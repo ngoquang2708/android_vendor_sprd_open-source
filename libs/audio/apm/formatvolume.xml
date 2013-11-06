@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2010 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<list>
+  <key>streams</key>
+  <array>
+    <string>in call</string>
+    <string>system</string>
+    <string>ring</string>
+    <string>music</string>
+    <string>alarm</string>
+    <string>notification</string>
+    <string>bluetooth sco</string>
+    <string>enforced audible</string>
+    <string>dtmf</string>
+    <string>tts</string>
+    <string>fm</string>
+  </array>
+  <key>formats</key>
+  <array>
+    <string>audio/default</string>
+    <string>audio/mpeg</string>
+    <string>audio/mp4a-latm</string>
+    <string>audio/midi</string>
+    <string>audio/3gpp</string>
+    <string>audio/amr-wb</string>
+  </array>
+  <key>profiles</key>
+  <list>
+    <key>stream in call</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream system</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream ring</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream music</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream alarm</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream notification</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream bluetooth sco</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream enforced audible</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream dtmf</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream tts</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+    <key>stream fm</key>
+    <list>
+      <key>audio/default</key>
+      <float>0</float>
+      <key>audio/mpeg</key>
+      <float>0</float>
+      <key>audio/mp4a-latm</key>
+      <float>0</float>
+      <key>audio/midi</key>
+      <float>0</float>
+      <key>audio/3gpp</key>
+      <float>0</float>
+      <key>audio/amr-wb</key>
+      <float>0</float>
+    </list>
+  </list>
+</list>
+
