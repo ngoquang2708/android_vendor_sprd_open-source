@@ -1,1 +1,1 @@
-USING_GPU_UTILIZATION=1 USING_MMU=1 USING_UMP=1 USING_PP_CORE=4 BUILD=debug CONFIG=sc8830 TARGET_PLATFORM=sc8830 KDIR=../../../../../../../out/target/product/sp8835eb/obj/KERNEL make $1
+make MALI_PLATFORM=sc8830 BUILD=debug KDIR=../../../../../../../out/target/product/sp8830ec/obj/KERNEL $1

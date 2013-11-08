@@ -13,41 +13,76 @@
  * Platform specific Mali driver functions for a default platform
  */
 
-#include <linux/kernel.h>
+#include <linux/platform_device.h>
 #include <linux/version.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
-#include <asm/system.h>
+#include <linux/pm.h>
+#ifdef CONFIG_PM_RUNTIME
+#include <linux/pm_runtime.h>
+#endif
 #include <asm/io.h>
-
+#include <linux/mali/mali_utgard.h>
+	 
+#include <mach/irqs.h>
 #include <mach/hardware.h>
+#include <mach/sci.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
 #include <mach/regs_glb.h>
 #include <mach/regs_ahb.h>
 #else
 #include <mach/sci_glb_regs.h>
 #endif
-#include <mach/sci.h>
-
 #include "mali_kernel_common.h"
-#include "mali_osk.h"
-#include "mali_platform.h"
+#include "base.h"
+	 
+static void mali_platform_device_release(struct device *device);
+static void mali_platform_utilization(unsigned int);
 
+static struct resource mali_gpu_resources[] =
+{
+	MALI_GPU_RESOURCES_MALI400_MP2_PMU(SPRD_MALI_PHYS, IRQ_G3D_INT, IRQ_G3D_INT,
+													IRQ_G3D_INT, IRQ_G3D_INT, IRQ_G3D_INT, IRQ_G3D_INT)
+};
+
+static struct mali_gpu_device_data mali_gpu_data =
+{
+	.shared_mem_size = ARCH_MALI_MEMORY_SIZE_DEFAULT,
+	.utilization_interval = 300,
+	.utilization_handler = mali_platform_utilization,
+};
+
+static struct platform_device mali_gpu_device =
+{
+	.name = MALI_GPU_NAME_UTGARD,
+	.id = 0,
+	.num_resources = ARRAY_SIZE(mali_gpu_resources),
+	.resource = mali_gpu_resources,
+	.dev.platform_data = &mali_gpu_data,
+	.dev.release = mali_platform_device_release,
+};
 
 static struct clk* g_gpu_clock = NULL;
 
 static int g_gpu_clock_on = 0;
+static int g_gpu_power_on = 0;
 
-_mali_osk_errcode_t mali_platform_init(void)
+int mali_platform_device_register(void)
 {
+	int err = -1;
+
+	MALI_DEBUG_PRINT(4, ("mali_platform_device_register() called\n"));
+
 	g_gpu_clock = clk_get(NULL, "clk_gpu_axi");
 
 	MALI_DEBUG_ASSERT(g_gpu_clock);
 
+	if(!g_gpu_power_on)
 	{
+		g_gpu_power_on = 1;
 		sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 		while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
-		msleep(2);
+		msleep(5);
 	}
 	if(!g_gpu_clock_on)
 	{
@@ -55,30 +90,70 @@ _mali_osk_errcode_t mali_platform_init(void)
 		clk_enable(g_gpu_clock);
 		udelay(300);
 	}
-	MALI_SUCCESS;
-}
 
-_mali_osk_errcode_t mali_platform_deinit(void)
-{
+	err = platform_device_register(&mali_gpu_device);
+	if (0 == err)
+	{
+#ifdef CONFIG_PM_RUNTIME
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
+		pm_runtime_set_autosuspend_delay(&(mali_gpu_device.dev), 50);
+		pm_runtime_use_autosuspend(&(mali_gpu_device.dev));
+#endif
+		pm_runtime_enable(&(mali_gpu_device.dev));
+#endif
+ 
+		return 0;
+	}
+
+	platform_device_unregister(&mali_gpu_device);
+ 
 	if(g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 0;
 		clk_disable(g_gpu_clock);
 	}
-	sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
-	MALI_SUCCESS;
+	if(g_gpu_power_on)
+	{
+		g_gpu_power_on = 0;
+		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+	}
+ 
+	return err;
+}
+ 
+void mali_platform_device_unregister(void)
+{
+	MALI_DEBUG_PRINT(4, ("mali_platform_device_unregister() called\n"));
+
+	platform_device_unregister(&mali_gpu_device);
+ 
+	if(g_gpu_clock_on)
+	{
+		g_gpu_clock_on = 0;
+		clk_disable(g_gpu_clock);
+	}
+	if(g_gpu_power_on)
+	{
+		g_gpu_power_on = 0;
+		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+	}
 }
 
-_mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
+static void mali_platform_device_release(struct device *device)
+{
+	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
+}
+
+void mali_platform_power_mode_change(int power_mode)
 {
 	switch(power_mode)
 	{
-	case MALI_POWER_MODE_ON:
-		if(sci_glb_read(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD))
+	case 0://MALI_POWER_MODE_ON:
+		if(!g_gpu_clock_on)
 		{
 			sci_glb_clr(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
 			while(sci_glb_read(REG_GLB_G3D_PWR_CTL, BITS_PD_G3D_STATUS(0x1f))) udelay(100);
-			msleep(2);
+			msleep(5);
 		}
 		if(!g_gpu_clock_on)
 		{
@@ -87,30 +162,33 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 			udelay(300);
 		}
 		break;
-	case MALI_POWER_MODE_LIGHT_SLEEP:
+	case 1://MALI_POWER_MODE_LIGHT_SLEEP:
 		if(g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 0;
 			clk_disable(g_gpu_clock);
 		}
 		break;
-	case MALI_POWER_MODE_DEEP_SLEEP:
+	case 2://MALI_POWER_MODE_DEEP_SLEEP:
 		if(g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 0;
 			clk_disable(g_gpu_clock);
 		}
-		sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+		if(g_gpu_power_on)
+		{
+			g_gpu_power_on = 0;
+			sci_glb_set(REG_GLB_G3D_PWR_CTL, BIT_G3D_POW_FORCE_PD);
+		}
 		break;
 	};
-	MALI_SUCCESS;
 }
 
-static int g_gpu_clock_div = 1;
-
-void mali_gpu_utilization_handler(u32 utilization)
+void mali_platform_utilization(u32 utilization)
 {
 #if 0
+	static int g_gpu_clock_div = 1;
+
 	// if the loading ratio is greater then 90%, switch the clock to the maximum
 	if(utilization >= (256*9/10))
 	{
@@ -134,9 +212,5 @@ void mali_gpu_utilization_handler(u32 utilization)
 
 	sci_glb_write(REG_GLB_GEN2, BITS_CLK_GPU_AXI_DIV(g_gpu_clock_div-1), BITS_CLK_GPU_AXI_DIV(7));
 #endif
-}
-
-void set_mali_parent_power_domain(void* dev)
-{
 }
 

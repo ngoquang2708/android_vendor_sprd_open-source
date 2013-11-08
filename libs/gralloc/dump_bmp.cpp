@@ -12,11 +12,11 @@
 #define BI_RGB          0
 #define BI_BITFIELDS    3
 
-typedef unsigned char BYTE, *PBYTE, *LPBYTE;
-typedef unsigned short WORD, *PWORD, *LPWORD;
+typedef unsigned char BYTE, *PBYTE, *LPBYTE; 
+typedef unsigned short WORD, *PWORD, *LPWORD; 
 typedef unsigned long DWORD, *PDWORD, *LPDWORD;
 
-typedef long LONG, *PLONG, *LPLONG;
+typedef long LONG, *PLONG, *LPLONG; 
 
 typedef BYTE  U8;
 typedef WORD  U16;
@@ -24,21 +24,21 @@ typedef DWORD U32;
 
 #pragma pack()
 
-typedef unsigned char BYTE, *PBYTE, *LPBYTE;
-typedef unsigned short WORD, *PWORD, *LPWORD;
+typedef unsigned char BYTE, *PBYTE, *LPBYTE; 
+typedef unsigned short WORD, *PWORD, *LPWORD; 
 typedef unsigned long DWORD, *PDWORD, *LPDWORD;
 
-typedef long LONG, *PLONG, *LPLONG;
+typedef long LONG, *PLONG, *LPLONG; 
 
 typedef WORD  U16;
 typedef DWORD U32;
 
 typedef struct tagBITMAPFILEHEADER {
   DWORD bfSize;
-  WORD  bfReserved1;
-  WORD  bfReserved2;
+  WORD  bfReserved1; 
+  WORD  bfReserved2; 
   DWORD bfOffBits;
-} BITMAPFILEHEADER;
+} BITMAPFILEHEADER; 
 
 typedef struct tagBITMAPINFOHEADER {
   DWORD biSize;
@@ -54,7 +54,7 @@ typedef struct tagBITMAPINFOHEADER {
   DWORD biClrImportant;
 } BITMAPINFOHEADER, *PBITMAPINFOHEADER;
 
-typedef struct tagRGBQUAD {
+typedef struct tagRGBQUAD { 
     union {
         struct {
           DWORD rgbBlueMask;
@@ -71,9 +71,9 @@ typedef struct tagRGBQUAD {
     };
 } RGBQUAD;
 
-typedef struct tagBITMAPINFO {
+typedef struct tagBITMAPINFO { 
   BITMAPFILEHEADER bmfHeader;
-  BITMAPINFOHEADER bmiHeader;
+  BITMAPINFOHEADER bmiHeader; 
 } BITMAPINFO;
 
 typedef struct region{
@@ -185,7 +185,7 @@ void dump_bmp(const char* filename, void* addr, PBINFO pBInfo, PREGION pScissor)
         break;
     }
 
-
+    
     for(i=pScissor->bottom; i>pScissor->top; i--){
         tempAddr=(char*)addr + (i-1)*(pBInfo->width*pixel_size);
         fwrite((char*)tempAddr+(pScissor->left*pixel_size), bmInfo.bmiHeader.biWidth*pixel_size , 1, fp);
@@ -193,7 +193,7 @@ void dump_bmp(const char* filename, void* addr, PBINFO pBInfo, PREGION pScissor)
     fclose(fp);
     return;
 
-fail_open:
+fail_open:    
     ALOGD("could not open dump_fb file");
 }
 
@@ -211,7 +211,6 @@ void dump_fb(void* addr, struct fb_var_screeninfo * info , int format)
     FILE* fp=NULL;
     if((fp=fopen("/data/dump/fb_scissor","r"))){
         fscanf(fp,"%d,%d,%d,%d",&region.left,&region.top,&region.right,&region.bottom);
-        fclose(fp);
         bInfo.width=info->xres;
         bInfo.height=info->yres;
         bInfo.format=format;

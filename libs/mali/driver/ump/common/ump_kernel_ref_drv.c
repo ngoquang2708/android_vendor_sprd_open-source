@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -94,7 +94,7 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_handle_create_from_phys_blocks(ump_dd
 	mem->ctx = NULL;
 	mem->release_func = phys_blocks_release;
 	/* For now UMP handles created by ump_dd_handle_create_from_phys_blocks() is forced to be Uncached */
-	mem->is_cached = 1;//0; //modified by yfs
+	mem->is_cached = 1;
 	mem->hw_device = _UMP_UK_USED_BY_CPU;
 	mem->lock_usage = UMP_NOT_LOCKED;
 

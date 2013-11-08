@@ -40,27 +40,32 @@
 #include "gralloc_helper.h"
 
 // numbers of buffers for page flipping
-#define NUM_BUFFERS 2
-#define DEBUG_FB_POST
+#define NUM_BUFFERS NUM_FB_BUFFERS 
 
 #ifdef DUMP_FB
 extern void dump_fb(void* addr, struct fb_var_screeninfo * info , int format);
 #endif
+
+static int swapInterval = 1;
 
 enum
 {
 	PAGE_FLIP = 0x00000001,
 };
 
-
 static int fb_set_swap_interval(struct framebuffer_device_t* dev, int interval)
 {
-	if (interval < dev->minSwapInterval || interval > dev->maxSwapInterval)
+	if (interval < dev->minSwapInterval)
 	{
-		return -EINVAL;
+		interval = dev->minSwapInterval;
+	}
+	else if (interval > dev->maxSwapInterval)
+	{
+		interval = dev->maxSwapInterval;
 	}
 
-	// Currently not implemented
+	swapInterval = interval;
+
 	return 0;
 }
 
@@ -90,9 +95,6 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(buffer);
 	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
 
-#ifdef DEBUG_FB_POST
-	AINF( "%s in line=%d\n", __FUNCTION__, __LINE__);
-#endif
 	if (m->currentBuffer)
 	{
 		m->base.unlock(&m->base, m->currentBuffer);
@@ -124,7 +126,11 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 			m->base.unlock(&m->base, buffer); 
 			return 0;
 		}
-
+#if PLATFORM_SDK_VERSION >= 16
+		if (swapInterval == 1 && !(hnd->usage & GRALLOC_USAGE_HW_COMPOSER))
+#else
+		if (swapInterval == 1)
+#endif
 		{
 			// enable VSYNC
 			interrupt = 1;
@@ -162,31 +168,6 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
 		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_BEGIN_WAIT);
 #endif
-
-#ifdef FB_FORMAT_SWITCH
-		if(dev->format==HAL_PIXEL_FORMAT_RGB_565){
-			m->info.bits_per_pixel = 16;
-			m->info.red.offset     = 11;
-			m->info.red.length     = 5;
-			m->info.green.offset   = 5;
-			m->info.green.length   = 6;
-			m->info.blue.offset    = 0;
-			m->info.blue.length    = 5;
-			m->info.transp.offset  = 0;
-			m->info.transp.length  = 0;
-		}
-		else{
-			m->info.bits_per_pixel = 32;
-			m->info.red.offset     = 0;
-			m->info.red.length     = 8;
-			m->info.green.offset   = 8;
-			m->info.green.length   = 8;
-			m->info.blue.offset    = 16;
-			m->info.blue.length    = 8;
-			m->info.transp.offset  = 24;
-			m->info.transp.length  = 0;
-		}
-#endif
 		if (ioctl(m->framebuffer->fd, FBIOPUT_VSCREENINFO, &m->info) == -1) 
 		{
 			AERR( "FBIOPUT_VSCREENINFO failed for fd: %d", m->framebuffer->fd );
@@ -220,9 +201,6 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		m->base.unlock(&m->base, m->framebuffer); 
 	}
 
-#ifdef DEBUG_FB_POST
-	AINF( "%s out line=%d\n", __FUNCTION__, __LINE__);
-#endif
 	return 0;
 }
 
@@ -259,14 +237,12 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	struct fb_fix_screeninfo finfo;
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
-		close(fd);
 		return -errno;
 	}
 
 	struct fb_var_screeninfo info;
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
-		close(fd);
 		return -errno;
 	}
 
@@ -275,7 +251,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	info.reserved[2] = 0;
 	info.xoffset = 0;
 	info.yoffset = 0;
-	info.activate = FB_ACTIVATE_NOW_NO_DISP;
+	info.activate = FB_ACTIVATE_NOW;
 
 	char value[PROPERTY_VALUE_MAX];
 	property_get("ro.sf.lcd_width", value, "1");
@@ -283,40 +259,40 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	property_get("ro.sf.lcd_height", value, "1");
 	info.height = atoi(value);
 
-	if(info.bits_per_pixel == 16)
-	{
-	/*
-	 * Explicitly request 5/6/5
-	*/
-		info.bits_per_pixel = 16;
-		info.red.offset     = 11;
-		info.red.length     = 5;
-		info.green.offset   = 5;
-		info.green.length   = 6;
-		info.blue.offset    = 0;
-		info.blue.length    = 5;
-		info.transp.offset  = 0;
-		info.transp.length  = 0;
+    if(info.bits_per_pixel == 16)
+    {
+        /*
+         * Explicitly request 5/6/5
+         */
+        info.bits_per_pixel = 16;
+        info.red.offset     = 11;
+        info.red.length     = 5;
+        info.green.offset   = 5;
+        info.green.length   = 6;
+        info.blue.offset    = 0;
+        info.blue.length    = 5;
+        info.transp.offset  = 0;
+        info.transp.length  = 0;
 
-		 module->fbFormat = HAL_PIXEL_FORMAT_RGB_565;
-	}
-	else
-	{
-		/*
-		 * Explicitly request 8/8/8
-		*/
-		info.bits_per_pixel = 32;
-		info.red.offset     = 0;
-		info.red.length     = 8;
-		info.green.offset   = 8;
-		info.green.length   = 8;
-		info.blue.offset    = 16;
-		info.blue.length    = 8;
-		info.transp.offset  = 24;
-		info.transp.length  = 0;
+        module->fbFormat = HAL_PIXEL_FORMAT_RGB_565;
+    }
+    else
+    {
+        /*
+         * Explicitly request 8/8/8
+         */
+        info.bits_per_pixel = 32;
+        info.red.offset     = 0;
+        info.red.length     = 8;
+        info.green.offset   = 8;
+        info.green.length   = 8;
+        info.blue.offset    = 16;
+        info.blue.length    = 8;
+        info.transp.offset  = 24;
+        info.transp.length  = 0;
 
-		module->fbFormat = HAL_PIXEL_FORMAT_RGBA_8888;
-	}
+        module->fbFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+    }
 
 	/*
 	 * Request NUM_BUFFERS screens (at lest 2 for page flipping)
@@ -341,7 +317,6 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
-		close(fd);
 		return -errno;
 	}
 
@@ -350,8 +325,8 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	{
 		refreshRate = 1000000000000000LLU /
 		(
-			uint64_t( info.upper_margin + info.lower_margin + info.yres )
-			* ( info.left_margin  + info.right_margin + info.xres )
+			uint64_t( info.upper_margin + info.lower_margin + info.yres + info.hsync_len )
+			* ( info.left_margin  + info.right_margin + info.xres + info.vsync_len )
 			* info.pixclock
 		);
 	}
@@ -407,13 +382,11 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
-		close(fd);
 		return -errno;
 	}
 
-	if (finfo.smem_len <= 0)
+    if (finfo.smem_len <= 0)
 	{
-		close(fd);
 		return -errno;
 	}
 
@@ -431,7 +404,6 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (vaddr == MAP_FAILED) 
 	{
-		close(fd);
 		AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
 		return -errno;
 	}
@@ -439,12 +411,22 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	memset(vaddr, 0, fbSize);
 
 	// Create a "fake" buffer object for the entire frame buffer memory, and store it in the module
-	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, fbSize, intptr_t(vaddr),
+	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, intptr_t(vaddr),
 	                                           0, dup(fd), 0);
 
-	close(fd);
 	module->numBuffers = info.yres_virtual / info.yres;
 	module->bufferMask = 0;
+	
+#if GRALLOC_ARM_UMP_MODULE
+	#ifdef IOCTL_GET_FB_UMP_SECURE_ID
+	ioctl(fd, IOCTL_GET_FB_UMP_SECURE_ID, &module->framebuffer->ump_id);
+	#endif
+	if ( (int)UMP_INVALID_SECURE_ID != module->framebuffer->ump_id )
+	{
+		AINF("framebuffer accessed with UMP secure ID %i\n", module->framebuffer->ump_id);
+	}
+#endif
+
 	return 0;
 }
 
@@ -530,7 +512,7 @@ int framebuffer_device_open(hw_module_t const* module, const char* name, hw_devi
 	const_cast<float&>(dev->xdpi) = m->xdpi;
 	const_cast<float&>(dev->ydpi) = m->ydpi;
 	const_cast<float&>(dev->fps) = m->fps;
-	const_cast<int&>(dev->minSwapInterval) = 1;
+	const_cast<int&>(dev->minSwapInterval) = 0;
 	const_cast<int&>(dev->maxSwapInterval) = 1;
 	*device = &dev->common;
 	//if (m->finfo.reserved[0] == 0x6f76 &&

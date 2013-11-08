@@ -75,11 +75,6 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 
 	// if this handle was created in this process, then we keep it as is.
 	private_handle_t* hnd = (private_handle_t*)handle;
-	if (hnd->pid == getpid())
-	{
-		AERR("Unable to register handle 0x%x coming from different process: %d", (unsigned int)hnd, hnd->pid );
-		return 0;
-	}
 
 	int retval = -EINVAL;
 
@@ -88,7 +83,7 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 #if GRALLOC_ARM_UMP_MODULE
 	if (!s_ump_is_open)
 	{
-		ump_result res = ump_open(); // TODO: Fix a ump_close() somewhere???
+		ump_result res = ump_open();
 		if (res != UMP_OK)
 		{
 			pthread_mutex_unlock(&s_map_lock);
@@ -99,7 +94,9 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 	}
 #endif
 
-	if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER) 
+	hnd->pid = getpid();
+
+	if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
 	{
 		AERR( "Can't register buffer 0x%x as it is a framebuffer", (unsigned int)handle );
 	}
@@ -143,7 +140,7 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 			}
 			else
 			{
-				AERR("Failed to map UMP handle 0x%x ump_id:0x%x", hnd->ump_mem_handle,hnd->ump_id);
+				AERR("Failed to map UMP handle 0x%x", hnd->ump_mem_handle );
 			}
 
 			ump_reference_release((ump_handle)hnd->ump_mem_handle);
@@ -162,18 +159,36 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 		int ret;
 		unsigned char *mappedAddress;
 		size_t size = hnd->size;
-	    /* a second user process must obtain a client handle first via ion_open before it can obtain the shared ion buffer*/	
-		hnd->ion_client = ion_open();
-		
-		if ( hnd->ion_client < 0 ) 
+		hw_module_t * pmodule = NULL;
+		private_module_t *m=NULL;
+		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
 		{
-			AERR( "Could not open ion device for handle: 0x%x", (unsigned int)hnd );
+			m = reinterpret_cast<private_module_t *>(pmodule);
+		}
+		else
+		{
+			AERR("Could not get gralloc module for handle: 0x%x", (unsigned int)hnd);
 			retval = -errno;
 			goto cleanup;
 		}
-		
+		/* the test condition is set to m->ion_client <= 0 here, because:
+		 * 1) module structure are initialized to 0 if no initial value is applied
+		 * 2) a second user process should get a ion fd greater than 0.
+		 */
+		if (m->ion_client <= 0)
+		{
+			/* a second user process must obtain a client handle first via ion_open before it can obtain the shared ion buffer*/
+			m->ion_client = ion_open();
+
+			if (m->ion_client < 0)
+			{
+				AERR( "Could not open ion device for handle: 0x%x", (unsigned int)hnd );
+				retval = -errno;
+				goto cleanup;
+			}
+		}
 		mappedAddress = (unsigned char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0 );
-		
+
 		if ( MAP_FAILED == mappedAddress )
 		{
 			AERR( "mmap( share_fd:%d ) failed with %s",  hnd->share_fd, strerror( errno ) );
@@ -212,7 +227,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 	{
 		AERR( "Can't unregister buffer 0x%x as it is a framebuffer", (unsigned int)handle );
 	}
-	else if (hnd->pid != getpid()) // never unmap buffers that were not created in this process
+	else if (hnd->pid == getpid()) // never unmap buffers that were not registered in this process
 	{
 		pthread_mutex_lock(&s_map_lock);
 
@@ -220,7 +235,6 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 		{
 #if GRALLOC_ARM_UMP_MODULE
 			ump_mapped_pointer_release((ump_handle)hnd->ump_mem_handle);
-			hnd->base = 0;
 			ump_reference_release((ump_handle)hnd->ump_mem_handle);
 			hnd->ump_mem_handle = (int)UMP_INVALID_MEMORY_HANDLE;
 #else
@@ -291,12 +305,6 @@ static int gralloc_lock(gralloc_module_t const* module, buffer_handle_t handle, 
 	{
 		hnd->writeOwner = usage & GRALLOC_USAGE_SW_WRITE_MASK;
 	}
-#if GRALLOC_ARM_DMA_BUF_MODULE && 0
-	if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && usage & GRALLOC_USAGE_SW_READ_MASK)
-	{
-		ion_msync(hnd->ion_client, hnd->share_fd, IMSYNC_DEV_TO_READ | IMSYNC_SYNC_FOR_DEV, hnd->size, hnd->offset);
-	}
-#endif
 	if (usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK))
 	{
 		*vaddr = (void*)hnd->base;
@@ -324,10 +332,21 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 #else
 		AERR( "Buffer 0x%x is UMP type but it is not supported", (unsigned int)hnd );
 #endif
-	} else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
+	}
+	else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
 	{
-#if GRALLOC_ARM_DMA_BUF_MODULE && 0 
-		ion_msync( hnd->ion_client, hnd->share_fd, IMSYNC_DEV_TO_READ | IMSYNC_SYNC_FOR_DEV, hnd->size, hnd->offset );
+#if GRALLOC_ARM_DMA_BUF_MODULE
+		hw_module_t * pmodule = NULL;
+		private_module_t *m=NULL;
+		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
+	   	{
+			m = reinterpret_cast<private_module_t *>(pmodule);
+			ion_sync_fd(m->ion_client, hnd->share_fd);
+		}
+		else
+		{
+			AERR("Couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+		}
 #endif
 	}
 	return 0;
@@ -388,7 +407,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 				break;
 			}
 			private_handle_t* hnd =
-				new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP | private_handle_t::PRIV_FLAGS_USES_PHY,
+				new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP | private_handle_t::PRIV_FLAGS_USES_PHY, 0,
 									size,
 									intptr_t(base) + (offset - bias),
 									private_handle_t::LOCK_STATE_MAPPED,
@@ -491,7 +510,6 @@ private_module_t::private_module_t()
 	numBuffers = 0;
 	bufferMask = 0;
 	pthread_mutex_init(&(lock), NULL);
-	pthread_mutex_init(&(fd_lock), NULL);
 	currentBuffer = NULL;
 	INIT_ZERO(info);
 	INIT_ZERO(finfo);

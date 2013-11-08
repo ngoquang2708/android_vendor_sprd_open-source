@@ -24,35 +24,38 @@ include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 
-MALI_DDK_PATH := vendor/sprd/open-source/libs
+MALI_DDK_TEST_PATH := hardware/arm/
 
 LOCAL_MODULE := gralloc.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 # Which DDK are we building for?
-ifneq (,$(wildcard $(MALI_DDK_PATH)/ump/))
+ifneq (,$(wildcard $(MALI_DDK_TEST_PATH)))
 # Mali-T6xx DDK
-LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM
+MALI_DDK_PATH := vendor/arm/mali6xx
+LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM libion
 
 # All include files are accessed from the DDK root
 DDK_PATH := $(LOCAL_PATH)/../../..
 UMP_HEADERS_PATH := $(DDK_PATH)/kernel/include
 LOCAL_C_INCLUDES := $(DDK_PATH) $(UMP_HEADERS_PATH)
 
-LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\"
-# -DGRALLOC_16_BITS -DSTANDARD_LINUX_SCREEN
+LOCAL_CFLAGS := -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\" -DMALI_600
+# -DSTANDARD_LINUX_SCREEN
 else
 # Mali-200/300/400MP DDK
-SHARED_MEM_LIBS := libUMP #libion
+MALI_DDK_PATH := vendor/sprd/open-source/libs
+SHARED_MEM_LIBS := libUMP
+#SHARED_MEM_LIBS := libion libhardware
 LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM $(SHARED_MEM_LIBS)
 
 # Include the UMP header files
-LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/mali/src/ump/include system/core/include/
+LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/mali/src/ump/include
 LOCAL_C_INCLUDES += \
     $(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video/ \
     $(TARGET_OUT_INTERMEDIATES)/KERNEL/
 LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\"
-# -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN
+# -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 endif
 
 ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
@@ -63,9 +66,6 @@ endif
 
 ifeq ($(strip $(USE_UI_OVERLAY)),true)
         LOCAL_CFLAGS += -DUSE_UI_OVERLAY
-endif
-ifeq ($(strip $(FB_FORMAT_SWITCH)),true)
-        LOCAL_CFLAGS += -DFB_FORMAT_SWITCH
 endif
 
 ifneq ($(strip $(TARGET_BUILD_VARIANT)), user)
