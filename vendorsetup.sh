@@ -88,7 +88,7 @@ function kmk()
 		echo "Couldn't locate the top of the tree.  Try setting TOP."
 		return
 	fi
-	#make -C $T/kernel O=$OUT/obj/KERNEL ARCH=arm CROSS_COMPILE=arm-eabi- $*
+	make -C $T/kernel O=$OUT/obj/KERNEL ARCH=arm CROSS_COMPILE=arm-eabi- $*
 	UNCOMPRESS=$(get_build_var USES_UNCOMPRESSED_KERNEL)
 	if [ "$UNCOMPRESS" = "true" ]; then
 		KIMG=$OUT/obj/KERNEL/arch/arm/boot/Image
