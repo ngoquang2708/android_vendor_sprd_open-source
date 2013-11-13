@@ -25,8 +25,8 @@ LOCAL_C_INCLUDES += vendor/sprd/open-source/apps/engineeringmodel/engcs \
 
 LOCAL_SRC_FILES :=  audio_pga.c vb_pga.c tinyalsa_util.c
 
-LOCAL_SHARED_LIBRARIES := liblog libc libcutils libtinyalsa liblog libcutils libtinyalsa libaudioutils \
-	libexpat libdl libhardware_legacy libengclient
+LOCAL_SHARED_LIBRARIES := liblog libc libcutils liblog libtinyalsa libaudioutils \
+	libexpat libdl libhardware_legacy
 
 LOCAL_MODULE := libvbpga
 
