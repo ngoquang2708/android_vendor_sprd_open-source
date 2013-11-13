@@ -50,7 +50,7 @@ LOCAL_C_INCLUDES += \
 	vendor/sprd/open-source/libs/audio/vb_pga \
 	vendor/sprd/open-source/libs/audio/record_process \
 	vendor/sprd/open-source/libs/audio/nv_exchange \
-	vendor/sprd/open-source/libs/lib_atcommand  \
+	vendor/sprd/open-source/libs/libatchannel \
 	vendor/sprd/open-source/libs/audio/DumpData
 	
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
@@ -74,7 +74,7 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
 	libexpat libdl \
 	libengclient libvbeffect libvbpga libnvexchange libdumpdata\
-	libatcommand.$(TARGET_BOARD_PLATFORM)
+	libatchannel
 
 LOCAL_MODULE_TAGS := optional
 

@@ -24,8 +24,14 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
 
 LOCAL_SHARED_LIBRARIES := libcutils libbinder libutils
 
-LOCAL_MODULE := libatcommand.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE := libatchannel
 
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_SHARED_LIBRARIES := liblog libcutils libatchannel libutils
+LOCAL_SRC_FILES := AtChannelTest.cpp
+LOCAL_MODULE := AtChannelTest
+include $(BUILD_EXECUTABLE)

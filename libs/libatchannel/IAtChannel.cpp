@@ -46,7 +46,7 @@ public:
     }
 };
 
-IMPLEMENT_META_INTERFACE(AtChannel, "com.android.internal.telephony.IAtChannel");
+IMPLEMENT_META_INTERFACE(AtChannel, "com.sprd.internal.telephony.IAtChannel");
 
 // ----------------------------------------------------------------------
 
