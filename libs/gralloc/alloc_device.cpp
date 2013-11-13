@@ -505,7 +505,7 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 		default:
 			return -EINVAL;
 		}
-		size_t bpr = GRALLOC_ALIGN(w * bpp, 64);
+		size_t bpr = GRALLOC_ALIGN(w * bpp, 8);
 		size = bpr * h;
 		stride = bpr / bpp;
 	}
