@@ -44,18 +44,6 @@ public:
     AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface);
     virtual ~AudioPolicyManagerSPRD();
     virtual status_t loadVolumeProfiles();
-    audio_io_handle_t getOutput(AudioSystem::stream_type stream,
-                                    uint32_t samplingRate,
-                                    uint32_t format,
-                                    uint32_t channelMask,
-                                    AudioSystem::output_flags flags);
-    status_t startOutput(audio_io_handle_t output,
-                                             AudioSystem::stream_type stream,
-                                             int session);  
-    status_t stopOutput(audio_io_handle_t output,
-                                            AudioSystem::stream_type stream,
-                                            int session); 
-    void releaseOutput(audio_io_handle_t output);                                        
 
 private:
     int is_voip_set;
