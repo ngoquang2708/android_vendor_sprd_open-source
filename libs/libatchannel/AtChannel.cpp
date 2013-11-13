@@ -24,7 +24,7 @@ const int MAX_SERVICE_NAME = 100;
 static int getPhoneId(int modemId, int simId)
 {
     /*
-     * Because there is no docs, LTE should be supported later.   
+     * Because there is no docs, LTE should be supported later.
      */
     char prop[PROPERTY_VALUE_MAX] = "";
     int tdEnable, wEnable;
