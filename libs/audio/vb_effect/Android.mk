@@ -54,7 +54,7 @@ LOCAL_MODULE_SUFFIX := -timestamp
 
 include $(BUILD_SYSTEM)/base_rules.mk
 
-$(LOCAL_BUILT_MODULE): VBC_EQ_FILE := /productinfo/vbc_eq
+$(LOCAL_BUILT_MODULE): VBC_EQ_FILE := /data/local/tmp/vbc_eq
 $(LOCAL_BUILT_MODULE): SYMLINK := $(TARGET_OUT_VENDOR)/firmware/vbc_eq
 $(LOCAL_BUILT_MODULE): $(LOCAL_PATH)/Android.mk
 $(LOCAL_BUILT_MODULE):

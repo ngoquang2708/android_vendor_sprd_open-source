@@ -78,7 +78,7 @@ static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
 //static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 
-#define AUDFIFO "/data/audiopara_tuning"
+#define AUDFIFO "/data/local/tmp/audiopara_tuning"
 
 
 struct eut_cmd eut_cmds[]={
