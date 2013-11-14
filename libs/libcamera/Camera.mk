@@ -199,8 +199,8 @@ LOCAL_C_INCLUDES := \
         external/jhead \
         external/sqlite/dist \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
-	$(TOP)/device/sprd/common/libs/gralloc \
-	$(TOP)/device/sprd/common/libs/mali/src/ump/include
+	$(TOP)/vendor/sprd/open-source/libs/gralloc \
+	$(TOP)/vendor/sprd/open-source/libs/mali/src/ump/include
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
