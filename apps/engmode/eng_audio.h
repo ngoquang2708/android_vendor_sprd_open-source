@@ -37,7 +37,7 @@
 #define ENG_PGA_OPS 0x100
 
 #define ENG_AUDIO_PARA  			"/etc/audio_para"
-#define ENG_AUDIO_PARA_DEBUG 			"/data/local/tmp/audio_para"
+#define ENG_AUDIO_PARA_DEBUG 			"/data/local/media/audio_para"
 
 enum{
     GET_AUDIO_MODE_COUNT,

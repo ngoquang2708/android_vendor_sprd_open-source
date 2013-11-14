@@ -53,7 +53,7 @@
 #define VBC_EFFECT_PARAS_LEN            (336)
 #define VBC_EFFECT_PROFILE_CNT          (4)
 
-#define STORED_VBC_EFFECT_PARAS_PATH    "/data/local/tmp/vbc_eq"
+#define STORED_VBC_EFFECT_PARAS_PATH    "/data/local/media/vbc_eq"
 
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"

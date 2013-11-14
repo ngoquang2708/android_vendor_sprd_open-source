@@ -163,7 +163,7 @@
 
 #define RECORD_POP_COUNT    5   //5 * 29 ms
 
-#define AUDFIFO "/data/local/tmp/audiopara_tuning"
+#define AUDFIFO "/data/local/media/audiopara_tuning"
 
 struct pcm_config pcm_config_mm = {
     .channels = 2,
