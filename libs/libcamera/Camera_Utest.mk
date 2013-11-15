@@ -46,6 +46,8 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov8865_mipi_raw.c \
 	sensor/sensor_gt2005.c \
 	sensor/sensor_gc0308.c \
+	sensor/sensor_hi702_ccir.c \
+        sensor/sensor_s5k4ecgx_mipi.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_global.c \
@@ -77,6 +79,7 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_tune_v0000.c \
 	isp/isp_param_tune_v0001.c \
 	isp/isp_param_size.c \
+	isp/isp_param_file_update.c \
 	sc8830/isp_calibration/src/utest_camera.cpp \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c

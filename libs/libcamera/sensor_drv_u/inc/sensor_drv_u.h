@@ -693,7 +693,7 @@ typedef enum {
 	SENSOR_PARAM_EFFECT_MAX
 } SENSOR_PARAM_EFFECT_E;
 
-int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr);
+int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first);
 int Sensor_WriteData(uint8_t *regPtr, uint32_t length);
 int Sensor_Open(uint32_t sensor_id);
 SENSOR_EXP_INFO_T *Sensor_GetInfo(void);
@@ -720,7 +720,7 @@ int32_t Sensor_WriteReg_8bits(uint16_t reg_addr, uint8_t value);
 int32_t Sensor_ReadReg_8bits(uint8_t reg_addr, uint8_t * reg_val);
 ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *sensor_reg_tab_info_ptr);
 BOOLEAN Sensor_IsInit(void);
-ERR_SENSOR_E Sensor_Close(void);
+ERR_SENSOR_E Sensor_Close(uint32_t is_last);
 BOOLEAN Sensor_IsOpen(void);
 uint32_t Sensor_SetCurId(SENSOR_ID_E sensor_id);
 SENSOR_ID_E Sensor_GetCurId(void);

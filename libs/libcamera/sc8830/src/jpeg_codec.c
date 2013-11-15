@@ -215,7 +215,7 @@ static uint32_t _quality_covert(uint32_t quality)
 	} else {
 		jq = JPEGENC_QUALITY_HIGH;
 	}
-	jq = JPEGENC_QUALITY_MIDDLE_LOW;
+
 	return jq;
 }
 

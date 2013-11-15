@@ -51,7 +51,7 @@ extern "C"
 #define CMR_SCALING_TH                     2048
 #define CMR_IMG_CNT_MAX                    8
 #define CMR_JPEG_COMPRESS_FACTOR           5
-#define CMR_JPEG_SZIE(w,h)                 (uint32_t)((w)*(h)/2)
+#define CMR_JPEG_SZIE(w,h)                 (uint32_t)((w)*(h)*4/5)
 #define CMR_EVT_MASK_BITS                  (uint32_t)(CMR_EVT_V4L2_BASE | CMR_EVT_CVT_BASE | \
 					CMR_EVT_ISP_BASE | CMR_EVT_SENSOR_BASE | \
 					CMR_EVT_JPEG_BASE | CMR_EVT_OEM_BASE)

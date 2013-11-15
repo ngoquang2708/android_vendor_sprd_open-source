@@ -490,7 +490,7 @@ static SENSOR_REG_T GC0308_YUV_COMMON[]=
 
 
 	//-------------H_V_Switch(4)---------------//
-			{0x14 , 0x13},
+			{0x14 , 0x10},
 
 	 /*GC0308_H_V_Switch,
 

@@ -61,12 +61,15 @@ extern SENSOR_INFO_T g_ov8825_mipi_raw_info;
 extern SENSOR_INFO_T g_imx179_mipi_raw_info;
 extern SENSOR_INFO_T g_ov8865_mipi_raw_info;
 extern SENSOR_INFO_T g_ov13850_mipi_raw_info;
+extern SENSOR_INFO_T g_s5k4ec_mipi_yuv_info;
+extern SENSOR_INFO_T g_HI702_yuv_info;
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_s5k4ec_mipi_yuv_info,
 	&g_ov8825_mipi_raw_info,
 	//&g_ov8830_mipi_raw_info,
 	&g_ov5640_mipi_yuv_info,
@@ -97,6 +100,7 @@ const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 #ifdef CONFIG_FRONT_CAMERA_CCIR
 	&g_GC0308_yuv_info,
 	&g_GC2035_yuv_info,
+	&g_HI702_yuv_info,
 	//&g_OV7675_yuv_info,
 	//&g_GC0309_yuv_info,
 	//g_OV7690_yuv_info,

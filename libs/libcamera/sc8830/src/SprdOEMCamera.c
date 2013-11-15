@@ -250,7 +250,7 @@ int camera_sensor_init(int32_t camera_id)
 	}
 
 	/*camera_set_sensormark();*/
-	sensor_ret = Sensor_Init(camera_id, &sensor_num);
+	sensor_ret = Sensor_Init(camera_id, &sensor_num, 1);
 	if (SENSOR_SUCCESS != sensor_ret) {
 		CMR_LOGE("No sensor %d", sensor_num);
 		ret = -CAMERA_NO_SENSOR;
@@ -298,7 +298,7 @@ int camera_sensor_init(int32_t camera_id)
 	}
 
 sensor_exit:
-	Sensor_Close();
+	Sensor_Close(1);
 exit:
 
 	/*camera_save_sensormark();*/
@@ -317,7 +317,7 @@ int camera_sensor_deinit(void)
 		goto exit;
 	}
 	Sensor_EventReg(NULL);
-	ret = Sensor_Close();
+	ret = Sensor_Close(1);
 	bzero(sensor_cxt, sizeof(*sensor_cxt));
 	ctrl->sensor_inited = 0;
 
@@ -2173,7 +2173,7 @@ int camera_before_set_internal(enum restart_mode re_mode)
 		if (RESTART_HEAVY == re_mode) {
 			g_cxt->stop_preview_mode = 1;
 			ret = camera_stop_preview_internal();
-			Sensor_Close();
+			Sensor_Close(0);
 			CMR_LOGI("id:%d.",g_cxt->sn_cxt.cur_id);
 		} else {
 			g_cxt->stop_preview_mode = 0;
@@ -2231,7 +2231,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 
 	switch (re_mode) {
 	case RESTART_HEAVY:
-		ret = Sensor_Init(g_cxt->sn_cxt.cur_id, &sensor_num);
+		ret = Sensor_Init(g_cxt->sn_cxt.cur_id, &sensor_num, 0);
 		if (ret) {
 			CMR_LOGE("Failed to init sensor");
 			return -CAMERA_FAILED;
@@ -2334,6 +2334,7 @@ int camera_after_set(enum restart_mode re_mode,
 
 	g_cxt->skip_mode = skip_mode;
 	g_cxt->skip_num  = skip_number;
+	g_cxt->set_flag ++;
 
 	message.msg_type = CMR_EVT_AFTER_SET;
 	message.sub_msg_type = re_mode;
@@ -2344,8 +2345,9 @@ int camera_after_set(enum restart_mode re_mode,
 	}
 
 	ret = camera_wait_start(g_cxt);
-	g_cxt->set_flag ++;
-	/*ret = camera_wait_set(g_cxt);*/
+	if (RESTART_ZOOM == re_mode) {
+		ret = camera_wait_set(g_cxt);
+	}
 
 	return ret;
 }
@@ -3278,7 +3280,7 @@ int camera_af_init(void)
 	if (!g_cxt->af_inited) {
 		ret = cmr_msg_queue_create(CAMERA_AF_MSG_QUEUE_SIZE, &g_cxt->af_msg_que_handle);
 		if (ret) {
-			CMR_LOGE("NO Memory, Frailed to create message queue");
+			CMR_LOGE("NO Memory, Failed to create message queue");
 		}
 		sem_init(&g_cxt->af_sync_sem, 0, 0);
 		pthread_attr_init(&attr);
@@ -4654,9 +4656,13 @@ void camera_call_af_cb(camera_cb_f_type cmr_cb,
 }
 void camera_set_hal_cb(camera_cb_f_type cmr_cb)
 {
-	pthread_mutex_lock(&g_cxt->cb_mutex);
-	g_cxt->camera_cb = cmr_cb;
-	pthread_mutex_unlock(&g_cxt->cb_mutex);
+	if (cmr_cb != g_cxt->camera_cb) {
+		pthread_mutex_lock(&g_cxt->cb_mutex);
+		g_cxt->camera_cb = cmr_cb;
+		pthread_mutex_unlock(&g_cxt->cb_mutex);
+	} else {
+		CMR_LOGV("same callback: need not set");
+	}
 	return;
 }
 
@@ -4666,6 +4672,7 @@ void camera_call_cb(camera_cb_type cb,
                  int32_t parm4)
 {
 	pthread_mutex_lock(&g_cxt->cb_mutex);
+
 	if (g_cxt->camera_cb) {
 		(*g_cxt->camera_cb)(cb, client_data, func, parm4);
 	}
@@ -4957,7 +4964,7 @@ int camera_capture_init(void)
 	if (v4l2_cfg.cfg.need_isp && ISP_IDLE == g_cxt->isp_cxt.isp_state) {
 		ret = camera_isp_start(CMR_CAPTURE,0,sensor_mode);
 	}
-	g_cxt->recover_status = NO_RECOVERY;
+
 exit:
 	return ret;
 }
@@ -5991,6 +5998,13 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 		CMR_LOGE("Invalid parameter, 0x%x", (uint32_t)data);
 		return -CAMERA_INVALID_PARM;
 	}
+
+	pthread_mutex_lock(&g_cxt->recover_mutex);
+	if (g_cxt->recover_status) {
+		CMR_LOGV("Reset the recover status");
+		g_cxt->recover_status = NO_RECOVERY;
+	}
+	pthread_mutex_unlock(&g_cxt->recover_mutex);
 
 	TAKE_PIC_CANCEL;
 	CMR_PRINT_TIME;

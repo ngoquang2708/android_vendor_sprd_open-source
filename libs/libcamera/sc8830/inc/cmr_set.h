@@ -87,8 +87,7 @@ int camera_autofocus_quit(void);
 int camera_autofocus_need_exit(uint32_t *is_external);
 int camera_isp_ae_wait_stab(void);
 int camera_isp_alg_wait(void);
-void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
-
+int camera_isp_get_ae_stab(uint32_t *isp_param);
 #ifdef __cplusplus
 }
 #endif

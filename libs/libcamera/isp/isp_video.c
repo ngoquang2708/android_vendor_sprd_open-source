@@ -181,9 +181,6 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 	int len = 0, rlen = 0, rsp_len = 0, extra_len = 0;
 	MSG_HEAD_T *msg_ret;
 	ISP_IMAGE_HEADER_T isp_msg;
-	uint32_t size_id=0x00;
-
-	size_id=ispParserGetSizeID(width,height);
 
 	chn0_number = (ch0_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
 	chn1_number = (ch1_len + SEND_IMAGE_SIZE - 1) /SEND_IMAGE_SIZE;
@@ -205,7 +202,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		// combine data
 		isp_msg.headlen = 12;
 		isp_msg.img_format = format;
-		isp_msg.img_size = size_id;
+		isp_msg.img_size = (width<<0x10)|height;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
 
@@ -235,7 +232,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		// combine data
 		isp_msg.headlen = 12;
 		isp_msg.img_format = format;
-		isp_msg.img_size = size_id;
+		isp_msg.img_size = (width<<0x10)|height;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
 
@@ -265,7 +262,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 		// combine data
 		isp_msg.headlen = 12;
 		isp_msg.img_format = format;
-		isp_msg.img_size = size_id;
+		isp_msg.img_size = (width<<0x10)|height;
 		isp_msg.totalpacket = total_number;
 		isp_msg.packetsn = send_number+1;
 

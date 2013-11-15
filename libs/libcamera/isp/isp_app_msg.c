@@ -67,7 +67,7 @@ int isp_app_msg_get(unsigned int queue_handle, struct isp_app_msg *message)
 	ISP_APP_MSG_CHECK_MSG_MAGIC(queue_handle);
 
 	sem_wait(&msg_cxt->msg_sem);
-	
+
 	pthread_mutex_lock(&msg_cxt->mutex);
 
 	if (msg_cxt->msg_read != msg_cxt->msg_write) {

@@ -530,8 +530,7 @@ int camera_isp_wb_trim(struct img_frm_cap *frm_cfg);
 int camera_isp_awb_bypass(enum isp_alg_mode awb_mode);
 int camera_isp_ae_bypass(enum isp_alg_mode ae_mode);
 int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level);
-int camera_isp_get_ae_stab(uint32_t *isp_param);
-
+void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 
 #ifdef __cplusplus
 }

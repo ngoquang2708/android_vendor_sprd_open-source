@@ -329,9 +329,9 @@ private:
 	uint32_t                        mPreviewHeapNum;
 	uint32_t                        mPreviewDcamAllocBufferCnt;
 	sprd_camera_memory_t*           *mPreviewHeapArray;
-	sprd_camera_memory_t*           mPreviewHeapBak;
+	sprd_camera_memory_t            mPreviewHeapInfoBak;
 	uint32_t                        mPreviewHeapBakUseFlag;
-	sprd_camera_memory_t*           mRawHeapBak;
+	sprd_camera_memory_t            mRawHeapInfoBak;
 	uint32_t                        mRawHeapBakUseFlag;
 	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	uint32_t                        mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
@@ -368,6 +368,7 @@ private:
 	int                             mPreviewFormat;//0:YUV422;1:YUV420;2:RGB
 	int                             mPictureFormat;//0:YUV422;1:YUV420;2:RGB;3:JPEG
 	int                             mPreviewStartFlag;
+	uint32_t                        mIsDvPreview;
 
 	bool                            mRecordingMode;
 	bool                            mBakParamFlag;

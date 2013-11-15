@@ -58,6 +58,7 @@ enum isp_callback_cmd{
 	ISP_AF_STAT_END_CALLBACK = 0x00000900,
 	ISP_AWB_STAT_CALLBACK = 0x00000A00,
 	ISP_CONTINUE_AF_NOTICE_CALLBACK = 0x00000B00,
+	ISP_SOF_CALLBACK = 0x00000C00,
 	ISP_CALLBACK_CMD_MAX=0xffffffff
 };
 
@@ -357,6 +358,7 @@ struct isp_init_param{
 	void* setting_param_ptr;
 	struct isp_size size;
 	proc_callback ctrl_callback;
+	proc_callback self_callback;
 };
 
 struct isp_video_limit{

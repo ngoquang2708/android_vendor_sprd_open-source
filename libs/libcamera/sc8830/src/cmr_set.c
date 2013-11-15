@@ -1793,12 +1793,12 @@ int camera_isp_alg_wait(void)
 		ts.tv_sec += ISP_ALG_TIMEOUT;
 		pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
 		if (sem_timedwait((&cxt->cmr_set.isp_alg_sem), &ts)) {
-			pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			rtn = -1;
 			cxt->cmr_set.isp_alg_timeout = 1;
 			CMR_LOGE("timeout.");
 		} else {
-			pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			cxt->cmr_set.isp_alg_timeout = 0;
 			CMR_LOGV("done.");
 		}
