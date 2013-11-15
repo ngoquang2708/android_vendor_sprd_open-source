@@ -235,6 +235,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 		{
 #if GRALLOC_ARM_UMP_MODULE
 			ump_mapped_pointer_release((ump_handle)hnd->ump_mem_handle);
+			hnd->base = 0;
 			ump_reference_release((ump_handle)hnd->ump_mem_handle);
 			hnd->ump_mem_handle = (int)UMP_INVALID_MEMORY_HANDLE;
 #else
@@ -265,7 +266,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 		hnd->base = 0;
 		hnd->lockState	= 0;
 		hnd->writeOwner = 0;
-
+#if SPRD_ION
 		if((hnd->flags & private_handle_t::PRIV_FLAGS_USES_PHY)&&(0!=hnd->resv0))
 		{
 			private_module_t* m = (private_module_t*)(module);
@@ -281,7 +282,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const* module, buffer_hand
 				ALOGI("ION_IOC_FREE success %x,phy addr = %x",hnd->resv0,hnd->phyaddr);
 			}
 		}
-		
+#endif
 		pthread_mutex_unlock(&s_map_lock);
 	}
 	else
@@ -305,6 +306,7 @@ static int gralloc_lock(gralloc_module_t const* module, buffer_handle_t handle, 
 	{
 		hnd->writeOwner = usage & GRALLOC_USAGE_SW_WRITE_MASK;
 	}
+
 	if (usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK))
 	{
 		*vaddr = (void*)hnd->base;
@@ -332,8 +334,7 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 #else
 		AERR( "Buffer 0x%x is UMP type but it is not supported", (unsigned int)hnd );
 #endif
-	}
-	else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
+	} else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		hw_module_t * pmodule = NULL;
@@ -358,7 +359,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 	int res = -EINVAL;
 	va_list args;
 	va_start(args, operation);
-
+#if GRALLOC_ARM_UMP_MODULE
 	switch (operation) {
 		case GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER:
 		{
@@ -470,7 +471,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
 			break;
 		}
 	}
-
+#endif
 	va_end(args);
 	return res;
 }
@@ -510,16 +511,17 @@ private_module_t::private_module_t()
 	numBuffers = 0;
 	bufferMask = 0;
 	pthread_mutex_init(&(lock), NULL);
+	pthread_mutex_init(&(fd_lock), NULL);
 	currentBuffer = NULL;
 	INIT_ZERO(info);
 	INIT_ZERO(finfo);
 	xdpi = 0.0f;
 	ydpi = 0.0f;
 	fps = 0.0f;
-
+#if SPRD_ION
 	mIonFd = -1;
 	mIonBufNum = 0;
-
+#endif
 
 #undef INIT_ZERO
 };
