@@ -95,6 +95,9 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(buffer);
 	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
 
+#ifdef DEBUG_FB_POST
+	AINF( "%s in line=%d\n", __FUNCTION__, __LINE__);
+#endif
 	if (m->currentBuffer)
 	{
 		m->base.unlock(&m->base, m->currentBuffer);
@@ -168,6 +171,31 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
 		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_BEGIN_WAIT);
 #endif
+
+#ifdef FB_FORMAT_SWITCH
+		if(dev->format==HAL_PIXEL_FORMAT_RGB_565){
+			m->info.bits_per_pixel = 16;
+			m->info.red.offset     = 11;
+			m->info.red.length     = 5;
+			m->info.green.offset   = 5;
+			m->info.green.length   = 6;
+			m->info.blue.offset    = 0;
+			m->info.blue.length    = 5;
+			m->info.transp.offset  = 0;
+			m->info.transp.length  = 0;
+		}
+		else{
+			m->info.bits_per_pixel = 32;
+			m->info.red.offset     = 0;
+			m->info.red.length     = 8;
+			m->info.green.offset   = 8;
+			m->info.green.length   = 8;
+			m->info.blue.offset    = 16;
+			m->info.blue.length    = 8;
+			m->info.transp.offset  = 24;
+			m->info.transp.length  = 0;
+		}
+#endif
 		if (ioctl(m->framebuffer->fd, FBIOPUT_VSCREENINFO, &m->info) == -1) 
 		{
 			AERR( "FBIOPUT_VSCREENINFO failed for fd: %d", m->framebuffer->fd );
@@ -201,6 +229,9 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		m->base.unlock(&m->base, m->framebuffer); 
 	}
 
+#ifdef DEBUG_FB_POST
+	AINF( "%s out line=%d\n", __FUNCTION__, __LINE__);
+#endif
 	return 0;
 }
 
@@ -237,12 +268,14 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	struct fb_fix_screeninfo finfo;
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
 	struct fb_var_screeninfo info;
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -317,6 +350,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -382,11 +416,13 @@ int init_frame_buffer_locked(struct private_module_t* module)
 
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
+		close(fd);
 		return -errno;
 	}
 
     if (finfo.smem_len <= 0)
 	{
+		close(fd);
 		return -errno;
 	}
 
@@ -404,6 +440,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	void* vaddr = mmap(0, fbSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (vaddr == MAP_FAILED) 
 	{
+		close(fd);
 		AERR( "Error mapping the framebuffer (%s)", strerror(errno) );
 		return -errno;
 	}
@@ -414,6 +451,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, intptr_t(vaddr),
 	                                           0, dup(fd), 0);
 
+	close(fd);
 	module->numBuffers = info.yres_virtual / info.yres;
 	module->bufferMask = 0;
 	

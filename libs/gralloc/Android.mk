@@ -45,8 +45,8 @@ LOCAL_CFLAGS := -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\" -DMALI_600
 else
 # Mali-200/300/400MP DDK
 MALI_DDK_PATH := vendor/sprd/open-source/libs
-SHARED_MEM_LIBS := libUMP
-#SHARED_MEM_LIBS := libion libhardware
+#SHARED_MEM_LIBS := libUMP
+SHARED_MEM_LIBS := libion libhardware
 LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM $(SHARED_MEM_LIBS)
 
 # Include the UMP header files

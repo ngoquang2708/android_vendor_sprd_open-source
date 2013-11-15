@@ -7,7 +7,7 @@
 # A copy of the licence is included with the program, and can also be obtained from Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-USING_UMP=1
+USING_UMP=0
 USE_UMPV2=0
 USING_PROFILING=1
 USING_INTERNAL_PROFILING ?= 0

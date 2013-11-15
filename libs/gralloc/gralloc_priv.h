@@ -44,8 +44,9 @@
  */
 
 /*#define IOCTL_GET_FB_UMP_SECURE_ID	_IOR('F', 311, unsigned int)*/
-#define GRALLOC_ARM_UMP_MODULE 1
-#define GRALLOC_ARM_DMA_BUF_MODULE 0
+#define GRALLOC_ARM_UMP_MODULE 0
+#define GRALLOC_ARM_DMA_BUF_MODULE 1
+#define SPRD_ION 0
 
 /* NOTE:
  * If your framebuffer device driver is integrated with dma_buf, you will have to
@@ -84,12 +85,13 @@ struct private_module_t
 	uint32_t numBuffers;
 	uint32_t bufferMask;
 	pthread_mutex_t lock;
+	pthread_mutex_t fd_lock;
 	buffer_handle_t currentBuffer;
 	int ion_client;
-
+#if SPRD_ION
 	int mIonFd;
 	int mIonBufNum;
-	
+#endif
 	struct fb_var_screeninfo info;
 	struct fb_fix_screeninfo finfo;
 	float xdpi;
@@ -130,9 +132,10 @@ struct private_handle_t
 		LOCK_STATE_MAPPED    =   1<<30,
 		LOCK_STATE_READ_MASK =   0x3FFFFFFF
 	};
+#if SPRD_ION
 	//fds
-	int     fd;
-
+	int 	fd;
+#endif
 	// ints
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	/*shared file descriptor for dma_buf sharing*/
@@ -157,19 +160,30 @@ struct private_handle_t
 #endif
 
 	// Following members is for framebuffer only
+	int     fd;
 	int     offset;
-	//int     fd;//move to "fds"
 
 	int     phyaddr;
+
+#if SPRD_ION
+
+	int     resv0;
+	int     resv1;
+#endif
 	int     format;
 	int     width;
 	int     height;
-	int     resv0;
-	int     resv1;   
 
+
+#if SPRD_ION
+#define SPRD_ION_NUM_INTS 5
+#else
+#define SPRD_ION_NUM_INTS 4
+#endif
 #if GRALLOC_ARM_DMA_BUF_MODULE
+	int     ion_client;
 	struct ion_handle *ion_hnd;
-#define GRALLOC_ARM_DMA_BUF_NUM_INTS 2
+#define GRALLOC_ARM_DMA_BUF_NUM_INTS 3 
 #else
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 0
 #endif
@@ -181,7 +195,7 @@ struct private_handle_t
 #endif
 
 #ifdef __cplusplus
-	static const int sNumInts = 10 -1 + 6 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
+	static const int sNumInts = 10 + SPRD_ION_NUM_INTS + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
 	static const int sNumFds = 1;
 	static const int sMagic = 0x3141592;
 
@@ -203,7 +217,7 @@ struct private_handle_t
 		fd(fd),
 		offset(offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,
+		,ion_client(-1),
 		ion_hnd(NULL)
 #endif
 
@@ -231,6 +245,7 @@ struct private_handle_t
 #endif
 		fd(0),
 		offset(0),
+		ion_client(-1),
 		ion_hnd(NULL)
 
 	{
@@ -260,7 +275,7 @@ struct private_handle_t
 		fd(fb_file),
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,
+		,ion_client(-1),
 		ion_hnd(NULL)
 #endif
 
