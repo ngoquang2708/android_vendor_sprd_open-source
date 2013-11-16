@@ -43,7 +43,7 @@ static struct sensor_t sSensorList[] = {
 	 "ST",
 	 1, SENSORS_ACCELERATION_HANDLE,
 	 SENSOR_TYPE_ACCELEROMETER, (GRAVITY_EARTH * 2.0f),
-	 (GRAVITY_EARTH) / 1024.0f, 0.145f, 10000, {}},
+	 (GRAVITY_EARTH) / 1024.0f, 0.145f, 10000, 0,0,{}},
 };
 
 AccSensor::AccSensor() :

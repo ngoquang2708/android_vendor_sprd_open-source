@@ -42,12 +42,12 @@ static struct sensor_t sSensorList[] = {
           "LTR",
           1, SENSORS_LIGHT_HANDLE,
           SENSOR_TYPE_LIGHT, 1.0f,
-          100000.0f, 0.005f, 0, { } },
+          100000.0f, 0.005f, 0, 0,0,{ } },
         { "LTR558ALS Proximity sensor",
           "LTR",
           1, SENSORS_PROXIMITY_HANDLE,
           SENSOR_TYPE_PROXIMITY, 1.0f,
-          1.0f, 0.005f, 0, { } },
+          1.0f, 0.005f, 0, 0,0,{ } },
 };
 
 PlsSensor::PlsSensor() :
