@@ -514,6 +514,11 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 			return -EINVAL;
 		}
 	}
+	else if(format == HAL_PIXEL_FORMAT_BLOB)
+	{
+		stride = GRALLOC_ALIGN(w, 16);
+		size = w*h;
+	}
 	else
 	{
 		int align = 8;
