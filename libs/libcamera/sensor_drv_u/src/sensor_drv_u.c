@@ -1430,7 +1430,7 @@ LOCAL uint32_t _Sensor_Register(SENSOR_ID_E sensor_id)
 
 
 #define SENSOR_PARAM_NUM  8
-#define SENSOR_PARA "/data/misc/sensors/sensor.file"
+#define SENSOR_PARA "/data/misc/media/sensor.file"
 void _Sensor_load_sensor_type(void)
 {
 	FILE 		*fp;
