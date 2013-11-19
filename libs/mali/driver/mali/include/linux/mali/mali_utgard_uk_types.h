@@ -71,6 +71,7 @@ typedef enum
 	_MALI_UK_STREAM_CREATE,           /**< _mali_ukk_stream_create() */
 	_MALI_UK_FENCE_CREATE_EMPTY,           /**< _mali_ukk_fence_create_empty() */
 	_MALI_UK_FENCE_VALIDATE,          /**< _mali_ukk_fence_validate() */
+	_MALI_UK_SET_GPU_LEVEL,           /*set gpu level to control frequency */
 
 	/** Memory functions */
 
