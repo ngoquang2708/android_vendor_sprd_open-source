@@ -314,6 +314,54 @@ static int gralloc_lock(gralloc_module_t const* module, buffer_handle_t handle, 
 	return 0;
 }
 
+
+
+static int gralloc_lock_ycbcr(struct gralloc_module_t const* module,
+            buffer_handle_t handle, int usage,
+            int l, int t, int w, int h,
+            struct android_ycbcr *ycbcr)
+{
+    if (private_handle_t::validate(handle) < 0)
+    {
+        AERR("Locking invalid buffer 0x%x, returning error", (int)handle );
+        return -EINVAL;
+    }
+    private_handle_t* hnd = (private_handle_t*)handle;
+    int ystride;
+    int err=0;
+
+    switch (hnd->format) {
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+            ystride = GRALLOC_ALIGN(hnd->width, 16);
+            ycbcr->y  = (void*)hnd->base;
+            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height);
+            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height + 1);
+            ycbcr->ystride = ystride;
+            ycbcr->cstride = ystride;
+            ycbcr->chroma_step = 2;
+            memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+            ystride = GRALLOC_ALIGN(hnd->width, 16);
+            ycbcr->y  = (void*)hnd->base;
+            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height);
+            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height + 1);
+            ycbcr->ystride = ystride;
+            ycbcr->cstride = ystride;
+            ycbcr->chroma_step = 2;
+            memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
+            break;
+        default:
+            ALOGD("%s: Invalid format passed: 0x%x", __FUNCTION__,
+                  hnd->format);
+            err = -EINVAL;
+    }
+
+    return err;
+}
+
+
+
 static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle)
 {
 	if (private_handle_t::validate(handle) < 0)
@@ -501,6 +549,7 @@ private_module_t::private_module_t()
 	base.registerBuffer = gralloc_register_buffer;
 	base.unregisterBuffer = gralloc_unregister_buffer;
 	base.lock = gralloc_lock;
+	base.lock_ycbcr = gralloc_lock_ycbcr;
 	base.unlock = gralloc_unlock;
 	base.perform = gralloc_perform;
 	INIT_ZERO(base.reserved_proc);

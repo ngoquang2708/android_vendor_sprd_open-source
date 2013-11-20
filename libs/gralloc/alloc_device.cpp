@@ -53,7 +53,6 @@
 #define ION_DEVICE "/dev/ion"
 
 
-#define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
 
 #if GRALLOC_SIMULATE_FAILURES
