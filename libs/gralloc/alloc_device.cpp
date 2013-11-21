@@ -255,12 +255,17 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 
         if((usage & GRALLOC_USAGE_VIDEO_BUFFER)
             ||(usage & GRALLOC_USAGE_CAMERA_BUFFER)
-            ||(usage & GRALLOC_USAGE_OVERLAY_BUFFER)
+
             )
         { 
             ALOGD("in ION_HEAP_CARVEOUT_MASK");
             ion_heap_mask = ION_HEAP_CARVEOUT_MASK;
         }
+	else if(usage & GRALLOC_USAGE_OVERLAY_BUFFER)
+	{
+	    ALOGD("in ION_HEAP_OVERLAY_MASK");
+	    ion_heap_mask = ION_HEAP_CARVEOUT_OVERLAY_MASK;
+	}
         else
         {
             ALOGD("in ION_HEAP_SYSTEM_MASK");
