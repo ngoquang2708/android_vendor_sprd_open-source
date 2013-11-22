@@ -27,7 +27,7 @@
 #include <hardware/hardware.h>
 
 #include "gsp_types_shark.h"
-#include "scale_rotate.h"
+#include "../sc8825/dcam_hal.h"
 
 
 

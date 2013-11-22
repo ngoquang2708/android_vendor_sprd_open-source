@@ -31,6 +31,7 @@
 
 #include "Layer.h"
 #include "GLErro.h"
+#include "OverlayComposer.h"
 
 
 namespace android
@@ -117,9 +118,8 @@ GLfloat mVertices[4][2];
 struct TexCoords texCoord[4];
 
 
-Layer::Layer(struct private_handle_t *h, EGLDisplay display, unsigned int fb_width, unsigned int fb_height)
-    : mPrivH(h), mDisplay(display),
-      mFBWidth(fb_width), mFBHeight(fb_height),
+Layer::Layer(OverlayComposer* composer, struct private_handle_t *h)
+    : mComposer(composer), mPrivH(h),
       mImage(EGL_NO_IMAGE_KHR),
       mTexTarget(GL_TEXTURE_EXTERNAL_OES),
       mTexName(-1U), mTransform(0),
@@ -198,6 +198,8 @@ bool Layer::createTextureImage()
         EGL_NONE
     };
 
+    EGLDisplay mDisplay = eglGetCurrentDisplay();
+
     mImage = eglCreateImageKHR(mDisplay, EGL_NO_CONTEXT,
                                EGL_NATIVE_BUFFER_ANDROID,
                                (EGLClientBuffer)mGFXBuffer->getNativeBuffer(),
@@ -229,6 +231,8 @@ bool Layer::createTextureImage()
 
 void Layer::destroyTextureImage()
 {
+    EGLDisplay mDisplay = eglGetCurrentDisplay();
+
     eglDestroyImageKHR(mDisplay, mImage);
     checkEGLErrors("eglDestroyImageKHR");
     glDeleteTextures(1, &mTexName);
@@ -388,9 +392,10 @@ bool Layer::prepareDrawData()
      *  Here, just Compensate for the loss.
      * */
     int format = buf->getPixelFormat();
-    if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
+    if ((mTransform == 0 ) &&
+        (format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
         format == HAL_PIXEL_FORMAT_YCrCb_420_SP ||
-        format == HAL_PIXEL_FORMAT_YV12)
+        format == HAL_PIXEL_FORMAT_YV12))
     {
         float height = float(mRect->bottom - mRect->top);
         float pixelOffset = 1.0 / height;
@@ -424,10 +429,12 @@ bool Layer::prepareDrawData()
     vertices[6] = (GLfloat)mRV->right;
     vertices[7] = (GLfloat)mRV->top;
 
-    vertices[1] = (GLfloat)mFBHeight - vertices[1];
-    vertices[3] = (GLfloat)mFBHeight - vertices[3];
-    vertices[5] = (GLfloat)mFBHeight - vertices[5];
-    vertices[7] = (GLfloat)mFBHeight - vertices[7];
+    unsigned int fb_height = mComposer->getDisplayPlane()->getHeight();
+
+    vertices[1] = (GLfloat)fb_height - vertices[1];
+    vertices[3] = (GLfloat)fb_height - vertices[3];
+    vertices[5] = (GLfloat)fb_height - vertices[5];
+    vertices[7] = (GLfloat)fb_height - vertices[7];
 
     /*
      * Here, some region from SurfacFlinger have exceeded the screen
@@ -485,22 +492,22 @@ int Layer::draw()
      *  By default, we use Premultiplied Alpha
      * */
     GLenum src = mPremultipliedAlpha ? GL_ONE : GL_SRC_ALPHA;
-    if (mAlpha < 0xFF)
-    {
-        const GLfloat alpha = (GLfloat)mAlpha * (1.0f/255.0f);
-        if (mPremultipliedAlpha)
-        {
-            glColor4f(alpha, alpha, alpha, alpha);
-        }
-        else
-        {
-            glColor4f(1, 1, 1, alpha);
-        }
-        glEnable(GL_BLEND);
-        glBlendFunc(src, GL_ONE_MINUS_SRC_ALPHA);
-        glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    }
-    else
+    //if (mAlpha < 0xFF)
+    //{
+    //    const GLfloat alpha = (GLfloat)mAlpha * (1.0f/255.0f);
+    //    if (mPremultipliedAlpha)
+    //    {
+    //        glColor4f(alpha, alpha, alpha, alpha);
+    //    }
+    //    else
+    //    {
+    //        glColor4f(1, 1, 1, alpha);
+    //    }
+    //    glEnable(GL_BLEND);
+    //    glBlendFunc(src, GL_ONE_MINUS_SRC_ALPHA);
+    //    glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    //}
+    //else
     {
         glColor4f(1, 1, 1, 1);
         glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
@@ -509,6 +516,7 @@ int Layer::draw()
     }
 
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(2, GL_FLOAT, 0, vertices);
     glTexCoordPointer(2, GL_FLOAT, 0, texCoord);
     GL_CHECK(glDrawArrays(GL_TRIANGLE_FAN, 0, mNumVertices));

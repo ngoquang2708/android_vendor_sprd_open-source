@@ -33,31 +33,15 @@
 #ifndef _OVERLAY_NATIVEWINDOW_H_
 #define _OVERLAY_NATIVEWINDOW_H_
 
-#include <binder/MemoryHeapIon.h>
 #include <ui/FramebufferNativeWindow.h>
 #include <ui/ANativeObjectBase.h>
+#include <ui/Fence.h>
 #include "gralloc_priv.h"
 #include "Utility.h"
 
+#include "../SprdPrimaryDisplayDevice/SprdPrimaryPlane.h"
+#include "../SprdPrimaryDisplayDevice/SprdFrameBufferHAL.h"
 
-/* Overlay device info */
-typedef struct
-{
-    int fbfd;
-    unsigned int fb_width;
-    unsigned int fb_height;
-    uint32_t stride;
-
-    uint32_t overlay_phy_addr;
-    void *overlay_v_addr;
-    uint32_t overlay_buf_size;
-
-    private_handle_t *bufHandle_1;
-    private_handle_t *bufHandle_2;
-
-    int overlay_gpu_flag;
-    int overlay_sur_flag;
-} overlayDevice_t;
 
 namespace android {
 // ----------------------------------------------------------------------------
@@ -92,13 +76,16 @@ class OverlayNativeWindow   //: public overlayNativeWindow
         LightRefBase<OverlayNativeWindow> >
 {
 public:
-    OverlayNativeWindow(overlayDevice_t* overlayDev);
+    OverlayNativeWindow(SprdPrimaryPlane *displayPlane);
     ~OverlayNativeWindow();
 
     bool Init();
 
 private:
-    overlayDevice_t* mOverlayDev;
+    SprdPrimaryPlane *mDisplayPlane;
+    unsigned int mWidth;
+    unsigned int mHeight;
+    int mFormat;
     int32_t mNumBuffers;
     int32_t mNumFreeBuffers;
     int32_t mBufferHead;
@@ -114,21 +101,14 @@ private:
     friend class LightRefBase<OverlayNativeWindow>;
 
     static int setSwapInterval(ANativeWindow* window, int interval);
-    static int dequeueBuffer(ANativeWindow* window, ANativeWindowBuffer** buffer);
-    static int lockBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer);
-    static int queueBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer);
+    static int cancelBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer, int fenceFd);
+    static int dequeueBuffer(ANativeWindow* window, ANativeWindowBuffer** buffer, int* fenceFd);
+    //static int lockBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer);
+    static int queueBuffer(ANativeWindow* window, ANativeWindowBuffer* buffer, int fenceFd);
     static int query(const ANativeWindow* window, int what, int* value);
     static int perform(ANativeWindow* window, int operation, ...);
 
-
-
-    private_handle_t *wrapBuffer(unsigned int w, unsigned int h,
-                                 int format, int index);
-
-    void unWrapBuffer(private_handle_t *h);
-
-    uint32_t getBufferPhyAddr(int index);
-    uint32_t getBufferVirAddr(int index);
+    static sp<NativeBuffer> CreateGraphicBuffer(private_handle_t* buffer);
 
     inline unsigned int round_up_to_page_size(unsigned int x)
     {
