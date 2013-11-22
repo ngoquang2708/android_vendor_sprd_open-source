@@ -143,8 +143,8 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
     bool ret = false;
     ret = openDecoder("libomx_m4vh263dec_sw_sprd.so");
     if(ret == false) {
-        mDecoderSwFlag = false;
-        ret = openDecoder("libomx_m4vh263dec_hw_sprd.so");
+        //mDecoderSwFlag = false;
+        //ret = openDecoder("libomx_m4vh263dec_hw_sprd.so");
     }
 
     CHECK_EQ(ret, true);
@@ -1020,7 +1020,7 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
                    NULL);
         }
     }
-
+#if 0
     if(mDecoderSwFlag) {
         if (!((buf_width <= 176 && buf_height <= 144) || (buf_height <= 176 && buf_width <= 144))) {
             mDecoderSwFlag = false;
@@ -1028,7 +1028,7 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
             ret = true;
         }
     }
-
+#endif
     if (buf_width != mWidth || buf_height != mHeight || mChangeToHwDec) {
         ALOGI("%s, %d, mWidth: %d, mHeight: %d", __FUNCTION__, __LINE__, mWidth, mHeight);
         mWidth = buf_width;
@@ -1122,7 +1122,7 @@ int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int width,unsigned int height, uns
     int32 Frm_width_align = ((width + 15) & (~15));
     int32 Frm_height_align = ((height + 15) & (~15));
 
-//    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d", __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align);
+    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d", __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align);
 
     int32 mb_num_x = Frm_width_align/16;
     int32 mb_num_y = Frm_height_align/16;
