@@ -107,32 +107,23 @@ void eng_check_factorymode(void)
     if(fd >= 0){
         ENG_LOG("%s: status=%x\n",__func__, status);
         chmod(ENG_FACOTRYMODE_FILE, 0660);
-        property_get("persist.sys.usb.config", config_property, "");
-        property_get("ro.modem.wcn.enable", modem_enable, "");
+
+
         if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
             sprintf(status_buf, "%s", "1");
             ENG_LOG("%s: modem_enable: %s\n", __FUNCTION__, modem_enable);
-/*          if(strncmp(config_property, USB_CONFIG_VSER_GSER, strlen(USB_CONFIG_VSER_GSER))){
-                property_set("sys.usb.config", USB_CONFIG_VSER_GSER);
-                property_set("persist.sys.usb.config", USB_CONFIG_VSER_GSER);
-            }
-*/
-            for(i = 0;i <5;i++){ //try 5 count
-                property_get("sys.usb.config",usb_config_value,"not_find");
-                if(strcmp(usb_config_value,"not_find") == 0){
-                     usleep(200*1000);
-                     ALOGD("%s: can not find sys.usb.config\n",__FUNCTION__);
-                     continue;
-                }else{
-                     property_set("sys.usb.config","mass_storage,adb,vser,gser");
-                     ALOGD("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
-                    break;
-                }
-           }
-           if(i >=5){
-                 property_set("sys.usb.config","mass_storage,adb,vser,gser");
-                 ALOGD("%s: time out for init.rc set system.usb.config ,we set it as default\n",__FUNCTION__);
-           }
+            do{
+                      property_get("sys.usb.config",usb_config_value,"not_find");
+                      if(strcmp(usb_config_value,"not_find") == 0){
+                              usleep(200*1000);
+                              ENG_LOG("%s: can not find sys.usb.config\n",__FUNCTION__);
+                              continue;
+                       }else{
+                              property_set("sys.usb.config", USB_CONFIG_VSER_GSER);
+                              ENG_LOG("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+                              break;
+                       }
+             }while(1);
         }else {
             sprintf(status_buf, "%s", "0");
         }
