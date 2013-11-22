@@ -13,5 +13,5 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 include $(LOCAL_PATH)/sc8830/Android.mk
 endif
 
-include $(TOP)/vendor/sprd/open-source/libs/video/omx_components/avc_sprd/thumbnail/Android.mk
+include $(TOP)/vendor/sprd/open-source/libs/omx_components/video/m4v_h263_sprd/thumbnail/Android.mk
 

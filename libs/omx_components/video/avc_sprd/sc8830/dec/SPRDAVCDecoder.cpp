@@ -139,7 +139,7 @@ SPRDAVCDecoder::SPRDAVCDecoder(
     ALOGI("Construct SPRDAVCDecoder, this: %0x", (void *)this);
 
     bool ret = false;
-    ret = openDecoder("libomx_avcdec_hw_sprd.so");
+    //ret = openDecoder("libomx_avcdec_hw_sprd.so");
     if(ret == false) {
         ret = openDecoder("libomx_avcdec_sw_sprd.so");
         mDecoderSwFlag = true;
