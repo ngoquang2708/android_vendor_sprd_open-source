@@ -3980,14 +3980,14 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             bool t_enable = false;
             bool w_enalbe = false;
             
-            if(property_get(RO_MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
+            if(property_get(MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
             {
-                MY_TRACE("%s:ro.modem.t.enable",__func__);
+                MY_TRACE("%s:%s",__func__,MODEM_T_ENABLE_PROPERTY);
                 t_enable = true;
             }
-            if(property_get(RO_MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+            if(property_get(MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
             {
-                MY_TRACE("%s:ro.modem.w.enable",__func__);
+                MY_TRACE("%s:%s",__func__,MODEM_W_ENABLE_PROPERTY);
                 w_enalbe = true;
             }
            /* Obtain the modem num */

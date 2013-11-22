@@ -32,8 +32,8 @@
 
 #define AUDIO_XML_PATH "/system/etc/audio_hw.xml"
 
-#define RO_MODEM_T_ENABLE_PROPERTY     "ro.modem.t.enable"
-#define RO_MODEM_W_ENABLE_PROPERTY     "ro.modem.w.enable"
+#define MODEM_T_ENABLE_PROPERTY     "persist.modem.t.enable"
+#define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
 
 
 typedef enum {

@@ -905,15 +905,15 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
     int i=0;
     bool result=false;
     vbc_ctrl_thread_para_t* vbc_ctrl_index = NULL;
-    if(property_get(RO_MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
+    if(property_get(MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
     {
-        MY_TRACE("%s:ro.modem.t.enable",__func__);
+        MY_TRACE("%s:%s", __func__, MODEM_T_ENABLE_PROPERTY);
         t_enable = true;
         s_vbc_pipe_count++;
     }
-    if(property_get(RO_MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+    if(property_get(MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
     {
-        MY_TRACE("%s:ro.modem.w.enable",__func__);
+        MY_TRACE("%s:%s", __func__, MODEM_W_ENABLE_PROPERTY);
         w_enalbe = true;
         s_vbc_pipe_count++;
     }
