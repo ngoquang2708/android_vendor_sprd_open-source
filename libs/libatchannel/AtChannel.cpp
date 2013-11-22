@@ -13,10 +13,10 @@ using namespace android;
 const int MAX_SERVICE_NAME = 100;
 
 #define  MSMS_PHONE_COUNT_PROP             "persist.msms.phone_count"
-#define  MODEM_TD_ENABLE_PROP              "ro.modem.t.enable"
+#define  MODEM_TD_ENABLE_PROP              "persist.modem.t.enable"
 #define  MODEM_TD_ID_PROP                  "ro.modem.t.id"
 #define  MODEM_TD_COUNT_PROP               "ro.modem.t.count"
-#define  MODEM_WCDMA_ENABLE_PROP           "ro.modem.w.enable"
+#define  MODEM_WCDMA_ENABLE_PROP           "persist.modem.w.enable"
 #define  MODEM_WCDMA_ID_PROP               "ro.modem.w.id"
 #define  MODEM_WCDMA_COUNT_PROP            "ro.modem.w.count"
 

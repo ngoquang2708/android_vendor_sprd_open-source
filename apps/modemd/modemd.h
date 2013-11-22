@@ -21,8 +21,8 @@
 #define MODEM_RESET 2
 
 /* indicate which modem is enable */
-#define TD_MODEM_ENABLE	"ro.modem.t.enable"
-#define W_MODEM_ENABLE	"ro.modem.w.enable"
+#define TD_MODEM_ENABLE	"persist.modem.t.enable"
+#define W_MODEM_ENABLE	"persist.modem.w.enable"
 #define WCN_MODEM_ENABLE	"ro.modem.wcn.enable"
 
 /* sim card num property */
