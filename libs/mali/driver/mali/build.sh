@@ -1,1 +1,1 @@
-make MALI_PLATFORM=sc8830 BUILD=debug KDIR=../../../../../../../out/target/product/sp8830ec/obj/KERNEL $1
+make MALI_PLATFORM=scx15 BUILD=debug KDIR=../../../../../../../out/target/product/scx15_sp7715ea/obj/KERNEL $1
