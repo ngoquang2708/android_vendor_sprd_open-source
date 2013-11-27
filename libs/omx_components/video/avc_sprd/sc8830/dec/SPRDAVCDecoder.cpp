@@ -139,7 +139,7 @@ SPRDAVCDecoder::SPRDAVCDecoder(
     ALOGI("Construct SPRDAVCDecoder, this: %0x", (void *)this);
 
     bool ret = false;
-    //ret = openDecoder("libomx_avcdec_hw_sprd.so");
+    ret = openDecoder("libomx_avcdec_hw_sprd.so");
     if(ret == false) {
         ret = openDecoder("libomx_avcdec_sw_sprd.so");
         mDecoderSwFlag = true;
@@ -404,7 +404,7 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalGetParameter(
         if(mDecoderSwFlag) {
             pganbp->nUsage = GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
         } else {
-            pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0 | GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
+            pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER | GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
         }
         ALOGI("internalGetParameter, OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);
         return OMX_ErrorNone;
@@ -756,7 +756,9 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             } else {
                 native_handle_t *pNativeHandle = (native_handle_t *)outHeader->pBuffer;
                 struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-                picPhyAddr = (unsigned int)(private_h->phyaddr);
+                int bufferSize = 0;
+                MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+                pBufCtrl->phyAddr = picPhyAddr;
             }
         }
 

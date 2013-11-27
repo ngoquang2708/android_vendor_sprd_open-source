@@ -143,8 +143,8 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
     bool ret = false;
     ret = openDecoder("libomx_m4vh263dec_sw_sprd.so");
     if(ret == false) {
-        //mDecoderSwFlag = false;
-        //ret = openDecoder("libomx_m4vh263dec_hw_sprd.so");
+        mDecoderSwFlag = false;
+        ret = openDecoder("libomx_m4vh263dec_hw_sprd.so");
     }
 
     CHECK_EQ(ret, true);
@@ -414,7 +414,7 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::internalGetParameter(
         if(mDecoderSwFlag) {
             pganbp->nUsage = GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
         } else {
-            pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+            pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
         }
         ALOGI("internalGetParameter, OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);
         return OMX_ErrorNone;
@@ -825,7 +825,9 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
             } else {
                 native_handle_t *pNativeHandle = (native_handle_t *)outHeader->pBuffer;
                 struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-                picPhyAddr = (unsigned int)(private_h->phyaddr);
+                int bufferSize = 0;
+                MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+                pBufCtrl->phyAddr = picPhyAddr;
             }
         }
         ALOGV("%s, %d, outHeader: 0x%x, pBuffer: 0x%x, phyAddr: 0x%x",__FUNCTION__, __LINE__, outHeader, outHeader->pBuffer, picPhyAddr);
@@ -1020,7 +1022,7 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
                    NULL);
         }
     }
-#if 0
+
     if(mDecoderSwFlag) {
         if (!((buf_width <= 176 && buf_height <= 144) || (buf_height <= 176 && buf_width <= 144))) {
             mDecoderSwFlag = false;
@@ -1028,7 +1030,7 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
             ret = true;
         }
     }
-#endif
+
     if (buf_width != mWidth || buf_height != mHeight || mChangeToHwDec) {
         ALOGI("%s, %d, mWidth: %d, mHeight: %d", __FUNCTION__, __LINE__, mWidth, mHeight);
         mWidth = buf_width;
