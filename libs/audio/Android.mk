@@ -29,13 +29,13 @@ ifeq ($(strip $(BOARD_USES_LINE_CALL)), true)
 LOCAL_CFLAGS += -D_VOICE_CALL_VIA_LINEIN
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-endif
-
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
+LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
+LOCAL_CFLAGS += -D_LPA_IRAM
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
 LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
 LOCAL_CFLAGS += -D_LPA_IRAM
@@ -53,10 +53,14 @@ LOCAL_C_INCLUDES += \
 	vendor/sprd/open-source/libs/libatchannel \
 	vendor/sprd/open-source/libs/audio/DumpData
 	
+	BOARD_EQ_DIR := v1
+
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 	BOARD_EQ_DIR := v2
-else
-	BOARD_EQ_DIR := v1
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+	BOARD_EQ_DIR := v2
 endif
 
 LOCAL_C_INCLUDES += vendor/sprd/open-source/libs/audio/vb_effect/$(BOARD_EQ_DIR)
