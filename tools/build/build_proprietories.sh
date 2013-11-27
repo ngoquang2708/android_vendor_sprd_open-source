@@ -2,8 +2,8 @@
 # This is a build script for an idh package
 #
 
-if [ $# -ne 2 -o "$1" = "-h" ]; then
-	echo "Usage: $0 <board> <outdir>"
+if [ $# -ne 3 -o "$1" = "-h" ]; then
+	echo "Usage: $0 <platform> <board> <outdir>"
 	exit 1
 fi
 
@@ -12,10 +12,20 @@ if [ ! -f Makefile -o ! -f build/core/main.mk ]; then
 	exit 1
 fi
 
-BOARD=$1
-OUTDIR=$2
+TOPDIR=`pwd`
 
-FLIST=`sed -e "s/^/$BOARD\//g" vendor/sprd/proprietories/$BOARD/prop.list`
-cd out/target/product
-tar zcf $OUTDIR/proprietories-$BOARD.tar.gz $FLIST
-cd -
+PLATFORM=$1
+BOARD=$2
+OUTDIR=`readlink -f $3`
+
+cd $TOPDIR/out/target/product
+mkdir -p $PLATFORM
+
+cd $BOARD
+cat $TOPDIR/vendor/sprd/proprietories/$PLATFORM/prop.list | cpio -pdum ../$PLATFORM
+
+cd ..
+tar zcf $OUTDIR/proprietories-$PLATFORM.tar.gz $PLATFORM
+rm -rf $PLATFORM
+
+cd $TOPDIR
