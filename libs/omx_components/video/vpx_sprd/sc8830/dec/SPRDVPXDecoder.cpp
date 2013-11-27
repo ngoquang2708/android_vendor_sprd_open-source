@@ -287,7 +287,7 @@ OMX_ERRORTYPE SPRDVPXDecoder::internalGetParameter(
         GetAndroidNativeBufferUsageParams *pganbp;
 
         pganbp = (GetAndroidNativeBufferUsageParams *)params;
-        pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+        pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
         ALOGI("internalGetParameter, OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);
         return OMX_ErrorNone;
     }
@@ -454,12 +454,15 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         int picPhyAddr = 0;
 
-        {
-            OMX_BUFFERHEADERTYPE *header_ = (OMX_BUFFERHEADERTYPE *)outHeader;
-
-            native_handle_t *pNativeHandle = (native_handle_t *)header_->pBuffer;
+        pBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
+        if(pBufCtrl->phyAddr != 0) {
+            picPhyAddr = pBufCtrl->phyAddr;
+        } else {
+            native_handle_t *pNativeHandle = (native_handle_t *)outHeader->pBuffer;
             struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-            picPhyAddr = (uint32)(private_h->phyaddr);
+            int bufferSize = 0;
+            MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+            pBufCtrl->phyAddr = picPhyAddr;
         }
 
 //    ALOGI("%s, %d, header: %0x, mPictureSize: %d", __FUNCTION__, __LINE__, header_tmp, mPictureSize);
