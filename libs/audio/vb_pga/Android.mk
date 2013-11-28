@@ -19,7 +19,7 @@ include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar -g
 
-LOCAL_C_INCLUDES += vendor/sprd/open-source/apps/engineeringmodel/engcs \
+LOCAL_C_INCLUDES += vendor/sprd/open-source/apps/engmode \
 			external/tinyalsa/include \
 			external/expat/lib
 

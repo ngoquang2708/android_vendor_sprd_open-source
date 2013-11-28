@@ -32,6 +32,8 @@ do
 		}
 	}while(1);
 
+break;
+#if 0		
 	do
 	{
 		if(30 < timeout)
@@ -59,7 +61,6 @@ do
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "%d,%d,%s",ENG_AT_NOHANDLE_CMD,1,NVSYN_CMD);
 	NVITEM_PRINT("NVITEM:engapi_write: %s !!!\n",cmd);
-
 	if(strlen(cmd) != engapi_write(fd, cmd, strlen(cmd))){
 		NVITEM_PRINT("NVITEM: engapi_write : wirte fail !!!\n");
 		engapi_close(fd);
@@ -81,6 +82,7 @@ do
 	close(channel_fd);
 	sleep(1);
 	continue;
+#endif
 }while(1);
 
 }

@@ -22,9 +22,8 @@ endif
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \
-    libutils liblog \
-    libengclient
-
+    libutils liblog
+    
 #ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
 #LOCAL_CFLAGS := -DCONFIG_EMMC
 #endif

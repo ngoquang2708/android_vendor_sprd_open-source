@@ -13,8 +13,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include "engapi.h"
-#include "engat.h"
+//#include "engapi.h"
+//#include "engat.h"
 
 #define LOG_TAG "NVITEM"
 #include <cutils/log.h>
