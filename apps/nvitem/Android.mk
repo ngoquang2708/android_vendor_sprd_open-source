@@ -11,13 +11,8 @@ LOCAL_SRC_FILES:= \
 	nvitem_os.c \
 	nvitem_packet.c \
 	nvitem_server.c \
-	nvitem_sync.c	
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-LOCAL_SRC_FILES += nvitem_channe_spipe.c
-else
-LOCAL_SRC_FILES += nvitem_channel.c
-endif
+	nvitem_sync.c \
+	nvitem_channe_spipe.c
 
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
