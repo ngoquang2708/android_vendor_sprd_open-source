@@ -26,60 +26,49 @@
  **                                   SurfaceFligner composition. It will     *
  **                                   improve system performance.             *
  ******************************************************************************
- ** File: SprdFrameBufferHal.h        DESCRIPTION                             *
- **                                   Open FrameBuffer device.                *
+ ** File: SprdHWLayer.cpp             DESCRIPTION                             *
+ **                                   Mainly responsible for filtering HWLayer*
+ **                                   list, find layers that meet OverlayPlane*
+ **                                   and PrimaryPlane specifications and then*
+ **                                   mark them as HWC_OVERLAY.               *
  ******************************************************************************
  ******************************************************************************
  ** Author:         zhongjun.chen@spreadtrum.com                              *
  *****************************************************************************/
 
-#ifndef _SPRD_FRAME_BUFFER_HAL_H_
-#define _SPRD_FRAME_BUFFER_HAL_H_
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <errno.h>
-
-#include <linux/fb.h>
-#include <hardware/hardware.h>
-#include <hardware/gralloc.h>
-#include <utils/RefBase.h>
-#include <cutils/log.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-
-#include "sprd_fb.h"
-#include "gralloc_priv.h"
-
+#include "SprdHWLayer.h"
 
 using namespace android;
 
-#define HWC_DISPLAY_MASK                  (0x00000000)
-#define HWC_DISPLAY_FRAMEBUFFER_TARGET    (0x00000001)
-#define HWC_DISPLAY_PRIMARY_PLANE         (0x00000010)
-#define HWC_DISPLAY_OVERLAY_PLANE         (0x00000100)
-#define HWC_DISPLAY_OVERLAY_COMPOSER_GPU  (0x00001000)
-#define HWC_DISPLAY_OVERLAY_COMPOSER_GSP  (0x00010000)
+bool SprdHWLayer:: checkRGBLayerFormat()
+{
+    hwc_layer_1_t *layer = mAndroidLayer;
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
-/*
- * FrameBuffer information.
- * */
-typedef struct _FrameBufferInfo {
-    int fbfd;
-    int fb_width;
-    int fb_height;
-    float xdpi;
-    float ydpi;
-    int stride;
-    void *fb_virt_addr;
-    char *pFrontAddr;
-    char *pBackAddr;
-    int format;
-    framebuffer_device_t* fbDev;
-} FrameBufferInfo;
+    if (privateH->format != HAL_PIXEL_FORMAT_RGBA_8888 &&
+        privateH->format != HAL_PIXEL_FORMAT_RGBX_8888 &&
+        privateH->format != HAL_PIXEL_FORMAT_RGB_565)
+    {
+        return false;
+    }
 
-extern int loadFrameBufferHAL(FrameBufferInfo **fbInfo);
-extern void closeFrameBufferHAL(FrameBufferInfo *fbInfo);
+    return true;
+}
 
-#endif
+bool SprdHWLayer:: checkYUVLayerFormat()
+{
+    hwc_layer_1_t *layer = mAndroidLayer;
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+
+    if (privateH->format != HAL_PIXEL_FORMAT_YCbCr_420_SP &&
+        privateH->format != HAL_PIXEL_FORMAT_YCrCb_420_SP &&
+        privateH->format != HAL_PIXEL_FORMAT_YV12)
+    {
+        return false;
+    }
+
+    return true;
+}
+

@@ -148,13 +148,6 @@ int SprdOverlayPlane::checkHWLayer(SprdHWLayer *l)
         return -1;
     }
 
-    if (l->getPlaneType() != PLANE_OVERLAY)
-    {
-        ALOGI("Cannot find PLANE_OVERLAY flag layer");
-        return -1;
-    }
-
-
     return 0;
 }
 

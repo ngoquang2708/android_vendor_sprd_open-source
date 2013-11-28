@@ -231,20 +231,20 @@ bool SprdPrimaryPlane::SetDisplayParameters(hwc_layer_1_t *AndroidLayer)
     return mDirectDisplayFlag;
 }
 
-void SprdPrimaryPlane::display(SprdHWLayer *overlayLayer, SprdHWLayer *primaryLayer, bool FBTargetLayerFlag)
+void SprdPrimaryPlane::display(bool DisplayOverlayPlane, bool DisplayPrimaryPlane, bool DisplayFBTarget)
 {
     int PlaneType = 0;
     struct overlay_display_setting displayContext;
 
     displayContext.display_mode = SPRD_DISPLAY_OVERLAY_ASYNC;
 
-    if (overlayLayer)
+    if (DisplayOverlayPlane)
     {
         PlaneType |= SPRD_LAYERS_IMG;
     }
 
     if (mPlaneDisable == false &&
-        (primaryLayer || FBTargetLayerFlag))
+        (DisplayPrimaryPlane || DisplayFBTarget))
     {
         PlaneType |= SPRD_LAYERS_OSD;
         if (GetDirectDisplay())
@@ -314,13 +314,6 @@ int SprdPrimaryPlane::checkHWLayer(SprdHWLayer *l)
         ALOGE("SprdPrimaryPlane Failed to check the list, SprdHWLayer is NULL");
         return -1;
     }
-
-    if (l->getPlaneType() != PLANE_PRIMARY)
-    {
-        ALOGI("Cannot find PLANE_OVERLAY flag layer");
-        return -1;
-    }
-
 
     return 0;
 }

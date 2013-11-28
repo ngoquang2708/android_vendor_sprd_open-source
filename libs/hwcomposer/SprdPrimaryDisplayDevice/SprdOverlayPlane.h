@@ -40,7 +40,7 @@
 
 #include <cutils/log.h>
 #include "SprdDisplayPlane.h"
-#include "SprdHWLayerList.h"
+#include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 
 using namespace android;

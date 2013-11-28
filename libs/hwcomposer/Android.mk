@@ -30,6 +30,7 @@ LOCAL_SRC_FILES := SprdHWComposer.cpp \
 		   SprdPrimaryDisplayDevice/SprdPrimaryDisplayDevice.cpp \
 		   SprdPrimaryDisplayDevice/SprdVsyncEvent.cpp \
 		   SprdPrimaryDisplayDevice/SprdHWLayerList.cpp \
+		   SprdPrimaryDisplayDevice/SprdHWLayer.cpp \
 		   SprdPrimaryDisplayDevice/SprdOverlayPlane.cpp \
 		   SprdPrimaryDisplayDevice/SprdPrimaryPlane.cpp \
 		   SprdVirtualDisplayDevice/SprdVirtualDisplayDevice.cpp \

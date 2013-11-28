@@ -40,39 +40,9 @@
 #include "SprdHWLayerList.h"
 #include "dump.h"
 
+
 using namespace android;
 
-bool SprdHWLayer:: checkRGBLayerFormat()
-{
-    hwc_layer_1_t *layer = mAndroidLayer;
-    const native_handle_t *pNativeHandle = layer->handle;
-    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
-
-    if (privateH->format != HAL_PIXEL_FORMAT_RGBA_8888 &&
-        privateH->format != HAL_PIXEL_FORMAT_RGBX_8888 &&
-        privateH->format != HAL_PIXEL_FORMAT_RGB_565)
-    {
-        return false;
-    }
-
-    return true;
-}
-
-bool SprdHWLayer:: checkYUVLayerFormat()
-{
-    hwc_layer_1_t *layer = mAndroidLayer;
-    const native_handle_t *pNativeHandle = layer->handle;
-    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
-
-    if (privateH->format != HAL_PIXEL_FORMAT_YCbCr_420_SP &&
-        privateH->format != HAL_PIXEL_FORMAT_YCrCb_420_SP &&
-        privateH->format != HAL_PIXEL_FORMAT_YV12)
-    {
-        return false;
-    }
-
-    return true;
-}
 
 SprdHWLayerList::~SprdHWLayerList()
 {
@@ -80,6 +50,17 @@ SprdHWLayerList::~SprdHWLayerList()
     {
         delete [] mLayerList;
         mLayerList = NULL;
+    }
+
+    if (mOSDLayerList)
+    {
+        delete [] mOSDLayerList;
+        mOSDLayerList = NULL;
+    }
+    if (mVideoLayerList)
+    {
+        delete [] mVideoLayerList;
+        mVideoLayerList = NULL;
     }
 }
 
@@ -134,19 +115,19 @@ bool SprdHWLayerList::IsHWCLayer(hwc_layer_1_t *AndroidLayer)
     return true;
 }
 
-bool SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
+int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
 {
     mLayerCount = 0;
     mRGBLayerCount = 0;
     mYUVLayerCount = 0;
     mOSDLayerCount = 0;
-    mOverlayLayerCount = 0;
+    mVideoLayerCount = 0;
     mRGBLayerFullScreenFlag = false;
 
     if (list == NULL)
     {
         ALOGE("updateGeometry input parameter list is NULL");
-        return false;
+        return -1;
     }
     mList = list;
 
@@ -154,6 +135,18 @@ bool SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     {
         delete [] mLayerList;
         mLayerList = NULL;
+    }
+
+    if (mOSDLayerList)
+    {
+       delete [] mOSDLayerList;
+       mOSDLayerList = NULL;
+    }
+
+    if (mVideoLayerList)
+    {
+        delete [] mVideoLayerList;
+        mVideoLayerList = NULL;
     }
 
     queryDebugFlag(&mDebugFlag);
@@ -168,7 +161,7 @@ bool SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     if (mDisableHWCFlag)
     {
         ALOGI_IF(mDebugFlag, "HWComposer is disabled now ...");
-        return true;
+        return 0;
     }
 
     mLayerCount = list->numHwLayers;
@@ -177,8 +170,28 @@ bool SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     if (mLayerList == NULL)
     {
         ALOGE("Cannot create Layer list");
-        return false;
+        return -1;
     }
+
+    /*
+     *  mOSDLayerList and mVideoLayerList should not include
+     *  FramebufferTarget layer.
+     * */
+    mOSDLayerList = new SprdHWLayer*[mLayerCount - 1];
+    if (mOSDLayerList == NULL)
+    {
+        ALOGE("Cannot create OSD Layer list");
+        return -1;
+    }
+
+    mVideoLayerList = new SprdHWLayer*[mLayerCount - 1];
+    if (mVideoLayerList == NULL)
+    {
+        ALOGE("Cannot create Video Layer list");
+        return -1;
+    }
+
+    mFBLayerCount = mLayerCount - 1;
 
     for (unsigned int i = 0; i < mLayerCount; i++)
     {
@@ -196,85 +209,188 @@ bool SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
         if (layer->compositionType == HWC_FRAMEBUFFER_TARGET)
         {
             ALOGI_IF(mDebugFlag, "HWC_FRAMEBUFFER_TARGET layer, ignore it");
+            mFBTargetLayer = layer;
             continue;
         }
 
+        //layer->compositionType = HWC_FRAMEBUFFER;
         resetOverlayFlag(&(mLayerList[i]));
 
         prepareOSDLayer(&(mLayerList[i]));
 
-        prepareOverlayLayer(&(mLayerList[i]));
+        prepareVideoLayer(&(mLayerList[i]));
 
         setOverlayFlag(&(mLayerList[i]), i);
     }
 
-    return true;
+    return 0;
 }
 
-bool SprdHWLayerList:: revistGeometry(bool *forceOverlayFlag)
+int SprdHWLayerList:: attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverlayPlane *mOverlay, int *DisplayFlag)
+{
+    int displayType = HWC_DISPLAY_MASK;
+
+    if (mPrimary == NULL || mOverlay == NULL || DisplayFlag == NULL)
+    {
+        ALOGE("attachToDisplayPlane: Input parameters is NULL");
+        return -1;
+    }
+
+    revistGeometry(DisplayFlag);
+
+    /*
+     *  At present, each SprdDisplayPlane only only can handle one
+     *  HWC layer.
+     *  According to Android Framework definition, the smaller z-order
+     *  layer is in the bottom layer list.
+     *  The application layer is in the bottom layer list.
+     *  Here, we forcibly attach the bottom layer to SprdDisplayPlane.
+     * */
+#define DEFAULT_ATTACH_LAYER 0
+
+    bool cond = false;
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+    cond = mOSDLayerCount > 0;
+#else
+    cond = mOSDLayerCount > 0 && mVideoLayerCount > 0;
+#endif
+    if (cond)
+    {
+        bool DirectDisplay = false;
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+        DirectDisplay = ((mOSDLayerCount == 1) && (mVideoLayerCount == 0));
+#endif
+        /*
+         *  At present, we disable the Direct Display OSD layer first
+         * */
+        SprdHWLayer *sprdLayer = mOSDLayerList[DEFAULT_ATTACH_LAYER];
+        if (sprdLayer && sprdLayer->InitCheck())
+        {
+            mPrimary->AttachPrimaryLayer(sprdLayer, DirectDisplay);
+            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdPrimaryDisplayPlane",
+                     sprdLayer->getLayerFormat());
+
+            displayType |= HWC_DISPLAY_PRIMARY_PLANE;
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "Attach layer to SprdPrimaryPlane failed");
+            displayType &= ~HWC_DISPLAY_PRIMARY_PLANE;
+        }
+    }
+
+    if (mVideoLayerCount > 0)
+    {
+        SprdHWLayer *sprdLayer = mVideoLayerList[DEFAULT_ATTACH_LAYER];
+
+        if (sprdLayer && sprdLayer->InitCheck())
+        {
+            mOverlay->AttachOverlayLayer(sprdLayer);
+            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdOverlayPlane",
+                     sprdLayer->getLayerFormat());
+
+            displayType |= HWC_DISPLAY_OVERLAY_PLANE;
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "Attach layer to SprdOverlayPlane failed");
+
+            displayType &= ~HWC_DISPLAY_OVERLAY_PLANE;
+        }
+    }
+
+    if (*DisplayFlag & HWC_DISPLAY_OVERLAY_COMPOSER_GPU)
+    {
+        displayType &= ~(HWC_DISPLAY_PRIMARY_PLANE | HWC_DISPLAY_OVERLAY_PLANE);
+    }
+    else if (mFBTargetLayer &&
+             mOSDLayerCount <= 1 &&
+             mVideoLayerCount <= 0)
+    {
+        //mPrimary->AttachFrameBufferTargetLayer(mFBTargetLayer);
+        ALOGI_IF(mDebugFlag, "Attach Framebuffer Target layer");
+
+        displayType |= (0x1) & HWC_DISPLAY_FRAMEBUFFER_TARGET;
+    }
+    else
+    {
+        displayType &= ~HWC_DISPLAY_FRAMEBUFFER_TARGET;
+    }
+
+    *DisplayFlag |= displayType;
+
+    return 0;
+}
+
+int SprdHWLayerList:: revistGeometry(int *DisplayFlag)
 {
     SprdHWLayer *YUVLayer = NULL;
     SprdHWLayer *RGBLayer = NULL;
     int YUVIndex = 0;
     int RGBIndex = 0;
-    int FBLayerCount = 0;
-    int LayerCount = mLayerCount;
+    int i = -1;
     bool postProcessVideoCond = false;
     mSkipLayerFlag = false;
+    int LayerCount = mLayerCount;
 
     if (mDisableHWCFlag)
     {
-        return true;
+        return 0;
     }
 
-    if (mLayerList == NULL || forceOverlayFlag == NULL)
+    /*
+     *  revist Overlay layer geometry.
+     * */
+    int VideoLayerCount = mVideoLayerCount;
+
+    for (i = 0; i < VideoLayerCount; i++)
     {
-        ALOGE("revistGeometry: Key parameters are NULL");
-        return false;
-    }
-
-    for (int i = 0; i < LayerCount; i++)
-    {
-        hwc_layer_1_t *layer = mLayerList[i].getAndroidLayer();
-
-        mSkipLayerFlag = !(IsHWCLayer(layer));
-        if (mSkipLayerFlag)
-        {
-            FBLayerCount++;
-            continue;
-        }
-
-        if (layer->compositionType == HWC_FRAMEBUFFER_TARGET)
+        if (!(mVideoLayerList[i]->InitCheck()))
         {
             continue;
         }
 
-        if (mLayerList[i].getPlaneType() == PLANE_OVERLAY)
+        /*
+         *  Our Display Controller cannot handle 2 or more than 2 video layers
+         *  at the same time.
+         * */
+        if (mVideoLayerCount > 1)
         {
-            YUVLayer = &(mLayerList[i]);
-            YUVIndex = i;
+            resetOverlayFlag(mVideoLayerList[i]);
+            mFBLayerCount++;
+            continue;
         }
-        else if (mLayerList[i].getPlaneType() == PLANE_PRIMARY)
-        {
-            RGBLayer = &(mLayerList[i]);
-            RGBIndex = i;
 
-            /*
-             *  At present, the HWComposer cannot deal with 2 or more than 2 RGB layer.
-             *  So, when found RGB layer count > 1, just switch back to SurfaceFlinger
-             *  composer.
-             * */
-             if (mOSDLayerCount > 1)
-             {
-                 resetOverlayFlag(RGBLayer);
-                 RGBLayer = NULL;
-                 FBLayerCount++;
-             }
-        }
-        else if (mLayerList[i].getPlaneType() == PLANE_FRAMEBUFFER)
+        YUVLayer = mVideoLayerList[i];
+        YUVIndex = YUVLayer->getLayerIndex();
+    }
+
+    /*
+     *  revist OSD layer geometry.
+     * */
+    int OSDLayerCount = mOSDLayerCount;
+
+    for (i = 0; i < OSDLayerCount; i++)
+    {
+        if (!(mOSDLayerList[i]->InitCheck()))
         {
-            FBLayerCount++;
+            continue;
         }
+
+        /*
+         *  At present, the HWComposer cannot handle 2 or more than 2 RGB layer.
+         *  So, when found RGB layer count > 1, just switch back to SurfaceFlinger.
+         * */
+        if (/*mOSDLayerCount > 1 ||*/YUVLayer == NULL)
+        {
+            resetOverlayFlag(mOSDLayerList[i]);
+            mFBLayerCount++;
+            ALOGI_IF(mDebugFlag , "no video layer, abandon osd overlay");
+            continue;
+        }
+
+        RGBLayer = mOSDLayerList[i];
+        RGBIndex = RGBLayer->getLayerIndex();
     }
 
 #ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
@@ -303,21 +419,13 @@ bool SprdHWLayerList:: revistGeometry(bool *forceOverlayFlag)
             goto Overlay;
         }
     }
-    else if (RGBLayer)
-    {
-        resetOverlayFlag(RGBLayer);
-        FBLayerCount++;
-        RGBLayer = NULL;
-        ALOGI_IF(mDebugFlag , "no video layer, abandon osd overlay");
-    }
 
 Overlay:
-    *forceOverlayFlag = false;
 
 #ifdef OVERLAY_COMPOSER_GPU
     postProcessVideoCond = (YUVLayer /*&& (RGBLayer || FBLayerCount > 0)*/);
 #else
-    postProcessVideoCond = (YUVLayer && FBLayerCount > 0);
+    postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
 #endif
 
     if (postProcessVideoCond)
@@ -327,22 +435,24 @@ Overlay:
         if (RGBLayer)
         {
             resetOverlayFlag(RGBLayer);
-            FBLayerCount++;
+            mFBLayerCount++;
         }
-        FBLayerCount++;
+        mFBLayerCount++;
 #else
-        revistOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &FBLayerCount, forceOverlayFlag);
+        revistOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
+    }
 #endif
     }
 
-    ALOGI_IF(mDebugFlag, "revistGeometry total layer count: %d, Framebuffer layer count: %d", mLayerCount, FBLayerCount);
+    ALOGI_IF(mDebugFlag, "Total layer count: %d, Framebuffer layer count: %d, OSD layer count:%d, video layer count:%d", 
+            (mLayerCount - 1), mFBLayerCount, mOSDLayerCount, mVideoLayerCount);
 
     YUVLayer = NULL;
     RGBLayer = NULL;
 
-    return true;
-}
 
+    return 0;
+}
 
 void SprdHWLayerList:: ClearFrameBuffer(hwc_layer_1_t *l, unsigned int index)
 {
@@ -354,29 +464,33 @@ void SprdHWLayerList:: ClearFrameBuffer(hwc_layer_1_t *l, unsigned int index)
     {
         l->hints &= ~HWC_HINT_CLEAR_FB;
     }
-
 }
 
 void SprdHWLayerList:: setOverlayFlag(SprdHWLayer *l, unsigned int index)
 {
     hwc_layer_1_t *layer = l->getAndroidLayer();
 
-    if (l->getLayerType() == LAYER_OSD)
+    switch (l->getLayerType())
     {
-        forceOverlay(l);
-        l->setPlaneType(PLANE_PRIMARY);
-        ClearFrameBuffer(layer, index);
+        case LAYER_OSD:
+            l->setSprdLayerIndex(mOSDLayerCount);
+            mOSDLayerList[mOSDLayerCount] = l;
+            mOSDLayerCount++;
+            forceOverlay(l);
+            ClearFrameBuffer(layer, index);
+            break;
+        case LAYER_OVERLAY:
+            l->setSprdLayerIndex(mVideoLayerCount);
+            mVideoLayerList[mVideoLayerCount] = l;
+            mVideoLayerCount++;
+            forceOverlay(l);
+            ClearFrameBuffer(layer, index);
+            break;
+        default:
+            break;
     }
-    else if (l->getLayerType() == LAYER_OVERLAY)
-    {
-        forceOverlay(l);
-        l->setPlaneType(PLANE_OVERLAY);
-        ClearFrameBuffer(layer, index);
-    }
-    else
-    {
-        l->setPlaneType(PLANE_FRAMEBUFFER);
-    }
+
+    l->setLayerIndex(index);
 }
 
 void SprdHWLayerList:: forceOverlay(SprdHWLayer *l)
@@ -389,6 +503,7 @@ void SprdHWLayerList:: forceOverlay(SprdHWLayer *l)
 
     hwc_layer_1_t *layer = l->getAndroidLayer();
     layer->compositionType = HWC_OVERLAY;
+
 }
 
 void SprdHWLayerList:: resetOverlayFlag(SprdHWLayer *l)
@@ -401,10 +516,29 @@ void SprdHWLayerList:: resetOverlayFlag(SprdHWLayer *l)
 
     hwc_layer_1_t *layer = l->getAndroidLayer();
     layer->compositionType = HWC_FRAMEBUFFER;
-    l->setPlaneType(PLANE_FRAMEBUFFER);
+    int index = l->getSprdLayerIndex();
+
+    if (index < 0)
+    {
+        return;
+    }
+
+    switch (l->getLayerType())
+    {
+        case LAYER_OSD:
+            mOSDLayerList[index] = NULL;
+            mOSDLayerCount--;
+            break;
+        case LAYER_OVERLAY:
+            mVideoLayerList[index] = NULL;
+            mVideoLayerCount--;
+            break;
+        default:
+            return;
+    }
 }
 
-bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
+int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 {
     unsigned int srcWidth;
     unsigned int srcHeight;
@@ -419,13 +553,14 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
     if (privateH == NULL)
     {
-        return false;
+        ALOGI_IF(mDebugFlag, "layer handle is NULL");
+        return -1;
     }
 
     if (!(l->checkRGBLayerFormat()))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer NOT RGB format layer Line:%d", __LINE__);
-        return false;
+        return 0;
     }
 
     mRGBLayerCount++;
@@ -437,14 +572,14 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
-        return false;
+        return 0;
     }
 #endif
 #else
     if ((layer->transform != 0) || !(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
-        return false;
+        return 0;
     }
 #endif
 
@@ -452,7 +587,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         ((layer->transform & HAL_TRANSFORM_ROT_90) != HAL_TRANSFORM_ROT_90))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer not support the kind of rotation L%d", __LINE__);
-        return false;
+        return 0;
     }
     else if (layer->transform == 0)
     {
@@ -460,7 +595,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             || ((unsigned int)privateH->height != mFBHeight))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not full-screen");
-            return false;
+            return 0;
         }
 
 #ifndef _DMA_COPY_OSD_LAYER
@@ -468,7 +603,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not physical address %d", __LINE__);
-            return false;
+            return 0;
         }
 #endif
 #endif
@@ -481,7 +616,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     )
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
-        return false;
+        return 0;
     }
 
     srcRect->x = MAX(layer->sourceCrop.left, 0);
@@ -515,7 +650,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     if ((srcWidth != FBRect->w) || (srcHeight != FBRect->h))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer NOT full-screen L%d", __LINE__);
-        return true;
+        return 0;
     }
 
     if ((srcRect->x != 0) || (srcRect->y != 0))
@@ -527,7 +662,7 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     if ((FBRect->w != mFBWidth) || (FBRect->h != mFBHeight))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now L%d", __LINE__);
-        return false;
+        return 0;
     }
 
     mRGBLayerFullScreenFlag = true;
@@ -538,12 +673,12 @@ bool SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
     l->setLayerType(LAYER_OSD);
 
-    mOSDLayerCount++;
+    mFBLayerCount--;
 
-    return true;
+    return 0;
 }
 
-bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
+int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 {
     int srcWidth;
     int srcHeight;
@@ -561,13 +696,14 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
 
     if (privateH == NULL)
     {
-        return false;
+        ALOGI_IF(mDebugFlag, "layer handle is NULL");
+        return -1;
     }
 
     if (!(l->checkYUVLayerFormat()))
     {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,color format:0x%08x,ret 0", __LINE__, privateH->format);
-        return false;
+        return 0;
     }
 
     l->setLayerFormat(privateH->format);
@@ -578,20 +714,20 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
     if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
         || (privateH->flags & private_handle_t::PRIV_FLAGS_NOT_OVERLAY)) {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
-        return false;
+        return 0;
     }
 #endif
 
     if(layer->blending != HWC_BLENDING_NONE)
     {
        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,blend:0x%08x,ret 0", __LINE__, layer->blending);
-        return false;
+        return 0;
     }
 #ifndef PROCESS_VIDEO_USE_GSP
     if(layer->transform == HAL_TRANSFORM_FLIP_V)
     {
        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
-        return false;
+        return 0;
     }
 
     if((layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_H)) || (layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_V)))
@@ -674,7 +810,7 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
        FBRect->w > 960 || FBRect->h > 960)
     { //dcam scaling > 960 should use slice mode
         ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam scaling > 960 should use slice mode! L%d",__LINE__);
-        return false;
+        return 0;
     }
 #else
     if(srcRect->w < 4
@@ -684,7 +820,7 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
        || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
        || FBRect->h > mFBHeight) {
        ALOGI_IF(mDebugFlag,"prepareOverlayLayer, gsp,return 0, L%d",__LINE__);
-        return false;
+        return 0;
     }
 
 #endif
@@ -707,14 +843,14 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
        4 * srcHeight < destHeight || srcHeight > 4 * destHeight)
     { //dcam support 1/4-4 scaling
         ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam support 1/4-4 scaling! L%d",__LINE__);
-        return false;
+        return 0;
     }
 #else
     if(4 * srcWidth < destWidth || srcWidth > 16 * destWidth ||
        4 * srcHeight < destHeight || srcHeight > 16 * destHeight)
     { //gsp support [1/16-4] scaling
         ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam support 1/4-4 scaling! L%d",__LINE__);
-        return false;
+        return 0;
     }
 
     //added for Bug 181381
@@ -722,7 +858,7 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
        || ((srcWidth > destWidth) && (srcHeight < destHeight)))
     { //gsp support [1/16-4] scaling
         ALOGI_IF(mDebugFlag,"prepareOverlayLayer, gsp not support one direction scaling down while the other scaling up! L%d",__LINE__);
-        return false;
+        return 0;
     }
 #endif
 
@@ -730,24 +866,23 @@ bool SprdHWLayerList:: prepareOverlayLayer(SprdHWLayer *l)
     prepareOverlayComposerLayer(l);
 #endif
 
-    mOverlayLayerCount++;
-
     l->setLayerType(LAYER_OVERLAY);
 
+    mFBLayerCount--;
 
-    return true;
+    return 0;
 
 }
 
 #ifdef OVERLAY_COMPOSER_GPU
-bool SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
+int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
 {
     hwc_layer_1_t *layer = l->getAndroidLayer();
 
     if (layer == NULL)
     {
         ALOGE("prepareOverlayComposerLayer input layer is NULL");
-        return false;
+        return -1;
     }
 
     if (layer->displayFrame.left < 0 ||
@@ -760,18 +895,25 @@ bool SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
         mSkipLayerFlag = true;
     }
 
-    return true;
+    return 0;
 }
 
-bool SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, bool *forceOverlayFlag)
+int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag)
 {
+    int displayType = HWC_DISPLAY_MASK;
     /*
      *  At present, OverlayComposer cannot handle 2 or more than 2 YUV layers.
      *  And OverlayComposer also cannot handle cropped RGB layer.
      * */
+    if (mYUVLayerCount == 1)
+    {
+        mRGBLayerFullScreenFlag = true;
+    }
+
     if (mYUVLayerCount > 1 || mRGBLayerFullScreenFlag == false)
     {
-        ALOGI_IF(mDebugFlag, "YUVLayerCount > 1 or Find Cropped RGB layer");
+        ALOGI_IF(mDebugFlag, "YUVLayerCount > 1 or Find Cropped RGB layer mYUVLayerCount: %d, mRGBLayerFullScreenFlag: %d", 
+                 mYUVLayerCount, mRGBLayerFullScreenFlag);
         mSkipLayerFlag = true;
     }
 
@@ -782,12 +924,12 @@ bool SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             SprdHWLayer *SprdLayer = &(mLayerList[j]);
             hwc_layer_1_t *l = SprdLayer->getAndroidLayer();
 
-            if (l->compositionType == HWC_FRAMEBUFFER_TARGET)
+            if (l && (l->compositionType == HWC_FRAMEBUFFER_TARGET))
             {
                 continue;
             }
 
-            if (SprdLayer->getPlaneType() == PLANE_FRAMEBUFFER)
+            if (l->compositionType == HWC_FRAMEBUFFER)
             {
                 int format = SprdLayer->getLayerFormat();
                 if (SprdLayer->checkRGBLayerFormat())
@@ -800,10 +942,11 @@ bool SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
                 }
                 ALOGI_IF(mDebugFlag, "Force layer format:%d go into OverlayComposer", format);
                 setOverlayFlag(SprdLayer, j);
+
                 (*FBLayerCount)--;
             }
         }
-        *forceOverlayFlag = true;
+        displayType |= HWC_DISPLAY_OVERLAY_COMPOSER_GPU;
     }
 
 
@@ -826,34 +969,36 @@ bool SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
              (*FBLayerCount)++;
          }
 
-         *forceOverlayFlag = false;
+         displayType &= ~HWC_DISPLAY_OVERLAY_COMPOSER_GPU;
      }
+
+     *DisplayFlag |= displayType;
 
       mSkipLayerFlag = false;
 
-      return true;
+      return 0;
 }
 #endif
 
-bool SprdHWLayerList::checkHWLayerList(hwc_display_contents_1_t* list)
+int SprdHWLayerList::checkHWLayerList(hwc_display_contents_1_t* list)
 {
     if (list == NULL)
     {
         ALOGE("input list is NULL");
-        return false;
+        return -1;
     }
 
     if (list != mList)
     {
         ALOGE("input list has been changed");
-        return false;
+        return -1;
     }
 
     if (list->numHwLayers != mLayerCount)
     {
         ALOGE("The input layer count have been changed");
-        return false;
+        return -1;
     }
 
-    return true;
+    return 0;
 }

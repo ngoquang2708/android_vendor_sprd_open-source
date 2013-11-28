@@ -118,7 +118,7 @@ private:
     sp<SprdVsyncEvent>  mVsyncEvent;
     SprdUtil          *mUtil;
     bool mPostFrameBuffer;
-    bool mForceOverlayFlag;
+    int mHWCDisplayFlag;
     int mDebugFlag;
     int mDumpFlag;
 

@@ -49,7 +49,7 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
      mVsyncEvent(0),
      mUtil(0),
      mPostFrameBuffer(true),
-     mForceOverlayFlag(false),
+     mHWCDisplayFlag(HWC_DISPLAY_MASK),
      mDebugFlag(0),
      mDumpFlag(0)
     {
@@ -177,7 +177,7 @@ int SprdPrimaryDisplayDevice:: getDisplayAttributes(DisplayAttributes *dpyAttrib
 int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 {
     bool ret = false;
-    mForceOverlayFlag = false;
+    mHWCDisplayFlag = HWC_DISPLAY_MASK;
 
     queryDebugFlag(&mDebugFlag);
 
@@ -190,17 +190,17 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
     }
 
     ret = mLayerList->updateGeometry(list);
-    if (ret == false)
+    if (ret != 0)
     {
         ALOGE("(FILE:%s, line:%d, func:%s) updateGeometry failed",
               __FILE__, __LINE__, __func__);
         return -1;
     }
 
-    ret = mLayerList->revistGeometry(&mForceOverlayFlag);
-    if (ret == false)
+    ret = mLayerList->attachToDisplayPlane(mPrimaryPlane, mOverlayPlane, &mHWCDisplayFlag);
+    if (ret !=0)
     {
-        ALOGE("(FILE:%s, line:%d, func:%s) revistGeometry failed",
+        ALOGE("(FILE:%s, line:%d, func:%s) attachToDisplayPlane failed",
               __FILE__, __LINE__, __func__);
         return -1;
     }
@@ -210,11 +210,13 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 
 int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 {
-    bool ret = false;
-    bool DisplayFBTargetLayerFlag = false;
+    int ret = -1;
+    bool DisplayFBTarget = false;
+    bool DisplayPrimaryPlane = false;
+    bool DisplayOverlayPlane = false;
+    bool DisplayOverlayComposerGPU = false;
+    bool DisplayOverlayComposerGSP = false;
     bool DirectDisplayFlag = false;
-    SprdHWLayer *OverlayLayer = NULL;
-    SprdHWLayer *PrimaryLayer = NULL;
     private_handle_t* buffer1 = NULL;
     private_handle_t* buffer2 = NULL;
 
@@ -231,51 +233,52 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
     ALOGI_IF(mDebugFlag, "HWC start commit");
 
-    for (size_t i = 0; i < list->numHwLayers; i++)
+    switch ((mHWCDisplayFlag & ~HWC_DISPLAY_MASK))
     {
-        hwc_layer_1_t *AndroidLayer = &(list->hwLayers[i]);
-
-        if (AndroidLayer && AndroidLayer->compositionType == HWC_OVERLAY)
-        {
-            if (mLayerList->getPlaneType(i) == PLANE_OVERLAY)
-            {
-                OverlayLayer = mLayerList->getSprdLayer(i);
-
-                OverlayLayer->setAndroidLayer(AndroidLayer);
-
-                mOverlayPlane->AttachOverlayLayer(OverlayLayer);
-            }
-            else if (mLayerList->getPlaneType(i) == PLANE_PRIMARY)
-            {
-                bool DirectDisplay = ((mForceOverlayFlag == false)&&
-                                      (list->numHwLayers == 1));
-
-                PrimaryLayer = mLayerList->getSprdLayer(i);
-
-                PrimaryLayer->setAndroidLayer(AndroidLayer);
-
-                mPrimaryPlane->AttachPrimaryLayer(PrimaryLayer, DirectDisplay);
-            }
-        }
-        else if (AndroidLayer && AndroidLayer->compositionType == HWC_FRAMEBUFFER_TARGET
-                 && mForceOverlayFlag == false)
-        {
-            ALOGI_IF(mDebugFlag, "This is HWC_FRAMEBUFFER_TARGET layer");
-
-            //mPrimaryPlane->AttachFramebufferTargetLayer(AndroidLayer);
-
-            //DisplayFBTargetLayerFlag = true;
-
-            FBTargetLayer = AndroidLayer;
-        }
-        AndroidLayer = NULL;
+        case (HWC_DISPLAY_FRAMEBUFFER_TARGET):
+            DisplayFBTarget = true;
+            break;
+        case (HWC_DISPLAY_PRIMARY_PLANE):
+            DisplayPrimaryPlane = true;
+            break;
+        case (HWC_DISPLAY_OVERLAY_PLANE):
+            DisplayOverlayPlane = true;
+            break;
+        case (HWC_DISPLAY_PRIMARY_PLANE |
+              HWC_DISPLAY_OVERLAY_PLANE):
+            DisplayPrimaryPlane = true;
+            DisplayOverlayPlane = true;
+            break;
+        case (HWC_DISPLAY_OVERLAY_COMPOSER_GPU):
+            DisplayOverlayComposerGPU = true;
+            break;
+        case (HWC_DISPLAY_FRAMEBUFFER_TARGET |
+              HWC_DISPLAY_OVERLAY_PLANE):
+            DisplayFBTarget = true;
+            DisplayOverlayPlane = true;
+            break;
+        case (HWC_DISPLAY_OVERLAY_COMPOSER_GSP):
+            DisplayOverlayComposerGSP = true;
+            break;
+        default:
+            ALOGE("Do not support display type: %d", (mHWCDisplayFlag & ~HWC_DISPLAY_MASK));
+            return -1;
     }
+
 
     /*
      *  This is temporary methods for displaying Framebuffer target layer, has some bug in FB HAL.
+     *  ====     start   ================
      * */
-    if (FBTargetLayer && mForceOverlayFlag == false)
+    if (DisplayFBTarget)
     {
+        FBTargetLayer = mLayerList->getFBTargetLayer();
+        if (FBTargetLayer == NULL)
+        {
+            ALOGE("FBTargetLayer is NULL");
+            return -1;
+        }
+
         const native_handle_t *pNativeHandle = FBTargetLayer->handle;
         struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
@@ -285,9 +288,12 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
         goto displayDone;
     }
+    /*
+     *  ==== end ========================
+     * */
 
 #ifdef OVERLAY_COMPOSER_GPU
-    if (mForceOverlayFlag)
+    if (DisplayOverlayComposerGPU)
     {
         ALOGI_IF(mDebugFlag, "Start OverlayComposer composition misson");
         mOverlayComposer->onComposer(list);
@@ -299,7 +305,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     }
 #endif
 
-    if (OverlayLayer != NULL)
+    if (DisplayOverlayPlane)
     {
         mOverlayPlane->dequeueBuffer();
 
@@ -310,17 +316,13 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         mOverlayPlane->disable();
     }
 
-    if (PrimaryLayer != NULL ||
-        DisplayFBTargetLayerFlag)
+    if (DisplayPrimaryPlane)
     {
         mPrimaryPlane->dequeueBuffer();
 
-        if (DisplayFBTargetLayerFlag == false)
-        {
-            buffer2 = mPrimaryPlane->getPlaneBuffer();
+        buffer2 = mPrimaryPlane->getPlaneBuffer();
 
-            DirectDisplayFlag = mPrimaryPlane->GetDirectDisplay();
-        }
+        DirectDisplayFlag = mPrimaryPlane->GetDirectDisplay();
     }
     else
     {
@@ -328,8 +330,22 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     }
 
 
-    if (DirectDisplayFlag == false && DisplayFBTargetLayerFlag == false)
+    if (DisplayOverlayPlane ||
+        DirectDisplayFlag == false)
     {
+        SprdHWLayer *OverlayLayer = NULL;
+        SprdHWLayer *PrimaryLayer = NULL;
+
+        if (DisplayOverlayPlane)
+        {
+            OverlayLayer = mOverlayPlane->getOverlayLayer();
+        }
+
+        if (DirectDisplayFlag == false)
+        {
+            PrimaryLayer = mPrimaryPlane->getPrimaryLayer();
+        }
+
 #ifdef TRANSFORM_USE_DCAM
         mUtil->transformLayer(OverlayLayer, PrimaryLayer, buffer1, buffer2);
 #endif
@@ -344,37 +360,37 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
    if (mOverlayPlane->online())
    {
-       mOverlayPlane->queueBuffer();
+       ret = mOverlayPlane->queueBuffer();
+       if (ret != 0)
+       {
+           ALOGE("OverlayPlane::queueBuffer failed");
+           return -1;
+       }
    }
 
    if (mPrimaryPlane->online())
    {
-       mPrimaryPlane->queueBuffer();
+       ret = mPrimaryPlane->queueBuffer();
+       if (ret != 0)
+       {
+           ALOGE("PrimaryPlane::queueBuffer failed");
+           return -1;
+       }
    }
 
-
-   if (OverlayLayer || PrimaryLayer ||
-       DisplayFBTargetLayerFlag)
+   if (DisplayOverlayPlane || DisplayPrimaryPlane || DisplayFBTarget)
    {
-       mPrimaryPlane->display(OverlayLayer, PrimaryLayer, DisplayFBTargetLayerFlag);
+       mPrimaryPlane->display(DisplayOverlayPlane, DisplayPrimaryPlane, DisplayFBTarget);
    }
 
 
 displayDone:
    queryDumpFlag(&mDumpFlag);
-   if (DisplayFBTargetLayerFlag &&
+   if (DisplayFBTarget &&
        (mDumpFlag & HWCOMPOSER_DUMP_FRAMEBUFFER_FLAG))
    {
        dumpFrameBuffer(mFBInfo->pFrontAddr, "FrameBuffer", mFBInfo->fb_width, mFBInfo->fb_height, mFBInfo->format);
    }
-
-    OverlayLayer = NULL;
-    PrimaryLayer = NULL;
-
-    mForceOverlayFlag = false;
-    DirectDisplayFlag = false;
-
-    DisplayFBTargetLayerFlag = false;
 
     closeAcquireFDs(list);
 

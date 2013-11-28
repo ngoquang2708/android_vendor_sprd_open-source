@@ -26,8 +26,8 @@
  **                                   SurfaceFligner composition. It will     *
  **                                   improve system performance.             *
  ******************************************************************************
- ** File:SprdExternalDisplayDevice.cpp DESCRIPTION                             *
- **                                   Manager External Display device.         *
+ ** File:SprdExternalDisplayDevice.cpp DESCRIPTION                            *
+ **                                   Manager External Display device.        *
  ******************************************************************************
  ******************************************************************************
  ** Author:         zhongjun.chen@spreadtrum.com                              *
