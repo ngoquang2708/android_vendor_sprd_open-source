@@ -91,15 +91,16 @@ static int cali_parse_one_para(char * buf, char gap, int* value)
     return len;
 }
 
-void eng_check_factorymode(void)
+void eng_check_factorymode(int final)
 {
     int ret;
     int fd;
     int status = eng_sql_string2int_get(ENG_TESTMODE);
     char status_buf[8];
-    char config_property[PROPERTY_VALUE_MAX];
-    char modem_enable[PROPERTY_VALUE_MAX];
+    char modem_diag_value[PROPERTY_VALUE_MAX];
     char usb_config_value[PROPERTY_VALUE_MAX];
+    char gser_config[] = {",gser"};
+    int usb_diag_set = 0;
     int i;
 #ifdef USE_BOOT_AT_DIAG
     fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC, 0660);
@@ -107,27 +108,35 @@ void eng_check_factorymode(void)
     if(fd >= 0){
         ENG_LOG("%s: status=%x\n",__func__, status);
         chmod(ENG_FACOTRYMODE_FILE, 0660);
-
-
+        property_get("persist.sys.modem.diag",modem_diag_value,"not_find");
+        ENG_LOG("%s: modem_diag_value: %s\n", __FUNCTION__, modem_diag_value);
         if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
             sprintf(status_buf, "%s", "1");
-            ENG_LOG("%s: modem_enable: %s\n", __FUNCTION__, modem_enable);
-            do{
-                      property_get("sys.usb.config",usb_config_value,"not_find");
-                      if(strcmp(usb_config_value,"not_find") == 0){
-                              usleep(200*1000);
-                              ENG_LOG("%s: can not find sys.usb.config\n",__FUNCTION__);
-                              continue;
-                       }else{
-                              property_set("sys.usb.config", USB_CONFIG_VSER_GSER);
-                              ENG_LOG("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
-                              break;
-                       }
-             }while(1);
+            if(strcmp(modem_diag_value,"not_find") == 0) {
+                usb_diag_set = 1;
+            }
         }else {
             sprintf(status_buf, "%s", "0");
+            if(strcmp(modem_diag_value,"not_find") != 0) {
+                usb_diag_set = 1;
+                memset(gser_config, '\0', sizeof(gser_config));
+            }
         }
 
+        if(usb_diag_set && !final){
+            do{
+                property_get("sys.usb.config",usb_config_value,"not_find");
+                if(strcmp(usb_config_value,"not_find") == 0){
+                    usleep(200*1000);
+                    ENG_LOG("%s: can not find sys.usb.config\n",__FUNCTION__);
+                    continue;
+                }else{
+                    property_set("persist.sys.modem.diag", gser_config);
+                    ENG_LOG("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+                    break;
+                }
+            }while(1);
+        }
         ret = write(fd, status_buf, strlen(status_buf)+1);
         ENG_LOG("%s: write %d bytes to %s",__FUNCTION__, ret, ENG_FACOTRYMODE_FILE);
 
@@ -298,7 +307,7 @@ int main (int argc, char** argv)
         cmdparam.cp_type = run_type;
         // Check factory mode and switch device mode.
         if(ENG_RUN_TYPE_BTWIFI != run_type){
-            eng_check_factorymode();
+            eng_check_factorymode(0);
         }
     }else{
         // Enable usb enum

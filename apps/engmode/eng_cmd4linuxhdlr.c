@@ -701,7 +701,7 @@ int eng_linuxcmd_infactorymode(char *req, char *rsp)
             ENG_LOG("%s: status=%d\n",__FUNCTION__, status);
             if(status==0||status==1) {
                 eng_sql_string2int_set(ENG_TESTMODE, status);
-                eng_check_factorymode();
+                eng_check_factorymode(1);
                 sprintf(rsp, "%s\r\n", SPRDENG_OK);
             } else {
                 sprintf(rsp, "%s\r\n", SPRDENG_ERROR);

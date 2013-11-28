@@ -1002,7 +1002,7 @@ int eng_diag_factorymode(char *buf,int len, char *rsp)
             ENG_LOG("%s: should close the vser,gser when next reboot\n",__FUNCTION__);
         case 0x01:
             eng_sql_string2int_set(ENG_TESTMODE, *pdata);
-            eng_check_factorymode();
+            eng_check_factorymode(1);
             head_ptr->subtype = 0x00;
             break;
         default:
