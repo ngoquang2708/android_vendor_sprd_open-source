@@ -168,7 +168,12 @@ private:
 #ifdef OVERLAY_COMPOSER_GPU
     int prepareOverlayComposerLayer(SprdHWLayer *l);
 
-    int revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag);
+    int revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer,
+                            int LayerCount, int *FBLayerCount, int *DisplayFlag);
+#endif
+
+#ifdef TRANSFORM_USE_DCAM
+    int DCAMTransformPrepare(hwc_layer_1_t *layer, struct sprdRect *srcRect, struct sprdRect *FBRect);
 #endif
 
     bool IsHWCLayer(hwc_layer_1_t *AndroidLayer);

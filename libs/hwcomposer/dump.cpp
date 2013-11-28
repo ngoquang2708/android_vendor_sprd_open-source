@@ -230,6 +230,7 @@ static int getDumpPath(char *pPath)
 void queryDebugFlag(int *debugFlag)
 {
     char value[PROPERTY_VALUE_MAX];
+    static int openFileFlag = 0;
 
     if (debugFlag == NULL)
     {
@@ -243,10 +244,37 @@ void queryDebugFlag(int *debugFlag)
     {
         *debugFlag = 1;
     }
-    else
+
+#define HWC_LOG_PATH "/data/hwc.cfg"
+    if (access(HWC_LOG_PATH, R_OK) != 0)
     {
-        *debugFlag = 0;
+        return;
     }
+
+    FILE *fp = NULL;
+    char * pch;
+    char cfg[100];
+
+    fp = fopen(HWC_LOG_PATH, "r");
+    if (fp != NULL)
+    {
+        if (openFileFlag == 0)
+        {
+            memset(cfg, '\0', 100);
+            fread(cfg, 1, 99, fp);
+            pch = strstr(cfg, "enable");
+            if (pch != NULL)
+            {
+                *debugFlag = 1;
+                openFileFlag = 1;
+            }
+        }
+        else
+        {
+            *debugFlag = 1;
+        }
+    }
+    fclose(fp);
 }
 
 void queryDumpFlag(int *dumpFlag)

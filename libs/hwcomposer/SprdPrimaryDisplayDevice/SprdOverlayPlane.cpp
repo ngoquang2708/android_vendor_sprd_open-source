@@ -104,8 +104,6 @@ int SprdOverlayPlane::queueBuffer()
 
     flush();
 
-    //display();
-
     mFreePlaneCount = 0;
 
     return 0;
