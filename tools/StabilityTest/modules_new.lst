@@ -17,7 +17,7 @@ mbbms_tel
 !ctpcali
 hciconfig hcitool hcidump
 # user build with all the needed libraries
-libengmodeljni libengutils libengclient libeng_wifi_ptest libcalibratejava-jni  libstabilityjni
+libengmodeljni libengutils libeng_wifi_ptest libcalibratejava-jni  libstabilityjni
 libghttp libhwrpc libomadownload libosal
 libmbbms_tel_jni libmbbms libsprddm
 libmtvadapter libmtvservice libcmmb libdtl
