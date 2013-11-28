@@ -966,7 +966,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_EXPOSURE_METERING != id)
 		&& (CAMERA_PARM_SHARPNESS != id)
 		&& (CAMERA_PARAM_ROTATION_CAPTURE != id)
-		&& (CAMERA_PARM_PREVIEW_ENV != id)) {
+		&& (CAMERA_PARM_PREVIEW_ENV != id)
+		&& (CAMERA_PARM_ZOOM_RECT != id)) {
 		return ret;
 	}
 
@@ -1225,6 +1226,7 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_ZOOM:
+		cxt->zoom_mode = (uint32_t)CAMERA_PARM_ZOOM;
 		if (parm != cxt->zoom_level) {
 			CMR_LOGV("Set zoom level %d", parm);
 			cxt->zoom_level = parm;
@@ -1247,7 +1249,42 @@ int camera_set_ctrl(camera_parm_type id,
 			}
 		}
 		break;
-
+	case CAMERA_PARM_ZOOM_RECT:
+		{
+			struct img_rect *rect_ptr = (struct img_rect *)parm;
+			cxt->zoom_mode = (uint32_t)CAMERA_PARM_ZOOM_RECT;
+			if (PNULL == rect_ptr) {
+				CMR_LOGE("set zoom rect is null parameter.");
+				break;
+			}
+			if ((rect_ptr->start_x != cxt->zoom_rect.start_x)
+				|| (rect_ptr->start_y != cxt->zoom_rect.start_y)
+				|| (rect_ptr->width != cxt->zoom_rect.width)
+				|| (rect_ptr->height != cxt->zoom_rect.height)) {
+				memcpy(&cxt->zoom_rect, rect_ptr, sizeof(struct img_rect));
+				if ((rect_ptr->start_x != 0) || (rect_ptr->start_y != 0)) {
+					cxt->zoom_level = 1;
+				}
+				if (CMR_PREVIEW == cxt->preview_status) {
+					if (before_set) {
+						ret = (*before_set)(RESTART_ZOOM_RECT);
+						CMR_RTN_IF_ERR(ret);
+					}
+					skip_mode = IMG_SKIP_HW;
+					if(SCENE_MODE_NIGHT == cxt->cmr_set.scene_mode){
+						skip_number = 3;
+					} else {
+						skip_number = 0;
+					}
+					CMR_RTN_IF_ERR(ret);
+					if (after_set) {
+						ret = (*after_set)(RESTART_ZOOM_RECT, skip_mode, skip_number);
+						CMR_RTN_IF_ERR(ret);
+					}
+				}
+			}
+		}
+		break;
 	case CAMERA_PARM_JPEGCOMP:
 		cxt->jpeg_cxt.quality = parm;
 		break;

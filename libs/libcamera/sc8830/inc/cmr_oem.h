@@ -327,6 +327,8 @@ struct camera_context {
 
 	camera_cb_f_type         camera_af_cb;
 	uint32_t                 zoom_level;
+	uint32_t                 zoom_mode;
+	struct img_rect          zoom_rect;
 	uint32_t                 skip_mode;
 	uint32_t                 skip_num;
 	uint32_t                 pre_frm_cnt;
@@ -387,6 +389,7 @@ struct camera_context {
 	/*for capture*/
 	struct img_size          picture_size;
 	struct img_size          actual_picture_size;
+	struct img_size          actual_picture_size_backup;
 	struct img_size          picture_size_backup;
 	struct img_size          capture_size;
 	struct img_size          cap_orig_size;

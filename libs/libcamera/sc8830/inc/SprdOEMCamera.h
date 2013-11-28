@@ -389,6 +389,7 @@ typedef enum {
 	CAMERA_PARAM_SLOWMOTION,
 	CAMERA_PARAM_ROTATION_CAPTURE,
 	CAMERA_PARM_PREVIEW_ENV,
+	CAMERA_PARM_ZOOM_RECT,//for hal2.0
 	CAMERA_PARM_MAX
 } camera_parm_type;
 
@@ -423,6 +424,14 @@ camera_ret_code_type camera_set_dimensions(uint16_t picture_width,
 					camera_cb_f_type callback,
 					void *client_data,
 					uint32_t can_resize);
+#ifdef SPRD_CAMERA_HAL2_VERSION
+camera_ret_code_type camera_set_preview_dimensions(
+					uint16_t display_width,
+					uint16_t display_height,
+					camera_cb_f_type callback,
+					void *client_data);
+
+#endif
 
 camera_ret_code_type camera_set_encode_properties(camera_encode_properties_type *encode_properties);
 

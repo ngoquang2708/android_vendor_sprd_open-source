@@ -185,6 +185,14 @@ LOCAL_SRC_FILES:= \
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+sc8830like=1
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+sc8830like=1
+endif
+
+ifeq ($(strip $(sc8830like)),1)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsp/sc8830/inc	\
 	$(LOCAL_PATH)/vsp/sc8830/src \
@@ -198,13 +206,13 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/core\
         external/jhead \
         external/sqlite/dist \
+	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
 	$(TOP)/vendor/sprd/open-source/libs/mali/src/ump/include
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
-        sc8830/src/SprdCameraHardwareInterface.cpp \
 	sc8830/src/SprdCameraParameters.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
@@ -265,6 +273,17 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_file_update.c \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL1.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdCameraHardwareInterface.cpp
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSIONG)),HAL2.0)
+LOCAL_SRC_FILES+= \
+	sc8830/src/SprdBaseThread.cpp \
+	sc8830/src/SprdCamera2.c \
+	sc8830/src/SprdCameraHWInterface2.cpp
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
@@ -408,8 +427,8 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
 LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libmorpho_facesolid
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr
+ifeq ($(strip $(sc8830like)),1)
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -434,7 +453,7 @@ include $(BUILD_MULTI_PREBUILT)
 endif
 
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+ifeq ($(strip $(sc8830like)),1)
 
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := sc8830/isp/libisp.so
