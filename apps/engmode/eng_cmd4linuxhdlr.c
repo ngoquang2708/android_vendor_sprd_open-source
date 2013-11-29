@@ -35,7 +35,7 @@
 extern int g_reset;
 extern int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp);
 extern int eng_atdiag_euthdlr(char *buf,int len,char* rsp,int module_index);
-extern void eng_check_factorymode(void);
+extern void eng_check_factorymode(int final);
 extern int turnoff_lcd_backlight(void);
 static unsigned char g_buffer[ENG_BUFFER_SIZE];
 static int eng_linuxcmd_rpoweron(char *req, char *rsp);

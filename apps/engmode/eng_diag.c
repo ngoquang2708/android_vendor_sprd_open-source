@@ -44,7 +44,7 @@ char *at_sipc_devname[] = {
 int g_reset = 0;
 extern int g_run_mode;
 extern AUDIO_TOTAL_T *audio_total;
-extern void eng_check_factorymode(void);
+extern void eng_check_factorymode(int final);
 extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
 extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
 extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,int out_len);
