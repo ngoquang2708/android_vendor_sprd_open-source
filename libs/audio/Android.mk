@@ -31,15 +31,20 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
-LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
 LOCAL_CFLAGS += -D_LPA_IRAM
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
-LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
 LOCAL_CFLAGS += -D_LPA_IRAM
 endif
+
+ifeq ($(strip $(BOARD_USES_SS_VOIP)), true)
+# Default case, Nothing to do.
+else
+LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
+endif
+
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \

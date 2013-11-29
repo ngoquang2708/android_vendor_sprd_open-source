@@ -1829,9 +1829,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     }
 #ifdef VOIP_DSP_PROCESS
     if (((adev->voip_start == 1) && (!(out->devices & AUDIO_DEVICE_OUT_ALL_SCO)))&&(!adev->call_start))
-#else
-    if((adev->voip_start == 1) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO))
-#endif
     {
         if(!out->is_voip ) {
 
@@ -1848,7 +1845,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
             do_output_standby(out);
         }
     }
-
+#endif
     if((adev->mode  != AUDIO_MODE_IN_CALL) && (out->devices & AUDIO_DEVICE_OUT_ALL_SCO)) {
         if(!out->is_bt_sco) {
             ALOGI("bt_sco:out_write_start and do standby");
@@ -2221,7 +2218,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         }
     }
 
-    BLUE_TRACE("[TH], start_input,channels=%d,peroid_size=%d, peroid_count=%d,rate=%d",
+    BLUE_TRACE("start_input,channels=%d,peroid_size=%d, peroid_count=%d,rate=%d",
             in->config.channels, in->config.period_size,
             in->config.period_count, in->config.rate);
 
@@ -2604,13 +2601,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
 #ifdef VOIP_DSP_PROCESS
     if(((adev->voip_start == 1) && (!((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_SCO)))
             &&(!adev->call_start))
-#else
-    if((adev->voip_start == 1) && ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
-#endif
-        {
-            if(!in->is_voip ) {
-                //ALOGE(": in_read sco start  and do standby");
-
+    {
+        if(!in->is_voip ) {
+            //ALOGE(": in_read sco start  and do standby");
             do_input_standby(in);
             adev->voip_state |= VOIP_CAPTURE_STREAM;
             force_standby_for_voip(adev);
@@ -2623,6 +2616,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             do_input_standby( in);
         }
     }
+#endif
     if((adev->mode  != AUDIO_MODE_IN_CALL) &&
             ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
     {
