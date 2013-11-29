@@ -27,7 +27,7 @@
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-#include "graphics.h"
+#include <system/graphics.h>
 #include "gralloc_priv.h"
 #include "gsp_hal.h"
 //#include "scale_rotate.h"
@@ -36,123 +36,6 @@
 static int debugenable = 0;
 
 
-
-static void printCfgInfo(GSP_CONFIG_INFO_T *gsp_cfg_info)
-{
-    ALOGE("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
-    ALOGE( "misc: ahb_clock %d|gsp_clock %d|dithering_en %d|gsp_gap %d\n",
-           gsp_cfg_info->misc_info.ahb_clock,
-           gsp_cfg_info->misc_info.gsp_clock,
-           gsp_cfg_info->misc_info.dithering_en,
-           gsp_cfg_info->misc_info.gsp_gap);
-
-    ALOGE( "L0: format:%d,pitch:%d,clip(x:%d,y:%d,w:%d,h:%d) =rot:%d=> des(x:%d,y:%d,w:%d,h:%d)\n",
-           gsp_cfg_info->layer0_info.img_format,
-           gsp_cfg_info->layer0_info.pitch,
-           gsp_cfg_info->layer0_info.clip_rect.st_x,
-           gsp_cfg_info->layer0_info.clip_rect.st_y,
-           gsp_cfg_info->layer0_info.clip_rect.rect_w,
-           gsp_cfg_info->layer0_info.clip_rect.rect_h,
-           gsp_cfg_info->layer0_info.rot_angle,
-           gsp_cfg_info->layer0_info.des_rect.st_x,
-           gsp_cfg_info->layer0_info.des_rect.st_y,
-           gsp_cfg_info->layer0_info.des_rect.rect_w,
-           gsp_cfg_info->layer0_info.des_rect.rect_h);
-    ALOGE( "L0: alpha:%d,colorkey_en:%d,pallet_en:%d,scaling_en:%d,layer_en:%d,pmargb_en:%d,pmargb_mod:%d\n",
-           gsp_cfg_info->layer0_info.alpha,
-           gsp_cfg_info->layer0_info.colorkey_en,
-           gsp_cfg_info->layer0_info.pallet_en,
-           gsp_cfg_info->layer0_info.scaling_en,
-           gsp_cfg_info->layer0_info.layer_en,
-           gsp_cfg_info->layer0_info.pmargb_en,
-           gsp_cfg_info->layer0_info.pmargb_mod);
-    ALOGE( "L0: col_tap_mode:%d,row_tap_mode:%d,a_swap_mode:%d,rgb_swap_mode:%d,va_word_endn:%d,va_lng_wrd_endn:%d,uv_word_endn:%d,uv_lng_wrd_endn:%d,y_word_endn:%d,y_lng_wrd_endn:%d\n",
-           gsp_cfg_info->layer0_info.col_tap_mode,
-           gsp_cfg_info->layer0_info.row_tap_mode,
-           gsp_cfg_info->layer0_info.endian_mode.a_swap_mode,
-           gsp_cfg_info->layer0_info.endian_mode.rgb_swap_mode,
-           gsp_cfg_info->layer0_info.endian_mode.va_word_endn,
-           gsp_cfg_info->layer0_info.endian_mode.va_lng_wrd_endn,
-           gsp_cfg_info->layer0_info.endian_mode.uv_word_endn,
-           gsp_cfg_info->layer0_info.endian_mode.uv_lng_wrd_endn,
-           gsp_cfg_info->layer0_info.endian_mode.y_word_endn,
-           gsp_cfg_info->layer0_info.endian_mode.y_lng_wrd_endn);
-    ALOGE( "L0: addr_y:0x%08x,addr_uv:0x%08x,addr_v:0x%08x,(grey r:%d,g:%d,b:%d,a:%d),(colorkey r:%d,g:%d,b:%d,a:%d)\n",
-           gsp_cfg_info->layer0_info.src_addr.addr_y,
-           gsp_cfg_info->layer0_info.src_addr.addr_uv,
-           gsp_cfg_info->layer0_info.src_addr.addr_v,
-           gsp_cfg_info->layer0_info.grey.r_val,
-           gsp_cfg_info->layer0_info.grey.g_val,
-           gsp_cfg_info->layer0_info.grey.b_val,
-           gsp_cfg_info->layer0_info.grey.a_val,
-           gsp_cfg_info->layer0_info.colorkey.r_val,
-           gsp_cfg_info->layer0_info.colorkey.g_val,
-           gsp_cfg_info->layer0_info.colorkey.b_val,
-           gsp_cfg_info->layer0_info.colorkey.a_val);
-
-
-    ALOGE( "L1: format:%d,pitch:%d,clip(x:%d,y:%d,w:%d,h:%d) =rot:%d=> des(x:%d,y:%d)\n",
-           gsp_cfg_info->layer1_info.img_format,
-           gsp_cfg_info->layer1_info.pitch,
-           gsp_cfg_info->layer1_info.clip_rect.st_x,
-           gsp_cfg_info->layer1_info.clip_rect.st_y,
-           gsp_cfg_info->layer1_info.clip_rect.rect_w,
-           gsp_cfg_info->layer1_info.clip_rect.rect_h,
-           gsp_cfg_info->layer1_info.rot_angle,
-           gsp_cfg_info->layer1_info.des_pos.pos_pt_x,
-           gsp_cfg_info->layer1_info.des_pos.pos_pt_y);
-    ALOGE( "L1: alpha:%d,colorkey_en:%d,pallet_en:%d,layer_en:%d,pmargb_en:%d,pmargb_mod:%d\n",
-           gsp_cfg_info->layer1_info.alpha,
-           gsp_cfg_info->layer1_info.colorkey_en,
-           gsp_cfg_info->layer1_info.pallet_en,
-           gsp_cfg_info->layer1_info.layer_en,
-           gsp_cfg_info->layer1_info.pmargb_en,
-           gsp_cfg_info->layer1_info.pmargb_mod);
-
-    ALOGE( "L1: col_tap_mode:%d,row_tap_mode:%d,a_swap_mode:%d,rgb_swap_mode:%d,va_word_endn:%d,va_lng_wrd_endn:%d,uv_word_endn:%d,uv_lng_wrd_endn:%d,y_word_endn:%d,y_lng_wrd_endn:%d\n",
-           gsp_cfg_info->layer1_info.col_tap_mode,
-           gsp_cfg_info->layer1_info.row_tap_mode,
-           gsp_cfg_info->layer1_info.endian_mode.a_swap_mode,
-           gsp_cfg_info->layer1_info.endian_mode.rgb_swap_mode,
-           gsp_cfg_info->layer1_info.endian_mode.va_word_endn,
-           gsp_cfg_info->layer1_info.endian_mode.va_lng_wrd_endn,
-           gsp_cfg_info->layer1_info.endian_mode.uv_word_endn,
-           gsp_cfg_info->layer1_info.endian_mode.uv_lng_wrd_endn,
-           gsp_cfg_info->layer1_info.endian_mode.y_word_endn,
-           gsp_cfg_info->layer1_info.endian_mode.y_lng_wrd_endn);
-    ALOGE( "L1: addr_y:0x%08x,addr_uv:0x%08x,addr_v:0x%08x,(grey r:%d,g:%d,b:%d,a:%d),(colorkey r:%d,g:%d,b:%d,a:%d)\n",
-           gsp_cfg_info->layer1_info.src_addr.addr_y,
-           gsp_cfg_info->layer1_info.src_addr.addr_uv,
-           gsp_cfg_info->layer1_info.src_addr.addr_v,
-           gsp_cfg_info->layer1_info.grey.r_val,
-           gsp_cfg_info->layer1_info.grey.g_val,
-           gsp_cfg_info->layer1_info.grey.b_val,
-           gsp_cfg_info->layer1_info.grey.a_val,
-           gsp_cfg_info->layer1_info.colorkey.r_val,
-           gsp_cfg_info->layer1_info.colorkey.g_val,
-           gsp_cfg_info->layer1_info.colorkey.b_val,
-           gsp_cfg_info->layer1_info.colorkey.a_val);
-
-
-    ALOGE( "Ld cfg:fmt:%d|pitch %04d|cmpr8 %d\n",
-           gsp_cfg_info->layer_des_info.img_format,
-           gsp_cfg_info->layer_des_info.pitch,
-           gsp_cfg_info->layer_des_info.compress_r8_en);
-    ALOGE( "Ld Yaddr 0x%08x|Uaddr 0x%08x|Vaddr 0x%08x\n",
-           gsp_cfg_info->layer_des_info.src_addr.addr_y,
-           gsp_cfg_info->layer_des_info.src_addr.addr_uv,
-           gsp_cfg_info->layer_des_info.src_addr.addr_v);
-    ALOGE( "Ld:a_swap_mode:%d,rgb_swap_mode:%d,va_word_endn:%d,va_lng_wrd_endn:%d,uv_word_endn:%d,uv_lng_wrd_endn:%d,y_word_endn:%d,y_lng_wrd_endn:%d\n",
-           gsp_cfg_info->layer_des_info.endian_mode.a_swap_mode,
-           gsp_cfg_info->layer_des_info.endian_mode.rgb_swap_mode,
-           gsp_cfg_info->layer_des_info.endian_mode.va_word_endn,
-           gsp_cfg_info->layer_des_info.endian_mode.va_lng_wrd_endn,
-           gsp_cfg_info->layer_des_info.endian_mode.uv_word_endn,
-           gsp_cfg_info->layer_des_info.endian_mode.uv_lng_wrd_endn,
-           gsp_cfg_info->layer_des_info.endian_mode.y_word_endn,
-           gsp_cfg_info->layer_des_info.endian_mode.y_lng_wrd_endn);
-    ALOGE("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
-}
 static int32_t gsp_hal_layer0_params_check (GSP_LAYER0_CONFIG_INFO_T *layer0_info)
 {
     float coef_factor_w = 0.0;
@@ -684,7 +567,7 @@ int32_t gsp_hal_open(void)
 {
     int32_t gsp_fd = -1;
 
-    gsp_fd = open("/dev/sprd_gsp", O_RDONLY, 0);
+    gsp_fd = open("/dev/sprd_gsp", O_RDWR, 0);
     if (-1 == gsp_fd) {
         ALOGE("open gsp device failed! Line:%d \n", __LINE__);
     }
@@ -826,13 +709,11 @@ int32_t GSP_Proccess(GSP_CONFIG_INFO_T *pgsp_cfg_info)
     ret = gsp_hal_config(gsp_fd,pgsp_cfg_info);
     if(0 != ret) {
         ALOGE("%s:%d,cfg gsp failed \n", __func__, __LINE__);
-        printCfgInfo(pgsp_cfg_info);
         goto exit;
     }
     ret = gsp_hal_trigger(gsp_fd);
     if(0 != ret) {
         ALOGE("%s:%d,trigger gsp failed \n", __func__, __LINE__);
-        printCfgInfo(pgsp_cfg_info);
         goto exit;
     }
 

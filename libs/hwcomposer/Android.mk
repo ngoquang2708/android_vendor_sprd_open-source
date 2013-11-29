@@ -17,39 +17,57 @@ LOCAL_PATH := $(call my-dir)
 
 # HAL module implemenation stored in
 # hw/<OVERLAY_HARDWARE_MODULE_ID>.<ro.product.board>.so
-include $(CLEAR_VARS)
 ifeq ($(strip $(USE_SPRD_HWCOMPOSER)),true)
+
+include $(CLEAR_VARS)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils libUMP libGLESv1_CM libhardware libui
-LOCAL_SRC_FILES := hwcomposer.cpp \
-		   vsync/vsync.cpp \
-                   dump_bmp.cpp
+LOCAL_SRC_FILES := SprdHWComposer.cpp \
+		   SprdPrimaryDisplayDevice/SprdFrameBufferHAL.cpp \
+		   AndroidFence.cpp \
+		   SprdDisplayPlane.cpp \
+		   SprdPrimaryDisplayDevice/SprdPrimaryDisplayDevice.cpp \
+		   SprdPrimaryDisplayDevice/SprdVsyncEvent.cpp \
+		   SprdPrimaryDisplayDevice/SprdHWLayerList.cpp \
+		   SprdPrimaryDisplayDevice/SprdOverlayPlane.cpp \
+		   SprdPrimaryDisplayDevice/SprdPrimaryPlane.cpp \
+		   SprdVirtualDisplayDevice/SprdVirtualDisplayDevice.cpp \
+		   SprdExternalDisplayDevice/SprdExternalDisplayDevice.cpp \
+		   SprdUtil.cpp \
+                   dump.cpp
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../gralloc \
 	$(LOCAL_PATH)/../mali/src/ump/include \
-	$(LOCAL_PATH)/vsync \
-	$(LOCAL_PATH)/android \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
-        $(TOP)/frameworks/native/include/utils \
-	$(TOP)/system/core/include/system
+
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDhwcomposer\"
 LOCAL_CFLAGS += -D_USE_SPRD_HWCOMPOSER -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
+
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+DEVICE_WITH_GSP := true
+endif
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+DEVICE_WITH_GSP := true
+endif
+
+ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8830/inc	
 	#LOCAL_CFLAGS += -DVIDEO_LAYER_USE_RGB
-	# _HWCOMPOSER_USE_GSP : protecting sc8830 code
-	LOCAL_CFLAGS += -D_HWCOMPOSER_USE_GSP
-        LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE
+	# PROCESS_VIDEO_USE_GSP : protecting sc8830 code
+	LOCAL_CFLAGS += -DPROCESS_VIDEO_USE_GSP
+	LOCAL_CFLAGS += -DGSP_OUTPUT_USE_YUV420
+	LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE
 	# LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
+	#
+	# DIRECT_DISPLAY_SINGLE_OSD_LAYER need contiguous physcial address.
+	# At present, this condition cannot be satisfied.
+	# LOCAL_CFLAGS += DIRECT_DISPLAY_SINGLE_OSD_LAYER
 
-HWCOMPOSER_USE_GSP_BLEND := true
-ifeq ($(strip $(HWCOMPOSER_USE_GSP_BLEND)),true)
-	LOCAL_CFLAGS += -D_HWCOMPOSER_USE_GSP_BLEND
 endif
 
-endif
+
 
 # OVERLAY_COMPOSER_GPU_CONFIG: Enable or disable OVERLAY_COMPOSER_GPU
 # Macro, OVERLAY_COMPOSER will do Hardware layer blending and then
@@ -57,8 +75,6 @@ endif
 # If you want to know how OVERLAY_COMPOSER use and work,
 # Please see the OverlayComposer/OverlayComposer.h for more details.
 ifeq ($(strip $(USE_OVERLAY_COMPOSER_GPU)),true)
-
-	LOCAL_CFLAGS += -D_ALLOC_OSD_BUF
 
 	LOCAL_CFLAGS += -DOVERLAY_COMPOSER_GPU
 
@@ -70,9 +86,12 @@ ifeq ($(strip $(USE_OVERLAY_COMPOSER_GPU)),true)
 
 	LOCAL_SRC_FILES += OverlayComposer/Utility.cpp
 
+	LOCAL_SRC_FILES += OverlayComposer/SyncThread.cpp
+
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+	#LOCAL_CFLAGS += -DTRANSFORM_USE_GPU
 	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
 
 	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8825/inc
@@ -81,58 +100,33 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 	LOCAL_CFLAGS += -D_PROC_OSD_WITH_THREAD
 
 	LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
-
-	LOCAL_CFLAGS += -D_ALLOC_OSD_BUF
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
 	LOCAL_SRC_FILES += sc8810/scale_rotate.c
-	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
 endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
 	LOCAL_CFLAGS += -DSCAL_ROT_TMP_BUF
 	LOCAL_SRC_FILES += sc8810/scale_rotate.c
-	LOCAL_CFLAGS += -D_SUPPORT_SYNC_DISP
 	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
 endif
 
 ifeq ($(strip $(USE_GPU_PROCESS_VIDEO)) , true)
-	LOCAL_CFLAGS += -DUSE_GPU_PROCESS_VIDEO
+	LOCAL_CFLAGS += -DTRANSFORM_USE_GPU
 	LOCAL_SRC_FILES += gpu_transform.cpp
 endif
 
 ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
 	LOCAL_CFLAGS += -DVIDEO_LAYER_USE_RGB
 endif
-else #android hwcomposer
-
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libEGL libutils libcutils
-LOCAL_SRC_FILES := vsync/vsync.cpp \
-                   android/hwcomposer.cpp \
-                   dump_bmp.cpp
-LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
-LOCAL_C_INCLUDES := $(TOP)/frameworks/native/include/utils \
-		    $(LOCAL_PATH)/vsync \
-	            $(LOCAL_PATH)/android \
-                    $(LOCAL_PATH)/../gralloc \
-                    $(LOCAL_PATH)/../mali/src/ump/include
-LOCAL_CFLAGS:= -DLOG_TAG=\"hwcomposer\"
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-	LOCAL_CFLAGS += -D_VSYNC_USE_SOFT_TIMER
-endif
-endif
 
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
+
+endif
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 

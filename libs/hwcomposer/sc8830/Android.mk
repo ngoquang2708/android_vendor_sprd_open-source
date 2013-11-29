@@ -18,24 +18,27 @@ LOCAL_PATH:= $(call my-dir)
 # HAL module implemenation stored in
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 
-ifeq ($(TARGET_BOARD_PLATFORM),sc8825)
-include $(CLEAR_VARS)
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+DEVICE_WITH_GSP := true
+endif
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+DEVICE_WITH_GSP := true
+endif
 
+ifeq ($(strip $(DEVICE_WITH_GSP)),true)
+include $(CLEAR_VARS)
 
 LOCAL_MODULE := sprd_gsp.$(TARGET_BOARD_PLATFORM)	
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_SRC_FILES := gsp_hal.cpp
 
-#/home/apuser/work/shark_android2/vendor/sprd/open-source/libs/mali/src/ump/include/ump/ump.h
-MALI_DDK_PATH := vendor/sprd/open-source/libs
-LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/mali/src/ump/include system/core/include/
+#/home/apuser/work/shark_android2/device/sprd/common/libs/mali/src/ump/include/ump/ump.h
+MALI_DDK_PATH := device/sprd/common/libs
+LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/mali/src/ump/include
 LOCAL_C_INCLUDES += \
-$(TOP)/system/core/include/system \
-$(TOP)/vendor/sprd/open-source/libs/gralloc \
-$(TOP)/frameworks/native/include/utils \
-$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
-$(LOCAL_PATH)/../ \
+	$(LOCAL_PATH)/../../gralloc \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
 
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)	

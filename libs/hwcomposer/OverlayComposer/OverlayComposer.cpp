@@ -31,17 +31,20 @@
 #include "OverlayComposer.h"
 #include "GLErro.h"
 #include "Layer.h"
+#include "SyncThread.h"
 
 
 namespace android
 {
 
 
-OverlayComposer::OverlayComposer(overlayDevice_t *dev)
-    : mDev(dev), InitFlag(0), mNumLayer(0),
+OverlayComposer::OverlayComposer(SprdPrimaryPlane *displayPlane)
+    : mDisplayPlane(displayPlane),
+      mClearBuffer(false),
+      mNumLayer(0), InitFlag(0),
       mDisplay(EGL_NO_DISPLAY), mSurface(EGL_NO_SURFACE),
       mContext(EGL_NO_CONTEXT),
-      mConfig(0), mWidth(0), mHeight(0), /*mFormat(0),*/
+      mConfig(0),
       mFlags(0)
 {
 };
@@ -83,6 +86,8 @@ status_t OverlayComposer::readyToRun()
     sem_init(&doneSem, 0, 0);
     sem_init(&displaySem, 0, 0);
 
+    InitSem();
+
     return NO_ERROR;
 }
 
@@ -100,8 +105,11 @@ bool OverlayComposer::threadLoop()
     /* *******************************
      * waiting display
      * *******************************/
-    sem_wait(&displaySem);
-    swapBuffers();
+    if (mClearBuffer == false)
+    {
+        sem_wait(&displaySem);
+        swapBuffers();
+    }
 
     return true;
 }
@@ -134,7 +142,7 @@ status_t OverlayComposer::selectConfigForPixelFormat(
 bool OverlayComposer::initEGL()
 {
 
-    mWindow = new OverlayNativeWindow(mDev);
+    mWindow = new OverlayNativeWindow(mDisplayPlane);
     if (mWindow == NULL)
     {
         ALOGE("Create Native Window failed, NO mem");
@@ -197,8 +205,6 @@ bool OverlayComposer::initEGL()
 
     surface = eglCreateWindowSurface(display, config, mWindow.get(), NULL);
     checkEGLErrors("eglCreateWindowSurface");
-    eglQuerySurface(display, surface, EGL_WIDTH,  &mWidth);
-    eglQuerySurface(display, surface, EGL_HEIGHT, &mHeight);
 
     //if (mFlags & PARTIAL_UPDATES) {
     //    // if we have partial updates, we definitely don't need to
@@ -235,11 +241,11 @@ bool OverlayComposer::initEGL()
      */
 
     result = eglMakeCurrent(display, surface, surface, context);
+    checkEGLErrors("eglMakeCurrent");
     if (!result) {
         ALOGE("Couldn't create a working GLES context. check logs. exiting...");
         return false;
     }
-    checkEGLErrors("eglMakeCurrent");
 
     //GLExtensions& extensions(GLExtensions::getInstance());
     //extensions.initWithGLStrings(
@@ -320,11 +326,14 @@ bool OverlayComposer::initOpenGLES()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0,
             GL_RGB, GL_UNSIGNED_SHORT_5_6_5, protTexData);
 
-    glViewport(0, 0, mDev->fb_width, mDev->fb_height);
+    unsigned int mFBWidth  = mDisplayPlane->getWidth();
+    unsigned int mFBHeight = mDisplayPlane->getHeight();
+
+    glViewport(0, 0, mFBWidth, mFBHeight);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     // put the origin in the left-bottom corner
-    glOrthof(0, mDev->fb_width, 0, mDev->fb_height, 0, 1);
+    glOrthof(0, mFBWidth, 0, mFBHeight, 0, 1);
     // l=0, r=w ; b=0, t=h
 
     return true;
@@ -336,7 +345,7 @@ void OverlayComposer::deInitOpenGLES()
     glDeleteTextures(1, &mProtectedTexName);
 }
 
-void OverlayComposer::caculateLayerRect(hwc_layer_t  *l, struct LayerRect *rect, struct LayerRect *rV)
+void OverlayComposer::caculateLayerRect(hwc_layer_1_t  *l, struct LayerRect *rect, struct LayerRect *rV)
 {
     if (l == NULL || rect == NULL)
     {
@@ -366,7 +375,7 @@ void OverlayComposer::caculateLayerRect(hwc_layer_t  *l, struct LayerRect *rect,
     }
     else if (private_h->format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
              private_h->format == HAL_PIXEL_FORMAT_YCrCb_420_SP ||
-             private_h->format != HAL_PIXEL_FORMAT_YV12)
+             private_h->format == HAL_PIXEL_FORMAT_YV12)
     {
         rect->left = MAX(l->sourceCrop.left, 0);
         rect->top = MAX(l->sourceCrop.top, 0);
@@ -380,15 +389,40 @@ void OverlayComposer::caculateLayerRect(hwc_layer_t  *l, struct LayerRect *rect,
     rV->bottom = l->displayFrame.bottom;
 }
 
+void OverlayComposer::ClearOverlayComposerBuffer()
+{
+    static GLfloat vertices[] = {
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f,  0.0f,
+        0.0f,  0.0f
+    };
+
+    glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+    glDisable(GL_TEXTURE_EXTERNAL_OES);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_BLEND);
+
+    glVertexPointer(2, GL_FLOAT, 0, vertices);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
 
 int OverlayComposer::composerHWLayers()
 {
     int status = -1;
     uint32_t numLayer = 0;
 
+    if (mClearBuffer)
+    {
+        ClearOverlayComposerBuffer();
+        return 0;
+    }
+
     if (mList == NULL)
     {
         ALOGE("The HWC List is NULL");
+        status = -1;
         return status;
     }
 
@@ -396,13 +430,25 @@ int OverlayComposer::composerHWLayers()
     if (numLayer <= 0)
     {
         ALOGE("Cannot find HWC layers");
+        status = -1;
         return status;
     }
 
 
+    /*
+     *  Window Manager will do the Rotation Animation,
+     *  here skip the Rotation Animation frame.
+     * */
+    //if ((mList->flags & HWC_ANIMATION_ROTATION_END) != HWC_ANIMATION_ROTATION_END)
+    //{
+    //    //ALOGI("Skip Rotation Animation");
+    //    status = 0;
+    //    return status;
+    //}
+
     for (unsigned int i = 0; i < mList->numHwLayers; i++)
     {
-        hwc_layer_t  *pL = &(mList->hwLayers[i]);
+        hwc_layer_1_t  *pL = &(mList->hwLayers[i]);
         if (pL == NULL)
         {
             numLayer--;
@@ -427,10 +473,11 @@ int OverlayComposer::composerHWLayers()
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
 
-        Layer *L = new Layer(pH, mDisplay, mDev->fb_width, mDev->fb_height);
+        Layer *L = new Layer(this, pH);
         if (L == NULL)
         {
             ALOGE("The %dth Layer object is NULL", numLayer);
+            status = -1;
             return status;
         }
 
@@ -442,7 +489,7 @@ int OverlayComposer::composerHWLayers()
 
         L->setLayerTransform(pL->transform);
         L->setLayerRect(&r, &rV);
-        L->setLayerAlpha(pL->alpha);
+        //L->setLayerAlpha(pL->alpha);
 
         L->draw();
 
@@ -459,7 +506,7 @@ int OverlayComposer::composerHWLayers()
     return status;
 }
 
-bool OverlayComposer::onComposer(hwc_layer_list_t* l)
+bool OverlayComposer::onComposer(hwc_display_contents_1_t* l)
 {
     if (l == NULL)
     {
@@ -483,14 +530,33 @@ bool OverlayComposer::onComposer(hwc_layer_list_t* l)
     return true;
 }
 
+void OverlayComposer::onClearOverlayComposerBuffer()
+{
+    mClearBuffer = true;
+
+    sem_post(&cmdSem);
+
+    sem_wait(&doneSem);
+
+    mClearBuffer = false;
+}
+
 void OverlayComposer::onDisplay()
 {
+    exhaustAllSem();
     sem_post(&displaySem);
+
+    /*
+     *  Sync thread.
+     *  return until OverlayNativeWindow::queueBuffer finished
+     * */
+    semWaitTimedOut(1000);
 }
 
 bool OverlayComposer::swapBuffers()
 {
     eglSwapBuffers(mDisplay, mSurface);
+
 
     /* delete some layer object from list
      * Now, these object are useless

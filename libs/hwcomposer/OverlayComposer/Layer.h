@@ -51,12 +51,12 @@
 namespace android
 {
 
-
+class OverlayComposer;
 
 class Layer
 {
 public:
-    Layer(struct private_handle_t *h, EGLDisplay display, unsigned int fb_width, unsigned int fb_height);
+    Layer(OverlayComposer* composer, struct private_handle_t *h);
     ~Layer();
 
     /* Hardware Layer draw function */
@@ -69,10 +69,8 @@ public:
     void setLayerAlpha(float alpha);
 
 private:
+    OverlayComposer* mComposer;
     struct private_handle_t *mPrivH;
-    EGLDisplay mDisplay;
-    unsigned int mFBWidth;
-    unsigned int mFBHeight;
     EGLImageKHR mImage;
     GLenum mTexTarget;
     GLuint mTexName;
