@@ -1,6 +1,7 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
+sc8830like:=0
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 
 # When zero we link against libqcamera; when 1, we dlopen libqcamera.
@@ -233,11 +234,16 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov5648_mipi_raw.c \
 	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_ov5640_mipi.c \
+	sensor/sensor_ov5640.c \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_ov8865_mipi_raw.c \
 	sensor/sensor_gt2005.c \
 	sensor/sensor_gc0308.c \
 	sensor/sensor_hi702_ccir.c \
+	sensor/sensor_pattern.c \
+	sensor/sensor_ov7675.c\
+	sensor/sensor_hi253.c\
+	sensor/sensor_hi255.c\
 	sensor/sensor_s5k4ecgx_mipi.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \

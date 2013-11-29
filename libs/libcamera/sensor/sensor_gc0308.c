@@ -662,7 +662,7 @@ SENSOR_INFO_T g_GC0308_yuv_info =
 
 	PNULL,						//information and table about Rawrgb sensor
 	PNULL,						//extend information about sensor
-	SENSOR_AVDD_2800MV,				//iovdd
+	SENSOR_AVDD_1800MV,				//iovdd
 	SENSOR_AVDD_1800MV,				//dvdd
 	4,						//skip frame num before preview
 	3,						//skip frame num before capture
