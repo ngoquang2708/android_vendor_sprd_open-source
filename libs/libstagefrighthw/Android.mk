@@ -2,13 +2,17 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-    SPRDOMXPlugin.cpp
+    SprdOMXPlugin.cpp \
+	SprdOMXComponent.cpp \
+	SprdSimpleOMXComponent.cpp
 
 LOCAL_CFLAGS := $(PV_CFLAGS_MINUS_VISIBILITY)
 
 LOCAL_C_INCLUDES:= \
-        $(TOP)/frameworks/native/include/media/openmax \
-	$(TOP)/frameworks/native/include/media/hardware
+    $(TOP)/frameworks/native/include/media/openmax \
+	$(TOP)/frameworks/native/include/media/hardware \
+	$(TOP)/vendor/sprd/open-source/libs/libstagefrighthw/include
+
 LOCAL_SHARED_LIBRARIES :=       \
         libbinder               \
         libutils                \

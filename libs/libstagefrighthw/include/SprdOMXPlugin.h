@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@
 
 #define SPRD_OMX_PLUGIN_H_
 
+#include <media/stagefright/foundation/ABase.h>
 #include <OMXPluginBase.h>
 
 namespace android {
 
-struct SPRDOMXPlugin : public OMXPluginBase {
-    SPRDOMXPlugin();
-    virtual ~SPRDOMXPlugin();
+struct SprdOMXPlugin : public OMXPluginBase {
+    SprdOMXPlugin();
 
     virtual OMX_ERRORTYPE makeComponentInstance(
             const char *name,
@@ -45,30 +45,7 @@ struct SPRDOMXPlugin : public OMXPluginBase {
             Vector<String8> *roles);
 
 private:
-    void *mLibHandle;
-
-    typedef OMX_ERRORTYPE (*InitFunc)();
-    typedef OMX_ERRORTYPE (*DeinitFunc)();
-    typedef OMX_ERRORTYPE (*ComponentNameEnumFunc)(
-            OMX_STRING, OMX_U32, OMX_U32);
-
-    typedef OMX_ERRORTYPE (*GetHandleFunc)(
-            OMX_HANDLETYPE *, OMX_STRING, OMX_PTR, OMX_CALLBACKTYPE *);
-
-    typedef OMX_ERRORTYPE (*FreeHandleFunc)(OMX_HANDLETYPE *);
-
-    typedef OMX_ERRORTYPE (*GetRolesOfComponentFunc)(
-            OMX_STRING, OMX_U32 *, OMX_U8 **);
-
-    InitFunc mInit;
-    DeinitFunc mDeinit;
-    ComponentNameEnumFunc mComponentNameEnum;
-    GetHandleFunc mGetHandle;
-    FreeHandleFunc mFreeHandle;
-    GetRolesOfComponentFunc mGetRolesOfComponentHandle;
-
-    SPRDOMXPlugin(const SPRDOMXPlugin &);
-    SPRDOMXPlugin &operator=(const SPRDOMXPlugin &);
+    DISALLOW_EVIL_CONSTRUCTORS(SprdOMXPlugin);
 };
 
 }  // namespace android
