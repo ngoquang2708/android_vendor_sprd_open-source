@@ -332,8 +332,8 @@ Overlay:
         FBLayerCount++;
 #else
         revistOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &FBLayerCount, forceOverlayFlag);
-    }
 #endif
+    }
 
     ALOGI_IF(mDebugFlag, "revistGeometry total layer count: %d, Framebuffer layer count: %d", mLayerCount, FBLayerCount);
 
