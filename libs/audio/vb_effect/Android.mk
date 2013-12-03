@@ -23,10 +23,15 @@ LOCAL_C_INCLUDES += vendor/sprd/open-source/apps/engmode \
 			external/tinyalsa/include \
 			vendor/sprd/open-source/libs/audio \
 			vendor/sprd/open-source/libs/audio/nv_exchange
+
+	BOARD_EQ_DIR := v1
+
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 	BOARD_EQ_DIR := v2
-else
-	BOARD_EQ_DIR := v1
+endif
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+	BOARD_EQ_DIR := v2
 endif
 
 LOCAL_SRC_FILES := $(BOARD_EQ_DIR)/vb_effect_if.c \
