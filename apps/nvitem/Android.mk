@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 
 LOCAL_C_INCLUDES    +=  $(LOCAL_PATH) \
 			$(LOCAL_PATH)/common \
+			$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/uapi/mtd \
 			vendor/sprd/open-source/apps/engineeringmodel/engcs
 LOCAL_SRC_FILES:= \
 	nvitem_buf.c \
@@ -22,6 +23,10 @@ LOCAL_SHARED_LIBRARIES := \
 #ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
 #LOCAL_CFLAGS := -DCONFIG_EMMC
 #endif
+
+ifeq ($(strip $(TARGET_USERIMAGES_USE_UBIFS)),true)
+LOCAL_CFLAGS := -DCONFIG_NAND_UBI_VOL
+endif
 
 LOCAL_MODULE := nvitemd
 LOCAL_MODULE_TAGS := optional

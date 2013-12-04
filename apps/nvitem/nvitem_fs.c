@@ -2,6 +2,10 @@
 #include "nvitem_common.h"
 #include "nvitem_fs.h"
 #include "nvitem_config.h"
+#ifdef CONFIG_NAND_UBI_VOL
+#include <sys/ioctl.h>
+#include <ubi-user.h>
+#endif
 
 typedef struct  _NV_HEADER {
      uint32 magic;
@@ -204,6 +208,10 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	}
 	fileHandle  = open(firstName, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
+#ifdef CONFIG_NAND_UBI_VOL
+		__s64 up_sz = size + RAMNV_SECT_SIZE;
+		ioctl(fileHandle, UBI_IOCVOLUP, &up_sz);
+#endif
 		write(fileHandle, header, RAMNV_SECT_SIZE);
 		write(fileHandle, buf, size);
 		fsync(fileHandle);
@@ -226,6 +234,9 @@ BOOLEAN	ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	BOOLEAN ret;
 	int fileHandle = 0;;
 	int idx;
+#ifdef CONFIG_NAND_UBI_VOL
+	__s64 up_sz = size + RAMNV_SECT_SIZE;
+#endif
 	char header_buf[RAMNV_SECT_SIZE];
 	nv_header_t *header_ptr = NULL;
 
@@ -246,6 +257,9 @@ BOOLEAN	ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	ret = 1;
 	fileHandle = open(_ramdiskCfg[idx].imageBak_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
+#ifdef CONFIG_NAND_UBI_VOL
+	    ioctl(fileHandle, UBI_IOCVOLUP, &up_sz);
+#endif
 		if(RAMNV_SECT_SIZE != write(fileHandle, header_buf, RAMNV_SECT_SIZE)){
 			ret = 0;
 			NVITEM_PRINT("NVITEM partId%x:bakup image header write fail!\n",_ramdiskCfg[idx].partId);
@@ -263,6 +277,9 @@ BOOLEAN	ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 // 3 write origin image
 	fileHandle = open(_ramdiskCfg[idx].image_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(fileHandle >= 0){
+#ifdef CONFIG_NAND_UBI_VOL
+	    ioctl(fileHandle, UBI_IOCVOLUP, &up_sz);
+#endif
 		if(RAMNV_SECT_SIZE != write(fileHandle, header_buf, RAMNV_SECT_SIZE)){
 			ret = 0;
 			NVITEM_PRINT("NVITEM partId%x:origin image header write fail!\n",_ramdiskCfg[idx].partId);
