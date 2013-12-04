@@ -2,6 +2,14 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 sc8830like:=0
+dulHAL:=0
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION_DUAL)),true)
+dulHAL=1
+endif
+
+ifeq ($(strip $(dulHAL)),1)
+
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 
 # When zero we link against libqcamera; when 1, we dlopen libqcamera.
@@ -279,12 +287,12 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_file_update.c \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
 LOCAL_SRC_FILES+= \
 	sc8830/src/SprdCameraHardwareInterface.cpp
 endif
 
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
 LOCAL_SRC_FILES+= \
 	sc8830/src/SprdBaseThread.cpp \
 	sc8830/src/SprdCamera2.c \
@@ -426,7 +434,11 @@ ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION_DUAL)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_DUAL_HAL
 endif
 
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
+LOCAL_MODULE := camera2.$(TARGET_BOARD_PLATFORM)
+else 
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
+endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
@@ -469,38 +481,21 @@ endif
 
 ifeq ($(strip $(sc8830like)),1)
 
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := sc8830/isp/libisp.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
+#include $(CLEAR_VARS)
+#LOCAL_PREBUILT_LIBS := sc8830/isp/libisp.so
+#LOCAL_MODULE_TAGS := optional
+#include $(BUILD_MULTI_PREBUILT)
 
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
+#include $(CLEAR_VARS)
+#LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_facesolid.so
+#LOCAL_MODULE_TAGS := optional
+#include $(BUILD_MULTI_PREBUILT)
 
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_easy_hdr.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8810/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
+#include $(CLEAR_VARS)
+#LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_easy_hdr.so
+#LOCAL_MODULE_TAGS := optional
+#include $(BUILD_MULTI_PREBUILT)
 
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8810/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
 endif
-
