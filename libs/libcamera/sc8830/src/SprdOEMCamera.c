@@ -2756,7 +2756,7 @@ static int _v4l2_postfix(struct frm_info* info)
 	struct img_frm      *cap_frm = NULL;
 
 	CMR_PRINT_TIME;
-//	pthread_mutex_lock(&g_cxt->prev_mutex);
+	pthread_mutex_lock(&g_cxt->prev_mutex);
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
 		cap_frm  = &g_cxt->prev_frm[frm_id];
@@ -2825,7 +2825,7 @@ static int _v4l2_postfix(struct frm_info* info)
 		(uint32_t)&frame_type);
 	}
 
-//	pthread_mutex_unlock(&g_cxt->prev_mutex);
+	pthread_mutex_unlock(&g_cxt->prev_mutex);
 	CMR_PRINT_TIME;
 	return ret;
 }
