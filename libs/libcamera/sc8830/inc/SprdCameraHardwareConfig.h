@@ -541,7 +541,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"video-size-values",  "720x480,352x288,176x144"},
 	{"video-size", "720x480"},
 #endif
-	{"preferred-preview-size-for-video", ""},
+	{"preferred-preview-size-for-video", "1280x720"},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
 	{"video-frame-format", "yuv420sp"},
 	{"preview-format-values", "yuv420sp,yuv420p"},
