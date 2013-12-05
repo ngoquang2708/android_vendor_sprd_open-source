@@ -2840,10 +2840,10 @@ static hw_module_methods_t camera_module_methods = {
 extern "C" {
     struct camera_module HAL_MODULE_INFO_SYM = {
       common : {
-#ifndef CONFIG_CAMERA_DUAL_HAL
+#ifdef CONFIG_CAMERA_HAL_20
           tag                : HARDWARE_MODULE_TAG,
 #else
-          tag                : HARDWARE_MODULE_TAG2,
+          tag                : 1,
 #endif
           module_api_version : CAMERA_MODULE_API_VERSION_2_0,
           hal_api_version    : HARDWARE_HAL_API_VERSION,
