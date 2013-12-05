@@ -84,9 +84,14 @@ static void mali_platform_utilization(struct mali_gpu_utilization_data *data);
 
 static struct resource mali_gpu_resources[] =
 {
+#if MALI_PP_CORE_NUMBER == 4
 	MALI_GPU_RESOURCES_MALI400_MP4_PMU(SPRD_MALI_PHYS, IRQ_GPU_INT, IRQ_GPU_INT,
 													IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT,
 													IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT)
+#else
+	MALI_GPU_RESOURCES_MALI400_MP2_PMU(SPRD_MALI_PHYS, IRQ_GPU_INT, IRQ_GPU_INT,
+													IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT, IRQ_GPU_INT)
+#endif
 };
 
 static struct mali_gpu_device_data mali_gpu_data =
@@ -287,8 +292,8 @@ static void gpu_dfs_func(struct work_struct *work)
 
 void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 {
-	unsigned int utilization = MAX((data->utilization_gp),(data->utilization_pp));
-	MALI_DEBUG_PRINT(2,("GPU_DFS mali_utilization  gpu:%d  gp:%d pp:%d\n",data->utilization_gpu,data->utilization_gp,data->utilization_pp));
+	unsigned int utilization = data->utilization_gpu;
+	MALI_DEBUG_PRINT(3,("GPU_DFS mali_utilization  gpu:%d  gp:%d pp:%d\n",data->utilization_gpu,data->utilization_gp,data->utilization_pp));
 #if GPU_FREQ_CONTROL
 	MALI_DEBUG_PRINT(3,("GPU_DFS  gpu_level:%d\n",gpu_level));
 	switch(gpu_level)

@@ -37,7 +37,7 @@
 #define GPU_FREQ_CONTROL	1
 
 #define GPU_MIN_DIVISION	1
-#define GPU_MAX_DIVISION	3
+#define GPU_MAX_DIVISION	2
 
 #if GPU_FREQ_CONTROL
 #define GPU_LEVEL0_MAX		208
@@ -285,8 +285,8 @@ static void gpu_dfs_func(struct work_struct *work)
 
 void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 {
-	unsigned int utilization = MAX((data->utilization_gp),(data->utilization_pp));
-	MALI_DEBUG_PRINT(2,("GPU_DFS mali_utilization  gpu:%d  gp:%d pp:%d\n",data->utilization_gpu,data->utilization_gp,data->utilization_pp));
+	unsigned int utilization = data->utilization_gpu;
+	MALI_DEBUG_PRINT(3,("GPU_DFS mali_utilization  gpu:%d  gp:%d pp:%d\n",data->utilization_gpu,data->utilization_gp,data->utilization_pp));
 #if GPU_FREQ_CONTROL
 	MALI_DEBUG_PRINT(3,("GPU_DFS  gpu_level:%d\n",gpu_level));
 	switch(gpu_level)
