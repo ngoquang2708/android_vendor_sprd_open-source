@@ -24,6 +24,10 @@ namespace android {
 
 #include "SprdOEMCamera.h"
 
+int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t androidAfMode, int8_t *convertDrvMode);
+int androidFlashModeToDrvFlashMode(camera_metadata_enum_android_flash_mode_t androidFlashMode, int8_t *convertDrvMode);
+int androidAeModeToDrvAeMode(camera_metadata_enum_android_control_ae_mode_t androidAeMode, int8_t *convertDrvMode);
+int androidAwbModeToDrvAwbMode(camera_metadata_enum_android_control_awb_mode_t androidAwbMode, int8_t *convertDrvMode);
 
 int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t androidScreneMode, int8_t *convertDrvMode);
 int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *convertDrvTag);
@@ -36,22 +40,15 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 #define CAMERA2_MAX_FACES 10
 
 
-const int32_t jpegResolutionSensorBack[] =
-{
-    2560, 1920,
-    2560, 1440,
-    2160, 1440,
+const int32_t jpegResolutionSensorBack[] = {
+    2592, 1944,
     2048, 1536,
     1600, 1200,
-    1280, 1024,
     1280,  960,
-    1152,  864,
      640,  480,
-     320,  240,
 };
 
-const int32_t jpegResolutionSensorFront[] =
-{
+const int32_t jpegResolutionSensorFront[] = {
     1600, 1200,
     1280, 1024,
     1280,  960,
@@ -60,8 +57,7 @@ const int32_t jpegResolutionSensorFront[] =
      320,  240,
 };
 
-const int32_t PreviewResolutionSensorBack[] =
-{
+const int32_t PreviewResolutionSensorBack[] = {
     1920, 1080, // 16:9
     1280,  720, // 16:9
      960,  720, // 4:3
@@ -77,8 +73,7 @@ const int32_t PreviewResolutionSensorBack[] =
      128,   96, // 4:3
 };
 
-const int32_t PreviewResolutionSensorFront[] =
-{
+const int32_t PreviewResolutionSensorFront[] = {
     1280,  720, // 16:9
      960,  720, // 4:3
      800,  480, // 5:3
@@ -93,8 +88,7 @@ const int32_t PreviewResolutionSensorFront[] =
      128,   96, // 4:3
 };
 
-const uint8_t availableAfModesSensorBack[] =
-{
+const uint8_t availableAfModesSensorBack[] = {
     ANDROID_CONTROL_AF_MODE_OFF,
     ANDROID_CONTROL_AF_MODE_AUTO,
     ANDROID_CONTROL_AF_MODE_MACRO,
@@ -102,8 +96,7 @@ const uint8_t availableAfModesSensorBack[] =
     ANDROID_CONTROL_AF_MODE_CONTINUOUS_VIDEO
 };
 
-const uint8_t sceneModeOverridesSensorBack[] =
-{
+const uint8_t sceneModeOverridesSensorBack[] = {
     // ANDROID_CONTROL_SCENE_MODE_ACTION
     ANDROID_CONTROL_AE_MODE_ON,
     ANDROID_CONTROL_AWB_MODE_AUTO,
@@ -122,8 +115,7 @@ const uint8_t sceneModeOverridesSensorBack[] =
     ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE
 };
 
-const uint8_t availableAeModesSensorBack[] =
-{
+const uint8_t availableAeModesSensorBack[] = {
     ANDROID_CONTROL_AE_MODE_OFF,
     ANDROID_CONTROL_AE_MODE_ON,
     ANDROID_CONTROL_AE_MODE_ON_AUTO_FLASH
@@ -154,14 +146,14 @@ const int64_t kExposureTimeRange[2] =
     {1000L, 30000000000L} ; // 1 us - 30 sec
 
 const uint64_t kAvailableRawMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 
 const uint64_t kAvailableProcessedMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 const uint64_t kAvailableJpegMinDurations[1] = {
-    kFrameDurationRange[0]
+    (uint64_t)kFrameDurationRange[0]
 };
 
 }

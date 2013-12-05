@@ -408,6 +408,13 @@ typedef enum preview_buffer_usage{
 	PREVIEW_BUFFER_USAGE_GRAPHICS/*camera use the grapics buffer directly*/
 } preview_buffer_usage_mode;
 
+typedef struct _cropZoom{
+        uint32_t crop_x;
+		uint32_t crop_y;
+		uint32_t crop_w;
+		uint32_t crop_h;
+    }cropZoom;
+
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
 					camera_cb_f_type callback,
@@ -477,6 +484,7 @@ int camera_start_autofocus(camera_focus_e_type focus,
 			void *client_data);
 
 int camera_capture_max_img_size(uint32_t *max_width, uint32_t *max_height);
+int camera_get_sensor_mode_trim(uint32_t mode, cropZoom *sensor_trim, uint16_t *width, uint16_t *height);
 
 int camerea_set_preview_format(uint32_t pre_format);
 

@@ -236,6 +236,48 @@ camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 	return ret;
 }
 
+int camera_get_sensor_mode_trim(uint32_t mode, cropZoom *sensor_trim, uint16_t *width, uint16_t *height)
+{
+   int                      ret = CAMERA_SUCCESS;
+   struct sensor_context    *sensor_cxt = &g_cxt->sn_cxt;
+   uint32_t                 sensor_mode = SENSOR_MODE_MAX;
+   if(!sensor_trim){
+		CMR_LOGE("camera_get_sensor_mode_trim para is null");
+		return -1;
+	}
+   switch(mode){
+	//start preview
+	case 0:
+       sensor_mode = g_cxt->sn_cxt.preview_mode;
+	   break;
+     //in preview
+	 case 1:
+	   if (NULL == sensor_cxt->sensor_info) {
+	        ret = -CAMERA_NOT_SUPPORTED;
+			CMR_LOGE("Failed to Get sensor info trim");
+			return ret;
+	   }
+	   ret = Sensor_GetMode(&sensor_mode);
+	   if (ret) {
+			CMR_LOGE("Fail to get sensor mode");
+			return -CAMERA_FAILED;
+	   }
+	   break;
+     //take picture normal
+	 case 2:
+       sensor_mode = g_cxt->sn_cxt.capture_mode;
+	   break;
+   }
+   sensor_trim->crop_x = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].trim_start_x;
+   sensor_trim->crop_y = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].trim_start_y;
+   sensor_trim->crop_w = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].trim_width;
+   sensor_trim->crop_h = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].trim_height;
+   *width = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].width;
+   *height = sensor_cxt->sensor_info->sensor_mode_info[sensor_mode].height;
+   CMR_LOGE("trim %d %d %d %d mode=%d",sensor_trim->crop_x,sensor_trim->crop_y, sensor_trim->crop_w, sensor_trim->crop_h,mode);
+   return ret;
+}
+
 int camera_sensor_init(int32_t camera_id)
 {
 	struct camera_ctrl       *ctrl = &g_cxt->control;
