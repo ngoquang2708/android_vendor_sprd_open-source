@@ -5708,7 +5708,9 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	sensor_size.width  = sn_mode->width;
 	sensor_size.height = sn_mode->height;
 	if (!IS_NO_MALLOC_MEM) {
-		g_cxt->cap_2_mems.free_mem(g_cxt->cap_2_mems.handle);
+		if (g_cxt->cap_2_mems.free_mem != NULL) {
+		    g_cxt->cap_2_mems.free_mem(g_cxt->cap_2_mems.handle);
+		}
 		ret = camera_arrange_capture_buf(&g_cxt->cap_2_mems,
 					&sensor_size,
 					&sn_trim_rect,
