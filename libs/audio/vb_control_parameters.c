@@ -198,6 +198,8 @@ extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
 
 extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
 
+extern int headset_no_mic();
+
 /*
  * local functions definition.
  */
@@ -594,6 +596,15 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     switch_mic0 = (mode_gain_paras->path_set & 0x0400)>>10;     //AUDIO_DEVICE_IN_BUILTIN_MIC
     switch_mic1 = (mode_gain_paras->path_set & 0x0800)>>11;     //AUDIO_DEVICE_IN_BACK_MIC
     switch_hp_mic = (mode_gain_paras->path_set & 0x1000)>>12;
+
+    /*need to check the type of headset(3-pole or 4-pole) when wants to open hp-mic*/
+    if(switch_hp_mic == 1){
+        if(headset_no_mic()){
+            MY_TRACE("%s 3-pole headset, need to open main-mic instead of hp-mic ",__func__);
+            switch_mic0 = 1;    /*open main-mic*/
+            switch_hp_mic = 0;
+        }
+    }
 
     switch_table[0] = switch_earpice;
     switch_table[1] = switch_speaker;
