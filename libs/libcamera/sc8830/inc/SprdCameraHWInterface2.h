@@ -390,6 +390,15 @@ class RequestQueueThread : public SprdBaseThread{
 	void                receivePreviewFrame(camera_frame_type *frame);
 	void                HandleStartPreview(camera_cb_type cb, int32_t parm4);
     void                HandleStartCamera(camera_cb_type cb, int32_t parm4);
+	status_t            startPreviewInternal(bool isRecording);
+	void                stopPreviewInternal(void);
+	bool                isPreviewing(void);
+	bool                isCapturing(void);
+	bool                WaitForCaptureDone(void);
+	status_t            cancelPictureInternal(void);
+	void                deinitPreview(void);
+	void                freePreviewMem(void);
+	bool                iSZslMode(void);
 	int                 coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, cam_size *preview_size, cropZoom *preview_rect);
 	void                PushReqQ(camera_metadata_t *reqInfo);
 	int              GetReqQueueSize();
