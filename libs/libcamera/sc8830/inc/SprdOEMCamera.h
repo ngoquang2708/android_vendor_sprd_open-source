@@ -524,6 +524,10 @@ void camera_call_cb(camera_cb_type cb,
                  const void *client_data,
                  camera_func_type func,
                  int32_t parm4);
+void camera_direct_call_cb(camera_cb_type cb,
+                 const void *client_data,
+                 camera_func_type func,
+                 int32_t parm4);
 void camera_callback_start(camera_cb_info *cb_info);
 void *camera_get_client_data(void);
 int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);

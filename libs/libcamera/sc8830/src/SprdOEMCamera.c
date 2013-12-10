@@ -223,6 +223,7 @@ static void _camera_autofocus_stop_handle(void);
 static int camera_take_picture_continue(int cap_cnt);
 static int camera_is_jpeg_encode_direct_process(void);
 static int camera_post_convert_thum_msg(void);
+static int camera_sensor_interface_updated(uint32_t work_mode, struct  sensor_if *sn_if);
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -1137,7 +1138,6 @@ int camera_take_picture_continue(int cap_cnt)
 	struct buffer_cfg        buffer_info;
 
 	CMR_LOGI("start.");
-
 	ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 	if (ret) {
 		CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -1487,6 +1487,7 @@ void *camera_cap_thread_proc(void *data)
 			struct frm_info *data = (struct frm_info *)message.data;
 
 			if (CAMERA_TOOL_RAW_MODE != g_cxt->cap_mode
+				&& CAMERA_RAW_MODE != g_cxt->cap_mode
 				&& (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt
 					||IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt)) {
 				if (0 == data) {
@@ -2084,7 +2085,7 @@ camera_ret_code_type camera_set_dimensions(uint16_t picture_width,
 			g_cxt->picture_size.height = picture_height;
 		}
 
-		if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 != g_cxt->cfg_cap_rot)) {
+		if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 != g_cxt->cfg_cap_rot && IMG_ROT_180 != g_cxt->cfg_cap_rot)) {
 			g_cxt->actual_picture_size.width = picture_height;
 			g_cxt->actual_picture_size.height = picture_width;
 		} else {
@@ -2442,6 +2443,13 @@ int camera_start_preview_internal(void)
 		g_cxt->sn_cxt.previous_sensor_mode, g_cxt->sn_cxt.sn_if.img_fmt);
 
 	if (SENSOR_MODE_MAX == g_cxt->sn_cxt.previous_sensor_mode) {
+
+		ret = camera_sensor_interface_updated(g_cxt->sn_cxt.preview_mode,
+			&g_cxt->sn_cxt.sn_if);
+		if (ret) {
+			CMR_LOGE("sensor if update err %d", ret);
+			return -CAMERA_FAILED;
+		}
 		ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 		if (ret) {
 			CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -2459,18 +2467,15 @@ int camera_start_preview_internal(void)
 			if (ret) {
 				CMR_LOGE("Failed to close sensor interface");
 			}
-			usleep(100);
+			usleep(1000);
 
-			sensor_if_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
-			if (SENSOR_IMAGE_FORMAT_YUV422 == sensor_if_mode->image_format) {
-				g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_YUV;
-			} else if (SENSOR_IMAGE_FORMAT_RAW == sensor_if_mode->image_format) {
-				g_cxt->sn_cxt.sn_if.img_fmt = V4L2_SENSOR_FORMAT_RAWRGB;
-			} else {
-				CMR_LOGE("Wrong sensor formast %d", sensor_if_mode->image_format);
-				ret = -CAMERA_NOT_SUPPORTED;
+			ret = camera_sensor_interface_updated(g_cxt->sn_cxt.preview_mode,
+				&g_cxt->sn_cxt.sn_if);
+			if (ret) {
+				CMR_LOGE("sensor if update err %d", ret);
+				return -CAMERA_FAILED;
 			}
-			g_cxt->sn_cxt.sn_if.if_spec.mipi.pclk = sensor_if_mode->pclk;
+
 			ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 			if (ret) {
 				CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3040,6 +3045,12 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 	CMR_LOGI("previous_sensor_mode is %d.is_reset_if_cfg=%d",g_cxt->sn_cxt.previous_sensor_mode,g_cxt->is_reset_if_cfg);
 
 	if (g_cxt->sn_cxt.previous_sensor_mode == SENSOR_MODE_MAX) {
+		ret = camera_sensor_interface_updated(g_cxt->sn_cxt.capture_mode,
+					&g_cxt->sn_cxt.sn_if);
+		if (ret) {
+			CMR_LOGE("sensor if update err %d", ret);
+			return -CAMERA_FAILED;
+		}
 		ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 		if (ret) {
 			CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3065,8 +3076,15 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 					CMR_LOGE("the senso interface is unsupported by V4L2");
 					return -CAMERA_FAILED;
 				}
+				ret = camera_sensor_interface_updated(g_cxt->sn_cxt.capture_mode,
+							&g_cxt->sn_cxt.sn_if);
+				if (ret) {
+					CMR_LOGE("sensor if update err %d", ret);
+					return -CAMERA_FAILED;
+				}
 				g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
 				usleep(100);
+
 				ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 				if (ret) {
 					CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3075,15 +3093,16 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 			}
 		}
 	}
-	ret = camera_capture_init();
-	if (ret) {
-		CMR_LOGE("Failed to init raw capture mode.");
-		return -CAMERA_FAILED;
-	}
 
 	ret = camera_snapshot_start_set();
 	if (ret) {
 		CMR_LOGE("Failed to snapshot");
+		return -CAMERA_FAILED;
+	}
+
+	ret = camera_capture_init();
+	if (ret) {
+		CMR_LOGE("Failed to init raw capture mode.");
 		return -CAMERA_FAILED;
 	}
 
@@ -3095,9 +3114,7 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 		}
 	}
 
-	if (V4L2_SENSOR_FORMAT_RAWRGB != g_cxt->sn_cxt.sn_if.img_fmt) {
-		g_cxt->skip_mode      = IMG_SKIP_HW;
-	}
+	g_cxt->skip_mode      = IMG_SKIP_HW;
 
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
 		skip_number = g_cxt->sn_cxt.sensor_info->capture_skip_num;
@@ -3183,7 +3200,14 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 				CMR_LOGE("Sensor can't work at this mode %d", g_cxt->sn_cxt.capture_mode);
 				return -CAMERA_FAILED;
 			}
+			ret = camera_sensor_interface_updated(g_cxt->sn_cxt.capture_mode,
+				&g_cxt->sn_cxt.sn_if);
+			if (ret) {
+				CMR_LOGE("sensor if update err %d", ret);
+				return -CAMERA_FAILED;
+			}
 			usleep(100);
+
 			ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 			if (ret) {
 				CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3200,9 +3224,22 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 		return -CAMERA_FAILED;
 	}
 
+	ret = camera_snapshot_start_set();
+	if (ret) {
+		CMR_LOGE("Failed to snapshot");
+		return -CAMERA_FAILED;
+	}
+
+	g_cxt->skip_mode      = IMG_SKIP_HW;
+
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
 		skip_number = g_cxt->sn_cxt.sensor_info->capture_skip_num;
 	}
+
+
+	CMR_LOGE("skip_number=%d",skip_number);
+
+
 	CMR_PRINT_TIME;
 	ret = cmr_v4l2_cap_start(skip_number);
 	if (ret) {
@@ -3349,6 +3386,7 @@ int camera_take_picture_hdr(int cap_cnt)
 	CMR_LOGI("start.");
 
 #if USE_SENSOR_OFF_ON_FOR_HDR
+
 	ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 	if (ret) {
 		CMR_LOGE("the sensor interface is unsupported by V4L2");
@@ -3988,15 +4026,18 @@ void camera_rot_evt_cb(int evt, void* data)
 {
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
-	struct frm_info *frm_data = data;
-
-	CMR_LOGV("0x%x", evt);
+	struct img_frm *frm_data = data;
+	uint32_t frame_id = 0;
 
 	if ((NULL == data) || (CMR_IMG_CVT_ROT_DONE != evt)) {
 		CMR_LOGE("Error param, 0x%x 0x%x", (uint32_t)data, evt);
 		return;
 	}
-	if (IS_PREVIEW && IS_PREV_FRM(frm_data->frame_id)) {
+	CMR_LOGV("0x%x 0x%x", evt, (uint32_t)frm_data->reserved);
+
+	frame_id = (uint32_t)frm_data->reserved;
+
+	if (IS_PREVIEW && IS_PREV_FRM(frame_id)) {
 		message.data = malloc(sizeof(struct img_frm));
 		if (NULL == message.data) {
 			CMR_LOGE("NO mem, Faile to alloc memory for one msg");
@@ -4081,10 +4122,10 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			if (CMR_CAPTURE == g_cxt->capture_status) {
 				ret = camera_set_take_picture(TAKE_PICTURE_NO);
 				ret = camera_stop_capture_internal();
-				camera_call_cb(CAMERA_RSP_CB_SUCCESS,
-					    camera_get_client_data(),
-					    CAMERA_FUNC_RELEASE_PICTURE,
-					    0);
+				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+						camera_get_client_data(),
+						CAMERA_FUNC_RELEASE_PICTURE,
+						0);
 			}
 			camera_stop_preview_internal();
 		} else if (CMR_CAPTURE == g_cxt->capture_raw_status) {
@@ -4132,7 +4173,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			if (CMR_CAPTURE == g_cxt->capture_status) {
 				ret = camera_set_take_picture(TAKE_PICTURE_NO);
 				ret = camera_stop_capture_internal();
-				camera_call_cb(CAMERA_RSP_CB_SUCCESS,
+				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 					    camera_get_client_data(),
 					    CAMERA_FUNC_RELEASE_PICTURE,
 					    0);
@@ -4140,7 +4181,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			ret = camera_stop_preview_internal();
 			camera_preview_stop_set();
 #if CB_LIGHT_SYNC
-			camera_call_cb(CAMERA_RSP_CB_SUCCESS,
+			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 					camera_get_client_data(),
 					CAMERA_FUNC_STOP_PREVIEW,
 					0);
@@ -4152,10 +4193,10 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 #endif
 		} else if (CMR_CAPTURE == sub_type) {
 			ret = camera_stop_capture_internal();
-			camera_call_cb(CAMERA_RSP_CB_SUCCESS,
-				    camera_get_client_data(),
-				    CAMERA_FUNC_RELEASE_PICTURE,
-				    0);
+			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+					camera_get_client_data(),
+					CAMERA_FUNC_RELEASE_PICTURE,
+					0);
 		} else {
 			CMR_LOGV("No this sub-type");
 		}
@@ -4909,6 +4950,17 @@ void camera_call_cb(camera_cb_type cb,
 		(*g_cxt->camera_cb)(cb, client_data, func, parm4);
 	}
 	pthread_mutex_unlock(&g_cxt->cb_mutex);
+	return;
+}
+
+void camera_direct_call_cb(camera_cb_type cb,
+                 const void *client_data,
+                 camera_func_type func,
+                 int32_t parm4)
+{
+	if (g_cxt->camera_cb) {
+		(*g_cxt->camera_cb)(cb, client_data, func, parm4);
+	}
 	return;
 }
 
@@ -5744,6 +5796,8 @@ int camera_alloc_capture_buf(struct buffer_cfg *buffer, uint32_t cap_number, uin
 	uint32_t                 mem_size, buffer_size, frame_size, y_addr, u_addr, i;
 	uint32_t                 y_addr_vir, u_addr_vir;
 	int                      ret = CAMERA_SUCCESS;
+	SENSOR_MODE_INFO_T       *sensor_mode;
+
 
 	if (NULL == buffer)
 		return -CAMERA_INVALID_PARM;
@@ -5755,6 +5809,8 @@ int camera_alloc_capture_buf(struct buffer_cfg *buffer, uint32_t cap_number, uin
 	frame_size         = buffer_size * 3 / 2;
 	for (i = 0; i < buffer->count; i++){
 		if (IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
+			sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+			buffer_size = sensor_mode->width * sensor_mode->height;
 			mem_size   = g_cxt->cap_mem[0].cap_raw.buf_size;
 			y_addr     = g_cxt->cap_mem[0].cap_raw.addr_phy.addr_y;
 			u_addr     = y_addr;
@@ -6202,13 +6258,13 @@ int camera_capture_yuv_process(struct frm_info *data)
 	CMR_PRINT_TIME;
 
 	if ((IMG_ROT_0 != g_cxt->cap_rot) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 != g_cxt->cfg_cap_rot))) {
-		if (IMG_ROT_0 != g_cxt->cfg_cap_rot) {
+		if (IMG_ROT_0 != g_cxt->cfg_cap_rot && IMG_ROT_180 != g_cxt->cfg_cap_rot) {
 			uint32_t temp = 0;
 			temp = g_cxt->picture_size.width;
 			g_cxt->picture_size.width = g_cxt->picture_size.height;
 			g_cxt->picture_size.height = temp;
-			g_cxt->cap_rot = g_cxt->cfg_cap_rot;
 		}
+		g_cxt->cap_rot = g_cxt->cfg_cap_rot;
 		ret = camera_start_rotate(data);
 	} else {
 		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot))) {
@@ -6316,7 +6372,7 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 		g_cxt->cap_rot);
 
 #if CB_LIGHT_SYNC
-	camera_call_cb(CAMERA_RSP_CB_SUCCESS,
+	camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 		camera_get_client_data(),
 		CAMERA_FUNC_TAKE_PICTURE,
 		0);
@@ -6954,7 +7010,7 @@ int camera_start_rotate(struct frm_info *data)
 				&g_cxt->prev_frm[frm_id],
 				&rect,
 				&g_cxt->prev_rot_frm[rot_frm_id],
-				NULL);
+				(void*)data->frame_id);
 			if (ret) {
 				g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 				sem_post(&g_cxt->rot_cxt.cmr_rot_sem);
@@ -7039,6 +7095,11 @@ int camera_get_data_redisplay(int output_addr,
 	if (IMG_ROT_90 == g_cxt->cfg_cap_rot || IMG_ROT_270 == g_cxt->cfg_cap_rot)  {
 		dst_frame.size.width      = output_height;
 		dst_frame.size.height     = output_width;
+		dst_frame.addr_phy.addr_y = output_addr + ((img_len * 3) >> 1);
+		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
+	}else if (IMG_ROT_180 == g_cxt->cfg_cap_rot) {
+		dst_frame.size.width      = output_width;
+		dst_frame.size.height     = output_height;
 		dst_frame.addr_phy.addr_y = output_addr + ((img_len * 3) >> 1);
 		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
 	} else {
@@ -7307,11 +7368,19 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 
 	frm_id = process->frame_info.frame_id - CAMERA_CAP0_ID_BASE;
 	offset = (uint32_t)(process->slice_height_out * g_cxt->cap_mem[frm_id].cap_raw.size.width);
-	in_param.dst_addr_phy.chn0 = g_cxt->cap_mem[frm_id].cap_yuv.addr_phy.addr_y + offset;
-	g_cxt->isp_cxt.cur_dst.addr_y = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir.addr_y + offset;
+	if (NO_SCALING) {
+		in_param.dst_addr_phy.chn0 = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_y + offset;
+		g_cxt->isp_cxt.cur_dst.addr_y = g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y + offset;
 
-	in_param.dst_addr_phy.chn1 = g_cxt->cap_mem[frm_id].cap_yuv.addr_phy.addr_u + (offset >> 1);
-	g_cxt->isp_cxt.cur_dst.addr_u = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir.addr_u + (offset >> 1);
+		in_param.dst_addr_phy.chn1 = g_cxt->cap_mem[frm_id].target_yuv.addr_phy.addr_u + (offset >> 1);
+		g_cxt->isp_cxt.cur_dst.addr_u = g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_u + (offset >> 1);
+	} else {
+		in_param.dst_addr_phy.chn0 = g_cxt->cap_mem[frm_id].cap_yuv.addr_phy.addr_y + offset;
+		g_cxt->isp_cxt.cur_dst.addr_y = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir.addr_y + offset;
+
+		in_param.dst_addr_phy.chn1 = g_cxt->cap_mem[frm_id].cap_yuv.addr_phy.addr_u + (offset >> 1);
+		g_cxt->isp_cxt.cur_dst.addr_u = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir.addr_u + (offset >> 1);
+	}
 
 	offset = (uint32_t)((offset * RAWRGB_BIT_WIDTH) >> 3);
 	in_param.src_addr_phy.chn0 = g_cxt->cap_mem[frm_id].cap_raw.addr_phy.addr_y + offset;
@@ -7950,4 +8019,36 @@ int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level)
 	return ret;
 }
 
+int camera_sensor_interface_updated(uint32_t work_mode, struct  sensor_if *sn_if)
+{
+	SENSOR_EXP_INFO_T        *sn_info = NULL;
+	SENSOR_MODE_INFO_T       *sn_mode = NULL;
+	struct camera_context    *cxt = camera_get_cxt();
+	int                      ret = CAMERA_SUCCESS;
+
+	CMR_LOGV("work mode %d", work_mode);
+	if (NULL == cxt) {
+		return -CAMERA_INVALID_PARM;
+	}
+	sn_info = cxt->sn_cxt.sensor_info;
+	if (NULL == sn_info) {
+		CMR_LOGE("NO Sensor.");
+		return -CAMERA_NOT_SUPPORTED;
+	}
+	sn_mode = &sn_info->sensor_mode_info[work_mode];
+
+	if (SENSOR_IMAGE_FORMAT_YUV422 == sn_mode->image_format) {
+		sn_if->img_fmt = V4L2_SENSOR_FORMAT_YUV;
+	} else if (SENSOR_IMAGE_FORMAT_RAW == sn_mode->image_format) {
+		sn_if->img_fmt = V4L2_SENSOR_FORMAT_RAWRGB;
+	} else if (SENSOR_IMAGE_FORMAT_JPEG == sn_mode->image_format) {
+		sn_if->img_fmt = V4L2_SENSOR_FORMAT_JPEG;
+	} else {
+		CMR_LOGE("Wrong sensor formast %d", sn_mode->image_format);
+		ret = -CAMERA_NOT_SUPPORTED;
+	}
+	sn_if->if_spec.mipi.pclk = sn_mode->pclk;
+
+	return ret;
+}
 

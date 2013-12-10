@@ -588,7 +588,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	uint32_t       y_to_raw = 0, yy_to_y = 0, tmp = 0, raw_size = 0;
 	uint32_t       uv_size = 0, useless_raw = 0;
 	struct cmr_cap_mem *cap_mem = capture_mem; //&capture_mem[0];
-	struct img_size align16_image_size, align16_cap_size;
+	struct img_size align16_image_size, align16_cap_size, sn_align_size;
 
 	if (IMG_DATA_TYPE_RAW != orig_fmt ||
 		NULL == io_mem_res ||
@@ -602,6 +602,8 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	align16_image_size.height = CAMERA_ALIGNED_16(image_size->height);
 	align16_cap_size.width    = CAMERA_ALIGNED_16(cap_size->width);
 	align16_cap_size.height   = CAMERA_ALIGNED_16(cap_size->height);
+	sn_align_size.width       = CAMERA_ALIGNED_16(sn_size->width);
+	sn_align_size.height       = CAMERA_ALIGNED_16(sn_size->height);
 
 	mem_res    = *io_mem_res;
 	mem_end    = *io_mem_end;
@@ -611,13 +613,24 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	raw_size = (uint32_t)(channel_size * RAWRGB_BIT_WIDTH / 8);
 	y_to_raw = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
 	uv_size = (channel_size >> 1);
-	if (align16_image_size.width != sn_size->width ||
-		align16_image_size.height != sn_size->height) {
-		yy_to_y = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
+
+	if (align16_image_size.width != sn_align_size.width  ||
+		align16_image_size.height != sn_align_size.height) {
+		if ((uint32_t)(align16_image_size.width * align16_image_size.height) >
+			(uint32_t)(sn_align_size.width * sn_align_size.height)) {
+			//if interpolation needed
+			yy_to_y = (uint32_t)(align16_image_size.width * align16_image_size.height) -
+				(uint32_t)(sn_align_size.width * sn_align_size.height);
+			if (yy_to_y < (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width)) {
+				yy_to_y = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
+			}
+			useless_raw = (uint32_t)(sn_align_size.width * sn_align_size.height * RAWRGB_BIT_WIDTH / 8);
+			useless_raw = useless_raw - (uint32_t)(sn_align_size.width * (sn_align_size.height - ISP_YUV_TO_RAW_GAP));
+		} else {
+			yy_to_y = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
+			useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
+		}
 		uv_size = uv_size + (yy_to_y >> 1);
-		tmp = (sn_size->height - align16_image_size.height) >> 1;
-		CMR_LOGV("Need scaling down, Recovered height, %d", tmp);
-		useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
 	} else if (sn_trim && sn_trim->start_y) {
 		tmp = sn_size->height - sn_trim->height - sn_trim->start_y;
 		CMR_LOGV("Recovered height, %d", tmp);

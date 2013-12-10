@@ -34,6 +34,13 @@ static sem_t              rot_sem;
 static pthread_mutex_t    rot_status_mutex = PTHREAD_MUTEX_INITIALIZER;
 static uint32_t           rot_running = 0;
 
+enum rotate_flag {
+	ROTATE_FLAG_SUCCESS = 0,
+	ROTATE_FLAG_EXIT = -1,
+	ROTATE_FLAG_SYS_BUSY = -2,
+	ROTATE_FLAG_MAX = 0xFF
+};
+
 static ROT_DATA_FORMAT_E cmr_rot_fmt_cvt(uint32_t cmr_fmt)
 {
 	ROT_DATA_FORMAT_E        fmt = ROT_FMT_MAX;
@@ -72,6 +79,10 @@ static void* cmr_rot_thread_proc(void* data)
 		if (-1 == ioctl(rot_fd, ROT_IO_IS_DONE, &param)) {
 			CMR_LOGV("To exit rot thread");
 			break;
+		} else if (ROTATE_FLAG_SYS_BUSY == (enum rotate_flag)param) {
+			usleep(10000);
+			CMR_LOGV("rot continue.");
+			continue;
 		} else {
 			CMR_LOGV("rot done OK. 0x%x", (uint32_t)rot_evt_cb);
 			frame.reserved = rot_user_data;

@@ -356,7 +356,6 @@ private:
 	SprdCameraParameters            mParameters;
 	SprdCameraParameters            mSetParameters;
 	SprdCameraParameters            mSetParametersBak;
-	SprdCameraParameters            mUseParameters;
 	uint32_t                        mPreviewHeight_trimy;
 	uint32_t                        mPreviewWidth_trimx;
 	int                             mPreviewHeight_backup;
