@@ -72,6 +72,13 @@ static nsecs_t s_start_timestamp = 0;
 static nsecs_t s_end_timestamp = 0;
 static int s_use_time = 0;
 
+#ifdef CONFIG_USEIOMMU
+static const int s_mem_method = 1;	 //   0=  physical	address,1=iommu  address
+#else
+static const int s_mem_method = 0;
+#endif
+
+
 #define GET_START_TIME do { \
                              s_start_timestamp = systemTime(); \
                        }while(0)
@@ -1546,8 +1553,9 @@ bool SprdCameraHardware::startCameraIfNecessary()
 
 int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
 {
-	LOGD("Callback_AllocCapturePmem size = %d", size);
+	LOGV("Callback_AllocCapturePmem size = %d", size);
 
+	sp<MemoryHeapIon> pHeapIon ;
 	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
 	if (camera == NULL) {
 		return -1;
@@ -1556,7 +1564,11 @@ int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int siz
 		return -1;
 	}
 
-	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	if(s_mem_method==0)
+		pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	else
+		pHeapIon = new MemoryHeapIon("/dev/ion", size ,MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+
 	if (pHeapIon == NULL) {
 		return -1;
 	}
@@ -1564,11 +1576,15 @@ int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int siz
 		return -1;
 	}
 
-	pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+	if(s_mem_method==0){
+		pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+	} else {
+		pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
+	}
 	*addr_vir = (int)(pHeapIon->base());
 	camera->mMiscHeapArray[camera->mMiscHeapNum++] = pHeapIon;
 
-	LOGD("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	LOGV("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
 
 	return 0;
 }
@@ -1580,7 +1596,7 @@ int SprdCameraHardware::Callback_FreeCapturePmem(void* handle)
 		return -1;
 	}
 
-	LOGD("Callback_FreePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	LOGV("Callback_FreePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
 
 	uint32_t i;
 	for (i=0; i<camera->mMiscHeapNum; i++) {
@@ -1598,6 +1614,7 @@ int SprdCameraHardware::Callback_FreeCapturePmem(void* handle)
 sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_bufs)
 {
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
+	MemoryHeapIon *pHeapIon;
 	if(NULL == memory) {
 		LOGE("wxz: Fail to GetCachePmem, memory is NULL.");
 		return NULL;
@@ -1608,28 +1625,37 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	camera_memory_t *camera_memory;
 	int paddr, psize;
 	int  acc = buf_size *num_bufs ;
-
-	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
+	if(s_mem_method==0)
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
+	else
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_SYSTEM_MASK);
 
 	if (NULL == pHeapIon) {
+		LOGE("Fail to GetCachePmem() 1.");
 		goto getpmem_end;
 	}
 	if (NULL == pHeapIon->getBase()
 		|| 0xffffffff == (uint32_t)pHeapIon->getBase()) {
+		LOGE("Fail to GetCachePmem() 2.");
 		goto getpmem_end;
 	}
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 
         if(NULL == camera_memory) {
+		LOGE("Fail to GetCachePmem() 3.");
                    goto getpmem_end;
         }
         if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
                  camera_memory = NULL;
-                 LOGE("Fail to GetPmem().");
+                 LOGE("Fail to GetPmem() 4.");
                  goto getpmem_end;
        }
-	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	if(s_mem_method==0){
+		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	} else {
+		pHeapIon->get_mm_iova(&paddr, &psize);
+	}
 	memory->ion_heap = pHeapIon;
 	memory->camera_memory = camera_memory;
 	memory->phys_addr = paddr;
@@ -1638,9 +1664,15 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	//memory->data = camera_memory->data;
 	memory->data = pHeapIon->getBase();
 
-       LOGV("GetCachePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-                            memory->phys_addr, (uint32_t)camera_memory->data,
-                            camera_memory->size, memory->phys_size);
+	if(s_mem_method==0){
+	   LOGV("GetCachePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+							memory->phys_addr, (uint32_t)memory->data,
+							camera_memory->size, memory->phys_size);
+	} else {
+	   LOGV("GetCachePmem,mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+							 memory->phys_addr, (uint32_t)memory->data,
+							 camera_memory->size, memory->phys_size);
+	}
 
 getpmem_end:
 	return memory;
@@ -1663,16 +1695,21 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 
 	if(NULL == camera_memory) {
+		LOGE("Fail to GetPmem() 1.");
 		goto getpmem_end;
 	}
 
 	if(0xFFFFFFFF == (uint32_t)camera_memory->data) {
 		camera_memory = NULL;
-		LOGE("Fail to GetPmem().");
+		LOGE("Fail to GetPmem() 2.");
 		goto getpmem_end;
 	}
 
-	pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	if(s_mem_method==0){
+		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+	} else {
+		pHeapIon->get_mm_iova(&paddr, &psize);
+	}
 	memory->ion_heap = pHeapIon;
 	memory->camera_memory = camera_memory;
 	memory->phys_addr = paddr;
@@ -1681,9 +1718,15 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 	//memory->data = camera_memory->data;
 	memory->data = pHeapIon->getBase();
 
-	LOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-			memory->phys_addr, (uint32_t)camera_memory->data,
-			camera_memory->size, memory->phys_size);
+	if(s_mem_method==0){
+	   LOGV("GetPmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+							memory->phys_addr, (uint32_t)memory->data,
+							camera_memory->size, memory->phys_size);
+	} else {
+	   LOGV("GetPmem,mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+							 memory->phys_addr, (uint32_t)memory->data,
+							 camera_memory->size, memory->phys_size);
+	}
 
 getpmem_end:
 	return memory;
@@ -1702,6 +1745,10 @@ void SprdCameraHardware::FreePmem(sprd_camera_memory_t* memory)
 		}
 
 		if(memory->ion_heap) {
+			if(s_mem_method!=0){
+				LOGV("free_mm_iova: 0x%x,data: 0x%x, 0x%x",memory->phys_addr, (uint32_t)memory->data,memory->phys_size);
+				memory->ion_heap->free_mm_iova(memory->phys_addr, memory->phys_size);
+			}
 			delete memory->ion_heap;
 			memory->ion_heap = NULL;
 		}
@@ -1725,6 +1772,10 @@ void SprdCameraHardware::clearPmem(sprd_camera_memory_t* memory)
 		}
 
 		if(memory->ion_heap) {
+			if(s_mem_method!=0){
+				LOGV("free_mm_iova: 0x%x,data: 0x%x, 0x%x",memory->phys_addr, (uint32_t)memory->data,memory->phys_size);
+				memory->ion_heap->free_mm_iova(memory->phys_addr, memory->phys_size);
+			}
 			delete memory->ion_heap;
 			memory->ion_heap = NULL;
 		}
@@ -1776,8 +1827,15 @@ void SprdCameraHardware::canclePreviewMem()
 {
 	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage && mPreviewWindow) {
 		int i = 0;
+		struct private_handle_t *private_h = NULL;
+
 		for (i = 0; i < kPreviewBufferCount; i++) {
 			if (mPreviewBufferHandle[i]) {
+				if (s_mem_method) {
+					LOGE("free_mm_iova by  allocatePreviewMemByGraphics:%d",i);
+					private_h=(struct private_handle_t*) (*mPreviewBufferHandle[i]);
+					MemoryHeapIon::Free_mm_iova(private_h->share_fd,mPreviewHeapArray_phy[i],mPreviewHeapArray_size[i]);
+				}
 				if (0 != mPreviewWindow->cancel_buffer(mPreviewWindow, mPreviewBufferHandle[i])) {
 					LOGE("canclePreviewMem: cancel_buffer error id = %d",i);
 				}
@@ -1841,14 +1899,22 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 				LOGE("allocatePreviewMemByGraphics: dequeue_buffer error");
 				return -1;
 			}
-
 			private_h=(struct private_handle_t*) (*buffer_handle);
-			mPreviewBufferHandle[i] = buffer_handle;
-			mPreviewHeapArray_phy[i] = (uint32_t)private_h->phyaddr;
-			mPreviewHeapArray_vir[i] = (uint32_t)private_h->base;
-
+			if(s_mem_method==0){
+				mPreviewBufferHandle[i] = buffer_handle;
+				mPreviewHeapArray_phy[i] = (uint32_t)private_h->phyaddr;
+				mPreviewHeapArray_vir[i] = (uint32_t)private_h->base;
+			} else {
+				int iova_addr=0,iova_size=0;
+				ALOGD("***frank.dong*** MemoryHeapIon::Get_mm_iova: %d",i);
+				MemoryHeapIon::Get_mm_iova(private_h->share_fd,&iova_addr,&iova_size);
+				mPreviewBufferHandle[i] = buffer_handle;
+				mPreviewHeapArray_phy[i] = (uint32_t)iova_addr;
+				mPreviewHeapArray_vir[i] = (uint32_t)private_h->base;
+				mPreviewHeapArray_size[i]=iova_size;
+			}
 			LOGD("allocatePreviewMemByGraphics: phyaddr:0x%x, base:0x%x, size:0x%x, stride:0x%x ",
-					private_h->phyaddr,private_h->base,private_h->size, stride);
+					mPreviewHeapArray_phy[i],private_h->base,private_h->size, stride);
 		}
 
 		for (i = (kPreviewBufferCount -miniUndequeued); i < kPreviewBufferCount; i++ ) {
@@ -2078,8 +2144,10 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 	LOGV("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
 
 	mRawHeap = GetCachePmem(buffer_size, kRawBufferCount);
-	if(NULL == mRawHeap)
+	if(NULL == mRawHeap){
+		LOGE("allocateCaptureMem: Fail to GetCachePmem.");
 		goto allocate_capture_mem_failed;
+	}
 
 	if(NULL == mRawHeap->handle){
 		LOGE("allocateCaptureMem: Fail to GetPmem mRawHeap.");
@@ -2100,6 +2168,7 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 	}
 
 	if (initJpegHeap) {
+		LOGV("allocateCaptureMem: initJpeg");
 		// ???
 		mJpegHeap = NULL;
 
@@ -2840,58 +2909,67 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 	int ret = 0;
 	struct _dma_copy_cfg_tag dma_copy_cfg;
 
+	if(s_mem_method==0) {
 #ifdef CONFIG_CAMERA_DMA_COPY
-	dma_copy_cfg.format = DMA_COPY_YUV420;
-	dma_copy_cfg.src_size.w = src_w;
-	dma_copy_cfg.src_size.h = src_h;
-	dma_copy_cfg.src_rec.x = mPreviewWidth_trimx;
-	dma_copy_cfg.src_rec.y = mPreviewHeight_trimy;
-	dma_copy_cfg.src_rec.w = mPreviewWidth_backup;
-	dma_copy_cfg.src_rec.h = mPreviewHeight_backup;
-	dma_copy_cfg.src_addr.y_addr = src_phy_addr;
-	dma_copy_cfg.src_addr.uv_addr = src_phy_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h;
-	dma_copy_cfg.dst_addr.y_addr = dst_phy_addr;
-	if ((0 == dma_copy_cfg.src_rec.x) && (0 == dma_copy_cfg.src_rec.y) &&
-		(dma_copy_cfg.src_size.w == dma_copy_cfg.src_rec.w) &&
-		(dma_copy_cfg.src_size.h == dma_copy_cfg.src_rec.h)) {
-		dma_copy_cfg.dst_addr.uv_addr = dst_phy_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h ;
-	} else {
-		dma_copy_cfg.dst_addr.uv_addr = dst_phy_addr + dma_copy_cfg.src_rec.w * dma_copy_cfg.src_rec.h ;
-	}
-	ret = camera_dma_copy_data(dma_copy_cfg);
+		dma_copy_cfg.format = DMA_COPY_YUV420;
+		dma_copy_cfg.src_size.w = src_w;
+		dma_copy_cfg.src_size.h = src_h;
+		dma_copy_cfg.src_rec.x = mPreviewWidth_trimx;
+		dma_copy_cfg.src_rec.y = mPreviewHeight_trimy;
+		dma_copy_cfg.src_rec.w = mPreviewWidth_backup;
+		dma_copy_cfg.src_rec.h = mPreviewHeight_backup;
+		dma_copy_cfg.src_addr.y_addr = src_phy_addr;
+		dma_copy_cfg.src_addr.uv_addr = src_phy_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h;
+		dma_copy_cfg.dst_addr.y_addr = dst_phy_addr;
+		if ((0 == dma_copy_cfg.src_rec.x) && (0 == dma_copy_cfg.src_rec.y) &&
+			(dma_copy_cfg.src_size.w == dma_copy_cfg.src_rec.w) &&
+			(dma_copy_cfg.src_size.h == dma_copy_cfg.src_rec.h)) {
+			dma_copy_cfg.dst_addr.uv_addr = dst_phy_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h ;
+		} else {
+			dma_copy_cfg.dst_addr.uv_addr = dst_phy_addr + dma_copy_cfg.src_rec.w * dma_copy_cfg.src_rec.h ;
+		}
+		ret = camera_dma_copy_data(dma_copy_cfg);
 #else
 
 #ifdef CONFIG_CAMERA_ANTI_SHAKE
-	dma_copy_cfg.format = DMA_COPY_YUV420;
-	dma_copy_cfg.src_size.w = src_w;
-	dma_copy_cfg.src_size.h = src_h;
-	dma_copy_cfg.src_rec.x = mPreviewWidth_trimx;
-	dma_copy_cfg.src_rec.y = mPreviewHeight_trimy;
-	dma_copy_cfg.src_rec.w = mPreviewWidth_backup;
-	dma_copy_cfg.src_rec.h = mPreviewHeight_backup;
-	dma_copy_cfg.src_addr.y_addr = src_virtual_addr;
-	dma_copy_cfg.src_addr.uv_addr = src_virtual_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h;
-	dma_copy_cfg.dst_addr.y_addr = dst_virtual_addr;
-	if ((0 == dma_copy_cfg.src_rec.x) && (0 == dma_copy_cfg.src_rec.y) &&
-		(dma_copy_cfg.src_size.w == dma_copy_cfg.src_rec.w) &&
-		(dma_copy_cfg.src_size.h == dma_copy_cfg.src_rec.h)) {
-		dma_copy_cfg.dst_addr.uv_addr = dst_virtual_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h ;
-	} else {
-		dma_copy_cfg.dst_addr.uv_addr = dst_virtual_addr + dma_copy_cfg.src_rec.w * dma_copy_cfg.src_rec.h ;
-	}
-	ret = uv420CopyTrim(dma_copy_cfg);
+		dma_copy_cfg.format = DMA_COPY_YUV420;
+		dma_copy_cfg.src_size.w = src_w;
+		dma_copy_cfg.src_size.h = src_h;
+		dma_copy_cfg.src_rec.x = mPreviewWidth_trimx;
+		dma_copy_cfg.src_rec.y = mPreviewHeight_trimy;
+		dma_copy_cfg.src_rec.w = mPreviewWidth_backup;
+		dma_copy_cfg.src_rec.h = mPreviewHeight_backup;
+		dma_copy_cfg.src_addr.y_addr = src_virtual_addr;
+		dma_copy_cfg.src_addr.uv_addr = src_virtual_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h;
+		dma_copy_cfg.dst_addr.y_addr = dst_virtual_addr;
+		if ((0 == dma_copy_cfg.src_rec.x) && (0 == dma_copy_cfg.src_rec.y) &&
+			(dma_copy_cfg.src_size.w == dma_copy_cfg.src_rec.w) &&
+			(dma_copy_cfg.src_size.h == dma_copy_cfg.src_rec.h)) {
+			dma_copy_cfg.dst_addr.uv_addr = dst_virtual_addr + dma_copy_cfg.src_size.w * dma_copy_cfg.src_size.h ;
+		} else {
+			dma_copy_cfg.dst_addr.uv_addr = dst_virtual_addr + dma_copy_cfg.src_rec.w * dma_copy_cfg.src_rec.h ;
+		}
+		ret = uv420CopyTrim(dma_copy_cfg);
 #else
-    if (mIsDvPreview) {
-		if (!mPreviewWindow || !mGrallocHal) return false;
-		memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
-    } else {
-		if (!mPreviewWindow || !mGrallocHal) return false;
-		memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
-    }
-
+		if (mIsDvPreview) {
+			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
+		} else {
+			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
+		}
 #endif
 
 #endif
+	} else {
+		if (mIsDvPreview) {
+			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w) * SIZE_ALIGN(src_h) * 3/2);
+		} else {
+			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
+		}
+	}
 	return ret;
 }
 
@@ -2949,6 +3027,9 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 
 bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32_t phy_addr, char *virtual_addr, uint32_t id)
 {
+
+	void				*vaddr = NULL;
+
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
 			return false;
@@ -2958,7 +3039,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		buffer_handle_t 	*buf_handle = NULL;
 		int 				stride = 0;
-		void 				*vaddr = NULL;
 		int					ret = 0;
 		struct _dma_copy_cfg_tag dma_copy_cfg;
 		struct private_handle_t *private_h = NULL;
@@ -3004,6 +3084,15 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			camera_release_frame(id);
 			return true;
 		} else {
+			if (mIsDvPreview) {
+				mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
+										0, 0, SIZE_ALIGN(width), SIZE_ALIGN(height), &vaddr);
+			} else {
+				mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
+										0, 0, width, height, &vaddr);
+			}
+
+			mGrallocHal->unlock(mGrallocHal, *mPreviewBufferHandle[id]);
 			if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, mPreviewBufferHandle[id])) {
 				LOGE("displayOneFrame fail: Could not enqueue gralloc buffer!\n");
 				return false;
@@ -3732,6 +3821,16 @@ void SprdCameraHardware::HandleStartPreview(camera_cb_type cb,
 		receiveCameraExitError();
 		break;
 
+	case CAMERA_EVT_CB_FLUSH:
+		LOGE("CAMERA_EVT_CB_FLUSH, 0x%x", mPreviewHeapSize);
+		{
+			camera_frame_type *frame = (camera_frame_type *)parm4;
+			flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, frame->buf_id,
+					(void*)frame->buf_Virt_Addr,
+					(void*)frame->buffer_phy_addr,
+					mPreviewHeapSize);
+		}
+		break;
 	default:
 		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
 		LOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.", cb);
@@ -4251,7 +4350,7 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 {
 	int ret = 0;
 	sprd_camera_memory_t  *pmem = NULL;
-	MemoryHeapIon *pHeapIon;
+	MemoryHeapIon *pHeapIon = NULL;
 
 
 	switch(type)
@@ -4266,7 +4365,7 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 		size = (int)pmem->phys_size;
 		break;
 	case CAMERA_FLUSH_PREVIEW_HEAP:
-		if (index < kPreviewBufferCount) {
+		if (index < kPreviewBufferCount && mPreviewHeapArray != NULL) {
 			pmem = mPreviewHeapArray[index];
 		}
 		break;
@@ -4274,9 +4373,12 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 		break;
 	}
 
-
 	if (pmem) {
 		pHeapIon = pmem->ion_heap;
+	}
+
+	if (pHeapIon) {
+		LOGV("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x,size=0x%x", index, (uint32_t)v_addr, (uint32_t)p_addr,size);
 		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
 		if (ret) {
 			LOGV("flush_buffer error ret=%d", ret);

@@ -335,6 +335,7 @@ private:
 	uint32_t                        mRawHeapBakUseFlag;
 	uint32_t                        mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	uint32_t                        mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	uint32_t                        mPreviewHeapArray_size[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	buffer_handle_t                 *mPreviewBufferHandle[kPreviewBufferCount];
 	buffer_handle_t                 *mPreviewCancelBufHandle[kPreviewBufferCount];
 	bool                            mCancelBufferEb;
