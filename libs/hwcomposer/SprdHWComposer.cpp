@@ -35,6 +35,7 @@
  *****************************************************************************/
 
 #include "SprdHWComposer.h"
+#include "AndroidFence.h"
 
 
 using namespace android;
@@ -101,6 +102,8 @@ bool SprdHWComposer:: Init()
 
     mVirtualDisplay->getDisplayAttributes(&(mDisplayAttributes[DISPLAY_VIRTUAL]));
 
+    openSprdFence();
+
     mInitFlag = 1;
 
     return true;
@@ -108,6 +111,8 @@ bool SprdHWComposer:: Init()
 
 SprdHWComposer:: ~SprdHWComposer()
 {
+    closeSprdFence();
+
     if (mPrimaryDisplay) {
         delete mPrimaryDisplay;
         mPrimaryDisplay = NULL;

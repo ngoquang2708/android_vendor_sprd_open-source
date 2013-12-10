@@ -95,5 +95,7 @@ int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
 
     closeAcquireFDs(list);
 
+    createRetiredFence(list);
+
     return 0;
 }
