@@ -111,6 +111,10 @@ extern int mali_max_pp_cores_group_2;
 module_param(mali_max_pp_cores_group_2, int, S_IRUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(mali_max_pp_cores_group_2, "Limit the number of PP cores to use from second PP group (Mali-450 only).");
 
+int mali_dfs_flag=0;
+module_param(mali_dfs_flag, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); /* rw-r-r-- */
+MODULE_PARM_DESC(mali_dfs_flag, "Enable/Disable mali DFS.");
+
 /* Export symbols from common code: mali_user_settings.c */
 #include "mali_user_settings_db.h"
 EXPORT_SYMBOL(mali_set_user_setting);

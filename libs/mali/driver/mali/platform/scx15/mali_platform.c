@@ -59,6 +59,7 @@ extern int scaling_min_freq;
 extern int scaling_max_freq;
 extern int scaling_cur_freq;
 extern int gpu_level;
+extern int mali_dfs_flag;
 static struct clk* gpu_clock = NULL;
 static struct clk* gpu_clock_i = NULL;
 static struct clk* clock_256m = NULL;
@@ -120,6 +121,7 @@ int mali_platform_device_register(void)
 	gpuinfo_transition_latency=300;
 	scaling_max_freq=256;
 	scaling_min_freq=85;
+	mali_dfs_flag=0;
 
 	MALI_DEBUG_ASSERT(gpu_clock);
 	MALI_DEBUG_ASSERT(gpu_clock_i);
@@ -376,9 +378,14 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 #if GPU_FREQ_CONTROL
 static void gpu_change_freq_div(void)
 {
+	if(!mali_dfs_flag) {
+		MALI_DEBUG_PRINT(3,("GPU_DFS gpu_change_freq_div disabled\n"));
+		return;
+	}
 #if !GPU_GLITCH_FREE_DFS
 	mali_dev_pause();
 #endif
+	MALI_DEBUG_PRINT(3,("GPU_DFS gpu_change_freq_div enabled\n"));
 	if(gpu_power_on&&gpu_clock_on)
 	{
 		if(old_mali_freq_select!=mali_freq_select)
