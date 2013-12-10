@@ -28,7 +28,10 @@
 #include <cutils/properties.h>
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
-
+/* SPRD: add for apct functions @{ */
+#include <sys/time.h>
+#include <time.h>
+/* @} */
 #include <GLES/gl.h>
 
 #ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
@@ -86,6 +89,60 @@ static int fb_setUpdateRect(struct framebuffer_device_t* dev,
 	return 0;
 }
 
+/* SPRD: add for apct functions @{ */
+static void writeFpsToProc(float fps)
+{
+    char fps_buf[256] = {0};
+    char *fps_proc = "/proc/benchMark/fps";
+    int fpsInt = (int)(fps+0.5);
+    
+    sprintf(fps_buf, "fps:%d", fpsInt);
+       
+    FILE *f = fopen(fps_proc,"r+w");
+	if (NULL != f)
+	{
+        fseek(f,0,0);
+        fwrite(fps_buf,strlen(fps_buf),1,f);
+        fclose(f);
+    }
+}
+  
+static int64_t systemTime()
+{
+    struct timespec t;
+    t.tv_sec = t.tv_nsec = 0;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec*1000000000LL + t.tv_nsec;
+}
+
+bool gIsApctFpsShow = false;
+bool gIsApctRead  = false;
+bool getApctFpsSupport()
+{
+    if (gIsApctRead)
+    {
+        return gIsApctFpsShow;
+    }
+    gIsApctRead = true;
+
+    char str[10] = {'\0'};
+    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+
+    FILE *f = fopen(FILE_NAME, "r");
+
+    if (NULL != f)
+    {
+        fseek(f, 0, 0);
+        fread(str, 5, 1, f);
+        fclose(f);
+
+        long apct_config = atol(str);
+
+        gIsApctFpsShow =  (apct_config & 0x8002) == 0x8002 ? true : false;
+    }
+    return gIsApctFpsShow;
+}
+/* @} */
 
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 {
@@ -94,8 +151,26 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		return -EINVAL;
 	}
 
-	private_handle_t const *hnd = reinterpret_cast<private_handle_t const *>(buffer);
-	private_module_t *m = reinterpret_cast<private_module_t *>(dev->common.module);
+    /* SPRD: add for apct functions @{ */
+    static int64_t now = 0, last = 0;
+    static int flip_count = 0;
+
+    if (getApctFpsSupport())
+    {
+        flip_count++;
+        now = systemTime();
+        if ((now - last) >= 1000000000LL)
+        {
+            float fps = flip_count*1000000000.0f/(now-last);
+            writeFpsToProc(fps);
+            flip_count = 0;
+            last = now;
+        }
+    }
+    /* @} */
+
+	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(buffer);
+	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
 
 #ifdef DEBUG_FB_POST
 	AINF( "%s in line=%d\n", __FUNCTION__, __LINE__);

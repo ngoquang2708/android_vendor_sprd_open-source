@@ -156,6 +156,7 @@ int SprdCameraHardware::getNumberOfCameras()
 	return num;
 }
 
+/* SPRD: add for apct functions @{ */
 static void writeCamInitTimeToApct(char *buf)
 {
     int apct_dir_fd = open("/data/apct", O_CREAT, 0777);
@@ -181,9 +182,9 @@ static nsecs_t cam_init_begin_time = 0;
 static void writeCamInitTimeToProc(float init_time)
 {
     char cam_time_buf[256] = {0};
-    const char *cam_time_proc = "/proc/benchMark/cam_time";
-
-    sprintf(cam_time_buf, "Camera Init Time: %.2fs", init_time);
+    char *cam_time_proc = "/proc/benchMark/cam_time";
+    
+    sprintf(cam_time_buf, "Camera Init Time: %.2fs", init_time);     
 
     FILE *f = fopen(cam_time_proc,"r+w");
 	if (NULL != f)
@@ -195,18 +196,18 @@ static void writeCamInitTimeToProc(float init_time)
     writeCamInitTimeToApct(cam_time_buf);
 }
 
-bool gIsCamInitTimeShow = false;
+bool gIsApctCamInitTimeShow = false;
 bool gIsApctRead  = false;
-void getCamInitSupport()
+bool getApctCamInitSupport()
 {
     if (gIsApctRead)
     {
-        return;
+        return gIsApctCamInitTimeShow;
     }
     gIsApctRead = true;
 
     char str[10] = {'\0'};
-    const char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
 
     FILE *f = fopen(FILE_NAME, "r");
 
@@ -215,12 +216,13 @@ void getCamInitSupport()
         fseek(f, 0, 0);
         fread(str, 5, 1, f);
         fclose(f);
-
-        long apct_config = atol(str);
-
-        gIsCamInitTimeShow =  (apct_config & 0x8010) == 0x8010 ? true : false;
+       
+        long apct_config = atol(str);        
+        gIsApctCamInitTimeShow =  (apct_config & 0x8010) == 0x8010 ? true : false;
     }
+    return gIsApctCamInitTimeShow;
 }
+/* @} */
 
 int SprdCameraHardware::getCameraInfo(int cameraId, struct camera_info *cameraInfo)
 {
@@ -3947,15 +3949,14 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		GET_USE_TIME;
 		LOGE("Launch Camera Time:%d(ms).",s_use_time);
 
-		//for benchMark camera init time display.
+        /* SPRD: add for apct functions @{ */
 		float cam_init_time;
-        getCamInitSupport();
-        if (gIsCamInitTimeShow)
+        if (getApctCamInitSupport())
         {
             cam_init_time =  ((float)(systemTime() - cam_init_begin_time))/1000000000;
             writeCamInitTimeToProc(cam_init_time);
         }
-
+        /* @} */
 		miSPreviewFirstFrame = 0;
 	}
 
@@ -5499,10 +5500,12 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
     LOGV("%s", __func__);
     GET_START_TIME;
 
-    if (gIsCamInitTimeShow)
+    /* SPRD: add for apct functions @{ */
+    if (getApctCamInitSupport())
     {
         cam_init_begin_time = systemTime();
     }
+    /* @} */
 
     int cameraId = atoi(id);
     if (cameraId < 0 || cameraId >= HAL_getNumberOfCameras()) {

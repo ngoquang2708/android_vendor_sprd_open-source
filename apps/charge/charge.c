@@ -29,8 +29,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/stat.h>
-
-
+/* SPRD: add for apct functions @{ */
+#include <sys/time.h>
+#include <stdbool.h>
+/* @} */
 #include "common.h"
 #include "cutils/properties.h"
 #include "minui/minui.h"
@@ -50,6 +52,91 @@ void log_init(void);
 int is_exit = 0;
 
 #define MODE_CHECK_MAX 10
+/* SPRD: add for apct functions @{ */
+bool gIsApctPowerOffCharge = false;
+bool gIsApctRead  = false;
+bool getApctChargeSupport()
+{
+    if (gIsApctRead)
+    {
+        return gIsApctPowerOffCharge;
+    }
+    gIsApctRead = true;
+
+    char str[10] = {'\0'};
+    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+
+    FILE *f = fopen(FILE_NAME, "r");
+
+    if (NULL != f)
+    {
+        fseek(f, 0, 0);
+        fread(str, 5, 1, f);
+        fclose(f);
+
+        long apct_config = atol(str);
+
+        gIsApctPowerOffCharge =  (apct_config & 0x8200) == 0x8200 ? true : false;
+    }
+    return gIsApctPowerOffCharge;
+}
+
+//for apct power off to charge time calculation.
+void RecordChargeTime()
+{
+	/*add for Sprd Android performance check tool*/
+	struct timespec t;
+	t.tv_sec = t.tv_nsec = 0;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	long charge_animt_time = t.tv_sec*1000 + t.tv_nsec/1000000;
+
+	struct timeval tv;
+	tv.tv_sec = tv.tv_usec = 0;
+	gettimeofday(&tv, NULL);
+	int cmdline_fd = open("/proc/cmdline", O_RDONLY);
+	long uboot_time = 0;
+	if (cmdline_fd >=0 ) {
+		char *p;
+
+		char cmd[1024] = {0};
+		read(cmdline_fd, cmd, sizeof(cmd) - 1);
+		p = strstr(cmd, "pl_t=");
+		if (p!=NULL) {
+			p = p+5;
+			//LOGE("charge time pl_t=%s", p);
+			while(1) {
+				char c = *p++;
+				if ( c >= '0' && c <= '9') {
+					uboot_time = uboot_time*10 + (c - '0');
+				} else {
+					break;
+				}
+			}
+		}
+		close(cmdline_fd);
+	}
+
+    int apct_dir_fd = open("/data/apct", O_CREAT, 0777);
+
+	if (apct_dir_fd >= 0)
+	{
+	    fchmod(apct_dir_fd, 0777);
+	    close(apct_dir_fd);
+	}
+
+	int chargetime_fd = open("/data/apct/chargetime", O_CREAT | O_RDWR | O_TRUNC, 0666); //umaks make it to 0600
+        if (chargetime_fd >=0) {
+			char buf[100] = {0};
+			//LOGE("charge time: uboot=%ldms  ", uboot_time);
+			//LOGE("charge time: user=%ldms  ", charge_animt_time);
+			sprintf(buf, "charge time: %ldms  ", charge_animt_time + uboot_time);
+			write(chargetime_fd, buf, strlen(buf));
+			fchmod(chargetime_fd, 0666);
+			close(chargetime_fd);
+	}
+}
+/* @} */
+
 int
 main(int argc, char **argv) {
 	time_t start = time(NULL);
@@ -165,6 +252,13 @@ main(int argc, char **argv) {
 
 	ui_set_background(BACKGROUND_ICON_NONE);
 	ui_show_indeterminate_progress();
+
+    /* SPRD: add for apct functions @{ */
+    if (getApctChargeSupport())
+    {
+        RecordChargeTime();
+    }
+    /* @} */
 
 	pthread_t t_1, t_2, t_3, t_4;
 	ret = pthread_create(&t_1, NULL, charge_thread, NULL);
