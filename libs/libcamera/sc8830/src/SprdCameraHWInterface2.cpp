@@ -2214,6 +2214,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		m_camCtlInfo.pictureMode = CAMERA_ZSL_MODE;
 		HAL_LOGD("LOG_TAG enabling ZSL mode");
     }
+
     if(!orireq || !srcreq) {
 	    HAL_LOGD("DEBUG(%s): Err para is NULL!", __FUNCTION__);
         return;
@@ -2230,6 +2231,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	m_reqIsProcess = true;
 	srcreq->ori_req = orireq;
     reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
+#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+	SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 1);
+#else
+	SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 0);
+#endif
 	//first get metadata struct
     for (; index < reqCount ; index++) {
         if (get_camera_metadata_entry(srcreq->ori_req, index, &entry)==0) {
@@ -2554,7 +2560,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					HAL_LOGE("%s set pic size fail",__FUNCTION__);
 				}
 				if (srcreq->isCropSet) {
-					camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
+					if (CAMERA_ZSL_MODE == m_camCtlInfo.pictureMode) {
+						camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
+					} else {
+						camera_get_sensor_mode_trim(0, &zoom1, &wid, &height);
+					}
 					CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
 					SET_PARM(drvTag,(uint32_t)&zoom);
 					srcreq->isCropSet = false;
@@ -2588,7 +2598,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							HAL_LOGE("%s set pic size fail",__FUNCTION__);
 						}
 						if (srcreq->isCropSet) {
-							camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
+							if (CAMERA_ZSL_MODE == m_camCtlInfo.pictureMode) {
+								camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
+							} else {
+								camera_get_sensor_mode_trim(0, &zoom1, &wid, &height);
+							}
 							CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
 							SET_PARM(drvTag,(uint32_t)&zoom);
 							srcreq->isCropSet = false;
@@ -2657,7 +2671,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			}
 			SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
 			if (srcreq->isCropSet) {
-                camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
+				camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
 				CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
 				SET_PARM(drvTag,(uint32_t)&zoom);
 				srcreq->isCropSet = false;
