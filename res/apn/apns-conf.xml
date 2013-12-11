@@ -894,7 +894,7 @@
     <apn carrier="Plus MMS"
         mcc="260"
         mnc="01"
-        apn="mms.plusgsm.pl"
+        apn="mms"
         mmsproxy="212.2.96.16"
         mmsport="8080"
         mmsc="http://mms.plusgsm.pl:8002"
@@ -920,15 +920,12 @@
         mmsc="http://mms.era.pl/servlets/mms"
         type="mms"
     />
-    <apn carrier="T-Mobile internet"
+    <apn carrier="T-mobile.pl"
         mcc="260"
         mnc="02"
         apn="internet"
-        proxy="213.158.194.229"
-        port="8080"
         server="http://t-mobile.pl/download"
         type="default,supl"
-        authtype="1"
     />
     <apn carrier="T-Mobile mms"
         mcc="260"
@@ -944,10 +941,7 @@
         mcc="260"
         mnc="02"
         apn="heyah.pl"
-        user="heyah"
-        password="heyah"
         type="default,supl"
-        authtype="3"
     />
     <apn carrier="heyahmms"
         mcc="260"
@@ -955,22 +949,17 @@
         apn="heyahmms"
         mmsproxy="213.158.194.226"
         mmsport="8080"
-        user="hayah"
-        password="hayah"
         mmsc="http://mms.heyah.pl/servlets/mms"
         type="mms"
-        authtype="3"
     />
     <!-- Poland Orange -->
-    <apn carrier="orange Internet"
+    <apn carrier="Orange Internet"
         mcc="260"
         mnc="03"
         apn="internet"
-        user="ppp"
-        password="ppp"
-        mmsc=""
+        user="internet"
+        password="internet"
         type="default,supl"
-        authtype="3"
     />
     <apn carrier="orange GPRS wap"
         mcc="260"
@@ -1066,7 +1055,7 @@
         mcc="515"
         mnc="02"
         apn="mms.globe.com.ph"
-        mmsproxy="192.040.100.020"
+        mmsproxy="203.177.42.214"
         mmsport="8080"
         mmsc="http://192.40.100.22:10021/mmsc"
         type="mms"
@@ -5160,7 +5149,7 @@
         mmsc="http://mms.onetouch.com.gh/mmsc"
         type="mms"
     />
-    <!-- Ghana tiGO -->
+    <!-- Ghana Tigo -->
     <apn carrier="Tigo Internet"
         mcc="620"
         mnc="03"
@@ -5214,6 +5203,28 @@
         mcc="620"
         mnc="07"
         apn="internet"
+        type="default"
+    />
+    <apn carrier="Glowap"
+        mcc="620"
+        mnc="07"
+        apn="glowap"
+        proxy="10.161.85.4"
+        port="8799"
+        user="glo"
+        password="glo"
+        server="http://wap.gloworld.com"
+        type=""
+    />
+    <apn carrier="Glomms"
+        mcc="620"
+        mnc="07"
+        apn=""
+        user="glo"
+        password="glo"
+        mmsc="mmsc11"
+        mmsproxy="10.161.85.4"
+        mmsport="8799"
         type="default"
     />
     <!-- Greece Cosmote -->
@@ -14146,8 +14157,6 @@
         mcc="510"
         mnc="89"
         apn="3data"
-        proxy="10.4.0.10"
-        port="3128"
         server="http://wap.three.co.id"
         user="3data"
         password="3data"
@@ -14167,13 +14176,6 @@
         authtype="1"
     />
     <!-- Iran IR-MCI -->
-    <apn carrier="IR - MCI Web"
-        mcc="432"
-        mnc="11"
-        apn="mcinet"
-        server="www.mci.ir"
-        type="default,supl"
-    />
     <!-- SPRD：remove port @{ -->
     <apn carrier="IR - MCI Wap"
         mcc="432"
@@ -14229,12 +14231,6 @@
     />
     <!-- @} -->
     <!-- Iran Irancell -->
-    <apn carrier="IR - MT Irancell Web"
-        mcc="432"
-        mnc="35"
-        apn="mtnirancell"
-        type="default,supl"
-    />
     <apn carrier="IR - MT Irancell Wap"
         mcc="432"
         mnc="35"
@@ -14351,30 +14347,6 @@
         authtype="1"
     />
     -->
-    <!-- Isle of Man Sure Mobile -->
-    <apn carrier="IM - Sure Web"
-        mcc="234"
-        mnc="36"
-        apn="internet"
-        proxy=""
-        port=""
-        user=""
-        password=""
-        type="default,supl"
-        authtype="1"
-    />
-    <apn carrier="IM - Sure MMS"
-        mcc="234"
-        mnc="36"
-        apn=""
-        mmsproxy=""
-        mmsport=""
-        user=""
-        password=""
-        mmsc=""
-        type="mms"
-        authtype="1"
-    />
     <!-- Israel Orange -->
     <apn carrier="IL - Orange Web"
         mcc="425"
@@ -14643,7 +14615,7 @@
         type="default,supl,mms"
         authtype="3"
     />
-    <apn carrier="dm.jplat.net"
+    <apn carrier="bmobile_dm"
         mcc="440"
         mnc="10"
         apn="dm.jplat.net"
@@ -14666,7 +14638,7 @@
         mnc="10"
         apn="biglobe.jp"
         user="user"
-        password="0"
+        password="0000"
         type="default,supl,mms"
         authtype="2"
     />
@@ -14712,6 +14684,32 @@
         password="dti"
         type="default,supl,mms"
         authtype="2"
+    />
+    <apn carrier="Umobile"
+        mcc="440"
+        mnc="10"
+        apn="umobile.jp"
+        user="umobile@umobile.jp"
+        password="umobile"
+        type="default,supl,mms"
+        authtype="3"
+    />
+    <!-- Myanmar MPT -->
+    <apn carrier="MPT Web"
+        mcc="414"
+        mnc="01"
+        apn="mptnet"
+        user="mptnet"
+        password="mptnet"
+        type="default,supl"
+        authtype="1"
+    />
+    <apn carrier="MPT MMS"
+        mcc="414"
+        mnc="01"
+        apn=""
+        type="mms"
+        authtype="1"
     />
     <!-- Jordan zain JO -->
     <apn carrier="JO - Zain Web"
@@ -16017,6 +16015,15 @@
         mmsc=""
         type="mms"
         authtype="1"
+    />
+    <!-- Mali Malitel-->
+    <apn carrier="Malitel 3g"
+        mcc="610"
+        mnc="01"
+        apn="web.malitel3.ml"
+        user="internet"
+        password="internet"
+        type="default,supl"
     />
     <!-- Mali Orange-->
     <apn carrier="Orange GPRS"
@@ -19225,7 +19232,7 @@
     <apn carrier="Vodafone"
         mcc="214"
         mnc="01"
-        apn="aritelwap.es"
+        apn="airtelwap.es"
         user="wap@wap"
         password="wap125"
         type="default,supl"
@@ -19316,7 +19323,7 @@
         password="MOVISTAR"
         type="default,supl"
     />
-    <apn carrier="Telefonica MMS"
+    <apn carrier="Movistar MMS"
         mcc="214"
         mnc="07"
         apn="telefonica.es"
@@ -20606,17 +20613,6 @@
         mmsc="http://mmsc.mms.o2.co.uk:8002"
         type="default,supl,mms"
     />
-    <apn carrier="O2 wap"
-        mcc="234"
-        mnc="11"
-        apn="mobile.o2.co.uk"
-        proxy="193.113.200.195"
-        port="8080"
-        server="wap.o2.co.uk"
-        user="O2web"
-        password="O2web"
-        type="default,supl"
-    />
     <!-- UK(Bristol） Vodafone -->
     <apn carrier="Lebara"
         mcc="234"
@@ -20663,7 +20659,7 @@
         mmsproxy="212.183.137.12"
         mmsport="8799"
         mmsc="http://mms.talkmobile.co.uk/servlets/mms"
-        type="default,supl,hipri"
+        type="default,mms,hipri"
     />
     <apn carrier="Talkmobile PAYG"
         mcc="234"
@@ -20674,7 +20670,7 @@
         mmsproxy="212.183.137.12"
         mmsport="8799"
         mmsc="http://mms.talkmobile.co.uk/servlets/mms"
-        type="default,supl,mms"
+        type="default,hipri,mms"
     />
     <apn carrier="ASDA Mobile"
         mcc="234"
@@ -20683,7 +20679,7 @@
         mmsproxy="212.183.137.12"
         mmsport="8799"
         mmsc="http://mms.asdamobiles.co.uk/servlets/mms"
-        type="default,supl,hipri"
+        type="default,mms,hipri"
     />
     <apn carrier="TalkTalk"
         mcc="234"
