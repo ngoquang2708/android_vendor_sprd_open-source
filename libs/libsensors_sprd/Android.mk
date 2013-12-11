@@ -18,6 +18,11 @@ ifeq ($(USE_SPRD_SENSOR_LIB),true)
 ifneq ($(TARGET_SIMULATOR),true)
 ifneq ($(USE_INVENSENSE_LIB),true)
 
+ifeq ($(BOARD_HAVE_ORI),ST480)
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := libst480.a
+include $(BUILD_MULTI_PREBUILT)
+endif
 # HAL module implemenation, not prelinked, and stored in
 # hw/<SENSORS_HARDWARE_MODULE_ID>.<ro.product.board>.so
 include $(CLEAR_VARS)
@@ -38,6 +43,10 @@ LOCAL_SRC_FILES := \
 			sensors.cpp
 
 #################################################################
+ifeq ($(BOARD_HAVE_ORI),ST480)
+LOCAL_STATIC_LIBRARIES := libst480
+LOCAL_LDFLAGS = $(LOCAL_PATH)/libst480.a
+endif
 #ACCELERATION
 ifneq ($(BOARD_HAVE_ACC),NULL)
 LOCAL_SRC_FILES += Acc_$(BOARD_HAVE_ACC).cpp

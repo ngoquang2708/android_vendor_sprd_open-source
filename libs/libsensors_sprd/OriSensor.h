@@ -26,6 +26,10 @@
 #include "SensorBase.h"
 #include "InputEventReader.h"
 
+#ifdef ST480
+#include <linux/ioctl.h>
+#include "RunAlgorithm.h"
+#endif
 
 #define SENSORS_ACCELERATION_HANDLE     0
 #define SENSORS_MAGNETIC_FIELD_HANDLE   1
@@ -66,6 +70,13 @@ private:
     int mEnabled[__numSensors];
 	int64_t mDelay[__numSensors];
     sensors_event_t mPendingEvents[__numSensors];
+#endif
+#ifdef ST480
+    int enabled;
+    unsigned char mLevel;
+    bool mMaEnabled;
+    bool mOrEnabled;
+    _st480 st480;
 #endif
     uint32_t mPendingMask;
     InputEventCircularReader mInputReader;
