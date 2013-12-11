@@ -1946,7 +1946,7 @@ camera_ret_code_type camera_release_frame(uint32_t index)
 	index += CAMERA_PREV_ID_BASE;
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
 		if (index >= CAMERA_PREV_ID_BASE &&
-			index < CAMERA_PREV_ID_BASE + CAMERA_PREV_FRM_CNT) {
+			index < CAMERA_PREV_ID_BASE + g_cxt->prev_mem_num) {
 			ret = cmr_v4l2_free_frame(CHN_1, index);
 			CMR_LOGV("release the frame whose index is 0x%x, rot %d, ret %d",
 				index,
@@ -2847,7 +2847,7 @@ static int _v4l2_postfix(struct frm_info* info)
 
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
-		frame_type.buf_id = frm_id; // more than CAMERA_PREV_FRM_CNT
+		frame_type.buf_id = frm_id;
 		frame_type.buf_Virt_Addr = (uint32_t*)g_cxt->prev_frm[frm_id].addr_vir.addr_y;
 		frame_type.buffer_phy_addr = g_cxt->prev_frm[frm_id].addr_phy.addr_y;
 		frame_type.dx = dx;
@@ -2929,7 +2929,7 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
-		frame_type.buf_id = frm_id; // more than CAMERA_PREV_FRM_CNT
+		frame_type.buf_id = frm_id;
 		frame_type.buf_Virt_Addr = (uint32_t*)g_cxt->prev_frm[frm_id].addr_vir.addr_y;
 		frame_type.buffer_phy_addr = g_cxt->prev_frm[frm_id].addr_phy.addr_y;
 		frame_type.dx = dx;
@@ -3616,7 +3616,7 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 	if (CHN_1 == info->channel_id) {
 		if (g_cxt->prev_rot) {
 			frm_id = g_cxt->prev_rot_index % CAMERA_PREV_ROT_FRM_CNT;
-			frame_type->buf_id = frm_id; // more than CAMERA_PREV_FRM_CNT
+			frame_type->buf_id = frm_id;
 			frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->prev_rot_frm[frm_id].addr_vir.addr_y;
 			frame_type->buffer_phy_addr = g_cxt->prev_rot_frm[frm_id].addr_phy.addr_y;
 		} else {
@@ -5537,14 +5537,14 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 		CMR_LOGE("Fail to malloc preview memory.");
 		return -CAMERA_FAILED;
 	}
-	for (i = 0; i < CAMERA_PREV_FRM_CNT; i++) {
+	for (i = 0; i < g_cxt->prev_mem_num; i++) {
 		if ((0 == g_cxt->prev_virt_addr_array[i]) || (0 == g_cxt->prev_phys_addr_array[i])) {
 			CMR_LOGE("Fail to malloc preview memory.");
 		         return  -CAMERA_FAILED;
 		}
 	}
 	if (g_cxt->prev_rot) {
-		for (i = CAMERA_PREV_FRM_CNT; i < CAMERA_PREV_FRM_CNT+ CAMERA_PREV_ROT_FRM_CNT; i++) {
+		for (i = g_cxt->prev_mem_num; i < g_cxt->prev_mem_num + CAMERA_PREV_ROT_FRM_CNT; i++) {
 			if ((0 == g_cxt->prev_virt_addr_array[i]) || (0 == g_cxt->prev_phys_addr_array[i])) {
 				CMR_LOGE("Fail to malloc preview memory.");
 		                  return  -CAMERA_FAILED;
@@ -5552,12 +5552,12 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 		}
 	}
 
-	frame_num = CAMERA_PREV_FRM_CNT;
-	if (g_cxt->prev_rot) {
+	frame_num = g_cxt->prev_mem_num;
+/*	if (g_cxt->prev_rot) {
 		frame_num += CAMERA_PREV_ROT_FRM_CNT;
 	}
-
-	if (frame_num > g_cxt->prev_mem_num || frame_size > g_cxt->prev_mem_size) {
+*/
+	if (frame_size > g_cxt->prev_mem_size) {
 		CMR_LOGE("prev_mem_size 0x%x, prev_mem_num %d, size 0x%x, num %d", g_cxt->prev_mem_size, g_cxt->prev_mem_num, frame_size, frame_num);
 		return -CAMERA_NO_MEMORY;
 	}
@@ -5565,12 +5565,12 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 	CMR_LOGV("preview addr, vir 0x%p phy 0x%p", g_cxt->prev_virt_addr_array, g_cxt->prev_phys_addr_array);
 	buffer->channel_id = CHN_1;
 	buffer->base_id    = CAMERA_PREV_ID_BASE;
-	buffer->count      = CAMERA_PREV_FRM_CNT;
+	buffer->count      = g_cxt->prev_mem_num;
 	buffer->length     = frame_size;
 	bzero((void*)&buffer->addr[0], (uint32_t)(V4L2_BUF_MAX*sizeof(struct img_addr)));
 	CMR_LOGV("self restart %d, prev_id %d", g_cxt->prev_self_restart, g_cxt->prev_buf_id);
 	if (g_cxt->prev_self_restart) {
-		if (g_cxt->prev_buf_id == CAMERA_PREV_FRM_CNT - 1) {
+		if (g_cxt->prev_buf_id == g_cxt->prev_mem_num - 1) {
 			buffer->start_buf_id = 0;
 		} else {
 			buffer->start_buf_id = g_cxt->prev_buf_id + 1;
@@ -5582,7 +5582,7 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 	if (buffer->start_buf_id) {
 		frame_num = 0;
 		for (i = 0; i < buffer->start_buf_id; i++) {
-			frame_num = (uint32_t)((buffer->start_buf_id + i) % CAMERA_PREV_FRM_CNT);
+			frame_num = (uint32_t)((buffer->start_buf_id + i) % g_cxt->prev_mem_num);
 			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[frame_num];
 			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
 
@@ -5596,9 +5596,9 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 		}
 		CMR_LOGV("frame_num %d", frame_num);
 
-		for (i = buffer->start_buf_id; i < CAMERA_PREV_FRM_CNT; i++) {
+		for (i = buffer->start_buf_id; i < g_cxt->prev_mem_num; i++) {
 			frame_num ++;
-			j = (uint32_t)(frame_num % CAMERA_PREV_FRM_CNT);
+			j = (uint32_t)(frame_num % g_cxt->prev_mem_num);
 			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[j];
 			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
 
@@ -5611,7 +5611,7 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 			buffer->addr[i].addr_u = g_cxt->prev_frm[i].addr_phy.addr_u;
 		}
 	}else {
-		for (i = 0; i < CAMERA_PREV_FRM_CNT; i++) {
+		for (i = 0; i < g_cxt->prev_mem_num; i++) {
 			g_cxt->prev_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[i];
 			g_cxt->prev_frm[i].addr_vir.addr_u = g_cxt->prev_frm[i].addr_vir.addr_y + buffer_size;
 
@@ -5627,10 +5627,10 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 
 	if (g_cxt->prev_rot) {
 		for (i = 0; i < CAMERA_PREV_ROT_FRM_CNT; i++) {
-			g_cxt->prev_rot_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[CAMERA_PREV_FRM_CNT+i];
+			g_cxt->prev_rot_frm[i].addr_vir.addr_y = (uint32_t)g_cxt->prev_virt_addr_array[g_cxt->prev_mem_num+i];
 			g_cxt->prev_rot_frm[i].addr_vir.addr_u = g_cxt->prev_rot_frm[i].addr_vir.addr_y + buffer_size;
 
-			g_cxt->prev_rot_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[CAMERA_PREV_FRM_CNT+i];
+			g_cxt->prev_rot_frm[i].addr_phy.addr_y = (uint32_t)g_cxt->prev_phys_addr_array[g_cxt->prev_mem_num+i];
 			g_cxt->prev_rot_frm[i].addr_phy.addr_u = g_cxt->prev_rot_frm[i].addr_phy.addr_y + buffer_size;
 			g_cxt->prev_rot_frm[i].fmt             = format;
 			g_cxt->prev_rot_frm[i].size.width      = g_cxt->display_size.width;
