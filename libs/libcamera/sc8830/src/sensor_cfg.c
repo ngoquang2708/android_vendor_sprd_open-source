@@ -88,7 +88,7 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	//&g_ov5648_mipi_raw_info,
 #endif
 #ifdef CONFIG_BACK_CAMERA_CCIR
-	//&g_GT2005_yuv_info,
+	&g_GT2005_yuv_info,
 	&g_ov5640_yuv_info,
 	&g_hi253_yuv_info,
 	//&g_OV7675_yuv_info,
