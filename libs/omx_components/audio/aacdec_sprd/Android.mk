@@ -17,9 +17,8 @@ LOCAL_CFLAGS := -DOSCL_EXPORT_REF= -DOSCL_IMPORT_REF= -D_AACARM_  -D_ARMNINEPLAT
 LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel
 
 LOCAL_SHARED_LIBRARIES := \
-          libstagefright libstagefright_omx libstagefright_foundation libstagefrighthw libutils libui libbinder libdl libcutils liblog
+          libstagefright libstagefright_omx libstagefright_foundation libstagefrighthw libutils libui libbinder libdl libcutils liblog libomx_aacdec_sprd
 
-LOCAL_STATIC_LIBRARIES := libaacdec_sprd
 
 LOCAL_MODULE := libstagefright_sprd_aacdec
 LOCAL_MODULE_TAGS := optional
