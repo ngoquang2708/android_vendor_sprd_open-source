@@ -34,6 +34,7 @@ namespace android {
 #define LOGD       ALOGD
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define SIZE_ALIGN_4(x)   (((x)+3)&(~3))
 
 ////////////////////////////////////////////////////////////////////////////////////
 static int lookup(const struct str_map *const arr, const char *name, int def);
@@ -373,24 +374,51 @@ void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
 	char vals_new[256] = {0};
 	const char *p = get(KEY_PREVIEW_SIZE);
 	const char *vals_p = get(KEY_SUPPORTED_PREVIEW_SIZES);
-	const char *pos_1 = vals_p, *pos_2 = vals_p;
+	const char *pos_1 = vals_p, *pos_2 = vals_p, *vals_temp = vals_p, *pos_dst = vals_p;
 	unsigned int p_len = strlen(p);
 	unsigned int cnt = 0;
 	unsigned int i = 0;
 
 	height = width*3/4;
+	height = SIZE_ALIGN_4(height);
+	width = SIZE_ALIGN_4(width);
 	sprintf(size_new, "%dx%d", width, height);
 	LOGV("updateSupportedPreviewSizes preview-size %s", size_new);
-
-	pos_1 = strstr(vals_p, p);
+	pos_1 = strstr(vals_p,",");
 	if (!pos_1) return;
-
-	pos_2 = pos_1 + p_len;
+	pos_2 = pos_1 + 1;
 	strncpy(vals_new, vals_p, pos_1-vals_p);
-	strcat(vals_new, size_new);
-	strcat(vals_new, pos_2);
-	LOGV("updateSupportedPreviewSizes preview-size-values %s", vals_new);
+	pos_dst += strlen(vals_new);
 
+	if(strlen(size_new) > strlen(vals_new) || (strlen(size_new) == strlen(vals_new) && strcmp(size_new,vals_new))){
+		sprintf(vals_new,"%s,%s",size_new,vals_p);
+	}
+	else{
+		while(pos_1){
+			memset(vals_new,0,128);
+			vals_temp = pos_2;
+			pos_1 = strstr(vals_temp,",");
+			if (!pos_1) {
+				strcpy(vals_new, vals_p);
+				strcat(vals_new,",");
+				strcat(vals_new,size_new);
+				break;
+			};
+			strncpy(vals_new, vals_temp, pos_1-vals_temp);
+			pos_2 = pos_1 + 1;
+			if(strlen(size_new) > strlen(vals_new) || (strlen(size_new) == strlen(vals_new) && strcmp(size_new,vals_new))){
+				strncpy(vals_new, vals_p, pos_dst-vals_p);
+				strcat(vals_new, ",");
+				strcat(vals_new, size_new);
+				strcat(vals_new, pos_dst);
+				break;
+				}
+			else{
+				pos_dst += strlen(vals_new) + 1;
+			     }
+		}
+	}
+	LOGV("updateSupportedPreviewSizes preview-size-values %s", vals_new);
 	set(KEY_SUPPORTED_PREVIEW_SIZES, vals_new);
 	set(KEY_PREVIEW_SIZE, size_new);
 }
