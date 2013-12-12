@@ -423,7 +423,7 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::internalGetParameter(
         GetAndroidNativeBufferUsageParams *pganbp;
 
         pganbp = (GetAndroidNativeBufferUsageParams *)params;
-        if(mDecoderSwFlag) {
+        if(mDecoderSwFlag || mIOMMUEnabled) {
             pganbp->nUsage = GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
         } else {
             pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
