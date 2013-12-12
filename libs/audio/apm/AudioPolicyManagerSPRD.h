@@ -28,30 +28,14 @@ using namespace android;
 
 namespace android_audio_legacy {
 
-// ----------------------------------------------------------------------------
-
-#define MAX_DEVICE_ADDRESS_LEN 20
-// Attenuation applied to STRATEGY_SONIFICATION streams when a headset is connected: 6dB
-#define SONIFICATION_HEADSET_VOLUME_FACTOR 0.5
-// Min volume for STRATEGY_SONIFICATION streams when limited by music volume: -36dB
-#define SONIFICATION_HEADSET_VOLUME_MIN  0.016
-// Time in seconds during which we consider that music is still active after a music
-// track was stopped - see computeVolume()
-#define SONIFICATION_HEADSET_MUSIC_DELAY  5
 class AudioPolicyManagerSPRD : public AudioPolicyManagerBase
 {
 public:
-    AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface);
-    virtual ~AudioPolicyManagerSPRD();
-    virtual status_t loadVolumeProfiles();
+    AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface)
+        : AudioPolicyManagerBase(clientInterface) {}
 
-private:
-    int is_voip_set;
-    VolumeCurvePoint *mVolumeProfiles[AudioSystem::NUM_STREAM_TYPES][DEVICE_CATEGORY_CNT];
-    status_t loadVolumeProfilesInternal();
-    void freeVolumeProfiles();
-    void applyVolumeProfiles();
-    void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
+    virtual ~AudioPolicyManagerSPRD() {}
+
 };
 
 };
