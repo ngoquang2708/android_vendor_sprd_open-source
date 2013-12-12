@@ -19,6 +19,7 @@
 #define SPRD_MP3_DECODER_H_
 
 #include "SprdSimpleOMXComponent.h"
+#include "mp3_dec_api.h"
 
 namespace android {
 
@@ -70,6 +71,12 @@ private:
     bool mEOSFlag;
     bool mFirstFrame;
     bool mSignalledError;
+    void* mLibHandle;
+
+    FT_MP3_ARM_DEC_Construct mMP3_ARM_DEC_Construct;
+    FT_MP3_ARM_DEC_Deconstruct mMP3_ARM_DEC_Deconstruct;
+    FT_MP3_ARM_DEC_InitDecoder mMP3_ARM_DEC_InitDecoder;
+    FT_MP3_ARM_DEC_DecodeFrame mMP3_ARM_DEC_DecodeFrame;
 
     enum {
         NONE,
@@ -82,6 +89,7 @@ private:
 
     uint32_t getNextMdBegin(uint8_t *frameBuf);
     uint32_t getCurFrameBitRate(uint8_t *frameBuf);
+    bool openDecoder(const char* libName);
 
     DISALLOW_EVIL_CONSTRUCTORS(SPRDMP3Decoder);
 };

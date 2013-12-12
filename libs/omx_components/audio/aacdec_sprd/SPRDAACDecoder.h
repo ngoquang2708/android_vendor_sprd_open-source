@@ -19,7 +19,7 @@
 #define SPRD_AAC_DECODER_H_
 
 #include "SprdSimpleOMXComponent.h"
-
+#include "aac_dec_api.h"
 //struct tPVMP4AudioDecoderExternal;
 
 namespace android {
@@ -65,6 +65,14 @@ private:
 //    size_t mUpsamplingFactor;
     int64_t mAnchorTimeUs;
     int64_t mNumSamplesOutput;
+    void* mLibHandle;
+
+    FT_AAC_MemoryFree mAAC_MemoryFree;
+    FT_AAC_MemoryAlloc mAAC_MemoryAlloc;
+    FT_AAC_DecInit mAAC_DecInit;
+    FT_AAC_RetrieveSampleRate mAAC_RetrieveSampleRate;
+    FT_AAC_FrameDecode mAAC_FrameDecode;
+    FT_AAC_DecStreamBufferUpdate  mAAC_DecStreamBufferUpdate;
 
     bool mSignalledError;
     enum {
@@ -76,6 +84,7 @@ private:
     void initPorts();
     status_t initDecoder();
     bool isConfigured() const;
+    bool openDecoder(const char* libName);
 
     DISALLOW_EVIL_CONSTRUCTORS(SPRDAACDecoder);
 };
