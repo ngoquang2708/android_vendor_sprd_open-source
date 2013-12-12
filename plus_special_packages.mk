@@ -1,3 +1,4 @@
 PRODUCT_PACKAGES += \
-    Stk1 \
-    MsmsStk
+	Stk1 \
+	MsmsStk
+
