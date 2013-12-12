@@ -308,7 +308,11 @@ OMX_ERRORTYPE SPRDVPXDecoder::internalGetParameter(
         GetAndroidNativeBufferUsageParams *pganbp;
 
         pganbp = (GetAndroidNativeBufferUsageParams *)params;
-        pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+        if(mIOMMUEnabled) {
+            pganbp->nUsage = GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+        } else {
+            pganbp->nUsage = GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+        }
         ALOGI("internalGetParameter, OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);
         return OMX_ErrorNone;
     }
