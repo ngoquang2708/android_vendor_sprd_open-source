@@ -6,8 +6,9 @@ PRODUCT_PACKAGES += \
 	VideoWallpaper \
 	FileExplorer \
 	NoteBook \
-	libsprddm \
 	EngineerMode \
 	DrmProvider \
 	CellBroadcastReceiver \
 	CallFireWall
+
+#	libsprddm \
