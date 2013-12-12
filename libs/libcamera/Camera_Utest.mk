@@ -98,18 +98,9 @@ LOCAL_SRC_FILES:= \
 	sc8830/isp_calibration/src/utest_camera.cpp \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
-
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
 LOCAL_SRC_FILES+= \
 	sc8830/src/SprdCameraHardwareInterface.cpp
-endif
 
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
-LOCAL_SRC_FILES+= \
-	sc8830/src/SprdBaseThread.cpp \
-	sc8830/src/SprdCamera2.c \
-	sc8830/src/SprdCameraHWInterface2.cpp
-endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M -DANDROID_4100
@@ -228,11 +219,6 @@ ifeq ($(strip $(CAMERA_SENSOR_OUTPUT_ONLY)),true)
 LOCAL_CFLAGS += -DCONFIG_SENSOR_OUTPUT_ONLY
 endif
 
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION_DUAL)),false)
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_HAL_20
-endif
-endif
 
 LOCAL_MODULE := utest_camera_$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional

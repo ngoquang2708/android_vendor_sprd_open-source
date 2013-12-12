@@ -279,17 +279,8 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_file_update.c \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
 LOCAL_SRC_FILES+= \
 	sc8830/src/SprdCameraHardwareInterface.cpp
-endif
-
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
-LOCAL_SRC_FILES+= \
-	sc8830/src/SprdBaseThread.cpp \
-	sc8830/src/SprdCamera2.c \
-	sc8830/src/SprdCameraHWInterface2.cpp
-endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
@@ -414,13 +405,12 @@ ifeq ($(strip $(CAMERA_SENSOR_OUTPUT_ONLY)),true)
 LOCAL_CFLAGS += -DCONFIG_SENSOR_OUTPUT_ONLY
 endif
 
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION_DUAL)),false)
-ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL2.0)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_HAL_20
-endif
-endif
 
+ifeq ($(strip $(TARGET_BOARD_CAMERA_HAL_VERSION)),HAL1.0)
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
+else
+LOCAL_MODULE := camera1.$(TARGET_BOARD_PLATFORM)
+endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
