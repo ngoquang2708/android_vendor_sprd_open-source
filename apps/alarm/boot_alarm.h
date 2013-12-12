@@ -53,7 +53,7 @@
 #define MP3_PLAYER "/system/bin/mplayer"
 #define BOOT_ALARM_SLEEP_TIME       (10*60)
 #define BOOT_ALARM_LAST_TIME		(60)
-#define BOOT_ALARM_DEFAULT_RING      "/res/sounds/default_ring.mp3"
+#define BOOT_ALARM_DEFAULT_RING      "/system/res/sounds/default_ring.mp3"
 
 #define VIB_PATH "/sys/class/timed_output/vibrator/enable"
 #define RTC_TIME_PATH "/sys/class/rtc/rtc0/alarm_op"
@@ -122,7 +122,7 @@ struct position g_left_pos,g_right_pos, g_mid_pos;
 struct position g_s_left_pos,g_s_right_pos, g_s_mid_pos;
 struct alarm_sec *creat_alarm_sec_list(void);
 int add_alarm_db_list(void);
-char g_brightness[];
+
 void leds_set(unsigned char red, unsigned char green, unsigned short blue, int light_time, unsigned short  interval_time);
 void free_bootcharge_surface(int image_pos);
 void boot_alarm_exit();

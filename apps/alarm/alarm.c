@@ -49,7 +49,7 @@ int g_alarm_button_event = BOOT_STATE_NONE;
 char * g_alarm_ring_path = BOOT_ALARM_DEFAULT_RING;
 int g_alarm_last_time = 0;
 int g_alarm_snooze_time = 0;
-
+extern char g_brightness[20];
 
 void system_shutdown(void)
 {
@@ -66,7 +66,7 @@ int add_alarm_db_list(void)
 	char db_item[1024]= {0,};
 	char cmd[1024]= {0};
 
-	sprintf(cmd,"/system/xbin/sqlite3 %s \" select * from alarm_templates\"",BOOT_ALARM_DB_FILE);
+	sprintf(cmd,"/system/xbin/sqlite3 %s \" select * from alarm_instances\"",BOOT_ALARM_DB_FILE);
 	fp = popen(cmd,"r");
 	if(fp == NULL )
 	{
