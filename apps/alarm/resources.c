@@ -50,7 +50,7 @@ int res_create_surface(const char* name, gr_surface* pSurface) {
 	png_structp png_ptr = NULL;
 	png_infop info_ptr = NULL;
 
-	snprintf(resPath, sizeof(resPath)-1, "/res/images/%s.png", name);
+	snprintf(resPath, sizeof(resPath)-1, "/system/res/images/%s.png", name);
 	resPath[sizeof(resPath)-1] = '\0';
 	LOGD("%s open %s\n", __func__, resPath);
 	FILE* fp = fopen(resPath, "rb");
