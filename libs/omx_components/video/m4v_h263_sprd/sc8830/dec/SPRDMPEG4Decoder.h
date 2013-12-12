@@ -90,16 +90,19 @@ private:
 
     int32_t mNumSamplesOutput;
 
+    bool mIOMMUEnabled;
     uint8_t *mCodecInterBuffer;
     uint8_t *mCodecExtraBuffer;
 
     sp<MemoryHeapIon> mPmem_stream;
     unsigned char* mPbuf_stream_v;
-    OMX_U32 mPbuf_stream_p;
+    int32 mPbuf_stream_p;
+    int32 mPbuf_stream_size;
 
     sp<MemoryHeapIon> mPmem_extra;
     unsigned char*  mPbuf_extra_v;
-    OMX_U32  mPbuf_extra_p;
+    int32  mPbuf_extra_p;
+    int32  mPbuf_extra_size;
 
     OMX_BOOL iUseAndroidNativeBuffer[2];
 

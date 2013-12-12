@@ -30,21 +30,25 @@ typedef struct BufferCtrlStruct
 {
     OMX_U32 iRefCount;
     sp<MemoryHeapIon> pMem;
+    OMX_S32 bufferFd;
     OMX_U32 phyAddr;
+    OMX_U32 bufferSize;
 } BufferCtrlStruct;
 
 typedef struct BufferPrivateStruct
 {
     MemoryHeapIon* pMem;
+    OMX_S32 bufferFd;
     OMX_U32 phyAddr;
+    OMX_U32 bufferSize;
 } BufferPrivateStruct;
 
 struct SprdOMXComponent : public RefBase {
     SprdOMXComponent(
-            const char *name,
-            const OMX_CALLBACKTYPE *callbacks,
-            OMX_PTR appData,
-            OMX_COMPONENTTYPE **component);
+        const char *name,
+        const OMX_CALLBACKTYPE *callbacks,
+        OMX_PTR appData,
+        OMX_COMPONENTTYPE **component);
 
     virtual OMX_ERRORTYPE initCheck() const;
 
@@ -59,53 +63,53 @@ protected:
     const char *name() const;
 
     void notify(
-            OMX_EVENTTYPE event,
-            OMX_U32 data1, OMX_U32 data2, OMX_PTR data);
+        OMX_EVENTTYPE event,
+        OMX_U32 data1, OMX_U32 data2, OMX_PTR data);
 
     void notifyEmptyBufferDone(OMX_BUFFERHEADERTYPE *header);
     void notifyFillBufferDone(OMX_BUFFERHEADERTYPE *header);
 
     virtual OMX_ERRORTYPE sendCommand(
-            OMX_COMMANDTYPE cmd, OMX_U32 param, OMX_PTR data);
+        OMX_COMMANDTYPE cmd, OMX_U32 param, OMX_PTR data);
 
     virtual OMX_ERRORTYPE getParameter(
-            OMX_INDEXTYPE index, OMX_PTR params);
+        OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual OMX_ERRORTYPE setParameter(
-            OMX_INDEXTYPE index, const OMX_PTR params);
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual OMX_ERRORTYPE getConfig(
-            OMX_INDEXTYPE index, OMX_PTR params);
+        OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual OMX_ERRORTYPE setConfig(
-            OMX_INDEXTYPE index, const OMX_PTR params);
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual OMX_ERRORTYPE getExtensionIndex(
-            const char *name, OMX_INDEXTYPE *index);
+        const char *name, OMX_INDEXTYPE *index);
 
     virtual OMX_ERRORTYPE useBuffer(
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size,
-            OMX_U8 *ptr,
-            BufferPrivateStruct* bufferPrivate=NULL);
+        OMX_BUFFERHEADERTYPE **buffer,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size,
+        OMX_U8 *ptr,
+        BufferPrivateStruct* bufferPrivate=NULL);
 
     virtual OMX_ERRORTYPE allocateBuffer(
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size);
+        OMX_BUFFERHEADERTYPE **buffer,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size);
 
     virtual OMX_ERRORTYPE freeBuffer(
-            OMX_U32 portIndex,
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_U32 portIndex,
+        OMX_BUFFERHEADERTYPE *buffer);
 
     virtual OMX_ERRORTYPE emptyThisBuffer(
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_BUFFERHEADERTYPE *buffer);
 
     virtual OMX_ERRORTYPE fillThisBuffer(
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_BUFFERHEADERTYPE *buffer);
 
     virtual OMX_ERRORTYPE getState(OMX_STATETYPE *state);
 
@@ -117,67 +121,67 @@ private:
     void *mLibHandle;
 
     static OMX_ERRORTYPE SendCommandWrapper(
-            OMX_HANDLETYPE component,
-            OMX_COMMANDTYPE cmd,
-            OMX_U32 param,
-            OMX_PTR data);
+        OMX_HANDLETYPE component,
+        OMX_COMMANDTYPE cmd,
+        OMX_U32 param,
+        OMX_PTR data);
 
     static OMX_ERRORTYPE GetParameterWrapper(
-            OMX_HANDLETYPE component,
-            OMX_INDEXTYPE index,
-            OMX_PTR params);
+        OMX_HANDLETYPE component,
+        OMX_INDEXTYPE index,
+        OMX_PTR params);
 
     static OMX_ERRORTYPE SetParameterWrapper(
-            OMX_HANDLETYPE component,
-            OMX_INDEXTYPE index,
-            OMX_PTR params);
+        OMX_HANDLETYPE component,
+        OMX_INDEXTYPE index,
+        OMX_PTR params);
 
     static OMX_ERRORTYPE GetConfigWrapper(
-            OMX_HANDLETYPE component,
-            OMX_INDEXTYPE index,
-            OMX_PTR params);
+        OMX_HANDLETYPE component,
+        OMX_INDEXTYPE index,
+        OMX_PTR params);
 
     static OMX_ERRORTYPE SetConfigWrapper(
-            OMX_HANDLETYPE component,
-            OMX_INDEXTYPE index,
-            OMX_PTR params);
+        OMX_HANDLETYPE component,
+        OMX_INDEXTYPE index,
+        OMX_PTR params);
 
     static OMX_ERRORTYPE GetExtensionIndexWrapper(
-            OMX_HANDLETYPE component,
-            OMX_STRING name,
-            OMX_INDEXTYPE *index);
+        OMX_HANDLETYPE component,
+        OMX_STRING name,
+        OMX_INDEXTYPE *index);
 
     static OMX_ERRORTYPE UseBufferWrapper(
-            OMX_HANDLETYPE component,
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size,
-            OMX_U8 *ptr);
+        OMX_HANDLETYPE component,
+        OMX_BUFFERHEADERTYPE **buffer,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size,
+        OMX_U8 *ptr);
 
     static OMX_ERRORTYPE AllocateBufferWrapper(
-            OMX_HANDLETYPE component,
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size);
+        OMX_HANDLETYPE component,
+        OMX_BUFFERHEADERTYPE **buffer,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size);
 
     static OMX_ERRORTYPE FreeBufferWrapper(
-            OMX_HANDLETYPE component,
-            OMX_U32 portIndex,
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_HANDLETYPE component,
+        OMX_U32 portIndex,
+        OMX_BUFFERHEADERTYPE *buffer);
 
     static OMX_ERRORTYPE EmptyThisBufferWrapper(
-            OMX_HANDLETYPE component,
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_HANDLETYPE component,
+        OMX_BUFFERHEADERTYPE *buffer);
 
     static OMX_ERRORTYPE FillThisBufferWrapper(
-            OMX_HANDLETYPE component,
-            OMX_BUFFERHEADERTYPE *buffer);
+        OMX_HANDLETYPE component,
+        OMX_BUFFERHEADERTYPE *buffer);
 
     static OMX_ERRORTYPE GetStateWrapper(
-            OMX_HANDLETYPE component,
-            OMX_STATETYPE *state);
+        OMX_HANDLETYPE component,
+        OMX_STATETYPE *state);
 
     DISALLOW_EVIL_CONSTRUCTORS(SprdOMXComponent);
 };

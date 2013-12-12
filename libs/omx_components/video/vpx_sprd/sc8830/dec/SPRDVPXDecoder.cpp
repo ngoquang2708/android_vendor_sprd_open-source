@@ -56,11 +56,14 @@ SPRDVPXDecoder::SPRDVPXDecoder(
       mOutputPortSettingsChange(NONE),
       mSignalledError(false),
       mLibHandle(NULL),
+      mIOMMUEnabled(false),
       mPbuf_inter(NULL),
       mPbuf_extra_v(NULL),
       mPbuf_extra_p(0),
+      mPbuf_extra_size(0),
       mPbuf_stream_v(NULL),
       mPbuf_stream_p(0),
+      mPbuf_stream_size(0),
       mVPXDecSetCurRecPic(NULL),
       mVPXDecInit(NULL),
       mVPXDecDecode(NULL),
@@ -71,6 +74,9 @@ SPRDVPXDecoder::SPRDVPXDecoder(
 
     initPorts();
     CHECK_EQ(openDecoder("libomx_vpxdec_hw_sprd.so"), true);
+
+    mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
+    ALOGI("%s, is IOMMU enabled: %d", __FUNCTION__, mIOMMUEnabled);
 
     CHECK_EQ(initDecoder(), (status_t)OK);
 
@@ -87,28 +93,32 @@ SPRDVPXDecoder::~SPRDVPXDecoder() {
     delete mHandle;
     mHandle = NULL;
 
-    if (mPbuf_inter != NULL)
-    {
+    if (mPbuf_inter != NULL) {
         free(mPbuf_inter);
         mPbuf_inter = NULL;
     }
 
-    if (mPbuf_stream_v != NULL)
-    {
+    if (mPbuf_stream_v != NULL) {
+        if (mIOMMUEnabled) {
+            mPmem_stream->free_mm_iova(mPbuf_stream_p, mPbuf_stream_size);
+        }
         mPmem_stream.clear();
         mPbuf_stream_v = NULL;
         mPbuf_stream_p = 0;
+        mPbuf_stream_size = 0;
     }
 
-    if(mPbuf_extra_v != NULL)
-    {
+    if(mPbuf_extra_v != NULL) {
+        if (mIOMMUEnabled) {
+            mPmem_extra->free_mm_iova(mPbuf_extra_p, mPbuf_extra_size);
+        }
         mPmem_extra.clear();
         mPbuf_extra_v = NULL;
         mPbuf_extra_p = 0;
+        mPbuf_extra_size = 0;
     }
 
-    if(mLibHandle)
-    {
+    if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
     }
@@ -188,20 +198,26 @@ status_t SPRDVPXDecoder::initDecoder() {
     int32 size = 0, size_stream;
 
     size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
-    mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-    if (mPmem_stream->getHeapID() < 0)
-    {
+    if (mIOMMUEnabled) {
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+    } else {
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    }
+    if (mPmem_stream->getHeapID() < 0) {
         ALOGE("Failed to alloc bitstream pmem buffer\n");
-    } else
-    {
-        int32 ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
-        if (ret < 0)
-        {
+    } else {
+        int32 ret;
+        if (mIOMMUEnabled) {
+            ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+        } else {
+            ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+        }
+        if (ret < 0) {
             ALOGE("Failed to alloc bitstream pmem buffer\n");
-        } else
-        {
+        } else {
             mPbuf_stream_v = (uint8 *)mPmem_stream->base();
-            mPbuf_stream_p = (uint32)phy_addr;
+            mPbuf_stream_p = (int32)phy_addr;
+            mPbuf_stream_size = (int32)size;
         }
     }
 
@@ -210,17 +226,23 @@ status_t SPRDVPXDecoder::initDecoder() {
 
     unsigned int size_extra = 8160*9*8+64;
     size_extra += 10*1024;
-    mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    if (mIOMMUEnabled) {
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+    } else {
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    }
     if (mPmem_extra->getHeapID() < 0) {
         ALOGE("Failed to alloc extra pmem (%d)", size_extra);
-    } else
-    {
-        int32 ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
-        if (ret < 0)
-        {
+    } else {
+        int32 ret;
+        if (mIOMMUEnabled) {
+            ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+        } else {
+            ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
+        }
+        if (ret < 0) {
             ALOGE("Failed to alloc extra pmem");
-        } else
-        {
+        } else {
             mPbuf_extra_v = (uint8 *)mPmem_extra->base();
             mPbuf_extra_p = (uint32)phy_addr;
         }
@@ -234,8 +256,7 @@ status_t SPRDVPXDecoder::initDecoder() {
     ExtraMemBfr.common_buffer_ptr_phy = (uint32)mPbuf_extra_p;
     ExtraMemBfr.size = size_extra;
 
-    if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr) != MMDEC_OK)
-    {
+    if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr) != MMDEC_OK) {
         ALOGE("Failed to init VPXDEC");
         return OMX_ErrorUndefined;
     }
@@ -369,8 +390,7 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
         OMX_BUFFERHEADERTYPE *outHeader = NULL;
         BufferCtrlStruct *pBufCtrl = NULL;
         uint32 count = 0;
-        do
-        {
+        do {
             ALOGI("%s, %d, outQueue.size: %d", __FUNCTION__, __LINE__, outQueue.size());
 
             if(count >= outQueue.size()) {
@@ -438,8 +458,7 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
         uint8_t *bitstream = inHeader->pBuffer + inHeader->nOffset;
         int32_t bufferSize = inHeader->nFilledLen;
 
-        if (mPbuf_stream_v != NULL)
-        {
+        if (mPbuf_stream_v != NULL) {
             memcpy(mPbuf_stream_v, bitstream, bufferSize);
         }
         dec_in.pStream= (uint8 *) mPbuf_stream_v;
@@ -458,11 +477,18 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
         if(pBufCtrl->phyAddr != 0) {
             picPhyAddr = pBufCtrl->phyAddr;
         } else {
-            native_handle_t *pNativeHandle = (native_handle_t *)outHeader->pBuffer;
-            struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-            int bufferSize = 0;
-            MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
-            pBufCtrl->phyAddr = picPhyAddr;
+            if (mIOMMUEnabled) {
+                ALOGE("onQueueFilled, pBufCtrl->phyAddr == 0, fail");
+                notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+                mSignalledError = true;
+                return;
+            } else {
+                native_handle_t *pNativeHandle = (native_handle_t *)outHeader->pBuffer;
+                struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+                int bufferSize = 0;
+                MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+                pBufCtrl->phyAddr = picPhyAddr;
+            }
         }
 
 //    ALOGI("%s, %d, header: %0x, mPictureSize: %d", __FUNCTION__, __LINE__, header_tmp, mPictureSize);
@@ -499,11 +525,9 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
             }
         }
 
-        if(decRet == MMDEC_MEMORY_ALLOCED)
-        {
+        if(decRet == MMDEC_MEMORY_ALLOCED) {
             continue;
-        } else  if (decRet == MMDEC_OK)
-        {
+        } else  if (decRet == MMDEC_OK) {
             int32_t width = dec_out.frame_width;
             int32_t height = dec_out.frame_height;
 
@@ -519,12 +543,10 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
                 mOutputPortSettingsChange = AWAITING_DISABLED;
                 return;
             }
-        } else if (decRet == MMDEC_MEMORY_ERROR)
-        {
+        } else if (decRet == MMDEC_MEMORY_ERROR) {
             ALOGE("failed to allocate memory.");
             notify(OMX_EventError, OMX_ErrorInsufficientResources, 0, NULL);
-        } else
-        {
+        } else {
             ALOGE("failed to decode video frame.");
 //            notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
         }
@@ -548,7 +570,6 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
         }
         ++mInputBufferCount;
         ALOGI("%s, %d, mInputBufferCount: %d, dec_out.frameEffective: %d", __FUNCTION__, __LINE__, mInputBufferCount, dec_out.frameEffective);
-
 
         if (dec_out.frameEffective) {
             outHeader = (OMX_BUFFERHEADERTYPE*)(dec_out.pBufferHeader);
@@ -636,25 +657,21 @@ void SPRDVPXDecoder::updatePortDefinitions() {
          * def->format.video.nFrameHeight * 3) / 2;
 
     ALOGI("%s, %d, def.nBufferCountMin: %d,def.nBufferCountActual : %d ", __FUNCTION__, __LINE__, def->nBufferCountMin, def->nBufferCountActual );
-
 }
 
 OMX_ERRORTYPE SPRDVPXDecoder::getExtensionIndex(
     const char *name, OMX_INDEXTYPE *index) {
 
     ALOGI("getExtensionIndex, name: %s",name);
-    if(strcmp(name, SPRD_INDEX_PARAM_ENABLE_ANB) == 0)
-    {
+    if(strcmp(name, SPRD_INDEX_PARAM_ENABLE_ANB) == 0) {
         ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_ENABLE_ANB);
         *index = (OMX_INDEXTYPE) OMX_IndexParamEnableAndroidBuffers;
         return OMX_ErrorNone;
-    } else if (strcmp(name, SPRD_INDEX_PARAM_GET_ANB) == 0)
-    {
+    } else if (strcmp(name, SPRD_INDEX_PARAM_GET_ANB) == 0) {
         ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_GET_ANB);
         *index = (OMX_INDEXTYPE) OMX_IndexParamGetAndroidNativeBuffer;
         return OMX_ErrorNone;
-    }	else if (strcmp(name, SPRD_INDEX_PARAM_USE_ANB) == 0)
-    {
+    }	else if (strcmp(name, SPRD_INDEX_PARAM_USE_ANB) == 0) {
         ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_USE_ANB);
         *index = OMX_IndexParamUseAndroidNativeBuffer2;
         return OMX_ErrorNone;
@@ -675,8 +692,7 @@ int32_t SPRDVPXDecoder::UnbindFrameWrapper(
     return static_cast<SPRDVPXDecoder *>(aUserData)->VSP_unbind_cb(pHeader, flag);
 }
 
-int SPRDVPXDecoder::VSP_bind_cb(void *pHeader,int flag)
-{
+int SPRDVPXDecoder::VSP_bind_cb(void *pHeader,int flag) {
     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
     ALOGI("VSP_bind_cb, ref frame: 0x%x, %x; iRefCount=%d",
           ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
@@ -684,23 +700,20 @@ int SPRDVPXDecoder::VSP_bind_cb(void *pHeader,int flag)
     return 0;
 }
 
-int SPRDVPXDecoder::VSP_unbind_cb(void *pHeader,int flag)
-{
+int SPRDVPXDecoder::VSP_unbind_cb(void *pHeader,int flag) {
     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
 
     ALOGI("VSP_unbind_cb, ref frame: 0x%x, %x; iRefCount=%d",
           ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
 
-    if (pBufCtrl->iRefCount  > 0)
-    {
+    if (pBufCtrl->iRefCount  > 0) {
         pBufCtrl->iRefCount--;
     }
 
     return 0;
 }
 
-bool SPRDVPXDecoder::openDecoder(const char* libName)
-{
+bool SPRDVPXDecoder::openDecoder(const char* libName) {
     if(mLibHandle) {
         dlclose(mLibHandle);
     }
