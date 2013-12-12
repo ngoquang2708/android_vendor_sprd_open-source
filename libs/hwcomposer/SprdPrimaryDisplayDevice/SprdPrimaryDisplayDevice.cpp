@@ -331,7 +331,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
 
     if (DisplayOverlayPlane ||
-        DirectDisplayFlag == false)
+		(DisplayPrimaryPlane && DirectDisplayFlag == false))
     {
         SprdHWLayer *OverlayLayer = NULL;
         SprdHWLayer *PrimaryLayer = NULL;
@@ -341,7 +341,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             OverlayLayer = mOverlayPlane->getOverlayLayer();
         }
 
-        if (DirectDisplayFlag == false)
+        if (DisplayPrimaryPlane && DirectDisplayFlag == false)
         {
             PrimaryLayer = mPrimaryPlane->getPrimaryLayer();
         }

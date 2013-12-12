@@ -423,7 +423,7 @@ int SprdHWLayerList:: revistGeometry(int *DisplayFlag)
 Overlay:
 
 #ifdef OVERLAY_COMPOSER_GPU
-    postProcessVideoCond = (YUVLayer /*&& (RGBLayer || FBLayerCount > 0)*/);
+    postProcessVideoCond = (YUVLayer && (RGBLayer || mFBLayerCount > 0));
 #else
     postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
 #endif
@@ -709,14 +709,14 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     mYUVLayerCount++;
 
-#if 0
+
     if (!(l->checkContiguousPhysicalAddress(privateH))
         || l->checkNotSupportOverlay(privateH))
     {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;
     }
-#endif
+
 
     if(layer->blending != HWC_BLENDING_NONE)
     {
