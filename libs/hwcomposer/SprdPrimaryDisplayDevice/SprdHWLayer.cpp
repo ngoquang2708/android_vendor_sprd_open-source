@@ -46,6 +46,11 @@ bool SprdHWLayer:: checkRGBLayerFormat()
     const native_handle_t *pNativeHandle = layer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
+    if (layer == NULL || privateH == NULL)
+    {
+        return false;
+    }
+
     if (privateH->format != HAL_PIXEL_FORMAT_RGBA_8888 &&
         privateH->format != HAL_PIXEL_FORMAT_RGBX_8888 &&
         privateH->format != HAL_PIXEL_FORMAT_RGB_565)
@@ -61,6 +66,11 @@ bool SprdHWLayer:: checkYUVLayerFormat()
     hwc_layer_1_t *layer = mAndroidLayer;
     const native_handle_t *pNativeHandle = layer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+
+    if (layer == NULL || privateH == NULL)
+    {
+        return false;
+    }
 
     if (privateH->format != HAL_PIXEL_FORMAT_YCbCr_420_SP &&
         privateH->format != HAL_PIXEL_FORMAT_YCrCb_420_SP &&

@@ -368,10 +368,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
     if(l1)
     {
         layer1 = l1->getAndroidLayer();
-        struct sprdYUV *srcImg1 = l1->getSprdSRCYUV();
         struct sprdRect *srcRect1 = l1->getSprdSRCRect();
         struct sprdRect *FBRect1 = l1->getSprdFBRect();
-        if (layer1 == NULL || srcImg1 == NULL ||
+        if (layer1 == NULL ||
             srcRect1 == NULL || FBRect1 == NULL)
         {
             ALOGE("Failed to get Video SprdHWLayer parameters");
@@ -481,10 +480,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
     if(l2)
     {
         layer2 = l2->getAndroidLayer();
-        struct sprdYUV *srcImg2 = l2->getSprdSRCYUV();
         struct sprdRect *srcRect2 = l2->getSprdSRCRect();
         struct sprdRect *FBRect2 = l2->getSprdFBRect();
-        if (layer2 == NULL || srcImg2 == NULL ||
+        if (layer2 == NULL ||
             srcRect2 == NULL || FBRect2 == NULL)
         {
             ALOGE("Failed to get OSD SprdHWLayer parameters");
@@ -661,7 +659,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             if (tmpBuffer == NULL)
             {
                 int format = -1;
-                format = HAL_PIXEL_FORMAT_RGBA_8888; //PRIVATE_HALF_BUFFER;
+                format = HAL_PIXEL_FORMAT_YCbCr_420_SP; //PRIVATE_HALF_BUFFER;
                 int stride;
 
                 GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);

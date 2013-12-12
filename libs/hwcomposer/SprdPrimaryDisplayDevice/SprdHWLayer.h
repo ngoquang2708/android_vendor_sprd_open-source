@@ -121,7 +121,6 @@ public:
         return mAndroidLayer;
     }
 
-
     inline enum layerType getLayerType()
     {
         return mLayerType;
@@ -138,14 +137,19 @@ public:
         return &srcRect;
     }
 
-    inline struct sprdYUV *getSprdSRCYUV()
-    {
-        return &srcYUV;
-    }
-
     inline struct sprdRect *getSprdFBRect()
     {
         return &FBRect;
+    }
+
+    inline bool checkContiguousPhysicalAddress(struct private_handle_t *privateH)
+    {
+        return (privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY);
+    }
+
+    inline bool checkNotSupportOverlay(struct private_handle_t *privateH)
+    {
+        return (privateH->flags & private_handle_t::PRIV_FLAGS_NOT_OVERLAY);
     }
 
     bool checkRGBLayerFormat();
@@ -161,7 +165,6 @@ private:
     int mSprdLayerIndex;
     struct sprdRect srcRect;
     struct sprdRect FBRect;
-    struct sprdYUV  srcYUV;
     bool mDirectDisplayFlag;
     int mDebugFlag;
 

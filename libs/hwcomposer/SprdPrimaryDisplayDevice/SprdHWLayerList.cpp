@@ -72,12 +72,12 @@ void SprdHWLayerList::dump_yuv(uint8_t* pBuffer,uint32_t aInBufSize)
 }
 
 void SprdHWLayerList::dump_layer(hwc_layer_1_t const* l) {
-    ALOGI_IF(mDebugFlag , "\ttype=%d, flags=%08x, handle=%p, tr=%02x, blend=%04x, {%d,%d,%d,%d}, {%d,%d,%d,%d}",
+    ALOGI_IF(mDebugFlag , "\ttype=%d, flags=%08x, handle=%p, tr=%02x, blend=%04x, {%f,%f,%f,%f}, {%d,%d,%d,%d}",
              l->compositionType, l->flags, l->handle, l->transform, l->blending,
-             l->sourceCrop.left,
-             l->sourceCrop.top,
-             l->sourceCrop.right,
-             l->sourceCrop.bottom,
+             l->sourceCropf.left,
+             l->sourceCropf.top,
+             l->sourceCropf.right,
+             l->sourceCropf.bottom,
              l->displayFrame.left,
              l->displayFrame.top,
              l->displayFrame.right,
@@ -440,7 +440,6 @@ Overlay:
         mFBLayerCount++;
 #else
         revistOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
-    }
 #endif
     }
 
@@ -551,6 +550,11 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     unsigned int mFBWidth  = mFBInfo->fb_width;
     unsigned int mFBHeight = mFBInfo->fb_height;
 
+    int sourceLeft   = (int)(layer->sourceCropf.left);
+    int sourceTop    = (int)(layer->sourceCropf.top);
+    int sourceRight  = (int)(layer->sourceCropf.right);
+    int sourceBottom = (int)(layer->sourceCropf.bottom);
+
     if (privateH == NULL)
     {
         ALOGI_IF(mDebugFlag, "layer handle is NULL");
@@ -569,14 +573,15 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifdef PROCESS_VIDEO_USE_GSP
 #ifndef OVERLAY_COMPOSER_GPU
-    if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+    if (!(l->checkContiguousPhysicalAddress(privateH)))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
         return 0;
     }
 #endif
 #else
-    if ((layer->transform != 0) || !(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+    if ((layer->transform != 0) ||
+        !(l->checkContiguousPhysicalAddress(privateH)))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
         return 0;
@@ -600,7 +605,7 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifndef _DMA_COPY_OSD_LAYER
 #ifndef OVERLAY_COMPOSER_GPU
-        if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+        if (!(l->checkContiguousPhysicalAddress(privateH)))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not physical address %d", __LINE__);
             return 0;
@@ -619,19 +624,15 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         return 0;
     }
 
-    srcRect->x = MAX(layer->sourceCrop.left, 0);
-    srcRect->x = MIN(srcRect->x, privateH->width);
-    srcRect->y = MAX(layer->sourceCrop.top, 0);
-    srcRect->y = MIN(srcRect->y, privateH->height);
-    srcRect->w = MIN(layer->sourceCrop.right - srcRect->x, privateH->width - srcRect->x);
-    srcRect->h = MIN(layer->sourceCrop.bottom - srcRect->y, privateH->height - srcRect->y);
+    srcRect->x = MAX(sourceLeft, 0);
+    srcRect->y = MAX(sourceTop, 0);
+    srcRect->w = MIN(sourceRight - sourceLeft, privateH->width);
+    srcRect->h = MIN(sourceBottom - sourceTop, privateH->height);
 
     FBRect->x = MAX(layer->displayFrame.left, 0);
-    FBRect->x = MIN(FBRect->x, mFBWidth);
     FBRect->y = MAX(layer->displayFrame.top, 0);
-    FBRect->y = MIN(FBRect->y, mFBHeight);
-    FBRect->w = MIN(layer->displayFrame.right - FBRect->x, mFBWidth - FBRect->x);
-    FBRect->h = MIN(layer->displayFrame.bottom - FBRect->y, mFBHeight - FBRect->y);
+    FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth);
+    FBRect->h = MIN(layer->displayFrame.bottom - layer->sourceCrop.top, mFBHeight);
 
     if ((layer->transform & HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
     {
@@ -647,19 +648,8 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     /*
      * Only support full screen now
      * */
-    if ((srcWidth != FBRect->w) || (srcHeight != FBRect->h))
-    {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer NOT full-screen L%d", __LINE__);
-        return 0;
-    }
-
-    if ((srcRect->x != 0) || (srcRect->y != 0))
-    {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now L%d", __LINE__);
-        return 0;
-    }
-
-    if ((FBRect->w != mFBWidth) || (FBRect->h != mFBHeight))
+    if ((FBRect->w != mFBWidth) || (FBRect->h != mFBHeight) ||
+        (FBRect->x != 0) || (FBRect->y != 0))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now L%d", __LINE__);
         return 0;
@@ -668,7 +658,12 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     mRGBLayerFullScreenFlag = true;
 
 #ifdef OVERLAY_COMPOSER_GPU
-    prepareOverlayComposerLayer(l);
+    int ret = prepareOverlayComposerLayer(l);
+    if (ret != 0)
+    {
+        ALOGI_IF(mDebugFlag, "prepareOverlayComposerLayer find irregular layer, give up OverlayComposerGPU");
+        return 0;
+    }
 #endif
 
     l->setLayerType(LAYER_OSD);
@@ -689,10 +684,14 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
     struct sprdRect *srcRect = l->getSprdSRCRect();
     struct sprdRect *FBRect  = l->getSprdFBRect();
-    struct sprdYUV  *srcImg =  l->getSprdSRCYUV();
 
     unsigned int mFBWidth  = mFBInfo->fb_width;
     unsigned int mFBHeight = mFBInfo->fb_height;
+
+    int sourceLeft   = (int)(layer->sourceCropf.left);
+    int sourceTop    = (int)(layer->sourceCropf.top);
+    int sourceRight  = (int)(layer->sourceCropf.right);
+    int sourceBottom = (int)(layer->sourceCropf.bottom);
 
     if (privateH == NULL)
     {
@@ -702,7 +701,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     if (!(l->checkYUVLayerFormat()))
     {
-        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,color format:0x%08x,ret 0", __LINE__, privateH->format);
+        ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,color format:0x%08x,ret 0", __LINE__, privateH->format);
         return 0;
     }
 
@@ -711,8 +710,9 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     mYUVLayerCount++;
 
 #if 0
-    if (!(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
-        || (privateH->flags & private_handle_t::PRIV_FLAGS_NOT_OVERLAY)) {
+    if (!(l->checkContiguousPhysicalAddress(privateH))
+        || l->checkNotSupportOverlay(privateH))
+    {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;
     }
@@ -720,110 +720,30 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     if(layer->blending != HWC_BLENDING_NONE)
     {
-       ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,blend:0x%08x,ret 0", __LINE__, layer->blending);
-        return 0;
-    }
-#ifndef PROCESS_VIDEO_USE_GSP
-    if(layer->transform == HAL_TRANSFORM_FLIP_V)
-    {
-       ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
+       ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,blend:0x%08x,ret 0", __LINE__, layer->blending);
         return 0;
     }
 
-    if((layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_H)) || (layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_V)))
-    {
-        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
-        return 0;
-    }
-#endif
-    srcImg->format = privateH->format;
-    srcImg->w = privateH->width;
-    srcImg->h = privateH->height;
+    srcRect->x = MAX(sourceLeft, 0);
+    srcRect->y = MAX(sourceTop, 0);
+    srcRect->w = MIN(sourceRight - sourceLeft, privateH->width);
+    srcRect->h = MIN(sourceBottom - sourceTop, privateH->height);
 
-    int rot_90_270 = (layer->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90;
-
-    srcRect->x = MAX(layer->sourceCrop.left, 0);
-    srcRect->x = (srcRect->x + SRCRECT_X_ALLIGNED) & (~SRCRECT_X_ALLIGNED);//dcam 8 pixel crop
-    srcRect->x = MIN(srcRect->x, srcImg->w);
-    srcRect->y = MAX(layer->sourceCrop.top, 0);
-    srcRect->y = (srcRect->y + SRCRECT_Y_ALLIGNED) & (~SRCRECT_Y_ALLIGNED);//dcam 8 pixel crop
-    srcRect->y = MIN(srcRect->y, srcImg->h);
-
-    srcRect->w = MIN(layer->sourceCrop.right - layer->sourceCrop.left, srcImg->w - srcRect->x);
-    srcRect->h = MIN(layer->sourceCrop.bottom - layer->sourceCrop.top, srcImg->h - srcRect->y);
-
-    if((srcRect->w - (srcRect->w & (~SRCRECT_WIDTH_ALLIGNED)))> ((SRCRECT_WIDTH_ALLIGNED+1)>>1))
-    {
-        srcRect->w = (srcRect->w + SRCRECT_WIDTH_ALLIGNED) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
-    } else
-    {
-        srcRect->w = (srcRect->w) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
-    }
-
-    if((srcRect->h - (srcRect->h & (~SRCRECT_HEIGHT_ALLIGNED)))> ((SRCRECT_HEIGHT_ALLIGNED+1)>>1))
-    {
-        srcRect->h = (srcRect->h + SRCRECT_HEIGHT_ALLIGNED) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
-    }
-    else
-    {
-        srcRect->h = (srcRect->h) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
-    }
-
-    srcRect->w = MIN(srcRect->w, srcImg->w - srcRect->x);
-    srcRect->h = MIN(srcRect->h, srcImg->h - srcRect->y);
-    //--------------------------------------------------
     FBRect->x = MAX(layer->displayFrame.left, 0);
     FBRect->y = MAX(layer->displayFrame.top, 0);
-    FBRect->x = MIN(FBRect->x, mFBWidth);
-    FBRect->y = MIN(FBRect->y, mFBHeight);
+    FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth);
+    FBRect->h = MIN(layer->displayFrame.bottom - layer->displayFrame.top, mFBHeight);
 
-    FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth - FBRect->x);
-    FBRect->h = MIN(layer->displayFrame.bottom - layer->displayFrame.top, mFBHeight - FBRect->y);
-    if((FBRect->w - (FBRect->w & (~FB_WIDTH_ALLIGNED)))> ((FB_WIDTH_ALLIGNED+1)>>1))
+#ifdef TRANSFORM_USE_DCAM
+    int ret = DCAMTransformPrepare(layer, srcRect, FBRect);
+    if (ret != 0)
     {
-        FBRect->w = (FBRect->w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+        return 0;
     }
-    else
-    {
-        FBRect->w = (FBRect->w) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-    }
+#endif
 
-    if((FBRect->h - (FBRect->h & (~FB_HEIGHT_ALLIGNED)))> ((FB_HEIGHT_ALLIGNED+1)>>1))
-    {
-        FBRect->h = (FBRect->h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-    }
-    else
-    {
-        FBRect->h = (FBRect->h) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
-    }
-
-
-    FBRect->w = MIN(FBRect->w, mFBWidth - ((FBRect->x + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED)));
-    FBRect->h = MIN(FBRect->h, mFBHeight - ((FBRect->y + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED)));
     ALOGV("rects {%d,%d,%d,%d}, {%d,%d,%d,%d}", srcRect->x, srcRect->y, srcRect->w, srcRect->h,
           FBRect->x, FBRect->y, FBRect->w, FBRect->h);
-
-#ifndef PROCESS_VIDEO_USE_GSP
-
-    if(srcRect->w < 4 || srcRect->h < 4 ||
-       FBRect->w < 4 || FBRect->h < 4 ||
-       FBRect->w > 960 || FBRect->h > 960)
-    { //dcam scaling > 960 should use slice mode
-        ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam scaling > 960 should use slice mode! L%d",__LINE__);
-        return 0;
-    }
-#else
-    if(srcRect->w < 4
-       || srcRect->h < 4
-       || FBRect->w < 4
-       || FBRect->h < 4
-       || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
-       || FBRect->h > mFBHeight) {
-       ALOGI_IF(mDebugFlag,"prepareOverlayLayer, gsp,return 0, L%d",__LINE__);
-        return 0;
-    }
-
-#endif
 
     destWidth = FBRect->w;
     destHeight = FBRect->h;
@@ -838,18 +758,21 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         srcHeight = srcRect->h;
     }
 
-#ifndef PROCESS_VIDEO_USE_GSP
-    if(4 * srcWidth < destWidth || srcWidth > 4 * destWidth ||
-       4 * srcHeight < destHeight || srcHeight > 4 * destHeight)
-    { //dcam support 1/4-4 scaling
-        ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam support 1/4-4 scaling! L%d",__LINE__);
+#ifdef PROCESS_VIDEO_USE_GSP
+    if(srcRect->w < 4
+       || srcRect->h < 4
+       || FBRect->w < 4
+       || FBRect->h < 4
+       || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
+       || FBRect->h > mFBHeight) {
+       ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp,return 0, L%d",__LINE__);
         return 0;
     }
-#else
+
     if(4 * srcWidth < destWidth || srcWidth > 16 * destWidth ||
        4 * srcHeight < destHeight || srcHeight > 16 * destHeight)
     { //gsp support [1/16-4] scaling
-        ALOGI_IF(mDebugFlag,"prepareOverlayLayer, dcam support 1/4-4 scaling! L%d",__LINE__);
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer, GSP only support 1/16-4 scaling! L%d",__LINE__);
         return 0;
     }
 
@@ -857,13 +780,21 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     if(((srcWidth < destWidth) && (srcHeight > destHeight))
        || ((srcWidth > destWidth) && (srcHeight < destHeight)))
     { //gsp support [1/16-4] scaling
-        ALOGI_IF(mDebugFlag,"prepareOverlayLayer, gsp not support one direction scaling down while the other scaling up! L%d",__LINE__);
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp not support one direction scaling down while the other scaling up! L%d",__LINE__);
         return 0;
     }
-#endif
+#else
+    if(layer->transform == HAL_TRANSFORM_FLIP_V)
+    {
+       ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
+        return 0;
+    }
 
-#ifdef OVERLAY_COMPOSER_GPU
-    prepareOverlayComposerLayer(l);
+    if((layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_H)) || (layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_V)))
+    {
+        ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
+        return 0;
+    }
 #endif
 
     l->setLayerType(LAYER_OVERLAY);
@@ -879,6 +810,11 @@ int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
 {
     hwc_layer_1_t *layer = l->getAndroidLayer();
 
+    int sourceLeft   = (int)(layer->sourceCropf.left);
+    int sourceTop    = (int)(layer->sourceCropf.top);
+    int sourceRight  = (int)(layer->sourceCropf.right);
+    int sourceBottom = (int)(layer->sourceCropf.bottom);
+
     if (layer == NULL)
     {
         ALOGE("prepareOverlayComposerLayer input layer is NULL");
@@ -893,6 +829,20 @@ int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
         layer->displayFrame.bottom > mFBInfo->fb_height)
     {
         mSkipLayerFlag = true;
+        return -1;
+    }
+
+    if (sourceLeft < 0 ||
+        sourceTop < 0 ||
+        sourceBottom < 0 ||
+        sourceRight < 0 ||
+        sourceLeft > mFBInfo->fb_width ||
+        sourceTop > mFBInfo->fb_height ||
+        sourceBottom > mFBInfo->fb_height ||
+        sourceRight > mFBInfo->fb_height)
+    {
+        mSkipLayerFlag = true;
+        return -1;
     }
 
     return 0;
@@ -905,14 +855,10 @@ int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLa
      *  At present, OverlayComposer cannot handle 2 or more than 2 YUV layers.
      *  And OverlayComposer also cannot handle cropped RGB layer.
      * */
-    if (mYUVLayerCount == 1)
+    if (mYUVLayerCount > 1 ||
+        (mRGBLayerCount > 0 && mRGBLayerFullScreenFlag == false))
     {
-        mRGBLayerFullScreenFlag = true;
-    }
-
-    if (mYUVLayerCount > 1 || mRGBLayerFullScreenFlag == false)
-    {
-        ALOGI_IF(mDebugFlag, "YUVLayerCount > 1 or Find Cropped RGB layer mYUVLayerCount: %d, mRGBLayerFullScreenFlag: %d", 
+        ALOGI_IF(mDebugFlag, "YUVLayerCount: %d, mRGBLayerFullScreenFlag: %d",
                  mYUVLayerCount, mRGBLayerFullScreenFlag);
         mSkipLayerFlag = true;
     }
@@ -924,7 +870,12 @@ int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLa
             SprdHWLayer *SprdLayer = &(mLayerList[j]);
             hwc_layer_1_t *l = SprdLayer->getAndroidLayer();
 
-            if (l && (l->compositionType == HWC_FRAMEBUFFER_TARGET))
+            if (SprdLayer == NULL || l == NULL)
+            {
+                continue;
+            }
+
+            if (l->compositionType == HWC_FRAMEBUFFER_TARGET)
             {
                 continue;
             }
@@ -936,7 +887,7 @@ int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLa
                 {
                     SprdLayer->setLayerType(LAYER_OSD);
                 }
-                else
+                else if (SprdLayer->checkYUVLayerFormat())
                 {
                     SprdLayer->setLayerType(LAYER_OVERLAY);
                 }
@@ -977,6 +928,100 @@ int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLa
       mSkipLayerFlag = false;
 
       return 0;
+}
+#endif
+
+#ifdef TRANSFORM_USE_DCAM
+int SprdHWLayerList:: DCAMTransformPrepare(hwc_layer_1_t *layer, struct sprdRect *srcRect, struct sprdRect *FBRect)
+{
+    hwc_layer_1_t *layer = l->getAndroidLayer();
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+    struct sprdYUV srcImg;
+    unsigned int mFBWidth  = mFBInfo->fb_width;
+    unsigned int mFBHeight = mFBInfo->fb_height;
+
+    srcImg.format = privateH->format;
+    srcImg.w = privateH->width;
+    srcImg.h = privateH->height;
+
+    int rot_90_270 = (layer->transform & HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90;
+
+    srcRect->x = MAX(layer->sourceCrop.left, 0);
+    srcRect->x = (srcRect->x + SRCRECT_X_ALLIGNED) & (~SRCRECT_X_ALLIGNED);//dcam 8 pixel crop
+    srcRect->x = MIN(srcRect->x, srcImg.w);
+    srcRect->y = MAX(layer->sourceCrop.top, 0);
+    srcRect->y = (srcRect->y + SRCRECT_Y_ALLIGNED) & (~SRCRECT_Y_ALLIGNED);//dcam 8 pixel crop
+    srcRect->y = MIN(srcRect->y, srcImg.h);
+
+    srcRect->w = MIN(layer->sourceCrop.right - layer->sourceCrop.left, srcImg.w - srcRect->x);
+    srcRect->h = MIN(layer->sourceCrop.bottom - layer->sourceCrop.top, srcImg.h - srcRect->y);
+
+    if((srcRect->w - (srcRect->w & (~SRCRECT_WIDTH_ALLIGNED)))> ((SRCRECT_WIDTH_ALLIGNED+1)>>1))
+    {
+        srcRect->w = (srcRect->w + SRCRECT_WIDTH_ALLIGNED) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
+    } else
+    {
+        srcRect->w = (srcRect->w) & (~SRCRECT_WIDTH_ALLIGNED);//dcam 8 pixel crop
+    }
+
+    if((srcRect->h - (srcRect->h & (~SRCRECT_HEIGHT_ALLIGNED)))> ((SRCRECT_HEIGHT_ALLIGNED+1)>>1))
+    {
+        srcRect->h = (srcRect->h + SRCRECT_HEIGHT_ALLIGNED) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
+    }
+    else
+    {
+        srcRect->h = (srcRect->h) & (~SRCRECT_HEIGHT_ALLIGNED);//dcam 8 pixel crop
+    }
+
+    srcRect->w = MIN(srcRect->w, srcImg.w - srcRect->x);
+    srcRect->h = MIN(srcRect->h, srcImg.h - srcRect->y);
+    //--------------------------------------------------
+    FBRect->x = MAX(layer->displayFrame.left, 0);
+    FBRect->y = MAX(layer->displayFrame.top, 0);
+    FBRect->x = MIN(FBRect->x, mFBWidth);
+    FBRect->y = MIN(FBRect->y, mFBHeight);
+
+    FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth - FBRect->x);
+    FBRect->h = MIN(layer->displayFrame.bottom - layer->displayFrame.top, mFBHeight - FBRect->y);
+    if((FBRect->w - (FBRect->w & (~FB_WIDTH_ALLIGNED)))> ((FB_WIDTH_ALLIGNED+1)>>1))
+    {
+        FBRect->w = (FBRect->w + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+    }
+    else
+    {
+        FBRect->w = (FBRect->w) & (~FB_WIDTH_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+    }
+
+    if((FBRect->h - (FBRect->h & (~FB_HEIGHT_ALLIGNED)))> ((FB_HEIGHT_ALLIGNED+1)>>1))
+    {
+        FBRect->h = (FBRect->h + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+    }
+    else
+    {
+        FBRect->h = (FBRect->h) & (~FB_HEIGHT_ALLIGNED);//dcam 8 pixel and lcdc must 4 pixel for yuv420
+    }
+
+
+    FBRect->w = MIN(FBRect->w, mFBWidth - ((FBRect->x + FB_WIDTH_ALLIGNED) & (~FB_WIDTH_ALLIGNED)));
+    FBRect->h = MIN(FBRect->h, mFBHeight - ((FBRect->y + FB_HEIGHT_ALLIGNED) & (~FB_HEIGHT_ALLIGNED)));
+
+    if(srcRect->w < 4 || srcRect->h < 4 ||
+       FBRect->w < 4 || FBRect->h < 4 ||
+       FBRect->w > 960 || FBRect->h > 960)
+    { //dcam scaling > 960 should use slice mode
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer, dcam scaling > 960 should use slice mode! L%d",__LINE__);
+        return -1;
+    }
+
+    if(4 * srcWidth < destWidth || srcWidth > 4 * destWidth ||
+       4 * srcHeight < destHeight || srcHeight > 4 * destHeight)
+    { //dcam support 1/4-4 scaling
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer, dcam support 1/4-4 scaling! L%d",__LINE__);
+        return -1;
+    }
+
+    return 0;
 }
 #endif
 

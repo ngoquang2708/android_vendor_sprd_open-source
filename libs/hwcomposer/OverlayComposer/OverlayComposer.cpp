@@ -347,14 +347,20 @@ void OverlayComposer::deInitOpenGLES()
 
 void OverlayComposer::caculateLayerRect(hwc_layer_1_t  *l, struct LayerRect *rect, struct LayerRect *rV)
 {
+
+    const native_handle_t *pNativeHandle = l->handle;
+    struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+
+    int sourceLeft   = (int)(l->sourceCropf.left);
+    int sourceTop    = (int)(l->sourceCropf.top);
+    int sourceRight  = (int)(l->sourceCropf.right);
+    int sourceBottom = (int)(l->sourceCropf.bottom);
+
     if (l == NULL || rect == NULL)
     {
         ALOGE("overlayDevice::caculateLayerRect, input parameters is NULL");
         return;
     }
-
-    const native_handle_t *pNativeHandle = l->handle;
-    struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 
     if (private_h == NULL)
     {
@@ -362,26 +368,10 @@ void OverlayComposer::caculateLayerRect(hwc_layer_1_t  *l, struct LayerRect *rec
         return;
     }
 
-    if (private_h->format == HAL_PIXEL_FORMAT_RGBA_8888 ||
-        private_h->format == HAL_PIXEL_FORMAT_RGBX_8888 ||
-        private_h->format == HAL_PIXEL_FORMAT_RGB_565)
-    {
-        rect->left = MAX(l->sourceCrop.left, 0);
-        rect->left = MIN(rect->left, private_h->width);
-        rect->top = MAX(l->sourceCrop.top, 0);
-        rect->top = MIN(rect->top, private_h->height);
-        rect->right = MIN(l->sourceCrop.right, private_h->width);
-        rect->bottom = MIN(l->sourceCrop.bottom, private_h->height);
-    }
-    else if (private_h->format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
-             private_h->format == HAL_PIXEL_FORMAT_YCrCb_420_SP ||
-             private_h->format == HAL_PIXEL_FORMAT_YV12)
-    {
-        rect->left = MAX(l->sourceCrop.left, 0);
-        rect->top = MAX(l->sourceCrop.top, 0);
-        rect->right = MIN(l->sourceCrop.right, private_h->width);
-        rect->bottom = MIN(l->sourceCrop.bottom, private_h->height);
-    }
+    rect->left = MAX(sourceLeft, 0);
+    rect->top = MAX(sourceTop, 0);
+    rect->right = MIN(sourceRight, private_h->width);
+    rect->bottom = MIN(sourceBottom, private_h->height);
 
     rV->left = l->displayFrame.left;
     rV->top = l->displayFrame.top;
