@@ -180,10 +180,17 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mSawInputEOS(false),
       mSignalledError(false),
       mStoreMetaData(OMX_FALSE),
-      mYUVIn(NULL),
+      mIOMMUEnabled(false),
+      mPbuf_yuv_v(NULL),
+      mPbuf_yuv_p(0),
+      mPbuf_yuv_size(0),
       mPbuf_inter(NULL),
       mPbuf_extra_v(NULL),
+      mPbuf_extra_p(0),
+      mPbuf_extra_size(0),
       mPbuf_stream_v(NULL),
+      mPbuf_stream_p(0),
+      mPbuf_stream_size(0),
       mHandle(new tagAVCHandle),
       mEncConfig(new MMEncConfig),
       mEncParams(new tagAVCEncParam),
@@ -203,6 +210,10 @@ SPRDAVCEncoder::SPRDAVCEncoder(
     CHECK_EQ(openEncoder("libomx_avcenc_hw_sprd.so"), true);
 
     ALOGI("%s, %d, name: %s", __FUNCTION__, __LINE__, name);
+
+    mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
+    ALOGI("%s, is IOMMU enabled: %d", __FUNCTION__, mIOMMUEnabled);
+
     initPorts();
     ALOGI("Construct SPRDAVCEncoder");
 
@@ -303,8 +314,6 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
     MMCodecBuffer StreamMemBfr;
-    unsigned char* pBuf_extra_phy = NULL;
-    unsigned char* pBuf_stream_phy = NULL;
     int32 phy_addr = 0;
     int32 size = 0;
 
@@ -314,36 +323,56 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     unsigned int size_extra = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2 * 2;
     size_extra += (406*2*sizeof(uint32));
     size_extra += 1024;
-    mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    if (mIOMMUEnabled) {
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+    } else {
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    }
     if (mPmem_extra->getHeapID() < 0) {
-        ALOGE("Failed to alloc extra pmem (%d)", size_extra);
+        ALOGE("Failed to alloc extra buffer (%d)", size_extra);
     } else
     {
-        int32 ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
+        int32 ret;
+        if (mIOMMUEnabled) {
+            ret = mPmem_extra->get_mm_iova(&phy_addr, &size);
+        } else {
+            ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
+        }
         if (ret < 0)
         {
-            ALOGE("Failed to alloc extra pmem");
+            ALOGE("Failed to alloc extra buffer");
         } else
         {
             mPbuf_extra_v = (unsigned char*)mPmem_extra->base();
-            pBuf_extra_phy = (unsigned char*)phy_addr;
+            mPbuf_extra_p = (int32)phy_addr;
+            mPbuf_extra_size = (int32)size;
         }
     }
 
     unsigned int size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
-    mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    if (mIOMMUEnabled) {
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+    } else {
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    }
     if (mPmem_stream->getHeapID() < 0) {
-        ALOGE("Failed to alloc stream pmem (%d)", size_stream);
+        ALOGE("Failed to alloc stream buffer (%d)", size_stream);
     } else
     {
-        int32 ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+        int32 ret;
+        if (mIOMMUEnabled) {
+            ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+        } else {
+            ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+        }
         if (ret < 0)
         {
-            ALOGE("Failed to alloc stream pmem");
+            ALOGE("Failed to alloc stream buffer");
         } else
         {
             mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
-            pBuf_stream_phy = (unsigned char*)phy_addr;
+            mPbuf_stream_p = (int32)phy_addr;
+            mPbuf_stream_size = (int32)size;
         }
     }
 
@@ -352,11 +381,11 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     InterMemBfr.size = size_inter;
 
     ExtraMemBfr.common_buffer_ptr = mPbuf_extra_v;
-    ExtraMemBfr.common_buffer_ptr_phy = pBuf_extra_phy;
+    ExtraMemBfr.common_buffer_ptr_phy = (void*)mPbuf_extra_p;
     ExtraMemBfr.size	= size_extra;
 
     StreamMemBfr.common_buffer_ptr = mPbuf_stream_v;
-    StreamMemBfr.common_buffer_ptr_phy = pBuf_stream_phy;
+    StreamMemBfr.common_buffer_ptr_phy = (void *)mPbuf_stream_p;
     StreamMemBfr.size	= size_stream;
 
     mEncInfo.is_h263 = 0;
@@ -451,19 +480,34 @@ OMX_ERRORTYPE SPRDAVCEncoder::releaseEncoder() {
 
     if (mPbuf_extra_v != NULL)
     {
+        if (mIOMMUEnabled) {
+            mPmem_extra->free_mm_iova(mPbuf_extra_p, mPbuf_extra_size);
+        }
         mPmem_extra.clear();
         mPbuf_extra_v = NULL;
+        mPbuf_extra_p = 0;
+        mPbuf_extra_size = 0;
     }
 
     if (mPbuf_stream_v != NULL)
     {
+        if (mIOMMUEnabled) {
+            mPmem_stream->free_mm_iova(mPbuf_stream_p, mPbuf_stream_size);
+        }
         mPmem_stream.clear();
         mPbuf_stream_v = NULL;
+        mPbuf_stream_p = 0;
+        mPbuf_stream_size = 0;
     }
 
-    if (mYUVIn != NULL) {
+    if (mPbuf_yuv_v != NULL) {
+        if (mIOMMUEnabled) {
+            mYUVInPmemHeap->free_mm_iova(mPbuf_yuv_p, mPbuf_yuv_size);
+        }
         mYUVInPmemHeap.clear();
-        mYUVIn = NULL;
+        mPbuf_yuv_v = NULL;
+        mPbuf_yuv_p = 0;
+        mPbuf_yuv_size = 0;
     }
 
 #ifdef VIDEOENC_CURRENT_OPT
@@ -960,22 +1004,33 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     x = (uint32_t)(*((int *) inputData + 5));
                     y = (uint32_t)(*((int *) inputData + 6));
                 } else if (type == kMetadataBufferTypeGrallocSource) {
-                    if (mYUVIn == NULL) {
-                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) *3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                    if (mPbuf_yuv_v == NULL) {
+                        int32 yuv_size = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) *3/2;
+                        if (mIOMMUEnabled) {
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                        } else {
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                        }
                         if (mYUVInPmemHeap->getHeapID() < 0) {
-                            ALOGE("Failed to alloc yuv pmem");
+                            ALOGE("Failed to alloc yuv buffer");
                             return;
                         }
                     }
 
                     int ret,phy_addr, buffer_size;
-                    ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                    if(mIOMMUEnabled) {
+                        ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
+                    } else {
+                        ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                    }
                     if(ret) {
                         ALOGE("Failed to get_phy_addr_from_ion %d", ret);
                         return;
                     }
-                    mYUVIn =(uint8_t *) mYUVInPmemHeap->base();
-                    py = mYUVIn;
+                    mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
+                    mPbuf_yuv_p = (int32)phy_addr;
+                    mPbuf_yuv_size = (int32)buffer_size;
+                    py = mPbuf_yuv_v;
                     py_phy = (uint8_t*)phy_addr;
 
                     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
@@ -1001,22 +1056,33 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     return;
                 }
             } else {
-                if (mYUVIn == NULL) {
-                    mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", ((mVideoWidth+15)&(~15))*((mVideoHeight+15)&(~15))*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                if (mPbuf_yuv_v == NULL) {
+                    int32 yuv_size = ((mVideoWidth+15)&(~15))*((mVideoHeight+15)&(~15))*3/2;
+                    if(mIOMMUEnabled) {
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                    } else {
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                    }
                     if (mYUVInPmemHeap->getHeapID() < 0) {
-                        ALOGE("Failed to alloc yuv pmem");
+                        ALOGE("Failed to alloc yuv buffer");
                         return;
                     }
                 }
 
                 int ret,phy_addr, buffer_size;
-                ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                if(mIOMMUEnabled) {
+                    ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
+                } else {
+                    ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                }
                 if(ret) {
                     ALOGE("Failed to get_phy_addr_from_ion %d", ret);
                     return;
                 }
-                mYUVIn =(uint8_t *) mYUVInPmemHeap->base();
-                py = mYUVIn;
+                mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
+                mPbuf_yuv_p = (int32)phy_addr;
+                mPbuf_yuv_size = (int32)buffer_size;
+                py = mPbuf_yuv_v;
                 py_phy = (uint8_t*)phy_addr;
 
                 if (mVideoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) {

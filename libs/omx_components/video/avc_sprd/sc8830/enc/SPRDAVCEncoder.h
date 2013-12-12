@@ -64,16 +64,23 @@ private:
 
 
     OMX_BOOL mStoreMetaData;
-    unsigned char* mYUVIn;
     sp<MemoryHeapIon> mYUVInPmemHeap;
+    unsigned char* mPbuf_yuv_v;
+    int32 mPbuf_yuv_p;
+    int32 mPbuf_yuv_size;
 
+    bool mIOMMUEnabled;
     uint8_t *mPbuf_inter;
 
     sp<MemoryHeapIon> mPmem_stream;
     unsigned char* mPbuf_stream_v;
+    int32 mPbuf_stream_p;
+    int32 mPbuf_stream_size;
 
     sp<MemoryHeapIon> mPmem_extra;
     unsigned char* mPbuf_extra_v;
+    int32  mPbuf_extra_p;
+    int32  mPbuf_extra_size;
 
     MMEncVideoInfo mEncInfo;
 
