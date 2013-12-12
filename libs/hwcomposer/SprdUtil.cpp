@@ -37,6 +37,7 @@
 
 
 #include <ui/GraphicBufferAllocator.h>
+#include <binder/MemoryHeapIon.h>
 #include "SprdUtil.h"
 #include "dump.h"
 
@@ -320,6 +321,7 @@ int SprdUtil::openGSPDevice()
 int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2)
 {
     int32_t ret = 0;
+	int size = 0;
     static int openFlag = 0;
     hwc_layer_1_t *layer1 = NULL;
     hwc_layer_1_t *layer2 = NULL;
@@ -336,6 +338,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         {
             ALOGE("open GSP device failed");
             openFlag = 0;
+			return -1;
         }
     }
 
@@ -408,6 +411,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             default:
                 return -1;
             }
+			MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
             gsp_cfg_info.layer0_info.src_addr.addr_y = private_h1->phyaddr;
             gsp_cfg_info.layer0_info.src_addr.addr_v = gsp_cfg_info.layer0_info.src_addr.addr_uv = private_h1->phyaddr + private_h1->width * private_h1->height;
             //gsp_cfg_info.layer0_info.src_addr.addr_v = gsp_cfg_info.layer0_info.src_addr.addr_uv = private_h0->phyaddr + context->src_img.w*context->src_img.h;
@@ -513,6 +517,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             {
                 gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
             }
+
+			MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
+
             gsp_cfg_info.layer1_info.src_addr.addr_v =
                 gsp_cfg_info.layer1_info.src_addr.addr_uv =
                     gsp_cfg_info.layer1_info.src_addr.addr_y = private_h2->phyaddr;
