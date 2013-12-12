@@ -20,6 +20,8 @@
 
 #include "include/SprdSimpleOMXComponent.h"
 
+#include "gralloc_priv.h"
+
 #include <media/stagefright/foundation/ADebug.h>
 #include <media/stagefright/foundation/ALooper.h>
 #include <media/stagefright/foundation/AMessage.h>
@@ -27,10 +29,10 @@
 namespace android {
 
 SprdSimpleOMXComponent::SprdSimpleOMXComponent(
-        const char *name,
-        const OMX_CALLBACKTYPE *callbacks,
-        OMX_PTR appData,
-        OMX_COMPONENTTYPE **component)
+    const char *name,
+    const OMX_CALLBACKTYPE *callbacks,
+    OMX_PTR appData,
+    OMX_COMPONENTTYPE **component)
     : SprdOMXComponent(name, callbacks, appData, component),
       mLooper(new ALooper),
       mHandler(new AHandlerReflector<SprdSimpleOMXComponent>(this)),
@@ -40,9 +42,9 @@ SprdSimpleOMXComponent::SprdSimpleOMXComponent(
     mLooper->registerHandler(mHandler);
 
     mLooper->start(
-            false, // runOnCallingThread
-            false, // canCallJava
-            ANDROID_PRIORITY_FOREGROUND);
+        false, // runOnCallingThread
+        false, // canCallJava
+        ANDROID_PRIORITY_FOREGROUND);
 }
 
 void SprdSimpleOMXComponent::prepareForDestruction() {
@@ -55,7 +57,7 @@ void SprdSimpleOMXComponent::prepareForDestruction() {
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::sendCommand(
-        OMX_COMMANDTYPE cmd, OMX_U32 param, OMX_PTR data) {
+    OMX_COMMANDTYPE cmd, OMX_U32 param, OMX_PTR data) {
     CHECK(data == NULL);
 
     sp<AMessage> msg = new AMessage(kWhatSendCommand, mHandler->id());
@@ -67,7 +69,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::sendCommand(
 }
 
 bool SprdSimpleOMXComponent::isSetParameterAllowed(
-        OMX_INDEXTYPE index, const OMX_PTR params) const {
+    OMX_INDEXTYPE index, const OMX_PTR params) const {
     if (mState == OMX_StateLoaded) {
         return true;
     }
@@ -75,26 +77,26 @@ bool SprdSimpleOMXComponent::isSetParameterAllowed(
     OMX_U32 portIndex;
 
     switch (index) {
-        case OMX_IndexParamPortDefinition:
-        {
-            portIndex = ((OMX_PARAM_PORTDEFINITIONTYPE *)params)->nPortIndex;
-            break;
-        }
+    case OMX_IndexParamPortDefinition:
+    {
+        portIndex = ((OMX_PARAM_PORTDEFINITIONTYPE *)params)->nPortIndex;
+        break;
+    }
 
-        case OMX_IndexParamAudioPcm:
-        {
-            portIndex = ((OMX_AUDIO_PARAM_PCMMODETYPE *)params)->nPortIndex;
-            break;
-        }
+    case OMX_IndexParamAudioPcm:
+    {
+        portIndex = ((OMX_AUDIO_PARAM_PCMMODETYPE *)params)->nPortIndex;
+        break;
+    }
 
-        case OMX_IndexParamAudioAac:
-        {
-            portIndex = ((OMX_AUDIO_PARAM_AACPROFILETYPE *)params)->nPortIndex;
-            break;
-        }
+    case OMX_IndexParamAudioAac:
+    {
+        portIndex = ((OMX_AUDIO_PARAM_AACPROFILETYPE *)params)->nPortIndex;
+        break;
+    }
 
-        default:
-            return false;
+    default:
+        return false;
     }
 
     CHECK(portIndex < mPorts.size());
@@ -103,13 +105,13 @@ bool SprdSimpleOMXComponent::isSetParameterAllowed(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::getParameter(
-        OMX_INDEXTYPE index, OMX_PTR params) {
+    OMX_INDEXTYPE index, OMX_PTR params) {
     Mutex::Autolock autoLock(mLock);
     return internalGetParameter(index, params);
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::setParameter(
-        OMX_INDEXTYPE index, const OMX_PTR params) {
+    OMX_INDEXTYPE index, const OMX_PTR params) {
     Mutex::Autolock autoLock(mLock);
 
     CHECK(isSetParameterAllowed(index, params));
@@ -118,83 +120,82 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::setParameter(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::internalGetParameter(
-        OMX_INDEXTYPE index, OMX_PTR params) {
+    OMX_INDEXTYPE index, OMX_PTR params) {
     switch (index) {
-        case OMX_IndexParamPortDefinition:
-        {
-            OMX_PARAM_PORTDEFINITIONTYPE *defParams =
-                (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+    case OMX_IndexParamPortDefinition:
+    {
+        OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+            (OMX_PARAM_PORTDEFINITIONTYPE *)params;
 
-            if (defParams->nPortIndex >= mPorts.size()
-                    || defParams->nSize
-                            != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
-                return OMX_ErrorUndefined;
-            }
-
-            const PortInfo *port =
-                &mPorts.itemAt(defParams->nPortIndex);
-#if 0
-            if(defParams->nPortIndex == OMX_DirOutput){
-                ALOGI("internalGetParameter, outport, eColorFormat: 0x%x",port->mDef.format.video.eColorFormat);
-            }
-#endif
-            memcpy(defParams, &port->mDef, sizeof(port->mDef));
-
-            return OMX_ErrorNone;
+        if (defParams->nPortIndex >= mPorts.size()
+                || defParams->nSize
+                != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+            return OMX_ErrorUndefined;
         }
 
-        default:
-            return OMX_ErrorUnsupportedIndex;
+        const PortInfo *port =
+            &mPorts.itemAt(defParams->nPortIndex);
+#if 0
+        if(defParams->nPortIndex == OMX_DirOutput) {
+            ALOGI("internalGetParameter, outport, eColorFormat: 0x%x",port->mDef.format.video.eColorFormat);
+        }
+#endif
+        memcpy(defParams, &port->mDef, sizeof(port->mDef));
+
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return OMX_ErrorUnsupportedIndex;
     }
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::internalSetParameter(
-        OMX_INDEXTYPE index, const OMX_PTR params) {
+    OMX_INDEXTYPE index, const OMX_PTR params) {
     switch (index) {
-        case OMX_IndexParamPortDefinition:
-        {
-            OMX_PARAM_PORTDEFINITIONTYPE *defParams =
-                (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+    case OMX_IndexParamPortDefinition:
+    {
+        OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+            (OMX_PARAM_PORTDEFINITIONTYPE *)params;
 
-            if (defParams->nPortIndex >= mPorts.size()
-                    || defParams->nSize
-                            != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
-                return OMX_ErrorUndefined;
-            }
-
-            PortInfo *port =
-                &mPorts.editItemAt(defParams->nPortIndex);
-
-            if (defParams->nBufferSize != port->mDef.nBufferSize) {
-                CHECK_GE(defParams->nBufferSize, port->mDef.nBufferSize);
-                port->mDef.nBufferSize = defParams->nBufferSize;
-            }
-
-            if (defParams->nBufferCountActual
-                    != port->mDef.nBufferCountActual) {
-                CHECK_GE(defParams->nBufferCountActual,
-                         port->mDef.nBufferCountMin);
-
-                port->mDef.nBufferCountActual = defParams->nBufferCountActual;
-            }
-
-            memcpy(&port->mDef.format.video, &defParams->format.video, sizeof(OMX_VIDEO_PORTDEFINITIONTYPE));
-
-            return OMX_ErrorNone;
+        if (defParams->nPortIndex >= mPorts.size()
+                || defParams->nSize != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+            return OMX_ErrorUndefined;
         }
 
-        default:
-            return OMX_ErrorUnsupportedIndex;
+        PortInfo *port =
+            &mPorts.editItemAt(defParams->nPortIndex);
+
+        if (defParams->nBufferSize != port->mDef.nBufferSize) {
+            CHECK_GE(defParams->nBufferSize, port->mDef.nBufferSize);
+            port->mDef.nBufferSize = defParams->nBufferSize;
+        }
+
+        if (defParams->nBufferCountActual
+                != port->mDef.nBufferCountActual) {
+            CHECK_GE(defParams->nBufferCountActual,
+                     port->mDef.nBufferCountMin);
+
+            port->mDef.nBufferCountActual = defParams->nBufferCountActual;
+        }
+
+        memcpy(&port->mDef.format.video, &defParams->format.video, sizeof(OMX_VIDEO_PORTDEFINITIONTYPE));
+
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return OMX_ErrorUnsupportedIndex;
     }
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
-        OMX_BUFFERHEADERTYPE **header,
-        OMX_U32 portIndex,
-        OMX_PTR appPrivate,
-        OMX_U32 size,
-        OMX_U8 *ptr,
-        BufferPrivateStruct* bufferPrivate) {
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size,
+    OMX_U8 *ptr,
+    BufferPrivateStruct* bufferPrivate) {
     Mutex::Autolock autoLock(mLock);
     CHECK_LT(portIndex, mPorts.size());
 
@@ -230,11 +231,25 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
         if(bufferPrivate != NULL) {
             pBufCtrl->pMem = ((BufferPrivateStruct*)bufferPrivate)->pMem;
             pBufCtrl->phyAddr = ((BufferPrivateStruct*)bufferPrivate)->phyAddr;
+            pBufCtrl->bufferSize = ((BufferPrivateStruct*)bufferPrivate)->bufferSize;
         } else {
-            pBufCtrl->pMem = NULL;
-            pBufCtrl->phyAddr = 0;
+            bool iommu_is_enable = MemoryHeapIon::Mm_iommu_is_enabled();
+            if (iommu_is_enable) {
+                int picPhyAddr = 0, bufferSize = 0;
+                native_handle_t *pNativeHandle = (native_handle_t *)((*header)->pBuffer);
+                struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+                MemoryHeapIon::Get_mm_iova(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+
+                pBufCtrl->pMem = NULL;
+                pBufCtrl->bufferFd = private_h->share_fd;
+                pBufCtrl->phyAddr = picPhyAddr;
+                pBufCtrl->bufferSize = bufferSize;
+            } else {
+                pBufCtrl->pMem = NULL;
+                pBufCtrl->phyAddr = 0;
+            }
         }
-    }    
+    }
 
     PortInfo *port = &mPorts.editItemAt(portIndex);
 
@@ -259,10 +274,10 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::allocateBuffer(
-        OMX_BUFFERHEADERTYPE **header,
-        OMX_U32 portIndex,
-        OMX_PTR appPrivate,
-        OMX_U32 size) {
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size) {
     OMX_U8* ptr;
     OMX_ERRORTYPE err;
     if(portIndex == OMX_DirOutput) {
@@ -291,8 +306,8 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::allocateBuffer(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
-        OMX_U32 portIndex,
-        OMX_BUFFERHEADERTYPE *header) {
+    OMX_U32 portIndex,
+    OMX_BUFFERHEADERTYPE *header) {
     Mutex::Autolock autoLock(mLock);
 
     CHECK_LT(portIndex, mPorts.size());
@@ -301,7 +316,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
 
 #if 0 // XXX
     CHECK((mState == OMX_StateIdle && mTargetState == OMX_StateLoaded)
-            || port->mDef.bEnabled == OMX_FALSE);
+          || port->mDef.bEnabled == OMX_FALSE);
 #endif
 
     bool found = false;
@@ -326,10 +341,15 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
             }
 
             if(header->pOutputPortPrivate != NULL) {
+                bool iommu_is_enable = MemoryHeapIon::Mm_iommu_is_enabled();
+                if (iommu_is_enable) {
+                    BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct*)(header->pOutputPortPrivate);
+                    MemoryHeapIon::Free_mm_iova((int)(pBufCtrl->bufferFd), (int)(pBufCtrl->phyAddr), (int)(pBufCtrl->bufferSize));
+                }
 
                 delete header->pOutputPortPrivate;
                 header->pOutputPortPrivate = NULL;
-            }            
+            }
 
             delete header;
             header = NULL;
@@ -350,7 +370,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::emptyThisBuffer(
-        OMX_BUFFERHEADERTYPE *buffer) {
+    OMX_BUFFERHEADERTYPE *buffer) {
     sp<AMessage> msg = new AMessage(kWhatEmptyThisBuffer, mHandler->id());
     msg->setPointer("header", buffer);
     msg->post();
@@ -359,7 +379,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::emptyThisBuffer(
 }
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::fillThisBuffer(
-        OMX_BUFFERHEADERTYPE *buffer) {
+    OMX_BUFFERHEADERTYPE *buffer) {
     sp<AMessage> msg = new AMessage(kWhatFillThisBuffer, mHandler->id());
     msg->setPointer("header", buffer);
     msg->post();
@@ -379,116 +399,116 @@ void SprdSimpleOMXComponent::onMessageReceived(const sp<AMessage> &msg) {
     Mutex::Autolock autoLock(mLock);
 
     switch (msg->what()) {
-        case kWhatSendCommand:
-        {
-            int32_t cmd, param;
-            CHECK(msg->findInt32("cmd", &cmd));
-            CHECK(msg->findInt32("param", &param));
+    case kWhatSendCommand:
+    {
+        int32_t cmd, param;
+        CHECK(msg->findInt32("cmd", &cmd));
+        CHECK(msg->findInt32("param", &param));
 
-            onSendCommand((OMX_COMMANDTYPE)cmd, (OMX_U32)param);
-            break;
+        onSendCommand((OMX_COMMANDTYPE)cmd, (OMX_U32)param);
+        break;
+    }
+
+    case kWhatEmptyThisBuffer:
+    {
+        OMX_BUFFERHEADERTYPE *header;
+        CHECK(msg->findPointer("header", (void **)&header));
+
+        CHECK(mState == OMX_StateExecuting && mTargetState == mState);
+
+        PortInfo *port = editPortInfo(OMX_DirInput);
+
+        bool found = false;
+
+        for (size_t j = 0; j < port->mBuffers.size(); ++j) {
+            BufferInfo *buffer = &port->mBuffers.editItemAt(j);
+
+            if (buffer->mHeader == header) {
+                CHECK(!buffer->mOwnedByUs);
+
+                buffer->mOwnedByUs = true;
+
+                port->mQueue.push_back(buffer);
+
+                onQueueFilled(OMX_DirInput);
+
+                found = true;
+                break;
+            }
         }
 
-        case kWhatEmptyThisBuffer:
-        {
-            OMX_BUFFERHEADERTYPE *header;
-            CHECK(msg->findPointer("header", (void **)&header));
+        CHECK(found);
+        break;
+    }
 
-            CHECK(mState == OMX_StateExecuting && mTargetState == mState);
+    case kWhatFillThisBuffer:
+    {
+        OMX_BUFFERHEADERTYPE *header;
+        CHECK(msg->findPointer("header", (void **)&header));
 
-            PortInfo *port = editPortInfo(OMX_DirInput);
+        CHECK(mState == OMX_StateExecuting && mTargetState == mState);
 
-            bool found = false;
+        PortInfo *port = editPortInfo(OMX_DirOutput);
 
-                for (size_t j = 0; j < port->mBuffers.size(); ++j) {
-                    BufferInfo *buffer = &port->mBuffers.editItemAt(j);
+        bool found = false;
 
-                    if (buffer->mHeader == header) {
-                        CHECK(!buffer->mOwnedByUs);
+        for (size_t j = 0; j < port->mBuffers.size(); ++j) {
+            BufferInfo *buffer = &port->mBuffers.editItemAt(j);
 
-                        buffer->mOwnedByUs = true;
+            if (buffer->mHeader == header) {
+                CHECK(!buffer->mOwnedByUs);
 
-                        port->mQueue.push_back(buffer);
+                buffer->mOwnedByUs = true;
 
-                        onQueueFilled(OMX_DirInput);
-
-                        found = true;
-                        break;
-                    }
+                BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(header->pOutputPortPrivate);
+                if(pBufCtrl != NULL && pBufCtrl->iRefCount > 0) {
+                    pBufCtrl->iRefCount--;
                 }
+                ALOGI("fillThisBuffer, buffer: 0x%x, header: 0x%x, iRefCount: %d",buffer, header,pBufCtrl->iRefCount);
+                port->mQueue.push_back(buffer);
 
-            CHECK(found);
-            break;
+                onQueueFilled(OMX_DirOutput);
+
+                found = true;
+                break;
+            }
         }
 
-        case kWhatFillThisBuffer:
-        {
-            OMX_BUFFERHEADERTYPE *header;
-            CHECK(msg->findPointer("header", (void **)&header));
+        CHECK(found);
+        break;
+    }
 
-            CHECK(mState == OMX_StateExecuting && mTargetState == mState);
-
-            PortInfo *port = editPortInfo(OMX_DirOutput);
-
-            bool found = false;
-
-                for (size_t j = 0; j < port->mBuffers.size(); ++j) {
-                    BufferInfo *buffer = &port->mBuffers.editItemAt(j);
-
-                    if (buffer->mHeader == header) {
-                        CHECK(!buffer->mOwnedByUs);
-
-                        buffer->mOwnedByUs = true;
-                        
-                        BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(header->pOutputPortPrivate);
-                        if(pBufCtrl != NULL && pBufCtrl->iRefCount > 0){
-                            pBufCtrl->iRefCount--;
-                        }
-                        ALOGI("fillThisBuffer, buffer: 0x%x, header: 0x%x, iRefCount: %d",buffer, header,pBufCtrl->iRefCount);
-                        port->mQueue.push_back(buffer);
-
-                        onQueueFilled(OMX_DirOutput);
-
-                        found = true;
-                        break;
-                    }
-                }
-
-            CHECK(found);        
-            break;
-        }
-
-        default:
-            TRESPASS();
-            break;
+    default:
+        TRESPASS();
+        break;
     }
 }
 
 void SprdSimpleOMXComponent::onSendCommand(
-        OMX_COMMANDTYPE cmd, OMX_U32 param) {
+    OMX_COMMANDTYPE cmd, OMX_U32 param) {
     switch (cmd) {
-        case OMX_CommandStateSet:
-        {
-            onChangeState((OMX_STATETYPE)param);
-            break;
-        }
+    case OMX_CommandStateSet:
+    {
+        onChangeState((OMX_STATETYPE)param);
+        break;
+    }
 
-        case OMX_CommandPortEnable:
-        case OMX_CommandPortDisable:
-        {
-            onPortEnable(param, cmd == OMX_CommandPortEnable);
-            break;
-        }
+    case OMX_CommandPortEnable:
+    case OMX_CommandPortDisable:
+    {
+        onPortEnable(param, cmd == OMX_CommandPortEnable);
+        break;
+    }
 
-        case OMX_CommandFlush:
-        {
-            onPortFlush(param, true /* sendFlushComplete */);
-            break;
-        }
+    case OMX_CommandFlush:
+    {
+        onPortFlush(param, true /* sendFlushComplete */);
+        break;
+    }
 
-        default:
-            TRESPASS();
-            break;
+    default:
+        TRESPASS();
+        break;
     }
 }
 
@@ -497,32 +517,32 @@ void SprdSimpleOMXComponent::onChangeState(OMX_STATETYPE state) {
     CHECK_EQ((int)mState, (int)mTargetState);
 
     switch (mState) {
-        case OMX_StateLoaded:
-            CHECK_EQ((int)state, (int)OMX_StateIdle);
-            break;
-        case OMX_StateIdle:
-            CHECK(state == OMX_StateLoaded || state == OMX_StateExecuting);
-            break;
-        case OMX_StateExecuting:
-        {
-            CHECK_EQ((int)state, (int)OMX_StateIdle);
+    case OMX_StateLoaded:
+        CHECK_EQ((int)state, (int)OMX_StateIdle);
+        break;
+    case OMX_StateIdle:
+        CHECK(state == OMX_StateLoaded || state == OMX_StateExecuting);
+        break;
+    case OMX_StateExecuting:
+    {
+        CHECK_EQ((int)state, (int)OMX_StateIdle);
 
-            PortInfo *port = &mPorts.editItemAt(OMX_DirOutput);
-            if (port->mTransition == PortInfo::ENABLING) {
-                port->mTransition = PortInfo::NONE;
-            }
-
-            for (size_t i = 0; i < mPorts.size(); ++i) {
-                onPortFlush(i, false /* sendFlushComplete */);
-            }
-
-            mState = OMX_StateIdle;
-            notify(OMX_EventCmdComplete, OMX_CommandStateSet, state, NULL);
-            break;
+        PortInfo *port = &mPorts.editItemAt(OMX_DirOutput);
+        if (port->mTransition == PortInfo::ENABLING) {
+            port->mTransition = PortInfo::NONE;
         }
 
-        default:
-            TRESPASS();
+        for (size_t i = 0; i < mPorts.size(); ++i) {
+            onPortFlush(i, false /* sendFlushComplete */);
+        }
+
+        mState = OMX_StateIdle;
+        notify(OMX_EventCmdComplete, OMX_CommandStateSet, state, NULL);
+        break;
+    }
+
+    default:
+        TRESPASS();
     }
 
     mTargetState = state;
@@ -552,7 +572,7 @@ void SprdSimpleOMXComponent::onPortEnable(OMX_U32 portIndex, bool enable) {
                 } else {
                     CHECK_EQ(port->mDef.eDir, OMX_DirOutput);
                     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(buffer->mHeader->pOutputPortPrivate);
-                    if(pBufCtrl != NULL){
+                    if(pBufCtrl != NULL) {
                         pBufCtrl->iRefCount = 1;
                     }
                     notifyFillBufferDone(buffer->mHeader);
@@ -569,7 +589,7 @@ void SprdSimpleOMXComponent::onPortEnable(OMX_U32 portIndex, bool enable) {
 }
 
 void SprdSimpleOMXComponent::onPortFlush(
-        OMX_U32 portIndex, bool sendFlushComplete) {
+    OMX_U32 portIndex, bool sendFlushComplete) {
     if (portIndex == OMX_ALL) {
         for (size_t i = 0; i < mPorts.size(); ++i) {
             onPortFlush(i, sendFlushComplete);
@@ -608,10 +628,10 @@ void SprdSimpleOMXComponent::onPortFlush(
             CHECK_EQ(port->mDef.eDir, OMX_DirOutput);
 
             BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(buffer->mHeader->pOutputPortPrivate);
-            if(pBufCtrl){
+            if(pBufCtrl) {
                 pBufCtrl->iRefCount = 1;
             }
-            
+
             notifyFillBufferDone(buffer->mHeader);
         }
     }
@@ -718,7 +738,7 @@ void SprdSimpleOMXComponent::onPortFlushCompleted(OMX_U32 portIndex) {
 }
 
 void SprdSimpleOMXComponent::onPortEnableCompleted(
-        OMX_U32 portIndex, bool enabled) {
+    OMX_U32 portIndex, bool enabled) {
 }
 
 void SprdSimpleOMXComponent::onPortFlushPrepare(OMX_U32 portIndex) {
@@ -731,7 +751,7 @@ SprdSimpleOMXComponent::getPortQueue(OMX_U32 portIndex) {
 }
 
 SprdSimpleOMXComponent::PortInfo *SprdSimpleOMXComponent::editPortInfo(
-        OMX_U32 portIndex) {
+    OMX_U32 portIndex) {
     CHECK_LT(portIndex, mPorts.size());
     return &mPorts.editItemAt(portIndex);
 }
