@@ -319,11 +319,15 @@ private:
 	Mutex                           mPreviewCbLock;
 	Mutex                           mCaptureCbLock;
 	Mutex                           mStateLock;
+	Mutex                           mPreviewWindowLock;
 	Condition                       mStateWait;
 	Mutex                           mParamLock;
 	Condition                       mParamWait;
 	Mutex                           mCbPrevDataBusyLock;
+	Mutex                           mPrevBakDataLock;
 	Mutex                           mCbCapDataBusyLock;
+	Mutex                           mCapBakDataLock;
+	Mutex                           mPrevCpLock;
 
 	uint32_t                        mPreviewHeapSize;
 	uint32_t                        mPreviewHeapNum;

@@ -398,9 +398,9 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	LOGV("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
-
+	mPreviewWindowLock.lock();
     mPreviewWindow = w;
-    
+	mPreviewWindowLock.unlock();
 
     LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
@@ -2034,29 +2034,35 @@ void SprdCameraHardware::freePreviewMem()
 {
 	uint32_t i;
 	LOGV("freePreviewMem E.");
+	Mutex::Autolock pcpl(&mPrevCpLock);
+
 	FreeFdmem();
 
 	if (mPreviewHeapArray != NULL) {
 		for (i = 0; i < mPreviewDcamAllocBufferCnt; i++) {
 #if FREE_PMEM_BAK
-			mCbPrevDataBusyLock.lock();
-			if ((mPreviewHeapArray[i]) &&
-				(true == mPreviewHeapArray[i]->busy_flag)) {
-				LOGE("preview buffer is busy, skip, bakup and free later!");
-				if (NULL == mPreviewHeapInfoBak.camera_memory) {
-					memcpy(&mPreviewHeapInfoBak, mPreviewHeapArray[i], sizeof(sprd_camera_memory));
-				} else {
-					LOGE("preview buffer not clear, unknown error!!!");
-					memcpy(&mPreviewHeapInfoBak, mPreviewHeapArray[i], sizeof(sprd_camera_memory));
+			if (NO_ERROR == mCbPrevDataBusyLock.tryLock()) {
+				if (mPreviewHeapArray[i]) {
+					FreePmem(mPreviewHeapArray[i]);
 				}
-				mPreviewHeapBakUseFlag = 1;
-				memset(mPreviewHeapArray[i], 0, sizeof(*mPreviewHeapArray[i]));
-				free(mPreviewHeapArray[i]);
+				mCbPrevDataBusyLock.unlock();
 			} else {
-				FreePmem(mPreviewHeapArray[i]);
+				if ((mPreviewHeapArray[i]) &&
+					(true == mPreviewHeapArray[i]->busy_flag)) {
+					Mutex::Autolock pbdLock(&mPrevBakDataLock);
+					LOGE("preview buffer is busy, skip, bakup and free later!");
+					if (NULL == mPreviewHeapInfoBak.camera_memory) {
+						memcpy(&mPreviewHeapInfoBak, mPreviewHeapArray[i], sizeof(sprd_camera_memory));
+					} else {
+						LOGE("preview buffer not clear, unknown error!!!");
+						memcpy(&mPreviewHeapInfoBak, mPreviewHeapArray[i], sizeof(sprd_camera_memory));
+					}
+					mPreviewHeapBakUseFlag = 1;
+					memset(mPreviewHeapArray[i], 0, sizeof(*mPreviewHeapArray[i]));
+					free(mPreviewHeapArray[i]);
+				}
 			}
 			mPreviewHeapArray[i] = NULL;
-			mCbPrevDataBusyLock.unlock();
 #else
 			FreePmem(mPreviewHeapArray[i]);
 			mPreviewHeapArray[i] = NULL;
@@ -2202,25 +2208,29 @@ allocate_capture_mem_failed:
 void SprdCameraHardware::freeCaptureMem()
 {
 #if FREE_PMEM_BAK
-	mCbCapDataBusyLock.lock();
-	if (mRawHeap) {
-		if (true == mRawHeap->busy_flag) {
-			LOGE("freeCaptureMem, raw buffer is busy, skip, bakup and free later!");
-			if (NULL == mRawHeapInfoBak.camera_memory) {
-				memcpy(&mRawHeapInfoBak, mRawHeap, sizeof(*mRawHeap));
-			} else {
-				LOGE("preview buffer not clear, unknown error!!!");
-				memcpy(&mRawHeapInfoBak, mRawHeap, sizeof(*mRawHeap));
-			}
-			mRawHeapBakUseFlag = 1;
-			memset(mRawHeap, 0, sizeof(*mRawHeap));
-			free(mRawHeap);
-		} else {
+	if (NO_ERROR == mCbCapDataBusyLock.tryLock()) {
+		if (mRawHeap) {
 			FreePmem(mRawHeap);
+		}
+		mCbCapDataBusyLock.unlock();
+	} else {
+		if (mRawHeap) {
+			if (true == mRawHeap->busy_flag) {
+				Mutex::Autolock cbdLock(&mCapBakDataLock);
+				LOGE("freeCaptureMem, raw buffer is busy, skip, bakup and free later!");
+				if (NULL == mRawHeapInfoBak.camera_memory) {
+					memcpy(&mRawHeapInfoBak, mRawHeap, sizeof(*mRawHeap));
+				} else {
+					LOGE("preview buffer not clear, unknown error!!!");
+					memcpy(&mRawHeapInfoBak, mRawHeap, sizeof(*mRawHeap));
+				}
+				mRawHeapBakUseFlag = 1;
+				memset(mRawHeap, 0, sizeof(*mRawHeap));
+				free(mRawHeap);
+			}
 		}
 	}
 	mRawHeap = NULL;
-	mCbCapDataBusyLock.unlock();
 #else
 	FreePmem(mRawHeap);
 	mRawHeap = NULL;
@@ -2908,6 +2918,7 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 {
 	int ret = 0;
 	struct _dma_copy_cfg_tag dma_copy_cfg;
+	Mutex::Autolock pcpl(&mPrevCpLock);
 
 	if(s_mem_method==0) {
 #ifdef CONFIG_CAMERA_DMA_COPY
@@ -2975,10 +2986,6 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 
 bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t height, uint32_t phy_addr, char *virtual_addr)
 {
-	if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
-		return false;
-	}
-
 	LOGV("%s: size = %dx%d, addr = %d", __func__, width, height, phy_addr);
 
 	buffer_handle_t 	*buf_handle = NULL;
@@ -2988,6 +2995,10 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 	struct _dma_copy_cfg_tag dma_copy_cfg;
 	struct private_handle_t *private_h = NULL;
 	uint32_t dst_phy_addr = 0;
+	Mutex::Autolock pwl(&mPreviewWindowLock);
+	if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
+		return false;
+	}
 
 	ret = mPreviewWindow->dequeue_buffer(mPreviewWindow, &buf_handle, &stride);
 	if (0 != ret) {
@@ -3029,6 +3040,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 {
 
 	void				*vaddr = NULL;
+	Mutex::Autolock pwl(&mPreviewWindowLock);
 
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
@@ -3211,6 +3223,7 @@ void SprdCameraHardware::handleDataCallbackTimestamp(int64_t timestamp,
 void SprdCameraHardware::cameraBakMemCheckAndFree()
 {
 	if(NO_ERROR == mCbPrevDataBusyLock.tryLock()) {
+		Mutex::Autolock pbdLock(&mPrevBakDataLock);
 		/*preview bak heap check and free*/
 		if ((false == mPreviewHeapInfoBak.busy_flag) &&
 			(1 == mPreviewHeapBakUseFlag)) {
@@ -3223,6 +3236,7 @@ void SprdCameraHardware::cameraBakMemCheckAndFree()
 	}
 
 	if(NO_ERROR == mCbCapDataBusyLock.tryLock()) {
+		Mutex::Autolock cbdLock(&mCapBakDataLock);
 		/* capture head check and free*/
 		if ((false == mRawHeapInfoBak.busy_flag) &&
 			(1 == mRawHeapBakUseFlag)) {
