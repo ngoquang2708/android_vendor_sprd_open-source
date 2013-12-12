@@ -23,6 +23,7 @@
 #include "aac_dec_api.h"
 
 #include <cutils/properties.h>
+#include <dlfcn.h>
 
 #include <media/stagefright/foundation/ADebug.h>
 #include <media/stagefright/foundation/hexdump.h>
@@ -57,20 +58,29 @@ SPRDAACDecoder::SPRDAACDecoder(
       mInputBufferCount(0),
       mAnchorTimeUs(0),
       mNumSamplesOutput(0),
+      mLibHandle(NULL),
       mSignalledError(false),
       mOutputPortSettingsChange(NONE) {
+    bool ret = false;
+    ret = openDecoder("libomx_aacdec_sprd.so");
+    CHECK_EQ(ret, true);
     initPorts();
     CHECK_EQ(initDecoder(), (status_t)OK);
 }
 
 SPRDAACDecoder::~SPRDAACDecoder() {
-    AAC_MemoryFree(&mDecoderBuf);
+    mAAC_MemoryFree(&mDecoderBuf);
     mDecoderBuf = NULL;
 
     delete []mPcm_out_l;
     mPcm_out_l = NULL;
     delete []mPcm_out_r;
     mPcm_out_r = NULL;
+
+    if(mLibHandle) {
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
 }
 
 void SPRDAACDecoder::initPorts() {
@@ -115,7 +125,7 @@ void SPRDAACDecoder::initPorts() {
 }
 
 status_t SPRDAACDecoder::initDecoder() {
-    if(AAC_MemoryAlloc(&mDecoderBuf))
+    if(mAAC_MemoryAlloc(&mDecoderBuf))
     {
         ALOGE("Failed to initialize AAC audio decoder");
         return UNKNOWN_ERROR;
@@ -391,7 +401,7 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         }
 
-        initRet = AAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
+        initRet = mAAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
         if(initRet){
             ALOGW("AAC decoder init returned error %d", initRet);
             mSignalledError = true;
@@ -400,11 +410,11 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
 	    }
 
         // Check on the sampling rate to see whether it is changed.
-        int32_t sampleRate = AAC_RetrieveSampleRate(mDecoderBuf);
+        int32_t sampleRate = mAAC_RetrieveSampleRate(mDecoderBuf);
         if (mSamplingRate != sampleRate) {
             ALOGI("aac sampleRate is %d, but now is %d", mSamplingRate, sampleRate);
             mSamplingRate = sampleRate;
-            initRet = AAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
+            initRet = mAAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
             if(initRet){
                 ALOGW("AAC decoder init returned error %d", initRet);
                 mSignalledError = true;
@@ -508,7 +518,7 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
         int16_t  decodedBytes = 0;
         if(inputBufferCurrentLength > 0) {
 
-            decoderRet = AAC_FrameDecode(pInputBuffer,inputBufferCurrentLength,mPcm_out_l,mPcm_out_r,&frm_pcm_len,mDecoderBuf,1, &decodedBytes);
+            decoderRet = mAAC_FrameDecode(pInputBuffer,inputBufferCurrentLength,mPcm_out_l,mPcm_out_r,&frm_pcm_len,mDecoderBuf,1, &decodedBytes);
 
             //dump_aac(0, (void *)pInputBuffer, (size_t)inputBufferCurrentLength);
 
@@ -596,7 +606,7 @@ void SPRDAACDecoder::onPortFlushCompleted(OMX_U32 portIndex) {
     if (portIndex == 0) {
         // Make sure that the next buffer output does not still
         // depend on fragments from the last one decoded.
-         AAC_DecStreamBufferUpdate(1,mDecoderBuf);
+         mAAC_DecStreamBufferUpdate(1,mDecoderBuf);
     }
 }
 
@@ -624,6 +634,71 @@ void SPRDAACDecoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
             break;
         }
     }
+}
+
+bool SPRDAACDecoder::openDecoder(const char* libName)
+{
+    if(mLibHandle) {
+        dlclose(mLibHandle);
+    }
+
+    ALOGI("openDecoder, lib: %s", libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL) {
+        ALOGE("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mAAC_MemoryFree = (FT_AAC_MemoryFree)dlsym(mLibHandle, "AAC_MemoryFree");
+    if(mAAC_MemoryFree == NULL) {
+        ALOGE("Can't find AAC_MemoryFree in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mAAC_MemoryAlloc = (FT_AAC_MemoryAlloc)dlsym(mLibHandle, "AAC_MemoryAlloc");
+    if(mAAC_MemoryAlloc == NULL) {
+        ALOGE("Can't find AAC_MemoryAlloc in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mAAC_DecInit = (FT_AAC_DecInit)dlsym(mLibHandle, "AAC_DecInit");
+    if(mAAC_DecInit == NULL) {
+        ALOGE("Can't find AAC_DecInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mAAC_RetrieveSampleRate = (FT_AAC_RetrieveSampleRate)dlsym(mLibHandle, "AAC_RetrieveSampleRate");
+    if(mAAC_RetrieveSampleRate == NULL) {
+        ALOGE("Can't find AAC_RetrieveSampleRate in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mAAC_FrameDecode = (FT_AAC_FrameDecode)dlsym(mLibHandle, "AAC_FrameDecode");
+    if(mAAC_FrameDecode == NULL) {
+        ALOGE("Can't find AAC_FrameDecode in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mAAC_DecStreamBufferUpdate = (FT_AAC_DecStreamBufferUpdate)dlsym(mLibHandle, "AAC_DecStreamBufferUpdate");
+    if(mAAC_DecStreamBufferUpdate == NULL) {
+        ALOGE("Can't find AAC_DecStreamBufferUpdate in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    return true;
 }
 
 }  // namespace android

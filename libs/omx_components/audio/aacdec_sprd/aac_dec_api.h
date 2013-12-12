@@ -101,6 +101,28 @@ int16_t AAC_MemoryFree(void ** const aac_mem_ptr);    // memory deconstrct
 int16_t AAC_DecStreamBufferUpdate(
                     int16_t  update_sign,         // 1: update mode, 
 					void     *aac_buf_ptr);     // allocate memory
+
+typedef int16_t (*FT_AAC_MemoryFree)(void ** const aac_mem_ptr);
+typedef int16_t (*FT_AAC_MemoryAlloc)(void ** const aac_mem_ptr) ;
+typedef int16_t (*FT_AAC_DecInit)(int8_t  *headerstream_ptr,  // input header info stream
+                    int16_t  head_length,       // header stream length
+                    int32_t  sample_rate,       // sample rate
+                    int16_t  sign,              // 1: input sample rate, other: inout header stream 
+					void     *aac_buf_ptr);
+typedef uint32_t (*FT_AAC_RetrieveSampleRate)(void     *aac_buf_ptr);
+typedef int16_t (*FT_AAC_FrameDecode)(uint8_t           *buffer_ptr,         // the input stream
+						uint32_t           buffer_size,    // input stream size
+						uint16_t          *pcm_out_l_ptr,      // output left channel pcm
+						uint16_t          *pcm_out_r_ptr,      // output right channel pcm
+						uint16_t          *frm_pcm_len_ptr,     // frmae length 
+						void              *aac_dec_mem_ptr,
+						int16_t            aacplus_decode_flag,/*1:decode aac plus part, 0:don't decode aac plus part.*/
+						int16_t        *decoded_bytes
+						);
+typedef int16_t (*FT_AAC_DecStreamBufferUpdate)(
+                    int16_t  update_sign,         // 1: update mode, 
+					void     *aac_buf_ptr);
+
 #ifdef __cplusplus
 }
 #endif

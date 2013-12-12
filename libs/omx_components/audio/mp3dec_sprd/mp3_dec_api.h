@@ -53,6 +53,16 @@ void MP3_ARM_DEC_DecodeFrame(
 						 uint32_t *decode_result	// [Output]
 						 );
 
+typedef int (*FT_MP3_ARM_DEC_Construct)(void **h_decoder_ptr);
+typedef int (*FT_MP3_ARM_DEC_Deconstruct)(void const **h_decoder_ptr);
+typedef void (*FT_MP3_ARM_DEC_InitDecoder)(void *);
+typedef void (*FT_MP3_ARM_DEC_DecodeFrame)( 
+							 void *,
+						FRAME_DEC_T *frame_dec_buf_ptr,  // [Input]
+						 OUTPUT_FRAME_T *output_frame_ptr, // [Output]
+						 uint32_t *decode_result	// [Output]
+						 );
+
 #ifdef   __cplusplus
 }
 #endif

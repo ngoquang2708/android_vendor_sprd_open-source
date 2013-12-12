@@ -23,6 +23,7 @@
 #include "mp3_dec_api.h"
 
 #include <cutils/properties.h>
+#include <dlfcn.h>
 
 #include <media/stagefright/foundation/ADebug.h>
 #include <media/stagefright/foundation/hexdump.h>
@@ -57,7 +58,11 @@ SPRDMP3Decoder::SPRDMP3Decoder(
       mNumFramesOutput(0),
       mEOSFlag(false),
       mSignalledError(false),
+      mLibHandle(NULL),
       mOutputPortSettingsChange(NONE) {
+    bool ret = false;
+    ret = openDecoder("libomx_mp3dec_sprd.so");
+    CHECK_EQ(ret, true);
     initPorts();
     initDecoder();
 }
@@ -72,7 +77,12 @@ SPRDMP3Decoder::~SPRDMP3Decoder() {
     delete mMaxFrameBuf;
     mMaxFrameBuf = NULL;
 
-    MP3_ARM_DEC_Deconstruct((void const **)&mMP3DecHandle);
+    mMP3_ARM_DEC_Deconstruct((void const **)&mMP3DecHandle);
+
+    if(mLibHandle) {
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+    }
 }
 
 void SPRDMP3Decoder::initPorts() {
@@ -126,11 +136,11 @@ void SPRDMP3Decoder::initDecoder() {
     //Temporary source data frame buffer.
     mMaxFrameBuf = new uint8_t[MP3_MAX_DATA_FRAME_LEN];
 
-    int32_t ret = MP3_ARM_DEC_Construct(&mMP3DecHandle);
+    int32_t ret = mMP3_ARM_DEC_Construct(&mMP3DecHandle);
     ALOGI("MP3_ARM_DEC_Construct=%d", ret);
 
     //Init sprd mp3 decoder
-    MP3_ARM_DEC_InitDecoder(mMP3DecHandle);
+    mMP3_ARM_DEC_InitDecoder(mMP3DecHandle);
 
     mIsFirst = true;
     mFirstFrame = true;
@@ -478,7 +488,7 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
         if(mMaxFrameBuf != NULL)
             //dump_mp3(0, (void *)mMaxFrameBuf, (size_t)mPreFilledLen); //dump input data
 
-        MP3_ARM_DEC_DecodeFrame(mMP3DecHandle, &inputParam,&outputFrame, &decoderRet);
+        mMP3_ARM_DEC_DecodeFrame(mMP3DecHandle, &inputParam,&outputFrame, &decoderRet);
 
         if(decoderRet != MP3_ARM_DEC_ERROR_NONE) { //decoder error
             ALOGE("MP3 decoder returned error %d, substituting silence", decoderRet);
@@ -562,7 +572,7 @@ void SPRDMP3Decoder::onPortFlushCompleted(OMX_U32 portIndex) {
         mPreFilledLen = 0;
         if (mLeftBuf) memset(mLeftBuf, 0, MP3_DEC_FRAME_LEN<<1);
         if (mRightBuf) memset(mRightBuf, 0, MP3_DEC_FRAME_LEN<<1);
-        MP3_ARM_DEC_InitDecoder(mMP3DecHandle);
+        mMP3_ARM_DEC_InitDecoder(mMP3DecHandle);
         mIsFirst = true;
         mFirstFrame = true;
     }
@@ -592,6 +602,55 @@ void SPRDMP3Decoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
         break;
     }
     }
+}
+
+bool SPRDMP3Decoder::openDecoder(const char* libName)
+{
+    if(mLibHandle) {
+        dlclose(mLibHandle);
+    }
+
+    ALOGI("openDecoder, lib: %s", libName);
+
+    mLibHandle = dlopen(libName, RTLD_NOW);
+    if(mLibHandle == NULL) {
+        ALOGE("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mMP3_ARM_DEC_Construct = (FT_MP3_ARM_DEC_Construct)dlsym(mLibHandle, "MP3_ARM_DEC_Construct");
+    if(mMP3_ARM_DEC_Construct == NULL) {
+        ALOGE("Can't find MP3_ARM_DEC_Construct in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP3_ARM_DEC_Deconstruct = (FT_MP3_ARM_DEC_Deconstruct)dlsym(mLibHandle, "MP3_ARM_DEC_Deconstruct");
+    if(mMP3_ARM_DEC_Deconstruct == NULL) {
+        ALOGE("Can't find MP3_ARM_DEC_Deconstruct in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP3_ARM_DEC_InitDecoder = (FT_MP3_ARM_DEC_InitDecoder)dlsym(mLibHandle, "MP3_ARM_DEC_InitDecoder");
+    if(mMP3_ARM_DEC_InitDecoder == NULL) {
+        ALOGE("Can't find MP3_ARM_DEC_InitDecoder in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP3_ARM_DEC_DecodeFrame = (FT_MP3_ARM_DEC_DecodeFrame)dlsym(mLibHandle, "MP3_ARM_DEC_DecodeFrame");
+    if(mMP3_ARM_DEC_DecodeFrame == NULL) {
+        ALOGE("Can't find MP3_ARM_DEC_DecodeFrame in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    return true;
 }
 
 }  // namespace android
