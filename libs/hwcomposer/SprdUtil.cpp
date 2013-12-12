@@ -225,15 +225,22 @@ bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
         int format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
 
 #ifdef SCAL_ROT_TMP_BUF
-        if (tmpBuffer == NULL)
+        if (tmpDCAMBuffer == NULL)
         {
             int stride;
-            GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
-            if (tmpBuffer == NULL)
+            int size;
+
+            GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpDCAMBuffer, &stride);
+
+            MemoryHeapIon::Get_phy_addr_from_ion(tmpDCAMBuffer->share_fd, &(tmpDCAMBuffer->phyaddr), &size);
+            if (tmpDCAMBuffer == NULL)
             {
                 ALOGE("Cannot alloc the tmpBuffer ION buffer");
                 return false;
             }
+
+            Rect bounds(mFBInfo->fb_width, mFBInfo->fb_height);
+            GraphicBufferMapper::get().lock((buffer_handle_t)tmpDCAMBuffer, GRALLOC_USAGE_SW_READ_OFTEN, bounds, &tmpDCAMBuffer->base);
         }
 #endif
 
@@ -260,7 +267,7 @@ bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
                       layer->transform, srcImg->w, srcImg->h,
                       buffer1->phyaddr, buffer1->base, dstFormat,
                       FBRect->w, FBRect->h, srcRect,
-                      tmpBuffer->phyaddr, tmpBuffer->base);
+                      tmpDCAMBuffer->phyaddr, tmpDCAMBuffer->base);
         if (ret != 0)
         {
             ALOGE("DCAM transform video layer failed");

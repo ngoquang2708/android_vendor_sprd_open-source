@@ -39,10 +39,11 @@
 
 #include <cutils/log.h>
 #include "SprdDisplayPlane.h"
-#include "SprdHWLayerList.h"
+#include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 
 using namespace android;
+
 
 class SprdPrimaryPlane: public SprdDisplayPlane
 {
@@ -74,7 +75,7 @@ public:
     /*
      *  Finally display Overlay plane and Primary plane buffer.
      * */
-    void display(SprdHWLayer *overlayLayer, SprdHWLayer *primaryLayer, bool FBTargetLayerFlag);
+    void display(bool DisplayOverlayPlane, bool DisplayPrimaryPlane, bool DisplayFBTarget);
 
     /*
      * Check whether SprdPrimaryPlane is available.

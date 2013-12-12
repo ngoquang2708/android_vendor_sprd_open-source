@@ -136,16 +136,23 @@ int OverlayNativeWindow::dequeueBuffer(ANativeWindow* window,
 int OverlayNativeWindow::queueBuffer(ANativeWindow* window,
         ANativeWindowBuffer* buffer, int fenceFd)
 {
-    uint32_t current_overlay_paddr = 0;
+    static uint32_t count = 0;
     OverlayNativeWindow* self = getSelf(window);
     Mutex::Autolock _l(self->mutex);
 
     sp<Fence> fence(new Fence(fenceFd));
     fence->wait(Fence::TIMEOUT_NEVER);
 
-    self->mDisplayPlane->queueBuffer();
+    if (count >= 1)
+    {
+        self->mDisplayPlane->queueBuffer();
 
-    self->mDisplayPlane->display(NULL, self->mDisplayPlane->getPrimaryLayer(), false);
+        self->mDisplayPlane->display(false, true, false);
+    }
+    else
+    {
+        count++;
+    }
 
     postSem();
 

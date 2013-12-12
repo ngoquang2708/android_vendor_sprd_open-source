@@ -166,42 +166,42 @@ static int dump_layer(const char* path ,const char* pSrc , const char* ptype ,  
     char fileName[MAX_DUMP_PATH_LENGTH + MAX_DUMP_FILENAME_LENGTH];
     switch(format)
     {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-		sprintf(fileName , "%s%lld_%s_%d_rgba_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-		sprintf(fileName , "%s%lld_%s_%d_rgbx_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case 	HAL_PIXEL_FORMAT_BGRA_8888:
-		sprintf(fileName , "%s%lld_%s_%d_bgra_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_RGB_888:
-		sprintf(fileName , "%s%lld_%s_%d_rgb888_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_RGBA_5551:
-		sprintf(fileName , "%s%lld_%s_%d_rgba5551_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_RGBA_4444:
-		sprintf(fileName , "%s%lld_%s_%d_rgba4444_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_RGB_565:
-		sprintf(fileName , "%s%lld_%s_%d_rgb565_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-		sprintf(fileName , "%s%lld_%s_%d_ybrsp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-		sprintf(fileName , "%s%lld_%s_%d_yrbsp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_YV12:
-		sprintf(fileName , "%s%lld_%s_%d_yv12_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P:
-		sprintf(fileName , "%s%lld_%s_%d_ybrp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
-		break;
-    default:
-		ALOGE("dump layer failed because of error format %d" , format);
-             return -2;
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+            sprintf(fileName , "%s%lld_%s_%d_rgba_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_RGBX_8888:
+            sprintf(fileName , "%s%lld_%s_%d_rgbx_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+            sprintf(fileName , "%s%lld_%s_%d_bgra_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_RGB_888:
+            sprintf(fileName , "%s%lld_%s_%d_rgb888_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_5551:
+            sprintf(fileName , "%s%lld_%s_%d_rgba5551_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_4444:
+            sprintf(fileName , "%s%lld_%s_%d_rgba4444_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex ,width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_RGB_565:
+            sprintf(fileName , "%s%lld_%s_%d_rgb565_%dx%d_%d.bmp" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+            sprintf(fileName , "%s%lld_%s_%d_ybrsp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+            sprintf(fileName , "%s%lld_%s_%d_yrbsp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
+            break;
+        case HAL_PIXEL_FORMAT_YV12:
+           sprintf(fileName , "%s%lld_%s_%d_yv12_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
+           break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P:
+           sprintf(fileName , "%s%lld_%s_%d_ybrp_%dx%d_%d.yuv" ,path, randNum , ptype , LayerIndex , width, height,index);
+           break;
+        default:
+            ALOGE("dump layer failed because of error format %d" , format);
+            return -2;
     }
 
     return dump_bmp(fileName , (void*)pSrc, format,width,height);

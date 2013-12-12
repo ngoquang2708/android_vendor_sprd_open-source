@@ -118,9 +118,9 @@ private_handle_t* SprdDisplayPlane::dequeueBuffer()
             return NULL;
         }
 
-        mSlots[found].mIonBuffer = static_cast<private_handle_t* >(BufHandle);
-
         MemoryHeapIon::Get_phy_addr_from_ion(BufHandle->share_fd, &(BufHandle->phyaddr), &size);
+
+        mSlots[found].mIonBuffer = static_cast<private_handle_t* >(BufHandle);
 
         ALOGI("DisplayPlane dequeueBuffer buffer phy addr:%p, size:%d",
               (void *)(BufHandle->phyaddr), size);

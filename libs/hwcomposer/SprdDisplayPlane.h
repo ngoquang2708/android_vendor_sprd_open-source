@@ -49,7 +49,6 @@
 
 #include "sprd_fb.h"
 #include "gralloc_priv.h"
-#include "SprdPrimaryDisplayDevice/SprdHWLayerList.h"
 #include "dump.h"
 
 using namespace android;

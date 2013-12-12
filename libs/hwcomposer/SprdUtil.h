@@ -43,6 +43,8 @@
 #include <utils/RefBase.h>
 #include <cutils/log.h>
 #include <semaphore.h>
+#include <binder/MemoryHeapIon.h>
+#include <ui/Rect.h>
 
 #include "SprdPrimaryDisplayDevice/SprdHWLayerList.h"
 #include "gralloc_priv.h"
@@ -113,11 +115,12 @@ class SprdUtil
 public:
     SprdUtil(FrameBufferInfo *fbInfo)
         : mFBInfo(fbInfo),
-          tmpBuffer(NULL),
 #ifdef TRANSFORM_USE_DCAM
+          tmpDCAMBuffer(NULL),
           mOSDTransform(NULL),
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
+          tmpBuffer(NULL),
           mGspDev(NULL),
 #endif
           mInitFlag(0),
@@ -136,11 +139,12 @@ public:
 
 private:
     FrameBufferInfo *mFBInfo;
-    private_handle_t* tmpBuffer;
 #ifdef TRANSFORM_USE_DCAM
+    private_handle_t* tmpDCAMBuffer;
     sp<OSDTransform>  mOSDTransform;s
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
+    private_handle_t* tmpBuffer;
     gsp_device_t *mGspDev;
 #endif
     int mInitFlag;

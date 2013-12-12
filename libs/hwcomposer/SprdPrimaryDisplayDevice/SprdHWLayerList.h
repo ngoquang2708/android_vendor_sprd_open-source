@@ -48,135 +48,15 @@
 #include "gralloc_priv.h"
 #include "sc8825/dcam_hal.h"
 
+#include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
+#include "SprdPrimaryPlane.h"
+#include "SprdOverlayPlane.h"
 
 using namespace android;
 
-/*
- *  YUV format layer info.
- * */
-struct sprdYUV {
-    uint32_t w;
-    uint32_t h;
-    uint32_t format;
-    uint32_t y_addr;
-    uint32_t u_addr;
-    uint32_t v_addr;
-};
-
-/*
- *  Available layer rectangle.
- * */
-struct sprdRect {
-    uint32_t x;
-    uint32_t y;
-    uint32_t w;
-    uint32_t h;
-};
-
-enum layerType {
-    LAYER_OSD = 1,
-    LAYER_OVERLAY,
-    LAYER_INVALIDE
-};
-
-enum planeType {
-    PLANE_PRIMARY = 1,
-    PLANE_OVERLAY,
-    PLANE_FRAMEBUFFER,
-    PLANE_INVALIDATE
-};
-
-
-/*
- *  Android layers info from Android Framework is not enough,
- *  here, SprdHWLayer object just add some info.
- * */
-class SprdHWLayer
-{
-public:
-    SprdHWLayer()
-        : mAndroidLayer(0), mLayerType(LAYER_INVALIDE), mFormat(-1),
-          mDebugFlag(0)
-    {
-
-    }
-    ~SprdHWLayer()
-    {
-
-    }
-
-    inline void setAndroidLayer(hwc_layer_1_t *l)
-    {
-        mAndroidLayer = l;
-    }
-
-    inline hwc_layer_1_t *getAndroidLayer()
-    {
-        return mAndroidLayer;
-    }
-
-    inline void setLayerType(enum layerType t)
-    {
-        mLayerType = t;
-    }
-
-    inline enum layerType getLayerType()
-    {
-        return mLayerType;
-    }
-
-    inline void setPlaneType(enum planeType t)
-    {
-        mPlaneType = t;
-    }
-
-    inline enum planeType getPlaneType()
-    {
-        return mPlaneType;
-    }
-
-    inline void setLayerFormat(int f)
-    {
-        mFormat = f;
-    }
-
-    inline int getLayerFormat()
-    {
-        return mFormat;
-    }
-
-    inline struct sprdRect *getSprdSRCRect()
-    {
-        return &srcRect;
-    }
-
-    inline struct sprdYUV *getSprdSRCYUV()
-    {
-        return &srcYUV;
-    }
-
-    inline struct sprdRect *getSprdFBRect()
-    {
-        return &FBRect;
-    }
-
-    bool checkRGBLayerFormat();
-    bool checkYUVLayerFormat();
-
-private:
-    hwc_layer_1_t *mAndroidLayer;
-    enum layerType mLayerType;
-    enum planeType mPlaneType;
-    int mFormat;
-    struct sprdRect srcRect;
-    struct sprdRect FBRect;
-    struct sprdYUV  srcYUV;
-    bool mDirectDisplayFlag;
-    int mDebugFlag;
-};
-
-
+class SprdPrimaryPlane;
+class SprdOverlayPlane;
 
 /*
  *  Mainly responsible for traversaling HWLayer list,
@@ -188,9 +68,14 @@ class SprdHWLayerList
 public:
     SprdHWLayerList(FrameBufferInfo* fbInfo)
         : mFBInfo(fbInfo),
-          mLayerList(0),mLayerCount(0),
+          mLayerList(0),
+          mOSDLayerList(0),
+          mVideoLayerList(0),
+          mFBTargetLayer(0),
+          mLayerCount(0),
           mRGBLayerCount(0), mYUVLayerCount(0),
-          mOSDLayerCount(0), mOverlayLayerCount(0),
+          mOSDLayerCount(0), mVideoLayerCount(0),
+          mFBLayerCount(0),
           mRGBLayerFullScreenFlag(false),
           mList(NULL),
           mDisableHWCFlag(false),
@@ -202,23 +87,41 @@ public:
     ~SprdHWLayerList();
 
     /*
-     *  traversal HWLayer list first,
+     *  traversal HWLayer list
      *  and change some geometry.
      * */
-    bool updateGeometry(hwc_display_contents_1_t *list);
+    int updateGeometry(hwc_display_contents_1_t *list);
 
     /*
-     *  traversal HWLayer list again,
-     *  mainly judge whether upper layer and bottom layer
-     *  is consistent with SprdDisplayPlane Hardware requirements.
+     *  And then attach these HWC_OVERLAY layers to SprdDisplayPlane.
      * */
-    bool revistGeometry(bool *forceOverlayFlag);
+    int attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverlayPlane *mOverlay, int *DisplayFlag);
 
-    bool checkHWLayerList(hwc_display_contents_1_t* list);
+    int checkHWLayerList(hwc_display_contents_1_t* list);
 
     inline SprdHWLayer *getSprdLayer(unsigned int index)
     {
         return &(mLayerList[index]);
+    }
+
+    inline SprdHWLayer **getSprdOSDLayerList()
+    {
+        return mOSDLayerList;
+    }
+
+    inline int getOSDLayerCount()
+    {
+        return mOSDLayerCount;
+    }
+
+    inline SprdHWLayer **getSprdOverlayLayerList()
+    {
+        return mVideoLayerList;
+    }
+
+    inline hwc_layer_1_t *getFBTargetLayer()
+    {
+        return mFBTargetLayer;
     }
 
     inline unsigned int getSprdLayerCount()
@@ -226,19 +129,18 @@ public:
         return mLayerCount;
     }
 
-    inline enum planeType getPlaneType(unsigned int index)
-    {
-        return (mLayerList[index].getPlaneType());
-    }
-
 private:
     FrameBufferInfo* mFBInfo;
     SprdHWLayer *mLayerList;
+    SprdHWLayer **mOSDLayerList;
+    SprdHWLayer **mVideoLayerList;
+    hwc_layer_1_t *mFBTargetLayer;
     unsigned int mLayerCount;
     unsigned int mRGBLayerCount;
     unsigned int mYUVLayerCount;
     int mOSDLayerCount;
-    int mOverlayLayerCount;
+    int mVideoLayerCount;
+    int mFBLayerCount;
     bool mRGBLayerFullScreenFlag;
     hwc_display_contents_1_t *mList;
     bool mDisableHWCFlag;
@@ -247,19 +149,26 @@ private:
     int mDumpFlag;
 
     /*
+     *  traversal HWLayer list again,
+     *  mainly judge whether upper layer and bottom layer
+     *  is consistent with SprdDisplayPlane Hardware requirements.    
+     * */
+    int revistGeometry(int *DisplayFlag);
+
+    /*
      *  Filter OSD layer
      * */
-    bool prepareOSDLayer(SprdHWLayer *l);
+    int prepareOSDLayer(SprdHWLayer *l);
 
     /*
      *  Filter video layer
      * */
-    bool prepareOverlayLayer(SprdHWLayer *l);
+    int prepareVideoLayer(SprdHWLayer *l);
 
 #ifdef OVERLAY_COMPOSER_GPU
-    bool prepareOverlayComposerLayer(SprdHWLayer *l);
+    int prepareOverlayComposerLayer(SprdHWLayer *l);
 
-    bool revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, bool *forceOverlayFlag);
+    int revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag);
 #endif
 
     bool IsHWCLayer(hwc_layer_1_t *AndroidLayer);
