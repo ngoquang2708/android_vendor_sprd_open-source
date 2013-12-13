@@ -55,7 +55,7 @@ PUBLIC JPEG_RET_E JPEG_HWEncInit(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 			return ret;
 		}
 	}
-	
+	jpeg_fw_codec->g_stream_buf_ptr = input_para_ptr->stream_buf1;
 	jpeg_fw_codec->mbio_bfr0_valid = input_para_ptr->mbio_bfr0_valid;
 	jpeg_fw_codec->mbio_bfr1_valid = input_para_ptr->mbio_bfr1_valid;
 	jpeg_fw_codec->bsm_buf0_valid = input_para_ptr->bsm_buf0_valid;
@@ -187,8 +187,12 @@ PUBLIC JPEG_RET_E JPEG_HWWriteHead(APP1_T *app1_t)
 
 PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 {
-	JPG_READ_REG_POLL(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, V_BIT_31, 0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
-	
+	int ret =0;
+	ret =JPG_READ_REG_POLL(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, V_BIT_31, 0, TIME_OUT_CLK, "VLC_CTRL_OFF: polling the vlc is done!");
+	if(0 != ret)
+	{
+		SCI_TRACE_LOW("JPG_READ_REG_POLL timeout %s %d",__FUNCTION__,__LINE__);
+	}
 	//clear vlc, Hardware should flush vlc internal buffer and byte align(if the last aligned byte value is 0xff, then 0x00 will be followed).
 	JPG_WRITE_REG(JPG_VLC_REG_BASE+VLC_CTRL_OFFSET, 1, "VLC_ST_OFF: clear vlc module");
 	
@@ -196,8 +200,11 @@ PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 	write_nbits(0xffd9, 16, 0);
 #endif //_CMODEL_
 
-	JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
-
+	ret = JPG_READ_REG_POLL(JPG_BSM_REG_BASE+BSM_RDY_OFFSET, 1, 1, TIME_OUT_CLK, "BSM_READY: polling bsm rfifo ready");
+	if(0 != ret)
+	{
+		SCI_TRACE_LOW("JPG_READ_REG_POLL timeout %s %d",__FUNCTION__,__LINE__);
+	}
 	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG2_OFFSET, (16<<24), "BSM_CFG2: configure 16 bit for writing");
 	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_WDATA_OFFSET, 0xffd9, "BSM_WDATA: configure the value to be written to bitstream");
 
@@ -213,6 +220,8 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 {
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 //	SCI_ASSERT(jpeg_fw_codec);
+      uint8* buf = jpeg_fw_codec->g_stream_buf_ptr;
+	  int i= 0;
 
 	if(ALONE_MODE == jpeg_fw_codec->work_mode)
 	{	    
@@ -251,12 +260,21 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 #endif
 
 	jpeg_fw_codec->encoded_stream_len = (JPG_READ_REG(JPG_BSM_REG_BASE+BSM_TOTAL_BITS_OFFSET, "BSM_TOTAL_BITS: Read the total bits") >>3); //byte.
-
+	SCI_TRACE_LOW("jpeg_fw_codec->encoded_stream_len %d", jpeg_fw_codec->encoded_stream_len);
 	if(SWITCH_MODE == jpeg_fw_codec->work_mode) //return the remain bitstream byte length in current ping-pang buffer.
 	{
 		jpeg_fw_codec->encoded_stream_len %= jpeg_fw_codec->pingpang_buf_len;
+		SCI_TRACE_LOW("pingpang_buf_len %d", jpeg_fw_codec->pingpang_buf_len);
 	}
-//	printf("%d", jpeg_fw_codec->encoded_stream_len);
+	SCI_TRACE_LOW("jpeg_fw_codec->encoded_stream_len %d", jpeg_fw_codec->encoded_stream_len);
+
+ 	if(!(0xff == buf[jpeg_fw_codec->encoded_stream_len-2]&&0xd9==buf[jpeg_fw_codec->encoded_stream_len-1]))
+		jpeg_fw_codec->encoded_stream_len += 4*1024*1024;
+	if(!(0xff == buf[jpeg_fw_codec->encoded_stream_len-2]&&0xd9==buf[jpeg_fw_codec->encoded_stream_len-1]))
+	{
+		jpeg_fw_codec->encoded_stream_len = -1;
+		SCI_TRACE_LOW("invalid jpg file");
+	}
 	return jpeg_fw_codec->encoded_stream_len;
 
 #if _CMODEL_

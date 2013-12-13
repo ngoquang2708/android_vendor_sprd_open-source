@@ -2490,12 +2490,7 @@ int camera_start_preview_internal(void)
 		CMR_LOGE("Failed to set sensor preview mode");
 		return -CAMERA_FAILED;
 	}
-#if 1
-	if (V4L2_SENSOR_FORMAT_RAWRGB == g_cxt->sn_cxt.sn_if.img_fmt) {
-		camera_isp_ae_stab_set(1);
-		camera_isp_get_ae_stab(&isp_param);
-	}
-#endif
+
 	CMR_PRINT_TIME;
 	ret = camera_preview_init(g_cxt->preview_fmt);
 	if (ret) {
@@ -4850,19 +4845,7 @@ void *camera_af_thread_proc(void *data)
 				break;
 
 			}
-			if (V4L2_SENSOR_FORMAT_RAWRGB == g_cxt->sn_cxt.sn_if.img_fmt) {
-#if 0
-				camera_isp_ae_stab_set(1);
-				ret = camera_isp_get_ae_stab(&isp_param);
-				CMR_LOGV("wait AE stable ....");
-				ret = camera_isp_ae_wait_stab();
-				if (ret) {
-					CMR_LOGE("wait AE stable abnormal!");
-				} else {
-					CMR_LOGV("wait AE stable OK");
-				}
-#endif
-			}
+
 			pthread_mutex_lock(&g_cxt->af_cb_mutex);
 			ret = camera_autofocus_start();
 			pthread_mutex_unlock(&g_cxt->af_cb_mutex);
@@ -7116,6 +7099,11 @@ int camera_get_data_redisplay(int output_addr,
 	dst_frame.fmt             = IMG_DATA_TYPE_YUV420;
 	dst_frame.data_end.y_endian = 1;
 	dst_frame.data_end.uv_endian = 2;
+	rect.start_x = 0;
+	rect.start_y = 0;
+	rect.width  = input_width;
+	rect.height = input_height;
+	camera_get_trim_rect(&rect, 0, &dst_frame.size);
 	camera_sync_scale_start(g_cxt);
 	cmr_scale_evt_reg(NULL);
 	ret = cmr_scale_start(input_height,

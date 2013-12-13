@@ -65,7 +65,7 @@ extern "C"
 #define INTS_VLC 1
 #define INTS_BSM 0
 
-#define TIME_OUT_CLK			0xffff
+#define TIME_OUT_CLK			0xfffffff
 
 #define IS_TIME_OUT				1
 #define NOT_TIME_OUT			0
@@ -131,6 +131,7 @@ PUBLIC __inline int32 jpg_read_reg_poll(uint32 reg_addr, uint32 msk,uint32 exp_v
 	{
 		if (vsp_time_out_cnt > time)
 		{
+			SCI_TRACE_LOW("reg_addr 0x%x poll timeout",reg_addr);
 			return 1;
 		}
 		vsp_time_out_cnt++;
@@ -140,6 +141,7 @@ PUBLIC __inline int32 jpg_read_reg_poll(uint32 reg_addr, uint32 msk,uint32 exp_v
 	{
 		if (vsp_time_out_cnt > time)
 		{
+			SCI_TRACE_LOW("reg_addr 0x%x poll timeout",reg_addr);
 			return 1;
 		}
 		vsp_time_out_cnt++;

@@ -109,16 +109,8 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_DATA_SHIFT
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_5M
-endif
-
 ifeq ($(strip $(TARGET_BOARD_CAMERA_FLASH_CTRL)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_FLASH_CTRL
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_5M
 endif
 
 ifeq ($(strip $(CAMERA_SUPPORT_SIZE)),13M)
@@ -149,12 +141,8 @@ ifeq ($(strip $(TARGET_BOARD_Z788)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_788
 endif
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-else
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-else
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
-endif
 endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_MODE)),true)
@@ -183,10 +171,6 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_DMA_COPY)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_DMA_COPY
-endif
-
-ifeq ($(strip $(TARGET_BOARD_SP7710_CAMERA)),true)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_SP7710_FEATURE
 endif
 
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),mipi)
@@ -223,60 +207,10 @@ endif
 LOCAL_MODULE := utest_camera_$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libmorpho_facesolid
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libmorpho_facesolid
-endif
-
 ifeq ($(strip $(sc8830like)),1)
 LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_facesolid libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_EXECUTABLE)
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := sc8825/isp/libisp.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_easy_hdr.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-endif
-
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8810/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-
-include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := arithmetic/sc8810/libmorpho_facesolid.so
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_MULTI_PREBUILT)
-
-endif
 
 endif

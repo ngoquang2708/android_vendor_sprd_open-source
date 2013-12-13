@@ -1039,7 +1039,7 @@ SENSOR_INFO_T g_ov8865_mipi_raw_info = {
 	&s_ov8865_ioctl_func_tab,	// point to ioctl function table
 	&s_ov8865_mipi_raw_info_ptr,		// information and table about Rawrgb sensor
 	NULL,			//&g_ov8825_ext_info,                // extend information about sensor
-	SENSOR_AVDD_2800MV,	// iovdd
+	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1200MV,	// dvdd
 	1,			// skip frame num before preview
 	3,			// skip frame num before capture

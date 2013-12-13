@@ -19,11 +19,10 @@
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
 #include "sensor_ov8825_raw_param.c"
+#include "sensor_ov8825_otp_truly_02.c"
 
 #define ov8825_I2C_ADDR_W        0x36
 #define ov8825_I2C_ADDR_R         0x36
-
-#define OV8825_RAW_PARAM_COM  0x0000
 
 #define OV8825_MIN_FRAME_LEN_PRV  0x5e8
 #define OV8825_4_LANES
@@ -50,16 +49,16 @@ LOCAL int _ov8825_set_VTS(int VTS);
 LOCAL uint32_t _ov8825_ReadGain(uint32_t param);
 LOCAL uint32_t _ov8825_set_video_mode(uint32_t param);
 LOCAL int _ov8825_get_shutter(void);
-LOCAL uint32_t _ov8825_com_Identify_otp(void* param_ptr);
+LOCAL uint32_t _ov8825_cfg_otp(uint32_t  param);
 
 LOCAL const struct raw_param_info_tab s_ov8825_raw_param_tab[]={
-	{OV8825_RAW_PARAM_COM, &s_ov8825_mipi_raw_info, _ov8825_com_Identify_otp, PNULL},
+	{OV8825_TRULY_02, &s_ov8825_mipi_raw_info, _ov8825_truly_Identify_otp, _ov8825_truly_update_otp},
 	{RAW_INFO_END_ID, PNULL, PNULL, PNULL}
 };
 
 struct sensor_raw_info* s_ov8825_mipi_raw_info_ptr=NULL;
 
-static uint32_t g_module_id = 0;
+static uint32_t g_ov8825_module_id = 0;
 
 static uint32_t g_flash_mode_en = 0;
 static uint32_t g_af_slewrate = 1;
@@ -518,6 +517,69 @@ LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 	// ISP
 	{0x5001, 0x01}, //MWB on
 	{0x5000, 0x06}, //LENC off,, 0xbPC on, WPC on
+
+//1920_1080_4lane_30fps_100Msysclk_408MBps/lane
+	{0x3003, 0xce}, // PLL_CTRL0
+	{0x3004, 0xce}, // PLL_CTRL1
+	{0x3005, 0x10}, // PLL_CTRL2
+	{0x3006, 0x00}, // PLL_CTRL3
+	{0x3007, 0x3b}, // PLL_CTRL4
+	{0x3012, 0x80}, // SC_PLL CTRL_S0
+	{0x3013, 0x39}, // SC_PLL CTRL_S1
+	{0x3106, 0x15}, // SRB_CTRL
+	{0x3600, 0x06}, // ANACTRL0
+	{0x3601, 0x34}, // ANACTRL1
+	{0x3602, 0x42}, //
+	{0x3700, 0x20}, // SENCTROL0 Sensor control
+	{0x3702, 0x50}, // SENCTROL2 Sensor control
+	{0x3703, 0xcc}, // SENCTROL3 Sensor control
+	{0x3704, 0x19}, // SENCTROL4 Sensor control
+	{0x3705, 0x14}, // SENCTROL5 Sensor control
+	{0x3706, 0x4b}, // SENCTROL6 Sensor control
+	{0x3708, 0x84}, // SENCTROL8 Sensor control
+	{0x3709, 0x40}, // SENCTROL9 Sensor control
+	{0x370a, 0x31}, // SENCTROLA Sensor control
+	{0x370e, 0x00}, // SENCTROLE Sensor control
+	{0x3711, 0x0f}, // SENCTROL11 Sensor control
+	{0x3712, 0x9c}, // SENCTROL12 Sensor control
+	{0x3724, 0x01}, // Reserved
+	{0x3725, 0x92}, // Reserved
+	{0x3726, 0x01}, // Reserved
+	{0x3727, 0xa9}, // Reserved
+	{0x3800, 0x00}, // HS(HREF start High)
+	{0x3801, 0x00}, // HS(HREF start Low)
+	{0x3802, 0x01}, // VS(Vertical start High)
+	{0x3803, 0x30}, // VS(Vertical start Low)
+	{0x3804, 0x0c}, // HW = 3295
+	{0x3805, 0xdf}, // HW
+	{0x3806, 0x08}, // VH = 2151
+	{0x3807, 0x67}, // VH
+	{0x3808, 0x07}, // ISPHO = 1920
+	{0x3809, 0x80}, // ISPHO
+	{0x380a, 0x04}, // ISPVO = 1080
+	{0x380b, 0x38}, // ISPVO
+	{0x380c, 0x0d}, // HTS = 3568
+	{0x380d, 0xf0}, // HTS
+	{0x380e, 0x07}, // VTS = 1868
+	{0x380f, 0x4c}, // VTS
+	{0x3810, 0x00}, // HOFF = 16
+	{0x3811, 0x10}, // HOFF
+	{0x3812, 0x00}, // VOFF = 6
+	{0x3813, 0x06}, // VOFF
+	{0x3814, 0x11}, // X INC
+	{0x3815, 0x11}, // Y INC
+	{0x3820, 0x86}, // Timing Reg20:Vflip
+	{0x3821, 0x10}, // Timing Reg21:Hmirror
+	{0x3f00, 0x02}, // PSRAM Ctrl0
+	{0x4005, 0x18}, // Gain triger for BLC
+	{0x404f, 0x8F}, // Auto BLC while more than value
+	{0x4600, 0x04}, // VFIFO Ctrl0
+	{0x4601, 0x01}, // VFIFO Read ST High
+	{0x4602, 0x00}, // VFIFO Read ST Low
+	{0x4837, 0x15}, // MIPI PCLK PERIOD
+	{0x5068, 0x53}, // HSCALE_CTRL
+	{0x506a, 0x53}, // VSCALE_CTRL
+	{0x0100, 0x01} // wake up
 #endif
 };
 //@@ FVGA 2lane 720x480 60fps
@@ -566,8 +628,8 @@ LOCAL const SENSOR_REG_T ov8825_720x480_setting[] = {
 	{0x3617, 0xa1},
 	{0x3618, 0x00},
 	{0x3619, 0x00},
-	{0x361a, 0x00},
-	{0x361b, 0x00},
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x20},
 	{0x3701, 0x44},
 	{0x3702, 0x50},
@@ -706,7 +768,6 @@ LOCAL const SENSOR_REG_T ov8825_720x480_setting[] = {
 	{0x6804, 0x59},
 	{0x6900, 0x60},
 	{0x6901, 0x04},
-	{0x0100, 0x01},
 	{0x5800, 0x0f},
 	{0x5801, 0x0d},
 	{0x5802, 0x09},
@@ -794,6 +855,8 @@ LOCAL const SENSOR_REG_T ov8825_1632x1224_setting[] = {
 	{0x3600, 0x07}, // ANACTRL0
 	{0x3601, 0x33}, // ANACTRL1
 	{0x3602, 0xc2}, //
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x10}, // SENCTROL0 Sensor c
 	{0x3702, 0x28}, // SENCTROL2 Sensor c
 	{0x3703, 0x6c}, // SENCTROL3 Sensor c
@@ -857,6 +920,8 @@ LOCAL const SENSOR_REG_T ov8825_1632x1224_setting[] = {
 	{0x3600, 0x07}, //0xaNACTRL0
 	{0x3601, 0x33}, //0xaNACTRL1
 	{0x3602, 0xc2},
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x10}, //SENCTROL0 Sensor, 0xcontrol
 	{0x3702, 0x28}, //SENCTROL2 Sensor, 0xcontrol
 	{0x3703, 0x6c}, //SENCTROL3 Sensor, 0xcontrol
@@ -925,6 +990,8 @@ LOCAL const SENSOR_REG_T ov8825_1920x1080_setting[] = {
 	{0x3600, 0x06}, // ANACTRL0
 	{0x3601, 0x34}, // ANACTRL1
 	{0x3602, 0x42}, //
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x20}, // SENCTROL0 Sensor control
 	{0x3702, 0x50}, // SENCTROL2 Sensor control
 	{0x3703, 0xcc}, // SENCTROL3 Sensor control
@@ -987,6 +1054,8 @@ LOCAL const SENSOR_REG_T ov8825_1920x1080_setting[] = {
 	{0x3600, 0x06}, // ANACTRL0
 	{0x3601, 0x34}, // ANACTRL1
 	{0x3602, 0x42}, //
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x20}, // SENCTROL0 Sensor control
 	{0x3702, 0x50}, // SENCTROL2 Sensor control
 	{0x3703, 0xcc}, // SENCTROL3 Sensor control
@@ -1054,6 +1123,8 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 	{0x3600, 0x07}, // ANACTRL0
 	{0x3601, 0x33}, // ANACTRL1
 	{0x3602, 0x42}, //
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x10}, // SENCTROL0 Sensor con
 	{0x3702, 0x28}, // SENCTROL2 Sensor con
 	{0x3703, 0x6c}, // SENCTROL3 Sensor con
@@ -1117,6 +1188,8 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 	{0x3600, 0x06}, //0xaNACTRL0
 	{0x3601, 0x34}, //0xaNACTRL1
 	{0x3602, 0x42},
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x20}, //SENCTROL0 Sensor, 0xcontrol
 	{0x3702, 0x50}, //SENCTROL2 Sensor, 0xcontrol
 	{0x3703, 0xcc}, //SENCTROL3 Sensor, 0xcontrol
@@ -1176,67 +1249,24 @@ LOCAL const SENSOR_REG_T ov8825_640x480_setting[] = {
 #elif defined(OV8825_4_LANES)
 	//@@ FVGA 4lane 640x480 30fps
 	//;MIPI clock = 528M
-	{0x0103, 0x01},
-	{0x3000, 0x16},
-	{0x3001, 0x00},
-	{0x3002, 0x6c},
-	{0x3003, 0xce},
 	{0x3004, 0xbf},
-	{0x3005, 0x10},
 	{0x3006, 0x00},
-	{0x3007, 0x3b},
-	{0x300d, 0x00},
-	{0x301f, 0x09},
-	{0x3020, 0x01},
-	{0x3010, 0x00},
-	{0x3011, 0x02},
 	{0x3012, 0x80},
-	{0x3013, 0x39},
-	{0x3018, 0x00},
-	{0x3104, 0x20},
 	{0x3106, 0x15},
-	{0x3300, 0x00},
-	{0x3500, 0x00},
-	{0x3501, 0x27},
-	{0x3502, 0x40},
-	{0x3503, 0x07},
-	{0x3509, 0x00},
-	{0x350b, 0x1f},
 	{0x3600, 0x06},
 	{0x3601, 0x34},
-	{0x3602, 0x42},
-	{0x3603, 0x5c},
-	{0x3604, 0x98},
-	{0x3605, 0xf5},
-	{0x3609, 0xb4},
-	{0x360a, 0x7c},
-	{0x360b, 0xc9},
-	{0x360c, 0x0b},
-	{0x3612, 0x00},
-	{0x3613, 0x02},
-	{0x3614, 0x0f},
-	{0x3615, 0x00},
-	{0x3616, 0x03},
-	{0x3617, 0xa1},
-	{0x3618, 0x00},
-	{0x3619, 0x00},
-	{0x361a, 0x00},
-	{0x361b, 0x00},
+	{0x361a, 0xB0}, // VCM clock divider, VCM c
+	{0x361b, 0x04}, // VCM clock divider
 	{0x3700, 0x20},
-	{0x3701, 0x44},
 	{0x3702, 0x50},
 	{0x3703, 0xcc},
 	{0x3704, 0x19},
 	{0x3705, 0x32},
 	{0x3706, 0x4b},
-	{0x3707, 0x63},
 	{0x3708, 0x84},
 	{0x3709, 0x40},
 	{0x370a, 0xb2},
-	{0x370b, 0x01},
-	{0x370c, 0x50},
 	{0x370d, 0x00},
-	{0x370e, 0x08},
 	{0x3711, 0x0f},
 	{0x3712, 0x9c},
 	{0x3724, 0x01},
@@ -1265,172 +1295,13 @@ LOCAL const SENSOR_REG_T ov8825_640x480_setting[] = {
 	{0x3813, 0x02},
 	{0x3814, 0x71},
 	{0x3815, 0x35},
-	{0x3816, 0x02},
-	{0x3817, 0x40},
-	{0x3818, 0x00},
-	{0x3819, 0x40},
-	{0x3820, 0x86},
-	{0x3821, 0x11},
-	{0x3b1f, 0x00},
-	{0x3d00, 0x00},
-	{0x3d01, 0x00},
-	{0x3d02, 0x00},
-	{0x3d03, 0x00},
-	{0x3d04, 0x00},
-	{0x3d05, 0x00},
-	{0x3d06, 0x00},
-	{0x3d07, 0x00},
-	{0x3d08, 0x00},
-	{0x3d09, 0x00},
-	{0x3d0a, 0x00},
-	{0x3d0b, 0x00},
-	{0x3d0c, 0x00},
-	{0x3d0d, 0x00},
-	{0x3d0e, 0x00},
-	{0x3d0f, 0x00},
-	{0x3d10, 0x00},
-	{0x3d11, 0x00},
-	{0x3d12, 0x00},
-	{0x3d13, 0x00},
-	{0x3d14, 0x00},
-	{0x3d15, 0x00},
-	{0x3d16, 0x00},
-	{0x3d17, 0x00},
-	{0x3d18, 0x00},
-	{0x3d19, 0x00},
-	{0x3d1a, 0x00},
-	{0x3d1b, 0x00},
-	{0x3d1c, 0x00},
-	{0x3d1d, 0x00},
-	{0x3d1e, 0x00},
-	{0x3d1f, 0x00},
-	{0x3d80, 0x00},
-	{0x3d81, 0x00},
-	{0x3d84, 0x00},
-	{0x3f00, 0x00},
-	{0x3f01, 0xfc},
-	{0x3f05, 0x10},
-	{0x3f06, 0x00},
-	{0x3f07, 0x00},
-	{0x4000, 0x29},
-	{0x4001, 0x02},
-	{0x4002, 0x45},
-	{0x4003, 0x08},
-	{0x4004, 0x04},
-	{0x4005, 0x18},
-	{0x404e, 0x37},
-	{0x404f, 0x8f},
-	{0x4300, 0xff},
-	{0x4303, 0x00},
-	{0x4304, 0x08},
-	{0x4307, 0x00},
+	{0x3821, 0x10},
 	{0x4600, 0x14},
 	{0x4601, 0x14},
 	{0x4602, 0x00},
-	{0x4800, 0x04},
-	{0x4801, 0x0f},
-	{0x4837, 0x1e},   //	{0x4837, 0x0A},
-	{0x4843, 0x02},
-	{0x5000, 0x06},
-	{0x5001, 0x00},
-	{0x5002, 0x00},
 	{0x5068, 0x59},
 	{0x506a, 0x5a},
-	{0x501f, 0x00},
-	{0x5780, 0xfc},
-	{0x5c00, 0x80},
-	{0x5c01, 0x00},
-	{0x5c02, 0x00},
-	{0x5c03, 0x00},
-	{0x5c04, 0x00},
-	{0x5c05, 0x00},
-	{0x5c06, 0x00},
-	{0x5c07, 0x80},
-	{0x5c08, 0x10},
-	{0x6700, 0x05},
-	{0x6701, 0x19},
-	{0x6702, 0xfd},
-	{0x6703, 0xd7},
-	{0x6704, 0xff},
-	{0x6705, 0xff},
-	{0x6800, 0x10},
-	{0x6801, 0x02},
-	{0x6802, 0x90},
-	{0x6803, 0x10},
-	{0x6804, 0x59},
-	{0x6900, 0x60},
-	{0x6901, 0x04},
-	{0x0100, 0x01},
-	{0x5800, 0x0f},
-	{0x5801, 0x0d},
-	{0x5802, 0x09},
-	{0x5803, 0x0a},
-	{0x5804, 0x0d},
-	{0x5805, 0x14},
-	{0x5806, 0x0a},
-	{0x5807, 0x04},
-	{0x5808, 0x03},
-	{0x5809, 0x03},
-	{0x580a, 0x05},
-	{0x580b, 0x0a},
-	{0x580c, 0x05},
-	{0x580d, 0x02},
-	{0x580e, 0x00},
-	{0x580f, 0x00},
-	{0x5810, 0x03},
-	{0x5811, 0x05},
-	{0x5812, 0x09},
-	{0x5813, 0x03},
-	{0x5814, 0x01},
-	{0x5815, 0x01},
-	{0x5816, 0x04},
-	{0x5817, 0x09},
-	{0x5818, 0x09},
-	{0x5819, 0x08},
-	{0x581a, 0x06},
-	{0x581b, 0x06},
-	{0x581c, 0x08},
-	{0x581d, 0x06},
-	{0x581e, 0x33},
-	{0x581f, 0x11},
-	{0x5820, 0x0e},
-	{0x5821, 0x0f},
-	{0x5822, 0x11},
-	{0x5823, 0x3f},
-	{0x5824, 0x08},
-	{0x5825, 0x46},
-	{0x5826, 0x46},
-	{0x5827, 0x46},
-	{0x5828, 0x46},
-	{0x5829, 0x46},
-	{0x582a, 0x42},
-	{0x582b, 0x42},
-	{0x582c, 0x44},
-	{0x582d, 0x46},
-	{0x582e, 0x46},
-	{0x582f, 0x60},
-	{0x5830, 0x62},
-	{0x5831, 0x42},
-	{0x5832, 0x46},
-	{0x5833, 0x46},
-	{0x5834, 0x44},
-	{0x5835, 0x44},
-	{0x5836, 0x44},
-	{0x5837, 0x48},
-	{0x5838, 0x28},
-	{0x5839, 0x46},
-	{0x583a, 0x48},
-	{0x583b, 0x68},
-	{0x583c, 0x28},
-	{0x583d, 0xae},
-	{0x5842, 0x00},
-	{0x5843, 0xef},
-	{0x5844, 0x01},
-	{0x5845, 0x3f},
-	{0x5846, 0x01},
-	{0x5847, 0x3f},
-	{0x5848, 0x00},
-	{0x5849, 0xd5},
+	{0x4837, 0x1e},
 #endif
 };
 
@@ -1633,7 +1504,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8825_ioctl_func_tab = {
 	PNULL, //get_status
 	_ov8825_StreamOn,
 	_ov8825_StreamOff,
-	PNULL,
+	_ov8825_cfg_otp
 };
 
 
@@ -1694,7 +1565,7 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
 	1,			// skip frame num before preview
-	3,			// skip frame num before capture
+	1,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -2114,7 +1985,8 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->awb.light.w_thr[6] = 8;
 
 	sensor_ptr->awb.steady_speed = 6;
-	sensor_ptr->awb.debug_level = 0;
+	sensor_ptr->awb.debug_level = 2;
+	sensor_ptr->awb.smart = 1;
 #endif
 	sensor_ptr->awb.alg_id = 0;
 	sensor_ptr->awb.smart_index = 4;
@@ -2840,12 +2712,12 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		//step 0 power up DOVDD, the AVDD
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
 		Sensor_SetIovddVoltage(iovdd_val);
-		usleep(2000);
+		udelay(2000);
 		Sensor_SetAvddVoltage(avdd_val);
-		usleep(6000);
+		udelay(6000);
 		//step 1 power up DVDD
 		Sensor_SetDvddVoltage(dvdd_val);
-		usleep(6000);
+		udelay(6000);
 		//step 2 power down pin high
 		Sensor_PowerDown(!power_down);
 		usleep(2000);
@@ -2854,7 +2726,7 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		usleep(22*1000);
 		//step 4 xvclk
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(4*1000);
+		udelay(4*1000);
 	} else {
 		//power off should start > 1ms after last SCCB
 		usleep(4*1000);
@@ -2879,34 +2751,26 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 	return SENSOR_SUCCESS;
 }
 
-LOCAL uint32_t _ov8825_cfg_otp(uint32_t  param)
+LOCAL uint32_t _ov8825_cfg_otp(uint32_t param)
 {
 	uint32_t rtn=SENSOR_SUCCESS;
 	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_ov8825_raw_param_tab;
-	uint32_t module_id=g_module_id;
+	uint32_t module_id=g_ov8825_module_id;
 
-	SENSOR_PRINT("SENSOR_OV8825: _ov8825_cfg_otp");
+	SENSOR_PRINT("SENSOR_OV8825: _ov8825_cfg_otp module_id:0x%x", module_id);
 
-	if(PNULL!=tab_ptr[module_id].cfg_otp){
+	/*be called in sensor thread, so not call Sensor_SetMode_WaitDone()*/
+	usleep(10 * 1000);
+
+	if (PNULL!=tab_ptr[module_id].cfg_otp) {
 		tab_ptr[module_id].cfg_otp(0);
-		}
-
-	return rtn;
-}
-
-LOCAL uint32_t _ov8825_com_Identify_otp(void* param_ptr)
-{
-	uint32_t rtn=SENSOR_FAIL;
-	uint32_t param_id;
-
-	SENSOR_PRINT("SENSOR_OV8825: _ov8825_com_Identify_otp");
-
-	/*read param id from sensor omap*/
-	param_id=OV8825_RAW_PARAM_COM;
-
-	if(OV8825_RAW_PARAM_COM==param_id){
-		rtn=SENSOR_SUCCESS;
 	}
+	/* do streamoff, and not sleep
+	_ov8825_StreamOff(0);
+	*/
+	Sensor_WriteReg(0x0100, 0x00);
+
+	SENSOR_PRINT("SENSOR_OV8825: _ov8825_cfg_otp end");
 
 	return rtn;
 }
@@ -2915,18 +2779,21 @@ LOCAL uint32_t _ov8825_GetRawInof(void)
 {
 	uint32_t rtn=SENSOR_SUCCESS;
 	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_ov8825_raw_param_tab;
-	uint32_t param_id;
 	uint32_t i=0x00;
+	uint16_t stream_value = 0;
 
-	/*read param id from sensor omap*/
-	param_id=OV8825_RAW_PARAM_COM;
+	stream_value = Sensor_ReadReg(0x0100);
+	if (1 != (stream_value & 0x01)) {
+		Sensor_WriteReg(0x0100, 0x01);
+		usleep(5 * 1000);
+	}
 
 	for(i=0x00; ; i++)
 	{
-		g_module_id = i;
+		g_ov8825_module_id = i;
 		if(RAW_INFO_END_ID==tab_ptr[i].param_id){
 			if(NULL==s_ov8825_mipi_raw_info_ptr){
-				SENSOR_PRINT("SENSOR_OV8825: ov5647_GetRawInof no param error");
+				SENSOR_PRINT("SENSOR_OV8825: ov8825_GetRawInof no param error");
 				rtn=SENSOR_FAIL;
 			}
 			SENSOR_PRINT("SENSOR_OV8825: ov8825_GetRawInof end");
@@ -2936,10 +2803,15 @@ LOCAL uint32_t _ov8825_GetRawInof(void)
 			if(SENSOR_SUCCESS==tab_ptr[i].identify_otp(0))
 			{
 				s_ov8825_mipi_raw_info_ptr = tab_ptr[i].info_ptr;
-				SENSOR_PRINT("SENSOR_OV8825: ov8825_GetRawInof success");
+				SENSOR_PRINT("SENSOR_OV8825: ov8825_GetRawInof id:0x%x success", g_ov8825_module_id);
 				break;
 			}
 		}
+	}
+
+	if(1 != (stream_value & 0x01)) {
+		Sensor_WriteReg(0x0100, stream_value);
+		usleep(5 * 1000);
 	}
 
 	return rtn;
@@ -3015,11 +2887,7 @@ LOCAL uint32_t _ov8825_write_exposure(uint32_t param)
 	if(0x00!=max_frame_len)
 	{
 		frame_len = ((expsure_line+4)> max_frame_len) ? (expsure_line+4) : max_frame_len;
-
-		if(0x00!=(0x01&frame_len))
-		{
-			frame_len+=0x01;
-		}
+		frame_len = (frame_len+1)>>1<<1;
 
 		frame_len_cur = (Sensor_ReadReg(0x380e)&0xff)<<8;
 		frame_len_cur |= Sensor_ReadReg(0x380f)&0xff;
@@ -3120,6 +2988,7 @@ LOCAL uint32_t _ov8825_BeforeSnapshot(uint32_t param)
 
 	if(capture_exposure > (capture_maxline - 4)){
 		capture_maxline = capture_exposure + 4;
+		capture_maxline = (capture_maxline+1)>>1<<1;
 		ret_l = (unsigned char)(capture_maxline&0x0ff);
 		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
 		Sensor_WriteReg(0x380e, ret_h);

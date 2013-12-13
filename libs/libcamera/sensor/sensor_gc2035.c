@@ -659,7 +659,7 @@ static SENSOR_REG_T GC2035_YUV_COMMON[]=
 	//{0xf4 , 0x00},
 	//{0xf5 , 0x30},
 };
-
+#if 0
 static SENSOR_REG_T GC2035_YUV_320x240[]=
 {
 	{0xfe, 0x00},
@@ -690,7 +690,7 @@ static SENSOR_REG_T GC2035_YUV_320x240[]=
 	{0xfe, 0x00}
 
 };
-
+#endif
 static SENSOR_REG_T GC2035_YUV_800x600[]=
 {
 	{0xfe , 0x00},
@@ -784,7 +784,7 @@ static SENSOR_REG_TAB_INFO_T s_GC2035_resolution_Tab_YUV[]=
 	{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_COMMON), 0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
 
 	// YUV422 PREVIEW 1
-	{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_320x240), 320, 240, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	//{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_320x240), 320, 240, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_1280x960), 1280, 960, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	//{ADDR_AND_LEN_OF_ARRAY(GC2035_YUV_1600x1200), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_YUV422},
@@ -1195,9 +1195,9 @@ static SENSOR_REG_T GC2035_awb_tab[][6]=
 	{
 		{0xfe , 0x00},
 		{0x82 , 0xfc},
-		{0xb3 , 0xa0},
-		{0xb4 , 0x45},
-		{0xb5 , 0x40},
+		{0xb3 , 0x50}, 
+		{0xb4 , 0x55},
+		{0xb5 , 0xa5},
 		{0xff , 0xff}
 	},
 
@@ -1205,7 +1205,7 @@ static SENSOR_REG_T GC2035_awb_tab[][6]=
 	{
 		{0xfe , 0x00},
 		{0x82 , 0xfc},
-		{0xb3 , 0x78},
+		{0xb3 , 0x70},  
 		{0xb4 , 0x40},
 		{0xb5 , 0x50},
 		{0xff , 0xff}
@@ -1215,9 +1215,9 @@ static SENSOR_REG_T GC2035_awb_tab[][6]=
 	{
 		{0xfe , 0x00},
 		{0x82 , 0xfc},
-		{0xb3 , 0x58},
-		{0xb4 , 0x40},
-		{0xb5 , 0x50},
+		{0xb3 , 0xa0},
+		{0xb4 , 0x45},
+		{0xb5 , 0x40},
 		{0xff , 0xff}
 	}
 };

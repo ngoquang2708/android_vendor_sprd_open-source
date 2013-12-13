@@ -50,7 +50,7 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 									JPEG_ENC_INPUT_PARA_T *enc_fw_info_ptr)
 {
 	uint32_t slice_height = 0;
-
+	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 	enc_fw_info_ptr->is_first_slice = TRUE;
 #if 0
 	if(jpegenc_params->height > SLICE_HEIGHT){
@@ -96,8 +96,8 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 	enc_fw_info_ptr->bitstream_buf_len = jpegenc_params->stream_buf_len;
 	g_stream_buf_size = enc_fw_info_ptr->bitstream_buf_len;
 	enc_fw_info_ptr->stream_buf0 = (uint8_t *)jpegenc_params->stream_phy_buf[0];
-	enc_fw_info_ptr->stream_buf1 = 0;//enc_fw_info_ptr->stream_buf0+enc_fw_info_ptr->bitstream_buf_len;
-
+	enc_fw_info_ptr->stream_buf1 =(uint8_t *)jpegenc_params->stream_virt_buf[0];//enc_fw_info_ptr->stream_buf0+enc_fw_info_ptr->bitstream_buf_len;
+	jpeg_fw_codec->g_stream_buf_ptr = (uint8_t *)jpegenc_params->stream_virt_buf[0];
 	enc_fw_info_ptr->enc_buf.buf_size = 0;
 	enc_fw_info_ptr->enc_buf.buf_ptr = NULL;
 
@@ -109,7 +109,7 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 	enc_fw_info_ptr->restart_interval = 0;
 
 	SCI_TRACE_LOW("[JPEG_EncInitFwParam] jpeg fw info, len = %d, ping addr = 0x%x, pong addr = 0x%x, encode size = %d,  encode addr = 0x%x",
-					enc_fw_info_ptr->bitstream_buf_len, (uint32_t)enc_fw_info_ptr->stream_buf0, (uint32_t)enc_fw_info_ptr->stream_buf1,
+					enc_fw_info_ptr->bitstream_buf_len, (uint32_t)enc_fw_info_ptr->stream_buf0, (uint32_t)jpeg_fw_codec->g_stream_buf_ptr,
 					(uint32_t)enc_fw_info_ptr->enc_buf.buf_ptr, enc_fw_info_ptr->enc_buf.buf_size);
 
 	SCI_TRACE_LOW("[JPEG_EncInitFwParam] ping mcu info = %d, pong mcu info = %d, width = %d, height = %d",
@@ -1051,7 +1051,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 
 	memset(out_ptr, 0, sizeof(JPEGENC_SLICE_OUT_T));
 	jpeg_fw_codec->stream_buf_id = 0;
-
+	jpeg_fw_codec->g_stream_buf_ptr = jpegenc_params->stream_virt_buf[0];
 	slice_height = jpegenc_params->set_slice_height ? jpegenc_params->set_slice_height : SLICE_HEIGHT;
 	slice_num = (jpegenc_params->height%slice_height) ? (jpegenc_params->height/slice_height+1):(jpegenc_params->height/slice_height);
 
@@ -1105,6 +1105,16 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 		
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
+			ret = -1;
+			goto error;
+		}
+		else
+		{
+			ret = 0;
+		}
+		if(-1 == stream_size)
+		{
+			SCI_TRACE_LOW("JPEGENC invalid stream size.");
 			ret = -1;
 			goto error;
 		}

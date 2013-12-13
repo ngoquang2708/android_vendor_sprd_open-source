@@ -159,7 +159,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 	struct sensor_raw_fix_info *raw_fix_info_ptr = PNULL;
 	struct sensor_raw_tune_info *raw_tune_info_ptr = PNULL;
 	uint16_t *awb_map_ptr = PNULL;
-	int i,j;
+	int i,j, ret_val = 0;
 	uint8_t *temp_buf_8 = PNULL;
 	uint16_t *temp_buf_16 = PNULL;
 	uint32_t *temp_buf_32 = PNULL;
@@ -174,9 +174,8 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 		CMR_LOGE("raw info is PNULL!!");
 		return SENSOR_FAIL;
 	}
-	
 
-	strcpy(file_name, "sdcard/");
+	strcpy(file_name, "/sdcard/");
 	strcat(file_name, "sensor_");
 	strcat(file_name, sensor_name);
 	strcat(file_name, "_raw_param.c");
@@ -188,7 +187,14 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 		return SENSOR_FAIL;
 	}
 
-	stat(file_name,&file_status);
+	ret_val = stat(file_name,&file_status);
+	if (ret_val < 0) {
+		CMR_LOGE("file: %s get stat failed\n", file_name);
+		if (fp) {
+			fclose(fp);
+		}
+		return SENSOR_FAIL;
+	}
 
 	if(0 == raw_info_update_status[sensor_id].updata_file_time){
 		CMR_LOGE("file first load");
@@ -207,9 +213,15 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 		raw_info_update_status[sensor_id].fix_info_table_org_addr = (*sensor_info_ptr->raw_info_ptr)->fix_ptr;
 	}
 
-
 	fseek(fp, 0L, SEEK_END);
 	file_size = ftell(fp);
+	if (file_size < 0) {
+		CMR_LOGE("file: %s ftell faild\n", file_name);
+		if (fp) {
+			fclose(fp);
+		}
+		return SENSOR_FAIL;
+	}
 	fseek(fp, 0L, SEEK_SET);
 	file_tmp_buf = (char*)malloc(file_size + 32);
 	if(!file_tmp_buf){
@@ -218,7 +230,14 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 		}
 		return SENSOR_FAIL;
 	}
-	fread(file_tmp_buf,1,file_size,fp);
+	ret_val = fread(file_tmp_buf,1,file_size,fp);
+	if (ferror(fp)) {
+		CMR_LOGE("file: %s read faild\n", file_name);
+		if (fp) {
+			fclose(fp);
+		}
+		goto update_error;
+	}
 	file_tmp_buf[file_size] = 0;
 	fclose(fp);
 

@@ -31,6 +31,7 @@ extern   "C"
 struct isp_size_info s_isp_size_info[]={
 	{ISP_SIZE_480x270, 480, 270},
 	{ISP_SIZE_640x480, 640, 480},
+	{ISP_SIZE_480x360, 480, 360},
 	{ISP_SIZE_800x600, 800, 600},
 	{ISP_SIZE_1280x960, 1280, 960},
 	{ISP_SIZE_1296x972, 1296, 972},
@@ -39,8 +40,10 @@ struct isp_size_info s_isp_size_info[]={
 	{ISP_SIZE_1632x1224, 1632, 1224},
 	{ISP_SIZE_1920x1080, 1920, 1080},
 	{ISP_SIZE_2048x1536, 2048, 1536},
+	{ISP_SIZE_2112x1568, 2112, 1568},
 	{ISP_SIZE_2592x1944, 2592, 1944},
 	{ISP_SIZE_3264x2448, 3264, 2448},
+	{ISP_SIZE_4208x3120, 4208, 3120},
 	{ISP_SIZE_END, ISP_SIZE_END, ISP_SIZE_END}
 };
 /**---------------------------------------------------------------------------*

@@ -22,8 +22,8 @@ extern "C"
 #endif
 
 #include <sys/types.h>
-#include "../../arithmetic/sc8825/inc/FaceSolid.h"
-#include "../../arithmetic/sc8825/inc/HDR2.h"
+#include "../../arithmetic/sc8830/inc/FaceSolid.h"
+#include "../../arithmetic/sc8830/inc/HDR2.h"
 #include "sprd_dma_copy_k.h"
 #include "cmr_v4l2.h"
 #include "isp_app.h"

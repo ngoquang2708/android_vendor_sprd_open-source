@@ -146,6 +146,13 @@ enum isp_flicker_mode{
 	ISP_FLICKER_MAX
 };
 
+enum isp_flash_ctrl{
+	ISP_FLASH_CLOSE=0x00,
+	ISP_FLASH_PRV,
+	ISP_FLASH_MAIN,
+	ISP_FLASH_MAX
+};
+
 enum isp_ae_mode{
 	ISP_AUTO=0x00,
 	ISP_NIGHT,
@@ -247,13 +254,17 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_DENOISE,
 	ISP_CTRL_SMART_AE,
 	ISP_CTRL_CONTINUE_AF,
+	ISP_CTRL_AF_DENOISE,
+	ISP_CTRL_FLASH_CTRL, // for isp tool
 	ISP_CTRL_MAX
 };
 
 enum isp_capbility_cmd{
 	ISP_VIDEO_SIZE,
 	ISP_CAPTURE_SIZE,
-	ISP_FLASH_EB,
+	ISP_LOW_LUX_EB,
+	ISP_CUR_ISO,
+	ISP_DENOISE_LEVEL,
 	ISP_CAPBILITY_MAX
 };
 

@@ -266,6 +266,7 @@ typedef struct jpeg_codec_tag
 	int			fd ;
 	uint32			addr;
 	uint32                      stream_switch_num;
+	uint8 *g_stream_buf_ptr;
 	
 
 }JPEG_CODEC_T;

@@ -118,6 +118,7 @@ public:
 	static int                   switch_monitor_thread_init(void *p_data);
 	static int                   switch_monitor_thread_deinit(void *p_data);
 	static void*                 switch_monitor_thread_proc(void *p_data);
+	inline bool                     isCameraInit();
 
 private:
 	inline void                  print_time();
@@ -247,7 +248,6 @@ private:
 	inline Sprd_camera_state        getFocusState();
 	inline Sprd_camera_state        getSetParamsState();
 	inline bool                     isCameraError();
-	inline bool                     isCameraInit();
 	inline bool                     isCameraIdle();
 	inline bool                     isPreviewing();
 	inline bool                     isCapturing();

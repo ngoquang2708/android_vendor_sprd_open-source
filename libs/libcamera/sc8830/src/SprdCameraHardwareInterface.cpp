@@ -156,6 +156,72 @@ int SprdCameraHardware::getNumberOfCameras()
 	return num;
 }
 
+static void writeCamInitTimeToApct(char *buf)
+{
+    int apct_dir_fd = open("/data/apct", O_CREAT, 0777);
+
+	if (apct_dir_fd >= 0)
+	{
+	    fchmod(apct_dir_fd, 0777);
+	    close(apct_dir_fd);
+	}
+
+	int apct_fd = open("/data/apct/apct_data.log", O_CREAT | O_RDWR | O_TRUNC, 0666); 
+    if (apct_fd >=0)
+    {
+        char buf[100] = {0};
+        sprintf(buf, "\n%s", buf);
+        write(apct_fd, buf, strlen(buf));
+        fchmod(apct_fd, 0666);
+        close(apct_fd);
+	}
+}
+
+static nsecs_t cam_init_begin_time = 0;
+static void writeCamInitTimeToProc(float init_time)
+{
+    char cam_time_buf[256] = {0};
+    char *cam_time_proc = "/proc/benchMark/cam_time";
+
+    sprintf(cam_time_buf, "Camera Init Time: %.2fs", init_time);
+
+    FILE *f = fopen(cam_time_proc,"r+w");
+	if (NULL != f)
+	{
+        fseek(f,0,0);
+        fwrite(cam_time_buf,strlen(cam_time_buf),1,f);
+        fclose(f);
+    }
+    writeCamInitTimeToApct(cam_time_buf);
+}
+
+bool gIsCamInitTimeShow = false;
+bool gIsApctRead  = false;
+void getCamInitSupport()
+{
+    if (gIsApctRead)
+    {
+        return;
+    }
+    gIsApctRead = true;
+
+    char str[10] = {'\0'};
+    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+
+    FILE *f = fopen(FILE_NAME, "r");
+
+    if (NULL != f)
+    {
+        fseek(f, 0, 0);
+        fread(str, 5, 1, f);
+        fclose(f);
+
+        long apct_config = atol(str);
+
+        gIsCamInitTimeShow =  (apct_config & 0x8010) == 0x8010 ? true : false;
+    }
+}
+
 int SprdCameraHardware::getCameraInfo(int cameraId, struct camera_info *cameraInfo)
 {
 	if (1 == getPropertyAtv()) {
@@ -2920,7 +2986,7 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 	struct _dma_copy_cfg_tag dma_copy_cfg;
 	Mutex::Autolock pcpl(&mPrevCpLock);
 
-	if(s_mem_method==0) {
+	if (s_mem_method==0) {
 #ifdef CONFIG_CAMERA_DMA_COPY
 		dma_copy_cfg.format = DMA_COPY_YUV420;
 		dma_copy_cfg.src_size.w = src_w;
@@ -3273,6 +3339,16 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		GET_END_TIME;
 		GET_USE_TIME;
 		LOGE("Launch Camera Time:%d(ms).",s_use_time);
+
+		//for benchMark camera init time display.
+		float cam_init_time;
+        getCamInitSupport();
+        if (gIsCamInitTimeShow)
+        {
+            cam_init_time =  ((float)(systemTime() - cam_init_begin_time))/1000000000;
+            writeCamInitTimeToProc(cam_init_time);
+        }
+
 		miSPreviewFirstFrame = 0;
 	}
 
@@ -4805,6 +4881,11 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
     LOGV("%s", __func__);
     GET_START_TIME;
 
+    if (gIsCamInitTimeShow)
+    {
+        cam_init_begin_time = systemTime();
+    }
+
     int cameraId = atoi(id);
     if (cameraId < 0 || cameraId >= HAL_getNumberOfCameras()) {
         LOGE("Invalid camera ID %s", id);
@@ -4850,6 +4931,11 @@ static int HAL_camera_device_open(const struct hw_module_t* module,
 
 done:
     *device = (hw_device_t *)g_cam_device;
+
+    if (!(((SprdCameraHardware *)(g_cam_device->priv))->isCameraInit())) {
+        LOGE("camera init failed!");
+        return -EINVAL;
+    }
 
     LOGI("%s: opened camera %s (%p)", __func__, id, *device);
 

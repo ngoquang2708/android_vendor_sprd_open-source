@@ -33,11 +33,12 @@
 #define ISP_APP_EVT_SIGNAL_NEXT     (1 << 7)
 #define ISP_APP_EVT_IOCTRL              (1 << 8)
 #define ISP_APP_EVT_SOF                   (1 << 9)
+#define ISP_APP_EVT_CTRL_CALLBAC   (1 << 10)
 
 #define ISP_APP_EVT_MASK                (uint32_t)(ISP_APP_EVT_START | ISP_APP_EVT_STOP | ISP_APP_EVT_INIT \
 					| ISP_APP_EVT_DEINIT | ISP_APP_EVT_CONTINUE | ISP_APP_EVT_CONTINUE_STOP \
 					| ISP_APP_EVT_SIGNAL | ISP_APP_EVT_SIGNAL_NEXT | ISP_APP_EVT_IOCTRL \
-					| ISP_APP_EVT_SOF)
+					| ISP_APP_EVT_SOF | ISP_APP_EVT_CTRL_CALLBAC)
 
 #define ISP_APP_THREAD_QUEUE_NUM 50
 
@@ -45,10 +46,14 @@
 #define ISP_APP_RETURN_IF_FAIL(exp,warning) do{if(exp) {ISP_APP_TRAC(warning); return exp;}}while(0)
 #define ISP_APP_TRACE_IF_FAIL(exp,warning) do{if(exp) {ISP_APP_TRAC(warning);}}while(0)
 
-#define APP_ISP_EB 0x01
-#define APP_ISP_UEB 0x00
+#define ISP_APP_EB 0x01
+#define ISP_APP_UEB 0x00
 
-#define APP_ISP_INVALID 0xffffffff
+#define ISP_APP_ZERO 0x00
+#define ISP_APP_ONE 0x01
+#define ISP_APP_TWO 0x02
+
+#define ISP_APP_INVALID 0xffffffff
 
 /**---------------------------------------------------------------------------*
 **				Data Structures 					*
@@ -148,6 +153,9 @@ static uint32_t _isp_AppInitContext(void)
 			rtn=ISP_APP_ALLOC_ERROR;
 			return rtn;
 		}
+	}
+
+	if (NULL != s_isp_app_context_ptr) {
 		memset((void*)s_isp_app_context_ptr, 0x00, sizeof(struct isp_app_context));
 	}
 
@@ -171,6 +179,73 @@ static int32_t _isp_AppDeinitContext(void)
 	return rtn;
 }
 
+/* _isp_AppAfDenoiseRecover --
+*@
+*@
+*@ return:
+*/
+uint32_t _isp_AppAfDenoiseRecover(void)
+{
+	int32_t rtn=ISP_APP_SUCCESS;
+	uint32_t denoise_level=0x00;
+
+	rtn = isp_ctrl_capability(ISP_DENOISE_LEVEL, (void*)&denoise_level);
+
+	if (ISP_APP_ZERO != (0x80000000&denoise_level)) {
+		denoise_level&=0xff;
+		rtn = isp_ctrl_ioctl(ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
+	} else {
+		rtn = isp_ctrl_ioctl(ISP_CTRL_DENOISE, (void*)&denoise_level);
+	}
+
+	return rtn;
+}
+
+/* _isp_AppCtrlCallback --
+*@
+*@
+*@ return:
+*/
+uint32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
+{
+	int32_t rtn=ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr=ispAppGetContext();
+	ISP_APP_MSG_INIT(isp_ctrl_msg);
+
+	isp_context_ptr->ctrl_callback(mode, param_ptr);
+
+	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
+		if (ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode)) {
+			isp_ctrl_msg.msg_type = ISP_APP_EVT_CTRL_CALLBAC;
+			isp_ctrl_msg.sub_msg_type = mode;
+			isp_ctrl_msg.alloc_flag = 0x00;
+			isp_ctrl_msg.respond = 0x00;
+			rtn = _isp_app_msg_post(&isp_ctrl_msg);
+			ISP_APP_RETURN_IF_FAIL(rtn, ("ctrl callback send msg to app thread error"));
+		}
+	}
+
+	return rtn;
+}
+
+/* _isp_AppCtrlCallbackHandler --
+*@
+*@
+*@ return:
+*/
+uint32_t _isp_AppCtrlCallbackHandler(int32_t mode, void* param_ptr)
+{
+	int32_t rtn=ISP_APP_SUCCESS;
+
+	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
+		if (ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode)) {
+			rtn = _isp_AppAfDenoiseRecover();
+		}
+	}
+
+	return rtn;
+}
+
 /* _isp_AppStopVideoHandler --
 *@
 *@
@@ -182,11 +257,11 @@ uint32_t _isp_AppStopVideoHandler(void)
 	struct isp_app_context* isp_context_ptr=ispAppGetContext();
 	struct isp_af_notice af_notice;
 
-	if (APP_ISP_EB == isp_context_ptr->af_flag) {
+	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		ISP_LOG("App Stop ISP_AF_NOTICE_CALLBACK");
 		af_notice.valid_win=0x00;
 		isp_context_ptr->ctrl_callback(ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice);
-		isp_context_ptr->af_flag = APP_ISP_UEB;
+		isp_context_ptr->af_flag = ISP_APP_UEB;
 	}
 
 	return rtn;
@@ -208,11 +283,11 @@ static int32_t _isp_AppCallBack(int32_t mode, void* param_ptr)
 	{
 		case ISP_AE_STAB_CALLBACK:
 			ISP_LOG("APP ISP_AE_STAB_CALLBACK");
-			isp_context_ptr->ae_stab = APP_ISP_EB;
+			isp_context_ptr->ae_stab = ISP_APP_EB;
 			break;
 
 		case ISP_SOF_CALLBACK:
-			if (APP_ISP_EB == isp_context_ptr->af_flag) {
+			if (ISP_APP_EB == isp_context_ptr->af_flag) {
 				ISP_LOG("APP ISP_SOF_CALLBACK");
 				isp_ctrl_msg.msg_type = ISP_APP_EVT_SOF;
 				isp_ctrl_msg.alloc_flag = 0x00;
@@ -241,11 +316,11 @@ static int32_t _isp_AppSofHandler(void)
 
 	ISP_LOG("af_flag:0x%x, rtn:0x%x", isp_context_ptr->af_flag, rtn);
 
-	if (APP_ISP_EB == isp_context_ptr->af_flag) {
+	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		struct isp_af_win af_param;
 		memcpy((void*)&af_param, (void*)&isp_context_ptr->af_info, sizeof(struct isp_af_win));
 		rtn = isp_ctrl_ioctl(ISP_CTRL_AF, (void*)&af_param);
-		isp_context_ptr->af_flag = APP_ISP_UEB;
+		isp_context_ptr->af_flag = ISP_APP_UEB;
 	}
 
 	return rtn;
@@ -261,9 +336,9 @@ static int32_t _isp_AppAfIoCtrlHandler(void* param_ptr)
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 
-	if (APP_ISP_EB != isp_context_ptr->ae_stab) {
+	if (ISP_APP_EB != isp_context_ptr->ae_stab) {
 		memcpy((void*)&isp_context_ptr->af_info, param_ptr, sizeof(struct isp_af_win));
-		isp_context_ptr->af_flag = APP_ISP_EB;
+		isp_context_ptr->af_flag = ISP_APP_EB;
 		rtn = ISP_APP_ERROR;
 	}
 
@@ -284,9 +359,12 @@ static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
 	switch (cmd)
 	{
 		case ISP_CTRL_AF:
+		{
+			uint32_t denoise_level=0xfe;
+			rtn = isp_ctrl_ioctl(ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
 			rtn = _isp_AppAfIoCtrlHandler(param_ptr);
 			break ;
-
+		}
 		default :
 			break ;
 	}
@@ -342,6 +420,7 @@ static int32_t _isp_set_app_init_param(struct isp_init_param* ptr)
 
 	ptr->self_callback = _isp_AppCallBack;
 	isp_context_ptr->ctrl_callback = ptr->ctrl_callback;
+	ptr->ctrl_callback = _isp_AppCtrlCallback;
 
 	return rtn;
 }
@@ -390,8 +469,8 @@ static int32_t _isp_set_app_video_param(struct isp_video_start* ptr)
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 
-	isp_context_ptr->ae_stab = APP_ISP_INVALID;
-	isp_context_ptr->af_flag = APP_ISP_INVALID;
+	isp_context_ptr->ae_stab = ISP_APP_INVALID;
+	isp_context_ptr->af_flag = ISP_APP_INVALID;
 
 	return rtn;
 }
@@ -556,8 +635,7 @@ static void *_isp_app_routine(void *client_data)
 				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_context_ptr->thread_common_cond);
 				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
-				ISP_LOG("exit isp app routine.");
-				return NULL;
+				break;
 
 			case ISP_APP_EVT_INIT:
 				//ISP_LOG("ISP_APP_EVT_INIT");
@@ -618,6 +696,10 @@ static void *_isp_app_routine(void *client_data)
 				rtn = _isp_AppSofHandler();
 				break;
 
+			case ISP_APP_EVT_CTRL_CALLBAC:
+				rtn = _isp_AppCtrlCallbackHandler(sub_type, param_ptr);
+				break;
+
 			default:
 				ISP_LOG("--default--cmd:0x%x", sub_type);
 				break;
@@ -632,6 +714,8 @@ static void *_isp_app_routine(void *client_data)
 		_isp_AppSetStatus(ISP_APP_IDLE);
 
 	}
+
+	ISP_LOG("exit isp app routine.");
 
 	return NULL;
 

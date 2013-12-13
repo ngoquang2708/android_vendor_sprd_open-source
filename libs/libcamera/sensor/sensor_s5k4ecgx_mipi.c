@@ -5471,7 +5471,6 @@ LOCAL uint32_t _s5k4ec_SetEV(uint32_t param)
     uint32_t gain = 0;
       
 	uint32_t ev = ext_ptr->param;
-        ev = SENSOR_HDR_EV_LEVE_0;//test
 	switch(ev) {
 	case SENSOR_HDR_EV_LEVE_0:
   Sensor_WriteReg(0x0028, 0x7000);

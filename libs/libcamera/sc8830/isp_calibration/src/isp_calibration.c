@@ -375,7 +375,7 @@ int32_t _isp_Cali_LNC_Calc(void *in_ptr, void *rtn_ptr)
 			else if ((0x01 == (0x01 & y)) && (0x00 == (0x01 & x))) {
 				rtn_param_ptr->chn_10.stat_ptr[grid_x * stat_y + stat_x] += *src_img_ptr++;
 			}
-			else if ((0x01 == (0x01 & y)) && (0x01 == (0x01 && x))) {
+			else if ((0x01 == (0x01 & y)) && (0x01 == (0x01 & x))) {
 				rtn_param_ptr->chn_11.stat_ptr[grid_x * stat_y + stat_x] += *src_img_ptr++;
 			}
 		}

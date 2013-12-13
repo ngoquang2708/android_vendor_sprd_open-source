@@ -169,7 +169,7 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 		break;
 	case CAMERA_FLASH_MODE_AUTO:
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			ret = isp_capability(ISP_FLASH_EB, (void *)&autoflash);
+			ret = isp_capability(ISP_LOW_LUX_EB, (void *)&autoflash);
 			CMR_LOGV("isp auto flash value is %d", autoflash);
 		} else {
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
@@ -853,11 +853,7 @@ int camera_autofocus_init(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
-#if 1
-	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-		ret = camera_isp_ae_wait_stab();
-	}
-#endif
+
 	ret = Sensor_AutoFocusInit();
 
 	return ret;
@@ -1849,39 +1845,6 @@ int camera_isp_alg_wait(void)
 	return rtn;
 }
 
-int camera_isp_ae_wait_stab(void)
-{
-	int rtn = CAMERA_SUCCESS;
-	struct timespec ts;
-	struct camera_context    *cxt = camera_get_cxt();
-
-	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
-	cxt->cmr_set.isp_ae_stab_timeout = 0;
-
-	if (clock_gettime(CLOCK_REALTIME, &ts)) {
-		rtn = -1;
-		CMR_LOGE("get time failed.");
-	} else {
-		ts.tv_sec += ISP_AE_STAB_TIMEOUT;
-		pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
-		CMR_LOGV("wait .....");
-		if (sem_timedwait((&cxt->cmr_set.isp_ae_stab_sem), &ts)) {
-			pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
-			rtn = -1;
-			cxt->cmr_set.isp_ae_stab_timeout = 1;
-			CMR_LOGE("timeout.");
-		} else {
-			pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
-			cxt->cmr_set.isp_ae_stab_timeout = 0;
-			CMR_LOGV("done.");
-		}
-		cxt->ae_wait_stab = 0x0;
-	}
-
-	pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
-	return rtn;
-}
-
 int camera_set_flashdevice(uint32_t param)
 {
 	int                      ret = 0;
@@ -1943,16 +1906,3 @@ int camera_ae_enable(uint32_t param)
 	return ret;
 }
 
-int camera_isp_get_ae_stab(uint32_t *isp_param)
-{
-	int ret = CAMERA_SUCCESS;
-	struct camera_context    *cxt = camera_get_cxt();
-
-	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
-	cxt->cmr_set.isp_ae_stab_timeout = 0;
-	cxt->ae_wait_stab = EN_WAIT_AE_STAB;
-	ret = isp_ioctl(ISP_CTRL_GET_FAST_AE_STAB, (void *)isp_param);
-	pthread_mutex_unlock(&cxt->cmr_set.isp_ae_stab_mutex);
-
-	return ret;
-}

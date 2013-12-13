@@ -67,7 +67,8 @@ enum SENSOR_EVT_TYPE {
 	SENSOR_EVT_STREAM_OFF,
 	SENSOR_EVT_AF_INIT,
 	SENSOR_EVT_DEINIT,
-	SENSOR_EVT_SET_MODE_DONE
+	SENSOR_EVT_SET_MODE_DONE,
+	SENSOR_EVT_CFG_OTP
 };
 
 struct sensor_drv_context {
@@ -129,6 +130,7 @@ LOCAL int   _Sensor_CreateMonitorThread(void);
 LOCAL int   _Sensor_KillMonitorThread(void);
 LOCAL int _Sensor_AutoFocusInit(void);
 LOCAL int _Sensor_SetId(SENSOR_ID_E sensor_id);
+LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id);
 
 static int xioctl(int fd, int request, void * arg) {
 	int r;
@@ -1997,7 +1999,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 		s_p_sensor_cxt->fd_sensor = -1;
 		s_p_sensor_cxt->i2c_addr = 0xff;
 	}
-
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	{
 		_Sensor_CleanInformation();
 		_Sensor_InitDefaultExifInfo();
@@ -2054,6 +2056,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 	*sensor_num_ptr = sensor_num;
 init_exit:
 	if (SENSOR_SUCCESS != ret_val) {
+		_Sensor_DeviceDeInit();
 		if (is_first) {
 			if (PNULL != s_p_sensor_cxt) {
 				free(s_p_sensor_cxt);
@@ -2110,14 +2113,8 @@ int Sensor_Open(uint32_t sensor_id)
 			ret_val = SENSOR_FAIL;
 		}
 
-		if ((NULL != s_p_sensor_cxt->sensor_info_ptr)
-			&& (NULL != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr)
-			&& (PNULL != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp)) {
-			s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp(0);
-		}
-
-		isp_raw_para_update_from_file(s_p_sensor_cxt->sensor_info_ptr,sensor_id);
-
+		Sensor_CfgOtpAndUpdateISPParam(sensor_id);
+		
 		CMR_LOGV("4 open success\n");
 	} else {
 		CMR_LOGE("Sensor not register, open fail, sensor_id = %d", sensor_id);
@@ -3099,6 +3096,16 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 		case SENSOR_EVT_SET_MODE_DONE:
 			sem_post(&s_p_sensor_cxt->st_setmode_sem);
 			break;
+		case SENSOR_EVT_CFG_OTP:
+			if ((NULL != s_p_sensor_cxt->sensor_info_ptr)
+				&& (NULL != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr)
+				&& (PNULL != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp)) {
+				s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp(0);
+			}
+
+			isp_raw_para_update_from_file(s_p_sensor_cxt->sensor_info_ptr,message.sub_msg_type);
+
+			break;
 		default:
 			CMR_LOGE("Unsupported MSG");
 			break;
@@ -3162,6 +3169,10 @@ LOCAL void* _Sensor_MonitorProc(void* data)
 
 	while (1) {
 		usleep(SENSOR_CHECK_STATUS_INTERVAL);
+		if(s_p_sensor_cxt == NULL){
+			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
+			break;
+		}
 
 		if (s_p_sensor_cxt->monitor_exit) {
 			s_p_sensor_cxt->monitor_exit = 0;
@@ -3219,6 +3230,24 @@ LOCAL int _Sensor_KillMonitorThread(void)
 		}
 		ret = pthread_join(s_p_sensor_cxt->monitor_thread, &dummy);
 		s_p_sensor_cxt->monitor_thread = 0;
+	}
+
+	return ret;
+}
+
+LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id)
+{
+	int                      ret = 0;
+	CMR_MSG_INIT(message);
+
+
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	message.msg_type = SENSOR_EVT_CFG_OTP;
+	message.sub_msg_type = sensor_id;
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	if (ret) {
+		CMR_LOGE("Fail to send message");
 	}
 
 	return ret;
