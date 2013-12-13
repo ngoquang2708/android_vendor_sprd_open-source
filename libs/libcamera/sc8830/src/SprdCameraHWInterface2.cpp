@@ -3716,7 +3716,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             kAvailableJpegMinDurations,
             sizeof(kAvailableJpegMinDurations)/sizeof(uint64_t));
 
-    static const float maxZoom = 4;
+    static const float maxZoom = CAMERA_DIGITAL_ZOOM_MAX;
     ADD_OR_SIZE(ANDROID_SCALER_AVAILABLE_MAX_DIGITAL_ZOOM, &maxZoom, 1);
 
     // android.jpeg
