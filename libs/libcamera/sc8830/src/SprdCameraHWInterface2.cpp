@@ -348,6 +348,7 @@ int SprdCameraHWInterface2::getInProgressCount()
 	if (SPRD_WAITING_RAW == getCaptureState() || SPRD_WAITING_JPEG == getCaptureState()) {
 	   ProcNum++ ;
 	}
+	HAL_LOGV("ProcNum=%d.",ProcNum);
     return ProcNum;
 }
 
@@ -388,10 +389,10 @@ static int initCamera2Info(int cameraId)
 			return 1;
 		}
 
-		g_Camera2[1]->sensorW             = 800;
-	    g_Camera2[1]->sensorH             = 600;
-	    g_Camera2[1]->sensorRawW          = 800;
-	    g_Camera2[1]->sensorRawH          = 600;
+		g_Camera2[1]->sensorW             = 640;
+	    g_Camera2[1]->sensorH             = 480;
+	    g_Camera2[1]->sensorRawW          = 640;
+	    g_Camera2[1]->sensorRawH          = 480;
 	    g_Camera2[1]->numPreviewResolution = ARRAY_SIZE(PreviewResolutionSensorFront)/2;
 	    g_Camera2[1]->PreviewResolutions   = PreviewResolutionSensorFront;
 	    g_Camera2[1]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorFront)/2;
@@ -641,7 +642,7 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
     ADD_OR_SIZE(ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION, &aeExpCompensation, 1);
 
     static const int32_t aeTargetFpsRange[2] = {
-        15, 30
+        10000, 30000
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRange, 2);
 
@@ -1778,6 +1779,9 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 {
     Mutex::Autolock lock(m_afTrigLock);
     HAL_LOGD("DEBUG(%s): id(%x), %d, %d afmode=%d", __FUNCTION__, trigger_id, ext1, ext2, m_staticReqInfo.afMode);
+	if (CAMERA2_TRIGGER_CANCEL_AUTOFOCUS != trigger_id) {
+		WaitForPreviewStart();
+	}
 
     switch (trigger_id) {
     case CAMERA2_TRIGGER_AUTOFOCUS:
@@ -1813,6 +1817,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
                 if(camera_cancel_autofocus())
 				   HAL_LOGE("%s cancel focus fail",__FUNCTION__);
 			}
+			HAL_LOGV("test.");
             m_focusStat = FOCUS_STAT_INACTIVE;
 			m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_INACTIVE, ext1, 0, m_callbackClient);
 			break;
