@@ -587,6 +587,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     unsigned short switch_mic1 = 0;
     unsigned short switch_hp_mic = 0;
     unsigned short switch_table[6] = {0};
+    uint32_t android_pre_device = 0x0;
     uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_BACK_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET,AUDIO_DEVICE_OUT_WIRED_HEADSET};
 
     MY_TRACE("%s path_set:0x%x ,dl_device:0x%x ", __func__,mode_gain_paras->path_set,s_call_dl_devices);
@@ -613,6 +614,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     switch_table[4] = switch_hp_mic;
     switch_table[5] = switch_headset;
     //At present, switch of pa cannot handle mulit-device
+    android_pre_device = s_call_dl_devices|s_call_ul_devices;
     s_call_dl_devices = 0;
     s_call_ul_devices = 0;
     if(switch_earpice){
@@ -655,7 +657,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
        we need to wait for codec here before call connected, maybe driver needs to fix this problem.
        if android_pre_device = 0, means   I2S --> CODEC
        */
-    if(!adev->call_connected){
+    if(!adev->call_connected || (android_pre_device == 0)){
         usleep(1000*100);
     }
     ALOGW("%s successfully, device: earpice(%s), headphone(%s), speaker(%s), Main_Mic(%s), Back_Mic(%s), hp_mic(%s)"
