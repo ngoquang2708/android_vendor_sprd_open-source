@@ -2712,12 +2712,12 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		//step 0 power up DOVDD, the AVDD
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
 		Sensor_SetIovddVoltage(iovdd_val);
-		udelay(2000);
+		usleep(2000);
 		Sensor_SetAvddVoltage(avdd_val);
-		udelay(6000);
+		usleep(6000);
 		//step 1 power up DVDD
 		Sensor_SetDvddVoltage(dvdd_val);
-		udelay(6000);
+		usleep(6000);
 		//step 2 power down pin high
 		Sensor_PowerDown(!power_down);
 		usleep(2000);
@@ -2726,7 +2726,7 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		usleep(22*1000);
 		//step 4 xvclk
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		udelay(4*1000);
+		usleep(4*1000);
 	} else {
 		//power off should start > 1ms after last SCCB
 		usleep(4*1000);

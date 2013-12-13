@@ -5496,7 +5496,7 @@ int camera_alloc_preview_buf(struct buffer_cfg *buffer, uint32_t format)
 {
 	uint32_t                 buffer_size, frame_size, frame_num, i, j;
 	int                      ret = CAMERA_SUCCESS;
-	int                      prev_num = g_cxt->prev_mem_num;
+	uint32_t                      prev_num = g_cxt->prev_mem_num;
 
 	if (g_cxt->prev_rot) {
 		prev_num = g_cxt->prev_mem_num - CAMERA_PREV_ROT_FRM_CNT;
