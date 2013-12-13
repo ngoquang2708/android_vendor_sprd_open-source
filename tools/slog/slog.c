@@ -447,6 +447,19 @@ static void init_external_storage()
 	int type;
 	char value[PROPERTY_VALUE_MAX];
 
+	/* Add for double t-flash solution for Kitkat */
+	property_get("ro.build.version.sdk", value, "1");
+	type = atoi(value);
+	if (type >= 19){
+		p = getenv("SECONDARY_STORAGE");
+		if (p){
+			strcpy(external_path, p);
+			sprintf(external_storage, "%s/slog", p);
+			debug_log("the external storage : %s", external_storage);
+			return;
+		}
+	}
+
 	p = getenv("SECOND_STORAGE_TYPE");
 	if(p){
 		type = atoi(p);
