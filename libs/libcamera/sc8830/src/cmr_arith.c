@@ -29,7 +29,10 @@
 
 #define ARITHMETIC_EVT_FD_START	      (1 << 16)
 #define ARITHMETIC_EVT_FD_EXIT	      (1 << 17)
-#define ARITHMETIC_EVT_MASK_BITS      (uint32_t)(ARITHMETIC_EVT_FD_START | ARITHMETIC_EVT_FD_EXIT)
+#define ARITHMETIC_EVT_FD_INIT	      (1 << 18)
+#define ARITHMETIC_EVT_MASK_BITS      (uint32_t)(ARITHMETIC_EVT_FD_START | \
+												ARITHMETIC_EVT_FD_EXIT | \
+												ARITHMETIC_EVT_FD_INIT)
 
 
 #define CAMERA_FD_MSG_QUEUE_SIZE      5
@@ -78,7 +81,6 @@ void *arithmetic_fd_thread_proc(void *data)
 	int                 face_num;
 	int                 k = 0;
 	morpho_FaceRect     *face_rect_ptr;
-	//unsigned char       *p_format = (unsigned char*)IMAGE_FORMAT;
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
 	camera_cb_info      cb_info;
@@ -98,6 +100,20 @@ void *arithmetic_fd_thread_proc(void *data)
 
 		evt = (uint32_t)(message.msg_type & ARITHMETIC_EVT_MASK_BITS);
 		switch (evt) {
+		case ARITHMETIC_EVT_FD_INIT:
+			CMR_PRINT_TIME;
+			FaceSolid_Finalize();
+			if ( 0 != FaceSolid_Init(cxt->display_size.width,
+			                    cxt->display_size.height )) {
+				ret = -ARITH_INIT_FAIL;
+				CMR_LOGE("FaceSolid_Init fail.");
+			} else {
+				CMR_LOGI("FaceSolid_Init done.");
+			}
+
+			CMR_PRINT_TIME;
+
+			break;
 		case ARITHMETIC_EVT_FD_START:
 			CMR_PRINT_TIME;
 			s_arith_cxt->fd_busy = 1;
@@ -158,6 +174,7 @@ void *arithmetic_fd_thread_proc(void *data)
 			pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 			break;
 		case ARITHMETIC_EVT_FD_EXIT:
+			FaceSolid_Finalize();
 			fd_exit_flag = 1;
 			break;
 		default:
@@ -177,34 +194,12 @@ int arithmetic_fd_init(void)
 {
 	CMR_MSG_INIT(message);
 	struct camera_context  *cxt = camera_get_cxt();
-	//unsigned char          *p_format = (unsigned char*)IMAGE_FORMAT;
 	int                    ret = ARITH_SUCCESS;
 	pthread_attr_t          attr;
 
 	CMR_LOGV("inited, %d", cxt->arithmetic_cxt.fd_inited);
 
-	if (cxt->arithmetic_cxt.fd_inited) {
-		FaceSolid_Finalize();
-		if ( 0 != FaceSolid_Init(cxt->display_size.width,
-		                    cxt->display_size.height )) {
-			ret = -ARITH_INIT_FAIL;
-			CMR_LOGE("FaceSolid_Init fail.");
-		} else {
-			CMR_LOGI("FaceSolid_Init done.");
-		}
-		return ret;
-	}
-
-	CMR_PRINT_TIME;
-	if ( 0 != FaceSolid_Init(cxt->display_size.width,
-		                    cxt->display_size.height)) {
-		ret = -ARITH_INIT_FAIL;
-		CMR_LOGE("FaceSolid_Init fail.");
-	} else {
-		CMR_LOGI("FaceSolid_Init done.");
-	}
-
-	if (!ret) {
+	if (0 == cxt->arithmetic_cxt.fd_inited) {
 		ret = cmr_msg_queue_create(CAMERA_FD_MSG_QUEUE_SIZE, &s_arith_cxt->fd_msg_que_handle);
 		if (ret) {
 			CMR_LOGE("NO Memory, Failed to create FD message queue");
@@ -214,10 +209,16 @@ int arithmetic_fd_init(void)
 			pthread_attr_init(&attr);
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 			ret = pthread_create(&s_arith_cxt->fd_thread,  &attr, arithmetic_fd_thread_proc, NULL);
-			cxt->arithmetic_cxt.fd_inited = 1;
-			sem_wait(&s_arith_cxt->fd_sync_sem);
+			message.msg_type = ARITHMETIC_EVT_FD_INIT;
+			ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
+			if (ret) {
+				arithmetic_fd_deinit();
+			} else {
+				cxt->arithmetic_cxt.fd_inited = 1;
+			}
 		}
 	}
+
 	return ret;
 }
 
@@ -239,7 +240,6 @@ int arithmetic_fd_deinit(void)
 		sem_destroy(&s_arith_cxt->fd_sync_sem);
 		pthread_mutex_destroy(&s_arith_cxt->fd_lock);
 		cmr_msg_queue_destroy(s_arith_cxt->fd_msg_que_handle);
-		FaceSolid_Finalize();
 		cxt->arithmetic_cxt.fd_inited = 0;
 		CMR_LOGI("FaceSolid_Finalize done.");
 	}

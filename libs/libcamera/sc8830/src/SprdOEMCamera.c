@@ -2510,6 +2510,7 @@ int camera_start_preview_internal(void)
 		skip_number = g_cxt->skip_num;
 	}
 
+	CMR_LOGV("skip number %d", skip_number);
 	ret = cmr_v4l2_cap_start(skip_number);
 	if (ret) {
 		CMR_LOGE("Fail to start V4L2 Capture");
@@ -2700,7 +2701,6 @@ int camera_stop_preview_internal(void)
 			if (ret) {
 				CMR_LOGE("Failed to stop IF , %d", ret);
 				pthread_mutex_unlock(&g_cxt->prev_mutex);
-				return -CAMERA_FAILED;
 			}
 			CMR_LOGE("get sensor mode fail.");
 		} else {
@@ -2716,7 +2716,6 @@ int camera_stop_preview_internal(void)
 		if (ret) {
 			CMR_LOGE("Failed to stop IF , %d", ret);
 			pthread_mutex_unlock(&g_cxt->prev_mutex);
-			return -CAMERA_FAILED;
 		}
 	}
 	pthread_mutex_unlock(&g_cxt->prev_mutex);
@@ -2731,7 +2730,7 @@ int camera_stop_preview_internal(void)
 	}
 
 	cmr_rot_wait_done();
-
+	arithmetic_fd_deinit();
 	g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 	/*arithmetic_hdr_deinit();*/
 

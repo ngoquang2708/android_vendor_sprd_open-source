@@ -2112,10 +2112,16 @@ int Sensor_Open(uint32_t sensor_id)
 			_Sensor_I2CDeInit(sensor_id);
 			ret_val = SENSOR_FAIL;
 		}
+		if (SENSOR_SUCCESS == ret_val) {
+			Sensor_CfgOtpAndUpdateISPParam(sensor_id);
 
-		Sensor_CfgOtpAndUpdateISPParam(sensor_id);
-		
-		CMR_LOGV("4 open success\n");
+			if (SENSOR_SUCCESS != Sensor_SetMode(SENSOR_MODE_PREVIEW_ONE)) {
+				CMR_LOGE("Sensor set init mode error!");
+				_Sensor_I2CDeInit(sensor_id);
+				ret_val = SENSOR_FAIL;
+			}
+		}
+		CMR_LOGV("4 open success");
 	} else {
 		CMR_LOGE("Sensor not register, open fail, sensor_id = %d", sensor_id);
 	}

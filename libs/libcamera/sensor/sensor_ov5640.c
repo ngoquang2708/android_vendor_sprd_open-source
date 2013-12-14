@@ -1043,8 +1043,8 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	NULL,			//&g_ov5640_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	3,			// skip frame num before preview
-	3,			// skip frame num before capture
+	1,			// skip frame num before preview
+	1,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -1055,7 +1055,7 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	0,
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
-	3,			// skip frame num while change setting
+	1,			// skip frame num while change setting
 };
 
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param)
