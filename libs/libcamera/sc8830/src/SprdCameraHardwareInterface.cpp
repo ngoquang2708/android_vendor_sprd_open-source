@@ -3029,10 +3029,10 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 		ret = uv420CopyTrim(dma_copy_cfg);
 #else
 		if (mIsDvPreview) {
-			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			if (!mPreviewWindow || !mGrallocHal) return false;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
 		} else {
-			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			if (!mPreviewWindow || !mGrallocHal) return false;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
 #endif
@@ -3040,10 +3040,10 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 #endif
 	} else {
 		if (mIsDvPreview) {
-			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			if (!mPreviewWindow || !mGrallocHal) return false;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w) * SIZE_ALIGN(src_h) * 3/2);
 		} else {
-			if (!mPreviewWindow || !mGrallocHal || !isPreviewing()) return false;
+			if (!mPreviewWindow || !mGrallocHal) return false;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
 	}
