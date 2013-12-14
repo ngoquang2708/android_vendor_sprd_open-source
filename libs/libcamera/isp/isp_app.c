@@ -95,7 +95,9 @@ struct isp_app_context{
 
 	uint32_t ae_stab;
 	uint32_t af_flag;
+	uint32_t lum_measure_flag;
 	struct isp_af_win af_info;
+	enum isp_ae_weight lum_measure_mode;
 
 	proc_callback ctrl_callback;
 };
@@ -130,10 +132,6 @@ static int _isp_app_msg_post(struct isp_app_msg *message);
 */
 static struct isp_app_context* ispAppGetContext(void)
 {
-	if (NULL == s_isp_app_context_ptr) {
-		ISP_LOG("app context is null error");
-	}
-
 	return s_isp_app_context_ptr;
 }
 
@@ -201,6 +199,40 @@ uint32_t _isp_AppAfDenoiseRecover(void)
 	return rtn;
 }
 
+/* _isp_AppSetLumMeasureCond --
+*@
+*@
+*@ return:
+*/
+uint32_t _isp_AppSetLumMeasureCond(void)
+{
+	int32_t rtn = ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	uint32_t ae_change = ISP_APP_EB;
+
+	if (ISP_APP_EB == isp_context_ptr->lum_measure_flag) {
+		rtn = isp_ctrl_ioctl(ISP_CTRL_GET_AE_CHG, (void*)&ae_change);
+		isp_context_ptr->lum_measure_flag = ISP_APP_UEB;
+	}
+
+	return rtn;
+}
+
+/* _isp_AppLumMeasureRecover --
+*@
+*@
+*@ return:
+*/
+uint32_t _isp_AppLumMeasureRecover(void)
+{
+	int32_t rtn = ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+
+	rtn = isp_ctrl_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void*)&isp_context_ptr->lum_measure_mode);
+
+	return rtn;
+}
+
 /* _isp_AppCtrlCallback --
 *@
 *@
@@ -215,7 +247,8 @@ uint32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
 	isp_context_ptr->ctrl_callback(mode, param_ptr);
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
-		if (ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode)) {
+		if ((ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode))
+			|| (ISP_AE_CHG_CALLBACK == (ISP_AE_CHG_CALLBACK&mode))) {
 			isp_ctrl_msg.msg_type = ISP_APP_EVT_CTRL_CALLBAC;
 			isp_ctrl_msg.sub_msg_type = mode;
 			isp_ctrl_msg.alloc_flag = 0x00;
@@ -240,6 +273,10 @@ uint32_t _isp_AppCtrlCallbackHandler(int32_t mode, void* param_ptr)
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
 		if (ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode)) {
 			rtn = _isp_AppAfDenoiseRecover();
+			rtn = _isp_AppSetLumMeasureCond();
+		}
+		if (ISP_AE_CHG_CALLBACK == (ISP_AE_CHG_CALLBACK&mode)) {
+			rtn = _isp_AppLumMeasureRecover();
 		}
 	}
 
@@ -287,7 +324,8 @@ static int32_t _isp_AppCallBack(int32_t mode, void* param_ptr)
 			break;
 
 		case ISP_SOF_CALLBACK:
-			if (ISP_APP_EB == isp_context_ptr->af_flag) {
+			if ((ISP_APP_EB == isp_context_ptr->af_flag)
+				&&(ISP_APP_EB == isp_context_ptr->ae_stab)) {
 				ISP_LOG("APP ISP_SOF_CALLBACK");
 				isp_ctrl_msg.msg_type = ISP_APP_EVT_SOF;
 				isp_ctrl_msg.alloc_flag = 0x00;
@@ -314,8 +352,6 @@ static int32_t _isp_AppSofHandler(void)
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 
-	ISP_LOG("af_flag:0x%x, rtn:0x%x", isp_context_ptr->af_flag, rtn);
-
 	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		struct isp_af_win af_param;
 		memcpy((void*)&af_param, (void*)&isp_context_ptr->af_info, sizeof(struct isp_af_win));
@@ -335,9 +371,23 @@ static int32_t _isp_AppAfIoCtrlHandler(void* param_ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_af_win* af_param_ptr=(struct isp_af_win*)param_ptr;
+	uint32_t ae_stab = ISP_APP_EB;
+
+	if (ISP_APP_EB == af_param_ptr->ae_touch) {
+		rtn = isp_ctrl_ioctl(ISP_CTRL_AE_TOUCH, (void*)&af_param_ptr->ae_touch_rect);
+		if (ISP_APP_SUCCESS == rtn) {
+			isp_context_ptr->lum_measure_flag = ISP_APP_EB;
+			isp_context_ptr->ae_stab=ISP_APP_UEB;
+			rtn = isp_ctrl_ioctl(ISP_CTRL_GET_AE_STAB, (void*)&ae_stab);
+		} else {
+			isp_context_ptr->lum_measure_flag = ISP_APP_UEB;
+			rtn = ISP_APP_SUCCESS;
+		}
+	}
 
 	if (ISP_APP_EB != isp_context_ptr->ae_stab) {
-		memcpy((void*)&isp_context_ptr->af_info, param_ptr, sizeof(struct isp_af_win));
+		memcpy((void*)&isp_context_ptr->af_info, af_param_ptr, sizeof(struct isp_af_win));
 		isp_context_ptr->af_flag = ISP_APP_EB;
 		rtn = ISP_APP_ERROR;
 	}
@@ -354,6 +404,7 @@ static int32_t _isp_AppAfIoCtrlHandler(void* param_ptr)
 static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 	enum isp_ctrl_cmd cmd = io_cmd&0x3fffffff;
 
 	switch (cmd)
@@ -364,6 +415,11 @@ static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
 			rtn = isp_ctrl_ioctl(ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
 			rtn = _isp_AppAfIoCtrlHandler(param_ptr);
 			break ;
+		}
+		case ISP_CTRL_AE_MEASURE_LUM:
+		{
+			isp_context_ptr->lum_measure_mode=*(uint32_t*)param_ptr;
+			break;
 		}
 		default :
 			break ;
@@ -382,11 +438,7 @@ static int32_t _isp_AppSetStatus(uint32_t status)
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 
-	if (NULL != isp_context_ptr) {
-		isp_context_ptr->isp_status = status;
-	} else {
-		ISP_LOG("app context is null error");
-	}
+	isp_context_ptr->isp_status = status;
 
 	return rtn;
 }
@@ -400,10 +452,6 @@ static int32_t _isp_AppGetStatus(void)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext();
-
-	if (NULL == isp_context_ptr) {
-		ISP_LOG("app context is null error");
-	}
 
 	return isp_context_ptr->isp_status;
 }
@@ -483,7 +531,6 @@ static int32_t _isp_set_app_video_param(struct isp_video_start* ptr)
 static int _isp_app_video_start(struct isp_video_start* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
 
 	rtn = _isp_set_app_video_param(ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("set app video param error"));
@@ -912,9 +959,6 @@ int isp_deinit(void)
 
 	rtn = _isp_app_release_resource();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("_isp_app_release_resource error"));
-
-	rtn = _isp_AppDeinitContext();
-	ISP_APP_RETURN_IF_FAIL(rtn, ("denit isp app context error"));
 
 	ISP_LOG("--isp_app_deinit-- end");
 

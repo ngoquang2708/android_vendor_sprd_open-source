@@ -390,7 +390,6 @@ static int32_t _ispParserReadSensorReg(void* in_param_ptr, void* rtn_param_ptr)
 	int32_t rtn=0x00;
 	struct isp_parser_cmd_param* in_ptr=(struct isp_parser_cmd_param*)in_param_ptr;
 	struct isp_parser_buf_rtn* rtn_ptr=(struct isp_parser_buf_rtn*)rtn_param_ptr;
-	SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
 	uint32_t* data_addr=NULL;
 	uint32_t data_len=0x0c;
 	uint32_t reg_num=in_ptr->param[0];

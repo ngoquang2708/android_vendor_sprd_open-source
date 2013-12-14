@@ -1630,7 +1630,7 @@ int camera_autofocus_start(void)
 				isp_af_param.win[i].end_x   = af_param.zone[i].x + af_param.zone[i].w - 1;
 				isp_af_param.win[i].end_y   = af_param.zone[i].y + af_param.zone[i].h - 1;
 
-				CMR_LOGE("ISP_RAW:af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
+				CMR_LOGE("af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
 					zone_cnt,
 					isp_af_param.win[i].start_x,
 					isp_af_param.win[i].start_y,
