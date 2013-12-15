@@ -37,13 +37,13 @@
 #else
 
 /* NOTE:
- * If your framebuffer device driver is integrated with UMP, you will have to 
- * change this IOCTL definition to reflect your integration with the framebuffer 
+ * If your framebuffer device driver is integrated with UMP, you will have to
+ * change this IOCTL definition to reflect your integration with the framebuffer
  * device.
  * Expected return value is a UMP secure id backing your framebuffer device memory.
  */
 
-/*#define IOCTL_GET_FB_UMP_SECURE_ID	_IOR('F', 311, unsigned int)*/
+/*#define IOCTL_GET_FB_UMP_SECURE_ID    _IOR('F', 311, unsigned int)*/
 #define GRALLOC_ARM_UMP_MODULE 0
 #define GRALLOC_ARM_DMA_BUF_MODULE 1
 #define SPRD_ION 0
@@ -56,12 +56,12 @@
  * backing your framebuffer device memory.
  */
 #if GRALLOC_ARM_DMA_BUF_MODULE
-struct fb_dmabuf_export 
+struct fb_dmabuf_export
 {
 	__u32 fd;
 	__u32 flags;
 };
-/*#define FBIOGET_DMABUF	_IOR('F', 0x21, struct fb_dmabuf_export)*/
+/*#define FBIOGET_DMABUF    _IOR('F', 0x21, struct fb_dmabuf_export)*/
 #endif /* GRALLOC_ARM_DMA_BUF_MODULE */
 
 
@@ -73,13 +73,22 @@ struct fb_dmabuf_export
 #include <ump/ump.h>
 #endif
 
+typedef enum
+{
+	MALI_YUV_NO_INFO,
+	MALI_YUV_BT601_NARROW,
+	MALI_YUV_BT601_WIDE,
+	MALI_YUV_BT709_NARROW,
+	MALI_YUV_BT709_WIDE,
+} mali_gralloc_yuv_info;
+
 struct private_handle_t;
 
 struct private_module_t
 {
 	gralloc_module_t base;
 
-	private_handle_t* framebuffer;
+	private_handle_t *framebuffer;
 	uint32_t fbFormat;
 	uint32_t flags;
 	uint32_t numBuffers;
@@ -128,8 +137,8 @@ struct private_handle_t
 
 	enum
 	{
-		LOCK_STATE_WRITE     =   1<<31,
-		LOCK_STATE_MAPPED    =   1<<30,
+		LOCK_STATE_WRITE     =   1 << 31,
+		LOCK_STATE_MAPPED    =   1 << 30,
 		LOCK_STATE_READ_MASK =   0x3FFFFFFF
 	};
 #if SPRD_ION
@@ -143,12 +152,18 @@ struct private_handle_t
 #endif
 	int     magic;
 	int     flags;
-	int 	usage;
+	int     usage;
 	int     size;
+	int     width;
+	int     height;
+	int     format;
+	int     stride;
 	int     base;
 	int     lockState;
 	int     writeOwner;
 	int     pid;
+
+	mali_gralloc_yuv_info yuv_info;
 
 	// Following members are for UMP memory only
 #if GRALLOC_ARM_UMP_MODULE
@@ -166,19 +181,14 @@ struct private_handle_t
 	int     phyaddr;
 
 #if SPRD_ION
-
 	int     resv0;
 	int     resv1;
 #endif
-	int     format;
-	int     width;
-	int     height;
-
 
 #if SPRD_ION
-#define SPRD_ION_NUM_INTS 5
+#define SPRD_ION_NUM_INTS 2
 #else
-#define SPRD_ION_NUM_INTS 4
+#define SPRD_ION_NUM_INTS 1
 #endif
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	int     ion_client;
@@ -189,14 +199,20 @@ struct private_handle_t
 #endif
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-#define GRALLOC_ARM_NUM_FDS 1	
+#define GRALLOC_ARM_NUM_FDS 1
 #else
-#define GRALLOC_ARM_NUM_FDS 0	
+#define GRALLOC_ARM_NUM_FDS 0
 #endif
 
 #ifdef __cplusplus
-	static const int sNumInts = 10 + SPRD_ION_NUM_INTS + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
-	static const int sNumFds = 1;
+	/*
+	 * We track the number of integers in the structure. There are 11 unconditional
+	 * integers (magic - pid, yuv_info, fd and offset). The GRALLOC_ARM_XXX_NUM_INTS
+	 * variables are used to track the number of integers that are conditionally
+	 * included.
+	 */
+	static const int sNumInts = 15 + SPRD_ION_NUM_INTS + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
+	static const int sNumFds = GRALLOC_ARM_NUM_FDS;
 	static const int sMagic = 0x3141592;
 
 #if GRALLOC_ARM_UMP_MODULE
@@ -208,10 +224,15 @@ struct private_handle_t
 		flags(flags),
 		usage(usage),
 		size(size),
+		width(0),
+		height(0),
+		format(0),
+		stride(0),
 		base(base),
 		lockState(lock_state),
 		writeOwner(0),
 		pid(getpid()),
+		yuv_info(MALI_YUV_NO_INFO),
 		ump_id((int)secure_id),
 		ump_mem_handle((int)handle),
 		fd(fd),
@@ -235,10 +256,15 @@ struct private_handle_t
 		flags(flags),
 		usage(usage),
 		size(size),
+		width(0),
+		height(0),
+		format(0),
+		stride(0),
 		base(base),
 		lockState(lock_state),
 		writeOwner(0),
 		pid(getpid()),
+		yuv_info(MALI_YUV_NO_INFO),
 #if GRALLOC_ARM_UMP_MODULE
 		ump_id((int)UMP_INVALID_SECURE_ID),
 		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE),
@@ -264,10 +290,15 @@ struct private_handle_t
 		flags(flags),
 		usage(usage),
 		size(size),
+		width(0),
+		height(0),
+		format(0),
+		stride(0),
 		base(base),
 		lockState(lock_state),
 		writeOwner(0),
 		pid(getpid()),
+		yuv_info(MALI_YUV_NO_INFO),
 #if GRALLOC_ARM_UMP_MODULE
 		ump_id((int)UMP_INVALID_SECURE_ID),
 		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE),
@@ -295,22 +326,25 @@ struct private_handle_t
 		return (flags & (PRIV_FLAGS_FRAMEBUFFER|PRIV_FLAGS_USES_PHY)) ? true : false;
 	}
 
-	static int validate(const native_handle* h)
+	static int validate(const native_handle *h)
 	{
-		const private_handle_t* hnd = (const private_handle_t*)h;
+		const private_handle_t *hnd = (const private_handle_t *)h;
+
 		if (!h || h->version != sizeof(native_handle) || h->numInts != sNumInts || h->numFds != sNumFds || hnd->magic != sMagic)
 		{
 			return -EINVAL;
 		}
+
 		return 0;
 	}
 
-	static private_handle_t* dynamicCast(const native_handle* in)
+	static private_handle_t *dynamicCast(const native_handle *in)
 	{
 		if (validate(in) == 0)
 		{
-			return (private_handle_t*) in;
+			return (private_handle_t *) in;
 		}
+
 		return NULL;
 	}
 #endif

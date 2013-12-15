@@ -39,4 +39,6 @@ void mali_core_scaling_term(void);
  */
 void mali_core_scaling_update(struct mali_gpu_utilization_data *data);
 
+void mali_core_scaling_sync(int num_cores);
+
 #endif /* __ARM_CORE_SCALING_H__ */

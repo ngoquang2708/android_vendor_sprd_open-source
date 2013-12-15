@@ -20,8 +20,7 @@
 /**
  * The actual descriptor mapping table, never directly accessed by clients
  */
-typedef struct mali_descriptor_table
-{
+typedef struct mali_descriptor_table {
 	u32 * usage; /**< Pointer to bitpattern indicating if a descriptor is valid/used or not */
 	void** mappings; /**< Array of the pointers the descriptors map to */
 } mali_descriptor_table;
@@ -30,9 +29,8 @@ typedef struct mali_descriptor_table
  * The descriptor mapping object
  * Provides a separate namespace where we can map an integer to a pointer
  */
-typedef struct mali_descriptor_mapping
-{
-    _mali_osk_lock_t *lock; /**< Lock protecting access to the mapping object */
+typedef struct mali_descriptor_mapping {
+	_mali_osk_mutex_rw_t *lock; /**< Lock protecting access to the mapping object */
 	int max_nr_mappings_allowed; /**< Max number of mappings to support in this namespace */
 	int current_nr_mappings; /**< Current number of possible mappings */
 	mali_descriptor_table * table; /**< Pointer to the current mapping table */

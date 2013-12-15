@@ -29,16 +29,14 @@ extern "C" {
  * The interface is used by the userpace Mali DDK.
  */
 
-typedef enum
-{
+typedef enum {
 	_LOCK_ACCESS_RENDERABLE = 1,
 	_LOCK_ACCESS_TEXTURE,
 	_LOCK_ACCESS_CPU_WRITE,
 	_LOCK_ACCESS_CPU_READ,
 } _lock_access_usage;
 
-typedef struct _lock_item_s
-{
+typedef struct _lock_item_s {
 	unsigned int secure_id;
 	_lock_access_usage usage;
 } _lock_item_s;

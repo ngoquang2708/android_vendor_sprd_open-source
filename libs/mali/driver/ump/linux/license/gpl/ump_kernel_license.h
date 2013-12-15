@@ -17,8 +17,7 @@
 #define __UMP_KERNEL_LICENSE_H__
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #define UMP_KERNEL_LINUX_LICENSE     "GPL"
