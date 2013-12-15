@@ -20,6 +20,7 @@
 **---------------------------------------------------------------------------*/
 //#include <linux/types.h>
 #include <sys/types.h>
+#include "isp_exif.h"
 
 /**---------------------------------------------------------------------------*
 **				Micro Define					*
@@ -59,6 +60,7 @@ enum isp_callback_cmd{
 	ISP_AWB_STAT_CALLBACK = 0x00000A00,
 	ISP_CONTINUE_AF_NOTICE_CALLBACK = 0x00000B00,
 	ISP_SOF_CALLBACK = 0x00000C00,
+	ISP_AE_CHG_CALLBACK = 0x00000D00,
 	ISP_CALLBACK_CMD_MAX=0xffffffff
 };
 
@@ -248,6 +250,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_SHARPNESS,
 	ISP_CTRL_GET_FAST_AE_STAB,
 	ISP_CTRL_GET_AE_STAB,
+	ISP_CTRL_GET_AE_CHG,
 	ISP_CTRL_GET_AWB_STAT,
 	ISP_CTRL_GET_AF_STAT,
 	ISP_CTRL_GAMMA,
@@ -256,6 +259,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_CONTINUE_AF,
 	ISP_CTRL_AF_DENOISE,
 	ISP_CTRL_FLASH_CTRL, // for isp tool
+	ISP_CTRL_GET_EXIF_INFO,
 	ISP_CTRL_MAX
 };
 
@@ -337,6 +341,8 @@ struct isp_af_win{
 	enum isp_focus_mode mode;
 	struct isp_pos_rect win[9];
 	uint32_t valid_win;
+	uint32_t ae_touch;
+	struct isp_pos_rect ae_touch_rect;
 };
 
 struct isp_smart_ae_param {
