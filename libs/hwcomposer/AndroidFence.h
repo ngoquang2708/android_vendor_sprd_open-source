@@ -48,6 +48,7 @@
 #include <utils/RefBase.h>
 #include <ui/Fence.h>
 #include <sync/sync.h>
+#include <utils/String8.h>
 
 using namespace android;
 
@@ -58,5 +59,7 @@ extern void closeSprdFence();
 extern void closeAcquireFDs(hwc_display_contents_1_t *list);
 
 extern void createRetiredFence(hwc_display_contents_1_t *list);
+
+extern int FenceWaitForever(const String8& name, int fenceFd);
 
 #endif

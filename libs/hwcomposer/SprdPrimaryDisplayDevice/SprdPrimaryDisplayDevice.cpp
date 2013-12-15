@@ -35,6 +35,7 @@
  *****************************************************************************/
 
 #include "SprdPrimaryDisplayDevice.h"
+#include <utils/String8.h>
 
 using namespace android;
 
@@ -284,6 +285,13 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
         ALOGI_IF(mDebugFlag, "Start Displaying FramebufferTarget layer");
 
+        if (FBTargetLayer->acquireFenceFd >= 0)
+        {
+            String8 name("HWCFBT::Post");
+
+            FenceWaitForever(name, FBTargetLayer->acquireFenceFd);
+        }
+
         mFBInfo->fbDev->post(mFBInfo->fbDev, privateH);
 
         goto displayDone;
@@ -331,7 +339,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
 
     if (DisplayOverlayPlane ||
-		(DisplayPrimaryPlane && DirectDisplayFlag == false))
+        (DisplayPrimaryPlane && DirectDisplayFlag == false))
     {
         SprdHWLayer *OverlayLayer = NULL;
         SprdHWLayer *PrimaryLayer = NULL;

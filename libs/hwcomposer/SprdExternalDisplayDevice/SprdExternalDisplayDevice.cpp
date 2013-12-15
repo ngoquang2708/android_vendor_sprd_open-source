@@ -85,12 +85,33 @@ int SprdExternalDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 
 int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
 {
+    hwc_layer_1_t *FBTargetLayer = NULL;
+
     queryDebugFlag(&mDebugFlag);
 
     if (list == NULL)
     {
         ALOGI_IF(mDebugFlag, "commit: External Display Device maybe closed");
         return 0;
+    }
+
+    FBTargetLayer = &(list->hwLayers[list->numHwLayers - 1]);
+    if (FBTargetLayer == NULL)
+    {
+        ALOGE("FBTargetLayer is NULL");
+        return -1;
+    }
+
+    const native_handle_t *pNativeHandle = FBTargetLayer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+
+    ALOGI_IF(mDebugFlag, "Start Displaying ExternalDisplay FramebufferTarget layer");
+
+    if (FBTargetLayer->acquireFenceFd >= 0)
+    {
+        String8 name("HWCFBTExternal::Post");
+
+        FenceWaitForever(name, FBTargetLayer->acquireFenceFd);
     }
 
     closeAcquireFDs(list);
