@@ -20,8 +20,7 @@
 #include "ump_kernel_common.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 

@@ -9,6 +9,12 @@ config MALI400
 	  To compile this driver as a module, choose M here: the module will be
 	  called mali.
 
+config MALI450
+	bool "Enable Mali-450 support"
+	depends on MALI400
+	---help---
+	  This enables support for Mali-450 specific features.
+
 config MALI400_DEBUG
 	bool "Enable debug in Mali driver"
 	depends on MALI400
@@ -36,6 +42,13 @@ config MALI400_UMP
 	---help---
 	  This enables support for the UMP memory sharing API in the Mali driver.
 
+config MALI400_POWER_PERFORMANCE_POLICY
+	bool "Enable Mali power performance policy"
+	depends on ARM
+	default n
+	---help---
+	  This enables support for dynamic performance scaling of Mali with the goal of lowering power consumption.
+
 config MALI_DMA_BUF_MAP_ON_ATTACH
 	bool "Map dma-buf attachments on attach"
 	depends on MALI400 && DMA_SHARED_BUFFER
@@ -53,5 +66,16 @@ config MALI_SHARED_INTERRUPTS
 	default n
 	---help---
 	  Adds functionality required to properly support shared interrupts.  Without this support,
-	  the device driver will fail during insmod if it detects shared interrupts.  Works even if
-	  the GPU is not using shared interrupts, but can cause lower performance.
+	  the device driver will fail during insmod if it detects shared interrupts.  This also
+	  works when the GPU is not using shared interrupts, but might have a slight performance
+	  impact.
+
+config MALI_PMU_PARALLEL_POWER_UP
+	bool "Power up Mali PMU domains in parallel"
+	depends on MALI400
+	default n
+	---help---
+	  This makes the Mali driver power up all PMU power domains in parallel, instead of
+	  powering up domains one by one, with a slight delay in between. Powering on all power
+	  domains at the same time may cause peak currents higher than what some systems can handle.
+	  These systems must not enable this option.

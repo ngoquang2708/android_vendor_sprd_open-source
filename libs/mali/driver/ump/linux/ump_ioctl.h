@@ -12,8 +12,7 @@
 #define __UMP_IOCTL_H__
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <linux/types.h>

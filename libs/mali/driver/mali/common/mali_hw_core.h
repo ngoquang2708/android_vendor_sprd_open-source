@@ -18,9 +18,9 @@
  * The common parts for all Mali HW cores (GP, PP, MMU, L2 and PMU)
  * This struct is embedded inside all core specific structs.
  */
-struct mali_hw_core
-{
+struct mali_hw_core {
 	u32 phys_addr;                    /**< Physical address of the registers */
+	u32 phys_offset;                  /**< Offset from start of Mali to registers */
 	u32 size;                         /**< Size of registers */
 	mali_io_address mapped_registers; /**< Virtual mapping of the registers */
 	const char* description;          /**< Name of unit (as specified in device configuration) */
@@ -44,7 +44,7 @@ MALI_STATIC_INLINE u32 mali_hw_core_register_read(struct mali_hw_core *core, u32
 MALI_STATIC_INLINE void mali_hw_core_register_write_relaxed(struct mali_hw_core *core, u32 relative_address, u32 new_val)
 {
 	MALI_DEBUG_PRINT(6, ("register_write_relaxed for core %s, relative addr=0x%04X, val=0x%08X\n",
-	                      core->description, relative_address, new_val));
+	                     core->description, relative_address, new_val));
 	_mali_osk_mem_iowrite32_relaxed(core->mapped_registers, relative_address, new_val);
 }
 
@@ -54,9 +54,8 @@ MALI_STATIC_INLINE void mali_hw_core_register_write_relaxed(struct mali_hw_core 
 MALI_STATIC_INLINE void mali_hw_core_register_write_relaxed_conditional(struct mali_hw_core *core, u32 relative_address, u32 new_val, const u32 old_val)
 {
 	MALI_DEBUG_PRINT(6, ("register_write_relaxed for core %s, relative addr=0x%04X, val=0x%08X\n",
-	                      core->description, relative_address, new_val));
-	if(old_val != new_val)
-	{
+	                     core->description, relative_address, new_val));
+	if(old_val != new_val) {
 		_mali_osk_mem_iowrite32_relaxed(core->mapped_registers, relative_address, new_val);
 	}
 }
@@ -65,7 +64,7 @@ MALI_STATIC_INLINE void mali_hw_core_register_write_relaxed_conditional(struct m
 MALI_STATIC_INLINE void mali_hw_core_register_write(struct mali_hw_core *core, u32 relative_address, u32 new_val)
 {
 	MALI_DEBUG_PRINT(6, ("register_write for core %s, relative addr=0x%04X, val=0x%08X\n",
-	                      core->description, relative_address, new_val));
+	                     core->description, relative_address, new_val));
 	_mali_osk_mem_iowrite32(core->mapped_registers, relative_address, new_val);
 }
 
@@ -76,8 +75,7 @@ MALI_STATIC_INLINE void mali_hw_core_register_write_array_relaxed(struct mali_hw
 	                     core->description,relative_address, nr_of_regs));
 
 	/* Do not use burst writes against the registers */
-	for (i = 0; i< nr_of_regs; i++)
-	{
+	for (i = 0; i< nr_of_regs; i++) {
 		mali_hw_core_register_write_relaxed(core, relative_address + i*4, write_array[i]);
 	}
 }
@@ -92,10 +90,8 @@ MALI_STATIC_INLINE void mali_hw_core_register_write_array_relaxed_conditional(st
 	                     core->description,relative_address, nr_of_regs));
 
 	/* Do not use burst writes against the registers */
-	for (i = 0; i< nr_of_regs; i++)
-	{
-		if(old_array[i] != write_array[i])
-		{
+	for (i = 0; i< nr_of_regs; i++) {
+		if(old_array[i] != write_array[i]) {
 			mali_hw_core_register_write_relaxed(core, relative_address + i*4, write_array[i]);
 		}
 	}

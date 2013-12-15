@@ -19,15 +19,17 @@
 #include "mali_pp.h"
 #include "mali_session.h"
 
-/* max runtime [ms] for a core job - used by timeout timers  */
-#define MAX_RUNTIME 5000
+/**
+ * @brief Default max runtime [ms] for a core job - used by timeout timers
+ */
+#define MALI_MAX_JOB_RUNTIME_DEFAULT 4000
+
 /** @brief A mali group object represents a MMU and a PP and/or a GP core.
  *
  */
 #define MALI_MAX_NUMBER_OF_GROUPS 10
 
-enum mali_group_core_state
-{
+enum mali_group_core_state {
 	MALI_GROUP_STATE_IDLE,
 	MALI_GROUP_STATE_WORKING,
 	MALI_GROUP_STATE_OOM,
@@ -45,11 +47,9 @@ struct mali_pm_domain;
  * A render group is defined by all the cores that share the same Mali MMU
  */
 
-struct mali_group
-{
+struct mali_group {
 	struct mali_mmu_core        *mmu;
 	struct mali_session_data    *session;
-	int                         page_dir_ref_count;
 
 	mali_bool                   power_is_on;
 	enum mali_group_core_state  state;
@@ -67,7 +67,11 @@ struct mali_group
 	struct mali_dlbu_core       *dlbu_core;
 	struct mali_bcast_unit      *bcast_core;
 
-	_mali_osk_lock_t            *lock;
+#ifdef MALI_UPPER_HALF_SCHEDULING
+	_mali_osk_spinlock_irq_t	*lock;
+#else
+	_mali_osk_spinlock_t		*lock;
+#endif
 
 	_mali_osk_list_t            pp_scheduler_list;
 
@@ -97,7 +101,7 @@ struct mali_group
  */
 struct mali_group *mali_group_create(struct mali_l2_cache_core *core,
                                      struct mali_dlbu_core *dlbu,
-				     struct mali_bcast_unit *bcast);
+                                     struct mali_bcast_unit *bcast);
 
 _mali_osk_errcode_t mali_group_add_mmu_core(struct mali_group *group, struct mali_mmu_core* mmu_core);
 void mali_group_remove_mmu_core(struct mali_group *group);
@@ -119,7 +123,11 @@ struct mali_group *mali_group_acquire_group(struct mali_group *parent);
 
 MALI_STATIC_INLINE mali_bool mali_group_is_virtual(struct mali_group *group)
 {
+#if defined(CONFIG_MALI450)
 	return (NULL != group->dlbu_core);
+#else
+	return MALI_FALSE;
+#endif
 }
 
 /** @brief Check if a group is considered as part of a virtual group
@@ -129,9 +137,13 @@ MALI_STATIC_INLINE mali_bool mali_group_is_virtual(struct mali_group *group)
  */
 MALI_STATIC_INLINE mali_bool mali_group_is_in_virtual(struct mali_group *group)
 {
+#if defined(CONFIG_MALI450)
 	return (MALI_GROUP_STATE_IN_VIRTUAL == group->state ||
 	        MALI_GROUP_STATE_JOINING_VIRTUAL == group->state ||
 	        MALI_GROUP_STATE_LEAVING_VIRTUAL == group->state);
+#else
+	return MALI_FALSE;
+#endif
 }
 
 /** @brief Reset group
@@ -200,9 +212,20 @@ void mali_group_abort_session(struct mali_group *group, struct mali_session_data
 
 mali_bool mali_group_power_is_on(struct mali_group *group);
 void mali_group_power_on_group(struct mali_group *group);
-void mali_group_power_off_group(struct mali_group *group);
+void mali_group_power_off_group(struct mali_group *group, mali_bool power_status);
 void mali_group_power_on(void);
-void mali_group_power_off(void);
+
+/** @brief Prepare group for power off
+ *
+ * Update the group's state and prepare for the group to be powered off.
+ *
+ * If do_power_change is MALI_FALSE group session will be set to NULL so that
+ * no more activity will happen to this group, but the power state flag will be
+ * left unchanged.
+ *
+ * @do_power_change MALI_TRUE if power status is to be updated
+ */
+void mali_group_power_off(mali_bool do_power_change);
 
 struct mali_group *mali_group_get_glob_group(u32 index);
 u32 mali_group_get_glob_num_groups(void);
@@ -250,8 +273,7 @@ MALI_STATIC_INLINE mali_bool mali_group_virtual_disable_if_empty(struct mali_gro
 	MALI_ASSERT_GROUP_LOCKED(group);
 	MALI_DEBUG_ASSERT(mali_group_is_virtual(group));
 
-	if (_mali_osk_list_empty(&group->group_list))
-	{
+	if (_mali_osk_list_empty(&group->group_list)) {
 		group->state = MALI_GROUP_STATE_DISABLED;
 		group->session = NULL;
 
@@ -268,8 +290,7 @@ MALI_STATIC_INLINE mali_bool mali_group_virtual_enable_if_empty(struct mali_grou
 	MALI_ASSERT_GROUP_LOCKED(group);
 	MALI_DEBUG_ASSERT(mali_group_is_virtual(group));
 
-	if (_mali_osk_list_empty(&group->group_list))
-	{
+	if (_mali_osk_list_empty(&group->group_list)) {
 		MALI_DEBUG_ASSERT(MALI_GROUP_STATE_DISABLED == group->state);
 
 		group->state = MALI_GROUP_STATE_IDLE;
@@ -279,5 +300,10 @@ MALI_STATIC_INLINE mali_bool mali_group_virtual_enable_if_empty(struct mali_grou
 
 	return empty;
 }
+
+/* Get group used l2 domain and core domain ref */
+void mali_group_get_pm_domain_ref(struct mali_group *group);
+/* Put group used l2 domain and core domain ref */
+void mali_group_put_pm_domain_ref(struct mali_group *group);
 
 #endif /* __MALI_GROUP_H__ */
