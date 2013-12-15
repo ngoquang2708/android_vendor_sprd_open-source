@@ -3,8 +3,6 @@
 #define VOICECALL_VOLUME_MAX_UI	6
 
 static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot handle many at commands once
-static unsigned int cur_call_sim = 0;
-static unsigned int cur_cp_type = 0;
 
 int do_cmd_dual(int modemId, int simId, const  char* at_cmd)
 {
@@ -16,18 +14,6 @@ int do_cmd_dual(int modemId, int simId, const  char* at_cmd)
         ALOGD("do_cmd_dual Switch incall AT command [%s][%s] ", at_cmd, err_str);
     }
     pthread_mutex_unlock(&ATlock);
-
-    return 0;
-}
-
-
-int at_cmd_init(void)
-{
-    if ( cur_call_sim != android_sim_num
-        ||cur_cp_type!= st_vbc_ctrl_thread_para->adev->cp_type) {
-        cur_call_sim = android_sim_num;
-	 cur_cp_type =  st_vbc_ctrl_thread_para->adev->cp_type;
-    }
 
     return 0;
 }
@@ -51,7 +37,8 @@ static int at_cmd_route(struct tiny_audio_device *adev)
     } else {
         at_cmd = "AT+SSAM=0";
     }
-    do_cmd_dual(adev->cp_type, cur_call_sim, at_cmd);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
 
     return 0;
 }
@@ -65,7 +52,8 @@ int at_cmd_volume(float vol, int mode)
     if (volume >= VOICECALL_VOLUME_MAX_UI) volume = VOICECALL_VOLUME_MAX_UI;
     ALOGI("%s mode=%d ,volume=%d, android vol:%f ", __func__,mode,volume,vol);
     snprintf(at_cmd, sizeof buf, "AT+VGR=%d", volume);
-    do_cmd_dual(cur_cp_type, cur_call_sim, at_cmd);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
     return 0;
 }
 
@@ -75,7 +63,8 @@ int at_cmd_mic_mute(bool mute)
     ALOGW("audio at_cmd_mic_mute %d", mute);
     if (mute) at_cmd = "AT+CMUT=1";
     else at_cmd = "AT+CMUT=0";
-    do_cmd_dual(cur_cp_type, cur_call_sim, at_cmd);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
     return 0;
 }
 
@@ -90,6 +79,7 @@ int at_cmd_audio_loop(int enable, int mode, int volume,int loopbacktype,int voic
             enable,mode,volume,loopbacktype,voiceformat,delaytime);
 
     snprintf(at_cmd, sizeof buf, "AT+SPVLOOP=%d,%d,%d,%d,%d,%d", enable,mode,volume,loopbacktype,voiceformat,delaytime);
-    do_cmd_dual(cur_cp_type, cur_call_sim, at_cmd);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
     return 0;
 }
