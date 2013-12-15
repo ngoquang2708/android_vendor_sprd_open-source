@@ -394,6 +394,8 @@ displayDone:
 
     closeAcquireFDs(list);
 
+    createRetiredFence(list);
+
     return 0;
 }
 

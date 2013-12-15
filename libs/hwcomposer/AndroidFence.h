@@ -36,12 +36,27 @@
 #ifndef _ANDROID_FENCE_H_
 #define _ANDROID_FENCE_H_
 
+#include <fcntl.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <hardware/hardware.h>
 #include <hardware/hwcomposer.h>
 #include <utils/RefBase.h>
+#include <ui/Fence.h>
+#include <sync/sync.h>
 
 using namespace android;
 
+extern int openSprdFence();
+
+extern void closeSprdFence();
+
 extern void closeAcquireFDs(hwc_display_contents_1_t *list);
+
+extern void createRetiredFence(hwc_display_contents_1_t *list);
 
 #endif
