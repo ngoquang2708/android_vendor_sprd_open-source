@@ -168,7 +168,7 @@ bool SprdVsyncEvent::threadLoop() {
         {
             return true;
         }
-        static int count = 0;
+
         mProcs->vsync(mProcs, DISPLAY_PRIMARY, next_vsync);
     }
     //may open when driver ready

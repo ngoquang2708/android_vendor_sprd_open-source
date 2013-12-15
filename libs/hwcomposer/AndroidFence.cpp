@@ -49,6 +49,10 @@ using namespace android;
 
 static int ion_device_fd = -1;
 
+enum {
+    TIMEOUT_NEVER = -1
+};
+
 int sprd_fence_create(char *name, int value)
 {
     if (ion_device_fd < 0)
@@ -133,6 +137,11 @@ void closeAcquireFDs(hwc_display_contents_1_t *list)
         {
             hwc_layer_1_t *l = &(list->hwLayers[i]);
 
+            if (l->compositionType == HWC_FRAMEBUFFER)
+            {
+                continue;
+            }
+
             if (l->acquireFenceFd >= 0)
             {
                 close(l->acquireFenceFd);
@@ -153,4 +162,24 @@ void createRetiredFence(hwc_display_contents_1_t *list)
 
         sprd_fence_signal();
     }
+}
+
+int FenceWaitForever(const String8& name, int fenceFd)
+{
+   if (fenceFd < 0)
+   {
+       return 0;
+   }
+
+   unsigned int warningTimeout = 3000;
+
+   int err = sync_wait(fenceFd, warningTimeout);
+   if (err < 0)
+   {
+       ALOGE("Fence: %s FD: %d didn't signal in %u ms", name.string(), fenceFd, warningTimeout);
+
+       err = sync_wait(fenceFd, TIMEOUT_NEVER);
+   }
+
+   return err;
 }
