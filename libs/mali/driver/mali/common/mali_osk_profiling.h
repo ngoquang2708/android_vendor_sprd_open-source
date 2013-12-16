@@ -130,7 +130,7 @@ mali_bool _mali_osk_profiling_have_recording(void);
 
 #else /* defined(CONFIG_MALI400_PROFILING)  && defined(CONFIG_TRACEPOINTS) */
 
-/* Dummy add_event, for when profiling is disabled. */
+ /* Dummy add_event, for when profiling is disabled. */
 
 #define _mali_osk_profiling_add_event(event_id, data0, data1, data2, data3, data4)
 

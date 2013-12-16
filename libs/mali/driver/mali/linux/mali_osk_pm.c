@@ -46,7 +46,8 @@ _mali_osk_errcode_t _mali_osk_pm_dev_ref_add(void)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
 	pm_runtime_mark_last_busy(&(mali_platform_device->dev));
 #endif
-	if (0 > err) {
+	if (0 > err)
+	{
 		MALI_PRINT_ERROR(("Mali OSK PM: pm_runtime_get_sync() returned error code %d\n", err));
 		return _MALI_OSK_ERR_FAULT;
 	}

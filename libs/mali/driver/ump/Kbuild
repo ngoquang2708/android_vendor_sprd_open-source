@@ -26,39 +26,14 @@ endif
 UDD_FILE_PREFIX = ../mali/
 
 # Get subversion revision number, fall back to 0000 if no svn info is available
-#SVN_INFO = (cd $(src); svn info 2>/dev/null)
-
-ifneq ($(shell $(SVN_INFO) 2>/dev/null),)
-# SVN detected
-SVN_REV := $(shell $(SVN_INFO) | grep '^Revision: '| sed -e 's/^Revision: //' 2>/dev/null)
-DRIVER_REV := $(MALI_RELEASE_NAME)-r$(SVN_REV)
-CHANGE_DATE := $(shell $(SVN_INFO) | grep '^Last Changed Date: ' | cut -d: -f2- | cut -b2-)
-CHANGED_REVISION := $(shell $(SVN_INFO) | grep '^Last Changed Rev: ' | cut -d: -f2- | cut -b2-)
-REPO_URL := $(shell $(SVN_INFO) | grep '^URL: ' | cut -d: -f2- | cut -b2-)
-
-else # SVN
-GIT_REV := $(shell cd $(src); git describe --always 2>/dev/null)
-ifneq ($(GIT_REV),)
-# Git detected
-DRIVER_REV := $(MALI_RELEASE_NAME)-$(GIT_REV)
-CHANGE_DATE := $(shell cd $(src); git log -1 --format="%ci")
-CHANGED_REVISION := $(GIT_REV)
-REPO_URL := $(shell cd $(src); git describe --all --always 2>/dev/null)
-
-else # Git
-# No Git or SVN detected
-DRIVER_REV := $(MALI_RELEASE_NAME)
-CHANGE_DATE := $(MALI_RELEASE_NAME)
-CHANGED_REVISION := $(MALI_RELEASE_NAME)
-endif
-endif
+#SVN_REV := $(shell ((svnversion | grep -qv exported && echo -n 'Revision: ' && svnversion) || git svn info | sed -e 's/$$$$/M/' | grep '^Revision: ' || echo ${MALI_RELEASE_NAME}) 2>/dev/null | sed -e 's/^Revision: //')
+SVN_REV=r3p2
 
 ccflags-y += -DSVN_REV=$(SVN_REV)
-ccflags-y += -DSVN_REV_STRING=\"$(DRIVER_REV)\"
+ccflags-y += -DSVN_REV_STRING=\"$(SVN_REV)\"
 
 ccflags-y += -I$(src) -I$(src)/common -I$(src)/linux -I$(src)/../mali/common -I$(src)/../mali/linux -I$(src)/include/ump -I$(src)/arch-$(CONFIG)
 ccflags-y += -DMALI_STATE_TRACKING=0
-ccflags-y += -DMALI_ENABLE_CPU_CYCLES=0
 ccflags-$(CONFIG_UMP_DEBUG) += -DDEBUG
 
 # For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
@@ -66,9 +41,9 @@ ccflags-$(CONFIG_UMP_DEBUG) += -DDEBUG
 # The GPL product will only include the license/gpl directory
 
 ifeq ($(wildcard $(src)/linux/license/gpl/*),)
-ccflags-y += -I$(src)/linux/license/proprietary -I$(src)/../mali/linux/license/proprietary
+ccflags-y += -I$(src)/linux/license/proprietary
 else
-ccflags-y += -I$(src)/linux/license/gpl -I$(src)/../mali/linux/license/gpl
+ccflags-y += -I$(src)/linux/license/gpl
 endif
 
 ump-y = common/ump_kernel_common.o \

@@ -24,13 +24,15 @@ int vsync_event_report_wrapper(struct mali_session_data *session_data, _mali_uk_
 
 	MALI_CHECK_NON_NULL(uargs, -EINVAL);
 
-	if (0 != copy_from_user(&kargs, uargs, sizeof(_mali_uk_vsync_event_report_s))) {
+	if (0 != copy_from_user(&kargs, uargs, sizeof(_mali_uk_vsync_event_report_s)))
+	{
 		return -EFAULT;
 	}
 
 	kargs.ctx = session_data;
 	err = _mali_ukk_vsync_event_report(&kargs);
-	if (_MALI_OSK_ERR_OK != err) {
+	if (_MALI_OSK_ERR_OK != err)
+	{
 		return map_errcode(err);
 	}
 

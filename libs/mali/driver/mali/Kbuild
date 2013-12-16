@@ -21,7 +21,6 @@ MALI_PP_SCHEDULER_KEEP_SUB_JOB_STARTS_ALIGNED ?= 0
 MALI_PP_SCHEDULER_FORCE_NO_JOB_OVERLAP_BETWEEN_APPS ?= 0
 MALI_UPPER_HALF_SCHEDULING ?= 1
 USING_PP_CORE ?= 2
-MALI_ENABLE_CPU_CYCLES ?= 0
 
 # For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
 # The ARM proprietary product will only include the license/proprietary directory
@@ -57,17 +56,11 @@ mali-y += \
 	linux/mali_osk_time.o \
 	linux/mali_osk_timers.o
 
-mali-y += linux/mali_memory.o linux/mali_memory_os_alloc.o
-mali-y += linux/mali_memory_external.o
-mali-y += linux/mali_memory_block_alloc.o
-
 mali-y += \
 	linux/mali_ukk_mem.o \
 	linux/mali_ukk_gp.o \
 	linux/mali_ukk_pp.o \
-	linux/mali_ukk_core.o \
-	linux/mali_ukk_soft_job.o \
-	linux/mali_ukk_timeline.o
+	linux/mali_ukk_core.o
 
 # Source files which always are included in a build
 mali-y += \
@@ -81,13 +74,16 @@ mali-y += \
 	linux/mali_kernel_sysfs.o \
 	common/mali_mmu.o \
 	common/mali_mmu_page_directory.o \
+	common/mali_memory.o \
+	common/mali_kernel_memory_engine.o \
+	common/mali_block_allocator.o \
+	common/mali_kernel_mem_os.o \
 	common/mali_mem_validation.o \
 	common/mali_hw_core.o \
 	common/mali_gp.o \
 	common/mali_pp.o \
 	common/mali_pp_job.o \
 	common/mali_gp_job.o \
-	common/mali_soft_job.o \
 	common/mali_scheduler.o \
 	common/mali_gp_scheduler.o \
 	common/mali_pp_scheduler.o \
@@ -99,11 +95,6 @@ mali-y += \
 	common/mali_user_settings_db.o \
 	common/mali_kernel_utilization.o \
 	common/mali_l2_cache.o \
-	common/mali_dma.o \
-	common/mali_timeline.o \
-	common/mali_timeline_fence_wait.o \
-	common/mali_timeline_sync_fence.o \
-	common/mali_spinlock_reentrant.o \
 	common/mali_pm_domain.o \
 	linux/mali_osk_pm.o \
 	linux/mali_pmu_power_up_down.o \
@@ -119,12 +110,8 @@ mali-$(CONFIG_MALI400_PROFILING) += linux/mali_osk_profiling.o
 mali-$(CONFIG_MALI400_INTERNAL_PROFILING) += linux/mali_profiling_internal.o timestamp-$(TIMESTAMP)/mali_timestamp.o
 ccflags-$(CONFIG_MALI400_INTERNAL_PROFILING) += -I$(src)/timestamp-$(TIMESTAMP)
 
-mali-$(CONFIG_DMA_SHARED_BUFFER) += linux/mali_memory_dma_buf.o
-mali-$(CONFIG_SYNC) += linux/mali_sync.o
-
-mali-$(CONFIG_MALI400_UMP) += linux/mali_memory_ump.o
-
-mali-$(CONFIG_MALI400_POWER_PERFORMANCE_POLICY) += common/mali_power_performance_policy.o
+mali-$(CONFIG_DMA_SHARED_BUFFER) += linux/mali_dma_buf.o
+mali-$(CONFIG_SYNC) += linux/mali_sync.o linux/mali_sync_user.o
 
 # Tell the Linux build system from which .o file to create the kernel module
 obj-$(CONFIG_MALI400) := mali.o
@@ -146,7 +133,6 @@ ccflags-y += -DMALI_STATE_TRACKING=1
 ccflags-y += -DMALI_OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB=$(OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB)
 ccflags-y += -DUSING_GPU_UTILIZATION=$(USING_GPU_UTILIZATION)
 ccflags-y += -DMALI_PP_CORE_NUMBER=$(USING_PP_CORE)
-ccflags-y += -DMALI_ENABLE_CPU_CYCLES=$(MALI_ENABLE_CPU_CYCLES)
 
 ifeq ($(MALI_UPPER_HALF_SCHEDULING),1)
 	ccflags-y += -DMALI_UPPER_HALF_SCHEDULING
@@ -210,7 +196,6 @@ VERSION_STRINGS += USING_UMP=$(CONFIG_MALI400_UMP)
 VERSION_STRINGS += USING_PROFILING=$(CONFIG_MALI400_PROFILING)
 VERSION_STRINGS += USING_INTERNAL_PROFILING=$(CONFIG_MALI400_INTERNAL_PROFILING)
 VERSION_STRINGS += USING_GPU_UTILIZATION=$(USING_GPU_UTILIZATION)
-VERSION_STRINGS += USING_POWER_PERFORMANCE_POLICY=$(CONFIG_POWER_PERFORMANCE_POLICY)
 VERSION_STRINGS += MALI_UPPER_HALF_SCHEDULING=$(MALI_UPPER_HALF_SCHEDULING)
 
 # Create file with Mali driver configuration

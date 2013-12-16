@@ -12,7 +12,8 @@
 #define __MALI_PROFILING_INTERNAL_H__
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "mali_osk.h"

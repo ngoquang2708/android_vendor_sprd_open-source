@@ -51,7 +51,7 @@ void mali_pm_os_suspend(void)
 	mali_gp_scheduler_suspend();
 	mali_pp_scheduler_suspend();
 	mali_utilization_suspend();
-	mali_group_power_off(MALI_TRUE);
+	mali_group_power_off();
 	mali_power_on = MALI_FALSE;
 	mali_platform_power_mode_change(2);
 }
@@ -63,19 +63,22 @@ void mali_pm_os_resume(void)
 
 	MALI_DEBUG_PRINT(3, ("Mali PM: OS resume\n"));
 
-	if (MALI_TRUE != mali_power_on) {
+	if (MALI_TRUE != mali_power_on)
+	{
 		mali_platform_power_mode_change(0);
 		do_reset = MALI_TRUE;
 	}
 
-	if (NULL != pmu) {
+	if (NULL != pmu)
+	{
 		mali_pmu_reset(pmu);
 	}
 
 	mali_power_on = MALI_TRUE;
 	_mali_osk_write_mem_barrier();
 
-	if (do_reset) {
+	if (do_reset)
+	{
 		mali_pm_reset_gpu();
 		mali_group_power_on();
 	}
@@ -87,7 +90,7 @@ void mali_pm_os_resume(void)
 void mali_pm_runtime_suspend(void)
 {
 	MALI_DEBUG_PRINT(3, ("Mali PM: Runtime suspend\n"));
-	mali_group_power_off(MALI_TRUE);
+	mali_group_power_off();
 	mali_power_on = MALI_FALSE;
 	mali_platform_power_mode_change(1);
 }
@@ -99,19 +102,22 @@ void mali_pm_runtime_resume(void)
 
 	MALI_DEBUG_PRINT(3, ("Mali PM: Runtime resume\n"));
 
-	if (MALI_TRUE != mali_power_on) {
+	if (MALI_TRUE != mali_power_on)
+	{
 		mali_platform_power_mode_change(0);
 		do_reset = MALI_TRUE;
 	}
 
-	if (NULL != pmu) {
+	if (NULL != pmu)
+	{
 		mali_pmu_reset(pmu);
 	}
 
 	mali_power_on = MALI_TRUE;
 	_mali_osk_write_mem_barrier();
 
-	if (do_reset) {
+	if (do_reset)
+	{
 		mali_pm_reset_gpu();
 		mali_group_power_on();
 	}

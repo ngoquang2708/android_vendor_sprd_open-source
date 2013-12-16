@@ -14,7 +14,6 @@
 #include "mali_osk.h"
 #include "mali_pp_job.h"
 #include "mali_hw_core.h"
-#include "mali_dma.h"
 
 struct mali_group;
 
@@ -24,11 +23,14 @@ struct mali_group;
  * Definition of the PP core struct
  * Used to track a PP core in the system.
  */
-struct mali_pp_core {
+struct mali_pp_core
+{
 	struct mali_hw_core  hw_core;           /**< Common for all HW cores */
 	_mali_osk_irq_t     *irq;               /**< IRQ handler */
 	u32                  core_id;           /**< Unique core ID */
 	u32                  bcast_id;          /**< The "flag" value used by the Mali-450 broadcast and DLBU unit */
+	u32                  counter_src0_used; /**< The selected performance counter 0 when a job is running */
+	u32                  counter_src1_used; /**< The selected performance counter 1 when a job is running */
 };
 
 _mali_osk_errcode_t mali_pp_initialize(void);
@@ -45,12 +47,6 @@ _mali_osk_errcode_t mali_pp_reset(struct mali_pp_core *core);
 _mali_osk_errcode_t mali_pp_hard_reset(struct mali_pp_core *core);
 
 void mali_pp_job_start(struct mali_pp_core *core, struct mali_pp_job *job, u32 sub_job, mali_bool restart_virtual);
-
-/**
- * @brief Add commands to DMA command buffer to start PP job on core.
- */
-void mali_pp_job_dma_cmd_prepare(struct mali_pp_core *core, struct mali_pp_job *job, u32 sub_job,
-                                 mali_bool restart_virtual, mali_dma_cmd_buf *buf);
 
 u32 mali_pp_core_get_version(struct mali_pp_core *core);
 

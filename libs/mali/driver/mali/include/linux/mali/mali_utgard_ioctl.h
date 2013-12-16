@@ -16,7 +16,8 @@
 #include <linux/fs.h>       /* file system operations */
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /**
@@ -43,14 +44,15 @@ extern "C" {
 #define MALI_IOC_POST_NOTIFICATION          _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_POST_NOTIFICATION, _mali_uk_post_notification_s *)
 #define MALI_IOC_GET_USER_SETTING           _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_GET_USER_SETTING, _mali_uk_get_user_setting_s *)
 #define MALI_IOC_GET_USER_SETTINGS          _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_GET_USER_SETTINGS, _mali_uk_get_user_settings_s *)
-#define MALI_IOC_REQUEST_HIGH_PRIORITY      _IOW (MALI_IOC_CORE_BASE, _MALI_UK_REQUEST_HIGH_PRIORITY, _mali_uk_request_high_priority_s *)
-#define MALI_IOC_TIMELINE_GET_LATEST_POINT  _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_TIMELINE_GET_LATEST_POINT, _mali_uk_timeline_get_latest_point_s *)
-#define MALI_IOC_TIMELINE_WAIT              _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_TIMELINE_WAIT, _mali_uk_timeline_wait_s *)
-#define MALI_IOC_TIMELINE_CREATE_SYNC_FENCE _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_TIMELINE_CREATE_SYNC_FENCE, _mali_uk_timeline_create_sync_fence_s *)
-#define MALI_IOC_SOFT_JOB_START             _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_SOFT_JOB_START, _mali_uk_soft_job_start_s *)
-#define MALI_IOC_SOFT_JOB_SIGNAL            _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_SOFT_JOB_SIGNAL, _mali_uk_soft_job_signal_s *)
+#define MALI_IOC_STREAM_CREATE              _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_STREAM_CREATE, _mali_uk_stream_create_s *)
+#define MALI_IOC_FENCE_CREATE_EMPTY         _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_FENCE_CREATE_EMPTY, _mali_uk_fence_create_empty_s *)
+#define MALI_IOC_FENCE_VALIDATE             _IOR(MALI_IOC_CORE_BASE, _MALI_UK_FENCE_VALIDATE, _mali_uk_fence_validate_s *)
 #define MALI_IOC_SET_GPU_LEVEL              _IOWR(MALI_IOC_CORE_BASE, _MALI_UK_SET_GPU_LEVEL, int)
 
+#define MALI_IOC_MEM_GET_BIG_BLOCK          _IOWR(MALI_IOC_MEMORY_BASE, _MALI_UK_GET_BIG_BLOCK, void *)
+#define MALI_IOC_MEM_FREE_BIG_BLOCK         _IOW (MALI_IOC_MEMORY_BASE, _MALI_UK_FREE_BIG_BLOCK, void *)
+#define MALI_IOC_MEM_INIT                   _IOR (MALI_IOC_MEMORY_BASE, _MALI_UK_INIT_MEM, _mali_uk_init_mem_s *)
+#define MALI_IOC_MEM_TERM                   _IOW (MALI_IOC_MEMORY_BASE, _MALI_UK_TERM_MEM, _mali_uk_term_mem_s *)
 #define MALI_IOC_MEM_MAP_EXT                _IOWR(MALI_IOC_MEMORY_BASE, _MALI_UK_MAP_EXT_MEM, _mali_uk_map_external_mem_s *)
 #define MALI_IOC_MEM_UNMAP_EXT              _IOW (MALI_IOC_MEMORY_BASE, _MALI_UK_UNMAP_EXT_MEM, _mali_uk_unmap_external_mem_s *)
 #define MALI_IOC_MEM_ATTACH_DMA_BUF         _IOWR(MALI_IOC_MEMORY_BASE, _MALI_UK_ATTACH_DMA_BUF, _mali_uk_attach_dma_buf_s *)
@@ -63,7 +65,6 @@ extern "C" {
 #define MALI_IOC_MEM_WRITE_SAFE             _IOWR(MALI_IOC_MEMORY_BASE, _MALI_UK_MEM_WRITE_SAFE, _mali_uk_mem_write_safe_s *)
 
 #define MALI_IOC_PP_START_JOB               _IOWR(MALI_IOC_PP_BASE, _MALI_UK_PP_START_JOB, _mali_uk_pp_start_job_s *)
-#define MALI_IOC_PP_AND_GP_START_JOB        _IOWR(MALI_IOC_PP_BASE, _MALI_UK_PP_AND_GP_START_JOB, _mali_uk_pp_and_gp_start_job_s *)
 #define MALI_IOC_PP_NUMBER_OF_CORES_GET	    _IOR (MALI_IOC_PP_BASE, _MALI_UK_GET_PP_NUMBER_OF_CORES, _mali_uk_get_pp_number_of_cores_s *)
 #define MALI_IOC_PP_CORE_VERSION_GET	    _IOR (MALI_IOC_PP_BASE, _MALI_UK_GET_PP_CORE_VERSION, _mali_uk_get_pp_core_version_s * )
 #define MALI_IOC_PP_DISABLE_WB              _IOW (MALI_IOC_PP_BASE, _MALI_UK_PP_DISABLE_WB, _mali_uk_pp_disable_wb_s * )
@@ -82,12 +83,6 @@ extern "C" {
 #define MALI_IOC_PROFILING_REPORT_SW_COUNTERS  _IOW (MALI_IOC_PROFILING_BASE, _MALI_UK_PROFILING_REPORT_SW_COUNTERS, _mali_uk_sw_counters_report_s *)
 
 #define MALI_IOC_VSYNC_EVENT_REPORT         _IOW (MALI_IOC_VSYNC_BASE, _MALI_UK_VSYNC_EVENT_REPORT, _mali_uk_vsync_event_report_s *)
-
-/* Deprecated ioctls */
-#define MALI_IOC_MEM_GET_BIG_BLOCK          _IOWR(MALI_IOC_MEMORY_BASE, _MALI_UK_GET_BIG_BLOCK, void *)
-#define MALI_IOC_MEM_FREE_BIG_BLOCK         _IOW (MALI_IOC_MEMORY_BASE, _MALI_UK_FREE_BIG_BLOCK, void *)
-#define MALI_IOC_MEM_INIT                   _IOR (MALI_IOC_MEMORY_BASE, _MALI_UK_INIT_MEM, void *)
-#define MALI_IOC_MEM_TERM                   _IOW (MALI_IOC_MEMORY_BASE, _MALI_UK_TERM_MEM, void *)
 
 #ifdef __cplusplus
 }
