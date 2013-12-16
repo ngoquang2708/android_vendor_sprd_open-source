@@ -87,6 +87,8 @@
 
 #define AUDIO_OUT_FILE_PATH  "data/audio_out.pcm"
 
+//make sure this device is not used by android
+#define SPRD_AUDIO_IN_DUALMIC_VOICE  0x81000000 //in:0x80000000
 
 #define PRIVATE_NAME_LEN 60
 
@@ -416,6 +418,7 @@ static const dev_names_para_t dev_names_linein[] = {
     { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
+    { SPRD_AUDIO_IN_DUALMIC_VOICE, "dual-mic-voice" },
     //{ "linein-capture"},
 };
 static const dev_names_para_t dev_names_digitalfm[] = {
@@ -434,6 +437,7 @@ static const dev_names_para_t dev_names_digitalfm[] = {
     { AUDIO_DEVICE_IN_WIRED_HEADSET, "headset-in" },
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
+    { SPRD_AUDIO_IN_DUALMIC_VOICE, "dual-mic-voice" },
     //{ "linein-capture"},
 };
 #define FM_VOLUME_MAX 15
@@ -761,12 +765,22 @@ static int get_route_depth (
         int on)
 {
     unsigned int i = 0;
+
     for (i=0; i<adev->num_dev_cfgs; i++) {
-        if (devices & adev->dev_cfgs[i].mask) {
-            if (on)
-                return adev->dev_cfgs[i].on_len;
-            else
-                return adev->dev_cfgs[i].off_len;
+        if ((devices & AUDIO_DEVICE_BIT_IN) && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            if ((devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask) {
+                if (on)
+                    return adev->dev_cfgs[i].on_len;
+                else
+                    return adev->dev_cfgs[i].off_len;
+            }
+        } else if (!(devices & AUDIO_DEVICE_BIT_IN) && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)){
+            if (devices & adev->dev_cfgs[i].mask) {
+                if (on)
+                    return adev->dev_cfgs[i].on_len;
+                else
+                    return adev->dev_cfgs[i].off_len;
+            }
         }
     }
     ALOGW("[get_route_setting], warning: devices(0x%08x) NOT found.", devices);
@@ -2858,7 +2872,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->low_power = true;
     }
 
- #if 1   
+ #if VOIP_DSP_PROCESS
     ret = str_parms_get_str(parms, "sprd_voip_start", value, sizeof(value));
     if (ret > 0) {
         if(strcmp(value, "true") == 0) {
