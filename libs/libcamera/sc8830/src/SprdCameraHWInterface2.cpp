@@ -3721,17 +3721,14 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
 
     // android.jpeg
     static const int32_t jpegThumbnailSizes[] = {
-            160, 120,
-            160, 160,
-            160, 90,
-            144, 96,
+            JPEG_THUMBNAIL_WIDTH, JPEG_THUMBNAIL_HEIGHT,
               0, 0
     };
 
     ADD_OR_SIZE(ANDROID_JPEG_AVAILABLE_THUMBNAIL_SIZES,
             jpegThumbnailSizes, sizeof(jpegThumbnailSizes)/sizeof(int32_t));
 
-    static const int32_t jpegMaxSize = 10 * 1024 * 1024;
+    static const int32_t jpegMaxSize = JPEG_MAX_SIZE;
     ADD_OR_SIZE(ANDROID_JPEG_MAX_SIZE, &jpegMaxSize, 1);
 
     // android.stats
