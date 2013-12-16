@@ -62,7 +62,8 @@ typedef enum mali_dlbu_register {
 	                                                     0 enable PP0 for load balancing */
 } mali_dlbu_register;
 
-typedef enum {
+typedef enum
+{
 	PP0ENABLE = 0,
 	PP1ENABLE,
 	PP2ENABLE,
@@ -73,7 +74,8 @@ typedef enum {
 	PP7ENABLE
 } mali_dlbu_pp_enable;
 
-struct mali_dlbu_core {
+struct mali_dlbu_core
+{
 	struct mali_hw_core     hw_core;           /**< Common for all HW cores */
 	u32                     pp_cores_mask;     /**< This is a mask for the PP cores whose operation will be controlled by LBU
 	                                              see MALI_DLBU_REGISTER_PP_ENABLE_MASK register */
@@ -84,7 +86,8 @@ _mali_osk_errcode_t mali_dlbu_initialize(void)
 
 	MALI_DEBUG_PRINT(2, ("Mali DLBU: Initializing\n"));
 
-	if (_MALI_OSK_ERR_OK == mali_mmu_get_table_page(&mali_dlbu_phys_addr, &mali_dlbu_cpu_addr)) {
+	if (_MALI_OSK_ERR_OK == mali_mmu_get_table_page(&mali_dlbu_phys_addr, &mali_dlbu_cpu_addr))
+	{
 		MALI_SUCCESS;
 	}
 
@@ -95,7 +98,7 @@ void mali_dlbu_terminate(void)
 {
 	MALI_DEBUG_PRINT(3, ("Mali DLBU: terminating\n"));
 
-	mali_mmu_release_table_page(mali_dlbu_phys_addr, mali_dlbu_cpu_addr);
+	mali_mmu_release_table_page(mali_dlbu_phys_addr);
 }
 
 struct mali_dlbu_core *mali_dlbu_create(const _mali_osk_resource_t * resource)
@@ -105,10 +108,13 @@ struct mali_dlbu_core *mali_dlbu_create(const _mali_osk_resource_t * resource)
 	MALI_DEBUG_PRINT(2, ("Mali DLBU: Creating Mali dynamic load balancing unit: %s\n", resource->description));
 
 	core = _mali_osk_malloc(sizeof(struct mali_dlbu_core));
-	if (NULL != core) {
-		if (_MALI_OSK_ERR_OK == mali_hw_core_create(&core->hw_core, resource, MALI_DLBU_SIZE)) {
+	if (NULL != core)
+	{
+		if (_MALI_OSK_ERR_OK == mali_hw_core_create(&core->hw_core, resource, MALI_DLBU_SIZE))
+		{
 			core->pp_cores_mask = 0;
-			if (_MALI_OSK_ERR_OK == mali_dlbu_reset(core)) {
+			if (_MALI_OSK_ERR_OK == mali_dlbu_reset(core))
+			{
 				return core;
 			}
 			MALI_PRINT_ERROR(("Failed to reset DLBU %s\n", core->hw_core.description));
@@ -116,7 +122,9 @@ struct mali_dlbu_core *mali_dlbu_create(const _mali_osk_resource_t * resource)
 		}
 
 		_mali_osk_free(core);
-	} else {
+	}
+	else
+	{
 		MALI_PRINT_ERROR(("Mali DLBU: Failed to allocate memory for DLBU core\n"));
 	}
 
@@ -191,7 +199,7 @@ void mali_dlbu_remove_group(struct mali_dlbu_core *dlbu, struct mali_group *grou
 	bcast_id = mali_pp_core_get_bcast_id(pp_core);
 
 	dlbu->pp_cores_mask &= ~bcast_id;
-	MALI_DEBUG_PRINT(3, ("Mali DLBU: Removing core[%d] New mask= 0x%02x\n", bcast_id, dlbu->pp_cores_mask));
+		MALI_DEBUG_PRINT(3, ("Mali DLBU: Removing core[%d] New mask= 0x%02x\n", bcast_id, dlbu->pp_cores_mask));
 }
 
 /* Configure the DLBU for \a job. This needs to be done before the job is started on the groups in the DLBU. */

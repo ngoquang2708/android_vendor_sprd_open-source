@@ -60,12 +60,14 @@ static struct dentry *ump_debugfs_dir = NULL;
  * Each memory mapping has a reference to the UMP memory it maps.
  * We release this reference when the last memory mapping is unmapped.
  */
-typedef struct ump_vma_usage_tracker {
+typedef struct ump_vma_usage_tracker
+{
 	int references;
 	ump_dd_handle handle;
 } ump_vma_usage_tracker;
 
-struct ump_device {
+struct ump_device
+{
 	struct cdev cdev;
 #if UMP_LICENSE_IS_GPL
 	struct class * ump_class;
@@ -88,7 +90,8 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma);
 
 
 /* This variable defines the file operations this UMP device driver offer */
-static struct file_operations ump_fops = {
+static struct file_operations ump_fops =
+{
 	.owner   = THIS_MODULE,
 	.open    = ump_file_open,
 	.release = ump_file_release,
@@ -111,7 +114,8 @@ static int ump_initialize_module(void)
 //	DBG_MSG(2, ("Inserting UMP device driver. Compiled: %s, time: %s\n", __DATE__, __TIME__));
 
 	err = ump_kernel_constructor();
-	if (_MALI_OSK_ERR_OK != err) {
+	if (_MALI_OSK_ERR_OK != err)
+	{
 		MSG_ERR(("UMP device driver init failed\n"));
 		return map_errcode(err);
 	}
@@ -137,17 +141,17 @@ static void ump_cleanup_module(void)
 
 static ssize_t ump_memory_used_read(struct file *filp, char __user *ubuf, size_t cnt, loff_t *ppos)
 {
-	char buf[64];
-	size_t r;
-	u32 mem = _ump_ukk_report_memory_usage();
+        char buf[64];
+        size_t r;
+        u32 mem = _ump_ukk_report_memory_usage();
 
-	r = snprintf(buf, 64, "%u\n", mem);
-	return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
+        r = snprintf(buf, 64, "%u\n", mem);
+        return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
 }
 
 static const struct file_operations ump_memory_usage_fops = {
-	.owner = THIS_MODULE,
-	.read = ump_memory_used_read,
+        .owner = THIS_MODULE,
+        .read = ump_memory_used_read,
 };
 
 /*
@@ -159,24 +163,31 @@ int ump_kernel_device_initialize(void)
 	dev_t dev = 0;
 #if UMP_LICENSE_IS_GPL
 	ump_debugfs_dir = debugfs_create_dir(ump_dev_name, NULL);
-	if (ERR_PTR(-ENODEV) == ump_debugfs_dir) {
-		ump_debugfs_dir = NULL;
-	} else {
+	if (ERR_PTR(-ENODEV) == ump_debugfs_dir)
+	{
+			ump_debugfs_dir = NULL;
+	}
+	else
+	{
 		debugfs_create_file("memory_usage", 0400, ump_debugfs_dir, NULL, &ump_memory_usage_fops);
 	}
 #endif
 
-	if (0 == ump_major) {
+	if (0 == ump_major)
+	{
 		/* auto select a major */
 		err = alloc_chrdev_region(&dev, 0, 1, ump_dev_name);
 		ump_major = MAJOR(dev);
-	} else {
+	}
+	else
+	{
 		/* use load time defined major number */
 		dev = MKDEV(ump_major, 0);
 		err = register_chrdev_region(dev, 1, ump_dev_name);
 	}
 
-	if (0 == err) {
+	if (0 == err)
+	{
 		memset(&ump_device, 0, sizeof(ump_device));
 
 		/* initialize our char dev data */
@@ -186,16 +197,21 @@ int ump_kernel_device_initialize(void)
 
 		/* register char dev with the kernel */
 		err = cdev_add(&ump_device.cdev, dev, 1/*count*/);
-		if (0 == err) {
+		if (0 == err)
+		{
 
 #if UMP_LICENSE_IS_GPL
 			ump_device.ump_class = class_create(THIS_MODULE, ump_dev_name);
-			if (IS_ERR(ump_device.ump_class)) {
+			if (IS_ERR(ump_device.ump_class))
+			{
 				err = PTR_ERR(ump_device.ump_class);
-			} else {
+			}
+			else
+			{
 				struct device * mdev;
 				mdev = device_create(ump_device.ump_class, NULL, dev, NULL, ump_dev_name);
-				if (!IS_ERR(mdev)) {
+				if (!IS_ERR(mdev))
+				{
 					return 0;
 				}
 
@@ -248,14 +264,16 @@ static int ump_file_open(struct inode *inode, struct file *filp)
 	_mali_osk_errcode_t err;
 
 	/* input validation */
-	if (0 != MINOR(inode->i_rdev)) {
+	if (0 != MINOR(inode->i_rdev))
+	{
 		MSG_ERR(("Minor not zero in ump_file_open()\n"));
 		return -ENODEV;
 	}
 
 	/* Call the OS-Independent UMP Open function */
 	err = _ump_ukk_open((void**) &session_data );
-	if( _MALI_OSK_ERR_OK != err ) {
+	if( _MALI_OSK_ERR_OK != err )
+	{
 		MSG_ERR(("Ump failed to open a new session\n"));
 		return map_errcode( err );
 	}
@@ -276,7 +294,8 @@ static int ump_file_release(struct inode *inode, struct file *filp)
 	_mali_osk_errcode_t err;
 
 	err = _ump_ukk_close((void**) &filp->private_data );
-	if( _MALI_OSK_ERR_OK != err ) {
+	if( _MALI_OSK_ERR_OK != err )
+	{
 		return map_errcode( err );
 	}
 
@@ -303,7 +322,8 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 #endif
 
 	session_data = (struct ump_session_data *)filp->private_data;
-	if (NULL == session_data) {
+	if (NULL == session_data)
+	{
 		MSG_ERR(("No session data attached to file object\n"));
 		return -ENOTTY;
 	}
@@ -311,51 +331,52 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 	/* interpret the argument as a user pointer to something */
 	argument = (void __user *)arg;
 
-	switch (cmd) {
-	case UMP_IOC_QUERY_API_VERSION:
-		err = ump_get_api_version_wrapper((u32 __user *)argument, session_data);
-		break;
+	switch (cmd)
+	{
+		case UMP_IOC_QUERY_API_VERSION:
+			err = ump_get_api_version_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_ALLOCATE :
-		err = ump_allocate_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_ALLOCATE :
+			err = ump_allocate_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_RELEASE:
-		err = ump_release_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_RELEASE:
+			err = ump_release_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_SIZE_GET:
-		err = ump_size_get_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_SIZE_GET:
+			err = ump_size_get_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_MSYNC:
-		err = ump_msync_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_MSYNC:
+			err = ump_msync_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_SECURE_ID_FROM_PHYS_BLOCKS:
-		err = ump_secure_id_from_phys_blocks_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_SECURE_ID_FROM_PHYS_BLOCKS:
+			err = ump_secure_id_from_phys_blocks_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_CACHE_OPERATIONS_CONTROL:
-		err = ump_cache_operations_control_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_CACHE_OPERATIONS_CONTROL:
+			err = ump_cache_operations_control_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_SWITCH_HW_USAGE:
-		err = ump_switch_hw_usage_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_SWITCH_HW_USAGE:
+			err = ump_switch_hw_usage_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_LOCK:
-		err = ump_lock_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_LOCK:
+			err = ump_lock_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	case UMP_IOC_UNLOCK:
-		err = ump_unlock_wrapper((u32 __user *)argument, session_data);
-		break;
+		case UMP_IOC_UNLOCK:
+			err = ump_unlock_wrapper((u32 __user *)argument, session_data);
+			break;
 
-	default:
-		DBG_MSG(1, ("No handler for IOCTL. cmd: 0x%08x, arg: 0x%08lx\n", cmd, arg));
-		err = -EFAULT;
-		break;
+		default:
+			DBG_MSG(1, ("No handler for IOCTL. cmd: 0x%08x, arg: 0x%08lx\n", cmd, arg));
+			err = -EFAULT;
+			break;
 	}
 
 	return err;
@@ -363,26 +384,18 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 
 int map_errcode( _mali_osk_errcode_t err )
 {
-	switch(err) {
-	case _MALI_OSK_ERR_OK :
-		return 0;
-	case _MALI_OSK_ERR_FAULT:
-		return -EFAULT;
-	case _MALI_OSK_ERR_INVALID_FUNC:
-		return -ENOTTY;
-	case _MALI_OSK_ERR_INVALID_ARGS:
-		return -EINVAL;
-	case _MALI_OSK_ERR_NOMEM:
-		return -ENOMEM;
-	case _MALI_OSK_ERR_TIMEOUT:
-		return -ETIMEDOUT;
-	case _MALI_OSK_ERR_RESTARTSYSCALL:
-		return -ERESTARTSYS;
-	case _MALI_OSK_ERR_ITEM_NOT_FOUND:
-		return -ENOENT;
-	default:
-		return -EFAULT;
-	}
+    switch(err)
+    {
+        case _MALI_OSK_ERR_OK : return 0;
+        case _MALI_OSK_ERR_FAULT: return -EFAULT;
+        case _MALI_OSK_ERR_INVALID_FUNC: return -ENOTTY;
+        case _MALI_OSK_ERR_INVALID_ARGS: return -EINVAL;
+        case _MALI_OSK_ERR_NOMEM: return -ENOMEM;
+        case _MALI_OSK_ERR_TIMEOUT: return -ETIMEDOUT;
+        case _MALI_OSK_ERR_RESTARTSYSCALL: return -ERESTARTSYS;
+        case _MALI_OSK_ERR_ITEM_NOT_FOUND: return -ENOENT;
+        default: return -EFAULT;
+    }
 }
 
 /*
@@ -396,7 +409,8 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 
 	/* Validate the session data */
 	session_data = (struct ump_session_data *)filp->private_data;
-	if (NULL == session_data) {
+	if (NULL == session_data)
+	{
 		MSG_ERR(("mmap() called without any session data available\n"));
 		return -EFAULT;
 	}
@@ -409,7 +423,8 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 	args.secure_id = vma->vm_pgoff;
 	args.is_cached = 0;
 
-	if (!(vma->vm_flags & VM_SHARED)) {
+	if (!(vma->vm_flags & VM_SHARED))
+	{
 		args.is_cached = 1;
 		vma->vm_flags = vma->vm_flags | VM_SHARED | VM_MAYSHARE  ;
 		DBG_MSG(3, ("UMP Map function: Forcing the CPU to use cache\n"));
@@ -421,7 +436,8 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 
 	/* Call the common mmap handler */
 	err = _ump_ukk_map_mem( &args );
-	if ( _MALI_OSK_ERR_OK != err) {
+	if ( _MALI_OSK_ERR_OK != err)
+	{
 		MSG_ERR(("_ump_ukk_map_mem() failed in function ump_file_mmap()"));
 		return map_errcode( err );
 	}

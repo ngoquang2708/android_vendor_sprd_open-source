@@ -22,7 +22,8 @@
 #include "ump_kernel_common.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 _mali_osk_errcode_t _ump_osk_init( void );

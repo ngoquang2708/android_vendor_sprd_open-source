@@ -12,7 +12,8 @@
 #define __MALI_KERNEL_SYSFS_H__
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <linux/device.h>

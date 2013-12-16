@@ -26,13 +26,15 @@
  * It also contains a wait queue of exclusive waiters blocked in the ioctl
  * When a new notification is posted a single thread is resumed.
  */
-struct _mali_osk_notification_queue_t_struct {
+struct _mali_osk_notification_queue_t_struct
+{
 	spinlock_t mutex; /**< Mutex protecting the list */
 	wait_queue_head_t receive_queue; /**< Threads waiting for new entries to the queue */
 	struct list_head head; /**< List of notifications waiting to be picked up */
 };
 
-typedef struct _mali_osk_notification_wrapper_t_struct {
+typedef struct _mali_osk_notification_wrapper_t_struct
+{
 	struct list_head list;           /**< Internal linked list variable */
 	_mali_osk_notification_t data;   /**< Notification data */
 } _mali_osk_notification_wrapper_t;
@@ -57,8 +59,9 @@ _mali_osk_notification_t *_mali_osk_notification_create( u32 type, u32 size )
 	_mali_osk_notification_wrapper_t *notification;
 
 	notification = (_mali_osk_notification_wrapper_t *)kmalloc( sizeof(_mali_osk_notification_wrapper_t) + size,
-	               GFP_KERNEL | __GFP_HIGH | __GFP_REPEAT);
-	if (NULL == notification) {
+	                                                            GFP_KERNEL | __GFP_HIGH | __GFP_REPEAT);
+	if (NULL == notification)
+	{
 		MALI_DEBUG_PRINT(1, ("Failed to create a notification object\n"));
 		return NULL;
 	}
@@ -66,9 +69,12 @@ _mali_osk_notification_t *_mali_osk_notification_create( u32 type, u32 size )
 	/* Init the list */
 	INIT_LIST_HEAD(&notification->list);
 
-	if (0 != size) {
+	if (0 != size)
+	{
 		notification->data.result_buffer = ((u8*)notification) + sizeof(_mali_osk_notification_wrapper_t);
-	} else {
+	}
+	else
+	{
 		notification->data.result_buffer = NULL;
 	}
 
@@ -96,7 +102,8 @@ void _mali_osk_notification_queue_term( _mali_osk_notification_queue_t *queue )
 	_mali_osk_notification_t *result;
 	MALI_DEBUG_ASSERT_POINTER( queue );
 
-	while (_MALI_OSK_ERR_OK == _mali_osk_notification_queue_dequeue(queue, &result)) {
+	while (_MALI_OSK_ERR_OK == _mali_osk_notification_queue_dequeue(queue, &result))
+	{
 		_mali_osk_notification_delete( result );
 	}
 
@@ -148,7 +155,8 @@ _mali_osk_errcode_t _mali_osk_notification_queue_dequeue( _mali_osk_notification
 	spin_lock(&queue->mutex);
 #endif
 
-	if (!list_empty(&queue->head)) {
+	if (!list_empty(&queue->head))
+	{
 		wrapper_object = list_entry(queue->head.next, _mali_osk_notification_wrapper_t, list);
 		*result = &(wrapper_object->data);
 		list_del_init(&wrapper_object->list);
@@ -166,7 +174,7 @@ _mali_osk_errcode_t _mali_osk_notification_queue_dequeue( _mali_osk_notification
 
 _mali_osk_errcode_t _mali_osk_notification_queue_receive( _mali_osk_notification_queue_t *queue, _mali_osk_notification_t **result )
 {
-	/* check input */
+    /* check input */
 	MALI_DEBUG_ASSERT_POINTER( queue );
 	MALI_DEBUG_ASSERT_POINTER( result );
 
@@ -174,7 +182,8 @@ _mali_osk_errcode_t _mali_osk_notification_queue_receive( _mali_osk_notification
 	*result = NULL;
 
 	if (wait_event_interruptible(queue->receive_queue,
-	                             _MALI_OSK_ERR_OK == _mali_osk_notification_queue_dequeue(queue, result))) {
+	                             _MALI_OSK_ERR_OK == _mali_osk_notification_queue_dequeue(queue, result)))
+	{
 		return _MALI_OSK_ERR_RESTARTSYSCALL;
 	}
 

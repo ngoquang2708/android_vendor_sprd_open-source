@@ -17,7 +17,8 @@
 #define __MALI_KERNEL_LICENSE_H__
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #define MALI_KERNEL_LINUX_LICENSE     "GPL"

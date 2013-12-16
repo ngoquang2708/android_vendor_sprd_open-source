@@ -18,7 +18,8 @@
 #define GRALLOC_VSYNC_REPORT_H_
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 

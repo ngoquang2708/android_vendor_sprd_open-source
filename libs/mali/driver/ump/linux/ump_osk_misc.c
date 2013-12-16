@@ -22,7 +22,8 @@
 /* is called from ump_kernel_constructor in common code */
 _mali_osk_errcode_t _ump_osk_init( void )
 {
-	if (0 != ump_kernel_device_initialize()) {
+	if (0 != ump_kernel_device_initialize())
+	{
 		return _MALI_OSK_ERR_FAULT;
 	}
 

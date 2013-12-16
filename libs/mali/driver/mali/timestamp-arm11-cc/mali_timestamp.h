@@ -19,7 +19,7 @@ MALI_STATIC_INLINE _mali_osk_errcode_t _mali_timestamp_reset(void)
 	 * reset counters and overflow flags
 	 */
 
-	u32 mask = (1 << 0) | /* enable all three counters */
+    u32 mask = (1 << 0) | /* enable all three counters */
 	           (0 << 1) | /* reset both Count Registers to 0x0 */
 	           (1 << 2) | /* reset the Cycle Counter Register to 0x0 */
 	           (0 << 3) | /* 1 = Cycle Counter Register counts every 64th processor clock cycle */

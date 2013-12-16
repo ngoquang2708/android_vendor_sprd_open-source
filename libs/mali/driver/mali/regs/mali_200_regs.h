@@ -14,7 +14,8 @@
 /**
  *  Enum for management register addresses.
  */
-enum mali200_mgmt_reg {
+enum mali200_mgmt_reg
+{
 	MALI200_REG_ADDR_MGMT_VERSION                              = 0x1000,
 	MALI200_REG_ADDR_MGMT_CURRENT_REND_LIST_ADDR               = 0x1004,
 	MALI200_REG_ADDR_MGMT_STATUS                               = 0x1008,
@@ -36,9 +37,6 @@ enum mali200_mgmt_reg {
 	MALI200_REG_ADDR_MGMT_PERF_CNT_1_ENABLE                    = 0x10a0,
 	MALI200_REG_ADDR_MGMT_PERF_CNT_1_SRC                       = 0x10a4,
 	MALI200_REG_ADDR_MGMT_PERF_CNT_1_VALUE                     = 0x10ac,
-
-	MALI200_REG_ADDR_MGMT_PERFMON_CONTR                        = 0x10b0,
-	MALI200_REG_ADDR_MGMT_PERFMON_BASE                         = 0x10b4,
 
 	MALI200_REG_SIZEOF_REGISTER_BANK                           = 0x10f0
 
@@ -101,7 +99,8 @@ enum mali200_mgmt_status {
 	MALI200_REG_VAL_STATUS_BUS_STOPPED          = (1<<4),
 };
 
-enum mali200_render_unit {
+enum mali200_render_unit
+{
 	MALI200_REG_ADDR_FRAME = 0x0000,
 	MALI200_REG_ADDR_RSW   = 0x0004,
 	MALI200_REG_ADDR_STACK = 0x0030,
@@ -110,14 +109,13 @@ enum mali200_render_unit {
 };
 
 enum mali200_wb_unit {
-	MALI200_REG_ADDR_WB0 = 0x0100,
-	MALI200_REG_ADDR_WB1 = 0x0200,
-	MALI200_REG_ADDR_WB2 = 0x0300
+    MALI200_REG_ADDR_WB0 = 0x0100,
+    MALI200_REG_ADDR_WB1 = 0x0200,
+    MALI200_REG_ADDR_WB2 = 0x0300
 };
 
 enum mali200_wb_unit_regs {
 	MALI200_REG_ADDR_WB_SOURCE_SELECT = 0x0000,
-	MALI200_REG_ADDR_WB_SOURCE_ADDR   = 0x0004,
 };
 
 /* This should be in the top 16 bit of the version register of Mali PP */
