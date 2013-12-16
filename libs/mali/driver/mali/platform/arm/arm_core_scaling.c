@@ -34,8 +34,7 @@ static void set_num_cores(struct work_struct *work)
 
 static void enable_one_core(void)
 {
-	if (num_cores_enabled < num_cores_total)
-	{
+	if (num_cores_enabled < num_cores_total) {
 		++num_cores_enabled;
 		schedule_work(&wq_work);
 		MALI_DEBUG_PRINT(3, ("Core scaling: Enabling one more core\n"));
@@ -47,8 +46,7 @@ static void enable_one_core(void)
 
 static void disable_one_core(void)
 {
-	if (1 < num_cores_enabled)
-	{
+	if (1 < num_cores_enabled) {
 		--num_cores_enabled;
 		schedule_work(&wq_work);
 		MALI_DEBUG_PRINT(3, ("Core scaling: Disabling one core\n"));
@@ -60,8 +58,7 @@ static void disable_one_core(void)
 
 static void enable_max_num_cores(void)
 {
-	if (num_cores_enabled < num_cores_total)
-	{
+	if (num_cores_enabled < num_cores_total) {
 		num_cores_enabled = num_cores_total;
 		schedule_work(&wq_work);
 		MALI_DEBUG_PRINT(3, ("Core scaling: Enabling maximum number of cores\n"));
@@ -78,6 +75,11 @@ void mali_core_scaling_init(int num_pp_cores)
 	num_cores_enabled = num_pp_cores;
 
 	/* NOTE: Mali is not fully initialized at this point. */
+}
+
+void mali_core_scaling_sync(int num_cores)
+{
+	num_cores_enabled = num_cores;
 }
 
 void mali_core_scaling_term(void)
@@ -106,24 +108,15 @@ void mali_core_scaling_update(struct mali_gpu_utilization_data *data)
 	/* NOTE: this function is normally called directly from the utilization callback which is in
 	 * timer context. */
 
-	if (     PERCENT_OF(90, 256) < data->utilization_pp)
-	{
+	if (     PERCENT_OF(90, 256) < data->utilization_pp) {
 		enable_max_num_cores();
-	}
-	else if (PERCENT_OF(50, 256) < data->utilization_pp)
-	{
+	} else if (PERCENT_OF(50, 256) < data->utilization_pp) {
 		enable_one_core();
-	}
-	else if (PERCENT_OF(40, 256) < data->utilization_pp)
-	{
+	} else if (PERCENT_OF(40, 256) < data->utilization_pp) {
 		/* do nothing */
-	}
-	else if (PERCENT_OF( 0, 256) < data->utilization_pp)
-	{
+	} else if (PERCENT_OF( 0, 256) < data->utilization_pp) {
 		disable_one_core();
-	}
-	else
-	{
+	} else {
 		/* do nothing */
 	}
 }

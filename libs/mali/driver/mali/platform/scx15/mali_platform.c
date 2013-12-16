@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/pm.h>
+#include <linux/dma-mapping.h>
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
 #endif
@@ -101,6 +102,7 @@ static struct platform_device mali_gpu_device =
 	.id = 0,
 	.num_resources = ARRAY_SIZE(mali_gpu_resources),
 	.resource = mali_gpu_resources,
+	.dev.coherent_dma_mask = DMA_BIT_MASK(32),
 	.dev.platform_data = &mali_gpu_data,
 	.dev.release = mali_platform_device_release,
 };

@@ -11,13 +11,11 @@
 #ifndef _MALI_UTGARD_COUNTERS_H_
 #define _MALI_UTGARD_COUNTERS_H_
 
-typedef struct
-{
+typedef struct {
 	void *unused;
 } mali_cinstr_counter_info;
 
-typedef enum
-{
+typedef enum {
 	MALI_CINSTR_COUNTER_SOURCE_EGL      =     0,
 	MALI_CINSTR_COUNTER_SOURCE_OPENGLES =  1000,
 	MALI_CINSTR_COUNTER_SOURCE_OPENVG   =  2000,
@@ -41,8 +39,7 @@ typedef enum
 #define MALI_CINSTR_PP_LAST_COUNTER (MALI_CINSTR_COUNTER_SOURCE_PP + 999)
 
 
-typedef enum
-{
+typedef enum {
 	/* EGL counters */
 
 	MALI_CINSTR_EGL_BLIT_TIME                                            = MALI_CINSTR_COUNTER_SOURCE_EGL + 0,

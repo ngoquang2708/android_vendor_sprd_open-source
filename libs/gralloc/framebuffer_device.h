@@ -19,7 +19,7 @@
 #include <hardware/hardware.h>
 
 // Create a framebuffer device
-int framebuffer_device_open(hw_module_t const* module, const char* name, hw_device_t** device);
+int framebuffer_device_open(hw_module_t const *module, const char *name, hw_device_t **device);
 
 // Initialize the framebuffer (must keep module lock before calling
-int init_frame_buffer_locked(struct private_module_t* module);
+int init_frame_buffer_locked(struct private_module_t *module);

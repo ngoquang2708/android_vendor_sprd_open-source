@@ -19,8 +19,7 @@
 #include "ump_kernel_types.h"
 
 
-typedef struct ump_memory_allocation
-{
+typedef struct ump_memory_allocation {
 	void                    * phys_addr;
 	void                    * mapping;
 	unsigned long             size;
@@ -32,8 +31,7 @@ typedef struct ump_memory_allocation
 	u32 is_cached;
 } ump_memory_allocation;
 
-typedef struct ump_memory_backend
-{
+typedef struct ump_memory_backend {
 	int  (*allocate)(void* ctx, ump_dd_mem * descriptor);
 	void (*release)(void* ctx, ump_dd_mem * descriptor);
 	void (*shutdown)(struct ump_memory_backend * backend);

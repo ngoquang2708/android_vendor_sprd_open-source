@@ -52,8 +52,7 @@ typedef enum {
  * Commands to geometry processor.
  *  @see MALIGP2_CTRL_REG_CMD
  */
-typedef enum
-{
+typedef enum {
 	MALIGP2_REG_VAL_CMD_START_VS			= (1<< 0),
 	MALIGP2_REG_VAL_CMD_START_PLBU			= (1<< 1),
 	MALIGP2_REG_VAL_CMD_UPDATE_PLBU_ALLOC	= (1<< 4),

@@ -11,92 +11,102 @@
 /**
  * @file mali_sync.h
  *
+ * Mali interface for Linux sync objects.
  */
 
 #ifndef _MALI_SYNC_H_
 #define _MALI_SYNC_H_
 
-#ifdef CONFIG_SYNC
+#if defined(CONFIG_SYNC)
 
 #include <linux/seq_file.h>
 #include <linux/sync.h>
 
-#define MALI_SYNC_TIMED_FENCE_TIMEOUT 4000 /* 4s */
+#include "mali_osk.h"
 
-/*
- * Create a stream object.
- * Built on top of timeline object.
- * Exposed as a file descriptor.
- * Life-time controlled via the file descriptor:
- * - dup to add a ref
- * - close to remove a ref
- */
-_mali_osk_errcode_t mali_stream_create(const char * name, int * out_fd);
-
-/*
- * Create a fence in a stream object
- */
-struct sync_pt *mali_stream_create_point(int tl_fd);
-int mali_stream_create_fence(struct sync_pt *pt);
-int mali_stream_create_empty_fence(int tl_fd);
+struct mali_sync_flag;
 
 /**
- * Commit an empty timed fence
+ * Create a sync timeline.
  *
- * This stops the timer of the empty fence and returns wether or not the fence
- * is still suitable for use.
- *
- * Returns -ETIME if fence is already signalled, in which case it can not be
- * used, or 0 when the timer was stopped and the fence is OK to use.
+ * @param name Name of the sync timeline.
+ * @return The new sync timeline if successful, NULL if not.
  */
-int mali_sync_timed_commit(struct sync_pt *pt);
+struct sync_timeline *mali_sync_timeline_create(const char *name);
 
-/*
- * Validate a fd to be a valid fence
- * No reference is taken.
+/**
+ * Check if sync timeline belongs to Mali.
  *
- * This function is only usable to catch unintentional user errors early,
- * it does not stop malicious code changing the fd after this function returns.
+ * @param sync_tl Sync timeline to check.
+ * @return MALI_TRUE if sync timeline belongs to Mali, MALI_FALSE if not.
  */
-_mali_osk_errcode_t mali_fence_validate(int fd);
+mali_bool mali_sync_timeline_is_ours(struct sync_timeline *sync_tl);
 
-
-/* Returns true if the specified timeline is allocated by Mali */
-int mali_sync_timeline_is_ours(struct sync_timeline *timeline);
-
-/* Allocates a timeline for Mali
+/**
+ * Creates a file descriptor representing the sync fence.  Will release sync fence if allocation of
+ * file descriptor fails.
  *
- * One timeline should be allocated per API context.
+ * @param sync_fence Sync fence.
+ * @return File descriptor representing sync fence if successful, or -1 if not.
  */
-struct sync_timeline *mali_sync_timeline_alloc(const char *name);
+s32 mali_sync_fence_fd_alloc(struct sync_fence *sync_fence);
 
-/* Allocates a sync point within the timeline.
+/**
+ * Merges two sync fences.  Both input sync fences will be released.
  *
- * The timeline must be the one allocated by mali_sync_timeline_alloc
- *
- * Sync points must be triggered in *exactly* the same order as they are allocated.
+ * @param sync_fence1 First sync fence.
+ * @param sync_fence2 Second sync fence.
+ * @return New sync fence that is the result of the merger if successful, or NULL if not.
  */
-struct sync_pt *mali_sync_pt_alloc(struct sync_timeline *parent);
+struct sync_fence *mali_sync_fence_merge(struct sync_fence *sync_fence1, struct sync_fence *sync_fence2);
 
-/* Allocates a timed sync point within the timeline.
+/**
+ * Create a sync fence that is already signaled.
  *
- * The timeline must be the one allocated by mali_sync_timeline_alloc
- *
- * Sync points must be triggered in *exactly* the same order as they are allocated.
- *
- * Timed sync points should be backed by a proper event before reaching the
- * timeout. If timeout is reached the fence will be signalled with an error (-ETIME).
+ * @param tl Sync timeline.
+ * @return New signaled sync fence if successful, NULL if not.
  */
-struct sync_pt *mali_sync_timed_pt_alloc(struct sync_timeline *parent);
+struct sync_fence *mali_sync_timeline_create_signaled_fence(struct sync_timeline *sync_tl);
 
-/* Signals a particular sync point
+/**
+ * Create a sync flag.
  *
- * Sync points must be triggered in *exactly* the same order as they are allocated.
- *
- * If they are signalled in the wrong order then a message will be printed in debug
- * builds and otherwise attempts to signal order sync_pts will be ignored.
+ * @param sync_tl Sync timeline.
+ * @param point Point on Mali timeline.
+ * @return New sync flag if successful, NULL if not.
  */
-void mali_sync_signal_pt(struct sync_pt *pt, int error);
+struct mali_sync_flag *mali_sync_flag_create(struct sync_timeline *sync_tl, u32 point);
 
-#endif /* CONFIG_SYNC */
+/**
+ * Grab sync flag reference.
+ *
+ * @param flag Sync flag.
+ */
+void mali_sync_flag_get(struct mali_sync_flag *flag);
+
+/**
+ * Release sync flag reference.  If this was the last reference, the sync flag will be freed.
+ *
+ * @param flag Sync flag.
+ */
+void mali_sync_flag_put(struct mali_sync_flag *flag);
+
+/**
+ * Signal sync flag.  All sync fences created from this flag will be signaled.
+ *
+ * @param flag Sync flag to signal.
+ * @param error Negative error code, or 0 if no error.
+ */
+void mali_sync_flag_signal(struct mali_sync_flag *flag, int error);
+
+/**
+ * Create a sync fence attached to given sync flag.
+ *
+ * @param flag Sync flag.
+ * @return New sync fence if successful, NULL if not.
+ */
+struct sync_fence *mali_sync_flag_create_fence(struct mali_sync_flag *flag);
+
+#endif /* defined(CONFIG_SYNC) */
+
 #endif /* _MALI_SYNC_H_ */

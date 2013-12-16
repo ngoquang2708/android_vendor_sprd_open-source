@@ -34,4 +34,4 @@
 #define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
 // Create an alloc device
-int alloc_device_open(hw_module_t const* module, const char* name, hw_device_t** device);
+int alloc_device_open(hw_module_t const *module, const char *name, hw_device_t **device);

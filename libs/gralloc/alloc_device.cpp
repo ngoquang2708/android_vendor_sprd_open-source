@@ -53,6 +53,7 @@
 #define ION_DEVICE "/dev/ion"
 
 
+#define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
 
 #if GRALLOC_SIMULATE_FAILURES
@@ -261,11 +262,11 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             ALOGD("in ION_HEAP_CARVEOUT_MASK");
             ion_heap_mask = ION_HEAP_CARVEOUT_MASK;
         }
-	else if(usage & GRALLOC_USAGE_OVERLAY_BUFFER)
-	{
-	    ALOGD("in ION_HEAP_OVERLAY_MASK");
-	    ion_heap_mask = ION_HEAP_CARVEOUT_OVERLAY_MASK;
-	}
+        else if(usage & GRALLOC_USAGE_OVERLAY_BUFFER)
+        {
+            ALOGD("in ION_HEAP_OVERLAY_MASK");
+            ion_heap_mask = ION_HEAP_CARVEOUT_OVERLAY_MASK;
+        }
         else
         {
             ALOGD("in ION_HEAP_SYSTEM_MASK");
@@ -545,7 +546,7 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 		default:
 			return -EINVAL;
 		}
-		size_t bpr = (w*bpp + (align-1)) & ~(align-1);
+		size_t bpr = GRALLOC_ALIGN(w * bpp, 8);
 		size = bpr * h;
 		stride = bpr / bpp;
 	}
@@ -617,6 +618,40 @@ AllocNormalBuffer:
 	{
 		return err;
 	}
+
+	/* match the framebuffer format */
+	if (usage & GRALLOC_USAGE_HW_FB)
+	{
+		format = HAL_PIXEL_FORMAT_RGBA_8888;
+	}
+
+	private_handle_t *hnd = (private_handle_t *)*pHandle;
+	int               private_usage = usage & (GRALLOC_USAGE_PRIVATE_0 |
+	                                  GRALLOC_USAGE_PRIVATE_1);
+
+	switch (private_usage)
+	{
+		case 0:
+			hnd->yuv_info = MALI_YUV_BT601_NARROW;
+			break;
+
+		case GRALLOC_USAGE_PRIVATE_1:
+			hnd->yuv_info = MALI_YUV_BT601_WIDE;
+			break;
+
+		case GRALLOC_USAGE_PRIVATE_0:
+			hnd->yuv_info = MALI_YUV_BT709_NARROW;
+			break;
+
+		case (GRALLOC_USAGE_PRIVATE_0 | GRALLOC_USAGE_PRIVATE_1):
+			hnd->yuv_info = MALI_YUV_BT709_WIDE;
+			break;
+	}
+
+	hnd->width = w;
+	hnd->height = h;
+	hnd->format = format;
+	hnd->stride = stride;
 
 	*pStride = stride;
 	return 0;

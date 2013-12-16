@@ -12,8 +12,7 @@
 #define __MALI_USER_SETTINGS_DB_H__
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include "mali_uk_types.h"
