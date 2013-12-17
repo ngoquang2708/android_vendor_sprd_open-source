@@ -438,6 +438,8 @@ class RequestQueueThread : public SprdBaseThread{
     void                  HandleTakePicture(camera_cb_type cb,int32_t parm4);
 	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
 	void                  HandleFocus(camera_cb_type cb, int32_t parm4);
+	void                  getPreviewBuffer(void);
+	int                   flush_preview_buffers();
 	sp<RequestQueueThread>      m_RequestQueueThread;
     substream_parameters_t  m_subStreams[STREAM_ID_LAST+1];
     sp<Stream> m_Stream[STREAM_ID_LAST];//parent stream

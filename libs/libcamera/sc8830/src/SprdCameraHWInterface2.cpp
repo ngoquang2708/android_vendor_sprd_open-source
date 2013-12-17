@@ -1312,6 +1312,9 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 	sprd_camera_memory_t  *pmem = NULL;
 	sp<MemoryHeapIon> pHeapIon;
 
+	HAL_LOGV("flush_buffer type %d, index %d, v_addr:0x%x, p_addr:0x%x, size %d",
+		type, index, (uint32_t)v_addr, (uint32_t)p_addr, size);
+
 	switch(type) {
 	case CAMERA_FLUSH_RAW_HEAP:
 		pmem = mRawHeap;
@@ -1322,13 +1325,12 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 		p_addr = (void*)pmem->phys_addr;
 		size = (int)pmem->phys_size;
 		break;
-	#if 0
+#if 0
 	case CAMERA_FLUSH_PREVIEW_HEAP:
-		if (index < kPreviewBufferCount) {
-			pmem = mPreviewHeapArray[index];
-		}
+		ret = MemoryHeapIon::Flush_ion_buffer(index, v_addr, p_addr, size);
+		HAL_LOGV("ret = %d", ret);
 		break;
-	#endif
+#endif
 	default:
 		break;
 	}
@@ -1336,12 +1338,38 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 	if (pmem) {
 		pHeapIon = pmem->ion_heap;
 		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
+		HAL_LOGV("ret = %d", ret);
 		if (ret) {
 			HAL_LOGE("flush_buffer error ret=%d", ret);
 		}
 	}
 	return ret;
 }
+int SprdCameraHWInterface2::flush_preview_buffers()
+{
+	int                     i;
+    stream_parameters_t     *targetStreamParms;
+	int phyaddr = 0;
+	int size =0;
+	int ret = 0;
+
+	HAL_LOGV("Enter flush_preview_buffers");
+
+    targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+
+    for (i = 0; i < targetStreamParms->numSvcBuffers; i++) {
+		const private_handle_t *priv_handle = reinterpret_cast<const private_handle_t *>(targetStreamParms->svcBufHandle[i]);
+
+		flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP,
+			 priv_handle->share_fd,
+			 (void*)mPreviewHeapArray_vir[i],
+			 (void*)mPreviewHeapArray_phy[i],
+			 priv_handle->size);
+	}
+
+	return ret;
+}
+
 
 void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 {
@@ -1471,6 +1499,7 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 	}
 	switch (cb) {
 	case CAMERA_EVT_CB_FLUSH:
+		HAL_LOGD("CAMERA_EVT_CB_FLUSH");
 		flush_buffer(CAMERA_FLUSH_RAW_HEAP_ALL, 0,(void*)0,(void*)0,0);
 		break;
 	case CAMERA_RSP_CB_SUCCESS:
@@ -1606,7 +1635,51 @@ void SprdCameraHWInterface2::camera_cb(camera_cb_type cb,
 		break;
 	}
 }
+void SprdCameraHWInterface2::getPreviewBuffer(void)
+{
+    stream_parameters_t     *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+	buffer_handle_t         *buf = NULL;
+	const private_handle_t  *priv_handle = NULL;
+	bool found = false;
+	int Index = 0;
+	int phyaddr =0;
+	int size =0;
+    int ret = 0;
+	void *vaddr= 0;
 
+	for(int j=0;j < targetStreamParms->numSvcBuffers;j++) {
+		HAL_LOGD("@@@ statue0=%d",targetStreamParms->svcBufStatus[j]);
+	}
+	for(int j=0;j < (targetStreamParms->numSvcBuffers - targetStreamParms->minUndequedBuffer);j++) {
+		found = false;
+		ret = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
+		if (ret != NO_ERROR || buf == NULL) {
+			HAL_LOGD("DEBUG(%s): first dequeue_buffer fail",__FUNCTION__);
+			return;
+		}
+		priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
+		MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
+		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
+			if ((phyaddr == mPreviewHeapArray_phy[Index])
+				&& (targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT)) {
+				found = true;
+				HAL_LOGD("@@@ Index=%d",Index);
+				targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+				vaddr = (void*)mPreviewHeapArray_vir[Index];
+				HAL_LOGV("@@@ lock ret = %d.",ret);
+				break;
+			}
+		}
+		if (!found) {
+			HAL_LOGD("ERR receivepreviewframe cannot found buf=0x%x ",phyaddr);
+			return;
+		}
+	}
+
+	for(int j=0;j < targetStreamParms->numSvcBuffers;j++) {
+		HAL_LOGD("@@@ statue=%d",targetStreamParms->svcBufStatus[j]);
+	}
+}
 int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
         int num_buffers, buffer_handle_t *registeringBuffers)
 {
@@ -1645,8 +1718,8 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 
 			 targetStreamParms->svcBufHandle[i] = registeringBuffers[i];//important
 			 targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
-			 HAL_LOGD("registerStreamBuffers index=%d Preview phyadd=0x%x,srv_add=0x%x",
-					i, (uint32_t)phyaddr,(uint32_t)targetStreamParms->svcBufHandle[i]);
+			 HAL_LOGD("registerStreamBuffers index=%d Preview phyadd=0x%x,srv_add=0x%x,status 0x%x",
+					i, (uint32_t)phyaddr,(uint32_t)targetStreamParms->svcBufHandle[i],targetStreamParms->svcBufStatus[i]);
 		}
 
 	    targetStreamParms->cancelBufNum = targetStreamParms->minUndequedBuffer;
@@ -2542,6 +2615,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					srcreq->isCropSet = false;
 				}
 	            setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
+				getPreviewBuffer();
 			    camera_ret_code_type qret = camera_start_preview(camera_cb, this,m_camCtlInfo.pictureMode);
 				if (qret != CAMERA_SUCCESS) {
 					HAL_LOGE("%s startPreview failed: sensor error.",__FUNCTION__);
@@ -2578,6 +2652,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					SET_PARM(drvTag,(uint32_t)&zoom);
 					srcreq->isCropSet = false;
 				}
+				getPreviewBuffer();
 				startPreviewInternal(0);
 			} else {
 				if ((m_camCtlInfo.pictureMode == CAMERA_ZSL_MODE)
@@ -2625,7 +2700,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 											|| srcreq->captureIntent == CAPTURE_INTENT_VIDEO_SNAPSHOT)
 											&& srcreq->outputStreamMask & STREAM_MASK_JPEG) {
         stream_parameters_t     *targetStreamParms = &(m_Stream[STREAM_ID_CAPTURE - 1]->m_parameters);
-		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_JPEG];
+		substream_parameters_t  *subParameters = &m_subStreams[STREAM_ID_JPEG];
+		stream_parameters_t     *previewStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 		uint32_t local_width = 0, local_height = 0;
 	    uint32_t mem_size0 = 0, mem_size1 = 0;
 
@@ -2647,6 +2723,16 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						return ;
 				    }
 				    WaitForPreviewStop();
+					for (i = 0 ;i < previewStreamParms->numSvcBuffers;i++) {
+						res = previewStreamParms->streamOps->cancel_buffer(previewStreamParms->streamOps,
+																			&(previewStreamParms->svcBufHandle[i]));
+						if (res) {
+							HAL_LOGE("cancelbuf res=%d",res);
+						}
+					}
+					for (i = 0; i < previewStreamParms->numSvcBuffers; i++) {
+						 previewStreamParms->svcBufStatus[i] = ON_HAL_INIT;
+					}
 				}
 			}
 			if (camera_set_dimensions(subParameters->width,subParameters->height,
@@ -3077,14 +3163,19 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		return;
 	}
 
-    if (m_Stream[STREAM_ID_PREVIEW - 1] != NULL) {
-	    StreamSP = m_Stream[STREAM_ID_PREVIEW - 1];
-	    targetStreamParms = &(StreamSP->m_parameters);
-		targetStreamParms->bufIndex = frame->buf_id;
-		targetStreamParms->m_timestamp = frame->timestamp;
-		HAL_LOGD("receivePreviewFrame Index=%d status=%d Firstfrm=%d",targetStreamParms->bufIndex,\
-			   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm);
-        if (GetStartPreviewAftPic()) {
+    StreamSP = m_Stream[STREAM_ID_PREVIEW - 1];
+	if (StreamSP == NULL) {
+		HAL_LOGE("preview stream is NULL.");
+		return;
+	}
+
+    targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+	targetStreamParms->bufIndex = frame->buf_id;
+	targetStreamParms->m_timestamp = frame->timestamp;
+	HAL_LOGD("@@@ Index=%d status=%d Firstfrm=%d",targetStreamParms->bufIndex,\
+		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm);
+    if (GetStartPreviewAftPic()) {
+		SetStartPreviewAftPic(false);
             if (StreamSP->m_IsFirstFrm)
 			    StreamSP->m_IsFirstFrm = false;
         }
@@ -3100,9 +3191,9 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		//check buf status
 		if (targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] != ON_HAL_DRIVER
 			&& targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] != ON_HAL_INIT) {
-            HAL_LOGE("receivepreviewframe BufStatus ERR(%d)",
-					targetStreamParms->svcBufStatus[targetStreamParms->bufIndex]);
-			targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFERR;
+        HAL_LOGE("BufStatus ERR(%d)",
+				targetStreamParms->svcBufStatus[targetStreamParms->bufIndex]);
+		//targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFERR;
 			if (!StreamSP->m_IsFirstFrm) {
 			    StreamSP->m_IsFirstFrm = true;
 				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
@@ -3115,188 +3206,137 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
 		    StreamSP->pushBufQ(targetStreamParms->bufIndex);
 			return;
-		}
-		//first deq 2 buf for graphic
-		if (targetStreamParms->cancelBufNum > 0) {
-		   targetStreamParms->cancelBufNum--;
-		   HAL_LOGD("receivepreviewframe cancelbuf index=%d",targetStreamParms->bufIndex);
-		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
-		   StreamSP->pushBufQ(targetStreamParms->bufIndex);//targetStreamParms->bufIndex
-		   return;
-		} else {
-	    //graphic deq 6 buf
-			if (!StreamSP->m_IsFirstFrm) {
-	            for(int j=0;j < (targetStreamParms->numSvcBuffers - targetStreamParms->minUndequedBuffer);j++) {
-					found = false;
-	                res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);//first deq 4 from 8 bufs
-		            if (res != NO_ERROR || buf == NULL) {
-		                HAL_LOGD("DEBUG(%s): first dequeue_buffer fail",__FUNCTION__);
-		                return;
-		            }
-					priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
-					int phyaddr =0;
-					int size =0;
-					MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
-					for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
-		                if (phyaddr == mPreviewHeapArray_phy[Index]
-							&& (targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT
-							|| targetStreamParms->svcBufStatus[Index] == ON_HAL_BUFQ)) {
-		                    found = true;
-							HAL_LOGD("receivePreviewFrame,Index=%d",Index);
-							targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
-		                    break;
-		                }
-		            }
-		            if (!found) {
-		                HAL_LOGD("ERR receivepreviewframe cannot found buf=0x%x ",phyaddr);
-						return;
-					}
-				}
+	}
+
+//graphic deq 6 buf
+	HAL_LOGD("m_staticReqInfo.outputStreamMask=0x%x.",m_staticReqInfo.outputStreamMask);
+    if (m_staticReqInfo.outputStreamMask & STREAM_MASK_PRVCB) {
+	    int i = 0;
+        for (; i < NUM_MAX_SUBSTREAM ; i++) {
+            if (StreamSP->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB) {
+				displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
+					      targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
+                break;
 			}
-			if (StreamSP->m_index != STREAM_ID_PREVIEW) {
+		}
+		if (i == NUM_MAX_SUBSTREAM) {
+			HAL_LOGD("err receivepreviewframe cb substream not regist");
+		}
+	}
+	if (m_staticReqInfo.outputStreamMask & STREAM_MASK_RECORD && !GetRecStopMsg()) {
+		substream_parameters_t *subParameters;
+        subParameters = &m_subStreams[STREAM_ID_RECORD];
+	    if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
+			displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
+					      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
+		}
+	}
+
+    if (m_staticReqInfo.outputStreamMask & STREAM_MASK_PREVIEW) {
+		HAL_LOGD("@@@ Display Preview,add=0x%x,enqueue index=%d",
+			 (uint32_t)targetStreamParms->svcBufHandle[targetStreamParms->bufIndex],targetStreamParms->bufIndex);
+
+		if (targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] == ON_HAL_DRIVER) {
+			priv_handle = reinterpret_cast<const private_handle_t *>(targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]);
+			/*flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP,
+						 priv_handle->share_fd,
+						 (void*)mPreviewHeapArray_vir[targetStreamParms->bufIndex],
+						 (void*)mPreviewHeapArray_phy[targetStreamParms->bufIndex],
+						 priv_handle->size);*/
+            res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
+																targetStreamParms->m_timestamp,
+																&(targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]));
+			if (res) {
+				HAL_LOGD("enqueue fail, ret=%d,buf status=%d.",res, targetStreamParms->svcBufStatus[targetStreamParms->bufIndex]);
 				StreamSP->pushBufQ(targetStreamParms->bufIndex);
-				targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
-				Index = StreamSP->popBufQ();
-				HAL_LOGD("receivePreviewFrame,popIndex=%d,previewid=%d",Index,StreamSP->m_index);
-				res = camera_release_frame(Index);
-				if (res)  {
-					HAL_LOGD("ERR receivepreviewframe1 release frame!");
-					targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFERR;
-				} else {
-					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
-				}
-				if (GetStartPreviewAftPic()) {
-					SetStartPreviewAftPic(false);
-				}
+			    targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
 				if (!StreamSP->m_IsFirstFrm) {
 					StreamSP->m_IsFirstFrm = true;
 					m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 				}
 				return;
-			}
-			HAL_LOGD("m_staticReqInfo.outputStreamMask=0x%x.",m_staticReqInfo.outputStreamMask);
-	        if (m_staticReqInfo.outputStreamMask & STREAM_MASK_PRVCB) {
-			    int i = 0;
-	            for (; i < NUM_MAX_SUBSTREAM ; i++) {
-		            if (StreamSP->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB) {
-						displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
-							      targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
-		                break;
-					}
-				}
-				if (i == NUM_MAX_SUBSTREAM) {
-					HAL_LOGD("err receivepreviewframe cb substream not regist");
-				}
-			}
-			if (m_staticReqInfo.outputStreamMask & STREAM_MASK_RECORD && !GetRecStopMsg()) {
-				substream_parameters_t *subParameters;
-		        subParameters = &m_subStreams[STREAM_ID_RECORD];
-			    if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
-					displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
-							      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
-				}
+			} else {
+				targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_SERVICE;
 			}
 
-	        if (m_staticReqInfo.outputStreamMask & STREAM_MASK_PREVIEW) {
-				HAL_LOGD("receivePreviewFrame Display Preview,add=0x%x",
-					 (uint32_t)targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]);
-
-				if (targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] == ON_HAL_DRIVER) {
-	                res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
-																		targetStreamParms->m_timestamp,
-																		&(targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]));
-				if (res) {
-					    targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFERR;
-						HAL_LOGD("Err receivePreviewFrame Display Preview(res=%d)",res);
-						if (!StreamSP->m_IsFirstFrm) {
-						   StreamSP->m_IsFirstFrm = true;
-							m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
-						}
-						return;
-					} else
-			            targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_SERVICE;
-					if (GetStartPreviewAftPic()) {
-				        SetStartPreviewAftPic(false);
-				    }
-	                if (!StreamSP->m_IsFirstFrm) {
-	                    StreamSP->m_IsFirstFrm = true;
-						m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
-	                }
-					//deq one
-					found = false;
-					res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
-	                if (res != NO_ERROR || buf == NULL) {
-		                HAL_LOGD("DEBUG(%s): dequeue_buffer fail",__FUNCTION__);
-		                return;
-		            }
-					priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
-					int phyaddr =0;
-					int size =0;
-					MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
-					for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
-		                if (phyaddr == mPreviewHeapArray_phy[Index] &&
-							(targetStreamParms->svcBufStatus[Index] == ON_SERVICE || targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT \
-	                        || targetStreamParms->svcBufStatus[Index] == ON_HAL_BUFQ)) {
-		                    found = true;
-							HAL_LOGD("receivePreviewFrame,Index=%d sta=%d",Index,targetStreamParms->svcBufStatus[Index]);
-		                    break;
-		                }
-		            }
-		            if (!found) {
-		                HAL_LOGE("ERR receivepreviewframe cannot found buf=0x%x ",phyaddr);
-						return;
-					}
-					if (targetStreamParms->svcBufStatus[Index] != ON_HAL_BUFQ) {
-						StreamSP->pushBufQ(Index);
-						targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFQ;
-					} else
-						targetStreamParms->svcBufStatus[Index] |= ON_HAL_DRIVER;
-					Index = StreamSP->popBufQ();
-					HAL_LOGD("receivePreviewFrame newindex=%d",Index);
-					res = camera_release_frame(Index);
-					if (res) {
-		               HAL_LOGD("ERR receivepreviewframe release buf deq from graphic");
-					   targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFERR;
-					} else
-					   targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
-				} else {
-				    StreamSP->pushBufQ(targetStreamParms->bufIndex);
-					targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
-					Index = StreamSP->popBufQ();
-					HAL_LOGD("receivepreviewframe not equal srv bufq, index=%d",Index);
-	                res = camera_release_frame(Index);
-					if (res) {
-		               HAL_LOGD("ERR receivepreviewframe release buf deq from graphic");
-					   targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFERR;
-					} else
-					   targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
-					if (GetStartPreviewAftPic()) {
-				       SetStartPreviewAftPic(false);
-				    }
-					if (!StreamSP->m_IsFirstFrm) {
-					    StreamSP->m_IsFirstFrm = true;
-						m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
-					}
-				}
-		    } else {
-				StreamSP->pushBufQ(targetStreamParms->bufIndex);
-				targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
-				Index = StreamSP->popBufQ();
-				HAL_LOGD("receivePreviewFrame stream not output,popIndex=%d",Index);
-				res = camera_release_frame(Index);
-				if (res) {
-	                 HAL_LOGD("ERR receivepreviewframe2 release frame!");
-					 targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFERR;
-				} else
-				    targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
-				if (GetStartPreviewAftPic()) {
-					SetStartPreviewAftPic(false);
-				}
-				if (!StreamSP->m_IsFirstFrm) {
-					StreamSP->m_IsFirstFrm = true;
-					m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
-				}
+	        if (!StreamSP->m_IsFirstFrm) {
+	            StreamSP->m_IsFirstFrm = true;
+				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
+	        }
+		//deq one
+			found = false;
+			res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
+			if (res != NO_ERROR || buf == NULL) {
+				HAL_LOGD("DEBUG(%s): dequeue_buffer fail",__FUNCTION__);
+				return;
+	        }
+			priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
+			int phyaddr = 0;
+			int size = 0;
+			int ret = 0;
+			MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
+			for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
+	            if (phyaddr == mPreviewHeapArray_phy[Index] &&
+					(targetStreamParms->svcBufStatus[Index] == ON_SERVICE || targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT \
+	                || targetStreamParms->svcBufStatus[Index] == ON_HAL_BUFQ)) {
+	                found = true;
+					HAL_LOGD("receivePreviewFrame,Index=%d sta=%d",Index,targetStreamParms->svcBufStatus[Index]);
+	                break;
+	            }
+	        }
+			if (!found) {
+				HAL_LOGE("ERR receivepreviewframe cannot found buf=0x%x ",phyaddr);
+				return;
 			}
+			if (targetStreamParms->svcBufStatus[Index] != ON_HAL_BUFQ) {
+				StreamSP->pushBufQ(Index);
+				targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFQ;
+			} else {
+				targetStreamParms->svcBufStatus[Index] = ON_HAL_BUFQ;
+			}
+			Index = StreamSP->popBufQ();
+			HAL_LOGD("@@@ receivePreviewFrame newindex=%d",Index);
+			res = camera_release_frame(Index);
+			if (res) {
+               HAL_LOGD("ERR receivepreviewframe release buf deq from graphic");
+			   StreamSP->pushBufQ(Index);
+			} else {
+			   targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+			}
+		} else {
+		    StreamSP->pushBufQ(targetStreamParms->bufIndex);
+			targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
+			Index = StreamSP->popBufQ();
+			HAL_LOGD("receivepreviewframe not equal srv bufq, index=%d",Index);
+            res = camera_release_frame(Index);
+			if (res) {
+               HAL_LOGD("ERR receivepreviewframe release buf deq from graphic");
+			   StreamSP->pushBufQ(Index);
+			} else {
+			   targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+			}
+
+			if (!StreamSP->m_IsFirstFrm) {
+			    StreamSP->m_IsFirstFrm = true;
+				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
+			}
+		}
+    } else {
+		StreamSP->pushBufQ(targetStreamParms->bufIndex);
+		targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
+		Index = StreamSP->popBufQ();
+		HAL_LOGD("receivePreviewFrame stream not output,popIndex=%d",Index);
+		res = camera_release_frame(Index);
+		if (res) {
+             HAL_LOGD("ERR receivepreviewframe2 release frame!");
+			 StreamSP->pushBufQ(Index);
+		} else {
+		    targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+		}
+
+		if (!StreamSP->m_IsFirstFrm) {
+			StreamSP->m_IsFirstFrm = true;
+			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);//important
 		}
 	}
 }
