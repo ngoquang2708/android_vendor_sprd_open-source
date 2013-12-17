@@ -4628,6 +4628,7 @@
         password="orange"
         type="default,supl"
     />
+    <!-- SPRD: delete for Bug#253805
     <apn carrier="Orange GPRS"
         mcc="208"
         mnc="00"
@@ -4650,6 +4651,7 @@
         password="orange"
         type="default,supl"
     />
+    -->
     <apn carrier="Orange Internet"
         mcc="208"
         mnc="01"
@@ -4693,6 +4695,7 @@
         password="orange"
         type="default,supl"
     />
+    <!-- SPRD: delete for Bug#253805
     <apn carrier="Orange GPRS"
         mcc="208"
         mnc="02"
@@ -4704,6 +4707,7 @@
         password="orange"
         type="default,supl"
     />
+    -->
     <apn carrier="Orange GPRS ISP"
         mcc="208"
         mnc="02"
