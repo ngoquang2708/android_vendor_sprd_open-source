@@ -45,6 +45,7 @@ const int32_t jpegResolutionSensorBack[] = {
     2048, 1536,
     1600, 1200,
     1280,  960,
+     720,  480,
      640,  480,
 };
 
@@ -52,6 +53,7 @@ const int32_t jpegResolutionSensorFront[] = {
     1600, 1200,
     1280, 1024,
     1280,  960,
+     720,  480,
      640,  480,
      320,  240,
 };

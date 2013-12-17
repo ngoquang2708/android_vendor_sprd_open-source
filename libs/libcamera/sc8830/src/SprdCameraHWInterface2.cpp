@@ -2519,6 +2519,10 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	}
 	HAL_LOGD("srcreq->captureIntent=%d,srcreq->outputStreamMask=%d.",
 			srcreq->captureIntent,srcreq->outputStreamMask);
+	if (CAPTURE_INTENT_VIDEO_RECORD == srcreq->captureIntent
+		|| CAPTURE_INTENT_VIDEO_SNAPSHOT == srcreq->captureIntent) {
+		m_camCtlInfo.pictureMode = CAMERA_ZSL_MODE;
+	}
     //stream process later
     if ((srcreq->outputStreamMask & STREAM_MASK_PREVIEW || srcreq->outputStreamMask & STREAM_MASK_PRVCB) && \
 		    (srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD || srcreq->captureIntent == CAPTURE_INTENT_PREVIEW)) {
