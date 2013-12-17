@@ -212,6 +212,7 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 {
     int ret = -1;
+    int releaseFenceFd = -1;
     bool DisplayFBTarget = false;
     bool DisplayPrimaryPlane = false;
     bool DisplayOverlayPlane = false;
@@ -233,6 +234,10 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     }
 
     ALOGI_IF(mDebugFlag, "HWC start commit");
+
+    waitAcquireFence(list);
+
+    releaseFenceFd = createReleaseFenceFD(list);
 
     switch ((mHWCDisplayFlag & ~HWC_DISPLAY_MASK))
     {
@@ -401,6 +406,8 @@ displayDone:
    }
 
     closeAcquireFDs(list);
+
+    retireReleaseFenceFD(releaseFenceFd);
 
     createRetiredFence(list);
 

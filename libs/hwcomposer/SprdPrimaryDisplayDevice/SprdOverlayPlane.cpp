@@ -233,7 +233,9 @@ bool SprdOverlayPlane::flush()
 
     if (HWCOMPOSER_DUMP_VIDEO_OVERLAY_FLAG & mDumpFlag)
     {
-        dumpOverlayImage(mBuffer, "OverlayVideo");
+        const char *name = "OverlayVideo";
+
+        dumpOverlayImage(mBuffer, name);
     }
 
     if (ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext) == -1)

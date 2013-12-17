@@ -85,6 +85,7 @@ int SprdExternalDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 
 int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
 {
+    int releaseFenceFd = -1;
     hwc_layer_1_t *FBTargetLayer = NULL;
 
     queryDebugFlag(&mDebugFlag);
@@ -94,6 +95,10 @@ int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
         ALOGI_IF(mDebugFlag, "commit: External Display Device maybe closed");
         return 0;
     }
+
+    waitAcquireFence(list);
+
+    releaseFenceFd = createReleaseFenceFD(list);
 
     FBTargetLayer = &(list->hwLayers[list->numHwLayers - 1]);
     if (FBTargetLayer == NULL)
@@ -115,6 +120,8 @@ int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
     }
 
     closeAcquireFDs(list);
+
+    retireReleaseFenceFD(releaseFenceFd);
 
     createRetiredFence(list);
 

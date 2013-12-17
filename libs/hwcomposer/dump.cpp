@@ -358,7 +358,7 @@ int dumpImage(hwc_display_contents_1_t *list)
     return 0;
 }
 
-int dumpOverlayImage(private_handle_t* buffer, char *name)
+int dumpOverlayImage(private_handle_t* buffer, const char *name)
 {
     static int index = 0;
 

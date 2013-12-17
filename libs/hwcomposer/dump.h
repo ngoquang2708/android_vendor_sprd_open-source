@@ -91,7 +91,7 @@ extern void queryDumpFlag(int *dumpFlag);
 
 extern int dumpImage(hwc_display_contents_1_t *list);
 
-extern int dumpOverlayImage(private_handle_t* buffer, char* name);
+extern int dumpOverlayImage(private_handle_t* buffer, const char* name);
 
 void dumpFrameBuffer(char *virAddr, const char* ptype, int width, int height, int format);
 #endif
