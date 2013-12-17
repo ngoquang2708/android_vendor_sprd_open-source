@@ -224,6 +224,11 @@ static int camera_take_picture_continue(int cap_cnt);
 static int camera_is_jpeg_encode_direct_process(void);
 static int camera_post_convert_thum_msg(void);
 static int camera_sensor_interface_updated(uint32_t work_mode, struct  sensor_if *sn_if);
+static uint32_t camera_get_rot_val(uint32_t rot_enum);
+static uint32_t camera_get_rot_enum(uint32_t rot_val);
+static void camera_buffer_copy(struct img_frm  *src_img, struct img_frm  *dst_img);
+
+
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -4703,8 +4708,8 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 #endif
 
 	} else if (CHN_2 == info->channel_id) {
-		if (IMG_ROT_90 == g_cxt->cap_rot || IMG_ROT_270 == g_cxt->cap_rot ||
-			IMG_ROT_90 == g_cxt->cfg_cap_rot || IMG_ROT_270 == g_cxt->cfg_cap_rot) {
+		//IMG_ROT_90 == g_cxt->cfg_cap_rot || IMG_ROT_270 == g_cxt->cfg_cap_rot
+		if (IMG_ROT_90 == g_cxt->cap_rot || IMG_ROT_270 == g_cxt->cap_rot) {
 			tmp = g_cxt->cap_orig_size.width;
 			g_cxt->cap_orig_size.width = g_cxt->cap_orig_size.height;
 			g_cxt->cap_orig_size.height = tmp;
@@ -5683,11 +5688,11 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	img_cap->src_img_rect.width   = sn_mode->trim_width;
 	img_cap->src_img_rect.height  = sn_mode->trim_height;
 	if ((uint32_t)CAMERA_PARM_ZOOM_RECT != g_cxt->zoom_mode) {
-	ret = camera_get_trim_rect(&img_cap->src_img_rect, g_cxt->zoom_level, cap_size);
-	if (ret) {
-		CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
-		goto exit;
-		}
+		ret = camera_get_trim_rect(&img_cap->src_img_rect, g_cxt->zoom_level, cap_size);
+		if (ret) {
+			CMR_LOGE("Failed to get trimming window for %d zoom level ", g_cxt->zoom_level);
+			goto exit;
+			}
 	} else {
 		img_cap->src_img_rect.start_x = g_cxt->zoom_rect.start_x;
 		img_cap->src_img_rect.start_y = g_cxt->zoom_rect.start_y;
@@ -5702,6 +5707,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	sn_trim_rect.start_y = img_cap->src_img_rect.start_y;
 	sn_trim_rect.width   = img_cap->src_img_rect.width;
 	sn_trim_rect.height  = img_cap->src_img_rect.height;
+
 	if (ZOOM_POST_PROCESS == g_cxt->cap_zoom_mode) {
 		img_cap->src_img_rect.start_x = sn_mode->trim_start_x;
 		img_cap->src_img_rect.start_y = sn_mode->trim_start_y;
@@ -6227,9 +6233,113 @@ int camera_capture_err_handle(uint32_t evt_type)
 	return ret;
 }
 
+uint32_t camera_get_rot_val(uint32_t rot_enum)
+{
+	uint32_t rot_val = 0;
+
+	switch (rot_enum) {
+	case IMG_ROT_0:
+		rot_val = 0;
+	break;
+
+	case IMG_ROT_90:
+		rot_val = 1;
+	break;
+
+	case IMG_ROT_180:
+		rot_val = 2;
+	break;
+
+	case IMG_ROT_270:
+		rot_val = 3;
+	break;
+
+	default:
+		CMR_LOGE("uncorrect params!");
+	break;
+	}
+
+	CMR_LOGE("in angle %d, out val %d", rot_enum, rot_val);
+
+	return rot_val;
+}
+
+
+uint32_t camera_get_rot_enum(uint32_t rot_val)
+{
+	uint32_t rot_enum = IMG_ROT_0;
+
+	switch (rot_val) {
+	case 0:
+		rot_enum = IMG_ROT_0;
+	break;
+
+	case 1:
+		rot_enum = IMG_ROT_90;
+	break;
+
+	case 2:
+		rot_enum = IMG_ROT_180;
+	break;
+
+	case 3:
+		rot_enum = IMG_ROT_270;
+	break;
+
+	default:
+		CMR_LOGE("uncorrect params!");
+	break;
+	}
+
+	CMR_LOGE("in val %d, out enum %d", rot_val, rot_enum);
+
+	return rot_enum;
+}
+
+void camera_buffer_copy(struct img_frm  *src_img,
+		struct img_frm  *dst_img)
+{
+	uint32_t y_buffer_size = 0;
+	uint32_t u_buffer_size = 0;
+	camera_frame_type frame_type;
+
+	switch (src_img->fmt) {
+	case IMG_DATA_TYPE_YUV422:
+		y_buffer_size = src_img->size.height * src_img->size.height;
+		u_buffer_size = src_img->size.height * src_img->size.height;
+	break;
+
+	case IMG_DATA_TYPE_YUV420:
+		y_buffer_size = src_img->size.height * src_img->size.height;
+		u_buffer_size = src_img->size.height * src_img->size.height/2;
+	break;
+
+	default:
+		CMR_LOGE("unsuport format yet!");
+	break;
+	}
+
+	memcpy((void *)dst_img->addr_vir.addr_y, (void *)src_img->addr_vir.addr_y, y_buffer_size);
+	memcpy((void *)dst_img->addr_vir.addr_u, (void *)src_img->addr_vir.addr_u, u_buffer_size);
+
+	frame_type.buf_Virt_Addr = (uint32_t*)dst_img->addr_vir.addr_y;
+	frame_type.buffer_phy_addr = dst_img->addr_phy.addr_y;
+	frame_type.dx = src_img->size.width;
+	frame_type.dy = src_img->size.height;
+	camera_direct_call_cb(CAMERA_EVT_CB_FLUSH,
+	camera_get_client_data(),
+	CAMERA_FUNC_TAKE_PICTURE,
+	(uint32_t)&frame_type);
+
+	return;
+}
+
 int camera_capture_yuv_process(struct frm_info *data)
 {
 	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 tmp_refer_rot = 0;
+	uint32_t                 tmp_req_rot = 0;
+	uint32_t                 bak_cap_rot = g_cxt->cap_rot;
 
 	CMR_LOGV("cap_zoom_mode %d, orig size %d %d, picture size %d %d, cap_original_fmt=%d, is_cfg_rot_cap=%d, cfg_cap_rot=%d",
 		g_cxt->cap_zoom_mode,
@@ -6251,10 +6361,20 @@ int camera_capture_yuv_process(struct frm_info *data)
 			g_cxt->picture_size.width = g_cxt->picture_size.height;
 			g_cxt->picture_size.height = temp;
 		}
-		g_cxt->cap_rot = g_cxt->cfg_cap_rot;
+		tmp_req_rot = camera_get_rot_val(g_cxt->cfg_cap_rot);
+		tmp_refer_rot = camera_get_rot_val(g_cxt->cap_rot);
+		tmp_req_rot += tmp_refer_rot;
+		if (tmp_req_rot>=4) {
+			tmp_req_rot -= 4;
+		}
+		g_cxt->cap_rot = camera_get_rot_enum(tmp_req_rot);
+	}
+
+	if (IMG_ROT_0 != g_cxt->cap_rot) {
 		ret = camera_start_rotate(data);
 	} else {
-		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot))) {
+//		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot))) {
+		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot))) {
 			ret = camera_start_scale(data);
 		} else {
 			ret = camera_start_jpeg_encode(data);
@@ -6805,7 +6925,6 @@ int camera_start_scale(struct frm_info *data)
 	frm_data.channel_id = CHN_2;
 	/*data->channel_id = CHN_2;*/
 	frm_id = data->frame_id - CAMERA_CAP0_ID_BASE;
-
 	if (g_cxt->cap_zoom_mode == ZOOM_BY_CAP) {
 		rect.start_x = 0;
 		rect.start_y = 0;
@@ -6869,7 +6988,8 @@ int camera_start_scale(struct frm_info *data)
 
 	src_frame.size.width      = g_cxt->cap_orig_size.width;
 	src_frame.size.height     = g_cxt->cap_orig_size.height;
-	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot)) {
+//	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot)) {
+	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot)) {
 		src_frame.addr_phy.addr_y = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_phy.addr_y + offset;
 		src_frame.addr_phy.addr_u = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_phy.addr_u + (offset >> 1);
 		src_frame.addr_phy.addr_v = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_phy.addr_v + (offset >> 1);
@@ -6918,6 +7038,7 @@ int camera_start_scale(struct frm_info *data)
 
 	return ret;
 }
+
 
 int camera_scale_next(struct frm_info *data)
 {
@@ -6975,6 +7096,7 @@ int camera_start_rotate(struct frm_info *data)
 	uint32_t                 frm_id, rot_frm_id;
 	struct img_rect          rect;
 	int                      ret = CAMERA_SUCCESS;
+	struct img_size          refer_size;
 
 	if (IS_PREVIEW && IS_PREV_FRM(data->frame_id)) {
 		CMR_LOGE("Call Rotation in preview");
@@ -7007,7 +7129,7 @@ int camera_start_rotate(struct frm_info *data)
 
 	} else if (IS_CAP0_FRM(data->frame_id)) {
 		TAKE_PIC_CANCEL;
-		CMR_LOGE("Call Rotation after capture for channel %d, orig size %d %d rot_state %d",
+		CMR_LOGV("Call Rotation after capture for channel %d, orig size %d %d rot_state %d",
 			data->channel_id,
 			g_cxt->cap_orig_size.width,
 			g_cxt->cap_orig_size.height,
@@ -7025,8 +7147,20 @@ int camera_start_rotate(struct frm_info *data)
 		g_cxt->rot_cxt.proc_status.slice_height_in = rect.height;
 		g_cxt->rot_cxt.rot_state = IMG_CVT_ROTATING;
 
-		if (g_cxt->cap_orig_size.height == g_cxt->picture_size.width &&
-			g_cxt->cap_orig_size.width == g_cxt->picture_size.height) {
+		if ((IMG_ROT_90 == g_cxt->cfg_cap_rot) || (IMG_ROT_270 == g_cxt->cfg_cap_rot)) {
+			refer_size.width = g_cxt->picture_size.height;
+			refer_size.height = g_cxt->picture_size.width;
+		} else if ((IMG_ROT_0 == g_cxt->cfg_cap_rot) || (IMG_ROT_180 == g_cxt->cfg_cap_rot)) {
+			refer_size.width = g_cxt->picture_size.width;
+			refer_size.height = g_cxt->picture_size.height;
+		} else {
+			refer_size.width = g_cxt->picture_size.width;
+			refer_size.height = g_cxt->picture_size.height;
+			CMR_LOGE("uncorrect value!");
+		}
+
+		if ((g_cxt->cap_orig_size.height == refer_size.width) &&
+			(g_cxt->cap_orig_size.width == refer_size.height)) {
 			ret = cmr_rot(g_cxt->cap_rot,
 				&g_cxt->cap_mem[frm_id].cap_yuv_rot,
 				&rect,
@@ -7870,7 +8004,7 @@ static int camera_is_jpeg_encode_direct_process(void)
 
 	if ((IMG_ROT_0 != g_cxt->cap_rot)
 		|| (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 != g_cxt->cfg_cap_rot))) {
-		/*ratation*/
+		/*rotation*/
 		ret = 0;
 	} else {
 		if ((!NO_SCALING)

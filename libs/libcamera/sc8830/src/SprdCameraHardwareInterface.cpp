@@ -181,7 +181,7 @@ static nsecs_t cam_init_begin_time = 0;
 static void writeCamInitTimeToProc(float init_time)
 {
     char cam_time_buf[256] = {0};
-    char *cam_time_proc = "/proc/benchMark/cam_time";
+    const char *cam_time_proc = "/proc/benchMark/cam_time";
 
     sprintf(cam_time_buf, "Camera Init Time: %.2fs", init_time);
 
@@ -206,7 +206,7 @@ void getCamInitSupport()
     gIsApctRead = true;
 
     char str[10] = {'\0'};
-    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+    const char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
 
     FILE *f = fopen(FILE_NAME, "r");
 

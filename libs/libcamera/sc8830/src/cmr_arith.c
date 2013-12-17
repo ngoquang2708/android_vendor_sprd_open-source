@@ -102,7 +102,6 @@ void *arithmetic_fd_thread_proc(void *data)
 		switch (evt) {
 		case ARITHMETIC_EVT_FD_INIT:
 			CMR_PRINT_TIME;
-			FaceSolid_Finalize();
 			if ( 0 != FaceSolid_Init(cxt->display_size.width,
 			                    cxt->display_size.height )) {
 				ret = -ARITH_INIT_FAIL;
@@ -199,6 +198,10 @@ int arithmetic_fd_init(void)
 
 	CMR_LOGV("inited, %d", cxt->arithmetic_cxt.fd_inited);
 
+	if (cxt->arithmetic_cxt.fd_inited) {
+		FaceSolid_Finalize();
+	}
+
 	if (0 == cxt->arithmetic_cxt.fd_inited) {
 		ret = cmr_msg_queue_create(CAMERA_FD_MSG_QUEUE_SIZE, &s_arith_cxt->fd_msg_que_handle);
 		if (ret) {
@@ -209,6 +212,7 @@ int arithmetic_fd_init(void)
 			pthread_attr_init(&attr);
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 			ret = pthread_create(&s_arith_cxt->fd_thread,  &attr, arithmetic_fd_thread_proc, NULL);
+			sem_wait(&s_arith_cxt->fd_sync_sem);
 			message.msg_type = ARITHMETIC_EVT_FD_INIT;
 			ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 			if (ret) {
