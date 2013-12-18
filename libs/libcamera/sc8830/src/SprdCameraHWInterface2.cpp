@@ -2249,10 +2249,15 @@ int SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint32
 		sensorOrgH = FRONT_SENSOR_ORIG_HEIGHT;
 	}
     if (sensorWidth == 0 || sensorHeight == 0 || cropRegion->crop_w == 0
-		|| cropRegion->crop_h == 0 || (sensorWidth == sensorOrgW && sensorHeight == sensorOrgH)){
+		|| cropRegion->crop_h == 0){
         HAL_LOGE("parameters error.");
 		return 1;
     }
+
+	if (sensorWidth == sensorOrgW && sensorHeight == sensorOrgH) {
+		HAL_LOGE("dont' nedd to convert.");
+		return 0;
+	}
 	zoomWidth = (float)cropRegion->crop_w;
 	zoomHeight = (float)cropRegion->crop_h;
 	minOutputRatio = zoomWidth / zoomHeight;
@@ -2323,6 +2328,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	m_reqIsProcess = true;
 	srcreq->ori_req = orireq;
     reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
+	camera_cfg_rot_cap_param_reset();
 #ifdef CONFIG_CAMERA_ROTATION_CAPTURE
 	SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 1);
 #else
