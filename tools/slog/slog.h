@@ -55,7 +55,8 @@ enum {
 	CTRL_CMD_TYPE_DUMP,
 	CTRL_CMD_TYPE_SCREEN,
 	CTRL_CMD_TYPE_HOOK_MODEM,
-	CTRL_CMD_TYPE_RSP
+	CTRL_CMD_TYPE_RSP,
+	CTRL_CMD_TYPE_SYNC
 };
 
 #define err_log(fmt, arg...) ALOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
@@ -154,7 +155,7 @@ extern char top_logdir[MAX_NAME_LEN];
 extern char external_storage[MAX_NAME_LEN];
 extern struct slog_info *stream_log_head, *snapshot_log_head;
 extern struct slog_info *notify_log_head, *misc_log;
-extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid, modem_dump_memory_tid, kmemleak_tid;
+extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid, kmemleak_tid;
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
@@ -172,7 +173,7 @@ extern void *tcp_log_handler(void *arg);
 extern void *uboot_log_handler(void *arg);
 extern void *kmemleak_handler(void *arg);
 extern void *modem_log_handler(void *arg);
-extern void *modem_dump_memory_handler(void *arg);
+extern void *handle_modem_state_monitor(void *arg);
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
 extern int notify_log_handler_started;
@@ -185,4 +186,5 @@ extern void cp_file(char *path, char *new_path);
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);
 extern int capture_by_name(struct slog_info *head, const char *name, char *filepath);
 extern int screen_shot(const char *name);
+extern void handle_android_log_sync(void);
 #endif /*_SLOG_H*/

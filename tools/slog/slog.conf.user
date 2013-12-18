@@ -17,7 +17,9 @@ stream	main	on	0	7
 stream	events	on	0	7
 stream	system	on	0	8
 stream	radio	on	0	0
-stream	modem	off	0	5
+stream	cp0	off	0	5
+stream	cp1	off	0	5
+stream	cp2	off	0	5
 stream	bt	off	0	7
 stream	tcp	off	0	7
 stream	kmemleak	off	0	7
