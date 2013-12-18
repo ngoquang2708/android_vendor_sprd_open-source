@@ -1041,6 +1041,10 @@ int camera_set_ctrl(camera_parm_type id,
 		CMR_LOGI("slow motion:%d.",parm);
 		break;
 	case CAMERA_PARM_SHOT_NUM:
+		if ((0 == parm) || (9 < parm)) {
+			CMR_LOGV("uncommon cap number %d.",parm);
+			parm = 1;
+		}
 		cxt->total_capture_num = parm;
 		CMR_LOGI("capture num is %d.",parm);
 		break;
