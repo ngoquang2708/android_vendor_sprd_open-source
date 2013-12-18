@@ -26,7 +26,6 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       bt_eut.c \
 		       wifi_eut_shark.c \
 		       eng_productdata.c \
-		       gps_eut.c \
 		       adc_calibration.c\
 		       crc16.c \
 		       eng_attok.c \
@@ -39,6 +38,12 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
                power.c \
                backlight.c \
                eng_util.c
+
+ifeq ($(strip $(BOARD_USE_SPRD_4IN1_GPS)),true)
+LOCAL_SRC_FILES     += sprd_gps_eut.c
+else
+LOCAL_SRC_FILES     += gps_eut.c
+endif
 
 LOCAL_MODULE := engpc
 LOCAL_MODULE_TAGS := optional
