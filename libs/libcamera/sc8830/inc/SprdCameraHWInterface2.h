@@ -86,8 +86,11 @@ namespace android {
 #define ON_HAL_INIT         (1 << 4)//service deq 6 bufs firstly
 
 #define MAX_MISCHEAP_NUM 50 //1024
-#define SENSOR_ORIG_WIDTH 1632
-#define SENSOR_ORIG_HEIGHT 1224
+#define BACK_SENSOR_ORIG_WIDTH 1632
+#define BACK_SENSOR_ORIG_HEIGHT 1224
+#define FRONT_SENSOR_ORIG_WIDTH 640
+#define FRONT_SENSOR_ORIG_HEIGHT 480
+
 #define ALIGN_ZOOM_CROP_BITS (~0x03)
 
 typedef struct stream_parameters {
@@ -380,7 +383,7 @@ class RequestQueueThread : public SprdBaseThread{
     bool                GetStartPreviewAftPic();
 	void                SetStartPreviewAftPic(bool IsPicPreview);
 	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
-	void                CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
+	int                CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
 	status_t            Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
 	status_t            CamconstructDefaultRequest(SprdCamera2Info *camHal, int request_template,camera_metadata_t **request, bool sizeRequest);
     bool                isSupportedJpegResolution(SprdCamera2Info *camHal, int width, int height);

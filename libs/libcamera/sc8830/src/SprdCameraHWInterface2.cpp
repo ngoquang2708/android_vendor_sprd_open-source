@@ -365,10 +365,10 @@ static int initCamera2Info(int cameraId)
 			return 1;
 		}
 
-		g_Camera2[0]->sensorW             = SENSOR_ORIG_WIDTH;
-	    g_Camera2[0]->sensorH             = SENSOR_ORIG_HEIGHT;
-	    g_Camera2[0]->sensorRawW          = SENSOR_ORIG_WIDTH;
-	    g_Camera2[0]->sensorRawH          = SENSOR_ORIG_HEIGHT;
+		g_Camera2[0]->sensorW             = BACK_SENSOR_ORIG_WIDTH;
+	    g_Camera2[0]->sensorH             = BACK_SENSOR_ORIG_HEIGHT;
+	    g_Camera2[0]->sensorRawW          = BACK_SENSOR_ORIG_WIDTH;
+	    g_Camera2[0]->sensorRawH          = BACK_SENSOR_ORIG_HEIGHT;
 	    g_Camera2[0]->numPreviewResolution = ARRAY_SIZE(PreviewResolutionSensorBack)/2;
 	    g_Camera2[0]->PreviewResolutions   = PreviewResolutionSensorBack;
 	    g_Camera2[0]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorBack)/2;
@@ -389,10 +389,10 @@ static int initCamera2Info(int cameraId)
 			return 1;
 		}
 
-		g_Camera2[1]->sensorW             = 640;
-	    g_Camera2[1]->sensorH             = 480;
-	    g_Camera2[1]->sensorRawW          = 640;
-	    g_Camera2[1]->sensorRawH          = 480;
+		g_Camera2[1]->sensorW             = FRONT_SENSOR_ORIG_WIDTH;
+	    g_Camera2[1]->sensorH             = FRONT_SENSOR_ORIG_HEIGHT;
+	    g_Camera2[1]->sensorRawW          = FRONT_SENSOR_ORIG_WIDTH;
+	    g_Camera2[1]->sensorRawH          = FRONT_SENSOR_ORIG_HEIGHT;
 	    g_Camera2[1]->numPreviewResolution = ARRAY_SIZE(PreviewResolutionSensorFront)/2;
 	    g_Camera2[1]->PreviewResolutions   = PreviewResolutionSensorFront;
 	    g_Camera2[1]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorFront)/2;
@@ -2231,28 +2231,37 @@ int SprdCameraHWInterface2::coordinate_convert(int *rect_arr,int arr_size,int an
 }
 
 
-void SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion)
+int SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion)
 {
 	float    minOutputRatio;
 	float    zoomWidth,zoomHeight,tmpZoom;
 	uint32_t i = 0;
-
+	int ret = 0;
+	int      sensorOrgW = 0, sensorOrgH = 0;
+	substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_JPEG];
 	HAL_LOGD("%s: crop %d %d %d %d sens w/h %d %d.", __FUNCTION__ ,
 		  cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w ,cropRegion->crop_h,sensorWidth,sensorHeight);
+	if(m_CameraId == 0) {
+		sensorOrgW = BACK_SENSOR_ORIG_WIDTH;
+		sensorOrgH = BACK_SENSOR_ORIG_HEIGHT;
+	} else if(m_CameraId == 1) {
+		sensorOrgW = FRONT_SENSOR_ORIG_WIDTH;
+		sensorOrgH = FRONT_SENSOR_ORIG_HEIGHT;
+	}
     if (sensorWidth == 0 || sensorHeight == 0 || cropRegion->crop_w == 0
-		|| cropRegion->crop_h == 0 || (sensorWidth == SENSOR_ORIG_WIDTH && sensorHeight == SENSOR_ORIG_HEIGHT)){
+		|| cropRegion->crop_h == 0 || (sensorWidth == sensorOrgW && sensorHeight == sensorOrgH)){
         HAL_LOGE("parameters error.");
-		return;
+		return 1;
     }
 	zoomWidth = (float)cropRegion->crop_w;
 	zoomHeight = (float)cropRegion->crop_h;
 	minOutputRatio = zoomWidth / zoomHeight;
-	tmpZoom = SENSOR_ORIG_WIDTH;
-	if (minOutputRatio > (tmpZoom / SENSOR_ORIG_HEIGHT)) {
+	tmpZoom = sensorOrgW;
+	if (minOutputRatio > (tmpZoom / sensorOrgH)) {
 		zoomWidth = (zoomWidth * sensorWidth)/ tmpZoom;
 		zoomHeight = zoomWidth / minOutputRatio;
 	} else {
-		zoomHeight = (sensorHeight * zoomHeight)/ SENSOR_ORIG_HEIGHT;
+		zoomHeight = (sensorHeight * zoomHeight)/ sensorOrgH;
         zoomWidth = zoomHeight * minOutputRatio;
 	}
 
@@ -2261,9 +2270,14 @@ void SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint3
 
 	cropRegion->crop_w = ((uint32_t)zoomWidth) & ALIGN_ZOOM_CROP_BITS;
 	cropRegion->crop_h = ((uint32_t)zoomHeight) & ALIGN_ZOOM_CROP_BITS;
-
+	if((subParameters->width > (cropRegion->crop_w * 4)) || (subParameters->height > (cropRegion->crop_h * 4))) {
+		HAL_LOGE("%s:Not scaleup over 4times (src=%d %d,dst=%d %d)",__FUNCTION__ ,
+		cropRegion->crop_w, cropRegion->crop_h, subParameters->width, subParameters->height);
+		return 1;
+	}
     HAL_LOGD("%s:Crop calculated (x=%d,y=%d,w=%d,h=%d)",__FUNCTION__ ,
         cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w, cropRegion->crop_h);
+	return ret;
 }
 
 void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq)
@@ -2767,7 +2781,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
 			if (srcreq->isCropSet) {
 				camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
-				CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
+				if(CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom)) {
+					HAL_LOGE("err(%s): scale up over 4times!", __FUNCTION__);
+					IsSetPara = true;
+					goto out;
+				}
 				SET_PARM(drvTag,(uint32_t)&zoom);
 				srcreq->isCropSet = false;
 			}
@@ -2783,7 +2801,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		    HAL_LOGD("takePicture: X res=%d",res);
 		}
 	}
-
+	out:
 	if (IsSetPara){
 		m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 	}
