@@ -448,7 +448,8 @@ static FILE *  fd_dest_paras;
  */
 static struct mixer_ctl *s_ctl_eq_update = NULL;
 static struct mixer_ctl *s_ctl_eq_select = NULL;
-static int s_cur_devices = 0;
+static int s_cur_out_devices = 0;
+static int s_cur_in_devices = 0;
 static AUDIO_TOTAL_T * s_vb_effect_ptr = NULL;
 static struct mixer_ctl *s_ctl_da_eq_profile_select = NULL;
 static struct mixer_ctl *s_ctl_ad01_eq_profile_select = NULL;
@@ -637,9 +638,10 @@ void vb_ad_effect_config_mixer_ctl(struct mixer_ctl *ad01_profile_select, struct
 }
 
 
-void vb_effect_sync_devices(int cur_devices)
+void vb_effect_sync_devices(int cur_out_devices, int cur_in_devices)
 {
-    s_cur_devices = cur_devices;
+    s_cur_out_devices = cur_out_devices;
+    s_cur_in_devices = cur_in_devices;
 }
 
 int vb_effect_loading(void)
@@ -659,7 +661,7 @@ int vb_effect_loading(void)
 int  vb_da_effect_profile_apply(int index)
 {
     int ret = 0;
-    ALOGI("s_cur_devices(0x%08x),index(%d)", s_cur_devices,index);
+    ALOGI("s_cur_out_devices(0x%08x),index(%d)", s_cur_out_devices,index);
     if(index < VBC_EFFECT_PROFILE_CNT)
     {
         ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, index);
@@ -673,7 +675,7 @@ int  vb_da_effect_profile_apply(int index)
 int  vb_ad01_effect_profile_apply(int index)
 {
     int ret = 0;
-    ALOGI("s_cur_devices(0x%08x),index(%d)", s_cur_devices,index);
+    ALOGI("s_cur_in_devices(0x%08x),index(%d)", s_cur_in_devices,index);
     if(index < VBC_EFFECT_PROFILE_CNT)
     {
         ret = mixer_ctl_set_value(s_ctl_ad01_eq_profile_select, 0, index); 
@@ -687,7 +689,7 @@ int  vb_ad01_effect_profile_apply(int index)
 int  vb_ad23_effect_profile_apply(int index)
 {
     int ret = 0;
-    ALOGI("s_cur_devices(0x%08x),index(%d)", s_cur_devices,index);
+    ALOGI("s_cur_in_devices(0x%08x),index(%d)", s_cur_in_devices,index);
     if(index < VBC_EFFECT_PROFILE_CNT)
     {
         ret = mixer_ctl_set_value(s_ctl_ad23_eq_profile_select, 0, index);
@@ -702,34 +704,35 @@ int  vb_ad23_effect_profile_apply(int index)
 int vb_effect_profile_apply(void)
 {
     int ret = 0;
-    ALOGI("s_cur_devices(0x%08x)", s_cur_devices);
+    ALOGI("s_cur_out_devices(0x%08x), s_cur_in_devices(0x%08x)", s_cur_out_devices, s_cur_in_devices);
 
     if (s_ctl_da_eq_profile_select) {
 
-        if(((s_cur_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)&&(s_cur_devices & AUDIO_DEVICE_OUT_SPEAKER))
-                ||((s_cur_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)&&(s_cur_devices & AUDIO_DEVICE_OUT_SPEAKER))){
+        if(((s_cur_out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)&&(s_cur_out_devices & AUDIO_DEVICE_OUT_SPEAKER))
+                ||((s_cur_out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)&&(s_cur_out_devices & AUDIO_DEVICE_OUT_SPEAKER))){
             //ret = mixer_ctl_set_enum_by_string(s_ctl_eq_select, "Headfree");
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 1);
             ALOGI("profile is Headfree, ret=%d", ret);
-        }else if(s_cur_devices & AUDIO_DEVICE_OUT_EARPIECE){
+        }else if(s_cur_out_devices & AUDIO_DEVICE_OUT_EARPIECE){
             //ret = mixer_ctl_set_enum_by_string(s_ctl_eq_select, "Handset");
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 2);
             ALOGI("profile is Handset, ret=%d", ret);
-        }else if((s_cur_devices & AUDIO_DEVICE_OUT_SPEAKER)
-                ||(s_cur_devices & AUDIO_DEVICE_OUT_FM_SPEAKER)
-                ||(s_cur_devices & AUDIO_DEVICE_IN_BUILTIN_MIC)){
+        }else if((s_cur_out_devices & AUDIO_DEVICE_OUT_SPEAKER)
+                ||(s_cur_out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER)
+                ||(s_cur_in_devices & AUDIO_DEVICE_IN_BUILTIN_MIC)){
             //ret = mixer_ctl_set_enum_by_string(s_ctl_eq_select, "Handsfree");
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 3);
             ALOGI("profile is Handsfree, ret=%d", ret);
-        }else if((s_cur_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)
-                ||(s_cur_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
-                ||(s_cur_devices & AUDIO_DEVICE_OUT_FM_HEADSET)
-                ||(s_cur_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
+        }else if((s_cur_out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)
+                ||(s_cur_out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+                ||(s_cur_out_devices & AUDIO_DEVICE_OUT_FM_HEADSET)
+                ||(s_cur_in_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
             //ret = mixer_ctl_set_enum_by_string(s_ctl_eq_select, "Headset");
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 0);
             ALOGI("profile is Headset, ret=%d", ret);
         }else{
-            ALOGE("s_cur_devices(0x%08x) IS NOT SUPPORT!\n", s_cur_devices);
+            ALOGE("s_cur_out_devices(0x%08x) s_cur_in_devices(0x%08x)IS NOT SUPPORT!\n",
+                    s_cur_out_devices, s_cur_in_devices);
             return -1;
         }
         return 0;

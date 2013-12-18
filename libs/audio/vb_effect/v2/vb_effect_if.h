@@ -33,7 +33,7 @@ void vb_ad_effect_config_mixer_ctl(struct mixer_ctl *ad01_profile_select, struct
 
 void vb_da_effect_config_mixer_ctl(struct mixer_ctl *da_profile_select);
 
-void vb_effect_sync_devices(int cur_devices);
+void vb_effect_sync_devices(int cur_out_devices, int cur_in_devices);
 
 int vb_effect_loading(void);
 

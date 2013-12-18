@@ -858,7 +858,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
     adev->prev_out_devices = adev->out_devices;
     adev->prev_in_devices = adev->in_devices;
     if(adev->eq_available)
-        vb_effect_sync_devices(adev->out_devices);
+        vb_effect_sync_devices(adev->out_devices, adev->in_devices);
 
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
@@ -2350,14 +2350,6 @@ static int do_input_standby(struct tiny_stream_in *in)
     	    in->is_bt_sco = false;
     	}
         adev->active_input = 0;
-        if ((adev->mode != AUDIO_MODE_IN_CALL)
-#ifdef VOIP_DSP_PROCESS
-            &&(adev->voip_start ==0)
-#endif     
-        ) {
-            adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
-            select_devices_signal(adev);
-        }
 
         if(in->resampler){
             in_deinit_resampler( in);

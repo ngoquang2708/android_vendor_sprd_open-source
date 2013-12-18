@@ -25,7 +25,7 @@ int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
 
 void vb_effect_config_mixer_ctl(struct mixer_ctl *eq_update, struct mixer_ctl *profile_select);
 
-void vb_effect_sync_devices(int cur_devices);
+void vb_effect_sync_devices(int cur_out_devices, int cur_in_devices);
 
 int vb_effect_loading(void);
 
