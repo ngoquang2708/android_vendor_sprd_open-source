@@ -933,11 +933,13 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
             notify(OMX_EventError, OMX_ErrorInsufficientResources, 0, NULL);
         } else if (decRet == MMDEC_STREAM_ERROR) {
             ALOGE("failed to decode video frame, stream error");
-            notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
-        } else if (decRet == MMDEC_HW_ERROR) {
+//            notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
+        } else if (decRet == MMDEC_HW_ERROR)
+        {
             ALOGE("failed to decode video frame, hardware error");
-            notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
-        } else {
+//            notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
+        } else
+        {
             ALOGE("now, we don't take care of the decoder return: %d", decRet);
         }
 
