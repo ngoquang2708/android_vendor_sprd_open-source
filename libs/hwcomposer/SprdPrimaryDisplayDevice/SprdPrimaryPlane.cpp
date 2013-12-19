@@ -390,7 +390,9 @@ bool SprdPrimaryPlane::flush()
 
     if (HWCOMPOSER_DUMP_OSD_OVERLAY_FLAG & mDumpFlag)
     {
-        dumpOverlayImage(mBuffer, "OverlayOSD");
+        const char *name = "OverlayOSD";
+
+        dumpOverlayImage(mBuffer, name);
     }
 
     if (ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext) == -1)

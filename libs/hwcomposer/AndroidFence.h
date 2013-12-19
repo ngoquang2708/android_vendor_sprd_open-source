@@ -56,10 +56,16 @@ extern int openSprdFence();
 
 extern void closeSprdFence();
 
+extern int waitAcquireFence(hwc_display_contents_1_t *list);
+
 extern void closeAcquireFDs(hwc_display_contents_1_t *list);
 
 extern void createRetiredFence(hwc_display_contents_1_t *list);
 
 extern int FenceWaitForever(const String8& name, int fenceFd);
+
+extern int createReleaseFenceFD(hwc_display_contents_1_t *list);
+
+extern void retireReleaseFenceFD(int fenceFd);
 
 #endif

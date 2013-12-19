@@ -154,11 +154,11 @@ void closeAcquireFDs(hwc_display_contents_1_t *list)
 void createRetiredFence(hwc_display_contents_1_t *list)
 {
     unsigned val = 1;
-    char *name = "HWCRetired";
+    const char *name = "HWCRetired";
 
     if (list)
     {
-        list->retireFenceFd = sprd_fence_create(name, val);
+        list->retireFenceFd = sprd_fence_create(const_cast<char *>(name), val);
 
         sprd_fence_signal();
     }
@@ -182,4 +182,80 @@ int FenceWaitForever(const String8& name, int fenceFd)
    }
 
    return err;
+}
+
+int waitAcquireFence(hwc_display_contents_1_t *list)
+{
+    int ret = -1;
+
+    if (list)
+    {
+        for(unsigned int i = 0; i < list->numHwLayers; i++)
+        {
+            hwc_layer_1_t *l = &(list->hwLayers[i]);
+
+            if (l->compositionType != HWC_OVERLAY)
+            {
+                continue;
+            }
+
+            if (l->acquireFenceFd >= 0)
+            {
+                String8 name;
+
+                name.appendFormat("acquireFence%d", i);
+
+                ret = FenceWaitForever(name, l->acquireFenceFd);
+            }
+        }
+    }
+
+    return ret;
+}
+
+int createReleaseFenceFD(hwc_display_contents_1_t *list)
+{
+    int releaseFenceFd = -1;
+    unsigned val = 1;
+    const char *name = "HWCReleaseFence";
+
+    releaseFenceFd = sprd_fence_create(const_cast<char *>(name), val);
+    if (releaseFenceFd < 0)
+    {
+        ALOGE("create release fence fd failed");
+        return -1;
+    }
+
+    if (list)
+    {
+        for(unsigned int i = 0; i < list->numHwLayers; i++)
+        {
+            hwc_layer_1_t *l = &(list->hwLayers[i]);
+
+            if (l->compositionType == HWC_FRAMEBUFFER)
+            {
+                continue;
+            }
+
+            if (l->releaseFenceFd < 0)
+            {
+                l->releaseFenceFd = dup(releaseFenceFd);
+            }
+        }
+    }
+
+    return releaseFenceFd;
+}
+
+void retireReleaseFenceFD(int fenceFd)
+{
+    if (fenceFd < 0)
+    {
+        return;
+    }
+
+    sprd_fence_signal();
+
+    close(fenceFd);
+    fenceFd = -1;
 }
