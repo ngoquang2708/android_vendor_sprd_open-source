@@ -136,23 +136,15 @@ int OverlayNativeWindow::dequeueBuffer(ANativeWindow* window,
 int OverlayNativeWindow::queueBuffer(ANativeWindow* window,
         ANativeWindowBuffer* buffer, int fenceFd)
 {
-    static uint32_t count = 0;
     OverlayNativeWindow* self = getSelf(window);
     Mutex::Autolock _l(self->mutex);
 
     sp<Fence> fence(new Fence(fenceFd));
     fence->wait(Fence::TIMEOUT_NEVER);
 
-    if (count >= 1)
-    {
-        self->mDisplayPlane->queueBuffer();
+    self->mDisplayPlane->queueBuffer();
 
-        self->mDisplayPlane->display(false, true, false);
-    }
-    else
-    {
-        count++;
-    }
+    self->mDisplayPlane->display(false, true, false);
 
     postSem();
 
@@ -223,6 +215,8 @@ int OverlayNativeWindow::query(const ANativeWindow* window,
             return NO_ERROR;
         case NATIVE_WINDOW_CONSUMER_RUNNING_BEHIND:
             *value = 0;
+        case NATIVE_WINDOW_CONSUMER_USAGE_BITS:
+            *value = GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_COMPOSER;
             return NO_ERROR;
     }
     return BAD_VALUE;
