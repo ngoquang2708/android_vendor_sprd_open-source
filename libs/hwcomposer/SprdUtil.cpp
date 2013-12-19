@@ -40,6 +40,7 @@
 #include <binder/MemoryHeapIon.h>
 #include "SprdUtil.h"
 #include "dump.h"
+#include <ui/GraphicBufferMapper.h>
 
 using namespace android;
 
@@ -296,6 +297,41 @@ bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
 }
 
 #ifdef PROCESS_VIDEO_USE_GSP
+/*
+func:test_set_y
+desc:add a white-line framework in source video layer, only for test purpose
+*/
+static void test_set_y(char* base,uint32_t w,uint32_t h)
+{
+    uint32_t i=0,r=0,c0=0,c1=0,c2=0,c3=0,c4=0;
+    char* base_walk = base;
+    uint32_t first_r=0,second_r=16;
+    uint32_t first_c=0,second_c=16;
+
+    memset(base_walk+w*first_r,            0xff,w); // 0
+    memset(base_walk+w*second_r,        0xff,w); // 10
+    memset(base_walk+(w*h>>1),    0xff,w);
+    memset(base_walk+w*(h-1-second_r),    0xff,w);
+    memset(base_walk+w*(h-1-first_r),    0xff,w);
+
+    base_walk = base;
+    r=0;
+    c0=first_c;
+    c1=second_c;
+    c2=(w>>1);
+    c3=w-1-second_c;
+    c4=w-1-first_c;
+    while(r < h)
+    {
+        *(base_walk+c0) = 0xff;
+        *(base_walk+c1) = 0xff;
+        *(base_walk+c2) = 0xff;
+        *(base_walk+c3) = 0xff;
+        *(base_walk+c4) = 0xff;
+        base_walk += w;
+        r++;
+    }
+}
 int SprdUtil::openGSPDevice()
 {
     hw_module_t const* pModule;
@@ -321,12 +357,18 @@ int SprdUtil::openGSPDevice()
 int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2)
 {
     int32_t ret = 0;
-	int size = 0;
+    int size = 0;
+    int mmu_addr = 0;
     static int openFlag = 0;
     hwc_layer_1_t *layer1 = NULL;
     hwc_layer_1_t *layer2 = NULL;
     int layer2_Format = -1;
+    struct private_handle_t *private_h1 = NULL;
+    struct private_handle_t *private_h2 = NULL;
     private_handle_t* buffer = NULL;
+    int buffersize_layer1 = 0;
+    int buffersize_layer2 = 0;
+    int buffersize_layert = 0;//scaling up twice temp
 
     queryDebugFlag(&mDebugFlag);
 
@@ -362,11 +404,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
     }
 
 
-    GSP_CONFIG_INFO_T gsp_cfg_info;
+    GSP_CONFIG_INFO_T gsp_cfg_info = {0};
     uint32_t video_check_result = 0;
     uint32_t osd_check_result = 0;
 
-    memset(&gsp_cfg_info,0,sizeof(gsp_cfg_info));
+    //memset(&gsp_cfg_info,0,sizeof(gsp_cfg_info));
 
     if(l1)
     {
@@ -380,7 +422,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             return -1;
         }
 
-        struct private_handle_t *private_h1 = (struct private_handle_t *)(layer1->handle);
+        private_h1 = (struct private_handle_t *)(layer1->handle);
 
         ALOGI_IF(mDebugFlag,"GSP check layer1 L%d,L1 info [x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  srcRect1->x, srcRect1->y,
@@ -391,15 +433,23 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                  FBRect1->w, FBRect1->h);
 
 
-        if(private_h1 && (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY)) {
+#ifdef GSP_ADDR_TYPE_PHY
+        if(private_h1 && (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+#elif defined (GSP_ADDR_TYPE_IOVA)
+        if(private_h1 /*&& (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY)*/)
+#endif
+        {
             video_check_result = 1;
 
             //config Video ,use GSP L0
             switch(private_h1->format) {
             case HAL_PIXEL_FORMAT_YCbCr_420_SP:
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_2P;
-                //gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
+#ifdef GSP_ADDR_TYPE_PHY
                 gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_1;
+#elif defined (GSP_ADDR_TYPE_IOVA)
+                gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
+#endif
                 break;
             case HAL_PIXEL_FORMAT_YCrCb_420_SP:
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_2P;//?
@@ -409,11 +459,29 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_3P;//?
                 break;
             default:
+                ALOGE("SprdUtil::composerLayers[%d],private_h1->format:%d not supported",__LINE__,private_h1->format);
                 return -1;
             }
+#ifdef GSP_ADDR_TYPE_PHY
 			MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
             gsp_cfg_info.layer0_info.src_addr.addr_y = private_h1->phyaddr;
-            gsp_cfg_info.layer0_info.src_addr.addr_v = gsp_cfg_info.layer0_info.src_addr.addr_uv = private_h1->phyaddr + private_h1->width * private_h1->height;
+#elif defined (GSP_ADDR_TYPE_IOVA)
+            //gsp_cfg_info.layer0_info.src_addr.addr_y = ion_get_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer1);
+            if((MemoryHeapIon::Get_gsp_iova(private_h1->share_fd, &mmu_addr, &buffersize_layer1) == 0) && (mmu_addr != 0) && (buffersize_layer1 > 0))
+            {
+                gsp_cfg_info.layer0_info.src_addr.addr_y = mmu_addr;
+                ALOGE("[%d] map L0 iommu addr success!",__LINE__);
+            }
+            else
+            {
+                ALOGI_IF(mDebugFlag,"[%d] map L0 iommu addr failed!",__LINE__);
+                return -1;
+            }
+#endif
+            ALOGI_IF(mDebugFlag,"gsp_iommu[%d] mapped L1 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
+            gsp_cfg_info.layer0_info.src_addr.addr_v
+                = gsp_cfg_info.layer0_info.src_addr.addr_uv
+                = gsp_cfg_info.layer0_info.src_addr.addr_y + private_h1->width * private_h1->height;
             //gsp_cfg_info.layer0_info.src_addr.addr_v = gsp_cfg_info.layer0_info.src_addr.addr_uv = private_h0->phyaddr + context->src_img.w*context->src_img.h;
             gsp_cfg_info.layer0_info.clip_rect.st_x = srcRect1->x;
             gsp_cfg_info.layer0_info.clip_rect.st_y = srcRect1->y;
@@ -457,7 +525,25 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             gsp_cfg_info.layer0_info.pitch = private_h1->width;
             gsp_cfg_info.layer0_info.layer_en = 1;
 
+#if 0 //add for test//
+            {
+                struct private_handle_t *pH = (struct private_handle_t *)l1->getAndroidLayer()->handle;
+                if (pH)
+                {
+                    Rect bounds(pH->width, pH->height);
+                    void* vaddr = NULL;
 
+                    GraphicBufferMapper::get().lock((buffer_handle_t)pH, GRALLOC_USAGE_SW_READ_OFTEN, bounds, &vaddr);
+
+                    if(vaddr > 0)
+                    {
+                        ALOGI_IF(mDebugFlag,"composerLayers[%d],test, set white framework in y plane",__LINE__);
+                        test_set_y((char*)vaddr,private_h1->width,private_h1->height);
+                    }
+                    GraphicBufferMapper::get().unlock((buffer_handle_t)pH);
+                }
+            }
+#endif
             ALOGI_IF(mDebugFlag,"GSP process layer1 L%d,L1 des_w %d des_h %d",__LINE__, FBRect1->w, FBRect1->h);
 
             ALOGI_IF(mDebugFlag,"GSP process layer1 L%d,L1 [x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
@@ -493,7 +579,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             return -1;
         }
 
-        struct private_handle_t *private_h2 = (struct private_handle_t *)(layer2->handle);
+        private_h2 = (struct private_handle_t *)(layer2->handle);
 
         ALOGI_IF(mDebugFlag,"GSP check layer2 L%d,L2 info [x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  0, 0,
@@ -503,8 +589,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                  mFBInfo->fb_width, mFBInfo->fb_height);
 
         layer2_Format = private_h2->format;
-
+#ifdef GSP_ADDR_TYPE_PHY
         if(private_h2->flags && (private_h2->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+#elif defined (GSP_ADDR_TYPE_IOVA)
+        if(private_h2->flags/* && (private_h2->flags & private_handle_t::PRIV_FLAGS_USES_PHY)*/)
+#endif
         {
             osd_check_result = 1;
             //config OSD,use GSP L1
@@ -517,12 +606,36 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             {
                 gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
             }
-
-			MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
-
+#ifdef GSP_ADDR_TYPE_PHY
+            MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
             gsp_cfg_info.layer1_info.src_addr.addr_v =
                 gsp_cfg_info.layer1_info.src_addr.addr_uv =
                     gsp_cfg_info.layer1_info.src_addr.addr_y = private_h2->phyaddr;
+#elif defined (GSP_ADDR_TYPE_IOVA)
+            //    gsp_cfg_info.layer1_info.src_addr.addr_v =
+            //        gsp_cfg_info.layer1_info.src_addr.addr_uv =
+            //            gsp_cfg_info.layer1_info.src_addr.addr_y = ion_get_dev_addr(private_h2->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer2);
+            if((MemoryHeapIon::Get_gsp_iova(private_h2->share_fd, &mmu_addr, &buffersize_layer2) == 0) && (mmu_addr != 0) && (buffersize_layer2 > 0))
+            {
+                gsp_cfg_info.layer1_info.src_addr.addr_v =
+                gsp_cfg_info.layer1_info.src_addr.addr_uv =
+                gsp_cfg_info.layer1_info.src_addr.addr_y = mmu_addr;
+                ALOGI_IF(mDebugFlag,"[%d] map L2 iommu addr success!",__LINE__);
+            }
+            else
+            {
+                ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
+                return -1;
+            }
+
+            if((gsp_cfg_info.layer1_info.src_addr.addr_y == NULL)
+            ||(buffersize_layer2 == 0))
+            {
+                ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
+                return -1;
+            }
+#endif
+            ALOGI_IF(mDebugFlag,"	gsp_iommu[%d] mapped L2 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
 
             gsp_cfg_info.layer1_info.clip_rect.rect_w = private_h2->width;
             gsp_cfg_info.layer1_info.clip_rect.rect_h = private_h2->height;
@@ -601,7 +714,12 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         gsp_cfg_info.layer_des_info.src_addr.addr_v =
             gsp_cfg_info.layer_des_info.src_addr.addr_uv = current_overlay_paddr + mFBInfo->fb_width * mFBInfo->fb_height;
         gsp_cfg_info.layer_des_info.pitch = mFBInfo->fb_width;
-
+        if((gsp_cfg_info.layer_des_info.src_addr.addr_y == NULL)/*||(buffersize_layerd == 0)*/)
+        {
+            ALOGE("GSP process Line%d,des.y_addr==%x buffersize_layerd==%x!",__LINE__,gsp_cfg_info.layer_des_info.src_addr.addr_y,buffer->size);
+            return -1;
+        }
+        ALOGI_IF(mDebugFlag,"[%d] des phy_addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer_des_info.src_addr.addr_y,buffer->size);
 
         if (l1 != NULL)
         {
@@ -662,14 +780,18 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         {
             GSP_CONFIG_INFO_T gsp_cfg_info_phase1 = gsp_cfg_info;
             GSP_LAYER_DST_DATA_FMT_E phase1_des_format = GSP_DST_FMT_YUV420_2P;//GSP_DST_FMT_YUV422_2P; //GSP_DST_FMT_ARGB888
+            ALOGI_IF(mDebugFlag,"GSP process Line%d,nead scale up twice. ",__LINE__);
 
             if (tmpBuffer == NULL)
             {
                 int format = -1;
                 format = HAL_PIXEL_FORMAT_YCbCr_420_SP; //PRIVATE_HALF_BUFFER;
                 int stride;
-
+#ifdef GSP_ADDR_TYPE_PHY
                 GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
+#elif defined (GSP_ADDR_TYPE_IOVA)
+                GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, 0, (buffer_handle_t*)&tmpBuffer, &stride);
+#endif
                 if (tmpBuffer == NULL)
                 {
                     ALOGE("Cannot alloc the tmpBuffer ION buffer");
@@ -679,7 +801,29 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
 
             /*phase1*/
             gsp_cfg_info_phase1.layer_des_info.img_format = phase1_des_format;
+#ifdef GSP_ADDR_TYPE_PHY
             gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)tmpBuffer->phyaddr;
+#elif defined (GSP_ADDR_TYPE_IOVA)
+            //gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)ion_get_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layert);
+            if((MemoryHeapIon::Get_gsp_iova(tmpBuffer->share_fd, &mmu_addr, &buffersize_layert) == 0) && (mmu_addr != 0) && (buffersize_layert > 0))
+            {
+                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = mmu_addr;
+                ALOGI_IF(mDebugFlag,"[%d] map temp buffer iommu addr success!",__LINE__);
+            }
+            else
+            {
+                ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
+                return -1;
+            }
+#endif
+            if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == NULL)
+                    ||(buffersize_layert == 0))
+            {
+                ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                return -1;
+            }
+            ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+
             gsp_cfg_info_phase1.layer_des_info.src_addr.addr_v =
                 gsp_cfg_info_phase1.layer_des_info.src_addr.addr_uv = gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y + mFBInfo->fb_width * mFBInfo->fb_height;
 
@@ -706,15 +850,26 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             gsp_cfg_info_phase1.layer0_info.rot_angle = GSP_ROT_ANGLE_0;
             gsp_cfg_info_phase1.layer1_info.layer_en = 0;//disable Layer1
 
-            ALOGI_IF(mDebugFlag,"scaling twice phase 1,set_GSP_layers L%d,src_addr_y:0x%08x,des_addr_y:0x%08x",__LINE__,
+            ALOGI_IF(mDebugFlag,"scaling twice phase 1,set_GSP_layers Line%d,src_addr_y:0x%08x,des_addr_y:0x%08x",__LINE__,
                      gsp_cfg_info_phase1.layer0_info.src_addr.addr_y,
                      gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y);
 
             ret = mGspDev->GSP_Proccess(&gsp_cfg_info_phase1);
+#ifdef GSP_ADDR_TYPE_IOVA
+            if(buffersize_layer1 != 0)
+            {
+                ALOGI_IF(mDebugFlag,"gsp_iommu[%d]  unmap L1 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
+                //ion_release_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_UNMAP ,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
+
+                MemoryHeapIon::Free_gsp_iova(private_h1->share_fd,gsp_cfg_info.layer0_info.src_addr.addr_y, buffersize_layer1);
+                gsp_cfg_info.layer0_info.src_addr.addr_y = NULL;
+                buffersize_layer1 = 0;
+            }
+#endif
             if(0 == ret) {
-                ALOGI_IF(mDebugFlag,"scaling twice phase 1,set_GSP_layers L%d,GSP_Proccess ret 0",__LINE__);
+                ALOGI_IF(mDebugFlag,"scaling twice phase 1,set_GSP_layers Line%d,GSP_Proccess ret 0",__LINE__);
             } else {
-                ALOGE("scaling twice phase 1,set_GSP_layers L%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
+                ALOGE("scaling twice phase 1,set_GSP_layers Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
                 return ret;
             }
 
@@ -725,28 +880,71 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             gsp_cfg_info.layer0_info.src_addr = gsp_cfg_info_phase1.layer_des_info.src_addr;
             gsp_cfg_info.layer0_info.endian_mode = gsp_cfg_info_phase1.layer_des_info.endian_mode;
 
-            ALOGI_IF(mDebugFlag,"scaling twice phase 2,set_GSP_layers L%d,src_addr_y:0x%08x,des_addr_y:0x%08x",__LINE__,
+            ALOGI_IF(mDebugFlag,"scaling twice phase 2,set_GSP_layers Line%d,src_addr_y:0x%08x,des_addr_y:0x%08x",__LINE__,
                      gsp_cfg_info.layer0_info.src_addr.addr_y,
                      gsp_cfg_info.layer_des_info.src_addr.addr_y);
             ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
             if(0 == ret) {
-                ALOGI_IF(mDebugFlag,"scaling twice phase 2,set_GSP_layers L%d,GSP_Proccess ret 0",__LINE__);
+                ALOGI_IF(mDebugFlag,"scaling twice phase 2,set_GSP_layers Line%d,GSP_Proccess ret 0",__LINE__);
             } else {
-                ALOGE("scaling twice phase 2,set_GSP_layers L%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
+                ALOGE("scaling twice phase 2,set_GSP_layers Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
             }
+#ifdef GSP_ADDR_TYPE_IOVA
+            if(buffersize_layert != 0)
+            {
+                ALOGI_IF(mDebugFlag,"		gsp_iommu[%d]  unmap temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                //ion_release_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_UNMAP ,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                MemoryHeapIon::Free_gsp_iova(tmpBuffer->share_fd,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y, buffersize_layert);
+                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = NULL;
+                buffersize_layert = 0;
+            }
+#endif
         } else {
-            ALOGI_IF(mDebugFlag,"GSP process layers L%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,gsp_cfg_info.layer_des_info.pitch, (void *)buffer->phyaddr, (void *)buffer->base);
+            ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
+                       gsp_cfg_info.layer_des_info.pitch,
+                       gsp_cfg_info.layer_des_info.src_addr.addr_y,
+			(void *)buffer->base);
              ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
+             if(0 == ret) {
+                 ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
+             } else {
+                 ALOGE("GSP process Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
+             }
          }
 #else
-        ALOGI_IF(mDebugFlag,"GSP process layers L%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,gsp_cfg_info.layer_des_info.pitch, (void *)buffer->phyaddr, (void *)buffer->base);
+        ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
+                  gsp_cfg_info.layer_des_info.pitch,
+                  gsp_cfg_info.layer_des_info.src_addr.addr_y,
+                  (void *)buffer->base);
         if(mGspDev) {
             ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
+            if(0 == ret) {
+                ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
+            } else {
+                ALOGE("GSP process Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
+            }
         }
 #endif
-        //ret = GSP_Proccess(&gsp_cfg_info);
-    }
+#ifdef GSP_ADDR_TYPE_IOVA
+        if(buffersize_layer2 != 0)
+        {
+            ALOGI_IF(mDebugFlag,"	gsp_iommu[%d]  unmap L2 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
+            //ion_release_dev_addr(private_h2->share_fd, ION_SPRD_CUSTOM_GSP_UNMAP ,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
+            MemoryHeapIon::Free_gsp_iova(private_h2->share_fd,gsp_cfg_info.layer0_info.src_addr.addr_y, buffersize_layer2);
+            gsp_cfg_info.layer1_info.src_addr.addr_y = NULL;
+            buffersize_layer2 = 0;
+        }
 
+        if(buffersize_layer1 != 0)
+        {
+            ALOGI_IF(mDebugFlag,"gsp_iommu[%d]  unmap L1 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
+            //ion_release_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_UNMAP ,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
+            MemoryHeapIon::Free_gsp_iova(private_h1->share_fd,gsp_cfg_info.layer0_info.src_addr.addr_y, buffersize_layer1);
+            gsp_cfg_info.layer0_info.src_addr.addr_y = NULL;
+            buffersize_layer1 = 0;
+        }
+#endif
+    }
     return 0;
 }
 #endif

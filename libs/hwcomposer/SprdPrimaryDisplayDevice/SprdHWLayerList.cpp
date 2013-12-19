@@ -196,6 +196,8 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     for (unsigned int i = 0; i < mLayerCount; i++)
     {
         hwc_layer_1_t *layer = &list->hwLayers[i];
+
+        ALOGI_IF(mDebugFlag,"process LayerList[%d/%d]",i,mLayerCount);
         dump_layer(layer);
 
         mLayerList[i].setAndroidLayer(layer);
@@ -236,7 +238,7 @@ int SprdHWLayerList:: attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverl
         return -1;
     }
 
-    revistGeometry(DisplayFlag);
+    revisitGeometry(DisplayFlag);
 
     /*
      *  At present, each SprdDisplayPlane only only can handle one
@@ -322,7 +324,7 @@ int SprdHWLayerList:: attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverl
     return 0;
 }
 
-int SprdHWLayerList:: revistGeometry(int *DisplayFlag)
+int SprdHWLayerList:: revisitGeometry(int *DisplayFlag)
 {
     SprdHWLayer *YUVLayer = NULL;
     SprdHWLayer *RGBLayer = NULL;
@@ -439,7 +441,7 @@ Overlay:
         }
         mFBLayerCount++;
 #else
-        revistOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
+        revisitOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
 #endif
     }
 
@@ -573,11 +575,13 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifdef PROCESS_VIDEO_USE_GSP
 #ifndef OVERLAY_COMPOSER_GPU
+#ifdef GSP_ADDR_TYPE_PHY
     if (!(l->checkContiguousPhysicalAddress(privateH)))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
         return 0;
     }
+#endif
 #endif
 #else
     if ((layer->transform != 0) ||
@@ -605,6 +609,7 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifndef _DMA_COPY_OSD_LAYER
 #ifndef OVERLAY_COMPOSER_GPU
+#ifdef GSP_ADDR_TYPE_PHY
         if (!(l->checkContiguousPhysicalAddress(privateH)))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not physical address %d", __LINE__);
@@ -612,15 +617,18 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         }
 #endif
 #endif
+#endif
     }
     else if (((unsigned int)privateH->width != mFBHeight)
              || ((unsigned int)privateH->height != mFBWidth)
 #ifndef OVERLAY_COMPOSER_GPU
+#ifdef GSP_ADDR_TYPE_PHY
              || !(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
+#endif
 #endif
     )
     {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
+        ALOGI_IF(mDebugFlag, "prepareOSDLayer, ret 0, L%d", __LINE__);
         return 0;
     }
 
@@ -651,7 +659,7 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     if ((FBRect->w != mFBWidth) || (FBRect->h != mFBHeight) ||
         (FBRect->x != 0) || (FBRect->y != 0))
     {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now L%d", __LINE__);
+        ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now,ret 0, L%d", __LINE__);
         return 0;
     }
 
@@ -661,12 +669,13 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     int ret = prepareOverlayComposerLayer(l);
     if (ret != 0)
     {
-        ALOGI_IF(mDebugFlag, "prepareOverlayComposerLayer find irregular layer, give up OverlayComposerGPU");
+        ALOGI_IF(mDebugFlag, "prepareOverlayComposerLayer find irregular layer, give up OverlayComposerGPU,ret 0, L%d", __LINE__);
         return 0;
     }
 #endif
 
     l->setLayerType(LAYER_OSD);
+    ALOGI_IF(mDebugFlag, "prepareOSDLayer[L%d],set type OSD", __LINE__);
 
     mFBLayerCount--;
 
@@ -709,9 +718,13 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     mYUVLayerCount++;
 
-
-    if (!(l->checkContiguousPhysicalAddress(privateH))
+#ifdef GSP_ADDR_TYPE_PHY
+	if (!(l->checkContiguousPhysicalAddress(privateH))
         || l->checkNotSupportOverlay(privateH))
+#elif defined (GSP_ADDR_TYPE_IOVA)
+	if (/*!(l->checkContiguousPhysicalAddress(privateH))
+        || */l->checkNotSupportOverlay(privateH))
+#endif
     {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;
@@ -769,18 +782,23 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         return 0;
     }
 
-    if(4 * srcWidth < destWidth || srcWidth > 16 * destWidth ||
-       4 * srcHeight < destHeight || srcHeight > 16 * destHeight)
-    { //gsp support [1/16-4] scaling
-        ALOGI_IF(mDebugFlag,"prepareVideoLayer, GSP only support 1/16-4 scaling! L%d",__LINE__);
+    int gsp_scaling_up_limit = 4;
+#ifdef GSP_SCALING_UP_TWICE
+    gsp_scaling_up_limit = 16;
+#endif
+
+    if(gsp_scaling_up_limit * srcWidth < destWidth || srcWidth > 16 * destWidth ||
+    gsp_scaling_up_limit * srcHeight < destHeight || srcHeight > 16 * destHeight)
+    { //gsp support [1/16-gsp_scaling_up_limit] scaling
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP only support 1/16-%d scaling! ret 0",__LINE__,gsp_scaling_up_limit);
         return 0;
     }
 
     //added for Bug 181381
     if(((srcWidth < destWidth) && (srcHeight > destHeight))
-       || ((srcWidth > destWidth) && (srcHeight < destHeight)))
-    { //gsp support [1/16-4] scaling
-        ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp not support one direction scaling down while the other scaling up! L%d",__LINE__);
+    || ((srcWidth > destWidth) && (srcHeight < destHeight)))
+    {
+        ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
         return 0;
     }
 #else
@@ -798,6 +816,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 #endif
 
     l->setLayerType(LAYER_OVERLAY);
+    ALOGI_IF(mDebugFlag, "prepareVideoLayer[L%d],set type Video", __LINE__);
 
     mFBLayerCount--;
 
@@ -848,7 +867,7 @@ int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
     return 0;
 }
 
-int SprdHWLayerList:: revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag)
+int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag)
 {
     int displayType = HWC_DISPLAY_MASK;
     /*

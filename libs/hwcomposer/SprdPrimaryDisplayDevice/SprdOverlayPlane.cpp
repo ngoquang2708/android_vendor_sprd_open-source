@@ -102,7 +102,10 @@ int SprdOverlayPlane::queueBuffer()
 {
     SprdDisplayPlane::queueBuffer();
 
-    flush();
+    if(flush() != true)
+    {
+        return -1;
+    }
 
     mFreePlaneCount = 0;
 
@@ -208,7 +211,12 @@ bool SprdOverlayPlane::flush()
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
         //BaseContext->uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
+
+#ifdef GSP_ADDR_TYPE_PHY
         BaseContext->rb_switch = 0;
+#elif defined (GSP_ADDR_TYPE_IOVA)
+        BaseContext->rb_switch = 1;
+#endif
     }
 
     BaseContext->rect.x = 0;
