@@ -9,6 +9,7 @@ PRODUCT_PACKAGES += \
 	EngineerMode \
 	DrmProvider \
 	CellBroadcastReceiver \
-	CallFireWall
+	CallFireWall \
+	SprdQuickSearchBox
 
 #	libsprddm \
