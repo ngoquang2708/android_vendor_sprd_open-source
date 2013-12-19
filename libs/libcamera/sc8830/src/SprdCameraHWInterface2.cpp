@@ -41,7 +41,6 @@ namespace android {
 gralloc_module_t const* SprdCameraHWInterface2::m_grallocHal;
 SprdCamera2Info * g_Camera2[2] = { NULL, NULL };
 
-
 status_t addOrSize(camera_metadata_t *request,
         bool sizeRequest,
         size_t *entryCount,
@@ -642,7 +641,7 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
     ADD_OR_SIZE(ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION, &aeExpCompensation, 1);
 
     static const int32_t aeTargetFpsRange[2] = {
-        10000, 30000
+        15, 30
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRange, 2);
 
@@ -1517,14 +1516,14 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 			}
 		}
 		{
-			stream_parameters_t     *targetStreamParms = NULL;
-			status_t res = NO_ERROR;
-	        int i = 0;
+		//	stream_parameters_t     *targetStreamParms = NULL;
+		//	status_t res = NO_ERROR;
+	    //    int i = 0;
 			//review start
 			//DisplayPictureImg((camera_frame_type *)parm4);
 			//cancel graphic bufs
-			targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
-			if (CAMERA_ZSL_MODE != m_camCtlInfo.pictureMode) {
+		//	targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+		/*	if (CAMERA_ZSL_MODE != m_camCtlInfo.pictureMode) {
 				for (;i < targetStreamParms->numSvcBuffers;i++) {
 		           res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
 				   if (res) {
@@ -1533,7 +1532,7 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 				   targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
 				}
 			}
-			m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();
+			m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();*/
 		}
 		break;
 	case CAMERA_EXIT_CB_DONE:
@@ -1753,7 +1752,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 
 int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 {
-    status_t res = NO_ERROR;
+    status_t ret = NO_ERROR;
 	int i = 0;
     stream_parameters_t     *targetStreamParms;
 	Sprd_camera_state       camStatus = (Sprd_camera_state)0;
@@ -1764,8 +1763,8 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		camStatus = getPreviewState();
 
 		if (camStatus != SPRD_PREVIEW_IN_PROGRESS) {
-		   HAL_LOGE("ERR releaseStream Preview status=%d",camStatus);
-		   return UNKNOWN_ERROR;
+		   HAL_LOGE("camera isn't in previewing,%d",camStatus);
+		   return ret;
 		}
 		m_Stream[STREAM_ID_PREVIEW - 1]->setRecevStopMsg(true);//sync receive preview frame
         setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
@@ -1778,9 +1777,9 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 
 		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 		for (;i < targetStreamParms->numSvcBuffers;i++) {
-           res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
-		   if (res) {
-              HAL_LOGE("releaseStream cancelbuf res=%d",res);
+           ret = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
+		   if (ret) {
+              HAL_LOGE("releaseStream cancelbuf res=%d",ret);
 		   }
 		}
 		camera_set_preview_mem(0, 0, 0, 0);
@@ -1795,7 +1794,7 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
         memset(&m_subStreams[stream_id], 0, sizeof(substream_parameters_t));
 		if (m_Stream[STREAM_ID_CAPTURE - 1] != NULL) {
 			if (m_Stream[STREAM_ID_CAPTURE - 1]->detachSubStream(stream_id) != NO_ERROR) {
-	            HAL_LOGE("(%s): substream detach failed. res(%d)", __FUNCTION__, res);
+	            HAL_LOGE("(%s): substream detach failed. res(%d)", __FUNCTION__, ret);
 	            return 1;
 	        }
             m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream = 1;
@@ -1818,7 +1817,7 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
     }
 
     HAL_LOGD("(%s): END", __FUNCTION__);
-    return CAMERA_SUCCESS;
+    return ret;
 }
 
 int SprdCameraHWInterface2::allocateReprocessStream(
@@ -2298,9 +2297,12 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	uint16_t wid = 0, height = 0;
 	size_t i = 0;
 	bool IsSetPara = true;
+	float focal_len = 3.43f;
 	stream_parameters_t     *targetStreamParms = NULL;
 	char value[PROPERTY_VALUE_MAX];
 	capture_intent lastCapInt = m_staticReqInfo.captureIntent;
+	int32_t frameRate = 0;
+	int32_t th_q,jpeg_q;
 	Mutex::Autolock lock(m_requestMutex);
 	HAL_LOGD("DEBUG(%s): ", __FUNCTION__);
 	property_get("camera.disable_zsl_mode", value, "0");
@@ -2338,6 +2340,32 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
     for (; index < reqCount ; index++) {
         if (get_camera_metadata_entry(srcreq->ori_req, index, &entry)==0) {
             switch (entry.tag) {
+			case ANDROID_LENS_FOCAL_LENGTH:
+				if (0 != entry.count) {
+					HAL_LOGV("focal %f.",entry.data.f[0]);
+					SET_PARM(CAMERA_PARM_FOCAL_LENGTH,  (int32_t)(entry.data.f[0]*1000));
+				}
+				break;
+			case ANDROID_JPEG_QUALITY:
+				if (0 != entry.count) {
+					jpeg_q = entry.data.i32[0];
+					HAL_LOGV("jpeg quality %d.",jpeg_q);
+					SET_PARM(CAMERA_PARM_JPEGCOMP, jpeg_q);
+				}
+				break;
+			case ANDROID_JPEG_THUMBNAIL_QUALITY:
+				if (0 != entry.count) {
+					th_q = entry.data.i32[0];
+					HAL_LOGV("jpeg thumbnail quality %d.",th_q);
+					SET_PARM(CAMERA_PARM_THUMBCOMP, th_q);
+				}
+				break;
+			case ANDROID_CONTROL_AE_TARGET_FPS_RANGE:
+                for (i=0 ; i<entry.count ; i++) {
+                    HAL_LOGV("frame rate:%d.",entry.data.i32[i]);
+                }
+				frameRate = entry.data.i32[entry.count-1];
+                break;
             case ANDROID_SENSOR_TIMESTAMP:
                 ASIGNIFNOTEQUAL(srcreq->sensorTimeStamp, entry.data.i64[0], (camera_parm_type)NULL)
 				HAL_LOGD("DEBUG(%s): ANDROID_SENSOR_TIMESTAMP (%lld)",  __FUNCTION__, entry.data.i64[0]);
@@ -2361,12 +2389,15 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			case ANDROID_JPEG_GPS_PROCESSING_METHOD:
 			{
 				size_t cnt = 0;
+				HAL_LOGV("GPS processing method cnt %d %s.",entry.count, (char*)(&entry.data.u8[0]));
+				memset(&srcreq->gpsProcMethod[0], 0, 32);
 				if (entry.count > 32)
                     cnt = 32;
                 else
                     cnt = entry.count;
-                for (i = 0 ; i < cnt ; i++)
-                    srcreq->gpsProcMethod[i] = entry.data.u8[i];
+       //         for (i = 0 ; i < cnt ; i++)
+             //       srcreq->gpsProcMethod[i] = entry.data.u8[i];
+				memcpy(&srcreq->gpsProcMethod[0],&entry.data.u8[0],cnt);
 			}
 				break;
 			case ANDROID_JPEG_THUMBNAIL_SIZE:
@@ -2615,6 +2646,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	if (CAPTURE_INTENT_VIDEO_RECORD == srcreq->captureIntent
 		|| CAPTURE_INTENT_VIDEO_SNAPSHOT == srcreq->captureIntent) {
 		m_camCtlInfo.pictureMode = CAMERA_ZSL_MODE;
+		SET_PARM(CAMERA_PARM_PREVIEW_ENV, frameRate);
+	} else {
+		SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
 	}
     //stream process later
     if ((srcreq->outputStreamMask & STREAM_MASK_PREVIEW || srcreq->outputStreamMask & STREAM_MASK_PRVCB) && \
@@ -2726,6 +2760,25 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	    uint32_t mem_size0 = 0, mem_size1 = 0;
 
 		HAL_LOGD("mCameraState.capture_state=%d.",mCameraState.capture_state);
+		int ret = camera_set_thumbnail_properties(srcreq->thumbnailJpgSize.width,
+												srcreq->thumbnailJpgSize.height, th_q);
+		if (ret != CAMERA_SUCCESS) {
+			HAL_LOGE("camera_set_thumbnail_properties returned %d", ret);
+		}
+		camera_encode_properties_type encode_properties = {0, CAMERA_JPEG, 0};
+		// Set Default JPEG encoding--this does not cause a callback
+		encode_properties.quality = jpeg_q;
+
+		if (encode_properties.quality < 0) {
+			HAL_LOGV("JPEG-image quality %d", encode_properties.quality);
+			encode_properties.quality = 100;
+		} else {
+			HAL_LOGV("Setting JPEG-image quality to %d",encode_properties.quality);
+		}
+
+		encode_properties.format = CAMERA_JPEG;
+		encode_properties.file_size = 0x0;
+		camera_set_encode_properties(&encode_properties);
 
 		if (mCameraState.capture_state == SPRD_INIT || mCameraState.capture_state == SPRD_IDLE) {
             IsSetPara = false;
@@ -2753,6 +2806,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					for (i = 0; i < previewStreamParms->numSvcBuffers; i++) {
 						 previewStreamParms->svcBufStatus[i] = ON_HAL_INIT;
 					}
+					m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();
 				}
 			}
 			if (camera_set_dimensions(subParameters->width,subParameters->height,
@@ -3858,7 +3912,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
     static const int32_t availableTargetFpsRanges[] = {
-            15, 15, 24, 24, 25, 25, 15, 30, 30, 30
+            15, 30, 15, 30
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
             availableTargetFpsRanges,
