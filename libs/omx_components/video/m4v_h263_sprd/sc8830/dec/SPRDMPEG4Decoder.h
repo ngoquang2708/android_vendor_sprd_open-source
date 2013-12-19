@@ -110,6 +110,7 @@ private:
     bool mDecoderSwFlag;
     bool mChangeToHwDec;
     bool mNeedIVOP;
+    bool mHeadersDecoded;
     FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
     FT_MP4DecInit mMP4DecInit;
     FT_MP4DecVolHeader mMP4DecVolHeader;
@@ -120,6 +121,7 @@ private:
     FT_Mp4GetBufferDimensions mMp4GetBufferDimensions;
     FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
     FT_MP4DecSetReferenceYUV mMP4DecSetReferenceYUV;
+    FT_MP4DecGetLastDspFrm mMP4DecGetLastDspFrm;
 
     static int32_t extMemoryAllocWrapper(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
     static int32_t BindFrameWrapper(void *aUserData, void *pHeader, int flag);
@@ -138,8 +140,9 @@ private:
     void initPorts();
     status_t initDecoder();
     void releaseDecoder();
-    void updatePortDefinitions();
+    bool drainAllOutputBuffers();
     bool portSettingsChanged();
+    void updatePortDefinitions();
     bool openDecoder(const char* libName);
 
     DISALLOW_EVIL_CONSTRUCTORS(SPRDMPEG4Decoder);

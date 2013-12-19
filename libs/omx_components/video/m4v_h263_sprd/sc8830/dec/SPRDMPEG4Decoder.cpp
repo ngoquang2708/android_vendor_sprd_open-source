@@ -123,6 +123,7 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mDecoderSwFlag(true),
       mChangeToHwDec(false),
       mNeedIVOP(true),
+      mHeadersDecoded(false),
       mMP4DecSetCurRecPic(NULL),
       mMP4DecInit(NULL),
       mMP4DecVolHeader(NULL),
@@ -130,7 +131,8 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mMP4DecDecode(NULL),
       mMP4DecRelease(NULL),
       mMp4GetVideoDimensions(NULL),
-      mMp4GetBufferDimensions(NULL) {
+      mMp4GetBufferDimensions(NULL),
+      mMP4DecGetLastDspFrm(NULL) {
 
     ALOGI("Construct SPRDMPEG4Decoder, this: %0x", (void *)this);
 
@@ -729,24 +731,7 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 
             ++mInputBufferCount;
 
-            outHeader->nFilledLen = 0;
-            outHeader->nFlags = OMX_BUFFERFLAG_EOS;
-
-            List<BufferInfo *>::iterator it = outQueue.begin();
-            while ((*it)->mHeader != outHeader) {
-                ++it;
-            }
-
-            BufferInfo *outInfo = *it;
-            outInfo->mOwnedByUs = false;
-            outQueue.erase(it);
-            outInfo = NULL;
-
-            BufferCtrlStruct* pBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
-            pBufCtrl->iRefCount++;
-
-            notifyFillBufferDone(outHeader);
-            outHeader = NULL;
+            drainAllOutputBuffers();
             return;
         }
 
@@ -995,6 +980,34 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
     }
 }
 
+bool SPRDMPEG4Decoder::drainAllOutputBuffers() {
+    ALOGI("%s, %d", __FUNCTION__, __LINE__);
+
+    List<BufferInfo *> &outQueue = getPortQueue(1);
+
+    void *yuv;
+
+    while (!outQueue.empty()) {
+        BufferInfo *outInfo = *outQueue.begin();
+        outQueue.erase(outQueue.begin());
+        OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
+        if (mHeadersDecoded &&(*mMP4DecGetLastDspFrm)(mHandle, &yuv) ) {
+            outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
+        } else {
+            outHeader->nTimeStamp = 0;
+            outHeader->nFilledLen = 0;
+            outHeader->nFlags = OMX_BUFFERFLAG_EOS;
+        }
+
+        outInfo->mOwnedByUs = false;
+        BufferCtrlStruct* pOutBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
+        pOutBufCtrl->iRefCount++;
+        notifyFillBufferDone(outHeader);
+    }
+
+    return true;
+}
+
 bool SPRDMPEG4Decoder::portSettingsChanged() {
     int32_t disp_width, disp_height;
     bool ret = false;
@@ -1230,6 +1243,8 @@ int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int width,unsigned int height, uns
 
     (*mMP4DecMemInit)(((SPRDMPEG4Decoder *)this)->mHandle, extra_mem);
 
+    mHeadersDecoded = true;
+
     return 0;
 }
 
@@ -1356,6 +1371,14 @@ bool SPRDMPEG4Decoder::openDecoder(const char* libName) {
     mMP4DecReleaseRefBuffers = (FT_MP4DecReleaseRefBuffers)dlsym(mLibHandle, "MP4DecReleaseRefBuffers");
     if(mMP4DecReleaseRefBuffers == NULL) {
         ALOGE("Can't find MP4DecReleaseRefBuffers in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4DecGetLastDspFrm = (FT_MP4DecGetLastDspFrm)dlsym(mLibHandle, "MP4DecGetLastDspFrm");
+    if(mMP4DecGetLastDspFrm == NULL) {
+        ALOGE("Can't find MP4DecGetLastDspFrm in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
         return false;
