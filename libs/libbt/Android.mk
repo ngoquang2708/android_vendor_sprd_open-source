@@ -9,7 +9,8 @@ BDROID_DIR := $(TOP_DIR)external/bluetooth/bluedroid
 LOCAL_SRC_FILES := \
         src/bt_vendor_sprd.c \
         src/hardware.c \
-        src/userial_vendor.c
+        src/userial_vendor.c \
+	src/pskey_get.c
 
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/include \
