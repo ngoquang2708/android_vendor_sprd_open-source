@@ -2853,12 +2853,12 @@ static int _v4l2_postfix(struct frm_info* info)
 		frame_type.dy = dy;
 		CMR_LOGV("buffer id =0x%x", frm_id);
 
-		if (g_cxt->prev_rot != IMG_ROT_0) {
+		//if (g_cxt->prev_rot != IMG_ROT_0) {
 			camera_call_cb(CAMERA_EVT_CB_FLUSH,
 			camera_get_client_data(),
 			CAMERA_FUNC_START_PREVIEW,
 			(uint32_t)&frame_type);
-		}
+		//}
 	} else {
 		frm_id = info->frame_id - CAMERA_CAP0_ID_BASE;
 		frame_type.buf_Virt_Addr = (uint32_t*)cap_frm->addr_vir.addr_y;
