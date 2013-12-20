@@ -58,7 +58,7 @@ status_t addOrSize(camera_metadata_t *request,
         (*entryCount)++;
         (*dataCount) += calculate_camera_metadata_entry_data_size(type,
                 entryDataCount);
-		HAL_LOGD("addorsize datasize=%d",*dataCount);
+//		HAL_LOGD("addorsize datasize=%d",*dataCount);
         return OK;
     }
 }
@@ -1515,25 +1515,7 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 				HAL_LOGE("receiveRawPicture: camera_set_position: error");
 			}
 		}
-		{
-		//	stream_parameters_t     *targetStreamParms = NULL;
-		//	status_t res = NO_ERROR;
-	    //    int i = 0;
-			//review start
-			//DisplayPictureImg((camera_frame_type *)parm4);
-			//cancel graphic bufs
-		//	targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
-		/*	if (CAMERA_ZSL_MODE != m_camCtlInfo.pictureMode) {
-				for (;i < targetStreamParms->numSvcBuffers;i++) {
-		           res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
-				   if (res) {
-		              HAL_LOGE("%s cancelbuf res=%d",__FUNCTION__,res);
-				   }
-				   targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
-				}
-			}
-			m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();*/
-		}
+		DisplayPictureImg((camera_frame_type *)parm4);
 		break;
 	case CAMERA_EXIT_CB_DONE:
 		if (SPRD_WAITING_RAW == getCaptureState()) {
@@ -2669,7 +2651,22 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					srcreq->isCropSet = false;
 				}
 	            setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
+				for (i=0 ;i < targetStreamParms->numSvcBuffers;i++) {
+		           res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
+				   if (res) {
+		              HAL_LOGE("%s cancelbuf res=%d",__FUNCTION__,res);
+				   }
+				   targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
+				}
+				m_Stream[STREAM_ID_PREVIEW-1]->releaseBufQ();
 				getPreviewBuffer();
+				if (camera_set_preview_mem((uint32_t)mPreviewHeapArray_phy,
+							(uint32_t)mPreviewHeapArray_vir,
+							(targetStreamParms->width * targetStreamParms->height * 3)/2,
+							(uint32_t)targetStreamParms->numSvcBuffers)) {
+						HAL_LOGE("set preview mem error.");
+						return ;
+				}
 			    camera_ret_code_type qret = camera_start_preview(camera_cb, this,m_camCtlInfo.pictureMode);
 				if (qret != CAMERA_SUCCESS) {
 					HAL_LOGE("%s startPreview failed: sensor error.",__FUNCTION__);
@@ -2796,17 +2793,6 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						return ;
 				    }
 				    WaitForPreviewStop();
-					for (i = 0 ;i < previewStreamParms->numSvcBuffers;i++) {
-						res = previewStreamParms->streamOps->cancel_buffer(previewStreamParms->streamOps,
-																			&(previewStreamParms->svcBufHandle[i]));
-						if (res) {
-							HAL_LOGE("cancelbuf res=%d",res);
-						}
-					}
-					for (i = 0; i < previewStreamParms->numSvcBuffers; i++) {
-						 previewStreamParms->svcBufStatus[i] = ON_HAL_INIT;
-					}
-					m_Stream[STREAM_ID_PREVIEW - 1]->releaseBufQ();
 				}
 			}
 			if (camera_set_dimensions(subParameters->width,subParameters->height,
