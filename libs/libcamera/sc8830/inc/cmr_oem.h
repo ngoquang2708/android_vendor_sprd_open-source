@@ -293,7 +293,6 @@ struct camera_context {
 	struct jpeg_context      jpeg_cxt;
 	struct scaler_context    scaler_cxt;
 	struct rotation_context  rot_cxt;
-	struct arithmetic_context arithmetic_cxt;
 	struct jpeg_specify_context jpeg_specify_cxt;
 
 	/*for the workflow management*/

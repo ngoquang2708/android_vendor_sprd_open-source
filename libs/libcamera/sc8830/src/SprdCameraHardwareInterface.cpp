@@ -1138,12 +1138,12 @@ status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2
     uint32_t addr = 0;
     LOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
 	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
-		setFdmem(buffer_size);
-        camera_set_start_facedetect(1);
+//		setFdmem(buffer_size);
+        camera_set_start_facedetect(1, buffer_size);
 	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
 	    LOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
-        camera_set_start_facedetect(0);
-        FreeFdmem();
+        camera_set_start_facedetect(0, 0);
+//        FreeFdmem();
 	}
 
 	return NO_ERROR;
@@ -1859,13 +1859,13 @@ void SprdCameraHardware::setFdmem(uint32_t size)
 
 	uint32_t addr = (uint32_t)malloc(size);
 	mFDAddr = addr;
-	camera_set_fd_mem(0, addr, size);
+//	camera_set_fd_mem(0, addr, size);
 }
 
 void SprdCameraHardware::FreeFdmem(void)
 {
 	if (mFDAddr) {
-		camera_set_fd_mem(0,0,0);
+//		camera_set_fd_mem(0,0,0);
 		free((void*)mFDAddr);
 		mFDAddr = 0;
 	}
@@ -2101,8 +2101,9 @@ void SprdCameraHardware::freePreviewMem()
 	uint32_t i;
 	LOGV("freePreviewMem E.");
 	Mutex::Autolock pcpl(&mPrevCpLock);
+	LOGV("freePreviewMem got Prev Cp lock");
 
-	FreeFdmem();
+//	FreeFdmem();
 
 	if (mPreviewHeapArray != NULL) {
 		for (i = 0; i < mPreviewDcamAllocBufferCnt; i++) {
@@ -2115,7 +2116,9 @@ void SprdCameraHardware::freePreviewMem()
 			} else {
 				if ((mPreviewHeapArray[i]) &&
 					(true == mPreviewHeapArray[i]->busy_flag)) {
+					LOGV("freePreviewMem wait Prev Bak Data lock");
 					Mutex::Autolock pbdLock(&mPrevBakDataLock);
+					LOGV("freePreviewMem got Prev Bak Data lock");
 					LOGE("preview buffer is busy, skip, bakup and free later!");
 					if (NULL == mPreviewHeapInfoBak.camera_memory) {
 						memcpy(&mPreviewHeapInfoBak, mPreviewHeapArray[i], sizeof(sprd_camera_memory));
@@ -2138,7 +2141,9 @@ void SprdCameraHardware::freePreviewMem()
 		mPreviewHeapArray = NULL;
 	}
 
+	LOGV("freePreviewMem start cancel Prev Mem");
 	canclePreviewMem();
+	LOGV("freePreviewMem cancel Prev Mem OK");
 	mPreviewHeapSize = 0;
 	mPreviewHeapNum = 0;
 	LOGV("freePreviewMem X.");
@@ -2984,7 +2989,6 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 {
 	int ret = 0;
 	struct _dma_copy_cfg_tag dma_copy_cfg;
-	Mutex::Autolock pcpl(&mPrevCpLock);
 
 	if (s_mem_method==0) {
 #ifdef CONFIG_CAMERA_DMA_COPY
@@ -3029,10 +3033,10 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 		ret = uv420CopyTrim(dma_copy_cfg);
 #else
 		if (mIsDvPreview) {
-			if (!mPreviewWindow || !mGrallocHal) return false;
+			if (!mPreviewWindow || !mGrallocHal) return -EOWNERDEAD;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
 		} else {
-			if (!mPreviewWindow || !mGrallocHal) return false;
+			if (!mPreviewWindow || !mGrallocHal) return -EOWNERDEAD;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
 #endif
@@ -3040,10 +3044,10 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 #endif
 	} else {
 		if (mIsDvPreview) {
-			if (!mPreviewWindow || !mGrallocHal) return false;
+			if (!mPreviewWindow || !mGrallocHal) return -EOWNERDEAD;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w) * SIZE_ALIGN(src_h) * 3/2);
 		} else {
-			if (!mPreviewWindow || !mGrallocHal) return false;
+			if (!mPreviewWindow || !mGrallocHal) return -EOWNERDEAD;
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
 	}
@@ -3053,6 +3057,7 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t height, uint32_t phy_addr, char *virtual_addr)
 {
 	LOGV("%s: size = %dx%d, addr = %d", __func__, width, height, phy_addr);
+	Mutex::Autolock cbLock(&mPreviewCbLock);
 
 	buffer_handle_t 	*buf_handle = NULL;
 	int 				stride = 0;
@@ -3142,7 +3147,14 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		private_h = (struct private_handle_t *)(*buf_handle);
 		dst_phy_addr =  (uint32_t)(private_h->phyaddr);
-		ret = displayCopy(dst_phy_addr, (uint32_t)vaddr, phy_addr, (uint32_t)virtual_addr, width, height);
+
+		mPrevCpLock.lock();
+		if (isPreviewing()) {
+			ret = displayCopy(dst_phy_addr, (uint32_t)vaddr, phy_addr, (uint32_t)virtual_addr, width, height);
+		} else {
+			ret = -ENOSYS;
+		}
+		mPrevCpLock.unlock();
 
 		mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
@@ -3189,7 +3201,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 {
-    Mutex::Autolock cbLock(&mPreviewCbLock);
+//    Mutex::Autolock cbLock(&mPreviewCbLock);
 
 	if (NULL == frame) {
 		LOGE("receivePreviewFDFrame: invalid frame pointer");
@@ -3352,8 +3364,13 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		miSPreviewFirstFrame = 0;
 	}
 
-	if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr, frame->buf_id)) {
-		LOGE("%s: displayOneFrame failed!", __func__);
+	if (isPreviewing()) { 
+		if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr, frame->buf_id)) {
+			LOGE("%s: displayOneFrame failed!", __func__);
+		}
+	} else {
+		LOGE("not in preview status, direct return!");
+		return;
 	}
 
 #ifdef CONFIG_CAMERA_ISP

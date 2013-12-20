@@ -284,6 +284,11 @@ int camera_get_sensor_mode_trim(uint32_t mode, cropZoom *sensor_trim, uint16_t *
    return ret;
 }
 
+uint32_t camera_get_prev_stat()
+{
+	return g_cxt->preview_status;
+}
+
 int camera_sensor_init(int32_t camera_id)
 {
 	struct camera_ctrl       *ctrl = &g_cxt->control;
@@ -2438,7 +2443,7 @@ int camera_start_preview_internal(void)
 
 	CMR_LOGV("preview format is %d", g_cxt->preview_fmt);
 
-	ret = arithmetic_fd_init();
+	ret = arithmetic_fd_init(&g_cxt->display_size);
 	if (ret) {
 		CMR_LOGE("Failed to init arithmetic %d", ret);
 	}
@@ -2735,7 +2740,6 @@ int camera_stop_preview_internal(void)
 	}
 
 	cmr_rot_wait_done();
-	arithmetic_fd_deinit();
 	g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 	/*arithmetic_hdr_deinit();*/
 
@@ -3636,15 +3640,14 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 					&g_cxt->prev_frm[frm_id].addr_vir);
 		}
 #endif
-		if (0 == g_cxt->arithmetic_cxt.fd_num) {
+		if (0 == arithmetic_get_fd_num()) {
 			skip_frame_gap = FACE_DETECT_GAP_MAX;
 		} else {
 			skip_frame_gap = FACE_DETECT_GAP_MIN;
 		}
-		if ((1 == g_cxt->arithmetic_cxt.fd_flag) && (1 == g_cxt->arithmetic_cxt.fd_inited)
+		if ((arithmetic_fd_is_eb()) && (arithmetic_fd_is_init())
 			&& (0 == (g_cxt->pre_frm_cnt % (skip_frame_gap + 1)))) {
 			CMR_LOGI("face detect start.");
-			g_cxt->arithmetic_cxt.fd_num = 0;
 			arithmetic_fd_start((void*)frame_type->buf_Virt_Addr);
 		}
 	} else if (CHN_2 == info->channel_id) {
@@ -7522,16 +7525,22 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 	return ret;
 
 }
-void camera_set_start_facedetect(uint32_t param)
+void camera_set_start_facedetect(uint32_t param, uint32_t mem_size)
 {
-	g_cxt->arithmetic_cxt.fd_flag = param;
+	if (param) {
+		arithmetic_mem_handle(mem_size);
+		arithmetic_set_fd_eb(param);
+	} else {
+		arithmetic_set_fd_eb(param);
+		arithmetic_mem_handle(mem_size);
+	}
 	CMR_LOGV("param %d.",param);
 }
 
 int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size)
 {
 	CMR_LOGV("phy_addr, 0x%x, vir_addr, 0x%x, mem_size 0x%x", phy_addr, vir_addr, mem_size);
-	arithmetic_set_mem(phy_addr,vir_addr,mem_size);
+//	arithmetic_set_mem(phy_addr,vir_addr,mem_size);
 
 	return 0;
 }

@@ -519,7 +519,7 @@ int camera_get_data_redisplay(int output_addr,
 					int input_height);
 
 uint32_t camera_get_rot_set(void);
-void camera_set_start_facedetect(uint32_t param);
+void camera_set_start_facedetect(uint32_t param, uint32_t mem_size);
 void camera_call_cb(camera_cb_type cb,
                  const void *client_data,
                  camera_func_type func,
@@ -552,6 +552,7 @@ int camera_isp_awb_bypass(enum isp_alg_mode awb_mode);
 int camera_isp_ae_bypass(enum isp_alg_mode ae_mode);
 int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level);
 void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
+inline uint32_t camera_get_prev_stat();
 
 #ifdef __cplusplus
 }

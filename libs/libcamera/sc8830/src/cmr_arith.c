@@ -27,12 +27,15 @@
 #include "cmr_oem.h"
 
 
-#define ARITHMETIC_EVT_FD_START	      (1 << 16)
-#define ARITHMETIC_EVT_FD_EXIT	      (1 << 17)
-#define ARITHMETIC_EVT_FD_INIT	      (1 << 18)
+#define ARITHMETIC_EVT_FD_START          (1 << 16)
+#define ARITHMETIC_EVT_FD_EXIT           (1 << 17)
+#define ARITHMETIC_EVT_FD_INIT           (1 << 18)
+#define ARITHMETIC_EVT_MEM               (1 << 19)
+
 #define ARITHMETIC_EVT_MASK_BITS      (uint32_t)(ARITHMETIC_EVT_FD_START | \
-												ARITHMETIC_EVT_FD_EXIT | \
-												ARITHMETIC_EVT_FD_INIT)
+						ARITHMETIC_EVT_FD_EXIT | \
+						ARITHMETIC_EVT_FD_INIT | \
+						ARITHMETIC_EVT_MEM)
 
 
 #define CAMERA_FD_MSG_QUEUE_SIZE      5
@@ -57,6 +60,11 @@ struct arithmetic_conext{
 	void            *addr;
 	void            *phy_addr;
 	uint32_t        mem_size;
+	uint32_t        fd_is_inited;
+	uint32_t        fd_num;
+	uint32_t        arith_fd_flag;
+	struct img_size fd_size;
+	uint32_t        mem_state;
 };
 
 struct arithmetic_hdr_conext{
@@ -69,8 +77,41 @@ static struct arithmetic_conext s_arithmetix_cxt;
 static struct arithmetic_conext *s_arith_cxt = &s_arithmetix_cxt;
 static struct arithmetic_hdr_conext s_hdr_cntext;
 static struct arithmetic_hdr_conext *s_hdr_cxt = &s_hdr_cntext;
+static uint32_t check_size_data_invalid(struct img_size * fd_size);
+static int arithmetic_fd_call_init(const struct img_size * fd_size);
 
+uint32_t arithmetic_fd_is_init(void)
+{
+	if (0 == s_arith_cxt->fd_is_inited) return 0;
+	return 1;
+}
 
+uint32_t arithmetic_get_fd_num(void)
+{
+	return s_arith_cxt->fd_num;
+}
+
+uint32_t arithmetic_fd_is_eb(void)
+{
+	if (0 == s_arith_cxt->arith_fd_flag) return 0;
+	return 1;
+}
+
+void arithmetic_set_fd_eb(uint32_t param)
+{
+	s_arith_cxt->arith_fd_flag = param;
+}
+
+uint32_t check_size_data_invalid(struct img_size * fd_size)
+{
+	uint32_t ret = 0;
+	if (NULL != fd_size) {
+		if ((fd_size->width)&&(fd_size->height)){
+			ret= 1;
+		}
+	}
+	return ret;
+}
 
 void *arithmetic_fd_thread_proc(void *data)
 {
@@ -85,6 +126,7 @@ void *arithmetic_fd_thread_proc(void *data)
 	int                 fd_exit_flag = 0;
 	camera_cb_info      cb_info;
 	struct camera_context  *cxt = camera_get_cxt();
+	uint32_t            mem_size = 0;
 
 	sem_post(&s_arith_cxt->fd_sync_sem);
 	while (1) {
@@ -99,25 +141,68 @@ void *arithmetic_fd_thread_proc(void *data)
 			(unsigned int)message.data);
 
 		evt = (uint32_t)(message.msg_type & ARITHMETIC_EVT_MASK_BITS);
+
 		switch (evt) {
 		case ARITHMETIC_EVT_FD_INIT:
 			CMR_PRINT_TIME;
-			if ( 0 != FaceSolid_Init(cxt->display_size.width,
-			                    cxt->display_size.height )) {
-				ret = -ARITH_INIT_FAIL;
-				CMR_LOGE("FaceSolid_Init fail.");
-			} else {
-				CMR_LOGI("FaceSolid_Init done.");
-			}
+			if (check_size_data_invalid((struct img_size *)(message.data))) {
+				FaceSolid_Finalize();
 
+				if ( 0 != FaceSolid_Init(((struct img_size *)(message.data))->width,
+				((struct img_size *)(message.data))->height)) {
+					ret = -ARITH_INIT_FAIL;
+					CMR_LOGE("FaceSolid_Init fail.");
+				} else {
+					CMR_LOGI("FaceSolid_Init done.");
+				}
+			}
 			CMR_PRINT_TIME;
+			break;
+		case ARITHMETIC_EVT_MEM:
+			mem_size = *(uint32_t *)(message.data);
+			if (0 == mem_size) {
+				if (s_arith_cxt->addr) {
+					free(s_arith_cxt->addr);
+					s_arith_cxt->addr = NULL;
+					s_arith_cxt->mem_size = 0;
+					s_arith_cxt->phy_addr = NULL;
+				}
+				s_arith_cxt->mem_state = ARITH_SUCCESS;
+			} else if (s_arith_cxt->mem_size != mem_size) {
+				if (s_arith_cxt->addr) {
+					free(s_arith_cxt->addr);
+					s_arith_cxt->addr = NULL;
+					s_arith_cxt->mem_size = 0;
+					s_arith_cxt->phy_addr = NULL;
+				}
+
+				s_arith_cxt->addr = malloc(mem_size);
+				if (NULL == s_arith_cxt->addr) {
+					CMR_LOGE("Fail to alloc FD mem");
+					s_arith_cxt->mem_state = ARITH_NO_MEM;
+				} else {
+					s_arith_cxt->mem_size = mem_size;
+					s_arith_cxt->phy_addr = NULL; /*the physical address is unuseable yet*/
+					s_arith_cxt->mem_state = ARITH_SUCCESS;
+				}
+			} else {
+				CMR_LOGV("same size req, use origin buffer");
+			}
+			sem_post(&s_arith_cxt->fd_sync_sem);
 
 			break;
 		case ARITHMETIC_EVT_FD_START:
 			CMR_PRINT_TIME;
+			s_arith_cxt->fd_num = 0;
 			s_arith_cxt->fd_busy = 1;
 			pthread_mutex_lock(&s_arith_cxt->fd_lock);
-			if (CMR_IDLE == cxt->preview_status) {
+			if (NULL == s_arith_cxt->addr) {
+				CMR_LOGE("FD memory NULL error");
+				sem_post(&s_arith_cxt->fd_sync_sem);
+				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
+				break;
+			}
+			if (CMR_IDLE == camera_get_prev_stat()) {
 				s_arith_cxt->fd_busy = 0;
 				sem_post(&s_arith_cxt->fd_sync_sem);
 				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
@@ -141,8 +226,8 @@ void *arithmetic_fd_thread_proc(void *data)
 			} else {
 				frame_type.face_ptr = face_rect_ptr;
 				frame_type.face_num = face_num;
-				cxt->arithmetic_cxt.fd_num = face_num;
-				if (CMR_IDLE == cxt->preview_status) {
+				s_arith_cxt->fd_num = face_num;
+				if (CMR_IDLE == camera_get_prev_stat()) {
 					s_arith_cxt->fd_busy = 0;
 					pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 					break;
@@ -151,9 +236,9 @@ void *arithmetic_fd_thread_proc(void *data)
 					CMR_LOGI("face num %d,smile_level %d.",k,face_rect_ptr->smile_level);
 					face_rect_ptr++;
 				}
-				if (cxt->arithmetic_cxt.fd_flag) {
+				if (s_arith_cxt->arith_fd_flag) {
 #if CB_LIGHT_SYNC
-					camera_call_cb(CAMERA_EVT_CB_FD,
+					camera_direct_call_cb(CAMERA_EVT_CB_FD,
 								camera_get_client_data(),
 								CAMERA_FUNC_START_PREVIEW,
 								(uint32_t)&frame_type);
@@ -179,30 +264,48 @@ void *arithmetic_fd_thread_proc(void *data)
 		default:
 			break;
 		}
+
+		if (message.alloc_flag) {
+			free(message.data);
+		}
+
 		if (1 == fd_exit_flag) {
 			CMR_LOGV("FD proc exit.");
 			sem_post(&s_arith_cxt->fd_sync_sem);
 			break;
 		}
+
 	}
 	CMR_LOGV("exit.");
 	return NULL;
 }
 
-int arithmetic_fd_init(void)
+int arithmetic_fd_call_init(const struct img_size * fd_size)
 {
 	CMR_MSG_INIT(message);
-	struct camera_context  *cxt = camera_get_cxt();
+	int          ret = ARITH_SUCCESS;
+
+	message.data = malloc(sizeof(struct img_size));
+	if (NULL == message.data) {
+		CMR_LOGE("NO mem, Fail to alloc memory for msg data");
+		return ARITH_NO_MEM;
+	}
+
+	message.alloc_flag = 1;
+	memcpy(message.data, fd_size, sizeof(struct img_size));
+
+	message.msg_type = ARITHMETIC_EVT_FD_INIT;
+	return cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
+}
+
+int arithmetic_fd_init(const struct img_size * fd_size)
+{
 	int                    ret = ARITH_SUCCESS;
 	pthread_attr_t          attr;
 
-	CMR_LOGV("inited, %d", cxt->arithmetic_cxt.fd_inited);
+	CMR_LOGV("inited, %d", s_arith_cxt->fd_is_inited);
 
-	if (cxt->arithmetic_cxt.fd_inited) {
-		FaceSolid_Finalize();
-	}
-
-	if (0 == cxt->arithmetic_cxt.fd_inited) {
+	if (0 == s_arith_cxt->fd_is_inited) {
 		ret = cmr_msg_queue_create(CAMERA_FD_MSG_QUEUE_SIZE, &s_arith_cxt->fd_msg_que_handle);
 		if (ret) {
 			CMR_LOGE("NO Memory, Failed to create FD message queue");
@@ -213,13 +316,17 @@ int arithmetic_fd_init(void)
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 			ret = pthread_create(&s_arith_cxt->fd_thread,  &attr, arithmetic_fd_thread_proc, NULL);
 			sem_wait(&s_arith_cxt->fd_sync_sem);
-			message.msg_type = ARITHMETIC_EVT_FD_INIT;
-			ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
-			if (ret) {
+
+			if (arithmetic_fd_call_init(fd_size)) {
 				arithmetic_fd_deinit();
 			} else {
-				cxt->arithmetic_cxt.fd_inited = 1;
+				s_arith_cxt->fd_is_inited = 1;
 			}
+		}
+	} else if ((s_arith_cxt->fd_size.width != fd_size->width) ||
+			(s_arith_cxt->fd_size.height != fd_size->height)) {
+		if (arithmetic_fd_call_init(fd_size)) {
+				arithmetic_fd_deinit();
 		}
 	}
 
@@ -230,11 +337,10 @@ int arithmetic_fd_deinit(void)
 {
 	CMR_MSG_INIT(message);
 	int                    ret = ARITH_SUCCESS;
-	struct camera_context  *cxt = camera_get_cxt();
 
 	CMR_LOGI("s.");
 	CMR_PRINT_TIME;
-	if (1 == cxt->arithmetic_cxt.fd_inited) {
+	if (1 == s_arith_cxt->fd_is_inited) {
 		message.msg_type = ARITHMETIC_EVT_FD_EXIT;
 		ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
@@ -244,9 +350,17 @@ int arithmetic_fd_deinit(void)
 		sem_destroy(&s_arith_cxt->fd_sync_sem);
 		pthread_mutex_destroy(&s_arith_cxt->fd_lock);
 		cmr_msg_queue_destroy(s_arith_cxt->fd_msg_que_handle);
-		cxt->arithmetic_cxt.fd_inited = 0;
+		s_arith_cxt->fd_is_inited = 0;
 		CMR_LOGI("FaceSolid_Finalize done.");
 	}
+
+	if (s_arith_cxt->addr) {
+		free(s_arith_cxt->addr);
+		s_arith_cxt->addr = NULL;
+		s_arith_cxt->mem_size = 0;
+		s_arith_cxt->phy_addr = NULL;
+	}
+
 	memset(s_arith_cxt, 0, sizeof(struct arithmetic_conext));
 
 	CMR_PRINT_TIME;
@@ -279,6 +393,7 @@ int arithmetic_fd_start(void *data_addr)
 	}
 	return ret;
 }
+
 void arithmetic_set_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size)
 {
 	pthread_mutex_lock(&s_arith_cxt->fd_lock);
@@ -287,6 +402,36 @@ void arithmetic_set_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size)
 	s_arith_cxt->phy_addr = (void*)phy_addr;
 	pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 	CMR_LOGI("0x%x,0x%x.",(uint32_t)s_arith_cxt->addr,vir_addr);
+}
+
+/*mem size = 0, means the memory should be free*/
+int arithmetic_mem_handle(uint32_t mem_size)
+{
+	int ret = ARITH_SUCCESS;
+	CMR_MSG_INIT(message);
+	CMR_LOGV("E");
+
+	message.msg_type = ARITHMETIC_EVT_MEM;
+	message.data = malloc(sizeof(uint32_t));
+	if (NULL == message.data) {
+		CMR_LOGE("NO mem, Fail to alloc memory for msg data");
+		return ARITH_NO_MEM;
+	}
+	message.alloc_flag = 1;
+	*(uint32_t *)(message.data) = mem_size;;
+
+	ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
+
+	if(CMR_MSG_SUCCESS == ret) {
+		sem_wait(&s_arith_cxt->fd_sync_sem);
+		ret = s_arith_cxt->mem_state;
+	} else {
+		ret = ARITH_FAIL;
+		CMR_LOGE("fail.");
+	}
+
+	CMR_LOGV("X");
+	return ret;
 }
 
 int arithmetic_hdr_init(uint32_t pic_width, uint32_t pic_height)
