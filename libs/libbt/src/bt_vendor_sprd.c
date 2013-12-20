@@ -27,6 +27,7 @@
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <stdlib.h>
 #include "bt_vendor_sprd.h"
 #include "userial_vendor.h"
 /******************************************************************************
@@ -255,7 +256,6 @@ BT_PSKEY_CONFIG_T bt_para_setting={
 0x1,
 0x1,
 0x2,
-0x2,
 0x4,
 0x4,
 0x0,
@@ -270,39 +270,13 @@ BT_PSKEY_CONFIG_T bt_para_setting={
 //******************create bt addr***********************
 static void mac_rand(char *btmac)
 {
-	int fd,i, j, k;
-	char buf[80];
-	char *ptr;
-	int size = 0,counter = 80;
+	int i=0, j=0;
 	unsigned int randseed;
 
 	ALOGI("mac_rand");
 
-	memset(buf, 0, sizeof(buf));
-
-	if(access(BT_MAC_FILE, F_OK) == 0) {
-		ALOGI("%s: %s exists",__FUNCTION__, BT_MAC_FILE);
-		fd = open(BT_MAC_FILE, O_RDWR);
-		if(fd>=0) {
-			size = read(fd, buf, sizeof(buf));
-			ALOGI("%s: read %s %s, size=%d",__FUNCTION__, BT_MAC_FILE, buf, size);
-			if(size == BT_RAND_MAC_LENGTH){
-				ALOGI("bt mac already exists, no need to random it");
-				strcpy(btmac, buf);
-				close(fd);
-				ALOGI("%s: read btmac=%s",__FUNCTION__, btmac);
-				return;
-			}
-			close(fd);
-		}
-	}
-      ALOGI("%s: there is no bt mac, random it", __FUNCTION__);
-	k=0;
-	for(i=0; i<counter; i++)
-		k += buf[i];
-
 	//rand seed
-	randseed = (unsigned int) time(NULL) + k*fd*counter + buf[counter-2];
+	randseed = (unsigned int) time(NULL);
 	ALOGI("%s: randseed=%d",__FUNCTION__, randseed);
 	srand(randseed);
 
@@ -318,15 +292,16 @@ static void mac_rand(char *btmac)
 }
 
 
-static void write_btmac2file(char *btmac)
+static  BOOLEAN write_btmac2file(char *btmac)
 {
-	int fd;
-	fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC);
-	if(fd > 0) {
-		chmod(BT_MAC_FILE,0666);
-		write(fd, btmac, strlen(btmac));
-		close(fd);
-	}
+    int fd = -1;
+    fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0660);
+    if(fd > 0) {
+        write(fd, btmac, strlen(btmac));
+        close(fd);
+        return TRUE;
+    }
+    return FALSE;
 }
 uint8 ConvertHexToBin(
 			uint8        *hex_ptr,     // in: the hexadecimal format string
@@ -407,21 +382,23 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
             }
             close(fd_btaddr);
         }
-
-        ALOGI("read bt_addr_read end\n");
-
+    }
+    else
+    {
+        mac_rand(bt_mac);     
+        if(write_btmac2file(bt_mac))
+            read_btmac=1;
+    }
+    
+    if(read_btmac == 1)
+    {
         for(i=0; i<6; i++)
         {
             bt_mac_tmp[i*2] = bt_mac[3*(5-i)];
             bt_mac_tmp[i*2+1] = bt_mac[3*(5-i)+1];
         }
         ALOGI("====bt_mac_tmp=%s", bt_mac_tmp);
-        ConvertHexToBin(bt_mac_tmp, strlen(bt_mac_tmp), bt_mac_bin);
-    }
-    else
-    {
-        ALOGI("btmac.txt not exsit!\n");
-        read_btmac=0;
+        ConvertHexToBin((uint8*)bt_mac_tmp, strlen(bt_mac_tmp), bt_mac_bin);
     }
 
     /* Reset the BT Chip */
