@@ -153,7 +153,7 @@ private:
      *  mainly judge whether upper layer and bottom layer
      *  is consistent with SprdDisplayPlane Hardware requirements.    
      * */
-    int revistGeometry(int *DisplayFlag);
+    int revisitGeometry(int *DisplayFlag);
 
     /*
      *  Filter OSD layer
@@ -168,7 +168,7 @@ private:
 #ifdef OVERLAY_COMPOSER_GPU
     int prepareOverlayComposerLayer(SprdHWLayer *l);
 
-    int revistOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer,
+    int revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer,
                             int LayerCount, int *FBLayerCount, int *DisplayFlag);
 #endif
 

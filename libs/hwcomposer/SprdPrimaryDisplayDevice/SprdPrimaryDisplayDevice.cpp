@@ -364,7 +364,14 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 #endif
 
 #ifdef PROCESS_VIDEO_USE_GSP
-        mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2);
+        if(mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2))
+        {
+            ALOGE("%s[%d],composerLayers ret err!!",__func__,__LINE__);
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "%s[%d],composerLayers success",__func__,__LINE__);
+        }
 #endif
     }
 

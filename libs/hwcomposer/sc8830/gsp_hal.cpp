@@ -361,11 +361,16 @@ static int32_t gsp_hal_layer1_params_check(GSP_LAYER1_CONFIG_INFO_T *layer1_info
         */
     return GSP_NO_ERR;
 }
-static int32_t gsp_hal_misc_params_check(GSP_MISC_CONFIG_INFO_T *misc_info)
+static int32_t gsp_hal_misc_params_check(GSP_CONFIG_INFO_T *gsp_cfg_info)
 {
-    if((misc_info->gsp_clock & (~3))
-            ||(misc_info->ahb_clock & (~3))) {
+    if((gsp_cfg_info->misc_info.gsp_clock & (~3))
+            ||(gsp_cfg_info->misc_info.ahb_clock & (~3))) {
         ALOGE("param check err: gsp_clock or ahb_clock larger than 3! Line:%d\n", __LINE__);
+        return GSP_HAL_PARAM_CHECK_ERR;
+    }
+    if(gsp_cfg_info->layer0_info.layer_en == 1 && gsp_cfg_info->layer0_info.pallet_en == 1
+            && gsp_cfg_info->layer1_info.layer_en == 1 && gsp_cfg_info->layer1_info.pallet_en == 1) {
+        ALOGE("param check err: both layer pallet are enable! Line:%d\n", __LINE__);
         return GSP_HAL_PARAM_CHECK_ERR;
     }
     return GSP_NO_ERR;
@@ -549,7 +554,7 @@ static int32_t gsp_hal_params_check(GSP_CONFIG_INFO_T *gsp_cfg_info)
 {
     if(gsp_hal_layer0_params_check(&gsp_cfg_info->layer0_info)
             ||gsp_hal_layer1_params_check(&gsp_cfg_info->layer1_info)
-            ||gsp_hal_misc_params_check(&gsp_cfg_info->misc_info)
+            ||gsp_hal_misc_params_check(gsp_cfg_info)
             ||gsp_hal_layerdes_params_check(gsp_cfg_info)) {
         return GSP_HAL_PARAM_CHECK_ERR;
     }
