@@ -89,49 +89,49 @@ struct cap_size_to_mem {
 static const struct cap_size_to_mem back_cam_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_1P3_MEGA, (6  << 20)},
 	{PIXEL_2P0_MEGA, (8  << 20)},
-	{PIXEL_3P0_MEGA, (12 << 20)},
+	{PIXEL_3P0_MEGA, (13 << 20)},
 	{PIXEL_4P0_MEGA, (14 << 20)},
-	{PIXEL_5P0_MEGA, (15 << 20)},
-	{PIXEL_6P0_MEGA, (17 << 20)},
-	{PIXEL_7P0_MEGA, (20 << 20)},
+	{PIXEL_5P0_MEGA, (16 << 20)},
+	{PIXEL_6P0_MEGA, (18 << 20)},
+	{PIXEL_7P0_MEGA, (21 << 20)},
 	{PIXEL_8P0_MEGA, (22 << 20)}
 };
 static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_1P3_MEGA, (5  << 20)},
 	{PIXEL_2P0_MEGA, (8  << 20)},
-	{PIXEL_3P0_MEGA, (11 << 20)},
+	{PIXEL_3P0_MEGA, (12 << 20)},
 	{PIXEL_4P0_MEGA, (13 << 20)},
-	{PIXEL_5P0_MEGA, (14 << 20)},
-	{PIXEL_6P0_MEGA, (16 << 20)},
-	{PIXEL_7P0_MEGA, (19 << 20)},
-	{PIXEL_8P0_MEGA, (20 << 20)},
-	{PIXEL_9P0_MEGA, (33 << 20)},
-	{PIXEL_AP0_MEGA, (33 << 20)},
-	{PIXEL_BP0_MEGA, (34 << 20)},
-	{PIXEL_CP0_MEGA, (34 << 20)},
-	{PIXEL_DP0_MEGA, (34 << 20)}
+	{PIXEL_5P0_MEGA, (15 << 20)},
+	{PIXEL_6P0_MEGA, (17 << 20)},
+	{PIXEL_7P0_MEGA, (20 << 20)},
+	{PIXEL_8P0_MEGA, (21 << 20)},
+	{PIXEL_9P0_MEGA, (35 << 20)},
+	{PIXEL_AP0_MEGA, (35 << 20)},
+	{PIXEL_BP0_MEGA, (36 << 20)},
+	{PIXEL_CP0_MEGA, (36 << 20)},
+	{PIXEL_DP0_MEGA, (37 << 20)}
 };
 
 
 static const struct cap_size_to_mem front_cam_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_1P3_MEGA, (7  << 20)},
 	{PIXEL_2P0_MEGA, (9  << 20)},
-	{PIXEL_3P0_MEGA, (12 << 20)},
+	{PIXEL_3P0_MEGA, (13 << 20)},
 	{PIXEL_4P0_MEGA, (18 << 20)},
-	{PIXEL_5P0_MEGA, (18 << 20)},
-	{PIXEL_6P0_MEGA, (18 << 20)},
-	{PIXEL_7P0_MEGA, (19 << 20)},
-	{PIXEL_8P0_MEGA, (19 << 20)}
+	{PIXEL_5P0_MEGA, (19 << 20)},
+	{PIXEL_6P0_MEGA, (19 << 20)},
+	{PIXEL_7P0_MEGA, (21 << 20)},
+	{PIXEL_8P0_MEGA, (22 << 20)}
 };
 static const struct cap_size_to_mem front_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_1P3_MEGA, (9  << 20)},
 	{PIXEL_2P0_MEGA, (9  << 20)},
-	{PIXEL_3P0_MEGA, (12 << 20)},
-	{PIXEL_4P0_MEGA, (14 << 20)},
-	{PIXEL_5P0_MEGA, (15 << 20)},
-	{PIXEL_6P0_MEGA, (17 << 20)},
-	{PIXEL_7P0_MEGA, (20 << 20)},
-	{PIXEL_8P0_MEGA, (21 << 20)}
+	{PIXEL_3P0_MEGA, (13 << 20)},
+	{PIXEL_4P0_MEGA, (18 << 20)},
+	{PIXEL_5P0_MEGA, (19 << 20)},
+	{PIXEL_6P0_MEGA, (19 << 20)},
+	{PIXEL_7P0_MEGA, (21 << 20)},
+	{PIXEL_8P0_MEGA, (22 << 20)}
 };
 
 /*for ATV*/

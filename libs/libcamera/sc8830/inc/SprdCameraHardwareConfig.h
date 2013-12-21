@@ -415,7 +415,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	/*	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},*/
 	{"picture-size-values", "1280x960,640x480"},
 	{"picture-size", "640x480"},
-	{"preview-size-values",	"960x540,720x480,640x480,352x288,320x240,176x144"},
+	{"preview-size-values",	"960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
 	{"preview-size", "640x480"},
 	{"video-size-values",  ""},
 	{"video-size", "720x480"},
@@ -526,7 +526,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"video-picture-size-values", "1280x960,1280x960,1280x960,1280x960,1280x960"},
 #endif
 	{"picture-size", "640x480"},
-	{"preview-size-values", "1920x1088,1280x960,1280x720,960x540,720x480,640x480,352x288,176x144"},
+	{"preview-size-values", "1920x1088,1280x960,1280x720,960x540,720x540,720x480,640x480,352x288,176x144"},
 	{"preview-size", "1280x960"},
 	{"video-size-values", ""},
 	{"video-size", "1920x1088"},

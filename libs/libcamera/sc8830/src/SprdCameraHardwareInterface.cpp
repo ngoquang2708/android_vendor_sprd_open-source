@@ -2278,6 +2278,8 @@ allocate_capture_mem_failed:
 
 void SprdCameraHardware::freeCaptureMem()
 {
+	LOGV("freeCaptureMem E!");
+	LOGV("free mRawHeap!");
 #if FREE_PMEM_BAK
 	if (NO_ERROR == mCbCapDataBusyLock.tryLock()) {
 		if (mRawHeap) {
@@ -2309,6 +2311,7 @@ void SprdCameraHardware::freeCaptureMem()
 
     mRawHeapSize = 0;
 
+	LOGV("free mMiscHeap!");
     if (mMiscHeapSize > 0) {
         FreePmem(mMiscHeap);
         mMiscHeap = NULL;
@@ -2316,6 +2319,7 @@ void SprdCameraHardware::freeCaptureMem()
     } else {
         uint32_t i;
         for (i=0; i<mMiscHeapNum; i++) {
+		LOGV("free mMiscHeapArray [%d]!", i);
             sp<MemoryHeapIon> pHeapIon = mMiscHeapArray[i];
             if (pHeapIon != NULL) {
                 pHeapIon.clear();
@@ -2325,6 +2329,8 @@ void SprdCameraHardware::freeCaptureMem()
         mMiscHeapNum = 0;
     }
      //mJpegHeap = NULL;
+	LOGV("freeCaptureMem X!");
+
 }
 
 

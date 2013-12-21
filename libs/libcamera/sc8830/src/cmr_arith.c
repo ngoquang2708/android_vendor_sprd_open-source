@@ -188,7 +188,6 @@ void *arithmetic_fd_thread_proc(void *data)
 			} else {
 				CMR_LOGV("same size req, use origin buffer");
 			}
-			sem_post(&s_arith_cxt->fd_sync_sem);
 
 			break;
 		case ARITHMETIC_EVT_FD_START:
@@ -196,7 +195,7 @@ void *arithmetic_fd_thread_proc(void *data)
 			s_arith_cxt->fd_num = 0;
 			s_arith_cxt->fd_busy = 1;
 			pthread_mutex_lock(&s_arith_cxt->fd_lock);
-			if (NULL == s_arith_cxt->addr) {
+			if ((NULL == s_arith_cxt->addr) || (ARITH_SUCCESS != s_arith_cxt->mem_state)) {
 				CMR_LOGE("FD memory NULL error");
 				sem_post(&s_arith_cxt->fd_sync_sem);
 				pthread_mutex_unlock(&s_arith_cxt->fd_lock);
@@ -423,8 +422,6 @@ int arithmetic_mem_handle(uint32_t mem_size)
 	ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
 	if(CMR_MSG_SUCCESS == ret) {
-		sem_wait(&s_arith_cxt->fd_sync_sem);
-		ret = s_arith_cxt->mem_state;
 	} else {
 		ret = ARITH_FAIL;
 		CMR_LOGE("fail.");
