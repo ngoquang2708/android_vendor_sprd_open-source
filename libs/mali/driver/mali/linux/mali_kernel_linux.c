@@ -602,7 +602,6 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 #endif
 {
 	int err;
-	int level=0;
 	struct mali_session_data *session_data;
 
 #ifndef HAVE_UNLOCKED_IOCTL
@@ -639,15 +638,11 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 	case MALI_IOC_GET_USER_SETTINGS:
 		err = get_user_settings_wrapper(session_data, (_mali_uk_get_user_settings_s __user *)arg);
 		break;
-
+#ifdef SPRD_GPU_BOOST
 	case MALI_IOC_SET_GPU_LEVEL:
-		err=get_user(level,(int __user *)arg);;
-		if((0==err)&&(level>gpu_level))
-		{
-			gpu_level=level;
-		}
+		err = get_user(session_data->level,(int __user *)arg);
 		break;
-
+#endif
 	case MALI_IOC_REQUEST_HIGH_PRIORITY:
 		err = request_high_priority_wrapper(session_data, (_mali_uk_request_high_priority_s __user *)arg);
 		break;

@@ -1285,7 +1285,9 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 #endif
 
 	session->use_high_priority_job_queue = MALI_FALSE;
-
+#ifdef SPRD_GPU_BOOST
+	session->level = 0;
+#endif
 	/* Initialize list of PP jobs on this session. */
 	_MALI_OSK_INIT_LIST_HEAD(&session->pp_job_list);
 

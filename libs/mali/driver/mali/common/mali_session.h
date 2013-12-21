@@ -46,6 +46,9 @@ struct mali_session_data {
 
 	mali_bool is_aborting; /**< MALI_TRUE if the session is aborting, MALI_FALSE if not. */
 	mali_bool use_high_priority_job_queue; /**< If MALI_TRUE, jobs added from this session will use the high priority job queues. */
+#ifdef SPRD_GPU_BOOST
+	int level;
+#endif
 };
 
 _mali_osk_errcode_t mali_session_initialize(void);
