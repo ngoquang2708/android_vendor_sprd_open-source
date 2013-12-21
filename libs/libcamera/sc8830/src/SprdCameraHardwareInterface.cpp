@@ -4957,6 +4957,7 @@ done:
 
     if (!(((SprdCameraHardware *)(g_cam_device->priv))->isCameraInit())) {
         LOGE("camera init failed!");
+        ((SprdCameraHardware *)(g_cam_device->priv))->release();
         return -EINVAL;
     }
 

@@ -3645,7 +3645,7 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 		} else {
 			skip_frame_gap = FACE_DETECT_GAP_MIN;
 		}
-		if ((arithmetic_fd_is_eb()) && (arithmetic_fd_is_init())
+		if ((arithmetic_fd_is_eb()) && (arithmetic_fd_is_init()) && (0 == g_cxt->is_dv_mode)
 			&& (0 == (g_cxt->pre_frm_cnt % (skip_frame_gap + 1)))) {
 			CMR_LOGI("face detect start.");
 			arithmetic_fd_start((void*)frame_type->buf_Virt_Addr);
