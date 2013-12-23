@@ -7026,6 +7026,7 @@ int camera_start_scale(struct frm_info *data)
 	cxt->proc_status.frame_info = frm_data;
 	cxt->proc_status.slice_height_in = slice_h;
 	cxt->proc_status.is_encoding = 0;
+	camera_sync_scale_start(g_cxt);
 	g_cxt->scaler_cxt.scale_state = IMG_CVT_SCALING;
 	ret = cmr_scale_start(slice_h,
 			&src_frame,
@@ -7036,8 +7037,8 @@ int camera_start_scale(struct frm_info *data)
 	if (ret) {
 		CMR_LOGE("Failed to start scaler, %d", ret);
 		g_cxt->scaler_cxt.scale_state = IMG_CVT_IDLE;
-		return ret;
 	}
+	camera_sync_scale_done(g_cxt);
 
 	return ret;
 }
