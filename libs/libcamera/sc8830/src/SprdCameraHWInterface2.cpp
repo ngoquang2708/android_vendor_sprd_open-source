@@ -803,7 +803,7 @@ int SprdCameraHWInterface2::Callback_AllocCapturePmem(void* handle, unsigned int
 		return -1;
 	}
 
-	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 	if (pHeapIon == NULL) {
 		return -1;
 	}
@@ -853,7 +853,7 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
 	}
 	memset(memory, 0, sizeof(*memory));
 
-    sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", acc, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+    sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", acc, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     if (pHeapIon->getHeapID() < 0) {
         HAL_LOGE("Failed to alloc cap pmem (%d)", acc);
         goto getpmem_end;

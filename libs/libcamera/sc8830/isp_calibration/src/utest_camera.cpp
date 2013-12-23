@@ -32,6 +32,7 @@
 #include "SprdOEMCamera.h"
 #include "isp_cali_interface.h"
 #include "sensor_drv_u.h"
+#include "ion_sprd.h"
 
 using namespace android;
 
@@ -211,7 +212,7 @@ static int utest_callback_cap_mem_alloc(void* handle, unsigned int size, unsigne
 		return -1;
 	}
 
-	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	sp<MemoryHeapIon> pHeapIon = new MemoryHeapIon("/dev/ion", size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 	if (pHeapIon == NULL) {
 		return -1;
 	}
@@ -258,7 +259,7 @@ static int utest_dcam_preview_mem_alloc(void)
 
 	for (i = 0; i < UTEST_PREVIEW_BUF_NUM; i++) {
 		cmr_cxt_ptr->preview_pmem_hp[i] = new MemoryHeapIon("/dev/ion", buf_size,
-			MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+			MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 		if (cmr_cxt_ptr->preview_pmem_hp[i]->getHeapID() < 0) {
 			ERR("failed to alloc preview pmem buffer.\n");
 			return -1;
@@ -308,7 +309,7 @@ static int utest_dcam_cap_memory_alloc(void)
 
 	buffer_size = camera_get_size_align_page(mem_size0);
 	cmr_cxt_ptr->cap_pmem_hp = new MemoryHeapIon("/dev/ion", buffer_size,
-		MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+		MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 	if (cmr_cxt_ptr->cap_pmem_hp->getHeapID() < 0) {
 		ERR("failed to alloc capture pmem buffer.\n");
 		return -1;
@@ -324,7 +325,7 @@ static int utest_dcam_cap_memory_alloc(void)
 	if (mem_size1) {
 		buffer_size = camera_get_size_align_page(mem_size1);
 		cmr_cxt_ptr->misc_pmem_hp = new MemoryHeapIon("/dev/ion", buffer_size,
-			MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+			MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 		if (cmr_cxt_ptr->misc_pmem_hp->getHeapID() < 0) {
 			ERR("failed to alloc misc pmem buffer.\n");
 			return -1;

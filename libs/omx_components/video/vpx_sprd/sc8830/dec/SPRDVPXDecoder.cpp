@@ -199,9 +199,9 @@ status_t SPRDVPXDecoder::initDecoder() {
 
     size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
     if (mIOMMUEnabled) {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
         ALOGE("Failed to alloc bitstream pmem buffer\n");
@@ -227,9 +227,9 @@ status_t SPRDVPXDecoder::initDecoder() {
     unsigned int size_extra = 8160*9*8+64;
     size_extra += 10*1024;
     if (mIOMMUEnabled) {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_extra->getHeapID() < 0) {
         ALOGE("Failed to alloc extra pmem (%d)", size_extra);

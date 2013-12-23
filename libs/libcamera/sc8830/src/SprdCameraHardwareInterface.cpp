@@ -1910,9 +1910,9 @@ int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int siz
 	}
 
 	if(s_mem_method==0)
-		pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+		pHeapIon = new MemoryHeapIon("/dev/ion", size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 	else
-		pHeapIon = new MemoryHeapIon("/dev/ion", size ,MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+		pHeapIon = new MemoryHeapIon("/dev/ion", size ,MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
 
 	if (pHeapIon == NULL) {
 		return -1;
@@ -1971,9 +1971,9 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	int paddr, psize;
 	int  acc = buf_size *num_bufs ;
 	if(s_mem_method==0)
-		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_CARVEOUT_MASK);
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
 	else
-		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_SYSTEM_MASK);
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);
 
 	if (NULL == pHeapIon) {
 		LOGE("Fail to GetCachePmem() 1.");
@@ -2035,7 +2035,7 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 	int paddr, psize;
 	int order = 0, acc = buf_size *num_bufs ;
 	acc = camera_get_size_align_page(acc);
-	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 

@@ -254,23 +254,17 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
         int ion_heap_mask = 0;
         private_handle_t *hnd = NULL;
 
-        if((usage & GRALLOC_USAGE_VIDEO_BUFFER)
-            ||(usage & GRALLOC_USAGE_CAMERA_BUFFER)
-
-            )
+        if (usage & (GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_CAMERA_BUFFER))
         { 
-            ALOGD("in ION_HEAP_CARVEOUT_MASK");
-            ion_heap_mask = ION_HEAP_CARVEOUT_MASK;
+            ion_heap_mask = ION_HEAP_ID_MASK_MM;
         }
         else if(usage & GRALLOC_USAGE_OVERLAY_BUFFER)
         {
-            ALOGD("in ION_HEAP_OVERLAY_MASK");
-            ion_heap_mask = ION_HEAP_CARVEOUT_OVERLAY_MASK;
+            ion_heap_mask = ION_HEAP_ID_MASK_OVERLAY;
         }
         else
         {
-            ALOGD("in ION_HEAP_SYSTEM_MASK");
-            ion_heap_mask = ION_HEAP_SYSTEM_MASK;
+            ion_heap_mask = ION_HEAP_ID_MASK_SYSTEM;
         }
 
         ret = ion_alloc(m->ion_client, size, 0, ion_heap_mask, 0, &ion_hnd);

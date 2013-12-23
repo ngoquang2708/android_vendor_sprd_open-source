@@ -39,6 +39,8 @@
 #include <dlfcn.h>
 
 #include "SPRDMPEG4Encoder.h"
+#include "ion_sprd.h"
+
 
 #define VIDEOENC_CURRENT_OPT
 
@@ -229,9 +231,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     size_extra += 320*2*sizeof(uint32);
     size_extra += 10*1024;
     if (mIOMMUEnabled) {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_extra->getHeapID() < 0) {
         ALOGE("Failed to alloc extra buffer (%d)", size_extra);
@@ -256,9 +258,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
 
     unsigned int size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
     if(mIOMMUEnabled) {
-        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
         ALOGE("Failed to alloc stream buffer (%d)", size_stream);
@@ -897,9 +899,9 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                     if (mPbuf_yuv_v == NULL) {
                         int32 yuv_size = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) *3/2;
                         if(mIOMMUEnabled) {
-                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
                         } else {
-                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
                         }
                         if (mYUVInPmemHeap->getHeapID() < 0) {
                             ALOGE("Failed to alloc yuv buffer");
@@ -949,9 +951,9 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                 if (mPbuf_yuv_v == NULL) {
                     int32 yuv_size = ((mVideoWidth+15)&(~15))*((mVideoHeight+15)&(~15))*3/2;
                     if(mIOMMUEnabled) {
-                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
                     } else {
-                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
                     }
                     if (mYUVInPmemHeap->getHeapID() < 0) {
                         ALOGE("Failed to alloc yuv buffer");

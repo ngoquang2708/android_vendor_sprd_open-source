@@ -39,6 +39,7 @@
 #include <dlfcn.h>
 
 #include "SPRDAVCEncoder.h"
+#include "ion_sprd.h"
 
 #define VIDEOENC_CURRENT_OPT
 
@@ -324,9 +325,9 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     size_extra += (406*2*sizeof(uint32));
     size_extra += 1024;
     if (mIOMMUEnabled) {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_extra->getHeapID() < 0) {
         ALOGE("Failed to alloc extra buffer (%d)", size_extra);
@@ -351,9 +352,9 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
 
     unsigned int size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
     if (mIOMMUEnabled) {
-        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
         ALOGE("Failed to alloc stream buffer (%d)", size_stream);
@@ -1007,9 +1008,9 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     if (mPbuf_yuv_v == NULL) {
                         int32 yuv_size = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) *3/2;
                         if (mIOMMUEnabled) {
-                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
                         } else {
-                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                            mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
                         }
                         if (mYUVInPmemHeap->getHeapID() < 0) {
                             ALOGE("Failed to alloc yuv buffer");
@@ -1059,9 +1060,9 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                 if (mPbuf_yuv_v == NULL) {
                     int32 yuv_size = ((mVideoWidth+15)&(~15))*((mVideoHeight+15)&(~15))*3/2;
                     if(mIOMMUEnabled) {
-                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
                     } else {
-                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                        mYUVInPmemHeap = new MemoryHeapIon("/dev/ion", yuv_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
                     }
                     if (mYUVInPmemHeap->getHeapID() < 0) {
                         ALOGE("Failed to alloc yuv buffer");

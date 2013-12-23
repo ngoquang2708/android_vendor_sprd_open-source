@@ -257,9 +257,9 @@ status_t SPRDAVCDecoder::initDecoder() {
 
     size_stream = H264_DECODER_STREAM_BUFFER_SIZE;
     if (mIOMMUEnabled) {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
         ALOGE("Failed to alloc bitstream pmem buffer\n");
@@ -547,9 +547,9 @@ OMX_ERRORTYPE SPRDAVCDecoder::allocateBuffer(
             OMX_U32 size64word = (size + 1024*4 - 1) & ~(1024*4 - 1);
 
             if (mIOMMUEnabled) {
-                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
             } else {
-                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
             }
 
             if(pMem->getHeapID() < 0) {
@@ -1124,9 +1124,9 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int width,unsigned int height, unsign
         size_extra += sizeof(uint32)*69;
 
         if (mIOMMUEnabled) {
-            mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_SYSTEM_MASK);
+            mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
         } else {
-            mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+            mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
         }
         int fd = mPmem_extra->getHeapID();
         if(fd >= 0) {
