@@ -220,11 +220,41 @@ void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview
 	*count = area_count;
 }
 
+const char *SprdCameraParameters::get_FocusAreas() const
+{
+	return get(KEY_FOCUS_AREAS);
+}
+
+void SprdCameraParameters::setFocusAreas(const char* value)
+{
+	set("focus-areas",value);
+}
+
+const char *SprdCameraParameters::get_MeteringAreas() const
+{
+	return get(KEY_METERING_AREAS);
+}
+
+void SprdCameraParameters::setMeteringAreas(const char* value)
+{
+	set("metering-areas",value);
+}
+
 int SprdCameraParameters::getFocusMode()
 {
 	const char *p = get(KEY_FOCUS_MODE);
 
 	return lookup(focus_mode_map, p, CAMERA_FOCUS_MODE_AUTO);
+}
+
+const char *SprdCameraParameters::get_FocusMode() const
+{
+	return get(KEY_FOCUS_MODE);
+}
+
+void SprdCameraParameters::setFocusMode(const char* value)
+{
+	set("focus-mode",value);
 }
 
 int SprdCameraParameters::getWhiteBalance()
@@ -234,6 +264,17 @@ int SprdCameraParameters::getWhiteBalance()
 	return lookup(wb_map, p, CAMERA_WB_AUTO);
 }
 
+const char *SprdCameraParameters::get_WhiteBalance() const
+{
+	return get(KEY_WHITE_BALANCE);
+
+}
+
+void SprdCameraParameters::setWhiteBalance(const char* value)
+{
+	set("whitebalance",value);
+}
+
 int SprdCameraParameters::getCameraId()
 {
 	const char *p = get(KEY_CAMERA_ID);
@@ -241,14 +282,44 @@ int SprdCameraParameters::getCameraId()
 	return lookup(camera_id_map, p, CAMERA_CAMERA_ID_BACK);
 }
 
+const char *SprdCameraParameters::get_CameraId() const
+{
+	return get(KEY_CAMERA_ID);
+}
+
+void SprdCameraParameters::setCameraId(const char* value)
+{
+	set("cameraid",value);
+}
+
 int SprdCameraParameters::getJpegQuality()
 {
 	return getInt(KEY_JPEG_QUALITY);
 }
 
+const char *SprdCameraParameters::get_JpegQuality() const
+{
+	return get(KEY_JPEG_QUALITY);
+}
+
+void SprdCameraParameters::setJpegQuality(const char* value)
+{
+	set("jpeg-quality",value);
+}
+
 int SprdCameraParameters::getJpegThumbnailQuality()
 {
 	return getInt(KEY_JPEG_THUMBNAIL_QUALITY);
+}
+
+const char *SprdCameraParameters::get_JpegThumbnailQuality() const
+{
+	return get(KEY_JPEG_THUMBNAIL_QUALITY);
+}
+
+void SprdCameraParameters::setJpegThumbnailQuality(const char* value)
+{
+	set("jpeg-thumbnail-quality",value);
 }
 
 int SprdCameraParameters::getEffect()
@@ -258,11 +329,32 @@ int SprdCameraParameters::getEffect()
 	return lookup(effect_map, p, CAMERA_EFFECT_NONE);
 }
 
+const char *SprdCameraParameters::get_Effect() const
+{
+	return get(KEY_EFFECT);
+}
+
+void SprdCameraParameters::setEffect(const char* value)
+{
+	set("effect",value);
+}
+
 int SprdCameraParameters::getSceneMode()
 {
 	const char *p = get(KEY_SCENE_MODE);
 
 	return lookup(scene_mode_map, p, CAMERA_SCENE_MODE_AUTO);
+}
+
+const char *SprdCameraParameters::get_SceneMode() const
+{
+	return get(KEY_SCENE_MODE);
+
+}
+
+void SprdCameraParameters::setSceneMode(const char* value)
+{
+	set("scene-mode",value);
 }
 
 int SprdCameraParameters::getZoom()
@@ -272,11 +364,31 @@ int SprdCameraParameters::getZoom()
 	return lookup(zoom_map, p, CAMERA_ZOOM_1X);
 }
 
+const char *SprdCameraParameters::get_Zoom() const
+{
+	return get(KEY_ZOOM);
+}
+
+void SprdCameraParameters::setZoom(const char* value)
+{
+	set("zoom",value);
+}
+
 int SprdCameraParameters::getBrightness()
 {
 	const char *p = get(KEY_BRIGHTNESS);
 
 	return lookup(brightness_map, p, CAMERA_BRIGHTNESS_DEFAULT);
+}
+
+const char *SprdCameraParameters::get_Brightness() const
+{
+	return get(KEY_BRIGHTNESS);
+}
+
+void SprdCameraParameters::setBrightness(const char* value)
+{
+	set("brightness",value);
 }
 
 int SprdCameraParameters::getSharpness()
@@ -286,11 +398,31 @@ int SprdCameraParameters::getSharpness()
 	return lookup(sharpness_map, p, CAMERA_SHARPNESS_DEFAULT);
 }
 
+const char *SprdCameraParameters::get_Sharpness() const
+{
+	return get(KEY_SHARPNESS);
+}
+
+void SprdCameraParameters::setSharpness(const char* value)
+{
+	set("sharpness",value);
+}
+
 int SprdCameraParameters::getPreviewFameRate()
 {
 	const char *p = get(KEY_PREVIEWFRAMERATE);
 
 	return lookup(previewframerate_map, p, CAMERA_PREVIEWFRAMERATE_DEFAULT);
+}
+
+const char *SprdCameraParameters::get_PreviewFameRate() const
+{
+	return get(KEY_PREVIEWFRAMERATE);
+}
+
+void SprdCameraParameters::setPreviewFameRate(const char* value)
+{
+	set("preview-frame-rate",value);
 }
 
 int SprdCameraParameters::getContrast()
@@ -300,11 +432,31 @@ int SprdCameraParameters::getContrast()
 	return lookup(contrast_map, p, CAMERA_CONTRAST_DEFAULT);
 }
 
+const char *SprdCameraParameters::get_Contrast() const
+{
+	return get(KEY_CONTRAST);
+}
+
+void SprdCameraParameters::setContrast(const char* value)
+{
+	set("contrast",value);
+}
+
 int SprdCameraParameters::getSaturation()
 {
 	const char *p = get(KEY_SATURATION);
 
 	return lookup(saturation_map, p, CAMERA_SATURATION_DEFAULT);
+}
+
+const char *SprdCameraParameters::get_Saturation() const
+{
+	return get(KEY_SATURATION);
+}
+
+void SprdCameraParameters::setSaturation(const char* value)
+{
+	set("saturation",value);
 }
 
 int SprdCameraParameters::getExposureCompensation()
@@ -314,11 +466,31 @@ int SprdCameraParameters::getExposureCompensation()
 	return lookup(exposure_compensation_map, p, CAMERA_EXPOSURW_COMPENSATION_DEFAULT);
 }
 
+const char *SprdCameraParameters::get_ExposureCompensation() const
+{
+	return get(KEY_EXPOSURE_COMPENSATION);
+}
+
+void SprdCameraParameters::setExposureCompensation(const char* value)
+{
+	set("exposure-compensation",value);
+}
+
 int SprdCameraParameters::getAntiBanding()
 {
 	const char *p = get(KEY_ANTI_BINDING);
 
 	return lookup(antibanding_map, p, CAMERA_ANTIBANDING_50HZ);
+}
+
+const char *SprdCameraParameters::get_AntiBanding() const
+{
+	return get(KEY_ANTI_BINDING);
+}
+
+void SprdCameraParameters::setAntiBanding(const char* value)
+{
+	set("antibanding",value);
 }
 
 int SprdCameraParameters::getIso()
@@ -328,11 +500,31 @@ int SprdCameraParameters::getIso()
 	return lookup(iso_map, p, CAMERA_ISO_AUTO);
 }
 
+const char *SprdCameraParameters::get_Iso() const
+{
+	return get(KEY_ISO);
+}
+
+void SprdCameraParameters::setIso(const char* value)
+{
+	set("iso",value);
+}
+
 int SprdCameraParameters::getRecordingHint()
 {
 	const char *p = get(KEY_RECORDING_HINT);
 
 	return lookup(camera_dcdv_mode, p, CAMERA_DC_MODE);
+}
+
+const char *SprdCameraParameters::get_RecordingHint() const
+{
+	return get(KEY_RECORDING_HINT);
+}
+
+void SprdCameraParameters::setRecordingHint(const char* value)
+{
+	set("recording-hint",value);
 }
 
 int SprdCameraParameters::getFlashMode()
@@ -342,11 +534,31 @@ int SprdCameraParameters::getFlashMode()
 	return lookup(flash_mode_map, p, CAMERA_FLASH_MODE_OFF);
 }
 
+const char *SprdCameraParameters::get_FlashMode() const
+{
+	return get(KEY_FLASH_MODE);
+}
+
+void SprdCameraParameters::setFlashMode(const char* value)
+{
+	set("flash-mode",value);
+}
+
 int SprdCameraParameters::getSlowmotion()
 {
 	const char *p = get(KEY_SLOWMOTION);
 
 	return lookup(slowmotion_map, p, CAMERA_SLOWMOTION_0);
+}
+
+const char *SprdCameraParameters::get_Slowmotion() const
+{
+	return get(KEY_SLOWMOTION);
+}
+
+void SprdCameraParameters::setSlowmotion(const char* value)
+{
+	set("slow-motion",value);
 }
 
 int SprdCameraParameters::getPreviewEnv()
@@ -356,11 +568,231 @@ int SprdCameraParameters::getPreviewEnv()
 	return lookup(previewenv_map, p, CAMERA_DC_PREVIEW);
 }
 
+const char *SprdCameraParameters::get_PreviewEnv() const
+{
+	return get(KEY_PREVIEW_ENV);
+}
+
+void SprdCameraParameters::setPreviewEnv(const char* value)
+{
+	set("preview-env",value);
+}
+
 int SprdCameraParameters::getAutoExposureMode()
 {
 	const char *p = get(KEY_AUTO_EXPOSURE);
 
 	return lookup(auto_exposure_mode_map, p, CAMERA_AE_FRAME_AVG);
+}
+
+const char *SprdCameraParameters::get_AutoExposureMode() const
+{
+	return get(KEY_AUTO_EXPOSURE);
+}
+
+void SprdCameraParameters::setAutoExposureMode(const char* value)
+{
+	set("auto-exposure",value);
+}
+
+const char *SprdCameraParameters::get_PreviewFpsRange() const
+{
+    return get(KEY_PREVIEW_FPS_RANGE);
+}
+
+void SprdCameraParameters::setPreviewFpsRange(const char* value)
+{
+	set(KEY_PREVIEW_FPS_RANGE,value);
+}
+
+const char *SprdCameraParameters::get_GPS_Processing_Method() const
+{
+    return get(KEY_GPS_PROCESSING_METHOD);
+}
+
+void SprdCameraParameters::setGPSProcessingMethod(const char* value)
+{
+	set(KEY_GPS_PROCESSING_METHOD, value);
+}
+
+const char *SprdCameraParameters::get_FocalLength() const
+{
+    return get(KEY_FOCAL_LENGTH);
+}
+
+void SprdCameraParameters::setFocalLength(const char* value)
+{
+	set(KEY_FOCAL_LENGTH, value);
+}
+
+const char *SprdCameraParameters::get_ExposureCompensationStep() const
+{
+    return get(KEY_EXPOSURE_COMPENSATION_STEP);
+}
+
+void SprdCameraParameters::setExposureCompensationStep(const char* value)
+{
+	set(KEY_EXPOSURE_COMPENSATION_STEP, value);
+}
+
+const char *SprdCameraParameters::get_MaxExposureCompensation() const
+{
+    return get(KEY_MAX_EXPOSURE_COMPENSATION);
+}
+
+void SprdCameraParameters::setMaxExposureCompensation(const char* value)
+{
+	set(KEY_MAX_EXPOSURE_COMPENSATION, value);
+}
+
+const char *SprdCameraParameters::get_MinExposureCompensation() const
+{
+    return get(KEY_MIN_EXPOSURE_COMPENSATION);
+}
+
+void SprdCameraParameters::setMinExposureCompensation(const char* value)
+{
+	set(KEY_MIN_EXPOSURE_COMPENSATION, value);
+}
+
+const char *SprdCameraParameters::get_SupportedSceneModes() const
+{
+    return get(KEY_SUPPORTED_SCENE_MODES);
+}
+
+void SprdCameraParameters::setSupportedSceneModes(const char* value)
+{
+	set(KEY_SUPPORTED_SCENE_MODES, value);
+}
+
+const char *SprdCameraParameters::get_SupportedPreviewSizes() const
+{
+    return get(KEY_SUPPORTED_PREVIEW_SIZES);
+}
+
+void SprdCameraParameters::setSupportedPreviewSizes(const char* value)
+{
+	set(KEY_SUPPORTED_PREVIEW_SIZES, value);
+}
+
+const char *SprdCameraParameters::get_SupportedPreviewFrameRate() const
+{
+    return get(KEY_SUPPORTED_PREVIEW_FRAME_RATES);
+}
+
+void SprdCameraParameters::setSupportedPreviewFrameRate(const char* value)
+{
+	set(KEY_SUPPORTED_PREVIEW_FRAME_RATES, value);
+}
+
+const char *SprdCameraParameters::get_SupportedPreviewFpsRange() const
+{
+    return get(KEY_SUPPORTED_PREVIEW_FPS_RANGE);
+}
+
+void SprdCameraParameters::setSupportedPreviewFpsRange(const char* value)
+{
+	set(KEY_SUPPORTED_PREVIEW_FPS_RANGE, value);
+}
+
+const char *SprdCameraParameters::get_SupportedPictureSizes() const
+{
+    return get(KEY_SUPPORTED_PICTURE_SIZES);
+}
+
+void SprdCameraParameters::setSupportedPictureSizes(const char* value)
+{
+	set(KEY_SUPPORTED_PICTURE_SIZES, value);
+}
+
+const char *SprdCameraParameters::get_SupportedFocusModes() const
+{
+    return get(KEY_SUPPORTED_FOCUS_MODES);
+}
+
+void SprdCameraParameters::setSupportedFocusModes(const char* value)
+{
+	set(KEY_SUPPORTED_FOCUS_MODES, value);
+}
+
+const char *SprdCameraParameters::get_AutoExposureLock() const
+{
+    return get(KEY_AUTO_EXPOSURE_LOCK);
+}
+
+void SprdCameraParameters::setAutoExposureLock(const char* value)
+{
+	set(KEY_AUTO_EXPOSURE_LOCK, value);
+}
+
+const char *SprdCameraParameters::get_AutoExposureLockSupported() const
+{
+    return get(KEY_AUTO_EXPOSURE_LOCK_SUPPORTED);
+}
+
+void SprdCameraParameters::setAutoExposureLockSupported(const char* value)
+{
+	set(KEY_AUTO_EXPOSURE_LOCK_SUPPORTED, value);
+}
+
+const char *SprdCameraParameters::get_AutoWhiteBalanceLock() const
+{
+    return get(KEY_AUTO_WHITEBALANCE_LOCK);
+}
+
+void SprdCameraParameters::setAutoWhiteBalanceLock(const char* value)
+{
+	set(KEY_AUTO_WHITEBALANCE_LOCK, value);
+}
+
+const char *SprdCameraParameters::get_AutoWhiteBalanceLockSupported() const
+{
+    return get(KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED);
+}
+
+void SprdCameraParameters::setAutoWhiteBalanceLockSupported(const char* value)
+{
+	set(KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED, value);
+}
+
+const char *SprdCameraParameters::get_HorizontalViewAngle() const
+{
+    return get(KEY_HORIZONTAL_VIEW_ANGLE);
+}
+
+void SprdCameraParameters::setHorizontalViewAngle(const char* value)
+{
+	set(KEY_HORIZONTAL_VIEW_ANGLE, value);
+}
+
+const char *SprdCameraParameters::get_VerticalViewAngle() const
+{
+    return get(KEY_VERTICAL_VIEW_ANGLE);
+}
+
+void SprdCameraParameters::setVerticalViewAngle(const char* value)
+{
+	set(KEY_VERTICAL_VIEW_ANGLE, value);
+}
+
+const char *SprdCameraParameters::get_VideoFrameFormat() const
+{
+    return get(KEY_VIDEO_FRAME_FORMAT);
+}
+
+void SprdCameraParameters::setVideoFrameFormat(const char* value)
+{
+	set(KEY_VIDEO_FRAME_FORMAT, value);
+}
+
+const char *SprdCameraParameters::get_SupportedVideoSizes() const
+{
+    return get(KEY_SUPPORTED_VIDEO_SIZES);
+}
+
+void SprdCameraParameters::setSupportedVideoSizes(const char* value)
+{
+	set(KEY_SUPPORTED_VIDEO_SIZES, value);
 }
 
 void SprdCameraParameters::setZSLSupport(const char* value)
