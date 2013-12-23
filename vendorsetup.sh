@@ -142,7 +142,11 @@ function packboot()
 	fi
 	rm -f $OUT/ramdisk.img
 	$ANDROID_HOST_OUT/bin/mkbootfs $OUT/root | $ANDROID_HOST_OUT/bin/minigzip > $OUT/ramdisk.img
-	$ANDROID_HOST_OUT/bin/mkbootimg  --kernel $OUT/kernel --ramdisk $OUT/ramdisk.img --cmdline "console=ttyS1,115200n8" --base 0x00000000  --output $OUT/boot.img
+	DT_SUPPORT=$(get_build_var BOARD_KERNEL_SEPARATED_DT)
+	if [ "$DT_SUPPORT" = "true" ]; then
+	O_ARGS="--dt $OUT/dt.img"
+	fi
+	$ANDROID_HOST_OUT/bin/mkbootimg  --kernel $OUT/kernel --ramdisk $OUT/ramdisk.img --cmdline "console=ttyS1,115200n8" --base 0x00000000 $O_ARGS --output $OUT/boot.img
 }
 
 function packsys()
