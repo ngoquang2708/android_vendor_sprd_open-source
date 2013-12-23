@@ -795,6 +795,76 @@ void SprdCameraParameters::setSupportedVideoSizes(const char* value)
 	set(KEY_SUPPORTED_VIDEO_SIZES, value);
 }
 
+const char *SprdCameraParameters::get_Rotation() const
+{
+    return get(KEY_ROTATION);
+}
+
+void SprdCameraParameters::setRotation(const char* value)
+{
+	set(KEY_ROTATION, value);
+}
+
+const char *SprdCameraParameters::get_GpsLatitude() const
+{
+    return get(KEY_GPS_LATITUDE);
+}
+
+void SprdCameraParameters::setGpsLatitude(const char* value)
+{
+	set(KEY_GPS_LATITUDE, value);
+}
+
+const char *SprdCameraParameters::get_GpsLongitude() const
+{
+    return get(KEY_GPS_LONGITUDE);
+}
+
+void SprdCameraParameters::setGpsLongitude(const char* value)
+{
+	set(KEY_GPS_LONGITUDE, value);
+}
+
+const char *SprdCameraParameters::get_GpsAltitude() const
+{
+    return get(KEY_GPS_ALTITUDE);
+}
+
+void SprdCameraParameters::setGpsAltitude(const char* value)
+{
+	set(KEY_GPS_ALTITUDE, value);
+}
+
+const char *SprdCameraParameters::get_GpsTimestamp() const
+{
+    return get(KEY_GPS_TIMESTAMP);
+}
+
+void SprdCameraParameters::setGpsTimestamp(const char* value)
+{
+	set(KEY_GPS_TIMESTAMP, value);
+}
+
+const char *SprdCameraParameters::get_MaxNumDetectedFacesHW() const
+{
+    return get(KEY_MAX_NUM_DETECTED_FACES_HW);
+}
+
+void SprdCameraParameters::setMaxNumDetectedFacesHW(const char* value)
+{
+	set(KEY_MAX_NUM_DETECTED_FACES_HW, value);
+}
+
+const char *SprdCameraParameters::get_MaxNumDetectedFacesSW() const
+{
+    return get(KEY_MAX_NUM_DETECTED_FACES_SW);
+}
+
+void SprdCameraParameters::setMaxNumDetectedFacesSW(const char* value)
+{
+	set(KEY_MAX_NUM_DETECTED_FACES_SW, value);
+}
+
 void SprdCameraParameters::setZSLSupport(const char* value)
 {
 	set("zsl-supported",value);

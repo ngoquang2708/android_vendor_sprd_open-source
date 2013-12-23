@@ -983,6 +983,41 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	if(new_thumbnail_quality)
 	cur_params.setJpegThumbnailQuality(values_new);
 
+	//rotation
+	const char*  new_Rotation = params.get_Rotation();
+	if(new_Rotation)
+	cur_params.setRotation(new_Rotation);
+
+	//GpsLatitude
+	const char*  new_GpsLatitude = params.get_GpsLatitude();
+	if(new_GpsLatitude)
+	cur_params.setGpsLatitude(new_GpsLatitude);
+
+	//GpsLongitude
+	const char*  new_GpsLongitude = params.get_GpsLongitude();
+	if(new_GpsLongitude)
+	cur_params.setGpsLongitude(new_GpsLongitude);
+
+	//GpsAltitude
+	const char*  new_GpsAltitude = params.get_GpsAltitude();
+	if(new_GpsAltitude)
+	cur_params.setGpsAltitude(new_GpsAltitude);
+
+	//GpsTimestamp
+	const char*  new_GpsTimestamp = params.get_GpsTimestamp();
+	if(new_GpsTimestamp)
+	cur_params.setGpsTimestamp(new_GpsTimestamp);
+
+	//MaxNumDetectedFacesHW
+	const char*  new_MaxNumDetectedFacesHW = params.get_MaxNumDetectedFacesHW();
+	if(new_MaxNumDetectedFacesHW)
+	cur_params.setMaxNumDetectedFacesHW(new_MaxNumDetectedFacesHW);
+
+	//MaxNumDetectedFacesSW
+	const char*  new_MaxNumDetectedFacesSW = params.get_MaxNumDetectedFacesSW();
+	if(new_MaxNumDetectedFacesSW)
+	cur_params.setMaxNumDetectedFacesSW(new_MaxNumDetectedFacesSW);
+
 	//Effect
 	const char* new_effect = params.get_Effect();
 	if(new_effect)
