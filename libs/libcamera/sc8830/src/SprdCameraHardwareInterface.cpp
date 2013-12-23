@@ -825,6 +825,247 @@ status_t SprdCameraHardware::checkSetParametersEnvironment( )
 	return ret;
 }
 
+status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, SprdCameraParameters& cur_params)
+{
+	status_t ret =  NO_ERROR;
+	char values_new[50] = {0};
+
+       int width = 0, height = 0;
+	int rawWidth = 0, rawHeight = 0;
+
+	params.getPreviewSize(&width, &height);
+	cur_params.setPreviewSize(width, height);
+
+	params.getPictureSize(&rawWidth, &rawHeight);
+	cur_params.setPictureSize(rawWidth, rawHeight);
+	LOGV("setParametersInternal:requested picture size %d x %d", rawWidth, rawHeight);
+
+	params.getVideoSize(&width, &height);
+	cur_params.setVideoSize(width, height);
+
+	const char* new_previewformat = params.getPreviewFormat();
+	cur_params.setPreviewFormat(new_previewformat);
+
+	const char* new_pictureformat = params.getPictureFormat();
+	cur_params.setPictureFormat(new_pictureformat);
+
+	//ExposureCompensationStep
+	const char* new_ExposureCompensationStep = params.get_ExposureCompensationStep();
+	if(new_ExposureCompensationStep)
+	cur_params.setExposureCompensationStep(new_ExposureCompensationStep);
+
+	//MaxExposureCompensation
+	const char* new_MaxExposureCompensation = params.get_MaxExposureCompensation();
+	if(new_MaxExposureCompensation)
+	cur_params.setMaxExposureCompensation(new_MaxExposureCompensation);
+
+	//MinExposureCompensation
+	const char* new_MinExposureCompensation = params.get_MinExposureCompensation();
+	if(new_MinExposureCompensation)
+	cur_params.setMinExposureCompensation(new_MinExposureCompensation);
+
+	//SupportedSceneModes
+	const char* new_SupportedSceneModes = params.get_SupportedSceneModes();
+	if(new_SupportedSceneModes)
+	cur_params.setSupportedSceneModes(new_SupportedSceneModes);
+
+	//SupportedPreviewSizes
+	const char* new_SupportedPreviewSizes = params.get_SupportedPreviewSizes();
+	if(new_SupportedPreviewSizes)
+	cur_params.setSupportedPreviewSizes(new_SupportedPreviewSizes);
+
+	//SupportedPreviewFrameRate
+	const char* new_SupportedPreviewFrameRate = params.get_SupportedPreviewFrameRate();
+	if(new_SupportedPreviewFrameRate)
+	cur_params.setSupportedPreviewFrameRate(new_SupportedPreviewFrameRate);
+
+	//SupportedPreviewFpsRange
+	const char* new_SupportedPreviewFpsRange = params.get_SupportedPreviewFpsRange();
+	if(new_SupportedPreviewFpsRange)
+	cur_params.setSupportedPreviewFpsRange(new_SupportedPreviewFpsRange);
+
+	//SupportedPictureSizes
+	const char* new_SupportedPictureSizes = params.get_SupportedPictureSizes();
+	if(new_SupportedPictureSizes)
+	cur_params.setSupportedPictureSizes(new_SupportedPictureSizes);
+
+	//SupportedFocusModes
+	const char* new_SupportedFocusModes = params.get_SupportedFocusModes();
+	if(new_SupportedFocusModes)
+	cur_params.setSupportedFocusModes(new_SupportedFocusModes);
+
+	//AutoExposureLock
+	const char* new_AutoExposureLock = params.get_AutoExposureLock();
+	if(new_AutoExposureLock)
+	cur_params.setAutoExposureLock(new_AutoExposureLock);
+
+	//AutoExposureLockSupported
+	const char* new_AutoExposureLockSupported = params.get_AutoExposureLockSupported();
+	if(new_AutoExposureLockSupported)
+	cur_params.setAutoExposureLockSupported(new_AutoExposureLockSupported);
+
+	//AutoWhiteBalanceLock
+	const char* new_AutoWhiteBalanceLock = params.get_AutoWhiteBalanceLock();
+	if(new_AutoWhiteBalanceLock)
+	cur_params.setAutoWhiteBalanceLock(new_AutoWhiteBalanceLock);
+
+	//AutoWhiteBalanceLockSupported
+	const char* new_AutoWhiteBalanceLockSupported = params.get_AutoWhiteBalanceLockSupported();
+	if(new_AutoWhiteBalanceLockSupported)
+	cur_params.setAutoWhiteBalanceLockSupported(new_AutoWhiteBalanceLockSupported);
+
+	//HorizontalViewAngle
+	const char* new_HorizontalViewAngle = params.get_HorizontalViewAngle();
+	if(new_HorizontalViewAngle)
+	cur_params.setHorizontalViewAngle(new_HorizontalViewAngle);
+
+	//VerticalViewAngle
+	const char* new_VerticalViewAngle = params.get_VerticalViewAngle();
+	if(new_VerticalViewAngle)
+	cur_params.setVerticalViewAngle(new_VerticalViewAngle);
+
+	//VideoFrameFormat
+	const char* new_VideoFrameFormat = params.get_VideoFrameFormat();
+	if(new_VideoFrameFormat)
+	cur_params.setVideoFrameFormat(new_VideoFrameFormat);
+
+	//SupportedVideoSizes
+	const char* new_SupportedVideoSizes = params.get_SupportedVideoSizes();
+	if(new_SupportedVideoSizes)
+	cur_params.setSupportedVideoSizes(new_SupportedVideoSizes);
+
+	//PreviewFpsRange
+	const char* new_PreviewFpsRange = params.get_PreviewFpsRange();
+	if(new_PreviewFpsRange)
+	cur_params.setPreviewFpsRange(new_PreviewFpsRange);
+
+	//FocusAreas
+	const char* new_focus_areas = params.get_FocusAreas();
+	if(new_focus_areas)
+	cur_params.setFocusAreas(new_focus_areas);
+
+	//MeteringAreas
+	const char* new_metering_areas = params.get_MeteringAreas();
+	if(new_metering_areas)
+	cur_params.setMeteringAreas(new_metering_areas);
+
+	//GPS_Processing_Method
+	const char* new_GPSProcessingMethod = params.get_GPS_Processing_Method();
+	if(new_GPSProcessingMethod)
+	cur_params.setGPSProcessingMethod(new_GPSProcessingMethod);
+
+	//FocalLength
+	const char* new_FocalLength = params.get_FocalLength();
+	if(new_FocalLength)
+	cur_params.setFocalLength(new_FocalLength);
+
+	//FocusMode
+	const char* new_focus_mode = params.get_FocusMode();
+	if(new_focus_mode)
+	cur_params.setFocusMode(new_focus_mode);
+
+	//WhiteBalance
+	const char* new_whitebalance = params.get_WhiteBalance();
+	if(new_whitebalance)
+	cur_params.setWhiteBalance(new_whitebalance);
+
+	//CameraId
+	const char* new_camera_id = params.get_CameraId();
+	cur_params.setCameraId(new_camera_id);
+
+	//JpegQuality
+	const char* new_jpeg_quality = params.get_JpegQuality();
+	if(new_jpeg_quality)
+	cur_params.setJpegQuality(values_new);
+
+	//JpegThumbnailQuality
+	const char* new_thumbnail_quality = params.get_JpegThumbnailQuality();
+	if(new_thumbnail_quality)
+	cur_params.setJpegThumbnailQuality(values_new);
+
+	//Effect
+	const char* new_effect = params.get_Effect();
+	if(new_effect)
+	cur_params.setEffect(new_effect);
+
+	//SceneMode
+	const char* new_scene_mode = params.get_SceneMode();
+	if(new_scene_mode)
+	cur_params.setSceneMode(new_scene_mode);
+
+	//Zoom
+	const char* new_zoom = params.get_Zoom();
+	if(new_zoom)
+	cur_params.setZoom(new_zoom);
+
+	//Brightness
+	const char* new_brightness = params.get_Brightness();
+	if(new_brightness)
+	cur_params.setBrightness(new_brightness);
+
+	//Sharpness
+	const char* new_sharpness = params.get_Sharpness();
+	if(new_sharpness)
+	cur_params.setSharpness(new_sharpness);
+
+	//Contrast
+	const char* new_contrast = params.get_Contrast();
+	if(new_contrast)
+	cur_params.setContrast(new_contrast);
+
+	//Saturation
+	const char* new_saturation = params.get_Saturation();
+	if(new_saturation)
+	cur_params.setSaturation(new_saturation);
+
+	//ExposureCompensation
+	const char* new_exposure_Compensation = params.get_ExposureCompensation();
+	if(new_exposure_Compensation)
+	cur_params.setExposureCompensation(new_exposure_Compensation);
+
+	//AntiBanding
+	const char* new_antiBanding = params.get_AntiBanding();
+	if(new_antiBanding)
+	cur_params.setAntiBanding(new_antiBanding);
+
+	//Iso
+	const char* new_iso = params.get_Iso();
+	if(new_iso)
+	cur_params.setIso(new_iso);
+
+	//RecordingHint
+	const char* new_recordingHint = params.get_RecordingHint();
+	if (new_recordingHint)
+	cur_params.setRecordingHint(new_recordingHint);
+
+	//FlashMode
+	const char* new_FlashMode = params.get_FlashMode();
+	if(new_FlashMode)
+	cur_params.setFlashMode(new_FlashMode);
+
+	//Slowmotion
+	const char* new_slowmotion = params.get_Slowmotion();
+	if(new_slowmotion)
+	cur_params.setSlowmotion(new_slowmotion);
+
+	//PreviewEnv
+	const char* new_PreviewEnv = params.get_PreviewEnv();
+	if(new_PreviewEnv)
+	cur_params.setPreviewEnv(new_PreviewEnv);
+
+	//PreviewFameRate
+	const char* new_PreviewFameRate = params.get_PreviewFameRate();
+	if(new_PreviewFameRate)
+	cur_params.setPreviewFameRate(new_PreviewFameRate);
+
+	//AutoExposureMode
+	const char* new_AutoExposureMode = params.get_AutoExposureMode();
+	if(new_AutoExposureMode)
+	cur_params.setAutoExposureMode(new_AutoExposureMode);
+
+	return ret;
+}
+
 status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& params, const SprdCameraParameters& oriParams)
 {
 	status_t ret =  NO_ERROR;
@@ -873,12 +1114,15 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		return NO_ERROR;
 	} else if (SPRD_IDLE != getSetParamsState()) {
 		LOGV("setParameters is handling, backup the parameter!");
-		mSetParametersBak = params;
+		//mSetParametersBak = params;
+		ret = copyParameters(params, mSetParametersBak);
+
 		mBakParamFlag = 1;
 		mParamLock.unlock();
 		return NO_ERROR;
 	} else {
-		mSetParameters = params;
+		//mSetParameters = params;
+		ret = copyParameters(params, mSetParameters);
 	}
 
 	message.msg_type = CMR_EVT_SW_MON_SET_PARA;
