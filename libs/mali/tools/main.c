@@ -3,46 +3,6 @@
 #include <string.h>
 
 
-void generate_cipher_data(FILE* fp,char* src,int src_len,char* key,int key_len)
-{
-	int done=0,i=0;
-	char temp_buf;
-	char buf_output[32];
-	if(src_len>30)
-	{
-		src_len=30;
-	}
-	while(done<src_len)
-	{
-		temp_buf=*(src+done);
-		for(i=0;i<key_len;i++)
-		{
-			temp_buf^=*(key+i);
-		}
-		buf_output[done]=temp_buf;
-		done++;
-	}
-	buf_output[done]='\n';
-	buf_output[done+1]='\0';
-	fputs(buf_output,fp);
-	printf("%s",buf_output);
-
-	done=0;
-	while(done<src_len)
-	{
-		temp_buf=buf_output[done];
-		for(i=0;i<key_len;i++)
-		{
-			temp_buf^=*(key+i);
-		}
-		buf_output[done]=temp_buf;
-		done++;
-	}
-	buf_output[done]='\n';
-	buf_output[done+1]='\0';
-	printf("%s",buf_output);
-}
-
 void xor_cipher(char* src,int src_len,char* key,int key_len)
 {
 	int done=0,i=0;
@@ -61,12 +21,24 @@ void xor_decipher(char* src,int src_len,char* key,int key_len)
 	int done=0,i=0;
 	while(done<src_len)
 	{
-		for(i=0;i<key_len;i++)
+		for(i=key_len-1;i>=0;i--)
 		{
 			*(src+done)^=*(key+i);
 		}
 		done++;
 	}
+}
+
+void generate_cipher_data(FILE* fp,char* src,int src_len,char* key,int key_len)
+{
+	char buf[256];
+	strcpy(buf, src);
+	printf("%s -> ",src);
+	xor_decipher(buf,src_len,key,key_len);
+	printf("%s (%d)-> ",buf, strlen(buf));
+	fputs(buf,fp);fputc('\n',fp);
+	xor_decipher(buf,src_len,key,key_len);
+	printf("%s\n",buf);
 }
 
 int main()
@@ -92,11 +64,11 @@ int main()
 		"com.threed.jpct",
 		"com.smartbench",
 	};
-	size_t app_num_level3 = 16;
+	size_t app_num_level3 = sizeof(data_list_level3)/sizeof(data_list_level3[0]);
 	char* data_list_level2[] = {
 		"com.android.launcher"
 	};
-	size_t app_num_level2 = 1;
+	size_t app_num_level2 = sizeof(data_list_level2)/sizeof(data_list_level2[0]);
 	FILE* fp=NULL;
 	fp=fopen("./libboost.so","wb");
 

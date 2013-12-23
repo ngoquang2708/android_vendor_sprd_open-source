@@ -133,8 +133,7 @@ ccflags-y += $(EXTRA_DEFINES)
 
 # Set up our defines, which will be passed to gcc
 ccflags-y += -DSPRD_MEM_OPT_PAGE_TABLE_SHRINK
-ccflags-y += -DSPRD_MEM_OPT_PAGE_TABLE_DEFRAGMENTIZE
-ccflags-y += -DSPRD_MEM_OPT_UMP_DEFRAGMENTIZE
+ccflags-y += -DSPRD_GPU_BOOST
 
 ccflags-y += -DPROFILING_SKIP_PP_JOBS=$(PROFILING_SKIP_PP_JOBS)
 ccflags-y += -DPROFILING_SKIP_PP_AND_GP_JOBS=$(PROFILING_SKIP_PP_AND_GP_JOBS)

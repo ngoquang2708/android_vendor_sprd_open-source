@@ -1165,6 +1165,10 @@ mali_timeline_point mali_pp_scheduler_submit_job(struct mali_session_data *sessi
 	return point;
 }
 
+#ifdef SPRD_GPU_BOOST
+extern int gpu_level;
+#endif
+
 _mali_osk_errcode_t _mali_ukk_pp_start_job(void *ctx, _mali_uk_pp_start_job_s *uargs)
 {
 	struct mali_session_data *session;
@@ -1184,7 +1188,10 @@ _mali_osk_errcode_t _mali_ukk_pp_start_job(void *ctx, _mali_uk_pp_start_job_s *u
 	}
 
 	timeline_point_ptr = (u32 __user *) job->uargs.timeline_point_ptr;
-
+#ifdef SPRD_GPU_BOOST
+	if (gpu_level < session->level)
+		gpu_level = session->level;
+#endif
 	point = mali_pp_scheduler_submit_job(session, job);
 	job = NULL;
 
@@ -1228,7 +1235,10 @@ _mali_osk_errcode_t _mali_ukk_pp_and_gp_start_job(void *ctx, _mali_uk_pp_and_gp_
 	}
 
 	timeline_point_ptr = (u32 __user *) pp_job->uargs.timeline_point_ptr;
-
+#ifdef SPRD_GPU_BOOST
+	if (gpu_level < session->level)
+		gpu_level = session->level;
+#endif
 	/* Submit GP job. */
 	mali_gp_scheduler_submit_job(session, gp_job);
 	gp_job = NULL;

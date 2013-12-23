@@ -34,7 +34,7 @@
 #include "mali_kernel_common.h"
 #include "base.h"
 
-#define GPU_GLITCH_FREE_DFS 1
+#define GPU_GLITCH_FREE_DFS	0
 #define GPU_FREQ_CONTROL	1
 
 #define GPU_MIN_DIVISION	1
