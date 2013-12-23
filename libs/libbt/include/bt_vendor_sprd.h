@@ -57,7 +57,7 @@ extern bt_vendor_callbacks_t *bt_vendor_cbacks;
 
 
  #define MAC_ERROR    "FF:FF:FF:FF:FF:FF"  
- #define BT_MAC_FILE  "/data/btmac.txt"  
+ #define BT_MAC_FILE  "/productinfo/btmac.txt" 
  #define GET_BTMAC_ATCMD "AT+SNVM=0,401"  
  #define GET_BTPSKEY_ATCMD "AT+SNVM=0,415"  
  #define SET_BTMAC_ATCMD  "AT+SNVM=1,401"  
@@ -70,6 +70,7 @@ extern bt_vendor_callbacks_t *bt_vendor_cbacks;
  typedef unsigned char uint8;  
  typedef unsigned int uint32;  
  typedef unsigned short uint16;  
+ typedef unsigned char   BOOLEAN;
  #define BT_ADDRESS_SIZE    6  
 
 // add by longting.zhao for pskey NV
