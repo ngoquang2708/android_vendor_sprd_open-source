@@ -3235,7 +3235,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 	targetStreamParms->bufIndex = frame->buf_id;
-	targetStreamParms->m_timestamp = frame->timestamp;
+	targetStreamParms->m_timestamp = systemTime();
 	HAL_LOGD("@@@ Index=%d status=%d Firstfrm=%d",targetStreamParms->bufIndex,\
 		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm);
     if (GetStartPreviewAftPic()) {
