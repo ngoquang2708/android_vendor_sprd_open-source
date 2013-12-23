@@ -733,11 +733,12 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         ++mPicId;
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
-            inQueue.erase(inQueue.begin());
-            inInfo->mOwnedByUs = false;
-            notifyEmptyBufferDone(inHeader);
+ //bug253058 , the last frame size may be not zero, it need to be decoded.
+//            inQueue.erase(inQueue.begin());
+ //           inInfo->mOwnedByUs = false;
+//            notifyEmptyBufferDone(inHeader);
             mEOSStatus = INPUT_EOS_SEEN;
-            continue;
+//            continue;
         }
 
         if(inHeader->nFilledLen == 0) {
