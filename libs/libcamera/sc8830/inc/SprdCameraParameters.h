@@ -163,7 +163,20 @@ public:
 	void setSupportedVideoSizes(const char* value);
 	const char* get_JpegQuality() const;
 	const char* get_JpegThumbnailQuality() const;
-
+	const char* get_Rotation() const;
+	void setRotation(const char* value);
+	const char* get_GpsLatitude() const;
+	void setGpsLatitude(const char* value);
+	const char* get_GpsLongitude() const;
+	void setGpsLongitude(const char* value);
+	const char* get_GpsAltitude() const;
+	void setGpsAltitude(const char* value);
+	const char* get_GpsTimestamp() const;
+	void setGpsTimestamp(const char* value);
+	const char* get_MaxNumDetectedFacesHW() const;
+	void setMaxNumDetectedFacesHW(const char* value);
+	const char* get_MaxNumDetectedFacesSW() const;
+	void setMaxNumDetectedFacesSW(const char* value);
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
 
