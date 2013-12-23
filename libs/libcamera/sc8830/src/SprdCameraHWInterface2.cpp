@@ -565,7 +565,7 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
     ADD_OR_SIZE(ANDROID_JPEG_QUALITY, &jpegQuality, 1);
 
     static const int32_t thumbnailSize[2] = {
-        160, 120
+        JPEG_THUMBNAIL_WIDTH, JPEG_THUMBNAIL_HEIGHT
     };
     ADD_OR_SIZE(ANDROID_JPEG_THUMBNAIL_SIZE, thumbnailSize, 2);
 
@@ -1515,7 +1515,9 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 				HAL_LOGE("receiveRawPicture: camera_set_position: error");
 			}
 		}
-		DisplayPictureImg((camera_frame_type *)parm4);
+		if (m_camCtlInfo.pictureMode != CAMERA_ZSL_MODE) {
+			DisplayPictureImg((camera_frame_type *)parm4);
+		}
 		break;
 	case CAMERA_EXIT_CB_DONE:
 		if (SPRD_WAITING_RAW == getCaptureState()) {
@@ -1788,6 +1790,13 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 	else if (stream_id == STREAM_ID_RECORD) {//release old record
 		SetRecStopMsg(true);
         memset(&m_subStreams[STREAM_ID_RECORD], 0, sizeof(substream_parameters_t));
+		if (m_Stream[STREAM_ID_PREVIEW - 1] != NULL) {
+		   if (m_Stream[STREAM_ID_PREVIEW - 1]->m_numRegisteredStream > 1)
+              m_Stream[STREAM_ID_PREVIEW - 1]->detachSubStream(stream_id);
+		}
+		return 0;
+	} else if (stream_id == STREAM_ID_PRVCB) {
+        memset(&m_subStreams[STREAM_ID_PRVCB], 0, sizeof(substream_parameters_t));
 		if (m_Stream[STREAM_ID_PREVIEW - 1] != NULL) {
 		   if (m_Stream[STREAM_ID_PREVIEW - 1]->m_numRegisteredStream > 1)
               m_Stream[STREAM_ID_PREVIEW - 1]->detachSubStream(stream_id);
@@ -2385,6 +2394,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			case ANDROID_JPEG_THUMBNAIL_SIZE:
                 srcreq->thumbnailJpgSize.width = entry.data.i32[0];
 				srcreq->thumbnailJpgSize.height = entry.data.i32[1];
+				camera_set_thumbnail_properties(srcreq->thumbnailJpgSize.width,
+												srcreq->thumbnailJpgSize.height, th_q);
 				HAL_LOGD("DEBUG(%s): ANDROID_JPEG_THUMBNAIL_SIZE (%d %d)",
 						__FUNCTION__, srcreq->thumbnailJpgSize.width, srcreq->thumbnailJpgSize.height);
                 break;
@@ -2757,11 +2768,6 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	    uint32_t mem_size0 = 0, mem_size1 = 0;
 
 		HAL_LOGD("mCameraState.capture_state=%d.",mCameraState.capture_state);
-		int ret = camera_set_thumbnail_properties(srcreq->thumbnailJpgSize.width,
-												srcreq->thumbnailJpgSize.height, th_q);
-		if (ret != CAMERA_SUCCESS) {
-			HAL_LOGE("camera_set_thumbnail_properties returned %d", ret);
-		}
 		camera_encode_properties_type encode_properties = {0, CAMERA_JPEG, 0};
 		// Set Default JPEG encoding--this does not cause a callback
 		encode_properties.quality = jpeg_q;
@@ -3898,7 +3904,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
     static const int32_t availableTargetFpsRanges[] = {
-            15, 30, 15, 30
+            4, 30, 5, 30
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
             availableTargetFpsRanges,
