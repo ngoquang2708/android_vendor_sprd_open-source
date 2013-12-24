@@ -1181,225 +1181,6 @@ int camera_take_picture_continue(int cap_cnt)
 	return ret;
 }
 
-int camera_cap_post(void *data)
-{
-	int ret = CAMERA_SUCCESS;
-	CMR_MSG_INIT(message);
-	int tmp = 0;
-	int jpeg_ret = CAMERA_SUCCESS;
-
-	g_cxt->cap_cnt++;
-	g_cxt->cap_cnt_for_err = g_cxt->cap_cnt;
-	CMR_LOGI("g_cxt->cap_cnt,%d.",g_cxt->cap_cnt);
-	if (CAMERA_NORMAL_MODE == g_cxt->cap_mode) {
-		CMR_LOGI("need to stop cap.");
-		ret = cmr_v4l2_cap_stop();
-		if (ret) {
-			CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
-			return -CAMERA_FAILED;
-		}
-
-		CMR_PRINT_TIME;
-		g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
-		ret = Sensor_StreamOff();
-		if (ret) {
-			CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
-		}
-		ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
-		if (ret) {
-			CMR_LOGE("Failed to stop IF , %d", ret);
-			return -CAMERA_FAILED;
-		}
-
-		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
-			ret = isp_video_stop();
-			g_cxt->isp_cxt.isp_state = ISP_IDLE;
-			if (ret) {
-				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
-			}
-		}
-		CMR_PRINT_TIME;
-	/*	ret = camera_snapshot_stop_set();
-		if (ret) {
-			CMR_LOGE("Failed to exit snapshot %d", ret);
-			return -CAMERA_FAILED;
-		}*/
-	} else if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
-		g_cxt->cap_process_id = 0;
-		ret = cmr_v4l2_cap_stop();
-		if (ret) {
-			CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
-			return -CAMERA_FAILED;
-		}
-
-		CMR_PRINT_TIME;
-#if !USE_SENSOR_OFF_ON_FOR_HDR
-		ret = Sensor_GetMode(&g_cxt->sn_cxt.previous_sensor_mode);
-		if (ret) {
-#endif
-			ret = Sensor_StreamOff();
-			if (ret) {
-				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
-			}
-			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
-			if (ret) {
-				CMR_LOGE("Failed to stop IF , %d", ret);
-				return -CAMERA_FAILED;
-			}
-			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
-#if !USE_SENSOR_OFF_ON_FOR_HDR
-		}
-#endif
-
-		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
-			ret = isp_video_stop();
-			g_cxt->isp_cxt.isp_state = ISP_IDLE;
-			if (ret) {
-				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
-			}
-		}
-		CMR_PRINT_TIME;
-
-		if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt) {
-			ret = camera_start_jpeg_decode(data);
-			if (ret) {
-				CMR_LOGE("Start JpegDec Failed, %d", ret);
-				return CAMERA_JPEG_SPECIFY_FAILED;
-			}
-			jpeg_ret = camera_jpeg_specify_wait_done();
-			if (jpeg_ret) {
-				CMR_LOGE("hdr wait %d", jpeg_ret);
-
-				camera_jpeg_specify_stop_jpeg_decode();
-				return CAMERA_JPEG_SPECIFY_FAILED;
-			} else {
-				((struct frm_info*)data)->data_endian.uv_endian = 1;
-			}
-		}
-
-
-		camera_capture_hdr_data((struct frm_info *)data);
-		if (HDR_CAP_NUM == g_cxt->cap_cnt) {
-#if !USE_SENSOR_OFF_ON_FOR_HDR
-			ret = Sensor_GetMode(&g_cxt->sn_cxt.previous_sensor_mode);
-			if (ret) {
-#endif
-				g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
-				ret = Sensor_StreamOff();
-				if (ret) {
-					CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
-				}
-				ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
-				if (ret) {
-					CMR_LOGE("Failed to stop IF , %d", ret);
-					return -CAMERA_FAILED;
-				}
-#if !USE_SENSOR_OFF_ON_FOR_HDR
-			}
-#endif
-		/*	ret = camera_snapshot_stop_set();
-			if (ret) {
-				CMR_LOGE("Failed to exit snapshot %d", ret);
-				return -CAMERA_FAILED;
-			}*/
-		} else {
-			tmp = g_cxt->cap_cnt;
-			camera_call_cb(CAMERA_EVT_CB_FLUSH,
-				camera_get_client_data(),
-				CAMERA_FUNC_TAKE_PICTURE,
-				0);
-			ret = camera_take_picture_hdr(tmp);
-			g_cxt->cap_cnt = tmp;
-			if (ret) {
-				CMR_LOGE("Failed to camera_take_picture_hdr %d.", ret);
-				return -CAMERA_FAILED;
-			} else {
-				CMR_LOGI("exit,%d.",g_cxt->cap_cnt);
-				return CAMERA_EXIT;
-			}
-		}
-	} else if (CAMERA_NORMAL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
-		if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt
-			|| IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
-			CMR_PRINT_TIME;
-
-			ret = cmr_v4l2_cap_stop();
-			if (ret) {
-				CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
-				return -CAMERA_FAILED;
-			}
-
-			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
-			ret = Sensor_StreamOff();
-			if (ret) {
-				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
-			}
-			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
-			if (ret) {
-				CMR_LOGE("Failed to stop IF , %d", ret);
-				return -CAMERA_FAILED;
-			}
-
-
-			if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt) {
-				ret = camera_start_jpeg_decode(data);
-				if (ret) {
-					CMR_LOGE("Start JpegDec Failed, %d", ret);
-					return CAMERA_JPEG_SPECIFY_FAILED;
-				}
-				jpeg_ret = camera_jpeg_specify_wait_done();
-				if (jpeg_ret) {
-					CMR_LOGE("burst cap wait %d", jpeg_ret);
-					camera_jpeg_specify_stop_jpeg_decode();
-					return CAMERA_JPEG_SPECIFY_FAILED;
-				} else {
-					((struct frm_info*)data)->data_endian.uv_endian = 1;
-				}
-			}
-		}else if  (g_cxt->cap_cnt == g_cxt->total_capture_num) {
-			ret = cmr_v4l2_cap_stop();
-			if (ret) {
-				CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
-				return -CAMERA_FAILED;
-			}
-			CMR_PRINT_TIME;
-			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
-			ret = Sensor_StreamOff();
-			if (ret) {
-				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
-			}
-			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
-			if (ret) {
-				CMR_LOGE("Failed to stop IF , %d", ret);
-				return -CAMERA_FAILED;
-			}
-			CMR_PRINT_TIME;
-		/*	ret = camera_snapshot_stop_set();
-			if (ret) {
-				CMR_LOGE("Failed to exit snapshot %d", ret);
-				return -CAMERA_FAILED;
-			}*/
-		} else {
-			g_cxt->chn_2_status = CHN_IDLE;
-			if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
-				message.msg_type = CMR_EVT_BEFORE_CAPTURE;
-				message.alloc_flag = 0;
-				ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
-				CMR_LOGI("send post.");
-			}
-		}
-	}else if (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
-		g_cxt->chn_2_status = CHN_IDLE;
-		if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
-			message.msg_type = CMR_EVT_BEFORE_CAPTURE;
-			message.alloc_flag = 0;
-			ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
-			CMR_LOGI("send post.");
-		}
-	}
-	return ret;
-}
-
 #ifdef CONFIG_CAMERA_DATA_SHIFT
 static int _v4l2_postfix(struct frm_info* info)
 {
@@ -1564,6 +1345,232 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 }
 #endif
 
+int camera_cap_post(void *data)
+{
+	int ret = CAMERA_SUCCESS;
+	CMR_MSG_INIT(message);
+	int tmp = 0;
+	int jpeg_ret = CAMERA_SUCCESS;
+
+	g_cxt->cap_cnt++;
+	g_cxt->cap_cnt_for_err = g_cxt->cap_cnt;
+	CMR_LOGI("g_cxt->cap_cnt,%d.",g_cxt->cap_cnt);
+	if (CAMERA_NORMAL_MODE == g_cxt->cap_mode) {
+		CMR_LOGI("need to stop cap.");
+		ret = cmr_v4l2_cap_stop();
+		if (ret) {
+			CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
+			return -CAMERA_FAILED;
+		}
+
+		CMR_PRINT_TIME;
+		g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
+		ret = Sensor_StreamOff();
+		if (ret) {
+			CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+		}
+		ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
+		if (ret) {
+			CMR_LOGE("Failed to stop IF , %d", ret);
+			return -CAMERA_FAILED;
+		}
+
+		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
+			ret = isp_video_stop();
+			g_cxt->isp_cxt.isp_state = ISP_IDLE;
+			if (ret) {
+				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
+			}
+		}
+		CMR_PRINT_TIME;
+	/*	ret = camera_snapshot_stop_set();
+		if (ret) {
+			CMR_LOGE("Failed to exit snapshot %d", ret);
+			return -CAMERA_FAILED;
+		}*/
+	} else if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
+		g_cxt->cap_process_id = 0;
+		ret = cmr_v4l2_cap_stop();
+		if (ret) {
+			CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
+			return -CAMERA_FAILED;
+		}
+
+		CMR_PRINT_TIME;
+#if !USE_SENSOR_OFF_ON_FOR_HDR
+		ret = Sensor_GetMode(&g_cxt->sn_cxt.previous_sensor_mode);
+		if (ret) {
+#endif
+			ret = Sensor_StreamOff();
+			if (ret) {
+				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+			}
+			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
+			if (ret) {
+				CMR_LOGE("Failed to stop IF , %d", ret);
+				return -CAMERA_FAILED;
+			}
+			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
+#if !USE_SENSOR_OFF_ON_FOR_HDR
+		}
+#endif
+
+		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
+			ret = isp_video_stop();
+			g_cxt->isp_cxt.isp_state = ISP_IDLE;
+			if (ret) {
+				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
+			}
+		}
+		CMR_PRINT_TIME;
+
+		if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt) {
+			ret = camera_start_jpeg_decode(data);
+			if (ret) {
+				CMR_LOGE("Start JpegDec Failed, %d", ret);
+				return CAMERA_JPEG_SPECIFY_FAILED;
+			}
+			jpeg_ret = camera_jpeg_specify_wait_done();
+			if (jpeg_ret) {
+				CMR_LOGE("hdr wait %d", jpeg_ret);
+
+				camera_jpeg_specify_stop_jpeg_decode();
+				return CAMERA_JPEG_SPECIFY_FAILED;
+			} else {
+				((struct frm_info*)data)->data_endian.uv_endian = 1;
+			}
+		}
+
+#ifdef CONFIG_CAMERA_DATA_SHIFT
+		_v4l2_postfix_cap(data);
+#endif
+		camera_capture_hdr_data((struct frm_info *)data);
+		if (HDR_CAP_NUM == g_cxt->cap_cnt) {
+#if !USE_SENSOR_OFF_ON_FOR_HDR
+			ret = Sensor_GetMode(&g_cxt->sn_cxt.previous_sensor_mode);
+			if (ret) {
+#endif
+				g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
+				ret = Sensor_StreamOff();
+				if (ret) {
+					CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+				}
+				ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
+				if (ret) {
+					CMR_LOGE("Failed to stop IF , %d", ret);
+					return -CAMERA_FAILED;
+				}
+#if !USE_SENSOR_OFF_ON_FOR_HDR
+			}
+#endif
+		/*	ret = camera_snapshot_stop_set();
+			if (ret) {
+				CMR_LOGE("Failed to exit snapshot %d", ret);
+				return -CAMERA_FAILED;
+			}*/
+			return ret;
+		} else {
+			tmp = g_cxt->cap_cnt;
+			camera_call_cb(CAMERA_EVT_CB_FLUSH,
+				camera_get_client_data(),
+				CAMERA_FUNC_TAKE_PICTURE,
+				0);
+			ret = camera_take_picture_hdr(tmp);
+			g_cxt->cap_cnt = tmp;
+			if (ret) {
+				CMR_LOGE("Failed to camera_take_picture_hdr %d.", ret);
+				return -CAMERA_FAILED;
+			} else {
+				CMR_LOGI("exit,%d.",g_cxt->cap_cnt);
+				return CAMERA_EXIT;
+			}
+		}
+	} else if (CAMERA_NORMAL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
+		if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt
+			|| IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
+			CMR_PRINT_TIME;
+
+			ret = cmr_v4l2_cap_stop();
+			if (ret) {
+				CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
+				return -CAMERA_FAILED;
+			}
+
+			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
+			ret = Sensor_StreamOff();
+			if (ret) {
+				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+			}
+			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
+			if (ret) {
+				CMR_LOGE("Failed to stop IF , %d", ret);
+				return -CAMERA_FAILED;
+			}
+
+
+			if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt) {
+				ret = camera_start_jpeg_decode(data);
+				if (ret) {
+					CMR_LOGE("Start JpegDec Failed, %d", ret);
+					return CAMERA_JPEG_SPECIFY_FAILED;
+				}
+				jpeg_ret = camera_jpeg_specify_wait_done();
+				if (jpeg_ret) {
+					CMR_LOGE("burst cap wait %d", jpeg_ret);
+					camera_jpeg_specify_stop_jpeg_decode();
+					return CAMERA_JPEG_SPECIFY_FAILED;
+				} else {
+					((struct frm_info*)data)->data_endian.uv_endian = 1;
+				}
+			}
+		}else if  (g_cxt->cap_cnt == g_cxt->total_capture_num) {
+			ret = cmr_v4l2_cap_stop();
+			if (ret) {
+				CMR_LOGE("Failed to stop v4l2 capture, %d", ret);
+				return -CAMERA_FAILED;
+			}
+			CMR_PRINT_TIME;
+			g_cxt->sn_cxt.previous_sensor_mode = SENSOR_MODE_MAX;
+			ret = Sensor_StreamOff();
+			if (ret) {
+				CMR_LOGE("Failed to switch off the sensor stream, %d", ret);
+			}
+			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
+			if (ret) {
+				CMR_LOGE("Failed to stop IF , %d", ret);
+				return -CAMERA_FAILED;
+			}
+			CMR_PRINT_TIME;
+		/*	ret = camera_snapshot_stop_set();
+			if (ret) {
+				CMR_LOGE("Failed to exit snapshot %d", ret);
+				return -CAMERA_FAILED;
+			}*/
+		} else {
+			g_cxt->chn_2_status = CHN_IDLE;
+			if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
+				message.msg_type = CMR_EVT_BEFORE_CAPTURE;
+				message.alloc_flag = 0;
+				ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+				CMR_LOGI("send post.");
+			}
+		}
+	}else if (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
+		g_cxt->chn_2_status = CHN_IDLE;
+		if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
+			message.msg_type = CMR_EVT_BEFORE_CAPTURE;
+			message.alloc_flag = 0;
+			ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+			CMR_LOGI("send post.");
+		}
+	}
+
+	#ifdef CONFIG_CAMERA_DATA_SHIFT
+	_v4l2_postfix_cap(data);
+	#endif
+	return ret;
+}
+
 void *camera_cap_thread_proc(void *data)
 {
 	CMR_MSG_INIT(message);
@@ -1605,9 +1612,6 @@ void *camera_cap_thread_proc(void *data)
 			if (TAKE_PICTURE_NO == camera_get_take_picture()) {
 				cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 			} else {
-				#ifdef CONFIG_CAMERA_DATA_SHIFT
-				_v4l2_postfix_cap(data);
-				#endif
 				ret = camera_cap_post(data);
 				if (CAMERA_EXIT == ret || CAMERA_JPEG_SPECIFY_FAILED == ret) {
 					CMR_LOGI("normal exit.");

@@ -73,9 +73,9 @@ static nsecs_t s_end_timestamp = 0;
 static int s_use_time = 0;
 
 #ifdef CONFIG_USEIOMMU
-static const int s_mem_method = 1;	 //   0=  physical	address,1=iommu  address
+static int s_mem_method = 1;	 //   0=  physical	address,1=iommu  address
 #else
-static const int s_mem_method = 0;
+static int s_mem_method = 0;
 #endif
 
 
@@ -297,7 +297,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 #if defined(CONFIG_BACK_CAMERA_ROTATION) || defined(CONFIG_FRONT_CAMERA_ROTATION)
 	mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
 #endif
-
+	s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
 	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
 	memset(mMiscHeapArray, 0, sizeof(mMiscHeapArray));
@@ -2036,6 +2036,11 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 	int order = 0, acc = buf_size *num_bufs ;
 	acc = camera_get_size_align_page(acc);
 	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+
+	if(s_mem_method==0)
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+	else
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
 
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), acc/num_bufs, num_bufs, NULL);
 
