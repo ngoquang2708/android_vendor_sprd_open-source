@@ -287,7 +287,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mIsRotCapture(0),
 #endif
 	mTimeCoeff(1),
-	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_DCAM),
+	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
 	mSetFreqCount(0),
 	mSwitchMonitorMsgQueHandle(0),
 	mSwitchMonitorInited(0)
@@ -523,9 +523,9 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
 #else
     if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-        	usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+		usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
     } else {
-        	usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_PRIVATE_0;
+		usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
     }
 #endif
 
@@ -690,6 +690,7 @@ void SprdCameraHardware::stopRecording()
 	Mutex::Autolock l(&mLock);
 //	camera_set_stop_preview_mode(1);
 //	stopPreviewInternal();
+	setRecordingMode(false);
 	mRecordingFirstFrameTime = 0;
 	LOGV("stopRecording: X");
 }
@@ -2251,9 +2252,13 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 			}
 			private_h=(struct private_handle_t*) (*buffer_handle);
 			if(s_mem_method==0){
+				int ion_addr=0,ion_size=0;
+				MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,&ion_addr,&ion_size);
+				ALOGD("MemoryHeapIon::Get_mm_ion: %d addr 0x%x size 0x%x",i, ion_addr, ion_size);
 				mPreviewBufferHandle[i] = buffer_handle;
-				mPreviewHeapArray_phy[i] = (uint32_t)private_h->phyaddr;
+				mPreviewHeapArray_phy[i] = (uint32_t)ion_addr;
 				mPreviewHeapArray_vir[i] = (uint32_t)private_h->base;
+				//mPreviewHeapArray_size[i] = ion_size;
 			} else {
 				int iova_addr=0,iova_size=0;
 				ALOGD("***frank.dong*** MemoryHeapIon::Get_mm_iova: %d",i);
@@ -3384,7 +3389,6 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 
 	if (0 != ret) {
 		LOGE("%s: camera copy data failed.", __func__);
-		return false;
 	}
 
 	ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
@@ -3450,7 +3454,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		if (0 != ret) {
 			LOGE("%s: camera copy data failed.", __func__);
-			return false;
 		}
 
 		ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
