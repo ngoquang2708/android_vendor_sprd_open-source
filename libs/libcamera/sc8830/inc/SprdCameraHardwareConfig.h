@@ -47,6 +47,7 @@ enum {
 	CAMERA_SCENE_MODE_PORTRAIT, //not support
 	CAMERA_SCENE_MODE_LANDSCAPE, //not support
 	CAMERA_SCENE_MODE_NORMAL,
+	CAMERA_SCENE_MODE_HDR,
 	CAMERA_SCENE_MODE_MAX
 };
 
@@ -245,6 +246,7 @@ const struct str_map scene_mode_map[] = {
 	{"landscape",       CAMERA_SCENE_MODE_LANDSCAPE},
 	{"action",          CAMERA_SCENE_MODE_ACTION},
 	{"normal",          CAMERA_SCENE_MODE_NORMAL},
+	{"hdr",             CAMERA_SCENE_MODE_HDR},
 	{NULL,              0}
 };
 
@@ -548,7 +550,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"jpeg-thumbnail-quality", "80"},
 	{"effect-values", "none,mono,negative,sepia,cold,antique"},
 	{"effect", "none"},
-	{"scene-mode-values", "auto,night,portrait,landscape,action,normal"},
+	{"scene-mode-values", "auto,night,portrait,landscape,action,normal,hdr"},
 	{"scene-mode", "auto"},
 	{"cameraid-values", "back_camera,front_camera"},
 	{"cameraid","back_camera"},

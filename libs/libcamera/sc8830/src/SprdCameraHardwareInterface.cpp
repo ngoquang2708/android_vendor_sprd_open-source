@@ -2843,7 +2843,7 @@ void SprdCameraHardware::stopPreviewInternal()
 takepicture_mode SprdCameraHardware::getCaptureMode()
 {
 	Mutex::Autolock          paramLock(&mParamLock);
-	if (1 == mParameters.getInt("hdr")) {
+	if (6 == mParameters.getInt("scene-mode")) {
         mCaptureMode = CAMERA_HDR_MODE;
     } else if ((1 == mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
 		mCaptureMode = CAMERA_ZSL_CONTINUE_SHOT_MODE;
