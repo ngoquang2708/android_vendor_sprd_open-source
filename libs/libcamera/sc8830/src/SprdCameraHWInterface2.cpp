@@ -2485,7 +2485,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						zoom.crop_w = area[3];
 						zoom.crop_h = area[4];
 						camera_get_sensor_mode_trim(1, &zoom1, &wid, &height);
-						CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
+						if (CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom)) {
+							break;
+						}
 						area[1] = zoom.crop_x;
 						area[2] = zoom.crop_y;
 						area[3] = zoom.crop_w;
@@ -3904,7 +3906,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
     static const int32_t availableTargetFpsRanges[] = {
-            4, 30, 5, 30
+            4, 15, 4, 30, 5, 30
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
             availableTargetFpsRanges,
@@ -3938,8 +3940,8 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
     ADD_OR_SIZE(ANDROID_CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
             availableVstabModes, sizeof(availableVstabModes));
 
-    ADD_OR_SIZE(ANDROID_CONTROL_SCENE_MODE_OVERRIDES,
-            camerahal->sceneModeOverrides, camerahal->numSceneModeOverrides);
+//    ADD_OR_SIZE(ANDROID_CONTROL_SCENE_MODE_OVERRIDES,
+ //           camerahal->sceneModeOverrides, camerahal->numSceneModeOverrides);
 
     static const uint8_t quirkTriggerAuto = 1;
     ADD_OR_SIZE(ANDROID_QUIRKS_TRIGGER_AF_WITH_AUTO,
