@@ -586,9 +586,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"focal-length", "3.75"},
 	{"horizontal-view-angle", "54"},
 	{"vertical-view-angle", "54"},
+#ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 	{"flash-mode-values", "off,on,torch,auto"},
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
+#endif
 	{"focus-distances", "2.0,2.5,3.75"},
 	{"max-num-detected-faces-hw", "10"},
 	{"max-num-focus-areas", "3"},
