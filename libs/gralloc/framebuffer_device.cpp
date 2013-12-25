@@ -41,6 +41,7 @@
 
 // numbers of buffers for page flipping
 #define NUM_BUFFERS NUM_FB_BUFFERS
+#define DEBUG_FB_POST
 
 #ifdef DUMP_FB
 extern void dump_fb(void* addr, struct fb_var_screeninfo * info , int format);
