@@ -753,7 +753,7 @@ static void handle_dump_shark_sipc_info()
 }
 
 
-#define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
+#define MODEM_W_DEVICE_PROPERTY "persist.modem.w.enable"
 #define MODEM_TD_DEVICE_PROPERTY "persist.modem.t.enable"
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
 
