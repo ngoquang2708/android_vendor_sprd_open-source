@@ -2185,8 +2185,14 @@ static int start_input_stream(struct tiny_stream_in *in)
         int card=0;
         cp_type_t cp_type = CP_MAX;
         in->active_rec_proc = 0;
+        in->config = pcm_config_vrec_vx;
+        if(in->config.channels  != in->requested_channels) {
+            ALOGE("%s, voice-call input : in->requested_channels is %d, in->config.channels is %d",
+                    __func__,in->requested_channels, in->config.channels);
+            in->config.channels = in->requested_channels;
+        }
 #ifdef AUDIO_MUX_PCM
-        in->mux_pcm = mux_pcm_open(s_vaudio,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
+        in->mux_pcm = mux_pcm_open(s_vaudio,PORT_MM,PCM_IN,&in->config);
         if (!pcm_is_ready(in->mux_pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->mux_pcm));
             mux_pcm_close(in->mux_pcm);
@@ -2204,7 +2210,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             card = s_vaudio_w;
         }
 
-        in->pcm = pcm_open(card,PORT_MM,PCM_IN,&pcm_config_vrec_vx);
+        in->pcm = pcm_open(card,PORT_MM,PCM_IN,&in->config);
         if (!pcm_is_ready(in->pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
             pcm_close(in->pcm);
