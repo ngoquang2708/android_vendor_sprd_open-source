@@ -379,15 +379,32 @@ first_key_check:
 			continue;
 		}
 		LOGD(" %s: %d\n", __func__, __LINE__);
-		if(ev.code == KEY_BRL_DOT8 && alarm_flag_check()){ /* alarm event happen */
-			set_screen_state(1);
-			is_exit = 1;
-			LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm happen 1, exit");
-			__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
-					LINUX_REBOOT_CMD_RESTART2, "alarm");
-			usleep(500000);
-			LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm reboot failed");
-			break;
+		if(ev.code == KEY_BRL_DOT8){ /* alarm event happen */
+			if(alarm_flag_check()){
+				set_screen_state(1);
+				is_exit = 1;
+				LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm happen 1, exit");
+				__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+						LINUX_REBOOT_CMD_RESTART2, "alarm");
+				usleep(500000);
+				LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm reboot failed");
+				break;
+			}else{
+				while(gettimeofday(&now_time, (struct timezone *)0)<0);
+				time_diff_temp = timeval_diff(now_time, start_time);
+				time_diff_temp = (time_diff_temp + 1000)/1000;
+				time_left = time_left - time_diff_temp;
+				LOGD(" %s: %d time_left: %d\n", __func__, __LINE__, time_left);
+				if(time_left <= 0){
+					cmd = BACKLIGHT_OFF_CMD;
+					write(cmd_fd, &cmd, sizeof(char));
+					set_screen_state(0);
+					continue;
+				}else{
+					goto first_key_check;
+				}
+
+			}
 		}
 
 		if(ev.code == pwr_key){
