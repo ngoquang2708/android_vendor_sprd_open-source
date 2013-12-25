@@ -3453,10 +3453,12 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 		mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
 		if (0 != ret) {
+			ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
 			LOGE("%s: camera copy data failed.", __func__);
+		} else {
+			ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
 		}
 
-		ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
 		if (0 != ret) {
 			LOGE("%s: enqueue_buffer() failed.", __func__);
 			return false;

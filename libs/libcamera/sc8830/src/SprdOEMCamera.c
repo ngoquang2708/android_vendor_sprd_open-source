@@ -840,9 +840,11 @@ void *camera_prev_thread_proc(void *data)
 			if (ret) {
 				CMR_LOGE("preview failed %d", ret);
 				memset(&cb_info, 0, sizeof(camera_cb_info));
-				cb_info.cb_type = CAMERA_EXIT_CB_FAILED;
-				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
-				camera_callback_start(&cb_info);
+				if (IS_PREVIEW) {
+					cb_info.cb_type = CAMERA_EXIT_CB_FAILED;
+					cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
+					camera_callback_start(&cb_info);
+				}
 			}
 			CMR_PRINT_TIME;
 			break;
@@ -2910,8 +2912,6 @@ int camera_stop_preview_internal(void)
 		}
 	}
 
-	cmr_rot_wait_done();
-	g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 	/*arithmetic_hdr_deinit();*/
 
 	return ret;
@@ -7188,6 +7188,9 @@ int camera_start_rotate(struct frm_info *data)
 			CMR_LOGE("Rot error");
 		}
 	}
+
+	cmr_rot_wait_done();
+
 	return ret;
 }
 
