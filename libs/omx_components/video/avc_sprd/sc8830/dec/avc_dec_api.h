@@ -234,7 +234,7 @@ MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *pInput,MMDecOutput *pOu
 MMDecRet H264DecRelease(AVCHandle *avcHandle);
 
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle);
-MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId);
+MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId);
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8 *pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 
 
@@ -246,7 +246,7 @@ typedef MMDecRet (*FT_H264DecMemInit)(AVCHandle *avcHandle, MMCodecBuffer *pBuff
 typedef MMDecRet (*FT_H264DecDecode)(AVCHandle *avcHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_H264DecRelease)(AVCHandle *avcHandle);
 typedef void (* FT_H264Dec_SetCurRecPic)(AVCHandle *avcHandle, uint8 *pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
-typedef MMDecRet (* FT_H264Dec_GetLastDspFrm)(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId);
+typedef MMDecRet (* FT_H264Dec_GetLastDspFrm)(AVCHandle *avcHandle, void **pOutput, int32 *picId);
 typedef void (* FT_H264Dec_ReleaseRefBuffers)(AVCHandle *avcHandle);
 
 /**----------------------------------------------------------------------------*

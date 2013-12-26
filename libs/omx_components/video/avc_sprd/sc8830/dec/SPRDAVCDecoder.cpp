@@ -733,9 +733,9 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         ++mPicId;
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
- //bug253058 , the last frame size may be not zero, it need to be decoded.
+//bug253058 , the last frame size may be not zero, it need to be decoded.
 //            inQueue.erase(inQueue.begin());
- //           inInfo->mOwnedByUs = false;
+//           inInfo->mOwnedByUs = false;
 //            notifyEmptyBufferDone(inHeader);
             mEOSStatus = INPUT_EOS_SEEN;
 //            continue;
@@ -991,18 +991,29 @@ bool SPRDAVCDecoder::drainAllOutputBuffers() {
     ALOGI("%s, %d", __FUNCTION__, __LINE__);
 
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
+    BufferInfo *outInfo;
+    OMX_BUFFERHEADERTYPE *outHeader;
 
     int32_t picId;
-    uint8 *yuv;
+    void* pBufferHeader;
 
-    while (!outQueue.empty()) {
-        BufferInfo *outInfo = *outQueue.begin();
-        outQueue.erase(outQueue.begin());
-        OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
+    while (!outQueue.empty() && mEOSStatus != OUTPUT_FRAMES_FLUSHED) {
+
         if (mHeadersDecoded &&
-                MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &yuv, &picId) ) {
+                MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &pBufferHeader, &picId) ) {
+            List<BufferInfo *>::iterator it = outQueue.begin();
+            while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader) {
+            ++it;
+            }
+
+            outInfo = *it;
+            outQueue.erase(it);
+            outHeader = outInfo->mHeader;
             outHeader->nFilledLen = mPictureSize;
         } else {
+            outInfo = *outQueue.begin();
+            outQueue.erase(outQueue.begin());
+            outHeader = outInfo->mHeader;
             outHeader->nTimeStamp = 0;
             outHeader->nFilledLen = 0;
             outHeader->nFlags = OMX_BUFFERFLAG_EOS;
