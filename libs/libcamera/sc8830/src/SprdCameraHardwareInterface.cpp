@@ -1971,6 +1971,8 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	camera_memory_t *camera_memory;
 	int paddr, psize;
 	int  acc = buf_size *num_bufs ;
+	GET_START_TIME;
+
 	if(s_mem_method==0)
 		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
 	else
@@ -2009,6 +2011,9 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	memory->handle = camera_memory->handle;
 	//memory->data = camera_memory->data;
 	memory->data = pHeapIon->getBase();
+        GET_END_TIME;
+        GET_USE_TIME;
+        LOGD("ion mmap Time:%d(ms).",s_use_time);
 
 	if(s_mem_method==0){
 	   LOGV("GetCachePmem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
