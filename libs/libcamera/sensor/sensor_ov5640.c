@@ -1151,52 +1151,45 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 	SENSOR_AVDD_VAL_E iovdd_val = g_ov5640_yuv_info.iovdd_val;
 	BOOLEAN power_down = g_ov5640_yuv_info.power_down_level;
 	BOOLEAN reset_level = g_ov5640_yuv_info.reset_pulse_level;
-	//uint32_t reset_width=g_ov5640_yuv_info.reset_pulse_width;
 
-	SENSOR_PRINT("(1:on, 0:off): %d_start", power_on);
+	CMR_LOGV("dvdd_val %d, dvdd_val %d, avdd_val %d, iovdd_val %d",
+			power_on,
+			dvdd_val,
+			avdd_val,
+			iovdd_val);
+	CMR_LOGV("power_down %d reset_level %d", power_down, reset_level);
+
 	if (SENSOR_TRUE == power_on) {
 		//reset
-		SENSOR_PRINT("1: %d", reset_level);
 		Sensor_SetResetLevel(reset_level);
-		usleep(5*1000);
-		SENSOR_PRINT("2: %d", power_down);
 		Sensor_PowerDown(power_down);
-		usleep(5*1000);
+		usleep(10*1000);
 		// Open power
 		Sensor_SetIovddVoltage(iovdd_val);
 		usleep(1*1000);
 		Sensor_SetAvddVoltage(avdd_val);
 		usleep(1*1000);
 		Sensor_SetDvddVoltage(dvdd_val);
-		usleep(8*1000);
-
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_3000MV);
 		usleep(5*1000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
-
-		SENSOR_PRINT("3: %d", !power_down);
 		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
-		// Reset sensor
-		SENSOR_PRINT("4: %d", !reset_level);
+		usleep(1*1000);
 		Sensor_SetResetLevel(!reset_level);
-		usleep(30*1000);
+		usleep(20*1000);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_3000MV);
 	} else {
-		Sensor_SetResetLevel(reset_level);
-		usleep(10*1000);
-		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetResetLevel(reset_level);
+		usleep(1*1000);
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		usleep(1*1000);
 		Sensor_SetDvddVoltage(SENSOR_AVDD_CLOSED);
-		usleep(2*1000);
+		usleep(1*1000);
 		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
-		usleep(2*1000);
+		usleep(1*1000);
 		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
-		usleep(2*1000);
-		Sensor_PowerDown(power_down);
 	}
-	SENSOR_PRINT("(1:on, 0:off): %d_end\n ", power_on);
+	CMR_LOGV("(1:on, 0:off): %d_end\n ", power_on);
 	return SENSOR_SUCCESS;
 }
 

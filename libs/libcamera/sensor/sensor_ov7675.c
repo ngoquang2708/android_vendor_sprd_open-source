@@ -647,27 +647,33 @@ LOCAL uint32_t _ov7675_PowerOn(uint32_t power_on)
 	BOOLEAN reset_level = g_OV7675_yuv_info.reset_pulse_level;
 	//uint32_t reset_width=g_ov5640_yuv_info.reset_pulse_width;
 
+	CMR_LOGV("dvdd_val %d, dvdd_val %d, avdd_val %d, iovdd_val %d",
+			power_on,
+			dvdd_val,
+			avdd_val,
+			iovdd_val);
+	CMR_LOGV("power_down %d reset_level %d", power_down, reset_level);
+
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
-		// Open power
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, iovdd_val);
-		usleep(2*1000);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, avdd_val, iovdd_val);
+		usleep(10*1000);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(1*1000);
+		Sensor_SetAvddVoltage(avdd_val);
 		usleep(5*1000);
-		Sensor_PowerDown(!power_down);
-		usleep(2*1000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
+		Sensor_PowerDown(!power_down);
 		usleep(10*1000);
 	} else {
 		Sensor_PowerDown(power_down);
 		usleep(2*1000);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		usleep(2*1000);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED,
-				  SENSOR_AVDD_CLOSED);
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
 		usleep(120*1000);
 	}
-	SENSOR_PRINT("(1:on, 0:off): %d", power_on);
+	CMR_LOGV("(1:on, 0:off): %d", power_on);
 	return SENSOR_SUCCESS;
 }
 LOCAL uint32_t OV7675_Identify(uint32_t param)
