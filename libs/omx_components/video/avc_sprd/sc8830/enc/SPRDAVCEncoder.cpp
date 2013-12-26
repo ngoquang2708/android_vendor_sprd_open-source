@@ -966,7 +966,8 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
             return;
         }
 
-        ALOGV("%s, %d", __FUNCTION__, __LINE__);
+        ALOGV("%s, %d, inHeader->nFilledLen: %d, mStoreMetaData: %d, mVideoColorFormat: %x",
+            __FUNCTION__, __LINE__, inHeader->nFilledLen, mStoreMetaData, mVideoColorFormat);
 
         // Save the input buffer info so that it can be
         // passed to an output buffer
@@ -1168,6 +1169,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
         if ((inHeader->nFlags & OMX_BUFFERFLAG_EOS) && (inHeader->nFilledLen == 0)) {
             // We also tag this output buffer with EOS if it corresponds
             // to the final input buffer.
+            ALOGI("saw EOS");
             outHeader->nFlags = OMX_BUFFERFLAG_EOS;
         }
 
@@ -1177,7 +1179,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
         CHECK(!mInputBufferInfoVec.empty());
         InputBufferInfo *inputBufInfo = mInputBufferInfoVec.begin();
-        if (dataLength > 0) //add this judgement by xiaowei, 20131017, for cr224544
+        if (dataLength > 0 || (inHeader->nFlags & OMX_BUFFERFLAG_EOS)) //add this judgement by xiaowei, 20131017, for cr224544
         {
             outQueue.erase(outQueue.begin());
             outHeader->nTimeStamp = inputBufInfo->mTimeUs;
