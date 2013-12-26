@@ -1746,10 +1746,11 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
     if (stream_id == STREAM_ID_PREVIEW) {
 		camStatus = getPreviewState();
 
-		if (camStatus != SPRD_PREVIEW_IN_PROGRESS) {
+	/*	if (camStatus != SPRD_PREVIEW_IN_PROGRESS) {
 		   HAL_LOGE("camera isn't in previewing,%d",camStatus);
 		   return ret;
-		}
+		}*/
+		if (camStatus == SPRD_PREVIEW_IN_PROGRESS) {
 		m_Stream[STREAM_ID_PREVIEW - 1]->setRecevStopMsg(true);//sync receive preview frame
         setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
         if (CAMERA_SUCCESS != camera_stop_preview()) {
@@ -1758,6 +1759,7 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 			return UNKNOWN_ERROR;
 	    }
 	    WaitForPreviewStop();
+		}
 
 		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 		for (;i < targetStreamParms->numSvcBuffers;i++) {
