@@ -2621,7 +2621,6 @@ int camera_start_preview_internal(void)
 		CMR_LOGE("Failed to init arithmetic %d", ret);
 	}
 
-
 	CMR_LOGV("previous mode %d, img_fmt= %d",\
 		g_cxt->sn_cxt.previous_sensor_mode, g_cxt->sn_cxt.sn_if.img_fmt);
 
@@ -4190,6 +4189,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			}
 			ret = camera_stop_preview_internal();
 			camera_preview_stop_set();
+			camera_set_start_facedetect(0, 0);
 #if CB_LIGHT_SYNC
 			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 					camera_get_client_data(),
