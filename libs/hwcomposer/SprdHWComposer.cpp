@@ -136,7 +136,7 @@ int SprdHWComposer:: prepareDisplays(size_t numDisplays, hwc_display_contents_1_
 {
     int ret = 0;
 
-    for(unsigned int i = 0; i < numDisplays - 1; i++)
+    for(unsigned int i = 0; i < numDisplays; i++)
     {
         hwc_display_contents_1_t *display = displays[i];
 
@@ -163,7 +163,7 @@ int SprdHWComposer:: commitDisplays(size_t numDisplays, hwc_display_contents_1_t
 {
     int ret = 0;
 
-    for(unsigned int i = 0; i < numDisplays - 1; i++)
+    for(unsigned int i = 0; i < numDisplays; i++)
     {
         hwc_display_contents_1_t *display = displays[i];
 

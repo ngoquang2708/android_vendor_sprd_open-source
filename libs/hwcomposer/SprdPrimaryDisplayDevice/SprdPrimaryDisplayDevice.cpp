@@ -295,6 +295,11 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             String8 name("HWCFBT::Post");
 
             FenceWaitForever(name, FBTargetLayer->acquireFenceFd);
+            if (FBTargetLayer->acquireFenceFd >= 0)
+            {
+                close(FBTargetLayer->acquireFenceFd);
+                FBTargetLayer->acquireFenceFd = -1;
+            }
         }
 
         mFBInfo->fbDev->post(mFBInfo->fbDev, privateH);

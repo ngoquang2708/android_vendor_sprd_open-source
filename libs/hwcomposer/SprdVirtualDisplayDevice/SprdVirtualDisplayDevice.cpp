@@ -82,32 +82,47 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
         return 0;
     }
 
-    waitAcquireFence(list);
-
-    releaseFenceFd = createReleaseFenceFD(list);
-
     FBTargetLayer = &(list->hwLayers[list->numHwLayers - 1]);
     if (FBTargetLayer == NULL)
     {
-        ALOGE("FBTargetLayer is NULL");
+        ALOGE("VirtualDisplay FBTLayer is NULL");
         return -1;
     }
 
     const native_handle_t *pNativeHandle = FBTargetLayer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
-    ALOGI_IF(mDebugFlag, "Start Displaying VirtualDisplay FramebufferTarget layer");
+    ALOGI_IF(mDebugFlag, "Start Display VirtualDisplay FBT layer");
 
     if (FBTargetLayer->acquireFenceFd >= 0)
     {
         String8 name("HWCFBTVirtual::Post");
 
         FenceWaitForever(name, FBTargetLayer->acquireFenceFd);
+
+        if (FBTargetLayer->acquireFenceFd >= 0)
+        {
+            close(FBTargetLayer->acquireFenceFd);
+            FBTargetLayer->acquireFenceFd = -1;
+        }
     }
 
-    closeAcquireFDs(list);
+    /*
+     *  Virtual display just have outbufAcquireFenceFd
+     * */
+    if (list->outbufAcquireFenceFd >= 0)
+    {
+        String8 name("HWCOBVirtual::Post");
 
-    retireReleaseFenceFD(releaseFenceFd);
+        FenceWaitForever(name, list->outbufAcquireFenceFd);
+
+        if (list->outbufAcquireFenceFd >= 0)
+        {
+            close(list->outbufAcquireFenceFd);
+            list->outbufAcquireFenceFd = -1;
+        }
+    }
+
 
     createRetiredFence(list);
 
