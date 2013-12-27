@@ -195,7 +195,11 @@ bool SprdOverlayPlane::flush()
         BaseContext->data_type = SPRD_DATA_FORMAT_RGB888;
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
+#ifdef GSP_ENDIAN_IMPROVEMENT
+        BaseContext->rb_switch = 1;
+#else
         BaseContext->rb_switch = 0;
+#endif
     }
     else if (format == PLANE_FORMAT_YUV422)
     {
@@ -209,13 +213,12 @@ bool SprdOverlayPlane::flush()
     {
         BaseContext->data_type = SPRD_DATA_FORMAT_YUV420;
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
-        //BaseContext->uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
-        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
-
-#ifdef GSP_ADDR_TYPE_PHY
-        BaseContext->rb_switch = 0;
-#elif defined (GSP_ADDR_TYPE_IOVA)
+#ifdef GSP_ENDIAN_IMPROVEMENT
         BaseContext->rb_switch = 1;
+        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
+#else
+        BaseContext->rb_switch = 0;
+        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
 #endif
     }
 
@@ -231,7 +234,7 @@ bool SprdOverlayPlane::flush()
     }
     BaseContext->buffer = (unsigned char *)(mBuffer->phyaddr);
 
-    ALOGI_IF(mDebugFlag, "video overlay parameter datatype = %d, x = %d, y = %d, w = %d, h = %d, buffer = 0x%08x",
+    ALOGI_IF(mDebugFlag, "SET_OVERLAY parameter datatype = %d, x = %d, y = %d, w = %d, h = %d, buffer = 0x%08x",
              BaseContext->data_type,
              BaseContext->rect.x,
              BaseContext->rect.y,

@@ -329,7 +329,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         mOverlayPlane->disable();
     }
 
-    if (DisplayPrimaryPlane)
+    if (DisplayPrimaryPlane && (!DisplayOverlayPlane))
     {
         mPrimaryPlane->dequeueBuffer();
 
@@ -372,6 +372,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         {
             ALOGI_IF(mDebugFlag, "%s[%d],composerLayers success",__func__,__LINE__);
         }
+       DisplayPrimaryPlane = false;
 #endif
     }
 

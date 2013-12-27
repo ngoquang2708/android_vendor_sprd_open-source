@@ -425,7 +425,11 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag)
 Overlay:
 
 #ifdef OVERLAY_COMPOSER_GPU
-    postProcessVideoCond = (YUVLayer && (RGBLayer || mFBLayerCount > 0));
+#ifdef GSP_BLEND_2_LAYERS
+    postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 1));// 3 layers compose with GPU
+#else
+    postProcessVideoCond = (YUVLayer && (RGBLayer || mFBLayerCount > 0));// 2 layers compose with GPU
+#endif
 #else
     postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
 #endif
