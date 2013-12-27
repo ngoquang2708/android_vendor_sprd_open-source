@@ -112,6 +112,8 @@ SPRDAVCDecoder::SPRDAVCDecoder(
       mCropTop(0),
       mCropWidth(mWidth),
       mCropHeight(mHeight),
+      mMaxWidth(352),
+      mMaxHeight(288),
       mPicId(0),
       mHeadersDecoded(false),
       mEOSStatus(INPUT_DATA_AVAILABLE),
@@ -302,6 +304,23 @@ status_t SPRDAVCDecoder::initDecoder() {
     if ((*mH264DecInit)(mHandle, &codec_buf,&video_format) != MMDEC_OK) {
         ALOGE("Failed to init AVCDEC");
         return OMX_ErrorUndefined;
+    }
+
+    int32 codec_capabilty;
+    if ((*mH264GetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
+        if (codec_capabilty == 0)   //limited under 720p
+        {
+            mMaxWidth = 1280;
+            mMaxHeight = 720;
+        } else if (codec_capabilty == 1)   //limited under 1080p
+        {
+            mMaxWidth = 1920;
+            mMaxHeight = 1088;
+        } else
+        {
+            mMaxWidth = 352;
+            mMaxHeight = 288;
+        }
     }
 
     return OMX_ErrorNone;
@@ -858,6 +877,15 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         MMDecRet ret;
         ret = (*mH264DecGetInfo)(mHandle, &decoderInfo);
         if(ret == MMDEC_OK) {
+            if (!((decoderInfo.picWidth<= mMaxWidth&& decoderInfo.picHeight<= mMaxHeight)
+                    || (decoderInfo.picWidth <= mMaxHeight && decoderInfo.picHeight <= mMaxWidth))) {
+                ALOGE("[%d,%d] is out of range [%d, %d], failed to support this format.",
+                      decoderInfo.picWidth, decoderInfo.picHeight, mMaxWidth, mMaxHeight);
+                notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
+            }
+
             if (handlePortSettingChangeEvent(&decoderInfo)) {
                 return;
             } else if(mChangeToSwDec == true) {
@@ -1233,6 +1261,14 @@ bool SPRDAVCDecoder::openDecoder(const char* libName) {
     mH264DecGetNALType = (FT_H264DecGetNALType)dlsym(mLibHandle, "H264DecGetNALType");
     if(mH264DecGetNALType == NULL) {
         ALOGE("Can't find H264DecGetNALType in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264GetCodecCapability = (FT_H264GetCodecCapability)dlsym(mLibHandle, "H264GetCodecCapability");
+    if(mH264GetCodecCapability == NULL) {
+        ALOGE("Can't find H264GetCodecCapability in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
         return false;

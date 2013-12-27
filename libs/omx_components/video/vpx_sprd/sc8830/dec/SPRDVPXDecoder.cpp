@@ -53,6 +53,8 @@ SPRDVPXDecoder::SPRDVPXDecoder(
       mInputBufferCount(0),
       mWidth(320),
       mHeight(240),
+      mMaxWidth(352),
+      mMaxHeight(288),
       mOutputPortSettingsChange(NONE),
       mSignalledError(false),
       mLibHandle(NULL),
@@ -259,6 +261,23 @@ status_t SPRDVPXDecoder::initDecoder() {
     if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr) != MMDEC_OK) {
         ALOGE("Failed to init VPXDEC");
         return OMX_ErrorUndefined;
+    }
+
+    int32 codec_capabilty;
+    if ((*mVPXGetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
+        if (codec_capabilty == 0)   //limited under 720p
+        {
+            mMaxWidth = 1280;
+            mMaxHeight = 720;
+        } else if (codec_capabilty == 1)   //limited under 1080p
+        {
+            mMaxWidth = 1920;
+            mMaxHeight = 1088;
+        } else
+        {
+            mMaxWidth = 352;
+            mMaxHeight = 288;
+        }
     }
 
     return OMX_ErrorNone;
@@ -530,7 +549,20 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
         }
 
         if(decRet == MMDEC_MEMORY_ALLOCED) {
-            continue;
+            int32_t buf_width, buf_height;
+
+            (*mVPXGetBufferDimensions)(mHandle, &buf_width, &buf_height);
+
+            if (!((buf_width<= mMaxWidth&& buf_height<= mMaxHeight)
+                    || (buf_width <= mMaxHeight && buf_height <= mMaxWidth))) {
+                ALOGE("[%d,%d] is out of range [%d, %d], failed to support this format.",
+                      buf_width, buf_height, mMaxWidth, mMaxHeight);
+                notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
+            } else {
+                continue;
+            }
         } else  if (decRet == MMDEC_OK) {
             int32_t width = dec_out.frame_width;
             int32_t height = dec_out.frame_height;
@@ -727,6 +759,22 @@ bool SPRDVPXDecoder::openDecoder(const char* libName) {
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
         ALOGE("openDecoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mVPXGetBufferDimensions = (FT_VPXGetBufferDimensions)dlsym(mLibHandle, "VP8GetBufferDimensions");
+    if(mVPXGetBufferDimensions == NULL) {
+        ALOGE("Can't find VP8GetBufferDimensions in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mVPXGetCodecCapability = (FT_VPXGetCodecCapability)dlsym(mLibHandle, "VP8GetCodecCapability");
+    if(mVPXGetCodecCapability == NULL) {
+        ALOGE("Can't find VP8GetCodecCapability in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
         return false;
     }
 

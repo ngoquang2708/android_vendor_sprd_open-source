@@ -63,6 +63,8 @@ private:
     int32_t mWidth;
     int32_t mHeight;
 
+    int32 mMaxWidth, mMaxHeight;
+
     bool mSignalledError;
 
     bool mIOMMUEnabled;
@@ -81,6 +83,8 @@ private:
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
     void* mLibHandle;
+    FT_VPXGetBufferDimensions mVPXGetBufferDimensions;
+    FT_VPXGetCodecCapability mVPXGetCodecCapability;
     FT_VPXDecSetCurRecPic mVPXDecSetCurRecPic;
     FT_VPXDecInit mVPXDecInit;
     FT_VPXDecDecode mVPXDecDecode;

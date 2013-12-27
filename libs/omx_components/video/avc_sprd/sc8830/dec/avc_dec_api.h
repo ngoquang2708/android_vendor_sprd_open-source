@@ -199,7 +199,7 @@ typedef struct tagAVCHandle
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
-
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *codec_capability);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder
@@ -242,6 +242,7 @@ typedef MMDecRet (*FT_H264DecGetNALType)(AVCHandle *avcHandle, uint8 *bitstream,
 typedef void (*FT_H264GetBufferDimensions)(AVCHandle *avcHandle, int32 *aligned_width, int32 *aligned_height) ;
 typedef MMDecRet (*FT_H264DecInit)(AVCHandle *avcHandle, MMCodecBuffer * pBuffer,MMDecVideoFormat * pVideoFormat);
 typedef MMDecRet (*FT_H264DecGetInfo)(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
+typedef MMDecRet (*FT_H264GetCodecCapability)(AVCHandle *avcHandle, int32 *codec_capability);
 typedef MMDecRet (*FT_H264DecMemInit)(AVCHandle *avcHandle, MMCodecBuffer *pBuffer);
 typedef MMDecRet (*FT_H264DecDecode)(AVCHandle *avcHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_H264DecRelease)(AVCHandle *avcHandle);
