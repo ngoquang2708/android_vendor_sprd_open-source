@@ -177,6 +177,38 @@ public:
 	void setMaxNumDetectedFacesHW(const char* value);
 	const char* get_MaxNumDetectedFacesSW() const;
 	void setMaxNumDetectedFacesSW(const char* value);
+	const char* get_MaxZoom() const;
+	void setMaxZoom(const char* value);
+	const char* get_ZoomRatios() const;
+	void setZoomRatios(const char* value);
+	const char* get_ZoomSupported() const;
+	void setZoomSupported(const char* value);
+	const char* get_SmoothZoomSupported() const;
+	void setSmoothZoomSupported(const char* value);
+	const char* get_SupportedFlashMode() const;
+	void setSupportedFlashMode(const char* value);
+	const char* get_SupportedWhiteBalance() const;
+	void setSupportedWhiteBalance(const char* value);
+	const char* get_SupportedIso() const;
+	void setSupportedIso(const char* value);
+	const char* get_SupportedContrast() const;
+	void setSupportedContrast(const char* value);
+	const char* get_SupportedSaturation() const;
+	void setSupportedSaturation(const char* value);
+	const char* get_SupportedBrightness() const;
+	void setSupportedBrightness(const char* value);
+	const char* get_SupportedSharpness() const;
+	void setSupportedSharpness(const char* value);
+	const char* get_SupportedAntibanding() const;
+	void setSupportedAntibanding(const char* value);
+	const char* get_SupportedEffects() const;
+	void setSupportedEffects(const char* value);
+	const char* get_PictureFormat() const;
+	void setPictureFormat(const char* value);
+	const char* get_SupportedPictureFormat() const;
+	void setSupportedPictureFormat(const char* value);
+	void setSensorRotation(int value);
+	void setSensorOrientation(int value);
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
 
@@ -202,19 +234,26 @@ public:
 	static const char KEY_SCENE_MODE[];
 	static const char KEY_ZOOM[];
 	static const char KEY_BRIGHTNESS[];
+	static const char KEY_SUPPORTED_BRIGHTNESS[];
 	static const char KEY_CONTRAST[];
+	static const char KEY_SUPPORTED_CONTRAST[];
 	static const char KEY_EXPOSURE_COMPENSATION[];
 	static const char KEY_ANTI_BINDING[];
 	static const char KEY_ISO[];
+	static const char KEY_SUPPORTED_ISO[];
 	static const char KEY_RECORDING_HINT[];
 	static const char KEY_FLASH_MODE[];
 	static const char KEY_SLOWMOTION[];
 	static const char KEY_SATURATION[];
+	static const char KEY_SUPPORTED_SATURATION[];
 	static const char KEY_SHARPNESS[];
+	static const char KEY_SUPPORTED_SHARPNESS[];
 	static const char KEY_PREVIEWFRAMERATE[];
 	static const char KEY_AUTO_EXPOSURE[];
 	static const char KEY_METERING_AREAS[];
 	static const char KEY_PREVIEW_ENV[];
+	static const char KEY_SENSOR_ROTATION[];
+	static const char KEY_SENSOR_ORIENTATION[];
 
 private:
 

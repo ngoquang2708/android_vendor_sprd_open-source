@@ -890,11 +890,6 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	if(new_SupportedPictureSizes)
 	cur_params.setSupportedPictureSizes(new_SupportedPictureSizes);
 
-	//SupportedFocusModes
-	const char* new_SupportedFocusModes = params.get_SupportedFocusModes();
-	if(new_SupportedFocusModes)
-	cur_params.setSupportedFocusModes(new_SupportedFocusModes);
-
 	//AutoExposureLock
 	const char* new_AutoExposureLock = params.get_AutoExposureLock();
 	if(new_AutoExposureLock)
@@ -965,6 +960,11 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	if(new_focus_mode)
 	cur_params.setFocusMode(new_focus_mode);
 
+	//SupportedFocusModes
+	const char* new_SupportedFocusModes = params.get_SupportedFocusModes();
+	if(new_SupportedFocusModes)
+	cur_params.setSupportedFocusModes(new_SupportedFocusModes);
+
 	//WhiteBalance
 	const char* new_whitebalance = params.get_WhiteBalance();
 	if(new_whitebalance)
@@ -1029,10 +1029,85 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	if(new_scene_mode)
 	cur_params.setSceneMode(new_scene_mode);
 
+	//SupportedAntibanding
+	const char* new_SupportedAntibanding = params.get_SupportedAntibanding();
+	if(new_SupportedAntibanding)
+	cur_params.setSupportedAntibanding(new_SupportedAntibanding);
+
+	//SupportedSupportedEffects
+	const char* new_SupportedEffects = params.get_SupportedEffects();
+	if(new_SupportedEffects)
+	cur_params.setSupportedEffects(new_SupportedEffects);
+
+	//SupportedSharpness
+	const char* new_SupportedSharpness = params.get_SupportedSharpness();
+	if(new_SupportedSharpness)
+	cur_params.setSupportedSharpness(new_SupportedSharpness);
+
+	//PictureFormat
+	const char* new_PictureFormat = params.get_PictureFormat();
+	if(new_PictureFormat)
+	cur_params.setPictureFormat(new_PictureFormat);
+
+	//SupportedPictureFormat
+	const char* new_SupportedPictureFormat = params.get_SupportedPictureFormat();
+	if(new_SupportedPictureFormat)
+	cur_params.setSupportedPictureFormat(new_SupportedPictureFormat);
+
 	//Zoom
 	const char* new_zoom = params.get_Zoom();
 	if(new_zoom)
 	cur_params.setZoom(new_zoom);
+
+	//MaxZoom
+	const char* new_maxzoom = params.get_MaxZoom();
+	if(new_maxzoom)
+	cur_params.setMaxZoom(new_maxzoom);
+
+	//ZoomRatios
+	const char* new_zoomratios = params.get_ZoomRatios();
+	if(new_zoomratios)
+	cur_params.setZoomRatios(new_zoomratios);
+
+	//ZoomSupported
+	const char* new_zoomsupported = params.get_ZoomSupported();
+	if(new_zoomsupported)
+	cur_params.setZoomSupported(new_zoomsupported);
+
+	//SmoothZoomSupported
+	const char* new_SmoothZoomSupported = params.get_SmoothZoomSupported();
+	if(new_SmoothZoomSupported)
+	cur_params.setSmoothZoomSupported(new_SmoothZoomSupported);
+
+	//SupportedFlashMode
+	const char* new_SupportedFlashMode = params.get_SupportedFlashMode();
+	if(new_SupportedFlashMode)
+	cur_params.setSupportedFlashMode(new_SupportedFlashMode);
+
+	//SupportedWhiteBalance
+	const char* new_SupportedWhiteBalance = params.get_SupportedWhiteBalance();
+	if(new_SupportedWhiteBalance)
+	cur_params.setSupportedWhiteBalance(new_SupportedWhiteBalance);
+
+	//SupportedIso
+	const char* new_SupportedIso = params.get_SupportedIso();
+	if(new_SupportedIso)
+	cur_params.setSupportedIso(new_SupportedIso);
+
+	//SupportedContrast
+	const char* new_SupportedContrast = params.get_SupportedContrast();
+	if(new_SupportedContrast)
+	cur_params.setSupportedContrast(new_SupportedContrast);
+
+	//SupportedSaturation
+	const char* new_SupportedSaturation = params.get_SupportedSaturation();
+	if(new_SupportedSaturation)
+	cur_params.setSupportedSaturation(new_SupportedSaturation);
+
+	//SupportedBrightness
+	const char* new_SupportedBrightness = params.get_SupportedBrightness();
+	if(new_SupportedBrightness)
+	cur_params.setSupportedBrightness(new_SupportedBrightness);
 
 	//Brightness
 	const char* new_brightness = params.get_Brightness();
@@ -1143,6 +1218,12 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		mParamLock.unlock();
 		return UNKNOWN_ERROR;
 	}
+	//backup this two parameters,resolve VT orientation problem
+	int rotationBak = params.getInt("sensorrotation");
+	mSetParameters.setSensorRotation(rotationBak);
+	int orientationBak = params.getInt("sensororientation");
+	mSetParameters.setSensorOrientation(orientationBak);
+	LOGV("orientationBak = %d, rotationBak = %d", orientationBak, rotationBak);
 
 	if (0 == checkSetParameters(params, mSetParameters)) {
 		LOGV("setParameters same parameters with system, directly return!");
