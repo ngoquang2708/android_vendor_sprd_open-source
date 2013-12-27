@@ -117,6 +117,12 @@ int SprdExternalDisplayDevice:: commit(hwc_display_contents_1_t *list)
         String8 name("HWCFBTExternal::Post");
 
         FenceWaitForever(name, FBTargetLayer->acquireFenceFd);
+
+        if (FBTargetLayer->acquireFenceFd >= 0)
+        {
+            close(FBTargetLayer->acquireFenceFd);
+            FBTargetLayer->acquireFenceFd = -1;
+        }
     }
 
     closeAcquireFDs(list);
