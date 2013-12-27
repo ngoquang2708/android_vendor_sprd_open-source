@@ -5499,6 +5499,7 @@ int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_
 	if (i == SENSOR_MODE_MAX) {
 		CMR_LOGV("can't find the right mode, %d", i);
 		target_mode = last_one;
+		ret = CAMERA_SUCCESS;
 	}
 	CMR_LOGV("target_mode %d", target_mode);
 
@@ -7213,6 +7214,8 @@ int camera_get_data_redisplay(int output_addr,
 		input_width, input_height, input_addr_y, output_width,output_height,
 		output_addr,g_cxt->cfg_cap_rot);
 
+	memset((void*)&src_frame, 0, sizeof(struct img_frm));
+	memset((void*)&dst_frame, 0, sizeof(struct img_frm));
 	/* start scaling*/
 	rect.start_x              = 0;
 	rect.start_y              = 0;

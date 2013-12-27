@@ -38,7 +38,9 @@
 namespace android {
 
 
-//#define NUM_MAX_STREAM_THREAD       (4)
+#define CACHE_DCAM_BUF    			(1)
+
+#define NO_CACHE_DCAM_BUF    		(2)
 #define NUM_MAX_CAMERA_BUFFERS      (16)
 
 #define NUM_MAX_SUBSTREAM           (4)
@@ -103,6 +105,8 @@ typedef struct stream_parameters {
             int                     numSvcBufsInHal;
             buffer_handle_t         svcBufHandle[NUM_MAX_CAMERA_BUFFERS];
             int                     svcBufStatus[NUM_MAX_CAMERA_BUFFERS];
+			int                     phySize[NUM_MAX_CAMERA_BUFFERS];
+			int                     phyAdd[NUM_MAX_CAMERA_BUFFERS];//for s_mem_method = 1
             int                     bufIndex;
             int                     minUndequedBuffer;
 			int                     cancelBufNum;
@@ -123,6 +127,7 @@ typedef struct substream_parameters {
             uint32_t                subStreamAddVirt[NUM_MAX_CAMERA_BUFFERS];
 			int                     subStreamGraphicFd[NUM_MAX_CAMERA_BUFFERS];//previewCbAddPhy
 			int                     svcBufStatus[NUM_MAX_CAMERA_BUFFERS];
+			int                     phySize[NUM_MAX_CAMERA_BUFFERS];
             int                     svcBufIndex;
             int                     numSvcBufsInHal;
             int                     minUndequedBuffer;
@@ -134,7 +139,8 @@ typedef struct substream_entry {
 } substream_entry_t;
 
 typedef struct sprd_camera_memory {
-	sp<MemoryHeapIon> ion_heap;
+	//sp<MemoryHeapIon> ion_heap;
+	MemoryHeapIon *ion_heap;
 	uint32_t phys_addr, phys_size;
 	void *data;
 }sprd_camera_memory_t;
@@ -465,7 +471,7 @@ class RequestQueueThread : public SprdBaseThread{
 
 	int32_t						   mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t						   mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
-	sp<MemoryHeapIon>              mMiscHeapArray[MAX_MISCHEAP_NUM];
+	sprd_camera_memory_t                  *mMiscHeapArray[MAX_MISCHEAP_NUM];
 	uint32_t                             mMiscHeapNum;
     int             				    m_CameraId;
     List<camera_metadata_t *>           m_ReqQueue;

@@ -19,7 +19,7 @@
 #define CAMERA_DIGITAL_ZOOM_MAX     2
 #define JPEG_THUMBNAIL_WIDTH        320
 #define JPEG_THUMBNAIL_HEIGHT       240
-#define JPEG_MAX_SIZE               (10*1024*1024)
+#define JPEG_MAX_SIZE               (8*1024*1024) //10
 
 
 enum {
