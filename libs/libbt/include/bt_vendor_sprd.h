@@ -57,7 +57,8 @@ extern bt_vendor_callbacks_t *bt_vendor_cbacks;
 
 
  #define MAC_ERROR    "FF:FF:FF:FF:FF:FF"  
- #define BT_MAC_FILE  "/productinfo/btmac.txt" 
+ #define BT_MAC_FILE  "/productinfo/btmac.txt"
+ #define BT_MAC_FILE_TEMP  "/data/misc/bluedroid/btmac.txt"
  #define GET_BTMAC_ATCMD "AT+SNVM=0,401"  
  #define GET_BTPSKEY_ATCMD "AT+SNVM=0,415"  
  #define SET_BTMAC_ATCMD  "AT+SNVM=1,401"  

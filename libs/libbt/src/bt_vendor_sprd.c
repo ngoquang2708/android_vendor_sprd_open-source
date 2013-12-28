@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "bt_vendor_sprd.h"
 #include "userial_vendor.h"
 /******************************************************************************
@@ -267,6 +268,69 @@ BT_PSKEY_CONFIG_T bt_para_setting={
 {0x0000,0x0000,0x0000,0x0000}
 };
 
+
+static BOOLEAN checkBluetoothAddress(char* address)
+{
+    int i=0;
+    char add_temp[BT_RAND_MAC_LENGTH+1]={0};
+    char c;
+    if (address == NULL)
+    {
+        return FALSE;
+    }
+
+    for (i=0; i < BT_RAND_MAC_LENGTH; i++)
+    {
+        c=add_temp[i]=toupper(address[i]);
+        switch (i % 3)
+        {
+            case 0:
+            case 1:
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))
+                {
+                    break;
+                }
+                return FALSE;
+            case 2:
+                if (c == ':')
+                {
+                    break;
+                }
+                return FALSE;
+        }
+    }
+
+    if(strstr(add_temp, MAC_ERROR)!=NULL)
+        return FALSE;
+
+    return TRUE;
+}
+
+int read_mac_from_file(const char * file_path,  char * mac)
+{
+    int fd_btaddr=0;
+    char bt_mac[BT_RAND_MAC_LENGTH+1] = {0};
+
+    fd_btaddr = open(file_path, O_RDWR);
+    if(fd_btaddr>=0)
+    {
+        read(fd_btaddr, bt_mac, BT_RAND_MAC_LENGTH);
+        ALOGI("bt mac read ===%s==",bt_mac);
+        if(checkBluetoothAddress(bt_mac))
+        {
+            ALOGI("bt mac already exists, no need to random it");
+            memcpy(mac,bt_mac,BT_RAND_MAC_LENGTH);
+            return 1;
+        }
+        close(fd_btaddr);
+    }
+    ALOGI("bt mac read fail.");
+
+    return 0;
+}
+
+
+
 //******************create bt addr***********************
 static void mac_rand(char *btmac)
 {
@@ -292,10 +356,10 @@ static void mac_rand(char *btmac)
 }
 
 
-static  BOOLEAN write_btmac2file(char *btmac)
+static  BOOLEAN write_btmac2file(const char * file_path,char *btmac)
 {
     int fd = -1;
-    fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0660);
+    fd = open(file_path, O_CREAT|O_RDWR|O_TRUNC, 0660);
     if(fd > 0) {
         write(fd, btmac, strlen(btmac));
         close(fd);
@@ -367,26 +431,25 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
     write_btmac2file(bt_mac);
 
     */
-    if(access(BT_MAC_FILE, F_OK) == 0) 
+    if(access(BT_MAC_FILE, F_OK) == 0)
     {
         ALOGI("%s: %s exists",__FUNCTION__, BT_MAC_FILE);
-        fd_btaddr = open(BT_MAC_FILE, O_RDWR);
-        if(fd_btaddr>=0) 
+        read_btmac=read_mac_from_file(BT_MAC_FILE,bt_mac);
+    }
+
+    if(0==read_btmac)
+    {
+        if(access(BT_MAC_FILE_TEMP, F_OK) == 0)
         {
-            size = read(fd_btaddr, bt_mac, sizeof(bt_mac));
-            ALOGI("%s: read %s %s, size=%d",__FUNCTION__, BT_MAC_FILE, bt_mac, size);
-            if(size == BT_RAND_MAC_LENGTH)
-            {
-                ALOGI("bt mac already exists, no need to random it");
-                read_btmac=1;
-            }
-            close(fd_btaddr);
+            ALOGI("%s: %s exists",__FUNCTION__, BT_MAC_FILE_TEMP);
+            read_btmac=read_mac_from_file(BT_MAC_FILE_TEMP,bt_mac);
         }
     }
-    else
+
+    if(0==read_btmac)
     {
-        mac_rand(bt_mac);     
-        if(write_btmac2file(bt_mac))
+        mac_rand(bt_mac);
+        if(write_btmac2file(BT_MAC_FILE_TEMP,bt_mac))
             read_btmac=1;
     }
     
