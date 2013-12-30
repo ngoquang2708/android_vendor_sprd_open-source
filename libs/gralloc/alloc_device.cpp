@@ -305,7 +305,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             {
                 hnd->flags=(private_handle_t::PRIV_FLAGS_USES_ION)|(private_handle_t::PRIV_FLAGS_USES_PHY);
             }
-            ALOGE("the flag 0x%x",hnd->flags);
+            ALOGD("the flag 0x%x and the vadress is 0x%x and the size is 0x%x",hnd->flags,(int)cpu_ptr,size);
             hnd->share_fd = shared_fd;
             hnd->ion_hnd = ion_hnd;
             hnd->ion_client = m->ion_client;
@@ -740,6 +740,7 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 		/* Buffer might be unregistered so we need to check for invalid ump handle*/
 		if ( 0 != hnd->base )
 		{
+			ALOGD("%s the vadress 0x%x size of 0x%x will be free",__FUNCTION__,hnd->base,hnd->size);
 			if ( 0 != munmap( (void*)hnd->base, hnd->size ) ) AERR( "Failed to munmap handle 0x%x", (unsigned int)hnd );
 		}
 		close( hnd->share_fd );
