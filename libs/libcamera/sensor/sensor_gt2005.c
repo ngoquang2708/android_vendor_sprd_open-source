@@ -1,4 +1,4 @@
-/*
+	/*
  * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1274,25 +1274,26 @@ static uint32_t GT2005_PowerOn(uint32_t power_on)
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
 		Sensor_SetResetLevel(reset_level);
-		usleep(20*1000);
+		usleep(1000);
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(10*1000);
+		usleep(2000);
 		Sensor_SetResetLevel(!reset_level);
-		usleep(10*1000);
+		usleep(2000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
+		usleep(2000);
 		Sensor_PowerDown(!power_down);
-		Sensor_Reset(reset_level);
+		usleep(10*1000);
 	} else {
 		Sensor_PowerDown(power_down);
-		usleep(5*1000);
+		usleep(1000);
 		Sensor_SetResetLevel(reset_level);
-		usleep(5*1000);
+		usleep(1000);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-		usleep(5*1000);
+		usleep(5000);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED,
 				SENSOR_AVDD_CLOSED);
 	}
+
 	SENSOR_PRINT("(1:on, 0:off): %d", power_on);
 	return (uint32_t)SENSOR_SUCCESS;
 }
