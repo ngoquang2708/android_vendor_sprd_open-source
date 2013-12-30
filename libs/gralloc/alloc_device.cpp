@@ -252,6 +252,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
         int shared_fd;
         int ret;
         int ion_heap_mask = 0;
+        int ion_flag = 0;
         private_handle_t *hnd = NULL;
 
         if (usage & (GRALLOC_USAGE_VIDEO_BUFFER|GRALLOC_USAGE_CAMERA_BUFFER))
@@ -267,7 +268,12 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             ion_heap_mask = ION_HEAP_ID_MASK_SYSTEM;
         }
 
-        ret = ion_alloc(m->ion_client, size, 0, ion_heap_mask, 0, &ion_hnd);
+        if (usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK))
+        {
+            ion_flag = ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC;
+        }
+
+        ret = ion_alloc(m->ion_client, size, 0, ion_heap_mask, ion_flag, &ion_hnd);
         if ( ret != 0)
         {
             AERR("Failed to ion_alloc from ion_client:%d", m->ion_client);
