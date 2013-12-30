@@ -295,7 +295,6 @@ int OriSensor::setAccel(sensors_event_t* data)
 	st480.acc_x = data->acceleration.x;
 	st480.acc_y = data->acceleration.y;
 	st480.acc_z = data->acceleration.z;
-ALOGE("#####################%f ,%f ,%f", st480.acc_x,st480.acc_y,st480.acc_z);
 	return err;
 }
 
