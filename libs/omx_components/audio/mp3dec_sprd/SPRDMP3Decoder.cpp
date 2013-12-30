@@ -419,11 +419,16 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
             inQueue.erase(inQueue.begin());
             inInfo->mOwnedByUs = false;
             notifyEmptyBufferDone(inHeader);
-
-            // pad the end of the stream with 529 samples, since that many samples
-            // were trimmed off the beginning when decoding started
-            outHeader->nFilledLen = kPVMP3DecoderDelay * mNumChannels * sizeof(int16_t);
-            memset(outHeader->pBuffer, 0, outHeader->nFilledLen);
+            if (!mIsFirst) {
+                // pad the end of the stream with 529 samples, since that many samples
+                // were trimmed off the beginning when decoding started
+                outHeader->nFilledLen = kPVMP3DecoderDelay * mNumChannels * sizeof(int16_t);
+                memset(outHeader->pBuffer, 0, outHeader->nFilledLen);
+            } else {
+                // Since we never discarded frames from the start, we won't have
+                // to add any padding at the end either.
+                outHeader->nFilledLen = 0;
+            }
             outHeader->nFlags = OMX_BUFFERFLAG_EOS;
 
             outQueue.erase(outQueue.begin());
@@ -431,7 +436,6 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
             notifyFillBufferDone(outHeader);
             return;
         }
-
         if (inHeader->nOffset == 0) {
             mAnchorTimeUs = inHeader->nTimeStamp;
             mNumFramesOutput = 0;
@@ -552,7 +556,7 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
         }
 
         if (numOutBytes <= outHeader->nOffset) {
-            ALOGI("onQueueFilled, numOutBytes:%d <= outHeader->nOffset:%d, continue", numOutBytes, outHeader->nOffset);
+            ALOGI("onQueueFilled, numOutBytes:%d <= outHeader->nOffset:%ld, continue", numOutBytes, outHeader->nOffset);
             continue;
         }
 
@@ -564,8 +568,9 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
     }
 }
 
-void SPRDMP3Decoder::onPortFlushCompleted(OMX_U32 portIndex) {
+void SPRDMP3Decoder::onPortFlushPrepare(OMX_U32 portIndex) {
     if (portIndex == 0) {
+        ALOGI("onPortFlushPrepare.");
         // Make sure that the next buffer output does not still
         // depend on fragments from the last one decoded.
         mNextMdBegin = 0;
@@ -576,6 +581,9 @@ void SPRDMP3Decoder::onPortFlushCompleted(OMX_U32 portIndex) {
         mIsFirst = true;
         mFirstFrame = true;
     }
+}
+void SPRDMP3Decoder::onPortFlushCompleted(OMX_U32 portIndex) {
+    // TODO
 }
 
 void SPRDMP3Decoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
@@ -651,6 +659,11 @@ bool SPRDMP3Decoder::openDecoder(const char* libName)
     }
 
     return true;
+}
+
+void SPRDMP3Decoder::onReset() {
+    // TODO.
+    ALOGI("onReset.");
 }
 
 }  // namespace android

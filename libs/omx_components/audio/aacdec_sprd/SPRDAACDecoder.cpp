@@ -72,6 +72,7 @@ SPRDAACDecoder::~SPRDAACDecoder() {
     mAAC_MemoryFree(&mDecoderBuf);
     mDecoderBuf = NULL;
 
+    ALOGI("~SPRDAACDecoder.");
     delete []mPcm_out_l;
     mPcm_out_l = NULL;
     delete []mPcm_out_r;
@@ -375,6 +376,10 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         BufferInfo *info = *inQueue.begin();
         OMX_BUFFERHEADERTYPE *header = info->mHeader;
+        if (!(header->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
+            ALOGI("not codec config.");
+            goto decoding;
+        }
         uint8_t latm[] = {'L', 'A', 'T', 'M', 0};
         int16_t initRet;
         int16_t sign = 0;
@@ -397,9 +402,6 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
             ALOGW("AAC Frame is ADTS");
         }
 
-        if (header->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
-
-        }
 
         initRet = mAAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
         if(initRet){
@@ -432,6 +434,7 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
         return;
     }
 
+decoding:
     while (!inQueue.empty() && !outQueue.empty()) {
         BufferInfo *inInfo = *inQueue.begin();
         OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
@@ -557,7 +560,7 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
         size_t numOutBytes =  mFrameSize * sizeof(int16_t) *2;
         uint16_t * pOutputBuffer = reinterpret_cast<uint16_t *>(outHeader->pBuffer + outHeader->nOffset);
 
-        for(int i = 0; i < mFrameSize; i++) {
+        for(uint32_t i = 0; i < mFrameSize; i++) {
             if((!mIsLATM && (decoderRet != 0)) || (mIsLATM && (decoderRet != 0) && (decoderRet != 1))) {
                 memset(pOutputBuffer, 0, numOutBytes);
             } else {
@@ -602,11 +605,19 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
     }
 }
 
+void SPRDAACDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
+    ALOGI("onPortFlushPrepare.");
+    if (portIndex == 0) {
+        mInputBufferCount = 0;
+    }
+}
+
 void SPRDAACDecoder::onPortFlushCompleted(OMX_U32 portIndex) {
     if (portIndex == 0) {
+        ALOGI("onPortFlushCompleted.");
         // Make sure that the next buffer output does not still
         // depend on fragments from the last one decoded.
-         mAAC_DecStreamBufferUpdate(1,mDecoderBuf);
+        mAAC_DecStreamBufferUpdate(1,mDecoderBuf);
     }
 }
 
@@ -699,6 +710,11 @@ bool SPRDAACDecoder::openDecoder(const char* libName)
     }
 
     return true;
+}
+
+void SPRDAACDecoder::onReset() {
+    // TODO.
+    ALOGI("onReset.");
 }
 
 }  // namespace android
