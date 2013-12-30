@@ -38,9 +38,7 @@
 namespace android {
 
 
-#define CACHE_DCAM_BUF    			(1)
 
-#define NO_CACHE_DCAM_BUF    		(2)
 #define NUM_MAX_CAMERA_BUFFERS      (16)
 
 #define NUM_MAX_SUBSTREAM           (4)

@@ -1344,7 +1344,9 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 {
 	int ret = 0;
 	sprd_camera_memory_t  *pmem = NULL;
-	sp<MemoryHeapIon> pHeapIon;
+	MemoryHeapIon *pHeapIon;
+	const private_handle_t *priv_handle = NULL;
+	stream_parameters_t     *targetStreamParms;
 
 	HAL_LOGV("flush_buffer type %d, index %d, v_addr:0x%x, p_addr:0x%x, size %d",
 		type, index, (uint32_t)v_addr, (uint32_t)p_addr, size);
@@ -1359,22 +1361,23 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 		p_addr = (void*)pmem->phys_addr;
 		size = (int)pmem->phys_size;
 		break;
-#if 0
 	case CAMERA_FLUSH_PREVIEW_HEAP:
-		ret = MemoryHeapIon::Flush_ion_buffer(index, v_addr, p_addr, size);
-		HAL_LOGV("ret = %d", ret);
+		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+		priv_handle = reinterpret_cast<const private_handle_t *>(targetStreamParms->svcBufHandle[index]);
+		MemoryHeapIon::Flush_ion_buffer(priv_handle->share_fd,v_addr, p_addr, size);
 		break;
-#endif
 	default:
 		break;
 	}
 
 	if (pmem) {
 		pHeapIon = pmem->ion_heap;
-		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
-		HAL_LOGV("ret = %d", ret);
-		if (ret) {
-			HAL_LOGE("flush_buffer error ret=%d", ret);
+		if(pHeapIon != NULL) {
+			ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
+			HAL_LOGV("ret = %d", ret);
+			if (ret) {
+				HAL_LOGE("flush_buffer error ret=%d", ret);
+			}
 		}
 	}
 	return ret;
@@ -1489,7 +1492,17 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	Index = StreamSP->popBufQ();
 	HAL_LOGD("DisplayPictureImg index=%d",Index);
 	if (Index == -1) {
-		return;
+		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
+            if (targetStreamParms->svcBufStatus[Index] == ON_HAL_DRIVER) {
+                found = true;
+				HAL_LOGD("%s,Index=%d",__FUNCTION__,Index);
+                break;
+            }
+        }
+		if (!found) {
+			HAL_LOGE("ERR %s cannot found buf",__FUNCTION__);
+			return;
+		}
 	}
     //lock
 	if (m_grallocHal->lock(m_grallocHal, targetStreamParms->svcBufHandle[Index], targetStreamParms->usage, 0, 0,
@@ -1507,6 +1520,9 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
 		HAL_LOGE("%s: Fail to camera_get_data_redisplay.", __FUNCTION__);
 		//return;//for enqbuf function invoked
+	}
+	if(s_mem_method != 0) {
+		 MemoryHeapIon::Free_mm_iova(priv_handle->share_fd,phyaddr, size);
 	}
 	//unlock
     if (m_grallocHal) {
@@ -1538,7 +1554,9 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 	switch (cb) {
 	case CAMERA_EVT_CB_FLUSH:
 		HAL_LOGD("CAMERA_EVT_CB_FLUSH");
-		//flush_buffer(CAMERA_FLUSH_RAW_HEAP_ALL, 0,(void*)0,(void*)0,0);
+		//#ifdef PREVIEW_USE_DCAM_BUF
+		flush_buffer(CAMERA_FLUSH_RAW_HEAP_ALL, 0,(void*)0,(void*)0,0);
+		//#endif
 		break;
 	case CAMERA_RSP_CB_SUCCESS:
 		if (m_staticReqInfo.outputStreamMask & STREAM_MASK_JPEG) {
@@ -1685,7 +1703,6 @@ void SprdCameraHWInterface2::getPreviewBuffer(void)
 		} else {
 			MemoryHeapIon::Get_mm_iova(priv_handle->share_fd,&phyaddr,&size);
 		}
-		HAL_LOGD("@@@ %s PhyAdd=0x%x,size=%d,srvAdd=0x%x",__FUNCTION__,phyaddr,size,(uint32_t)(*buf));
 		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
 			if ((phyaddr == mPreviewHeapArray_phy[Index])
 				&& (targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT)) {
@@ -2759,7 +2776,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							(uint32_t)mPreviewHeapArray_vir,
 							(targetStreamParms->width * targetStreamParms->height * 3)/2,
 							(uint32_t)targetStreamParms->numSvcBuffers)) {
-						HAL_LOGE("set preview mem error.");
+						HAL_LOGE("%s set preview mem error.",__FUNCTION__);
 						return ;
 				}
 			    camera_ret_code_type qret = camera_start_preview(camera_cb, this,m_camCtlInfo.pictureMode);
@@ -3295,7 +3312,12 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 		break;
 	case CAMERA_EVT_CB_FLUSH:
 		{
-			HAL_LOGD("%s: flush not process",__FUNCTION__);
+			camera_frame_type *frame = (camera_frame_type *)parm4;
+			stream_parameters_t     *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
+			flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, frame->buf_id,
+					(void*)frame->buf_Virt_Addr,
+					(void*)frame->buffer_phy_addr,
+					(targetStreamParms->width * targetStreamParms->height * 3)/2);
 		}
 		break;
 	default:
