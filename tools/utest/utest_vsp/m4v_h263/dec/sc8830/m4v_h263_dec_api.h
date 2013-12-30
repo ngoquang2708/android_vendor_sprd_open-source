@@ -53,7 +53,8 @@ typedef enum {
 
 typedef enum
 {
-    HW_NO_CACHABLE = 0, /*physical continuous and no-cachable, only for VSP writing and reading */
+    INTER_MEM = 0,  /*internal memory, only for software writing and reading and initialized when initialize decoder*/
+    HW_NO_CACHABLE, /*physical continuous and no-cachable, only for VSP writing and reading */
     HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
     SW_CACHABLE,    /*only for software writing and reading*/
     MAX_MEM_TYPE
@@ -153,7 +154,7 @@ typedef struct
 } MMDecOutput;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height);
+typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
 typedef int (*FunctionType_FlushCacheCB)(void* aUserData, int* vaddr,int* paddr,int size);
 
 /* Application controls, this structed shall be allocated */

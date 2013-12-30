@@ -11,7 +11,8 @@ LOCAL_SRC_FILES := m4vh263enc.cpp \
 		../../../util/util.c
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH) \
-		$(LOCAL_PATH)/../../../util
+		$(LOCAL_PATH)/../../../util\
+		$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video
 
 LOCAL_SHARED_LIBRARIES := libutils libbinder libdl
 

@@ -107,6 +107,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded
+    uint8		*pStream_phy;          	// Pointer to stream to be decoded, phy
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 
@@ -144,7 +145,8 @@ typedef struct
 
 typedef enum
 {
-    HW_NO_CACHABLE = 0, /*physical continuous and no-cachable, only for VSP writing and reading */
+    INTER_MEM = 0,  /*internal memory, only for software writing and reading and initialized when initialize decoder*/
+    HW_NO_CACHABLE, /*physical continuous and no-cachable, only for VSP writing and reading */
     HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
     SW_CACHABLE,    /*only for software writing and reading*/
     MAX_MEM_TYPE
@@ -172,7 +174,7 @@ typedef struct
 } H264SwDecInfo;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(void* aUserData, uint32 * buffer_array, uint32 buffer_num, uint32 buffer_size);
+typedef int (*FunctionType_MallocCB)(void* mHandle, unsigned int width,unsigned int height, unsigned int numBuffers);
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */

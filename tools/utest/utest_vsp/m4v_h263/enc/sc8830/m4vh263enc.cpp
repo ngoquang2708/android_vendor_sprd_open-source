@@ -12,6 +12,7 @@
 
 #include <linux/ion.h>
 #include <binder/MemoryHeapIon.h>
+#include "ion_sprd.h"
 using namespace android;
 
 
@@ -62,7 +63,7 @@ FT_MP4EncGetConf        mMP4EncGetConf;
 FT_MP4EncStrmEncode        mMP4EncStrmEncode;
 FT_MP4EncGenHeader        mMP4EncGenHeader;
 FT_MP4EncRelease        mMP4EncRelease;
-
+static bool mIOMMUEnabled = false;
 
 static int enc_init(MP4Handle *mHandle, unsigned int width, unsigned int height, int format,
                     unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter,
@@ -233,7 +234,7 @@ bool openEncoder(const char* libName)
         dlclose(mLibHandle);
     }
 
-    ALOGI("openEncoder, lib: %s",libName);
+    INFO("openEncoder, lib: %s",libName);
 
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
@@ -410,9 +411,21 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
         goto err;
     }
 
+    /*MMU Enable or not enable.  shark:not enable;dophin:enable */
+    mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
+    INFO("IOMMU enabled: %d\n", mIOMMUEnabled);
+
     /* yuv420sp buffer */
-    pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width * height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-    pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+    if (mIOMMUEnabled) {
+        pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width * height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    } else {
+        pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width * height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+    }
+    if (mIOMMUEnabled) {
+        pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
+    } else {
+        pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+    }
     pyuv = (unsigned char*)pmem_yuv420sp->base();
     pyuv_phy = (unsigned char*)phy_addr;
     if (pyuv == NULL)
@@ -442,8 +455,16 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 
     /* step 1 - init vsp */
     size_inter = MP4ENC_INTERNAL_BUFFER_SIZE;
-    pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-    pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
+    if (mIOMMUEnabled) {
+        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    } else {
+        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+    }
+    if (mIOMMUEnabled) {
+        pmem_inter->get_mm_iova(&phy_addr, &size);
+    } else {
+        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
+    }
     pbuf_inter = (unsigned char*)pmem_inter->base();
     pbuf_inter_phy = (unsigned char*)phy_addr;
     if (pbuf_inter == NULL)
@@ -455,8 +476,16 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     INFO("pbuf_inter: %x\n", pbuf_inter);
 
     size_extra = width * height * 3/2 * 2 + 10*1024;
-    pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-    pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
+    if (mIOMMUEnabled) {
+        pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    } else {
+        pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+    }
+    if (mIOMMUEnabled) {
+        pmem_extra->get_mm_iova(&phy_addr, &size);
+    } else {
+        pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
+    }
     pbuf_extra = (unsigned char*)pmem_extra->base();
     pbuf_extra_phy = (unsigned char*)phy_addr;
     if (pbuf_extra == NULL)
@@ -467,8 +496,16 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     INFO("pbuf_inter: %x\n", pbuf_extra);
 
     size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
-    pmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
-    pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+    if (mIOMMUEnabled) {
+        pmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    } else {
+        pmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+    }
+    if (mIOMMUEnabled) {
+        pmem_stream->get_mm_iova(&phy_addr, &size);
+    } else {
+        pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+    }
     pbuf_stream = (unsigned char*)pmem_stream->base();
     pbuf_stream_phy = (unsigned char*)phy_addr;
     if (pbuf_stream == NULL)
