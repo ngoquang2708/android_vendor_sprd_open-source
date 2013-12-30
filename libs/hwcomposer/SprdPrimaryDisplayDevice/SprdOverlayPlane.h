@@ -43,6 +43,11 @@
 #include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+#include "SprdPrimaryPlane.h"
+class SprdPrimaryPlane;
+#endif
+
 using namespace android;
 
 
@@ -50,6 +55,9 @@ class SprdOverlayPlane: public SprdDisplayPlane
 {
 public:
     SprdOverlayPlane(FrameBufferInfo *fbInfo);
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    SprdOverlayPlane(FrameBufferInfo *fbInfo, SprdPrimaryPlane *PrimaryPlane);
+#endif
     virtual ~SprdOverlayPlane();
 
     /*
@@ -86,6 +94,9 @@ public:
 
 private:
     FrameBufferInfo *mFBInfo;
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    SprdPrimaryPlane *mPrimaryPlane;
+#endif
     SprdHWLayer *mHWLayer;
     unsigned int mOverlayPlaneCount;
     unsigned int mFreePlaneCount;
@@ -100,7 +111,7 @@ private:
      * father classe SprdDisplayPlane interface.
      * flush: update the plane registers.
      * */
-    virtual bool flush();
+    virtual private_handle_t* flush();
     //virtual void display();
     virtual bool open();
     virtual bool close();

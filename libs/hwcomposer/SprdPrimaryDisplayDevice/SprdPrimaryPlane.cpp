@@ -62,9 +62,15 @@ SprdPrimaryPlane::SprdPrimaryPlane(FrameBufferInfo *fbInfo)
       mDebugFlag(0),
       mDumpFlag(0)
 {
+#ifdef PRIMARYPLANE_USE_RGB565
+    mDefaultDisplayFormat = HAL_PIXEL_FORMAT_RGB_565;
+#else
     mDefaultDisplayFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+#endif
 
     SprdDisplayPlane::setGeometry(mFBInfo->fb_width, mFBInfo->fb_height, mDefaultDisplayFormat);
+
+    SprdDisplayPlane::setPlaneRunThreshold(300);
 
     mContext = SprdDisplayPlane::getPlaneContext();
 
@@ -97,14 +103,14 @@ private_handle_t* SprdPrimaryPlane::dequeueBuffer()
 
     mFreePlaneCount = 1;
 
-    mBufferIndex = (mBufferIndex + 1) % PLANE_BUFFER_NUMBER;
+    mBufferIndex = SprdDisplayPlane:: getPlaneBufferIndex();
 
 
     enable();
 
     /*
      *  Here, it is a workaround method.
-     *  Mali posting FrameBuffer in another thread of
+     *  Mali drawing FrameBuffer in another thread of
      *  OverlayComposer maybe access the resource released
      *  by Android framework.
      *  Just do the safely thread check.
@@ -133,7 +139,8 @@ private_handle_t* SprdPrimaryPlane::dequeueBuffer()
         mPlaneBufferPhyAddr = (unsigned char *)(mBuffer->phyaddr);
     }
 
-    ALOGI_IF(mDebugFlag, "SprdPrimaryPlane::dequeueBuffer phy addr:%p", (void *)mPlaneBufferPhyAddr);
+    ALOGI_IF(mDebugFlag, "SprdPrimaryPlane::dequeueBuffer phy addr:%p, index: %d", (void *)mPlaneBufferPhyAddr, mBufferIndex);
+
     return mBuffer;
 }
 
@@ -340,7 +347,7 @@ enum PlaneFormat SprdPrimaryPlane::getPlaneFormat()
     return format;
 }
 
-bool SprdPrimaryPlane::flush()
+private_handle_t* SprdPrimaryPlane::flush()
 {
     enum PlaneFormat format;
     struct overlay_setting *BaseContext = &(mContext->BaseContext);
@@ -349,6 +356,8 @@ bool SprdPrimaryPlane::flush()
     queryDumpFlag(&mDumpFlag);
 
     InvalidatePlaneContext();
+
+    private_handle_t* flushingBuffer = SprdDisplayPlane::flush();
 
     BaseContext->layer_index = SPRD_LAYERS_OSD;
 
@@ -373,12 +382,25 @@ bool SprdPrimaryPlane::flush()
     BaseContext->rect.w = mFBInfo->fb_width;
     BaseContext->rect.h = mFBInfo->fb_height;
 
-    if (mPlaneBufferPhyAddr == NULL)
+    if (GetDirectDisplay() || mDisplayFBTargetLayerFlag)
     {
-        ALOGE("mPlaneBufferPhyAddr is NULL");
-        return false;
+        if (mPlaneBufferPhyAddr == NULL)
+        {
+            ALOGE("mPlaneBufferPhyAddr is NULL");
+            return NULL;
+        }
+        BaseContext->buffer = mPlaneBufferPhyAddr;
     }
-    BaseContext->buffer = mPlaneBufferPhyAddr;
+    else
+    {
+        if (flushingBuffer == NULL)
+        {
+            ALOGE("SprdPrimaryPlane::flush flushingBuffer error");
+            return NULL;
+        }
+
+        BaseContext->buffer = (unsigned char *)(flushingBuffer->phyaddr);
+    }
 
     ALOGI_IF(mDebugFlag, "SprdPrimaryPlane::flush  osd overlay parameter datatype = %d, x = %d, y = %d, w = %d, h = %d, buffer = 0x%08x",
              BaseContext->data_type,
@@ -392,7 +414,7 @@ bool SprdPrimaryPlane::flush()
     {
         const char *name = "OverlayOSD";
 
-        dumpOverlayImage(mBuffer, name);
+        dumpOverlayImage(flushingBuffer, name);
     }
 
     if (ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext) == -1)
@@ -401,14 +423,16 @@ bool SprdPrimaryPlane::flush()
         ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext);//Fix ME later
     }
 
-    return true;
+    return flushingBuffer;
 }
 
 bool SprdPrimaryPlane::open()
 {
-    SprdDisplayPlane::open();
-    SprdDisplayPlane::dequeueBuffer();
-    SprdDisplayPlane::dequeueBuffer();
+    if (SprdDisplayPlane::open() == false)
+    {
+        ALOGE("SprdPrimaryPlane::open failed");
+        return false;
+    };
 
     mPrimaryPlaneCount = 1;
     mFreePlaneCount = 1;
@@ -464,3 +488,20 @@ void SprdPrimaryPlane::getPlaneGeometry(unsigned int *width, unsigned int *heigh
     *height = mFBInfo->fb_height;
     *format = mDefaultDisplayFormat;
 }
+
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+private_handle_t* SprdPrimaryPlane:: dequeueFriendBuffer()
+{
+    return SprdDisplayPlane::dequeueBuffer();
+}
+
+int SprdPrimaryPlane:: queueFriendBuffer()
+{
+    return SprdDisplayPlane::queueBuffer();
+}
+
+private_handle_t* SprdPrimaryPlane:: flushFriend()
+{
+    return SprdDisplayPlane::flush();
+}
+#endif

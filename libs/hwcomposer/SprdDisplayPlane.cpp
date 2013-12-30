@@ -46,7 +46,12 @@ SprdDisplayPlane::SprdDisplayPlane()
     : mWidth(1), mHeight(1), mFormat(-1),
       InitFlag(false), mContext(NULL),
       mBufferCount(PLANE_BUFFER_NUMBER),
+      mPlaneUsage(GRALLOC_USAGE_OVERLAY_BUFFER),
       mDisplayBufferIndex(-1),
+      mFlushingBufferIndex(-1),
+      mPlaneRunThreshold(100),
+      mPlaneIdleCount(0),
+      mWaitingBuffer(false),
       mDebugFlag(0)
 {
     mContext = (PlaneContext *)malloc(sizeof(PlaneContext));
@@ -73,70 +78,101 @@ void SprdDisplayPlane::setGeometry(unsigned int width, unsigned int height, int 
     mFormat = format;
 }
 
+private_handle_t* SprdDisplayPlane:: createPlaneBuffer(int index)
+{
+    private_handle_t* BufHandle = NULL;
+    int stride;
+    int size;
+
+    if (index < 0)
+    {
+        ALOGE("plane buffer index < 0");
+        return NULL;
+    }
+
+    GraphicBufferAllocator::get().alloc(mWidth, mHeight, mFormat, mPlaneUsage, (buffer_handle_t*)&BufHandle, &stride);
+    if (BufHandle == NULL)
+    {
+        ALOGE("SprdDisplayPlane cannot alloc buffer");
+        return NULL;
+    }
+
+    MemoryHeapIon::Get_phy_addr_from_ion(BufHandle->share_fd, &(BufHandle->phyaddr), &size);
+
+    mSlots[index].mIonBuffer = static_cast<private_handle_t* >(BufHandle);
+
+    ALOGI("DisplayPlane createPlaneBuffer phy addr:%p, size:%d",
+          (void *)(BufHandle->phyaddr), size);
+
+    return BufHandle;
+}
+
 private_handle_t* SprdDisplayPlane::dequeueBuffer()
 {
+    bool repeat = true;
     int found = -1;
+    mWaitingBuffer = false;
 
     queryDebugFlag(&mDebugFlag);
 
-    for(int i = 0; i < mBufferCount; i++)
+    Mutex::Autolock _l(mLock);
+    do
     {
-        const int state = mSlots[i].mBufferState;
-
-        if (state == BufferSlot::FREE)
+        for(int i = 0; i < mBufferCount; i++)
         {
-            found = i;
-            continue;
-        }
-        //else if (state == BufferSlot::QUEUEED)
-        //{
-        //    /*
-        //     *  Wait availeable buffer
-        //     **/
+            const int state = mSlots[i].mBufferState;
 
-        //}
-        //else
-        //{
-        //    ALOGE("Cannot find the available ION buffer");
-        //    return -ENOMEM;
-        //}
-    }
+            if (state == BufferSlot::FREE)
+            {
+                found = i;
+                break;
+            }
+        }
+
+        if (found < 0)
+        {
+            /*
+             *  Wait availeable buffer
+             **/
+            mWaitingBuffer = true;
+            nsecs_t timeout = ms2ns(3000);
+            if (mCondition.waitRelative(mLock, timeout) == TIMED_OUT)
+            {
+                ALOGE("SprdDisplayPlane::dequeueBuffer has waited 3s, give up");
+                repeat = false;
+            }
+        }
+        else
+        {
+            break;
+        }
+
+    } while (repeat);
 
     mSlots[found].mBufferState = BufferSlot::DEQUEUEED;
     private_handle_t* buffer = mSlots[found].mIonBuffer;
 
     if (buffer == NULL && mWidth > 1 && mHeight > 1)
     {
-        private_handle_t* BufHandle = NULL;
-        int stride;
-        int size;
-
-        GraphicBufferAllocator::get().alloc(mWidth, mHeight, mFormat, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&BufHandle, &stride);
-        if (BufHandle == NULL)
-        {
-            ALOGE("SprdDisplayPlane cannot alloc buffer");
-            return NULL;
-        }
-
-        MemoryHeapIon::Get_phy_addr_from_ion(BufHandle->share_fd, &(BufHandle->phyaddr), &size);
-
-        mSlots[found].mIonBuffer = static_cast<private_handle_t* >(BufHandle);
-
-        ALOGI("DisplayPlane dequeueBuffer buffer phy addr:%p, size:%d",
-              (void *)(BufHandle->phyaddr), size);
+        buffer = createPlaneBuffer(found);
     }
 
+
     /*
-     * The avaiable buffer has been found, restore the prevous buffer state to
-     * BufferSlot::FREE
+     *  eglMakeCurrent will call dequeueBuffer first.
+     *  If GPU do not use this buffer, just release the
+     *  buffer status.
+     *  It is a workaround method to make dequeueBuffer
+     *  and queueBuffer invocation in serial way.
      * */
-    if (mDisplayBufferIndex >= 0)
+    static int dequeueFirstFlag = 0;
+    if (dequeueFirstFlag == 0 && mDisplayBufferIndex >= 0)
     {
         mSlots[mDisplayBufferIndex].mBufferState = BufferSlot::FREE;
+        dequeueFirstFlag = 1;
     }
 
     mDisplayBufferIndex = found;
-
 
     return (mSlots[found].mIonBuffer);
 }
@@ -145,14 +181,73 @@ int SprdDisplayPlane::queueBuffer()
 {
     int bufferIndex = mDisplayBufferIndex;
 
+    Mutex::Autolock _l(mLock);
     mSlots[bufferIndex].mBufferState = BufferSlot::QUEUEED;
+
+    mQueue.push_back(bufferIndex);
 
     return 0;
 }
 
-bool SprdDisplayPlane::flush()
+private_handle_t* SprdDisplayPlane::flush()
 {
-    return true;
+    if (mQueue.empty())
+    {
+        ALOGE("SprdDisplayPlane::flush no avaialbe buffer for flushing");
+        return NULL;
+    }
+
+    Mutex::Autolock _l(mLock);
+
+    FIFO::iterator front(mQueue.begin());
+    int index(*front);
+    private_handle_t* flushingBuffer = mSlots[index].mIonBuffer;
+
+    mQueue.erase(front);
+
+    /*
+     *  Two tasks need to be done.
+     *
+     *  1. The avaiable buffer has been found, restore the prevous flushing
+     *     buffer state to BufferSlot::FREE.
+     * */
+    /*
+     *  2. Restore the available buffer status from the error status.
+     *     Sometimes, display plane dequeueBuffer and queueBuffer can
+     *     not been invocated in serial way, this will result in a buffer
+     *     can not be used.
+     *     So here, check the buffer status in error.
+     * */
+    if (mFlushingBufferIndex == index)
+    {
+        ALOGE("SprdDisplayPlane buffer: %d has been in error status", index);
+
+        for (int i = 0; i < mBufferCount; i++)
+        {
+            if (index == i)
+            {
+                continue;
+            }
+
+            mSlots[i].mBufferState = BufferSlot::FREE;
+        }
+    }
+    else if (mFlushingBufferIndex >= 0)
+    {
+        mSlots[mFlushingBufferIndex].mBufferState = BufferSlot::FREE;
+    }
+
+    /*
+     *  Update the flushing buffer index
+     * */
+    mFlushingBufferIndex = index;
+
+    if (mWaitingBuffer)
+    {
+        mCondition.broadcast();
+    }
+
+    return flushingBuffer;
 }
 
 //bool SprdDisplayPlane::display()
@@ -162,10 +257,26 @@ bool SprdDisplayPlane::flush()
 
 bool SprdDisplayPlane::open()
 {
+    private_handle_t* buffer = NULL;
+
     for (int i = 0; i < mBufferCount; i++)
     {
+        buffer = mSlots[i].mIonBuffer;
         mSlots[i].mBufferState = BufferSlot::FREE;
+        if (buffer)
+        {
+            continue;
+        }
+        buffer = createPlaneBuffer(i);
+        if (buffer == NULL)
+        {
+            ALOGE("SprdDisplayPlane::open createPlaneBuffer failed");
+            return false;
+        }
+
     }
+
+    InitFlag = true;
 
     return true;
 }
@@ -180,6 +291,8 @@ bool SprdDisplayPlane::close()
         mSlots[i].mBufferState = BufferSlot::RELEASE;
     }
 
+    InitFlag = false;
+
     return true;
 }
 
@@ -191,4 +304,29 @@ private_handle_t* SprdDisplayPlane::getPlaneBuffer()
 void SprdDisplayPlane::getPlaneGeometry(unsigned int *width, unsigned int *height, int *format)
 {
 
+}
+
+enum PlaneRunStatus SprdDisplayPlane:: queryPlaneRunStatus()
+{
+    enum PlaneRunStatus status = PLANE_STATUS_INVALID;
+
+    if (InitCheck() == true)
+    {
+        status = PLANE_OPENED;
+    }
+    else
+    {
+        status = PLANE_CLOSED;
+    }
+
+    if (status == PLANE_OPENED)
+    {
+        bool flag = ((mPlaneIdleCount < mPlaneRunThreshold) ?  true : false);
+        if (flag == false)
+        {
+            status = PLANE_SHOULD_CLOSED;
+        }
+    }
+
+    return status;
 }

@@ -72,17 +72,21 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         return false;
     }
 
-    mOverlayPlane = new SprdOverlayPlane(mFBInfo);
-    if (mOverlayPlane == NULL)
-    {
-        ALOGE("new SprdOverlayPlane failed");
-        return false;
-    }
-
     mPrimaryPlane = new SprdPrimaryPlane(mFBInfo);
     if (mPrimaryPlane == NULL)
     {
         ALOGE("new SprdPrimaryPlane failed");
+        return false;
+    }
+
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    mOverlayPlane = new SprdOverlayPlane(mFBInfo, mPrimaryPlane);
+#else
+    mOverlayPlane = new SprdOverlayPlane(mFBInfo);
+#endif
+    if (mOverlayPlane == NULL)
+    {
+        ALOGE("new SprdOverlayPlane failed");
         return false;
     }
 
@@ -219,6 +223,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     bool DisplayOverlayComposerGPU = false;
     bool DisplayOverlayComposerGSP = false;
     bool DirectDisplayFlag = false;
+    bool PrimaryPlane_Online_cond = false;
     private_handle_t* buffer1 = NULL;
     private_handle_t* buffer2 = NULL;
 
@@ -334,7 +339,13 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         mOverlayPlane->disable();
     }
 
-    if (DisplayPrimaryPlane && (!DisplayOverlayPlane))
+#ifdef PROCESS_VIDEO_USE_GSP
+    PrimaryPlane_Online_cond = (DisplayPrimaryPlane && (DisplayOverlayPlane == false));
+#else
+    PrimaryPlane_Online_cond = DisplayPrimaryPlane;
+#endif
+
+    if (PrimaryPlane_Online_cond)
     {
         mPrimaryPlane->dequeueBuffer();
 
@@ -346,7 +357,6 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     {
        mPrimaryPlane->disable();
     }
-
 
     if (DisplayOverlayPlane ||
         (DisplayPrimaryPlane && DirectDisplayFlag == false))
@@ -377,7 +387,11 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         {
             ALOGI_IF(mDebugFlag, "%s[%d],composerLayers success",__func__,__LINE__);
         }
-       DisplayPrimaryPlane = false;
+        /*
+         *  Use GSP to do 2 layer blending, so if PrimaryLayer is not NULL,
+         *  disable DisplayPrimaryPlane.
+         * */
+        DisplayPrimaryPlane = false;
 #endif
     }
 

@@ -48,6 +48,7 @@ static int mDebugFlag = 0;
 OverlayNativeWindow::OverlayNativeWindow(SprdPrimaryPlane *displayPlane)
     : mDisplayPlane(displayPlane),
       mWidth(1), mHeight(1), mFormat(-1),
+      mWindowUsage(-1),
       mNumBuffers(NUM_FRAME_BUFFERS),
       mNumFreeBuffers(NUM_FRAME_BUFFERS), mBufferHead(0),
       mUpdateOnDemand(false)
@@ -58,6 +59,7 @@ OverlayNativeWindow::OverlayNativeWindow(SprdPrimaryPlane *displayPlane)
 bool OverlayNativeWindow::Init()
 {
     mDisplayPlane->getPlaneGeometry(&mWidth, &mHeight, &mFormat);
+    mWindowUsage = mDisplayPlane->getPlaneUsage();
 
     ANativeWindow::setSwapInterval = setSwapInterval;
     ANativeWindow::cancelBuffer    = cancelBuffer;
@@ -216,7 +218,8 @@ int OverlayNativeWindow::query(const ANativeWindow* window,
         case NATIVE_WINDOW_CONSUMER_RUNNING_BEHIND:
             *value = 0;
         case NATIVE_WINDOW_CONSUMER_USAGE_BITS:
-            *value = GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_COMPOSER;
+            *value = GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_HW_RENDER |
+                     GRALLOC_USAGE_HW_COMPOSER | self->mWindowUsage;
             return NO_ERROR;
     }
     return BAD_VALUE;

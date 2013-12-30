@@ -205,6 +205,7 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
         if (!IsHWCLayer(layer))
         {
             ALOGI_IF(mDebugFlag, "NOT HWC layer");
+            mSkipLayerFlag = true;
             continue;
         }
 
@@ -428,7 +429,7 @@ Overlay:
 #ifdef GSP_BLEND_2_LAYERS
     postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 1));// 3 layers compose with GPU
 #else
-    postProcessVideoCond = (YUVLayer && (RGBLayer || mFBLayerCount > 0));// 2 layers compose with GPU
+    postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 0));// 2 layers compose with GPU
 #endif
 #else
     postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
@@ -447,6 +448,14 @@ Overlay:
 #else
         revisitOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
 #endif
+    }
+    else if (YUVLayer)
+    {
+        if (mFBLayerCount > 0)
+        {
+            resetOverlayFlag(YUVLayer);
+            mFBLayerCount++;
+        }
     }
 
     ALOGI_IF(mDebugFlag, "Total layer count: %d, Framebuffer layer count: %d, OSD layer count:%d, video layer count:%d", 
@@ -627,7 +636,7 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
              || ((unsigned int)privateH->height != mFBWidth)
 #ifndef OVERLAY_COMPOSER_GPU
 #ifdef GSP_ADDR_TYPE_PHY
-             || !(privateH->flags & private_handle_t::PRIV_FLAGS_USES_PHY)
+             || !(l->checkContiguousPhysicalAddress(privateH))
 #endif
 #endif
     )
@@ -894,6 +903,11 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             hwc_layer_1_t *l = SprdLayer->getAndroidLayer();
 
             if (SprdLayer == NULL || l == NULL)
+            {
+                continue;
+            }
+
+            if (!IsHWCLayer(l))
             {
                 continue;
             }

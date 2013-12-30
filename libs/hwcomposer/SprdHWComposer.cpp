@@ -306,23 +306,23 @@ int SprdHWComposer:: getDisplayAttributes(int disp, uint32_t config, const uint3
         {
             case HWC_DISPLAY_VSYNC_PERIOD:
                 value[i] = dpyAttr->vsync_period;
-                ALOGI("%s: disp:%d vsync_period:%d", __func__, disp, dpyAttr->vsync_period);
+                ALOGI("getDisplayAttributes: disp:%d vsync_period:%d", disp, dpyAttr->vsync_period);
                 break;
             case HWC_DISPLAY_WIDTH:
                 value[i] = dpyAttr->xres;
-                ALOGI("%s: disp:%d width:%d", __func__, disp, dpyAttr->xres);
+                ALOGI("getDisplayAttributes: disp:%d width:%d", disp, dpyAttr->xres);
                 break;
             case HWC_DISPLAY_HEIGHT:
                 value[i] = dpyAttr->yres;
-                ALOGI("%s: disp:%d height:%d", __func__, disp, dpyAttr->yres);
+                ALOGI("getDisplayAttributes: disp:%d height:%d", disp, dpyAttr->yres);
                 break;
             case HWC_DISPLAY_DPI_X:
                 value[i] = (int32_t)(dpyAttr->xdpi);
-                ALOGI("%s: disp:%d xdpi:%f", __func__, disp, dpyAttr->xdpi / 1000.0);
+                ALOGI("getDisplayAttributes: disp:%d xdpi:%f", disp, dpyAttr->xdpi / 1000.0);
                 break;
             case HWC_DISPLAY_DPI_Y:
                 value[i] = (int32_t)(dpyAttr->ydpi);
-                ALOGI("%s: disp:%d ydpi:%f", __func__, disp, dpyAttr->ydpi / 1000.0);
+                ALOGI("getDisplayAttributes: disp:%d ydpi:%f", disp, dpyAttr->ydpi / 1000.0);
                 break;
             default:
                 ALOGE("Unknown Display Attributes:%d", attributes[i]);

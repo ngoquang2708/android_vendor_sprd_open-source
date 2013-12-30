@@ -86,6 +86,7 @@ private:
     unsigned int mWidth;
     unsigned int mHeight;
     int mFormat;
+    int mWindowUsage;
     int32_t mNumBuffers;
     int32_t mNumFreeBuffers;
     int32_t mBufferHead;
