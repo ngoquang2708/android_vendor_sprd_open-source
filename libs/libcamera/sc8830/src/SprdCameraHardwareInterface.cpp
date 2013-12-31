@@ -1159,6 +1159,11 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	if(new_slowmotion)
 	cur_params.setSlowmotion(new_slowmotion);
 
+	//SlowmotionSupported
+	const char* new_slowmotionsupported = params.get_SlowmotionSupported();
+	if(new_slowmotionsupported )
+	cur_params.setSlowmotionSupported(new_slowmotionsupported );
+
 	//PreviewEnv
 	const char* new_PreviewEnv = params.get_PreviewEnv();
 	if(new_PreviewEnv)
@@ -1173,6 +1178,26 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	const char* new_AutoExposureMode = params.get_AutoExposureMode();
 	if(new_AutoExposureMode)
 	cur_params.setAutoExposureMode(new_AutoExposureMode);
+
+	//VideoStabilition
+	const char* new_VideoStabilition = params.get_VideoStabilition();
+	if(new_VideoStabilition)
+	cur_params.setVideoStabilition(new_VideoStabilition);
+
+	//VideoStabilitionSupported
+	const char* new_VideoStabilitionSupported = params.get_VideoStabilitionSupported();
+	if(new_VideoStabilitionSupported)
+	cur_params.setVideoStabilitionSupported(new_VideoStabilitionSupported);
+
+	//FocusDistances
+	const char* new_FocusDistances = params.get_FocusDistances();
+	if(new_FocusDistances)
+	cur_params.setFocusDistances(new_FocusDistances);
+
+	//MaxNumFocusAreas
+	const char* new_MaxNumFocusAreas = params.get_MaxNumFocusAreas();
+	if(new_MaxNumFocusAreas)
+	cur_params.setMaxNumFocusAreas(new_MaxNumFocusAreas);
 
 	return ret;
 }

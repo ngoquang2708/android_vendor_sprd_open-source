@@ -104,6 +104,8 @@ public:
 	int getSlowmotion();
 	const char* get_Slowmotion() const;
 	void setSlowmotion(const char* value);
+	const char* get_SlowmotionSupported() const;
+	void setSlowmotionSupported(const char* value);
 	int getPreviewEnv();
 	const char* get_PreviewEnv() const;
 	void setPreviewEnv(const char* value);
@@ -209,6 +211,14 @@ public:
 	void setSupportedPictureFormat(const char* value);
 	void setSensorRotation(int value);
 	void setSensorOrientation(int value);
+	const char* get_VideoStabilition() const;
+	void setVideoStabilition(const char* value);
+	const char* get_VideoStabilitionSupported() const;
+	void setVideoStabilitionSupported(const char* value);
+	const char* get_FocusDistances() const;
+	void setFocusDistances(const char* value);
+	const char* get_MaxNumFocusAreas() const;
+	void setMaxNumFocusAreas(const char* value);
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
 
@@ -244,6 +254,7 @@ public:
 	static const char KEY_RECORDING_HINT[];
 	static const char KEY_FLASH_MODE[];
 	static const char KEY_SLOWMOTION[];
+	static const char KEY_SUPPORTED_SLOWMOTION[];
 	static const char KEY_SATURATION[];
 	static const char KEY_SUPPORTED_SATURATION[];
 	static const char KEY_SHARPNESS[];

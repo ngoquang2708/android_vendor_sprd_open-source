@@ -83,6 +83,7 @@ const char SprdCameraParameters::KEY_SUPPORTED_ISO[] = "iso-values";
 const char SprdCameraParameters::KEY_RECORDING_HINT[] = "recording-hint";
 const char SprdCameraParameters::KEY_FLASH_MODE[] = "flash-mode";
 const char SprdCameraParameters::KEY_SLOWMOTION[] = "slow-motion";
+const char SprdCameraParameters::KEY_SUPPORTED_SLOWMOTION[] = "slow-motion-values";
 const char SprdCameraParameters::KEY_SATURATION[] = "saturation";
 const char SprdCameraParameters::KEY_SUPPORTED_SATURATION[] = "saturation-values";
 const char SprdCameraParameters::KEY_SHARPNESS[] = "sharpness";
@@ -568,6 +569,17 @@ void SprdCameraParameters::setSlowmotion(const char* value)
 	set("slow-motion",value);
 }
 
+const char *SprdCameraParameters::get_SlowmotionSupported() const
+{
+	return get(KEY_SUPPORTED_SLOWMOTION);
+}
+
+void SprdCameraParameters::setSlowmotionSupported(const char* value)
+{
+	set(KEY_SUPPORTED_SLOWMOTION,value);
+}
+
+
 int SprdCameraParameters::getPreviewEnv()
 {
 	const char *p = get(KEY_PREVIEW_ENV);
@@ -1022,6 +1034,26 @@ void SprdCameraParameters::setSupportedPictureFormat(const char* value)
 	set(KEY_SUPPORTED_PICTURE_FORMATS, value);
 }
 
+const char *SprdCameraParameters::get_VideoStabilition() const
+{
+    return get(KEY_VIDEO_STABILIZATION);
+}
+
+void SprdCameraParameters::setVideoStabilition(const char* value)
+{
+	set(KEY_VIDEO_STABILIZATION, value);
+}
+
+const char *SprdCameraParameters::get_VideoStabilitionSupported() const
+{
+    return get(KEY_VIDEO_STABILIZATION_SUPPORTED);
+}
+
+void SprdCameraParameters::setVideoStabilitionSupported(const char* value)
+{
+	set(KEY_VIDEO_STABILIZATION_SUPPORTED, value);
+}
+
 void SprdCameraParameters::setSensorRotation(int value)
 {
 	set(KEY_SENSOR_ROTATION,value);
@@ -1032,6 +1064,25 @@ void SprdCameraParameters::setSensorOrientation(int value)
 	set(KEY_SENSOR_ORIENTATION,value);
 }
 
+const char *SprdCameraParameters::get_FocusDistances() const
+{
+    return get(KEY_FOCUS_DISTANCES);
+}
+
+void SprdCameraParameters::setFocusDistances(const char* value)
+{
+	set(KEY_FOCUS_DISTANCES, value);
+}
+
+const char *SprdCameraParameters::get_MaxNumFocusAreas() const
+{
+    return get(KEY_MAX_NUM_FOCUS_AREAS);
+}
+
+void SprdCameraParameters::setMaxNumFocusAreas(const char* value)
+{
+	set(KEY_MAX_NUM_FOCUS_AREAS, value);
+}
 
 void SprdCameraParameters::setZSLSupport(const char* value)
 {
