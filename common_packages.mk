@@ -9,6 +9,7 @@ PRODUCT_PACKAGES += \
 	EngineerMode \
 	DrmProvider \
 	CellBroadcastReceiver \
-	SprdQuickSearchBox
+	SprdQuickSearchBox \
+	Caldav-Sync.apk
 
 #	libsprddm \
