@@ -156,6 +156,24 @@ void *arithmetic_fd_thread_proc(void *data)
 					CMR_LOGI("FaceSolid_Init done.");
 				}
 			}
+
+			if (0 != s_arith_cxt->mem_size) {
+				CMR_LOGV("initial with mem_size ");
+				if (NULL != s_arith_cxt->addr) {
+					free(s_arith_cxt->addr);
+				}
+
+				s_arith_cxt->addr = malloc(mem_size);
+				if (NULL == s_arith_cxt->addr) {
+					CMR_LOGE("Fail to alloc FD mem");
+					s_arith_cxt->mem_state = ARITH_NO_MEM;
+				} else {
+					s_arith_cxt->mem_size = mem_size;
+					s_arith_cxt->phy_addr = NULL; /*the physical address is unuseable yet*/
+					s_arith_cxt->mem_state = ARITH_SUCCESS;
+				}
+			}
+
 			CMR_PRINT_TIME;
 			break;
 		case ARITHMETIC_EVT_MEM:
@@ -410,21 +428,25 @@ int arithmetic_mem_handle(uint32_t mem_size)
 	CMR_MSG_INIT(message);
 	CMR_LOGV("E");
 
-	message.msg_type = ARITHMETIC_EVT_MEM;
-	message.data = malloc(sizeof(uint32_t));
-	if (NULL == message.data) {
-		CMR_LOGE("NO mem, Fail to alloc memory for msg data");
-		return ARITH_NO_MEM;
-	}
-	message.alloc_flag = 1;
-	*(uint32_t *)(message.data) = mem_size;;
+	if (s_arith_cxt->fd_is_inited) {
+		message.msg_type = ARITHMETIC_EVT_MEM;
+		message.data = malloc(sizeof(uint32_t));
+		if (NULL == message.data) {
+			CMR_LOGE("NO mem, Fail to alloc memory for msg data");
+			return ARITH_NO_MEM;
+		}
+		message.alloc_flag = 1;
+		*(uint32_t *)(message.data) = mem_size;;
 
-	ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
+		ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
-	if(CMR_MSG_SUCCESS == ret) {
+		if(CMR_MSG_SUCCESS == ret) {
+		} else {
+			ret = ARITH_FAIL;
+			CMR_LOGE("fail.");
+		}
 	} else {
-		ret = ARITH_FAIL;
-		CMR_LOGE("fail.");
+		s_arith_cxt->mem_size = mem_size;
 	}
 
 	CMR_LOGV("X");

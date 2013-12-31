@@ -94,7 +94,9 @@ const char SprdCameraParameters::KEY_METERING_AREAS[] = "metering-areas";
 const char SprdCameraParameters::KEY_PREVIEW_ENV[] = "preview-env";
 const char SprdCameraParameters::KEY_SENSOR_ROTATION[] = "sensorrotation";
 const char SprdCameraParameters::KEY_SENSOR_ORIENTATION[] = "sensororientation";
-
+const char SprdCameraParameters::KEY_ZSL[] = "zsl";
+const char SprdCameraParameters::KEY_CAPMODE[] = "capture-mode";
+const char SprdCameraParameters::KEY_SUPPORTED_ZSL[] = "zsl-supported";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -1084,9 +1086,19 @@ void SprdCameraParameters::setMaxNumFocusAreas(const char* value)
 	set(KEY_MAX_NUM_FOCUS_AREAS, value);
 }
 
+void SprdCameraParameters::setZsl(int value)
+{
+	set(KEY_ZSL,value);
+}
+
+void SprdCameraParameters::setCapMode(int value)
+{
+	set(KEY_CAPMODE,value);
+}
+
 void SprdCameraParameters::setZSLSupport(const char* value)
 {
-	set("zsl-supported",value);
+	set(KEY_SUPPORTED_ZSL,value);
 }
 
 void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)

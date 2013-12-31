@@ -219,6 +219,8 @@ public:
 	void setFocusDistances(const char* value);
 	const char* get_MaxNumFocusAreas() const;
 	void setMaxNumFocusAreas(const char* value);
+	void setZsl(int value);
+	void setCapMode(int value);
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
 
@@ -265,6 +267,9 @@ public:
 	static const char KEY_PREVIEW_ENV[];
 	static const char KEY_SENSOR_ROTATION[];
 	static const char KEY_SENSOR_ORIENTATION[];
+	static const char KEY_ZSL[];
+	static const char KEY_CAPMODE[];
+	static const char KEY_SUPPORTED_ZSL[];
 
 private:
 

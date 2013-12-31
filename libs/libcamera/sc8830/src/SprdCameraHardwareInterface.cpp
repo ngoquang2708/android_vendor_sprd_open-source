@@ -589,6 +589,17 @@ status_t SprdCameraHardware::takePicture()
 
 	Mutex::Autolock l(&mLock);
 
+	if (camera_set_dimensions(mRawWidth,
+				mRawHeight,
+				mPreviewWidth,
+				mPreviewHeight,
+				NULL,
+				NULL,
+				mCaptureMode != CAMERA_RAW_MODE)){
+		LOGE("take picture parameters error!");
+		return UNKNOWN_ERROR;
+	}
+
 	if (SPRD_ERROR == mCameraState.capture_state) {
 		LOGE("takePicture in error status, deinit capture at first ");
 		deinitCapture();
@@ -815,6 +826,7 @@ status_t SprdCameraHardware::checkSetParametersEnvironment( )
 	/*check capture status*/
 	if (SPRD_IDLE != getCaptureState()) {
 		LOGE("warning, camera HAL in capturing process, abnormal calling sequence!");
+		return PERMISSION_DENIED;
 	}
 
 	/*check preview status*/
@@ -826,7 +838,7 @@ status_t SprdCameraHardware::checkSetParametersEnvironment( )
 	return ret;
 }
 
-status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, SprdCameraParameters& cur_params)
+status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, const SprdCameraParameters& params)
 {
 	status_t ret =  NO_ERROR;
 	char values_new[50] = {0};
@@ -851,353 +863,492 @@ status_t SprdCameraHardware::copyParameters(const SprdCameraParameters& params, 
 	cur_params.setPictureFormat(new_pictureformat);
 
 	//ExposureCompensationStep
+	{
 	const char* new_ExposureCompensationStep = params.get_ExposureCompensationStep();
 	if(new_ExposureCompensationStep)
 	cur_params.setExposureCompensationStep(new_ExposureCompensationStep);
-
+	}
 	//MaxExposureCompensation
+	{
 	const char* new_MaxExposureCompensation = params.get_MaxExposureCompensation();
 	if(new_MaxExposureCompensation)
 	cur_params.setMaxExposureCompensation(new_MaxExposureCompensation);
+	}
 
 	//MinExposureCompensation
+	{
 	const char* new_MinExposureCompensation = params.get_MinExposureCompensation();
 	if(new_MinExposureCompensation)
 	cur_params.setMinExposureCompensation(new_MinExposureCompensation);
+	}
 
 	//SupportedSceneModes
+	{
 	const char* new_SupportedSceneModes = params.get_SupportedSceneModes();
 	if(new_SupportedSceneModes)
 	cur_params.setSupportedSceneModes(new_SupportedSceneModes);
+	}
 
 	//SupportedPreviewSizes
+	{
 	const char* new_SupportedPreviewSizes = params.get_SupportedPreviewSizes();
 	if(new_SupportedPreviewSizes)
 	cur_params.setSupportedPreviewSizes(new_SupportedPreviewSizes);
+	}
 
 	//SupportedPreviewFrameRate
+	{
 	const char* new_SupportedPreviewFrameRate = params.get_SupportedPreviewFrameRate();
 	if(new_SupportedPreviewFrameRate)
 	cur_params.setSupportedPreviewFrameRate(new_SupportedPreviewFrameRate);
+	}
 
 	//SupportedPreviewFpsRange
+	{
 	const char* new_SupportedPreviewFpsRange = params.get_SupportedPreviewFpsRange();
 	if(new_SupportedPreviewFpsRange)
 	cur_params.setSupportedPreviewFpsRange(new_SupportedPreviewFpsRange);
+	}
 
 	//SupportedPictureSizes
+	{
 	const char* new_SupportedPictureSizes = params.get_SupportedPictureSizes();
 	if(new_SupportedPictureSizes)
 	cur_params.setSupportedPictureSizes(new_SupportedPictureSizes);
+	}
 
 	//AutoExposureLock
+	{
 	const char* new_AutoExposureLock = params.get_AutoExposureLock();
 	if(new_AutoExposureLock)
 	cur_params.setAutoExposureLock(new_AutoExposureLock);
+	}
 
 	//AutoExposureLockSupported
+	{
 	const char* new_AutoExposureLockSupported = params.get_AutoExposureLockSupported();
 	if(new_AutoExposureLockSupported)
 	cur_params.setAutoExposureLockSupported(new_AutoExposureLockSupported);
+	}
 
 	//AutoWhiteBalanceLock
+	{
 	const char* new_AutoWhiteBalanceLock = params.get_AutoWhiteBalanceLock();
 	if(new_AutoWhiteBalanceLock)
 	cur_params.setAutoWhiteBalanceLock(new_AutoWhiteBalanceLock);
+	}
 
 	//AutoWhiteBalanceLockSupported
+	{
 	const char* new_AutoWhiteBalanceLockSupported = params.get_AutoWhiteBalanceLockSupported();
 	if(new_AutoWhiteBalanceLockSupported)
 	cur_params.setAutoWhiteBalanceLockSupported(new_AutoWhiteBalanceLockSupported);
+	}
 
 	//HorizontalViewAngle
+	{
 	const char* new_HorizontalViewAngle = params.get_HorizontalViewAngle();
 	if(new_HorizontalViewAngle)
 	cur_params.setHorizontalViewAngle(new_HorizontalViewAngle);
+	}
 
 	//VerticalViewAngle
+	{
 	const char* new_VerticalViewAngle = params.get_VerticalViewAngle();
 	if(new_VerticalViewAngle)
 	cur_params.setVerticalViewAngle(new_VerticalViewAngle);
+	}
 
 	//VideoFrameFormat
+	{
 	const char* new_VideoFrameFormat = params.get_VideoFrameFormat();
 	if(new_VideoFrameFormat)
 	cur_params.setVideoFrameFormat(new_VideoFrameFormat);
+	}
 
 	//SupportedVideoSizes
+	{
 	const char* new_SupportedVideoSizes = params.get_SupportedVideoSizes();
 	if(new_SupportedVideoSizes)
 	cur_params.setSupportedVideoSizes(new_SupportedVideoSizes);
+	}
 
 	//PreviewFpsRange
+	{
 	const char* new_PreviewFpsRange = params.get_PreviewFpsRange();
 	if(new_PreviewFpsRange)
 	cur_params.setPreviewFpsRange(new_PreviewFpsRange);
+	}
 
 	//FocusAreas
+	{
 	const char* new_focus_areas = params.get_FocusAreas();
 	if(new_focus_areas)
 	cur_params.setFocusAreas(new_focus_areas);
+	}
 
 	//MeteringAreas
+	{
 	const char* new_metering_areas = params.get_MeteringAreas();
 	if(new_metering_areas)
 	cur_params.setMeteringAreas(new_metering_areas);
+	}
 
 	//GPS_Processing_Method
+	{
 	const char* new_GPSProcessingMethod = params.get_GPS_Processing_Method();
 	if(new_GPSProcessingMethod)
 	cur_params.setGPSProcessingMethod(new_GPSProcessingMethod);
+	}
 
 	//FocalLength
+	{
 	const char* new_FocalLength = params.get_FocalLength();
 	if(new_FocalLength)
 	cur_params.setFocalLength(new_FocalLength);
+	}
 
 	//FocusMode
+	{
 	const char* new_focus_mode = params.get_FocusMode();
 	if(new_focus_mode)
 	cur_params.setFocusMode(new_focus_mode);
+	}
 
 	//SupportedFocusModes
+	{
 	const char* new_SupportedFocusModes = params.get_SupportedFocusModes();
 	if(new_SupportedFocusModes)
 	cur_params.setSupportedFocusModes(new_SupportedFocusModes);
+	}
 
 	//WhiteBalance
+	{
 	const char* new_whitebalance = params.get_WhiteBalance();
 	if(new_whitebalance)
 	cur_params.setWhiteBalance(new_whitebalance);
+	}
 
 	//CameraId
+	{
 	const char* new_camera_id = params.get_CameraId();
 	cur_params.setCameraId(new_camera_id);
+	}
 
 	//JpegQuality
+	{
 	const char* new_jpeg_quality = params.get_JpegQuality();
 	if(new_jpeg_quality)
 	cur_params.setJpegQuality(values_new);
+	}
 
 	//JpegThumbnailQuality
+	{
 	const char* new_thumbnail_quality = params.get_JpegThumbnailQuality();
 	if(new_thumbnail_quality)
 	cur_params.setJpegThumbnailQuality(values_new);
+	}
 
 	//rotation
+	{
 	const char*  new_Rotation = params.get_Rotation();
 	if(new_Rotation)
 	cur_params.setRotation(new_Rotation);
+	}
 
 	//GpsLatitude
+	{
 	const char*  new_GpsLatitude = params.get_GpsLatitude();
 	if(new_GpsLatitude)
 	cur_params.setGpsLatitude(new_GpsLatitude);
+	}
 
 	//GpsLongitude
+	{
 	const char*  new_GpsLongitude = params.get_GpsLongitude();
 	if(new_GpsLongitude)
 	cur_params.setGpsLongitude(new_GpsLongitude);
+	}
 
 	//GpsAltitude
+	{
 	const char*  new_GpsAltitude = params.get_GpsAltitude();
 	if(new_GpsAltitude)
 	cur_params.setGpsAltitude(new_GpsAltitude);
+	}
 
 	//GpsTimestamp
+	{
 	const char*  new_GpsTimestamp = params.get_GpsTimestamp();
 	if(new_GpsTimestamp)
 	cur_params.setGpsTimestamp(new_GpsTimestamp);
+	}
 
 	//MaxNumDetectedFacesHW
+	{
 	const char*  new_MaxNumDetectedFacesHW = params.get_MaxNumDetectedFacesHW();
 	if(new_MaxNumDetectedFacesHW)
 	cur_params.setMaxNumDetectedFacesHW(new_MaxNumDetectedFacesHW);
+	}
 
 	//MaxNumDetectedFacesSW
+	{
 	const char*  new_MaxNumDetectedFacesSW = params.get_MaxNumDetectedFacesSW();
 	if(new_MaxNumDetectedFacesSW)
 	cur_params.setMaxNumDetectedFacesSW(new_MaxNumDetectedFacesSW);
+	}
 
 	//Effect
+	{
 	const char* new_effect = params.get_Effect();
 	if(new_effect)
 	cur_params.setEffect(new_effect);
+	}
 
 	//SceneMode
+	{
 	const char* new_scene_mode = params.get_SceneMode();
 	if(new_scene_mode)
 	cur_params.setSceneMode(new_scene_mode);
+	}
 
 	//SupportedAntibanding
+	{
 	const char* new_SupportedAntibanding = params.get_SupportedAntibanding();
 	if(new_SupportedAntibanding)
 	cur_params.setSupportedAntibanding(new_SupportedAntibanding);
+	}
 
 	//SupportedSupportedEffects
+	{
 	const char* new_SupportedEffects = params.get_SupportedEffects();
 	if(new_SupportedEffects)
 	cur_params.setSupportedEffects(new_SupportedEffects);
+	}
 
 	//SupportedSharpness
+	{
 	const char* new_SupportedSharpness = params.get_SupportedSharpness();
 	if(new_SupportedSharpness)
 	cur_params.setSupportedSharpness(new_SupportedSharpness);
+	}
 
 	//PictureFormat
+	{
 	const char* new_PictureFormat = params.get_PictureFormat();
 	if(new_PictureFormat)
 	cur_params.setPictureFormat(new_PictureFormat);
+	}
 
 	//SupportedPictureFormat
+	{
 	const char* new_SupportedPictureFormat = params.get_SupportedPictureFormat();
 	if(new_SupportedPictureFormat)
 	cur_params.setSupportedPictureFormat(new_SupportedPictureFormat);
+	}
 
 	//Zoom
+	{
 	const char* new_zoom = params.get_Zoom();
 	if(new_zoom)
 	cur_params.setZoom(new_zoom);
+	}
 
 	//MaxZoom
+	{
 	const char* new_maxzoom = params.get_MaxZoom();
 	if(new_maxzoom)
 	cur_params.setMaxZoom(new_maxzoom);
+	}
 
 	//ZoomRatios
+	{
 	const char* new_zoomratios = params.get_ZoomRatios();
 	if(new_zoomratios)
 	cur_params.setZoomRatios(new_zoomratios);
+	}
 
 	//ZoomSupported
+	{
 	const char* new_zoomsupported = params.get_ZoomSupported();
 	if(new_zoomsupported)
 	cur_params.setZoomSupported(new_zoomsupported);
+	}
 
 	//SmoothZoomSupported
+	{
 	const char* new_SmoothZoomSupported = params.get_SmoothZoomSupported();
 	if(new_SmoothZoomSupported)
 	cur_params.setSmoothZoomSupported(new_SmoothZoomSupported);
+	}
 
 	//SupportedFlashMode
+	{
 	const char* new_SupportedFlashMode = params.get_SupportedFlashMode();
 	if(new_SupportedFlashMode)
 	cur_params.setSupportedFlashMode(new_SupportedFlashMode);
+	}
 
 	//SupportedWhiteBalance
+	{
 	const char* new_SupportedWhiteBalance = params.get_SupportedWhiteBalance();
 	if(new_SupportedWhiteBalance)
 	cur_params.setSupportedWhiteBalance(new_SupportedWhiteBalance);
+	}
 
 	//SupportedIso
+	{
 	const char* new_SupportedIso = params.get_SupportedIso();
 	if(new_SupportedIso)
 	cur_params.setSupportedIso(new_SupportedIso);
+	}
 
 	//SupportedContrast
+	{
 	const char* new_SupportedContrast = params.get_SupportedContrast();
 	if(new_SupportedContrast)
 	cur_params.setSupportedContrast(new_SupportedContrast);
+	}
 
 	//SupportedSaturation
+	{
 	const char* new_SupportedSaturation = params.get_SupportedSaturation();
 	if(new_SupportedSaturation)
 	cur_params.setSupportedSaturation(new_SupportedSaturation);
+	}
 
 	//SupportedBrightness
+	{
 	const char* new_SupportedBrightness = params.get_SupportedBrightness();
 	if(new_SupportedBrightness)
 	cur_params.setSupportedBrightness(new_SupportedBrightness);
+	}
 
 	//Brightness
+	{
 	const char* new_brightness = params.get_Brightness();
 	if(new_brightness)
 	cur_params.setBrightness(new_brightness);
+	}
 
 	//Sharpness
+	{
 	const char* new_sharpness = params.get_Sharpness();
 	if(new_sharpness)
 	cur_params.setSharpness(new_sharpness);
+	}
 
 	//Contrast
+	{
 	const char* new_contrast = params.get_Contrast();
 	if(new_contrast)
 	cur_params.setContrast(new_contrast);
+	}
 
 	//Saturation
+	{
 	const char* new_saturation = params.get_Saturation();
 	if(new_saturation)
 	cur_params.setSaturation(new_saturation);
+	}
 
 	//ExposureCompensation
+	{
 	const char* new_exposure_Compensation = params.get_ExposureCompensation();
 	if(new_exposure_Compensation)
 	cur_params.setExposureCompensation(new_exposure_Compensation);
+	}
 
 	//AntiBanding
+	{
 	const char* new_antiBanding = params.get_AntiBanding();
 	if(new_antiBanding)
 	cur_params.setAntiBanding(new_antiBanding);
+	}
 
 	//Iso
+	{
 	const char* new_iso = params.get_Iso();
 	if(new_iso)
 	cur_params.setIso(new_iso);
+	}
 
 	//RecordingHint
+	{
 	const char* new_recordingHint = params.get_RecordingHint();
 	if (new_recordingHint)
 	cur_params.setRecordingHint(new_recordingHint);
+	}
 
 	//FlashMode
+	{
 	const char* new_FlashMode = params.get_FlashMode();
 	if(new_FlashMode)
 	cur_params.setFlashMode(new_FlashMode);
+	}
 
 	//Slowmotion
+	{
 	const char* new_slowmotion = params.get_Slowmotion();
 	if(new_slowmotion)
 	cur_params.setSlowmotion(new_slowmotion);
-
+	}
 	//SlowmotionSupported
+	{
 	const char* new_slowmotionsupported = params.get_SlowmotionSupported();
 	if(new_slowmotionsupported )
 	cur_params.setSlowmotionSupported(new_slowmotionsupported );
-
+	}
 	//PreviewEnv
+	{
 	const char* new_PreviewEnv = params.get_PreviewEnv();
 	if(new_PreviewEnv)
 	cur_params.setPreviewEnv(new_PreviewEnv);
+	}
 
 	//PreviewFameRate
+	{
 	const char* new_PreviewFameRate = params.get_PreviewFameRate();
 	if(new_PreviewFameRate)
 	cur_params.setPreviewFameRate(new_PreviewFameRate);
+	}
 
 	//AutoExposureMode
+	{
 	const char* new_AutoExposureMode = params.get_AutoExposureMode();
 	if(new_AutoExposureMode)
 	cur_params.setAutoExposureMode(new_AutoExposureMode);
-
+	}
 	//VideoStabilition
+	{
 	const char* new_VideoStabilition = params.get_VideoStabilition();
 	if(new_VideoStabilition)
 	cur_params.setVideoStabilition(new_VideoStabilition);
-
+	}
 	//VideoStabilitionSupported
+	{
 	const char* new_VideoStabilitionSupported = params.get_VideoStabilitionSupported();
 	if(new_VideoStabilitionSupported)
 	cur_params.setVideoStabilitionSupported(new_VideoStabilitionSupported);
-
+	}
 	//FocusDistances
+	{
 	const char* new_FocusDistances = params.get_FocusDistances();
 	if(new_FocusDistances)
 	cur_params.setFocusDistances(new_FocusDistances);
-
+	}
 	//MaxNumFocusAreas
+	{
 	const char* new_MaxNumFocusAreas = params.get_MaxNumFocusAreas();
 	if(new_MaxNumFocusAreas)
 	cur_params.setMaxNumFocusAreas(new_MaxNumFocusAreas);
+	}
+	//isZslSupport
+	{
+	const char* new_isZslSupport = (char *)params.get("zsl-supported");
+	if(new_isZslSupport)
+	cur_params.setZSLSupport(new_isZslSupport);
+	}
 
 	return ret;
 }
@@ -1243,11 +1394,13 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		mParamLock.unlock();
 		return UNKNOWN_ERROR;
 	}
+
 	//backup this two parameters,resolve VT orientation problem
 	int rotationBak = params.getInt("sensorrotation");
-	mSetParameters.setSensorRotation(rotationBak);
 	int orientationBak = params.getInt("sensororientation");
-	mSetParameters.setSensorOrientation(orientationBak);
+	int zslValBak = params.getInt("zsl");
+	int capMode = params.getInt("capture-mode");
+
 	LOGV("orientationBak = %d, rotationBak = %d", orientationBak, rotationBak);
 
 	if (0 == checkSetParameters(params, mSetParameters)) {
@@ -1256,15 +1409,23 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		return NO_ERROR;
 	} else if (SPRD_IDLE != getSetParamsState()) {
 		LOGV("setParameters is handling, backup the parameter!");
+		if (-1 != rotationBak) mSetParametersBak.setSensorRotation(rotationBak);
+		if (-1 != orientationBak) mSetParametersBak.setSensorOrientation(orientationBak);
+		if (-1 != zslValBak) mSetParametersBak.setZsl(zslValBak);
+		if (-1 != capMode) mSetParametersBak.setCapMode(capMode);
 		//mSetParametersBak = params;
-		ret = copyParameters(params, mSetParametersBak);
+		ret = copyParameters(mSetParametersBak, params);
 
 		mBakParamFlag = 1;
 		mParamLock.unlock();
 		return NO_ERROR;
 	} else {
+		if (-1 != rotationBak) mSetParameters.setSensorRotation(rotationBak);
+		if (-1 != orientationBak) mSetParameters.setSensorOrientation(orientationBak);
+		if (-1 != zslValBak) mSetParameters.setZsl(zslValBak);
+		if (-1 != capMode) mSetParameters.setCapMode(capMode);
 		//mSetParameters = params;
-		ret = copyParameters(params, mSetParameters);
+		ret = copyParameters(mSetParameters, params);
 	}
 
 	message.msg_type = CMR_EVT_SW_MON_SET_PARA;
@@ -1290,6 +1451,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 {
 	status_t ret =  NO_ERROR;
 	uint32_t                 isZoomChange = 0;
+	char *                   isZslSupport = (char *)"false";
 
 
 	LOGV("setParametersInternal: E params = %p", &params);
@@ -1349,6 +1511,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	ret = checkSetParametersEnvironment();
 	if (NO_ERROR != ret) {
 		LOGE("setParametersInternal X: invalid status , directly return!");
+		mBakParamFlag = 2;
 		mParamLock.unlock();
 		return NO_ERROR;
 	}
@@ -1362,6 +1525,12 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	// FIXME: will this make a deep copy/do the right thing? String8 i
 	// should handle it
 	mParameters = params;
+	isZslSupport = (char *)params.get("zsl-supported");
+	if (NULL != isZslSupport) {
+		LOGV("isZslSupport is not NULL.");
+		mParameters.setZSLSupport((const char *)(isZslSupport));
+	}
+
 	if (1 != mBakParamFlag) {
 		/*if zoom parameter changed, then the action should be sync*/
 		if (!isZoomChange) {
@@ -1377,9 +1546,14 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	// find closest match that doesn't exceed app's request
 	int width = 0, height = 0;
 	int rawWidth = 0, rawHeight = 0;
-	params.getPreviewSize(&width, &height);
+	mParameters.getPreviewSize(&width, &height);
 	LOGV("setParametersInternal: requested preview size %d x %d", width, height);
-	params.getPictureSize(&rawWidth, &rawHeight);
+	//if in DV mode then set the picture size as preview size
+	if (1 == mParameters.getRecordingHint()) {
+		mParameters.getPreviewSize(&width, &height);
+		mParameters.setPictureSize(width, height);
+	}
+	mParameters.getPictureSize(&rawWidth, &rawHeight);
 	LOGV("setParametersInternal:requested picture size %d x %d", rawWidth, rawHeight);
 
 	mPreviewWidth = (width + 1) & ~1;
@@ -1420,7 +1594,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		}
 	}
 
-	if ((1 == params.getInt("zsl")) &&
+	if ((1 == mParameters.getInt("zsl")) &&
 		((mCaptureMode != CAMERA_ZSL_CONTINUE_SHOT_MODE) && (mCaptureMode != CAMERA_ZSL_MODE))) {
 		LOGI("mode change:stop preview.");
 		if (isPreviewing()) {
@@ -1435,7 +1609,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 			}
 		}
 	}
-	if ((0 == params.getInt("zsl")) &&
+	if ((0 == mParameters.getInt("zsl")) &&
 		((mCaptureMode == CAMERA_ZSL_CONTINUE_SHOT_MODE) || (mCaptureMode == CAMERA_ZSL_MODE))) {
 		LOGI("mode change:stop preview.");
 		if (isPreviewing()) {
@@ -1470,8 +1644,9 @@ SprdCameraParameters SprdCameraHardware::getParameters()
 	Mutex::Autolock          l(&mLock);
 	Mutex::Autolock          pl(&mParamLock);
 	LOGV("getParameters: X");
+
 	if ((0 != checkSetParameters(mParameters, mSetParametersBak)) &&
-		(1 == mBakParamFlag)) {
+		(0 != mBakParamFlag)) {
 		return mSetParametersBak;
 	} else {
 		return mParameters;
@@ -2840,8 +3015,19 @@ void SprdCameraHardware::set_ddr_freq(const char* freq_in_khz)
 
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 {
+	char * isZslSupport = (char *)"false";
+	LOGV("startPreviewInternal E");
+
+	if ((1 == mParameters.getRecordingHint())) {
+		isZslSupport = (char *)mParameters.get("zsl-supported");
+		if ((isZslSupport) && (0 == strcmp("true", isZslSupport))) {
+			ALOGV("zsl-supported is %s", isZslSupport);
+			mParameters.setZsl(1);
+		}
+	}
+
 	takepicture_mode mode = getCaptureMode();
-	LOGV("startPreviewInternal E isRecording=%d.captureMode=%d",isRecording, mCaptureMode);
+	LOGV("startPreviewInternal isRecording=%d.captureMode=%d",isRecording, mCaptureMode);
 
 	if (isPreviewing()) {
 		LOGE("startPreviewInternal: already in progress, doing nothing.X");
@@ -3057,6 +3243,8 @@ status_t SprdCameraHardware::initDefaultParameters()
 		p.updateSupportedPreviewSizes(lcd_w, lcd_h);
 	}
 
+	copyParameters(mSetParameters, p);
+	copyParameters(mSetParametersBak, p);
 	if (setParametersInternal(p) != NO_ERROR) {
 		LOGE("Failed to set default parameters?!");
 		return UNKNOWN_ERROR;
@@ -4449,15 +4637,12 @@ void SprdCameraHardware::HandleCancelPicture(camera_cb_type cb,
 	LOGV("HandleCancelPicture in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCaptureState()));
 
-	if (checkPreviewStateForCapture()) {
+	if (checkPreviewStateForCapture())
 		Mutex::Autolock cbLock(&mCaptureCbLock);
-	}
 
-	transitionState(SPRD_INTERNAL_CAPTURE_STOPPING,
+	transitionState(getCaptureState(),
 				SPRD_IDLE,
 				STATE_CAPTURE);
-
-
 
 	LOGV("HandleCancelPicture out, state = %s", getCameraStateStr(getCaptureState()));
 }

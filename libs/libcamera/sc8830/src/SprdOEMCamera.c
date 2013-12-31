@@ -1636,7 +1636,6 @@ void *camera_cap_thread_proc(void *data)
 				}
 
 				camera_wait_takepicdone(g_cxt);
-				/*cmr_v4l2_free_frame(data->channel_id, data->frame_id);*/
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num) || (CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 					g_cxt->capture_status = CMR_IDLE;
 					camera_snapshot_stop_set();
@@ -1724,7 +1723,6 @@ void *camera_cap_thread_proc(void *data)
 					} else {
 						camera_cap_continue();
 					}
-					/*cmr_v4l2_free_frame(data->channel_id, data->frame_id);*/
 				}
 			} else {
 				if (!IS_CAP_FRM(data->frame_id)) {
@@ -4424,6 +4422,7 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct jpeg_enc_next_param enc_nxt_param;
 	uint32_t                 in_slice_height = 0;
+	CMR_MSG_INIT(message);
 
 	if(NULL != data)
 	    CMR_LOGV("stream buf 0x%x size 0x%x",
@@ -4450,8 +4449,8 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 
 	CMR_LOGI("slice_height_out=%d",g_cxt->jpeg_cxt.proc_status.slice_height_out);
 	CMR_LOGI("data->total_height=%d",data->total_height);
-
 	g_cxt->jpeg_cxt.proc_status.slice_height_out = data->total_height;
+
 	if (g_cxt->jpeg_cxt.proc_status.slice_height_out == g_cxt->picture_size.height) {
 		g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_u = data->stream_size;
 		CMR_LOGV("Encode done");
@@ -4524,7 +4523,19 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 		}
 		ret = camera_jpeg_encode_done(thumb_size);
 	} else {
-		CMR_LOGV("Do nothing");
+		CMR_LOGV("Do nothing, direct finish capture!");
+
+		camera_call_cb(CAMERA_EXIT_CB_FAILED,
+				camera_get_client_data(),
+				CAMERA_FUNC_ENCODE_PICTURE,
+				0);
+
+		message.msg_type = CMR_EVT_AFTER_CAPTURE;
+		message.alloc_flag = 0;
+		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+		if (ret)
+			CMR_LOGE("Faile to send one msg to camera main thread");
+		camera_takepic_done(g_cxt);
 	}
 	CMR_LOGI("test time:%d.",g_cxt->jpeg_cxt.jpeg_state);
 	return ret;
@@ -6905,6 +6916,9 @@ int camera_start_jpeg_encode(struct frm_info *data)
 	g_cxt->jpeg_cxt.jpeg_state = JPEG_ENCODE;
 	in_parm.out_size.width = g_cxt->actual_picture_size.width;
 	in_parm.out_size.height = g_cxt->actual_picture_size.height;
+
+	CMR_LOGI("out size w h, %d x %d", g_cxt->actual_picture_size.width, g_cxt->actual_picture_size.height);
+
 	ret = jpeg_enc_start(&in_parm, &out_parm);
 	if (0 == ret) {
 		CMR_LOGV("OK, handle 0x%x", out_parm.handle);

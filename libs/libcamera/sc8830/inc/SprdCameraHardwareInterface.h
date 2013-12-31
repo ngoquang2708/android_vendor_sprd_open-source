@@ -275,8 +275,8 @@ private:
 	status_t                        initDefaultParameters();
 	status_t                        setCameraParameters();
 	status_t                        checkSetParametersEnvironment();
-	status_t                        copyParameters(const SprdCameraParameters& params,
-							SprdCameraParameters& cur_params);
+	status_t                        copyParameters(SprdCameraParameters& cur_params,
+						const SprdCameraParameters& params);
 	status_t                        checkSetParameters(const SprdCameraParameters& params,
 							const SprdCameraParameters& oriParams);
 	bool                            setCameraDimensions();
