@@ -38,6 +38,7 @@
 namespace android {
 
 
+#define PREVIEW_USE_DCAM_BUF
 
 #define NUM_MAX_CAMERA_BUFFERS      (16)
 
@@ -379,6 +380,8 @@ class RequestQueueThread : public SprdBaseThread{
     bool                 allocateCaptureMem(void);
 	int                 ConstructProduceReq(camera_metadata_t **request,bool sizeRequest);
 	void                freeCaptureMem();
+	void				freePreviewMem(int num);
+	bool				allocatePreviewMem();
     void                RequestQueueThreadFunc(SprdBaseThread * self);
 	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();
@@ -395,6 +398,9 @@ class RequestQueueThread : public SprdBaseThread{
 	bool                isSupportedResolution(SprdCamera2Info *camHal, int width, int height);
 	int                 displaySubStream(sp<Stream> stream, int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream);
 	void                receivePreviewFrame(camera_frame_type *frame);
+	#ifdef PREVIEW_USE_DCAM_BUF
+	void                receivePrevFrmWithCacheMem(camera_frame_type *frame);
+	#endif
 	void                HandleStartPreview(camera_cb_type cb, int32_t parm4);
     void                HandleStartCamera(camera_cb_type cb, int32_t parm4);
 	status_t            startPreviewInternal(bool isRecording);
@@ -404,7 +410,6 @@ class RequestQueueThread : public SprdBaseThread{
 	bool                WaitForCaptureDone(void);
 	status_t            cancelPictureInternal(void);
 	void                deinitPreview(void);
-	void                freePreviewMem(void);
 	bool                iSZslMode(void);
 	int                 coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, cam_size *preview_size, cropZoom *preview_rect);
 	void                PushReqQ(camera_metadata_t *reqInfo);
@@ -461,6 +466,7 @@ class RequestQueueThread : public SprdBaseThread{
 	focus_status                         m_focusStat;
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
+	uint32_t						mPreviewHeapNum;
 	bool                               m_reqIsProcess;
 	bool                               m_IsPrvAftPic;
 	bool                               m_recStopMsg;
@@ -469,6 +475,7 @@ class RequestQueueThread : public SprdBaseThread{
 
 	int32_t						   mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t						   mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	sprd_camera_memory_t           *mPreviewHeapArray[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t                  *mMiscHeapArray[MAX_MISCHEAP_NUM];
 	uint32_t                             mMiscHeapNum;
     int             				    m_CameraId;
