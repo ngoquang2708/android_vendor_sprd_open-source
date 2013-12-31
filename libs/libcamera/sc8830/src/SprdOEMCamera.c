@@ -2064,7 +2064,9 @@ int camera_stop_internal(void)
 
 	camera_af_deinit();
 
+#if defined(CONFIG_CAMERA_FACE_DETECT)
 	arithmetic_fd_deinit();
+#endif
 
 	camera_setting_deinit();
 
@@ -2616,10 +2618,12 @@ int camera_start_preview_internal(void)
 
 	CMR_LOGV("preview format is %d", g_cxt->preview_fmt);
 
+#if defined(CONFIG_CAMERA_FACE_DETECT)
 	ret = arithmetic_fd_init(&g_cxt->display_size);
 	if (ret) {
 		CMR_LOGE("Failed to init arithmetic %d", ret);
 	}
+#endif
 
 	CMR_LOGV("previous mode %d, img_fmt= %d",\
 		g_cxt->sn_cxt.previous_sensor_mode, g_cxt->sn_cxt.sn_if.img_fmt);
@@ -3647,6 +3651,8 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 					&g_cxt->prev_frm[frm_id].addr_vir);
 		}
 #endif
+
+#if defined(CONFIG_CAMERA_FACE_DETECT)
 		if (0 == arithmetic_get_fd_num()) {
 			skip_frame_gap = FACE_DETECT_GAP_MAX;
 		} else {
@@ -3657,6 +3663,7 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 			CMR_LOGI("face detect start.");
 			arithmetic_fd_start((void*)frame_type->buf_Virt_Addr);
 		}
+#endif
 	} else if (CHN_2 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_CAP0_ID_BASE;
 		frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y;
@@ -4189,7 +4196,11 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			}
 			ret = camera_stop_preview_internal();
 			camera_preview_stop_set();
+
+#if defined(CONFIG_CAMERA_FACE_DETECT)
 			camera_set_start_facedetect(0, 0);
+#endif
+
 #if CB_LIGHT_SYNC
 			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 					camera_get_client_data(),
