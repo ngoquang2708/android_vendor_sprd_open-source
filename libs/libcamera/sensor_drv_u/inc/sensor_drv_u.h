@@ -731,6 +731,8 @@ void ImgSensor_GetMutex(void);
 void ImgSensor_GetMutex(void);
 void ImgSensor_PutMutex(void);
 uint32_t Sensor_SetFlash(uint32_t is_open);
+int Sensor_GetSocId(SENSOR_SOCID_T *p_id);
+
 struct i2c_client *Sensor_GetI2CClien(void);
 int Sensor_SetSensorParam(uint8_t *buf);
 int Sensor_GetSensorParam(uint8_t *buf,uint8_t *is_saved_ptr);

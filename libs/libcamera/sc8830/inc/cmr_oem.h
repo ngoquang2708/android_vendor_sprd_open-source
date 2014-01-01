@@ -445,7 +445,21 @@ struct camera_context {
 	uint32_t                 cfg_cap_rot;
 
 	uint32_t                 is_isp_ae_stab_eb;
+
+	SENSOR_SOCID_T cpu_id;
+	uint32_t		    which_cpu;
 };
+
+#define CPUID_DOLPHIN1               (SENSOR_SOCID_T ) {0x7715a000,0x2711a000}
+#define CPUID_DOLPHIN2               (SENSOR_SOCID_T ) {0x7715a000,0x2711a002}
+
+#define  CPU_SHARK          0x01
+#define  CPU_DOLPHIN1   0x02
+#define  CPU_DOLPHIN2   0x03
+
+uint32_t camera_get_which_cpu(void);
+#define  cpu_is(which_cpu)    (camera_get_which_cpu()==which_cpu)
+#define  cpu_is_dolphin()    (camera_get_which_cpu()==CPU_DOLPHIN1||camera_get_which_cpu()==CPU_DOLPHIN2)
 
 uint32_t camera_get_rot_angle(uint32_t degree);
 uint32_t camera_get_img_type(uint32_t format_mode);

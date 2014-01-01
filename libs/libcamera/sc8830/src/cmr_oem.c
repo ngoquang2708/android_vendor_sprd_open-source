@@ -321,7 +321,11 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	if(NULL != p_exif_info->primary.img_desc_ptr) {
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->ImageDescription, (char *)image_desc);
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->Make,             (char *)image_make);
-		strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            (char *)model);
+		if(cpu_is_dolphin() ){
+			strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            "dolphin");
+		}else{
+			strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            (char *)model);
+		}
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->Copyright,        (char *)copyright);
 	}
 
@@ -704,7 +708,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		index, img_fmt, width, height);
 
 	bzero(file_name, 40);
-	strcpy(file_name, "/data/");
+	strcpy(file_name, "/data/misc/media/");
 	sprintf(tmp_str, "%d", width);
 	strcat(file_name, tmp_str);
 	strcat(file_name, "X");
@@ -729,7 +733,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	        fclose(fp);
 
 		bzero(file_name, 40);
-		strcpy(file_name, "/data/");
+		strcpy(file_name, "/data/misc/media/");
 		sprintf(tmp_str, "%d", width);
 		strcat(file_name, tmp_str);
 		strcat(file_name, "X");
@@ -765,7 +769,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 			return 0;
 		}
 
-		fwrite((void*)addr->addr_y, 1, addr->addr_u, fp);
+		fwrite((void*)addr->addr_y, 1, width * height*2, fp);
 	        fclose(fp);
 	} else if (IMG_DATA_TYPE_RAW == img_fmt) {
 		strcat(file_name, "_");

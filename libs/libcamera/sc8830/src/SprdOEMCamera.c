@@ -289,6 +289,36 @@ uint32_t camera_get_prev_stat()
 	return g_cxt->preview_status;
 }
 
+struct
+{
+	SENSOR_SOCID_T  id;
+	int  which_cpu;
+} cputab []= {
+	{CPUID_DOLPHIN1,CPU_DOLPHIN1},
+	{CPUID_DOLPHIN2,CPU_DOLPHIN2},
+};
+
+static void camera_pre_init(void)
+{
+	int i;
+	g_cxt->which_cpu =0;
+
+	Sensor_GetSocId(&g_cxt->cpu_id);
+	for (i=0; i< (sizeof(cputab)/sizeof(cputab[0])) ;i++){
+		if(memcmp(&g_cxt->cpu_id,&cputab[i].id,sizeof(g_cxt->cpu_id))==0){
+			g_cxt->which_cpu = cputab[i].which_cpu;
+			CMR_LOGV("cpu is %d!",g_cxt->which_cpu);
+			break;
+		}
+	}
+	return ;
+}
+
+uint32_t camera_get_which_cpu(void)
+{
+	return g_cxt->which_cpu  ;
+}
+
 int camera_sensor_init(int32_t camera_id)
 {
 	struct camera_ctrl       *ctrl = &g_cxt->control;
@@ -1195,6 +1225,9 @@ static int _v4l2_postfix(struct frm_info* info)
 	struct img_frm      *cap_frm = NULL;
 
 	CMR_PRINT_TIME;
+	if( !cpu_is (CPU_DOLPHIN1) )
+		return 0;
+
 	pthread_mutex_lock(&g_cxt->prev_mutex);
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
@@ -1279,6 +1312,8 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 	uint32_t                 dx,dy;
 	struct img_frm      *cap_frm = NULL;
 
+	if( !cpu_is (CPU_DOLPHIN1) )
+		return 0;
 
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
@@ -1926,6 +1961,8 @@ int camera_init_internal(uint32_t camera_id)
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_PRINT_TIME;
+	camera_pre_init();
+
 	ret = camera_sensor_init(camera_id);
 	if (ret) {
 		CMR_LOGE("Failed to init sensor %d", ret);

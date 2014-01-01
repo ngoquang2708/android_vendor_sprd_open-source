@@ -494,6 +494,23 @@ LOCAL int _Sensor_Device_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level)
 	return ret;
 }
 
+int Sensor_GetSocId(SENSOR_SOCID_T *p_id)
+{
+	int ret = SENSOR_SUCCESS;
+	int fd_sensor = open(dev_name, O_RDWR, 0);
+
+	ret = xioctl(fd_sensor, SENSOR_IO_GET_SOCID, p_id);
+	if (0 != ret)
+	{
+		CMR_LOGE("Sensor_GetSocId failed, ret=%d \n",  ret);
+		ret = -1;
+	}
+	close(fd_sensor);
+	CMR_LOGV("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
+
+	return ret;
+}
+
 int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level)
 {
 	int ret = SENSOR_SUCCESS;
