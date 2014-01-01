@@ -2556,6 +2556,7 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 			}
 			LOGD("allocatePreviewMemByGraphics: phyaddr:0x%x, base:0x%x, size:0x%x, stride:0x%x ",
 					mPreviewHeapArray_phy[i],private_h->base,private_h->size, stride);
+			mCancelBufferEb[i] = 0;
 		}
 
 		for (i = (kPreviewBufferCount -miniUndequeued); i < kPreviewBufferCount; i++ ) {
@@ -2563,8 +2564,8 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 				LOGE("allocatePreviewMemByGraphics: cancel_buffer error: %d",i);
 			}
 			mPreviewCancelBufHandle[i] = mPreviewBufferHandle[i];
+			mCancelBufferEb[i] = 1;
 		}
-		mCancelBufferEb = 1;
 	}
 	return 0;
 }
@@ -3763,7 +3764,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			return false;
 		}
 	} else {
-		if (mCancelBufferEb && (mPreviewCancelBufHandle[id] == mPreviewBufferHandle[id])) {
+		if (mCancelBufferEb[id] && (mPreviewCancelBufHandle[id] == mPreviewBufferHandle[id])) {
 			LOGE("displayOneFrame fail: Could not enqueue cancel buffer!\n");
 			camera_release_frame(id);
 			return true;
@@ -3781,7 +3782,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 				LOGE("displayOneFrame fail: Could not enqueue gralloc buffer!\n");
 				return false;
 			}
-			mCancelBufferEb = 0;
+			mCancelBufferEb[id] = 0;
 		}
 
 		if (!isRecordingMode()) {
@@ -3960,7 +3961,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 
 	if (isPreviewing()) { 
 		if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr, frame->buf_id)) {
-			LOGE("%s: displayOneFrame failed!", __func__);
+			LOGE("%s: displayOneFrame not successful!", __func__);
 		}
 	} else {
 		LOGE("not in preview status, direct return!");
@@ -4228,23 +4229,32 @@ void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
 
 void SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
 {
+	LOGV("receiveJpegPictureFragment E.");
 	Mutex::Autolock cbLock(&mCaptureCbLock);
 
 	if (NULL == encInfo) {
 		LOGE("receiveJpegPictureFragment: invalid enc info pointer");
 		return;
 	}
+	LOGV("receiveJpegPictureFragment ptr val: encInfo 0x%x",
+		(uint32_t)encInfo);
 
-    camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
+	camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
 
-    uint8_t *base = (uint8_t *)mJpegHeap->mHeap->base();
-    uint32_t size = encInfo->size;
-    uint32_t remaining = mJpegHeap->mHeap->virtualSize();
-    uint32_t i = 0;
-    uint8_t *temp_ptr,*src_ptr;
-    remaining -= mJpegSize;
+	uint8_t *base = (uint8_t *)mJpegHeap->mHeap->base();
+	LOGV("receiveJpegPictureFragment base ptr 0x%x", (uint32_t)base);
+	uint32_t size = encInfo->size;
+	uint32_t remaining = mJpegHeap->mHeap->virtualSize();
+	LOGV("receiveJpegPictureFragment remaining size 0x%x mjpeg size 0x%x", remaining, mJpegSize);
+	uint32_t i = 0;
+	uint8_t *temp_ptr,*src_ptr;
 
-	LOGV("receiveJpegPictureFragment E.");
+	if (remaining > mJpegSize) {
+		remaining -= mJpegSize;
+	} else {
+		LOGE("size exceed, abnormal!");
+	}
+
     LOGV("receiveJpegPictureFragment: (status %d size %d remaining %d mJpegSize %d)",
          encInfo->status,
          size, remaining,mJpegSize);

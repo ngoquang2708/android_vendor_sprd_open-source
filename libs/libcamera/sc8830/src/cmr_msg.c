@@ -130,7 +130,6 @@ int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message)
 	ret = sem_timedwait(&msg_cxt->msg_sem, &ts);
 
 	if (ret) {
-		CMR_LOGI("queue_handle 0x%x no message in a period, out", queue_handle);
 		return CMR_MSG_NO_OTHER_MSG;
 	}
 

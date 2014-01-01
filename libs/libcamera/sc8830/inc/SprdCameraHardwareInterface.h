@@ -344,7 +344,7 @@ private:
 	uint32_t                        mPreviewHeapArray_size[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	buffer_handle_t                 *mPreviewBufferHandle[kPreviewBufferCount];
 	buffer_handle_t                 *mPreviewCancelBufHandle[kPreviewBufferCount];
-	bool                            mCancelBufferEb;
+	bool                            mCancelBufferEb[kPreviewBufferCount];
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
