@@ -364,7 +364,7 @@ int main(int argc, char **argv)
     unsigned int maskcode = 0;
     int i;
 
-    VPXHandle *mHandle = NULL;
+    VPXHandle *mHandle;
 
     // bitstream buffer, read from bs file
     unsigned char buffer_data[ONEFRAME_BITSTREAM_BFR_SIZE];
