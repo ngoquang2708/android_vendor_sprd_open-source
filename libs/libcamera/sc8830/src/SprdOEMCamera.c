@@ -5482,7 +5482,7 @@ exit:
 
 int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_mode)
 {
-	uint32_t                 width = 0, theight = 0, i;
+	uint32_t                 width = 0, height = 0, i;
 	uint32_t                 search_width;
 	uint32_t                 search_height;
 	uint32_t                 target_mode = SENSOR_MODE_MAX;
@@ -5498,17 +5498,18 @@ int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_
 	CMR_LOGV("search_width = %d", search_width);
 	for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
 		if (SENSOR_MODE_MAX != sn_info->sensor_mode_info[i].mode) {
-			last_mode = i;
-			width = sn_info->sensor_mode_info[i].width;
-			theight = sn_info->sensor_mode_info[i].height;
-			CMR_LOGV("width = %d", width);
-			if (search_width <= width && search_height <= theight ) {
+			height = sn_info->sensor_mode_info[i].height;
+			CMR_LOGV("height = %d", height);
+			if (search_height <= height) {
 				target_mode = i;
 				ret = CAMERA_SUCCESS;
 				break;
+			} else {
+				last_mode = i;
 			}
 		}
 	}
+
 
 	if (i == SENSOR_MODE_MAX) {
 		CMR_LOGV("can't find the right mode, use last available mode %d", last_mode);

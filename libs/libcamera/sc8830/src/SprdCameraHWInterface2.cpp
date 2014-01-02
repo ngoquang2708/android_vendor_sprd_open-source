@@ -1508,7 +1508,9 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 								timeStamp,(uint16_t)STREAM_ID_JPEG);
 			}
 			if (tmpCBpara->need_free) {
-				freeCaptureMem();
+				if(m_camCtlInfo.pictureMode == CAMERA_NORMAL_MODE) {
+					freeCaptureMem();
+				}
 				transitionState(SPRD_WAITING_JPEG,
 						SPRD_IDLE,
 						STATE_CAPTURE);
@@ -1954,6 +1956,9 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		#ifdef PREVIEW_USE_DCAM_BUF
 		freePreviewMem(mPreviewHeapNum);
 		#endif
+		if(m_CameraId == 1 && m_staticReqInfo.captureIntent == CAPTURE_INTENT_VIDEO_RECORD) {
+			freeCaptureMem();
+		}
 		camera_set_preview_mem(0, 0, 0, 0);
         if (m_Stream[STREAM_ID_PREVIEW - 1] != NULL) {
 			m_Stream[STREAM_ID_PREVIEW - 1]->detachSubStream(STREAM_ID_RECORD);
@@ -1969,6 +1974,7 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 			  MemoryHeapIon::Free_mm_iova(priv_handle->share_fd,subParms->subStreamGraphicFd[i], subParms->phySize[i] );
 		  }
 			}
+		freeCaptureMem();
         memset(&m_subStreams[stream_id], 0, sizeof(substream_parameters_t));
 		if (m_Stream[STREAM_ID_CAPTURE - 1] != NULL) {
 			if (m_Stream[STREAM_ID_CAPTURE - 1]->detachSubStream(stream_id) != NO_ERROR) {
@@ -3022,35 +3028,41 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				    }
 				    WaitForPreviewStop();
 				}
-			}
-			if (camera_set_dimensions(subParameters->width,subParameters->height,
+				if (camera_set_dimensions(subParameters->width,subParameters->height,
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.width,\
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.height,NULL,NULL,true) != 0) {
+					HAL_LOGE("%s set pic size fail",__FUNCTION__);
+				}
+				if (camera_capture_max_img_size(&local_width, &local_height)) {
+					HAL_LOGE("(%s): camera_capture_max_img_size fail", __FUNCTION__);
+					return ;
+				}
+				if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size0, &mem_size1)) {
+					HAL_LOGE("(%s): camera_capture_get_buffer_size fail", __FUNCTION__);
+					return ;
+				}
+				mRawHeapSize = mem_size0;
+				if (!allocateCaptureMem()) {
+					HAL_LOGE("(%s): allocateCaptureMem fail", __FUNCTION__);
+					return ;
+				}
+				if (camera_set_capture_mem2(0,
+										(uint32_t)mRawHeap->phys_addr,
+										(uint32_t)mRawHeap->data,
+										(uint32_t)mRawHeap->phys_size,
+										(uint32_t)Callback_AllocCapturePmem,
+										(uint32_t)Callback_FreeCapturePmem,
+										(uint32_t)this)) {
+					HAL_LOGE("(%s): camera_set_capture_mem2 fail", __FUNCTION__);
+					freeCaptureMem();
+					return ;
+				}
+			}
+			//must set dimensions again
+			if (camera_set_dimensions(subParameters->width,subParameters->height,
+								m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.width,\
+								m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.height,NULL,NULL,true) != 0) {
 				HAL_LOGE("%s set pic size fail",__FUNCTION__);
-			}
-			if (camera_capture_max_img_size(&local_width, &local_height)) {
-				HAL_LOGE("(%s): camera_capture_max_img_size fail", __FUNCTION__);
-				return ;
-			}
-			if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size0, &mem_size1)) {
-				HAL_LOGE("(%s): camera_capture_get_buffer_size fail", __FUNCTION__);
-				return ;
-			}
-			mRawHeapSize = mem_size0;
-			if (!allocateCaptureMem()) {
-				HAL_LOGE("(%s): allocateCaptureMem fail", __FUNCTION__);
-				return ;
-			}
-			if (camera_set_capture_mem2(0,
-									(uint32_t)mRawHeap->phys_addr,
-									(uint32_t)mRawHeap->data,
-									(uint32_t)mRawHeap->phys_size,
-									(uint32_t)Callback_AllocCapturePmem,
-									(uint32_t)Callback_FreeCapturePmem,
-									(uint32_t)this)) {
-				HAL_LOGE("(%s): camera_set_capture_mem2 fail", __FUNCTION__);
-				freeCaptureMem();
-				return ;
 			}
 			SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
 			if (srcreq->isCropSet) {
@@ -3715,8 +3727,13 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 	    int i = 0;
         for (; i < NUM_MAX_SUBSTREAM ; i++) {
             if (StreamSP->m_attachedSubStreams[i].streamId == STREAM_ID_PRVCB) {
-				displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
-					      targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
+				if (camera_get_rot_set()) {
+					displaySubStream(StreamSP, (int32_t *)(frame->buf_Virt_Addr),\
+						      targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
+				} else {
+					displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
+						      targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
+				}
                 break;
 			}
 		}
@@ -3728,8 +3745,13 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 		substream_parameters_t *subParameters;
         subParameters = &m_subStreams[STREAM_ID_RECORD];
 	    if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
-			displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
-					      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
+			if (camera_get_rot_set()) {
+				displaySubStream(StreamSP, (int32_t *)(frame->buf_Virt_Addr),\
+						      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
+			} else {
+				displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[targetStreamParms->bufIndex]),\
+						      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
+			}
 		}
 	}
 
