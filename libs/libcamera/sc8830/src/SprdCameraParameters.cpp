@@ -1099,6 +1099,7 @@ void SprdCameraParameters::setCapMode(int value)
 void SprdCameraParameters::setZSLSupport(const char* value)
 {
 	set(KEY_SUPPORTED_ZSL,value);
+	LOGV("set ZSL support %s", value);
 }
 
 void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
