@@ -105,6 +105,8 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mCropTop(0),
       mCropRight(mWidth - 1),
       mCropBottom(mHeight - 1),
+      mMaxWidth(352),
+      mMaxHeight(288),
       mSignalledError(false),
       mInitialized(false),
       mFramesConfigured(false),
@@ -297,6 +299,22 @@ status_t SPRDMPEG4Decoder::initDecoder() {
         return OMX_ErrorUndefined;
     }
 
+    int32 codec_capabilty;
+    if ((*mMP4GetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
+        if (codec_capabilty == 0)   //limited under 720p
+        {
+            mMaxWidth = 1280;
+            mMaxHeight = 720;
+        } else if (codec_capabilty == 1)   //limited under 1080p
+        {
+            mMaxWidth = 1920;
+            mMaxHeight = 1088;
+        } else
+        {
+            mMaxWidth = 352;
+            mMaxHeight = 288;
+        }
+    }
     return OMX_ErrorNone;
 }
 
@@ -790,8 +808,20 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 
             mInitialized = true;
 
-            if (mode == MPEG4_MODE && portSettingsChanged()) {
-                return;
+            if (mode == MPEG4_MODE) {
+                int32_t buf_width, buf_height;
+
+                (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
+                if (!((buf_width <= mMaxWidth&& buf_height <= mMaxHeight) || (buf_width <= mMaxHeight && buf_height <= mMaxWidth))) {
+                    ALOGE("[%d,%d] is out of range [%d, %d], failed to support this format.",buf_width, buf_height, mMaxWidth, mMaxHeight);
+                    notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                    mSignalledError = true;
+                    return;
+                }
+
+                if (portSettingsChanged()) {
+                    return;
+                }
             }
 
             if (inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
@@ -897,6 +927,16 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         }
 
         if (decRet == MMDEC_OK || decRet == MMDEC_MEMORY_ALLOCED) {
+            int32_t buf_width, buf_height;
+
+            (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
+            if (!((buf_width <= mMaxWidth&& buf_height <= mMaxHeight) || (buf_width <= mMaxHeight && buf_height <= mMaxWidth))) {
+                ALOGE("[%d,%d] is out of range [%d, %d], failed to support this format.",buf_width, buf_height, mMaxWidth, mMaxHeight);
+                notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
+            }
+
             if (portSettingsChanged()) {
                 return;
             } else if(mChangeToHwDec == true) {
@@ -1311,6 +1351,13 @@ bool SPRDMPEG4Decoder::openDecoder(const char* libName) {
         return false;
     }
 
+    mMP4GetCodecCapability = (FT_MP4GetCodecCapability)dlsym(mLibHandle, "MP4GetCodecCapability");
+    if(mMP4GetCodecCapability == NULL) {
+        ALOGE("Can't find MP4GetCodecCapability in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
 
     mMP4DecInit = (FT_MP4DecInit)dlsym(mLibHandle, "MP4DecInit");
     if(mMP4DecInit == NULL) {

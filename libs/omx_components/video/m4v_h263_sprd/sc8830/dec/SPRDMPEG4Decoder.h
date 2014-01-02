@@ -84,6 +84,8 @@ private:
     int32_t mWidth, mHeight;
     int32_t mCropLeft, mCropTop, mCropRight, mCropBottom;
 
+    int32 mMaxWidth, mMaxHeight;
+
     bool mSignalledError;
     bool mInitialized;
     bool mFramesConfigured;
@@ -122,6 +124,7 @@ private:
     FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
     FT_MP4DecSetReferenceYUV mMP4DecSetReferenceYUV;
     FT_MP4DecGetLastDspFrm mMP4DecGetLastDspFrm;
+    FT_MP4GetCodecCapability mMP4GetCodecCapability;
 
     static int32_t extMemoryAllocWrapper(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
     static int32_t BindFrameWrapper(void *aUserData, void *pHeader, int flag);

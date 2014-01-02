@@ -100,6 +100,8 @@ private:
     uint32_t mCropLeft, mCropTop;
     uint32_t mCropWidth, mCropHeight;
 
+    int32 mMaxWidth, mMaxHeight;
+
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
     void* mLibHandle;
@@ -107,6 +109,7 @@ private:
     bool mChangeToSwDec;
     FT_H264DecGetNALType mH264DecGetNALType;
     FT_H264DecGetInfo mH264DecGetInfo;
+    FT_H264GetCodecCapability mH264GetCodecCapability;
     FT_H264DecInit mH264DecInit;
     FT_H264DecDecode mH264DecDecode;
     FT_H264DecRelease mH264DecRelease;
