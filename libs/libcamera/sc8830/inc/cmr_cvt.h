@@ -35,19 +35,23 @@ enum cmr_img_cvt_ret {
 //#define ROT_IO_IS_DONE             0xEE000000
 #define SCALER_IS_DONE             0xFF000000
 
-int cmr_rot_init(void);
+struct cmr_rot_param{
+	int fd;/*file handle*/
+	enum img_rot_angle	angle;
+	struct img_frm	*src_img;
+	struct img_rect *trim;
+	struct img_frm	*dst_img;
+};
 
-int cmr_rot_evt_reg(cmr_evt_cb  rot_event_cb);
+/*cmr_rot_open
+* 0:fail
+* other:success
+*/
+int cmr_rot_open(void);
 
-int cmr_rot(enum img_rot_angle  angle,
-		struct img_frm  *src_img,
-		struct img_rect *trim,
-		struct img_frm  *dst_img,
-		void            *user_data);
+int cmr_rot(struct cmr_rot_param *rot_param);
 
-int cmr_rot_wait_done(void);
-
-int cmr_rot_deinit(void);
+int cmr_rot_close(int *fd);
 
 int cmr_scale_init(void);
 

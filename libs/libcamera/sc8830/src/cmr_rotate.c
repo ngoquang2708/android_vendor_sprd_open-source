@@ -25,20 +25,10 @@
 #include "sprd_rot_k.h"
 
 static char               rot_dev_name[50] = "/dev/sprd_rotation";
-static int                rot_fd = -1;
-static cmr_evt_cb         rot_evt_cb = NULL;
-static pthread_mutex_t    rot_cb_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_t          rot_thread;
-static void*              rot_user_data;
-static sem_t              rot_sem;
-static pthread_mutex_t    rot_status_mutex = PTHREAD_MUTEX_INITIALIZER;
-static uint32_t           rot_running = 0;
 
-enum rotate_flag {
-	ROTATE_FLAG_SUCCESS = 0,
-	ROTATE_FLAG_EXIT = -1,
-	ROTATE_FLAG_SYS_BUSY = -2,
-	ROTATE_FLAG_MAX = 0xFF
+struct rot_file{
+	int fd;
+	pthread_mutex_t status_lock;
 };
 
 static ROT_DATA_FORMAT_E cmr_rot_fmt_cvt(uint32_t cmr_fmt)
@@ -65,115 +55,85 @@ static ROT_DATA_FORMAT_E cmr_rot_fmt_cvt(uint32_t cmr_fmt)
 	return fmt;
 }
 
-static void* cmr_rot_thread_proc(void* data)
+int cmr_rot_open(void)
 {
-	int                      evt_id;
-	struct img_frm           frame;
-	uint32_t                 param;
+	int ret = -1;
+	struct rot_file *file = NULL;
+	int fd = -1;
+	int handle = 0;
 
-	CMR_LOGV("rot_thread In");
 
-	bzero(&frame, sizeof(frame));
-
-	while(1) {
-		if (-1 == ioctl(rot_fd, ROT_IO_IS_DONE, &param)) {
-			CMR_LOGV("To exit rot thread");
-			break;
-		} else if (ROTATE_FLAG_SYS_BUSY == (enum rotate_flag)param) {
-			usleep(10000);
-			CMR_LOGV("rot continue.");
-			continue;
-		} else {
-			CMR_LOGV("rot done OK. 0x%x", (uint32_t)rot_evt_cb);
-			frame.reserved = rot_user_data;
-			evt_id = CMR_IMG_CVT_ROT_DONE;
-			pthread_mutex_lock(&rot_cb_mutex);
-			if (rot_evt_cb) {
-				(*rot_evt_cb)(evt_id, &frame);
-			}
-			pthread_mutex_unlock(&rot_cb_mutex);
-			pthread_mutex_lock(&rot_status_mutex);
-			rot_running = 0;
-			pthread_mutex_unlock(&rot_status_mutex);
-			sem_post(&rot_sem);
-		}
+	file = malloc(sizeof(struct rot_file));
+	if (!file) {
+		goto open_out;
 	}
 
-	CMR_LOGV("rot_thread Out");
-	return NULL;
-}
-
-static int   cmr_rot_create_thread(void)
-{
-	int                      ret = 0;
-	pthread_attr_t           attr;
-
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	ret = pthread_create(&rot_thread, &attr, cmr_rot_thread_proc, NULL);
-	pthread_attr_destroy(&attr);
-	return ret;
-}
-
-int cmr_rot_init(void)
-{
-	int                      ret = 0;
-
-	rot_fd = open(rot_dev_name, O_RDWR, 0);
-
-	if (-1 == rot_fd) {
+	fd = open(rot_dev_name, O_RDWR, 0);
+	if (fd < 0) {
 		CMR_LOGE("Fail to open rotation device.");
-		return -ENODEV;
-	} else {
-		CMR_LOGV("OK to open rotation device.");
+		goto rot_free;
 	}
+	file->fd = fd;
 
-	ret = pthread_mutex_init(&rot_cb_mutex, NULL);
+	ret = pthread_mutex_init(&file->status_lock, NULL);
 	if (ret) {
-		CMR_LOGE("Failed to init mutex : %d", ret);
-		exit(EXIT_FAILURE);
+		CMR_LOGE("Failed to init status lock");
+		goto rot_free;
 	}
+	handle = (int)file;
+	goto open_out;
+rot_free:
+	if (file)
+		free(file);
+	file = NULL;
+open_out:
 
-	ret = pthread_mutex_init(&rot_status_mutex, NULL);
-	if (ret) {
-		CMR_LOGE("Failed to init status mutex : %d", ret);
-		exit(EXIT_FAILURE);
-	}
+	CMR_LOGE("handle=0x%x", handle);
 
-
-	sem_init(&rot_sem, 0, 1);
-
-	ret = cmr_rot_create_thread();
-	rot_evt_cb = NULL;
-
-	return ret;
+	return handle;
 }
 
-int cmr_rot_evt_reg(cmr_evt_cb  rot_event_cb)
-{
-	pthread_mutex_lock(&rot_cb_mutex);
-	rot_evt_cb = rot_event_cb;
-	pthread_mutex_unlock(&rot_cb_mutex);
-	return 0;
-}
 
-int cmr_rot(enum img_rot_angle  angle,
-		struct img_frm  *src_img,
-		struct img_rect *trim,
-		struct img_frm  *dst_img,
-		void            *user_data)
+int cmr_rot(struct cmr_rot_param *rot_param)
 {
 	struct _rot_cfg_tag      rot_cfg;
 	int                      ret = 0;
+	enum img_rot_angle       angle;
+	struct img_frm           *src_img;
+	struct img_frm           *dst_img;
+	int                      fd;
+	struct rot_file          *file = NULL;
 
-	if (-1 == rot_fd) {
-		CMR_LOGE("Invalid fd");
-		return -ENODEV;
+
+	CMR_LOGE("S");
+
+	if (!rot_param) {
+		ret = -1;
+		goto rot_exit;
 	}
+
+	/*check fd*/
+	file = (struct rot_file*)rot_param->fd;
+	if (!file) {
+		ret = -1;
+		goto rot_exit;
+	}
+	fd = file->fd;
+	if (fd < 0) {
+		CMR_LOGE("Invalid fd");
+		ret = -ENODEV;
+		goto rot_exit;
+	}
+
+	pthread_mutex_lock(&file->status_lock);
+	angle = rot_param->angle;
+	src_img = rot_param->src_img;
+	dst_img = rot_param->dst_img;
 
 	if (NULL == src_img || NULL == dst_img) {
 		CMR_LOGE("Wrong parameter 0x%x 0x%x", (uint32_t)src_img, (uint32_t)dst_img);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto rot_unlock;
 	}
 
 	CMR_LOGV("angle %d, src 0x%x 0x%x, w h %d %d, dst 0x%x 0x%x",
@@ -188,16 +148,16 @@ int cmr_rot(enum img_rot_angle  angle,
 
 	if ((uint32_t)angle < (uint32_t)(IMG_ROT_90)) {
 		CMR_LOGE("Wrong angle %d", angle);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto rot_unlock;
 	}
 
-	sem_wait(&rot_sem);
 
 	rot_cfg.format          = cmr_rot_fmt_cvt(src_img->fmt);
 	if (rot_cfg.format >= ROT_FMT_MAX) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
-		sem_post(&rot_sem);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto rot_unlock;
 	}
 
 	rot_cfg.angle = angle - IMG_ROT_90 + ROT_90;
@@ -210,95 +170,51 @@ int cmr_rot(enum img_rot_angle  angle,
 	rot_cfg.img_size.w      = (uint16_t)src_img->size.width;
 	rot_cfg.img_size.h      = (uint16_t)src_img->size.height;
 
-	rot_user_data = user_data;
 
-	ret = ioctl(rot_fd, ROT_IO_CFG, &rot_cfg);
+	ret = ioctl(fd, ROT_IO_START, &rot_cfg);
 	if (ret) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
-		sem_post(&rot_sem);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto rot_unlock;
 	}
 
-	ret = ioctl(rot_fd, ROT_IO_START, 1);
-	pthread_mutex_lock(&rot_status_mutex);
-	rot_running = 1;
-	pthread_mutex_unlock(&rot_status_mutex);
+rot_unlock:
+	pthread_mutex_unlock(&file->status_lock);
 
+rot_exit:
+
+	CMR_LOGE("X ret=%d", ret);
 
 	return ret;
 }
 
-int cmr_rot_wait_done(void)
+int cmr_rot_close(int *fd)
 {
-	int                      ret = 0;
-	uint32_t                 need_wait = 0;
+	int                      ret = -1;
+	struct rot_file *file = (struct rot_file*)(*fd);
 
-	pthread_mutex_lock(&rot_status_mutex);
-	need_wait = rot_running;
-	pthread_mutex_unlock(&rot_status_mutex);
-
-	if (need_wait) {
-		CMR_LOGV("Wait for rot done.");
-		sem_wait(&rot_sem);
-		sem_post(&rot_sem);
-	}
-
-	return ret;
-}
-
-static int cmr_rot_kill_thread(void)
-{
-	int                      ret = 0;
-	char                     write_ch = 0;
-	void                     *dummy;
-
-	if (-1 == rot_fd) {
-		CMR_LOGE("invalid fd");
-		return -ENODEV;
-	}
-
-	ret = write(rot_fd, &write_ch, 1);// kill thread;
-	if (ret > 0) {
-		ret = pthread_join(rot_thread, &dummy);
-	}
-
-	return ret;
-}
-
-int cmr_rot_deinit(void)
-{
-	int                      ret = 0;
 
 	CMR_LOGV("Start to close rotation device.");
 
-	if (-1 == rot_fd) {
+	if (!file)
+		goto out;
+
+	if (file->fd < 0) {
 		CMR_LOGE("Invalid fd");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto close_free;
 	}
-
-	sem_wait(&rot_sem);
-	sem_post(&rot_sem);
-
-	/* thread should be killed before fd deinited */
-	ret = cmr_rot_kill_thread();
-	if (ret) {
-		CMR_LOGE("Failed to kill the thread. errno : %d", ret);
-		exit(EXIT_FAILURE);
-	}
-
-	sem_destroy(&rot_sem);
 
 	/* then close fd */
-	if (-1 == close(rot_fd)) {
-		exit(EXIT_FAILURE);
-	}
-	rot_fd = -1;
+	close(file->fd);
 
+	pthread_mutex_destroy(&file->status_lock);
+close_free:
+	free(file);
+	*fd = 0;
+	ret = 0;
+out:
 
-	pthread_mutex_lock(&rot_cb_mutex);
-	rot_evt_cb = NULL;
-	pthread_mutex_unlock(&rot_cb_mutex);
-	pthread_mutex_destroy(&rot_cb_mutex);
-	CMR_LOGV("close device.");
-	return 0;
+	CMR_LOGV("ret=%d",ret);
+	return ret;
 }

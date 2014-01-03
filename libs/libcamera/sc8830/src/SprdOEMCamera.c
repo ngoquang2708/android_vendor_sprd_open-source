@@ -127,7 +127,7 @@ static void camera_sensor_evt_cb(int evt, void* data);
 static int  camera_isp_evt_cb(int evt, void* data);
 static void camera_jpeg_evt_cb(int evt, void* data);
 static void camera_v4l2_evt_cb(int evt, void* data);
-static void camera_rot_evt_cb(int evt, void* data);
+static void camera_post_rot_evt(int evt, struct img_frm *frm_data);
 static void camera_scaler_evt_cb(int evt, void* data);
 static int  camera_create_main_thread(int32_t camera_id);
 static int  camera_destroy_main_thread(void);
@@ -661,21 +661,22 @@ int camera_rotation_init(void)
 	struct camera_ctrl       *ctrl = &g_cxt->control;
 	struct rotation_context  *cxt  = &g_cxt->rot_cxt;
 	int                      ret   = CAMERA_SUCCESS;
+	int                      fd = -1;
 
 	if (1 == ctrl->rot_inited) {
 		CMR_LOGI("Rot has been intialized");
 		goto exit;
 	}
 
-	ret = cmr_rot_init();
-	if (ret) {
-		CMR_LOGE("Failed to init Rot %d", ret);
-		ret = -CAMERA_NOT_SUPPORTED;
-	} else {
-		cmr_rot_evt_reg(camera_rot_evt_cb);
+	fd = cmr_rot_open();
+	if (fd) {
+		cxt->fd = fd;
 		cxt->rot_state = IMG_CVT_IDLE;
 		sem_init(&cxt->cmr_rot_sem, 0, 1);
 		ctrl->rot_inited = 1;
+	} else {
+		CMR_LOGE("Failed to init Rot %d", ret);
+		ret = -CAMERA_NOT_SUPPORTED;
 	}
 
 exit:
@@ -687,13 +688,15 @@ int camera_rotation_deinit(void)
 	struct camera_ctrl       *ctrl = &g_cxt->control;
 	struct rotation_context  *cxt  = &g_cxt->rot_cxt;
 	int                      ret   = CAMERA_SUCCESS;
+	int                      fd = -1;
 
 	if (0 == ctrl->rot_inited) {
 		CMR_LOGI("Rot has been de-intialized");
 		goto exit;
 	}
 
-	ret = cmr_rot_deinit();
+	fd = cxt->fd;
+	ret = cmr_rot_close(&fd);
 	if (ret) {
 		CMR_LOGE("Failed to de-init ROT %d", ret);
 		ret = -CAMERA_NOT_SUPPORTED;
@@ -4073,15 +4076,14 @@ void camera_jpeg_evt_cb(int evt, void* data)
 	return;
 }
 
-void camera_rot_evt_cb(int evt, void* data)
+void camera_post_rot_evt(int evt, struct img_frm *frm_data)
 {
 	CMR_MSG_INIT(message);
 	int                      ret = CAMERA_SUCCESS;
-	struct img_frm *frm_data = data;
 	uint32_t frame_id = 0;
 
-	if ((NULL == data) || (CMR_IMG_CVT_ROT_DONE != evt)) {
-		CMR_LOGE("Error param, 0x%x 0x%x", (uint32_t)data, evt);
+	if ((NULL == frm_data) || (CMR_IMG_CVT_ROT_DONE != evt)) {
+		CMR_LOGE("Error param, 0x%x 0x%x", (uint32_t)frm_data, evt);
 		return;
 	}
 	CMR_LOGV("0x%x 0x%x", evt, (uint32_t)frm_data->reserved);
@@ -4096,7 +4098,7 @@ void camera_rot_evt_cb(int evt, void* data)
 		}
 		message.msg_type = CMR_EVT_PREV_CVT_ROT_DONE;
 		message.alloc_flag = 1;
-		memcpy(message.data, data, sizeof(struct img_frm));
+		memcpy(message.data, frm_data, sizeof(struct img_frm));
 		ret = cmr_msg_post(g_cxt->prev_msg_que_handle, &message);
 	} else {
 		message.data = malloc(sizeof(struct img_frm));
@@ -4106,7 +4108,7 @@ void camera_rot_evt_cb(int evt, void* data)
 		}
 		message.msg_type = evt;
 		message.alloc_flag = 1;
-		memcpy(message.data, data, sizeof(struct img_frm));
+		memcpy(message.data, frm_data, sizeof(struct img_frm));
 		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 	}
 	if (ret) {
@@ -7170,6 +7172,9 @@ int camera_start_rotate(struct frm_info *data)
 	struct img_rect          rect;
 	int                      ret = CAMERA_SUCCESS;
 	struct img_size          refer_size;
+	struct cmr_rot_param     rot_param;
+	struct img_frm           frm_data;
+
 
 	if (IS_PREVIEW && IS_PREV_FRM(data->frame_id)) {
 		CMR_LOGE("Call Rotation in preview");
@@ -7188,15 +7193,19 @@ int camera_start_rotate(struct frm_info *data)
 			g_cxt->rot_cxt.proc_status.frame_info = *data;
 			g_cxt->rot_cxt.proc_status.slice_height_in = rect.height;
 			g_cxt->rot_cxt.rot_state = IMG_CVT_ROTATING;
-			ret = cmr_rot(g_cxt->prev_rot,
-				&g_cxt->prev_frm[frm_id],
-				&rect,
-				&g_cxt->prev_rot_frm[rot_frm_id],
-				(void*)data->frame_id);
+
+			rot_param.fd = g_cxt->rot_cxt.fd;
+			rot_param.angle = g_cxt->prev_rot;
+			rot_param.src_img = &g_cxt->prev_frm[frm_id];
+			rot_param.dst_img = &g_cxt->prev_rot_frm[rot_frm_id];
+			ret = cmr_rot(&rot_param);
 			if (ret) {
 				g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 				sem_post(&g_cxt->rot_cxt.cmr_rot_sem);
 				CMR_LOGE("Rot error");
+			} else {
+				frm_data.reserved = (void*)data->frame_id;
+				camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&frm_data);
 			}
 		}
 
@@ -7232,28 +7241,28 @@ int camera_start_rotate(struct frm_info *data)
 			CMR_LOGE("uncorrect value!");
 		}
 
+
+		rot_param.fd = g_cxt->rot_cxt.fd;
+		rot_param.angle = g_cxt->cap_rot;
+		rot_param.src_img = &g_cxt->cap_mem[frm_id].cap_yuv_rot;
+
 		if ((g_cxt->cap_orig_size.height == refer_size.width) &&
 			(g_cxt->cap_orig_size.width == refer_size.height)) {
-			ret = cmr_rot(g_cxt->cap_rot,
-				&g_cxt->cap_mem[frm_id].cap_yuv_rot,
-				&rect,
-				&g_cxt->cap_mem[frm_id].target_yuv,
-				NULL);
+			rot_param.dst_img = &g_cxt->cap_mem[frm_id].target_yuv;
 		} else {
-			ret = cmr_rot(g_cxt->cap_rot,
-				&g_cxt->cap_mem[frm_id].cap_yuv_rot,
-				&rect,
-				&g_cxt->cap_mem[frm_id].cap_yuv,
-				NULL);
+			rot_param.dst_img = &g_cxt->cap_mem[frm_id].cap_yuv;
 		}
+		ret = cmr_rot(&rot_param);
 		if (ret) {
 			g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
 			sem_post(&g_cxt->rot_cxt.cmr_rot_sem);
 			CMR_LOGE("Rot error");
+		} else {
+			frm_data.reserved = (void*)data->frame_id;
+			camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&frm_data);
 		}
 	}
 
-	cmr_rot_wait_done();
 
 	return ret;
 }
@@ -7272,6 +7281,8 @@ int camera_get_data_redisplay(int output_addr,
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t temp = 0;
 	enum img_rot_angle angle = IMG_ROT_0;
+	struct cmr_rot_param rot_param;
+
 
 	CMR_LOGV("input(w,h,addr)%d %d 0x%x output(w,h,addr)%d %d,0x%x rot %d",
 		input_width, input_height, input_addr_y, output_width,output_height,
@@ -7352,14 +7363,13 @@ int camera_get_data_redisplay(int output_addr,
 		dst_frame.addr_phy.addr_u = dst_frame.addr_phy.addr_y + img_len;
 
 		camera_sync_rotate_start(g_cxt);
-		cmr_rot_evt_reg(NULL);
-		ret = cmr_rot(angle,
-				&src_frame,
-				&rect,
-				&dst_frame,
-				NULL);
-		cmr_rot_wait_done();
-		cmr_rot_evt_reg(camera_rot_evt_cb);
+
+		rot_param.fd = g_cxt->rot_cxt.fd;
+		rot_param.angle = angle;
+		rot_param.src_img = &src_frame;
+		rot_param.dst_img = &dst_frame;
+		ret = cmr_rot(&rot_param);
+
 		camera_sync_rotate_done(g_cxt);
 		if (ret) {
 			CMR_LOGV("dis rot fail, %d", ret);

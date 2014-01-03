@@ -224,6 +224,7 @@ struct scaler_context {
 };
 
 struct rotation_context {
+	int                      fd;
 	uint32_t                 rot_state;
 	struct process_status    proc_status;
 	sem_t                    cmr_rot_sem;
