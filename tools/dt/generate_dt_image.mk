@@ -19,6 +19,7 @@ define build-dtimage-target
     $(hide) chmod a+r $@
 endef
 
+.PHONY: $(INSTALLED_DTIMAGE_TARGET)
 $(INSTALLED_DTIMAGE_TARGET): $(DTBTOOL) $(INSTALLED_KERNEL_TARGET)
 	$(build-dtimage-target)
 
