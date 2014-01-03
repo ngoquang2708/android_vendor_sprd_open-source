@@ -689,9 +689,9 @@ LOCAL const SENSOR_REG_T ov5640_1600X1200_YUV[] = {
 	{0x3034, 0x1A},
 	{0x3035, 0x21},		/* change from 0x11 to 0x21*/
 	{0x3036, 0x69},
-	{0x3037, 0x13},
+	{0x3037, 0x13}
 
-	{0x3503, 0x00}		/* AEC/AGC on*/
+	//{0x3503, 0x00}		/* AEC/AGC on*/
 };
 
 /*1600X1200  YUV   Mode*/
@@ -778,8 +778,8 @@ LOCAL const SENSOR_REG_T ov5640_2048X1536_YUV[] = {
 	{0x3821, 0x06},		/* mirror*/
 	{0x3814, 0x11},		/* timing X inc*/
 	{0x3815, 0x11},		/* timing Y inc*/
-	{0x3503, 0x00},		/* AEC/AGC on*/
-	{0x5001, 0xa7},
+	//{0x3503, 0x00},		/* AEC/AGC on*/
+	{0x5001, 0xa7}
 };
 
 /*20480X1536  JPG   Mode*/
@@ -1044,7 +1044,7 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
 	1,			// skip frame num before preview
-	1,			// skip frame num before capture
+	2,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
