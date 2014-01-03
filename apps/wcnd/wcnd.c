@@ -93,51 +93,76 @@ bool is_file_exists(const char *file_path)
 	return access(file_path, 0) == 0;
 }
 
-void force_replace_config_file()
+void force_replace_file(const char *dst_file_path, const char *src_file_path)
 {
 	FILE *f_src, *f_dst;
 	char buf[100];
 
-	f_src = fopen(WCND_FACTORY_CONFIG_FILE_PATH, "r");
+	f_src = fopen(src_file_path, "r");
 	if (f_src == NULL) return;
 	fgets(buf, sizeof(buf), f_src);
 	fclose(f_src);
 	
-	f_dst = fopen(WCND_CONFIG_FILE_PATH, "w");
+	f_dst = fopen(dst_file_path, "w");
 	if (f_dst == NULL) return;
 	fputs(buf, f_dst);
 	fclose(f_dst);
 
-	sprintf(buf, "chmod 666 %s", WCND_CONFIG_FILE_PATH);
+	sprintf(buf, "chmod 666 %s", dst_file_path);
 	system(buf);
 	WCND_LOGD("force_replace_config_file: %s", buf);
 }
 
-void generate_mac()
+void generate_wifi_mac()
 {
 	unsigned char mac[MAC_LEN];
 	// force replace configuration file if vaild mac is in factory configuration file
-	if(is_file_exists(WCND_FACTORY_CONFIG_FILE_PATH)) {
-		WCND_LOGD("factory configuration file exists");
-		read_mac_from_file(WCND_FACTORY_CONFIG_FILE_PATH, mac);
+	if(is_file_exists(WCND_WIFI_FACTORY_CONFIG_FILE_PATH)) {
+		WCND_LOGD("wifi factory configuration file exists");
+		read_mac_from_file(WCND_WIFI_FACTORY_CONFIG_FILE_PATH, mac);
 		if(!is_zero_ether_addr(mac)) {
-			force_replace_config_file();
+			force_replace_file(WCND_WIFI_CONFIG_FILE_PATH, WCND_WIFI_FACTORY_CONFIG_FILE_PATH);
 			return;
 		}
 	}
 	// if vaild mac is in configuration file, use it
-	if(is_file_exists(WCND_CONFIG_FILE_PATH)) {
-		WCND_LOGD("configuration file exists");
-		read_mac_from_file(WCND_CONFIG_FILE_PATH, mac);
+	if(is_file_exists(WCND_WIFI_CONFIG_FILE_PATH)) {
+		WCND_LOGD("wifi configuration file exists");
+		read_mac_from_file(WCND_WIFI_CONFIG_FILE_PATH, mac);
 		if(!is_zero_ether_addr(mac)) return;
 	}
 	// generate random mac and write to configuration file
 	get_random_mac(mac);
-	write_mac_to_file(WCND_CONFIG_FILE_PATH, mac);
+	write_mac_to_file(WCND_WIFI_CONFIG_FILE_PATH, mac);
+}
+
+void generate_bt_mac()
+{
+	unsigned char mac[MAC_LEN];
+	// force replace configuration file if vaild mac is in factory configuration file
+	if(is_file_exists(WCND_BT_FACTORY_CONFIG_FILE_PATH)) {
+		WCND_LOGD("bt factory configuration file exists");
+		read_mac_from_file(WCND_BT_FACTORY_CONFIG_FILE_PATH, mac);
+		if(!is_zero_ether_addr(mac)) {
+			force_replace_file(WCND_BT_CONFIG_FILE_PATH, WCND_BT_FACTORY_CONFIG_FILE_PATH);
+			return;
+		}
+	}
+	// if vaild mac is in configuration file, use it
+	if(is_file_exists(WCND_BT_CONFIG_FILE_PATH)) {
+		WCND_LOGD("bt configuration file exists");
+		read_mac_from_file(WCND_BT_CONFIG_FILE_PATH, mac);
+		if(!is_zero_ether_addr(mac)) return;
+	}
+	// generate random mac and write to configuration file
+	get_random_mac(mac);
+	mac[0] = 0;
+	write_mac_to_file(WCND_BT_CONFIG_FILE_PATH, mac);
 }
 
 int main(int argc, char *argv[])
 {
-	generate_mac();
+	generate_wifi_mac();
+	generate_bt_mac();
 	return 0;
 }
