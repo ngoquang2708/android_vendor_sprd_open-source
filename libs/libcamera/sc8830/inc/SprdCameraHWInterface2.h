@@ -143,6 +143,14 @@ typedef struct sprd_camera_memory {
 	uint32_t phys_addr, phys_size;
 	void *data;
 }sprd_camera_memory_t;
+typedef enum _capture_intent {
+	CAPTURE_INTENT_CUSTOM = 0,
+	CAPTURE_INTENT_PREVIEW,
+	CAPTURE_INTENT_STILL_CAPTURE,
+	CAPTURE_INTENT_VIDEO_RECORD,
+	CAPTURE_INTENT_VIDEO_SNAPSHOT,
+	CAPTURE_INTENT_ZERO_SHUTTER_LAG
+}capture_intent;
 
 typedef struct _SprdCamera2Info
 {
@@ -219,14 +227,6 @@ private:
 		METADATA_MODE_NONE,
 		METADATA_MODE_FULL
 	}metadata_mode;
-	typedef enum _capture_intent {
-		CAPTURE_INTENT_CUSTOM = 0,
-		CAPTURE_INTENT_PREVIEW,
-		CAPTURE_INTENT_STILL_CAPTURE,
-		CAPTURE_INTENT_VIDEO_RECORD,
-		CAPTURE_INTENT_VIDEO_SNAPSHOT,
-		CAPTURE_INTENT_ZERO_SHUTTER_LAG
-	}capture_intent;
 
 	typedef enum _focus_status {
 		FOCUS_STAT_INACTIVE = 0,
@@ -387,6 +387,14 @@ class RequestQueueThread : public SprdBaseThread{
 	bool                GetReqProcessStatus();
 	bool                GetRecStopMsg();
 	void                SetRecStopMsg(bool recStop);
+	int64_t             GetSensorTimeStamp(camera_req_info *reqInfo);
+	void                SetSensorTimeStamp(camera_req_info *reqInfo, int64_t timestamp);
+	capture_intent      GetCameraCaptureIntent(camera_req_info *reqInfo);
+	void                SetCameraCaptureIntent(camera_req_info *reqInfo, capture_intent intent);
+	takepicture_mode    GetCameraPictureMode();
+	void                SetCameraPictureMode(takepicture_mode mode);
+	int32_t             GetOutputStreamMask();
+	void                SetOutputStreamMask(int32_t mask);
     bool                GetStartPreviewAftPic();
 	void                SetStartPreviewAftPic(bool IsPicPreview);
 	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);

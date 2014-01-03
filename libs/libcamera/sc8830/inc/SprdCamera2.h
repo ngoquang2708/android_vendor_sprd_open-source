@@ -45,18 +45,21 @@ const int32_t jpegResolutionSensorBack[] = {
     2048, 1536,
     1600, 1200,
     1280,  960,
+     720,  480,
      640,  480,
 };
 
 const int32_t jpegResolutionSensorFront[] = {
-    1280,  960,
+     720,  480,
      640,  480,
+     320,  240,
 };
 
 const int32_t PreviewResolutionSensorBack[] = {
 /*    1920, 1088, // 16:9
     1280,  720, // 16:9
      960,  720, // 4:3*/
+     1280,  720, // 16:9
      720,  480, // 3:2
      640,  480, // 4:3
      352,  288, // 11:9
