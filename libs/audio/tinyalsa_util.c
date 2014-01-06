@@ -56,17 +56,20 @@ static int get_snd_card_name(int card, char *name);
 int get_snd_card_number(const char *card_name)
 {
     int i = 0;
+    int ret = 0;
     char cur_name[64] = {0};
 
-    //loop search card number
+    //loop search card number, which is in the ascending order.
     for (i = 0; i < 32; i++) {
-        get_snd_card_name(i, &cur_name[0]);
+        ret = get_snd_card_name(i, &cur_name[0]);
+        if (ret < 0)
+            break;
         if (strcmp(cur_name, card_name) == 0) {
             ALOGI("Search Completed, cur_name is %s, card_num=%d", cur_name, i);
             return i;
         }
     }
-    ALOGE("There is no one found.");
+    ALOGE("There is no one matched to <%s>.", card_name);
     return -1;
 }
 
