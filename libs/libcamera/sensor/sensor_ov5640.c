@@ -65,7 +65,7 @@ LOCAL uint32_t _ov5640_check_status(uint32_t param);
 LOCAL uint32_t _ov5640_set_iso(uint32_t mode);
 LOCAL uint32_t _ov5640_ReadGain(uint32_t param);
 LOCAL uint32_t _ov5640_flash(uint32_t param);
-
+LOCAL int _ov5640_init_firmware(void);
 
 LOCAL const SENSOR_REG_T ov5640_640X480[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
@@ -2386,6 +2386,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		if (0x00 == reg_value) {
 			SENSOR_PRINT_HIGH("fail!");
 			rtn = SENSOR_FAIL;
+			_ov5640_init_firmware();
 		}
 	}
 	return rtn;
@@ -2444,6 +2445,7 @@ LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			if (0 == reg_value) {
 				SENSOR_PRINT_HIGH("fail!");
 				rtn=SENSOR_FAIL;
+				_ov5640_init_firmware();
 			}
 		}
 
@@ -2521,6 +2523,7 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		{
 			SENSOR_PRINT_HIGH("fail!");
 			rtn=SENSOR_FAIL;
+			_ov5640_init_firmware();
 		}
 	}
 	return rtn;
@@ -6841,23 +6844,15 @@ LOCAL uint8_t af_firmware[] = {
 		0x06
 };
 
-LOCAL int _ov5640_init_firmware(uint32_t param)
+LOCAL int _ov5640_init_firmware(void)
 {
 	uint32_t i = 0;
 	int ret = 0;
 	uint32_t init_num = NUMBER_OF_ARRAY(af_firmware);
-	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
 	uint8_t *reg_ptr = af_firmware;
 	uint16_t reg_val_1, reg_val_2;
 
-	SENSOR_PRINT_HIGH("cmd=%d!", ext_ptr->cmd);
-	switch (ext_ptr->param) {
-	case SENSOR_EXT_FOCUS_TRIG:	//auto focus
-		reg_ptr = af_firmware;
-		break;
-	default:
-		break;
-	}
+	SENSOR_PRINT_HIGH("init firmware start!");
 	Sensor_WriteReg(0x3000, 0x20);
 
 	for (i = 0; i < 4; i++) {
@@ -6931,7 +6926,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 	case SENSOR_EXT_FUNC_INIT:
 		OV5640_set_AE_target(52);
 		OV5640_set_bandingfilter();
-		rtn = _ov5640_init_firmware(ctl_param);
+		rtn = _ov5640_init_firmware();
 		break;
 	case SENSOR_EXT_FOCUS_START:
 		rtn = _ov5640_StartAutoFocus(ctl_param);
