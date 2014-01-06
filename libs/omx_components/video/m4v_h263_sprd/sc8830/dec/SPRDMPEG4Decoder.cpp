@@ -189,7 +189,7 @@ void SPRDMPEG4Decoder::initPorts() {
     def.eDir = OMX_DirInput;
     def.nBufferCountMin = 1;
     def.nBufferCountActual = kNumInputBuffers;
-    def.nBufferSize = 8192;
+    def.nBufferSize = 128*1024 ;///8192;
     def.bEnabled = OMX_TRUE;
     def.bPopulated = OMX_FALSE;
     def.eDomain = OMX_PortDomainVideo;
