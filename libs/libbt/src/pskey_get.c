@@ -355,7 +355,7 @@ int bt_getPskeyFromFile(void *pData)
     int fd;
     unsigned char *pBuf = NULL;
     int len;
-    char *CFG_2351_PATH = "/productinfo/2351_connectivity_configure.ini";
+    char *CFG_2351_PATH = "/system/etc/connectivity_configure.ini";
     
     ALOGI("begin to bt_getPskeyFromFile");  
     fd = open(CFG_2351_PATH, O_RDONLY, 0644);
