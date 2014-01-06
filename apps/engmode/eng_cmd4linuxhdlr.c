@@ -62,6 +62,12 @@ static int eng_linuxcmd_chargertest(char *req, char *rsp);
 static int eng_linuxcmd_bteutmode(char *req,char *rsp);
 static int eng_linuxcmd_wifieutmode(char *req,char *rsp);
 static int eng_linuxcmd_gpseutmode(char *req,char *rsp);
+static int eng_linuxcmd_batttest(char *req,char *rsp);
+static int eng_linuxcmd_temptest(char *req,char *rsp);
+static int eng_linuxcmd_rtctest(char *req,char *rsp);
+
+
+
 
 
 static struct eng_linuxcmd_str eng_linuxcmd[] = {
@@ -88,7 +94,9 @@ static struct eng_linuxcmd_str eng_linuxcmd[] = {
     {CMD_SPWIFITEST,     CMD_TO_AP,	    "AT+SPWIFITEST",	eng_linuxcmd_wifieutmode},
     {CMD_SPGPSTEST,      CMD_TO_AP,	    "AT+SPGPSTEST",		eng_linuxcmd_gpseutmode},
     {CMD_ATDIAG,         CMD_TO_AP,	    "+SPBTWIFICALI",	eng_linuxcmd_atdiag},
-
+    {CMD_BATTTEST,       CMD_TO_AP,     "AT+BATTTEST",      eng_linuxcmd_batttest},
+    {CMD_TEMPTEST,       CMD_TO_AP,     "AT+TEMPTEST",      eng_linuxcmd_temptest},
+    {CMD_RTCTEST,        CMD_TO_AP,     "AT+RTCTEST",       eng_linuxcmd_rtctest},
 };
 
 /** returns 1 if line starts with prefix, 0 if it does not */
@@ -303,6 +311,82 @@ int eng_linuxcmd_vbat(char *req, char *rsp)
     ENG_LOG("%s: rsp=%s\n",__FUNCTION__,rsp);
     return 0;
 }
+
+int eng_linuxcmd_batttest(char *req,char *rsp)
+{
+	char ptr_parm1[1];
+	char ptr_parm2[1];
+	float vol=0;
+	int fd, voltage=0,ret=1,chg_sts=0;
+	char buffer[16];
+
+	req = strchr(req, '=');
+	req++;
+	ptr_parm1[0]=*req;
+	req = strchr(req, ',');
+	req++;
+	ptr_parm2[0]=*req;
+
+	if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='2'))
+	{
+		fd = open(ENG_BATTVOL_NOW, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_BATVOL, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			voltage = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; voltage=%d\n",__FUNCTION__, buffer, voltage);
+			vol = ((float) voltage) * 0.001/1000;
+			} else {
+			sprintf(rsp, "+BATTTEST:1,2 NA");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+			close(fd);
+		sprintf(rsp, "+BATTTEST:1,%.3g",vol);
+		return 0;
+	}
+	else if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='1'))
+	{
+		fd = open(ENG_BATTCHG_STS, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_BATVOL, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			chg_sts = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; chg_sts=%d\n",__FUNCTION__, buffer, chg_sts);
+			} else {
+			if(chg_sts ==1 )
+				sprintf(rsp, "+BATTTEST:1,CHAR");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+		close(fd);
+		sprintf(rsp, "+BATTTEST:1,%d",chg_sts);
+		return 0;
+	}
+	else
+	{
+		sprintf(rsp, "NA");
+	}
+
+	return 0;
+}
+
 
 int eng_linuxcmd_stopchg(char *req, char *rsp)
 {
@@ -791,5 +875,100 @@ int eng_linuxcmd_chargertest(char *req, char *rsp)
     return 0;
 }
 
+int eng_linuxcmd_temptest(char *req,char *rsp)
+{
+	char ptr_parm1[1];
+	char ptr_parm2[1];
+	char ptr_parm3[1];
+	float vol=0;
+	int fd, temp_val=0,ret=1;
+	char buffer[16];
+
+	req = strchr(req, '=');
+	req++;
+	ptr_parm1[0]=*req;
+	req = strchr(req, ',');
+	req++;
+	ptr_parm2[0]=*req;
+	req = strchr(req, ',');
+
+	if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='0'))
+	{
+		fd = open(ENG_BATTTEMP, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_BATVOL, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			temp_val = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+		} else {
+			sprintf(rsp, "+CME Error:NG");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+			close(fd);
+		sprintf(rsp, "+TEMPTEST:1,%d",temp_val );
+		return 0;
+	}
+	else if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='1'))
+	{
+		fd = open(ENG_BATTTEMP_ADC, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_BATVOL, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			temp_val = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+		} else {
+			sprintf(rsp, "+CME Error:NG");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+			close(fd);
+		sprintf(rsp, "+TEMPTEST:1,%d",temp_val);
+		return 0;
+	}
+
+	return 0;
+}
+
+int eng_linuxcmd_rtctest(char *req,char *rsp)
+{
+	char ptr_parm1[1];
+	time_t t;
+	struct tm tm;
+
+	req = strchr(req, '=');
+	req++;
+	ptr_parm1[0]=*req;
+
+	if((ptr_parm1[0]=='1'))
+	{
+		t = time(NULL);
+		localtime_r(&t, &tm);
+		tm.tm_year = tm.tm_year%100;
+		tm.tm_mon = tm.tm_mon+1;
+		sprintf(rsp, "%d,%04d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
+	}
+	else
+	{
+		sprintf(rsp, "+RTCTEST:2");
+	}
+	return 0;
+}
 
 
