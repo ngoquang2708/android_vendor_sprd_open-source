@@ -228,6 +228,7 @@ struct rotation_context {
 	uint32_t                 rot_state;
 	struct process_status    proc_status;
 	sem_t                    cmr_rot_sem;
+	struct img_frm           frm_data;
 };
 
 struct arithmetic_context {

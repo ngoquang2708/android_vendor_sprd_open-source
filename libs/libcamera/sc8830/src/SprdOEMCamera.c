@@ -7173,7 +7173,6 @@ int camera_start_rotate(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct img_size          refer_size;
 	struct cmr_rot_param     rot_param;
-	struct img_frm           frm_data;
 
 
 	if (IS_PREVIEW && IS_PREV_FRM(data->frame_id)) {
@@ -7204,8 +7203,8 @@ int camera_start_rotate(struct frm_info *data)
 				sem_post(&g_cxt->rot_cxt.cmr_rot_sem);
 				CMR_LOGE("Rot error");
 			} else {
-				frm_data.reserved = (void*)data->frame_id;
-				camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&frm_data);
+				g_cxt->rot_cxt.frm_data.reserved = (void*)data->frame_id;
+				camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&g_cxt->rot_cxt.frm_data);
 			}
 		}
 
@@ -7258,8 +7257,8 @@ int camera_start_rotate(struct frm_info *data)
 			sem_post(&g_cxt->rot_cxt.cmr_rot_sem);
 			CMR_LOGE("Rot error");
 		} else {
-			frm_data.reserved = (void*)data->frame_id;
-			camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&frm_data);
+			g_cxt->rot_cxt.frm_data.reserved = (void*)data->frame_id;
+			camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&g_cxt->rot_cxt.frm_data);
 		}
 	}
 
