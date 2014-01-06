@@ -2549,6 +2549,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	uint16_t wid = 0, height = 0;
 	size_t i = 0;
 	bool IsSetPara = true;
+	bool IsCapIntChange = false;
 	float focal_len = 3.43f;
 	stream_parameters_t     *targetStreamParms = NULL;
 	char value[PROPERTY_VALUE_MAX];
@@ -2684,6 +2685,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					capture_intent tmpIntent = (capture_intent)entry.data.u8[0];
 					if(srcreq->captureIntent != tmpIntent) {
 						SetCameraCaptureIntent(srcreq, tmpIntent);
+						IsCapIntChange = true;//for cts testImmediateZoom
 					}
 					HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_CAPTURE_INTENT (%d)",  __FUNCTION__, tmpIntent);
 				}
@@ -2695,8 +2697,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				zoom0.crop_w = entry.data.i32[2] & ALIGN_ZOOM_CROP_BITS;
 				zoom0.crop_h = entry.data.i32[3] & ALIGN_ZOOM_CROP_BITS;
 				if (zoom0.crop_x != srcreq->cropRegion0 || zoom0.crop_y != srcreq->cropRegion1\
-					  || zoom0.crop_w != srcreq->cropRegion2 || zoom0.crop_h != srcreq->cropRegion3\
-					  || m_Stream[STREAM_ID_PREVIEW - 1]->getHalStopMsg()) {
+					  || zoom0.crop_w != srcreq->cropRegion2 || zoom0.crop_h != srcreq->cropRegion3) {
+					  //|| m_Stream[STREAM_ID_PREVIEW - 1]->getHalStopMsg()) {
 				    srcreq->cropRegion0 = zoom0.crop_x;
 					srcreq->cropRegion1 = zoom0.crop_y;
 					srcreq->cropRegion2 = zoom0.crop_w;
@@ -2743,9 +2745,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						zoom.crop_w = area[3];
 						zoom.crop_h = area[4];
 						camera_get_sensor_mode_trim(1, &zoom1, &wid, &height);
-						if (CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom)) {
-							break;
-						}
+						CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom);
 						area[1] = zoom.crop_x;
 						area[2] = zoom.crop_y;
 						area[3] = zoom.crop_w;
@@ -2871,8 +2871,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			srcreq->outputStreamMask = tmpMask;
 		}
 	}
-    if ((mCameraState.preview_state == SPRD_IDLE && srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD && srcreq->isCropSet == false)\
-		|| (srcreq->captureIntent == CAPTURE_INTENT_STILL_CAPTURE)){
+    if (((mCameraState.preview_state == SPRD_IDLE && srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD) || \
+		(srcreq->captureIntent == CAPTURE_INTENT_STILL_CAPTURE) || IsCapIntChange) && srcreq->isCropSet == false){
 		srcreq->cropRegion0 = zoom0.crop_x;
 		srcreq->cropRegion1 = zoom0.crop_y;
 		srcreq->cropRegion2 = zoom0.crop_w;
