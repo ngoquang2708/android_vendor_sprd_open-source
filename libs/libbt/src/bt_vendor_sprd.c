@@ -330,7 +330,7 @@ int read_mac_from_file(const char * file_path,  char * mac)
 }
 
 
-
+#if 0
 //******************create bt addr***********************
 static void mac_rand(char *btmac)
 {
@@ -367,6 +367,7 @@ static  BOOLEAN write_btmac2file(const char * file_path,char *btmac)
     }
     return FALSE;
 }
+#endif
 uint8 ConvertHexToBin(
 			uint8        *hex_ptr,     // in: the hexadecimal format string
 			uint16       length,       // in: the length of hexadecimal string
@@ -436,7 +437,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
         ALOGI("%s: %s exists",__FUNCTION__, BT_MAC_FILE);
         read_btmac=read_mac_from_file(BT_MAC_FILE,bt_mac);
     }
-
+#if 0
     if(0==read_btmac)
     {
         if(access(BT_MAC_FILE_TEMP, F_OK) == 0)
@@ -452,7 +453,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
         if(write_btmac2file(BT_MAC_FILE_TEMP,bt_mac))
             read_btmac=1;
     }
-    
+#endif
     if(read_btmac == 1)
     {
         for(i=0; i<6; i++)
