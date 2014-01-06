@@ -119,7 +119,7 @@
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
 #define CARD_VAUDIO_W  "VIRTUAL AUDIO W"
 #define CARD_SCO    "saudiovoip"
-#define CARD_BT_SCO    "bt-i2s"
+#define CARD_BT_SCO    "all-i2s"
 
 
 /* ALSA ports for sprd */
