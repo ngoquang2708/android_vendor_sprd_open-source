@@ -61,12 +61,12 @@ static unsigned long int agps_c_plane_stack_network_ulreq(unsigned int ota_type,
 
 	p += sprintf(p, "AT+SPAGPSUL=");
 	p += sprintf(p, "%d,%d,%d,%ld,", isfinal, ota_type, rrc_msg_type, msg_size);
-	*(p++) = '\"'; 
+	p += sprintf(p, "\"");
 	while (msg_size) {
 		p += sprintf(p, "%02x", *p_msg_data++);
 		msg_size--;
 	}
-	*(p++) = '\"';
+	p += sprintf(p, "\"");
 
 	if (isfinal) {
 		handle_NotifyStopSession();
