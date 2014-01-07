@@ -2,15 +2,20 @@
 #ifndef __ENG_CMD4LINUXHDLR_H__
 #define __ENG_CMD4LINUXHDLR_H__
 
-#define SPRDENG_OK		"OK"
-#define SPRDENG_ERROR	"ERROR"
-#define ENG_STREND		"\r\n"
-#define ENG_TESTMODE	"engtestmode"
-#define ENG_BATVOL		"/sys/class/power_supply/battery/real_time_voltage"
-#define ENG_STOPCHG		"/sys/class/power_supply/battery/stop_charge"
-#define ENG_CURRENT		"/sys/class/power_supply/battery/real_time_current"
-#define ENG_RECOVERYCMD	"/cache/recovery/command"
-#define ENG_RECOVERYDIR	"/cache/recovery"
+#define SPRDENG_OK			"OK"
+#define SPRDENG_ERROR		"ERROR"
+#define ENG_STREND			"\r\n"
+#define ENG_TESTMODE		"engtestmode"
+#define ENG_BATVOL			"/sys/class/power_supply/battery/real_time_voltage"
+#define ENG_STOPCHG			"/sys/class/power_supply/battery/stop_charge"
+#define ENG_CURRENT			"/sys/class/power_supply/battery/real_time_current"
+#define ENG_BATTVOL_AVG 	"/sys/class/power_supply/battery/current_avg"
+#define ENG_BATTVOL_NOW 	"/sys/class/power_supply/battery/voltage_now"
+#define ENG_BATTCHG_STS 	"/sys/class/power_supply/battery/status"
+#define ENG_BATTTEMP   		"/sys/class/power_supply/battery/temp"
+#define ENG_BATTTEMP_ADC 	"/sys/class/power_supply/battery/temp_adc"
+#define ENG_RECOVERYCMD		"/cache/recovery/command"
+#define ENG_RECOVERYDIR		"/cache/recovery"
 #define ENG_CHARGERTEST_FILE "/productinfo/chargertest.file"
 
 
@@ -39,7 +44,10 @@ typedef enum{
     CMD_END,
     CMD_SPBTTEST,
     CMD_SPWIFITEST,
-    CMD_SPGPSTEST
+    CMD_SPGPSTEST,
+    CMD_BATTTEST,
+    CMD_TEMPTEST,
+    CMD_RTCTEST
 }ENG_CMD;
 
 
