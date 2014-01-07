@@ -67,10 +67,43 @@ SprdOverlayPlane::SprdOverlayPlane(FrameBufferInfo *fbInfo)
 #endif
     SprdDisplayPlane::setGeometry(mFBInfo->fb_width, mFBInfo->fb_height, mDisplayFormat);
 
+    SprdDisplayPlane::setPlaneRunThreshold(300);
+
     mContext = SprdDisplayPlane::getPlaneContext();
 
     open();
 }
+
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+SprdOverlayPlane::SprdOverlayPlane(FrameBufferInfo *fbInfo, SprdPrimaryPlane *PrimaryPlane)
+    : SprdDisplayPlane(),
+      mFBInfo(fbInfo),
+      mPrimaryPlane(PrimaryPlane),
+      mHWLayer(NULL),
+      mOverlayPlaneCount(1),
+      mFreePlaneCount(1),
+      mContext(NULL),
+      mBuffer(NULL),
+      mDisplayFormat(-1),
+      mPlaneDisable(false),
+      mDebugFlag(0),
+      mDumpFlag(0)
+{
+#ifdef VIDEO_LAYER_USE_RGB
+    mDisplayFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+#else
+#ifdef GSP_OUTPUT_USE_YUV420
+    mDisplayFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+#else
+    mDisplayFormat = HAL_PIXEL_FORMAT_YCbCr_422_SP;
+#endif
+#endif
+
+    mContext = SprdDisplayPlane::getPlaneContext();
+
+    open();
+}
+#endif
 
 SprdOverlayPlane::~SprdOverlayPlane()
 {
@@ -84,7 +117,11 @@ private_handle_t* SprdOverlayPlane::dequeueBuffer()
     queryDebugFlag(&mDebugFlag);
     queryDumpFlag(&mDumpFlag);
 
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    mBuffer = mPrimaryPlane->dequeueFriendBuffer();
+#else
     mBuffer = SprdDisplayPlane::dequeueBuffer();
+#endif
     if (mBuffer == NULL)
     {
         ALOGE("SprdOverlayPlane cannot get ION buffer");
@@ -95,14 +132,20 @@ private_handle_t* SprdOverlayPlane::dequeueBuffer()
 
     mFreePlaneCount = 1;
 
+    ALOGI_IF(mDebugFlag, "SprdOverlayPlane::dequeueBuffer phy addr:%p", (void *)mBuffer->phyaddr);
+
     return mBuffer;
 }
 
 int SprdOverlayPlane::queueBuffer()
 {
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    mPrimaryPlane->queueFriendBuffer();
+#else
     SprdDisplayPlane::queueBuffer();
+#endif
 
-    if(flush() != true)
+    if(flush() == NULL)
     {
         return -1;
     }
@@ -179,12 +222,19 @@ enum PlaneFormat SprdOverlayPlane::getPlaneFormat()
     return format;
 }
 
-bool SprdOverlayPlane::flush()
+private_handle_t* SprdOverlayPlane::flush()
 {
     enum PlaneFormat format;
     struct overlay_setting *BaseContext = &(mContext->BaseContext);
 
     InvalidatePlaneContext();
+
+    private_handle_t* flushingBuffer = NULL;
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    flushingBuffer = mPrimaryPlane->flushFriend();
+#else
+    flushingBuffer = SprdDisplayPlane::flush();
+#endif
 
     BaseContext->layer_index = SPRD_LAYERS_IMG;
 
@@ -227,14 +277,14 @@ bool SprdOverlayPlane::flush()
     BaseContext->rect.w = mFBInfo->fb_width;
     BaseContext->rect.h = mFBInfo->fb_height;
 
-    if (mBuffer == NULL)
+    if (flushingBuffer == NULL)
     {
         ALOGE("SprdOverlayPlane: Cannot get the display buffer");
-        return false;
+        return NULL;
     }
-    BaseContext->buffer = (unsigned char *)(mBuffer->phyaddr);
+    BaseContext->buffer = (unsigned char *)(flushingBuffer->phyaddr);
 
-    ALOGI_IF(mDebugFlag, "SET_OVERLAY parameter datatype = %d, x = %d, y = %d, w = %d, h = %d, buffer = 0x%08x",
+    ALOGI_IF(mDebugFlag, "SprdOverlayPlane::flush SET_OVERLAY parameter datatype = %d, x = %d, y = %d, w = %d, h = %d, buffer = 0x%08x",
              BaseContext->data_type,
              BaseContext->rect.x,
              BaseContext->rect.y,
@@ -246,7 +296,7 @@ bool SprdOverlayPlane::flush()
     {
         const char *name = "OverlayVideo";
 
-        dumpOverlayImage(mBuffer, name);
+        dumpOverlayImage(flushingBuffer, name);
     }
 
     if (ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext) == -1)
@@ -255,16 +305,25 @@ bool SprdOverlayPlane::flush()
         ioctl(mFBInfo->fbfd, SPRD_FB_SET_OVERLAY, BaseContext);//Fix ME later
     }
 
-    return true;
+    return flushingBuffer;
 }
 
 
 bool SprdOverlayPlane::open()
 {
-    SprdDisplayPlane::open();
-
-    SprdDisplayPlane::dequeueBuffer();
-    SprdDisplayPlane::dequeueBuffer();
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    if (mPrimaryPlane == NULL)
+    {
+        ALOGE("PrimaryPlane is NULL");
+        return false;
+    }
+#else
+    if (SprdDisplayPlane::open() == false)
+    {
+        ALOGE("SprdOverlayPlane::open failed");
+        return false;
+    }
+#endif
 
     mOverlayPlaneCount = 1;
     mFreePlaneCount = 1;
@@ -274,7 +333,9 @@ bool SprdOverlayPlane::open()
 
 bool SprdOverlayPlane::close()
 {
+#ifndef BORROW_PRIMARYPLANE_BUFFER
     SprdDisplayPlane::close();
+#endif
 
     mFreePlaneCount = 0;
 
@@ -311,12 +372,8 @@ private_handle_t* SprdOverlayPlane::getPlaneBuffer()
 {
     if (mBuffer == NULL)
     {
-        //mBuffer = SprdDisplayPlane::dequeueBuffer();
-        //if (mBuffer == NULL)
-        //{
-            ALOGE("OverlayPlane buffer is NULL, dequeueBuffer failed");
-            return NULL;
-        //}
+        ALOGE("OverlayPlane buffer is NULL, dequeueBuffer failed");
+        return NULL;
     }
 
     return mBuffer;

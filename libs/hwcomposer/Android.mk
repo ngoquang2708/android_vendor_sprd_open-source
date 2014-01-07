@@ -43,14 +43,24 @@ LOCAL_C_INCLUDES := \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
 
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
-LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDhwcomposer\"
+LOCAL_CFLAGS:= -DLOG_TAG=\"SPRDHWComposer\"
 LOCAL_CFLAGS += -D_USE_SPRD_HWCOMPOSER -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
+
+#DEVICE_OVERLAYPLANE_BORROW_PRIMARYPLANE_BUFFER can make SprdPrimaryPlane
+#share the plane buffer to SprdOverlayPlane,
+#save 3 screen size YUV420 buffer memory.
+#DEVICE_PRIMARYPLANE_USE_RGB565 make the SprdPrimaryPlane use
+#RGB565 format buffer to display, also can save 4 screen size
+#buffer memory, but it will reduce the image quality.
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 DEVICE_WITH_GSP := true
+DEVICE_OVERLAYPLANE_BORROW_PRIMARYPLANE_BUFFER := true
 endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 DEVICE_WITH_GSP := true
+DEVICE_OVERLAYPLANE_BORROW_PRIMARYPLANE_BUFFER := true
+#DEVICE_PRIMARYPLANE_USE_RGB565 := true
 endif
 
 ifeq ($(strip $(DEVICE_WITH_GSP)),true)
@@ -78,7 +88,13 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	endif
 endif
 
+ifeq ($(strip $(DEVICE_PRIMARYPLANE_USE_RGB565)), true)
+	LOCAL_CFLAGS += -DPRIMARYPLANE_USE_RGB565
+endif
 
+ifeq ($(strip $(DEVICE_OVERLAYPLANE_BORROW_PRIMARYPLANE_BUFFER)), true)
+	LOCAL_CFLAGS += -DBORROW_PRIMARYPLANE_BUFFER
+endif
 
 # OVERLAY_COMPOSER_GPU_CONFIG: Enable or disable OVERLAY_COMPOSER_GPU
 # Macro, OVERLAY_COMPOSER will do Hardware layer blending and then

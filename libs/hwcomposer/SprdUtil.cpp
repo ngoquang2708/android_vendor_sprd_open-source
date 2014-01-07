@@ -380,7 +380,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         {
             ALOGE("open GSP device failed");
             openFlag = 0;
-			return -1;
+            return -1;
         }
     }
 
@@ -464,7 +464,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 return -1;
             }
 #ifdef GSP_ADDR_TYPE_PHY
-			MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
+            MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
             gsp_cfg_info.layer0_info.src_addr.addr_y = private_h1->phyaddr;
 #elif defined (GSP_ADDR_TYPE_IOVA)
             //gsp_cfg_info.layer0_info.src_addr.addr_y = ion_get_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer1);
@@ -673,6 +673,28 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         }
         else
         {
+            gsp_cfg_info.layer1_info.grey.r_val = 0;
+            gsp_cfg_info.layer1_info.grey.g_val = 0;
+            gsp_cfg_info.layer1_info.grey.b_val = 0;
+            gsp_cfg_info.layer1_info.clip_rect.st_x = 0;
+            gsp_cfg_info.layer1_info.clip_rect.st_y = 0;
+
+            gsp_cfg_info.layer1_info.clip_rect.rect_w = mFBInfo->fb_width;
+            gsp_cfg_info.layer1_info.clip_rect.rect_h = mFBInfo->fb_height;
+            gsp_cfg_info.layer1_info.pitch = mFBInfo->fb_width;
+
+            //the 3-plane addr should not be used by GSP
+            gsp_cfg_info.layer1_info.src_addr.addr_y = gsp_cfg_info.layer0_info.src_addr.addr_y;
+            gsp_cfg_info.layer1_info.src_addr.addr_uv = gsp_cfg_info.layer0_info.src_addr.addr_uv;
+            gsp_cfg_info.layer1_info.src_addr.addr_v = gsp_cfg_info.layer0_info.src_addr.addr_v;
+
+            gsp_cfg_info.layer1_info.pallet_en = 1;
+            gsp_cfg_info.layer1_info.alpha = 0x1;
+
+            gsp_cfg_info.layer1_info.rot_angle = GSP_ROT_ANGLE_0;
+            gsp_cfg_info.layer1_info.des_pos.pos_pt_x = 0;
+            gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
+            gsp_cfg_info.layer1_info.layer_en = 1;
             ALOGE("GSP process layer2 L%d,osd layer use virtual addr!",__LINE__);
         }
 

@@ -45,6 +45,8 @@
 #include <sys/mman.h>
 #include <cutils/log.h>
 #include <utils/Vector.h>
+#include <utils/Condition.h>
+#include <utils/Mutex.h>
 #include <binder/MemoryHeapIon.h>
 
 #include "sprd_fb.h"
@@ -84,12 +86,19 @@ struct BufferSlot
     private_handle_t* mIonBuffer;
 };
 
-enum PlaneFormat{
+enum PlaneFormat {
     PLANE_FORMAT_RGB888 = 1,
     PLANE_FORMAT_RGB565 = 2,
     PLANE_FORMAT_YUV420 = 3,
     PLANE_FORMAT_YUV422 = 4,
     PLANE_FORMAT_NONE = 5,
+};
+
+enum PlaneRunStatus {
+    PLANE_OPENED = 1,
+    PLANE_CLOSED = 2,
+    PLANE_SHOULD_CLOSED = 3,
+    PLANE_STATUS_INVALID = 4,
 };
 
 typedef struct DisplayPlaneContext{
@@ -120,6 +129,28 @@ public:
     unsigned int getWidth()  { return mWidth; }
     unsigned int getHeight() { return mHeight; }
 
+    inline int getPlaneRunThreshold()
+    {
+        return mPlaneRunThreshold;
+    }
+
+    inline void recordPlaneIdleCount()
+    {
+        mPlaneIdleCount++;
+    }
+
+    inline void resetPlaneIdleCount()
+    {
+        mPlaneIdleCount = 0;
+    }
+
+    enum PlaneRunStatus queryPlaneRunStatus();
+
+    int getPlaneUsage()
+    {
+        return mPlaneUsage;
+    }
+
 protected:
     virtual bool open();
     virtual bool close();
@@ -127,7 +158,7 @@ protected:
     /*
      *  Update SprdDisplayPlane display registers.
      * */
-    virtual bool flush();
+    virtual private_handle_t* flush();
     //virtual bool display();
 
     inline PlaneContext *getPlaneContext()
@@ -137,8 +168,17 @@ protected:
 
     virtual private_handle_t* getPlaneBuffer();
     virtual void getPlaneGeometry(unsigned int *width, unsigned int *height, int *format);
+    inline int getPlaneBufferIndex()
+    {
+        return mDisplayBufferIndex;
+    }
 
     void setGeometry(unsigned int width, unsigned int height, int format);
+
+    inline void setPlaneRunThreshold(int threshold)
+    {
+        mPlaneRunThreshold = threshold;
+    }
 
 private:
     unsigned int mWidth;
@@ -147,10 +187,17 @@ private:
     bool InitFlag;
     PlaneContext *mContext;
     int mBufferCount;
+    int mPlaneUsage;
     BufferSlot mSlots[PLANE_BUFFER_NUMBER];
     int mDisplayBufferIndex;
-    //typedef Vector<int> FIFO;
-    //FIFO mQueue;
+    int mFlushingBufferIndex;
+    int mPlaneRunThreshold;
+    int mPlaneIdleCount;
+    typedef Vector<int> FIFO;
+    FIFO mQueue;
+    mutable Condition mCondition;
+    mutable Mutex mLock;
+    bool mWaitingBuffer;
     int mDebugFlag;
 
 
@@ -158,6 +205,8 @@ private:
     {
         return InitFlag;
     }
+
+    private_handle_t* createPlaneBuffer(int index);
 };
 
 

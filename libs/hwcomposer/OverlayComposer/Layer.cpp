@@ -485,6 +485,9 @@ int Layer::draw()
 
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_TEXTURE_EXTERNAL_OES);
+#ifdef PRIMARYPLANE_USE_RGB565
+    glEnable(GL_DITHER);
+#endif
 
 
     /*
@@ -526,6 +529,9 @@ int Layer::draw()
     glDisable(GL_BLEND);
 
 
+#ifdef PRIMARYPLANE_USE_RGB565
+    glDisable(GL_DITHER);
+#endif
     glDisable(GL_TEXTURE_EXTERNAL_OES);
     glDisable(GL_TEXTURE_2D);
 

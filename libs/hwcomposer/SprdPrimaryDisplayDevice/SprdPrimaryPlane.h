@@ -42,6 +42,11 @@
 #include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+#include "SprdOverlayPlane.h"
+class SprdOverlayPlane;
+#endif
+
 using namespace android;
 
 
@@ -128,7 +133,7 @@ private:
     int mDebugFlag;
     int mDumpFlag;
 
-    virtual bool flush();
+    virtual private_handle_t* flush();
     virtual bool open();
     virtual bool close();
 
@@ -153,6 +158,19 @@ private:
     {
         mFreePlaneCount--;
     }
+
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+    /*
+     *  Friend function for SprdOverlayPlane
+     * */
+    friend SprdOverlayPlane;
+
+    private_handle_t* dequeueFriendBuffer();
+
+    int queueFriendBuffer();
+
+    private_handle_t* flushFriend();
+#endif
 
 };
 
