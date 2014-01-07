@@ -34,7 +34,7 @@ import android.content.ContentResolver;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
+import android.telephony.TelephonyManager;
 
 public class APCTReceiver extends BroadcastReceiver
 {
@@ -45,7 +45,7 @@ public class APCTReceiver extends BroadcastReceiver
     int sim_count;
 
     public APCTReceiver() {
-        sim_count = PhoneFactory.getPhoneCount();
+        sim_count = TelephonyManager.getPhoneCount();
         Log.d("APCT_DEBUG", "APCTReceiver sim_count = " + sim_count);
         sim_time = new long[sim_count << 1];
         first_flg = new boolean[sim_count];
@@ -87,7 +87,7 @@ public class APCTReceiver extends BroadcastReceiver
     {
         if (NET_ACTION.equals(intent.getAction()))
         {
-            int sim_count = PhoneFactory.getPhoneCount();
+            int sim_count = TelephonyManager.getPhoneCount();
             int phoneId = intent.getIntExtra(Phone.PHONE_ID, 0);
             ServiceState serviceState = ServiceState.newFromBundle(intent.getExtras());
 
