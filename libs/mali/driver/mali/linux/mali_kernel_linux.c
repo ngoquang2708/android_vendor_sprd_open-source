@@ -22,7 +22,7 @@
 #include "mali_kernel_license.h"
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
-#include <linux/mali/mali_utgard.h>
+
 #include "mali_kernel_common.h"
 #include "mali_session.h"
 #include "mali_kernel_core.h"
@@ -38,6 +38,8 @@
 #if defined(CONFIG_MALI400_INTERNAL_PROFILING)
 #include "mali_profiling_internal.h"
 #endif
+
+#include <linux/dma-mapping.h>
 
 /* Streamline support for the Mali driver */
 #if defined(CONFIG_TRACEPOINTS) && defined(CONFIG_MALI400_PROFILING)
@@ -174,7 +176,7 @@ static int mali_driver_runtime_resume(struct device *dev);
 static int mali_driver_runtime_idle(struct device *dev);
 #endif
 
-#if defined(MALI_FAKE_PLATFORM_DEVICE)
+#ifndef CONFIG_OF
 extern int mali_platform_device_register(void);
 extern int mali_platform_device_unregister(void);
 #endif
@@ -206,6 +208,22 @@ static const struct dev_pm_ops mali_dev_pm_ops = {
 #endif
 
 /* The Mali device driver struct */
+#ifdef CONFIG_OF
+#include <linux/of.h>
+static struct mali_gpu_device_data mali_gpu_data =
+{
+	.shared_mem_size = ARCH_MALI_MEMORY_SIZE_DEFAULT,
+	.utilization_interval = 300,
+	.utilization_callback = mali_platform_utilization,
+};
+
+
+const struct of_device_id gpu_ids[] __initconst = {
+	{ .compatible = "sprd,mali-utgard", .data = (void *)&mali_gpu_data, },
+	{},
+};
+#endif
+
 static struct platform_driver mali_platform_driver = {
 	.probe  = mali_probe,
 	.remove = mali_remove,
@@ -217,11 +235,15 @@ static struct platform_driver mali_platform_driver = {
 		.name   = MALI_GPU_NAME_UTGARD,
 		.owner  = THIS_MODULE,
 		.bus = &platform_bus_type,
+#ifdef CONFIG_OF
+		.of_match_table = gpu_ids,
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 		.pm = &mali_dev_pm_ops,
 #endif
 	},
 };
+
 
 /* Linux misc device operations (/dev/mali) */
 struct file_operations mali_fops = {
@@ -369,7 +391,7 @@ int mali_module_init(void)
 #endif
 
 	/* Initialize module wide settings */
-#if defined(MALI_FAKE_PLATFORM_DEVICE)
+#ifndef CONFIG_OF
 	MALI_DEBUG_PRINT(2, ("mali_module_init() registering device\n"));
 	err = mali_platform_device_register();
 	if (0 != err) {
@@ -383,7 +405,7 @@ int mali_module_init(void)
 
 	if (0 != err) {
 		MALI_DEBUG_PRINT(2, ("mali_module_init() Failed to register driver (%d)\n", err));
-#if defined(MALI_FAKE_PLATFORM_DEVICE)
+#ifndef CONFIG_OF
 		mali_platform_device_unregister();
 #endif
 		mali_platform_device = NULL;
@@ -415,7 +437,7 @@ void mali_module_exit(void)
 
 	platform_driver_unregister(&mali_platform_driver);
 
-#if defined(MALI_FAKE_PLATFORM_DEVICE)
+#ifndef CONFIG_OF
 	MALI_DEBUG_PRINT(2, ("mali_module_exit() unregistering device\n"));
 	mali_platform_device_unregister();
 #endif
@@ -423,9 +445,25 @@ void mali_module_exit(void)
 	MALI_PRINT(("Mali device driver unloaded\n"));
 }
 
+#ifdef CONFIG_OF
+static void mali_prn_resource(void )
+{
+	int i;
+	MALI_DEBUG_PRINT(2, ("mali resource number ,%d, \n", mali_platform_device->num_resources));
+	for (i = 0; i < mali_platform_device->num_resources; i++) {
+		MALI_DEBUG_PRINT(2, ("mali resource ,%d, \n",i));
+		MALI_DEBUG_PRINT(2, ("mal resource name:%s\n", mali_platform_device->resource[i].name));
+		MALI_DEBUG_PRINT(2, ("mal resource flags:%d\n", mali_platform_device->resource[i].flags));
+		MALI_DEBUG_PRINT(2, ("mal resource start:%x\n", mali_platform_device->resource[i].start));
+		MALI_DEBUG_PRINT(2, ("mal resource end:%x\n", mali_platform_device->resource[i].end));
+	}
+
+}
+#endif
+
 static int mali_probe(struct platform_device *pdev)
 {
-	int err;
+	int err = -1;
 
 	MALI_DEBUG_PRINT(2, ("mali_probe(): Called for platform device %s\n", pdev->name));
 
@@ -436,6 +474,16 @@ static int mali_probe(struct platform_device *pdev)
 	}
 
 	mali_platform_device = pdev;
+
+#ifdef CONFIG_OF
+	mali_prn_resource();
+
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32),
+	pdev->dev.platform_data = &mali_gpu_data,
+	pdev->dev.release = mali_platform_device_release,
+
+	mali_power_initialize(pdev);
+#endif
 
 	if (_MALI_OSK_ERR_OK == _mali_osk_wq_init()) {
 		/* Initialize the Mali GPU HW specified by pdev */

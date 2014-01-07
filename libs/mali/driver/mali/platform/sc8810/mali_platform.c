@@ -27,12 +27,13 @@
 #include <mach/globalregs.h>
 #include "mali_kernel_common.h"
 #include "base.h"
+#include "mali_kernel_linux.h"
 
 #define SPRD_MALI_PHYS 0xA0010000
 #define IRQ_G3D_INT 25
 	 
-static void mali_platform_device_release(struct device *device);
-static void mali_platform_utilization(unsigned int);
+void mali_platform_device_release(struct device *device);
+void mali_platform_utilization(unsigned int);
 
 static struct resource mali_gpu_resources[] =
 {
@@ -126,7 +127,7 @@ void mali_platform_device_unregister(void)
 	}
 }
 
-static void mali_platform_device_release(struct device *device)
+void mali_platform_device_release(struct device *device)
 {
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
 }

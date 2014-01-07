@@ -24,6 +24,7 @@
 #endif
 #include <asm/io.h>
 #include <linux/mali/mali_utgard.h>
+#include "mali_kernel_linux.h"
 
 #include <mach/irqs.h>
 #include <mach/hardware.h>
@@ -65,7 +66,7 @@ static struct clk* gpu_clock_i = NULL;
 static struct clk* clock_256m = NULL;
 static struct clk* clock_312m = NULL;
 static int max_div = GPU_MAX_DIVISION;
-const int min_div = GPU_MIN_DIVISION;
+static const int min_div = GPU_MIN_DIVISION;
 #if GPU_FREQ_CONTROL
 static int mali_freq_select = 1;
 static int old_mali_freq_select = 1;
@@ -76,12 +77,9 @@ static int old_gpu_clock_div = 1;
 static int gpu_clock_on = 0;
 static int gpu_power_on = 0;
 #if !GPU_GLITCH_FREE_DFS
-static struct workqueue_struct *gpu_dfs_workqueue = NULL;
+ struct workqueue_struct *gpu_dfs_workqueue = NULL;
 #endif
 static void gpu_change_freq_div(void);
-
-static void mali_platform_device_release(struct device *device);
-static void mali_platform_utilization(struct mali_gpu_utilization_data *data);
 
 static struct resource mali_gpu_resources[] =
 {
@@ -113,12 +111,9 @@ static struct platform_device mali_gpu_device =
 	.dev.release = mali_platform_device_release,
 };
 
-int mali_platform_device_register(void)
+extern int mali_dfs_flag;
+void mali_power_initialize(struct platform_device *pdev)
 {
-	int err = -1;
-
-	MALI_DEBUG_PRINT(4, ("mali_platform_device_register() called\n"));
-
 	gpu_clock = clk_get(NULL, "clk_gpu");
 	gpu_clock_i = clk_get(NULL, "clk_gpu_i");
 	clock_256m = clk_get(NULL, "clk_256m");
@@ -129,6 +124,7 @@ int mali_platform_device_register(void)
 	gpuinfo_transition_latency=300;
 	scaling_max_freq=256;
 	scaling_min_freq=85;
+	mali_dfs_flag=0;
 
 	MALI_DEBUG_ASSERT(gpu_clock);
 	MALI_DEBUG_ASSERT(gpu_clock_i);
@@ -145,9 +141,17 @@ int mali_platform_device_register(void)
 	if(!gpu_clock_on)
 	{
 		gpu_clock_on = 1;
+#ifdef CONFIG_COMMON_CLOCK
+		clk_prepare_enable(gpu_clock_i);
+#else
 		clk_enable(gpu_clock_i);
+#endif
 		clk_set_parent(gpu_clock,clock_256m);
+#ifdef CONFIG_COMMON_CLOCK
+		clk_prepare_enable(gpu_clock);
+#else
 		clk_enable(gpu_clock);
+#endif
 		udelay(300);
 	}
 #if !GPU_GLITCH_FREE_DFS
@@ -156,18 +160,24 @@ int mali_platform_device_register(void)
 		gpu_dfs_workqueue = create_singlethread_workqueue("gpu_dfs");
 	}
 #endif
+#ifdef CONFIG_PM_RUNTIME
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
+	pm_runtime_set_autosuspend_delay(&(pdev->dev), 50);
+	pm_runtime_use_autosuspend(&(pdev->dev));
+#endif
+	pm_runtime_enable(&(pdev->dev));
+#endif
+}
 
+int mali_platform_device_register(void)
+{
+	int err = -1;
+
+	MALI_DEBUG_PRINT(4, ("mali_platform_device_register() called\n"));
 	err = platform_device_register(&mali_gpu_device);
 	if (0 == err)
 	{
-#ifdef CONFIG_PM_RUNTIME
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-		pm_runtime_set_autosuspend_delay(&(mali_gpu_device.dev), 50);
-		pm_runtime_use_autosuspend(&(mali_gpu_device.dev));
-#endif
-		pm_runtime_enable(&(mali_gpu_device.dev));
-#endif
-
+		mali_power_initialize(&mali_gpu_device);
 		return 0;
 	}
 
@@ -206,7 +216,7 @@ void mali_platform_device_unregister(void)
 	}
 }
 
-static void mali_platform_device_release(struct device *device)
+ void mali_platform_device_release(struct device *device)
 {
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
 }
@@ -230,9 +240,17 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!gpu_clock_on)
 		{
 			gpu_clock_on = 1;
+#ifdef CONFIG_COMMON_CLOCK
+			clk_prepare_enable(gpu_clock_i);
+#else
 			clk_enable(gpu_clock_i);
+#endif
 			clk_set_parent(gpu_clock,clock_256m);
+#ifdef CONFIG_COMMON_CLOCK
+			clk_prepare_enable(gpu_clock);
+#else
 			clk_enable(gpu_clock);
+#endif
 			udelay(300);
 		}
 		break;
@@ -339,7 +357,6 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			break;
 	}
 #endif
-
 	// if the loading ratio is greater then 90%, switch the clock to the maximum
 	if(utilization >= (256*9/10))
 	{
@@ -400,7 +417,11 @@ static void gpu_change_freq_div(void)
 			{
 				case 3:
 					scaling_max_freq=GPU_LEVEL3_MAX;
+#ifdef CONFIG_COMMON_CLOCK
+					clk_prepare_enable(clock_312m);
+#else
 					clk_enable(clock_312m);
+#endif
 					clk_set_parent(gpu_clock,clock_312m);
 					clk_disable(clock_256m);
 					udelay(200);
@@ -410,7 +431,11 @@ static void gpu_change_freq_div(void)
 				case 2:
 				default:
 					scaling_max_freq=GPU_LEVEL1_MAX;
+#ifdef CONFIG_COMMON_CLOCK
+					clk_prepare_enable(clock_256m);
+#else
 					clk_enable(clock_256m);
+#endif
 					clk_set_parent(gpu_clock,clock_256m);
 					clk_disable(clock_312m);
 					udelay(200);
