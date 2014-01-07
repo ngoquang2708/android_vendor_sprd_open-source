@@ -2245,15 +2245,20 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	MemoryHeapIon *pHeapIon;
 	if(NULL == memory) {
-		LOGE("wxz: Fail to GetCachePmem, memory is NULL.");
+		LOGE("Fail to GetCachePmem, memory is NULL.");
 		return NULL;
+	} else {
+		memset(memory, 0 , sizeof(sprd_camera_memory_t));
 	}
+
 	memset(memory, 0, sizeof(*memory));
 	memory->busy_flag = false;
 
 	camera_memory_t *camera_memory;
 	int paddr, psize;
 	int  acc = buf_size *num_bufs ;
+	void *base = NULL;
+	int result = 0;
 	GET_START_TIME;
 
 	if(s_mem_method==0)
@@ -2283,10 +2288,22 @@ sprd_camera_memory_t* SprdCameraHardware::GetCachePmem(int buf_size, int num_buf
                  goto getpmem_end;
        }
 	if(s_mem_method==0){
-		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+		result = pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
 	} else {
-		pHeapIon->get_mm_iova(&paddr, &psize);
+		result = pHeapIon->get_mm_iova(&paddr, &psize);
 	}
+
+	if (result < 0) {
+		LOGE("GetPmem: error get pHeapIon addr - method %d result 0x%x ",s_mem_method, result);
+		goto getpmem_end;
+	}
+
+	base =  pHeapIon->getBase();
+	if (0xFFFFFFFF == (uint32_t)base) {
+		LOGE("GetPmem: error pHeapIon->getBase() failed 0x%x",(uint32_t)base);
+		goto  getpmem_end;
+	}
+
 	memory->ion_heap = pHeapIon;
 	memory->camera_memory = camera_memory;
 	memory->phys_addr = paddr;
@@ -2316,15 +2333,19 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 {
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	if(NULL == memory) {
-		LOGE("wxz: Fail to GetPmem, memory is NULL.");
+		LOGE("Fail to GetPmem, memory is NULL.");
 		return NULL;
+	} else {
+		memset(memory, 0 , sizeof(sprd_camera_memory_t));
 	}
 
 	camera_memory_t *camera_memory;
 	int paddr, psize;
 	int order = 0, acc = buf_size *num_bufs ;
 	acc = camera_get_size_align_page(acc);
-	MemoryHeapIon *pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+	MemoryHeapIon *pHeapIon = NULL;
+	void *base = NULL;
+	int result = 0;
 
 	if(s_mem_method==0)
 		pHeapIon = new MemoryHeapIon("/dev/ion", acc , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
@@ -2345,10 +2366,22 @@ sprd_camera_memory_t* SprdCameraHardware::GetPmem(int buf_size, int num_bufs)
 	}
 
 	if(s_mem_method==0){
-		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+		result = pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
 	} else {
-		pHeapIon->get_mm_iova(&paddr, &psize);
+		result = pHeapIon->get_mm_iova(&paddr, &psize);
 	}
+
+	if (result < 0) {
+		LOGE("GetPmem: error get pHeapIon addr - method %d result 0x%x ",s_mem_method, result);
+		goto getpmem_end;
+	}
+
+	base =  pHeapIon->getBase();
+	if (0xFFFFFFFF == (uint32_t)base) {
+		LOGE("GetPmem: error pHeapIon->getBase() failed 0x%x",(uint32_t)base);
+		goto  getpmem_end;
+	}
+
 	memory->ion_heap = pHeapIon;
 	memory->camera_memory = camera_memory;
 	memory->phys_addr = paddr;
