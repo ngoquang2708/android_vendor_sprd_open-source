@@ -33,6 +33,7 @@ import android.os.Message;
 import android.content.SharedPreferences;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
+import android.telephony.TelephonyManager;
 /*End   of  oasis_zp@hisense  2011.2.14*/
 
 /**
@@ -945,7 +946,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
         String str = null;
         final String selection = "(name = 'CMCCWAP DM') and numeric=\""
                 + android.os.SystemProperties.get(
-                PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "")
+                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "")
                 + "\"";
             Log.d(TAG, "readGprsCmwapParam     selection:  = " + selection);
         Cursor cursor = _context.getContentResolver().query(
@@ -985,7 +986,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
         String str = null;
         final String selection = "(name = 'CMCCNET' or name='CMNET' or name='CMCCNET_USIM') and numeric=\""
                 + android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
         Cursor cursor = _context.getContentResolver().query(
          (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(DmService.getInstance().getCurrentPhoneID(),null), null,
                 selection, null, null);
@@ -1030,7 +1031,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
         String str = null;
         final String selection = "(name = 'CMCCWAP' or name='CMWAP' or name='CMCCWAP_USIM') and numeric=\""
                 + android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
         Log.d(TAG, "readGprsCmwapParam     selection:  = " + selection);
         Cursor cursor = _context.getContentResolver().query(
 		 (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(DmService.getInstance().getCurrentPhoneID(),null), null,
@@ -1094,7 +1095,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 					Cursor c = cr.query(
 						 (DmService.getInstance().getCurrentPhoneID()==0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(DmService.getInstance().getCurrentPhoneID(),null), new String[] {
 							"apn"}, where,new String[]{android.os.SystemProperties.get(
-								PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), ""),re},
+							        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), ""),re},
 							Telephony.Carriers.DEFAULT_SORT_ORDER);
 					if(c.moveToNext()){
 						str = c.getString(0);
@@ -1153,7 +1154,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
                 break;
             case MMS_MMSC_IO_HANDLER: {
                 String numric = android.os.SystemProperties.get(
-                        PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "");
+                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "");
                 final String selection = "(name='CMCCWAP' or name='CMWAP' or name='CMCCMMS_USIM') and numeric="
                         + numric;
                 Log.d(TAG, "readMMSParam selection:" + selection);

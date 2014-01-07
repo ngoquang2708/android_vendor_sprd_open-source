@@ -331,7 +331,7 @@ public class DmService extends Service {
         mPhoneStateListener = new PhoneStateListener[mPhoneCnt];
 
         for(int phoneId=0; phoneId<mPhoneCnt; phoneId++){
-            mTelephonyManager[phoneId] = (TelephonyManager) getSystemService(PhoneFactory.
+            mTelephonyManager[phoneId] = (TelephonyManager) getSystemService(TelephonyManager.
                     getServiceName(Context.TELEPHONY_SERVICE,phoneId));
             mPhoneStateListener[phoneId] = getPhoneStateListener(phoneId);
             mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId],
@@ -408,7 +408,7 @@ public class DmService extends Service {
 		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register ");
 	for (num= 0; num < mPhoneCnt; num++)
 	{
-         filter = new IntentFilter(PhoneFactory.getAction("android.intent.action.ACTION_IS_SIM_SMS_READY",num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
+         filter = new IntentFilter(TelephonyManager.getAction("android.intent.action.ACTION_IS_SIM_SMS_READY",num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
          intent1 = registerReceiver(mReceiver, filter);
 		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
 	}
@@ -624,7 +624,7 @@ public class DmService extends Service {
         
         while (attempts < 60) {
           String numeric = android.os.SystemProperties.get(
-                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
             
             if (numeric != null && numeric.length() >= 5) {
                 Log.d(TAG, "initConnectParam numeric: " + numeric);
@@ -696,7 +696,7 @@ public class DmService extends Service {
     private void createDmApn() {
         // Add new apn
           String numeric = android.os.SystemProperties.get(
-                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
 	
         if (numeric == null || numeric.length() < 5) {
             Log.d(TAG, "createDMApn numeric: " + numeric);
@@ -992,7 +992,7 @@ public class DmService extends Service {
     private String getInitApn(Context context) {
         String str = null;
          String numeric = android.os.SystemProperties.get(
-                  PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+                 TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
         final String selection = "name = 'CMCC DM' and numeric=\""
                 + numeric + "\"";
         Log.d(TAG, "getInitApn: selection = " + selection);
@@ -1059,7 +1059,7 @@ public class DmService extends Service {
             mApn = apn;
             final String selection = "name = 'CMCC DM' and numeric=\""
                     + android.os.SystemProperties.get(
-                           PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
             Log.d(TAG, "setAPN: selection = " + selection);
 
             ContentValues values = new ContentValues();
@@ -1092,7 +1092,7 @@ public class DmService extends Service {
         String str = null;
         final String selection = "name = 'CMCC DM' and numeric=\""
                + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                       TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
 
 	
         Cursor cursor = 	context.getContentResolver().query(
@@ -1122,7 +1122,7 @@ public class DmService extends Service {
   //      if (!Vdmc.getInstance().isVDMRunning()) {
             final String selection = "name = 'CMCC DM' and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
             ContentValues values = new ContentValues();
 
             values.put(Telephony.Carriers.PROXY, proxy);
@@ -1155,7 +1155,7 @@ public class DmService extends Service {
         // final String selection = "name = 'CMCC DM' and numeric=\""
         final String selection = "name = 'CMCC DM' and numeric=\""
                 + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
 
         Cursor cursor = context.getContentResolver().query(
         (curPhoneId== 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(curPhoneId,null),
@@ -1184,7 +1184,7 @@ public class DmService extends Service {
  //       if (!Vdmc.getInstance().isVDMRunning()) {
             final String selection = "name = 'CMCC DM' and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
             ContentValues values = new ContentValues();
 
             values.put(Telephony.Carriers.PORT, port);
@@ -1390,7 +1390,7 @@ public class DmService extends Service {
                                 case Activity.RESULT_OK:
 					curPhoneId = phoneid;
                                         TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
-                                                PhoneFactory.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
+                                                TelephonyManager.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
                                         
                                         String imsi = mTelephonyManager.getSubscriberId();
 
