@@ -7,6 +7,7 @@ PRODUCT_PACKAGES += \
 	FileExplorer \
 	NoteBook \
 	EngineerMode \
+	ValidationTools \
 	DrmProvider \
 	CellBroadcastReceiver \
 	SprdQuickSearchBox \
