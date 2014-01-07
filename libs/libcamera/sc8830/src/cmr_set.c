@@ -16,6 +16,7 @@
 
 #include "cmr_set.h"
 #include "sensor_drv_u.h"
+#include "cmr_v4l2.h"
 
 #define DV_FLASH_ON_DV_WITH_PREVIEW 1
 
@@ -1653,16 +1654,8 @@ int camera_autofocus_start(void)
 	}
 
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
-		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
+		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_AUTOFOCUS);
 	}
-/*#ifndef CONFIG_CAMERA_FLASH_CTRL
-	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
-		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			sem_wait(&cxt->cmr_set.isp_alg_sem);
-		}
-		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN);
-	}
-#endif*/
 	CMR_PRINT_TIME;
 	CMR_LOGV("End. %d", ret);
 

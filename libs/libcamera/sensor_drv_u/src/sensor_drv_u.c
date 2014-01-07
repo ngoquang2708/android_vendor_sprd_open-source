@@ -370,17 +370,15 @@ LOCAL int _Sensor_Device_WriteReg(SENSOR_REG_BITS_T_PTR reg)
 LOCAL int _Sensor_Device_SetFlash(uint32_t flash_mode)
 {
 	int ret = SENSOR_SUCCESS;
-	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_SET_FLASH, &flash_mode);
-	if (0 != ret)
-	{
-		CMR_LOGE("_Sensor_Device_SetFlash failed,   flash_mode=%d \n",flash_mode);
+	ret = cmr_v4l2_set_flash(flash_mode);
+	if (ret) {
 		ret = -1;
+		CMR_LOGE("_Sensor_Device_SetFlash failed,   flash_mode=%d \n",flash_mode);
 	}
-
 	return ret;
 }
+
 
 int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
 {

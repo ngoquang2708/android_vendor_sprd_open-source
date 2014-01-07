@@ -69,6 +69,7 @@ enum dcam_parm_id {
 	CAPTURE_SENSOR_SIZE,
 	CAPTURE_FRM_ID_BASE,
 	CAPTURE_SET_CROP,
+	CAPTURE_SET_FLASH,
 	PATH_FRM_DECI = 0x2000,
 	PATH_PAUSE    = 0x2001,
 	PATH_RESUME   = 0x2002,
@@ -763,5 +764,20 @@ static uint32_t cmr_v4l2_get_4cc(uint32_t img_type)
 	return ret_4cc;
 }
 
+int cmr_v4l2_set_flash(uint32_t opt)
+{
+	int                      ret = 0;
+	struct v4l2_streamparm   stream_parm;
+
+	CMR_CHECK_FD;
+	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	stream_parm.parm.capture.capability = CAPTURE_SET_FLASH;
+	stream_parm.parm.capture.reserved[0] = opt;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	if (ret) {
+		CMR_LOGE("error");
+	}
+	return ret;
+}
 
 

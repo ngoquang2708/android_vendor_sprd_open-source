@@ -127,6 +127,7 @@ int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag);
 int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index);
 int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 int cmr_v4l2_get_cap_time(uint32_t *sec, uint32_t *usec);
+int cmr_v4l2_set_flash(uint32_t opt);
 #ifdef __cplusplus
 }
 #endif

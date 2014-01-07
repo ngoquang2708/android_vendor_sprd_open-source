@@ -55,6 +55,7 @@ enum cmr_flash_status {
 	FLASH_CLOSE_AFTER_OPEN = 0x10,	/* following is set to sensor */
 	FLASH_HIGH_LIGHT = 0x11,
 	FLASH_OPEN_ON_RECORDING = 0x22,
+	FLASH_CLOSE_AFTER_AUTOFOCUS = 0x30,
 	FLASH_STATUS_MAX
 };
 
