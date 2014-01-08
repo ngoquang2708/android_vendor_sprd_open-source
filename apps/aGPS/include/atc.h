@@ -36,19 +36,20 @@
 	if (debug_mode) printf(format, ##__VA_ARGS__)
 #endif
 #define MAX_AT_RESPONSE (8 * 1024)
+//#define DEBUG_SIPC
 
 /** a singly-lined list of intermediate responses */
 typedef struct ATLine  {
-    struct ATLine *p_next;
-    char *line;
+	struct ATLine *p_next;
+	char *line;
 } ATLine;
 
 /** Free this with at_response_free() */
 typedef struct {
-    int success;              /* true if final response indicates
-                                    success (eg "OK") */
-    char *finalResponse;      /* eg OK, ERROR */
-    ATLine  *p_intermediates; /* any intermediate responses */
+	int success;              /* true if final response indicates
+								 success (eg "OK") */
+	char *finalResponse;      /* eg OK, ERROR */
+	ATLine  *p_intermediates; /* any intermediate responses */
 } ATResponse;
 
 #define mmalloc malloc
@@ -65,6 +66,10 @@ typedef struct work_queue_tag {
 } work_queue_t;
 
 struct at_channel {
+#ifdef DEBUG_SIPC
+	int dfd;
+	char sipc_buf[1024*8];
+#endif
 	int fd;
 	work_queue_t *queue; /* For unsolicited & async response */
 	pthread_mutex_t queue_mutex;

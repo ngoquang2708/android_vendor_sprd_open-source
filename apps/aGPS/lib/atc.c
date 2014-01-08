@@ -254,9 +254,19 @@ static int writeline(struct at_channel *atc, char *s, size_t len)
 				return -2;
 			}
 			dprintf("atchannel: write not enough space, wait 100ms\n");
+#ifdef DEBUG_SIPC
+			dprintf("prev right data: %s\n", atc->sipc_buf);
+			read(atc->dfd, atc->sipc_buf, sizeof(atc->sipc_buf));
+			dprintf("curr wrong data: %s\n", atc->sipc_buf);
+#endif
 			usleep(100 * 1000);
 			continue;
 		}
+#ifdef DEBUG_SIPC
+		else {
+			read(atc->dfd, atc->sipc_buf, sizeof(atc->sipc_buf));
+		}
+#endif
 
 		cur += written;
 	}
@@ -267,6 +277,11 @@ static int writeline(struct at_channel *atc, char *s, size_t len)
 		written = write (atc->fd, "\r" , 1);
 		if (errno == EAGAIN) {
 			dprintf("atchannel: write not enough space, wait 5ms\n");
+#ifdef DEBUG_SIPC
+			dprintf("prev right data: %s\n", atc->sipc_buf);
+			read(atc->dfd, atc->sipc_buf, sizeof(atc->sipc_buf));
+			dprintf("curr wrong data: %s\n", atc->sipc_buf);
+#endif
 			usleep(5 * 1000);
 			continue;
 		}
@@ -467,7 +482,7 @@ int atc_send(struct at_channel *atc, char *at, size_t len, int sync, int timeout
 		 * 1. "+CME ERROR"
 		 * 2. "OK"
 		 */
-		int err;
+		int err = 0;
 		struct timespec ts;
 #ifndef USE_NP
 		if (timeout_ms != 0) {
@@ -475,14 +490,16 @@ int atc_send(struct at_channel *atc, char *at, size_t len, int sync, int timeout
 		}
 #endif /*USE_NP*/
 		pthread_mutex_lock(&atc->response_cond_mutex);
-		if (timeout_ms != 0) {
+		if (!atc->atrep.finalResponse) {
+			if (timeout_ms != 0) {
 #ifdef USE_NP
-			err = pthread_cond_timeout_np(&atc->response_cond, &atc->response_cond_mutex, timeout_ms);
+				err = pthread_cond_timeout_np(&atc->response_cond, &atc->response_cond_mutex, timeout_ms);
 #else
-			err = pthread_cond_timedwait(&atc->response_cond, &atc->response_cond_mutex, &ts);
+				err = pthread_cond_timedwait(&atc->response_cond, &atc->response_cond_mutex, &ts);
 #endif /*USE_NP*/
-		} else {
-			err = pthread_cond_wait(&atc->response_cond, &atc->response_cond_mutex);
+			} else {
+				err = pthread_cond_wait(&atc->response_cond, &atc->response_cond_mutex);
+			}
 		}
 		if (err == ETIMEDOUT) {
 			dprintf("%s timeout\n", __func__);
@@ -553,6 +570,10 @@ struct at_channel *atc_init(const char *dev, int mode, int fd)
 	if (pthread_create(&tid, NULL, readerLoop, atc) < 0) {
 		dprintf("atc create [%s] readerLoop thread failed\n", atc->name);
 	}
+#ifdef DEBUG_SIPC
+	if (atc->dfd <= 0)
+		atc->dfd = open("/d/sipc/sbuf", O_RDONLY);
+#endif
 
 	return atc;
 }
