@@ -79,6 +79,7 @@ struct sensor_drv_context {
 	uint16_t                            i2c_addr;
 	int                                 fd_sensor;         /*sensor device id, used when sensor dev alive*/
 	cmr_evt_cb                          sensor_event_cb;
+	cmr_set_flash                       set_flash_cb;
 	pthread_mutex_t                     cb_mutex;
 	uint32_t                            is_calibration;
 	pthread_t                           monitor_thread;
@@ -366,19 +367,6 @@ LOCAL int _Sensor_Device_WriteReg(SENSOR_REG_BITS_T_PTR reg)
 
 	return ret;
 }
-
-LOCAL int _Sensor_Device_SetFlash(uint32_t flash_mode)
-{
-	int ret = SENSOR_SUCCESS;
-
-	ret = cmr_v4l2_set_flash(flash_mode);
-	if (ret) {
-		ret = -1;
-		CMR_LOGE("_Sensor_Device_SetFlash failed,   flash_mode=%d \n",flash_mode);
-	}
-	return ret;
-}
-
 
 int _Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
 {
@@ -2569,11 +2557,20 @@ int Sensor_CheckTiming(SENSOR_MODE_E mode)
 	return ret;
 }
 
-uint32_t Sensor_SetFlash(uint32_t flash_mode)
+int Sensor_RegisterFlashCB(cmr_set_flash set_flash_cb)
 {
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+	s_p_sensor_cxt->set_flash_cb = set_flash_cb;
+	return 0;
+}
+
+uint32_t Sensor_SetFlash(uint32_t flash_mode)
+{
+	int ret = SENSOR_SUCCESS;
+
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (s_p_sensor_cxt->flash_mode == flash_mode)
-		return 0;
+		return ret;
 
 	s_p_sensor_cxt->flash_mode = flash_mode;
 	if ((FLASH_OPEN == flash_mode) || (FLASH_HIGH_LIGHT == flash_mode)) {
@@ -2581,11 +2578,16 @@ uint32_t Sensor_SetFlash(uint32_t flash_mode)
 	} else {
 		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_FLASH, 0);
 	}
-	_Sensor_Device_SetFlash(flash_mode);
 
-	CMR_LOGV("Sensor_SetFlash:flash_mode=0x%x .\n", flash_mode);
+	if (s_p_sensor_cxt->set_flash_cb) {
+		(*s_p_sensor_cxt->set_flash_cb)(flash_mode);
+	} else {
+		CMR_LOGE("flash cb have not been registered, error!");
+	}
 
-	return 0;
+	CMR_LOGV(" cb flash_mode=0x%x .\n", flash_mode);
+
+	return ret;
 }
 
 

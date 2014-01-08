@@ -376,6 +376,7 @@ int camera_sensor_init(int32_t camera_id)
 		camera_sensor_inf(sensor_cxt);
 
 		Sensor_EventReg(camera_sensor_evt_cb);
+		Sensor_RegisterFlashCB(cmr_v4l2_flash_cb);
 		ctrl->sensor_inited = 1;
 		goto exit;
 	}
@@ -400,6 +401,7 @@ int camera_sensor_deinit(void)
 		goto exit;
 	}
 	Sensor_EventReg(NULL);
+	Sensor_RegisterFlashCB(NULL);
 	ret = Sensor_Close(1);
 	bzero(sensor_cxt, sizeof(*sensor_cxt));
 	ctrl->sensor_inited = 0;
@@ -2531,6 +2533,7 @@ int camera_after_set_internal(enum restart_mode re_mode)
 			return -CAMERA_FAILED;
 		}
 		Sensor_EventReg(camera_sensor_evt_cb);
+		Sensor_RegisterFlashCB(cmr_v4l2_flash_cb);
 		ret  = camera_start_preview_internal();
 		break;
 	case RESTART_MIDDLE:

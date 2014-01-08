@@ -181,6 +181,8 @@ extern	 "C"
 
 #define SENSOR_VIDEO_MODE_MAX                         4
 
+typedef int  (*cmr_set_flash)(uint32_t opt);
+
 /*  isp param for raw */
 
 /*  isp param for raw  end */
@@ -746,6 +748,7 @@ int Sensor_GetMode(uint32_t *mode);
 int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level);
 int Sensor_SetMode_WaitDone();
 int Sensor_set_calibration(uint32_t value);
+int Sensor_RegisterFlashCB(cmr_set_flash set_flash_cb);
 #ifdef	 __cplusplus
 }
 #endif

@@ -764,7 +764,7 @@ static uint32_t cmr_v4l2_get_4cc(uint32_t img_type)
 	return ret_4cc;
 }
 
-int cmr_v4l2_set_flash(uint32_t opt)
+int cmr_v4l2_flash_cb(uint32_t opt)
 {
 	int                      ret = 0;
 	struct v4l2_streamparm   stream_parm;
