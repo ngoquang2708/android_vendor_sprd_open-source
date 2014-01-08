@@ -5,7 +5,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
-
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.content.Intent;
 import android.content.Context;
@@ -52,7 +52,7 @@ public class DmNetwork {
         if(!isInit){
 		Log.v(TAG,"dmnetwork init ,phoneid:"+DmService.getInstance().getCurrentPhoneID());
             mConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-// 	mConnMgr = (ConnectivityManager) mContext.getSystemService(PhoneFactory.getServiceName(Context.CONNECTIVITY_SERVICE, DmService.getInstance().getCurrentPhoneID()));
+// 	mConnMgr = (ConnectivityManager) mContext.getSystemService(TelephonyManager.getServiceName(Context.CONNECTIVITY_SERVICE, DmService.getInstance().getCurrentPhoneID()));
             create_netstate_receiver();
             registe_netstate_receiver();
         }
@@ -121,7 +121,7 @@ public class DmNetwork {
             	}
         }
        mConnectStatus = mConnMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE,
-		PhoneFactory.getServiceName(PhoneConstants.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
+               TelephonyManager.getServiceName(PhoneConstants.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
 
         switch (mConnectStatus) {
             case PhoneConstants.APN_REQUEST_STARTED: {
@@ -178,7 +178,7 @@ public class DmNetwork {
                  * (ConnectivityManager.TYPE_MOBILE, Phone.FEATURE_ENABLE_DM); }
                  */
                 mConnMgr.stopUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE,
-		PhoneFactory.getServiceName(PhoneConstants.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
+                        TelephonyManager.getServiceName(PhoneConstants.FEATURE_ENABLE_DM, DmService.getInstance().getCurrentPhoneID()));
             }
         } finally {
             connectiontype = -1;

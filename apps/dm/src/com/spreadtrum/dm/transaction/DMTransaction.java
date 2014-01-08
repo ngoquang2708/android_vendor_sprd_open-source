@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.FileWriter;
 import java.io.FileOutputStream;
 import com.android.internal.telephony.PhoneFactory;
+import android.telephony.TelephonyManager;
 
 public class DMTransaction implements Runnable {
     private final String TAG = "DMTransaction";
@@ -271,7 +272,7 @@ public class DMTransaction implements Runnable {
 	Log.v(TAG,"ensureRouteToHost, phoneid:"+DmService.getInstance().getCurrentPhoneID());
         ConnectivityManager connMgr = (ConnectivityManager) mContext
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
-// 	.getSystemService(PhoneFactory.getServiceName(Context.CONNECTIVITY_SERVICE, DmService.getInstance().getCurrentPhoneID()));
+// 	.getSystemService(TelephonyManager.getServiceName(Context.CONNECTIVITY_SERVICE, DmService.getInstance().getCurrentPhoneID()));
 		Log.v(TAG,"ensureRouteToHost, Connectivitymanager ok in phoneid :"+DmService.getInstance().getCurrentPhoneID());
         String serverUrl = DmService.getInstance().getServerAddr();
 //        int inetAddr;

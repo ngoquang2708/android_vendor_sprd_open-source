@@ -25,6 +25,7 @@ import android.database.ContentObserver;
 import java.lang.Thread;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
+import android.telephony.TelephonyManager;
 public class Vdmc {
     protected static final String DM_TAG = "DM ==> ";
 
@@ -274,7 +275,7 @@ public class Vdmc {
 		values, where,
                     new String[] {
                             android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), ""),name
+                                    TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), ""),name
                     });
         }
       
@@ -291,7 +292,7 @@ public class Vdmc {
 			
             final String selection = "(name = 'CMCC DM' or name='CMCCDM_USIM') and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
             Log.d(TAG, "writeCMCCDMParam 	selection:	= " + selection);
             ContentValues values = new ContentValues();
             values.put(Telephony.Carriers.APN, tmpdmwapapn);
@@ -313,7 +314,7 @@ public class Vdmc {
         if (tmpmmsmmsc != null) {
 		Log.d(TAG, "writeMMSParam entering " );
             String numric = android.os.SystemProperties.get(
-                    PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "");
+                    TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "");
             final String selection = "(name = 'CMCCWAP' or name='CMWAP' or name='CMCCMMS_SIM') and numeric="
                     + numric;
 		Log.d(TAG, "writeMMSParam entering1 " );
@@ -334,7 +335,7 @@ public class Vdmc {
 		Log.d(TAG, "writeCMNETParam entering " );
             final String selection = "(name = 'CMCCNET' or name='CMNET' or name='CMCCNET_USIM') and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
             Log.d(TAG, "writeGprsCmnetParam 	selection:	= " + selection);
             ContentValues values = new ContentValues();
 		if (tmpnetapn != null)
@@ -394,7 +395,7 @@ public class Vdmc {
 			
             final String selection = "(name = 'CMCCWAP' or name='CMWAP' or name='CMCCWAP_USIM') and numeric=\""
                     + android.os.SystemProperties.get(
-                            PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
+                            TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "") + "\"";
             Log.d(TAG, "writeGprsCmwapParam 	selection:	= " + selection);
             ContentValues values = new ContentValues();
 		if (tmpwapapn != null)
@@ -426,7 +427,7 @@ public class Vdmc {
 		
 		    final String selection = "(name = 'CMCCWAP DM') and numeric=\""
 				   + android.os.SystemProperties.get(
-				   PhoneFactory.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "")
+				           TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, DmService.getInstance().getCurrentPhoneID()), "")
 				   + "\"";
 			Log.d(TAG, "writedmwapParam 	selection:	= " + selection);
 		    ContentValues values = new ContentValues();

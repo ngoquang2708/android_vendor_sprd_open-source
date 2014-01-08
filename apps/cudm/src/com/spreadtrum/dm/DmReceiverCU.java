@@ -88,7 +88,7 @@ public class DmReceiverCU extends BroadcastReceiver {
         //TelephonyManager mTelephonyManager = (TelephonyManager) context
         //       .getSystemService(Context.TELEPHONY_SERVICE);
         TelephonyManager mTelephonyManager = (TelephonyManager) context.getSystemService(
-                PhoneFactory.getServiceName(Context.TELEPHONY_SERVICE, phoneId));
+                TelephonyManager.getServiceName(Context.TELEPHONY_SERVICE, phoneId));
         
         String imsi = mTelephonyManager.getSubscriberId();
         String imei = DmServiceCU.getInstance().getImei(phoneId);
