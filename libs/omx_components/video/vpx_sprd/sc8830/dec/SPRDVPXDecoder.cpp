@@ -238,7 +238,7 @@ status_t SPRDVPXDecoder::initDecoder() {
     } else {
         int32 ret;
         if (mIOMMUEnabled) {
-            ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+            ret = mPmem_extra->get_mm_iova(&phy_addr, &size);
         } else {
             ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
         }
