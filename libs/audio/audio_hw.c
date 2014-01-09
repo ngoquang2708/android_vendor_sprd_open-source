@@ -301,6 +301,7 @@ struct tiny_audio_device {
     struct tiny_stream_out *active_output;
     bool mic_mute;
     bool bluetooth_nrec;
+    int  bluetooth_type;
     bool low_power;
 
     struct tiny_dev_cfg *dev_cfgs;
@@ -2860,6 +2861,15 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->bluetooth_nrec = true;
         else
             adev->bluetooth_nrec = false;
+    }
+
+    /* specify the sampling rate supported by bt headset
+     * 8KHz for BT headset NB, as default.
+     * 16KHz for BT headset WB.
+     * */
+    ret = str_parms_get_str(parms, "bt_samplerate", value, sizeof(value));
+    if (ret >= 0) {
+        adev->bluetooth_type = value;
     }
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));

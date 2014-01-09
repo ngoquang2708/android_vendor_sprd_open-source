@@ -18,6 +18,23 @@ int do_cmd_dual(int modemId, int simId, const  char* at_cmd)
     return 0;
 }
 
+// 0x80 stands for 8KHz(NB) sampling rate BT Headset.
+// 0x40 stands for 16KHz(WB) sampling rate BT Headset.
+static int config_bt_dev_type(int bt_headset_type, cp_type_t cp_type, int cp_sim_id)
+{
+    const char *at_cmd = NULL;
+
+    if (bt_headset_type == VX_NB_SAMPLING_RATE) {
+        at_cmd = "AT+SSAM=128";
+    } else if (bt_headset_type == VX_WB_SAMPLING_RATE) {
+        at_cmd = "AT+SSAM=64";
+    }
+    do_cmd_dual(cp_type, cp_sim_id, at_cmd);
+    usleep(10000);
+
+    return 0;
+}
+
 static int at_cmd_route(struct tiny_audio_device *adev)
 {
     const char *at_cmd = NULL;
@@ -31,7 +48,15 @@ static int at_cmd_route(struct tiny_audio_device *adev)
     } else if (adev->out_devices & (AUDIO_DEVICE_OUT_BLUETOOTH_SCO
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT)) {
-        at_cmd = "AT+SSAM=5";
+        if (adev->bluetooth_type)
+            config_bt_dev_type(adev->bluetooth_type,
+                    st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num);
+
+        if (adev->bluetooth_nrec) {
+            at_cmd = "AT+SSAM=6";
+        } else {
+            at_cmd = "AT+SSAM=5";
+        }
     } else if (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
         at_cmd = "AT+SSAM=1";
     } else {
