@@ -385,6 +385,10 @@ class RequestQueueThread : public SprdBaseThread{
     void                RequestQueueThreadFunc(SprdBaseThread * self);
 	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();
+	void                SetPrvCbProcessing(bool PrvCbIsProc);
+	bool                GetDcDircToDvSnap();
+	void                SetDcDircToDvSnap(bool dcDircToSnap);
+	bool                GetPrvCbProcStatus();
 	bool                GetRecStopMsg();
 	void                SetRecStopMsg(bool recStop);
 	int64_t             GetSensorTimeStamp(camera_req_info *reqInfo);
@@ -476,8 +480,10 @@ class RequestQueueThread : public SprdBaseThread{
 	uint32_t                        mRawHeapSize;
 	uint32_t						mPreviewHeapNum;
 	bool                               m_reqIsProcess;
+	bool                               m_prvCbIsProc;
 	bool                               m_IsPrvAftPic;
 	bool                               m_recStopMsg;
+	bool                               m_dcDircToDvSnap;//for cts testVideoSnapshot start
 	camera_metadata_t                   *m_halRefreshReq;
     static gralloc_module_t const*      m_grallocHal;
 
@@ -490,6 +496,7 @@ class RequestQueueThread : public SprdBaseThread{
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
 	Mutex                               m_halCBMutex;
+	Mutex                               m_metaDataMutex;
 	Mutex                           mStateLock;
 	mutable Mutex                   m_afTrigLock;
 	Condition                       mStateWait;
