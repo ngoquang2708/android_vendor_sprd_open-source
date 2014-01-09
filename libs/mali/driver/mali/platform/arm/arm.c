@@ -28,8 +28,9 @@
 
 #include "arm_core_scaling.h"
 #include "mali_pp_scheduler.h"
+#include "mali_kernel_linux.h"
 
-static void mali_platform_device_release(struct device *device);
+void mali_platform_device_release(struct device *device);
 static u32 mali_read_phys(u32 phys_addr);
 #if defined(CONFIG_ARCH_REALVIEW)
 static void mali_write_phys(u32 phys_addr, u32 value);
@@ -168,7 +169,7 @@ void mali_platform_device_unregister(void)
 #endif
 }
 
-static void mali_platform_device_release(struct device *device)
+void mali_platform_device_release(struct device *device)
 {
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
 }

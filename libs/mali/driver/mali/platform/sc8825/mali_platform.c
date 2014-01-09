@@ -35,9 +35,10 @@
 #endif
 #include "mali_kernel_common.h"
 #include "base.h"
+#include "mali_kernel_linux.h"
 	 
-static void mali_platform_device_release(struct device *device);
-static void mali_platform_utilization(unsigned int);
+void mali_platform_device_release(struct device *device);
+void mali_platform_utilization(unsigned int);
 
 static struct resource mali_gpu_resources[] =
 {
@@ -87,7 +88,11 @@ int mali_platform_device_register(void)
 	if(!g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 1;
+#ifdef CONFIG_COMMON_CLOCK
+		clk_prepare_enable(g_gpu_clock);
+#else
 		clk_enable(g_gpu_clock);
+#endif
 		udelay(300);
 	}
 
@@ -139,7 +144,7 @@ void mali_platform_device_unregister(void)
 	}
 }
 
-static void mali_platform_device_release(struct device *device)
+void mali_platform_device_release(struct device *device)
 {
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
 }
@@ -158,7 +163,11 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 1;
+#ifdef CONFIG_COMMON_CLOCK
+			clk_prepare_enable(g_gpu_clock);
+#else
 			clk_enable(g_gpu_clock);
+#endif
 			udelay(300);
 		}
 		break;

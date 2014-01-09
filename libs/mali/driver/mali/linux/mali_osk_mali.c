@@ -22,14 +22,53 @@
 #include "mali_osk.h"           /* kernel side OS functions */
 #include "mali_kernel_linux.h"
 
+#ifdef CONFIG_OF
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/slab.h>
+
+int _mali_get_pp_core_number(void)
+{
+	int pp_core_number;
+	const char  propname[] = "mali_pp_core_number";
+	struct device_node *np;
+
+	np = of_find_matching_node(NULL, gpu_ids);
+	of_property_read_u32( np, propname,&pp_core_number);
+	return pp_core_number;
+}
+
+int _mali_get_description(char**desc,int index)
+{
+	char* propname="reg-names";
+	struct device_node *np;
+
+	np = of_find_matching_node(NULL, gpu_ids);
+	if(!np) {
+		*desc=NULL;
+		return -1;
+	}
+	return  of_property_read_string_index(np, propname,  index, desc);
+}
+#endif
+
+
 _mali_osk_errcode_t _mali_osk_resource_find(u32 addr, _mali_osk_resource_t *res)
 {
 	int i;
+
+#ifdef CONFIG_OF
+	struct device_node *np;
+	int base_address=_mali_osk_resource_base_address();
+	np = of_find_matching_node(NULL, gpu_ids);
+#endif
 
 	if (NULL == mali_platform_device) {
 		/* Not connected to a device */
 		return _MALI_OSK_ERR_ITEM_NOT_FOUND;
 	}
+
+	MALI_DEBUG_PRINT(2, ("%s, addr:%x\n", __FUNCTION__, addr));
 
 	for (i = 0; i < mali_platform_device->num_resources; i++) {
 		if (IORESOURCE_MEM == resource_type(&(mali_platform_device->resource[i])) &&
@@ -38,6 +77,7 @@ _mali_osk_errcode_t _mali_osk_resource_find(u32 addr, _mali_osk_resource_t *res)
 				res->base = addr;
 				res->description = mali_platform_device->resource[i].name;
 
+#ifndef CONFIG_OF
 				/* Any (optional) IRQ resource belonging to this resource will follow */
 				if ((i + 1) < mali_platform_device->num_resources &&
 				    IORESOURCE_IRQ == resource_type(&(mali_platform_device->resource[i+1]))) {
@@ -45,10 +85,21 @@ _mali_osk_errcode_t _mali_osk_resource_find(u32 addr, _mali_osk_resource_t *res)
 				} else {
 					res->irq = -1;
 				}
+#else
+				if ((np) && (addr!=(base_address + 0x02000))&&(addr!=(base_address + 0x01000))) {
+					res->irq= irq_of_parse_and_map(np,0); //the index should be changed if the irq is not unique.
+					}
+				else {
+					res->irq=-1;
+					}
+#endif
+				MALI_DEBUG_PRINT(2, ("%s, res->base:%x,res->irq:%x\n", __FUNCTION__, res->base,res->irq));
 			}
 			return _MALI_OSK_ERR_OK;
 		}
 	}
+
+	MALI_DEBUG_PRINT(2, ("%s,resource not found\n", __FUNCTION__));
 
 	return _MALI_OSK_ERR_ITEM_NOT_FOUND;
 }
@@ -68,6 +119,7 @@ u32 _mali_osk_resource_base_address(void)
 			}
 		}
 	}
+	MALI_DEBUG_PRINT(2, ("_mali_osk_resource_base_address,base addr: %x\n", ret));
 
 	return ret;
 }
@@ -96,6 +148,8 @@ _mali_osk_errcode_t _mali_osk_device_data_get(struct _mali_osk_device_data *data
 			memcpy(data->pmu_domain_config, os_data->pmu_domain_config, sizeof(os_data->pmu_domain_config));
 			return _MALI_OSK_ERR_OK;
 		}
+		else
+			MALI_DEBUG_PRINT(2, ("_mali_osk_device_data_get,platform_data is null \n"));
 	}
 
 	return _MALI_OSK_ERR_ITEM_NOT_FOUND;
@@ -123,5 +177,6 @@ mali_bool _mali_osk_shared_interrupts(void)
 		}
 	}
 
+	MALI_DEBUG_PRINT(2, ("_mali_osk_shared_interrupts, no irq \n"));
 	return MALI_FALSE;
 }
