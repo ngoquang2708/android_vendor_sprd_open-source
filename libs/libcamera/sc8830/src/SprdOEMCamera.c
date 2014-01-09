@@ -296,6 +296,7 @@ struct
 } cputab []= {
 	{CPUID_DOLPHIN1,CPU_DOLPHIN1},
 	{CPUID_DOLPHIN2,CPU_DOLPHIN2},
+	{CPUID_DOLPHIN_T1,CPU_DOLPHIN_T1},
 };
 
 static void camera_pre_init(void)
@@ -1230,7 +1231,7 @@ static int _v4l2_postfix(struct frm_info* info)
 	struct img_frm      *cap_frm = NULL;
 
 	CMR_PRINT_TIME;
-	if( !cpu_is (CPU_DOLPHIN1) )
+	if( !cpu_is (CPU_DOLPHIN1) &&!cpu_is ( CPU_DOLPHIN_T1) )
 		return 0;
 
 	pthread_mutex_lock(&g_cxt->prev_mutex);
@@ -1317,7 +1318,7 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 	uint32_t                 dx,dy;
 	struct img_frm      *cap_frm = NULL;
 
-	if( !cpu_is (CPU_DOLPHIN1) )
+	if( !cpu_is (CPU_DOLPHIN1) && !cpu_is ( CPU_DOLPHIN_T1))
 		return 0;
 
 	if (CHN_1 == info->channel_id) {
