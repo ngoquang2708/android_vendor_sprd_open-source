@@ -381,10 +381,10 @@ bool Layer::prepareDrawData()
 {
     sp<GraphicBuffer>& buf(mGFXBuffer);
 
-    GLfloat left = GLfloat(mRect->left) / GLfloat(mRect->right - mRect->left);
-    GLfloat top = GLfloat(mRect->top) / GLfloat(mRect->bottom - mRect->top);
-    GLfloat right = GLfloat(mRect->right) / GLfloat(mRect->right - mRect->left);
-    GLfloat bottom = GLfloat(mRect->bottom) / GLfloat(mRect->bottom - mRect->top);
+    GLfloat left = GLfloat(mRect->left) / GLfloat(mRect->right);
+    GLfloat top = GLfloat(mRect->top) / GLfloat(mRect->bottom);
+    GLfloat right = GLfloat(mRect->right) / GLfloat(mRect->right);
+    GLfloat bottom = GLfloat(mRect->bottom) / GLfloat(mRect->bottom);
 
     /*
      *  The video layer height maybe loss some accuracy
@@ -402,6 +402,19 @@ bool Layer::prepareDrawData()
 
         top -= pixelOffset;
         bottom += pixelOffset;
+    }
+
+    /*
+     *  Some RGB layer is cropped, it will cause RGB layer display abnormal.
+     *  Here, just correct the RGB layer to right region.
+     * */
+    if ((mRect->top > 0) &&
+        (format == HAL_PIXEL_FORMAT_RGBA_8888 ||
+         format == HAL_PIXEL_FORMAT_RGBX_8888 ||
+         format == HAL_PIXEL_FORMAT_RGB_565))
+    {
+        float pixelOffset = 1.0 / float(mRect->bottom);
+        top -= float(mRect->top) * pixelOffset;
     }
 
     texCoord[0].u = texCoord[1].u = left;
