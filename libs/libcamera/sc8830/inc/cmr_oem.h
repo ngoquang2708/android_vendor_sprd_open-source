@@ -279,6 +279,7 @@ struct camera_settings {
 	uint8_t                  bflash;
 	uint32_t                 slow_motion_mode;
 	uint32_t                 isp_alg_timeout;
+	uint32_t                 isp_af_timeout;
 	sem_t                    isp_alg_sem;
 	pthread_mutex_t          isp_alg_mutex;
 	uint32_t                 isp_ae_stab_timeout;
