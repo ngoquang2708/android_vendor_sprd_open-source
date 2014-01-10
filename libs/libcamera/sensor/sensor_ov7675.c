@@ -612,8 +612,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         SENSOR_AVDD_1800MV,                      // dvdd
         3,                     // skip frame num before preview
         1,                      // skip frame num before capture
-        1,                      // deci frame num during preview
-        1,                      // deci frame num during video preview
+        0,                      // deci frame num during preview
+        0,                      // deci frame num during video preview
         0,                     // threshold enable(only analog TV)
         0,                     // atv output mode 0 fix mode 1 auto mode
         0,                    // atv output start postion
