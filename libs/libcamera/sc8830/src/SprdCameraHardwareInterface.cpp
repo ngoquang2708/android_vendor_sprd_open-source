@@ -1041,14 +1041,14 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	{
 	const char* new_jpeg_quality = params.get_JpegQuality();
 	if(new_jpeg_quality)
-	cur_params.setJpegQuality(values_new);
+	cur_params.setJpegQuality(new_jpeg_quality);
 	}
 
 	//JpegThumbnailQuality
 	{
 	const char* new_thumbnail_quality = params.get_JpegThumbnailQuality();
 	if(new_thumbnail_quality)
-	cur_params.setJpegThumbnailQuality(values_new);
+	cur_params.setJpegThumbnailQuality(new_thumbnail_quality);
 	}
 
 	//rotation
@@ -1527,6 +1527,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	// FIXME: will this make a deep copy/do the right thing? String8 i
 	// should handle it
 	mParameters = params;
+
 	isZslSupport = (char *)params.get("zsl-supported");
 	if (NULL != isZslSupport) {
 		LOGV("isZslSupport is not NULL.");
