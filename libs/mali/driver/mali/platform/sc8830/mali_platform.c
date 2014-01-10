@@ -76,9 +76,7 @@ static int old_gpu_clock_div = 1;
 
 static int gpu_clock_on = 0;
 static int gpu_power_on = 0;
-#if !GPU_GLITCH_FREE_DFS
- struct workqueue_struct *gpu_dfs_workqueue = NULL;
-#endif
+struct workqueue_struct *gpu_dfs_workqueue = NULL;
 static void gpu_change_freq_div(void);
 
 static struct resource mali_gpu_resources[] =
@@ -154,12 +152,10 @@ void mali_power_initialize(struct platform_device *pdev)
 #endif
 		udelay(300);
 	}
-#if !GPU_GLITCH_FREE_DFS
 	if(gpu_dfs_workqueue == NULL)
 	{
 		gpu_dfs_workqueue = create_singlethread_workqueue("gpu_dfs");
 	}
-#endif
 #ifdef CONFIG_PM_RUNTIME
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
 	pm_runtime_set_autosuspend_delay(&(pdev->dev), 50);
@@ -300,7 +296,6 @@ static inline void mali_set_freq(u32 gpu_freq)
 	return;
 }
 #endif
-#if !GPU_GLITCH_FREE_DFS
 static void gpu_dfs_func(struct work_struct *work);
 static DECLARE_WORK(gpu_dfs_work, &gpu_dfs_func);
 
@@ -308,7 +303,6 @@ static void gpu_dfs_func(struct work_struct *work)
 {
 	gpu_change_freq_div();
 }
-#endif
 
 void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 {
@@ -391,10 +385,19 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 #endif
 	{
 #if !GPU_GLITCH_FREE_DFS
-		if(gpu_dfs_workqueue)
-			queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
+		//if(gpu_dfs_workqueue)
+		//	queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
 #else
-		gpu_change_freq_div();
+		/*if (old_mali_freq_select == mali_freq_select) {
+			old_gpu_clock_div = gpu_clock_div;
+			mali_set_div(gpu_clock_div);
+			scaling_cur_freq=scaling_max_freq/gpu_clock_div;
+		} else {
+			if (gpu_dfs_workqueue) {
+				queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
+			}
+		}*/
+		//gpu_change_freq_div();
 #endif
 	}
 }
@@ -444,12 +447,10 @@ static void gpu_change_freq_div(void)
 #if GPU_GLITCH_FREE_DFS
 			mali_dev_resume();
 #endif
-			if(1!=old_gpu_clock_div)
-			{
-				old_gpu_clock_div=1;
-				gpu_clock_div=1;
-				mali_set_div(gpu_clock_div);
-			}
+			old_gpu_clock_div=1;
+			gpu_clock_div=1;
+			mali_set_div(gpu_clock_div);
+
 #if !GPU_GLITCH_FREE_DFS
 			udelay(100);
 #endif
@@ -457,7 +458,9 @@ static void gpu_change_freq_div(void)
 		else
 		{
 			old_gpu_clock_div = gpu_clock_div;
+			clk_disable(gpu_clock);
 			mali_set_div(gpu_clock_div);
+			clk_enable(gpu_clock);
 #if !GPU_GLITCH_FREE_DFS
 			udelay(100);
 #endif
