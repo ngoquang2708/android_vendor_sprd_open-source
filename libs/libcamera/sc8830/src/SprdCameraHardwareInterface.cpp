@@ -504,6 +504,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     int preview_width;
     int preview_height;
     mParameters.getPreviewSize(&preview_width, &preview_height);
+    preview_width = SIZE_ALIGN(preview_width);
     LOGV("%s: preview size: %dx%d.", __func__, preview_width, preview_height);
 
 #if CAM_OUT_YUV420_UV
@@ -1351,6 +1352,12 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	if(new_isZslSupport)
 	cur_params.setZSLSupport(new_isZslSupport);
 	}
+	//SupportedPreviewFormat
+	{
+	const char* new_SupportedPreviewFormat = params.get_SupportedPreviewFormat();
+	if(new_SupportedPreviewFormat)
+		cur_params.setSupportedPreviewFormat(new_SupportedPreviewFormat);
+	}
 
 	return ret;
 }
@@ -1550,6 +1557,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	int width = 0, height = 0;
 	int rawWidth = 0, rawHeight = 0;
 	mParameters.getPreviewSize(&width, &height);
+	width = SIZE_ALIGN(width);
 	LOGV("setParametersInternal: requested preview size %d x %d", width, height);
 	//if in DV mode then set the picture size as preview size
 	if (1 == mParameters.getRecordingHint()) {

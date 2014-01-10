@@ -1086,6 +1086,16 @@ void SprdCameraParameters::setMaxNumFocusAreas(const char* value)
 	set(KEY_MAX_NUM_FOCUS_AREAS, value);
 }
 
+const char *SprdCameraParameters::get_SupportedPreviewFormat() const
+{
+    return get(KEY_SUPPORTED_PREVIEW_FORMATS);
+}
+
+void SprdCameraParameters::setSupportedPreviewFormat(const char* value)
+{
+       set(KEY_SUPPORTED_PREVIEW_FORMATS, value);
+}
+
 void SprdCameraParameters::setZsl(int value)
 {
 	set(KEY_ZSL,value);

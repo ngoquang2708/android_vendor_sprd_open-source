@@ -219,6 +219,8 @@ public:
 	void setFocusDistances(const char* value);
 	const char* get_MaxNumFocusAreas() const;
 	void setMaxNumFocusAreas(const char* value);
+	const char* get_SupportedPreviewFormat() const;
+	void setSupportedPreviewFormat(const char* value);
 	void setZsl(int value);
 	void setCapMode(int value);
 	void setZSLSupport(const char* value);
