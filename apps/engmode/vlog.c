@@ -17,7 +17,7 @@
 #include "vlog.h"
 #include "eng_util.h"
 
-#define DATA_BUF_SIZE (4096 * 64)
+#define DATA_BUF_SIZE (4096 * 32)
 #define MAX_OPEN_TIMES  10
 
 extern int g_ass_start;
