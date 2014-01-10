@@ -23,4 +23,4 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_SRC_FILES += main.c
 LOCAL_MODULE := atd
 include $(BUILD_EXECUTABLE)
-include $(LOCAL_PATH)/marvell/Android.mk
+include $(LOCAL_PATH)/generic/Android.mk

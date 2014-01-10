@@ -1,5 +1,5 @@
 /*
- *  L2000 aGPS Stack Customer Interface
+ *  Generic aGPS Stack Customer Interface
  *
  *  Copyright (C) 2013 Spreadtrum Communications Inc.
  *
@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef __SPRD_L2000_H
-#define __SPRD_L2000_H
+#ifndef __SPRD_AGPS_AGENT_H
+#define __SPRD_AGPS_AGENT_H
 
 /** handle_NotifyMTLR structure */
 typedef struct agps_user_notify_params_t {

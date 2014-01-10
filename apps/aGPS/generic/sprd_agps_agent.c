@@ -1,5 +1,5 @@
 /*
- *  L2000 aGPS Stack Customer Interface
+ *  Generic aGPS Stack Customer Interface
  *
  *  Copyright (C) 2013 Spreadtrum Communications Inc.
  *
@@ -11,7 +11,7 @@
  */
 
 #include <atd.h>
-#include "sprd_l2000.h"
+#include "sprd_agps_agent.h"
 #include <parser.h>
 
 struct agps_c_plane_hook c_plane_stack_hook;
