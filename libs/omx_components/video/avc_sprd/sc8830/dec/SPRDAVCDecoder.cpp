@@ -143,8 +143,23 @@ SPRDAVCDecoder::SPRDAVCDecoder(
 
     ALOGI("Construct SPRDAVCDecoder, this: %0x", (void *)this);
 
+    //read config flag
+#define USE_SW_DECODER	0x01
+#define USE_HW_DECODER	0x00
+
+    uint8 video_cfg = USE_HW_DECODER;
+    FILE *fp = fopen("/data/data/com.sprd.test.videoplayer/app_decode/flag", "rb");
+    if (fp != NULL) {
+        fread(&video_cfg, sizeof(uint8), 1, fp);
+        fclose(fp);
+    }
+    ALOGI("%s, video_cfg: %d", __FUNCTION__, video_cfg);
+
     bool ret = false;
-    ret = openDecoder("libomx_avcdec_hw_sprd.so");
+    if (USE_HW_DECODER == video_cfg) {
+        ret = openDecoder("libomx_avcdec_hw_sprd.so");
+    }
+
     if(ret == false) {
         ret = openDecoder("libomx_avcdec_sw_sprd.so");
         mDecoderSwFlag = true;
