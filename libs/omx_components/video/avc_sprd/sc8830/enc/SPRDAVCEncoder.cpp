@@ -144,8 +144,11 @@ inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
 }
 
 inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* outyuv,
-        int32_t width, int32_t height)
-{
+                    int32_t width, int32_t height) {
+#define RGB2Y(_r, _g, _b) (((66 * (_r) + 129 * (_g) + 25 * (_b)) >> 8) + 16)
+#define RGB2CB(_r, _g, _b) (((-38 * (_r) - 74 * (_g) + 112 * (_b)) >> 8) + 128)
+#define RGB2CR(_r, _g, _b) (((112 * (_r) - 94 * (_g) - 18 * (_b)) >> 8) + 128)
+
     uint32_t i, j;
     uint32_t *argb_ptr = (uint32_t *)inrgb;
     uint8_t *y_ptr = outyuv;
@@ -161,41 +164,47 @@ inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* out
     {
         for (j=0; j<width; j+=2)
         {
-            uint32_t y, u, v;
-            uint32_t r, g, b;
+            uint8 y, cb, cr;
+            int32 r, g, b;
             uint32_t argb;
 
             argb = *argb_ptr;
-            r = (argb >> 16) & 0xff;
+
+            //abgr
+            b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
-            b = (argb) & 0xff;
-            y = (77 * r + 150 * g + 29 * b) >> 8;
-            u = 128 + ((128 * b - 43 * r - 85 * g) >> 8);
-            v = 128 + ((128 * r - 107 * g - 21 * b) >> 8);
+            r = (argb >> 0) & 0xff;
+            y = RGB2Y(r, g, b);
+            cr = RGB2CR(r, g, b);
+            cb = RGB2CB(r, g, b);
 
             *y_ptr = y;
-            *vu_ptr++ = u;
-            *vu_ptr++ = v;
+            *vu_ptr++ = cr;
+            *vu_ptr++ = cb;
 
             argb = *(argb_ptr + 1);
-            r = (argb >> 16) & 0xff;
+            //abgr
+            b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
-            b = (argb) & 0xff;
-            y = (77 * r + 150 * g + 29 * b) >> 8;
+            r = (argb >> 0) & 0xff;
+            y = RGB2Y(r, g, b);
             *(y_ptr + 1) = y;
 
             argb = *(argb_ptr + width);
-            r = (argb >> 16) & 0xff;
+            //abgr
+            b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
-            b = (argb) & 0xff;
-            y = (77 * r + 150 * g + 29 * b) >> 8;
+            r = (argb >> 0) & 0xff;
+            y = RGB2Y(r, g, b);
             *(y_ptr + width) = y;
 
             argb = *(argb_ptr + width + 1);
-            r = (argb >> 16) & 0xff;
+
+            //abgr
+            b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
-            b = (argb) & 0xff;
-            y = (77 * r + 150 * g + 29 * b) >> 8;
+            r = (argb >> 0) & 0xff;
+            y = RGB2Y(r, g, b) ;
             *(y_ptr + width + 1) = y;
 
             y_ptr += 2;
