@@ -28,7 +28,7 @@ static camera_position_type  s_position;
 const char image_desc[] = "Exif_JPEG_420";
 const char image_make[] = "Spreadtrum";
 const char copyright[] = "Copyright,Spreadtrum,2011";
-const char model[] = "shark";
+const char model[] = "SmartPhone";
 
 uint32_t camera_get_rot_angle(uint32_t degree)
 {
@@ -321,11 +321,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	if(NULL != p_exif_info->primary.img_desc_ptr) {
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->ImageDescription, (char *)image_desc);
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->Make,             (char *)image_make);
-		if(cpu_is_dolphin() ){
-			strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            "dolphin");
-		}else{
-			strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            (char *)model);
-		}
+		strcpy((char *)p_exif_info->primary.img_desc_ptr->Model,            (char *)model);
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->Copyright,        (char *)copyright);
 	}
 

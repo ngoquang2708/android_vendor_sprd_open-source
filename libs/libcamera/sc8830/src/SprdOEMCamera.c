@@ -123,6 +123,31 @@ struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
 		cap_stp[a].valid = 1;                                                 \
 	} while (0)
 
+#define CPUID_DOLPHIN1               (SENSOR_SOCID_T ) {0x7715a000,0x2711a000}
+#define CPUID_DOLPHIN2               (SENSOR_SOCID_T ) {0x7715a000,0x2711a002}
+#define CPUID_DOLPHIN_T1               (SENSOR_SOCID_T ) {0x8815a000,0x2711a000}
+
+#define  CPU_SHARK          0x01
+#define  CPU_DOLPHIN1   0x02
+#define  CPU_DOLPHIN2   0x03
+#define  CPU_DOLPHIN_T1   0x100
+
+static struct
+{
+	SENSOR_SOCID_T  id;
+	int  which_cpu;
+} cputab[ ]= {
+	{CPUID_DOLPHIN1,CPU_DOLPHIN1},
+	{CPUID_DOLPHIN2,CPU_DOLPHIN2},
+	{CPUID_DOLPHIN_T1,CPU_DOLPHIN_T1},
+};
+
+#define  camera_get_which_cpu()    (g_cxt->which_cpu)
+#define  cpu_is(which_cpu)    (camera_get_which_cpu()==which_cpu)
+#define  cpu_is_dolphin()    (camera_get_which_cpu()==CPU_DOLPHIN1||camera_get_which_cpu()==CPU_DOLPHIN2 \
+							||camera_get_which_cpu()==CPU_DOLPHIN_T1)
+#define  NEED_V4L2_POSTPOROCESS() 	  (cpu_is (CPU_DOLPHIN1) ||cpu_is ( CPU_DOLPHIN_T1) )
+
 static void camera_sensor_evt_cb(int evt, void* data);
 static int  camera_isp_evt_cb(int evt, void* data);
 static void camera_jpeg_evt_cb(int evt, void* data);
@@ -289,16 +314,6 @@ uint32_t camera_get_prev_stat()
 	return g_cxt->preview_status;
 }
 
-struct
-{
-	SENSOR_SOCID_T  id;
-	int  which_cpu;
-} cputab []= {
-	{CPUID_DOLPHIN1,CPU_DOLPHIN1},
-	{CPUID_DOLPHIN2,CPU_DOLPHIN2},
-	{CPUID_DOLPHIN_T1,CPU_DOLPHIN_T1},
-};
-
 static void camera_pre_init(void)
 {
 	int i;
@@ -313,11 +328,6 @@ static void camera_pre_init(void)
 		}
 	}
 	return ;
-}
-
-uint32_t camera_get_which_cpu(void)
-{
-	return g_cxt->which_cpu  ;
 }
 
 int camera_sensor_init(int32_t camera_id)
@@ -1230,10 +1240,10 @@ static int _v4l2_postfix(struct frm_info* info)
 	uint32_t                 dx,dy;
 	struct img_frm      *cap_frm = NULL;
 
-	CMR_PRINT_TIME;
-	if( !cpu_is (CPU_DOLPHIN1) &&!cpu_is ( CPU_DOLPHIN_T1) )
+	if( !NEED_V4L2_POSTPOROCESS() )
 		return 0;
 
+	CMR_PRINT_TIME;
 	pthread_mutex_lock(&g_cxt->prev_mutex);
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
@@ -1318,7 +1328,7 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 	uint32_t                 dx,dy;
 	struct img_frm      *cap_frm = NULL;
 
-	if( !cpu_is (CPU_DOLPHIN1) && !cpu_is ( CPU_DOLPHIN_T1))
+	if( !NEED_V4L2_POSTPOROCESS())
 		return 0;
 
 	if (CHN_1 == info->channel_id) {
