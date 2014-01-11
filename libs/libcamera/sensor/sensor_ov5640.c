@@ -18,6 +18,7 @@
 #include "sensor.h"
 #include "jpeg_exif_header.h"
 #include "sensor_drv_u.h"
+#include "cmr_oem.h"
 
 #define ov5640_I2C_ADDR_W        0x3c
 #define ov5640_I2C_ADDR_R         0x3c
@@ -874,59 +875,29 @@ LOCAL const SENSOR_REG_T ov5640_2592X1944[] = {
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 24,
-	 SENSOR_IMAGE_FORMAT_YUV422},
-#if  (SC_FPGA==0)
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480_new), 640, 480, 24,
-	SENSOR_IMAGE_FORMAT_YUV422},
-	//{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960), 1280, 960, 24,
-	 //SENSOR_IMAGE_FORMAT_JPEG},
-	//{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200), 1600, 1200, 24,
-	// SENSOR_IMAGE_FORMAT_JPEG},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 12, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480_new), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200_YUV), 1600, 1200,  12, SENSOR_IMAGE_FORMAT_YUV422},
-	//{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536), 2048, 1536, 24,
-	 //SENSOR_IMAGE_FORMAT_JPEG},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536_YUV), 2048, 1536,  12, SENSOR_IMAGE_FORMAT_YUV422},
-	//{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944), 2592, 1944, 24,
-	//SENSOR_IMAGE_FORMAT_JPEG},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536), 2048, 1536, 24, SENSOR_IMAGE_FORMAT_JPEG},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_JPEG},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0},
-#else
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480), 640, 480, 12,
-	SENSOR_IMAGE_FORMAT_YUV422},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960), 1280, 960, 24,
-	 SENSOR_IMAGE_FORMAT_JPEG},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200), 1600, 1200, 24,
-	 SENSOR_IMAGE_FORMAT_JPEG},
-	/*{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200_YUV), 1600, 1200,  24, SENSOR_IMAGE_FORMAT_YUV422},*/
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536), 2048, 1536, 24,
-	 SENSOR_IMAGE_FORMAT_JPEG},
-	/*{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536_YUV), 2048, 1536,  24, SENSOR_IMAGE_FORMAT_YUV422},*/
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944), 2592, 1944, 24,
-	 SENSOR_IMAGE_FORMAT_JPEG},
-
-#endif
-	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0},
-};
+	{PNULL, 0, 0, 0, 0, 0}};
 
 LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 640, 480, 68, 56},
-	//{0, 0, 1280, 960, 122, 42},
 	{0, 0, 1600, 1200, 122, 42},
 	{0, 0, 2048, 1536, 122, 42},
-	//{0, 0, 2592, 1944, 122, 42},
-	{0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0},
+	{0, 0, 2592, 1944, 122, 42},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 };
+
+
 
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_ov5640_exif;
 
@@ -1143,7 +1114,7 @@ LOCAL uint32_t _ov5640_InitExifInfo(void)
 
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param)
 {
-	return (uint32_t) s_ov5640_Resolution_Trim_Tab;
+		return (uint32_t) s_ov5640_Resolution_Trim_Tab;
 }
 LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 {
@@ -1223,6 +1194,7 @@ LOCAL uint32_t _ov5640_Identify(uint32_t param)
 		SENSOR_PRINT("identify fail,pid_value = %d ", pid_value);
 	}
 	_ov5640_InitExifInfo();
+
 	return ret_value;
 }
 
@@ -2338,17 +2310,17 @@ LOCAL uint32_t _ov5640_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 		break;
 	}
 
-	if ((0x00 != s_ov5640_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width)
+	if ((0x00 != g_ov5640_yuv_info.resolution_tab_info_ptr[SENSOR_MODE_PREVIEW_ONE].width)
 	    && (0x00 !=
-		s_ov5640_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height)
+		g_ov5640_yuv_info.resolution_tab_info_ptr[SENSOR_MODE_PREVIEW_ONE].height)
 	    && (0x00 != zone_rect.w)
 	    && (0x00 != zone_rect.h)) {
 		param_ptr->zone.x =
 		    (zone_rect.w * param_ptr->zone.x) /
-		    s_ov5640_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width;
+		    g_ov5640_yuv_info.resolution_tab_info_ptr[SENSOR_MODE_PREVIEW_ONE].width;
 		param_ptr->zone.y =
 		    (zone_rect.h * param_ptr->zone.y) /
-		    s_ov5640_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height;
+		    g_ov5640_yuv_info.resolution_tab_info_ptr[SENSOR_MODE_PREVIEW_ONE].height;
 	} else {
 		SENSOR_PRINT_HIGH("w:%d, h:%d error",
 			     zone_rect.w, zone_rect.h);

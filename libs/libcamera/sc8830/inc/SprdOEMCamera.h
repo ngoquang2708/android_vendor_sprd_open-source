@@ -32,7 +32,6 @@ extern "C"
 #define FACE_DETECT_NUM     10
 #define FACE_SMILE_LIMIT    10
 #define HDR_CAP_NUM         3
-#define CB_LIGHT_SYNC       1
 
 typedef enum {
 	CAMERA_NORMAL_MODE = 0,

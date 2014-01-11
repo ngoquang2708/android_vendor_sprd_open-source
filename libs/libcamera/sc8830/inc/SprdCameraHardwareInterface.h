@@ -329,7 +329,9 @@ private:
 	Mutex                           mPrevBakDataLock;
 	Mutex                           mCbCapDataBusyLock;
 	Mutex                           mCapBakDataLock;
-	Mutex                           mPrevCpLock;
+	Mutex                           mPrevBufLock;
+	Mutex                           mCapBufLock;
+	uint32_t                        mCapBufIsAvail;
 
 	uint32_t                        mPreviewHeapSize;
 	uint32_t                        mPreviewHeapNum;
