@@ -86,9 +86,9 @@ public class InsertDbThread implements Runnable {
 										.currentTimeMillis());
 
 					} else if ("3".equals(SmsConfig.boxId)) {
-						Telephony.Sms.Draft.addMessage(resolver, smsConfig.phoneNo,
-								content, smsConfig.subject, (long) System
-										.currentTimeMillis());
+//						Telephony.Sms.Draft.addMessage(resolver, smsConfig.phoneNo,
+//								content, smsConfig.subject, (long) System
+//										.currentTimeMillis());
 
 					} else if ("4".equals(SmsConfig.boxId)) {
 

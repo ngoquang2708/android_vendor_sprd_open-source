@@ -8,12 +8,15 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
+import android.content.Intent;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
+import android.provider.Telephony;
+import android.provider.Telephony.Sms;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -27,7 +30,7 @@ import android.widget.Toast;
 import com.android.insertdata.R;
 
 
-public class AddMMSActivity extends Activity {
+public class AddMMSActivity extends SmsAbility {
 	static final String TAG = "AddMMSActivity";
 	private PowerManager.WakeLock mWakeock;
 
@@ -125,6 +128,7 @@ public class AddMMSActivity extends Activity {
 
 	@SuppressWarnings("deprecation")
 	public void applyMmsHandler(View v) {
+	    checkDefaultSmsApp();
 		getView();
 		MmsConfig mmsConfig = GetEditData();
 		if (0 == mmsConfig.mmsCount){
@@ -230,7 +234,7 @@ public class AddMMSActivity extends Activity {
 								SingleMmsParam.time = 0;
 								mWakeock.release();
 								mWakeock = null;
-								finish();
+								//finish();
 							}
 						}).create();
 		dialog.show();

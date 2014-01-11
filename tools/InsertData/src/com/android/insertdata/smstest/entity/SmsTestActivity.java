@@ -21,9 +21,10 @@ import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import com.android.insertdata.R;
+import com.android.insertdata.addmms.SmsAbility;
 import com.android.insertdata.smstest.thread.InsertDbThread;
 
-public class SmsTestActivity extends Activity {
+public class SmsTestActivity extends SmsAbility {
 	public EditText phoneNoEt;
 	public CheckBox autoUpCb;
 	public EditText smsContentEt;
@@ -97,6 +98,7 @@ public class SmsTestActivity extends Activity {
     
     public void applyHandler(View v)
     {
+        checkDefaultSmsApp();
     	getView();
     	SmsConfig smsConfig = new SmsConfig();
     	if(phoneNoEt.getText().toString()==null||"".equals(phoneNoEt.getText().toString())){
@@ -238,7 +240,7 @@ public class SmsTestActivity extends Activity {
 				SingleParam.time=0;
 				mWakeock.release();
 				mWakeock=null;
-				finish();
+				//finish();
 			}
 		}).create();
        dialog.show();
