@@ -532,7 +532,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"video-picture-size-values", "1280x960,1280x960,1280x960,1280x960,1280x960"},
 #endif
 	{"picture-size", "640x480"},
-#if defined(DCONFIG_CAMERA_SMALL_PREVSIZE)
+#if defined(CONFIG_CAMERA_SMALL_PREVSIZE)
 	{"preview-size-values", "640x480,352x288,176x144"},
 	{"preview-size", "640x480"},
 #else
