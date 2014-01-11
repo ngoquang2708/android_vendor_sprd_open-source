@@ -285,6 +285,7 @@ struct camera_settings {
 	uint32_t                 isp_ae_stab_timeout;
 	sem_t                    isp_ae_stab_sem;
 	pthread_mutex_t          isp_ae_stab_mutex;
+	pthread_mutex_t          isp_af_mutex;
 };
 
 struct camera_context {

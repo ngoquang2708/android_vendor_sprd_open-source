@@ -24,6 +24,7 @@
 
 #define FOCUS_ZONE_W 80
 #define FOCUS_ZONE_H 60
+#define AUTOFOCUS_TIMEOUT (280)
 
 #define EXPOSURE_ZONE_W 1280
 #define EXPOSURE_ZONE_H 960
@@ -2362,7 +2363,7 @@ LOCAL uint32_t _ov5640_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-	uint16_t i=300;
+	uint16_t i = AUTOFOCUS_TIMEOUT;
 	uint16_t reg_value = 0x00;
 
 	SENSOR_PRINT_HIGH("Start");
@@ -2394,7 +2395,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 
 LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 {
-	uint32_t i = 20;	// 10 * 100 = 3 seconds
+	uint32_t i = AUTOFOCUS_TIMEOUT;	// 2.8 seconds
 	uint16_t reg_value = 0x00;
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_T ext_param;
@@ -2434,7 +2435,7 @@ LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 				rtn = SENSOR_FAIL;
 				break;
 			}
-			usleep(100*1000);
+			usleep(10*1000);
 			reg_value = Sensor_ReadReg(CMD_ACK);
 			SENSOR_PRINT_HIGH("cycles %d, reg %d", i, reg_value);
 			i--;
@@ -2498,20 +2499,19 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		Sensor_WriteReg(CMD_MAIN, zone_num);
 		zone_num++;
 	}
-	i = 20;
-	usleep(10*1000);
 
+	i = AUTOFOCUS_TIMEOUT;
+	usleep(10*1000);
 	Sensor_WriteReg(CMD_ACK, 0x01);
 	Sensor_WriteReg(CMD_MAIN, 0x03);
 
 	do {
 		if (0x00 == i) {
-			SENSOR_PRINT_ERR
-			    ("error!");
+			SENSOR_PRINT_ERR("error!");
 			rtn = SENSOR_FAIL;
 			break;
 		}
-		usleep(100*1000);
+		usleep(10*1000);
 		reg_value = Sensor_ReadReg(CMD_ACK);
 		i--;
 	} while (0x00 != reg_value);

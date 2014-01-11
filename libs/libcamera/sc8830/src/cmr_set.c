@@ -28,7 +28,7 @@
 
 /* total 2.5s */
 #define ISP_PROCESS_SEC_TIMEOUT (2)
-#define ISP_PROCESS_NSEC_TIMEOUT (500000000)
+#define ISP_PROCESS_NSEC_TIMEOUT (800000000)
 //static int camera_autofocus_need_exit(uint32_t *is_external);
 static uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode);
 static int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *skip_num);
@@ -654,6 +654,7 @@ int camera_setting_init(void)
 	cxt->cmr_set.isp_alg_timeout = 0;
 	cxt->cmr_set.isp_ae_stab_timeout = 0;
 	cxt->cmr_set.isp_af_timeout = 0;
+	pthread_mutex_init (&cxt->cmr_set.isp_af_mutex, NULL);
 	pthread_mutex_init (&cxt->cmr_set.set_mutex, NULL);
 	pthread_mutex_init (&cxt->cmr_set.isp_alg_mutex, NULL);
 	pthread_mutex_init (&cxt->cmr_set.isp_ae_stab_mutex, NULL);
@@ -678,6 +679,7 @@ int camera_setting_deinit(void)
 	pthread_mutex_destroy(&cxt->cmr_set.set_mutex);
 	pthread_mutex_destroy(&cxt->cmr_set.isp_alg_mutex);
 	pthread_mutex_destroy(&cxt->cmr_set.isp_ae_stab_mutex);
+	pthread_mutex_destroy(&cxt->cmr_set.isp_af_mutex);
 
 	return ret;
 }
@@ -1647,25 +1649,27 @@ int camera_autofocus_start(void)
 					isp_af_param.win[i].end_x,
 					isp_af_param.win[i].end_y);
 			}
+			cxt->cmr_set.isp_af_timeout = 0;
 			ret = isp_ioctl(ISP_CTRL_AF, &isp_af_param);
 			if (clock_gettime(CLOCK_REALTIME, &ts)) {
 				ret = -1;
 				CMR_LOGE("get time failed.");
 			} else {
 				ts.tv_sec += ISP_PROCESS_SEC_TIMEOUT;
-				if (ts.tv_nsec >= ISP_PROCESS_NSEC_TIMEOUT) {
-					ts.tv_nsec -= ISP_PROCESS_NSEC_TIMEOUT;
+				if (ts.tv_nsec + ISP_PROCESS_NSEC_TIMEOUT >= 1000000000) {
+					ts.tv_nsec = ts.tv_nsec + ISP_PROCESS_NSEC_TIMEOUT - 1000000000;
 					ts.tv_sec ++;
 				} else {
 					ts.tv_nsec += ISP_PROCESS_NSEC_TIMEOUT;
 				}
 				ret = sem_timedwait(&cxt->cmr_set.isp_af_sem, &ts);
 				if (ret) {
+					pthread_mutex_lock(&cxt->cmr_set.isp_af_mutex);
 					CMR_LOGE("isp af timeout");
 					cxt->cmr_set.isp_af_timeout = 1;
+					pthread_mutex_unlock(&cxt->cmr_set.isp_af_mutex);
 					camera_autofocus_stop(0);
 				} else {
-					cxt->cmr_set.isp_af_timeout = 0;
 					if (0 == cxt->cmr_set.isp_af_win_val) {
 						ret = -1;
 					}
@@ -1789,13 +1793,15 @@ int camera_isp_af_done(void *data)
 	struct camera_context    *cxt = camera_get_cxt();
 	struct isp_af_notice     *isp_af = (struct isp_af_notice*)data;
 
+	pthread_mutex_lock(&cxt->cmr_set.isp_af_mutex);
 	CMR_LOGV("AF done, valid_win 0x%x, isp_af_timeout %d",
 		isp_af->valid_win, cxt->cmr_set.isp_af_timeout);
-
 	cxt->cmr_set.isp_af_win_val = isp_af->valid_win;
 	if (cxt->cmr_set.isp_af_timeout == 0) {
 		sem_post(&cxt->cmr_set.isp_af_sem);
 	}
+	pthread_mutex_unlock(&cxt->cmr_set.isp_af_mutex);
+
 	return 0;
 }
 
