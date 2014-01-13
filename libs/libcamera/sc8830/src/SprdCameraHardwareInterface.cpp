@@ -71,12 +71,7 @@ static nsecs_t s_start_timestamp = 0;
 static nsecs_t s_end_timestamp = 0;
 static int s_use_time = 0;
 
-#ifdef CONFIG_USEIOMMU
-static int s_mem_method = 1;	 //   0=  physical	address,1=iommu  address
-#else
-static int s_mem_method = 0;
-#endif
-
+static int s_mem_method = 0;	 //   0=  physical	address,1=iommu  address
 
 #define GET_START_TIME do { \
                              s_start_timestamp = systemTime(); \
