@@ -135,10 +135,6 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 		sprintf(dsp_partition,"%s%s",path,"wdsp");
 		strcpy(modem_bank, W_MODEM_BANK);
 		strcpy(dsp_bank, W_DSP_BANK);
-	} else if(modem == WCN_MODEM) {
-		sipc_modem_size = WCN_MODEM_SIZE;
-		sprintf(modem_partition,"%s%s",path,"wcnmodem");
-		strcpy(modem_bank, WCN_MODEM_BANK);
 	}
 
 	/* write 1 to stop*/
@@ -148,17 +144,13 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 	} else if(modem == W_MODEM) {
 		MODEMD_LOGD("write 1 to %s", W_MODEM_STOP);
 		write_proc_file(W_MODEM_STOP, 0, "1");
-	} else if(modem == WCN_MODEM) {
-		MODEMD_LOGD("write 1 to %s", WCN_MODEM_STOP);
-		write_proc_file(WCN_MODEM_STOP, 0, "1");
 	}
 
 	/* load modem */
 	MODEMD_LOGD("load modem image from %s to %s, len=%d",
 			modem_partition, modem_bank, sipc_modem_size);
 	load_sipc_image(modem_partition, 0, modem_bank, 0, sipc_modem_size);
-
-	if(modem != WCN_MODEM) {
+	{
 		/* load dsp */
 		MODEMD_LOGD("load dsp image from %s to %s, len=%d",
 			dsp_partition, dsp_bank, sipc_dsp_size);
@@ -176,11 +168,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 		MODEMD_LOGD("write 1 to %s", W_MODEM_START);
 		write_proc_file(W_MODEM_START, 0, "1");
 		strcpy(alive_info, "W Modem Alive");
-	} else if(modem == WCN_MODEM) {
-		MODEMD_LOGD("write 1 to %s", WCN_MODEM_START);
-		write_proc_file(WCN_MODEM_START, 0, "1");
-		strcpy(alive_info, "WCN Modem Alive");
-	} else {
+	}else {
 		MODEMD_LOGE("error unkown modem  alive_info");
 	}
 	MODEMD_LOGD("wait for 20s\n");
@@ -375,10 +363,7 @@ void* detect_sipc_modem(void *param)
 	} else if(modem == W_MODEM) {
 		property_get(W_ASSERT_PRO, assert_dev, W_ASSERT_DEV);
 		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", W_WATCHDOG_DEV);
-	} else if(modem == WCN_MODEM) {
-		property_get(WCN_ASSERT_PRO, assert_dev, WCN_ASSERT_DEV);
-		snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", WCN_WATCHDOG_DEV);
-	} else {
+	}  else {
 		MODEMD_LOGE("%s: input wrong modem type!", __func__);
                 return NULL;
         }
@@ -461,10 +446,6 @@ void* detect_sipc_modem(void *param)
 						MODEMD_LOGD("w modem hangup");
 						strcpy(buf, "W Modem Hang");
 						numRead = sizeof("W Modem Hang");
-					} else if(modem == WCN_MODEM) {
-						MODEMD_LOGD("wcn modem hangup");
-						strcpy(buf, "WCN Modem Hang");
-						numRead = sizeof("WCN Modem Hang");
 					}
 				} else {
 					MODEMD_LOGD("modem assert happen");
