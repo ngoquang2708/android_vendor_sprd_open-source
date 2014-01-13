@@ -63,6 +63,13 @@ cd -
 
 echo "==== ====" >> $LOG
 date >> $LOG
+
+if [ -f "$ANDROID_PRODUCT_OUT/system.img" ]; then
+  info=($(du -skh $ANDROID_PRODUCT_OUT/system.img))
+  size=${info[0]}
+  echo "system.img:$size" >>$LOG
+fi
+
 echo "==== Build Successfully ====" >> $LOG
 
 echo "==== $PROD-$VAR-$VLX Done ===="
