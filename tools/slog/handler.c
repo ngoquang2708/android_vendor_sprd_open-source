@@ -1505,15 +1505,16 @@ void operate_bt_status(char *status, char* path)
 		return;
 	}
 
+	memset(buffer, 0, MAX_LINE_LEN);
 	while (fgets(line, MAX_NAME_LEN, fp)) {
 
 		if(!strncmp(BT_LOG_STATUS, line, strlen(BT_LOG_STATUS))) {
-			sprintf(line, "%s%s", BT_LOG_STATUS, status);
+			sprintf(line, "%s%s\n", BT_LOG_STATUS, status);
 		}
 
 		if(!strncmp(BT_LOG_PATH, line, strlen(BT_LOG_PATH))) {
 			if(path != NULL)
-				sprintf(line, "%s%s", BT_LOG_PATH, path);
+				sprintf(line, "%s%s\n", BT_LOG_PATH, path);
 		}
 
 		len += sprintf(buffer + len, "%s", line);
@@ -1521,7 +1522,7 @@ void operate_bt_status(char *status, char* path)
 
 	fclose(fp);
 
-	fp = fopen(BT_CONF_PATH, "r+");
+	fp = fopen(BT_CONF_PATH, "w");
 	if(fp == NULL) {
 		err_log("open %s failed!", BT_CONF_PATH);
 		return;
@@ -1548,8 +1549,10 @@ void *bt_log_handler(void *arg)
 		info = info->next;
 	}
 
-	if( !bt)
+	if( !bt) {
+		operate_bt_status("false", NULL);
 		return NULL;
+	}
 
 	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
 		bt->state = SLOG_STATE_OFF;
@@ -1558,7 +1561,13 @@ void *bt_log_handler(void *arg)
 	}
 
 	sprintf(buffer, "%s/%s/%s/", current_log_path, top_logdir, bt->log_path);
-	operate_bt_status("ture", buffer);
+	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)){
+		err_log("mkdir %s failed.", buffer);
+		exit(0);
+	}
+
+	operate_bt_status("true", buffer);
 
 	return NULL;
 }
