@@ -385,10 +385,8 @@ class RequestQueueThread : public SprdBaseThread{
     void                RequestQueueThreadFunc(SprdBaseThread * self);
 	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();
-	void                SetPrvCbProcessing(bool PrvCbIsProc);
 	bool                GetDcDircToDvSnap();
 	void                SetDcDircToDvSnap(bool dcDircToSnap);
-	bool                GetPrvCbProcStatus();
 	bool                GetRecStopMsg();
 	void                SetRecStopMsg(bool recStop);
 	int64_t             GetSensorTimeStamp(camera_req_info *reqInfo);
@@ -417,6 +415,7 @@ class RequestQueueThread : public SprdBaseThread{
     void                HandleStartCamera(camera_cb_type cb, int32_t parm4);
 	status_t            startPreviewInternal(bool isRecording);
 	void                stopPreviewInternal(void);
+	void                stopPreviewSimple(void);//only call camera_stop_preview
 	bool                isPreviewing(void);
 	bool                isCapturing(void);
 	bool                WaitForCaptureDone(void);
@@ -480,7 +479,6 @@ class RequestQueueThread : public SprdBaseThread{
 	uint32_t                        mRawHeapSize;
 	uint32_t						mPreviewHeapNum;
 	bool                               m_reqIsProcess;
-	bool                               m_prvCbIsProc;
 	bool                               m_IsPrvAftPic;
 	bool                               m_recStopMsg;
 	bool                               m_dcDircToDvSnap;//for cts testVideoSnapshot start
@@ -496,6 +494,7 @@ class RequestQueueThread : public SprdBaseThread{
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
 	Mutex                               m_halCBMutex;
+	Mutex                               m_stopPrvFrmCBMutex;//mutex for stop preview and receivepreviewframe
 	Mutex                               m_metaDataMutex;
 	Mutex                           mStateLock;
 	mutable Mutex                   m_afTrigLock;
