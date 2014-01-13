@@ -4443,7 +4443,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
     static const int32_t availableTargetFpsRanges[] = {
-            5, 30
+            4, 15, 4, 30, 5, 30
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
             availableTargetFpsRanges,
