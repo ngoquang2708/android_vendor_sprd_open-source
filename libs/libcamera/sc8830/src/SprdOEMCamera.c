@@ -1231,7 +1231,6 @@ int camera_take_picture_continue(int cap_cnt)
 	return ret;
 }
 
-#ifdef CONFIG_CAMERA_DATA_SHIFT
 static int _v4l2_postfix(struct frm_info* info)
 {
 	int                           ret = 0;
@@ -1398,7 +1397,6 @@ static int _v4l2_postfix_cap(struct frm_info* info)
 
 	return ret;
 }
-#endif
 
 int camera_cap_post(void *data)
 {
@@ -1496,9 +1494,8 @@ int camera_cap_post(void *data)
 			}
 		}
 
-#ifdef CONFIG_CAMERA_DATA_SHIFT
 		_v4l2_postfix_cap(data);
-#endif
+
 		camera_capture_hdr_data((struct frm_info *)data);
 		if (HDR_CAP_NUM == g_cxt->cap_cnt) {
 #if !USE_SENSOR_OFF_ON_FOR_HDR
@@ -1562,7 +1559,6 @@ int camera_cap_post(void *data)
 				return -CAMERA_FAILED;
 			}
 
-
 			if (IMG_DATA_TYPE_JPEG == g_cxt->cap_original_fmt) {
 				ret = camera_start_jpeg_decode(data);
 				if (ret) {
@@ -1620,9 +1616,6 @@ int camera_cap_post(void *data)
 		}
 	}
 
-	#ifdef CONFIG_CAMERA_DATA_SHIFT
-	_v4l2_postfix_cap(data);
-	#endif
 	return ret;
 }
 
@@ -6165,9 +6158,7 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
 		return ret;
 	}*/
-#ifdef CONFIG_CAMERA_DATA_SHIFT
 	_v4l2_postfix(data);
-#endif
 
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
 		if(g_cxt->set_flag > 0){
@@ -6588,6 +6579,11 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 	} else {
 		SET_CHN_IDLE(CHN_2);
 	}
+
+	if (CAMERA_HDR_MODE != g_cxt->cap_mode) {
+		_v4l2_postfix_cap(data);
+	}
+
 	switch (g_cxt->cap_original_fmt) {
 	case IMG_DATA_TYPE_RAW:
 		ret = camera_start_isp_process(data);
