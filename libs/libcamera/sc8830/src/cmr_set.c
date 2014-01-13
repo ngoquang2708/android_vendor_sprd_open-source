@@ -511,9 +511,16 @@ int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32_t *ski
 
 uint32_t camera_convert_iso(uint32_t iso)
 {
+	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t isp_param = 0;
 	uint32_t convert_iso = 100;
 
 	switch(iso) {
+	case 0:
+		if(V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt){
+			convert_iso = isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+		}
+		break;
 	case 2:
 		convert_iso = 200;
 		break;

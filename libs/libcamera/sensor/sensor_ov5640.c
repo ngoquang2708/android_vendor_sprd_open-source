@@ -42,6 +42,7 @@ static uint32_t preview_sysclk;
 static int s_ov5640_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
+static uint32_t iso_mode = 0;
 static uint32_t preview_hts;
 LOCAL uint32_t _ov5640_InitExifInfo(void);
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
@@ -2168,6 +2169,10 @@ LOCAL int OV5640_capture(uint32_t param)
 	_ov5640_ReadGain(param);
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME,
 				 (uint32_t) capture_shutter);
+	if(iso_mode == 0){
+		uint32_t iso_value = (uint32_t)Sensor_ReadReg(0x350b);
+		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_ISOSPEEDRATINGS, (uint32_t)iso_value);
+	}
 	return 0;
 }
 
@@ -6960,6 +6965,7 @@ LOCAL uint32_t _ov5640_set_iso(uint32_t mode)
 	uint32_t reg_value = 0;
 	SENSOR_REG_BITS_T_PTR sensor_reg_ptr=(SENSOR_REG_BITS_T_PTR)ov5640_iso_tab[mode];
 	SENSOR_PRINT("mode = %d",mode);
+	iso_mode = mode;
 	if(mode>5)
 		return 0;
 
