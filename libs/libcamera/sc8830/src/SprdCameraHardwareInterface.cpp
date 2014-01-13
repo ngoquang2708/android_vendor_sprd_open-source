@@ -773,7 +773,7 @@ status_t SprdCameraHardware::autoFocus()
 
 	if (SPRD_IDLE != getFocusState()) {
 		LOGE("autoFocus existing, direct return!");
-		return ALREADY_EXISTS;
+		return NO_ERROR;
 	}
 	mMsgEnabled |= CAMERA_MSG_FOCUS;
 
