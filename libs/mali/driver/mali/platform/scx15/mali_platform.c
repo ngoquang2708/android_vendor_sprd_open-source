@@ -120,7 +120,7 @@ void mali_power_initialize(struct platform_device *pdev)
 	gpuinfo_transition_latency=300;
 	scaling_max_freq=256;
 	scaling_min_freq=85;
-	mali_dfs_flag=0;
+	mali_dfs_flag=1;
 
 	MALI_DEBUG_ASSERT(gpu_clock);
 	MALI_DEBUG_ASSERT(gpu_clock_i);
@@ -319,37 +319,17 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			scaling_min_freq=GPU_LEVEL3_MAX;
 			max_div=GPU_MIN_DIVISION;
 			mali_freq_select=3;
-			gpu_level=1;
+			gpu_level=2;
 			break;
+		case 0:
+		case 1:
 		case 2:
+		default:
 			scaling_max_freq=GPU_LEVEL1_MAX;
 			scaling_min_freq=GPU_LEVEL1_MAX;
 			max_div=GPU_MIN_DIVISION;
 			mali_freq_select=1;
-			gpu_level=1;
-			break;
-		case 0:
-			if(scaling_max_freq>GPU_LEVEL1_MAX)
-			{
-				scaling_max_freq=GPU_LEVEL3_MAX;
-				mali_freq_select=3;
-				max_div=GPU_MIN_DIVISION;
-			}
-			else
-			{
-				scaling_max_freq=GPU_LEVEL1_MAX;
-				mali_freq_select=1;
-				max_div=GPU_MAX_DIVISION;
-			}
-			gpu_level=0;
-			break;
-		case 1:
-		default:
-			scaling_max_freq=GPU_LEVEL1_MAX;
-			scaling_min_freq=GPU_LEVEL1_MIN;
-			max_div=GPU_MAX_DIVISION;
-			mali_freq_select=1;
-			gpu_level=0;
+			gpu_level=2;
 			break;
 	}
 #endif
