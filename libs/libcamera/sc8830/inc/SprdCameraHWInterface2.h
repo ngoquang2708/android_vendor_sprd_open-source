@@ -93,6 +93,8 @@ namespace android {
 #define FRONT_SENSOR_ORIG_HEIGHT 480
 
 #define ALIGN_ZOOM_CROP_BITS (~0x03)
+#define SIZE_ALIGN(x)   (((x)+15)&(~15))
+
 
 typedef struct stream_parameters {
             uint32_t                width;

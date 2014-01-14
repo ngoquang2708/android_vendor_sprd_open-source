@@ -1555,6 +1555,8 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	sp<Stream> StreamSP = NULL;
 	int phyaddr = 0;
 	int size =0;
+	uint32_t buffer_size = 0;
+	sprd_camera_memory_t *cam_Add = NULL;
     if (NULL == frame) {
 		HAL_LOGE("%s: invalid frame pointer",__FUNCTION__);
 		return;
@@ -1567,12 +1569,31 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
     //deq one graphic buf(2 bufs)
     StreamSP = m_Stream[STREAM_ID_PREVIEW - 1];
 	targetStreamParms = &(StreamSP->m_parameters);
+	buffer_size = camera_get_size_align_page((SIZE_ALIGN(targetStreamParms->width) * SIZE_ALIGN(targetStreamParms->height) * 3)/2);
+	#ifdef CONFIG_CAMERA_ROTATION_CAPTURE
+	buffer_size <<= 1;
+	#endif
+	cam_Add = GetCachePmem(buffer_size, 1);
+	if (cam_Add == NULL) {
+		HAL_LOGE("ERR %s cannot allocate buf",__FUNCTION__);
+		goto allocate_buf_free;
+	}
+	if (cam_Add->data == NULL) {
+		HAL_LOGE("ERR %s cannot get virt add",__FUNCTION__);
+		goto allocate_buf_free;
+	}
+	if ( 0 != camera_get_data_redisplay(cam_Add->phys_addr, targetStreamParms->width, targetStreamParms->height, frame->buffer_phy_addr,
+									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
+		HAL_LOGE("%s: Fail to camera_get_data_redisplay.", __FUNCTION__);
+		goto allocate_buf_free;
+	}
 	#ifdef PREVIEW_USE_DCAM_BUF
 	res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
 	if (res != NO_ERROR || buf == NULL) {
 		HAL_LOGD("DEBUG(%s): dequeue_buffer fail",__FUNCTION__);
-		return;
+		goto allocate_buf_free;
     }
+	disPic = *buf;
 	#else
 	Index = StreamSP->popBufQ();
 	HAL_LOGD("DisplayPictureImg index=%d",Index);
@@ -1586,13 +1607,9 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
         }
 		if (!found) {
 			HAL_LOGE("ERR %s cannot found buf",__FUNCTION__);
-			return;
+			goto allocate_buf_free;
 		}
 	}
-	#endif
-	#ifdef PREVIEW_USE_DCAM_BUF
-	disPic = *buf;
-	#else
 	disPic = targetStreamParms->svcBufHandle[Index];
 	#endif
     //lock
@@ -1602,19 +1619,8 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	}
 
 	priv_handle = reinterpret_cast<const private_handle_t *>(disPic);
-	if(s_mem_method == 0){
-		MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
-	} else {
-		MemoryHeapIon::Get_mm_iova(priv_handle->share_fd,&phyaddr,&size);
-	}
-	if ( 0 != camera_get_data_redisplay(phyaddr, targetStreamParms->width, targetStreamParms->height, frame->buffer_phy_addr,
-									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
-		HAL_LOGE("%s: Fail to camera_get_data_redisplay.", __FUNCTION__);
-		//return;//for enqbuf function invoked
-	}
-	if(s_mem_method != 0) {
-		 MemoryHeapIon::Free_mm_iova(priv_handle->share_fd,phyaddr, size);
-	}
+	memcpy((char *)(priv_handle->base),(char *)(cam_Add->data),
+							(targetStreamParms->width * targetStreamParms->height * 3)/2);
 	//unlock
     if (m_grallocHal) {
         m_grallocHal->unlock(m_grallocHal, disPic);
@@ -1624,7 +1630,18 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
                                                frame->timestamp,
                                                &disPic);
-
+	allocate_buf_free:
+	if (cam_Add) {
+		if(cam_Add->ion_heap != NULL) {
+			if(s_mem_method != 0){
+				cam_Add->ion_heap->free_mm_iova(cam_Add->phys_addr, cam_Add->phys_size);
+			}
+			//mPreviewHeapArray[i]->ion_heap.clear();
+			delete cam_Add->ion_heap;
+			cam_Add->ion_heap = NULL;
+		}
+		free(cam_Add);
+	}
     HAL_LOGD("DEBUG(%s): return %d",__FUNCTION__, res);
 }
 void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
@@ -3584,6 +3601,9 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	bool found = false;
 	int Index = 0;
 	sp<Stream> StreamSP = NULL;
+	#ifndef PREVIEW_USE_DCAM_BUF
+	Mutex::Autolock lock(m_stopPrvFrmCBMutex);
+	#endif
 	if (NULL == frame) {
 		HAL_LOGE("receivePreviewFrame: invalid frame pointer");
 		return;
@@ -3635,7 +3655,10 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		    StreamSP->pushBufQ(targetStreamParms->bufIndex);
 			return;
 	}
-
+	if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
+		HAL_LOGD("%s prv is not previewing!",__FUNCTION__);
+		return;
+	}
 //graphic deq 6 buf
 	HAL_LOGD("m_staticReqInfo.outputStreamMask=0x%x.",GetOutputStreamMask());
     if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
