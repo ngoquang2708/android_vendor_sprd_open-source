@@ -319,17 +319,14 @@ void OriSensor::processEvent(int code, int value)
 		case EVENT_TYPE_MAGV_X:
 			mPendingMask |= 1<<MagneticField;
 			st480.mag_x = value;
-			ALOGD("EVENT_TYPE_MAGV_X =%f",st480.mag_x);
 			break;
 		case EVENT_TYPE_MAGV_Y:
 			mPendingMask |= 1<<MagneticField;
 			st480.mag_y = value;
-			ALOGD("EVENT_TYPE_MAGV_Y =%f",st480.mag_y);
 			break;
 		case EVENT_TYPE_MAGV_Z:
 			mPendingMask |= 1<<MagneticField;
 			st480.mag_z = value;
-			ALOGD("EVENT_TYPE_MAGV_Z =%f",st480.mag_z);
 			break;
 	}
 }
