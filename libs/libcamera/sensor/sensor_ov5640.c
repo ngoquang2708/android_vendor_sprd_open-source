@@ -1953,7 +1953,7 @@ LOCAL  int OV5640_get_light_frequency(void)
 	return light_frequency;
 }
 
-LOCAL int OV5640_get_sysclk(void)
+LOCAL int OV5640_get_sysclk(uint32_t xclk_to_sensor)
 {
 	// calculate sysclk
 	int temp1, temp2;
@@ -1983,7 +1983,7 @@ LOCAL int OV5640_get_sysclk(void)
 	temp2 = temp1 & 0x03;
 	sclk_rdiv = sclk_rdiv_map[temp2];
 
-	VCO = 2400 * Multiplier / PreDiv;//if MCLK = 24M, then XVCLK = 2400
+	VCO = xclk_to_sensor*100 * Multiplier / PreDiv;//if MCLK = 24M, then XVCLK = 2400
 
 	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
 
@@ -2099,7 +2099,7 @@ LOCAL int OV5640_capture(uint32_t param)
 	// read capture VTS
 	capture_VTS = OV5640_get_VTS();
 	capture_HTS = OV5640_get_HTS();
-	capture_sysclk = OV5640_get_sysclk();
+	capture_sysclk = OV5640_get_sysclk(s_ov5640_resolution_Tab_YUV[param].xclk_to_sensor);
 
 	SENSOR_PRINT("capture_VTS %d, capture_HTS %d, capture_sysclk %d",
 		capture_VTS,
@@ -6863,7 +6863,7 @@ LOCAL void OV5640_set_bandingfilter(void)
 	int band_step60, max_band60, band_step50, max_band50;
 
 	// read preview PCLK
-	preview_sysclk = OV5640_get_sysclk();
+	preview_sysclk = OV5640_get_sysclk(s_ov5640_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].xclk_to_sensor);
 
 	// read preview HTS
 	preview_hts = OV5640_get_HTS();
