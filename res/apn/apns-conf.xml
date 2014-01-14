@@ -4652,21 +4652,21 @@
         type="default,supl"
     />
     -->
-    <apn carrier="Orange Internet"
-        mcc="208"
-        mnc="01"
-        apn="orange.fr"
-        user="orange"
-        password="orange"
-        type="default,supl"
-        authtype="3"
-    />
     <apn carrier="Orange World"
         mcc="208"
         mnc="01"
         apn="orange"
         proxy="192.168.010.100"
         port="8080"
+        user="orange"
+        password="orange"
+        type="default,supl"
+        authtype="3"
+    />
+    <apn carrier="Orange Internet"
+        mcc="208"
+        mnc="01"
+        apn="orange.fr"
         user="orange"
         password="orange"
         type="default,supl"
@@ -4746,12 +4746,10 @@
         type="default,supl"
         authtype="3"
     />
-    <apn carrier="SFR GPRS"
+    <apn carrier="SFR internet"
         mcc="208"
         mnc="10"
         apn="wapsfr"
-        proxy="195.115.025.129"
-        port="8080"
         server="http://live.vodafone.com"
         type="default,supl"
     />
@@ -4985,7 +4983,7 @@
     <apn carrier="Vodafone DE"
         mcc="262"
         mnc="02"
-        apn="web.vodafone.de "
+        apn="web.vodafone.de"
         type="default,supl"
     />
     <apn carrier="Vodafone DE-MMS"
