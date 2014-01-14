@@ -96,5 +96,5 @@
     <string name="same_number">是否使用相同号码？</string>
     <string name="number_yes">是</string>
     <string name="number_no">否</string>
-    
+    <string name="must_default_sms_app">"请设为默认短信应用"</string>
 </resources>

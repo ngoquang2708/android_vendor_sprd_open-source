@@ -155,8 +155,8 @@ public class MmsDataGenrat {
 			filePart.setContentType(ContentType.IMAGE_UNSPECIFIED
 					.getBytes(CharacterSets.MIMENAME_ISO_8859_1));
 		} else {
-//			filePart.setContentType(ContentType.FILE_UNSPECIFIED
-//					.getBytes(CharacterSets.MIMENAME_ISO_8859_1));
+			filePart.setContentType(ContentType.IMAGE_UNSPECIFIED
+					.getBytes(CharacterSets.MIMENAME_ISO_8859_1));
 		}
 		filePart.setName("file".getBytes(CharacterSets.MIMENAME_ISO_8859_1));
 		/* set contentLocation */
@@ -263,7 +263,8 @@ public class MmsDataGenrat {
 		Log.d(TAG, "---box uri:" + getMmsUri(getMsgBoxId()) + " "
 				+ currentCount);
 		PduPersister persister = getPduPersister();
-		Uri uri = persister.persist(pdu, getMmsUri(getMsgBoxId()));
+//		Uri uri = persister.persist(pdu, getMmsUri(getMsgBoxId()));
+        Uri uri = persister.persist(pdu, getMmsUri(getMsgBoxId()), true , false, null);
 		updatePdu(uri);
 	}
 

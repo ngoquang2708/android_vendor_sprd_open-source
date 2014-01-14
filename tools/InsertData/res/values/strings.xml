@@ -82,5 +82,5 @@
     <string name="same_number">Are you sure to use the same number ?</string>
     <string name="number_yes">yes</string>
     <string name="number_no">no</string>
-
+    <string name="must_default_sms_app">"Please set to default SMS application"</string>
 </resources>
