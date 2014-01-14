@@ -63,6 +63,7 @@ int main()
 		"com.passmark",
 		"com.threed.jpct",
 		"com.smartbench",
+		"fishnoodle.benchmark"
 	};
 	size_t app_num_level3 = sizeof(data_list_level3)/sizeof(data_list_level3[0]);
 	char* data_list_level2[] = {

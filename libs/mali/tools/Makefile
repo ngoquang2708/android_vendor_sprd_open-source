@@ -1,5 +1,17 @@
-xor_cipher: main.o
-	cc -o xor_cipher main.o
+objects=main.o
+program=xor_cipher
 
-main.o:main.c
-	cc -c main.c
+.PHONY:
+all:$(program) $(objects)
+$(program):$(objects)
+	cc -o $(program) $(objects)
+
+$(objects):%.o:%.c
+	cc -c $< -o $@
+
+install:
+	./$(program)
+
+clean:
+	rm -rf *.o $(program) libboost.so
+
