@@ -2632,8 +2632,8 @@ uint32_t Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_E cmd, uint32_t param)
 		sensor_exif_info_ptr =
 			(EXIF_SPEC_PIC_TAKING_COND_T *)sensor_info_ptr->ioctl_func_ptr->get_exif(0x00);
 	} else {
+		CMR_LOGV("SENSOR: Sensor_SetSensorExifInfo the get_exif fun is null, set it to default\n");
 		sensor_exif_info_ptr = &s_p_sensor_cxt->default_exif;
-		CMR_LOGV("SENSOR: Sensor_SetSensorExifInfo the get_exif fun is null error \n");
 	}
 
 	switch (cmd) {

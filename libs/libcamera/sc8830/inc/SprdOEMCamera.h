@@ -552,6 +552,7 @@ int camera_isp_ae_bypass(enum isp_alg_mode ae_mode);
 int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level);
 void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 inline uint32_t camera_get_prev_stat();
+int camera_capture_is_idle(void);
 
 #ifdef __cplusplus
 }

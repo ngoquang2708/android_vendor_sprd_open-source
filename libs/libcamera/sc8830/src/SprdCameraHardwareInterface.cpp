@@ -423,6 +423,8 @@ status_t SprdCameraHardware::startPreview()
 {
 	LOGV("startPreview: E");
 	Mutex::Autolock l(&mLock);
+	/*should wait for setParameter OK to stop*/
+	waitSetParamsOK();
 
 	setCaptureRawMode(0);
 
@@ -434,6 +436,8 @@ void SprdCameraHardware::stopPreview()
 {
 	LOGV("stopPreview: E");
 	Mutex::Autolock l(&mLock);
+	/*should wait for setParameter OK to stop*/
+	waitSetParamsOK();
 	camera_set_stop_preview_mode(0);
 	stopPreviewInternal();
 	setRecordingMode(false);
@@ -468,13 +472,6 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
         return NO_ERROR;
     }
 
-/*
-    if (isPreviewing()){
-        LOGI("stop preview (window change)");
-		camera_set_stop_preview_mode(0);
-        stopPreviewInternal();
-    }
-*/
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         LOGE("%s: could not retrieve min undequeued buffer count", __func__);
         return INVALID_OPERATION;
@@ -561,12 +558,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
              __func__, str_preview_format);
         return INVALID_OPERATION;
     }
-/*
-   status_t ret = startPreviewInternal(isRecordingMode());
-   if (ret != NO_ERROR) {
-		return INVALID_OPERATION;
-   }
-*/
+
     return NO_ERROR;
 }
 
@@ -577,10 +569,12 @@ status_t SprdCameraHardware::takePicture()
 	LOGV("takePicture: E");
 
 	LOGV("ISP_TOOL:takePicture: %d E", mode);
-
 	print_time();
 
 	Mutex::Autolock l(&mLock);
+	/*should wait for setParameter OK to capture*/
+	waitSetParamsOK();
+	print_time();
 
 	if (camera_set_dimensions(mRawWidth,
 				mRawHeight,
@@ -658,16 +652,37 @@ status_t SprdCameraHardware::setTakePictureSize(uint32_t width, uint32_t height)
 	return NO_ERROR;
 }
 
+status_t SprdCameraHardware::waitSetParamsOK()
+{
+	status_t ret = NO_ERROR;
+	uint32_t i_count = 0;
+
+	while (SPRD_IDLE != getSetParamsState() || mBakParamFlag) {
+		usleep(10*1000);
+		if (i_count < SET_PARAMS_TIMEOUT) {
+			i_count++;
+		} else {
+			LOGE("timeout to wait set Parameter OK, skip that!");
+			ret = TIMED_OUT;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 status_t SprdCameraHardware::startRecording()
 {
 	LOGV("mLock:startRecording S.\n");
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
+	//should wait the camera setPrameters OK to startRecording
+	waitSetParamsOK();
 
 #if 1
 	if (isPreviewing()) {
 		if (camera_is_need_stop_preview()) {
-			LOGV("wxz call stopPreviewInternal in startRecording().");
+			LOGV("call stopPreviewInternal in startRecording().");
 			camera_set_stop_preview_mode(1);
 			setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
 			if(CAMERA_SUCCESS != camera_stop_preview()){
@@ -692,8 +707,6 @@ void SprdCameraHardware::stopRecording()
 {
 	LOGV("stopRecording: E");
 	Mutex::Autolock l(&mLock);
-//	camera_set_stop_preview_mode(1);
-//	stopPreviewInternal();
 	setRecordingMode(false);
 	mRecordingFirstFrameTime = 0;
 	LOGV("stopRecording: X");
@@ -1357,6 +1370,35 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 		cur_params.setVideoSnapshotSupported(new_VideoSnapshotSupported);
 	}
 
+	/*the below parameters should be acquired by getInt*/
+	//sensor rotation (sensor rotation should be worked with sensor orientation)
+	{
+	int newRotation = params.getInt("sensorrotation");
+	if (-1 != newRotation)
+		cur_params.setSensorRotation(newRotation);
+	}
+
+	//sensor orientation (sensor orientation should be worked with sensor rotation)
+	{
+	int newOrientation = params.getInt("sensororientation");
+	if (-1 != newOrientation)
+		cur_params.setSensorOrientation(newOrientation);
+	}
+
+	//ZSL mode set
+	{
+	int newZslVal = params.getInt("zsl");
+	if (-1 != newZslVal)
+		cur_params.setZsl(newZslVal);
+	}
+
+	//continuos mode set
+	{
+	int newCapMode = params.getInt("capture-mode");
+	if (-1 != newCapMode)
+		cur_params.setCapMode(newCapMode);
+	}
+
 	return ret;
 }
 
@@ -1402,24 +1444,12 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		return UNKNOWN_ERROR;
 	}
 
-	//backup this two parameters,resolve VT orientation problem
-	int rotationBak = params.getInt("sensorrotation");
-	int orientationBak = params.getInt("sensororientation");
-	int zslValBak = params.getInt("zsl");
-	int capMode = params.getInt("capture-mode");
-
-	LOGV("orientationBak = %d, rotationBak = %d", orientationBak, rotationBak);
-
 	if (0 == checkSetParameters(params, mSetParameters)) {
 		LOGV("setParameters same parameters with system, directly return!");
 		mParamLock.unlock();
 		return NO_ERROR;
-	} else if (SPRD_IDLE != getSetParamsState()) {
+	} else if (SPRD_IDLE != getSetParamsState() || mBakParamFlag) {
 		LOGV("setParameters is handling, backup the parameter!");
-		if (-1 != rotationBak) mSetParametersBak.setSensorRotation(rotationBak);
-		if (-1 != orientationBak) mSetParametersBak.setSensorOrientation(orientationBak);
-		if (-1 != zslValBak) mSetParametersBak.setZsl(zslValBak);
-		if (-1 != capMode) mSetParametersBak.setCapMode(capMode);
 		//mSetParametersBak = params;
 		ret = copyParameters(mSetParametersBak, params);
 
@@ -1427,12 +1457,10 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 		mParamLock.unlock();
 		return NO_ERROR;
 	} else {
-		if (-1 != rotationBak) mSetParameters.setSensorRotation(rotationBak);
-		if (-1 != orientationBak) mSetParameters.setSensorOrientation(orientationBak);
-		if (-1 != zslValBak) mSetParameters.setZsl(zslValBak);
-		if (-1 != capMode) mSetParameters.setCapMode(capMode);
 		//mSetParameters = params;
 		ret = copyParameters(mSetParameters, params);
+		/*also update the bak parameter's yet*/
+		ret = copyParameters(mSetParametersBak, params);
 	}
 
 	message.msg_type = CMR_EVT_SW_MON_SET_PARA;
@@ -1515,18 +1543,25 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		return NO_ERROR;
 	}
 
-	ret = checkSetParametersEnvironment();
-	if (NO_ERROR != ret) {
-		LOGE("setParametersInternal X: invalid status , directly return!");
-		mBakParamFlag = 2;
-		mParamLock.unlock();
-		return NO_ERROR;
-	}
-
 	/*check if the ZOOM level changed*/
 	if (mParameters.getZoom() != ((SprdCameraParameters)params).getZoom()) {
 		LOGV("setParametersInternal, zoom level changed");
 		isZoomChange = 1;
+	}
+
+	ret = checkSetParametersEnvironment();
+	if (NO_ERROR != ret) {
+		LOGW("setParametersInternal cannot set parameters, bakup parameters.");
+		mSetParametersBak = params;
+		if (!mBakParamFlag) {
+			mBakParamFlag = 1;
+			if (!isZoomChange) {
+				mParamWait.signal();
+			}
+		}
+		LOGW("setParametersInternal X: invalid status , directly return!");
+		mParamLock.unlock();
+		return NO_ERROR;
 	}
 
 	// FIXME: will this make a deep copy/do the right thing? String8 i
@@ -1539,7 +1574,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		mParameters.setZSLSupport((const char *)(isZslSupport));
 	}
 
-	if (1 != mBakParamFlag) {
+	if (!mBakParamFlag) {
 		/*if zoom parameter changed, then the action should be sync*/
 		if (!isZoomChange) {
 			mParamWait.signal();
@@ -1580,10 +1615,9 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 
 	if (camera_set_change_size(mRawWidth, mRawHeight, mPreviewWidth, mPreviewHeight)) {
 		if (isPreviewing()) {
+			LOGV("setParametersInternal preview or ZSL size should be changed!");
 			camera_set_stop_preview_mode(1);
-			mPreviewCbLock.lock();
 			stopPreviewInternal();
-			mPreviewCbLock.unlock();
 			if (NO_ERROR != setPreviewWindow(mPreviewWindow)) {
 				LOGE("setParametersInternal X: setPreviewWindow fail, unknown error!");
 				ret = UNKNOWN_ERROR;
@@ -1605,12 +1639,10 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 
 	if ((1 == mParameters.getInt("zsl")) &&
 		((mCaptureMode != CAMERA_ZSL_CONTINUE_SHOT_MODE) && (mCaptureMode != CAMERA_ZSL_MODE))) {
-		LOGI("mode change:stop preview.");
 		if (isPreviewing()) {
+			LOGV("setParametersInternal mode change:stop preview.ZSL ON");
 			camera_set_stop_preview_mode(1);
-			mPreviewCbLock.lock();
 			stopPreviewInternal();
-			mPreviewCbLock.unlock();
 			if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
 				LOGE("setParametersInternal X: open ZSL startPreviewInternal fail, unknown error!");
 				ret = UNKNOWN_ERROR;
@@ -1620,12 +1652,10 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	}
 	if ((0 == mParameters.getInt("zsl")) &&
 		((mCaptureMode == CAMERA_ZSL_CONTINUE_SHOT_MODE) || (mCaptureMode == CAMERA_ZSL_MODE))) {
-		LOGI("mode change:stop preview.");
 		if (isPreviewing()) {
+			LOGV("setParametersInternal mode change:stop preview.ZSL OFF");
 			camera_set_stop_preview_mode(0);
-			mPreviewCbLock.lock();
 			stopPreviewInternal();
-			mPreviewCbLock.unlock();
 			if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
 				LOGE("setParametersInternal X: close ZSL startPreviewInternal fail, unknown error!");
 				ret = UNKNOWN_ERROR;
@@ -1849,9 +1879,9 @@ void SprdCameraHardware::setRecordingMode(bool enable)
 
 void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner owner)
 {
-
-	LOGV("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
+	LOGV("setCameraState:state: E");
 	Mutex::Autolock stateLock(&mStateLock);
+	LOGV("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
 
 	switch (state) {
 	//camera state
@@ -1959,7 +1989,7 @@ void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner own
 		break;
 	}
 
-	LOGV("setCameraState:camera state = %s, preview state = %s, capture state = %s focus state = %s set param state = %s",
+	LOGV("setCameraState: X camera state = %s, preview state = %s, capture state = %s focus state = %s set param state = %s",
 				getCameraStateStr(mCameraState.camera_state),
 				getCameraStateStr(mCameraState.preview_state),
 				getCameraStateStr(mCameraState.capture_state),
@@ -2017,13 +2047,28 @@ bool SprdCameraHardware::isPreviewing()
 
 bool SprdCameraHardware::isCapturing()
 {
+	bool ret = false;
 	LOGV("isCapturing: %s", getCameraStateStr(mCameraState.capture_state));
 #if 1
-	return (SPRD_WAITING_RAW == mCameraState.capture_state
-			|| SPRD_WAITING_JPEG == mCameraState.capture_state);
+	if ((SPRD_INTERNAL_RAW_REQUESTED == mCameraState.capture_state) ||
+		(SPRD_WAITING_RAW == mCameraState.capture_state) ||
+		(SPRD_WAITING_JPEG == mCameraState.capture_state)) {
+		ret = true;
+	} else if (SPRD_INTERNAL_CAPTURE_STOPPING == mCameraState.capture_state) {
+		if (camera_capture_is_idle()) {
+			setCameraState(SPRD_IDLE, STATE_CAPTURE);
+			LOGV("isCapturing: %s", getCameraStateStr(mCameraState.capture_state));
+		} else {
+			ret = true;
+		}
+	} else if (SPRD_IDLE != mCameraState.capture_state) {
+		LOGE("isCapturing error: unknown capture status");
+		ret = true;
+	}
 #else
 	return (SPRD_IDLE != mCameraState.capture_state);
 #endif
+	return ret;
 }
 
 bool SprdCameraHardware::checkPreviewStateForCapture()
@@ -2031,19 +2076,25 @@ bool SprdCameraHardware::checkPreviewStateForCapture()
 	bool ret = true;
 	Sprd_camera_state tmpState = SPRD_IDLE;
 
-	tmpState = getPreviewState();
-	if (iSZslMode()) {
-		if (SPRD_PREVIEW_IN_PROGRESS != tmpState) {
-			LOGV("incorrect preview status %d of ZSL capture mode", (uint32_t)tmpState);
-			ret = false;
-		}
+	tmpState = getCaptureState();
+	if ((SPRD_INTERNAL_CAPTURE_STOPPING == tmpState) ||
+		(SPRD_ERROR == tmpState)) {
+		LOGW("incorrect capture status %s", getCameraStateStr(tmpState));
+		ret = false;
 	} else {
-		if (SPRD_IDLE != tmpState) {
-			LOGV("incorrect preview status %d of normal capture mode", (uint32_t)tmpState);
-			ret = false;
+		tmpState = getPreviewState();
+		if (iSZslMode()) {
+			if (SPRD_PREVIEW_IN_PROGRESS != tmpState) {
+				LOGV("incorrect preview status %d of ZSL capture mode", (uint32_t)tmpState);
+				ret = false;
+			}
+		} else {
+			if (SPRD_IDLE != tmpState) {
+				LOGV("incorrect preview status %d of normal capture mode", (uint32_t)tmpState);
+				ret = false;
+			}
 		}
 	}
-
 	return ret;
 }
 
@@ -3077,23 +3128,19 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		return NO_ERROR;
 	}
 	//to do it
-	if (!iSZslMode()) {
-		// We check for these two states explicitly because it is possible
-		// for startPreview() to be called in response to a raw or JPEG
-		// callback, but before we've updated the state from SPRD_WAITING_RAW
-		// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
-		// we update the state *after* we've made the callback.  See that
-		// function for an explanation.
-		if (isCapturing()) {
-			WaitForCaptureDone();
-		}
 
-		if (isCapturing() || isPreviewing()) {
-			LOGE("startPreviewInternal X Capture state is %s, Preview state is %s, expecting SPRD_IDLE!",
-			getCameraStateStr(mCameraState.capture_state), getCameraStateStr(mCameraState.preview_state));
-			return INVALID_OPERATION;
-		}
+	// We check for these two states explicitly because it is possible
+	// for startPreview() to be called in response to a raw or JPEG
+	// callback, but before we've updated the state from SPRD_WAITING_RAW
+	// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
+	// we update the state *after* we've made the callback.  See that
+	// function for an explanation.
+	if (isCapturing()) {
+		LOGE("startPreviewInternal X Capture state is %s, expecting SPRD_IDLE!",
+		getCameraStateStr(mCameraState.capture_state));
+		return INVALID_OPERATION;
 	}
+
 	setRecordingMode(isRecording);
 
 	cameraBakMemCheckAndFree();
@@ -3106,6 +3153,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	if (iSZslMode()) {
 		set_ddr_freq("500000");
 		mSetFreqCount++;
+		deinitCapture();
 		if (!initCapture(mData_cb != NULL)) {
 			deinitCapture();
 			set_ddr_freq("0");
@@ -3142,16 +3190,20 @@ void SprdCameraHardware::stopPreviewInternal()
 	nsecs_t end_timestamp;
 	LOGV("stopPreviewInternal E");
 
+	if (isCapturing()) {
+		setCameraState(SPRD_INTERNAL_CAPTURE_STOPPING, STATE_CAPTURE);
+		if (0 != camera_stop_capture()) {
+			LOGE("stopPreviewInternal: camera_stop_capture failed!");
+			return;
+		}
+	}
+
 	if (!isPreviewing()) {
 		LOGE("Preview not in progress! stopPreviewInternal X");
 		return;
 	}
 
 	setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
-
-	if (isCapturing()) {
-		cancelPictureInternal();
-	}
 
 	if(CAMERA_SUCCESS != camera_stop_preview()) {
 		setCameraState(SPRD_ERROR, STATE_PREVIEW);
@@ -4449,9 +4501,10 @@ SprdCameraHardware::transitionState(SprdCameraHardware::Sprd_camera_state from,
 									SprdCameraHardware::state_owner owner, bool lock)
 {
 	volatile SprdCameraHardware::Sprd_camera_state *which_ptr = NULL;
-	LOGV("transitionState: owner = %d, lock = %d", owner, lock);
+	LOGV("transitionState E");
 
 	if (lock) mStateLock.lock();
+	LOGV("transitionState: owner = %d, lock = %d", owner, lock);
 
 	switch (owner) {
 	case STATE_CAMERA:
@@ -4490,6 +4543,7 @@ SprdCameraHardware::transitionState(SprdCameraHardware::Sprd_camera_state from,
 	}
 
 	if (lock) mStateLock.unlock();
+	LOGV("transitionState X");
 
 	return to;
 }
@@ -4907,6 +4961,18 @@ int SprdCameraHardware::switch_monitor_thread_deinit(void *p_data)
 	return ret ;
 }
 
+void SprdCameraHardware::sync_bak_parameters()
+{
+	Mutex::Autolock          l(&mParamLock);
+
+	if (SPRD_IDLE == getSetParamsState()) {
+		/*update the bakParameters if there exist difference*/
+		if (0 == checkSetParameters(mSetParametersBak, mParameters)) {
+			copyParameters(mSetParametersBak, mParameters);
+		}
+	}
+}
+
 void * SprdCameraHardware::switch_monitor_thread_proc(void *p_data)
 {
 	struct cmr_msg           message = {0, 0, 0, 0};
@@ -4923,6 +4989,8 @@ void * SprdCameraHardware::switch_monitor_thread_proc(void *p_data)
 				LOGV("switch_monitor_thread_proc, bak set");
 				obj->setParametersInternal(obj->mSetParametersBak);
 				obj->setCameraState(SPRD_IDLE, STATE_SET_PARAMS);
+			} else {
+				obj->sync_bak_parameters();
 			}
 			obj->cameraBakMemCheckAndFree();
 		} else if (NO_ERROR != ret) {
@@ -5103,9 +5171,8 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 		LOGV("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x,size=0x%x", index, (uint32_t)v_addr, (uint32_t)p_addr,size);
 		ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
 		if (ret) {
-			LOGV("flush_buffer error ret=%d", ret);
-
-			LOGE("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x", index, (uint32_t)v_addr, (uint32_t)p_addr);
+			LOGW("flush_buffer abnormal ret=%d", ret);
+			LOGW("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x", index, (uint32_t)v_addr, (uint32_t)p_addr);
 		}
 	}
 

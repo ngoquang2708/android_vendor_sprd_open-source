@@ -58,7 +58,8 @@ typedef struct sprd_camera_memory {
 
 
 #define MAX_MISCHEAP_NUM 1024
-#define SET_PARAM_TIMEOUT 500000000
+#define SET_PARAM_TIMEOUT 2000000000
+#define SET_PARAMS_TIMEOUT 250       /*250 means 250*10ms*/
 
 
 class SprdCameraHardware : public virtual RefBase {
@@ -302,11 +303,13 @@ private:
 						sprd_camera_memory_t *data, unsigned int index,
 						void *user);
 	void                            cameraBakMemCheckAndFree();
-
+	void                            sync_bak_parameters();
 	bool                            iSDisplayCaptureFrame();
 	bool                            iSZslMode();
 	bool                            checkPreviewStateForCapture();
 	bool                            getLcdSize(uint32_t *width, uint32_t *height);
+	status_t                        waitSetParamsOK();
+
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
 	changes.
