@@ -238,6 +238,9 @@ _mali_osk_errcode_t mali_mem_mali_map_prepare(mali_mem_allocation *descriptor)
 	return mali_mmu_pagedir_map(session->page_directory, descriptor->mali_mapping.addr, size);
 }
 
+extern void mali_pause_lock(void);
+extern void mali_pause_unlock(void);
+
 void mali_mem_mali_map_free(mali_mem_allocation *descriptor)
 {
 	u32 size = descriptor->size;
@@ -249,10 +252,14 @@ void mali_mem_mali_map_free(mali_mem_allocation *descriptor)
 		size += MALI_MMU_PAGE_SIZE;
 	}
 
+	mali_pause_lock();
+
 	/* Umap and flush L2 */
 	mali_mmu_pagedir_unmap(session->page_directory, descriptor->mali_mapping.addr, descriptor->size);
 
 	mali_scheduler_zap_all_active(session);
+
+	mali_pause_unlock();
 }
 
 u32 _mali_ukk_report_memory_usage(void)
