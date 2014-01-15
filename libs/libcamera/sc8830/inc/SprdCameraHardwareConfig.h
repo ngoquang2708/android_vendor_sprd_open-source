@@ -630,9 +630,10 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"slow-motion-values", "1,2,3"},
 	{"slow-motion", "1"},
 	{"max-num-metering-areas", "1"},
-    {"auto-exposure","frame-average"},
-    {"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
-    {"preview-env","0"}
+	{"auto-exposure","frame-average"},
+	{"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
+	{"preview-env","0"},
+	{"video-snapshot-supported","true"}
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
