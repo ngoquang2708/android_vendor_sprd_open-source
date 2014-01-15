@@ -1350,6 +1350,12 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	if(new_SupportedPreviewFormat)
 		cur_params.setSupportedPreviewFormat(new_SupportedPreviewFormat);
 	}
+	//VideoSnapshotSupported
+	{
+	const char* new_VideoSnapshotSupported = params.get_VideoSnapshotSupported();
+	if(new_VideoSnapshotSupported)
+		cur_params.setVideoSnapshotSupported(new_VideoSnapshotSupported);
+	}
 
 	return ret;
 }

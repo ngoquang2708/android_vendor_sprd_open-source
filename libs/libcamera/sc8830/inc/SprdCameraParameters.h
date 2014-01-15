@@ -221,6 +221,8 @@ public:
 	void setMaxNumFocusAreas(const char* value);
 	const char* get_SupportedPreviewFormat() const;
 	void setSupportedPreviewFormat(const char* value);
+	const char* get_VideoSnapshotSupported() const;
+	void setVideoSnapshotSupported(const char* value);
 	void setZsl(int value);
 	void setCapMode(int value);
 	void setZSLSupport(const char* value);

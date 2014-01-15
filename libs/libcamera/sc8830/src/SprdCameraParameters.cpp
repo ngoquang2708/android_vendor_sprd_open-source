@@ -1096,6 +1096,16 @@ void SprdCameraParameters::setSupportedPreviewFormat(const char* value)
        set(KEY_SUPPORTED_PREVIEW_FORMATS, value);
 }
 
+const char *SprdCameraParameters::get_VideoSnapshotSupported() const
+{
+    return get(KEY_VIDEO_SNAPSHOT_SUPPORTED);
+}
+
+void SprdCameraParameters::setVideoSnapshotSupported(const char* value)
+{
+	set(KEY_VIDEO_SNAPSHOT_SUPPORTED, value);
+}
+
 void SprdCameraParameters::setZsl(int value)
 {
 	set(KEY_ZSL,value);
