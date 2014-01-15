@@ -602,8 +602,6 @@ public class APCTService extends Service {
 
     private String getFps()
     {
-        char[] buffer = new char[256];
-
         final String FPS_PROC = "/proc/benchMark/fps";
         FileReader fr = null;
         BufferedReader reader = null;
@@ -612,13 +610,16 @@ public class APCTService extends Service {
         try
         {
             fr = new FileReader(FPS_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                str = reader.readLine();
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str = reader.readLine();
+                    reader.close();
+	         }
+            }finally {
                 fr.close();
-                reader.close();
-			}
+            }
         }
         catch (IOException e)
         {
@@ -653,7 +654,7 @@ public class APCTService extends Service {
                     }
                  }
                  in.close();
-		       }
+             }
         }
         catch(Throwable t)
         {
@@ -664,56 +665,62 @@ public class APCTService extends Service {
 
     private String getAppLaunchTime()
     {
-        char[] buffer = new char[64];
-
         final String APP_PROC = "/proc/benchMark/app_launch_time";
         FileReader fr = null;
         BufferedReader reader = null;
-        String str = "";
+        String str = null;
 
         try
         {
             fr = new FileReader(APP_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                str = reader.readLine();
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str = reader.readLine();
+                    reader.close();
+                }
+            }finally {
                 fr.close();
-                reader.close();
-			}
+            }
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
 
+        if (str == null ||str.charAt(0) == '\0')
+        {
+            str = "App Launch Time: null";
+        }
         return str;
     }
 
     private String getAppLaunchData()
     {
-        char[] buffer = new char[1024];
-
         final String APP_PROC = "/proc/benchMark/app_launch_data";
         FileReader fr = null;
         BufferedReader reader = null;
-        String str = "ACTIVITY LAUNCH PROCESS\n";
+        String str = "ACTIVITY LAUNCH PROCESS:\n";
         String str_tmp = "";
         try
         {
             fr = new FileReader(APP_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                while ((str_tmp = reader.readLine()) != null)
+            try{
+                if (fr != null)
                 {
-                    str += str_tmp;
-                    str += "\n";
-                }
+                    reader = new BufferedReader(fr);
+                    while ((str_tmp = reader.readLine()) != null)
+                    {
+                        str += str_tmp;
+                        str += "\n";
+                    }
 
+                    reader.close();
+                }
+            }finally {
                 fr.close();
-                reader.close();
-		     }
+            }
         }
         catch (IOException e)
         {
@@ -731,9 +738,12 @@ public class APCTService extends Service {
         try
         {
             fr = new FileWriter(BOOT_DATA_PROC, true);
-            if (fr != null)
-            {
-                fr.write(buffer);
+            try{
+                if (fr != null)
+                {
+                    fr.write(buffer);
+                }
+            }finally {
                 fr.close();
             }
         }
@@ -745,12 +755,10 @@ public class APCTService extends Service {
 
     private String getBootData()
     {
-        char[] buffer = new char[1024];
-
         final String APP_PROC = "/proc/bootperf";
         FileReader fr = null;
         BufferedReader reader = null;
-        String str = "BOOT PROCESS\n";
+        String str = "BOOT PROCESS:\n";
         String str_tmp = "";
         String read_flg = "1";
 
@@ -759,19 +767,20 @@ public class APCTService extends Service {
         try
         {
             fr = new FileReader(APP_PROC);
-
-            if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                while ((str_tmp = reader.readLine()) != null)
+            try{
+                if (fr != null)
                 {
-                    str += str_tmp;
-                    str += "\n";
+                    reader = new BufferedReader(fr);
+                    while ((str_tmp = reader.readLine()) != null)
+                    {
+                        str += str_tmp;
+                        str += "\n";
+                    }
+                    reader.close();
                 }
-
+            }finally {
                 fr.close();
-                reader.close();
-		    }
+            }
         }
         catch (IOException e)
         {
@@ -783,64 +792,79 @@ public class APCTService extends Service {
 
     private String getPwronTime()
     {
-        char[] buffer = new char[64];
         final String BOOT_TIME_PROC = "/proc/benchMark/boot_time";
-        FileReader fr = null;
-        BufferedReader reader = null;
-        String str = "";
-
-        try
-        {
-            fr = new FileReader(BOOT_TIME_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                str = reader.readLine();
-                fr.close();
-                reader.close();
-			}
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        return str;
-    }
-
-    private String getNetSearchTime()
-    {
-        char[] buffer = new char[64];
-        final String NET_TIME_PROC = "/proc/benchMark/net_time";
         FileReader fr = null;
         BufferedReader reader = null;
         String str = null;
 
         try
         {
-            fr = new FileReader(NET_TIME_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                str = reader.readLine();
+            fr = new FileReader(BOOT_TIME_PROC);
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str = reader.readLine();
+                    reader.close();
+                }
+            }finally {
                 fr.close();
-                reader.close();
-			}
+            }
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
 
-       if (str.charAt(0) == '\0')
-       {
-           str = "Net Search Time: 0 ms";
-       }
-       return str;
+        if (str == null ||str.charAt(0) == '\0')
+        {
+            str = "Boot Time: null";
+        }
+
+        return str;
+    }
+
+    private String getNetSearchTime()
+    {
+        final String NET_TIME_PROC = "/proc/benchMark/net_time";
+        FileReader fr = null;
+        BufferedReader reader = null;
+        String str = null;
+        String tmp_str;
+
+        try
+        {
+            fr = new FileReader(NET_TIME_PROC);
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    while ((tmp_str = reader.readLine()) != null) {
+                        if (str == null)
+                            str = tmp_str + "\n";
+                        else
+                            str += tmp_str;
+                    }
+                    reader.close();
+                }
+            }finally {
+                fr.close();
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        if (str == null ||str.charAt(0) == '\0')
+        {
+            str = "Net Search Time: null";
+        }
+        return str;
     }
 
     private String getCameraInitTime()
     {
-        char[] buffer = new char[64];
         final String CAM_TIME_PROC = "/proc/benchMark/cam_time";
         FileReader fr = null;
         BufferedReader reader = null;
@@ -849,50 +873,59 @@ public class APCTService extends Service {
         try
         {
             fr = new FileReader(CAM_TIME_PROC);
-			if (fr != null)
-			{
-                reader = new BufferedReader(fr);
-                str = reader.readLine();
-                fr.close();
-                reader.close();
-			}
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str = reader.readLine();
+                    reader.close();
+                }
+            }finally {
+                    fr.close();
+                }
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
 
-       if (str.charAt(0) == '\0')
-       {
-           str = "Camera Init Time: 0 ms";
-       }
-       return str;
+        if (str == null  || str.charAt(0) == '\0')
+        {
+            str = "Camera Init Time: null";
+        }
+        return str;
     }
 
-	private String getRereturnToIdleTime()
-	{
-		String line = null;
-		FileReader fr = null;
-		BufferedReader reader = null;
-		final String filename = "/proc/benchMark/gohome_time";
-		String str = " ";
-		try {
-			fr = new FileReader(filename);
-			reader = new BufferedReader(fr);
-			str=reader.readLine();
-			reader.close();
-			fr.close();
-                        reader.close(); 
-		} catch (IOException e) {
-			Log.d(TAG, "cannot open " + filename + e);
-		}
+    private String getRereturnToIdleTime()
+    {
+        String line = null;
+        FileReader fr = null;
+        BufferedReader reader = null;
+        final String filename = "/proc/benchMark/gohome_time";
+        String str = null;
 
-        if (str.charAt(0) == '\0')
-        {
-            str = "Home to Idle Time: 0 ms";
+        try {
+            fr = new FileReader(filename);
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str=reader.readLine();
+                    reader.close();
+                }
+            }finally {
+                fr.close();
+            }
+        } catch (IOException e) {
+            Log.d(TAG, "cannot open " + filename + e);
         }
 
-		return str;
+        if (str == null  || str.charAt(0) == '\0')
+        {
+            str = "Home to Idle Time: null";
+        }
+
+        return str;
     }
 
     private String getChargeTime()
@@ -901,24 +934,27 @@ public class APCTService extends Service {
         FileReader fr = null;
         BufferedReader reader = null;
         final String filename = "/data/apct/chargetime";
-        String str = " ";
+        String str = null;
 
         try {
             fr = new FileReader(filename);
-            if (fr != null)
-            {
-                reader = new BufferedReader(fr);
-                str=reader.readLine();
-                reader.close();
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str=reader.readLine();
+                    reader.close();
+                }
+            }finally {
                 fr.close();
             }
         } catch (IOException e) {
             Log.d(TAG, "cannot open " + filename + e);
         }
 
-        if (str.equals(" "))
+       if (str == null ||str.charAt(0) == '\0')
         {
-            str = "Power Off Charge Time: 0 ms";
+            str = "Power Off Charge Time: null";
         }
 
         return str;
@@ -930,24 +966,27 @@ public class APCTService extends Service {
         FileReader fr = null;
         BufferedReader reader = null;
         final String filename = "/data/apct/shutdowntime";
-        String str = " ";
+        String str = null;
 
         try {
             fr = new FileReader(filename);
-            if (fr != null)
-            {
-                reader = new BufferedReader(fr);
-                str=reader.readLine();
-                reader.close();
+            try{
+                if (fr != null)
+                {
+                    reader = new BufferedReader(fr);
+                    str=reader.readLine();
+                    reader.close();
+                }
+            }finally {
                 fr.close();
             }
         } catch (IOException e) {
             Log.d(TAG, "cannot open " + filename + e);
         }
 
-        if (str.equals(" "))
+        if (str == null  || str.charAt(0) == '\0')
         {
-            str = "Power Off Time: 0 ms";
+            str = "Power Off Time: null";
         }
 
         return str;

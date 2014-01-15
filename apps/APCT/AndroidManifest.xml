@@ -51,8 +51,11 @@
         </activity>
         <receiver android:name=".APCTReceiver">
             <intent-filter>
-                <action android:name="android.intent.action.BENCHMARK_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.SERVICE_STATE" />
+                <action android:name="android.intent.action.SERVICE_STATE1" />
+                <action android:name="android.intent.action.SERVICE_STATE2" />
+                <action android:name="android.intent.action.SERVICE_STATE3" />
             </intent-filter>
         </receiver>
         <service android:name=".APCTService" />
