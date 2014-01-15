@@ -38,22 +38,17 @@ import android.telephony.TelephonyManager;
 
 public class APCTReceiver extends BroadcastReceiver
 {
-    static final String NET_ACTION     = "android.intent.action.SERVICE_STATE";
+    static final String BOOT_ACTION  = "android.intent.action.BOOT_COMPLETED";
+    static final String SIM1_ACTION    = "android.intent.action.SERVICE_STATE";
+    static final String SIM2_ACTION    = "android.intent.action.SERVICE_STATE1";
+    static final String SIM3_ACTION    = "android.intent.action.SERVICE_STATE2";
+    static final String SIM4_ACTION    = "android.intent.action.SERVICE_STATE3";
     static final String TAG = "APCTReceiver";
-    boolean[] first_flg;
-    long[] sim_time;
-    int sim_count;
+    static boolean first_flg[] = {true, true, true, true};
+    int sim_count = TelephonyManager.getPhoneCount();
+    long[] sim_time = new long[sim_count << 1];
+    static String net_str = null;
 
-    public APCTReceiver() {
-        sim_count = TelephonyManager.getPhoneCount();
-        Log.d("APCT_DEBUG", "APCTReceiver sim_count = " + sim_count);
-        sim_time = new long[sim_count << 1];
-        first_flg = new boolean[sim_count];
-        for (int i = 0; i < sim_count; i++)
-        {
-            first_flg[i] = true;
-        }
-    }
     public boolean IsFloatWinShow(Context context)
     {
         boolean ret  = false;
@@ -83,41 +78,79 @@ public class APCTReceiver extends BroadcastReceiver
        return ret;
     }
 
+    public void processNetSearch(int phoneId, Intent intent)
+    {
+        ServiceState serviceState = ServiceState.newFromBundle(intent.getExtras());
+        if (first_flg[phoneId] && serviceState.getState() == ServiceState.STATE_POWER_OFF)
+        {
+            sim_time[phoneId<<1] = SystemClock.elapsedRealtime();
+        }
+        else
+        if (first_flg[phoneId] && serviceState.getState() == ServiceState.STATE_IN_SERVICE)
+        {
+            sim_time[(phoneId<<1) + 1] = SystemClock.elapsedRealtime();
+            first_flg[phoneId] = false;
+            AddNetSimTime(phoneId);
+        }
+    }
+
     public void onReceive(Context context, Intent intent)
     {
-        if (NET_ACTION.equals(intent.getAction()))
-        {
-            int sim_count = TelephonyManager.getPhoneCount();
-            int phoneId = intent.getIntExtra(Phone.PHONE_ID, 0);
-            ServiceState serviceState = ServiceState.newFromBundle(intent.getExtras());
-
-            if (first_flg[phoneId] && serviceState.getState() == ServiceState.STATE_POWER_OFF)
-            {
-                sim_time[phoneId<<1] = SystemClock.elapsedRealtime();
-            }
-            else
-            if (first_flg[phoneId] && serviceState.getState() == ServiceState.STATE_IN_SERVICE)
-            {
-                sim_time[phoneId<<1 + 1] = SystemClock.elapsedRealtime();
-                first_flg[phoneId] = false;
-                writeNetTimeToProc();
-            }
+        if (BOOT_ACTION.equals(intent.getAction()) && IsFloatWinShow(context))
+	 {
+            Intent service = new Intent();
+            service.setClass(context, APCTService.class);
+            context.startService(service);
         }
+        else
+        if (SIM1_ACTION.equals(intent.getAction()))
+        {
+            processNetSearch(0, intent);
+        }
+        else
+        if (SIM2_ACTION.equals(intent.getAction()))
+        {
+            processNetSearch(1, intent);
+        }
+        else
+        if (SIM3_ACTION.equals(intent.getAction()))
+        {
+            processNetSearch(2, intent);
+        }
+        else
+        if (SIM4_ACTION.equals(intent.getAction()))
+        {
+            processNetSearch(3, intent);
+        }
+    }
+
+    public void AddNetSimTime(int id)
+    {
+        if (id >= sim_count)
+        {
+            return;
+        }
+
+        long net_time = sim_time[(id<<1) + 1] - sim_time[id<<1];
+        Long net_time2 = new Long(net_time);
+
+        if (net_str == null)
+        {
+            net_str = "SIM";
+        }
+        else
+        {
+            net_str += "\nSIM";
+        }
+
+        net_str += Long.toString(id+1) + " Search Time: " + Long.toString(net_time2) + " ms";
+
+        writeNetTimeToProc();
+        net_time2 = null;
     }
 
     public final void writeNetTimeToProc()
     {
-        String net_str = "Net Search Time: ";
-
-        for (int i = 0; i < sim_count; i++)
-        {
-            long net_time = sim_time[i<<1 + 1] - sim_time[i<<1];
-            Long net_time2 = new Long(net_time);
-            net_str += Long.toString(net_time2);
-            net_str += " ";
-        }
-
-        net_str += " ms";
         char[] buffer = net_str.toCharArray();
         final String NET_TIME_PROC = "/proc/benchMark/net_time";
 

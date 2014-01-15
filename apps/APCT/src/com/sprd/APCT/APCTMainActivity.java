@@ -92,6 +92,7 @@ public class APCTMainActivity extends Activity{
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         mContext = APCTMainActivity.this;
         sp = getSharedPreferences("checkbox", Context.MODE_PRIVATE);
         editor = sp.edit();
@@ -139,6 +140,8 @@ public class APCTMainActivity extends Activity{
             = new ArrayList<CheckBoxPreference>();
 
     private final HashSet<Preference> mDisabledPrefs = new HashSet<Preference>();
+
+    public APCTFragment(){};
 
     @Override
     public void onCreate(Bundle icicle) {
