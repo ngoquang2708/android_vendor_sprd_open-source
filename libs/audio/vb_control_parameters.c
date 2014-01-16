@@ -36,7 +36,9 @@ exp = read(s_vbpipe_fd, paras_ptr, sizeof(type)); \
 }
 */
 
-#define ENG_AUDIO_PGA       "/sys/class/vbc_param_config/vbc_pga_store"
+#define KCTL_MAIN_MIC_ADCL  "ADCL Mixer MainMICADCL Switch"
+#define KCTL_AUX_MIC_ADCL   "ADCL Mixer AuxMICADCL Switch"
+#define KCTL_HP_MIC_ADCL    "ADCL Mixer HPMICADCL Switch"
 
 /* vbc control parameters struct here.*/
 typedef struct Paras_Mode_Gain
@@ -577,6 +579,26 @@ static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_lev
     }
 }
 
+/* DSP read only one adc channel, all ADCL should be closed */
+static void close_adc_channel(struct mixer *amixer, bool main, bool aux, bool hp)
+{
+    struct mixer_ctl *mic_adcl = NULL;
+    if (amixer) {
+        if (main) {
+            mic_adcl = mixer_get_ctl_by_name(amixer, KCTL_MAIN_MIC_ADCL);
+            mixer_ctl_set_value(mic_adcl, 0, 0);
+        }
+        if (aux) {
+            mic_adcl = mixer_get_ctl_by_name(amixer, KCTL_AUX_MIC_ADCL);
+            mixer_ctl_set_value(mic_adcl, 0, 0);
+        }
+        if (hp) {
+            mic_adcl = mixer_get_ctl_by_name(amixer, KCTL_HP_MIC_ADCL);
+            mixer_ctl_set_value(mic_adcl, 0, 0);
+        }
+    }
+}
+
 static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *mode_gain_paras)
 {
     unsigned short i = 0;
@@ -634,7 +656,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     if(switch_mic1){
         s_call_ul_devices |= AUDIO_DEVICE_IN_BACK_MIC;
     }
-    if(switch_mic0 || switch_mic1) {
+    if(switch_mic0 && switch_mic1) {
         s_call_ul_devices |= SPRD_AUDIO_IN_DUALMIC_VOICE;
         switch_table[6] = 1;
     }
@@ -658,6 +680,10 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
 #endif
             set_call_route(adev,switch_device[i],0);
         }
+    }
+
+    if (!(switch_mic0 && switch_mic1)) {
+        close_adc_channel(adev->mixer, switch_mic0, switch_mic1, switch_hp_mic);
     }
     /*
        we need to wait for codec here before call connected, maybe driver needs to fix this problem.
