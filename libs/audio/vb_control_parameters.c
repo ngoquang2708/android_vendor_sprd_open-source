@@ -634,7 +634,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     if(switch_mic1){
         s_call_ul_devices |= AUDIO_DEVICE_IN_BACK_MIC;
     }
-    if(switch_mic0 && switch_mic1) {
+    if(switch_mic0 || switch_mic1) {
         s_call_ul_devices |= SPRD_AUDIO_IN_DUALMIC_VOICE;
         switch_table[6] = 1;
     }
