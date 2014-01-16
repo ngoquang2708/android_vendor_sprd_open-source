@@ -4729,28 +4729,10 @@
     />
     <!-- @} -->
     <!-- France SFR -->
-    <apn carrier="F SFR"
-        mcc="208"
-        mnc="10"
-        apn="websfr"
-        user="sfr"
-        server="*"
-        password="sfr"
-        mmsc="null"
-        type="default,supl"
-    />
-    <apn carrier="SFR"
-        mcc="208"
-        mnc="10"
-        apn="sl2sfr"
-        type="default,supl"
-        authtype="3"
-    />
     <apn carrier="SFR internet"
         mcc="208"
         mnc="10"
         apn="wapsfr"
-        server="http://live.vodafone.com"
         type="default,supl"
     />
     <apn carrier="SFR-MMS"
