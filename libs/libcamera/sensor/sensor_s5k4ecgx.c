@@ -3329,119 +3329,112 @@ LOCAL const SENSOR_REG_T s5k4ec_common_init[]=
 //640X480 YUV
 LOCAL const SENSOR_REG_T s5k4ec_640X480[]=
 {
-		//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
-	//======================================================================================
-	{0xFCFC, 0xD000},
-	{0x0028, 0x7000},
-	{0x002A, 0x0398},
-	{0x0F12, 0x0500},
-	{0x0F12, 0x03c0},
-	{0x0F12, 0x0005},
-	{0x002A, 0x03B2},
-	{0x0F12, 0x0002},
-	{0x002A, 0x03B0},
-	{0x0F12, 0x0002},
-	{0x002A, 0x0270},
-	{0x0F12, 0x0001},
+//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
+//======================================================================================
+{0xFCFC, 0xD000},
+{0x0028, 0x7000},
+{0x002A, 0x0398},
+{0x0F12, 0x0280},
+{0x0F12, 0x01E0},
+{0x0F12, 0x0005},
+{0x002A, 0x03B2},
+{0x0F12, 0x0002},
+{0x002A, 0x03B0},
+{0x0F12, 0x0002},
+{0x002A, 0x0270},
+{0x0F12, 0x0001},
 
-	{0x0028, 0x7000},
-	{0x002A, 0x0242},
-	{0x0F12, 0x0001},
-	{0x002A, 0x024E},
-	{0x0F12, 0x0001},
-	{0x002A, 0x0244},
-	{0x0F12, 0x0001},
-
+{0x0028, 0x7000},
+{0x002A, 0x0242},
+{0x0F12, 0x0001},
+{0x002A, 0x024E},
+{0x0F12, 0x0001},
+{0x002A, 0x0244},
+{0x0F12, 0x0001},
 };
 
 //1280X960  YUV   Mode
 LOCAL const SENSOR_REG_T s5k4ec_1280X960[] =
 {
-		//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
-	//======================================================================================
-	{0xFCFC, 0xD000},
-	{0x0028, 0x7000},
-	{0x002A, 0x0398},
-	{0x0F12, 0x0500}, //#REG_0TC_CCFG_usWidth
-	{0x0F12, 0x03c0}, //#REG_0TC_CCFG_usHeight
-	{0x0F12, 0x0009}, //#REG_0TC_CCFG_Format
+//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
+//======================================================================================
+{0xFCFC, 0xD000},
+{0x0028, 0x7000},
+{0x002A, 0x0398},
+{0x0F12, 0x0500}, //#REG_0TC_CCFG_usWidth
+{0x0F12, 0x03c0}, //#REG_0TC_CCFG_usHeight
+{0x0F12, 0x0005}, //9 //#REG_0TC_CCFG_Format
 
-	{0x002A, 0x03B2},
-	{0x0F12, 0x0002}, //REG_0TC_CCFG_FrRateQualityType
-	{0x002A, 0x03B0},
-	{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
-	{0x002A, 0x0270},
-	{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
+{0x002A, 0x03B2},
+{0x0F12, 0x0002}, //REG_0TC_CCFG_FrRateQualityType
+{0x002A, 0x03B0},
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
+{0x002A, 0x0270},
+{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
 
-
-	{0x0028, 0x7000},
-	{0x002A, 0x0242},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
-	{0x002A, 0x024E},
-	{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
-	{0x002A, 0x0244},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
-
+{0x0028, 0x7000},
+{0x002A, 0x0242},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
+{0x002A, 0x024E},
+{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
+{0x002A, 0x0244},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
 };
 
 //1600X1200  YUV   Mode
 LOCAL const SENSOR_REG_T s5k4ec_1600X1200[] =
 {
-	//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
-	//======================================================================================
-	{0xFCFC, 0xD000},
-	{0x0028, 0x7000},
-	{0x002A, 0x0398},
-	{0x0F12, 0x0640}, //#REG_0TC_CCFG_usWidth
-	{0x0F12, 0x04B0}, //#REG_0TC_CCFG_usHeight
-	{0x0F12, 0x0005}, //#REG_0TC_CCFG_Format
+//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
+//======================================================================================
+{0xFCFC, 0xD000},
+{0x0028, 0x7000},
+{0x002A, 0x0398},
+{0x0F12, 0x0640}, //#REG_0TC_CCFG_usWidth
+{0x0F12, 0x04B0}, //#REG_0TC_CCFG_usHeight
+{0x0F12, 0x0005}, //9 //#REG_0TC_CCFG_Format
 
-	{0x002A, 0x03B2},
-	{0x0F12, 0x0002}, //REG_0TC_CCFG_FrRateQualityType
-	{0x002A, 0x03B0},
-	{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
-	{0x002A, 0x0270},
-	{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
+{0x002A, 0x03B2},
+{0x0F12, 0x0002}, //REG_0TC_CCFG_FrRateQualityType
+{0x002A, 0x03B0},
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
+{0x002A, 0x0270},
+{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
 
-
-	{0x0028, 0x7000},
-	{0x002A, 0x0242},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
-	{0x002A, 0x024E},
-	{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
-	{0x002A, 0x0244},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
-
+{0x0028, 0x7000},
+{0x002A, 0x0242},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
+{0x002A, 0x024E},
+{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
+{0x002A, 0x0244},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
 };
 
 //20480X1536  YUV   Mode
 LOCAL const SENSOR_REG_T s5k4ec_2048X1536[] =
 {
-	//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
-	//======================================================================================
-	{0xFCFC, 0xD000},
-	{0x0028, 0x7000},
-	{0x002A, 0x0398},
-	{0x0F12, 0x0800}, //#REG_0TC_CCFG_usWidth
-	{0x0F12, 0x0600}, //#REG_0TC_CCFG_usHeight
-	{0x0F12, 0x0005}, //#REG_0TC_CCFG_Format
+//APPLY CAPTURE CONFIGURATION & RUN CAPTURE
+//======================================================================================
+{0xFCFC, 0xD000},
+{0x0028, 0x7000},
+{0x002A, 0x0398},
+{0x0F12, 0x0800}, //#REG_0TC_CCFG_usWidth
+{0x0F12, 0x0600}, //#REG_0TC_CCFG_usHeight
+{0x0F12, 0x0005}, //9 //#REG_0TC_CCFG_Format
 
-	{0x002A, 0x03B2},
-	{0x0F12, 0x0002}, //#REG_0TC_CCFG_FrRateQualityType
-	{0x002A, 0x03B0},
-	{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
-	{0x002A, 0x0270},
-	{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
+{0x002A, 0x03B2},
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_FrRateQualityType
+{0x002A, 0x03B0},
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
+{0x002A, 0x0270},
+{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
 
-
-	{0x0028, 0x7000},
-	{0x002A, 0x0242},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
-	{0x002A, 0x024E},
-	{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
-	{0x002A, 0x0244},
-	{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
-
+{0x0028, 0x7000},
+{0x002A, 0x0242},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
+{0x002A, 0x024E},
+{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
+{0x002A, 0x0244},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
 };
 //2592X1944  JPEG   Mode
 LOCAL const SENSOR_REG_T s5k4ec_2560X1920[] =
@@ -3449,47 +3442,41 @@ LOCAL const SENSOR_REG_T s5k4ec_2560X1920[] =
 //APPLY CAPTURE CONFIGURATION & RUN CAPTURE
 //======================================================================================
 {0xFCFC, 0xD000},
-
-{0x0028, 0x7000},   //this is D000 page
+{0x0028, 0x7000},
 {0x002A, 0x0398},
-{0x0F12, 0x0A00},//HS_prepare,{0x0F12, 0x0002},0x03:174nS;0x02:152nS
-{0x0F12, 0x0780},//HS_zero,{0x0F12, 0x0008},0x07:338ns
-{0x0F12, 0x0009},//TLPX1f:68ns;0x10:96ns;0x08:236ns;0x0c:396;0x04:194ns
+{0x0F12, 0x0A00}, //#REG_0TC_CCFG_usWidth
+{0x0F12, 0x0780}, //#REG_0TC_CCFG_usHeight
+{0x0F12, 0x0009}, //#REG_0TC_CCFG_Format
 
 {0x002A, 0x03B2},
-{0x0F12, 0x0002}, //senHal_uAddColsBin
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_FrRateQualityType
 {0x002A, 0x03B0},
-{0x0F12, 0x0002},	//REG_0TC_CCFG_uCaptureMode
-{0x002A, 0x0270},	//REG_0TC_CCFG_usWidth
-{0x0F12, 0x0001},	//REG_0TC_CCFG_usHeight
+{0x0F12, 0x0002}, //#REG_0TC_CCFG_usFrTimeType
+{0x002A, 0x0270},
+{0x0F12, 0x0001}, //#REG_TC_GP_CapConfigChanged
 
-{0x0028, 0x7000},	//REG_0TC_CCFG_Format
+{0x0028, 0x7000},
 {0x002A, 0x0242},
-{0x0F12, 0x0001},	//REG_0TC_CCFG_uClockInd
-{0x002A, 0x024E},	//REG_0TC_CCFG_usFrTimeType
-{0x0F12, 0x0001},	//REG_0TC_CCFG_FrRateQualityType
-{0x002A, 0x0244},	//REG_0TC_CCFG_usMaxFrTimeMsecMult10
-{0x0F12, 0x0001},	//REG_0TC_CCFG_usMinFrTimeMsecMult10
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCapture
+{0x002A, 0x024E},
+{0x0F12, 0x0001}, //#REG_TC_GP_NewConfigSync
+{0x002A, 0x0244},
+{0x0F12, 0x0001}, //#REG_TC_GP_EnableCaptureChanged
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_s5k4ec_resolution_Tab_YUV[] = {
 	//COMMON INIT
 	{ADDR_AND_LEN_OF_ARRAY(s5k4ec_common_init), 0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	//YUV422 PREVIEW 1
 	{ADDR_AND_LEN_OF_ARRAY(s5k4ec_640X480), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	#if 1
-	{ADDR_AND_LEN_OF_ARRAY(s5k4ec_1280X960), 1280, 960, 24, SENSOR_IMAGE_FORMAT_JPEG},
-	//{ADDR_AND_LEN_OF_ARRAY(s5k4ec_1600X1200), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_JPEG},
-
-	//YUV422 PREVIEW 2
-	//{ADDR_AND_LEN_OF_ARRAY(s5k4ec_2048X1536), 2048, 1536, 24, SENSOR_IMAGE_FORMAT_JPEG},
+	{ADDR_AND_LEN_OF_ARRAY(s5k4ec_1280X960), 1280, 960, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	//{ADDR_AND_LEN_OF_ARRAY(s5k4ec_1600X1200), 1600, 1200, 12, SENSOR_IMAGE_FORMAT_YUV422},
+	//{ADDR_AND_LEN_OF_ARRAY(s5k4ec_2048X1536), 2048, 1536, 12, SENSOR_IMAGE_FORMAT_YUV422},
 	//{ADDR_AND_LEN_OF_ARRAY(s5k4ec_2592X1944), 2560, 1920, 24, SENSOR_IMAGE_FORMAT_JPEG},
-	#else
+
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
-	#endif
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -3543,18 +3530,14 @@ LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
 
     // YUV422 PREVIEW 1
     {0, 0, 640, 480, 664, 40},
-    #if 1
    {0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
-   //{0, 0, 1600, 1200, 660, 40},
-   //{0, 0, 2048, 1536, 660, 40},
+   // {0, 0, 1600, 1200, 660, 40},
+   // {0, 0, 2048, 1536, 660, 40},
    //{0, 0, 2560, 1920, 660, 40},
-   #else
-   {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
-   #endif
-
+    {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0},
@@ -3679,7 +3662,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4ec_ioctl_func_tab =
 	SENSOR_AVDD_1800MV,                     // iovdd
 	SENSOR_AVDD_1200MV,                      // dvdd
 	1,                     // skip frame num before preview
-	1,                     // skip frame num before capture
+	2,                     // skip frame num before capture
 	0,                     // deci frame num during preview;
         0,                     // deci frame num during video preview;
 
@@ -3825,9 +3808,9 @@ LOCAL uint32_t _s5k4ec_PowerOn(uint32_t power_on)
 	{
 		Sensor_SetResetLevel(reset_level);
 		Sensor_PowerDown(power_down);
-		SENSOR_Sleep(1000);//10
+		SENSOR_Sleep(10);
 
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
+		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, avdd_val, iovdd_val);
 		SENSOR_Sleep(1);
 		Sensor_SetMonitorVoltage(afvdd_val);
 		SENSOR_Sleep(10);
@@ -3836,7 +3819,7 @@ LOCAL uint32_t _s5k4ec_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(!power_down);
 		SENSOR_Sleep(20);
 		Sensor_SetResetLevel(!reset_level);
-		SENSOR_Sleep(70);
+		SENSOR_Sleep(20);
 	}
 	else
 	{
@@ -4757,6 +4740,8 @@ LOCAL uint32_t _s5k4ec_BeforeSnapshot(uint32_t param)
 {
 	uint16_t capture_mode_check = 0;
 	SENSOR_PRINT("SENSOR: _s5k4ec_BeforeSnapshot = %d \n", param);
+
+	param = param&0xffff;
 #if 0
 	if(gv_scene_mode == DCAMERA_ENVIRONMENT_NIGHT || gv_scene_mode == DCAMERA_ENVIRONMENT_FIREWORK)
 	{
@@ -4770,19 +4755,20 @@ LOCAL uint32_t _s5k4ec_BeforeSnapshot(uint32_t param)
 
 
 	Sensor_SetMode(param);
+	SENSOR_Sleep(150);
 //	if(flash_needed || FLASH_ON == g_sensor_flash)
 //	{	//Set mainflash on
 		//s5k4ec_Flash_Mode(SENSOR_FLASH_MAIN);
 		//Set_s5k4ec_Main_Flash_On();
 //	}
 //	SENSOR_PRINT("s5k4ec_Before_Snapshot capture_mode_check start = %d", SCI_GetTickCount());
-	while(1)
-	{
-//		capture_mode_check = s5k4ec_mode_Check();
-			SENSOR_PRINT("ae_check_value = %d \n", capture_mode_check);
-		if(capture_mode_check == 0x0100)
-			break;
-	}
+	//while(1)
+	//{
+//		//capture_mode_check = s5k4ec_mode_Check();
+			//SENSOR_PRINT("ae_check_value = %d \n", capture_mode_check);
+		//if(capture_mode_check == 0x0100)
+			//break;
+	//}
 //	SENSOR_PRINT("s5k4ec_Before_Snapshot capture_mode_check end = %d", SCI_GetTickCount());
 	return SENSOR_SUCCESS;
 }
