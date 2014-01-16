@@ -1736,17 +1736,25 @@ status_t SprdCameraHardware::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2
 {
     uint32_t buffer_size = mPreviewWidth * mPreviewHeight * 3 / 2;
     uint32_t addr = 0;
+	status_t ret = NO_ERROR;
     LOGE("sendCommand: facedetect mem size 0x%x.",buffer_size);
 	if(CAMERA_CMD_START_FACE_DETECTION == cmd){
-//		setFdmem(buffer_size);
+		if (0 == mParameters.getInt("max-num-detected-faces-hw")) {
+			ret = BAD_VALUE;
+			goto sendCommand_end;
+		}
         camera_set_start_facedetect(1, buffer_size);
 	} else if(CAMERA_CMD_STOP_FACE_DETECTION == cmd) {
 	    LOGE("sendCommand: not support the CAMERA_CMD_STOP_FACE_DETECTION.");
+		if (0 == mParameters.getInt("max-num-detected-faces-hw")) {
+			ret = BAD_VALUE;
+			goto sendCommand_end;
+		}
         camera_set_start_facedetect(0, 0);
-//        FreeFdmem();
 	}
-
-	return NO_ERROR;
+sendCommand_end:
+    LOGE("sendCommand:ret = %d.",ret);
+	return ret;
 }
 
 status_t SprdCameraHardware::storeMetaDataInBuffers(bool enable)
