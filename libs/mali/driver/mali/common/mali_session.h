@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
- * 
+ *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- * 
+ *
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -46,6 +46,9 @@ struct mali_session_data {
 
 	mali_bool is_aborting; /**< MALI_TRUE if the session is aborting, MALI_FALSE if not. */
 	mali_bool use_high_priority_job_queue; /**< If MALI_TRUE, jobs added from this session will use the high priority job queues. */
+
+	u32 pid;
+
 #ifdef SPRD_GPU_BOOST
 	int level;
 #endif

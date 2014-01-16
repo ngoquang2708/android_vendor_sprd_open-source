@@ -36,6 +36,7 @@
 #endif
 
 #include <linux/mali/mali_utgard.h>
+#include "mali_memory.h"
 #include "mali_pm.h"
 #include "mali_pmu.h"
 #include "mali_group.h"
@@ -837,6 +838,7 @@ static const struct file_operations profiling_events_human_readable_fops = {
 
 #endif
 
+#if 0
 static ssize_t memory_used_read(struct file *filp, char __user *ubuf, size_t cnt, loff_t *ppos)
 {
 	char buf[64];
@@ -846,10 +848,44 @@ static ssize_t memory_used_read(struct file *filp, char __user *ubuf, size_t cnt
 	r = snprintf(buf, 64, "%u\n", mem);
 	return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
 }
+#else
+static int mali_seq_memory_state_show(struct seq_file *seq_file, void *v)
+{
+	u32 len = 0;
+	u32 size;
+	char *buf;
+
+	size = seq_get_buf(seq_file, &buf);
+
+	if(!size)
+	{
+		return -ENOMEM;
+	}
+
+	/* Create the internal state dump. */
+	len += _mali_kernel_memory_dump_state(buf + len, size - len);
+
+	seq_commit(seq_file, len);
+
+	return 0;
+}
+
+static int mali_seq_memory_state_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mali_seq_memory_state_show, NULL);
+}
+#endif
 
 static const struct file_operations memory_usage_fops = {
 	.owner = THIS_MODULE,
+#if 0
 	.read = memory_used_read,
+#else
+	.open = mali_seq_memory_state_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+#endif
 };
 
 static ssize_t utilization_gp_pp_read(struct file *filp, char __user *ubuf, size_t cnt, loff_t *ppos)
