@@ -633,7 +633,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"auto-exposure","frame-average"},
 	{"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
 	{"preview-env","0"},
+#if  defined(CONFIG_CAMERA_ZSL_CAPTURE)
 	{"video-snapshot-supported","true"}
+#else
+	{"video-snapshot-supported","false"}
+#endif
 };
 
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
