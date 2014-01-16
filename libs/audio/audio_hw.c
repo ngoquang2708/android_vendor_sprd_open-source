@@ -1853,7 +1853,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     {
         if(!out->is_voip ) {
 
-            //ALOGD("voip:out_write: start: out->is_voip is %d, voip_state is %d",out->is_voip,adev->voip_state);
+            ALOGD("sco:out_write start and do standby");
             adev->voip_state |= VOIP_PLAYBACK_STREAM;
             force_standby_for_voip(adev);
             ALOGI("out->is_voip is %d",out->is_voip);
@@ -1863,6 +1863,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     }
     else {
         if(out->is_voip) {
+            ALOGD("sco:out_write stop and do standby");
             do_output_standby(out);
         }
     }
@@ -1870,8 +1871,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     if((adev->mode  != AUDIO_MODE_IN_CALL) && (out->devices & AUDIO_DEVICE_OUT_ALL_SCO)) {
         if(!out->is_bt_sco) {
             ALOGI("bt_sco:out_write_start and do standby");
-            out->is_bt_sco=true;
             do_output_standby(out);
+            out->is_bt_sco=true;
         }
     }
     else {
@@ -2622,7 +2623,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             &&(!adev->call_start))
     {
         if(!in->is_voip ) {
-            //ALOGE(": in_read sco start  and do standby");
+            ALOGD(": in_read sco start  and do standby");
             do_input_standby(in);
             adev->voip_state |= VOIP_CAPTURE_STREAM;
             force_standby_for_voip(adev);
@@ -2631,7 +2632,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
     else{
         if(in->is_voip){
-            //ALOGE(": in_read sco stop  and do standby");
+            ALOGD(": in_read sco stop  and do standby");
             do_input_standby( in);
         }
     }
@@ -2640,13 +2641,14 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
     {
         if(!in->is_bt_sco) {
+            ALOGD("bt_sco:in_read start and do standby");
             do_input_standby(in);
             in->is_bt_sco=true;
         }
     }
     else{
         if(in->is_bt_sco){
-            ALOGD("bt_sco:in_read_stop and do standby");
+            ALOGD("bt_sco:in_read stop and do standby");
             do_input_standby( in);
         }
     }

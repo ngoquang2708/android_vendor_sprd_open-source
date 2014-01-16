@@ -1265,7 +1265,6 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("voip1:VBC_CMD_SET_MODE IN.");
-                    cur_timeout = &timeout;
                    
                    ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
                    if(ret < 0){
