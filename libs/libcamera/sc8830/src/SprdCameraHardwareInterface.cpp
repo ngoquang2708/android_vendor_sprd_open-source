@@ -1412,8 +1412,9 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 
 status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& params)
 {
-	//wxz20120316: check the value of preview-fps-range. //CR168435
 	int min,max;
+	int max_focus_num = 0;
+
 	params.getPreviewFpsRange(&min, &max);
 	if((min > max) || (min < 0) || (max < 0)){
 		LOGE("Error to FPS range: min: %d, max: %d.", min, max);
@@ -1428,6 +1429,10 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		mParameters.setPreviewSize(640, 480);
 		return UNKNOWN_ERROR;
 	}
+	max_focus_num = params.getInt("max-num-focus-areas");
+	if (params.chekFocusAreas(max_focus_num)) {
+		return BAD_VALUE;
+	}
 
 	return NO_ERROR;
 }
@@ -1441,7 +1446,8 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 
 	if (checkSetParameters(params)) {
 		mParamLock.unlock();
-		return UNKNOWN_ERROR;
+		LOGV("setParameters:invalid.");
+		return BAD_VALUE;
 	}
 
 	if (0 == checkSetParameters(params, mSetParameters)) {

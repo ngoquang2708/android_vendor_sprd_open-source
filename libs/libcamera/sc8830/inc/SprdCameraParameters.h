@@ -47,6 +47,7 @@ public:
 
 	void setDefault(ConfigType config);
 
+	int chekFocusAreas(int max_num) const;
 	void getFocusAreas(int *area, int *count);
 	void getFocusAreas(int *area, int *count, Size *preview_size,
 					 Rect *preview_rect, int orientation, bool mirror);

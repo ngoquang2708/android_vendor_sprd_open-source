@@ -194,6 +194,42 @@ void SprdCameraParameters::getFocusAreas(int *area, int *count, Size *preview_si
 	*count = area_count;
 }
 
+int SprdCameraParameters::chekFocusAreas(int max_num) const
+{
+	const char *p = get(KEY_FOCUS_AREAS);
+	int focus_area[4 * kFocusZoneMax] = {0};
+	int area_count = 0;
+	int i =0;
+    int left = 0,top=0,right=0,bottom=0;
+	int ret = 0;
+	int weight = 0;
+
+	parse_rect(&focus_area[0], &area_count, p, false);
+
+	if (area_count > 0) {
+		if (area_count > max_num) {
+			return 1;
+		}
+		for (i=0;i<area_count;i++) {
+	        left   = focus_area[i*5];
+	        top    = focus_area[i*5+1];
+	        right  = focus_area[i*5+2];
+			bottom = focus_area[i*5+3];
+			weight = focus_area[i*5+4];
+			if ((left != 0) && (right != 0) && (top != 0) && (bottom != 0)) {
+				if ((left >= right) || (top >= bottom) || (left < -1000) || (top < -1000)
+					|| (right > 1000) || (bottom > 1000) || (weight < 1) || (weight > 1000)) {
+					LOGV("chekFocusAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
+					left, top, right, bottom, weight);
+					return 1;
+				}
+			}
+	    }
+	}
+
+	return 0;
+}
+
 //return rectangle: (x1, y1, x2, y2), the values are on the sensor's coordinate
 void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview_size,
 										 Rect *preview_rect,
