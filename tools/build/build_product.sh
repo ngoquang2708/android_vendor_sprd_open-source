@@ -2,7 +2,7 @@
 # This is a build script for a product package
 #
 
-if [ $# -ne 5 -o "$1" = "-h" ]; then
+if [ $# -lt 5 -o "$1" = "-h" ]; then
 	echo "Usage: $0 <product> <variant> <vlx> <outdir> <-jN>"
 	exit 1
 fi
@@ -18,8 +18,14 @@ VLX=$3
 OUTDIR=$4
 JOBS=$5
 
-LOG=$OUTDIR/$PROD-$VAR-$VLX.build.log
-PAK=$OUTDIR/$PROD-$VAR-$VLX.tar.gz
+MOD=$6
+if [ -z "$MOD" ]; then
+  LOG=$OUTDIR/$PROD-$VAR-$VLX.build.log
+  PAK=$OUTDIR/$PROD-$VAR-$VLX.tar.gz
+else
+ LOG=$OUTDIR/$PROD-$VAR-$VLX-$MOD.build.log
+ PAK=$OUTDIR/$PROD-$VAR-$VLX-$MOD.tar.gz
+fi
 
 echo "==== $PROD-$VAR-$VLX Start ===="
 
@@ -46,7 +52,12 @@ make clean >>/dev/null 2>&1
 
 # do make
 kheader >>$LOG 2>&1
-make KALLSYMS_EXTRA_PASS=1 $JOBS >>$LOG 2>&1
+if [ -z "$MOD" ]; then
+  make KALLSYMS_EXTRA_PASS=1 $JOBS >>$LOG 2>&1
+else
+  make KALLSYMS_EXTRA_PASS=1 $JOBS $MOD >>$LOG 2>&1
+fi
+
 # failure handle
 if [ $? -ne 0 ]; then
 	echo "==== ====" >> $LOG
@@ -58,8 +69,19 @@ fi
 
 cd $ANDROID_PRODUCT_OUT
 cp obj/KERNEL/vmlinux symbols/
-find . -name "*.img" -o -name "*.bin" -o -name "installed-files.txt" -maxdepth 1| xargs tar -zcf $PAK 2>/dev/null
+if [ -n "$MOD" ]; then
+  if [ -f "system/priv-app/$MOD.apk" ]; then
+    cp system/priv-app/$MOD.apk $ANDROID_PRODUCT_OUT
+  elif [ -f "system/app/$MOD.apk" ]; then
+    cp system/app/$MOD.apk $ANDROID_PRODUCT_OUT
+  elif [ -f "system/preloadapp/$MOD.apk" ]; then
+    cp system/preloadapp/$MOD.apk $ANDROID_PRODUCT_OUT
+  fi
+fi
+
+find . -name "*.img" -o -name "*.bin" -o -name "installed-files.txt" -o -name "$MOD.apk" -maxdepth 1| xargs tar -zcf $PAK 2
 cd -
+
 
 echo "==== ====" >> $LOG
 date >> $LOG
