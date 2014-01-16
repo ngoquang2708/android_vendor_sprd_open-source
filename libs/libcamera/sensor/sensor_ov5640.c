@@ -2564,7 +2564,7 @@ LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 		rtn = _ov5640_AutoFocusMultiZone(ext_ptr);
 		break;
 	case SENSOR_EXT_FOCUS_MACRO:
-		rtn = _ov5640_AutoFocusMacro(ext_ptr);
+		rtn = _ov5640_AutoFocusTrig(ext_ptr);//rtn = _ov5640_AutoFocusMacro(ext_ptr);
 		break;
 	default:
 		break;
