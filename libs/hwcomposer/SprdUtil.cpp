@@ -354,6 +354,69 @@ int SprdUtil::openGSPDevice()
     return 0;
 }
 
+int SprdUtil:: acquireTmpBuffer(int width, int height, int format, private_handle_t* friendBuffer, int *outBufferPhy, int *outBufferSize)
+{
+    int GSPOutputFormat = -1;
+#ifdef VIDEO_LAYER_USE_RGB
+    GSPOutputFormat = HAL_PIXEL_FORMAT_RGBX_8888;
+#else
+#ifdef GSP_OUTPUT_USE_YUV420
+    GSPOutputFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+#else
+    GSPOutputFormat = HAL_PIXEL_FORMAT_YCbCr_422_SP;
+#endif
+#endif
+    int stride;
+
+    if (friendBuffer == NULL)
+    {
+        ALOGE("acquireTmpBuffer: Input parameter is NULL");
+        return -1;
+    }
+
+    if (GSPOutputFormat == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
+             GSPOutputFormat == HAL_PIXEL_FORMAT_YCbCr_422_SP)
+    {
+#ifdef BORROW_PRIMARYPLANE_BUFFER
+        if (friendBuffer->format != HAL_PIXEL_FORMAT_RGBA_8888)
+        {
+            ALOGE("Friend buffer need to be RGBA8888");
+            goto AllocGFXBuffer;
+        }
+
+        /*
+         *  Borrow buffer memory from PrimaryPlane buffer.
+         *  Just use 2.0 --- 2.75 (4 bytes for RGBA8888)
+         * */
+        int offset = width * height * (1.5 + 0.5);
+        *outBufferSize = (int)((float)width * (float)height * 1.5 * 0.5);
+        *outBufferPhy = friendBuffer->phyaddr + offset;
+#else
+        goto AllocGFXBuffer;
+#endif
+    }
+    else if (GSPOutputFormat == HAL_PIXEL_FORMAT_RGBX_8888)
+    {
+        goto AllocGFXBuffer;
+    }
+
+    return 0;
+
+AllocGFXBuffer:
+#ifdef GSP_ADDR_TYPE_PHY
+    GraphicBufferAllocator::get().alloc(width, height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
+#elif defined (GSP_ADDR_TYPE_IOVA)
+    GraphicBufferAllocator::get().alloc(width, height, format, 0, (buffer_handle_t*)&tmpBuffer, &stride);
+#endif
+    if (tmpBuffer == NULL)
+    {
+        ALOGE("Cannot alloc the tmpBuffer ION buffer");
+        return -1;
+    }
+
+    return 0;
+}
+
 int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2)
 {
     int32_t ret = 0;
@@ -808,38 +871,59 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             GSP_LAYER_DST_DATA_FMT_E phase1_des_format = GSP_DST_FMT_YUV420_2P;//GSP_DST_FMT_YUV422_2P; //GSP_DST_FMT_ARGB888
             ALOGI_IF(mDebugFlag,"GSP process Line%d,nead scale up twice. ",__LINE__);
 
-            if (tmpBuffer == NULL)
+            static bool acquireTmpBufferFlag = false;
+            if (acquireTmpBufferFlag == false)
             {
-                int format = -1;
-                format = HAL_PIXEL_FORMAT_YCbCr_420_SP; //PRIVATE_HALF_BUFFER;
-                int stride;
-#ifdef GSP_ADDR_TYPE_PHY
-                GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
-#elif defined (GSP_ADDR_TYPE_IOVA)
-                GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, 0, (buffer_handle_t*)&tmpBuffer, &stride);
-#endif
-                if (tmpBuffer == NULL)
+                int ret = -1;
+                int format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+                ret = acquireTmpBuffer(mFBInfo->fb_width, mFBInfo->fb_height, format, buffer, &outBufferPhy, &outBufferSize);
+                if (ret != 0)
                 {
-                    ALOGE("Cannot alloc the tmpBuffer ION buffer");
+                    ALOGE("acquireTmpBuffer failed");
                     return -1;
                 }
+
+                acquireTmpBufferFlag = true;
             }
 
             /*phase1*/
             gsp_cfg_info_phase1.layer_des_info.img_format = phase1_des_format;
 #ifdef GSP_ADDR_TYPE_PHY
-            gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)tmpBuffer->phyaddr;
-#elif defined (GSP_ADDR_TYPE_IOVA)
-            //gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)ion_get_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layert);
-            if((MemoryHeapIon::Get_gsp_iova(tmpBuffer->share_fd, &mmu_addr, &buffersize_layert) == 0) && (mmu_addr != 0) && (buffersize_layert > 0))
+            if (outBufferPhy != 0 && outBufferSize > 0)
             {
-                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = mmu_addr;
-                ALOGI_IF(mDebugFlag,"[%d] map temp buffer iommu addr success!",__LINE__);
+                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
+                ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
             }
             else
             {
-                ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
-                return -1;
+                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)tmpBuffer->phyaddr;
+            }
+#elif defined (GSP_ADDR_TYPE_IOVA)
+            //gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)ion_get_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layert);
+            if (outBufferPhy > 0 && outBufferSize > 0)
+            {
+                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
+                ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
+            }
+            else
+            {
+                if((MemoryHeapIon::Get_gsp_iova(tmpBuffer->share_fd, &mmu_addr, &buffersize_layert) == 0) && (mmu_addr != 0) && (buffersize_layert > 0))
+                {
+                    gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = mmu_addr;
+                    ALOGI_IF(mDebugFlag,"[%d] map temp buffer iommu addr success!",__LINE__);
+                }
+                else
+                {
+                    ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
+                    return -1;
+                }
+                if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
+                        ||(buffersize_layert == 0))
+                {
+                    ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                    return -1;
+                }
+                ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
             }
 #endif
             if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
@@ -916,7 +1000,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 ALOGE("scaling twice phase 2,set_GSP_layers Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
             }
 #ifdef GSP_ADDR_TYPE_IOVA
-            if(buffersize_layert != 0)
+            if(buffersize_layert != 0 && (outBufferPhy == 0 || outBufferSize == 0))
             {
                 ALOGI_IF(mDebugFlag,"		gsp_iommu[%d]  unmap temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
                 //ion_release_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_UNMAP ,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
