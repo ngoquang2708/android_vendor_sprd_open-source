@@ -1434,6 +1434,10 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		return BAD_VALUE;
 	}
 
+	if (((SprdCameraParameters)params).getZoom() > params.getInt("max-zoom")) {
+		return BAD_VALUE;
+	}
+
 	return NO_ERROR;
 }
 
