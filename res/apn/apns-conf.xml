@@ -4843,7 +4843,7 @@
         mcc="208"
         mnc="20"
         apn="a2bouygtel.com"
-        type="default,supl,mms"
+        type="default,supl"
         authtype="3"
     />
     <apn carrier="Bouygues pro"
