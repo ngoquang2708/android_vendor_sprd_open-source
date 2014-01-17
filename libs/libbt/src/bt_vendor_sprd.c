@@ -320,6 +320,7 @@ int read_mac_from_file(const char * file_path,  char * mac)
         {
             ALOGI("bt mac already exists, no need to random it");
             memcpy(mac,bt_mac,BT_RAND_MAC_LENGTH);
+            close(fd_btaddr);
             return 1;
         }
         close(fd_btaddr);

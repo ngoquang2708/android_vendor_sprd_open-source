@@ -368,8 +368,10 @@ int bt_getPskeyFromFile(void *pData)
         {
             ALOGE("%s read %s ret:%d\n", __FUNCTION__, CFG_2351_PATH, ret);
             free(pBuf);
+            close(fd);
             return -1;
         }
+        close(fd);
     }
     else
     {
