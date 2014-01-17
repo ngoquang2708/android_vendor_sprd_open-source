@@ -457,6 +457,7 @@ struct camera_context {
 uint32_t camera_get_rot_angle(uint32_t degree);
 uint32_t camera_get_img_type(uint32_t format_mode);
 int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, struct img_size *dst_size);
+int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoomRatio, float dstRatio,uint32_t SensorW, uint32_t SensorH, uint8_t Rot);//for hal2.0
 struct camera_context *camera_get_cxt(void);
 int camera_set_pos_type(camera_position_type *position);
 JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt);

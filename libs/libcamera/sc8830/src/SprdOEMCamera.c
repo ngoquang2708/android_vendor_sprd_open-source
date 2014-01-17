@@ -7117,10 +7117,32 @@ int camera_start_scale(struct frm_info *data)
 			return ret;
 			}
 		} else {
-			rect.start_x = g_cxt->zoom_rect.start_x;
-			rect.start_y = g_cxt->zoom_rect.start_y;
-			rect.width = g_cxt->zoom_rect.width;
-			rect.height = g_cxt->zoom_rect.height;
+			if(IS_CAPTURE) {
+				if (IMG_ROT_0 != g_cxt->cap_rot) {
+					struct sensor_context    *sensor_cxt = &g_cxt->sn_cxt;
+					uint32_t SenW = sensor_cxt->sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode].trim_width;
+					uint32_t SenH = sensor_cxt->sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode].trim_height;
+					float    SenRatio,zoomHeight,zoomRatio,minOutputRatio;
+					SenRatio = (float)SenW / SenH;
+					minOutputRatio = (float)(g_cxt->zoom_rect.width) /g_cxt->zoom_rect.height;
+					if (minOutputRatio < SenRatio) {
+						zoomRatio = (float)SenH / g_cxt->zoom_rect.height;
+					} else {
+						zoomRatio = (float)SenW / g_cxt->zoom_rect.width;
+					}
+					ret = camera_get_trim_rect2(&rect, zoomRatio,minOutputRatio, rect.width, rect.height, g_cxt->cap_rot);
+					if (ret) {
+						CMR_LOGE("HAL2 Failed to calculate scaling window, %d", ret);
+						return ret;
+					}
+				}
+				else {
+					rect.start_x = g_cxt->zoom_rect.start_x;
+					rect.start_y = g_cxt->zoom_rect.start_y;
+					rect.width = g_cxt->zoom_rect.width;
+					rect.height = g_cxt->zoom_rect.height;
+				}
+			}
 			CMR_LOGV("zoom rect %d,%d,%d,%d.",rect.start_x,rect.start_y,rect.width,rect.height);
 		}
 		if (IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {

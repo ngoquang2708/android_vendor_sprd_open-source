@@ -3575,6 +3575,10 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 		break;
 	case CAMERA_EVT_CB_FLUSH:
 		{
+			if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
+				HAL_LOGD("%s prv is not previewing!",__FUNCTION__);
+				return;
+			}
 			camera_frame_type *frame = (camera_frame_type *)parm4;
 			stream_parameters_t     *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 			flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, frame->buf_id,

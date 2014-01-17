@@ -132,6 +132,47 @@ int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, st
 	return CAMERA_SUCCESS;
 }
 
+int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoomRatio, float dstRatio,uint32_t SensorW, uint32_t SensorH, uint8_t Rot)//for hal2.0 calculate crop again
+{
+	uint32_t                 trim_width;
+	uint32_t                 trim_height;
+	float    minOutputRatio;
+	float    zoomWidth,zoomHeight,SensorRatio;
+
+	if (NULL == src_trim_rect || src_trim_rect->width == 0 || src_trim_rect->height == 0) {
+		CMR_LOGE("0x%x w=%d h=%d", (uint32_t)src_trim_rect,src_trim_rect->width,src_trim_rect->height);
+		return -CAMERA_INVALID_PARM;
+	}
+	minOutputRatio = dstRatio;
+	SensorRatio = (float)SensorW /SensorH;
+	if (Rot != IMG_ROT_0) {
+		minOutputRatio = 1 / minOutputRatio;
+	}
+	if (minOutputRatio > SensorRatio) {
+		zoomWidth = SensorW / zoomRatio;
+		zoomHeight = zoomWidth / minOutputRatio;
+	} else {
+		zoomHeight = SensorH / zoomRatio;
+		zoomWidth = zoomHeight * minOutputRatio;
+	}
+	trim_width = zoomWidth;
+	trim_height = zoomHeight;
+	src_trim_rect->start_x += (src_trim_rect->width - trim_width) >> 1;
+	src_trim_rect->start_y += (src_trim_rect->height - trim_height) >> 1;
+	src_trim_rect->start_x = CAMERA_WIDTH(src_trim_rect->start_x);
+	src_trim_rect->start_y = CAMERA_HEIGHT(src_trim_rect->start_y);
+	src_trim_rect->width  = CAMERA_WIDTH(trim_width);
+	src_trim_rect->height = CAMERA_HEIGHT(trim_height);
+	CMR_LOGV("zoom_level %f, trim rect, %d %d %d %d",
+		zoomRatio,
+		src_trim_rect->start_x,
+		src_trim_rect->start_y,
+		src_trim_rect->width,
+		src_trim_rect->height);
+
+	return CAMERA_SUCCESS;
+}
+
 uint32_t getOrientationFromRotationDegrees(int degrees)
 {
 	uint32_t orientation = 1;/*ExifInterface.ORIENTATION_NORMAL;*/
