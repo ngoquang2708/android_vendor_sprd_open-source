@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2013 ARM Limited. All rights reserved.
- * 
+ *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- * 
+ *
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -17,11 +17,13 @@
 #include <linux/version.h>
 #include <linux/platform_device.h>
 
+
 #include "mali_osk.h"
 #include "mali_osk_mali.h"
 #include "mali_kernel_linux.h"
 #include "mali_scheduler.h"
 #include "mali_kernel_descriptor_mapping.h"
+#include "mali_osk_bitops.h"
 
 #include "mali_memory.h"
 #include "mali_memory_dma_buf.h"
@@ -298,6 +300,8 @@ _mali_osk_errcode_t mali_memory_session_begin(struct mali_session_data * session
 		MALI_ERROR(_MALI_OSK_ERR_FAULT);
 	}
 
+	session_data->pid = _mali_osk_get_pid();
+
 	MALI_DEBUG_PRINT(5, ("MMU session begin: success\n"));
 	MALI_SUCCESS;
 }
@@ -378,5 +382,46 @@ _mali_osk_errcode_t _mali_ukk_term_mem( _mali_uk_term_mem_s *args )
 	MALI_DEBUG_ASSERT_POINTER(args);
 	MALI_CHECK_NON_NULL(args->ctx, _MALI_OSK_ERR_INVALID_ARGS);
 	MALI_SUCCESS;
+}
+
+u32 _mali_kernel_memory_dump_state(char* buf, u32 size)
+{
+	int n = 0;
+
+	struct mali_session_data *session, *tmp;
+
+	mali_session_lock();
+	MALI_SESSION_FOREACH(session, tmp, link)
+	{
+		int i;
+		u32 sum_gl = 0;
+
+		_mali_osk_mutex_wait(session->memory_lock);
+
+		_mali_osk_mutex_rw_wait(session->descriptor_mapping->lock, _MALI_OSK_LOCKMODE_RO);
+		/* id 0 is skipped as it's an reserved ID not mapping to anything */
+		for (i = 1; i < session->descriptor_mapping->current_nr_mappings; ++i) {
+			if (_mali_osk_test_bit(i, session->descriptor_mapping->table->usage)) {
+				mali_mem_allocation* descriptor = (mali_mem_allocation*)session->descriptor_mapping->table->mappings[i];
+				switch(descriptor->type)
+				{
+				case MALI_MEM_OS:
+					sum_gl += descriptor->size;
+//					n += _mali_osk_snprintf(buf + n, size - n, "\t%-8s\t0x%08x\n", "GL", descriptor->size);
+					break;
+				default:
+					;
+				}
+			}
+		}
+		_mali_osk_mutex_rw_signal(session->descriptor_mapping->lock, _MALI_OSK_LOCKMODE_RO);
+
+		_mali_osk_mutex_signal(session->memory_lock);
+
+		n += _mali_osk_snprintf(buf + n, size - n, "%8d\t0x%08x\n", session->pid, sum_gl);
+	}
+	mali_session_unlock();
+
+	return n;
 }
 
