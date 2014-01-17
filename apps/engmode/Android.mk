@@ -48,5 +48,5 @@ endif
 LOCAL_MODULE := engpc
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
-
+include $(call all-makefiles-under,$(LOCAL_PATH))
 endif
