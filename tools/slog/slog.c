@@ -399,17 +399,6 @@ static void use_ori_log_dir()
 	return;
 }
 
-static int handle_low_power()
-{
-	if(slog_enable == SLOG_DISABLE)
-		return 0;
-
-	if(!modem_log_handler_started) {
-		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
-	}
-	return 0;
-}
-
 static int start_sub_threads()
 {
 	if(slog_enable != SLOG_ENABLE)
@@ -1058,8 +1047,6 @@ int main(int argc, char *argv[])
 
 	/* backend capture threads started here */
 	do_init();
-
-	handle_low_power();
 
 	while(1) {
 		sleep(10);

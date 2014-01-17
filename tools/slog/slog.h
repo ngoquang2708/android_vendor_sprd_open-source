@@ -35,7 +35,6 @@
 #define SLOG_STATE_OFF 1
 
 /*"slog state" field*/
-#define SLOG_LOW_POWER 2
 #define SLOG_ENABLE 1
 #define SLOG_DISABLE 0
 
@@ -78,10 +77,7 @@ enum {
 #define MAXROLLLOGS			9
 #define INTERNAL_ROLLLOGS		1
 #define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
-#define MODEM_CIRCULAR_SIZE		(2 * 1024 * 1024) /* 2 MB */
-#define SINGLE_BUFFER_SIZE		(16 * 1024) /* 16k */
-#define RING_BUFFER_NUM			(MODEM_CIRCULAR_SIZE / SINGLE_BUFFER_SIZE)
-#define HOOK_MODEM_TARGET_DIR		"/data/log"
+#define BUFFER_SIZE			(32 * 1024) /* 32k */
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
 #define MODEM_LOG_SOURCE		"/dev/vbpipe0"
