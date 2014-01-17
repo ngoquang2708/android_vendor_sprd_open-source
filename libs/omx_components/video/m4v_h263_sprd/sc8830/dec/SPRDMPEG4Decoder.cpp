@@ -189,7 +189,7 @@ void SPRDMPEG4Decoder::initPorts() {
     def.eDir = OMX_DirInput;
     def.nBufferCountMin = 1;
     def.nBufferCountActual = kNumInputBuffers;
-    def.nBufferSize = 256*1024 ;   ///128*1024 ;///8192;
+    def.nBufferSize = 128*1024 ;///8192;
     def.bEnabled = OMX_TRUE;
     def.bPopulated = OMX_FALSE;
     def.eDomain = OMX_PortDomainVideo;
@@ -300,20 +300,8 @@ status_t SPRDMPEG4Decoder::initDecoder() {
     }
 
     int32 codec_capabilty;
-    if ((*mMP4GetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
-        if (codec_capabilty == 0)   //limited under 720p
-        {
-            mMaxWidth = 1280;
-            mMaxHeight = 720;
-        } else if (codec_capabilty == 1)   //limited under 1080p
-        {
-            mMaxWidth = 1920;
-            mMaxHeight = 1088;
-        } else
-        {
-            mMaxWidth = 352;
-            mMaxHeight = 288;
-        }
+    if ((*mMP4GetCodecCapability)(mHandle, &mMaxWidth, &mMaxHeight) != MMDEC_OK) {
+        ALOGE("Failed to mMP4GetCodecCapability");
     }
     return OMX_ErrorNone;
 }
@@ -1186,8 +1174,8 @@ void SPRDMPEG4Decoder::updatePortDefinitions() {
 }
 
 int32_t SPRDMPEG4Decoder::extMemoryAllocWrapper(
-    void *aUserData, unsigned int width,unsigned int height, unsigned int is_dp) {
-    return static_cast<SPRDMPEG4Decoder *>(aUserData)->extMemoryAlloc(width, height, is_dp);
+    void *aUserData, unsigned int extra_mem_size) {
+    return static_cast<SPRDMPEG4Decoder *>(aUserData)->extMemoryAlloc(extra_mem_size);
 }
 
 int32_t SPRDMPEG4Decoder::BindFrameWrapper(
@@ -1200,57 +1188,16 @@ int32_t SPRDMPEG4Decoder::UnbindFrameWrapper(
     return static_cast<SPRDMPEG4Decoder *>(aUserData)->VSP_unbind_cb(pHeader, flag);
 }
 
-int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int width,unsigned int height, unsigned int is_dp) {
+int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int extra_mem_size) {
 
-    int32 Frm_width_align = ((width + 15) & (~15));
-    int32 Frm_height_align = ((height + 15) & (~15));
-
-    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d", __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align);
-
-    int32 mb_num_x = Frm_width_align/16;
-    int32 mb_num_y = Frm_height_align/16;
-    int32 mb_num_total = mb_num_x * mb_num_y;
-    int32 frm_size = (mb_num_total * 256);
-    int32 i;
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
-    uint32 extra_mem_size;
-
+    ALOGI("%s, %d, mDecoderSwFlag: %d, extra_mem_size: %d", __FUNCTION__, __LINE__, mDecoderSwFlag, extra_mem_size);
     if (mDecoderSwFlag) {
-        int32 ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
-        int32 ext_size_c = ext_size_y >> 2;
-
-        extra_mem_size = mb_num_total * 6 * 2* sizeof(int32); 	//mb_info
-        extra_mem_size += 4 * 8 * sizeof(int16);				//pLeftCoeff
-        extra_mem_size += 6 * 64 * sizeof(int16);				//coef_block
-        extra_mem_size += 4*8*mb_num_x*sizeof(int16);	//pTopCoeff
-        extra_mem_size += (mb_num_total * sizeof(uint8));   //mbdec_stat_ptr
-        extra_mem_size += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY
-        extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
-        extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV
-
-        for (i = 0; i < 3; i++) {
-            extra_mem_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
-            extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
-            extra_mem_size += ((( ext_size_c + 255 + 8) >>8)<<8);	//imgYUV[2], 8 extra byte for mc loading of V.
-        }
-        extra_mem_size += ((( ext_size_y + 255) >>8)<<8);   //g_dbk_tmp_frm_ptr
-
-        if (is_dp) {
-            extra_mem_size += ((1+6)*sizeof (int32 *) * mb_num_total); //g_dec_dc_store + g_dec_dc_store[i]
-        }
-        extra_mem_size += (10*1024);
-
         mCodecExtraBuffer = (uint8 *)malloc(extra_mem_size);
 
         extra_mem[SW_CACHABLE].common_buffer_ptr = mCodecExtraBuffer;
         extra_mem[SW_CACHABLE].size = extra_mem_size;
     } else {
-        extra_mem_size = mb_num_total * (4 * 80 + 384); //384 for tmp YUV.
-        extra_mem_size += (146 + 152)*sizeof(uint32);
-        if (is_dp) {
-            extra_mem_size += mb_num_total * 32;
-        }
-        extra_mem_size += 1024;
 
         if (mIOMMUEnabled) {
             mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);

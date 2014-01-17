@@ -29,7 +29,7 @@ using namespace android;
 
 
 
-#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
+#define ONEFRAME_BITSTREAM_BFR_SIZE	(1024*1024*2)  //for bitstream size of one encoded frame.
 #define DEC_YUV_BUFFER_NUM  17
 
 
@@ -126,7 +126,8 @@ static int dec_init(AVCHandle *mHandle, int format, unsigned char* pheader_buffe
     video_format.p_extra = pheader_buffer;
     video_format.frame_width = 0;
     video_format.frame_height = 0;
-
+    video_format.uv_interleaved = 1;
+    video_format.video_std = H264;
     ret = (*mH264DecInit)(mHandle, &InterMemBfr,&video_format);
 //	if (ret == 0)
 //	{
@@ -137,11 +138,12 @@ static int dec_init(AVCHandle *mHandle, int format, unsigned char* pheader_buffe
     return ret;
 }
 
-static int dec_decode_frame(AVCHandle *mHandle, unsigned char* pframe, unsigned int size, MMDecOutput *dec_out) {
+static int dec_decode_frame(AVCHandle *mHandle, unsigned char* pframe, unsigned char* pframe_y, unsigned int size, MMDecOutput *dec_out) {
     MMDecInput dec_in;
     int ret;
 
-    dec_in.pStream_phy= pframe;
+    dec_in.pStream  = pframe;
+    dec_in.pStream_phy= (uint32)pframe_y;
     dec_in.dataLen = size;
     dec_in.beLastFrm = 0;
     dec_in.expected_IVOP = 0;
@@ -263,34 +265,23 @@ static const char* type2str(int type)
     }
 }
 
+uint8_t *mCodecExtraBuffer;
+static int VSP_malloc_cb(void* mHandle, unsigned int size_extra) {
 
-sp<MemoryHeapIon> pmem_extra[17];
-unsigned char* pbuf_extra[17];
-unsigned char* pbuf_extra_phy[17];
-
-static int VSP_malloc_cb(void* mHandle, unsigned int width,unsigned int height, unsigned int numBuffers) {
-
-    int32 Frm_width_align = ((width + 15) & (~15));
-    int32 Frm_height_align = ((height + 15) & (~15));
-    int32 mb_num_x = Frm_width_align/16;
-    int32 mb_num_y = Frm_height_align/16;
-    int32 mb_num_total = mb_num_x * mb_num_y;
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
-    uint32 size_extra;
-
     unsigned char*  mPbuf_extra_v;
     uint32  mPbuf_extra_p;
 
     sp<MemoryHeapIon> mPmem_extra;
+    //INFO("width = %d, height = %d. \n", width, height);
 
-    size_extra = mb_num_total * 80 * numBuffers + 1024; //384 for tmp YUV.
-    size_extra += sizeof(uint32)*69 ;
     if (mIOMMUEnabled) {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+        mPmem_extra = new MemoryHeapIon(SPRD_ION_WITH_MMU, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        mPmem_extra = new MemoryHeapIon(SPRD_ION_NO_MMU, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     int fd = mPmem_extra->getHeapID();
+    //INFO("VSP_malloc_cb... \n");
     if(fd >= 0)
     {
         int ret,phy_addr, buffer_size;
@@ -307,7 +298,7 @@ static int VSP_malloc_cb(void* mHandle, unsigned int width,unsigned int height, 
 
         mPbuf_extra_p =(uint32)phy_addr;
         mPbuf_extra_v = (uint8 *)mPmem_extra->base();
-
+        //INFO("mPbuf_extra_p = %08x, mPbuf_extra_v = %08x, buffer_size= %08x\n", mPbuf_extra_p, mPbuf_extra_v, buffer_size);
         extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) mPbuf_extra_v;
         extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)mPbuf_extra_p;
         extra_mem[HW_NO_CACHABLE].size = size_extra;
@@ -317,9 +308,6 @@ static int VSP_malloc_cb(void* mHandle, unsigned int width,unsigned int height, 
     }
 
     (*mH264DecMemInit)((AVCHandle *)mHandle, extra_mem);
-
-    // mHeadersDecoded = true;
-
     return 0;
 }
 
@@ -339,7 +327,7 @@ bool openDecoder(const char* libName)
         dlclose(mLibHandle);
     }
 
-    INFO("openDecoder, lib: %s",libName);
+    INFO("openDecoder, lib: %s\n",libName);
 
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
@@ -486,13 +474,12 @@ int main(int argc, char **argv)
     unsigned char* pbuf_stream_phy = NULL;
 
     unsigned int size_extra = 0;
-    unsigned int size_inter = 0;
-    unsigned int size_stream = 0;
+    int size_inter = 0;
+    int size_stream = 0;
 
     int phy_addr = 0;
     int size = 0;
-
-
+    int size_yuv = 0;
     /* parse argument */
 
     if (argc < 3)
@@ -578,9 +565,9 @@ int main(int argc, char **argv)
 
     /* bs buffer */
     if (mIOMMUEnabled) {
-        pmem_stream = new MemoryHeapIon("/dev/ion", ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+        pmem_stream = new MemoryHeapIon(SPRD_ION_WITH_MMU, ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        pmem_stream = new MemoryHeapIon("/dev/ion", ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        pmem_stream = new MemoryHeapIon(SPRD_ION_NO_MMU, ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (pmem_stream->getHeapID() < 0)
     {
@@ -588,12 +575,13 @@ int main(int argc, char **argv)
         goto err;
     }
     if (mIOMMUEnabled) {
-        pmem_stream->get_mm_iova(&phy_addr, &size);
+        pmem_stream->get_mm_iova(&phy_addr, &size_stream);
     } else {
-        pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+        pmem_stream->get_phy_addr_from_ion(&phy_addr, &size_stream);
     }
     pbuf_stream = (unsigned char*)pmem_stream->base();
     pbuf_stream_phy = (unsigned char*)phy_addr;
+    //INFO("pbuf_stream_phy = %08x, pbuf_stream = %08x, size_stream =%08x \n", pbuf_stream_phy, pbuf_stream, size_stream);
     if (pbuf_stream == NULL)
     {
         ERR("Failed to alloc bitstream pmem buffer\n");
@@ -606,26 +594,28 @@ int main(int argc, char **argv)
     if (mIOMMUEnabled) {
         for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
         {
-            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-            pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
-
+            pmem_yuv420sp = new MemoryHeapIon(SPRD_ION_WITH_MMU, width*height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
             if (pmem_yuv420sp->getHeapID() < 0)
             {
                 ERR("Failed to alloc yuv pmem buffer\n");
                 goto err;
             }
+
+            pmem_yuv420sp->get_mm_iova(&phy_addr, &size_yuv);
             pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) ;//+ width*height*3/2 * i;
             pyuv_phy[i] = ((unsigned char*)phy_addr) ;//+ width*height*3/2 * i;
             pmem_yuv420sp_num[i] = pmem_yuv420sp;
+            //INFO("pyuv_phy[%d] = %08x, pyuv[%d] = %08x ,size_yuv =%08x\n", i, pyuv_phy[i], i, pyuv[i],size_yuv);
         }
 
     } else {
-        pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-        pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+        pmem_yuv420sp = new MemoryHeapIon(SPRD_ION_NO_MMU, width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size_yuv);
         for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
         {
             pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
             pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
+            //INFO("pyuv_phy[%d] = %08x, pyuv[%d] = %08x \n", i, pyuv_phy[i], i, pyuv[i]);
         }
     }
 
@@ -673,10 +663,10 @@ int main(int argc, char **argv)
 
     /* step 1 - init vsp */
     size_inter = H264_DECODER_INTERNAL_BUFFER_SIZE;
-    if (mIOMMUEnabled) {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    /* if (mIOMMUEnabled) {
+        pmem_inter = new MemoryHeapIon(SPRD_ION_WITH_MMU, size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        pmem_inter = new MemoryHeapIon(SPRD_ION_NO_MMU, size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (pmem_inter->getHeapID() == NULL)
     {
@@ -684,18 +674,21 @@ int main(int argc, char **argv)
         goto err;
     }
     if (mIOMMUEnabled) {
-        pmem_inter->get_mm_iova(&phy_addr, &size);
+        pmem_inter->get_mm_iova(&phy_addr, &size_inter);
     } else {
-        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
+        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size_inter);
     }
     pbuf_inter = (unsigned char*)pmem_inter->base();
     pbuf_inter_phy = (unsigned char*)phy_addr;
+     INFO("pbuf_inter_phy = %08x, pbuf_inter = %08x \n", pbuf_inter_phy, pbuf_inter);
     if (pbuf_inter == NULL)
     {
         ERR("Failed to alloc inter memory\n");
         goto err;
-    }
+    }*/
 
+    pbuf_inter = (uint8 *)malloc(size_inter);
+    pbuf_inter_phy = NULL;
 //	H264Dec_RegSPSCB(ActivateSPS);
 //        H264Dec_RegMallocCB( VSP_malloc_cb);
     if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter/*, extra_mem*/) != 0)
@@ -710,6 +703,7 @@ int main(int argc, char **argv)
     while (!feof(fp_bs))
     {
         int read_size = fread(buffer_data+buffer_size, 1, ONEFRAME_BITSTREAM_BFR_SIZE-buffer_size, fp_bs);
+        int iCount = 0;
         if (read_size <= 0)
         {
             break;
@@ -743,18 +737,16 @@ int main(int argc, char **argv)
             buffer_size -= frame_size;
 
             // decode bitstream to yuv420sp
-//            int frame_effective = 0;
-//            int type = 0;
-//            unsigned int width_new = 0;
-//            unsigned int height_new = 0;
             unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
             unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
+            *pyuv420sp = 16;
+            INFO("pyuv420sp = %d\n",*pyuv420sp);
             (*mH264Dec_SetCurRecPic)(mHandle, pyuv420sp, pyuv420sp_phy, NULL, framenum_yuv);
             framenum_bs ++;
             MMDecOutput dec_out;
             dec_out.frameEffective = 0;
             int64_t start = systemTime();
-            int ret = dec_decode_frame(mHandle, pbuf_stream_phy, frame_size, &dec_out);
+            int ret = dec_decode_frame(mHandle, pbuf_stream, pbuf_stream_phy, frame_size, &dec_out);
             int64_t end = systemTime();
             unsigned int duration = (unsigned int)((end-start) / 1000000L);
             time_total_ms += duration;
@@ -768,10 +760,6 @@ int main(int argc, char **argv)
                 continue;
             }
 
-//            if ((width_new != width) || (height_new != height)) {
-//                width = width_new;
-//                height = height_new;
-//            }
             INFO("frame %d[%dx%d]: time = %dms, size = %d, effective(%d)\n",
                  framenum_bs, dec_out.frame_width, dec_out.frame_height, duration, frame_size, dec_out.frameEffective);
 
@@ -832,24 +820,30 @@ err:
         free (mHandle);
     }
 
-    for (int i = 0; i < 17; i++)
-    {
-        if (pbuf_extra[i] == NULL)
-        {
-            pmem_extra[i].clear();
-        }
-    }
-
     if (pbuf_inter != NULL)
-    {
+    {   //pmem_inter
+        vsp_free(pbuf_inter);
+        pbuf_inter = NULL;
+        /* if (mIOMMUEnabled)
+        {
+               pmem_inter->free_mm_iova((int32)pbuf_inter_phy, size_inter);
+         }
         pmem_inter.clear();
         pbuf_inter = NULL;
+        pbuf_inter_phy = NULL;
+        size_inter = 0;*/
     }
 
     if (pbuf_stream != NULL)
-    {
+    {   //pmem_stream
+        if (mIOMMUEnabled)
+        {
+            pmem_stream->free_mm_iova((int32)pbuf_stream_phy, size_stream);
+        }
         pmem_stream.clear();
         pbuf_stream = NULL;
+        pbuf_stream_phy = NULL;
+        size_stream = 0;
     }
     if (pyuv[0] != NULL)
     {
@@ -857,8 +851,11 @@ err:
         {
             for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
             {
+                pmem_yuv420sp_num[i]->free_mm_iova((int32)pyuv_phy[i], size_yuv);
                 pmem_yuv420sp_num[i].clear();
                 pyuv[i] = NULL;
+                pyuv_phy[i] = NULL;
+                size_yuv = 0;
             }
         }
         else

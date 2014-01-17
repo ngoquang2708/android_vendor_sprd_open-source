@@ -263,21 +263,8 @@ status_t SPRDVPXDecoder::initDecoder() {
         return OMX_ErrorUndefined;
     }
 
-    int32 codec_capabilty;
-    if ((*mVPXGetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
-        if (codec_capabilty == 0)   //limited under 720p
-        {
-            mMaxWidth = 1280;
-            mMaxHeight = 720;
-        } else if (codec_capabilty == 1)   //limited under 1080p
-        {
-            mMaxWidth = 1920;
-            mMaxHeight = 1088;
-        } else
-        {
-            mMaxWidth = 352;
-            mMaxHeight = 288;
-        }
+    if ((*mVPXGetCodecCapability)(mHandle, &mMaxWidth, &mMaxHeight) != MMDEC_OK) {
+        ALOGE("Failed to mVPXGetCodecCapability\n");
     }
 
     return OMX_ErrorNone;

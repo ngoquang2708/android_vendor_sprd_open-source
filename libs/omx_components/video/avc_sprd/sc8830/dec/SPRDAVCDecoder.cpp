@@ -321,21 +321,9 @@ status_t SPRDAVCDecoder::initDecoder() {
         return OMX_ErrorUndefined;
     }
 
-    int32 codec_capabilty;
-    if ((*mH264GetCodecCapability)(mHandle, &codec_capabilty) == MMDEC_OK) {
-        if (codec_capabilty == 0)   //limited under 720p
-        {
-            mMaxWidth = 1280;
-            mMaxHeight = 720;
-        } else if (codec_capabilty == 1)   //limited under 1080p
-        {
-            mMaxWidth = 1920;
-            mMaxHeight = 1088;
-        } else
-        {
-            mMaxWidth = 352;
-            mMaxHeight = 288;
-        }
+    //int32 codec_capabilty;
+    if ((*mH264GetCodecCapability)(mHandle, &mMaxWidth, &mMaxHeight) != MMDEC_OK) {
+        ALOGE("Failed to mH264GetCodecCapability");
     }
 
     return OMX_ErrorNone;
@@ -1131,8 +1119,8 @@ void SPRDAVCDecoder::updatePortDefinitions() {
 
 // static
 int32_t SPRDAVCDecoder::ExtMemAllocWrapper(
-    void* aUserData, unsigned int width,unsigned int height, unsigned int numBuffers) {
-    return static_cast<SPRDAVCDecoder *>(aUserData)->VSP_malloc_cb(width, height, numBuffers);
+    void* aUserData, unsigned int size_extra) {
+    return static_cast<SPRDAVCDecoder *>(aUserData)->VSP_malloc_cb(size_extra);
 }
 
 // static
@@ -1145,28 +1133,12 @@ int32_t SPRDAVCDecoder::UnbindFrameWrapper(void *aUserData, void *pHeader) {
     return static_cast<SPRDAVCDecoder *>(aUserData)->VSP_unbind_cb(pHeader);
 }
 
-int SPRDAVCDecoder::VSP_malloc_cb(unsigned int width,unsigned int height, unsigned int numBuffers) {
+int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
 
-    ALOGI("%s, %d, mDecoderSwFlag: %d, mPictureSize: %d, width: %d, height: %d, numBuffers: %d", __FUNCTION__, __LINE__, mDecoderSwFlag, mPictureSize, width, height, numBuffers);
-
-    int32 Frm_width_align = ((width + 15) & (~15));
-    int32 Frm_height_align = ((height + 15) & (~15));
-    int32 mb_num_x = Frm_width_align/16;
-    int32 mb_num_y = Frm_height_align/16;
-    int32 mb_num_total = mb_num_x * mb_num_y;
+    ALOGI("%s, %d, mDecoderSwFlag: %d, mPictureSize: %d, size_extra: %d", __FUNCTION__, __LINE__, mDecoderSwFlag, mPictureSize, size_extra);
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
-    uint32 size_extra;
 
     if (mDecoderSwFlag) {
-        size_extra = (2*+mb_num_y)*mb_num_x*8 /*MB_INFO*/
-                     + (mb_num_total*16) /*i4x4pred_mode_ptr*/
-                     + (mb_num_total*16) /*direct_ptr*/
-                     + (mb_num_total*24) /*nnz_ptr*/
-                     + (mb_num_total*2*16*2*2) /*mvd*/
-                     + 3*4*17 /*fs, fs_ref, fs_ltref*/
-                     + 17*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_num_x*16+48)*(mb_num_y*16+48)*3/2)) /*dpb_ptr*/
-                     + mb_num_total /*g_MbToSliceGroupMap*/
-                     +10*1024; //rsv
         if (mCodecExtraBuffer != NULL) {
             free(mCodecExtraBuffer);
             mCodecExtraBuffer = NULL;
@@ -1177,8 +1149,7 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int width,unsigned int height, unsign
         extra_mem[SW_CACHABLE].common_buffer_ptr_phy = 0;
         extra_mem[SW_CACHABLE].size = size_extra;
     } else {
-        size_extra = mb_num_total * 80 * numBuffers + 1024; //384 for tmp YUV.
-        size_extra += sizeof(uint32)*69;
+
 
         if (mIOMMUEnabled) {
             mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);

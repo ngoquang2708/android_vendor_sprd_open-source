@@ -119,36 +119,11 @@ void*  iDecExtVAddr =NULL;
 uint32 iDecExtPhyAddr =NULL;
 static bool mIOMMUEnabled = false;
 
-int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height, unsigned int is_dp) {
+int extMemoryAlloc(void *  mHandle,unsigned int extra_mem_size) {
 
-    int32 Frm_width_align = ((width + 15) & (~15));
-    int32 Frm_height_align = ((height + 15) & (~15));
-
-#if 0 //removed it, bug 121132, xiaowei@2013.01.25
-    mWidth = Frm_width_align;
-    mHeight = Frm_height_align;
-#endif
-
-//    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d", __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align);
-
-    int32 mb_num_x = Frm_width_align/16;
-    int32 mb_num_y = Frm_height_align/16;
-    int32 mb_num_total = mb_num_x * mb_num_y;
-    int32 frm_size = (mb_num_total * 256);
-    int32 i;
-    //MMCodecBuffer extra_mem;
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
-    uint32 extra_mem_size;
 
-
-
-//    if (mDecoderSwFlag)
-//    {
-//        extra_mem_size[HW_NO_CACHABLE] = 0;
-//        extra_mem_size[HW_CACHABLE] = 0;
-//    }else
     {
-        extra_mem_size = mb_num_total * (32 + 4 * 80 + 384) + 1024;
         if (mIOMMUEnabled) {
             iDecExtPmemHeap = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
 
@@ -171,7 +146,6 @@ int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height, unsig
             }
 
             iDecExtPhyAddr =(uint32)phy_addr;
-//            ALOGD ("%s: ext mem pmempool %x,%x,%x,%x\n", __FUNCTION__, iDecExtPmemHeap->getHeapID(),iDecExtPmemHeap->base(),phy_addr,buffer_size);
             iDecExtVAddr = (void *)iDecExtPmemHeap->base();
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) iDecExtVAddr;
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)iDecExtPhyAddr;
@@ -185,8 +159,7 @@ int extMemoryAlloc(void *  mHandle,unsigned int width,unsigned int height, unsig
 }
 
 static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size,
-                    unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter,
-                    unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra)
+                    unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter)
 {
     MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
@@ -199,10 +172,6 @@ static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffe
     InterMemBfr.common_buffer_ptr_phy = pbuf_inter_phy;
     InterMemBfr.size = size_inter;
 
-    ExtraMemBfr.common_buffer_ptr = pbuf_extra;
-    ExtraMemBfr.common_buffer_ptr_phy = pbuf_extra_phy;
-    ExtraMemBfr.size	= size_extra;
-
     video_format.video_std = format;
     video_format.i_extra = header_size;
     video_format.p_extra = pheader_buffer;
@@ -210,11 +179,6 @@ static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffe
     video_format.frame_height = 0;
 
     ret = (*mMP4DecInit)(mHandle, &InterMemBfr);
-    INFO(" ret = %d\n", ret);
-    if (ret == 0)
-    {
-        (*mMP4DecMemInit)(mHandle, &ExtraMemBfr);
-    }
 
     INFO("dec_init OUT\n");
 
@@ -481,7 +445,7 @@ int main(int argc, char **argv)
     sp<MemoryHeapIon> pmem_yuv420sp = NULL;
     unsigned char* pyuv[DEC_YUV_BUFFER_NUM] = {NULL};
     unsigned char* pyuv_phy[DEC_YUV_BUFFER_NUM] = {NULL};
-
+    sp<MemoryHeapIon> pmem_yuv420sp_num[DEC_YUV_BUFFER_NUM] = {NULL};
     // yuv420p buffer, transform from yuv420sp and write to yuv file
     unsigned char* py = NULL;
     unsigned char* pu = NULL;
@@ -617,6 +581,7 @@ int main(int argc, char **argv)
     }
     pbuf_stream = (unsigned char*)pmem_stream->base();
     pbuf_stream_phy = (unsigned char*)phy_addr;
+    INFO("pbuf_stream_phy = %08x, pbuf_stream = %08x \n", pbuf_stream_phy, pbuf_stream);
     if (pbuf_stream == NULL)
     {
         ERR("Failed to alloc bitstream pmem buffer\n");
@@ -624,32 +589,63 @@ int main(int argc, char **argv)
     }
 
     /* yuv420sp buffer */
+    /*    if (mIOMMUEnabled) {
+            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+        } else {
+            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        }
+        if (pmem_yuv420sp->getHeapID() < 0)
+        {
+            ERR("Failed to alloc yuv pmem buffer\n");
+            goto err;
+        }
+        if (mIOMMUEnabled) {
+            pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
+        } else {
+            pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+        }
+        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
+        {
+            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
+            pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
+        }
+        if (pyuv[0] == NULL)
+        {
+            ERR("Failed to alloc yuv pmem buffer\n");
+            goto err;
+        }*/
+
     if (mIOMMUEnabled) {
-        pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
+        {
+            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+            pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
+
+            if (pmem_yuv420sp->getHeapID() < 0)
+            {
+                ERR("Failed to alloc yuv pmem buffer\n");
+                goto err;
+            }
+            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) ;//+ width*height*3/2 * i;
+            pyuv_phy[i] = ((unsigned char*)phy_addr) ;//+ width*height*3/2 * i;
+            pmem_yuv420sp_num[i] = pmem_yuv420sp;
+            INFO("pyuv_phy[%d] = %08x, pyuv[%d] = %08x \n", i, pyuv_phy[i], i, pyuv[i]);
+        }
+
     } else {
         pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-    }
-    if (pmem_yuv420sp->getHeapID() < 0)
-    {
-        ERR("Failed to alloc yuv pmem buffer\n");
-        goto err;
-    }
-    if (mIOMMUEnabled) {
-        pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
-    } else {
         pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
+        {
+            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
+            pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
+        }
     }
-    for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
-    {
-        pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
-        pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
-    }
+
     if (pyuv[0] == NULL)
     {
         ERR("Failed to alloc yuv pmem buffer\n");
-        goto err;
     }
-
     /* yuv420p buffer */
     py = (unsigned char*)vsp_malloc(width * height * sizeof(unsigned char), 4);
     if (py == NULL)
@@ -713,32 +709,8 @@ int main(int argc, char **argv)
         goto err;
     }
 
-    size_extra = 5000 * 1024;
-    if (mIOMMUEnabled) {
-        pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-    } else {
-        pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-    }
-    if (pmem_extra->getHeapID() < 0)
-    {
-        ERR("Failed to alloc extra memory\n");
-        goto err;
-    }
-    if (mIOMMUEnabled) {
-        pmem_extra->get_mm_iova(&phy_addr, &size);
-    } else {
-        pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
-    }
-    INFO("hl size = %d, size_extra = %d\n", size, size_extra);
-    pbuf_extra = (unsigned char*)pmem_extra->base();
-    pbuf_extra_phy = (unsigned char*)phy_addr;
-    if (pbuf_extra == NULL)
-    {
-        ERR("Failed to alloc extra memory\n");
-        goto err;
-    }
 
-    if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra) != 0)
+    if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter) != 0)
     {
         ERR("Failed to init VSP\n");
         goto err;
@@ -933,11 +905,30 @@ err:
         pmem_stream.clear();
         pbuf_stream = NULL;
     }
+
+    if (pyuv[0] != NULL)
+    {
+        if (mIOMMUEnabled)
+        {
+            for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
+            {
+                pmem_yuv420sp_num[i].clear();
+                pyuv[i] = NULL;
+            }
+        }
+        else
+        {
+            pmem_yuv420sp.clear();
+            pyuv[0] = NULL;
+        }
+
+    }
+    /*
     if (pyuv[0] != NULL)
     {
         pmem_yuv420sp.clear();
         pyuv[0] = NULL;
-    }
+    }*/
     if (py != NULL)
     {
         vsp_free(py);

@@ -26,8 +26,8 @@ extern   "C"
 {
 #endif
 
-#define H264_DECODER_INTERNAL_BUFFER_SIZE (0x200000)  //(H264DEC_OR_RUN_SIZE+H264DEC_OR_INTER_MALLOC_SIZE)
-#define H264_DECODER_STREAM_BUFFER_SIZE (1024*1024)
+#define H264_DECODER_INTERNAL_BUFFER_SIZE (0x100000)  //(H264DEC_OR_RUN_SIZE+H264DEC_OR_INTER_MALLOC_SIZE)
+//#define H264_DECODER_STREAM_BUFFER_SIZE (1024*1024*2)
 
 typedef unsigned char		BOOLEAN;
 //typedef unsigned char		Bool;
@@ -78,6 +78,8 @@ typedef struct
 #ifdef _VSP_LINUX_
 //	void *p_extra_phy;
 #endif
+    uint32 p_extra_phy;
+    int32	uv_interleaved;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
@@ -107,7 +109,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded
-    uint8		*pStream_phy;          	// Pointer to stream to be decoded, phy
+    uint32		pStream_phy;          	// Pointer to stream to be decoded, phy
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 
@@ -174,7 +176,7 @@ typedef struct
 } H264SwDecInfo;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(void* mHandle, unsigned int width,unsigned int height, unsigned int numBuffers);
+typedef int (*FunctionType_MallocCB)(void* mHandle, unsigned int size_extra);
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
