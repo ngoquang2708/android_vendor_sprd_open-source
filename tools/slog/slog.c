@@ -528,16 +528,15 @@ static int sdcard_mounted()
 	FILE *str;
 	char buffer[MAX_LINE_LEN];
 	char value[PROPERTY_VALUE_MAX];
-	int mount;
+	int mount = 0;
 	int type;
 
-	mount = 0;
 	// Assume SDK Version, we don't want effect other branch,
 	// and easier for porting. There's too much solutions
 	property_get("ro.build.version.sdk", value, "1");
 	type = atoi(value);
  	if (type >= 19){
-		property_get("persis.storage.type", value, "-1");
+		property_get("persist.storage.type", value, "-1");
 		type = atoi(value);
 		if (type == 1) { // STORAGE_TYPE_EMMC_EXTERNAL = 1
 			property_get("sys.tempsd.enable", value, "-1"); // 0 -> SDCard, 1 -> Emulated
