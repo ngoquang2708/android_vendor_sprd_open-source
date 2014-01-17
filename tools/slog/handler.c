@@ -1568,6 +1568,11 @@ void *bt_log_handler(void *arg)
 	}
 
 	operate_bt_status("true", buffer);
+	bt_log_handler_started = 1;
+	while(slog_enable == SLOG_ENABLE)
+		sleep(1);
+	bt_log_handler_started = 0;
+	operate_bt_status("false", NULL);
 
 	return NULL;
 }

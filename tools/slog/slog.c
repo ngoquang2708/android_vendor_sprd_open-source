@@ -59,6 +59,8 @@ struct slog_info *notify_log_head, *misc_log;
 
 pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid, uboot_log_tid, kmemleak_tid;
 
+extern void operate_bt_status(char *status, char* path);
+
 static void handler_exec_cmd(struct slog_info *info, char *filepath)
 {
 	FILE *fp;
@@ -440,6 +442,8 @@ static int stop_sub_threads()
 
 static int reload()
 {
+	if(bt_log_handler_started == 1 )
+		operate_bt_status("false", NULL);
 	kill(getpid(), SIGTERM);
 	return 0;
 }
@@ -629,6 +633,8 @@ int clear_all_log()
 {
 	char cmd[MAX_NAME_LEN];
 
+	if(bt_log_handler_started == 1 )
+		operate_bt_status("false", NULL);
 	slog_enable = SLOG_DISABLE;
 	stop_sub_threads();
 	sleep(3);
