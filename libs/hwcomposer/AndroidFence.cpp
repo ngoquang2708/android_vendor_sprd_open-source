@@ -42,6 +42,7 @@
 #include "ion_sprd.h"
 #include "AndroidFence.h"
 #include <cutils/log.h>
+#include "SprdDisplayDevice.h"
 
 using namespace android;
 
@@ -159,8 +160,6 @@ void createRetiredFence(hwc_display_contents_1_t *list)
     if (list)
     {
         list->retireFenceFd = sprd_fence_create(const_cast<char *>(name), val);
-
-        sprd_fence_signal();
     }
 }
 
@@ -213,11 +212,36 @@ int waitAcquireFence(hwc_display_contents_1_t *list)
     return ret;
 }
 
-int createReleaseFenceFD(hwc_display_contents_1_t *list)
+int syncReleaseFence(hwc_display_contents_1_t *list, int display)
 {
-    int releaseFenceFd = -1;
+    static int releaseFenceFd = -1;
     unsigned val = 1;
     const char *name = "HWCReleaseFence";
+
+    if (display != DISPLAY_PRIMARY)
+    {
+        goto DupFenceFD;
+    }
+
+    if (releaseFenceFd >= 0)
+    {
+        int ret = -1;
+
+        /*
+         *  Display do not need previous buffer any more.
+         *  Just release the previous buffer release fence.
+         * */
+        ret = sprd_fence_signal();
+
+        close(releaseFenceFd);
+        releaseFenceFd = -1;
+
+        if (ret < 0)
+        {
+            ALOGE("sprd_fence_signal name: %s failed", name);
+            return -1;
+        }
+    }
 
     releaseFenceFd = sprd_fence_create(const_cast<char *>(name), val);
     if (releaseFenceFd < 0)
@@ -226,6 +250,7 @@ int createReleaseFenceFD(hwc_display_contents_1_t *list)
         return -1;
     }
 
+DupFenceFD:
     if (list)
     {
         for(unsigned int i = 0; i < list->numHwLayers; i++)
@@ -245,17 +270,4 @@ int createReleaseFenceFD(hwc_display_contents_1_t *list)
     }
 
     return releaseFenceFd;
-}
-
-void retireReleaseFenceFD(int fenceFd)
-{
-    if (fenceFd < 0)
-    {
-        return;
-    }
-
-    sprd_fence_signal();
-
-    close(fenceFd);
-    fenceFd = -1;
 }

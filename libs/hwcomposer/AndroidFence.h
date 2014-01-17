@@ -64,8 +64,6 @@ extern void createRetiredFence(hwc_display_contents_1_t *list);
 
 extern int FenceWaitForever(const String8& name, int fenceFd);
 
-extern int createReleaseFenceFD(hwc_display_contents_1_t *list);
-
-extern void retireReleaseFenceFD(int fenceFd);
+extern int syncReleaseFence(hwc_display_contents_1_t *list, int display);
 
 #endif
