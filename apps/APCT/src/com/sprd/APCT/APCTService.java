@@ -188,7 +188,6 @@ public class APCTService extends Service {
     {
         if (isBaseDataChecked())
         {
-            Log.d("APCT_DEBUG", "displayBaseData");
             if (float_data.get(0).win_stat != FLOAT_VIEW_RUNING_MIN)
             {
                 displayMaxView(0);
@@ -200,7 +199,6 @@ public class APCTService extends Service {
         }
         else
         {
-            Log.d("APCT_DEBUG", "destroyView0");
             destroyMaxView(0);
             destroyMinView(0);
             float_data.get(0).win_stat = FLOAT_VIEW_CLOSE;
@@ -211,7 +209,6 @@ public class APCTService extends Service {
     {
         if (mIsAppData)
         {
-            Log.d("APCT_DEBUG", "displayAppData");
             if (float_data.get(1).win_stat != FLOAT_VIEW_RUNING_MIN)
             {
                 displayMaxView(1);
@@ -223,7 +220,6 @@ public class APCTService extends Service {
         }
         else
         {
-            Log.d("APCT_DEBUG", "destroyView1");
             destroyMaxView(1);
             destroyMinView(1);
             float_data.get(1).win_stat = FLOAT_VIEW_CLOSE;
@@ -234,7 +230,6 @@ public class APCTService extends Service {
     {
         if (mIsBootData)
         {
-            Log.d("APCT_DEBUG", "displayBootData");
             if (float_data.get(2).win_stat != FLOAT_VIEW_RUNING_MIN)
             {
                 displayMaxView(2);
@@ -246,7 +241,6 @@ public class APCTService extends Service {
         }
         else
         {
-            Log.d("APCT_DEBUG", "destroyView2");
             destroyMaxView(2);
             destroyMinView(2);
             float_data.get(2).win_stat = FLOAT_VIEW_CLOSE;
@@ -257,7 +251,6 @@ public class APCTService extends Service {
     {
         if (mIsTopRecorder)
         {
-            Log.d("APCT_DEBUG", "displayTopData");
             if (float_data.get(3).win_stat != FLOAT_VIEW_RUNING_MIN)
             {
                 displayMaxView(3);
@@ -269,7 +262,6 @@ public class APCTService extends Service {
         }
         else
         {
-            Log.d("APCT_DEBUG", "destroyView3");
             destroyMaxView(3);
             destroyMinView(3);
             float_data.get(3).win_stat = FLOAT_VIEW_CLOSE;
@@ -280,7 +272,6 @@ public class APCTService extends Service {
     {
         if (mIsProcrankRecorder)
         {
-            Log.d("APCT_DEBUG", "displayProcrankData");
             if (float_data.get(4).win_stat != FLOAT_VIEW_RUNING_MIN)
             {
                 displayMaxView(4);
@@ -292,7 +283,6 @@ public class APCTService extends Service {
         }
         else
         {
-            Log.d("APCT_DEBUG", "destroyView4");
             destroyMaxView(4);
             destroyMinView(4);
             float_data.get(4).win_stat = FLOAT_VIEW_CLOSE;
@@ -303,7 +293,6 @@ public class APCTService extends Service {
     {
         if (getItemCheckedStat(index))
         {
-            Log.d("APCT_DEBUG", "displayMaxView" + index);
             createMaxView(index);
             setFloatViewtext(index);
             wm.updateViewLayout(float_data.get(index).maxView, float_data.get(index).maxParams);
@@ -337,7 +326,6 @@ public class APCTService extends Service {
 
     private void createMinView(int idx)
     {
-        Log.d("APCT_DEBUG", "createMinView" + idx);
         final int index = idx;
         float_data.get(index).minView   = new ImageButton(getApplicationContext());
         float_data.get(index).minParams = new WindowManager.LayoutParams();
@@ -386,7 +374,7 @@ public class APCTService extends Service {
                 case MotionEvent.ACTION_UP:
                     int x = (int)event.getRawX();
                     int y = (int)event.getRawY();
-                    Log.d("APCT_DEBUG", "UP x = " + x + " y = " + y);
+
                     if ((x - lastX <= 8) && (y - lastY) <= 8)
                     {
                         destroyMinView(index);
@@ -406,7 +394,7 @@ public class APCTService extends Service {
         {
             return;
         }
-        Log.d("APCT_DEBUG", "createMaxView"+idx);
+
         final int index = idx;
         int x      = 0;
         int y      = 0;
@@ -632,7 +620,7 @@ public class APCTService extends Service {
     private String getMemInfo()
     {
         String line = "";
-        String result = "";
+        String result = null;
         int line_count  = 0;
         boolean isOnlyDisp6Line = false;
 
@@ -645,7 +633,10 @@ public class APCTService extends Service {
             {
                 while ((line = in.readLine()) != null)
                 {
-                    result += line + "\n";
+                    if (result == null)
+                        result = line;
+                    else
+                        result += "\n" + line;
                     line_count++;
 
                     if (line_count == 5)
@@ -701,7 +692,7 @@ public class APCTService extends Service {
         final String APP_PROC = "/proc/benchMark/app_launch_data";
         FileReader fr = null;
         BufferedReader reader = null;
-        String str = "ACTIVITY LAUNCH PROCESS:\n";
+        String str = "ACTIVITY LAUNCH PROCESS:";
         String str_tmp = "";
         try
         {
@@ -712,8 +703,7 @@ public class APCTService extends Service {
                     reader = new BufferedReader(fr);
                     while ((str_tmp = reader.readLine()) != null)
                     {
-                        str += str_tmp;
-                        str += "\n";
+                        str += "\n" + str_tmp;
                     }
 
                     reader.close();
@@ -758,7 +748,7 @@ public class APCTService extends Service {
         final String APP_PROC = "/proc/bootperf";
         FileReader fr = null;
         BufferedReader reader = null;
-        String str = "BOOT PROCESS:\n";
+        String str = "BOOT PROCESS:";
         String str_tmp = "";
         String read_flg = "1";
 
@@ -773,8 +763,7 @@ public class APCTService extends Service {
                     reader = new BufferedReader(fr);
                     while ((str_tmp = reader.readLine()) != null)
                     {
-                        str += str_tmp;
-                        str += "\n";
+                        str += "\n" + str_tmp;
                     }
                     reader.close();
                 }
@@ -841,9 +830,9 @@ public class APCTService extends Service {
                     reader = new BufferedReader(fr);
                     while ((tmp_str = reader.readLine()) != null) {
                         if (str == null)
-                            str = tmp_str + "\n";
+                            str = tmp_str;
                         else
-                            str += tmp_str;
+                            str += "\n" + tmp_str;
                     }
                     reader.close();
                 }
@@ -1170,11 +1159,13 @@ public class APCTService extends Service {
                    BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));   
                    
                    String line = null;    
-                   String result = "";
+                   String result = null;
                    int line_count = 0;
                    while ((line = in.readLine()) != null) {
-                      result += line;
-                      result += "\n";
+                      if (result == null)
+                          result = line;
+                      else
+                          result += "\n" + line;
                       line_count++;
                       
                       if (line_count == 30)
@@ -1265,10 +1256,8 @@ public class APCTService extends Service {
 
     private void destroyMinView(int index)
     {
-        Log.d("APCT_DEBUG", "destroyMinView" + index + " win_stat = " + float_data.get(index).win_stat);
         if (float_data.get(index).win_stat == FLOAT_VIEW_RUNING_MIN)
         {
-            Log.d("APCT_DEBUG", "wm.removeView " + index + ".minView");
             wm.removeView(float_data.get(index).minView);
             float_data.get(index).win_stat = FLOAT_VIEW_CLOSE;
         }              
@@ -1311,7 +1300,7 @@ public class APCTService extends Service {
          {
              e.printStackTrace();
          }
-         Log.d("APCT_DEBUG", "statusBarHeight = " + statusBarHeight);
+
          return statusBarHeight;
     }
 

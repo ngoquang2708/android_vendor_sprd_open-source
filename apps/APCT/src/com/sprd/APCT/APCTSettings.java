@@ -145,13 +145,13 @@ public class APCTSettings extends Activity{
         try
         {
             fr = new FileReader(FILE_NAME);
-			if (fr != null)
-			{
+	     if (fr != null)
+	     {
                 reader = new BufferedReader(fr);
                 str = reader.readLine();
                 fr.close();
                 FileUtils.setPermissions(FILE_NAME, 0777, -1, -1);
-			}
+	     }
         }
         catch (IOException e)
         {
