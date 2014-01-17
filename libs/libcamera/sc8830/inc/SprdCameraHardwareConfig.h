@@ -470,10 +470,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"sharpness-values", "0,1,2,3,4,5,6"},
 	{"sharpness", "3"},
 #endif
-	{"min-exposure-compensation", "0"},
-	{"max-exposure-compensation", "0"},
+	{"min-exposure-compensation", "-3"},
+	{"max-exposure-compensation", "3"},
 	{"exposure-compensation","0"},
-	{"exposure-compensation-step", "0"},
+	{"exposure-compensation-step", "1"},
 	{"focal-length", "3.75"},
 	{"horizontal-view-angle", "54"},
 	{"vertical-view-angle", "54"},
