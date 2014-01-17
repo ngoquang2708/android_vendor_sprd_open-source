@@ -122,6 +122,8 @@ public:
 #ifdef PROCESS_VIDEO_USE_GSP
           tmpBuffer(NULL),
           mGspDev(NULL),
+          outBufferPhy(0),
+          outBufferSize(0),
 #endif
           mInitFlag(0),
           mDebugFlag(0)
@@ -146,6 +148,8 @@ private:
 #ifdef PROCESS_VIDEO_USE_GSP
     private_handle_t* tmpBuffer;
     gsp_device_t *mGspDev;
+    int outBufferPhy;
+    int outBufferSize;
 #endif
     int mInitFlag;
     int mDebugFlag;
@@ -157,6 +161,7 @@ private:
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
     int openGSPDevice();
+    int acquireTmpBuffer(int width, int height, int format, private_handle_t* friendBuffer, int *outBufferPhy, int *outBufferSize);
 #endif
 };
 
