@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+//#define SPRD_ION_WITH_MMU  "/dev/sprd_iommu_mm"
+#define SPRD_ION_WITH_MMU "/dev/ion"
+#define SPRD_ION_NO_MMU      "/dev/ion"
+
 #ifdef __cplusplus
 extern "C"
 {

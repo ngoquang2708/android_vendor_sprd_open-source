@@ -24,7 +24,7 @@
 
 #define SPRD_ION_DEV "/dev/ion"
 
-#define H264_DECODER_INTERNAL_BUFFER_SIZE (0x200000)
+#define H264_DECODER_INTERNAL_BUFFER_SIZE (0x100000)
 #define H264_DECODER_STREAM_BUFFER_SIZE (1024*1024*2)
 
 struct tagAVCHandle;
@@ -146,11 +146,11 @@ private:
     bool handleCropRectEvent(const CropParams* crop);
     bool handlePortSettingChangeEvent(const H264SwDecInfo *info);
 
-    static int32_t ExtMemAllocWrapper(void* aUserData, unsigned int width,unsigned int height, unsigned int numBuffers) ;
+    static int32_t ExtMemAllocWrapper(void* aUserData, unsigned int size_extra) ;
     static int32_t BindFrameWrapper(void *aUserData, void *pHeader);
     static int32_t UnbindFrameWrapper(void *aUserData, void *pHeader);
 
-    int VSP_malloc_cb(unsigned int width,unsigned int height, unsigned int numBuffers);
+    int VSP_malloc_cb(unsigned int size_extra);
     int VSP_bind_cb(void *pHeader);
     int VSP_unbind_cb(void *pHeader);
     bool openDecoder(const char* libName);

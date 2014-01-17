@@ -145,7 +145,7 @@ typedef struct
 } MMDecOutput;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_MemAllocCB)(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
+typedef int (*FunctionType_MemAllocCB)(void *userData, unsigned int extra_mem_size);
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
@@ -186,7 +186,7 @@ void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY);
 
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
-MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *codec_capability);
+MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height);
 
 /*****************************************************************************/
 //  Description: Init mpeg4 decoder
@@ -229,7 +229,7 @@ typedef void (*FT_MP4DecSetCurRecPic)(MP4Handle *mp4Handle, uint8	*pFrameY,uint8
 typedef void (*FT_MP4DecSetReferenceYUV)(MP4Handle *mp4Handle, uint8 *pFrameY);
 typedef void (*FT_Mp4GetVideoDimensions)(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 typedef void (*FT_Mp4GetBufferDimensions)(MP4Handle *mp4Handle, int32 *width, int32 *height);
-typedef MMDecRet (*FT_MP4GetCodecCapability)(MP4Handle *mp4Handle, int32 *codec_capability);
+typedef MMDecRet (*FT_MP4GetCodecCapability)(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height);
 
 typedef MMDecRet (*FT_MP4DecInit)(MP4Handle *mp4Handle, MMCodecBuffer * pBuffer);
 typedef MMDecRet (*FT_MP4DecVolHeader)(MP4Handle *mp4Handle, MMDecVideoFormat *video_format_ptr);

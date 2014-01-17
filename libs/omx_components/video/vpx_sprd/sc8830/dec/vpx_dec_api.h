@@ -164,7 +164,7 @@ typedef struct tagVPXHandle
 **----------------------------------------------------------------------------*/
 
 void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height);
-MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *codec_capability);
+MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
 
 /*****************************************************************************/
@@ -192,7 +192,7 @@ MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *pInput, MMDecOutput *pOu
 MMDecRet VP8DecRelease(VPXHandle *vpxHandle);
 
 typedef void (*FT_VPXGetBufferDimensions)(VPXHandle *vpxHandle, int32 *width, int32 *height);
-typedef MMDecRet (*FT_VPXGetCodecCapability)(VPXHandle *vpxHandle, int32 *codec_capability);
+typedef MMDecRet (*FT_VPXGetCodecCapability)(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 typedef void (*FT_VPXDecSetCurRecPic)(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
 typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
 typedef MMDecRet (*FT_VPXDecDecode)(VPXHandle *vpxHandle, MMDecInput *pInput,MMDecOutput *pOutput);

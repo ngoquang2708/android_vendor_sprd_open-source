@@ -154,7 +154,7 @@ typedef struct
 } MMDecOutput;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
+typedef int (*FunctionType_MemAllocCB)(void *userData, unsigned int extra_mem_size);
 typedef int (*FunctionType_FlushCacheCB)(void* aUserData, int* vaddr,int* paddr,int size);
 
 /* Application controls, this structed shall be allocated */

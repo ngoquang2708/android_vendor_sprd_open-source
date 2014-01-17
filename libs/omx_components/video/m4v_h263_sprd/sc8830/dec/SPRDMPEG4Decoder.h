@@ -126,11 +126,11 @@ private:
     FT_MP4DecGetLastDspFrm mMP4DecGetLastDspFrm;
     FT_MP4GetCodecCapability mMP4GetCodecCapability;
 
-    static int32_t extMemoryAllocWrapper(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
+    static int32_t extMemoryAllocWrapper(void *userData, unsigned int extra_mem_size);
     static int32_t BindFrameWrapper(void *aUserData, void *pHeader, int flag);
     static int32_t UnbindFrameWrapper(void *aUserData, void *pHeader, int flag);
 
-    int extMemoryAlloc(unsigned int width,unsigned int height, unsigned int is_dp) ;
+    int extMemoryAlloc(unsigned int extra_mem_size) ;
     int VSP_bind_cb(void *pHeader,int flag);
     int VSP_unbind_cb(void *pHeader,int flag);
 
