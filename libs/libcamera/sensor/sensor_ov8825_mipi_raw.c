@@ -65,7 +65,7 @@ static uint32_t g_af_slewrate = 1;
 
 LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 #if defined(OV8825_2_LANES)
-	{0x0100, 0x00}, // software standby
+//	{0x0100, 0x00}, // software standby
 	{0x0103, 0x01}, // software reset
 	// delay(5ms)
 	{SENSOR_WRITE_DELAY, 0x0a},
@@ -292,7 +292,7 @@ LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 	{0x5001, 0x01}, // MWB on
 	{0x5000, 0x06} // LENC off, BPC on, WPC on
 #elif defined(OV8825_4_LANES)
-	{0x0100, 0x00}, // software standby
+//	{0x0100, 0x00}, // software standby
 	{0x0103, 0x01}, //software reset
 	{SENSOR_WRITE_DELAY, 0x0a},
 	{0x3000, 0x16}, //strobe, 0xdisable,, 0xfrex, 0xdisable, vsync, 0xdisable
@@ -579,7 +579,7 @@ LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 	{0x4837, 0x15}, // MIPI PCLK PERIOD
 	{0x5068, 0x53}, // HSCALE_CTRL
 	{0x506a, 0x53}, // VSCALE_CTRL
-	{0x0100, 0x01} // wake up
+//	{0x0100, 0x01} // wake up
 #endif
 };
 //@@ FVGA 2lane 720x480 60fps

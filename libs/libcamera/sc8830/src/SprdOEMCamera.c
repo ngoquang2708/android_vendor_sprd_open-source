@@ -2713,7 +2713,13 @@ int camera_start_preview_internal(void)
 		}
 	} else {
 		CMR_LOGV("preview mode %d",g_cxt->sn_cxt.preview_mode);
-		if (g_cxt->sn_cxt.previous_sensor_mode != g_cxt->sn_cxt.preview_mode) {
+		if (IS_ZSL_MODE(g_cxt->cap_mode)) {
+			sensor_mode = g_cxt->sn_cxt.capture_mode;
+		} else {
+			sensor_mode = g_cxt->sn_cxt.preview_mode;
+		}
+
+		if (g_cxt->sn_cxt.previous_sensor_mode != sensor_mode) {
 			ret = Sensor_StreamOff();
 			if (ret) {
 				CMR_LOGE("Failed to switch off the sensor stream");
