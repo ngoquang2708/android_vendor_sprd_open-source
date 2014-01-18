@@ -72,7 +72,7 @@ LOCAL int _ov5640_init_firmware(void);
 
 LOCAL const SENSOR_REG_T ov5640_640X480[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3c07, 0x08},		/* lightmeter 1 threshold[7:0]*/
 	{0x3820, 0x41},		/* flip*/
 	{0x3821, 0x07},		/* mirror*/
@@ -133,7 +133,7 @@ LOCAL const SENSOR_REG_T ov5640_640X480[] = {
 
 LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 	{0x4202, 0x0f},/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3103, 0x11},		/* sysclk from pad*/
 	{0x3008, 0x82},		/*software reset*/
 	{SENSOR_WRITE_DELAY, 0x20},
@@ -548,7 +548,7 @@ LOCAL const SENSOR_REG_T ov5640_common_init[] = {
 
 LOCAL const SENSOR_REG_T ov5640_640X480_new[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3c07, 0x08},		/* lightmeter 1 threshold[7:0]*/
 	{0x3820, 0x41},		/* flip*/
 	{0x3821, 0x07},		/* mirror*/
@@ -604,7 +604,7 @@ LOCAL const SENSOR_REG_T ov5640_640X480_new[] = {
 /*1280X960  YUV   Mode*/
 LOCAL const SENSOR_REG_T ov5640_1280X960[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3035, 0x11},
 	{0x3036, 0x69},
 	{0x3c07, 0x07},
@@ -700,7 +700,7 @@ LOCAL const SENSOR_REG_T ov5640_1600X1200_YUV[] = {
 /*1600X1200  YUV   Mode*/
 LOCAL const SENSOR_REG_T ov5640_1600X1200[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3035, 0x11},
 	{0x3036, 0x69},
 	{0x3c07, 0x07},
@@ -788,7 +788,7 @@ LOCAL const SENSOR_REG_T ov5640_2048X1536_YUV[] = {
 /*20480X1536  JPG   Mode*/
 LOCAL const SENSOR_REG_T ov5640_2048X1536[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3035, 0x11},
 	{0x3036, 0x69},
 	{0x3c07, 0x07},
@@ -833,7 +833,7 @@ LOCAL const SENSOR_REG_T ov5640_2048X1536[] = {
 /*2592X1944  JPG   Mode*/
 LOCAL const SENSOR_REG_T ov5640_2592X1944[] = {
 	{0x4202, 0x0f},		/*kenxu add 20120207 for stream off*/
-	{SENSOR_WRITE_DELAY, 0x64},
+	{SENSOR_WRITE_DELAY, 0x10},
 	{0x3035, 0x11},
 	{0x3036, 0x69},
 	{0x3c07, 0x07},
@@ -1017,7 +1017,7 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
 	1,			// skip frame num before preview
-	2,			// skip frame num before capture
+	3,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
