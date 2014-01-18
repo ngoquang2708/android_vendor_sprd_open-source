@@ -56,6 +56,8 @@ typedef enum
 
 #define DIAG_CMD_CURRENT_TEST       0x11
 
+#define DIAG_CMD_ASSERT         0x5
+
 #define AUDIO_NV_ARM_INDI_FLAG          0x02
 #define AUDIO_ENHA_EQ_INDI_FLAG         0x04
 #define AUDIO_DATA_READY_INDI_FLAG      (AUDIO_NV_ARM_INDI_FLAG|AUDIO_ENHA_EQ_INDI_FLAG)
