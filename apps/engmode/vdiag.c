@@ -18,6 +18,7 @@
 #include "eng_util.h"
 
 int g_ass_start = 0;
+extern int g_assert_cmd;
 
 #define DATA_BUF_SIZE (4096*2)
 #define MAX_OPEN_TIMES  10
@@ -358,6 +359,12 @@ void *eng_vdiag_thread(void *x)
         if(1 == has_processed){// Data has been processed & should not send to modem
             backup_data_len = 0;
             continue;
+        }
+
+        if(g_assert_cmd) {
+            for(offset=0; offset < r_cnt; offset++){
+                ENG_LOG("%s: diag cmd: %d\n", __FUNCTION__, log_data[offset]);
+            }
         }
 
         if(2 == r_cnt && log_data[1] == 0xa){

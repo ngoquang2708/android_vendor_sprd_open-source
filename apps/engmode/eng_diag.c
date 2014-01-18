@@ -42,6 +42,7 @@ char *at_sipc_devname[] = {
 };
 
 int g_reset = 0;
+int g_assert_cmd = 0;
 extern int g_run_mode;
 extern AUDIO_TOTAL_T *audio_total;
 extern void eng_check_factorymode(int final);
@@ -256,6 +257,12 @@ int eng_diag_parse(char *buf,int len)
             ENG_LOG("%s: Handle DIAG_CMD_CURRENT_TEST", __FUNCTION__);
             if(head_ptr->subtype==0x2) {
                 ret = CMD_USER_DEEP_SLEEP;
+            }
+            break;
+        case DIAG_CMD_ASSERT:
+            if(head_ptr->subtype==0x4) {
+                ENG_LOG("%s: Handle DIAG_CMD_ASSERT", __FUNCTION__);
+                g_assert_cmd = 1;
             }
             break;
         default:
