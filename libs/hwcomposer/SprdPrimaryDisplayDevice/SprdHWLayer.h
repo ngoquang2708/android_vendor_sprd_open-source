@@ -165,7 +165,6 @@ private:
     int mSprdLayerIndex;
     struct sprdRect srcRect;
     struct sprdRect FBRect;
-    bool mDirectDisplayFlag;
     int mDebugFlag;
 
     inline void setAndroidLayer(hwc_layer_1_t *l)

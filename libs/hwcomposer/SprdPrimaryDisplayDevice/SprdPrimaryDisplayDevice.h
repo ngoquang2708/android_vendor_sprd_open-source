@@ -66,6 +66,9 @@
 
 using namespace android;
 
+class SprdHWLayerList;
+class SprdUtil;
+
 class SprdPrimaryDisplayDevice
 {
 public:
@@ -107,12 +110,18 @@ public:
      * */
     int getDisplayAttributes(DisplayAttributes *dpyAttributes);
 
+    /*
+     *  Recycle DispalyPlane buffer for saving memory.
+     * */
+    int reclaimPlaneBuffer(SprdHWLayer *YUVLayer);
+
 private:
     FrameBufferInfo   *mFBInfo;
     SprdHWLayerList   *mLayerList;
     SprdOverlayPlane  *mOverlayPlane;
     SprdPrimaryPlane  *mPrimaryPlane;
 #ifdef OVERLAY_COMPOSER_GPU
+    sp<OverlayNativeWindow> mWindow;
     sp<OverlayComposer> mOverlayComposer;
 #endif
     sp<SprdVsyncEvent>  mVsyncEvent;
@@ -131,6 +140,11 @@ private:
     {
         return mVsyncEvent;
     }
+
+    /*
+     *  And then attach these HWC_OVERLAY layers to SprdDisplayPlane.
+     * */
+    int attachToDisplayPlane(int DisplayFlag);
 };
 
 #endif

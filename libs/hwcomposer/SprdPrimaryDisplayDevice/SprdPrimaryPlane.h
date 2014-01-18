@@ -47,6 +47,7 @@
 class SprdOverlayPlane;
 #endif
 
+
 using namespace android;
 
 
@@ -66,6 +67,9 @@ public:
     virtual private_handle_t* getPlaneBuffer();
     virtual void getPlaneGeometry(unsigned int *width, unsigned int *height, int *format);
     /**************************************************************************************/
+
+    virtual bool open();
+    virtual bool close();
 
     /*
      *  Bind OSD layer to SprdPrimaryPlane.
@@ -113,6 +117,7 @@ public:
         return mDirectDisplayFlag;
     }
 
+
 private:
     FrameBufferInfo *mFBInfo;
     SprdHWLayer *mHWLayer;
@@ -134,8 +139,6 @@ private:
     int mDumpFlag;
 
     virtual private_handle_t* flush();
-    virtual bool open();
-    virtual bool close();
 
     void InvalidatePlaneContext();
 

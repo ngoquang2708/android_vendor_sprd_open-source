@@ -42,6 +42,7 @@
 #include "../SprdPrimaryDisplayDevice/SprdPrimaryPlane.h"
 #include "../SprdPrimaryDisplayDevice/SprdFrameBufferHAL.h"
 
+class SprdPrimaryPlane;
 
 namespace android {
 // ----------------------------------------------------------------------------
@@ -80,6 +81,8 @@ public:
     ~OverlayNativeWindow();
 
     bool Init();
+
+    int releaseNativeBuffer();
 
 private:
     SprdPrimaryPlane *mDisplayPlane;

@@ -50,13 +50,12 @@
 
 #include "SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
-#include "SprdPrimaryPlane.h"
-#include "SprdOverlayPlane.h"
+#include "SprdPrimaryDisplayDevice.h"
+
 
 using namespace android;
 
-class SprdPrimaryPlane;
-class SprdOverlayPlane;
+class SprdPrimaryDisplayDevice;
 
 /*
  *  Mainly responsible for traversaling HWLayer list,
@@ -93,9 +92,11 @@ public:
     int updateGeometry(hwc_display_contents_1_t *list);
 
     /*
-     *  And then attach these HWC_OVERLAY layers to SprdDisplayPlane.
+     *  traversal HWLayer list again,
+     *  mainly judge whether upper layer and bottom layer
+     *  is consistent with SprdDisplayPlane Hardware requirements.
      * */
-    int attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverlayPlane *mOverlay, int *DisplayFlag);
+    int revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice *mPrimary);
 
     int checkHWLayerList(hwc_display_contents_1_t* list);
 
@@ -114,9 +115,14 @@ public:
         return mOSDLayerCount;
     }
 
-    inline SprdHWLayer **getSprdOverlayLayerList()
+    inline SprdHWLayer **getSprdVideoLayerList()
     {
         return mVideoLayerList;
+    }
+
+    inline int getVideoLayerCount()
+    {
+        return mVideoLayerCount;
     }
 
     inline hwc_layer_1_t *getFBTargetLayer()
@@ -148,12 +154,6 @@ private:
     int mDebugFlag;
     int mDumpFlag;
 
-    /*
-     *  traversal HWLayer list again,
-     *  mainly judge whether upper layer and bottom layer
-     *  is consistent with SprdDisplayPlane Hardware requirements.    
-     * */
-    int revisitGeometry(int *DisplayFlag);
 
     /*
      *  Filter OSD layer

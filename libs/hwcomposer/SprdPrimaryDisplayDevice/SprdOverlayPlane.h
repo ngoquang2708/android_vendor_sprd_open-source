@@ -70,6 +70,9 @@ public:
     virtual private_handle_t* getPlaneBuffer();
     /****************************************************/
 
+    virtual bool open();
+    virtual bool close();
+
     /*
      *  Setup a Overlay layer to SprdOverlayPlane
      * */
@@ -113,8 +116,6 @@ private:
      * */
     virtual private_handle_t* flush();
     //virtual void display();
-    virtual bool open();
-    virtual bool close();
     /********************************************/
 
     /*

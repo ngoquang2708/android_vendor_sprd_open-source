@@ -550,6 +550,8 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name, s
     if (!ret)
     {
         ALOGE("Init HWComposer failed");
+        delete HWC;
+        HWC = NULL;
         status = -ENOMEM;
         return status;
     }

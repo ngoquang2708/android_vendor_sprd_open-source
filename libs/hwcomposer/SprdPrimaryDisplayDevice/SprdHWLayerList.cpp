@@ -229,103 +229,7 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     return 0;
 }
 
-int SprdHWLayerList:: attachToDisplayPlane(SprdPrimaryPlane *mPrimary, SprdOverlayPlane *mOverlay, int *DisplayFlag)
-{
-    int displayType = HWC_DISPLAY_MASK;
-
-    if (mPrimary == NULL || mOverlay == NULL || DisplayFlag == NULL)
-    {
-        ALOGE("attachToDisplayPlane: Input parameters is NULL");
-        return -1;
-    }
-
-    revisitGeometry(DisplayFlag);
-
-    /*
-     *  At present, each SprdDisplayPlane only only can handle one
-     *  HWC layer.
-     *  According to Android Framework definition, the smaller z-order
-     *  layer is in the bottom layer list.
-     *  The application layer is in the bottom layer list.
-     *  Here, we forcibly attach the bottom layer to SprdDisplayPlane.
-     * */
-#define DEFAULT_ATTACH_LAYER 0
-
-    bool cond = false;
-#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
-    cond = mOSDLayerCount > 0;
-#else
-    cond = mOSDLayerCount > 0 && mVideoLayerCount > 0;
-#endif
-    if (cond)
-    {
-        bool DirectDisplay = false;
-#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
-        DirectDisplay = ((mOSDLayerCount == 1) && (mVideoLayerCount == 0));
-#endif
-        /*
-         *  At present, we disable the Direct Display OSD layer first
-         * */
-        SprdHWLayer *sprdLayer = mOSDLayerList[DEFAULT_ATTACH_LAYER];
-        if (sprdLayer && sprdLayer->InitCheck())
-        {
-            mPrimary->AttachPrimaryLayer(sprdLayer, DirectDisplay);
-            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdPrimaryDisplayPlane",
-                     sprdLayer->getLayerFormat());
-
-            displayType |= HWC_DISPLAY_PRIMARY_PLANE;
-        }
-        else
-        {
-            ALOGI_IF(mDebugFlag, "Attach layer to SprdPrimaryPlane failed");
-            displayType &= ~HWC_DISPLAY_PRIMARY_PLANE;
-        }
-    }
-
-    if (mVideoLayerCount > 0)
-    {
-        SprdHWLayer *sprdLayer = mVideoLayerList[DEFAULT_ATTACH_LAYER];
-
-        if (sprdLayer && sprdLayer->InitCheck())
-        {
-            mOverlay->AttachOverlayLayer(sprdLayer);
-            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdOverlayPlane",
-                     sprdLayer->getLayerFormat());
-
-            displayType |= HWC_DISPLAY_OVERLAY_PLANE;
-        }
-        else
-        {
-            ALOGI_IF(mDebugFlag, "Attach layer to SprdOverlayPlane failed");
-
-            displayType &= ~HWC_DISPLAY_OVERLAY_PLANE;
-        }
-    }
-
-    if (*DisplayFlag & HWC_DISPLAY_OVERLAY_COMPOSER_GPU)
-    {
-        displayType &= ~(HWC_DISPLAY_PRIMARY_PLANE | HWC_DISPLAY_OVERLAY_PLANE);
-    }
-    else if (mFBTargetLayer &&
-             mOSDLayerCount <= 1 &&
-             mVideoLayerCount <= 0)
-    {
-        //mPrimary->AttachFrameBufferTargetLayer(mFBTargetLayer);
-        ALOGI_IF(mDebugFlag, "Attach Framebuffer Target layer");
-
-        displayType |= (0x1) & HWC_DISPLAY_FRAMEBUFFER_TARGET;
-    }
-    else
-    {
-        displayType &= ~HWC_DISPLAY_FRAMEBUFFER_TARGET;
-    }
-
-    *DisplayFlag |= displayType;
-
-    return 0;
-}
-
-int SprdHWLayerList:: revisitGeometry(int *DisplayFlag)
+int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice *mPrimary)
 {
     SprdHWLayer *YUVLayer = NULL;
     SprdHWLayer *RGBLayer = NULL;
@@ -339,6 +243,12 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag)
     if (mDisableHWCFlag)
     {
         return 0;
+    }
+
+    if (mPrimary == NULL)
+    {
+        ALOGE("prdHWLayerList:: revisitGeometry input parameters error");
+        return -1;
     }
 
     /*
@@ -425,11 +335,32 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag)
 
 Overlay:
 
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+    int ret = -1;
+
+    ret = mPrimary->reclaimPlaneBuffer(YUVLayer);
+    if (ret == 1)
+    {
+        resetOverlayFlag(YUVLayer);
+        mFBLayerCount++;
+        YUVLayer = NULL;
+        ALOGI_IF(mDebugFlag, "alloc plane buffer failed, reset video layer");
+
+        if (RGBLayer)
+        {
+            resetOverlayFlag(RGBLayer);
+            mFBLayerCount++;
+            RGBLayer = NULL;
+            ALOGI_IF(mDebugFlag, "alloc plane buffer failed, reset OSD layer");
+        }
+    }
+#endif
+
 #ifdef OVERLAY_COMPOSER_GPU
 #ifdef GSP_BLEND_2_LAYERS
     postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 1));// 3 layers compose with GPU
 #else
-    postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 0));// 2 layers compose with GPU
+    postProcessVideoCond = (YUVLayer && (mRGBLayerCount));// 2 layers compose with GPU
 #endif
 #else
     postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
@@ -597,12 +528,14 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 #endif
 #endif
 #else
+#ifndef OVERLAY_COMPOSER_GPU
     if ((layer->transform != 0) ||
         !(l->checkContiguousPhysicalAddress(privateH)))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
         return 0;
     }
+#endif
 #endif
 
     if ((layer->transform != 0) &&
@@ -731,6 +664,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     mYUVLayerCount++;
 
+#ifdef PROCESS_VIDEO_USE_GSP
 #ifdef GSP_ADDR_TYPE_PHY
 	if (!(l->checkContiguousPhysicalAddress(privateH))
         || l->checkNotSupportOverlay(privateH))
@@ -742,6 +676,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;
     }
+#endif
 
 
     if(layer->blending != HWC_BLENDING_NONE)
