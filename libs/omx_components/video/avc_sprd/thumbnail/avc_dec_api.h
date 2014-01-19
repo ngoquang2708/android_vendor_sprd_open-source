@@ -167,7 +167,7 @@ typedef struct
 } H264SwDecInfo;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int width,unsigned int height, unsigned int aNumBuffers);
+typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int size_extra);
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */

@@ -746,26 +746,13 @@ void SoftSPRDAVC::updatePortDefinitions() {
 
 // static
 int32_t SoftSPRDAVC::ExtMemAllocWrapper(
-    void *aUserData, unsigned int width,unsigned int height, unsigned int numBuffers) {
-    return static_cast<SoftSPRDAVC *>(aUserData)->VSP_malloc_cb(width, height, numBuffers);
+    void *aUserData, unsigned int size_extra) {
+    return static_cast<SoftSPRDAVC *>(aUserData)->VSP_malloc_cb(size_extra);
 }
 
-int SoftSPRDAVC::VSP_malloc_cb(unsigned int width,unsigned int height, unsigned int numBuffers) {
+int SoftSPRDAVC::VSP_malloc_cb(unsigned int size_extra) {
     MMCodecBuffer ExtraBuffer[MAX_MEM_TYPE];
-    uint32 mb_x = width/16;
-    uint32 mb_y = height/16;
-    uint32 sizeInMbs = mb_x * mb_y;
 
-    int32 size_extra = (2+mb_y)*mb_x*8 /*MB_INFO*/
-                       + (mb_x*mb_y*16) /*i4x4pred_mode_ptr*/
-                       + (mb_x*mb_y*16) /*direct_ptr*/
-                       + (mb_x*mb_y*24) /*nnz_ptr*/
-                       + (mb_x*mb_y*2*16*2*2) /*mvd*/
-                       + 3*4*17 /*fs, fs_ref, fs_ltref*/
-                       + 17*(7*4+(23+150*2*17)*4+mb_x*mb_y*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
-                       + 2/*17*/*((mb_x*16+48)*(mb_y*16+48)*3/2);
-                       + mb_x*mb_y /*g_MbToSliceGroupMap*/
-                       +10*1024; //rsv
     if (mCodecExtraBuffer != NULL)
     {
         free(mCodecExtraBuffer);
@@ -773,8 +760,8 @@ int SoftSPRDAVC::VSP_malloc_cb(unsigned int width,unsigned int height, unsigned 
     }
     mCodecExtraBuffer = (uint8 *)malloc(size_extra);
 
-    ALOGI("%s, %d, mPictureSize: %d, width: %d, height: %d, numBuffers: %d, size_extra: %d, mCodecExtraBuffer: %0x",
-          __FUNCTION__, __LINE__, mPictureSize, width, height, numBuffers, size_extra, mCodecExtraBuffer);
+    ALOGI("%s, %d, mPictureSize: %d, size_extra: %d, mCodecExtraBuffer: %0x",
+          __FUNCTION__, __LINE__, mPictureSize, size_extra, mCodecExtraBuffer);
 
     if (mCodecExtraBuffer == NULL)
     {

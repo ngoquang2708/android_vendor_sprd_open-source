@@ -91,8 +91,8 @@ private:
     FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
     FT_MP4DecSetReferenceYUV mMP4DecSetReferenceYUV;
 
-    static int32_t extMemoryAllocWrapper(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
-    int extMemoryAlloc(unsigned int width,unsigned int height, unsigned int is_dp);
+    static int32_t extMemoryAllocWrapper(void *userData, unsigned int extra_mem_size);
+    int extMemoryAlloc(unsigned int extra_mem_size);
 
     enum {
         NONE,

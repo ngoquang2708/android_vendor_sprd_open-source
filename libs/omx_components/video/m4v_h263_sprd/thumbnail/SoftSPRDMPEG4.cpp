@@ -793,44 +793,11 @@ void SoftSPRDMPEG4::updatePortDefinitions() {
 
 // static
 int32_t SoftSPRDMPEG4::extMemoryAllocWrapper(
-    void *aUserData, unsigned int width,unsigned int height, unsigned int is_dp) {
-    return static_cast<SoftSPRDMPEG4 *>(aUserData)->extMemoryAlloc(width, height, is_dp);
+    void *aUserData, unsigned int extra_mem_size) {
+    return static_cast<SoftSPRDMPEG4 *>(aUserData)->extMemoryAlloc(extra_mem_size);
 }
 
-int SoftSPRDMPEG4::extMemoryAlloc(unsigned int width,unsigned int height, unsigned int is_dp) {
-
-    int32 Frm_width_align = ((width + 15) & (~15));
-    int32 Frm_height_align = ((height + 15) & (~15));
-    int32 mb_x = Frm_width_align/16;
-    int32 mb_y = Frm_height_align/16;
-    int32 total_mb_num = mb_x * mb_y;
-    int32 ext_size_y = (mb_x * 16 + 16*2) * (mb_y * 16 + 16*2);
-    int32 ext_size_c = ext_size_y >> 2;
-    int32 i;
-    uint32 extra_mem_size;
-
-    extra_mem_size = total_mb_num * 6 * 2* sizeof(int32); 	//mb_info
-    extra_mem_size += 4 * 8 * sizeof(int16);				//pLeftCoeff
-    extra_mem_size += 6 * 64 * sizeof(int16);				//coef_block
-    extra_mem_size += 4*8*mb_x*sizeof(int16);	//pTopCoeff
-    extra_mem_size += (total_mb_num * sizeof(uint8));   //mbdec_stat_ptr
-    extra_mem_size += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY
-    extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
-    extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV
-
-    for (i = 0; i < 3; i++)
-    {
-        extra_mem_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
-        extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
-        extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[2]
-    }
-
-    if (is_dp)
-    {
-        extra_mem_size += ((1+6)*sizeof (int32 *) * total_mb_num); //g_dec_dc_store + g_dec_dc_store[i]
-    }
-    extra_mem_size += (10*1024);
-
+int SoftSPRDMPEG4::extMemoryAlloc(unsigned int extra_mem_size) {
     if (mCodecExtraBuffer != NULL)
     {
         free(mCodecExtraBuffer);
@@ -842,8 +809,8 @@ int SoftSPRDMPEG4::extMemoryAlloc(unsigned int width,unsigned int height, unsign
 
     extra_mem[SW_CACHABLE].common_buffer_ptr = mCodecExtraBuffer;
     extra_mem[SW_CACHABLE].size = extra_mem_size;
-    ALOGI("%s, %d, Frm_width_align: %d, Frm_height_align: %d, ext_mem: %0x, ext_mem_size: %d",
-          __FUNCTION__, __LINE__, Frm_width_align, Frm_height_align, mCodecExtraBuffer, extra_mem_size);
+    ALOGI("%s, %d, ext_mem: %0x, ext_mem_size: %d",
+          __FUNCTION__, __LINE__, mCodecExtraBuffer, extra_mem_size);
 
     (*mMP4DecMemInit)( ((SoftSPRDMPEG4 *)this)->mHandle, extra_mem);
 

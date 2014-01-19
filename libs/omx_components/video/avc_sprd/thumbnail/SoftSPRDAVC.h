@@ -113,8 +113,8 @@ private:
     bool handleCropRectEvent(const CropParams* crop);
     bool handlePortSettingChangeEvent(const H264SwDecInfo *info);
 
-    static int32_t ExtMemAllocWrapper(void *aUserData, unsigned int width,unsigned int height, unsigned int numBuffers) ;
-    int VSP_malloc_cb(unsigned int width,unsigned int height, unsigned int numBuffers);
+    static int32_t ExtMemAllocWrapper(void *aUserData, unsigned int size_extra) ;
+    int VSP_malloc_cb(unsigned int size_extra);
 
     DISALLOW_EVIL_CONSTRUCTORS(SoftSPRDAVC);
 };
