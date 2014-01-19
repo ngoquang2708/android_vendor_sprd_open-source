@@ -7654,6 +7654,11 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 	int                        ret = CAMERA_SUCCESS;
 	int                        is_jpeg_encode = 0;
 
+
+	if (NULL == isp_out) {
+		CMR_LOGE("fail isp_out is NULL");
+		return -CAMERA_FAILED;
+	}
 	CMR_LOGV("total processed height %d", process->slice_height_out);
 
 #if 0
