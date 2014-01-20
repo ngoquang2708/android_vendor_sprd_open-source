@@ -1800,6 +1800,11 @@ int camera_isp_af_done(void *data)
 	struct camera_context    *cxt = camera_get_cxt();
 	struct isp_af_notice     *isp_af = (struct isp_af_notice*)data;
 
+
+	if (NULL == isp_af) {
+		CMR_LOGE("fail data is NULL");
+		return -1;
+	}
 	pthread_mutex_lock(&cxt->cmr_set.isp_af_mutex);
 	CMR_LOGV("AF done, valid_win 0x%x, isp_af_timeout %d",
 		isp_af->valid_win, cxt->cmr_set.isp_af_timeout);
