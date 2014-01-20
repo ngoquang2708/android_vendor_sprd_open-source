@@ -58,9 +58,6 @@ typedef struct sprd_camera_memory {
 
 
 #define MAX_MISCHEAP_NUM 1024
-#define SET_PARAM_TIMEOUT 2000000000
-#define SET_PARAMS_TIMEOUT 250       /*250 means 250*10ms*/
-
 
 class SprdCameraHardware : public virtual RefBase {
 public:

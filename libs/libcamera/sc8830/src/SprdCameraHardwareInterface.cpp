@@ -83,6 +83,10 @@ static int s_mem_method = 0;	 //   0=  physical	address,1=iommu  address
                             s_use_time = (s_end_timestamp - s_start_timestamp)/1000000; \
                      }while(0)
 
+#define SET_PARAM_TIMEOUT    2000000000
+#define SET_PARAMS_TIMEOUT   250       /*250 means 250*10ms*/
+#define ON_OFF_ACT_TIMEOUT   50        /*50 means 50*10ms*/
+
 ///////////////////////////////////////////////////////////////////
 //static members
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -3153,10 +3157,16 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	// or SPRD_WAITING_JPEG to SPRD_IDLE.  This is because in camera_cb(),
 	// we update the state *after* we've made the callback.  See that
 	// function for an explanation.
-	if (isCapturing()) {
-		LOGE("startPreviewInternal X Capture state is %s, expecting SPRD_IDLE!",
-		getCameraStateStr(mCameraState.capture_state));
-		return INVALID_OPERATION;
+	while (isCapturing()) {
+		uint32_t wait_cnt = 0;
+		if (ON_OFF_ACT_TIMEOUT < wait_cnt) {
+			LOGE("startPreviewInternal X Capture state is %s, expecting SPRD_IDLE!",
+			getCameraStateStr(mCameraState.capture_state));
+			return INVALID_OPERATION;
+		} else {
+			usleep(10*1000);
+			wait_cnt++;
+		}
 	}
 
 	setRecordingMode(isRecording);
@@ -4050,7 +4060,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		miSPreviewFirstFrame = 0;
 	}
 
-	if (isPreviewing()) { 
+	if (isPreviewing()) {
 		if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr, frame->buf_id)) {
 			LOGE("%s: displayOneFrame not successful!", __func__);
 		}
@@ -4076,14 +4086,17 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
 					mPreviewHeapArray[tmpIndex],
 					0, NULL, mUser, 1);
+
 			} else {
 				uint32_t dataSize = frame->dx * frame->dy * 3 / 2;
+
 				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
 					frame->buf_Virt_Addr, dataSize);
 
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
 					mPreviewHeapArray[mPreviewDcamAllocBufferCnt - 1],
 					0, NULL, mUser, 1);
+
 			}
 		}
 
