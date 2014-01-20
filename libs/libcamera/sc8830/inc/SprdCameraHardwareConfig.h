@@ -477,11 +477,11 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"focal-length", "3.75"},
 	{"horizontal-view-angle", "54"},
 	{"vertical-view-angle", "54"},
-#if 0
-	{"flash-mode-values", "off,on,torch,auto"},
+
+	{"flash-mode-values", "off"},
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "false"},
-#endif
+
 	{"focus-mode-values", "infinity"},
 	{"focus-mode", "infinity"},
 	{"focus-distances", "2.0,2.5,Infinity"},

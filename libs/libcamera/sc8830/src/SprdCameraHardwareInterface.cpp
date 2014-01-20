@@ -1418,6 +1418,8 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 {
 	int min,max;
 	int max_focus_num = 0;
+	const char* flash_mode;
+	const char* focus_mode;
 
 	params.getPreviewFpsRange(&min, &max);
 	if((min > max) || (min < 0) || (max < 0)){
@@ -1425,20 +1427,40 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		return UNKNOWN_ERROR;
 	}
 
-	//check preview size
-	int w,h;
-	params.getPreviewSize(&w, &h);
-	if((w < 0) || (h < 0)){
-		LOGE("Error to preview size: w: %d, h: %d.", w, h);
-		mParameters.setPreviewSize(640, 480);
-		return UNKNOWN_ERROR;
-	}
 	max_focus_num = params.getInt("max-num-focus-areas");
 	if (params.chekFocusAreas(max_focus_num)) {
 		return BAD_VALUE;
 	}
 
 	if (((SprdCameraParameters)params).getZoom() > params.getInt("max-zoom")) {
+		return BAD_VALUE;
+	}
+
+	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
+	LOGV("flash_mode:%s.",flash_mode);
+	if (!flash_mode) {
+		return BAD_VALUE;
+	}
+	if (0 == strcmp(flash_mode,"invalid")) {
+		return BAD_VALUE;
+	}
+
+	focus_mode = ((SprdCameraParameters)params).get_FocusMode();
+	LOGV("focus_mode:%s",focus_mode);
+	if (!focus_mode) {
+		return BAD_VALUE;
+	}
+	if (0 == strcmp(focus_mode,"invalid")) {
+		LOGV("focus_mode is invalid.");
+		return BAD_VALUE;
+	}
+
+	//check preview size
+	int w,h;
+	params.getPreviewSize(&w, &h);
+	if((w < 0) || (h < 0)){
+		LOGE("Error to preview size: w: %d, h: %d.", w, h);
+		/*mParameters.setPreviewSize(640, 480);*/ /*for cts*/
 		return BAD_VALUE;
 	}
 
