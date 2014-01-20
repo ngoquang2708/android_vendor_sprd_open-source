@@ -16,7 +16,8 @@
 
 # On space-constrained devices, we include a subset of fonts:
 # First, core/required fonts
+# Created by SPRD
 PRODUCT_COPY_FILES := \
-    device/sprd/common/res/user_fonts/DroidSans.ttf:system/user_fonts/DroidSans.ttf \
-    device/sprd/common/res/user_fonts/DroidSerif-Regular.ttf:system/user_fonts/DroidSerif-Regular.ttf
+    vendor/sprd/open-source/res/user_fonts/DroidSans.ttf:system/user_fonts/DroidSans.ttf \
+    vendor/sprd/open-source/res/user_fonts/DroidSerif-Regular.ttf:system/user_fonts/DroidSerif-Regular.ttf
 
