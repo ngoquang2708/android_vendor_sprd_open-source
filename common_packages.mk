@@ -11,7 +11,6 @@ PRODUCT_PACKAGES += \
 	DrmProvider \
 	CellBroadcastReceiver \
 	SprdQuickSearchBox \
-	Carddav-Sync \
-	Caldav-Sync.apk
-
+        Carddav-Sync \
+        Caldav-Sync.apk
 #	libsprddm \
