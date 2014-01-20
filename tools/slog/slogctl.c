@@ -103,9 +103,9 @@ void update_conf(const char *keyword, const char *status)
 		return;
 	}
 
-	if (!strncmp("enable", keyword, 6) || !strncmp("disable", keyword, 7) || !strncmp("low_power", keyword, 8)) {
+	if (!strncmp("enable", keyword, 6) || !strncmp("disable", keyword, 7)) {
 		while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
-			if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7) || !strncmp("low_power", line, 8)) {
+			if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7)) {
 				sprintf(line, "%s\n",  keyword);
 			}
 			len += sprintf(buffer + len, "%s", line);
@@ -137,7 +137,6 @@ void usage(const char *name)
 	printf("Operation:\n"
                "\tenable             update config file and enable slog\n"
                "\tdisable            update config file and disable slog\n"
-               "\tlow_power          update config file and make slog in low_power state\n"
                "\tandroid [on/off]   update config file and enable/disable android log\n"
                "\tmodem [on/off]     update config file and enable/disable modem log\n"
                "\ttcp [on/off]       update config file and enable/disable cap log\n"
@@ -151,6 +150,7 @@ void usage(const char *name)
                "\tdump [file]        dump all log to a tar file.\n"
                "\tscreen [file]      screen shot, if no file given, will be put into misc dir\n"
                "\thook_modem         dump current modem log to /data/log\n"
+               "\tsync               sync current android log to file.\n"
                "\tquery              print the current slog configuration.\n");
 	return;
 }
@@ -166,7 +166,6 @@ int main(int argc, char *argv[])
 	arguments list:
 	enable		update config file and enable slog
 	disable		update config file and disable slog
-	low_power	update config file and make slog in low_power state
 
 	reload		CTRL_CMD_TYPE_RELOAD,
 	snap $some	CTRL_CMD_TYPE_SNAP,
@@ -222,6 +221,8 @@ int main(int argc, char *argv[])
 			snprintf(cmd.content, MAX_NAME_LEN, "%s", argv[2]);
 	} else if(!strncmp(argv[1], "query", 5)) {
 		cmd.type = CTRL_CMD_TYPE_QUERY;
+	} else if(!strncmp(argv[1], "sync", 4)) {
+		cmd.type = CTRL_CMD_TYPE_SYNC;
 	} else if(!strncmp(argv[1], "hook_modem", 10)) {
 		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
 	} else if(!strncmp(argv[1], "enable", 6)) {
@@ -229,9 +230,6 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
 	} else if(!strncmp(argv[1], "disable", 7)) {
 		update_conf("disable", NULL);
-		cmd.type = CTRL_CMD_TYPE_RELOAD;
-	} else if(!strncmp(argv[1], "low_power", 9)) {
-		update_conf("low_power", NULL);
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
 	} else if(!strncmp(argv[1], "android", 7)) {
 		if(argc == 3 && ( strcmp(argv[2], "on") == 0 || strcmp(argv[2], "off") == 0 )) {

@@ -1,4 +1,4 @@
-#control: enable/disable/low_power
+#control: enable/disable
 disable
 
 #type	name		value
