@@ -211,6 +211,7 @@ void dump_fb(void* addr, struct fb_var_screeninfo * info , int format)
     FILE* fp=NULL;
     if((fp=fopen("/data/dump/fb_scissor","r"))){
         fscanf(fp,"%d,%d,%d,%d",&region.left,&region.top,&region.right,&region.bottom);
+        fclose(fp);
         bInfo.width=info->xres;
         bInfo.height=info->yres;
         bInfo.format=format;
