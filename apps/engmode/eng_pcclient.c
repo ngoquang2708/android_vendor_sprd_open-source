@@ -112,14 +112,14 @@ void eng_check_factorymode(int final)
         ENG_LOG("%s: modem_diag_value: %s\n", __FUNCTION__, modem_diag_value);
         if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
             sprintf(status_buf, "%s", "1");
-            if(strcmp(modem_diag_value,"not_find") == 0) {
+            if(strcmp(modem_diag_value,",none") == 0) {
                 usb_diag_set = 1;
             }
         }else {
             sprintf(status_buf, "%s", "0");
-            if(strcmp(modem_diag_value,"not_find") != 0) {
+            if(strcmp(modem_diag_value,",none") != 0) {
                 usb_diag_set = 1;
-                memset(gser_config, '\0', sizeof(gser_config));
+                memcpy(gser_config, ",none", 5);
             }
         }
 
