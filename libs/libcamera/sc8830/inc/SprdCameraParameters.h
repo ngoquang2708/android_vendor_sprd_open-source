@@ -124,6 +124,7 @@ public:
 	void setPreviewFpsRange(const char* value);
 	const char* get_GPS_Processing_Method() const;
 	void setGPSProcessingMethod(const char* value);
+	void removeGPSProcessingMethod(void);
 	const char* get_FocalLength() const;
 	void setFocalLength(const char* value);
 	const char* get_ExposureCompensationStep() const;
@@ -174,12 +175,16 @@ public:
 	void setRotation(const char* value);
 	const char* get_GpsLatitude() const;
 	void setGpsLatitude(const char* value);
+	void removeGpsLatitude(void);
 	const char* get_GpsLongitude() const;
 	void setGpsLongitude(const char* value);
+	void removeGpsLongitude(void);
 	const char* get_GpsAltitude() const;
 	void setGpsAltitude(const char* value);
+	void removeGpsAltitude(void);
 	const char* get_GpsTimestamp() const;
 	void setGpsTimestamp(const char* value);
+	void removeGpsTimestamp(void);
 	const char* get_MaxNumDetectedFacesHW() const;
 	void setMaxNumDetectedFacesHW(const char* value);
 	const char* get_MaxNumDetectedFacesSW() const;

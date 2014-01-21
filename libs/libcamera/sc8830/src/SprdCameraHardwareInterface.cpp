@@ -855,7 +855,7 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	status_t ret =  NO_ERROR;
 	char values_new[50] = {0};
 
-       int width = 0, height = 0;
+	int width = 0, height = 0;
 	int rawWidth = 0, rawHeight = 0;
 
 	params.getPreviewSize(&width, &height);
@@ -1006,13 +1006,6 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	cur_params.setMeteringAreas(new_metering_areas);
 	}
 
-	//GPS_Processing_Method
-	{
-	const char* new_GPSProcessingMethod = params.get_GPS_Processing_Method();
-	if(new_GPSProcessingMethod)
-	cur_params.setGPSProcessingMethod(new_GPSProcessingMethod);
-	}
-
 	//FocalLength
 	{
 	const char* new_FocalLength = params.get_FocalLength();
@@ -1081,31 +1074,52 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	//GpsLatitude
 	{
 	const char*  new_GpsLatitude = params.get_GpsLatitude();
-	if(new_GpsLatitude)
-	cur_params.setGpsLatitude(new_GpsLatitude);
+	if (new_GpsLatitude) {
+		cur_params.setGpsLatitude(new_GpsLatitude);
+	} else {
+		cur_params.removeGpsLatitude();
+	}
 	}
 
 	//GpsLongitude
 	{
 	const char*  new_GpsLongitude = params.get_GpsLongitude();
-	if(new_GpsLongitude)
-	cur_params.setGpsLongitude(new_GpsLongitude);
+	if (new_GpsLongitude) {
+		cur_params.setGpsLongitude(new_GpsLongitude);
+	} else {
+		cur_params.removeGpsLongitude();
+	}
 	}
 
 	//GpsAltitude
 	{
 	const char*  new_GpsAltitude = params.get_GpsAltitude();
-	if(new_GpsAltitude)
-	cur_params.setGpsAltitude(new_GpsAltitude);
+	if (new_GpsAltitude) {
+		cur_params.setGpsAltitude(new_GpsAltitude);
+	} else {
+		cur_params.removeGpsAltitude();
+	}
 	}
 
 	//GpsTimestamp
 	{
 	const char*  new_GpsTimestamp = params.get_GpsTimestamp();
-	if(new_GpsTimestamp)
-	cur_params.setGpsTimestamp(new_GpsTimestamp);
+	if (new_GpsTimestamp) {
+		cur_params.setGpsTimestamp(new_GpsTimestamp);
+	} else {
+		cur_params.removeGpsTimestamp();
+	}
 	}
 
+	//GPS_Processing_Method
+	{
+	const char* new_GPSProcessingMethod = params.get_GPS_Processing_Method();
+	if(new_GPSProcessingMethod) {
+		cur_params.setGPSProcessingMethod(new_GPSProcessingMethod);
+	} else {
+		cur_params.removeGPSProcessingMethod();
+	}
+	}
 	//MaxNumDetectedFacesHW
 	{
 	const char*  new_MaxNumDetectedFacesHW = params.get_MaxNumDetectedFacesHW();

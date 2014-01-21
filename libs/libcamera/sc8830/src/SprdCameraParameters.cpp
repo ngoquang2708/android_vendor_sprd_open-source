@@ -694,6 +694,11 @@ void SprdCameraParameters::setGPSProcessingMethod(const char* value)
 	set(KEY_GPS_PROCESSING_METHOD, value);
 }
 
+void SprdCameraParameters::removeGPSProcessingMethod(void)
+{
+	remove(KEY_GPS_PROCESSING_METHOD);
+}
+
 const char *SprdCameraParameters::get_FocalLength() const
 {
     return get(KEY_FOCAL_LENGTH);
@@ -894,9 +899,14 @@ void SprdCameraParameters::setGpsLatitude(const char* value)
 	set(KEY_GPS_LATITUDE, value);
 }
 
+void SprdCameraParameters::removeGpsLatitude(void)
+{
+	remove(KEY_GPS_LATITUDE);
+}
+
 const char *SprdCameraParameters::get_GpsLongitude() const
 {
-    return get(KEY_GPS_LONGITUDE);
+	return get(KEY_GPS_LONGITUDE);
 }
 
 void SprdCameraParameters::setGpsLongitude(const char* value)
@@ -904,14 +914,24 @@ void SprdCameraParameters::setGpsLongitude(const char* value)
 	set(KEY_GPS_LONGITUDE, value);
 }
 
+void SprdCameraParameters::removeGpsLongitude(void)
+{
+	remove(KEY_GPS_LONGITUDE);
+}
+
 const char *SprdCameraParameters::get_GpsAltitude() const
 {
-    return get(KEY_GPS_ALTITUDE);
+	return get(KEY_GPS_ALTITUDE);
 }
 
 void SprdCameraParameters::setGpsAltitude(const char* value)
 {
 	set(KEY_GPS_ALTITUDE, value);
+}
+
+void SprdCameraParameters::removeGpsAltitude(void)
+{
+	remove(KEY_GPS_ALTITUDE);
 }
 
 const char *SprdCameraParameters::get_GpsTimestamp() const
@@ -922,6 +942,11 @@ const char *SprdCameraParameters::get_GpsTimestamp() const
 void SprdCameraParameters::setGpsTimestamp(const char* value)
 {
 	set(KEY_GPS_TIMESTAMP, value);
+}
+
+void SprdCameraParameters::removeGpsTimestamp(void)
+{
+	remove(KEY_GPS_TIMESTAMP);
 }
 
 const char *SprdCameraParameters::get_MaxNumDetectedFacesHW() const
