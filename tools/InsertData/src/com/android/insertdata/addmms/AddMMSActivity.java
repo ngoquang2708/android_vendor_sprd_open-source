@@ -128,7 +128,9 @@ public class AddMMSActivity extends SmsAbility {
 
 	@SuppressWarnings("deprecation")
 	public void applyMmsHandler(View v) {
-	    checkDefaultSmsApp();
+	    if ( !checkDefaultSmsApp() ) {
+	        return;
+	    }
 		getView();
 		MmsConfig mmsConfig = GetEditData();
 		if (0 == mmsConfig.mmsCount){
@@ -160,6 +162,7 @@ public class AddMMSActivity extends SmsAbility {
 						}
 					});
 
+			mWakeock.acquire();
 			Thread t = new Thread(new InsertMmsDbThread(mmsConfig, this,
 					this.getContentResolver(), insertProcessDialog, myHandle));
 			t.start();
@@ -233,7 +236,7 @@ public class AddMMSActivity extends SmsAbility {
 								SingleMmsParam.finishCount = 0;
 								SingleMmsParam.time = 0;
 								mWakeock.release();
-								mWakeock = null;
+								//mWakeock = null;
 								//finish();
 							}
 						}).create();

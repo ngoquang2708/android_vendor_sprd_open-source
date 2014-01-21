@@ -80,7 +80,7 @@ public class SmsTestActivity extends SmsAbility {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK
                 , LOG_TAG);
-        mWakeock.acquire();
+        //mWakeock.acquire();
         if (mToneGenerator == null) {
             try {
                 mToneGenerator = new ToneGenerator(DIAL_TONE_STREAM_TYPE, TONE_RELATIVE_VOLUME);
@@ -98,7 +98,9 @@ public class SmsTestActivity extends SmsAbility {
     
     public void applyHandler(View v)
     {
-        checkDefaultSmsApp();
+        if ( !checkDefaultSmsApp() ) {
+            return;
+        }
     	getView();
     	SmsConfig smsConfig = new SmsConfig();
     	if(phoneNoEt.getText().toString()==null||"".equals(phoneNoEt.getText().toString())){
@@ -170,6 +172,7 @@ public class SmsTestActivity extends SmsAbility {
 				}
 			});
         	
+            mWakeock.acquire();
         	Thread t = new Thread(new InsertDbThread(smsConfig,this,this.getContentResolver(),insertProcessDialog, myHandle));
         	t.start();
         	insertProcessDialog.show();
@@ -239,7 +242,7 @@ public class SmsTestActivity extends SmsAbility {
 				SingleParam.status=0;
 				SingleParam.time=0;
 				mWakeock.release();
-				mWakeock=null;
+				//mWakeock=null;
 				//finish();
 			}
 		}).create();
