@@ -3963,7 +3963,6 @@ void camera_v4l2_evt_cb(int evt, void* data)
 	int                      ret = CAMERA_SUCCESS;
 	struct frm_info          *info = (struct frm_info*)data;
 	uint32_t                 queue_handle = g_cxt->msg_queue_handle;
-
 	if (NULL == data ||
 		CMR_EVT_V4L2_BASE != (CMR_EVT_V4L2_BASE & evt)) {
 		CMR_LOGE("Error param, 0x%x 0x%x 0x%x", (uint32_t)data, evt, info->frame_id);
@@ -4294,6 +4293,13 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 					0);
 		} else if (CMR_CAPTURE == sub_type) {
 			ret = camera_stop_capture_internal();
+			/*busy means waiting for channel 2 frame, so can directly return and drop the frame*/
+			if (CHN_BUSY == g_cxt->chn_2_status) {
+				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+						camera_get_client_data(),
+						CAMERA_FUNC_RELEASE_PICTURE,
+						0);
+			}
 		} else {
 			CMR_LOGV("No this sub-type");
 		}
@@ -6939,7 +6945,6 @@ static int camera_post_convert_thum_msg(void)
 	CMR_MSG_INIT(message);
 	int ret = CAMERA_SUCCESS;
 
-
 	message.msg_type = CMR_EVT_CONVERT_THUM;
 	message.alloc_flag = 0;
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
@@ -7061,7 +7066,7 @@ int camera_start_jpeg_encode(struct frm_info *data)
 	}
 
 	if (in_parm.size.height == in_parm.slice_height) {
-		ret = camera_post_convert_thum_msg();
+		camera_start_convert_thum();
 	}
 
 	return ret;
@@ -7279,12 +7284,6 @@ int camera_scale_done(struct frm_info *data)
 		frm.channel_id,
 		frm.frame_id,
 		g_cxt->actual_picture_size.height);
-
-	if ((THUM_FROM_CAP != g_cxt->thum_from) &&
-		(0 != g_cxt->thum_size.width) &&
-		(0 != g_cxt->thum_size.height)) {
-		camera_scale_path_done(g_cxt);
-	}
 
 	return ret;
 }
@@ -7567,8 +7566,9 @@ static int camera_convert_to_thumb(void)
 	struct img_rect          rect;
 	int                      ret = CAMERA_SUCCESS;
 
-	if (!NO_SCALING) {
-		camera_wait_scale_path(g_cxt);
+	if (CAMERA_EXIT == camera_capture_way_out()) {
+		CMR_LOGW("need exit capture, direct out!");
+		return ret;
 	}
 
 	if (IS_CHN_BUSY(CHN_2)) {
@@ -7714,7 +7714,7 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 
 	if (process->slice_height_out == g_cxt->cap_orig_size.height) {
 		if (is_jpeg_encode) {
-			camera_post_convert_thum_msg();
+			camera_start_convert_thum();
 			return camera_take_picture_done(&process->frame_info);
 		} else {
 			process->frame_info.height = process->slice_height_out;

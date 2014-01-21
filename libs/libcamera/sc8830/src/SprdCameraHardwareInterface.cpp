@@ -836,7 +836,7 @@ status_t SprdCameraHardware::checkSetParametersEnvironment( )
 {
 	status_t ret =  NO_ERROR;
 	/*check capture status*/
-	if (SPRD_IDLE != getCaptureState()) {
+	if (isCapturing()) {
 		LOGE("warning, camera HAL in capturing process, abnormal calling sequence!");
 		return PERMISSION_DENIED;
 	}
@@ -4673,12 +4673,22 @@ void SprdCameraHardware::HandleStartPreview(camera_cb_type cb,
 void SprdCameraHardware::HandleStopPreview(camera_cb_type cb,
 										  int32_t parm4)
 {
+	Sprd_camera_state tmpPrevState = SPRD_IDLE;
+	tmpPrevState = getPreviewState();
 	LOGV("HandleStopPreview in: cb = %d, parm4 = 0x%x, state = %s",
-				cb, parm4, getCameraStateStr(getPreviewState()));
+				cb, parm4, getCameraStateStr(tmpPrevState));
 
-	transitionState(SPRD_INTERNAL_PREVIEW_STOPPING,
+	if ((SPRD_IDLE == tmpPrevState) || (SPRD_INTERNAL_PREVIEW_STOPPING == tmpPrevState)) {
+		transitionState(tmpPrevState,
 				SPRD_IDLE,
 				STATE_PREVIEW);
+	} else {
+		LOGE("HandleEncode: error preview status, %s",
+			getCameraStateStr(tmpPrevState));
+		transitionState(tmpPrevState,
+				SPRD_ERROR,
+				STATE_PREVIEW);
+	}
 	/*freePreviewMem();*/
 
 	LOGV("HandleStopPreview out, state = %s", getCameraStateStr(getPreviewState()));
@@ -4796,6 +4806,7 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 	case CAMERA_EXIT_CB_DONE:
 		LOGV("HandleEncode: CAMERA_EXIT_CB_DONE");
 		if ((SPRD_WAITING_JPEG == getCaptureState())) {
+			Sprd_camera_state tmpCapState= SPRD_WAITING_JPEG;
 			// Receive the last fragment of the image.
 			receiveJpegPictureFragment((JPEGENC_CBrtnType *)parm4);
 			LOGV("CAMERA_EXIT_CB_DONE MID.");
@@ -4804,21 +4815,26 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 			} else {
 				LOGE("HandleEncode: drop current jpgPicture");
 			}
-#if 1//to do it
-			if (((JPEGENC_CBrtnType *)parm4)->need_free) {
-				transitionState(SPRD_WAITING_JPEG,
-						SPRD_IDLE,
-						STATE_CAPTURE);
+			tmpCapState = getCaptureState();
+			if ((SPRD_WAITING_JPEG == tmpCapState
+				|| (SPRD_INTERNAL_CAPTURE_STOPPING == tmpCapState))) {
+				if (((JPEGENC_CBrtnType *)parm4)->need_free) {
+					transitionState(tmpCapState,
+							SPRD_IDLE,
+							STATE_CAPTURE);
+				} else {
+					transitionState(tmpCapState,
+							SPRD_INTERNAL_RAW_REQUESTED,
+							STATE_CAPTURE);
+				}
 			} else {
-				transitionState(SPRD_WAITING_JPEG,
-						SPRD_INTERNAL_RAW_REQUESTED,
-						STATE_CAPTURE);
+				LOGE("HandleEncode: CAMERA_EXIT_CB_DONE error cap status, %s",
+					getCameraStateStr(tmpCapState));
+				transitionState(tmpCapState,
+					SPRD_ERROR,
+					STATE_CAPTURE);
 			}
-#else
-			transitionState(SPRD_WAITING_JPEG,
-						SPRD_IDLE,
-						STATE_CAPTURE);
-#endif
+
 		}
 		break;
 
