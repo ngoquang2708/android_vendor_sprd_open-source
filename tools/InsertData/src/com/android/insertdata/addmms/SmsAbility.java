@@ -62,7 +62,7 @@ public class SmsAbility extends Activity {
         }
     }
     
-    protected void checkDefaultSmsApp() {
+    protected boolean checkDefaultSmsApp() {
         if (Telephony.Sms.getDefaultSmsPackage(this).compareTo(getPackageName()) != 0) {
             Toast.makeText(this, R.string.must_default_sms_app, Toast.LENGTH_LONG).show();
             mHandler.postDelayed(new Runnable() {
@@ -71,7 +71,8 @@ public class SmsAbility extends Activity {
                     setDefaultSmsApp();
                 }
             }, 1000);
-            return;
+            return false;
         }
+        return true;
     }
 }
