@@ -88,6 +88,11 @@
 #define MODEM_SOCKET_NAME	"modemd"
 #define PHSTD_SOCKET_NAME	"phstd"
 #define PHSW_SOCKET_NAME	"phsw"
+#define MODEM_ENGCTRL_NAME "modemd_engpc"
+#define MODEM_ENGCTRL_PRO  "persist.sys.engpc.disable"
+
+#define ENGPC_REQUSETY_OPEN "0"
+#define ENGPC_REQUSETY_CLOSE "1"
 #define MAX_CLIENT_NUM	10
 extern int  client_fd[MAX_CLIENT_NUM];
 
