@@ -17590,7 +17590,7 @@
         type="mms"
     />
     <!-- Peru Movistar-->
-    <apn carrier="PE - Movistar Web"
+    <apn carrier="PE-movistar Web"
         mcc="716"
         mnc="06"
         apn="movistar.pe"
@@ -17598,8 +17598,9 @@
         user="movistar@datos"
         password="movistar"
         type="default,supl"
+        authtype="1"
     />
-    <apn carrier="PE - Movistar MMS"
+    <apn carrier="PE-movistar MMS"
         mcc="716"
         mnc="06"
         apn="mms.movistar.pe"
@@ -17610,28 +17611,8 @@
         mmsc="http://mmsc.telefonicamovistar.com.pe:8088/mms/"
         type="mms"
     />
-    <!-- Peru NEXTEL -->
-    <apn carrier="PE - Nextel Web"
-        mcc="716"
-        mnc="07"
-        apn="datacard.nextel.com.pe"
-        type="default,supl"
-        authtype="1"
-    />
-    <apn carrier="PE - Nextel MMS"
-        mcc="716"
-        mnc="07"
-        apn=""
-        mmsproxy=""
-        mmsport=""
-        user=""
-        password=""
-        mmsc=""
-        type="mms"
-        authtype="1"
-    />
     <!-- Peru Claro -->
-    <apn carrier="PE - Claro Web"
+    <apn carrier="PE-claro Web"
         mcc="716"
         mnc="10"
         apn="wap.claro.pe"
@@ -17641,7 +17622,7 @@
         password="claro"
         type="default,supl"
     />
-    <apn carrier="PE - Claro MMS"
+    <apn carrier="Pe-claro MMS"
         mcc="716"
         mnc="10"
         apn="mms.claro.pe"
@@ -17650,6 +17631,26 @@
         user="claro"
         password="claro"
         mmsc="http://claro/servlets/mms"
+        type="mms"
+    />
+    <!-- Peru NEXTEL -->
+    <apn carrier="nextel WAP"
+        mcc="716"
+        mnc="17"
+        apn="wap.nextel.com.pe"
+        proxy="129.192.129.104"
+        port="8080"
+        server="http://m.nextel.com.pe"
+        type="default,supl"
+    />
+    <apn carrier="nextel mms"
+        mcc="716"
+        mnc="17"
+        apn="mms.nextel.com.pe"
+        server="http://m.nextel.com.pe"
+        mmsc="http://mms.nextel.pe"
+        mmsproxy="129.192.129.104"
+        mmsport="8080"
         type="mms"
     />
     <!-- Portugal Vodafone -->
@@ -17797,7 +17798,7 @@
         type="mms"
         authtype="1"
     />
-    <!-- Romania Vodafone -->
+    <!-- Romania Vodafone RO -->
     <apn carrier="Vodafone Internet"
         mcc="226"
         mnc="01"
@@ -18014,6 +18015,13 @@
         type="mms"
         authtype="1"
     />
+    <!-- Ethiopia ETH-MTN -->
+    <apn carrier="MTN Internet"
+        mcc="636"
+        mnc="01"
+        apn="etc.com"
+        type="default,supl"
+    />
     <!-- Russia MTS -->
     <apn carrier="MTS RU"
         mcc="250"
@@ -18181,7 +18189,6 @@
         user="any"
         password="any"
         type="default,supl"
-        authtype="3"
     />
     <apn carrier="mms"
         mcc="250"
@@ -18193,19 +18200,6 @@
         password="wap"
         mmsc="http://172.24.120.135/mms/wapenc"
         type="mms"
-        authtype="3"
-    />
-    <apn carrier="mms"
-        mcc="250"
-        mnc="07"
-        apn="mms.smarts.ru"
-        mmsproxy="172.24.121.5"
-        mmsport="8080"
-        user="n@k"
-        password="nok"
-        mmsc="http://mmsc:8002"
-        type="mms"
-        authtype="3"
     />
     <!-- Russia DTC -->
     <apn carrier="MTC"
