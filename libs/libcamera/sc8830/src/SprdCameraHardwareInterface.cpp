@@ -1061,6 +1061,16 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	cur_params.setJpegThumbnailQuality(new_thumbnail_quality);
 	}
 
+	//jpegThumbnail Dimension
+	{
+	const char* new_thumbnail_width = params.get_JpegThumbnailWidth();
+	const char* new_thumbnail_height = params.get_JpegThumbnailHeight();
+	if (new_thumbnail_width)
+		cur_params.setJpegThumbnailWidth(new_thumbnail_width);
+	if (new_thumbnail_height)
+		cur_params.setJpegThumbnailHeight(new_thumbnail_height);
+	}
+
 	//rotation
 	{
 	const char*  new_Rotation = params.get_Rotation();

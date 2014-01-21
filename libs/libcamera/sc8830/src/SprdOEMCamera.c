@@ -2454,13 +2454,12 @@ camera_ret_code_type camera_set_thumbnail_properties(uint32_t width,
 {
 	(void) quality;
 
-	CMR_LOGV("%d,%d.",g_cxt->thum_size.width,g_cxt->thum_size.height);
 	/*if (0 == width || 0 == height)
 			return CAMERA_INVALID_PARM;*/
 	g_cxt->thum_size.width  = width;
 	g_cxt->thum_size.height = height;
 	g_cxt->thum_size_backup = g_cxt->thum_size;
-
+	CMR_LOGV("%d,%d.",g_cxt->thum_size.width,g_cxt->thum_size.height);
 	return CAMERA_SUCCESS;
 }
 

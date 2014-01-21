@@ -69,6 +69,9 @@ const char SprdCameraParameters::KEY_WHITE_BALANCE[] = "whitebalance";
 const char SprdCameraParameters::KEY_CAMERA_ID[] = "cameraid";
 const char SprdCameraParameters::KEY_JPEG_QUALITY[] = "jpeg-quality";
 const char SprdCameraParameters::KEY_JPEG_THUMBNAIL_QUALITY[] = "jpeg-thumbnail-quality";
+//const char SprdCameraParameters::KEY_JPEG_THUMBNAIL_SIZE = "jpeg-thumbnail-size";
+const char SprdCameraParameters::KEY_JPEG_THUMBNAIL_WIDTH[] = "jpeg-thumbnail-width";
+const char SprdCameraParameters::KEY_JPEG_THUMBNAIL_HEIGHT[] = "jpeg-thumbnail-height";
 const char SprdCameraParameters::KEY_EFFECT[] = "effect";
 const char SprdCameraParameters::KEY_SCENE_MODE[] = "scene-mode";
 const char SprdCameraParameters::KEY_ZOOM[] = "zoom";
@@ -366,6 +369,25 @@ const char *SprdCameraParameters::get_JpegThumbnailQuality() const
 void SprdCameraParameters::setJpegThumbnailQuality(const char* value)
 {
 	set("jpeg-thumbnail-quality",value);
+}
+
+const char *SprdCameraParameters::get_JpegThumbnailWidth() const
+{
+	return get(KEY_JPEG_THUMBNAIL_WIDTH);
+}
+
+void SprdCameraParameters::setJpegThumbnailWidth(const char* value)
+{
+	set(KEY_JPEG_THUMBNAIL_WIDTH,value);
+}
+
+void SprdCameraParameters::setJpegThumbnailHeight(const char* value)
+{
+	set(KEY_JPEG_THUMBNAIL_HEIGHT,value);
+}
+const char *SprdCameraParameters::get_JpegThumbnailHeight() const
+{
+	return get(KEY_JPEG_THUMBNAIL_HEIGHT);
 }
 
 int SprdCameraParameters::getEffect()

@@ -166,6 +166,10 @@ public:
 	void setSupportedVideoSizes(const char* value);
 	const char* get_JpegQuality() const;
 	const char* get_JpegThumbnailQuality() const;
+	const char* get_JpegThumbnailWidth() const;
+	void setJpegThumbnailWidth(const char* value);
+	const char* get_JpegThumbnailHeight() const;
+	void setJpegThumbnailHeight(const char* value);
 	const char* get_Rotation() const;
 	void setRotation(const char* value);
 	const char* get_GpsLatitude() const;
@@ -247,6 +251,8 @@ public:
 	static const char KEY_CAMERA_ID[];
 	static const char KEY_JPEG_QUALITY[];
 	static const char KEY_JPEG_THUMBNAIL_QUALITY[];
+	static const char KEY_JPEG_THUMBNAIL_WIDTH[];
+	static const char KEY_JPEG_THUMBNAIL_HEIGHT[];
 	static const char KEY_EFFECT[];
 	static const char KEY_SCENE_MODE[];
 	static const char KEY_ZOOM[];
