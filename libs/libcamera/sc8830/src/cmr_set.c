@@ -794,6 +794,14 @@ int camera_snapshot_start_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 
+	if (V4L2_SENSOR_FORMAT_RAWRGB != cxt->sn_cxt.sn_if.img_fmt) {
+		if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
+			uint32_t skip_mode = 0;
+			uint32_t skip_number = 0;
+			ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
+		}
+	}
+
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
 		/*open flash*/
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
