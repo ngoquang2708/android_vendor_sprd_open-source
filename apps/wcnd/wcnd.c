@@ -310,11 +310,25 @@ static int wcn_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndM
 {
 	int len = 0;
 	int atcmd_fd = -1;
+	char buffer[255] ;
 
 	if( !atcmd_str || !pWcndManger)
 		return -1;
 
-	WCND_LOGD("%s: Receive AT CMD: %s, len = %d", __func__, atcmd_str, strlen(atcmd_str));
+	int atcmd_len = strlen(atcmd_str);
+
+	WCND_LOGD("%s: Receive AT CMD: %s, len = %d", __func__, atcmd_str, atcmd_len);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	snprintf(buffer, 255, "%s", atcmd_str);
+
+	//at cmd shoud end with '\r'
+	if((atcmd_len < 254) && (buffer[atcmd_len - 1] != '\r'))
+	{
+		buffer[atcmd_len] = '\r';
+		atcmd_len++;
+	}
 
 	atcmd_fd = open( pWcndManger->wcn_atcmd_iface_name, O_RDWR|O_NONBLOCK);
 	WCND_LOGD("%s: open at cmd interface: %s, fd = %d", __func__, pWcndManger->wcn_atcmd_iface_name, atcmd_fd);
@@ -324,7 +338,7 @@ static int wcn_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndM
 		return -1;
 	}
 
-	len = write(atcmd_fd, atcmd_str, strlen(atcmd_str));
+	len = write(atcmd_fd, buffer, atcmd_len);
 	if(len < 0)
 	{
 		WCND_LOGE("%s: write %s failed, error:%s", __func__, pWcndManger->wcn_atcmd_iface_name, strerror(errno));
@@ -333,13 +347,13 @@ static int wcn_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndM
 	}
 
 	//wait
-	usleep(200*1000);
+	usleep(100*1000);
 
 	WCND_LOGD("%s: Wait ATcmd to return", __func__);
 
 	//Get AT Cmd Response
 	int try_counts = 0;
-	char buffer[255];
+
 	memset(buffer, 0, sizeof(buffer));
 try_again:
 	if(try_counts++ > 5)
@@ -350,15 +364,16 @@ try_again:
 	else
 	{
 		do {
-			len = read(atcmd_fd, buffer, sizeof(buffer));
+			len = read(atcmd_fd, buffer, sizeof(buffer)-1);
 		} while(len < 0 && errno == EINTR);
 
 		if ((len <= 0))
 		{
 			WCND_LOGE("%s: read fd(%d) return len(%d), errno = %s", __func__, atcmd_fd , len, strerror(errno));
+			usleep(300*1000);
+			goto try_again;
 		}
-		usleep(300*1000);
-		goto try_again;
+
 	}
 
 	WCND_LOGD("%s: ATcmd to %s return: '%s'", __func__, pWcndManger->wcn_atcmd_iface_name, buffer);

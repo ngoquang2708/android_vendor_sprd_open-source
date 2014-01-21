@@ -48,7 +48,7 @@
 
 
 //send at cmd to this interface
-#define WCN_ATCMD_IFACE		"dev/spipe_wcn5"
+#define WCN_ATCMD_IFACE		"/dev/spipe_wcn5"
 
 
 
