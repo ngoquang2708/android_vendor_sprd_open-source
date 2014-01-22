@@ -2281,7 +2281,8 @@ bool SprdCameraHardware::WaitForFocusCancelDone()
 	Mutex::Autolock stateLock(&mStateLock);
 	while (SPRD_IDLE != mCameraState.focus_state
 		 && SPRD_ERROR != mCameraState.focus_state) {
-		LOGV("WaitForFocusCancelDone: waiting for SPRD_IDLE from %d", getFocusState());
+		LOGV("WaitForFocusCancelDone: waiting for SPRD_IDLE from %s",
+			getCameraStateStr(getFocusState()));
 		mStateWait.waitRelative(mStateLock, 1000000000);
 		LOGV("WaitForFocusCancelDone: woke up");
 	}
@@ -4908,6 +4909,8 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 		return;
 	}
 
+	transitionState(getFocusState(), SPRD_IDLE, STATE_FOCUS);
+
 	switch (cb) {
 	case CAMERA_RSP_CB_SUCCESS:
 		LOGV("camera cb: autofocus has started.");
@@ -4940,9 +4943,7 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 		break;
 	}
 
-	transitionState(getFocusState(), SPRD_IDLE, STATE_FOCUS);
-
-	LOGV("HandleFocus out, state = %s", getCameraStateStr(getCaptureState()));
+	LOGV("HandleFocus out, state = %s", getCameraStateStr(getFocusState()));
 }
 
 void SprdCameraHardware::HandleStartCamera(camera_cb_type cb,
