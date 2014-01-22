@@ -794,6 +794,7 @@ bool SPRDVPXDecoder::openDecoder(const char* libName) {
         ALOGE("Can't find VP8DecRelease in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
+        return false;
     }
 
     mVPXDecReleaseRefBuffers = (FT_VPXDecReleaseRefBuffers)dlsym(mLibHandle, "VP8DecReleaseRefBuffers");
