@@ -273,26 +273,32 @@ status_t SPRDAVCDecoder::initDecoder() {
     int32 size = 0, size_stream;
 
     size_stream = H264_DECODER_STREAM_BUFFER_SIZE;
-    if (mIOMMUEnabled) {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    if (mDecoderSwFlag) {
+        mPbuf_stream_v = (unsigned char*)malloc(size_stream * sizeof(unsigned char));
+        mPbuf_stream_p = (int32)0;
+        mPbuf_stream_size = (int32)size_stream;
     } else {
-        mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-    }
-    if (mPmem_stream->getHeapID() < 0) {
-        ALOGE("Failed to alloc bitstream pmem buffer\n");
-    } else {
-        int32 ret;
         if (mIOMMUEnabled) {
-            ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+            mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
         } else {
-            ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+            mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
         }
-        if (ret < 0) {
+        if (mPmem_stream->getHeapID() < 0) {
             ALOGE("Failed to alloc bitstream pmem buffer\n");
         } else {
-            mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
-            mPbuf_stream_p = (int32)phy_addr;
-            mPbuf_stream_size = (int32)size;
+            int32 ret;
+            if (mIOMMUEnabled) {
+                ret = mPmem_stream->get_mm_iova(&phy_addr, &size);
+            } else {
+                ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
+            }
+            if (ret < 0) {
+                ALOGE("Failed to alloc bitstream pmem buffer\n");
+            } else {
+                mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
+                mPbuf_stream_p = (int32)phy_addr;
+                mPbuf_stream_size = (int32)size;
+            }
         }
     }
 
@@ -343,15 +349,19 @@ void SPRDAVCDecoder::releaseDecoder() {
     }
 
     if (mPbuf_stream_v != NULL) {
-        if (mIOMMUEnabled) {
-            mPmem_stream->free_mm_iova(mPbuf_stream_p, mPbuf_stream_size);
+        if (mDecoderSwFlag) {
+            free(mPbuf_stream_v);
+            mPbuf_stream_v = NULL;
+        } else {
+            if (mIOMMUEnabled) {
+                mPmem_stream->free_mm_iova(mPbuf_stream_p, mPbuf_stream_size);
+            }
+            mPmem_stream.clear();
+            mPbuf_stream_v = NULL;
+            mPbuf_stream_p = 0;
+            mPbuf_stream_size = 0;
         }
-        mPmem_stream.clear();
-        mPbuf_stream_v = NULL;
-        mPbuf_stream_p = 0;
-        mPbuf_stream_size = 0;
     }
-
     if (mPbuf_extra_v != NULL) {
         if (mIOMMUEnabled) {
             mPmem_extra->free_mm_iova(mPbuf_extra_p, mPbuf_extra_size);
@@ -866,7 +876,7 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
                 ALOGE("failed to decode video frame, hardware error");
 //                notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
             } else {
-                ALOGE("now, we don't take care of the decoder return: %d", decRet);
+                ALOGI("now, we don't take care of the decoder return: %d", decRet);
             }
         }
 

@@ -432,15 +432,13 @@ OMX_ERRORTYPE SoftSPRDAVC::getConfig(
     }
 }
 
-void dump_bs( uint8* pBuffer,int32 aInBufSize)
-{
+void dump_bs( uint8* pBuffer,int32 aInBufSize) {
     FILE *fp = fopen("/data/video_es.m4v","ab");
     fwrite(pBuffer,1,aInBufSize,fp);
     fclose(fp);
 }
 
-void dump_yuv( uint8* pBuffer,int32 aInBufSize)
-{
+void dump_yuv( uint8* pBuffer,int32 aInBufSize) {
     FILE *fp = fopen("/data/video.yuv","ab");
     fwrite(pBuffer,1,aInBufSize,fp);
     fclose(fp);
@@ -471,11 +469,12 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
 
         ++mPicId;
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
-            inQueue.erase(inQueue.begin());
-            inInfo->mOwnedByUs = false;
-            notifyEmptyBufferDone(inHeader);
+//bug253058 , the last frame size may be not zero, it need to be decoded.
+//            inQueue.erase(inQueue.begin());
+//           inInfo->mOwnedByUs = false;
+//            notifyEmptyBufferDone(inHeader);
             mEOSStatus = INPUT_EOS_SEEN;
-            continue;
+//            continue;
         }
 
         if(inHeader->nFilledLen == 0) {
@@ -675,14 +674,14 @@ bool SoftSPRDAVC::drainAllOutputBuffers() {
 
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
     int32_t picId;
-    uint8 *yuv;
+    void* pBufferHeader;
 
     while (!outQueue.empty()) {
         BufferInfo *outInfo = *outQueue.begin();
         outQueue.erase(outQueue.begin());
         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
         if (mHeadersDecoded &&
-                MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &yuv, &picId) ) {
+                MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &pBufferHeader, &picId) ) {
             outHeader->nFilledLen = mPictureSize;
         } else {
             outHeader->nTimeStamp = 0;
