@@ -34,7 +34,7 @@ namespace android {
 #define LOGD       ALOGD
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define SIZE_ALIGN_4(x)   (((x)+3)&(~3))
+#define SIZE_ALIGN_16(x)   (((x)+15)&(~15))
 
 ////////////////////////////////////////////////////////////////////////////////////
 static int lookup(const struct str_map *const arr, const char *name, int def);
@@ -1263,8 +1263,8 @@ void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
 	unsigned int i = 0;
 
 	height = width*3/4;
-	height = SIZE_ALIGN_4(height);
-	width = SIZE_ALIGN_4(width);
+	height = SIZE_ALIGN_16(height);
+	width = SIZE_ALIGN_16(width);
 	sprintf(size_new, "%dx%d", width, height);
 	LOGV("updateSupportedPreviewSizes preview-size %s", size_new);
 	pos_1 = strstr(vals_p,",");
