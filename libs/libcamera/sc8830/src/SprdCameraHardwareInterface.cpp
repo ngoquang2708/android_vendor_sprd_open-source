@@ -1385,6 +1385,12 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	if(new_isZslSupport)
 	cur_params.setZSLSupport(new_isZslSupport);
 	}
+	//isFlashModeSupport
+	{
+	const char* new_isFlashModeSupport = (char *)params.get("flash-mode-supported");
+	if(new_isFlashModeSupport)
+		cur_params.setFlashModeSupport(new_isFlashModeSupport);
+	}
 	//SupportedPreviewFormat
 	{
 	const char* new_SupportedPreviewFormat = params.get_SupportedPreviewFormat();

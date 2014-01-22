@@ -240,7 +240,7 @@ public:
 	void setCapMode(int value);
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
-
+	void setFlashModeSupport(const char* value);
 
 	// These sizes have to be a multiple of 16 in each dimension
 	static const Size kPreviewSizes[];
@@ -289,6 +289,7 @@ public:
 	static const char KEY_ZSL[];
 	static const char KEY_CAPMODE[];
 	static const char KEY_SUPPORTED_ZSL[];
+	static const char KEY_SUPPORTED_FLASH_MODE[];
 
 private:
 

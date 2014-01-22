@@ -100,6 +100,7 @@ const char SprdCameraParameters::KEY_SENSOR_ORIENTATION[] = "sensororientation";
 const char SprdCameraParameters::KEY_ZSL[] = "zsl";
 const char SprdCameraParameters::KEY_CAPMODE[] = "capture-mode";
 const char SprdCameraParameters::KEY_SUPPORTED_ZSL[] = "zsl-supported";
+const char SprdCameraParameters::KEY_SUPPORTED_FLASH_MODE[] = "flash-mode-supported";
 
 ////////////////////////////////////////////////////////////////////////////////////
 SprdCameraParameters::SprdCameraParameters():CameraParameters()
@@ -1249,6 +1250,11 @@ void SprdCameraParameters::setZSLSupport(const char* value)
 {
 	set(KEY_SUPPORTED_ZSL,value);
 	LOGV("set ZSL support %s", value);
+}
+
+void SprdCameraParameters::setFlashModeSupport(const char* value)
+{
+	set(KEY_SUPPORTED_FLASH_MODE,value);
 }
 
 void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
