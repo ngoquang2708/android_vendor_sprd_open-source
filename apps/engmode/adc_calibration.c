@@ -80,6 +80,7 @@ void	disable_calibration(void)
 	}
 	read(fd,&cali_info,sizeof(cali_info));
 	cali_info.magic = CALI_MAGIC;
+	cali_info.cali_flag = CALI_COMP;
 
 	lseek(fd,SEEK_SET,0);
 	write(fd,&cali_info,sizeof(cali_info));
@@ -142,6 +143,7 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 	 cali_info.magic = CALI_MAGIC;
         ret = write(fd,&cali_info,sizeof(cali_info));
 	 fsync(fd);
+	 sleep(1);
     } else {
         if(fd < 0)
             return 0;

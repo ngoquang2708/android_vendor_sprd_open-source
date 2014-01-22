@@ -83,6 +83,7 @@ typedef enum
     CMD_USER_DIRECT_PHSCHK,
     CMD_USER_MMICIT_READ,
     CMD_USER_DEEP_SLEEP,
+    CMD_USER_FILE_OPER,
     CMD_INVALID
 }DIAG_CMD_TYPE;
 
@@ -103,6 +104,9 @@ typedef enum
 
 #define MSG_NACK                    0
 #define MSG_ACK                     1
+
+#define ENG_MAX_NAME_LEN            260
+#define MAX_DIAG_TRANSMIT_FILE_LEN  8192
 
 typedef enum{
     IMEI_ERR_NONE = 0,
@@ -160,6 +164,25 @@ typedef struct _PHASE_CHECK_S
 {
     TEST_TRACK_HEADER_T header;
 }TEST_DATA_INFO_T;
+
+typedef struct
+{
+    unsigned int file_cmd;
+    unsigned char file_name[ENG_MAX_NAME_LEN];
+}__attribute__((packed))TOOLS_DIAG_AP_FILEOPER_REQ_T;
+
+typedef struct
+{
+    unsigned int file_size;
+}TOOLS_DIAG_AP_FILE_STATUS_T;
+
+typedef struct
+{
+    unsigned int status; // 0: finished, 1: under reading or writing
+    unsigned int data_len;// specifies the data length to read/write
+    unsigned char data[MAX_DIAG_TRANSMIT_FILE_LEN];
+}__attribute__((packed))TOOLS_DIAG_AP_FILE_DATA_T;
+
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);
 void *eng_vlog_thread(void *x);

@@ -149,20 +149,23 @@ static void mac_rand(char *btmac, char *wifimac)
     ALOGD("%s: bt mac=%s, wifi mac=%s",__FUNCTION__, btmac, wifimac);
 
     //create rand file
-    write_to_randmacfile(btmac, wifimac);
+    //write_to_randmacfile(btmac, wifimac);
 }
 
-static void write_mac2file(char *wifimac, char *btmac)
+static int write_mac2file(char *wifimac, char *btmac)
 {
     int fd;
+    int ret = 0;
 
     //wifi mac
     fd = open(WIFI_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
     ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, wifimac, WIFI_MAC_FILE, fd);
     if(fd >= 0) {
         chmod(WIFI_MAC_FILE, 0666);
-        write(fd, wifimac, strlen(wifimac));
+        ret = write(fd, wifimac, strlen(wifimac));
         close(fd);
+    }else{
+        ret = -1;
     }
 
     //bt mac
@@ -170,13 +173,20 @@ static void write_mac2file(char *wifimac, char *btmac)
     ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, btmac, BT_MAC_FILE, fd);
     if(fd >= 0) {
         chmod(BT_MAC_FILE, 0666);
-        write(fd, btmac, strlen(btmac));
+        ret = write(fd, btmac, strlen(btmac));
         close(fd);
+    }else{
+        ret = -1;
     }
+
+    sync();
+
+    return ret;
 }
 
-void eng_btwifimac_write(char* bt_mac, char* wifi_mac)
+int eng_btwifimac_write(char* bt_mac, char* wifi_mac)
 {
+    int ret = 0;
     char bt_mac_rand[32] = {0};
     char wifi_mac_rand[32] = {0};
 
@@ -186,22 +196,26 @@ void eng_btwifimac_write(char* bt_mac, char* wifi_mac)
     if(!bt_mac || !wifi_mac) {
         mac_rand(bt_mac_rand, wifi_mac_rand);
         if(!bt_mac){
+            eng_btwifimac_read(bt_mac_rand, ENG_BT_MAC);
             bt_mac = bt_mac_rand;
         }
         if(!wifi_mac){
+            eng_btwifimac_read(wifi_mac_rand, ENG_WIFI_MAC);
             wifi_mac = wifi_mac_rand;
         }
     }
 
-    write_to_randmacfile(bt_mac, wifi_mac);
-
     ENG_LOG("property ro.mac.wifi=%s, ro.mac.bluetooth=%s",wifi_mac,bt_mac);
-    write_mac2file(wifi_mac,bt_mac);
+    ret = write_mac2file(wifi_mac,bt_mac);
 
-    property_set("sys.mac.wifi" ,wifi_mac);
-    property_set("sys.mac.bluetooth",bt_mac);
-    property_set("sys.bt.bdaddr_path",BT_MAC_FILE);
-    property_set("ctl.start", "set_mac");
+    if(ret > 0){
+        property_set("sys.mac.wifi" ,wifi_mac);
+        property_set("sys.mac.bluetooth",bt_mac);
+        property_set("sys.bt.bdaddr_path",BT_MAC_FILE);
+        property_set("ctl.start", "set_mac");
+    }
+
+    return ret;
 }
 
 int eng_btwifimac_read(char* mac, MacType type)
@@ -230,6 +244,8 @@ int eng_btwifimac_read(char* mac, MacType type)
 
         ENG_LOG("%s: mac=%s, fd[%s]=%d",__FUNCTION__, mac, WIFI_MAC_FILE, fd);
         close(fd);
+    }else{
+        ret = -1;
     }
 
     return ret;

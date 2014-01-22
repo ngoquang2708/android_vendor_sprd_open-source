@@ -7,7 +7,7 @@ typedef enum
     ENG_WIFI_MAC
 } MacType;
 
-void eng_btwifimac_write(char* bt_mac, char* wifi_mac);
+int eng_btwifimac_write(char* bt_mac, char* wifi_mac);
 
 int eng_btwifimac_read(char* mac, MacType type);
 

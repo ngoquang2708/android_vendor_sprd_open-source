@@ -28,6 +28,7 @@
 #include "AtChannel.h"
 #endif
 #include "string_exchange_bin.h"
+#include "calibration.h"
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 #define NVITEM_ERROR_E  int
@@ -72,18 +73,21 @@ static int cmd_type;
 static int eq_or_tun_type,eq_mode_sel_type;
 static int s_cmd_index = -1;
 static int s_cp_ap_proc = 0;
+static int s_cur_filepos = 0;
 
 static int write_productnvdata(char* buffer , int size);
 static int read_productnvdata(char* buffer , int size);
 static int eng_diag_getver(unsigned char *buf,int len, char *rsp);
 static int eng_diag_bootreset(unsigned char *buf,int len, char *rsp);
 static int eng_diag_getband(char *buf,int len, char *rsp);
-static int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len);
+static int eng_diag_btwifi(char *buf,int len, char *rsp, int rsplen);
 static int eng_diag_audio(char *buf,int len, char *rsp);
 static int eng_diag_product_ctrl(char *buf,int len, char *rsp, int rsplen);
 static int eng_diag_direct_phschk(char *buf,int len, char *rsp, int rsplen);
 static void eng_diag_reboot(int reset);
 static int eng_diag_deep_sleep(char *buf,int len, char *rsp);
+static int eng_diag_fileoper_hdlr(char *buf, int len, char *rsp);
+static int eng_diag_ap_req(char *buf, int len);
 int is_audio_at_cmd_need_to_handle(char *buf,int len);
 int is_btwifi_addr_need_to_handle(char *buf,int len);
 int eng_diag_factorymode(char *buf,int len, char *rsp);
@@ -133,7 +137,7 @@ struct eut_cmd eut_cmds[]={
     {ENG_WIFIRSSI_REQ_INDEX, ENG_WIFIRSSI_REQ},  
 };
 
-static int eng_diag_write2pc(void)
+static int eng_diag_write2pc(unsigned char* buf, unsigned int len)
 {
     int ret;
     int i=0;
@@ -141,16 +145,16 @@ static int eng_diag_write2pc(void)
     int error = 0;
 
     do{
-           fd = get_ser_fd();
-           error = 0;
-           ret = write(fd,eng_diag_buf,eng_diag_len);
-           if(ret < 0){
-               error = errno;
-               ENG_LOG("%s error: %s \n",__func__,strerror(errno));
-               if(error == EBUSY)
-               usleep(200000);
-           }
-           i++;
+        fd = get_ser_fd();
+        error = 0;
+        ret = write(fd,buf,len);
+        if(ret < 0){
+            error = errno;
+            ENG_LOG("%s error: %s \n",__func__,strerror(errno));
+            if(error == EBUSY)
+                usleep(200000);
+        }
+        i++;
     }while(( error == EBUSY)&&(i<25));
     return ret;
 }
@@ -234,7 +238,7 @@ int eng_diag_parse(char *buf,int len)
             ret = CMD_USER_GETVOLTAGE;
             break;
         case DIAG_CMD_APCALI:
-            ret = CMD_USER_APCALI;
+            ret = eng_diag_ap_req(buf, len);
             break;
         case DIAG_CMD_VER:
             ENG_LOG("%s: Handle DIAG_CMD_VER",__FUNCTION__);
@@ -296,10 +300,9 @@ int eng_diag_user_handle(int type, char *buf,int len)
             g_reset = 1;
             break;
         case CMD_USER_BTWIFI:
-            rlen=eng_diag_btwifi(buf, len, rsp, &extra_len);
-            if(!rlen)
-                return 0;
-            break;
+            rlen=eng_diag_btwifi(buf, len, rsp, sizeof(rsp));
+            eng_diag_write2pc(rsp, rlen);
+            return 0;
         case CMD_USER_FACTORYMODE:
             rlen=eng_diag_factorymode(buf, len, rsp);
             break;
@@ -314,7 +317,7 @@ int eng_diag_user_handle(int type, char *buf,int len)
         case CMD_USER_APCALI:
             rlen = eng_battery_calibration(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
             eng_diag_len = rlen;
-            eng_diag_write2pc();
+            eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             return 0;
             break;
         case CMD_USER_APCMD:
@@ -331,26 +334,30 @@ int eng_diag_user_handle(int type, char *buf,int len)
             memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
             rlen = eng_diag_product_ctrl(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
             eng_diag_len = rlen;
-            eng_diag_write2pc();
+            eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             return 0;
         case CMD_USER_DIRECT_PHSCHK:
             ENG_LOG("%s: CMD_USER_DIRECT_PHSCHK\n", __FUNCTION__);
             memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
             rlen = eng_diag_direct_phschk(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
             eng_diag_len = rlen;
-            eng_diag_write2pc();
+            eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             return 0;
         case CMD_USER_MMICIT_READ:
             ENG_LOG("%s: CMD_USER_MMICIT_READ Req !\n", __FUNCTION__);
             rlen = eng_diag_mmicit_read(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
             eng_diag_len = rlen;
-            eng_diag_write2pc();
+            eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             return 0;
         case CMD_USER_DEEP_SLEEP:
             ENG_LOG("%s: CMD_USER_DEEP_SLEEP Req!\n", __FUNCTION__);
             rlen = eng_diag_deep_sleep(buf, len, rsp);
             s_cp_ap_proc = 1;// This cmd need cp proc.
             return 0;
+        case CMD_USER_FILE_OPER:
+            ENG_LOG("%s: CMD_USER_FILE_OPER Req!\n", __FUNCTION__);
+            rlen = eng_diag_fileoper_hdlr(buf, len, rsp);
+            break;
         default:
             break;
     }
@@ -381,7 +388,7 @@ int eng_diag_user_handle(int type, char *buf,int len)
     }
     eng_diag_buf[head.len+extra_len+1] = 0x7e;
     eng_diag_len = head.len+extra_len+2;
-    ret = eng_diag_write2pc();
+    ret = eng_diag_write2pc(eng_diag_buf, eng_diag_len);
     if ( ret<=0 ){
         ENG_LOG("%s: write to pc failed \n", __FUNCTION__);
         restart_gser();
@@ -672,7 +679,7 @@ int eng_diag(char *buf,int len)
 
             retry_time = 0; //reset retry time counter
 write_again:
-            ret = eng_diag_write2pc();
+            ret = eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             if (ret <= 0) {
                 restart_gser();
                 if((++retry_time) <= 10){
@@ -891,7 +898,7 @@ int eng_diag_encode7d7e(char *buf, int len,int *extra_len)
 
 }
 
-int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
+int eng_diag_btwifi(char *buf,int len, char *rsp, int rsplen)
 {
     int rlen = 0,i;
     int ret=-1;
@@ -900,14 +907,15 @@ int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
     char tmp;
     char btaddr[32]={0};
     char wifiaddr[32]={0};
+    char tmprsp[512]={0};
     char *pBtAddr = NULL, *pWifiAddr = NULL;
+    int headlen = sizeof(MSG_HEAD_T);
     REF_NVWriteDirect_T *direct;
     MSG_HEAD_T *head_ptr=NULL;
     head_ptr = (MSG_HEAD_T *)(buf+1);
     direct = (REF_NVWriteDirect_T *)(buf + DIAG_HEADER_LENGTH + 1);
 
     ENG_LOG("Call %s, subtype=%x\n",__FUNCTION__, head_ptr->subtype);
-    eng_diag_decode7d7e((char *)direct, len-DIAG_HEADER_LENGTH-1);
 
     if((head_ptr->subtype&DIAG_CMD_READ)==0){ 	//write command
         crc1 = *(buf + DIAG_HEADER_LENGTH + sizeof(REF_NVWriteDirect_T) + 1);
@@ -936,17 +944,23 @@ int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
                 ENG_LOG("%s: WIFIADDR:%s\n",__func__,wifiaddr);
             }
 
-            eng_btwifimac_write(pBtAddr, pWifiAddr);
+            ret = eng_btwifimac_write(pBtAddr, pWifiAddr);
         }
 
         if(!s_cp_ap_proc){
-            //alreays write successfully
-            head_ptr->subtype = 0x01;
-            rsp[0]=0x00; rsp[1]=0x00;
-            rlen=2;
+            if(ret <= 0){// fail
+                head_ptr->subtype = 0x00;
+            }else{
+                head_ptr->subtype = 0x01;
+            }
+
+            memcpy(tmprsp, (unsigned char*)head_ptr, headlen);
+            head_ptr = (MSG_HEAD_T*)tmprsp;
+            head_ptr->len = headlen + 2;
+            rlen = translate_packet(rsp, tmprsp, head_ptr->len);
         }
     } else {//read command
-        direct = (REF_NVWriteDirect_T *)rsp;
+        direct = (REF_NVWriteDirect_T *)(tmprsp + headlen);
 
         //read btaddr
         if((head_ptr->subtype&DIAG_CMD_BTBIT)>0) {
@@ -972,16 +986,19 @@ int eng_diag_btwifi(char *buf,int len, char *rsp, int *extra_len)
 
         //response
         head_ptr->subtype = 0x01;
+        memcpy(tmprsp, (unsigned char*)head_ptr, headlen);
+        head_ptr = (MSG_HEAD_T*)tmprsp;
+
         rlen = sizeof(REF_NVWriteDirect_T);
         crc = crc16(crc,(const unsigned char*)direct,sizeof(REF_NVWriteDirect_T));
 
-        rlen = eng_diag_encode7d7e((char *)direct, rlen, extra_len);
-        memcpy(rsp, direct, rlen);
-        *(rsp+rlen) = crc&0xff;
-        *(rsp+rlen+1) = (crc>>8)&0xff;
-        ENG_LOG("%s: read crc = %d, [%x,%x],extra_len=%d\n",__func__, \
-                crc, *(rsp+rlen), *(rsp+rlen+1),*extra_len);
+        *(tmprsp+headlen+rlen) = crc&0xff;
+        *(tmprsp+headlen+rlen+1) = (crc>>8)&0xff;
+        ENG_LOG("%s: read crc = %d, [%x,%x]\n",__func__, \
+                crc, *(tmprsp+headlen+rlen), *(tmprsp+headlen+rlen+1));
         rlen += 2;
+        head_ptr->len = headlen + rlen;
+        rlen = translate_packet(rsp, tmprsp, headlen + rlen);
     }
 
     // clear BT/WIFI bit in this diag framer
@@ -1269,7 +1286,7 @@ void At_cmd_back_sig(void)
     eng_diag_buf[8] =0x00;
 
     eng_diag_buf[9] =0x7e;
-    eng_diag_write2pc();
+    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
     memset(eng_diag_buf, 0, 10);
 }
 
@@ -1873,4 +1890,182 @@ static int eng_diag_deep_sleep(char *buf,int len, char *rsp)
     char cmd[] = {"echo mem > /sys/power/state"};
     system(cmd);
     return 0;
+}
+
+static int eng_diag_ap_req(char *buf, int len)
+{
+    int ret;
+    TOOLS_DIAG_AP_CMD_T* apcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+
+    if(DIAG_AP_CMD_FILE_OPER == apcmd->cmd){
+        ret = CMD_USER_FILE_OPER;
+    }else{
+        ret = CMD_USER_APCALI;
+    }
+
+    ENG_LOG("%s: Handle CMD: %d\n", __FUNCTION__, ret);
+
+    return ret;
+}
+
+static int eng_get_filesize(unsigned char* filename)
+{
+    struct stat fileattr;
+
+    ENG_LOG("%s: file name: %s\n", __FUNCTION__, filename);
+
+    if(stat(filename, &fileattr) < 0)
+    {
+        return 0;
+    }
+
+    return fileattr.st_size;
+}
+
+static int eng_diag_fileoper_hdlr(char *buf, int len, char *rsp)
+{
+    int ret = 0;
+    TOOLS_DIAG_AP_CMD_T* apcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    TOOLS_DIAG_AP_FILEOPER_REQ_T* fileoper = (TOOLS_DIAG_AP_FILEOPER_REQ_T*)(apcmd + 1);
+
+    ENG_LOG("%s: File oper: %d, filename: %s\n", __FUNCTION__, fileoper->file_cmd, fileoper->file_name);
+
+    switch(fileoper->file_cmd){
+        case 0:// Query file status
+            {
+                unsigned char tmp[128] = {0};
+                MSG_HEAD_T* header = (MSG_HEAD_T*)tmp;
+                TOOLS_DIAG_AP_CNF_T* aprsp = (TOOLS_DIAG_AP_CNF_T*)(tmp + sizeof(MSG_HEAD_T));
+                TOOLS_DIAG_AP_FILE_STATUS_T* filests = (TOOLS_DIAG_AP_FILE_STATUS_T*)(tmp + sizeof(MSG_HEAD_T)
+                        + sizeof(TOOLS_DIAG_AP_CNF_T));
+
+                memcpy(tmp, buf + 1, sizeof(MSG_HEAD_T)); // copy the diag header
+                header->len = sizeof(MSG_HEAD_T)  + sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(TOOLS_DIAG_AP_FILE_STATUS_T);
+
+                aprsp->status = 0;
+                aprsp->length = sizeof(TOOLS_DIAG_AP_FILE_STATUS_T);
+
+                filests->file_size = eng_get_filesize(fileoper->file_name);
+                if(0 == filests->file_size){
+                    aprsp->status = 1;// error
+                    ENG_LOG("%s: get file size error(query)\n", __FUNCTION__);
+                }
+
+                ret = translate_packet(rsp, tmp, header->len);
+                ENG_LOG("%s: response length: %d\n", __FUNCTION__, ret);
+            }
+            break;
+        case 1:// Read file
+            {
+                int fd = -1;
+                int file_size = 0;
+                int read_size = 0;
+                int total_size = 0;
+                int diag_size = MAX_DIAG_TRANSMIT_FILE_LEN + sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T)
+                    + sizeof(TOOLS_DIAG_AP_FILE_DATA_T);
+                unsigned char* tmp, *diag_frame;
+
+                tmp = malloc(diag_size);
+                memset(tmp, 0, diag_size);
+
+                diag_frame = malloc(2*diag_size + 2);
+
+                MSG_HEAD_T* header = (MSG_HEAD_T*)tmp;
+                TOOLS_DIAG_AP_CNF_T* aprsp = (TOOLS_DIAG_AP_CNF_T*)(tmp + sizeof(MSG_HEAD_T));
+                TOOLS_DIAG_AP_FILE_DATA_T* filedata = (TOOLS_DIAG_AP_FILE_DATA_T*)(tmp + sizeof(MSG_HEAD_T)
+                        + sizeof(TOOLS_DIAG_AP_CNF_T));
+
+                memcpy(tmp, buf + 1, sizeof(MSG_HEAD_T)); // copy the diag header
+                header->len = sizeof(MSG_HEAD_T)  + sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(TOOLS_DIAG_AP_FILE_DATA_T);
+                aprsp->status = 0;
+                aprsp->length = sizeof(TOOLS_DIAG_AP_FILE_DATA_T);
+
+                file_size = eng_get_filesize(fileoper->file_name);
+                if(0 == file_size){
+                    ENG_LOG("%s: get file size error(read): file_size: %d\n", __FUNCTION__, file_size);
+                    aprsp->status = 1;
+                }else{
+                    fd = open(fileoper->file_name, O_RDONLY);
+                    if(fd >= 0){
+                        do{
+                            read_size = read(fd, filedata->data, MAX_DIAG_TRANSMIT_FILE_LEN);
+                            total_size += read_size;
+
+                            if(total_size != file_size){
+                                filedata->status = 1;
+                            }else{
+                                filedata->status = 0;
+                            }
+                            filedata->data_len = read_size;
+
+                            memset(diag_frame, 0, 2*diag_size + 2);
+                            ret = translate_packet(diag_frame, tmp, header->len);
+
+                            eng_diag_write2pc(diag_frame, ret);
+
+                            ENG_LOG("%s: response length(read): %d\n", __FUNCTION__, ret);
+                        }while(file_size != total_size);
+
+                        close(fd);
+                        free(diag_frame);
+                        free(tmp);
+
+                        return 0;
+                    }else{
+                        ENG_LOG("%s: file open fail\n", __FUNCTION__);
+                        aprsp->status = 1;
+                    }
+                }
+
+                ret = translate_packet(diag_frame, tmp, header->len);
+                free(diag_frame);
+                free(tmp);
+            }
+            break;
+        case 2:// Write file
+            {
+                int fd = -1;
+                int write_size = 0;
+                unsigned char tmp[128] = {0};
+                MSG_HEAD_T* header = (MSG_HEAD_T*)tmp;
+                TOOLS_DIAG_AP_CNF_T* aprsp = (TOOLS_DIAG_AP_CNF_T*)(tmp + sizeof(MSG_HEAD_T));
+                TOOLS_DIAG_AP_FILE_DATA_T* filedata = (TOOLS_DIAG_AP_FILE_DATA_T*)(fileoper + 1);
+
+                memcpy(tmp, buf + 1, sizeof(MSG_HEAD_T)); // copy the diag header
+                header->len = sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T);
+                aprsp->status = 0;
+
+                ENG_LOG("%s: Open the file : %s, datalen: %d\n", __FUNCTION__, fileoper->file_name, filedata->data_len);
+
+                fd = open(fileoper->file_name, O_WRONLY);
+                if(fd >= 0){
+                    ENG_LOG("%s: File is open\n", __FUNCTION__);
+                    lseek(fd, s_cur_filepos, SEEK_SET);
+                    write_size = write(fd, filedata->data, filedata->data_len);
+                    if(write_size < 0){
+                        aprsp->status = 1;
+                    }
+
+                    if(filedata->status){
+                        s_cur_filepos += write_size;
+                    }else{
+                        s_cur_filepos = 0;
+                    }
+
+                    ENG_LOG("%s: write_size: %d\n", __FUNCTION__, write_size);
+                    close(fd);
+                }else{
+                    ENG_LOG("%s, open fail, fd: %d, err: %s\n", __FUNCTION__, fd, strerror(errno));
+                    aprsp->status = 1;// fail
+                }
+
+                ret = translate_packet(rsp, tmp, header->len);
+            }
+            break;
+        default:
+            ENG_LOG("%s: Error operation!\n", __FUNCTION__);
+            break;
+    }
+
+    return ret;
 }

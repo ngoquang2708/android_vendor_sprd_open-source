@@ -8,6 +8,7 @@
 #define ENG_USBCONNECTD			"CONFIGURED"
 #define ENG_FACOTRYMODE_FILE	"/productinfo/factorymode.file"
 #define ENG_FACOTRYSYNC_FILE	"/factorysync.file"
+#define ENG_WIFI_CONFIG_FILE    "/productinfo/2351_connectivity_configure.ini"
 #define ENG_MODEMRESET_PROPERTY	"persist.sys.sprd.modemreset"
 #define ENG_USB_PROPERTY	    "persist.sys.sprd.usbfactorymode"
 #define RAWDATA_PROPERTY		"sys.rawdata.ready"

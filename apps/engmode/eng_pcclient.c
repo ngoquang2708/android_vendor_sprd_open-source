@@ -16,8 +16,6 @@
 #include "eng_sqlite.h"
 
 #define VLOG_PRI  -20
-#define USB_CONFIG_VSER_GSER  "mass_storage,adb,vser,gser"
-#define USB_CONFIG_GSER6  "mass_storage,adb,gser6"
 #define SYS_CLASS_ANDUSB_ENABLE "/sys/class/android_usb/android0/enable"
 
 extern void	disconnect_vbus_charger(void);
@@ -100,6 +98,7 @@ void eng_check_factorymode(int final)
     char modem_diag_value[PROPERTY_VALUE_MAX];
     char usb_config_value[PROPERTY_VALUE_MAX];
     char gser_config[] = {",gser"};
+    char build_type[PROPERTY_VALUE_MAX];
     int usb_diag_set = 0;
     int i;
 #ifdef USE_BOOT_AT_DIAG
@@ -108,6 +107,8 @@ void eng_check_factorymode(int final)
     if(fd >= 0){
         ENG_LOG("%s: status=%x\n",__func__, status);
         chmod(ENG_FACOTRYMODE_FILE, 0660);
+        property_get("ro.build.type",build_type,"not_find");
+        ENG_LOG("%s: build_type: %s", __FUNCTION__, build_type);
         property_get("persist.sys.modem.diag",modem_diag_value,"not_find");
         ENG_LOG("%s: modem_diag_value: %s\n", __FUNCTION__, modem_diag_value);
         if((status==1)||(status == ENG_SQLSTR2INT_ERR)) {
@@ -123,7 +124,7 @@ void eng_check_factorymode(int final)
             }
         }
 
-        if(usb_diag_set && !final){
+        if(usb_diag_set && !final && 0 == strcmp(build_type, "userdebug")){
             do{
                 property_get("sys.usb.config",usb_config_value,"not_find");
                 if(strcmp(usb_config_value,"not_find") == 0){
