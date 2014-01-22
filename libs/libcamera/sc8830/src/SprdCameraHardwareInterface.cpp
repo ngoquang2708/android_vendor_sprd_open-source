@@ -1398,6 +1398,13 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 		cur_params.setVideoSnapshotSupported(new_VideoSnapshotSupported);
 	}
 
+	//max metering areas number
+	{
+	const char* new_maxNumMeteringArea = params.get_maxNumMeteringArea();
+	if(new_maxNumMeteringArea)
+		cur_params.setMaxNumMeteringArea(new_maxNumMeteringArea);
+	}
+
 	/*the below parameters should be acquired by getInt*/
 	//sensor rotation (sensor rotation should be worked with sensor orientation)
 	{
@@ -1441,7 +1448,8 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& params)
 {
 	int min,max;
-	int max_focus_num = 0;
+	int max_focus_num = -1;
+	int max_metering_num = -1;
 	const char* flash_mode;
 	const char* focus_mode;
 
@@ -1453,6 +1461,16 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 
 	max_focus_num = params.getInt("max-num-focus-areas");
 	if (params.chekFocusAreas(max_focus_num)) {
+		return BAD_VALUE;
+	}
+
+	if (NULL != params.get("max-num-metering-areas")) {
+		max_metering_num = params.getInt("max-num-metering-areas");
+	} else {
+		max_metering_num = mParameters.getInt("max-num-metering-areas");
+	}
+
+	if (params.chekMeteringAreas(max_metering_num)) {
 		return BAD_VALUE;
 	}
 

@@ -203,7 +203,7 @@ int SprdCameraParameters::chekFocusAreas(int max_num) const
 	int focus_area[4 * kFocusZoneMax] = {0};
 	int area_count = 0;
 	int i =0;
-    int left = 0,top=0,right=0,bottom=0;
+	int left = 0,top=0,right=0,bottom=0;
 	int ret = 0;
 	int weight = 0;
 
@@ -267,6 +267,42 @@ void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview
 	}
 
 	*count = area_count;
+}
+
+int SprdCameraParameters::chekMeteringAreas(int max_num) const
+{
+	const char *p = get(KEY_METERING_AREAS);
+	int metering_area[4 * kMeteringAreasMax] = {0};
+	int area_count = 0;
+	int i =0;
+	int left = 0,top=0,right=0,bottom=0;
+	int ret = 0;
+	int weight = 0;
+
+	parse_rect(&metering_area[0], &area_count, p, false);
+
+	if (area_count > 0) {
+		if (area_count > max_num) {
+			return 1;
+		}
+		for (i=0;i<area_count;i++) {
+			left   = metering_area[i*5];
+			top    = metering_area[i*5+1];
+			right  = metering_area[i*5+2];
+			bottom = metering_area[i*5+3];
+			weight = metering_area[i*5+4];
+			if ((left != 0) && (right != 0) && (top != 0) && (bottom != 0)) {
+				if ((left >= right) || (top >= bottom) || (left < -1000) || (top < -1000)
+					|| (right > 1000) || (bottom > 1000) || (weight < 1) || (weight > 1000)) {
+					LOGV("checkMeteringAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
+					left, top, right, bottom, weight);
+					return 1;
+				}
+			}
+		}
+	}
+
+	return 0;
 }
 
 const char *SprdCameraParameters::get_FocusAreas() const
@@ -686,7 +722,7 @@ void SprdCameraParameters::setPreviewFpsRange(const char* value)
 
 const char *SprdCameraParameters::get_GPS_Processing_Method() const
 {
-    return get(KEY_GPS_PROCESSING_METHOD);
+	return get(KEY_GPS_PROCESSING_METHOD);
 }
 
 void SprdCameraParameters::setGPSProcessingMethod(const char* value)
@@ -701,7 +737,7 @@ void SprdCameraParameters::removeGPSProcessingMethod(void)
 
 const char *SprdCameraParameters::get_FocalLength() const
 {
-    return get(KEY_FOCAL_LENGTH);
+	return get(KEY_FOCAL_LENGTH);
 }
 
 void SprdCameraParameters::setFocalLength(const char* value)
@@ -711,7 +747,7 @@ void SprdCameraParameters::setFocalLength(const char* value)
 
 const char *SprdCameraParameters::get_ExposureCompensationStep() const
 {
-    return get(KEY_EXPOSURE_COMPENSATION_STEP);
+	return get(KEY_EXPOSURE_COMPENSATION_STEP);
 }
 
 void SprdCameraParameters::setExposureCompensationStep(const char* value)
@@ -721,7 +757,7 @@ void SprdCameraParameters::setExposureCompensationStep(const char* value)
 
 const char *SprdCameraParameters::get_MaxExposureCompensation() const
 {
-    return get(KEY_MAX_EXPOSURE_COMPENSATION);
+	return get(KEY_MAX_EXPOSURE_COMPENSATION);
 }
 
 void SprdCameraParameters::setMaxExposureCompensation(const char* value)
@@ -771,7 +807,7 @@ void SprdCameraParameters::setSupportedPreviewFrameRate(const char* value)
 
 const char *SprdCameraParameters::get_SupportedPreviewFpsRange() const
 {
-    return get(KEY_SUPPORTED_PREVIEW_FPS_RANGE);
+	return get(KEY_SUPPORTED_PREVIEW_FPS_RANGE);
 }
 
 void SprdCameraParameters::setSupportedPreviewFpsRange(const char* value)
@@ -781,7 +817,7 @@ void SprdCameraParameters::setSupportedPreviewFpsRange(const char* value)
 
 const char *SprdCameraParameters::get_SupportedPictureSizes() const
 {
-    return get(KEY_SUPPORTED_PICTURE_SIZES);
+	return get(KEY_SUPPORTED_PICTURE_SIZES);
 }
 
 void SprdCameraParameters::setSupportedPictureSizes(const char* value)
@@ -791,7 +827,7 @@ void SprdCameraParameters::setSupportedPictureSizes(const char* value)
 
 const char *SprdCameraParameters::get_SupportedFocusModes() const
 {
-    return get(KEY_SUPPORTED_FOCUS_MODES);
+	return get(KEY_SUPPORTED_FOCUS_MODES);
 }
 
 void SprdCameraParameters::setSupportedFocusModes(const char* value)
@@ -801,7 +837,7 @@ void SprdCameraParameters::setSupportedFocusModes(const char* value)
 
 const char *SprdCameraParameters::get_AutoExposureLock() const
 {
-    return get(KEY_AUTO_EXPOSURE_LOCK);
+	return get(KEY_AUTO_EXPOSURE_LOCK);
 }
 
 void SprdCameraParameters::setAutoExposureLock(const char* value)
@@ -811,7 +847,7 @@ void SprdCameraParameters::setAutoExposureLock(const char* value)
 
 const char *SprdCameraParameters::get_AutoExposureLockSupported() const
 {
-    return get(KEY_AUTO_EXPOSURE_LOCK_SUPPORTED);
+	return get(KEY_AUTO_EXPOSURE_LOCK_SUPPORTED);
 }
 
 void SprdCameraParameters::setAutoExposureLockSupported(const char* value)
@@ -821,7 +857,7 @@ void SprdCameraParameters::setAutoExposureLockSupported(const char* value)
 
 const char *SprdCameraParameters::get_AutoWhiteBalanceLock() const
 {
-    return get(KEY_AUTO_WHITEBALANCE_LOCK);
+	return get(KEY_AUTO_WHITEBALANCE_LOCK);
 }
 
 void SprdCameraParameters::setAutoWhiteBalanceLock(const char* value)
@@ -831,7 +867,7 @@ void SprdCameraParameters::setAutoWhiteBalanceLock(const char* value)
 
 const char *SprdCameraParameters::get_AutoWhiteBalanceLockSupported() const
 {
-    return get(KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED);
+	return get(KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED);
 }
 
 void SprdCameraParameters::setAutoWhiteBalanceLockSupported(const char* value)
@@ -841,7 +877,7 @@ void SprdCameraParameters::setAutoWhiteBalanceLockSupported(const char* value)
 
 const char *SprdCameraParameters::get_HorizontalViewAngle() const
 {
-    return get(KEY_HORIZONTAL_VIEW_ANGLE);
+	return get(KEY_HORIZONTAL_VIEW_ANGLE);
 }
 
 void SprdCameraParameters::setHorizontalViewAngle(const char* value)
@@ -851,7 +887,7 @@ void SprdCameraParameters::setHorizontalViewAngle(const char* value)
 
 const char *SprdCameraParameters::get_VerticalViewAngle() const
 {
-    return get(KEY_VERTICAL_VIEW_ANGLE);
+	return get(KEY_VERTICAL_VIEW_ANGLE);
 }
 
 void SprdCameraParameters::setVerticalViewAngle(const char* value)
@@ -861,7 +897,7 @@ void SprdCameraParameters::setVerticalViewAngle(const char* value)
 
 const char *SprdCameraParameters::get_VideoFrameFormat() const
 {
-    return get(KEY_VIDEO_FRAME_FORMAT);
+	return get(KEY_VIDEO_FRAME_FORMAT);
 }
 
 void SprdCameraParameters::setVideoFrameFormat(const char* value)
@@ -871,7 +907,7 @@ void SprdCameraParameters::setVideoFrameFormat(const char* value)
 
 const char *SprdCameraParameters::get_SupportedVideoSizes() const
 {
-    return get(KEY_SUPPORTED_VIDEO_SIZES);
+	return get(KEY_SUPPORTED_VIDEO_SIZES);
 }
 
 void SprdCameraParameters::setSupportedVideoSizes(const char* value)
@@ -891,7 +927,7 @@ void SprdCameraParameters::setRotation(const char* value)
 
 const char *SprdCameraParameters::get_GpsLatitude() const
 {
-    return get(KEY_GPS_LATITUDE);
+	return get(KEY_GPS_LATITUDE);
 }
 
 void SprdCameraParameters::setGpsLatitude(const char* value)
@@ -951,7 +987,7 @@ void SprdCameraParameters::removeGpsTimestamp(void)
 
 const char *SprdCameraParameters::get_MaxNumDetectedFacesHW() const
 {
-    return get(KEY_MAX_NUM_DETECTED_FACES_HW);
+	return get(KEY_MAX_NUM_DETECTED_FACES_HW);
 }
 
 void SprdCameraParameters::setMaxNumDetectedFacesHW(const char* value)
@@ -1071,7 +1107,7 @@ void SprdCameraParameters::setSupportedBrightness(const char* value)
 
 const char *SprdCameraParameters::get_SupportedAntibanding() const
 {
-    return get(KEY_SUPPORTED_ANTIBANDING);
+	return get(KEY_SUPPORTED_ANTIBANDING);
 }
 
 void SprdCameraParameters::setSupportedAntibanding(const char* value)
@@ -1081,7 +1117,7 @@ void SprdCameraParameters::setSupportedAntibanding(const char* value)
 
 const char *SprdCameraParameters::get_SupportedEffects() const
 {
-    return get(KEY_SUPPORTED_EFFECTS);
+	return get(KEY_SUPPORTED_EFFECTS);
 }
 
 void SprdCameraParameters::setSupportedEffects(const char* value)
@@ -1161,7 +1197,7 @@ void SprdCameraParameters::setFocusDistances(const char* value)
 
 const char *SprdCameraParameters::get_MaxNumFocusAreas() const
 {
-    return get(KEY_MAX_NUM_FOCUS_AREAS);
+	return get(KEY_MAX_NUM_FOCUS_AREAS);
 }
 
 void SprdCameraParameters::setMaxNumFocusAreas(const char* value)
@@ -1171,22 +1207,32 @@ void SprdCameraParameters::setMaxNumFocusAreas(const char* value)
 
 const char *SprdCameraParameters::get_SupportedPreviewFormat() const
 {
-    return get(KEY_SUPPORTED_PREVIEW_FORMATS);
+	return get(KEY_SUPPORTED_PREVIEW_FORMATS);
 }
 
 void SprdCameraParameters::setSupportedPreviewFormat(const char* value)
 {
-       set(KEY_SUPPORTED_PREVIEW_FORMATS, value);
+	set(KEY_SUPPORTED_PREVIEW_FORMATS, value);
 }
 
 const char *SprdCameraParameters::get_VideoSnapshotSupported() const
 {
-    return get(KEY_VIDEO_SNAPSHOT_SUPPORTED);
+	return get(KEY_VIDEO_SNAPSHOT_SUPPORTED);
 }
 
 void SprdCameraParameters::setVideoSnapshotSupported(const char* value)
 {
 	set(KEY_VIDEO_SNAPSHOT_SUPPORTED, value);
+}
+
+const char *SprdCameraParameters::get_maxNumMeteringArea() const
+{
+	return get(KEY_MAX_NUM_METERING_AREAS);
+}
+
+void SprdCameraParameters::setMaxNumMeteringArea(const char* value)
+{
+	set(KEY_MAX_NUM_METERING_AREAS, value);
 }
 
 void SprdCameraParameters::setZsl(int value)
