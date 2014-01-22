@@ -16,9 +16,14 @@
 #include <utils/Log.h>
 #include <signal.h>
 #include "modemd.h"
+#include <sys/time.h>
+#include <fcntl.h>
 
 int  client_fd[MAX_CLIENT_NUM];
 static char ttydev[256];
+int  engpc_client_fd[MAX_CLIENT_NUM] ;
+static fd_set engpcFds;
+static int nengfds = 0;
 static int ttydev_fd;
 
 /*
@@ -94,7 +99,11 @@ static int stop_engservice(int modem)
 			property_set("ctl.stop", "engmodemclientw");
 			property_set("ctl.stop", "engpcclientw");
 			break;
-
+		case WCN_MODEM:
+			property_set("ctl.stop", "engservicewcn");
+			property_set("ctl.stop", "engmodemclientwcn");
+			property_set("ctl.stop", "engpcclientwcn");
+			break;
 		default:
 			property_set("ctl.stop", "engservicet");
 			property_set("ctl.stop", "engmodemclientt");
@@ -107,7 +116,13 @@ static int stop_engservice(int modem)
 
 static int start_engservice(int modem)
 {
+       char prop[256];
 	MODEMD_LOGD("start engservice!");
+	property_get(MODEM_ENGCTRL_PRO,prop, "0");
+	if(!strcmp(prop, "1")) {
+	   MODEMD_LOGD("persist.engpc.disable is true return  ");
+	   return 0;
+	}
 
 	switch(modem){
 		case TD_MODEM:
@@ -120,7 +135,12 @@ static int start_engservice(int modem)
 			property_set("ctl.start", "engmodemclientw");
 			property_set("ctl.start", "engpcclientw");
 			break;
-                  default:
+		case WCN_MODEM:
+			property_set("ctl.start", "engservicewcn");
+			property_set("ctl.start", "engmodemclientwcn");
+			property_set("ctl.start", "engpcclientwcn");
+			break;
+		default:
 			property_set("ctl.start", "engservicet");
 			property_set("ctl.start", "engmodemclientt");
 			property_set("ctl.start", "engpcclientt");
@@ -234,7 +254,8 @@ int stop_service(int modem, int is_vlx)
 
 	/* stop eng */
 	stop_engservice(modem);
-
+	if(modem == WCN_MODEM)
+		return 0;
 
 	/* stop phoneserver */
 	stop_phser(modem);
@@ -302,6 +323,10 @@ int start_service(int modem, int is_vlx, int restart)
 		} else if(modem == W_MODEM) {
 			property_get(W_TTY_DEV_PRO, modem_dev, "");
 			property_get(W_SIM_NUM, phoneCount, "");
+		} else if(modem == WCN_MODEM) {
+			/*start eng*/
+			start_engservice(modem);
+			return 0;
 		}
 		sprintf(path, "%s0", modem_dev);
 		MODEMD_LOGD("open stty dev: %s", path);
@@ -424,6 +449,158 @@ static void *modemd_listenaccept_thread(void *par)
 	}
 }
 
+static void control_engservice(int  open)
+{
+      MODEMD_LOGD("%s :%d",__FUNCTION__,open);
+      char prop[265] = {'\0'};
+      if(0== open) {
+          MODEMD_LOGD("persist.engpc.disable true");
+          memset(prop,'\0',256);
+          property_get(TD_MODEM_ENABLE,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+             stop_engservice(TD_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(W_MODEM_ENABLE,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              stop_engservice(W_MODEM);
+          }
+      }
+      else
+      {
+          MODEMD_LOGD("persist.engpc.disable false");
+          memset(prop,'\0',256);
+          property_get(TD_MODEM_ENABLE,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              start_engservice(TD_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(W_MODEM_ENABLE,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              start_engservice(W_MODEM);
+          }
+      }
+}
+
+
+static void *modemd_engcontrol_listen(void *par)
+{
+       int n;
+	char  controlinfo[32] = {'\0'};
+	int controlinfolen = strlen(MODEM_ENGCTRL_PRO) + 1;
+       int  countRead = -1;
+       int readnum = -1 ;
+       int i = 0 ;
+	char prop[256];
+      struct timeval tv;
+      MODEMD_LOGD("%s:  enter",	__FUNCTION__);
+	for(;;)
+	{
+	       FD_ZERO(&engpcFds);
+	       nengfds = 0 ;
+		for(i=0; i<MAX_CLIENT_NUM; i++) {
+                  if(engpc_client_fd[i]!=-1){
+                      FD_SET(engpc_client_fd[i], &engpcFds);
+                      if (engpc_client_fd[i] >= nengfds) nengfds = engpc_client_fd[i]+1;
+                  }
+		}
+		if (nengfds == 0 )
+		{
+                  MODEMD_LOGD("%s:nengfds = 0 ,continue",__FUNCTION__);
+                  sleep(1);
+                  continue ;
+		}
+	       tv.tv_sec = 0;
+              tv.tv_usec = 1000000ll;
+		MODEMD_LOGD("%s:begin select ",__FUNCTION__);
+		n = select(nengfds, &engpcFds, NULL, NULL, &tv);
+		 MODEMD_LOGD("%s:after  select n= %d",__FUNCTION__,n);
+		for (i = 0; (i < MAX_CLIENT_NUM) && (n > 0); i++) {
+			int  nfd=engpc_client_fd[i];
+			if (nfd != -1 && FD_ISSET(nfd, &engpcFds)) {
+				n--;
+				countRead = 0 ;
+				do{
+					MODEMD_LOGD("%s:begin   read ",__FUNCTION__);
+					readnum =  read (nfd,controlinfo,controlinfolen);
+					MODEMD_LOGD("%s:after    read %d",__FUNCTION__,readnum);
+					if(readnum > 0)
+					{
+						countRead += readnum ;
+					}
+					if(countRead ==controlinfolen ||readnum <= 0 )
+					{
+						engpc_client_fd[i] = -1 ;
+					       property_get(MODEM_ENGCTRL_PRO,prop, "");
+					       if(!strcmp(prop,ENGPC_REQUSETY_CLOSE))
+						{
+						    control_engservice(0);
+						}
+						else if(!strcmp(prop,ENGPC_REQUSETY_OPEN))
+						{
+					            control_engservice(1);
+						}
+						else
+						{
+						     MODEMD_LOGD("%s:error not prop set%s ",__FUNCTION__);
+						}
+						memset(prop,'\0',256);
+						break;
+					}
+				}while(1) ;
+			}
+		}
+	}
+	exit(-1);
+}
+
+static void *modemd_engcontrol_thread(void *par)
+{
+	int sfd, n, i;
+	pthread_t tid;
+	for(i=0; i<MAX_CLIENT_NUM; i++)
+		engpc_client_fd[i]=-1;
+
+	FD_ZERO(&engpcFds);
+
+
+	sfd = socket_local_server(MODEM_ENGCTRL_NAME,
+			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+	if (sfd < 0) {
+		MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
+		exit(-1);
+	}
+	pthread_create(&tid, NULL, (void*)modemd_engcontrol_listen, NULL);
+	for(; ;){
+
+		MODEMD_LOGD("%s: Waiting for new connect ...", __FUNCTION__);
+		if ( (n=accept(sfd,NULL,NULL)) == -1)
+		{
+			MODEMD_LOGE("%s engserver accept error\n", __FUNCTION__);
+			continue;
+		}
+		MODEMD_LOGD("%s: accept client n=%d",__FUNCTION__, n);
+		for(i=0; i<MAX_CLIENT_NUM; i++) {
+			if(engpc_client_fd[i]==-1){
+				engpc_client_fd[i]=n;
+				MODEMD_LOGD("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
+				break;
+			}
+			/* if client_fd arrray is full, just fill the new socket to the
+			 * last element */
+			if(i == MAX_CLIENT_NUM - 1) {
+				MODEMD_LOGD("%s: client array is full, just fill %d to client[%d]",
+						__FUNCTION__, n, i);
+				engpc_client_fd[i]=n;
+			}
+		}
+	}
+}
+
 static void start_modem(int *para)
 {
 	pthread_t tid1, tid2, tid3, tid4, tid5;
@@ -439,6 +616,8 @@ static void start_modem(int *para)
 		strcpy(prop, TD_MODEM_ENABLE);
 	} else if(modem == W_MODEM) {
 		strcpy(prop, W_MODEM_ENABLE);
+	} else if(modem == WCN_MODEM) {
+		strcpy(prop, WCN_MODEM_ENABLE);
 	} else {
 		MODEMD_LOGE("Invalid modem type");
 		return;
@@ -452,7 +631,11 @@ static void start_modem(int *para)
 		} else if(modem == W_MODEM) {
 			MODEMD_LOGD("W modem is enabled");
 			strcpy(prop, W_PROC_PRO);
+		} else if(modem == WCN_MODEM) {
+			MODEMD_LOGD("WCN modem is enabled");
+			strcpy(prop, WCN_PROC_PRO);
 		}
+
 		property_get(prop, modem_dev, "");
 		if(!strcmp(modem_dev, TD_PROC_DEV)) {
 			/*  sipc td modem */
@@ -466,8 +649,12 @@ static void start_modem(int *para)
 			start_service(modem, 0, 0);
 			pthread_create(&tid2, NULL, (void*)detect_sipc_modem, (void *)para);
 			pthread_create(&tid4, NULL, (void*)detect_modem_blocked, (void *)para);
-		} 
-		else {
+		} else if(!strcmp(modem_dev, WCN_PROC_DEV)) {
+			/*  sipc wcn modem */
+			MODEMD_LOGD("It's wcn native version");
+			start_service(modem, 0, 0);
+			pthread_create(&tid5, NULL, (void*)detect_sipc_modem, (void *)para);
+		} else {
 			/*  vlx version, only one modem */
 			MODEMD_LOGD("It's vlx version");
 			vlx_reboot_init();
@@ -479,7 +666,9 @@ static void start_modem(int *para)
 			MODEMD_LOGD("TD modem is not enabled");
 		else if(modem == W_MODEM)
 			MODEMD_LOGD("W modem is not enabled");
-              }
+		else if(modem == WCN_MODEM)
+			MODEMD_LOGD("WCN modem is not enabled");
+	}
 }
 
 int main(int argc, char *argv[])
@@ -489,6 +678,7 @@ int main(int argc, char *argv[])
 	int ret;
 	int modem_td = TD_MODEM;
 	int modem_w = W_MODEM;
+	int modem_wcn = WCN_MODEM;
 
 	memset(&action, 0x00, sizeof(action));
 	action.sa_handler = SIG_IGN;
@@ -501,6 +691,7 @@ int main(int argc, char *argv[])
 	}
 
 	pthread_create(&tid, NULL, (void*)modemd_listenaccept_thread, NULL);
+	pthread_create(&tid, NULL, (void*)modemd_engcontrol_thread, NULL);
 
 	/* for vlx version, there is only one modem, once one of the follow two functions
 	*   matched, it will execute forever and never retrun to check the next modem
@@ -511,6 +702,10 @@ int main(int argc, char *argv[])
 
 	/* start w modem*/
 	start_modem(&modem_w);
+
+	/* start wcn modem*/
+	start_modem(&modem_wcn);
+
 	do {
 		pause();
 	} while(1);

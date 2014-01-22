@@ -14,7 +14,7 @@
 
 #define TD_MODEM 0x3434
 #define W_MODEM  0x5656
-//#define WCN_MODEM  0x7878
+#define WCN_MODEM  0x7878
 
 #define MODEM_READY 0
 #define MODEM_ASSERT 1
@@ -40,7 +40,7 @@
 /* default value for cproc driver device node */
 #define TD_PROC_DEV	"/dev/cpt"
 #define W_PROC_DEV	"/dev/cpw"
-//#define WCN_PROC_DEV	"/dev/cpwcn"
+#define WCN_PROC_DEV	"/dev/cpwcn"
 
 /* load modem image interface */
 #define TD_MODEM_BANK	"/proc/cpt/modem"
@@ -51,16 +51,16 @@
 #define W_DSP_BANK	"/proc/cpw/dsp"
 #define W_MODEM_START	"/proc/cpw/start"
 #define W_MODEM_STOP	"/proc/cpw/stop"
-//#define WCN_MODEM_BANK	"/proc/cpwcn/modem"
-//#define WCN_MODEM_START	"/proc/cpwcn/start"
-//#define WCN_MODEM_STOP	"/proc/cpwcn/stop"
+#define WCN_MODEM_BANK	"/proc/cpwcn/modem"
+#define WCN_MODEM_START	"/proc/cpwcn/start"
+#define WCN_MODEM_STOP	"/proc/cpwcn/stop"
 
 /* modem/dsp partition */
 #define TD_MODEM_SIZE	(10*1024*1024)
 #define TD_DSP_SIZE	(5*1024*1024)
 #define W_MODEM_SIZE	(10*1024*1024)
 #define W_DSP_SIZE	(5*1024*1024)
-//#define WCN_MODEM_SIZE	(10*1024*1024)
+#define WCN_MODEM_SIZE	(10*1024*1024)
 
 /* detect assert/hangup interface */
 #define TD_ASSERT_PRO	"ro.modem.t.assert"
@@ -88,6 +88,11 @@
 #define MODEM_SOCKET_NAME	"modemd"
 #define PHSTD_SOCKET_NAME	"phstd"
 #define PHSW_SOCKET_NAME	"phsw"
+#define MODEM_ENGCTRL_NAME "modemd_engpc"
+#define MODEM_ENGCTRL_PRO  "persist.sys.engpc.disable"
+
+#define ENGPC_REQUSETY_OPEN "0"
+#define ENGPC_REQUSETY_CLOSE "1"
 #define MAX_CLIENT_NUM	10
 extern int  client_fd[MAX_CLIENT_NUM];
 
