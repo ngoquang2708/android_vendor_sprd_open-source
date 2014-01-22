@@ -116,6 +116,7 @@ public:
 	int getAutoExposureMode();
 	const char* get_AutoExposureMode() const;
 	void setAutoExposureMode(const char* value);
+	int chekMeteringAreas(int max_num) const;
 	void getMeteringAreas(int *area, int *count, Size *preview_size,
 					 Rect *preview_rect, int orientation, bool mirror);
 	const char* get_MeteringAreas() const;
@@ -233,6 +234,8 @@ public:
 	void setSupportedPreviewFormat(const char* value);
 	const char* get_VideoSnapshotSupported() const;
 	void setVideoSnapshotSupported(const char* value);
+	const char * get_maxNumMeteringArea() const;
+	void setMaxNumMeteringArea(const char* value);
 	void setZsl(int value);
 	void setCapMode(int value);
 	void setZSLSupport(const char* value);

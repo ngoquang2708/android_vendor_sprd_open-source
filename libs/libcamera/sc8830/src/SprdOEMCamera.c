@@ -4151,11 +4151,6 @@ void camera_post_rot_evt(int evt, struct img_frm *frm_data)
 	memcpy(message.data, frm_data, sizeof(struct img_frm));
 
 	if (IS_PREVIEW && IS_PREV_FRM(frame_id)) {
-		message.data = malloc(sizeof(struct img_frm));
-		if (NULL == message.data) {
-			CMR_LOGE("NO mem, Faile to alloc memory for one msg");
-			return;
-		}
 		message.msg_type = CMR_EVT_PREV_CVT_ROT_DONE;
 		ret = cmr_msg_post(g_cxt->prev_msg_que_handle, &message);
 	} else if (IS_CAPTURE && IS_CAP_FRM(frame_id)) {
