@@ -691,7 +691,8 @@ status_t SprdCameraHardware::waitSetParamsOK()
 
 status_t SprdCameraHardware::startRecording()
 {
-	LOGV("mLock:startRecording S.\n");
+	status_t ret = NO_ERROR;
+	LOGV("mLock:startRecording E.\n");
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
 	mRecordingTimeOffset = systemTime(SYSTEM_TIME_REALTIME) - systemTime();
@@ -707,7 +708,7 @@ status_t SprdCameraHardware::startRecording()
 			if(CAMERA_SUCCESS != camera_stop_preview()){
 				setCameraState(SPRD_ERROR, STATE_PREVIEW);
 				freePreviewMem();
-				LOGE("startRecording: fail to camera_stop_preview().");
+				LOGE("startRecording X: fail to camera_stop_preview().");
 				return INVALID_OPERATION;
 			}
 
@@ -718,8 +719,9 @@ status_t SprdCameraHardware::startRecording()
 		}
 	}
 #endif
-
-	return startPreviewInternal(true);
+	ret = startPreviewInternal(true);
+	LOGV("mLock:startRecording X.\n");
+	return ret;
 }
 
 void SprdCameraHardware::stopRecording()
@@ -1086,12 +1088,22 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 
 	//jpegThumbnail Dimension
 	{
+	const char* new_thumbnail_size = params.get_JpegThumbnailSize();
 	const char* new_thumbnail_width = params.get_JpegThumbnailWidth();
 	const char* new_thumbnail_height = params.get_JpegThumbnailHeight();
+	if (new_thumbnail_size)
+		cur_params.setJpegThumbnailSize(new_thumbnail_size);
 	if (new_thumbnail_width)
 		cur_params.setJpegThumbnailWidth(new_thumbnail_width);
 	if (new_thumbnail_height)
 		cur_params.setJpegThumbnailHeight(new_thumbnail_height);
+	}
+
+	//jpegThumbnail Dimesion Value
+	{
+	const char* new_thumbnail_size_val = params.get_JpegThumbnailSizeValue();
+	if (new_thumbnail_size_val)
+		cur_params.setJpegThumbnailSizeValue(new_thumbnail_size_val);
 	}
 
 	//rotation
@@ -3234,7 +3246,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	char * isZslSupport = (char *)"false";
 	LOGV("startPreviewInternal E");
 
-	if ((1 == mParameters.getRecordingHint())) {
+	if ((1 == mParameters.getRecordingHint()) || isRecording) {
 		isZslSupport = (char *)mParameters.get("zsl-supported");
 		if ((isZslSupport) && (0 == strcmp("true", isZslSupport))) {
 			ALOGV("zsl-supported is %s", isZslSupport);
@@ -3318,6 +3330,7 @@ void SprdCameraHardware::stopPreviewInternal()
 {
 	nsecs_t start_timestamp = systemTime();
 	nsecs_t end_timestamp;
+	char * isZslSupport = (char *)"false";
 	LOGV("stopPreviewInternal E");
 
 	if (isCapturing()) {
@@ -3356,6 +3369,14 @@ void SprdCameraHardware::stopPreviewInternal()
 
 	if (iSZslMode()) {
 		deinitCapture();
+	}
+
+	if (1 == mParameters.getRecordingHint()) {
+		isZslSupport = (char *)mParameters.get("zsl-supported");
+		if ((isZslSupport) && (0 == strcmp("true", isZslSupport))) {
+			ALOGV("stopRecording zsl-supported is %s", isZslSupport);
+			mParameters.setZsl(0);
+		}
 	}
 
 	end_timestamp = systemTime();

@@ -168,6 +168,10 @@ public:
 	void setSupportedVideoSizes(const char* value);
 	const char* get_JpegQuality() const;
 	const char* get_JpegThumbnailQuality() const;
+	const char* get_JpegThumbnailSize() const;
+	void setJpegThumbnailSize(const char* value);
+	const char* get_JpegThumbnailSizeValue() const;
+	void setJpegThumbnailSizeValue(const char* value);
 	const char* get_JpegThumbnailWidth() const;
 	void setJpegThumbnailWidth(const char* value);
 	const char* get_JpegThumbnailHeight() const;
@@ -259,6 +263,7 @@ public:
 	static const char KEY_CAMERA_ID[];
 	static const char KEY_JPEG_QUALITY[];
 	static const char KEY_JPEG_THUMBNAIL_QUALITY[];
+	static const char KEY_JPEG_THUMBNAIL_SIZE[];
 	static const char KEY_JPEG_THUMBNAIL_WIDTH[];
 	static const char KEY_JPEG_THUMBNAIL_HEIGHT[];
 	static const char KEY_EFFECT[];
