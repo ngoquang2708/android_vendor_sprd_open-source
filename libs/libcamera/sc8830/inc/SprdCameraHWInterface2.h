@@ -502,6 +502,8 @@ class RequestQueueThread : public SprdBaseThread{
 	mutable Mutex                   m_afTrigLock;
 	Condition                       mStateWait;
     volatile camera_state           mCameraState;
+
+    nsecs_t                         mRecordingTimeOffset;
 };
 
 }; // namespace android

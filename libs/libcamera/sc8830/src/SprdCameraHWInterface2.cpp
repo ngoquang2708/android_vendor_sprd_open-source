@@ -1091,6 +1091,9 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
                 HAL_LOGE("(%s): substream attach failed. res(%d)", __FUNCTION__, res);
                 return 1;
             }
+
+            mRecordingTimeOffset = systemTime(SYSTEM_TIME_REALTIME) - systemTime();
+
             HAL_LOGD("(%s): Enabling Record", __FUNCTION__);
             return 0;
 		}
@@ -3623,7 +3626,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 	targetStreamParms->bufIndex = frame->buf_id;
-	targetStreamParms->m_timestamp = systemTime();
+	targetStreamParms->m_timestamp = frame->timestamp - mRecordingTimeOffset;
 	HAL_LOGD("@@@ Index=%d status=%d Firstfrm=%d",targetStreamParms->bufIndex,\
 		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm);
     if (GetStartPreviewAftPic()) {
@@ -3853,7 +3856,7 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 	}
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 	targetStreamParms->bufIndex = frame->buf_id;
-	targetStreamParms->m_timestamp = systemTime();//frame->timestamp
+	targetStreamParms->m_timestamp = frame->timestamp - mRecordingTimeOffset;
 	HAL_LOGD("%s@@@ Index=%d status=%d Firstfrm=%d outMask=0x%x",__FUNCTION__,targetStreamParms->bufIndex,\
 		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm, GetOutputStreamMask());
     if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
