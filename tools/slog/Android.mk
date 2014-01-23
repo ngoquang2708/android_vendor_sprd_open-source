@@ -2,16 +2,18 @@ LOCAL_PATH:= $(call my-dir)
 
 #slog
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := slog.c handler.c parse_conf.c screenshot.c
+LOCAL_SRC_FILES := slog.c \
+				common.c \
+				parse_conf.c \
+				screenshot.c \
+				android.c \
+				modem.c \
+				snap.c \
+				tcp.c \
+				bt.c
 LOCAL_MODULE := slog
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
-ifeq ($(PLATFORM_VERSION),4.1.2)
-LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
-endif
-ifeq ($(PLATFORM_VERSION),2.3.5)
-LOCAL_CFLAGS += -DSLOG_BTLOG_235
-endif
 LOCAL_LDLIBS += -lpthread
 LOCAL_C_INCLUDES += external/jpeg external/zlib
 LOCAL_SHARED_LIBRARIES := liblog libz libjpeg
@@ -19,13 +21,11 @@ include $(BUILD_EXECUTABLE)
 
 #slogctl
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := slogctl.c parse_conf.c
+LOCAL_SRC_FILES := slogctl.c \
+			common.c
 LOCAL_MODULE := slogctl
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
-ifeq ($(PLATFORM_VERSION),4.1.2)
-LOCAL_CFLAGS += -DSLOG_ALOGD_ALOGE
-endif
 LOCAL_LDLIBS += -lpthread
 LOCAL_C_INCLUDES += external/jpeg external/zlib
 LOCAL_SHARED_LIBRARIES := liblog libz libjpeg

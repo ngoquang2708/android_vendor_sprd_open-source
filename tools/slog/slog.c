@@ -28,12 +28,14 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <cutils/properties.h>
+#include <sys/mman.h>
 
 #include "slog.h"
 
 int slog_enable = SLOG_ENABLE;
 int screenshot_enable = 1;
 int slog_start_step = 0;
+int slog_reload_flag = 0;
 int slog_init_complete = 0;
 int stream_log_handler_started = 0;
 int snapshot_log_handler_started = 0;
@@ -45,7 +47,6 @@ int modem_log_handler_started = 0;
 
 int internal_log_size = 5 * 1024; /*M*/
 
-int hook_modem_flag = 0;
 int dev_shark_flag = 0;
 
 char *config_log_path = INTERNAL_LOG_PATH;
@@ -57,9 +58,22 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid, uboot_log_tid, kmemleak_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid,
+kmemleak_tid;
 
 extern void operate_bt_status(char *status, char* path);
+static int reload(int flush)
+{
+	err_log("slog reload.");
+
+	if(bt_log_handler_started == 1 )
+		operate_bt_status("false", NULL);
+	if(flush == 1)
+		log_buffer_flush();
+	property_set("slog.reload", "1");
+	kill(getpid(), SIGTERM);
+	return 0;
+}
 
 static void handler_exec_cmd(struct slog_info *info, char *filepath)
 {
@@ -129,12 +143,6 @@ static void handler_dump_file(struct slog_info *info, char *filepath)
 	while( (ret = fread(buffer, 1, 4096, fcmd)) > 0)
 		fwrite(buffer, 1, ret, fp);
 
-	/*Separate treating apanic, copy after delete apanic*/
-	if(!strncmp("apanic_console", info->name, 14) || !strncmp("apanic_threads", info->name, 14)){
-		sprintf(buffer, "rm -r %s", info->content);
-		system(buffer);
-	}
-
 	fclose(fcmd);
 	fclose(fp);
 
@@ -196,12 +204,11 @@ static int capture_snap_for_last(struct slog_info *head)
 	struct slog_info *info = head;
 	while(info) {
 		if(info->level == 7)
-			exec_or_dump_content(info, NULL);
+		exec_or_dump_content(info, NULL);
 		info = info->next;
 	}
 	return 0;
 }
-
 
 static int capture_all(struct slog_info *head)
 {
@@ -227,7 +234,7 @@ static int capture_all(struct slog_info *head)
 
 	t = time(NULL);
 	localtime_r(&t, &tm);
-	sprintf(filepath, "%s/%s/%s/snapshot_%02d%02d%02d.log",
+	sprintf(filepath, "%s/%s/%s/snapshot_%02d-%02d-%02d.log",
 				current_log_path,
 				top_logdir,
 				info->log_path,
@@ -248,8 +255,8 @@ static void handler_last_dir()
 {
 	DIR *p_dir;
 	struct dirent *p_dirent;
-	int log_num = 0, last_flag =0, ret;
-	char buffer[MAX_NAME_LEN];
+	int ret;
+	char buffer[MAX_NAME_LEN], top_path[MAX_NAME_LEN];
 
 	if(( p_dir = opendir(current_log_path)) == NULL) {
 		err_log("can not open %s.", current_log_path);
@@ -257,71 +264,30 @@ static void handler_last_dir()
 	}
 
 	while((p_dirent = readdir(p_dir))) {
-		if( !strncmp(p_dirent->d_name, "20", 2) ) {
-			log_num += 1;
-		}else if( !strncmp(p_dirent->d_name, LAST_LOG, 3) ) {
-			last_flag = 1;
+		if( !strncmp(p_dirent->d_name, LAST_LOG, 3) ) {
+			sprintf(buffer, "rm -r %s/%s/", current_log_path, LAST_LOG);
+			system(buffer);
+		} else if( !strncmp(p_dirent->d_name, "20", 2) ) {
+			sprintf(top_path, "%s", p_dirent->d_name);
+
 		}
+
 	}
 
-	if(log_num < LOG_DIR_NUM){
-		closedir(p_dir);
-		return;
-	}
-
-	if(last_flag == 1) {
-		sprintf(buffer, "rm -r %s/%s/", current_log_path, LAST_LOG);
+	if( !strncmp(top_path, "20", 2) ) {
+		sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
+		ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+		if(-1 == ret && (errno != EEXIST)) {
+			err_log("mkdir %s failed.", buffer);
+			closedir(p_dir);
+			exit(0);
+		}
+		sprintf(buffer, "mv %s/%s %s/%s", current_log_path, top_path, current_log_path, LAST_LOG);
 		system(buffer);
 	}
 
-	sprintf(buffer, "%s/%s/", current_log_path, LAST_LOG);
-	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
-	if(-1 == ret && (errno != EEXIST)) {
-		err_log("mkdir %s failed.", buffer);
-		exit(0);
-	}
-
-	sprintf(buffer, "%s %s/%s %s/%s", "mv", current_log_path, "20*", current_log_path, LAST_LOG);
-	debug_log("%s\n", buffer);
-	system(buffer);
-
-	sprintf(buffer, "%s %s/%s", "rm -r", current_log_path, "20*");
-	system(buffer);
-
 	closedir(p_dir);
 	return;
-}
-
-/*
- * cp /data/slog/20* to external_storage.
- */
-static int cp_internal_to_external()
-{
-	DIR *p_dir;
-	struct dirent *p_dirent;
-	char buffer[MAX_NAME_LEN];
-
-	if(( p_dir = opendir(INTERNAL_LOG_PATH)) == NULL) {
-		err_log("can not open %s.", current_log_path);
-		return 0;
-	}
-
-	while((p_dirent = readdir(p_dir))) {
-		if( !strncmp(p_dirent->d_name, "20", 2) ) {
-			strcpy(top_logdir, p_dirent->d_name);
-			sprintf(buffer, "tar c %s | tar x -C %s/", p_dirent->d_name, external_storage);
-			if(chdir(INTERNAL_LOG_PATH) == -1){
-				err_log("chdir %s failed!", INTERNAL_LOG_PATH);
-			}
-			system(buffer);
-			debug_log("%s", buffer);
-			closedir(p_dir);
-			return 1;
-		}
-	}
-
-	closedir(p_dir);
-	return 0;
 }
 
 static void handler_modem_memory_log()
@@ -343,25 +309,17 @@ static void create_log_dir()
 	char path[MAX_NAME_LEN];
 	int ret = 0;
 
-	handler_last_dir();
-
-	if(slog_start_step == 1 && cp_internal_to_external() == 1)
-		return;
-
-	/* generate log dir */
+		/* generate log dir */
 	when = time(NULL);
 	localtime_r(&when, &start_tm);
-	sprintf(top_logdir, "20%02d%02d%02d%02d%02d%02d",
+	sprintf(top_logdir, "20%02d-%02d-%02d-%02d-%02d-%02d",
 						start_tm.tm_year % 100,
 						start_tm.tm_mon + 1,
 						start_tm.tm_mday,
 						start_tm.tm_hour,
 						start_tm.tm_min,
 						start_tm.tm_sec);
-
-
 	sprintf(path, "%s/%s", current_log_path, top_logdir);
-
 	ret = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", path);
@@ -414,26 +372,11 @@ static int start_sub_threads()
 		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
 	if(!tcp_log_handler_started)
 		pthread_create(&tcp_tid, NULL, tcp_log_handler, NULL);
-	if(!modem_log_handler_started) {
+	if(!modem_log_handler_started)
 		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
-	}
-
-	pthread_create(&uboot_log_tid, NULL, uboot_log_handler, NULL);
 	if(!kmemleak_handler_started)
 		pthread_create(&kmemleak_tid, NULL, kmemleak_handler, NULL);
-	return 0;
-}
 
-static int stop_sub_threads()
-{
-	return 0;
-}
-
-static int reload()
-{
-	if(bt_log_handler_started == 1 )
-		operate_bt_status("false", NULL);
-	kill(getpid(), SIGTERM);
 	return 0;
 }
 
@@ -528,10 +471,11 @@ static int sdcard_mounted()
 		property_get("persist.storage.type", value, "-1");
 		type = atoi(value);
 		if (type == 1) { // STORAGE_TYPE_EMMC_EXTERNAL = 1
-			property_get("sys.tempsd.enable", value, "-1"); // 0 -> SDCard, 1 -> Emulated
-			mount = atoi(value);
-			mount = !mount; // Treat emulated as unmount.
-			return mount;
+			property_get("init.svc.fuse_sdcard0", value, ""); // 0 -> SDCard, 1 -> Emulated
+			if( !strncmp(value, "running", 7) )
+				return 1;
+			else
+				return 0;
 		}
 	}
 	str = fopen("/proc/mounts", "r");
@@ -548,7 +492,6 @@ static int sdcard_mounted()
 	}
 
 	fclose(str);
-
 	return 0;
 }
 
@@ -562,7 +505,6 @@ static void check_available_volume()
 		return;
 
 	if(!strncmp(current_log_path, external_storage, strlen(external_storage))) {
-		sleep(3); /* wait 3s to slog reload */
 		if( statfs(external_path, &diskInfo) < 0 ) {
 			err_log("statfs %s return err!", external_path);
 			return;
@@ -587,36 +529,6 @@ static void check_available_volume()
 	}
 }
 
-static int recv_socket(int sockfd, void* buffer, int size)
-{
-	int received = 0, result;
-	while(buffer && (received < size)) {
-		result = recv(sockfd, (char *)buffer + received, size - received, MSG_NOSIGNAL);
-		if (result > 0) {
-			received += result;
-		} else {
-			received = result;
-			break;
-		}
-	}
-	return received;
-}
-
-static int send_socket(int sockfd, void* buffer, int size)
-{
-	int result = -1;
-	int ioffset = 0;
-	while(sockfd > 0 && ioffset < size) {
-		result = send(sockfd, (char *)buffer + ioffset, size - ioffset, MSG_NOSIGNAL);
-		if (result > 0) {
-			ioffset += result;
-		} else {
-			break;
-		}
-	}
-	return result;
-}
-
 int clear_all_log()
 {
 	char cmd[MAX_NAME_LEN];
@@ -624,13 +536,11 @@ int clear_all_log()
 	if(bt_log_handler_started == 1 )
 		operate_bt_status("false", NULL);
 	slog_enable = SLOG_DISABLE;
-	stop_sub_threads();
-	sleep(3);
 	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
 	system(cmd);
 	sprintf(cmd, "rm -r %s", external_storage);
 	system(cmd);
-	reload();
+	reload(0);
 	return 0;
 }
 
@@ -641,26 +551,18 @@ int dump_all_log(const char *name)
 		return -1;
 	capture_all(snapshot_log_head);
 	capture_by_name(snapshot_log_head, "getprop", NULL);
-	sprintf(cmd, "tar czf %s/../%s /%s %s", current_log_path, name, current_log_path, INTERNAL_LOG_PATH);
+	sprintf(cmd, "tar czf %s/%s -C %s %s %s", external_path, name, external_path, "slog", INTERNAL_LOG_PATH);
 	return system(cmd);
 }
 
 /* monitoring sdcard status thread */
 static void *monitor_sdcard_fun()
 {
-	char *last = current_log_path;
-
 	while( !strncmp (config_log_path, external_storage, strlen(external_storage))) {
 		if(sdcard_mounted()) {
-			current_log_path = external_storage;
-			if(last != current_log_path)
-				reload();
-			last = current_log_path;
-		} else {
-			current_log_path = INTERNAL_LOG_PATH;
-			if(last != current_log_path)
-				reload();
-			last = current_log_path;
+			if(slog_start_step == 0)
+				sleep(TIMEOUT_FOR_SD_MOUNT);
+			reload(1);
 		}
 		sleep(TIMEOUT_FOR_SD_MOUNT);
 	}
@@ -706,6 +608,98 @@ static void handler_internal_log_size()
 }
 
 /*
+ * handle uboot log.
+ *
+ */
+
+static void handle_uboot_log(void)
+{
+	int fd = -1;
+	FILE *fout = NULL;
+	void *va = NULL;
+	char buffer[MAX_LINE_LEN];
+	char *s1, *s2;
+	unsigned long pa_start = 0;
+	unsigned long data_sz = 0;
+	int ret;
+
+	/* misc_log on/off state will control all snapshot log */
+	if(misc_log->state != SLOG_STATE_ON)
+		return;
+
+	debug_log("Start dump uboot log..");
+
+	/* Check cmdline to find the location of uboot log */
+	if ((fd = open("/proc/cmdline", O_RDONLY)) == -1) {
+		err_log("open proc file cmdline error!");
+		return;
+	}
+
+	ret = read(fd, buffer, sizeof(buffer));
+	if (ret < 0) {
+		err_log("read cmdline error");
+		close(fd);
+		return;
+	}
+
+	/* parse address and size, format: boot_ram_log=0x..., 0x...*/
+	if ((s1 = strstr(buffer, "boot_ram_log=")) != NULL) {
+		s2= strsep(&s1, "="); /*0x=...*/
+		if ((s2 = strsep(&s1, ",")) != NULL) {
+			pa_start = strtoll(s2, NULL, 16);
+			if ((s2 = strsep(&s1, " ")) != NULL)
+				data_sz = strtoll(s2, NULL, 16);
+		}
+	}
+	else {
+		err_log("can not get boot_ram_log flag in cmdline");
+		close(fd);
+		return;
+	}
+
+	close(fd);
+
+	debug_log("boot_ram_log base=%#010x, size=%#x", (unsigned int)pa_start, (unsigned int)data_sz);
+
+	/* map memory region from physcial address */
+        if ((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+                err_log("could not open /dev/mem/");
+                return;
+        }
+
+        va = (char*)mmap(0, data_sz, PROT_READ | PROT_WRITE,
+                        MAP_SHARED, fd, pa_start);
+        if (va == MAP_FAILED) {
+                err_log("can not map region!");
+                close(fd);
+                return;
+        }
+
+	sprintf(buffer, "%s/%s/misc/uboot.log",
+			current_log_path,
+			top_logdir);
+
+	if ((fout = fopen(buffer, "w")) == NULL) {
+		err_log("create log file error!");
+		close(fd);
+		return;
+	}
+
+	ret = fwrite(va, 1, data_sz, fout);
+	debug_log("%#x bytes were written to file.", ret);
+
+	if (munmap(va, data_sz) == MAP_FAILED) {
+		err_log("munmap failed!");
+	}
+
+	close(fd);
+
+	fclose(fout);
+
+	return;
+}
+
+/*
  * handle dropbox
  *
  */
@@ -713,7 +707,6 @@ static void handle_dropbox()
 {
 	char cmd[MAX_NAME_LEN];
 	sprintf(cmd, "tar czf %s/%s/dropbox.tgz /data/system/dropbox", current_log_path, top_logdir);
-	err_log("%s", cmd);
 	system(cmd);
 }
 
@@ -724,13 +717,9 @@ static void handle_dropbox()
 static void handle_top_logdir()
 {
 	int ret;
-	char value[PROPERTY_VALUE_MAX];
 
 	if(slog_enable != SLOG_ENABLE)
 		return;
-
-	property_get("slog.step", value, "0");
-	slog_start_step = atoi(value);
 
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)) {
@@ -742,9 +731,10 @@ static void handle_top_logdir()
 		err_log("slog use internal storage");
 		switch(slog_start_step){
 		case 0:
+			handler_last_dir();
 			create_log_dir();
 			capture_snap_for_last(snapshot_log_head);
-			handle_dropbox();
+			handle_uboot_log();
 			property_set("slog.step", "1");
 			break;
 		default:
@@ -754,16 +744,12 @@ static void handle_top_logdir()
 	} else {
 		err_log("slog use external storage");
 		switch(slog_start_step){
-		case 0:
+		case 1:
+			handler_last_dir();
 			create_log_dir();
 			capture_snap_for_last(snapshot_log_head);
+			handle_uboot_log();
 			handle_dropbox();
-			handler_modem_memory_log();
-			property_set("slog.step", "2");
-			break;
-		case 1:
-			create_log_dir();
-			handler_modem_memory_log();
 			property_set("slog.step", "2");
 			break;
 		default:
@@ -784,21 +770,24 @@ static int start_monitor_sdcard_fun()
 			current_log_path = INTERNAL_LOG_PATH;
 		else {
 			/*avoid can't unload SD card*/
-			sleep(TIMEOUT_FOR_SD_MOUNT *2);
+			if(slog_reload_flag == 0)
+				sleep(TIMEOUT_FOR_SD_MOUNT);
 			current_log_path = external_storage;
 		}
 		/* create a sdcard monitor thread */
 		if(slog_enable != SLOG_ENABLE)
 			return 0;
-		pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
+		if(!strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
+			pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
 	} else
 		current_log_path = INTERNAL_LOG_PATH;
 
 	return 0;
+
 }
 
 /*
- * 1.start running slog system(stream,snapshot,inotify)
+ * 1.start running slog system(stream,snapshot)
  * 2.monitoring sdcard status
  */
 static void do_init()
@@ -811,7 +800,6 @@ static void do_init()
 	handle_top_logdir();
 
 	capture_all(snapshot_log_head);
-
 	/* all backend log capture handled by follows threads */
 	start_sub_threads();
 
@@ -840,7 +828,8 @@ void *handle_request(void *arg)
 		sprintf(cmd.content, "OK");
 		send_socket(client_sock, (void *)&cmd, sizeof(cmd));
 		close(client_sock);
-		reload();
+		reload(1);
+		return 0;
 	}
 
 	switch(cmd.type) {
@@ -860,15 +849,14 @@ void *handle_request(void *arg)
 		break;
 	case CTRL_CMD_TYPE_OFF:
 		slog_enable = SLOG_DISABLE;
-		ret = stop_sub_threads();
 		sleep(3);
 		break;
 	case CTRL_CMD_TYPE_QUERY:
-		handle_android_log_sync();
+		log_buffer_flush();
 		ret = gen_config_string(cmd.content);
 		break;
 	case CTRL_CMD_TYPE_SYNC:
-		handle_android_log_sync();
+		log_buffer_flush();
 		ret = 0;
 		break;
 	case CTRL_CMD_TYPE_CLEAR:
@@ -876,14 +864,6 @@ void *handle_request(void *arg)
 		break;
 	case CTRL_CMD_TYPE_DUMP:
 		ret = dump_all_log(cmd.content);
-		break;
-	case CTRL_CMD_TYPE_HOOK_MODEM:
-		ret = mkdir("/data/log", S_IRWXU | S_IRWXG | S_IRWXO);
-		if (-1 == ret && (errno != EEXIST)){
-			err_log("mkdir /data/log failed.");
-		}
-		ret = 0;
-		hook_modem_flag = 1;
 		break;
 	case CTRL_CMD_TYPE_SCREEN:
 		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
@@ -899,7 +879,7 @@ void *handle_request(void *arg)
 			}
 			t = time(NULL);
 			localtime_r(&t, &tm);
-			sprintf(filename, "%s/%s/misc/screenshot_%02d%02d%02d.jpg",
+			sprintf(filename, "%s/%s/misc/screenshot_%02d-%02d-%02d.jpg",
 					current_log_path, top_logdir,
 					tm.tm_hour, tm.tm_min, tm.tm_sec);
 			ret = screen_shot(filename);
@@ -957,22 +937,20 @@ void *command_handler(void *arg)
 			sleep(1);
 			continue;
 		}
-
-		if ( 0 != pthread_create(&thread_pid, NULL, handle_request, (void *) &client_sock) ) {
+		if ( 0 != pthread_create(&thread_pid, NULL, handle_request, (void *) &client_sock) )
 			err_log("sock thread create error");
-		}
 	}
 }
 
 static void sig_handler1(int sig)
 {
-	err_log("get a signal %d.", sig);
+	err_log("get a signal %d, exit(0).", sig);
 	exit(0);
 }
 
 static void sig_handler2(int sig)
 {
-	err_log("get a signal %d.", sig);
+	err_log("get a signal %d, lgnore.", sig);
 	return;
 }
 
@@ -1008,6 +986,20 @@ static void setup_signals()
 	return;
 }
 
+static void handle_slog_property(void)
+{
+	char value[PROPERTY_VALUE_MAX];
+
+	property_get("slog.step", value, "0");
+	slog_start_step = atoi(value);
+
+	property_get("slog.reload", value, "0");
+	slog_reload_flag = atoi(value);
+	property_set("slog.reload", "0");
+
+	err_log("slog.step = %d, slog.reload = %d", slog_start_step, slog_reload_flag);
+}
+
 /*
  * the main function
  */
@@ -1033,11 +1025,14 @@ int main(int argc, char *argv[])
 	/* handle signal */
 	setup_signals();
 
-	/* read and parse config file */
-	parse_config();
-
 	/* even backend capture threads disabled, we also accept user command */
 	pthread_create(&command_tid, NULL, command_handler, NULL);
+
+	/* set slog_start_step form property.*/
+	handle_slog_property();
+
+	/* read and parse config file */
+	parse_config();
 
 	/*find the external storage environment*/
 	init_external_storage();
@@ -1049,8 +1044,10 @@ int main(int argc, char *argv[])
 	do_init();
 
 	while(1) {
-		sleep(10);
+		sleep(5);
+		log_buffer_flush();
 		check_available_volume();
 	}
+
 	return 0;
 }
