@@ -157,7 +157,8 @@ typedef struct {
 	uint32_t                 thumbnail_phy_addr;
 	uint32_t                 pmem_id;
 
-	uint32_t                 buf_id;
+	uint32_t                 buf_id; /*logical buffer id*/
+	uint32_t                 order_buf_id;/*serial buffer id*/
 	int64_t                  timestamp;
 	uint32_t                 buffer_uv_phy_addr;
 	/*face detect*/

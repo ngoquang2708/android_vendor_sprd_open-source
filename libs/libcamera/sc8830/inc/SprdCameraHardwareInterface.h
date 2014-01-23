@@ -407,6 +407,7 @@ private:
 	bool                            mIsRotCapture;
 	uint32_t                        mTimeCoeff;
 	uint32_t                        mPreviewBufferUsage;
+	uint32_t                        mOriginalPreviewBufferUsage;
 	int                             mSetFreqCount;
 
 	/*callback thread*/
