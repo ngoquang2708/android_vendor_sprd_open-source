@@ -110,10 +110,30 @@ static struct platform_device mali_gpu_device =
 
 void mali_power_initialize(struct platform_device *pdev)
 {
+#ifdef CONFIG_OF && CONFIG_COMMON_CLK
+		struct device_node *np;
+		np = of_find_matching_node(NULL, gpu_ids);
+		if(!np) {
+			return -1;
+		}
+		gpu_clock = of_clk_get(np, 2) ;
+		gpu_clock_i = of_clk_get(np, 1) ;
+		clock_256m = of_clk_get(np, 0) ;
+		clock_312m = of_clk_get(np, 3) ;
+		if (!gpu_clock)
+			MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock\n", __FUNCTION__));
+		if (!gpu_clock_i)
+			MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock_i\n", __FUNCTION__));
+		if (!clock_256m)
+			MALI_DEBUG_PRINT(2, ("%s, cant get clock_256m\n", __FUNCTION__));
+		if (!clock_312m)
+			MALI_DEBUG_PRINT(2, ("%s, cant get clock_312m\n", __FUNCTION__));
+#else
 	gpu_clock = clk_get(NULL, "clk_gpu");
 	gpu_clock_i = clk_get(NULL, "clk_gpu_i");
 	clock_256m = clk_get(NULL, "clk_256m");
 	clock_312m = clk_get(NULL, "clk_312m");
+#endif
 
 	gpuinfo_min_freq=52;
 	gpuinfo_max_freq=312;
@@ -137,13 +157,13 @@ void mali_power_initialize(struct platform_device *pdev)
 	if(!gpu_clock_on)
 	{
 		gpu_clock_on = 1;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 		clk_prepare_enable(gpu_clock_i);
 #else
 		clk_enable(gpu_clock_i);
 #endif
 		clk_set_parent(gpu_clock,clock_256m);
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 		clk_prepare_enable(gpu_clock);
 #else
 		clk_enable(gpu_clock);
@@ -236,13 +256,13 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!gpu_clock_on)
 		{
 			gpu_clock_on = 1;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_clock_i);
 #else
 			clk_enable(gpu_clock_i);
 #endif
 			clk_set_parent(gpu_clock,clock_256m);
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_clock);
 #else
 			clk_enable(gpu_clock);
@@ -398,7 +418,7 @@ static void gpu_change_freq_div(void)
 			{
 				case 3:
 					scaling_max_freq=GPU_LEVEL3_MAX;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 					clk_prepare_enable(clock_312m);
 #else
 					clk_enable(clock_312m);
@@ -412,7 +432,7 @@ static void gpu_change_freq_div(void)
 				case 2:
 				default:
 					scaling_max_freq=GPU_LEVEL1_MAX;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 					clk_prepare_enable(clock_256m);
 #else
 					clk_enable(clock_256m);

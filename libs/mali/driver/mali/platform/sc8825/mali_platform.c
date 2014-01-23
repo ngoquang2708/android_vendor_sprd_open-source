@@ -88,7 +88,7 @@ int mali_platform_device_register(void)
 	if(!g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 1;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 		clk_prepare_enable(g_gpu_clock);
 #else
 		clk_enable(g_gpu_clock);
@@ -163,7 +163,7 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 1;
-#ifdef CONFIG_COMMON_CLOCK
+#ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(g_gpu_clock);
 #else
 			clk_enable(g_gpu_clock);
