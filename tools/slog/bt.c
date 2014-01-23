@@ -16,12 +16,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <sys/stat.h>
 
 #include "slog.h"
 
-#if 1
+#ifdef ANDROID_VERSION_442
 
-#define BT_CONF_PATH "/etc/bluetooth/bt_stack.conf"
+#define BT_CONF_PATH "/data/misc/bluedroid/bt_stack.conf"
 #define BT_LOG_STATUS "BtSnoopLogOutput="
 #define BT_LOG_PATH "BtSnoopFileName="
 
@@ -34,17 +38,19 @@ void operate_bt_status(char *status, char* path)
 	fp = fopen(BT_CONF_PATH, "r+");
 	if(fp == NULL) {
 		err_log("open %s failed!", BT_CONF_PATH);
+		return;
 	}
 
+	memset(buffer, 0, MAX_LINE_LEN);
 	while (fgets(line, MAX_NAME_LEN, fp)) {
 
 		if(!strncmp(BT_LOG_STATUS, line, strlen(BT_LOG_STATUS))) {
-			sprintf(line, "%s%s", BT_LOG_STATUS, status);
+			sprintf(line, "%s%s\n", BT_LOG_STATUS, status);
 		}
 
-		if(!strncmp(BT_LOG_STATUS, line, strlen(BT_LOG_PATH))) {
+		if(!strncmp(BT_LOG_PATH, line, strlen(BT_LOG_PATH))) {
 			if(path != NULL)
-				sprintf(line, "%s%s", BT_LOG_PATH, path);
+				sprintf(line, "%s%s\n", BT_LOG_PATH, path);
 		}
 
 		len += sprintf(buffer + len, "%s", line);
@@ -52,9 +58,10 @@ void operate_bt_status(char *status, char* path)
 
 	fclose(fp);
 
-	fp = fopen(BT_CONF_PATH, "r+");
+	fp = fopen(BT_CONF_PATH, "w");
 	if(fp == NULL) {
 		err_log("open %s failed!", BT_CONF_PATH);
+		return;
 	}
 
 	fprintf(fp, "%s", buffer);
@@ -78,8 +85,10 @@ void *bt_log_handler(void *arg)
 		info = info->next;
 	}
 
-	if( !bt)
+	if( !bt) {
+		operate_bt_status("false", NULL);
 		return NULL;
+	}
 
 	if( !strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
 		bt->state = SLOG_STATE_OFF;
@@ -88,7 +97,18 @@ void *bt_log_handler(void *arg)
 	}
 
 	sprintf(buffer, "%s/%s/%s/", current_log_path, top_logdir, bt->log_path);
-	operate_bt_status("ture", buffer);
+	ret = mkdir(buffer, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)){
+		err_log("mkdir %s failed.", buffer);
+		exit(0);
+	}
+
+	operate_bt_status("true", buffer);
+	bt_log_handler_started = 1;
+	while(slog_enable == SLOG_ENABLE)
+		sleep(1);
+	bt_log_handler_started = 0;
+	operate_bt_status("false", NULL);
 
 	return NULL;
 }

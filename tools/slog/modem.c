@@ -78,9 +78,13 @@ static void handle_dump_shark_sipc_info()
 	cp_file(SBLOCK, buffer);
 }
 
-
+#ifdef ANDROID_VERSION_442
 #define MODEM_W_DEVICE_PROPERTY "persist.modem.w.enable"
 #define MODEM_TD_DEVICE_PROPERTY "persist.modem.t.enable"
+#else
+#define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
+#define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
+#endif
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
 
 #define MODEM_W_DIAG_PROPERTY "ro.modem.w.diag"
@@ -229,8 +233,7 @@ void handle_socket_modem(char *buffer)
 		if(reset == 0) {
 			if (handle_correspond_modem(buffer) == 1) {
 				modem_assert_flag = 1;
-				if(dev_shark_flag == 1)
-					handle_dump_shark_sipc_info();
+				handle_dump_shark_sipc_info();
 			}
 		} else {
 			if (handle_correspond_modem(buffer) == 1)
@@ -243,9 +246,7 @@ void handle_socket_modem(char *buffer)
 	} else if(strstr(buffer, "Modem Blocked") != NULL) {
 		if (handle_correspond_modem(buffer) == 1) {
 			modem_assert_flag = 1;
-			/* for shark dump sipc info */
-			if(dev_shark_flag == 1)
-				handle_dump_shark_sipc_info();
+			handle_dump_shark_sipc_info();
 		}
 	}
 
@@ -269,8 +270,7 @@ void handle_socket_wcn(char *buffer)
 		if(dump != 0) {
 			if (handle_correspond_modem(buffer) == 1) {
 				modem_assert_flag = 1;
-				if(dev_shark_flag == 1)
-					handle_dump_shark_sipc_info();
+				handle_dump_shark_sipc_info();
 			}
 		} 
 		if(reset != 0){
@@ -408,7 +408,7 @@ write_cmd:
 
 		if( 0 == ret ){
 			/* for shark, when CP can not send integral log to AP, slog will use another way to save CP memory*/
-			if( (receive_from_cp < 10 ) && (dev_shark_flag == 1) )
+			if( receive_from_cp < 10 )
 				handle_dump_modem_memory_from_proc(info);
 			err_log("select timeout ->save finsh");
 			finish = 1;
@@ -441,12 +441,26 @@ void *modem_log_handler(void *arg)
 {
 	struct slog_info *info;
 	char cp_buffer[BUFFER_SIZE];
-	char buffer[MAX_NAME_LEN];
 	int ret = 0, totalLen = 0, max = 0;
 	fd_set readset_tmp, readset;
 	int result;
 	struct timeval timeout;
+#ifdef LOW_POWER_MODE
+#define MODEM_CIRCULAR_SIZE		(2 * 1024 * 1024) /* 2 MB */
+	time_t t;
+	struct tm tm;
+	char buffer[MAX_NAME_LEN];
+	FILE *data_fp;
+	unsigned char *ring_buffer_start;
+	unsigned char *ring_buffer_head;
+	unsigned int ring_buffer_full = 0;
 
+	if(slog_enable == SLOG_LOW_POWER) {
+		ring_buffer_start = malloc(MODEM_CIRCULAR_SIZE);
+		ring_buffer_head = ring_buffer_start;
+		memset(ring_buffer_start, 0, MODEM_CIRCULAR_SIZE);
+	}
+#endif
 	if(slog_enable == SLOG_DISABLE)
 		return NULL;
 
@@ -461,6 +475,9 @@ void *modem_log_handler(void *arg)
 		if (!strncmp(info->name, "cp0", 3)) {
 			handle_init_modem_state(info);
 			if(info->state == SLOG_STATE_ON) {
+#ifdef LOW_POWER_MODE
+				if(slog_enable != SLOG_LOW_POWER)
+#endif
 				info->fp_out = gen_outfd(info);
 				handle_open_modem_device(info);
 			} else {
@@ -470,6 +487,9 @@ void *modem_log_handler(void *arg)
 		} else if (!strncmp(info->name, "cp1", 3)) {
 			handle_init_modem_state(info);
 			if(info->state == SLOG_STATE_ON) {
+#ifdef LOW_POWER_MODE
+				if(slog_enable != SLOG_LOW_POWER)
+#endif
 				info->fp_out = gen_outfd(info);
 				handle_open_modem_device(info);
 			} else {
@@ -479,6 +499,9 @@ void *modem_log_handler(void *arg)
 		} else if (!strncmp(info->name, "cp2", 3)) {
 			handle_init_modem_state(info);
 			if(info->state == SLOG_STATE_ON) {
+#ifdef LOW_POWER_MODE
+				if(slog_enable != SLOG_LOW_POWER)
+#endif
 				info->fp_out = gen_outfd(info);
 				handle_open_modem_device(info);
 			} else {
@@ -502,10 +525,13 @@ void *modem_log_handler(void *arg)
 		return NULL;
 	}
 
+#ifdef LOW_POWER_MODE
+	if(slog_enable != SLOG_LOW_POWER)
+#endif
 	pthread_create(&modem_state_monitor_tid, NULL, handle_modem_state_monitor, NULL);
 
 	modem_log_handler_started = 1;
-	while(slog_enable == SLOG_ENABLE) {
+	while(slog_enable != SLOG_DISABLE) {
 
 		if(modem_assert_flag == 1) {
 			err_log("Modem %s Assert!", modem_info->name);
@@ -579,6 +605,44 @@ void *modem_log_handler(void *arg)
 					info = info->next;
 					continue;
 				}
+#ifdef LOW_POWER_MODE
+				if(slog_enable == SLOG_LOW_POWER && !strncmp(info->name, "cp0", 3)) {
+					if((ring_buffer_head + ret) < (ring_buffer_start + MODEM_CIRCULAR_SIZE)) {
+						memcpy(ring_buffer_head, cp_buffer, ret);
+						ring_buffer_head += ret;
+					} else {
+						memset(ring_buffer_head, 0, ring_buffer_start + MODEM_CIRCULAR_SIZE - ring_buffer_head);
+						ring_buffer_head = ring_buffer_start;
+						memcpy(ring_buffer_head, cp_buffer, ret);
+						ring_buffer_head += ret;
+						ring_buffer_full = 1;
+					}
+
+					if(hook_modem_flag == 1) {
+						hook_modem_flag = 0;
+						/* add timestamp */
+						t = time(NULL);
+						localtime_r(&t, &tm);
+						sprintf(buffer, "%s/%s_%02d-%02d-%02d.log", HOOK_MODEM_TARGET_DIR,
+							info->name, tm.tm_hour, tm.tm_min, tm.tm_sec);
+						data_fp = fopen(buffer, "a+b");
+						if(data_fp == NULL) {
+							err_log("open cp log file failed!");
+							info = info->next;
+							continue;
+						}
+						if(ring_buffer_full == 1) {
+							fwrite(ring_buffer_head, ring_buffer_start + MODEM_CIRCULAR_SIZE - ring_buffer_head, 1, data_fp);
+							fwrite(ring_buffer_start, ring_buffer_head - ring_buffer_start, 1, data_fp);
+						} else
+							fwrite(ring_buffer_start, ring_buffer_head - ring_buffer_start, 1, data_fp);
+						fclose(data_fp);
+					}
+
+					info = info->next;
+					continue;
+				}
+#endif
 				totalLen = fwrite(cp_buffer, ret, 1, info->fp_out);
 				if ( totalLen != 1 ) {
 					fclose(info->fp_out);
@@ -600,5 +664,3 @@ void *modem_log_handler(void *arg)
 	return NULL;
 
 }
-
-

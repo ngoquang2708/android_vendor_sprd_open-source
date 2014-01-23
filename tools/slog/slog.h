@@ -23,6 +23,9 @@
 #include <pthread.h>
 #include <utils/Log.h>
 
+#define ANDROID_VERSION_442
+#define LOW_POWER_MODE
+
 /* "type" field */
 #define SLOG_TYPE_STREAM	0x1
 #define SLOG_TYPE_MISC		(0x1 << 1)
@@ -34,6 +37,10 @@
 #define SLOG_STATE_OFF 1
 
 /*"slog state" field*/
+#ifdef LOW_POWER_MODE
+#define SLOG_LOW_POWER 2
+#endif
+
 #define SLOG_ENABLE 1
 #define SLOG_DISABLE 0
 
@@ -53,6 +60,9 @@ enum {
 	CTRL_CMD_TYPE_DUMP,
 	CTRL_CMD_TYPE_SCREEN,
 	CTRL_CMD_TYPE_SYNC,
+#ifdef LOW_POWER_MODE
+	CTRL_CMD_TYPE_HOOK_MODEM,
+#endif
 	CTRL_CMD_TYPE_RSP
 };
 
@@ -155,7 +165,10 @@ extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_t
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
-extern int dev_shark_flag;
+#ifdef LOW_POWER_MODE
+extern int hook_modem_flag;
+#define HOOK_MODEM_TARGET_DIR	"/data/log"
+#endif
 
 /* function */
 extern void *stream_log_handler(void *arg);

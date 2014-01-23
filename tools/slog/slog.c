@@ -45,9 +45,11 @@ int tcp_log_handler_started = 0;
 int kmemleak_handler_started = 0;
 int modem_log_handler_started = 0;
 
-int internal_log_size = 5 * 1024; /*M*/
+#ifdef LOW_POWER_MODE
+int hook_modem_flag = 0;
+#endif
 
-int dev_shark_flag = 0;
+int internal_log_size = 5 * 1024; /*M*/
 
 char *config_log_path = INTERNAL_LOG_PATH;
 char *current_log_path;
@@ -61,13 +63,17 @@ struct slog_info *notify_log_head, *misc_log;
 pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid,
 kmemleak_tid;
 
+#ifdef ANDROID_VERSION_442
 extern void operate_bt_status(char *status, char* path);
+#endif
 static int reload(int flush)
 {
 	err_log("slog reload.");
 
+#ifdef ANDROID_VERSION_442
 	if(bt_log_handler_started == 1 )
 		operate_bt_status("false", NULL);
+#endif
 	if(flush == 1)
 		log_buffer_flush();
 	property_set("slog.reload", "1");
@@ -357,6 +363,16 @@ static void use_ori_log_dir()
 	return;
 }
 
+#ifdef LOW_POWER_MODE
+static void handle_low_power()
+{
+	if(slog_enable != SLOG_LOW_POWER)
+		return;
+	if(!modem_log_handler_started)
+		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+}
+#endif
+
 static int start_sub_threads()
 {
 	if(slog_enable != SLOG_ENABLE)
@@ -386,19 +402,14 @@ static void init_external_storage()
 	int type;
 	char value[PROPERTY_VALUE_MAX];
 
-	/* Add for double t-flash solution for Kitkat */
-	property_get("ro.build.version.sdk", value, "1");
-	type = atoi(value);
-	if (type >= 19){
-		p = getenv("SECONDARY_STORAGE");
-		if (p){
-			strcpy(external_path, p);
-			sprintf(external_storage, "%s/slog", p);
-			debug_log("the external storage : %s", external_storage);
-			return;
-		}
+#ifdef ANDROID_VERSION_442
+	p = getenv("SECONDARY_STORAGE");
+	if (p){
+		strcpy(external_path, p);
+		sprintf(external_storage, "%s/slog", p);
+		return;
 	}
-
+#endif
 	p = getenv("SECOND_STORAGE_TYPE");
 	if(p){
 		type = atoi(p);
@@ -459,25 +470,22 @@ static int sdcard_mounted()
 {
 	FILE *str;
 	char buffer[MAX_LINE_LEN];
+
+#ifdef ANDROID_VERSION_442
 	char value[PROPERTY_VALUE_MAX];
-	int mount = 0;
 	int type;
 
-	// Assume SDK Version, we don't want effect other branch,
-	// and easier for porting. There's too much solutions
-	property_get("ro.build.version.sdk", value, "1");
+	property_get("persist.storage.type", value, "-1");
 	type = atoi(value);
- 	if (type >= 19){
-		property_get("persist.storage.type", value, "-1");
-		type = atoi(value);
-		if (type == 1) { // STORAGE_TYPE_EMMC_EXTERNAL = 1
-			property_get("init.svc.fuse_sdcard0", value, ""); // 0 -> SDCard, 1 -> Emulated
-			if( !strncmp(value, "running", 7) )
-				return 1;
-			else
-				return 0;
-		}
+	if (type == 1) {
+		property_get("init.svc.fuse_sdcard0", value, "");
+		if( !strncmp(value, "running", 7) )
+			return 1;
+		else
+			return 0;
 	}
+
+#endif
 	str = fopen("/proc/mounts", "r");
 	if(str == NULL) {
 		err_log("can't open '/proc/mounts'");
@@ -533,8 +541,10 @@ int clear_all_log()
 {
 	char cmd[MAX_NAME_LEN];
 
+#ifdef ANDROID_VERSION_442
 	if(bt_log_handler_started == 1 )
 		operate_bt_status("false", NULL);
+#endif
 	slog_enable = SLOG_DISABLE;
 	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
 	system(cmd);
@@ -865,6 +875,16 @@ void *handle_request(void *arg)
 	case CTRL_CMD_TYPE_DUMP:
 		ret = dump_all_log(cmd.content);
 		break;
+#ifdef LOW_POWER_MODE
+	case CTRL_CMD_TYPE_HOOK_MODEM:
+		ret = mkdir(HOOK_MODEM_TARGET_DIR, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (-1 == ret && (errno != EEXIST)){
+			err_log("mkdir /data/log failed.");
+		}
+		ret = 0;
+		hook_modem_flag = 1;
+		break;
+#endif
 	case CTRL_CMD_TYPE_SCREEN:
 		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
 			break;
@@ -973,7 +993,7 @@ static void setup_signals()
 
 	SIGNAL(SIGTERM, sig_handler1);
 	SIGNAL(SIGBUS, sig_handler1);
-	SIGNAL(SIGSEGV, sig_handler1);
+//	SIGNAL(SIGSEGV, sig_handler1);
 	SIGNAL(SIGHUP, sig_handler1);
 	SIGNAL(SIGQUIT, sig_handler1);
 	SIGNAL(SIGABRT, sig_handler1);
@@ -1005,19 +1025,7 @@ static void handle_slog_property(void)
  */
 int main(int argc, char *argv[])
 {
-	int opt;
-
-	err_log("Slog begin to work.");
-	/* for shark opt:t*/
-	while ( -1 != (opt = getopt(argc, argv, "t"))) {
-		switch (opt) {
-			case 't':
-				dev_shark_flag = 1;
-				break;
-			default:
-				break;
-		}
-	}
+	err_log("slog begin to work.");
 
 	/* sets slog process's file mode creation mask */
 	umask(0);
@@ -1042,7 +1050,9 @@ int main(int argc, char *argv[])
 
 	/* backend capture threads started here */
 	do_init();
-
+#ifdef LOW_POWER_MODE
+	handle_low_power();
+#endif
 	while(1) {
 		sleep(5);
 		log_buffer_flush();

@@ -474,6 +474,10 @@ int parse_config()
 			slog_enable = SLOG_ENABLE;
 		if(!strncmp("disable", buffer, 7))
 			slog_enable = SLOG_DISABLE;
+#ifdef LOW_POWER_MODE
+		if(!strncmp("low_power", buffer, 7))
+			slog_enable = SLOG_LOW_POWER;
+#endif
 		if(!strncmp("var", buffer, 3))
 			ret = parse_3_entries(buffer);
 		else if(!strncmp("snap", buffer, 4)) 

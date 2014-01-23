@@ -21,15 +21,23 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <log/logger.h>
-#include <log/logd.h>
-#include <log/logprint.h>
-#include <log/event_tag_map.h>
 #include <cutils/properties.h>
 #include <cutils/sockets.h>
 #include "private/android_filesystem_config.h"
 
 #include "slog.h"
+
+#ifdef ANDROID_VERSION_442
+#include <log/logger.h>
+#include <log/logd.h>
+#include <log/logprint.h>
+#include <log/event_tag_map.h>
+#else
+#include <cutils/logger.h>
+#include <cutils/logd.h>
+#include <cutils/logprint.h>
+#include <cutils/event_tag_map.h>
+#endif
 
 /*
  *
