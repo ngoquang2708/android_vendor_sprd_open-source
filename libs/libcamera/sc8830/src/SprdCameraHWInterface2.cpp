@@ -85,7 +85,6 @@ int SprdCameraHWInterface2::ConstructProduceReq(camera_metadata_t **request, boo
 	ADD_OR_SIZE(ANDROID_REQUEST_FRAME_COUNT, &frameCount1, 1);
 
 	/** android.control */
-
 	static const uint8_t controlIntent1 = ANDROID_CONTROL_CAPTURE_INTENT_PREVIEW;
 	ADD_OR_SIZE(ANDROID_CONTROL_CAPTURE_INTENT, &controlIntent1, 1);
 
@@ -122,7 +121,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 {
     int res = 0;
 
-     s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
+    s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
     memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
 	memset(mMiscHeapArray, 0, sizeof(mMiscHeapArray));
@@ -214,25 +213,25 @@ void SprdCameraHWInterface2::release()
 {
     int i = 0, res;
 	Sprd_camera_state  camStatus = (Sprd_camera_state)0;
-    HAL_LOGD("(HAL2::release): ENTER");
+    HAL_LOGD("ENTER");
 
 	if (m_RequestQueueThread != NULL) {
         m_RequestQueueThread->release();
     }
 	if (m_RequestQueueThread != NULL) {
-        HAL_LOGD("(HAL2::release): START Waiting for m_RequestQueueThread termination");
+        HAL_LOGD("START Waiting for m_RequestQueueThread termination");
         while (!m_RequestQueueThread->IsTerminated())
             usleep(SIG_WAITING_TICK);
-        HAL_LOGD("(HAL2::release): END   Waiting for m_RequestQueueThread termination");
+        HAL_LOGD("END Waiting for m_RequestQueueThread termination");
         m_RequestQueueThread = NULL;
     }
 
 	camStatus = getPreviewState();
 	if (camStatus != SPRD_IDLE) {
-        HAL_LOGE("(HAL2::release) preview sta=%d",camStatus);
-		if(camStatus == SPRD_PREVIEW_IN_PROGRESS) {
+        HAL_LOGE("preview sta=%d",camStatus);
+		if (camStatus == SPRD_PREVIEW_IN_PROGRESS) {
 	        res = releaseStream(STREAM_ID_PREVIEW);
-			if(res != CAMERA_SUCCESS) {
+			if (res != CAMERA_SUCCESS) {
 				HAL_LOGE("releaseStream error.");
 			}
 		}
@@ -241,11 +240,11 @@ void SprdCameraHWInterface2::release()
 		freeCaptureMem();
 		memset(&m_subStreams[STREAM_ID_JPEG], 0, sizeof(substream_parameters_t));
 		if (m_Stream[STREAM_ID_CAPTURE - 1]->detachSubStream(STREAM_ID_JPEG) != NO_ERROR) {
-			HAL_LOGE("(%s): substream detach failed.", __FUNCTION__);
+			HAL_LOGE(" substream detach failed.");
 		}
-		if(m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream > 1) {
-		   HAL_LOGE("(%s): substream detach not over. num(%d)",
-					__FUNCTION__, m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream);
+		if (m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream > 1) {
+		   HAL_LOGE("substream detach not over. num(%d)",
+					m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream);
 		}
 		m_Stream[STREAM_ID_CAPTURE - 1] = NULL;
     }
@@ -259,7 +258,7 @@ void SprdCameraHWInterface2::release()
 	HAL_LOGD("stopping camera.");
 	if (CAMERA_SUCCESS != camera_stop(camera_cb, this)) {
 		setCameraState(SPRD_ERROR, STATE_CAMERA);
-		HAL_LOGE("release: fail to camera_stop().");
+		HAL_LOGE("fail to camera_stop().");
 		return;
 	}
 
@@ -272,17 +271,18 @@ void SprdCameraHWInterface2::release()
 		free(g_Camera2[m_CameraId]);
 		g_Camera2[m_CameraId] = NULL;
 	}
-    HAL_LOGD("(HAL2::release): EXIT");
+    HAL_LOGD("EXIT");
 }
 int SprdCameraHWInterface2::setRequestQueueSrcOps(const camera2_request_queue_src_ops_t *request_src_ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     if ((NULL != request_src_ops) && (NULL != request_src_ops->dequeue_request)
             && (NULL != request_src_ops->free_request) && (NULL != request_src_ops->request_count)) {
         m_requestQueueOps = (camera2_request_queue_src_ops_t*)request_src_ops;
+		HAL_LOGV("end");
         return 0;
     } else {
-        HAL_LOGE("DEBUG(%s):setRequestQueueSrcOps : NULL arguments", __FUNCTION__);
+        HAL_LOGE("NULL arguments");
         return 1;
     }
 }
@@ -296,7 +296,7 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 	Mutex::Autolock lock(m_requestMutex);
 
     if ((NULL == m_frameQueueOps)|| (NULL == m_requestQueueOps)) {
-        HAL_LOGE("DEBUG(%s):queue ops NULL. ignoring request", __FUNCTION__);
+        HAL_LOGE("queue ops NULL.ignoring request");
         return 0;
     }
     reqNum = m_ReqQueue.size();
@@ -305,22 +305,31 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 		reqNum++;
 	}
     if (reqNum >= MAX_REQUEST_NUM) {
-		HAL_LOGD("DEBUG(%s):queue is full(%d). ignoring request", __FUNCTION__, reqNum);
+		HAL_LOGD("queue is full(%d). ignoring request", reqNum);
 		return 0;
 	} else {
 		m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
 		if (!curReq) {
-            HAL_LOGD("%s req is NULL",__FUNCTION__);
+            HAL_LOGD("req is NULL");
 			return 0;
 	    }
 	    reqNum++;
-	    HAL_LOGD("notifyRequestQueueNotEmpty currep=%p reqnum=%d",curReq,reqNum);
+	    HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
         m_ReqQueue.push_back(curReq);
 		while (curReq) {
 		   m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
+		   if (curReq) {
+				if (reqNum >= MAX_REQUEST_NUM) {
+					HAL_LOGD("request queue is full,discard this request.");
+				} else {
+					reqNum++;
+					m_ReqQueue.push_back(curReq);
+					HAL_LOGD("push a request to queue.");
+				}
+		   }
 		   HAL_LOGD("%s Srv req %p",__FUNCTION__,curReq);
 		}
-		HAL_LOGD("notifyRequestQueueNotEmpty srv clear flag processing=%d",m_reqIsProcess);
+		HAL_LOGD("srv clear flag processing=%d",m_reqIsProcess);
 		if (!m_reqIsProcess) {
             m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY);
 		}
@@ -330,13 +339,14 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 
 int SprdCameraHWInterface2::setFrameQueueDstOps(const camera2_frame_queue_dst_ops_t *frame_dst_ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     if ((NULL != frame_dst_ops) && (NULL != frame_dst_ops->dequeue_frame)
             && (NULL != frame_dst_ops->cancel_frame) && (NULL !=frame_dst_ops->enqueue_frame)) {
         m_frameQueueOps = (camera2_frame_queue_dst_ops_t *)frame_dst_ops;
+    HAL_LOGV("end");
         return 0;
     } else {
-        HAL_LOGE("DEBUG(%s):setFrameQueueDstOps : NULL arguments", __FUNCTION__);
+        HAL_LOGE("NULL arguments");
         return 1;
     }
 }
@@ -367,7 +377,7 @@ static int initCamera2Info(int cameraId)
 {
     if (cameraId == 0) {
 	    if (!g_Camera2[0]) {
-            HAL_LOGE("%s back not alloc!",__FUNCTION__);
+            HAL_LOGE("back not alloc!");
 			return 1;
 		}
 
@@ -704,7 +714,7 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
 
 int SprdCameraHWInterface2::ConstructDefaultRequest(int request_template, camera_metadata_t **request)
 {
-    HAL_LOGD("DEBUG(%s): making template (%d) ", __FUNCTION__, request_template);
+    HAL_LOGD("making template (%d) ", request_template);
 
     if (request == NULL) return BAD_VALUE;
     if (request_template < 0 || request_template >= CAMERA2_TEMPLATE_COUNT) {
@@ -756,7 +766,7 @@ bool SprdCameraHWInterface2::isSupportedJpegResolution(SprdCamera2Info *camHal, 
 
 status_t SprdCameraHWInterface2::Stream::attachSubStream(int stream_id, int priority)
 {
-    HAL_LOGV("(%s): substream_id(%d)", __FUNCTION__, stream_id);
+    HAL_LOGV("substream_id(%d)", stream_id);
     int index;
     bool found = false;
 
@@ -768,7 +778,7 @@ status_t SprdCameraHWInterface2::Stream::attachSubStream(int stream_id, int prio
     }
     if (!found)
     {
-        HAL_LOGD("(%s): No idle index (%d)", __FUNCTION__, index);
+        HAL_LOGD("No idle index (%d)", index);
         return NO_MEMORY;
     }
     m_attachedSubStreams[index].streamId = stream_id;
@@ -779,7 +789,7 @@ status_t SprdCameraHWInterface2::Stream::attachSubStream(int stream_id, int prio
 
 status_t SprdCameraHWInterface2::Stream::detachSubStream(int stream_id)
 {
-    HAL_LOGV("(%s): substream_id(%d)", __FUNCTION__, stream_id);
+    HAL_LOGV("substream_id(%d)", stream_id);
     int index;
     bool found = false;
 
@@ -829,7 +839,7 @@ int SprdCameraHWInterface2::Callback_AllocCapturePmem(void* handle, unsigned int
 	camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_size = size;
 	camera->mMiscHeapArray[camera->mMiscHeapNum++]->ion_heap = pHeapIon;
 
-	HAL_LOGD("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	HAL_LOGD("mMiscHeapNum = %d", camera->mMiscHeapNum);
 
 	return 0;
 }
@@ -841,13 +851,13 @@ int SprdCameraHWInterface2::Callback_FreeCapturePmem(void* handle)
 		return -1;
 	}
 
-	HAL_LOGD("Callback_FreePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	HAL_LOGD("mMiscHeapNum = %d", camera->mMiscHeapNum);
 
 	uint32_t i;
 	for (i=0; i<camera->mMiscHeapNum; i++) {
 		MemoryHeapIon *pHeapIon = camera->mMiscHeapArray[i]->ion_heap;
 		if (pHeapIon != NULL) {
-			if(s_mem_method != 0){
+			if (s_mem_method != 0){
 				pHeapIon->free_mm_iova(camera->mMiscHeapArray[i]->phys_addr, camera->mMiscHeapArray[i]->phys_size);
 			}
 			delete pHeapIon;
@@ -867,19 +877,19 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
 	uint8_t tmp = 0;
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	if(NULL == memory) {
-		HAL_LOGE("wxz: Fail to GetCachePmem, memory is NULL.");
+		HAL_LOGE("Fail to GetCachePmem, memory is NULL.");
 		return NULL;
 	}
 	memset(memory, 0, sizeof(*memory));
-		if(s_mem_method == 0)
-			pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);//ION_HEAP_CARVEOUT_MASK
-		else
-			pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);//ION_HEAP_SYSTEM_MASK
-	    if (pHeapIon == NULL) {
-	        HAL_LOGE("Failed to alloc cap pmem (%d)", acc);
-	        goto getpmem_end;
-	    }
-	if(s_mem_method == 0){
+	if(s_mem_method == 0)
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);//ION_HEAP_CARVEOUT_MASK
+	else
+		pHeapIon = new MemoryHeapIon("/dev/ion", acc ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);//ION_HEAP_SYSTEM_MASK
+    if (pHeapIon == NULL) {
+        HAL_LOGE("Failed to alloc cap pmem (%d)", acc);
+        goto getpmem_end;
+    }
+	if (s_mem_method == 0){
 		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
 	} else {
 		pHeapIon->get_mm_iova(&paddr, &psize);
@@ -892,7 +902,7 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
        HAL_LOGE("Failed to alloc cap virtadd");
        goto getpmem_end;
     }
-    HAL_LOGD("GetCachePmem: phys_addr 0x%x, data: %p,phys_size: 0x%x.",
+    HAL_LOGD("phys_addr 0x%x, data: %p,phys_size: 0x%x.",
                             memory->phys_addr,memory->data, memory->phys_size);
 getpmem_end:
 	return memory;
@@ -903,7 +913,7 @@ bool SprdCameraHWInterface2::allocateCaptureMem(void)
 	uint32_t buffer_size = 0;
 
 	buffer_size = camera_get_size_align_page(mRawHeapSize);
-	HAL_LOGD("%s Heapsize=%d align size = %d . count %d ",__FUNCTION__,mRawHeapSize, buffer_size, kRawBufferCount);
+	HAL_LOGD("Heapsize=%d align size = %d . count %d ",mRawHeapSize, buffer_size, kRawBufferCount);
 
 	mRawHeap = GetCachePmem(buffer_size, kRawBufferCount);
 	if (NULL == mRawHeap) {
@@ -927,7 +937,7 @@ allocate_capture_mem_failed:
 void SprdCameraHWInterface2::freeCaptureMem()
 {
     uint32_t i;
-	HAL_LOGD("%s,mRawHeap %p",__FUNCTION__,mRawHeap);
+	HAL_LOGD("mRawHeap %p",mRawHeap);
 	if (mRawHeap) {
 		if(mRawHeap->ion_heap != NULL) {
 			//mRawHeap->ion_heap.clear();
@@ -946,7 +956,7 @@ void SprdCameraHWInterface2::freeCaptureMem()
         MemoryHeapIon *pHeapIon = mMiscHeapArray[i]->ion_heap;
         if (pHeapIon != NULL) {
             //pHeapIon.clear();
-            if(s_mem_method != 0){
+            if (s_mem_method != 0) {
 				pHeapIon->free_mm_iova(mMiscHeapArray[i]->phys_addr, mMiscHeapArray[i]->phys_size);
 			}
 			delete pHeapIon;
@@ -976,7 +986,7 @@ bool SprdCameraHWInterface2::allocatePreviewMem()
 			goto allocate_preview_mem_failed;
 		}
 		if (NULL == mPreviewHeapArray[i]->data) {
-			HAL_LOGE("%s: Fail to GetPmem index=%d virtadd",__FUNCTION__,i);
+			HAL_LOGE("Fail to GetPmem index=%d virtadd",i);
 			goto allocate_preview_mem_failed;
 		}
 		mPreviewHeapArray_phy[i] = (int32_t)(mPreviewHeapArray[i]->phys_addr);
@@ -992,7 +1002,7 @@ allocate_preview_mem_failed:
 void SprdCameraHWInterface2::freePreviewMem(int num)
 {
 	int i = 0;
-	HAL_LOGD("%s: bufnum=%d",__FUNCTION__,num);
+	HAL_LOGD("bufnum=%d",num);
 	for(;i < num; i++) {
 		if (mPreviewHeapArray[i]) {
 			if(mPreviewHeapArray[i]->ion_heap != NULL) {
@@ -1013,7 +1023,7 @@ void SprdCameraHWInterface2::freePreviewMem(int num)
 int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int format, const camera2_stream_ops_t *stream_ops,
                                     uint32_t *stream_id, uint32_t *format_actual, uint32_t *usage, uint32_t *max_buffers)
 {
-    HAL_LOGD("(%s): stream width(%d) height(%d) format(%x)", __FUNCTION__,  width, height, format);
+    HAL_LOGD("stream width(%d) height(%d) format(%x)", width, height, format);
     stream_parameters_t *newParameters;
     substream_parameters_t *subParameters;
     status_t res;
@@ -1026,7 +1036,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
 
             m_Stream[STREAM_ID_PREVIEW - 1]  = new Stream(this, *stream_id);
             if (m_Stream[STREAM_ID_PREVIEW - 1] == NULL) {
-                HAL_LOGD("(%s): new preview stream fail due to no mem", __FUNCTION__);
+                HAL_LOGD("new preview stream fail due to no mem");
 				return 1;
 			}
 
@@ -1053,15 +1063,15 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
             m_Stream[STREAM_ID_PREVIEW - 1]->m_numRegisteredStream = 1;//parent stream total the num of stream
             #ifdef PREVIEW_USE_DCAM_BUF
             if(!allocatePreviewMem()) {
-				HAL_LOGE("(%s): hal alloc preview mem fail!", __FUNCTION__);
+				HAL_LOGE("hal alloc preview mem fail!");
 				return 1;
             }
 			#endif
-            HAL_LOGD("(%s): m_numRegisteredStream preview format=0x%x", __FUNCTION__, *format_actual);
+            HAL_LOGD("m_numRegisteredStream preview format=0x%x", *format_actual);
             return 0;
 		} else {
 			*stream_id = STREAM_ID_RECORD;
-			HAL_LOGD("DEBUG(%s): stream_id (%d) stream_ops(0x%x)", __FUNCTION__, *stream_id,(uint32_t)stream_ops);
+			HAL_LOGD("stream_id (%d) stream_ops(0x%x)", *stream_id,(uint32_t)stream_ops);
             subParameters = &m_subStreams[STREAM_ID_RECORD];
             memset(subParameters, 0, sizeof(substream_parameters_t));
             if (m_Stream[STREAM_ID_PREVIEW - 1] == NULL) {//preview parent stream
@@ -1088,13 +1098,11 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
             HAL_LOGD("subParameters->streamOps 0x%x",(uint32_t)subParameters->streamOps);
             res = m_Stream[STREAM_ID_PREVIEW - 1]->attachSubStream(STREAM_ID_RECORD, 20);
             if (res != NO_ERROR) {
-                HAL_LOGE("(%s): substream attach failed. res(%d)", __FUNCTION__, res);
+                HAL_LOGE("substream attach failed. res(%d)", res);
                 return 1;
             }
-
             mRecordingTimeOffset = systemTime(SYSTEM_TIME_REALTIME) - systemTime();
-
-            HAL_LOGD("(%s): Enabling Record", __FUNCTION__);
+            HAL_LOGD("Enabling Record");
             return 0;
 		}
     }
@@ -1124,10 +1132,10 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
 
         res = m_Stream[STREAM_ID_PREVIEW - 1]->attachSubStream(STREAM_ID_PRVCB, 20);
         if (res != NO_ERROR) {
-            HAL_LOGE("(%s): substream attach failed. res(%d)", __FUNCTION__, res);
+            HAL_LOGE("substream attach failed. res(%d)", res);
             return 1;
         }
-        HAL_LOGD("(%s): Enabling previewcb m_numRegisteredStream = %d", __FUNCTION__, m_Stream[STREAM_ID_PREVIEW - 1]->m_numRegisteredStream);
+        HAL_LOGD("Enabling previewcb m_numRegisteredStream = %d", m_Stream[STREAM_ID_PREVIEW - 1]->m_numRegisteredStream);
         return 0;
     }
     else if (format == HAL_PIXEL_FORMAT_BLOB //first create jpeg substream
@@ -1160,10 +1168,10 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
         subParameters->minUndequedBuffer = 2;
         res = m_Stream[STREAM_ID_CAPTURE - 1]->attachSubStream(STREAM_ID_JPEG, 20);
         if (res != NO_ERROR) {
-            HAL_LOGE("(%s): substream attach failed. jpeg res(%d)", __FUNCTION__, res);
+            HAL_LOGE("substream attach failed. jpeg res(%d)", res);
             return 1;
         }
-        HAL_LOGD("(%s): substream jpeg", __FUNCTION__);
+        HAL_LOGD("substream jpeg");
         return 0;
     } else if ((format == CAMERA2_HAL_PIXEL_FORMAT_ZSL)
 												&& (width == (uint32_t)m_Camera2->sensorW)
@@ -1199,14 +1207,14 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
         subParameters->minUndequedBuffer = 2;
         res = m_Stream[STREAM_ID_CAPTURE - 1]->attachSubStream(STREAM_ID_JPEG, 20);
         if (res != NO_ERROR) {
-            HAL_LOGE("(%s): substream attach failed. jpeg res(%d)", __FUNCTION__, res);
+            HAL_LOGE("substream attach failed. jpeg res(%d)", res);
             return 1;
         }
-        HAL_LOGD("(%s): substream zsl", __FUNCTION__);
+        HAL_LOGD("substream zsl");
 		return 0;
     }
 
-    HAL_LOGE("(%s): Unsupported Pixel Format", __FUNCTION__);
+    HAL_LOGE("Unsupported Pixel Format");
     return 1;
 }
 
@@ -1256,9 +1264,9 @@ bool SprdCameraHWInterface2::WaitForCaptureStart()
 		 && SPRD_WAITING_JPEG != mCameraState.capture_state
 		 && SPRD_IDLE != mCameraState.capture_state
 		 && SPRD_ERROR != mCameraState.camera_state) {
-		HAL_LOGD("WaitForCaptureStart: waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
+		HAL_LOGD("waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
 		mStateWait.wait(mStateLock);
-		HAL_LOGD("WaitForCaptureStart: woke up, state is %s",
+		HAL_LOGD("woke up, state is %s",
 				getCameraStateStr(mCameraState.capture_state));
 	}
 
@@ -1272,9 +1280,9 @@ bool SprdCameraHWInterface2::WaitForPreviewStop()
 	Mutex::Autolock statelock(&mStateLock);
     while (SPRD_IDLE != mCameraState.preview_state
 			&& SPRD_ERROR != mCameraState.preview_state) {
-		HAL_LOGD("WaitForPreviewStop: waiting for SPRD_IDLE");
+		HAL_LOGD("waiting for SPRD_IDLE");
 		mStateWait.wait(mStateLock);
-		HAL_LOGD("WaitForPreviewStop: woke up");
+		HAL_LOGD("woke up");
     }
 
 	return SPRD_IDLE == mCameraState.preview_state;
@@ -1283,7 +1291,7 @@ bool SprdCameraHWInterface2::WaitForPreviewStop()
 void SprdCameraHWInterface2::setCameraState(Sprd_camera_state state, state_owner owner)
 {
 
-	HAL_LOGV("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
+	HAL_LOGV("state: %s, owner: %d", getCameraStateStr(state), owner);
 	Mutex::Autolock stateLock(&mStateLock);
 
 	switch (state) {
@@ -1391,7 +1399,7 @@ void SprdCameraHWInterface2::setCameraState(Sprd_camera_state state, state_owner
 		break;
 	}
 
-	HAL_LOGV("setCameraState:camera state = %s, preview state = %s, capture state = %s focus state = %s",
+	HAL_LOGV("camera state = %s, preview state = %s, capture state = %s focus state = %s",
 				getCameraStateStr(mCameraState.camera_state),
 				getCameraStateStr(mCameraState.preview_state),
 				getCameraStateStr(mCameraState.capture_state),
@@ -1401,13 +1409,13 @@ void SprdCameraHWInterface2::setCameraState(Sprd_camera_state state, state_owner
 void SprdCameraHWInterface2::HandleStopPreview(camera_cb_type cb,
 										  int32_t parm4)
 {
-	HAL_LOGD("HandleStopPreview in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGD("in,cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getPreviewState()));
 
 	transitionState(SPRD_INTERNAL_PREVIEW_STOPPING,
 				SPRD_IDLE,
 				STATE_PREVIEW);
-	HAL_LOGD("HandleStopPreview out, state = %s", getCameraStateStr(getPreviewState()));
+	HAL_LOGD("out, state = %s", getCameraStateStr(getPreviewState()));
 }
 
 int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size)
@@ -1420,7 +1428,7 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 	stream_parameters_t     *targetStreamParms;
 	#endif
 
-	HAL_LOGV("flush_buffer type %d, index %d, v_addr:0x%x, p_addr:0x%x, size %d",
+	HAL_LOGV("type %d, index %d, v_addr:0x%x, p_addr:0x%x, size %d",
 		type, index, (uint32_t)v_addr, (uint32_t)p_addr, size);
 
 	switch(type) {
@@ -1450,11 +1458,11 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 
 	if (pmem) {
 		pHeapIon = pmem->ion_heap;
-		if(pHeapIon != NULL) {
+		if (pHeapIon != NULL) {
 			ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
 			HAL_LOGV("ret = %d", ret);
 			if (ret) {
-				HAL_LOGE("flush_buffer error ret=%d", ret);
+				HAL_LOGE("error ret=%d", ret);
 			}
 		}
 	}
@@ -1468,7 +1476,7 @@ int SprdCameraHWInterface2::flush_preview_buffers()
 	int size =0;
 	int ret = 0;
 
-	HAL_LOGV("Enter flush_preview_buffers");
+	HAL_LOGV("start");
 
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 
@@ -1481,14 +1489,14 @@ int SprdCameraHWInterface2::flush_preview_buffers()
 			 (void*)mPreviewHeapArray_phy[i],
 			 priv_handle->size);
 	}
-
+	HAL_LOGV("end");
 	return ret;
 }
 
 
 void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 {
-	HAL_LOGD("HandleEncode in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGD("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCaptureState()));
 
 	switch (cb) {
@@ -1535,7 +1543,7 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 		break;
 	}
 
-	HAL_LOGD("HandleEncode out, state = %s", getCameraStateStr(getCaptureState()));
+	HAL_LOGD("out, state = %s", getCameraStateStr(getCaptureState()));
 }
 
 void SprdCameraHWInterface2::HandleCancelPicture(camera_cb_type cb, int32_t parm4)
@@ -1561,12 +1569,12 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	uint32_t buffer_size = 0;
 	sprd_camera_memory_t *cam_Add = NULL;
     if (NULL == frame) {
-		HAL_LOGE("%s: invalid frame pointer",__FUNCTION__);
+		HAL_LOGE("invalid frame pointer");
 		return;
 	}
 
 	if(SPRD_INTERNAL_CAPTURE_STOPPING == getCaptureState()) {
-		HAL_LOGD("%s: warning: capture state = SPRD_INTERNAL_CAPTURE_STOPPING, return \n",__FUNCTION__);
+		HAL_LOGD("warning: capture state = SPRD_INTERNAL_CAPTURE_STOPPING, return \n");
 		return;
 	}
     //deq one graphic buf(2 bufs)
@@ -1578,22 +1586,22 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	#endif
 	cam_Add = GetCachePmem(buffer_size, 1);
 	if (cam_Add == NULL) {
-		HAL_LOGE("ERR %s cannot allocate buf",__FUNCTION__);
+		HAL_LOGE("cannot allocate buf");
 		goto allocate_buf_free;
 	}
 	if (cam_Add->data == NULL) {
-		HAL_LOGE("ERR %s cannot get virt add",__FUNCTION__);
+		HAL_LOGE("cannot get virt add");
 		goto allocate_buf_free;
 	}
 	if ( 0 != camera_get_data_redisplay(cam_Add->phys_addr, targetStreamParms->width, targetStreamParms->height, frame->buffer_phy_addr,
 									frame->buffer_uv_phy_addr, frame->dx, frame->dy)) {
-		HAL_LOGE("%s: Fail to camera_get_data_redisplay.", __FUNCTION__);
+		HAL_LOGE("Fail to camera_get_data_redisplay.");
 		goto allocate_buf_free;
 	}
 	#ifdef PREVIEW_USE_DCAM_BUF
 	res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
 	if (res != NO_ERROR || buf == NULL) {
-		HAL_LOGD("DEBUG(%s): dequeue_buffer fail",__FUNCTION__);
+		HAL_LOGD("dequeue_buffer fail");
 		goto allocate_buf_free;
     }
 	disPic = *buf;
@@ -1604,12 +1612,12 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
             if (targetStreamParms->svcBufStatus[Index] == ON_HAL_DRIVER) {
                 found = true;
-				HAL_LOGD("%s,Index=%d",__FUNCTION__,Index);
+				HAL_LOGD("Index=%d",Index);
                 break;
             }
         }
 		if (!found) {
-			HAL_LOGE("ERR %s cannot found buf",__FUNCTION__);
+			HAL_LOGE("ERR cannot found buf");
 			goto allocate_buf_free;
 		}
 	}
@@ -1618,7 +1626,7 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
     //lock
 	if (m_grallocHal->lock(m_grallocHal, disPic, targetStreamParms->usage, 0, 0,
                    targetStreamParms->width, targetStreamParms->height, &VirtBuf) != 0) {
-		HAL_LOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
+		HAL_LOGE("ERR could not obtain gralloc buffer");
 	}
 
 	priv_handle = reinterpret_cast<const private_handle_t *>(disPic);
@@ -1645,11 +1653,11 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 		}
 		free(cam_Add);
 	}
-    HAL_LOGD("DEBUG(%s): return %d",__FUNCTION__, res);
+    HAL_LOGD("return %d",res);
 }
 void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 {
-	HAL_LOGD("HandleTakePicture in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGD("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCaptureState()));
 	bool encode_location = true;
 	camera_position_type pt = {0, 0, 0, 0, NULL};
@@ -1705,17 +1713,17 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 		break;
 	}
 
-	HAL_LOGD("HandleTakePicture out, state = %s", getCameraStateStr(getCaptureState()));
+	HAL_LOGD("out, state = %s", getCameraStateStr(getCaptureState()));
 }
 
 void SprdCameraHWInterface2::HandleStopCamera(camera_cb_type cb, int32_t parm4)
 {
-	HAL_LOGD("HandleStopCamera in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGD("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCameraState()));
 
 	transitionState(SPRD_INTERNAL_STOPPING, SPRD_INIT, STATE_CAMERA);
 
-	HAL_LOGD("HandleStopCamera out, state = %s", getCameraStateStr(getCameraState()));
+	HAL_LOGD("out, state = %s", getCameraStateStr(getCameraState()));
 }
 
 void SprdCameraHWInterface2::HandleFocus(camera_cb_type cb,
@@ -1805,7 +1813,7 @@ void SprdCameraHWInterface2::getPreviewBuffer(void)
 		found = false;
 		ret = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
 		if (ret != NO_ERROR || buf == NULL) {
-			HAL_LOGD("DEBUG(%s): first dequeue_buffer fail",__FUNCTION__);
+			HAL_LOGD("first dequeue_buffer fail");
 			return;
 		}
 		priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
@@ -1826,7 +1834,7 @@ void SprdCameraHWInterface2::getPreviewBuffer(void)
 			}
 		}
 		if (!found) {
-			HAL_LOGD("ERR receivepreviewframe cannot found buf=0x%x ",phyaddr);
+			HAL_LOGD("ERR cannot found buf=0x%x ",phyaddr);
 			if(s_mem_method != 0) {
 				 MemoryHeapIon::Free_mm_iova(priv_handle->share_fd,phyaddr, size);
 			}
@@ -1852,19 +1860,19 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 	int phyaddr = 0;
 	int size =0;
 
-    HAL_LOGD("(%s): stream_id(%d), num_buff(%d), handle(%x) ", __FUNCTION__,
+    HAL_LOGD("stream_id(%d), num_buff(%d), handle(%x) ",
         stream_id, num_buffers, (uint32_t)registeringBuffers);
 
     if (stream_id == STREAM_ID_PREVIEW && m_Stream[STREAM_ID_PREVIEW - 1] != NULL) {
         targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 		camStatus = getCameraState();
 	    if (camStatus != SPRD_IDLE) {
-	        HAL_LOGD("ERR registerStreamBuffers Sta=%d",camStatus);
+	        HAL_LOGD("ERR Sta=%d",camStatus);
 			return UNKNOWN_ERROR;
 		}
 
-		HAL_LOGD("DEBUG(%s): format(%x) width(%d), height(%d)",
-				__FUNCTION__, targetStreamParms->format, targetStreamParms->width,
+		HAL_LOGD("format(%x) width(%d), height(%d)",
+				targetStreamParms->format, targetStreamParms->width,
 				targetStreamParms->height);
 	    targetStreamParms->numSvcBuffers = num_buffers;
 
@@ -1890,12 +1898,12 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 
 			 targetStreamParms->svcBufHandle[i] = registeringBuffers[i];//important
 			 targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
-			 HAL_LOGD("registerStreamBuffers index=%d Preview phyadd=0x%x,virtadd=0x%x,srv_add=0x%x,size %d",
+			 HAL_LOGD("index=%d Preview phyadd=0x%x,virtadd=0x%x,srv_add=0x%x,size %d",
 					i, (uint32_t)phyaddr,priv_handle->base,(uint32_t)targetStreamParms->svcBufHandle[i],size);
 		}
 
 	    targetStreamParms->cancelBufNum = targetStreamParms->minUndequedBuffer;
-	    HAL_LOGD("DEBUG(%s): END registerStreamBuffers", __FUNCTION__);
+	    HAL_LOGD("END registerStreamBuffers");
 	    return NO_ERROR;
 
     } else if ((stream_id == STREAM_ID_PRVCB) || (stream_id == STREAM_ID_JPEG) || (stream_id == STREAM_ID_ZSL) || (stream_id == STREAM_ID_RECORD)) {
@@ -1918,13 +1926,13 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
                 targetParms->svcBufHandle[i]       = registeringBuffers[i];
 				targetParms->svcBufStatus[i] = ON_HAL_INIT;
 				targetParms->numSvcBufsInHal++;
-				HAL_LOGD("(%s): registering substream(%d) size[%d] phyAdd0x%x vAdd(%x) ", __FUNCTION__,
+				HAL_LOGD("registering substream(%d) size[%d] phyAdd0x%x vAdd(%x) ",
                          i, size,phyaddr, (uint32_t)(priv_handle->base));
             }
         }
         return 0;
     } else {
-        HAL_LOGE("(%s): unregistered stream id (%d)", __FUNCTION__, stream_id);
+        HAL_LOGE("unregistered stream id (%d)", stream_id);
         return 1;
     }
 
@@ -1939,7 +1947,7 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 	Sprd_camera_state       camStatus = (Sprd_camera_state)0;
 	const private_handle_t *priv_handle = NULL;
 
-	HAL_LOGD("(%s): stream_id(%d)", __FUNCTION__, stream_id);
+	HAL_LOGD("stream_id(%d)", stream_id);
 
     if (stream_id == STREAM_ID_PREVIEW) {
 		camStatus = getPreviewState();
@@ -1949,13 +1957,13 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		   return ret;
 		}*/
 		if (camStatus == SPRD_PREVIEW_IN_PROGRESS) {
-		m_Stream[STREAM_ID_PREVIEW - 1]->setRecevStopMsg(true);//sync receive preview frame
-        stopPreviewSimple();
+			m_Stream[STREAM_ID_PREVIEW - 1]->setRecevStopMsg(true);//sync receive preview frame
+        	stopPreviewSimple();
 		}
 
 		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 		for (;i < targetStreamParms->numSvcBuffers;i++) {
-		  if(s_mem_method == 1) {
+		  if (s_mem_method == 1) {
 			  priv_handle = reinterpret_cast<const private_handle_t *>(targetStreamParms->svcBufHandle[i]);
 			  #ifdef PREVIEW_USE_DCAM_BUF
 			  MemoryHeapIon::Free_mm_iova(priv_handle->share_fd,targetStreamParms->phyAdd[i], targetStreamParms->phySize[i] );
@@ -1965,13 +1973,13 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		  }
 	           ret = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
 		   if (ret) {
-              HAL_LOGE("releaseStream cancelbuf res=%d",ret);
+              HAL_LOGE("cancelbuf res=%d",ret);
 		   }
 		}
 		#ifdef PREVIEW_USE_DCAM_BUF
 		freePreviewMem(mPreviewHeapNum);
 		#endif
-		if(m_CameraId == 1 && GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_RECORD) {
+		if (m_CameraId == 1 && GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_RECORD) {
 			freeCaptureMem();
 		}
 		camera_set_preview_mem(0, 0, 0, 0);
@@ -1993,13 +2001,13 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
         memset(&m_subStreams[stream_id], 0, sizeof(substream_parameters_t));
 		if (m_Stream[STREAM_ID_CAPTURE - 1] != NULL) {
 			if (m_Stream[STREAM_ID_CAPTURE - 1]->detachSubStream(stream_id) != NO_ERROR) {
-	            HAL_LOGE("(%s): substream detach failed. res(%d)", __FUNCTION__, ret);
+	            HAL_LOGE("substream detach failed. res(%d)", ret);
 	            return 1;
 	        }
             m_Stream[STREAM_ID_CAPTURE - 1]->m_numRegisteredStream = 1;
 			memset(&(m_Stream[STREAM_ID_CAPTURE - 1]->m_parameters), 0, sizeof(stream_parameters_t));
 		}
-        HAL_LOGD("(%s): jpg stream release!", __FUNCTION__);
+        HAL_LOGD("jpg stream release!");
         return 0;
     }
 	else if (stream_id == STREAM_ID_RECORD) {//release old record
@@ -2024,11 +2032,11 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		}
 		return 0;
 	} else {
-        HAL_LOGE("HAL_LOGE:(%s): wrong stream id (%d)", __FUNCTION__, stream_id);
+        HAL_LOGE("wrong stream id (%d)", stream_id);
         return 1;
     }
 
-    HAL_LOGD("(%s): END", __FUNCTION__);
+    HAL_LOGD("END");
     return ret;
 }
 
@@ -2037,7 +2045,7 @@ int SprdCameraHWInterface2::allocateReprocessStream(
     const camera2_stream_in_ops_t *reprocess_stream_ops,
     uint32_t *stream_id, uint32_t *consumer_usage, uint32_t *max_buffers)
 {
-	HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+	HAL_LOGV("dont handle");
 	return 0;
 }
 
@@ -2046,7 +2054,7 @@ int SprdCameraHWInterface2::allocateReprocessStreamFromStream(
             const camera2_stream_in_ops_t *reprocess_stream_ops,
             uint32_t *stream_id)
 {
-    HAL_LOGD("(%s): output_stream_id(%d)", __FUNCTION__, output_stream_id);
+    HAL_LOGD("output_stream_id(%d)", output_stream_id);
     if (output_stream_id == STREAM_ID_ZSL) {
 	    *stream_id = STREAM_ID_JPEG;
     }
@@ -2055,14 +2063,14 @@ int SprdCameraHWInterface2::allocateReprocessStreamFromStream(
 
 int SprdCameraHWInterface2::releaseReprocessStream(uint32_t stream_id)
 {
-    HAL_LOGD("(%s): stream_id(%d)", __FUNCTION__, stream_id);
+    HAL_LOGD("stream_id(%d)", stream_id);
 	return 0;
 }
 
 int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext2)
 {
     Mutex::Autolock lock(m_afTrigLock);
-    HAL_LOGD("DEBUG(%s): id(%x), %d, %d afmode=%d", __FUNCTION__, trigger_id, ext1, ext2, m_staticReqInfo.afMode);
+    HAL_LOGD("id(%x), %d, %d afmode=%d", trigger_id, ext1, ext2, m_staticReqInfo.afMode);
 	if (CAMERA2_TRIGGER_CANCEL_AUTOFOCUS != trigger_id) {
 		WaitForPreviewStart();
 	}
@@ -2079,13 +2087,22 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 			case FOCUS_STAT_FOCUS_LOCKED:
 			case FOCUS_STAT_FOCUS_NOT_LOCKED:
 				if (0 != camera_start_autofocus(CAMERA_AUTO_FOCUS, camera_cb, this)) {
-					HAL_LOGE("%s auto foucs fail.",__FUNCTION__);
+					HAL_LOGE("auto foucs fail.");
 					return 1;
 				}
 				m_focusStat = FOCUS_STAT_ACTIVE_SCAN;
 				m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_ACTIVE_SCAN, ext1, 0, m_callbackClient);
 				break;
 			case FOCUS_STAT_ACTIVE_SCAN:
+				HAL_LOGV("don't handle.");
+				break;
+			case FOCUS_STAT_PASSIVE_SCAN:
+				HAL_LOGV("don't handle.");
+				break;
+			case FOCUS_STAT_PASSIVE_LOCKED:
+				HAL_LOGV("don't handle.");
+				break;
+			default:
 				HAL_LOGV("don't handle.");
 				break;
 			}
@@ -2099,9 +2116,8 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 		case CAMERA_FOCUS_MODE_MACRO:
 			if (m_focusStat == FOCUS_STAT_ACTIVE_SCAN) {
                 if(camera_cancel_autofocus())
-				   HAL_LOGE("%s cancel focus fail",__FUNCTION__);
+				   HAL_LOGE("cancel focus fail");
 			}
-			HAL_LOGV("test.");
             m_focusStat = FOCUS_STAT_INACTIVE;
 			m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_INACTIVE, ext1, 0, m_callbackClient);
 			break;
@@ -2127,7 +2143,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 
 int SprdCameraHWInterface2::setNotifyCallback(camera2_notify_callback notify_cb, void *user)
 {
-    HAL_LOGV("DEBUG(%s): cb_addr(%x)", __FUNCTION__, (unsigned int)notify_cb);
+    HAL_LOGV("cb_addr(%x)", (unsigned int)notify_cb);
     m_notifyCb = notify_cb;
     m_callbackClient = user;
     return 0;
@@ -2135,13 +2151,13 @@ int SprdCameraHWInterface2::setNotifyCallback(camera2_notify_callback notify_cb,
 
 int SprdCameraHWInterface2::getMetadataVendorTagOps(vendor_tag_query_ops_t **ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("dont handle");
     return 0;
 }
 
 int SprdCameraHWInterface2::dump(int fd)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("don't handle");
     return 0;
 }
 
@@ -2197,7 +2213,7 @@ void SprdCameraHWInterface2::Stream::releaseBufQ()
     List<int>::iterator round;
 
     Mutex::Autolock lock(m_BufQLock);
-    HAL_LOGD("(%s)bufqueue.size : %d", __FUNCTION__, m_bufQueue.size());
+    HAL_LOGD("bufqueue.size : %d", m_bufQueue.size());
 
     while (m_bufQueue.size() > 0) {
         round  = m_bufQueue.begin()++;
@@ -2252,7 +2268,7 @@ void SprdCameraHWInterface2::ClearReqQ()
     List<camera_metadata_t *>::iterator round;
 
     Mutex::Autolock lock(m_requestMutex);
-    HAL_LOGD("(%s)m_ReqQueue.size : %d", __FUNCTION__, m_ReqQueue.size());
+    HAL_LOGD("m_ReqQueue.size : %d", m_ReqQueue.size());
 
     while (m_ReqQueue.size() > 0) {
         round  = m_ReqQueue.begin()++;
@@ -2354,10 +2370,10 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 	camera_metadata_entry_t requestId;
 	camera_metadata_entry_t entry;
 	if (!srcreq || !dstreq) {
-        HAL_LOGE("%s para is null",__FUNCTION__);
+        HAL_LOGE("para is null");
 		return BAD_VALUE;
 	}
-	HAL_LOGD("%s befset reqid=%d",__FUNCTION__,srcreq->requestID);
+	HAL_LOGD("befset reqid=%d",srcreq->requestID);
     {
 		Mutex::Autolock lock(m_afTrigLock);
 		uint8_t afStat = (uint8_t)m_focusStat;
@@ -2370,21 +2386,21 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 	}
     res = find_camera_metadata_entry(dstreq, ANDROID_REQUEST_ID, &entry);
     if (res == NAME_NOT_FOUND) {
-        HAL_LOGE("%s not found!",__FUNCTION__);
+        HAL_LOGE("not found!");
     } else if (res == OK) {
         res = update_camera_metadata_entry(dstreq,entry.index, &(srcreq->requestID), 1, NULL);
     }
 
 	res = find_camera_metadata_entry(dstreq, ANDROID_SENSOR_TIMESTAMP, &entry);
     if (res == NAME_NOT_FOUND) {
-        HAL_LOGE("%s not found!",__FUNCTION__);
+        HAL_LOGE("not found!");
     } else if (res == OK) {
 		int64_t Time = GetSensorTimeStamp(srcreq);
         res = update_camera_metadata_entry(dstreq,entry.index, &Time, 1, NULL);
     }
 	res = find_camera_metadata_entry(dstreq, ANDROID_REQUEST_FRAME_COUNT, &entry);
     if (res == NAME_NOT_FOUND) {
-        HAL_LOGE("%s not found!",__FUNCTION__);
+        HAL_LOGE("not found!");
     } else if (res == OK) {
         res = update_camera_metadata_entry(dstreq,entry.index, &(srcreq->frmCnt), 1, NULL);
     }
@@ -2393,7 +2409,7 @@ status_t SprdCameraHWInterface2::Camera2RefreshSrvReq(camera_req_info *srcreq, c
 		uint8_t capintent = 0;
 		res = find_camera_metadata_entry(dstreq, ANDROID_CONTROL_CAPTURE_INTENT, &entry);
 	    if (res == NAME_NOT_FOUND) {
-	        HAL_LOGE("%s not found!",__FUNCTION__);
+	        HAL_LOGE("not found!");
 	    } else if (res == OK) {
 	        capintent = (uint8_t)GetCameraCaptureIntent(srcreq);
 	        res = update_camera_metadata_entry(dstreq,entry.index, &capintent, 1, NULL);//note type of data
@@ -2416,7 +2432,7 @@ int SprdCameraHWInterface2::coordinate_convert(int *rect_arr,int arr_size,int an
 	int height = preview_size->height;
 
 	HAL_LOGD("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n",
-	width, height, arr_size, angle, is_mirror);
+		width, height, arr_size, angle, is_mirror);
 
 	for (i=0;i<arr_size*2;i++) {
 		x1 = rect_arr[i*2];
@@ -2464,7 +2480,7 @@ int SprdCameraHWInterface2::coordinate_convert(int *rect_arr,int arr_size,int an
 	for (i=0;i<arr_size;i++) {
 		int point_x, point_y;
 
-		HAL_LOGD("coordinate_convert %d: org: %d, %d, %d, %d.\n",
+		HAL_LOGD("%d: org: %d, %d, %d, %d.\n",
 					i,rect_arr[i*4],rect_arr[i*4+1],
 					rect_arr[i*4+2],rect_arr[i*4+3]);
 
@@ -2479,23 +2495,23 @@ int SprdCameraHWInterface2::coordinate_convert(int *rect_arr,int arr_size,int an
 		recHalfHeight	= (rect_arr[i*4+3] - rect_arr[i*4+1])/2;
 		centre_y		= rect_arr[i*4+3] - recHalfHeight;
 		centre_x		= rect_arr[i*4+2] - recHalfWidth;
-		//HAL_LOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
+		//HAL_LOGV("%d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
 
 		// map to sensor coordinate
 		//centre_y		= height - centre_y;
-		//HAL_LOGV("coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
+		//HAL_LOGV("%d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
 				//i, centre_x, centre_y, recHalfWidth, recHalfHeight);
 
 		point_x = preview_x + centre_x*preview_w/width;
 		point_y = preview_y + centre_y*preview_h/height;
-		//HAL_LOGV("coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
+		//HAL_LOGV("%d: out point: x=%d, y=%d\n", i, point_x, point_y);
 
 		rect_arr[i*4]		= point_x - recHalfWidth;
 		rect_arr[i*4+1] 	= point_y - recHalfHeight;
 		rect_arr[i*4+2] 	= point_x + recHalfWidth;
 		rect_arr[i*4+3] 	= point_y + recHalfHeight;
 
-		HAL_LOGD("coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+		HAL_LOGD("%d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
 		rect_arr[i*4+2] = (((rect_arr[i*4+2] - rect_arr[i*4])+ 3)>> 2) << 2;
 		rect_arr[i*4+3] = (((rect_arr[i*4+3] - rect_arr[i*4+1])+ 3)>> 2) << 2;
 	}
@@ -2513,7 +2529,7 @@ int SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint32
 	uint32_t      sensorOrgW = 0, sensorOrgH = 0, dstW = 0, dstH = 0;
 	uint32_t IsRotate = 0;
 	substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_JPEG];
-	HAL_LOGD("%s: crop %d %d %d %d sens w/h %d %d.", __FUNCTION__ ,
+	HAL_LOGD("crop %d %d %d %d sens w/h %d %d.",
 		  cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w ,cropRegion->crop_h,sensorWidth,sensorHeight);
 	if(m_CameraId == 0) {
 		sensorOrgW = BACK_SENSOR_ORIG_WIDTH;
@@ -2568,7 +2584,7 @@ int SprdCameraHWInterface2::CameraConvertCropRegion(uint32_t sensorWidth, uint32
 		cropRegion->crop_w, cropRegion->crop_h, dstW, dstH);
 		return 1;
 	}
-    HAL_LOGD("%s:Crop calculated (x=%d,y=%d,w=%d,h=%d ratio=%f)",__FUNCTION__ ,
+    HAL_LOGD("Crop calculated (x=%d,y=%d,w=%d,h=%d ratio=%f)",
         cropRegion->crop_x, cropRegion->crop_y, cropRegion->crop_w, cropRegion->crop_h, zoomRatio);
 	return ret;
 }
@@ -2596,7 +2612,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	takepicture_mode picMode = (takepicture_mode)0;
 	Mutex::Autolock lock(m_requestMutex);
     if(!orireq || !srcreq) {
-	    HAL_LOGD("DEBUG(%s): Err para is NULL!", __FUNCTION__);
+	    HAL_LOGD("Err para is NULL!");
         return;
 	}
 	#define ASIGNIFNOTEQUAL(x, y, flag) if((x) != (y) || ((x) == (y) && (x) == 0))\
@@ -2651,11 +2667,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				if(srcreq->sensorTimeStamp != entry.data.i64[0]) {
 					SetSensorTimeStamp(srcreq,entry.data.i64[0]);
 				}
-				HAL_LOGD("DEBUG(%s): ANDROID_SENSOR_TIMESTAMP (%lld)",  __FUNCTION__, entry.data.i64[0]);
+				HAL_LOGD("ANDROID_SENSOR_TIMESTAMP (%lld)", entry.data.i64[0]);
                 break;
             case ANDROID_REQUEST_TYPE:
 				ASIGNIFNOTEQUAL(srcreq->isReprocessing, entry.data.u8[0], (camera_parm_type)NULL)
-				HAL_LOGD("DEBUG(%s): ANDROID_REQUEST_TYPE (%d)",  __FUNCTION__, entry.data.u8[0]);
+				HAL_LOGD("ANDROID_REQUEST_TYPE (%d)", entry.data.u8[0]);
 				break;
 			case ANDROID_JPEG_GPS_COORDINATES:
 				if(srcreq->gpsLat != entry.data.d[0] || srcreq->gpsLon != entry.data.d[1] || srcreq->gpsAlt != entry.data.d[2]) {
@@ -2663,8 +2679,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					srcreq->gpsLon = entry.data.d[1];
 					srcreq->gpsAlt = entry.data.d[2];
 				}
-				HAL_LOGD("DEBUG(%s): ANDROID_JPEG_GPS_COORDINATES (%lf %lf %lf)",
-						__FUNCTION__, entry.data.d[0], entry.data.d[1],entry.data.d[2]);
+				HAL_LOGD("ANDROID_JPEG_GPS_COORDINATES (%lf %lf %lf)",
+						entry.data.d[0], entry.data.d[1],entry.data.d[2]);
 				break;
 			case ANDROID_JPEG_GPS_TIMESTAMP:
 				ASIGNIFNOTEQUAL(srcreq->gpsTimestamp, entry.data.i64[0], (camera_parm_type)NULL);
@@ -2674,12 +2690,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				size_t cnt = 0;
 				HAL_LOGV("GPS processing method cnt %d %s.",entry.count, (char*)(&entry.data.u8[0]));
 				memset(&srcreq->gpsProcMethod[0], 0, 32);
-				if (entry.count > 32)
+				if (entry.count > 32) {
                     cnt = 32;
-                else
+                } else {
                     cnt = entry.count;
-       //         for (i = 0 ; i < cnt ; i++)
-             //       srcreq->gpsProcMethod[i] = entry.data.u8[i];
+                }
 				memcpy(&srcreq->gpsProcMethod[0],&entry.data.u8[0],cnt);
 			}
 				break;
@@ -2688,8 +2703,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				srcreq->thumbnailJpgSize.height = entry.data.i32[1];
 				camera_set_thumbnail_properties(srcreq->thumbnailJpgSize.width,
 												srcreq->thumbnailJpgSize.height, th_q);
-				HAL_LOGD("DEBUG(%s): ANDROID_JPEG_THUMBNAIL_SIZE (%d %d)",
-						__FUNCTION__, srcreq->thumbnailJpgSize.width, srcreq->thumbnailJpgSize.height);
+				HAL_LOGD("ANDROID_JPEG_THUMBNAIL_SIZE (%d %d)",
+						srcreq->thumbnailJpgSize.width, srcreq->thumbnailJpgSize.height);
                 break;
 			case ANDROID_JPEG_ORIENTATION:
 			{
@@ -2714,7 +2729,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				break;
 			case ANDROID_CONTROL_MODE:
 				ASIGNIFNOTEQUAL(srcreq->ctlMode, (ctl_mode)(entry.data.u8[0] + 1),(camera_parm_type)NULL)
-				HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_MODE (%d)",  __FUNCTION__, (ctl_mode)(entry.data.u8[0] + 1));
+				HAL_LOGD("ANDROID_CONTROL_MODE (%d)", (ctl_mode)(entry.data.u8[0] + 1));
 				break;
 
 			case ANDROID_CONTROL_CAPTURE_INTENT:
@@ -2729,7 +2744,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						//}
 						SetCameraCaptureIntent(srcreq, tmpIntent);
 					}
-					HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_CAPTURE_INTENT (%d)",  __FUNCTION__, tmpIntent);
+					HAL_LOGD("ANDROID_CONTROL_CAPTURE_INTENT (%d)", tmpIntent);
 				}
 				break;
 
@@ -2748,20 +2763,20 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					srcreq->isCropSet = true;
 				}
 
-				HAL_LOGD("DEBUG(%s): ANDROID_SCALER_CROP_REGION (%d %d %d %d)",
-						__FUNCTION__,zoom0.crop_x,zoom0.crop_y,zoom0.crop_w,zoom0.crop_h);
+				HAL_LOGD("ANDROID_SCALER_CROP_REGION (%d %d %d %d)",
+						zoom0.crop_x,zoom0.crop_y,zoom0.crop_w,zoom0.crop_h);
 				break;
 		    case ANDROID_CONTROL_AF_MODE:
 				{
                     int8_t AfMode = 0;
 					res = androidAfModeToDrvAfMode((camera_metadata_enum_android_control_af_mode_t)entry.data.u8[0], &AfMode);
-					HAL_LOGD("DEBUG(%s): af mode (%d) ret=%d",  __FUNCTION__,AfMode,res);
+					HAL_LOGD("af mode (%d) ret=%d",AfMode,res);
 					if (res) {
-						HAL_LOGE("ERR(%s): af not support",  __FUNCTION__);
+						HAL_LOGE("ERR: af not support");
 					}
 					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AF_MODE, &drvTag);
 					if (res) {
-						HAL_LOGE("ERR(%s): drv not support af mode",  __FUNCTION__);
+						HAL_LOGE("ERR: drv not support af mode");
 					}
 					if (m_CameraId == 0) {
 					    ASIGNIFNOTEQUAL(srcreq->afMode, AfMode,drvTag)
@@ -2777,8 +2792,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		                for (i=1 ; i < entry.count; i++)
 		                    area[i] = entry.data.i32[i - 1];
 					}
-					HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_AF_REGIONS (%d %d %d %d %d cnt=%d)",
-							__FUNCTION__, area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
+					HAL_LOGD("ANDROID_CONTROL_AF_REGIONS (%d %d %d %d %d cnt=%d)",
+							area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
 					area[3] = area[3] - area[1];
 					area[4] = area[4] - area[2];
 					if (mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS) {
@@ -2804,8 +2819,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		                for (i=1 ; i < entry.count; i++)
 		                    area[i] = entry.data.i32[i - 1];
 					}
-					HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_AE_REGIONS (%d %d %d %d %d cnt=%d)",
-							__FUNCTION__, area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
+					HAL_LOGD("ANDROID_CONTROL_AE_REGIONS (%d %d %d %d %d cnt=%d)",
+							area[1],area[2],area[3],area[4],entry.data.i32[4],entry.count);
 				}
                 break;
 			case ANDROID_FLASH_MODE:
@@ -2813,11 +2828,11 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					int8_t FlashMode = 0;
 
 					res = androidFlashModeToDrvFlashMode((camera_metadata_enum_android_flash_mode_t)entry.data.u8[0], &FlashMode);
-					HAL_LOGD("DEBUG(%s): flash mode (%d) ret=%d",  __FUNCTION__,FlashMode,res);
+					HAL_LOGD("flash mode (%d) ret=%d", FlashMode,res);
 					if (CAMERA_FLASH_MODE_TORCH == FlashMode) {
 						res = androidParametTagToDrvParaTag(ANDROID_FLASH_MODE, &drvTag);
 						if (res) {
-							HAL_LOGE("ERR(%s): drv not support flash mode",  __FUNCTION__);
+							HAL_LOGE("ERR: drv not support flash mode");
 						}
 						if (m_CameraId == 0) {
 						    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
@@ -2830,10 +2845,10 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					int8_t FlashMode = 0;
 
 					res = androidAeModeToDrvAeMode((camera_metadata_enum_android_control_ae_mode_t)entry.data.u8[0], &FlashMode);
-					HAL_LOGD("DEBUG(%s): ae flash mode (%d) ret=%d",  __FUNCTION__,FlashMode,res);
+					HAL_LOGD("ae flash mode (%d) ret=%d", FlashMode,res);
 					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AE_MODE, &drvTag);
 					if (res) {
-						HAL_LOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
+						HAL_LOGE("ERR: drv not support ae flash mode");
 					}
 					if (m_CameraId == 0) {
 					    ASIGNIFNOTEQUAL(srcreq->aeFlashMode, FlashMode, drvTag)
@@ -2847,20 +2862,20 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			case ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION:
 				res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION, &drvTag);
 				if (res) {
-					HAL_LOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
+					HAL_LOGE("ERR: drv not support ae flash mode");
 				}
 				ASIGNIFNOTEQUAL(srcreq->aeCompensation, entry.data.i32[0] + 3, drvTag)
-                HAL_LOGD("DEBUG(%s): ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION (%d)",  __FUNCTION__, entry.data.i32[0]);
+                HAL_LOGD("DEBUG: ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION (%d)", entry.data.i32[0]);
                 break;
             case ANDROID_CONTROL_AWB_MODE:
                 {
 					int8_t AwbMode = 0;
 
 					res = androidAwbModeToDrvAwbMode((camera_metadata_enum_android_control_awb_mode_t)entry.data.u8[0], &AwbMode);
-					HAL_LOGD("DEBUG(%s): ae flash mode (%d) ret=%d",  __FUNCTION__,AwbMode,res);
+					HAL_LOGD("ae flash mode (%d) ret=%d", AwbMode,res);
 					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_AWB_MODE, &drvTag);
 					if (res) {
-						HAL_LOGE("ERR(%s): drv not support ae flash mode",  __FUNCTION__);
+						HAL_LOGE("ERR: drv not support ae flash mode");
 					}
 					ASIGNIFNOTEQUAL(srcreq->awbMode, AwbMode, drvTag)
 				}
@@ -2870,33 +2885,33 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
                 break;
             case ANDROID_REQUEST_ID:
 				ASIGNIFNOTEQUAL(srcreq->requestID, entry.data.i32[0],(camera_parm_type)NULL)
-                HAL_LOGD("DEBUG(%s): ANDROID_REQUEST_ID (%d)",  __FUNCTION__, entry.data.i32[0]);
+                HAL_LOGD("ANDROID_REQUEST_ID (%d)", entry.data.i32[0]);
                 break;
             case ANDROID_REQUEST_METADATA_MODE:
 				ASIGNIFNOTEQUAL(srcreq->metadataMode, (metadata_mode)entry.data.u8[0],(camera_parm_type)NULL)
-                HAL_LOGD("DEBUG(%s): ANDROID_REQUEST_METADATA_MODE (%d)",  __FUNCTION__, (metadata_mode)entry.data.u8[0]);
+                HAL_LOGD("ANDROID_REQUEST_METADATA_MODE (%d)", (metadata_mode)entry.data.u8[0]);
                 break;
             case ANDROID_REQUEST_OUTPUT_STREAMS:
 				for(i = 0; i < entry.count; i++){
                     tmpMask |= 1 << entry.data.i32[i];//int32_t data type
-                    HAL_LOGD("DEBUG(%s): ANDROID_REQUEST_OUTPUT_STREAMS (0x%x)",  __FUNCTION__, tmpMask);
+                    HAL_LOGD("ANDROID_REQUEST_OUTPUT_STREAMS (0x%x)", tmpMask);
 				}
                 break;
             case ANDROID_REQUEST_FRAME_COUNT:
 				ASIGNIFNOTEQUAL(srcreq->frmCnt,entry.data.i32[0],(camera_parm_type)NULL)
-                HAL_LOGD("DEBUG(%s): ANDROID_REQUEST_FRAME_COUNT (%d)",  __FUNCTION__,entry.data.i32[0]);
+                HAL_LOGD("ANDROID_REQUEST_FRAME_COUNT (%d)", entry.data.i32[0]);
                 break;
             case ANDROID_CONTROL_SCENE_MODE:
 				{
-					int8_t             sceneMode;
+					int8_t   sceneMode;
 					res = androidSceneModeToDrvMode((camera_metadata_enum_android_control_scene_mode_t)entry.data.u8[0], &sceneMode);
-					HAL_LOGD("DEBUG(%s): drv mode (%d) ret=%d",  __FUNCTION__,sceneMode,res);
+					HAL_LOGD("drv mode (%d) ret=%d", sceneMode,res);
 					if (res) {
-						HAL_LOGE("ERR(%s): Scene not support",  __FUNCTION__);
+						HAL_LOGE("ERR: Scene not support");
 					}
 					res = androidParametTagToDrvParaTag(ANDROID_CONTROL_SCENE_MODE, &drvTag);
 					if (res) {
-						HAL_LOGE("ERR(%s): drv not support scene mode",  __FUNCTION__);
+						HAL_LOGE("ERR: drv not support scene mode");
 					}
 					ASIGNIFNOTEQUAL(srcreq->sceneMode, sceneMode,drvTag)
 				}
@@ -2907,9 +2922,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
             }
         }
     }
-	if(tmpMask) {
+	if (tmpMask) {
 		Mutex::Autolock lock(m_halCBMutex);
-		if(srcreq->outputStreamMask != tmpMask) {
+		if (srcreq->outputStreamMask != tmpMask) {
 			srcreq->outputStreamMask = tmpMask;
 		}
 	}
@@ -2924,7 +2939,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	if (srcreq->isCropSet) {
 		res = androidParametTagToDrvParaTag(ANDROID_SCALER_CROP_REGION, &drvTag);
 		if (res) {
-			HAL_LOGE("ERR(%s): drv not support zoom",  __FUNCTION__);
+			HAL_LOGE("ERR: drv not support zoom");
 		}
 		zoom.crop_x = srcreq->cropRegion0;
 		zoom.crop_y = srcreq->cropRegion1;
@@ -2954,7 +2969,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
 	}
 	SetCameraPictureMode(picMode);
-	HAL_LOGD("DEBUG(%s): picmode=%d", __FUNCTION__,picMode);
+	HAL_LOGD("picmode=%d", picMode);
     //stream process later
     if ((srcreq->outputStreamMask & STREAM_MASK_PREVIEW || srcreq->outputStreamMask & STREAM_MASK_PRVCB) && \
 		    (srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD || srcreq->captureIntent == CAPTURE_INTENT_PREVIEW)) {
@@ -2982,7 +2997,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				for (i=0 ;i < (size_t)targetStreamParms->numSvcBuffers; i++) {
 		           res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
 				   if (res) {
-		              HAL_LOGE("%s cancelbuf res=%d",__FUNCTION__,res);
+		              HAL_LOGE("cancelbuf res=%d",res);
 				   }
 				   targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
 				}
@@ -2993,7 +3008,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							(uint32_t)mPreviewHeapArray_vir,
 							(targetStreamParms->width * targetStreamParms->height * 3)/2,
 							(uint32_t)targetStreamParms->numSvcBuffers)) {
-						HAL_LOGE("%s set preview mem error.",__FUNCTION__);
+						HAL_LOGE("set preview mem error.");
 						return ;
 				}
 				#else
@@ -3001,19 +3016,19 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							(uint32_t)mPreviewHeapArray_vir,
 							(targetStreamParms->width * targetStreamParms->height * 3)/2,
 							mPreviewHeapNum)) {
-						HAL_LOGE("%s set preview mem error.",__FUNCTION__);
+						HAL_LOGE("set preview mem error.");
 						return ;
 				}
 				#endif
 			    camera_ret_code_type qret = camera_start_preview(camera_cb, this,GetCameraPictureMode());
 				if (qret != CAMERA_SUCCESS) {
-					HAL_LOGE("%s startPreview failed: sensor error.",__FUNCTION__);
+					HAL_LOGE("startPreview failed: sensor error.");
 					setCameraState(SPRD_ERROR, STATE_PREVIEW);
 					return ;
 				}
 
 				res = WaitForPreviewStart();
-				HAL_LOGD("%s camera_start_preview X ret=%d",__FUNCTION__,res);
+				HAL_LOGD("camera_start_preview X ret=%d",res);
 			}
 		} else {
 			if (mCameraState.preview_state == SPRD_INIT || mCameraState.preview_state == SPRD_IDLE) {
@@ -3029,7 +3044,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				if (camera_set_dimensions(StreamParameter->width, StreamParameter->height,
 		                     targetStreamParms->width,targetStreamParms->height,
 		                     NULL,NULL,true) != 0) {
-					HAL_LOGE("%s set pic size fail",__FUNCTION__);
+					HAL_LOGE("set pic size fail");
 				}
 				if (srcreq->isCropSet) {
 					if (CAMERA_ZSL_MODE == GetCameraPictureMode()) {
@@ -3071,7 +3086,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							if (camera_set_dimensions(StreamParameter->width, StreamParameter->height,
 					                     targetStreamParms->width,targetStreamParms->height,
 					                     NULL,NULL,true) != 0) {
-								HAL_LOGE("%s set pic size fail",__FUNCTION__);
+								HAL_LOGE("set pic size fail");
 							}
 						} else {//for cts testVideoSnapshot start
 							#if 0
@@ -3082,7 +3097,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							}
 							SetDcDircToDvSnap(true);
 							#endif
-							HAL_LOGV("ent  cts testVideoSnapshot scene!");
+							HAL_LOGV("ent cts testVideoSnapshot scene!");
 						}
 						if (srcreq->isCropSet) {
 							if (CAMERA_ZSL_MODE == GetCameraPictureMode()) {
@@ -3133,25 +3148,25 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
                 if(mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS) {
 					m_Stream[STREAM_ID_PREVIEW - 1]->setHalStopMsg(true);
 					camera_set_stop_preview_mode(0);
-					HAL_LOGD("%s stop preview bef picture",__FUNCTION__);
+					HAL_LOGD("stop preview bef picture");
 			        stopPreviewSimple();
 				}
 				if (camera_set_dimensions(subParameters->width,subParameters->height,
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.width,\
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.height,NULL,NULL,true) != 0) {
-					HAL_LOGE("%s set pic size fail",__FUNCTION__);
+					HAL_LOGE("set pic size fail");
 				}
 				if (camera_capture_max_img_size(&local_width, &local_height)) {
-					HAL_LOGE("(%s): camera_capture_max_img_size fail", __FUNCTION__);
+					HAL_LOGE("camera_capture_max_img_size fail");
 					return ;
 				}
 				if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size0, &mem_size1)) {
-					HAL_LOGE("(%s): camera_capture_get_buffer_size fail", __FUNCTION__);
+					HAL_LOGE("camera_capture_get_buffer_size fail");
 					return ;
 				}
 				mRawHeapSize = mem_size0;
 				if (!allocateCaptureMem()) {
-					HAL_LOGE("(%s): allocateCaptureMem fail", __FUNCTION__);
+					HAL_LOGE("allocateCaptureMem fail");
 					return ;
 				}
 				if (camera_set_capture_mem2(0,
@@ -3161,7 +3176,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 										(uint32_t)Callback_AllocCapturePmem,
 										(uint32_t)Callback_FreeCapturePmem,
 										(uint32_t)this)) {
-					HAL_LOGE("(%s): camera_set_capture_mem2 fail", __FUNCTION__);
+					HAL_LOGE("camera_set_capture_mem2 fail");
 					freeCaptureMem();
 					return ;
 				}
@@ -3171,14 +3186,14 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				if (camera_set_dimensions(subParameters->width,subParameters->height,
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.width,\
 									m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters.height,NULL,NULL,true) != 0) {
-					HAL_LOGE("%s set pic size fail",__FUNCTION__);
+					HAL_LOGE("set pic size fail");
 				}
 			//}
 			SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
 			if (srcreq->isCropSet) {
 				camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
 				if(CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom)) {
-					HAL_LOGE("err(%s): scale up over 4times!", __FUNCTION__);
+					HAL_LOGE("err: scale up over 4times!");
 					IsSetPara = true;
 					goto out;
 				}
@@ -3208,9 +3223,9 @@ bool SprdCameraHWInterface2::WaitForCaptureDone(void)
 	Mutex::Autolock stateLock(&mStateLock);
 	while (SPRD_IDLE != mCameraState.capture_state
 		 && SPRD_ERROR != mCameraState.capture_state) {
-		HAL_LOGV("WaitForCaptureDone: waiting for SPRD_IDLE");
+		HAL_LOGV("waiting for SPRD_IDLE");
 		mStateWait.wait(mStateLock);
-		HAL_LOGV("WaitForCaptureDone: woke up");
+		HAL_LOGV("woke up");
 	}
 	return SPRD_IDLE == mCameraState.capture_state;
 }
@@ -3219,7 +3234,7 @@ status_t SprdCameraHWInterface2::cancelPictureInternal(void)
 {
 	bool result = true;
 
-	HAL_LOGV("cancelPictureInternal: S, state = %s", getCameraStateStr(getCaptureState()));
+	HAL_LOGV("start, state = %s", getCameraStateStr(getCaptureState()));
 
 	switch (getCaptureState()) {
 	case SPRD_INTERNAL_RAW_REQUESTED:
@@ -3239,7 +3254,7 @@ status_t SprdCameraHWInterface2::cancelPictureInternal(void)
 		break;
 	}
 
-	HAL_LOGV("cancelPictureInternal: E");
+	HAL_LOGV("end");
 	return result ? NO_ERROR : UNKNOWN_ERROR;
 }
 
@@ -3256,7 +3271,7 @@ bool SprdCameraHWInterface2::iSZslMode(void)
 
 bool SprdCameraHWInterface2::isCapturing(void)
 {
-	HAL_LOGV("isCapturing: %s", getCameraStateStr(mCameraState.capture_state));
+	HAL_LOGV("state: %s", getCameraStateStr(mCameraState.capture_state));
 
 	return (SPRD_WAITING_RAW == mCameraState.capture_state
 			|| SPRD_WAITING_JPEG == mCameraState.capture_state);
@@ -3264,7 +3279,7 @@ bool SprdCameraHWInterface2::isCapturing(void)
 
 bool SprdCameraHWInterface2::isPreviewing(void)
 {
-	HAL_LOGV("isPreviewing: %s", getCameraStateStr(mCameraState.preview_state));
+	HAL_LOGV("state: %s", getCameraStateStr(mCameraState.preview_state));
 	return (SPRD_PREVIEW_IN_PROGRESS == mCameraState.preview_state);
 }
 
@@ -3273,7 +3288,7 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
 	stream_parameters_t     *StreamParameter = NULL;
 	stream_parameters_t     *targetStreamParms = NULL;
 	bool  ret = true;
-	HAL_LOGV("startPreviewInternal E isRecording=%d.",isRecording);
+	HAL_LOGV("start isRecording=%d.",isRecording);
 
 	if (isPreviewing()) {
 		HAL_LOGE("startPreviewInternal: already in progress, doing nothing.X");
@@ -3288,7 +3303,7 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
 		}
 
 		if (isCapturing() || isPreviewing()) {
-			HAL_LOGE("startPreviewInternal X Capture state is %s, Preview state is %s, expecting SPRD_IDLE!",
+			HAL_LOGE("X Capture state is %s, Preview state is %s, expecting SPRD_IDLE!",
 			getCameraStateStr(mCameraState.capture_state), getCameraStateStr(mCameraState.preview_state));
 			return INVALID_OPERATION;
 		}
@@ -3323,22 +3338,22 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
         uint32_t mem_size0 = 0, mem_size1 = 0;
 
         if (camera_capture_max_img_size(&local_width, &local_height)) {
-	        HAL_LOGE("(%s): camera_capture_max_img_size fail", __FUNCTION__);
+	        HAL_LOGE("camera_capture_max_img_size fail");
 	        return SPRD_ERROR;
         }
 
         if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size0, &mem_size1)) {
-	        HAL_LOGE("(%s): camera_capture_get_buffer_size fail", __FUNCTION__);
+	        HAL_LOGE("camera_capture_get_buffer_size fail");
 	        return SPRD_ERROR;
         }
 
         mRawHeapSize = mem_size0;
         if (!allocateCaptureMem()) {
-	        HAL_LOGE("(%s): allocateCaptureMem fail", __FUNCTION__);
+	        HAL_LOGE("allocateCaptureMem fail");
 	        return SPRD_ERROR;
         }
 
-        HAL_LOGE("%s to call camera_set_capture_mem2", __FUNCTION__);
+        HAL_LOGE("to call camera_set_capture_mem2");
         if (camera_set_capture_mem2(0,
 						(uint32_t)mRawHeap->phys_addr,
 						(uint32_t)mRawHeap->data,
@@ -3346,7 +3361,7 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
 						(uint32_t)Callback_AllocCapturePmem,
 						(uint32_t)Callback_FreeCapturePmem,
 						(uint32_t)this)) {
-	        HAL_LOGE("(%s): camera_set_capture_mem2 fail", __FUNCTION__);
+	        HAL_LOGE("camera_set_capture_mem2 fail");
 	        freeCaptureMem();
 	        return SPRD_ERROR;
         }
@@ -3362,7 +3377,7 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
 	}
 
 	ret = WaitForPreviewStart();
-	HAL_LOGD("camera_start_preview X ret=%d",ret);
+	HAL_LOGD("end ret=%d",ret);
 	return ret ? NO_ERROR : UNKNOWN_ERROR;
 }
 
@@ -3372,7 +3387,7 @@ void SprdCameraHWInterface2::stopPreviewSimple(void)
 	setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
 	if(CAMERA_SUCCESS != camera_stop_preview()) {
 		setCameraState(SPRD_ERROR, STATE_PREVIEW);
-		HAL_LOGE("%s X: fail to camera_stop_preview()",__FUNCTION__);
+		HAL_LOGE("fail to camera_stop_preview()");
 	}
 	WaitForPreviewStop();
 }
@@ -3384,12 +3399,12 @@ void SprdCameraHWInterface2::stopPreviewInternal(void)
 	stream_parameters_t *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 	status_t res = 0;
 	size_t i = 0;
-	HAL_LOGV("%s", getCameraStateStr(mCameraState.preview_state));
+	HAL_LOGV("preview state %s", getCameraStateStr(mCameraState.preview_state));
 	if (SPRD_PREVIEW_IN_PROGRESS != mCameraState.preview_state) {
 		HAL_LOGV("Preview not in progress!");
 		return;
 	}
-	HAL_LOGV("%s", getCameraStateStr(mCameraState.capture_state));
+	HAL_LOGV("capture state %s", getCameraStateStr(mCameraState.capture_state));
 
 	if (SPRD_WAITING_RAW == mCameraState.capture_state
 		|| SPRD_WAITING_JPEG == mCameraState.capture_state) {
@@ -3406,14 +3421,14 @@ void SprdCameraHWInterface2::stopPreviewInternal(void)
 		for (;i < (size_t)targetStreamParms->numSvcBuffers; i++) {
 	       res = targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[i]));
 		   if (res) {
-	          HAL_LOGE("%s cancelbuf res=%d",__FUNCTION__,res);
+	          HAL_LOGE("cancelbuf res=%d",res);
 		   }
 		   targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
 		}
 		m_Stream[STREAM_ID_PREVIEW-1]->releaseBufQ();
 	}
 	end_timestamp = systemTime();
-	HAL_LOGV("stopPreviewInternal end time:%lld(ms).",(end_timestamp - start_timestamp)/1000000);
+	HAL_LOGV("end time:%lld(ms).",(end_timestamp - start_timestamp)/1000000);
 }
 
 int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream)
@@ -3426,19 +3441,19 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 	const private_handle_t *priv_handle = NULL;
 
 	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
-		HAL_LOGE("ERR(%s): haven't stream ops", __FUNCTION__);
+		HAL_LOGE("ERR: haven't stream ops");
 		return 0;
 	}
 
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
     if (ret != NO_ERROR || buf == NULL) {
-        HAL_LOGD("DEBUG(%s):  prvcb stream(%d) dequeue_buffer fail res(%d)",__FUNCTION__ , stream->m_index,  ret);
+        HAL_LOGD("prvcb stream(%d) dequeue_buffer fail res(%d)",stream->m_index,  ret);
 		return ret;
     }
 	//lock
 	if (m_grallocHal->lock(m_grallocHal, *buf, subParms->usage, 0, 0,
                    subParms->width, subParms->height, &VirtBuf) != 0) {
-		HAL_LOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
+		HAL_LOGE("ERRcould not obtain gralloc buffer");
 	}
 	priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
     switch(subStream)
@@ -3470,8 +3485,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
     ret = subParms->streamOps->enqueue_buffer(subParms->streamOps,
                                                frameTimeStamp,
                                                buf);
-
-    HAL_LOGD("DEBUG(%s): return %d",__FUNCTION__, ret);
+    HAL_LOGD("return %d",ret);
 
     return ret;
 }
@@ -3485,7 +3499,7 @@ SprdCameraHWInterface2::transitionState(SprdCameraHWInterface2::Sprd_camera_stat
 									SprdCameraHWInterface2::state_owner owner, bool lock)
 {
 	volatile SprdCameraHWInterface2::Sprd_camera_state *which_ptr = NULL;
-	HAL_LOGV("transitionState: owner = %d, lock = %d", owner, lock);
+	HAL_LOGV("owner = %d, lock = %d", owner, lock);
 
 	if (lock) mStateLock.lock();
 
@@ -3530,19 +3544,19 @@ SprdCameraHWInterface2::transitionState(SprdCameraHWInterface2::Sprd_camera_stat
 void SprdCameraHWInterface2::HandleStartCamera(camera_cb_type cb,
 								  		int32_t parm4)
 {
-	HAL_LOGV("HandleCameraStart in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGV("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCameraState()));
 
 	transitionState(SPRD_INIT, SPRD_IDLE, STATE_CAMERA);
 
-	HAL_LOGV("HandleCameraStart out, state = %s", getCameraStateStr(getCameraState()));
+	HAL_LOGV("out, state = %s", getCameraStateStr(getCameraState()));
 }
 
 void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 											 int32_t parm4)
 {
 
-	HAL_LOGV("HandleStartPreview in: cb = %d, parm4 = 0x%x, state = %s",
+	HAL_LOGV("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getPreviewState()));
 
 	switch(cb) {
@@ -3565,13 +3579,13 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 			break;
 
 		default:
-			HAL_LOGV("HandleStartPreview: invalid state");
+			HAL_LOGV("invalid state");
 			break;
 			}
 		break;
 
 	case CAMERA_EXIT_CB_FAILED:
-		HAL_LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
+		HAL_LOGE("camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
 				parm4, getCameraStateStr(getPreviewState()));
 		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
 		//receiveCameraExitError();
@@ -3579,7 +3593,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 	case CAMERA_EVT_CB_FLUSH:
 		{
 			if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
-				HAL_LOGD("%s prv is not previewing!",__FUNCTION__);
+				HAL_LOGD("prv is not previewing!");
 				return;
 			}
 			camera_frame_type *frame = (camera_frame_type *)parm4;
@@ -3596,7 +3610,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 		break;
 	}
 
-	HAL_LOGV("HandleStartPreview out, state = %s", getCameraStateStr(getPreviewState()));
+	HAL_LOGV("out, state = %s", getCameraStateStr(getPreviewState()));
 }
 
 void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
@@ -3612,7 +3626,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	Mutex::Autolock lock(m_stopPrvFrmCBMutex);
 	#endif
 	if (NULL == frame) {
-		HAL_LOGE("receivePreviewFrame: invalid frame pointer");
+		HAL_LOGE("invalid frame pointer");
 		return;
 	}
 	#ifdef PREVIEW_USE_DCAM_BUF
@@ -3663,7 +3677,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			return;
 	}
 	if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
-		HAL_LOGD("%s prv is not previewing!",__FUNCTION__);
+		HAL_LOGD("prv is not previewing!");
 		return;
 	}
 //graphic deq 6 buf
@@ -3725,7 +3739,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			found = false;
 			res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
 			if (res != NO_ERROR || buf == NULL) {
-				HAL_LOGD("DEBUG(%s): dequeue_buffer fail",__FUNCTION__);
+				HAL_LOGD("dequeue_buffer fail");
 				return;
 	        }
 			priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
@@ -3795,7 +3809,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		StreamSP->pushBufQ(targetStreamParms->bufIndex);
 		targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_HAL_BUFQ;
 		Index = StreamSP->popBufQ();
-		HAL_LOGD("receivePreviewFrame stream not output,popIndex=%d",Index);
+		HAL_LOGD("stream not output,popIndex=%d",Index);
 		res = camera_release_frame(Index);
 		if (res) {
              HAL_LOGD("ERR receivepreviewframe2 release frame!");
@@ -3822,13 +3836,13 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 	void *VirtBuf = NULL;
 	Mutex::Autolock lock(m_stopPrvFrmCBMutex);
 	if (NULL == frame) {
-		HAL_LOGE("%s: invalid frame pointer",__FUNCTION__);
+		HAL_LOGE("invalid frame pointer");
 		return;
 	}
 
     StreamSP = m_Stream[STREAM_ID_PREVIEW - 1];
 	if (StreamSP == NULL) {
-		HAL_LOGE("%s preview stream is NULL.",__FUNCTION__);
+		HAL_LOGE("preview stream is NULL.");
 		return;
 	}
 	if (GetStartPreviewAftPic()) {
@@ -3838,7 +3852,7 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
         }
 		//check if kick cancel key first
 		if (StreamSP->getRecevStopMsg()) {
-		    HAL_LOGD("%s recev stop msg!",__FUNCTION__);
+		    HAL_LOGD("recev stop msg!");
             if (!StreamSP->m_IsFirstFrm) {
                 StreamSP->m_IsFirstFrm = true;
 				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
@@ -3847,11 +3861,11 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 		}
 		//oem stop preview for picture
 		if (StreamSP->getHalStopMsg()) {
-            HAL_LOGD("%s hal stop msg!",__FUNCTION__);
+            HAL_LOGD("hal stop msg!");
 			return;
 	}
 	if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
-		HAL_LOGD("%s prv is not previewing!",__FUNCTION__);
+		HAL_LOGD("prv is not previewing!");
 		return;
 	}
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
@@ -3874,7 +3888,7 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 			}
 		}
 		if (i == NUM_MAX_SUBSTREAM) {
-			HAL_LOGD("err %s cb substream not regist",__FUNCTION__);
+			HAL_LOGD("err cb substream not regist");
 		}
 	}
 	if (GetOutputStreamMask() & STREAM_MASK_RECORD && !GetRecStopMsg()) {
@@ -3903,7 +3917,7 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
         }
 		if (m_grallocHal->lock(m_grallocHal, *buf, targetStreamParms->usage, 0, 0,
                    targetStreamParms->width, targetStreamParms->height, &VirtBuf) != 0) {
-			HAL_LOGE("ERR(%s): could not obtain gralloc buffer", __FUNCTION__);
+			HAL_LOGE("ERR: could not obtain gralloc buffer");
 		}
 		priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
 		if (camera_get_rot_set()) {
@@ -3916,23 +3930,23 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 		if (m_grallocHal) {
 			m_grallocHal->unlock(m_grallocHal, *buf);
 		} else {
-			HAL_LOGD("ERR %s gralloc is NULL",__FUNCTION__);
+			HAL_LOGD("ERR gralloc is NULL");
 		}
 		res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
 												   targetStreamParms->m_timestamp,
 												   buf);
 		if(res) {
-			HAL_LOGE("ERR(%s): could not enq gralloc buffer,res=%d", __FUNCTION__,res);
+			HAL_LOGE("ERR could not enq gralloc buffer,res=%d", res);
 			if (!StreamSP->m_IsFirstFrm) {
 				StreamSP->m_IsFirstFrm = true;
 				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 			}
 			return;
 		} else {
-			HAL_LOGD("%s release frame start",__FUNCTION__);
+			HAL_LOGD("release frame start");
 			res = camera_release_frame(targetStreamParms->bufIndex);
 			if (res) {
-	             HAL_LOGD("ERR %s release frame!",__FUNCTION__);
+	             HAL_LOGD("ERR release frame!");
 			}
 			if (!StreamSP->m_IsFirstFrm) {
 				StreamSP->m_IsFirstFrm = true;
@@ -3940,10 +3954,10 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
 			}
 		}
     } else {
-		HAL_LOGD("%s stream not output",__FUNCTION__);
+		HAL_LOGD("stream not output");
 		res = camera_release_frame(targetStreamParms->bufIndex);
 		if (res) {
-             HAL_LOGD("ERR %s release frame!",__FUNCTION__);
+             HAL_LOGD("ERR release frame!");
 		}
 		if (!StreamSP->m_IsFirstFrm) {
 			StreamSP->m_IsFirstFrm = true;
@@ -3963,28 +3977,28 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 	RequestQueueThread *  selfThread      = ((RequestQueueThread*)self);
 	int ret;
 
-    HAL_LOGD("DEBUG(%s): RequestQueueThread (%x)", __FUNCTION__, currentSignal);
+    HAL_LOGD("RequestQueueThread (%x)", currentSignal);
 
     if (currentSignal & SIGNAL_THREAD_RELEASE) {
         ClearReqQ();
-        HAL_LOGD("DEBUG(%s): processing SIGNAL_THREAD_RELEASE DONE", __FUNCTION__);
+        HAL_LOGD("processing SIGNAL_THREAD_RELEASE DONE");
         selfThread->SetSignal(SIGNAL_THREAD_TERMINATE);
         return;
     }
 
     if (currentSignal & SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY) {
-        HAL_LOGD("DEBUG(%s): RequestQueueThread processing SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY", __FUNCTION__);
+        HAL_LOGD("RequestQueueThread processing SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY");
 		//app send req faster than oem process req
 		if(!GetReqProcessStatus()){
 	        curReq = PopReqQ();
 	        if (!curReq) {
-	            HAL_LOGD("DEBUG(%s): No more service requests left in the queue!", __FUNCTION__);
+	            HAL_LOGD("No more service requests left in the queue!");
 	        }
 	        else
 			{
-			    HAL_LOGD("DEBUG(%s): bef curreq=0x%x", __FUNCTION__, (uint32_t)curReq);
+			    HAL_LOGD("bef curreq=0x%x", (uint32_t)curReq);
 			    Camera2GetSrvReqInfo(&m_staticReqInfo, curReq);
-	            HAL_LOGD("DEBUG(%s): aft", __FUNCTION__);
+	            HAL_LOGD("aft");
 	        }
 		}
     }
@@ -3993,17 +4007,17 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 		bool IsProcessing = false;
         IsProcessing = GetReqProcessStatus();
 		if (!IsProcessing) {
-           HAL_LOGE("ERR %s status should processing",__FUNCTION__);
+           HAL_LOGE("ERR status should processing");
 		}
 		ret = Camera2RefreshSrvReq(&m_staticReqInfo,m_halRefreshReq);
 		if (ret) {
-           HAL_LOGE("ERR %s refresh req",__FUNCTION__);
+           HAL_LOGE("ERR refresh req");
 		}
-		HAL_LOGD("DEBUG(%s):  processing SIGNAL_REQ_THREAD_REQ_DONE,free add=0x%x",
-				__FUNCTION__, (uint32_t)m_staticReqInfo.ori_req);
+		HAL_LOGD("processing SIGNAL_REQ_THREAD_REQ_DONE,free add=0x%x",
+				(uint32_t)m_staticReqInfo.ori_req);
         ret = m_requestQueueOps->free_request(m_requestQueueOps, m_staticReqInfo.ori_req);
         if (ret < 0)
-            HAL_LOGE("ERR(%s): free_request ret = %d", __FUNCTION__, ret);
+            HAL_LOGE("ERR: free_request ret = %d", ret);
         {
 			Mutex::Autolock lock(m_requestMutex);
 	        m_staticReqInfo.ori_req = NULL;
@@ -4018,19 +4032,19 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
         //for currentFrame alloc buf(metadata struct)
         ret = m_frameQueueOps->dequeue_frame(m_frameQueueOps, numEntries, frameSize, &newReq);//numEntries mean parameters num
         if (ret < 0)
-            HAL_LOGE("ERR(%s): dequeue_frame ret = %d", __FUNCTION__, ret);
+            HAL_LOGE("ERR dequeue_frame ret = %d", ret);
 
         if (newReq==NULL) {
-            HAL_LOGV("DBG(%s): frame dequeue returned NULL",__FUNCTION__ );
+            HAL_LOGV("frame dequeue returned NULL" );
         } else {
-            HAL_LOGV("DEBUG(%s): frame dequeue done. numEntries(%d) frameSize(%d)",__FUNCTION__ , numEntries, frameSize);
+            HAL_LOGV("frame dequeue done. numEntries(%d) frameSize(%d)",numEntries, frameSize);
         }
         ret = append_camera_metadata(newReq, m_halRefreshReq);
         if (ret == 0) {
-            HAL_LOGD("DEBUG(%s): frame metadata append success add=0x%x",__FUNCTION__, (uint32_t)newReq);
+            HAL_LOGD("frame metadata append success add=0x%x",(uint32_t)newReq);
             m_frameQueueOps->enqueue_frame(m_frameQueueOps, newReq);
         } else {
-            HAL_LOGE("ERR(%s): frame metadata append fail (%d)",__FUNCTION__, ret);
+            HAL_LOGE("ERR frame metadata append fail (%d)",ret);
         }
 		if (GetReqQueueSize() > 0)
 			selfThread->SetSignal(SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY);
@@ -4045,15 +4059,15 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
                         ANDROID_CONTROL_AWB_STATE_CONVERGED,
                         m_camCtlInfo.precaptureTrigID, 0, m_callbackClient);
 		m_camCtlInfo.precaptureTrigID = 0;
-		HAL_LOGD("%s precap meter done",__FUNCTION__);
+		HAL_LOGD("precap meter done");
 	}
-    HAL_LOGV("DEBUG(%s): RequestQueueThread Exit", __FUNCTION__);
+    HAL_LOGV("Exit");
     return;
 }
 
 SprdCameraHWInterface2::RequestQueueThread::~RequestQueueThread()
 {
-	HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+	HAL_LOGV("dont' handle");
 }
 
 static camera2_device_t *g_cam2_device = NULL;
@@ -4063,7 +4077,7 @@ static Mutex g_camera_mutex;
 static int HAL2_camera_device_close(struct hw_device_t* device)
 {
     Mutex::Autolock lock(g_camera_mutex);
-    HAL_LOGD("(%s): ENTER", __FUNCTION__);
+    HAL_LOGD("start");
     if (device) {
         camera2_device_t *cam_device = (camera2_device_t *)device;
         HAL_LOGV("cam_device(0x%08x):", (unsigned int)cam_device);
@@ -4073,7 +4087,7 @@ static int HAL2_camera_device_close(struct hw_device_t* device)
         g_camera_vaild = false;
         g_cam2_device = NULL;
     }
-    HAL_LOGD("(%s): EXIT", __FUNCTION__);
+    HAL_LOGD("end");
     return 0;
 }
 
@@ -4085,39 +4099,39 @@ static inline SprdCameraHWInterface2 *obj(const struct camera2_device *dev)
 static int HAL2_device_set_request_queue_src_ops(const struct camera2_device *dev,
             const camera2_request_queue_src_ops_t *request_src_ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->setRequestQueueSrcOps(request_src_ops);
 }
 
 static int HAL2_device_notify_request_queue_not_empty(const struct camera2_device *dev)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->notifyRequestQueueNotEmpty();
 }
 
 static int HAL2_device_set_frame_queue_dst_ops(const struct camera2_device *dev,
             const camera2_frame_queue_dst_ops_t *frame_dst_ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->setFrameQueueDstOps(frame_dst_ops);
 }
 
 static int HAL2_device_get_in_progress_count(const struct camera2_device *dev)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->getInProgressCount();
 }
 
 static int HAL2_device_flush_captures_in_progress(const struct camera2_device *dev)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->flushCapturesInProgress();
 }
 
 static int HAL2_device_construct_default_request(const struct camera2_device *dev,
             int request_template, camera_metadata_t **request)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->ConstructDefaultRequest(request_template, request);
 }
 
@@ -4134,7 +4148,7 @@ static int HAL2_device_allocate_stream(
             uint32_t *usage,
             uint32_t *max_buffers)
 {
-    HAL_LOGV("(%s): ", __FUNCTION__);
+    HAL_LOGV("start ");
     return obj(dev)->allocateStream(width, height, format, stream_ops,
                                     stream_id, format_actual, usage, max_buffers);
 }
@@ -4144,7 +4158,7 @@ static int HAL2_device_register_stream_buffers(const struct camera2_device *dev,
             int num_buffers,
             buffer_handle_t *buffers)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->registerStreamBuffers(stream_id, num_buffers, buffers);
 }
 
@@ -4152,7 +4166,7 @@ static int HAL2_device_release_stream(
         const struct camera2_device *dev,
             uint32_t stream_id)
 {
-    HAL_LOGV("DEBUG(%s)(id: %d):", __FUNCTION__, stream_id);
+    HAL_LOGV("start id: %d", stream_id);
     if (!g_camera_vaild)
         return 0;
     return obj(dev)->releaseStream(stream_id);
@@ -4169,7 +4183,7 @@ static int HAL2_device_allocate_reprocess_stream(
             uint32_t *consumer_usage,
             uint32_t *max_buffers)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->allocateReprocessStream(width, height, format, reprocess_stream_ops,
                                     stream_id, consumer_usage, max_buffers);
 }
@@ -4181,7 +4195,7 @@ static int HAL2_device_allocate_reprocess_stream_from_stream(
             // outputs
             uint32_t *stream_id)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->allocateReprocessStreamFromStream(output_stream_id,
                                     reprocess_stream_ops, stream_id);
 }
@@ -4190,7 +4204,7 @@ static int HAL2_device_release_reprocess_stream(
         const struct camera2_device *dev,
             uint32_t stream_id)
 {
-	HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+	HAL_LOGV("start");
 	return obj(dev)->releaseReprocessStream(stream_id);
 }
 
@@ -4199,7 +4213,7 @@ static int HAL2_device_trigger_action(const struct camera2_device *dev,
             int ext1,
             int ext2)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     if (!g_camera_vaild)
         return 0;
     return obj(dev)->triggerAction(trigger_id, ext1, ext2);
@@ -4209,26 +4223,26 @@ static int HAL2_device_set_notify_callback(const struct camera2_device *dev,
             camera2_notify_callback notify_cb,
             void *user)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->setNotifyCallback(notify_cb, user);
 }
 
 static int HAL2_device_get_metadata_vendor_tag_ops(const struct camera2_device*dev,
             vendor_tag_query_ops_t **ops)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->getMetadataVendorTagOps(ops);
 }
 
 static int HAL2_device_dump(const struct camera2_device *dev, int fd)
 {
-    HAL_LOGV("DEBUG(%s):", __FUNCTION__);
+    HAL_LOGV("start");
     return obj(dev)->dump(fd);
 }
 
 static int HAL2_getNumberOfCameras()
 {
-    HAL_LOGV("(%s): returning 2", __FUNCTION__);
+    HAL_LOGV("start");
 #ifndef CONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
     return 2;
 #else
@@ -4243,7 +4257,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
     size_t dataCount = 0;
     status_t ret;
 
-    HAL_LOGD("ConstructStaticInfo info_add=0x%x,sizereq=%d",
+    HAL_LOGD("info_add=0x%x,sizereq=%d",
                 (int)*info, (int)sizeRequest);
 #define ADD_OR_SIZE( tag, data, count ) \
     if ( ( ret = addOrSize(*info, sizeRequest, &entryCount, &dataCount, \
@@ -4519,7 +4533,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
 
 static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc camera_meta for load default paramet
 {
-    HAL_LOGD("DEBUG(%s): cameraID: %d", __FUNCTION__, cameraId);
+    HAL_LOGD("cameraID: %d", cameraId);
     static camera_metadata_t * mCameraInfo[2] = {NULL, NULL};
     status_t res;
 
@@ -4529,7 +4543,7 @@ static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc ca
         if (!g_Camera2[0]) {
             g_Camera2[0] = (SprdCamera2Info *)malloc(sizeof(SprdCamera2Info));
 			if(!g_Camera2[0])
-			   HAL_LOGE("%s no mem! backcam",__FUNCTION__);
+			   HAL_LOGE("no mem! backcam");
             initCamera2Info(cameraId);
         }
     } else if (cameraId == 1) {
@@ -4538,7 +4552,7 @@ static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc ca
         if (!g_Camera2[1]) {
             g_Camera2[1] = (SprdCamera2Info *)malloc(sizeof(SprdCamera2Info));
 			if (!g_Camera2[1])
-			   HAL_LOGE("%s no mem! frontcam",__FUNCTION__);
+			   HAL_LOGE("no mem! frontcam");
 
 			initCamera2Info(cameraId);
         }
@@ -4550,14 +4564,14 @@ static int HAL2_getCameraInfo(int cameraId, struct camera_info *info)//malloc ca
     if (mCameraInfo[cameraId] == NULL) {
         res = ConstructStaticInfo(g_Camera2[cameraId],&(mCameraInfo[cameraId]), cameraId, true);
         if (res != OK) {
-            HAL_LOGE("%s: Unable to allocate static info: %s (%d)",
-                    __FUNCTION__, strerror(-res), res);
+            HAL_LOGE("Unable to allocate static info: %s (%d)",
+                    strerror(-res), res);
             return res;
         }
         res = ConstructStaticInfo(g_Camera2[cameraId], &(mCameraInfo[cameraId]), cameraId, false);
         if (res != OK) {
-            HAL_LOGE("%s: Unable to fill in static info: %s (%d)",
-                    __FUNCTION__, strerror(-res), res);
+            HAL_LOGE("Unable to fill in static info: %s (%d)",
+                    strerror(-res), res);
             return res;
         }
     }
@@ -4599,26 +4613,26 @@ static int HAL2_camera_device_open(const struct hw_module_t* module,
 
     Mutex::Autolock lock(g_camera_mutex);
     if (g_camera_vaild) {
-        HAL_LOGE("ERR(%s): Can't open, other camera is in use", __FUNCTION__);
+        HAL_LOGE("ERR Can't open, other camera is in use");
         return -EBUSY;
     }
     g_camera_vaild = false;
     HAL_LOGD("\n\n>>> SPRD CameraHAL_2(ID:%d) <<<\n\n", cameraId);
     if (cameraId < 0 || cameraId >= HAL2_getNumberOfCameras()) {
-        HAL_LOGE("ERR(%s):Invalid camera ID %s", __FUNCTION__, id);
+        HAL_LOGE("ERR Invalid camera ID %s", id);
         return -EINVAL;
     }
 
     HAL_LOGD("g_cam2_device : 0x%08x", (unsigned int)g_cam2_device);
     if (g_cam2_device) {
         if (obj(g_cam2_device)->getCameraId() == cameraId) {
-            HAL_LOGD("DEBUG(%s):returning existing camera ID %s", __FUNCTION__, id);
+            HAL_LOGD("return existing camera ID %s", id);
             goto done;
         } else {
-            HAL_LOGD("(%s): START waiting for cam device free", __FUNCTION__);
+            HAL_LOGD("START waiting for cam device free");
             while (g_cam2_device)
                 usleep(SIG_WAITING_TICK);
-            HAL_LOGD("(%s): END   waiting for cam device free", __FUNCTION__);
+            HAL_LOGD("END   waiting for cam device free");
         }
     }
 
@@ -4635,16 +4649,16 @@ static int HAL2_camera_device_open(const struct hw_module_t* module,
 
     g_cam2_device->ops = &camera2_device_ops;
 
-    HAL_LOGD("DEBUG(%s):open camera2 %s", __FUNCTION__, id);
+    HAL_LOGD("open camera2 %s", id);
 
     g_cam2_device->priv = new SprdCameraHWInterface2(cameraId, g_cam2_device, g_Camera2[cameraId], &openInvalid);
     if (openInvalid) {
-        HAL_LOGE("DEBUG(%s): SprdCameraHWInterface2 creation failed", __FUNCTION__);
+        HAL_LOGE("SprdCameraHWInterface2 creation failed");
         return -ENODEV;
     }
 done:
     *device = (hw_device_t *)g_cam2_device;
-    HAL_LOGV("DEBUG(%s):opened camera2 %s (%p)", __FUNCTION__, id, *device);
+    HAL_LOGV("opened camera2 %s (%p)", id, *device);
     g_camera_vaild = true;
 
     return 0;
