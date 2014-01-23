@@ -24,39 +24,6 @@
 
 #include "slog.h"
 
-int send_socket(int sockfd, void* buffer, int size)
-{
-        int result = -1;
-        int ioffset = 0;
-        while(sockfd > 0 && ioffset < size) {
-                result = send(sockfd, (char *)buffer + ioffset, size - ioffset, MSG_NOSIGNAL);
-                if (result > 0) {
-                        ioffset += result;
-                } else {
-                        break;
-                }
-        }
-        return result;
-
-}
-
-int
-recv_socket(int sockfd, void* buffer, int size)
-{
-        int received = 0, result;
-        while(buffer && (received < size))
-        {
-                result = recv(sockfd, (char *)buffer + received, size - received, MSG_NOSIGNAL);
-                if (result > 0) {
-                        received += result;
-                } else {
-                        received = result;
-                        break;
-                }
-        }
-        return received;
-}
-
 void update_5_entries(const char *keyword, const char *status, char *line)
 {
 	char *name, *pos3, *pos4, *pos5;
@@ -149,7 +116,6 @@ void usage(const char *name)
                "\tclear              delete all log.\n"
                "\tdump [file]        dump all log to a tar file.\n"
                "\tscreen [file]      screen shot, if no file given, will be put into misc dir\n"
-               "\thook_modem         dump current modem log to /data/log\n"
                "\tsync               sync current android log to file.\n"
                "\tquery              print the current slog configuration.\n");
 	return;
@@ -157,7 +123,7 @@ void usage(const char *name)
 
 int main(int argc, char *argv[])
 {
-        int sockfd, ret;
+	int sockfd, ret;
 	struct slog_cmd cmd;
 	struct sockaddr_un address;
 	struct timeval tv_out;
@@ -177,7 +143,6 @@ int main(int argc, char *argv[])
 	clear		CTRL_CMD_TYPE_CLEAR,
 	dump		CTRL_CMD_TYPE_DUMP,
 	screen		CTRL_CMD_TYPE_SCREEN,
-	hook_modem      CTRL_CMD_TYPE_HOOK_MODEM
 	*/
 	if(argc < 2) {
 		usage(argv[0]);
@@ -223,8 +188,6 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_QUERY;
 	} else if(!strncmp(argv[1], "sync", 4)) {
 		cmd.type = CTRL_CMD_TYPE_SYNC;
-	} else if(!strncmp(argv[1], "hook_modem", 10)) {
-		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
 	} else if(!strncmp(argv[1], "enable", 6)) {
 		update_conf("enable", NULL);
 		cmd.type = CTRL_CMD_TYPE_RELOAD;

@@ -154,20 +154,6 @@ static void handle_watchdog( int state )
 	system(buffer);
 }
 
-char *parse_string(char *src, char c, char *token)
-{
-	char *results;
-	results = strchr(src, c);
-	if(results == NULL) {
-		err_log("%s is null!", token);
-		return NULL;
-	}
-	*results++ = 0;
-	while(results[0]== c)
-		*results++ = 0;
-	return results;
-}
-
 int parse_3_entries(char *type)
 {
 	char *name, *pos3;
@@ -235,6 +221,7 @@ int parse_4_entries(char *type)
 		err_log("calloc failed!");
 		return -1;
 	}
+	memset(info, 0, sizeof(struct slog_info));
 
 	/* init data structure according to type */
 	if(!strncmp(type, "notify", 6)) {
@@ -282,6 +269,7 @@ int parse_5_entries(char *type)
 		err_log("calloc failed!");
 		return -1;
 	}
+	memset(info, 0, sizeof(struct slog_info));
 
 	/* init data structure according to type */
 	if(!strncmp(type, "stream", 6)) {
@@ -307,6 +295,8 @@ int parse_5_entries(char *type)
 		info->log_basename = strdup(name);
 		if(strncmp(pos3, "on", 2))
 			info->state = SLOG_STATE_OFF;
+		else
+			info->state = SLOG_STATE_ON;
 		info->max_size = atoi(pos4);
 		info->level = atoi(pos5);
 		if(!stream_log_head)
@@ -322,6 +312,8 @@ int parse_5_entries(char *type)
 		info->name = strdup(name);
 		if(!strncmp(pos3, "off", 3))
 			info->state = SLOG_STATE_OFF;
+		else
+			info->state = SLOG_STATE_ON;
 		info->max_size = atoi(pos4);
 		info->level = atoi(pos5);
 		misc_log = info;
@@ -356,6 +348,7 @@ int parse_6_entries(char *type)
 		err_log("calloc failed!");
 		return -1;
 	}
+	memset(info, 0, sizeof(struct slog_info));
 
 	/* init data structure according to type */
 	if(!strncmp(type, "snap", 4)) {

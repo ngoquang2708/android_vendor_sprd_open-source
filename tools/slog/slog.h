@@ -28,7 +28,6 @@
 #define SLOG_TYPE_MISC		(0x1 << 1)
 #define SLOG_TYPE_SNAPSHOT	(0x1 << 2)
 #define SLOG_TYPE_NOTIFY	(0x1 << 3)
-#define SLOG_TYPE_EXEC		(0x1 << 4)
 
 /* "state" field */
 #define SLOG_STATE_ON 0
@@ -53,9 +52,8 @@ enum {
 	CTRL_CMD_TYPE_CLEAR,
 	CTRL_CMD_TYPE_DUMP,
 	CTRL_CMD_TYPE_SCREEN,
-	CTRL_CMD_TYPE_HOOK_MODEM,
-	CTRL_CMD_TYPE_RSP,
-	CTRL_CMD_TYPE_SYNC
+	CTRL_CMD_TYPE_SYNC,
+	CTRL_CMD_TYPE_RSP
 };
 
 #define err_log(fmt, arg...) ALOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
@@ -76,16 +74,15 @@ enum {
 #define DEFAULT_MAX_LOG_SIZE		256 /* MB */
 #define MAXROLLLOGS			9
 #define INTERNAL_ROLLLOGS		1
-#define TIMEOUT_FOR_SD_MOUNT		5 /* seconds */
+#define TIMEOUT_FOR_SD_MOUNT		10 /* seconds */
 #define BUFFER_SIZE			(32 * 1024) /* 32k */
+#define SETV_BUFFER_SIZE		(64 * 1024) /* 64k */
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
 #define MODEM_LOG_SOURCE		"/dev/vbpipe0"
 
 /* handler last log dir */
 #define LAST_LOG 			"last_log"
-#define LOG_DIR_MAX_NUM 		5
-#define LOG_DIR_NUM 			1
 
 /* main data structure */
 struct slog_info {
@@ -125,7 +122,10 @@ struct slog_info {
 	int		fd_device;
 
 	/* log file handle */
-	int		fd_out;
+	FILE		*fp_out;
+
+	/* setvbuf need buffer*/
+	char		*setvbuf;
 
 	/* current log file size count */
 	int		outbytecount;
@@ -155,21 +155,18 @@ extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_t
 extern int slog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
-extern int hook_modem_flag;
 extern int dev_shark_flag;
 
 /* function */
-extern char *parse_string(char *src, char c, char *token);
-extern int parse_config();
 extern void *stream_log_handler(void *arg);
 extern void *snapshot_log_handler(void *arg);
 extern void *notify_log_handler(void *arg);
 extern void *bt_log_handler(void *arg);
 extern void *tcp_log_handler(void *arg);
-extern void *uboot_log_handler(void *arg);
 extern void *kmemleak_handler(void *arg);
 extern void *modem_log_handler(void *arg);
 extern void *handle_modem_state_monitor(void *arg);
+
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
 extern int notify_log_handler_started;
@@ -177,10 +174,30 @@ extern int bt_log_handler_started;
 extern int tcp_log_handler_started;
 extern int kmemleak_handler_started;
 extern int modem_log_handler_started;
+
+/* parse_conf.c */
 extern int gen_config_string(char *buffer);
-extern void cp_file(char *path, char *new_path);
+extern int parse_config();
+
+/* slog.c */
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);
 extern int capture_by_name(struct slog_info *head, const char *name, char *filepath);
+
+/* screenshot.c */
 extern int screen_shot(const char *name);
-extern void handle_android_log_sync(void);
+
+/* command.c */
+extern int send_socket(int sockfd, void* buffer, int size);
+extern int recv_socket(int sockfd, void* buffer, int size);
+extern int request_socket_cmd(int cmd_type);
+extern void cp_file(char *path, char *new_path);
+extern FILE *gen_outfd(struct slog_info *info);
+extern void rotatefiles(struct slog_info *info, int num, char *buffer);
+extern void log_size_handler(struct slog_info *info);
+extern char *parse_string(char *src, char c, char *token);
+extern int write_from_buffer(int fd, char *buf, int len);
+extern void open_device(struct slog_info *info, char *path);
+extern void gen_logfile(char *filename, struct slog_info *info);
+extern void log_buffer_flush(void);
+
 #endif /*_SLOG_H*/
