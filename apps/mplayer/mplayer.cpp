@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
         close(fd);
     }
 
-    mp->setAudioStreamType(AUDIO_STREAM_ENFORCED_AUDIBLE );
+    mp->setAudioStreamType(AUDIO_STREAM_ALARM );
     mp->prepare();
     if (msecond) mp->seekTo(msecond);
     mp->setVolume(volume, volume);
