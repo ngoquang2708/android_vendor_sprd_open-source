@@ -118,14 +118,16 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 		ret = -1;
 		goto rot_exit;
 	}
+
+	pthread_mutex_lock(&file->status_lock);
+
 	fd = file->fd;
 	if (fd < 0) {
 		CMR_LOGE("Invalid fd");
 		ret = -ENODEV;
-		goto rot_exit;
+		goto rot_unlock;
 	}
 
-	pthread_mutex_lock(&file->status_lock);
 	angle = rot_param->angle;
 	src_img = rot_param->src_img;
 	dst_img = rot_param->dst_img;
@@ -199,6 +201,7 @@ int cmr_rot_close(int *fd)
 	if (!file)
 		goto out;
 
+	pthread_mutex_lock(&file->status_lock);
 	if (file->fd < 0) {
 		CMR_LOGE("Invalid fd");
 		ret = -ENODEV;
@@ -208,8 +211,11 @@ int cmr_rot_close(int *fd)
 	/* then close fd */
 	close(file->fd);
 
-	pthread_mutex_destroy(&file->status_lock);
 close_free:
+	pthread_mutex_unlock(&file->status_lock);
+
+	pthread_mutex_destroy(&file->status_lock);
+
 	free(file);
 	*fd = 0;
 	ret = 0;
