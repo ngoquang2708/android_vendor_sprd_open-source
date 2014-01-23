@@ -880,17 +880,6 @@
         server="http://wap.plus.pl"
         type="default,supl"
     />
-    <apn carrier="Plus GPRS wap"
-        mcc="260"
-        mnc="01"
-        apn="wap"
-        proxy="212.002.096.016"
-        port="8080"
-        server="http://wap.plus.pl"
-        user="plusgsm"
-        password="plusgsm"
-        type="default,supl"
-    />
     <apn carrier="Plus MMS"
         mcc="260"
         mnc="01"
@@ -901,33 +890,13 @@
         type="mms"
     />
     <!-- Poland T-Mobile -->
-    <apn carrier="ERA Internet"
-        mcc="260"
-        mnc="02"
-        apn="erainternet"
-        user="erainternet"
-        password="erainternet"
-        type="default,supl"
-    />
-    <apn carrier="Era MMS"
-        mcc="260"
-        mnc="02"
-        apn="eramms"
-        mmsproxy="213.158.194.226"
-        mmsport="8080"
-        user="eramms"
-        password="eramms"
-        mmsc="http://mms.era.pl/servlets/mms"
-        type="mms"
-    />
     <apn carrier="T-mobile.pl"
         mcc="260"
         mnc="02"
         apn="internet"
-        server="http://t-mobile.pl/download"
         type="default,supl"
     />
-    <apn carrier="T-Mobile mms"
+    <apn carrier="T-mobile.pl MMS"
         mcc="260"
         mnc="02"
         apn="mms"
@@ -935,7 +904,6 @@
         mmsport="8080"
         mmsc="http://mms/servlets/mms"
         type="mms"
-        authtype="3"
     />
     <apn carrier="heyahinternet"
         mcc="260"
@@ -961,17 +929,7 @@
         password="internet"
         type="default,supl"
     />
-    <apn carrier="orange GPRS wap"
-        mcc="260"
-        mnc="03"
-        apn="wap"
-        proxy="192.168.006.102"
-        port="8080"
-        server="http://mobile.orange.pl"
-        user="wap"
-        type="default,supl"
-    />
-    <apn carrier="MMS orange"
+    <apn carrier="MMS Orange"
         mcc="260"
         mnc="03"
         apn="mms"
@@ -981,7 +939,6 @@
         password="mms"
         mmsc="http://mms.orange.pl"
         type="mms"
-        authtype="3"
     />
     <!-- Poland Play -->
     <apn carrier="Play Internet"
@@ -990,20 +947,11 @@
         apn="internet"
         type="default,supl"
     />
-    <apn carrier="Play GPRS wap"
-        mcc="260"
-        mnc="06"
-        apn="wap"
-        proxy="010.010.025.005"
-        port="8080"
-        server="http://wap.playmobile.pl"
-        type="default,supl"
-    />
     <apn carrier="Play MMS"
         mcc="260"
         mnc="06"
         apn="mms"
-        mmsproxy="010.010.025.005"
+        mmsproxy="10.10.25.5"
         mmsport="8080"
         mmsc="http://10.10.28.164/mms/wapenc"
         type="mms"
@@ -4686,16 +4634,6 @@
         type="mms"
         authtype="3"
     />
-    <!-- SPRD: Add Wap Simplicime apn @{ -->
-    <apn carrier="Wap Simplicime"
-        mcc="208"
-        mnc="10"
-        apn="wapdebitel"
-        proxy="192.168.21.3"
-        port="8080"
-        type="default,supl"
-    />
-    <!-- @} -->
     <apn carrier="ACCESS DATA"
         mcc="208"
         mnc="11"
@@ -4765,7 +4703,7 @@
         authtype="1"
     />
     <!-- France Bouygues -->
-    <apn carrier="Bouygues Web/mail"
+    <apn carrier="Bouygues Web"
         mcc="208"
         mnc="20"
         apn="ebouygtal.com"
@@ -5004,6 +4942,27 @@
         mmsproxy="82.113.100.5"
         mmsport="8080"
         type="default,supl,mms"
+    />
+   <apn carrier="o2 Internet Prepaid"
+        mcc="262"
+        mnc="07"
+        apn="pinternet.interkom.de"
+        proxy="82.113.100.6"
+        port="8080"
+        mmsc="http://10.81.0.7:8002"
+        mmsproxy="82.113.100.6"
+        mmsport="8080"
+        type="default,supl,mms"
+    />
+    <apn carrier="o2 MMS Loop"
+        mcc="262"
+        mnc="07"
+        apn="pinternet.interkom.de"
+        mmsc="http://10.81.0.7:8002/"
+        mmsproxy="82.113.100.6"
+        mmsport="8080"
+        type="mms"
+        authtype="3"
     />
     <apn carrier="O2"
         mcc="262"
@@ -19194,15 +19153,15 @@
         authtype="3"
     />
     <!-- Spain Vodafone -->
-    <apn carrier="Vodafone"
+    <apn carrier="Vodafone Internet"
         mcc="214"
         mnc="01"
         apn="airtelwap.es"
         user="wap@wap"
-        password="wap125"
+        password="airtel"
         type="default,supl"
     />
-    <apn carrier="Vodafone ES-MMS"
+    <apn carrier="Vodafone MMS"
         mcc="214"
         mnc="01"
         apn="mms.vodafone.net"
@@ -19214,14 +19173,6 @@
         type="mms"
     />
     <!-- Spain Orange -->
-    <apn carrier="Orange Internet"
-        mcc="214"
-        mnc="03"
-        apn="internet"
-        user="orange"
-        password="orange"
-        type="default,supl"
-    />
     <apn carrier="Orange World"
         mcc="214"
         mnc="03"
@@ -19244,7 +19195,7 @@
         type="mms"
     />
     <!-- Spain Yoigo -->
-    <apn carrier="GPRS Connection"
+    <apn carrier="GPRS connection"
         mcc="214"
         mnc="04"
         apn="internet"
@@ -19297,6 +19248,46 @@
         user="telefonica"
         password="telefonica"
         mmsc="http://mms.movistar.com"
+        type="mms"
+    />
+    <!-- Spain Euskaltel -->
+    <apn carrier="Euskaltel Internet"
+        mcc="214"
+        mnc="08"
+        apn="internet.euskaltel.mobi"
+        user="CLIENTE"
+        password="EUSKALTEL"
+        type="default,supl"
+    />
+    <apn carrier="Euskaltel MMS"
+        mcc="214"
+        mnc="08"
+        apn="euskaltelmms.euskaltel.mobi"
+        user="MMS"
+        password="EUSKALTEL"
+        mmsproxy="172.16.18.74"
+        mmsport="8080"
+        mmsc="http://mms.euskaltel.mobi"
+        type="mms"
+    />
+    <!-- Spain TeleCable -->
+    <apn carrier="TeleCable Internet"
+        mcc="214"
+        mnc="16"
+        apn="internet.telecable.es"
+        user="telecable"
+        password="telecable"
+        type="default,supl"
+    />
+    <apn carrier="TeleCable MMS"
+        mcc="214"
+        mnc="16"
+        apn="mms.telecable.es"
+        user="telecable"
+        password="telecable"
+        mmsproxy="212.89.0.84"
+        mmsport="8080"
+        mmsc="http://mms.telecable.es/mms/"
         type="mms"
     />
     <!-- Sri Lanka Mobitel -->
@@ -19838,7 +19829,6 @@
         apn="internet"
         type="default,supl"
     />
-    <!-- SPRD：Remove user and password @{ -->
     <apn carrier="AIS MMS"
         mcc="520"
         mnc="01"
@@ -19849,6 +19839,7 @@
         type="mms"
         authtype="2"
     />
+    <!-- Thailand AIS -->
     <apn carrier="AIS 3G Internet"
         mcc="520"
         mnc="03"
@@ -19865,6 +19856,7 @@
         type="mms"
         authtype="2"
     />
+    <!-- Thailand TRUE-H -->
     <apn carrier="TRUE-H INTERNET"
         mcc="520"
         mnc="04"
@@ -19880,6 +19872,7 @@
         mmsc="http://mms.trueh.com:8002"
         type="mms"
     />
+    <!-- Thailand DTAC -->
     <apn carrier="DTAC 3G"
         mcc="520"
         mnc="05"
@@ -19895,7 +19888,6 @@
         mmsc="http://mms2.dtac.co.th:8002"
         type="mms"
     />
-    <!-- @} -->
     <!-- Thailand i-mobile3GX -->
     <apn carrier="TOT 3G"
         mcc="520"
