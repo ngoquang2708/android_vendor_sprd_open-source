@@ -132,7 +132,7 @@ void *arithmetic_fd_thread_proc(void *data)
 	while (1) {
 		ret = cmr_msg_get(s_arith_cxt->fd_msg_que_handle, &message);
 		if (ret) {
-			CMR_LOGE("Message queue destroied");
+			CMR_LOGE("Message queue destroyed");
 			break;
 		}
 
@@ -596,7 +596,7 @@ void arithmetic_hdr_data(struct img_addr *addr,uint32_t y_size,uint32_t uv_size,
 		uv_addr = s_hdr_cxt->addr[cap_cnt-1]+y_size;
 		memcpy((void *)uv_addr,(void *)addr->addr_u,uv_size);
 	} else {
-		CMR_LOGE("mem size:0x%x,data size:0x%x.",s_hdr_cxt->mem_size,y_size);
+		CMR_LOGW("mem size:0x%x,data size:0x%x.",s_hdr_cxt->mem_size,y_size);
 	}
 	pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 }

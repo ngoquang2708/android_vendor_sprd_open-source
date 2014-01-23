@@ -2151,7 +2151,8 @@ bool SprdCameraHardware::isCapturing()
 		(SPRD_WAITING_RAW == mCameraState.capture_state) ||
 		(SPRD_WAITING_JPEG == mCameraState.capture_state)) {
 		ret = true;
-	} else if (SPRD_INTERNAL_CAPTURE_STOPPING == mCameraState.capture_state) {
+	} else if ((SPRD_INTERNAL_CAPTURE_STOPPING == mCameraState.capture_state) ||
+			(SPRD_ERROR == mCameraState.capture_state)) {
 		if (camera_capture_is_idle()) {
 			setCameraState(SPRD_IDLE, STATE_CAPTURE);
 			LOGV("isCapturing: %s", getCameraStateStr(mCameraState.capture_state));
@@ -4870,8 +4871,8 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 				LOGE("HandleEncode: drop current jpgPicture");
 			}
 			tmpCapState = getCaptureState();
-			if ((SPRD_WAITING_JPEG == tmpCapState
-				|| (SPRD_INTERNAL_CAPTURE_STOPPING == tmpCapState))) {
+			if ((SPRD_WAITING_JPEG == tmpCapState)
+				|| (SPRD_INTERNAL_CAPTURE_STOPPING == tmpCapState)) {
 				if (((JPEGENC_CBrtnType *)parm4)->need_free) {
 					transitionState(tmpCapState,
 							SPRD_IDLE,
@@ -4881,7 +4882,7 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 							SPRD_INTERNAL_RAW_REQUESTED,
 							STATE_CAPTURE);
 				}
-			} else {
+			} else if (SPRD_IDLE != tmpCapState) {
 				LOGE("HandleEncode: CAMERA_EXIT_CB_DONE error cap status, %s",
 					getCameraStateStr(tmpCapState));
 				transitionState(tmpCapState,
@@ -5088,7 +5089,7 @@ void SprdCameraHardware::sync_bak_parameters()
 {
 	Mutex::Autolock          l(&mParamLock);
 
-	if (SPRD_IDLE == getSetParamsState()) {
+	if (SPRD_IDLE == mCameraState.setParam_state) {
 		/*update the bakParameters if there exist difference*/
 		if (0 == checkSetParameters(mSetParametersBak, mParameters)) {
 			copyParameters(mSetParametersBak, mParameters);
@@ -5785,7 +5786,10 @@ extern "C" {
           reserved	:{0},
       },
       get_number_of_cameras : HAL_getNumberOfCameras,
-      get_camera_info       : HAL_getCameraInfo
+      get_camera_info       : HAL_getCameraInfo,
+      set_callbacks         : NULL,
+      get_vendor_tag_ops    : NULL,
+      reserved          	: {0,0,0,0,0,0,0,0}
     };
 }
 

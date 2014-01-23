@@ -59,7 +59,7 @@ extern "C"
 #define CMR_RTN_IF_ERR(n)                                              \
 		do {                                                   \
 			if (n) {                                       \
-				CMR_LOGE("ret %d", n);                 \
+				CMR_LOGW("ret %d", n);                 \
 				goto exit;                             \
 			}                                              \
 		} while(0)

@@ -64,11 +64,11 @@ static int32_t _ispSetAllParamV0000(void* in_param_ptr)
 	struct sensor_raw_tune_info* raw_ptr=sensor_info_ptr->raw_info_ptr->tune_ptr;
 	struct sensor_raw_tune_info* tune_ptr=(struct sensor_raw_tune_info*)data_addr;
 
-	//CMR_LOGE("ISP_TOOL:--raw_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",raw_ptr->edge.info[0].detail_thr,raw_ptr->edge.info[0].smooth_thr,raw_ptr->edge.info[0].strength);
-	//CMR_LOGE("ISP_TOOL:--tune_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",tune_ptr->edge.info[0].detail_thr,tune_ptr->edge.info[0].smooth_thr,tune_ptr->edge.info[0].strength);
+	//CMR_LOGV("ISP_TOOL:--raw_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",raw_ptr->edge.info[0].detail_thr,raw_ptr->edge.info[0].smooth_thr,raw_ptr->edge.info[0].strength);
+	//CMR_LOGV("ISP_TOOL:--tune_ptr-- detail_thr:0x%x,smooth_thr: 0x%x, strength:0x%x",tune_ptr->edge.info[0].detail_thr,tune_ptr->edge.info[0].smooth_thr,tune_ptr->edge.info[0].strength);
 
 	if((NULL!=raw_tune_ptr)&&(NULL!=data_addr)&&(0x00!=data_len)) {
-		//CMR_LOGE("ISP_TOOL:_ispSetAllParamV0000:raw_tune_ptr:0x%x, data_addr:0x%x, data_len:0x%x tune_len:0x%x\n", raw_tune_ptr, data_addr, data_len, sizeof(struct sensor_raw_tune_info));
+		//CMR_LOGV("ISP_TOOL:_ispSetAllParamV0000:raw_tune_ptr:0x%x, data_addr:0x%x, data_len:0x%x tune_len:0x%x\n", raw_tune_ptr, data_addr, data_len, sizeof(struct sensor_raw_tune_info));
 		memcpy(raw_tune_ptr, data_addr, data_len);
 		isp_ioctl(ISP_CTRL_PARAM_UPDATE|ISP_TOOL_CMD_ID, NULL);
 	} else {
@@ -201,14 +201,14 @@ int32_t ispGetUpParamV0000(void*param_ptr, void* rtn_param_ptr)
 	struct sensor_version_info* raw_version_info_ptr=sensor_raw_info_ptr->version_info;
 	struct sensor_raw_tune_info* raw_tune_ptr=sensor_raw_info_ptr->tune_ptr;
 
-	CMR_LOGE("ISP_TOOL:sensor_raw_info_ptr:0x%x:0x%x:0x%x",(uint32_t)sensor_raw_info_ptr, (uint32_t)raw_version_info_ptr, (uint32_t)raw_tune_ptr);
+	CMR_LOGV("ISP_TOOL:sensor_raw_info_ptr:0x%x:0x%x:0x%x",(uint32_t)sensor_raw_info_ptr, (uint32_t)raw_version_info_ptr, (uint32_t)raw_tune_ptr);
 
 	ispGetParamSizeV0000(&data_len);
 	rtn_ptr->buf_len=data_len+0x10;
 	data_addr=ispParserAlloc(rtn_ptr->buf_len);
 	rtn_ptr->buf_addr=(uint32_t)data_addr;
 
-	CMR_LOGE("ISP_TOOL:sensor_raw_info_ptr:0x%x:0x%x:0x%x:0x%x",(uint32_t)data_addr, (uint32_t)rtn_ptr->buf_addr, rtn_ptr->buf_len, data_len);
+	CMR_LOGV("ISP_TOOL:sensor_raw_info_ptr:0x%x:0x%x:0x%x:0x%x",(uint32_t)data_addr, (uint32_t)rtn_ptr->buf_addr, rtn_ptr->buf_len, data_len);
 
 	if(NULL!=data_addr)
 	{

@@ -88,7 +88,7 @@ rot_free:
 	file = NULL;
 open_out:
 
-	CMR_LOGE("handle=0x%x", handle);
+	CMR_LOGV("handle=0x%x", handle);
 
 	return handle;
 }
@@ -105,7 +105,7 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 	struct rot_file          *file = NULL;
 
 
-	CMR_LOGE("S");
+	CMR_LOGV("S");
 
 	if (!rot_param) {
 		ret = -1;
@@ -183,7 +183,7 @@ rot_unlock:
 
 rot_exit:
 
-	CMR_LOGE("X ret=%d", ret);
+	CMR_LOGV("X ret=%d", ret);
 
 	return ret;
 }

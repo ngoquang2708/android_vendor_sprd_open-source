@@ -1216,7 +1216,7 @@ LOCAL BOOLEAN _Sensor_Identify(SENSOR_ID_E sensor_id)
 			_Sensor_I2CInit(sensor_id);
 			sensor_info_ptr = sensor_info_tab_ptr[sensor_index];
 			if (NULL == sensor_info_ptr) {
-				CMR_LOGE("SENSOR: %d info of Sensor table %d is null", sensor_index, (uint)sensor_id);
+				CMR_LOGW("SENSOR: %d info of Sensor table %d is null", sensor_index, (uint)sensor_id);
 				_Sensor_I2CDeInit(sensor_id);
 				goto IDENTIFY_SEARCH;
 			}
@@ -1258,7 +1258,7 @@ IDENTIFY_SEARCH:
 		sensor_info_ptr = sensor_info_tab_ptr[sensor_index];
 
 		if (NULL==sensor_info_ptr) {
-			CMR_LOGE("SENSOR: %d info of Sensor table %d is null", sensor_index, (uint)sensor_id);
+			CMR_LOGW("SENSOR: %d info of Sensor table %d is null", sensor_index, (uint)sensor_id);
 			continue ;
 		}
 		s_p_sensor_cxt->sensor_info_ptr = sensor_info_ptr;
@@ -2254,7 +2254,7 @@ int Sensor_StreamOn(void)
 	int                      ret = 0;
 	CMR_MSG_INIT(message);
 
-	CMR_LOGE("Before");
+	CMR_LOGV("Before");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	message.msg_type = SENSOR_EVT_STREAM_ON;
 	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
@@ -2263,7 +2263,7 @@ int Sensor_StreamOn(void)
 	}
 
 	sem_wait(&s_p_sensor_cxt->st_on_sem);
-	CMR_LOGE("Ret");
+	CMR_LOGV("Ret");
 	return ret;
 
 }
@@ -2317,7 +2317,7 @@ int Sensor_StreamOff(void)
 	int                      ret = 0;
 	CMR_MSG_INIT(message);
 
-	CMR_LOGE("Before");
+	CMR_LOGV("Before");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	message.msg_type = SENSOR_EVT_STREAM_OFF;
 	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
@@ -2326,7 +2326,7 @@ int Sensor_StreamOff(void)
 	}
 
 	sem_wait(&s_p_sensor_cxt->st_off_sem);
-	CMR_LOGE("Ret");
+	CMR_LOGV("Ret");
 
 	return ret;
 }
@@ -3010,7 +3010,7 @@ LOCAL int   _Sensor_CreateThread(void)
 	s_p_sensor_cxt->exit_flag = 0;
 	ret = cmr_msg_queue_create(SENSOR_MSG_QUEUE_SIZE, &s_p_sensor_cxt->queue_handle);
 	if (ret) {
-		CMR_LOGE("NO Memory, Frailed to create message queue");
+		CMR_LOGE("NO Memory, Failed to create message queue");
 	}
 
 	pthread_attr_init(&attr);
@@ -3049,7 +3049,7 @@ LOCAL int _Sensor_KillThread(void)
 	}
 
 	while (0 == s_p_sensor_cxt->exit_flag) {
-		CMR_LOGE("Wait 10 ms");
+		CMR_LOGW("Wait 10 ms");
 		usleep(10000);
 	}
 
@@ -3082,7 +3082,7 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 			break;
 		}
 
-		CMR_LOGE("Msg, 0x%x", message.msg_type);
+		CMR_LOGV("Msg, 0x%x", message.msg_type);
 		CMR_PRINT_TIME;
 
 		switch (message.msg_type) {
@@ -3248,7 +3248,7 @@ LOCAL int _Sensor_KillMonitorThread(void)
 	if (s_p_sensor_cxt->monitor_thread) {
 		s_p_sensor_cxt->monitor_exit = 1;
 		while (1 == s_p_sensor_cxt->monitor_exit) {
-			CMR_LOGE("Wait 10 ms");
+			CMR_LOGW("Wait 10 ms");
 			usleep(10000);
 		}
 		ret = pthread_join(s_p_sensor_cxt->monitor_thread, &dummy);

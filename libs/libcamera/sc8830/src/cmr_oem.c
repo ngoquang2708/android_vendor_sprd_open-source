@@ -255,7 +255,7 @@ int camera_set_pos_type(camera_position_type *position)
 	s_position.longitude = -122.441983;
 	s_position.process_method = "GPS NETWORK HYBRID ARE ALL FINE.";*/
 
-   CMR_LOGE("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
+   CMR_LOGV("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
 			position->timestamp,
 			(double)position->latitude,
 			(double)position->longitude,
@@ -543,7 +543,7 @@ int camera_wait_cap_path(struct camera_context *p_cxt)
 
 	sem_wait(&p_cxt->cap_path_sem);
 	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
-	CMR_LOGE("got cap path sem, val = %d", tmpval);
+	CMR_LOGV("got cap path sem, val = %d", tmpval);
 	ret = cxt->err_code;
 	return ret;
 }
@@ -555,7 +555,7 @@ int camera_cap_path_done(struct camera_context *p_cxt)
 
 	sem_post(&p_cxt->cap_path_sem);
 	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
-	CMR_LOGE("post cap path sem, val = %d", tmpval);
+	CMR_LOGV("post cap path sem, val = %d", tmpval);
 	return ret;
 }
 
@@ -906,7 +906,7 @@ int camera_save_sensormark(void)
 			fclose(fp);
 
 		} else {
-			CMR_LOGE("can not create SENSOR_PARA");
+			CMR_LOGW("can not create SENSOR_PARA");
 		}
 	}
 

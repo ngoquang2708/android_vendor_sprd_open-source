@@ -503,6 +503,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI702_ioctl_func_tab =
 	PNULL,
 	PNULL
 #else
+	PNULL,
 	PNULL
 #endif
 };
@@ -586,7 +587,9 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI702_ioctl_func_tab =
 	0,			// threshold start postion
 	0,			// threshold end postion
 	0,
-	{0, 2, 8, 1}
+	{0, 2, 8, 1},
+	PNULL,
+	1
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions

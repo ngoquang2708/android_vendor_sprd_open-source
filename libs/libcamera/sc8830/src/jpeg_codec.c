@@ -173,7 +173,7 @@ static void save_inputdata(uint32_t y_buf_addr,
 		fwrite((void*)uv_buf_addr, 1, size/2, fp);
 		fclose(fp);
 	}else{
-		CMR_LOGE("can not create savedata");
+		CMR_LOGW("can not create savedata");
 	}
 }
 
@@ -191,7 +191,7 @@ static uint32_t _format_covert(uint32_t format)
 
 	default:
 
-		CMR_LOGE("JPEG, unknow format");
+		CMR_LOGW("JPEG, unknow format");
 
 	break;
 
@@ -398,7 +398,7 @@ static  int  _enc_start(uint32_t handle)
 			enc_cxt_ptr->stream_real_size = slice_out.stream_size;
 			enc_cxt_ptr->cur_line_num = enc_cxt_ptr->size.height;
 #ifdef JPEG_CODE_DEBUG
-			CMR_LOGE("jpeg: stream size: %d", slice_out.stream_size);
+			CMR_LOGV("jpeg: stream size: %d", slice_out.stream_size);
 #endif
 		}
 		CMR_LOGV("slice_num %d.",slice_num);
@@ -793,7 +793,7 @@ static void* _thread_proc(void* data)
 			break;
 		}
 
-		CMR_LOGE("jpeg: message.msg_type 0x%x", message.msg_type);
+		CMR_LOGV("jpeg: message.msg_type 0x%x", message.msg_type);
 		evt = (uint32_t)(message.msg_type & JPEG_EVT_MASK_BITS);
 		if((1 == jcontext.is_stop) &&(JPEG_EVT_STOP != evt)) {
 			CMR_LOGI("discard message 0x%x.",evt);
@@ -822,7 +822,7 @@ static void* _thread_proc(void* data)
 				}
 			}
 
-			CMR_LOGE("jpeg:receive JPEG_EVT_ENC_START message");
+			CMR_LOGV("jpeg:receive JPEG_EVT_ENC_START message");
 			break;
 		case  JPEG_EVT_ENC_NEXT:
 			param_ptr = (struct jpeg_enc_next_param*)message.data;
@@ -985,19 +985,19 @@ static int _check_enc_start_param(struct jpeg_enc_in_param *in_parm_ptr, struct 
 {
 	int ret = JPEG_CODEC_SUCCESS;
 
-	CMR_LOGE("w h, %d %d, quality level %d", in_parm_ptr->size.width, in_parm_ptr->size.height,
+	CMR_LOGV("w h, %d %d, quality level %d", in_parm_ptr->size.width, in_parm_ptr->size.height,
 		in_parm_ptr->quality_level);
 #ifdef JPEG_CODE_DEBUG
-	CMR_LOGE("slice height, %d, slice mode %d", in_parm_ptr->slice_height, in_parm_ptr->slice_mod);
-	CMR_LOGE("phy addr 0x%x 0x%x, vir addr 0x%x 0x%x",
+	CMR_LOGV("slice height, %d, slice mode %d", in_parm_ptr->slice_height, in_parm_ptr->slice_mod);
+	CMR_LOGV("phy addr 0x%x 0x%x, vir addr 0x%x 0x%x",
 		in_parm_ptr->src_addr_phy.addr_y, in_parm_ptr->src_addr_phy.addr_u,
 		in_parm_ptr->src_addr_vir.addr_y, in_parm_ptr->src_addr_vir.addr_u);
-	CMR_LOGE("endian %d %d", in_parm_ptr->src_endian.y_endian, in_parm_ptr->src_endian.uv_endian);
-	CMR_LOGE("stream phy 0x%x vir 0x%x, size 0x%x",
+	CMR_LOGV("endian %d %d", in_parm_ptr->src_endian.y_endian, in_parm_ptr->src_endian.uv_endian);
+	CMR_LOGV("stream phy 0x%x vir 0x%x, size 0x%x",
 		in_parm_ptr->stream_buf_phy,
 		in_parm_ptr->stream_buf_vir,
 		in_parm_ptr->stream_buf_size);
-	CMR_LOGE("temp_buf phy 0x%x vir 0x%x, size 0x%x",
+	CMR_LOGV("temp_buf phy 0x%x vir 0x%x, size 0x%x",
 		in_parm_ptr->temp_buf_phy,
 		in_parm_ptr->temp_buf_vir,
 		in_parm_ptr->temp_buf_size);

@@ -181,7 +181,7 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 		}
 		if(ret){
 			autoflash = 1;
-			CMR_LOGE("Failed to read auto flash mode, %d", ret);
+			CMR_LOGW("Failed to read auto flash mode, %d", ret);
 		}
 		if(autoflash){
 			status = FLASH_OPEN;
@@ -209,7 +209,7 @@ int camera_set_ae(uint32_t ae_mode, uint32_t *skip_mode, uint32_t *skip_num)
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MODE,(void *)&ae_mode);
 	} else {
-		CMR_LOGE ("set ae: sensor not support\n");
+		CMR_LOGW ("set ae: sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
 	}
 
@@ -228,7 +228,7 @@ int camera_set_ae_measure_lum(uint32_t meas_lum_mode, uint32_t *skip_mode, uint3
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void *)&meas_lum_mode);
 	} else {
-		CMR_LOGE ("set ae measure lum: sensor not support\n");
+		CMR_LOGW ("set ae measure lum: sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
 	}
 
@@ -257,7 +257,7 @@ int camera_set_ae_metering_area(uint32_t *win_ptr)
 
 		ret = isp_ioctl(ISP_CTRL_AE_TOUCH, (void *)&trim_size);
 	} else {
-		CMR_LOGE ("camera_set_ae_metering_area: sensor not support\n");
+		CMR_LOGW ("camera_set_ae_metering_area: sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
 	}
 
@@ -277,7 +277,7 @@ int camera_set_alg(uint32_t ae_work_mode, uint32_t *skip_mode, uint32_t *skip_nu
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void *)&ae_work_mode);
 	} else {
-		CMR_LOGE ("set alg:sensor not support\n");
+		CMR_LOGW ("set alg:sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
 	}
 
@@ -297,7 +297,7 @@ int camera_set_hdr(uint32_t hdr_mode, uint32_t *skip_mode, uint32_t *skip_num)
 		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
 		ret = isp_ioctl(ISP_CTRL_HDR, (void *)&hdr_mode);
 	} else {
-		CMR_LOGE ("set hdr:sensor not support\n");
+		CMR_LOGW ("set hdr:sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
 	}
 	return ret;
@@ -707,13 +707,13 @@ int camera_preview_start_set(void)
 	CMR_LOGV("Sensor workmode %d", sn_mode);
 	ret = Sensor_SetMode(sn_mode);
 	if (ret) {
-		CMR_LOGE("Sensor can't work at this mode %d", sn_mode);
+		CMR_LOGW("Sensor can't work at this mode %d", sn_mode);
 		goto exit;
 	}
 
 	ret = camera_ae_enable(1);
 	if (ret) {
-		CMR_LOGE("ae enable fail");
+		CMR_LOGW("ae enable fail");
 		goto exit;
 	}
 
@@ -821,7 +821,7 @@ int camera_snapshot_start_set(void)
 	if (camera_get_is_nonzsl()) {
 		ret = Sensor_Ioctl(SENSOR_IOCTL_BEFORE_SNAPSHOT, (cxt->sn_cxt.capture_mode | (cxt->sn_cxt.preview_mode<<CAP_MODE_BITS)));
 		if (ret) {
-			CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
+			CMR_LOGW("Sensor can't work at this mode %d", cxt->sn_cxt.capture_mode);
 		}
 		if (CAMERA_HDR_MODE == cxt->cap_mode) {
 			switch (cxt->cap_cnt) {
@@ -862,7 +862,7 @@ int camera_snapshot_stop_set(void)
 		|| (CAMERA_NORMAL_CONTINUE_SHOT_MODE == cxt->cap_mode)) {
 		ret = Sensor_Ioctl(SENSOR_IOCTL_AFTER_SNAPSHOT, cxt->sn_cxt.preview_mode);
 		if (ret) {
-			CMR_LOGE("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
+			CMR_LOGW("Sensor can't work at this mode %d", cxt->sn_cxt.preview_mode);
 		}
 		if (CAMERA_HDR_MODE == cxt->cap_mode) {
 			camera_set_hdr_ev(SENSOR_HDR_EV_LEVE_1);
@@ -1509,7 +1509,7 @@ static int camera_check_autofocus_area(SENSOR_RECT_T *rect_ptr,uint32_t rect_num
 			|| (rect_ptr->h > sensor_mode->trim_height)
 			|| ((rect_ptr->x+rect_ptr->w) > (sensor_mode->trim_start_x + sensor_mode->trim_width))
 			|| ((rect_ptr->y+rect_ptr->h) > (sensor_mode->trim_start_y + sensor_mode->trim_height))) {
-			CMR_LOGE("auto focus use auto mode.");
+			CMR_LOGW("auto focus use auto mode.");
 			ret = CAMERA_FAILED;
 			break;
 		}
@@ -1547,7 +1547,7 @@ int camera_autofocus_start(void)
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			SENSOR_FLASH_LEVEL_T flash_level;
 			if (Sensor_GetFlashLevel(&flash_level)) {
-				CMR_LOGE("get flash level error.");
+				CMR_LOGW("get flash level error.");
 			}
 
 			camera_isp_awb_bypass(ISP_AWB_BYPASS);
@@ -1657,7 +1657,7 @@ int camera_autofocus_start(void)
 				isp_af_param.win[i].end_x   = af_param.zone[i].x + af_param.zone[i].w - 1;
 				isp_af_param.win[i].end_y   = af_param.zone[i].y + af_param.zone[i].h - 1;
 
-				CMR_LOGE("af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
+				CMR_LOGV("af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
 					zone_cnt,
 					isp_af_param.win[i].start_x,
 					isp_af_param.win[i].start_y,
@@ -1668,7 +1668,7 @@ int camera_autofocus_start(void)
 			ret = isp_ioctl(ISP_CTRL_AF, &isp_af_param);
 			if (clock_gettime(CLOCK_REALTIME, &ts)) {
 				ret = -1;
-				CMR_LOGE("get time failed.");
+				CMR_LOGW("get time failed.");
 			} else {
 				ts.tv_sec += ISP_PROCESS_SEC_TIMEOUT;
 				if (ts.tv_nsec + ISP_PROCESS_NSEC_TIMEOUT >= 1000000000) {
@@ -1680,7 +1680,7 @@ int camera_autofocus_start(void)
 				ret = sem_timedwait(&cxt->cmr_set.isp_af_sem, &ts);
 				if (ret) {
 					pthread_mutex_lock(&cxt->cmr_set.isp_af_mutex);
-					CMR_LOGE("isp af timeout");
+					CMR_LOGW("isp af timeout");
 					cxt->cmr_set.isp_af_timeout = 1;
 					pthread_mutex_unlock(&cxt->cmr_set.isp_af_mutex);
 					camera_autofocus_stop(0);
@@ -1884,7 +1884,7 @@ int camera_isp_alg_wait(void)
 			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			rtn = -1;
 			cxt->cmr_set.isp_alg_timeout = 1;
-			CMR_LOGE("timeout.");
+			CMR_LOGW("timeout.");
 		} else {
 			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			cxt->cmr_set.isp_alg_timeout = 0;
@@ -1903,7 +1903,7 @@ int camera_set_flashdevice(uint32_t param)
 	CMR_LOGI("test flash:0x%x.",param);
 
 	if (0 != cxt->camera_id) {
-		CMR_LOGE("don't support flash.");
+		CMR_LOGW("don't support flash.");
 		return ret;
 	}
 
@@ -1929,7 +1929,7 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 	*video_mode = 0;
 	sensor_mode = cxt->sn_cxt.preview_mode;
 	sensor_ae_info = (SENSOR_AE_INFO_T*)&cxt->sn_cxt.sensor_info->sensor_video_info[sensor_mode];
-	CMR_LOGE("%d.",sensor_mode);
+	CMR_LOGV("%d.",sensor_mode);
 	for (i=0 ; i<SENSOR_VIDEO_MODE_MAX ; i++) {
 		if (frame_rate <= sensor_ae_info[i].max_frate) {
 			*video_mode = i;

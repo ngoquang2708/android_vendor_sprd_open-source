@@ -2996,9 +2996,9 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 		_Sensor_Device_WriteRegTab(&regTab);
 	}
 
-       free(p_reg_val_tmp);
 	fclose(file);
      }
+	free(p_reg_val_tmp);
 
   return file_len;
 }

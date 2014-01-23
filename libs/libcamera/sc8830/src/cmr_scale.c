@@ -27,7 +27,7 @@
 #define CVT_EXIT_IF_ERR(n)                                             \
 		do {                                                   \
 			if (n) {                                       \
-				CMR_LOGE("ret %d", n);                 \
+				CMR_LOGW("ret %d", n);                 \
 				goto exit;                             \
 			}                                              \
 		} while(0)
@@ -527,7 +527,7 @@ int  cmr_scale_next(uint32_t     slice_height,
 	}
 	CMR_PRINT_TIME;
 	if (sc_cxt->total_out_height >= sc_cxt->dst_frame.size.height) {
-		CMR_LOGE("Slice scaling has been finished");
+		CMR_LOGW("Slice scaling has been finished");
 		return 0;
 	}
 
