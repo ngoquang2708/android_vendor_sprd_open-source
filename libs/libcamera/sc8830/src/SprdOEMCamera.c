@@ -863,6 +863,18 @@ int camera_prev_thread_handle(struct frm_info *data)
 int camera_prev_thread_rot_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm * data)
 {
 	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 preview_status;
+
+
+	pthread_mutex_lock(&g_cxt->prev_mutex);
+	preview_status = g_cxt->preview_status;
+	pthread_mutex_unlock(&g_cxt->prev_mutex);
+
+	if (CMR_IDLE == preview_status) {
+		CMR_LOGV("discard.");
+		return ret;
+	}
+
 	ret = camera_rotation_handle(evt_type, sub_type, data);
 	return ret;
 }
@@ -1263,7 +1275,7 @@ static int _v4l2_postfix(struct frm_info* info)
 		return 0;
 
 	CMR_PRINT_TIME;
-	pthread_mutex_lock(&g_cxt->prev_mutex);
+
 	if (CHN_1 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
 		cap_frm  = &g_cxt->prev_frm[frm_id];
@@ -1332,7 +1344,6 @@ static int _v4l2_postfix(struct frm_info* info)
 		(uint32_t)&frame_type);
 	}
 
-	pthread_mutex_unlock(&g_cxt->prev_mutex);
 	CMR_PRINT_TIME;
 	return ret;
 }
@@ -2965,7 +2976,6 @@ int camera_stop_preview_internal(void)
 			ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
 			if (ret) {
 				CMR_LOGE("Failed to stop IF , %d", ret);
-				pthread_mutex_unlock(&g_cxt->prev_mutex);
 			}
 			CMR_LOGE("get sensor mode fail.");
 		} else {
@@ -2980,17 +2990,18 @@ int camera_stop_preview_internal(void)
 		ret = cmr_v4l2_if_decfg(&g_cxt->sn_cxt.sn_if);
 		if (ret) {
 			CMR_LOGE("Failed to stop IF , %d", ret);
-			pthread_mutex_unlock(&g_cxt->prev_mutex);
 		}
 	}
 	pthread_mutex_unlock(&g_cxt->prev_mutex);
 	CMR_PRINT_TIME;
 
-	if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
-		ret = isp_video_stop();
-		g_cxt->isp_cxt.isp_state = ISP_IDLE;
-		if (ret) {
-			CMR_LOGE("Failed to stop ISP video mode, %d", ret);
+	if (0 == ret) {
+		if (ISP_COWORK == g_cxt->isp_cxt.isp_state) {
+			ret = isp_video_stop();
+			g_cxt->isp_cxt.isp_state = ISP_IDLE;
+			if (ret) {
+				CMR_LOGE("Failed to stop ISP video mode, %d", ret);
+			}
 		}
 	}
 
@@ -3710,13 +3721,17 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 
 	if (CHN_1 == info->channel_id) {
 		if (g_cxt->prev_rot) {
+			uint32_t prev_num = g_cxt->prev_mem_num - CAMERA_PREV_ROT_FRM_CNT;
+
 			frm_id = g_cxt->prev_rot_index % CAMERA_PREV_ROT_FRM_CNT;
 			frame_type->buf_id = frm_id;
+			frame_type->order_buf_id = frm_id + prev_num;
 			frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->prev_rot_frm[frm_id].addr_vir.addr_y;
 			frame_type->buffer_phy_addr = g_cxt->prev_rot_frm[frm_id].addr_phy.addr_y;
 		} else {
 			frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
 			frame_type->buf_id = frm_id;
+			frame_type->order_buf_id = frm_id;
 			frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->prev_frm[frm_id].addr_vir.addr_y;
 			frame_type->buffer_phy_addr = g_cxt->prev_frm[frm_id].addr_phy.addr_y;
 
@@ -6156,10 +6171,13 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		return ret;
 	}
 
+	pthread_mutex_lock(&g_cxt->prev_mutex);
 	if (CMR_IDLE == g_cxt->preview_status) {
 		CMR_LOGV("discard.");
+		pthread_mutex_unlock(&g_cxt->prev_mutex);
 		return ret;
 	}
+
 
 	g_cxt->pre_frm_cnt++;
 
@@ -6168,6 +6186,8 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 			CMR_LOGV("Ignore this frame, preview cnt %d, total skip num %d",
 				g_cxt->pre_frm_cnt, g_cxt->skip_num);
 			ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+
+			pthread_mutex_unlock(&g_cxt->prev_mutex);
 			return ret;
 		}
 	}
@@ -6184,6 +6204,8 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 				CMR_LOGV("Restart skip: Ignore this frame, preview cnt %d, total skip num %d",
 					g_cxt->restart_skip_cnt, g_cxt->skip_num);
 				ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+
+				pthread_mutex_unlock(&g_cxt->prev_mutex);
 				return ret;
 			} else {
 				pthread_mutex_lock(&g_cxt->main_prev_mutex);
@@ -6203,6 +6225,8 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		return ret;
 	}*/
 	_v4l2_postfix(data);
+	pthread_mutex_unlock(&g_cxt->prev_mutex);
+
 
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
 		if(g_cxt->set_flag > 0){

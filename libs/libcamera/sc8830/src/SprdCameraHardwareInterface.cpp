@@ -295,9 +295,19 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 {
 	LOGV("openCameraHardware: E cameraId: %d.", cameraId);
 
-#if defined(CONFIG_BACK_CAMERA_ROTATION) || defined(CONFIG_FRONT_CAMERA_ROTATION)
-	mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+#if defined(CONFIG_BACK_CAMERA_ROTATION)
+	if (0 == cameraId) {
+		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+	}
 #endif
+
+#if defined(CONFIG_FRONT_CAMERA_ROTATION)
+	if (1 == cameraId) {
+		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+	}
+#endif
+
+	mOriginalPreviewBufferUsage = mPreviewBufferUsage;
 	s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
 	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
@@ -472,7 +482,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
     if (!w) {
-        mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+        /*mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+        */
         LOGE("preview window is NULL!");
         return NO_ERROR;
     }
@@ -512,6 +523,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
 	if (preview_width < 640) {
 		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+	} else {
+		mPreviewBufferUsage = mOriginalPreviewBufferUsage;
 	}
 
 #ifdef CONFIG_CAMERA_DMA_COPY
@@ -722,6 +735,9 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 {
 	LOGV("releaseRecordingFrame E. ");
 
+	Mutex::Autolock pbl(&mPrevBufLock);
+
+
 	if (!isPreviewing()) {
 		LOGE("releaseRecordingFrame: Preview not in progress!");
 		return;
@@ -730,7 +746,7 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		//Mutex::Autolock l(&mLock);
 		uint8_t *addr = (uint8_t *)opaque;
-		int32_t index;
+		uint32_t index;
 
 		uint32_t *vaddr = NULL;
 		uint32_t *paddr = NULL;
@@ -740,34 +756,41 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 			paddr = (uint32_t *) *((uint32_t*)addr + 1);
 			vaddr = (uint32_t *) *((uint32_t*)addr + 2);
 
+			if (camera_get_rot_set()) {
+				index += kPreviewBufferCount;
+			}
+
 		} else {
-			for (index=0; index<kPreviewBufferCount; index++) {
+			for (index=0; index < mPreviewHeapNum; index++) {
 				if ((uint32_t)addr == mPreviewHeapArray_vir[index])	break;
 			}
 
-			if (index < kPreviewBufferCount) {
+			if (index < mPreviewHeapNum) {
 				vaddr = (uint32_t*)mPreviewHeapArray_vir[index];
 				paddr = (uint32_t*)mPreviewHeapArray_phy[index];
 			}
 		}
 
-		if (index > kPreviewBufferCount) {
+
+		if (index >= mPreviewHeapNum) {
 			LOGV("releaseRecordingFrame error: index: %d, data: %x, w=%d, h=%d \n",
 			index, (uint32_t)addr, mPreviewWidth, mPreviewHeight);
+			return;
 		}
-		mPrevBufLock.lock();
-		if (isPreviewing()) {
-			flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, index,
-						(void*)vaddr,
-						(void*)paddr,
-						(int)mPreviewHeapSize);
-		}
-		mPrevBufLock.unlock();
+
+
+		flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, index,
+					(void*)vaddr,
+					(void*)paddr,
+					(int)mPreviewHeapSize);
+
 		camera_release_frame(index);
 		LOGV("releaseRecordingFrame: index: %d", index);
 	} else {
 		releasePreviewFrame();
 	}
+
+	LOGV("releaseRecordingFrame X. ");
 }
 
 bool SprdCameraHardware::recordingEnabled()
@@ -3562,6 +3585,7 @@ status_t SprdCameraHardware::setCameraParameters()
     SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
     if (0 != rotation) {
         mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+        mOriginalPreviewBufferUsage = mPreviewBufferUsage;
     }
 
     SET_PARM(CAMERA_PARM_SHOT_NUM, mParameters.getInt("capture-mode"));
@@ -3898,6 +3922,13 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 	void				*vaddr = NULL;
 	Mutex::Autolock pwl(&mPreviewWindowLock);
+	Mutex::Autolock pbl(&mPrevBufLock);
+
+
+	if (!isPreviewing()) {
+		LOGV("not in preview");
+		return false;
+	}
 
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		if (!mPreviewWindow || !mGrallocHal || 0 == phy_addr) {
@@ -3934,13 +3965,11 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 		private_h = (struct private_handle_t *)(*buf_handle);
 		dst_phy_addr =  (uint32_t)(private_h->phyaddr);
 
-		mPrevBufLock.lock();
 		if (isPreviewing()) {
 			ret = displayCopy(dst_phy_addr, (uint32_t)vaddr, phy_addr, (uint32_t)virtual_addr, width, height);
 		} else {
 			ret = -ENOSYS;
 		}
-		mPrevBufLock.unlock();
 
 		mGrallocHal->unlock(mGrallocHal, *buf_handle);
 
@@ -4157,10 +4186,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-				uint32_t tmpIndex = offset;
-				if(camera_get_rot_set()) {
-					tmpIndex += kPreviewBufferCount;
-				}
+				uint32_t tmpIndex = frame->order_buf_id;
 
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
 					mPreviewHeapArray[tmpIndex],
@@ -4203,10 +4229,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
 			} else {
 				//mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
-				uint32_t tmpIndex = offset;
-				if(camera_get_rot_set()) {
-					tmpIndex += kPreviewBufferCount;
-				}
+				uint32_t tmpIndex = frame->order_buf_id;
 
 				handleDataCallbackTimestamp(timestamp,
 					CAMERA_MSG_VIDEO_FRAME,
@@ -4216,14 +4239,12 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		//LOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
 		} else {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-				mPrevBufLock.lock();
 				if (isPreviewing()) {
-					flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, offset,
+					flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, frame->order_buf_id,
 							(void*)frame->buf_Virt_Addr,
 							(void*)frame->buffer_phy_addr,
 							(int)frame->dx * frame->dy * 3 /2);
 				}
-				mPrevBufLock.unlock();
 				if (CAMERA_SUCCESS != camera_release_frame(offset)) {
 					LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", (int)offset);
 				}
@@ -5281,7 +5302,8 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 		size = (int)pmem->phys_size;
 		break;
 	case CAMERA_FLUSH_PREVIEW_HEAP:
-		if (index < kPreviewBufferCount && mPreviewHeapArray != NULL) {
+		if ( (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage)
+			&& index < (int)mPreviewHeapNum && mPreviewHeapArray != NULL) {
 			pmem = mPreviewHeapArray[index];
 		}
 		break;
