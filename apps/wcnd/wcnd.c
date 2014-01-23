@@ -30,7 +30,7 @@
 //#define LOOP_CHECK
 
 //Macro to enable the Wifi Engineer Mode
-//#define WIFI_ENGINEER_ENABLE
+#define WIFI_ENGINEER_ENABLE
 
 bool is_zero_ether_addr(const unsigned char *mac)
 {
