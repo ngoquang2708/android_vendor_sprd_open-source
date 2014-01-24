@@ -2072,7 +2072,13 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
     Mutex::Autolock lock(m_afTrigLock);
     HAL_LOGD("id(%x), %d, %d afmode=%d", trigger_id, ext1, ext2, m_staticReqInfo.afMode);
 	if (CAMERA2_TRIGGER_CANCEL_AUTOFOCUS != trigger_id) {
-		WaitForPreviewStart();
+		if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
+			if (GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_RECORD || GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_SNAPSHOT) {
+				return 1;
+			} else {
+				WaitForPreviewStart();
+			}
+		}
 	}
 
     switch (trigger_id) {
@@ -3097,7 +3103,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 							}
 							SetDcDircToDvSnap(true);
 							#endif
-							HAL_LOGV("ent cts testVideoSnapshot scene!");
+							HAL_LOGV("ent  cts testVideoSnapshot scene!");
+							IsSetPara = false;
+							SetStartPreviewAftPic(true);
 						}
 						if (srcreq->isCropSet) {
 							if (CAMERA_ZSL_MODE == GetCameraPictureMode()) {
