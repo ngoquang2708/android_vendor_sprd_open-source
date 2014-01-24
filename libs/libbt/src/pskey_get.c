@@ -12,6 +12,7 @@
 
 #include "bt_vendor_sprd.h"
 #define BT_PSKEY_TRACE_BUF_SIZE 256
+#define MAX_BOARD_TYPE_LEN 32
 
 #define _FILE_PARSE_DEBUG_
 #define  CMD_ITEM_TABLE(ITEM, MEM_OFFSET, TYPE)    { ITEM,   (unsigned int)( &(  ((BT_PSKEY_CONFIG_T *)(0))->MEM_OFFSET )),   TYPE }
@@ -355,18 +356,64 @@ int bt_getPskeyFromFile(void *pData)
     int fd;
     unsigned char *pBuf = NULL;
     int len;
-    char *CFG_2351_PATH = "/system/etc/connectivity_configure.ini";
-    
+    int board_type=0;
+
+#ifdef HW_ADC_ADAPT_SUPPORT
+    char *CFG_2351_PATH[] = {
+        "/system/etc/connectivity_configure_hw100.ini",
+        "/system/etc/connectivity_configure_hw102.ini",
+        "/system/etc/connectivity_configure_hw104.ini"
+    };
+#else
+    char *CFG_2351_PATH[] = {
+        "/system/etc/connectivity_configure.ini"
+    };
+#endif
+
+
+#ifdef HW_ADC_ADAPT_SUPPORT
+
+    char *BOARD_TYPE_PATH = "/dev/board_type";
+    int fd_board_type;
+    char board_type_str[MAX_BOARD_TYPE_LEN] = {0};
+
+    fd_board_type = open(BOARD_TYPE_PATH, O_RDONLY);
+    if (fd_board_type<0)
+    {
+        ALOGI("#### %s file open %s err ####\n", __FUNCTION__, BOARD_TYPE_PATH);
+        board_type = 2; // default is 1.0.4
+    }
+    else
+    {
+        len = read(fd_board_type, board_type_str, MAX_BOARD_TYPE_LEN);
+        if (strstr(board_type_str, "1.0.0"))
+        {
+            board_type = 0;
+        }
+        else if (strstr(board_type_str, "1.0.2"))
+        {
+            board_type = 1;
+        }
+        else
+        {
+            board_type = 2; // default is 1.0.4
+        }
+        ALOGI("#### %s get board type len %d %s type %d ####\n", __FUNCTION__, len, board_type_str, board_type);
+
+        close(fd_board_type);
+    }
+#endif
+
     ALOGI("begin to bt_getPskeyFromFile");  
-    fd = open(CFG_2351_PATH, O_RDONLY, 0644);
+    fd = open(CFG_2351_PATH[board_type], O_RDONLY, 0644);
     if(-1 != fd)
     {
-        len = bt_getFileSize(CFG_2351_PATH);
+        len = bt_getFileSize(CFG_2351_PATH[board_type]);
         pBuf = (unsigned char *)malloc(len);
         ret = read(fd, pBuf, len);
         if(-1 == ret)
         {
-            ALOGE("%s read %s ret:%d\n", __FUNCTION__, CFG_2351_PATH, ret);
+            ALOGE("%s read %s ret:%d\n", __FUNCTION__, CFG_2351_PATH[board_type], ret);
             free(pBuf);
             close(fd);
             return -1;
@@ -375,7 +422,7 @@ int bt_getPskeyFromFile(void *pData)
     }
     else
     {
-        ALOGE("%s open %s ret:%d\n", __FUNCTION__, CFG_2351_PATH, fd);
+        ALOGE("%s open %s ret:%d\n", __FUNCTION__, CFG_2351_PATH[board_type], fd);
         return -1;
     }
 
