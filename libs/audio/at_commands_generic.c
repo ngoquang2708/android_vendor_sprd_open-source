@@ -38,7 +38,7 @@ static int config_bt_dev_type(int bt_headset_type, cp_type_t cp_type, int cp_sim
 static int at_cmd_route(struct tiny_audio_device *adev)
 {
     const char *at_cmd = NULL;
-    if (adev->mode != AUDIO_MODE_IN_CALL) {
+    if ((adev->mode != AUDIO_MODE_IN_CALL) && (!adev->voip_start)) {
         ALOGE("Error: NOT mode_in_call, current mode(%d)", adev->mode);
         return -1;
     }
@@ -104,6 +104,21 @@ int at_cmd_audio_loop(int enable, int mode, int volume,int loopbacktype,int voic
             enable,mode,volume,loopbacktype,voiceformat,delaytime);
 
     snprintf(at_cmd, sizeof buf, "AT+SPVLOOP=%d,%d,%d,%d,%d,%d", enable,mode,volume,loopbacktype,voiceformat,delaytime);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
+    return 0;
+}
+
+int at_cmd_cp_usecase_type(audio_cp_usecase_t type)
+{
+    char buf[89];
+    char *at_cmd = buf;
+    if(type > AUDIO_CP_USECASE_MAX) {
+        type = AUDIO_CP_USECASE_VOIP_1;
+    }
+    ALOGW("%s, type:%d ",__func__,type);
+
+    snprintf(at_cmd, sizeof buf, "AT+SPAPAUDMODE=%d", type);
 
     do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
     return 0;

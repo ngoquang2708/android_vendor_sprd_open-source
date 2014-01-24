@@ -481,6 +481,17 @@ static const int fm_volume_tbl[FM_VOLUME_MAX] = {
 
 static dev_names_para_t *dev_names = NULL;
 
+/* this enum is for use-case type processed in cp side */
+typedef enum {
+    AUDIO_CP_USECASE_VOICE  = 0,
+    AUDIO_CP_USECASE_VT,
+    AUDIO_CP_USECASE_VOIP_1,
+    AUDIO_CP_USECASE_VOIP_2,
+    AUDIO_CP_USECASE_VOIP_3,
+    AUDIO_CP_USECASE_VOIP_4,
+    AUDIO_CP_USECASE_MAX,
+} audio_cp_usecase_t;
+
 
 /*
  * card define
@@ -1379,6 +1390,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         select_devices_signal(adev);
     }
     else if (adev->voip_state) {
+        at_cmd_cp_usecase_type(AUDIO_CP_USECASE_VOIP_1);  /* set the usecase type to cp side */
         if((adev->out_devices &AUDIO_DEVICE_OUT_ALL) != out->devices) {
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
@@ -2664,6 +2676,15 @@ static int do_input_standby(struct tiny_stream_in *in)
             ALOGE("bt sco : %s after", __func__);
         }
         adev->active_input = 0;
+        if ((adev->mode != AUDIO_MODE_IN_CALL)
+#ifdef VOIP_DSP_PROCESS
+            &&(adev->voip_start ==0)
+#endif
+        )
+        {
+            adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
+            select_devices_signal(adev);
+        }
 
         if(in->resampler){
             in_deinit_resampler( in);

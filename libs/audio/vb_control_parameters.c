@@ -1334,7 +1334,7 @@ RESTART:
                 if(ret < 0){
                     MY_TRACE("voip:VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error. ");
                 }
-                ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_DEVICE_CTRL);
+                ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SWITCH_CTRL);
                 if(ret < 0){
                     ALOGE("voip1:Error, DEVICE_CTRL Write_Rsp2cp1 failed(%d).",ret);
                 }

@@ -31,11 +31,20 @@ namespace android_audio_legacy {
 class AudioPolicyManagerSPRD : public AudioPolicyManagerBase
 {
 public:
-    AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface)
-        : AudioPolicyManagerBase(clientInterface) {}
+    AudioPolicyManagerSPRD(AudioPolicyClientInterface *clientInterface);
 
-    virtual ~AudioPolicyManagerSPRD() {}
+    virtual ~AudioPolicyManagerSPRD();
+    status_t startOutput(audio_io_handle_t output,
+                                             AudioSystem::stream_type stream,
+                                             int session);
+    status_t stopOutput(audio_io_handle_t output,
+                                            AudioSystem::stream_type stream,
+                                            int session);
+    void releaseOutput(audio_io_handle_t output);
 
+private:
+    int is_voip_set;
+    void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
 };
 
 };
