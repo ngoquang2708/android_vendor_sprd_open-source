@@ -309,7 +309,7 @@ void file_name_rotate(struct slog_info *info, int num, char *buffer)
 	struct dirent *p_dirent;
 	char filename[MAX_NAME_LEN], buf[MAX_NAME_LEN];
 
-	for (i = num - 1; i >= 0 ; i--) {
+	for (i = num; i >= 0 ; i--) {
 		char *file0, *file1;
 
 		if(( p_dir = opendir(buffer)) == NULL) {
@@ -324,18 +324,15 @@ void file_name_rotate(struct slog_info *info, int num, char *buffer)
 					err_log("asprintf return err!");
 					exit(0);
 				}
-
-				if (i + 1 <= num) {
+				if (i + 1 > num)
+					remove(file1);
+				else {
 					sprintf(filename, "%s", p_dirent->d_name);
 					err = asprintf(&file0, "%s/%s/%s/%d%s", current_log_path, top_logdir, info->log_path, i + 1, filename + 1);
 					if(err == -1) {
 						err_log("asprintf return err!");
 						exit(0);
 					}
-
-				err_log("file0=%s", file0); //wenxiao
-				err_log("file1=%s", file1);
-
 					err = rename (file1, file0);
 					if (err < 0 && errno != ENOENT) {
 						perror("while rotating log files");
@@ -366,20 +363,6 @@ void rotatelogs(int num, struct slog_info *info)
 	file_name_rotate(info, num, buffer);
 	info->fp_out = gen_outfd(info);
 	info->outbytecount = 0;
-}
-
-/*
- *  File volume
- *
- *  When the file is written full, rename file to file.1
- *  and rename file.1 to file.2, and so on.
- */
-void rotatefiles(struct slog_info *info, int num, char *buffer)
-{
-	err_log("slog rotatefiles");
-	gen_logpath(buffer, info);
-	file_name_rotate(info, num, buffer);
-	gen_logfile(buffer, info);
 }
 
 /*
