@@ -993,7 +993,7 @@ static void setup_signals()
 
 	SIGNAL(SIGTERM, sig_handler1);
 	SIGNAL(SIGBUS, sig_handler1);
-//	SIGNAL(SIGSEGV, sig_handler1);
+	SIGNAL(SIGSEGV, sig_handler1);
 	SIGNAL(SIGHUP, sig_handler1);
 	SIGNAL(SIGQUIT, sig_handler1);
 	SIGNAL(SIGABRT, sig_handler1);

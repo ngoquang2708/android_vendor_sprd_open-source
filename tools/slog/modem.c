@@ -272,8 +272,7 @@ void handle_socket_wcn(char *buffer)
 				modem_assert_flag = 1;
 				handle_dump_shark_sipc_info();
 			}
-		} 
-		if(reset != 0){
+		} else if(reset != 0) {
 			if (handle_correspond_modem(buffer) == 1)
 				modem_reset_flag =1;
 				err_log("waiting for Modem Alive.");
