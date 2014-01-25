@@ -2300,6 +2300,7 @@ bool SprdCameraHardware::WaitForCaptureStart()
 	while (SPRD_WAITING_RAW != mCameraState.capture_state
 		 && SPRD_WAITING_JPEG != mCameraState.capture_state
 		 && SPRD_IDLE != mCameraState.capture_state
+		 && SPRD_ERROR != mCameraState.capture_state
 		 && SPRD_ERROR != mCameraState.camera_state) {
 		LOGV("WaitForCaptureStart: waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
 		mStateWait.wait(mStateLock);
