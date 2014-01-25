@@ -221,7 +221,7 @@ static int camera_set_cancel_capture(int set_val);
 static int camera_prev_thread_init(void);
 static int camera_prev_thread_deinit(void);
 static void *camera_prev_thread_proc(void *data);
-static int camera_prev_thread_handle();
+static int camera_prev_thread_handle(struct frm_info *data);
 static int camera_prev_thread_rot_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm * data);
 static int camera_preview_weak_init(int format_mode, enum restart_mode re_mode);
 static int camera_cap_thread_init(void);
@@ -254,9 +254,10 @@ static int camera_sensor_interface_updated(uint32_t work_mode, struct  sensor_if
 static uint32_t camera_get_rot_val(uint32_t rot_enum);
 static uint32_t camera_get_rot_enum(uint32_t rot_val);
 static void camera_buffer_copy(struct img_frm  *src_img, struct img_frm  *dst_img);
-static int camera_capture_way_out();
+static int camera_capture_way_out(void);
+static uint32_t camera_safe_scale_th(void);
 
-int camera_capture_way_out()
+int camera_capture_way_out(void)
 {
 	int ret = CAMERA_SUCCESS;
 	if (camera_capture_need_exit()) {
@@ -5820,7 +5821,7 @@ int camera_capture_ability(SENSOR_MODE_INFO_T *sn_mode,
 	} else {
 		tmp_width = (uint32_t)(g_cxt->v4l2_cxt.sc_factor * img_cap->src_img_rect.width);
 		if (img_cap->src_img_rect.width >= CAMERA_SAFE_SCALE_DOWN(g_cxt->capture_size.width) ||
-			g_cxt->capture_size.width <= CMR_SCALING_TH) {
+			g_cxt->capture_size.width <= camera_safe_scale_th()) {
 			/*if the out size is smaller than the in size, try to use scaler on the fly*/
 			if (g_cxt->capture_size.width > tmp_width) {
 				if (tmp_width > g_cxt->v4l2_cxt.sc_capability) {
@@ -8153,7 +8154,7 @@ int camera_capture_get_max_size(SENSOR_MODE_INFO_T *sn_mode, uint32_t *io_width,
 	} else {
 		tmp_width = (uint32_t)(g_cxt->v4l2_cxt.sc_factor * img_rc.width);
 		if (img_rc.width >= CAMERA_SAFE_SCALE_DOWN(g_cxt->capture_size.width) ||
-			g_cxt->capture_size.width <= CMR_SCALING_TH) {
+			g_cxt->capture_size.width <= camera_safe_scale_th()) {
 			/*if the out size is smaller than the in size, try to use scaler on the fly*/
 			if (g_cxt->capture_size.width > tmp_width) {
 				if (tmp_width > g_cxt->v4l2_cxt.sc_capability) {
@@ -8412,3 +8413,14 @@ int camera_sensor_interface_updated(uint32_t work_mode, struct  sensor_if *sn_if
 	return ret;
 }
 
+uint32_t camera_safe_scale_th(void)
+{
+	uint32_t scale_threshold = 0;
+
+	if (cpu_is_dolphin()) {
+		scale_threshold = CMR_DOLPHIN_SCALING_TH;
+	} else {
+		scale_threshold = CMR_SHARK_SCALING_TH;
+	}
+	return scale_threshold;
+}
