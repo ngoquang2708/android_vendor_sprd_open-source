@@ -266,6 +266,7 @@ int camera_capture_way_out()
 				0);
 		camera_takepic_done(g_cxt);
 		g_cxt->jpeg_cxt.jpeg_state = JPEG_IDLE;
+		g_cxt->v4l2_cxt.waiting_cap_frame = 0;
 		ret = CAMERA_EXIT;
 	}
 	return ret;
@@ -1086,43 +1087,6 @@ int camera_cap_subthread_deinit(void)
 	return ret ;
 }
 
-int camera_take_continue_picture(int cap_cnt)
-{
-	int                      preview_format;
-	uint32_t                 skip_number = 0;
-	int                      ret = CAMERA_SUCCESS;
-	struct buffer_cfg        buffer_info;
-
-	CMR_LOGI("start.");
-
-	ret = camera_capture_init_continue();
-	if (ret) {
-		CMR_LOGE("Failed to init raw capture mode.");
-		return -CAMERA_FAILED;
-	}
-
-	if (V4L2_SENSOR_FORMAT_RAWRGB != g_cxt->sn_cxt.sn_if.img_fmt) {
-		g_cxt->skip_mode = IMG_SKIP_HW;
-	}
-
-	if (IMG_SKIP_HW == g_cxt->skip_mode) {
-		skip_number = g_cxt->sn_cxt.sensor_info->capture_skip_num;
-	}
-
-	CMR_PRINT_TIME;
-	skip_number = 1;
-	ret = cmr_v4l2_cap_start(skip_number);
-	if (ret) {
-		CMR_LOGE("Fail to start V4L2 Capture");
-		return -CAMERA_FAILED;
-	}
-	g_cxt->v4l2_cxt.v4l2_state = V4L2_PREVIEW;
-	CMR_PRINT_TIME;
-
-	g_cxt->capture_raw_status = CMR_CAPTURE;
-	return ret;
-}
-
 int camera_cap_continue(void)
 {
 	int ret = CAMERA_SUCCESS;
@@ -1135,11 +1099,12 @@ int camera_cap_continue(void)
 			ret = camera_take_picture_continue(g_cxt->cap_cnt);
 		else
 			g_cxt->chn_2_status = CHN_BUSY;
-		/*ret = camera_take_continue_picture(0);*/
 	}
 	if (CAMERA_ZSL_CONTINUE_SHOT_MODE == g_cxt->cap_mode) {
 		g_cxt->chn_2_status = CHN_BUSY;
 	}
+
+	g_cxt->v4l2_cxt.waiting_cap_frame = 1;
 	return ret;
 }
 
@@ -1676,6 +1641,7 @@ void *camera_cap_thread_proc(void *data)
 
 		case CMR_EVT_CAP_TX_DONE:
 			CMR_PRINT_TIME;
+			g_cxt->v4l2_cxt.waiting_cap_frame = 0;
 			struct frm_info *data = (struct frm_info *)message.data;
 			if (0 == data) {
 				break;
@@ -1750,6 +1716,7 @@ void *camera_cap_thread_proc(void *data)
 		case CMR_EVT_CAP_RAW_TX_DONE:
 		{
 			CMR_PRINT_TIME;
+			g_cxt->v4l2_cxt.waiting_cap_frame = 0;
 			struct frm_info *data = (struct frm_info *)message.data;
 
 			if (CAMERA_TOOL_RAW_MODE != g_cxt->cap_mode
@@ -2580,24 +2547,6 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		ret  = camera_start_preview_internal();
 		break;
 	case RESTART_MIDDLE:
-		/*ret = camera_preview_init(g_cxt->preview_fmt);
-		if (ret) {
-			CMR_LOGE("Failed to restart preview");
-			return -CAMERA_FAILED;
-		}
-		ret = cmr_v4l2_cap_start(skip_number_l);
-		if (ret) {
-			CMR_LOGE("Failed to restart preview");
-			return -CAMERA_FAILED;
-		} else {
-			ret = Sensor_StreamOn();
-			if (ret) {
-				CMR_LOGE("Fail to switch on the sensor stream");
-				return -CAMERA_FAILED;
-			}
-			g_cxt->v4l2_cxt.v4l2_state = V4L2_PREVIEW;
-			g_cxt->preview_status = CMR_PREVIEW;
-		}*/
 		ret  = camera_start_preview_internal();
 		break;
 	case RESTART_LIGHTLY:
@@ -3260,6 +3209,7 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 	} else if (IS_NON_ZSL_MODE(cap_mode)) {
 		g_cxt->capture_status = CMR_CAPTURE;
 	}
+	g_cxt->v4l2_cxt.waiting_cap_frame = 1;
 
 	return ret;
 }
@@ -3361,6 +3311,7 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 	}
 
 	g_cxt->capture_raw_status = CMR_CAPTURE;
+	g_cxt->v4l2_cxt.waiting_cap_frame = 1;
 
 	return ret;
 }
@@ -3446,6 +3397,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 		if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
 			g_cxt->capture_status = CMR_CAPTURE;
 			g_cxt->chn_2_status = CHN_BUSY;
+			g_cxt->v4l2_cxt.waiting_cap_frame = 1;
 			message.msg_type = CMR_EVT_BEFORE_CAPTURE;
 			message.alloc_flag = 0;
 			ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
@@ -3535,6 +3487,7 @@ int camera_take_picture_hdr(int cap_cnt)
 	}
 #endif
 	g_cxt->capture_raw_status = CMR_CAPTURE;
+	g_cxt->v4l2_cxt.waiting_cap_frame = 1;
 	return ret;
 }
 
@@ -4307,7 +4260,9 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 		} else if (CMR_CAPTURE == sub_type) {
 			ret = camera_stop_capture_internal();
 			/*busy means waiting for channel 2 frame, so can directly return and drop the frame*/
-			if (CHN_BUSY == g_cxt->chn_2_status) {
+			if (CHN_BUSY == g_cxt->chn_2_status
+				&& (1 == g_cxt->v4l2_cxt.waiting_cap_frame)) {
+				CMR_LOGV("cont cap channel waiting channel 2 frame. direct return!");
 				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 						camera_get_client_data(),
 						CAMERA_FUNC_RELEASE_PICTURE,

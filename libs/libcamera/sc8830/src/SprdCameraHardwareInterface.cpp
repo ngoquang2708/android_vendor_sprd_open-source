@@ -4879,9 +4879,6 @@ void SprdCameraHardware::HandleCancelPicture(camera_cb_type cb,
 	LOGV("HandleCancelPicture in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCaptureState()));
 
-	if (checkPreviewStateForCapture())
-		Mutex::Autolock cbLock(&mCaptureCbLock);
-
 	transitionState(getCaptureState(),
 				SPRD_IDLE,
 				STATE_CAPTURE);

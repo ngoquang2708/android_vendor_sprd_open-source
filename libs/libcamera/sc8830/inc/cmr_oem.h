@@ -152,6 +152,7 @@ enum {
 	IMG_CVT_ROTATING,
 	IMG_CVT_ROT_DONE,
 	IMG_CVT_SCALING,
+
 };
 
 
@@ -181,6 +182,7 @@ struct v4l2_context {
 	uint32_t                 sc_factor;
 	uint32_t                 chn_status[CHN_MAX];
 	uint32_t                 chn_frm_deci[CHN_MAX];
+	uint32_t                 waiting_cap_frame;
 };
 
 struct sensor_context {
