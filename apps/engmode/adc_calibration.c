@@ -336,18 +336,15 @@ int translate_packet(char *dest,char *src,int size)
 static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
 {
     int translated_size = 0;
-    int msghead_size = sizeof(MSG_HEAD_T);
 
-    memset(dest, 0, destSize);
-    translated_size = untranslate_packet_header(dest, src, srcSize, msghead_size);
-    if (translated_size >= msghead_size ){
+        memset(dest, 0, destSize);
+	 if(srcSize > destSize)
+		memcpy(dest, (src+1), destSize);
+	 else
+		memcpy(dest, (src+1), (srcSize-1));
         MSG_HEAD_T* lpHeader = (MSG_HEAD_T *)dest;
         if (DIAG_CMD_APCALI  == lpHeader->type){
-
             TOOLS_DIAG_AP_CMD_T *lpAPCmd =(TOOLS_DIAG_AP_CMD_T *)(lpHeader+1);
-            memset(dest, 0, destSize);
-            translated_size = untranslate_packet_header(dest, src, srcSize, -1);
-
             switch (lpAPCmd->cmd)
             {
                 case DIAG_AP_CMD_ADC:
@@ -377,8 +374,6 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
         } else if(DIAG_CMD_GETVOLTAGE  == lpHeader->type){
             return AP_GET_VOLT;
         }
-    }
-
     return 0;
 }
 
