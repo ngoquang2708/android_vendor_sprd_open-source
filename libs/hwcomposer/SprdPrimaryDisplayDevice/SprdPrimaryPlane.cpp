@@ -70,13 +70,15 @@ SprdPrimaryPlane::SprdPrimaryPlane(FrameBufferInfo *fbInfo)
 
     SprdDisplayPlane::setGeometry(mFBInfo->fb_width, mFBInfo->fb_height, mDefaultDisplayFormat);
 
-    SprdDisplayPlane::setPlaneRunThreshold(300);
+    SprdDisplayPlane::setPlaneRunThreshold(100);
 
     mContext = SprdDisplayPlane::getPlaneContext();
 
     mDisplayFormat = mDefaultDisplayFormat;
 
+#ifndef DYNAMIC_RELEASE_PLANEBUFFER
     open();
+#endif
 
     mThreadID = gettid();
 }

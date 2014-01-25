@@ -52,6 +52,9 @@ SprdDisplayPlane::SprdDisplayPlane()
       mPlaneRunThreshold(100),
       mPlaneIdleCount(0),
       mWaitingBuffer(false),
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+      mAlloc(NULL),
+#endif
       mDebugFlag(0)
 {
     mContext = (PlaneContext *)malloc(sizeof(PlaneContext));
@@ -60,6 +63,15 @@ SprdDisplayPlane::SprdDisplayPlane()
         ALOGE("Failed to malloc overlay_setting");
         exit(-1);
     }
+
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+    mAlloc = new AllocHelper(this);
+    if (mAlloc == NULL)
+    {
+        ALOGE("Failed to new AllocHelper");
+        exit(-1);
+    }
+#endif
 }
 
 SprdDisplayPlane::~SprdDisplayPlane()
@@ -149,6 +161,12 @@ private_handle_t* SprdDisplayPlane::dequeueBuffer()
 
     } while (repeat);
 
+    if (found < 0)
+    {
+        ALOGE("get invalid buffer index");
+        return NULL;
+    }
+
     mSlots[found].mBufferState = BufferSlot::DEQUEUEED;
     private_handle_t* buffer = mSlots[found].mIonBuffer;
 
@@ -196,8 +214,6 @@ private_handle_t* SprdDisplayPlane::flush()
         ALOGE("SprdDisplayPlane::flush no avaialbe buffer for flushing");
         return NULL;
     }
-
-    Mutex::Autolock _l(mLock);
 
     FIFO::iterator front(mQueue.begin());
     int index(*front);
@@ -255,8 +271,9 @@ private_handle_t* SprdDisplayPlane::flush()
 //    return true;
 //}
 
-bool SprdDisplayPlane::open()
+bool SprdDisplayPlane:: openBase()
 {
+    bool success = false;
     private_handle_t* buffer = NULL;
 
     for (int i = 0; i < mBufferCount; i++)
@@ -265,16 +282,43 @@ bool SprdDisplayPlane::open()
         mSlots[i].mBufferState = BufferSlot::FREE;
         if (buffer)
         {
+            success = true;
             continue;
         }
         buffer = createPlaneBuffer(i);
         if (buffer == NULL)
         {
             ALOGE("SprdDisplayPlane::open createPlaneBuffer failed");
+            success = false;
             return false;
         }
 
+        success = true;
     }
+
+    return success;
+}
+
+bool SprdDisplayPlane::open()
+{
+    private_handle_t* buffer = NULL;
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+    int ret = -1;
+    ret = mAlloc->requestAllocBuffer();
+    if (ret < 0)
+    {
+        ALOGE("SprdDisplayPlane::open requestAllocBuffer failed");
+        return false;
+    }
+#else
+    bool retValue = false;
+    retValue = openBase();
+    if (retValue == false)
+    {
+        ALOGE("SprdDisplayPlane openBase failed");
+        return false;
+    }
+#endif
 
     InitFlag = true;
 
@@ -283,13 +327,18 @@ bool SprdDisplayPlane::open()
 
 bool SprdDisplayPlane::close()
 {
+    queryDebugFlag(&mDebugFlag);
+
     for (int i = 0; i < mBufferCount; i++)
     {
         private_handle_t* bufferHandle = mSlots[i].mIonBuffer;
+        ALOGI_IF(mDebugFlag, "SprdDisplayPlane::close free buffer phy: %p", (void *)(bufferHandle->phyaddr));
         GraphicBufferAllocator::get().free((buffer_handle_t)bufferHandle);
         bufferHandle = NULL;
+        mSlots[i].mIonBuffer = NULL;
         mSlots[i].mBufferState = BufferSlot::RELEASE;
     }
+
 
     InitFlag = false;
 
@@ -330,3 +379,93 @@ enum PlaneRunStatus SprdDisplayPlane:: queryPlaneRunStatus()
 
     return status;
 }
+
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+void AllocHelper:: onFirstRef()
+{
+    run("DisplayPlaneAllocHelper", PRIORITY_URGENT_DISPLAY + PRIORITY_MORE_FAVORABLE);
+}
+
+status_t AllocHelper:: readyToRun()
+{
+    if (mPlane == NULL)
+    {
+        ALOGE("AllocHelper:: readyToRun check parameters error");
+        return -1;
+    }
+
+    sem_init(&doneSem, 0, 0);
+
+    return NO_ERROR;
+}
+
+bool AllocHelper:: threadLoop()
+{
+    {
+        Mutex::Autolock _l(mLock);
+        mCondition.wait(mLock);
+    }
+
+    bool success = false;
+    mStopFlag = false;
+
+    do {
+        success = mPlane->openBase();
+        if (success || mStopFlag)
+        {
+            break;
+        }
+    } while (1);
+
+    if (mStopFlag == false)
+    {
+        mAllocSuccess = success;
+
+        sem_post(&doneSem);
+    }
+
+    return true;
+}
+
+int AllocHelper:: requestAllocBuffer()
+{
+    int ret = -1;
+
+    {
+        Mutex::Autolock _l(mLock);
+        mCondition.broadcast();
+    }
+
+    unsigned int timeout = 1;
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += timeout;
+    //ts.tv_nsec += 0;
+    if ((unsigned int)(ts.tv_nsec) >= TIME_SPEC_NSEC_MAX_VALUE)
+    {
+        ts.tv_sec += 1;
+        ts.tv_nsec -= TIME_SPEC_NSEC_MAX_VALUE;
+    }
+
+    ret = sem_timedwait(&doneSem, &ts);
+
+    if (ret == -1)
+    {
+        ALOGE("Wait alloc buffer timedwait error: %d", errno);
+        mStopFlag = true;
+        return ret;
+    }
+
+    if (mAllocSuccess)
+    {
+        ret = 0;
+    }
+    else
+    {
+        ret = -1;
+        ALOGE("AllocHelper:: requestAllocBuffer failed");
+    }
+
+    return ret;
+}
+#endif

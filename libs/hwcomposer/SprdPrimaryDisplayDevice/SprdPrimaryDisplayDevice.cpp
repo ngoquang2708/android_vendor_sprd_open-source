@@ -45,6 +45,7 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
      mOverlayPlane(0),
      mPrimaryPlane(0),
 #ifdef OVERLAY_COMPOSER_GPU
+     mWindow(NULL),
      mOverlayComposer(NULL),
 #endif
      mVsyncEvent(0),
@@ -91,7 +92,20 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
     }
 
 #ifdef OVERLAY_COMPOSER_GPU
-    mOverlayComposer = new OverlayComposer(mPrimaryPlane);
+    mWindow = new OverlayNativeWindow(mPrimaryPlane);
+    if (mWindow == NULL)
+    {
+        ALOGE("Create Native Window failed, NO mem");
+        return false;
+    }
+
+    if (!(mWindow->Init()))
+    {
+        ALOGE("Init Native Window failed");
+        return false;
+    }
+
+    mOverlayComposer = new OverlayComposer(mPrimaryPlane, mWindow);
     if (mOverlayComposer == NULL)
     {
         ALOGE("new OverlayComposer failed");
@@ -179,10 +193,154 @@ int SprdPrimaryDisplayDevice:: getDisplayAttributes(DisplayAttributes *dpyAttrib
     return 0;
 }
 
+int SprdPrimaryDisplayDevice:: reclaimPlaneBuffer(SprdHWLayer *YUVLayer)
+{
+    static int ret = -1;
+    enum PlaneRunStatus status = PLANE_STATUS_INVALID;
+
+    if (YUVLayer == NULL)
+    {
+        mPrimaryPlane->recordPlaneIdleCount();
+
+        status = mPrimaryPlane->queryPlaneRunStatus();
+        if (status == PLANE_SHOULD_CLOSED)
+        {
+            mPrimaryPlane->close();
+            mWindow->releaseNativeBuffer();
+        }
+
+        ret = 0;
+    }
+    else
+    {
+        mPrimaryPlane->resetPlaneIdleCount();
+
+        status = mPrimaryPlane->queryPlaneRunStatus();
+        if (status == PLANE_CLOSED)
+        {
+            bool value = false;
+            value = mPrimaryPlane->open();
+            if (value == false)
+            {
+                ALOGE("open PrimaryPlane failed");
+                ret = 1;
+            }
+            else
+            {
+                ret = 0;
+            }
+        }
+    }
+
+    return ret;
+}
+
+int SprdPrimaryDisplayDevice:: attachToDisplayPlane(int DisplayFlag)
+{
+    int displayType = HWC_DISPLAY_MASK;
+    mHWCDisplayFlag = HWC_DISPLAY_MASK;
+    int OSDLayerCount = mLayerList->getOSDLayerCount();
+    int VideoLayerCount = mLayerList->getVideoLayerCount();
+    SprdHWLayer **OSDLayerList = mLayerList->getSprdOSDLayerList();
+    SprdHWLayer **VideoLayerList = mLayerList->getSprdVideoLayerList();
+    hwc_layer_1_t *FBTargetLayer = mLayerList->getFBTargetLayer();
+    if (OSDLayerCount < 0 || VideoLayerCount < 0 ||
+        OSDLayerList == NULL || VideoLayerList == NULL ||
+        FBTargetLayer == NULL)
+    {
+        ALOGE("SprdPrimaryDisplayDevice:: attachToDisplayPlane get LayerList parameters error");
+        return -1;
+    }
+
+    /*
+     *  At present, each SprdDisplayPlane only only can handle one
+     *  HWC layer.
+     *  According to Android Framework definition, the smaller z-order
+     *  layer is in the bottom layer list.
+     *  The application layer is in the bottom layer list.
+     *  Here, we forcibly attach the bottom layer to SprdDisplayPlane.
+     * */
+#define DEFAULT_ATTACH_LAYER 0
+
+    bool cond = false;
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+    cond = OSDLayerCount > 0;
+#else
+    cond = OSDLayerCount > 0 && VideoLayerCount > 0;
+#endif
+    if (cond)
+    {
+        bool DirectDisplay = false;
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+        DirectDisplay = ((OSDLayerCount == 1) && (VideoLayerCount == 0));
+#endif
+        /*
+         *  At present, we disable the Direct Display OSD layer first
+         * */
+        SprdHWLayer *sprdLayer = OSDLayerList[DEFAULT_ATTACH_LAYER];
+        if (sprdLayer && sprdLayer->InitCheck())
+        {
+            mPrimaryPlane->AttachPrimaryLayer(sprdLayer, DirectDisplay);
+            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdPrimaryDisplayPlane",
+                     sprdLayer->getLayerFormat());
+
+            displayType |= HWC_DISPLAY_PRIMARY_PLANE;
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "Attach layer to SprdPrimaryPlane failed");
+            displayType &= ~HWC_DISPLAY_PRIMARY_PLANE;
+        }
+    }
+
+    if (VideoLayerCount > 0)
+    {
+        SprdHWLayer *sprdLayer = VideoLayerList[DEFAULT_ATTACH_LAYER];
+
+        if (sprdLayer && sprdLayer->InitCheck())
+        {
+            mOverlayPlane->AttachOverlayLayer(sprdLayer);
+            ALOGI_IF(mDebugFlag, "Attach Format:%d layer to SprdOverlayPlane",
+                     sprdLayer->getLayerFormat());
+
+            displayType |= HWC_DISPLAY_OVERLAY_PLANE;
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "Attach layer to SprdOverlayPlane failed");
+
+            displayType &= ~HWC_DISPLAY_OVERLAY_PLANE;
+        }
+    }
+
+    if (DisplayFlag & HWC_DISPLAY_OVERLAY_COMPOSER_GPU)
+    {
+        displayType &= ~(HWC_DISPLAY_PRIMARY_PLANE | HWC_DISPLAY_OVERLAY_PLANE);
+        displayType |= DisplayFlag;
+    }
+    else if (FBTargetLayer &&
+             OSDLayerCount <= 1 &&
+             VideoLayerCount <= 0)
+    {
+        //mPrimary->AttachFrameBufferTargetLayer(mFBTargetLayer);
+        ALOGI_IF(mDebugFlag, "Attach Framebuffer Target layer");
+
+        displayType |= (0x1) & HWC_DISPLAY_FRAMEBUFFER_TARGET;
+    }
+    else
+    {
+        displayType &= ~HWC_DISPLAY_FRAMEBUFFER_TARGET;
+    }
+
+    mHWCDisplayFlag |= displayType;
+
+    return 0;
+}
+
 int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
 {
-    bool ret = false;
-    mHWCDisplayFlag = HWC_DISPLAY_MASK;
+    int ret = false;
+    int displayFlag = HWC_DISPLAY_MASK;
 
     queryDebugFlag(&mDebugFlag);
 
@@ -202,11 +360,18 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
         return -1;
     }
 
-    ret = mLayerList->attachToDisplayPlane(mPrimaryPlane, mOverlayPlane, &mHWCDisplayFlag);
+    ret = mLayerList->revisitGeometry(&displayFlag, this);
     if (ret !=0)
     {
-        ALOGE("(FILE:%s, line:%d, func:%s) attachToDisplayPlane failed",
+        ALOGE("(FILE:%s, line:%d, func:%s) revisitGeometry failed",
               __FILE__, __LINE__, __func__);
+        return -1;
+    }
+
+    ret = attachToDisplayPlane(displayFlag);
+    if (ret != 0)
+    {
+        ALOGE("SprdPrimaryDisplayDevice:: attachToDisplayPlane failed");
         return -1;
     }
 

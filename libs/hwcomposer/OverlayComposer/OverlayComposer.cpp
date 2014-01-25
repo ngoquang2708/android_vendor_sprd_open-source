@@ -38,14 +38,19 @@ namespace android
 {
 
 
-OverlayComposer::OverlayComposer(SprdPrimaryPlane *displayPlane)
+OverlayComposer::OverlayComposer(SprdPrimaryPlane *displayPlane, sp<OverlayNativeWindow> NativeWindow)
     : mDisplayPlane(displayPlane),
       mClearBuffer(false),
+      mList(NULL),
       mNumLayer(0), InitFlag(0),
+      mWindow(NativeWindow),
       mDisplay(EGL_NO_DISPLAY), mSurface(EGL_NO_SURFACE),
       mContext(EGL_NO_CONTEXT),
       mConfig(0),
-      mFlags(0)
+      mFlags(0),
+      mMaxTextureSize(0),
+      mWormholeTexName(-1),
+      mProtectedTexName(-1)
 {
 };
 
@@ -142,16 +147,9 @@ status_t OverlayComposer::selectConfigForPixelFormat(
 bool OverlayComposer::initEGL()
 {
 
-    mWindow = new OverlayNativeWindow(mDisplayPlane);
     if (mWindow == NULL)
     {
-        ALOGE("Create Native Window failed, NO mem");
-        return false;
-    }
-
-    if (!(mWindow->Init()))
-    {
-        ALOGE("Init Native Window failed");
+        ALOGE("NativeWindow is NULL");
         return false;
     }
 
@@ -563,7 +561,6 @@ bool OverlayComposer::swapBuffers()
 
     return true;
 }
-
 
 };
 

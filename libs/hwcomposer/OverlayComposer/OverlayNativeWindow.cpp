@@ -51,6 +51,7 @@ OverlayNativeWindow::OverlayNativeWindow(SprdPrimaryPlane *displayPlane)
       mWindowUsage(-1),
       mNumBuffers(NUM_FRAME_BUFFERS),
       mNumFreeBuffers(NUM_FRAME_BUFFERS), mBufferHead(0),
+      mCurrentBufferIndex(0),
       mUpdateOnDemand(false)
 {
 
@@ -76,6 +77,19 @@ bool OverlayNativeWindow::Init()
 
 OverlayNativeWindow::~OverlayNativeWindow()
 {
+}
+
+int OverlayNativeWindow:: releaseNativeBuffer()
+{
+    for (int i = 0; i < NUM_FRAME_BUFFERS; i++)
+    {
+        if (buffers[i] != NULL)
+        {
+            buffers[i] = 0;
+        }
+    }
+
+    return 0;
 }
 
 sp<NativeBuffer> OverlayNativeWindow::CreateGraphicBuffer(private_handle_t* buffer)
@@ -112,6 +126,11 @@ int OverlayNativeWindow::dequeueBuffer(ANativeWindow* window,
     }
 
     index = self->mDisplayPlane->getPlaneBufferIndex();
+    if (index < 0)
+    {
+        ALOGE("OverlayNativeWindow get invalid buffer index");
+        return -1;
+    }
     // get this buffer
     self->mNumFreeBuffers--;
     self->mCurrentBufferIndex = index;

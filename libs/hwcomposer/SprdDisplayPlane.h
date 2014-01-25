@@ -48,6 +48,11 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 #include <binder/MemoryHeapIon.h>
+#include <semaphore.h>
+
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+#include <utils/threads.h>
+#endif
 
 #include "sprd_fb.h"
 #include "gralloc_priv.h"
@@ -106,6 +111,40 @@ typedef struct DisplayPlaneContext{
     //struct overlay_display_setting DisplayContext;
 
 } PlaneContext;
+
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+#define TIME_SPEC_NSEC_MAX_VALUE  1000000000UL
+class SprdDisplayPlane;
+class AllocHelper: public Thread
+{
+public:
+    AllocHelper(SprdDisplayPlane *plane)
+        : mAllocSuccess(false),
+          mStopFlag(true),
+          mPlane(plane)
+    {
+
+    }
+    ~AllocHelper()
+    {
+
+    }
+
+    int requestAllocBuffer();
+
+private:
+    bool mAllocSuccess;
+    bool mStopFlag;
+    SprdDisplayPlane *mPlane;
+    mutable Mutex mLock;
+    sem_t         doneSem;
+    Condition mCondition;
+
+    virtual void onFirstRef();
+    virtual status_t readyToRun();
+    virtual bool threadLoop();
+};
+#endif
 
 /* SprdDisplayPlane is a abstract class, responsible for manage
  * display plane
@@ -198,6 +237,9 @@ private:
     mutable Condition mCondition;
     mutable Mutex mLock;
     bool mWaitingBuffer;
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+    sp<AllocHelper> mAlloc;
+#endif
     int mDebugFlag;
 
 
@@ -207,6 +249,12 @@ private:
     }
 
     private_handle_t* createPlaneBuffer(int index);
+
+    bool openBase();
+
+#ifdef DYNAMIC_RELEASE_PLANEBUFFER
+    friend AllocHelper;
+#endif
 };
 
 

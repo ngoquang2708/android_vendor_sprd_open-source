@@ -99,7 +99,7 @@ namespace android
 class OverlayComposer: public Thread
 {
 public:
-    OverlayComposer(SprdPrimaryPlane *displayPlane);
+    OverlayComposer(SprdPrimaryPlane *displayPlane, sp<OverlayNativeWindow> NativeWindow);
     ~OverlayComposer();
 
     SprdDisplayPlane* getDisplayPlane() { return mDisplayPlane; }
@@ -131,7 +131,6 @@ private:
     EGLConfig       mConfig;
 
     uint32_t        mFlags;
-    bool            mSkipFrame;
     GLint           mMaxViewportDims[2];
     GLint           mMaxTextureSize;
 
@@ -167,7 +166,6 @@ private:
     sem_t         cmdSem;
     sem_t         doneSem;
     sem_t         displaySem;
-    bool   threadInitFlag;
     int composerHWLayers();
     virtual bool        threadLoop();
     virtual status_t    readyToRun();

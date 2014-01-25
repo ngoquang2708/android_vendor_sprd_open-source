@@ -183,6 +183,10 @@ void closeFrameBufferHAL(FrameBufferInfo *fbInfo)
 {
     if (fbInfo)
     {
+       if (fbInfo->fbDev)
+       {
+           framebuffer_close(fbInfo->fbDev);
+       }
        close(fbInfo->fbfd);
        free(fbInfo);
        fbInfo = NULL;
