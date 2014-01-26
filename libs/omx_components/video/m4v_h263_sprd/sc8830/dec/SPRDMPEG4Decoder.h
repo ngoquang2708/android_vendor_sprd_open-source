@@ -77,6 +77,12 @@ private:
 
     } mMode;
 
+    enum EOSStatus {
+        INPUT_DATA_AVAILABLE,
+        INPUT_EOS_SEEN,
+        OUTPUT_FRAMES_FLUSHED,
+    };
+
     tagMP4Handle *mHandle;
 
     size_t mInputBufferCount;
@@ -111,6 +117,7 @@ private:
     void* mLibHandle;
     bool mDecoderSwFlag;
     bool mChangeToHwDec;
+    EOSStatus mEOSStatus;
     bool mNeedIVOP;
     bool mHeadersDecoded;
     FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
