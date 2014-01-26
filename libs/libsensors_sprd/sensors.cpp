@@ -256,6 +256,10 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns)
 int sensors_poll_context_t::setDelay_sub(int handle, int64_t ns)
 {
 	int drv = handleToDriver(handle);
+	if (drv < 0) {
+		ALOGE("setDelay_sub():Negative array index\n");
+		return -EINVAL;
+	}
 	int en = mSensors[drv]->getEnable(handle);
 	int64_t cur = mSensors[drv]->getDelay(handle);
 	int err = 0;
