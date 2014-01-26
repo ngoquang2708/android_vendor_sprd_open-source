@@ -2095,7 +2095,7 @@ LOCAL int OV5640_capture(uint32_t param)
 	average = Sensor_ReadReg(0x56a1);
 
 	Sensor_SetMode(param);
-	Sensor_StreamOff();
+	Sensor_SetMode_WaitDone();
 
 	// read capture VTS
 	capture_VTS = OV5640_get_VTS();

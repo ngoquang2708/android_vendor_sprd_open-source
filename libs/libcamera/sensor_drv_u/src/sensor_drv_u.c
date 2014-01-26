@@ -98,8 +98,6 @@ struct sensor_drv_context {
 	pthread_t                           sensor_thread;
 	uint32_t                            queue_handle;
 	sem_t                               sensor_sync_sem;
-	sem_t                               st_on_sem;
-	sem_t                               st_off_sem;
 	sem_t                               st_af_sem;
 	sem_t                               st_setmode_sem;
 	uint32_t                            exit_flag;
@@ -493,6 +491,46 @@ int Sensor_GetSocId(SENSOR_SOCID_T *p_id)
 	}
 	close(fd_sensor);
 	CMR_LOGV("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
+
+	return ret;
+}
+
+LOCAL int _Sensor_Device_MIPI_init(uint32_t lane_num, uint32_t bps)
+{
+	int ret = SENSOR_SUCCESS;
+	SENSOR_IF_CFG_T if_cfg;
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
+	CMR_LOGV("Lane num %d, bps %d", lane_num, bps);
+	if_cfg.if_type      = INTERFACE_MIPI;
+	if_cfg.is_open      = INTERFACE_OPEN;
+	if_cfg.lane_num     = lane_num;
+	if_cfg.bps_per_lane = bps;
+	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_IF_CFG, &if_cfg);
+	if (0 != ret) {
+		CMR_LOGE("failed, ret=%d, lane=%d, bps=%d", ret, lane_num, bps);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+LOCAL int _Sensor_Device_MIPI_deinit(void)
+{
+	int ret = SENSOR_SUCCESS;
+	SENSOR_IF_CFG_T if_cfg;
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	CMR_LOGV("close mipi");
+	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
+	if_cfg.if_type      = INTERFACE_MIPI;
+	if_cfg.is_open      = INTERFACE_CLOSE;
+	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_IF_CFG, &if_cfg);
+	if (0 != ret) {
+		CMR_LOGE("failed, 0x%x", ret);
+		ret = -1;
+	}
 
 	return ret;
 }
@@ -2157,6 +2195,10 @@ int _Sensor_SetMode(uint32_t mode)
 		return SENSOR_SUCCESS;
 	}
 
+	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
+		_Sensor_StreamOff();/*stream off first for MIPI sensor switch*/
+		_Sensor_Device_MIPI_deinit();
+	}
 	if (PNULL != s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].sensor_reg_tab_ptr) {
 		mclk = s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].xclk_to_sensor;
 		Sensor_SetMCLK(mclk);
@@ -2173,6 +2215,12 @@ int _Sensor_SetMode(uint32_t mode)
 			set_reg_tab_func(0);
 		CMR_LOGV("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
 	}
+	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
+		_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
+						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
+		_Sensor_StreamOn();/*stream on at last*/
+	}
+
 	return SENSOR_SUCCESS;
 }
 
@@ -2246,26 +2294,7 @@ int _Sensor_StreamOn(void)
 	if (0 == err) {
 		s_p_sensor_cxt->stream_on = 1;
 	}
-	sem_post(&s_p_sensor_cxt->st_on_sem);
 	return err;
-}
-int Sensor_StreamOn(void)
-{
-	int                      ret = 0;
-	CMR_MSG_INIT(message);
-
-	CMR_LOGV("Before");
-	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
-	message.msg_type = SENSOR_EVT_STREAM_ON;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
-	if (ret) {
-		CMR_LOGE("Fail to send message");
-	}
-
-	sem_wait(&s_p_sensor_cxt->st_on_sem);
-	CMR_LOGV("Ret");
-	return ret;
-
 }
 
 int Sensor_AutoFocusInit(void)
@@ -2281,8 +2310,8 @@ int Sensor_AutoFocusInit(void)
 	}
 	sem_wait(&s_p_sensor_cxt->st_af_sem);
 
-	return ret;}
-
+	return ret;
+}
 
 int _Sensor_StreamOff(void)
 {
@@ -2309,26 +2338,7 @@ int _Sensor_StreamOff(void)
 		err = stream_off_func(param);
 	}
 	s_p_sensor_cxt->stream_on = 0;
-	sem_post(&s_p_sensor_cxt->st_off_sem);
 	return err;
-}
-int Sensor_StreamOff(void)
-{
-	int                      ret = 0;
-	CMR_MSG_INIT(message);
-
-	CMR_LOGV("Before");
-	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
-	message.msg_type = SENSOR_EVT_STREAM_OFF;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
-	if (ret) {
-		CMR_LOGE("Fail to send message");
-	}
-
-	sem_wait(&s_p_sensor_cxt->st_off_sem);
-	CMR_LOGV("Ret");
-
-	return ret;
 }
 
 uint32_t Sensor_Ioctl(uint32_t cmd, uint32_t arg)
@@ -2391,6 +2401,8 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 
+	_Sensor_StreamOff();
+	_Sensor_Device_MIPI_deinit();
 	if (1 == s_p_sensor_cxt->is_register_sensor) {
 		if (1 == s_p_sensor_cxt->is_main_sensor) {
 			_Sensor_Device_I2CDeInit(SENSOR_MAIN);
@@ -3002,8 +3014,6 @@ LOCAL int   _Sensor_CreateThread(void)
 	CMR_MSG_INIT(message);
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
-	sem_init(&s_p_sensor_cxt->st_on_sem, 0, 0);
-	sem_init(&s_p_sensor_cxt->st_off_sem, 0, 0);
 	sem_init(&s_p_sensor_cxt->st_af_sem, 0, 0);
 	sem_init(&s_p_sensor_cxt->sensor_sync_sem, 0, 0);
 	sem_init(&s_p_sensor_cxt->st_setmode_sem, 0, 0);
@@ -3055,8 +3065,6 @@ LOCAL int _Sensor_KillThread(void)
 
 	ret = pthread_join(s_p_sensor_cxt->sensor_thread, &dummy);
 	s_p_sensor_cxt->sensor_thread = 0;
-	sem_destroy(&s_p_sensor_cxt->st_on_sem);
-	sem_destroy(&s_p_sensor_cxt->st_off_sem);
 	sem_destroy(&s_p_sensor_cxt->st_setmode_sem);
 	sem_destroy(&s_p_sensor_cxt->st_af_sem);
 	sem_destroy(&s_p_sensor_cxt->sensor_sync_sem);
@@ -3098,12 +3106,12 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 		case SENSOR_EVT_STREAM_ON:
 			CMR_LOGV("SENSOR_EVT_STREAM_ON");
 			_Sensor_StreamOn();
-
 			break;
 
 		case SENSOR_EVT_STREAM_OFF:
 			CMR_LOGV("SENSOR_EVT_STREAM_OFF");
 			_Sensor_StreamOff();
+			_Sensor_Device_MIPI_deinit();
 			break;
 
 		case SENSOR_EVT_DEINIT:

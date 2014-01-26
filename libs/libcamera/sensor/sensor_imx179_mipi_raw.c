@@ -2113,7 +2113,7 @@ LOCAL uint32_t _imx179_BeforeSnapshot(uint32_t param)
 
 	_imx179_ReadGain(&gain);
 	Sensor_SetMode(param);
-	Sensor_StreamOff();
+	Sensor_SetMode_WaitDone();
 
 	capture_exposure = preview_exposure * cap_linetime /prv_linetime;
 	frame_len = Sensor_ReadReg(0x0341)&0xff;

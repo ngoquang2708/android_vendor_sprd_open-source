@@ -1096,7 +1096,6 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 
 	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d.\n", jpeg_fw_codec->slice_num);   
 	if(0 == (slice_num-1)) {
-		SCI_TRACE_LOW("hansen: final.");
 		if(ret != 4) // 4 indicate vlc done
 		{
 			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
@@ -1180,7 +1179,6 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 		return ret;
 	}
 	if(0 == (slice_num) || (0 != ret&& 1 != ret) ) {
-		SCI_TRACE_LOW("hansen: final.");
 		if(ret != 4) 
 		{
 			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
