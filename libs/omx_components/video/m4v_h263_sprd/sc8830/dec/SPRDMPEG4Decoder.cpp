@@ -124,6 +124,7 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mLibHandle(NULL),
       mDecoderSwFlag(true),
       mChangeToHwDec(false),
+      mEOSStatus(INPUT_DATA_AVAILABLE),
       mNeedIVOP(true),
       mHeadersDecoded(false),
       mMP4DecSetCurRecPic(NULL),
@@ -673,6 +674,10 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         return;
     }
 
+    if (mEOSStatus == OUTPUT_FRAMES_FLUSHED) {
+        return;
+    }
+
     if(mChangeToHwDec) {
 
         mChangeToHwDec = false;
@@ -699,7 +704,14 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
     List<BufferInfo *> &inQueue = getPortQueue(0);
     List<BufferInfo *> &outQueue = getPortQueue(1);
 
-    while ((!inQueue.empty()) && (outQueue.size() != 0)) {
+    while ((mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
+            && outQueue.size() != 0) {
+
+        if (mEOSStatus == INPUT_EOS_SEEN) {
+            drainAllOutputBuffers();
+            return;
+        }
+
         BufferInfo *inInfo = *inQueue.begin();
         OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
 
@@ -731,14 +743,7 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 //        ALOGI("%s, %d, mBuffer=0x%x, outHeader=0x%x, iRefCount=%d", __FUNCTION__, __LINE__, *itBuffer, outHeader, pBufCtrl->iRefCount);
         ALOGI("%s, %d, outHeader:0x%x, inHeader: 0x%x, len: %d, time: %lld, EOS: %d", __FUNCTION__, __LINE__,outHeader, inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS);
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
-            inQueue.erase(inQueue.begin());
-            inInfo->mOwnedByUs = false;
-            notifyEmptyBufferDone(inHeader);
-
-            ++mInputBufferCount;
-
-            drainAllOutputBuffers();
-            return;
+            mEOSStatus = INPUT_EOS_SEEN; //the last frame size may be not zero, it need to be decoded.
         }
 
         uint8_t *bitstream = inHeader->pBuffer + inHeader->nOffset;
@@ -988,10 +993,10 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 
         List<BufferInfo *>::iterator it = outQueue.begin();
 //        ALOGI("%s, %d,mHeader=0x%x, outHeader=0x%x", __FUNCTION__, __LINE__,(*it)->mHeader,outHeader );
-        while ((*it)->mHeader != outHeader) {
-//        ALOGI("%s, %d, while,mHeader=0x%x, outHeader=0x%x", __FUNCTION__, __LINE__,(*it)->mHeader,outHeader );
+        while ((*it)->mHeader != outHeader && it != outQueue.end()) {
             ++it;
         }
+        CHECK((*it)->mHeader == outHeader);
 
         BufferInfo *outInfo = *it;
         outInfo->mOwnedByUs = false;
@@ -1012,19 +1017,31 @@ bool SPRDMPEG4Decoder::drainAllOutputBuffers() {
     ALOGI("%s, %d", __FUNCTION__, __LINE__);
 
     List<BufferInfo *> &outQueue = getPortQueue(1);
+    BufferInfo *outInfo;
+    OMX_BUFFERHEADERTYPE *outHeader;
+    void *pBufferHeader;
 
-    void *yuv;
-
-    while (!outQueue.empty()) {
-        BufferInfo *outInfo = *outQueue.begin();
-        outQueue.erase(outQueue.begin());
-        OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
-        if (mHeadersDecoded &&(*mMP4DecGetLastDspFrm)(mHandle, &yuv) ) {
+    while (!outQueue.empty() && mEOSStatus != OUTPUT_FRAMES_FLUSHED) {
+        if (mHeadersDecoded &&(*mMP4DecGetLastDspFrm)(mHandle, &pBufferHeader) ) {
+            ALOGI("%s, %d, MP4DecGetLastDspFrm, pBufferHeader: 0x%x", __FUNCTION__, __LINE__, pBufferHeader);
+            List<BufferInfo *>::iterator it = outQueue.begin();
+            while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader && it != outQueue.end()) {
+                ++it;
+            }
+            CHECK((*it)->mHeader == (OMX_BUFFERHEADERTYPE*)pBufferHeader);
+            outInfo = *it;
+            outQueue.erase(it);
+            outHeader = outInfo->mHeader;
             outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
         } else {
+            ALOGI("%s, %d, output EOS", __FUNCTION__, __LINE__);
+            outInfo = *outQueue.begin();
+            outQueue.erase(outQueue.begin());
+            outHeader = outInfo->mHeader;
             outHeader->nTimeStamp = 0;
             outHeader->nFilledLen = 0;
             outHeader->nFlags = OMX_BUFFERFLAG_EOS;
+            mEOSStatus = OUTPUT_FRAMES_FLUSHED;
         }
 
         outInfo->mOwnedByUs = false;
@@ -1119,6 +1136,7 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
 
 void SPRDMPEG4Decoder::onPortFlushCompleted(OMX_U32 portIndex) {
     if (portIndex == 0 && mInitialized) {
+        mEOSStatus = INPUT_DATA_AVAILABLE;
         mNeedIVOP = true;
     }
 }
