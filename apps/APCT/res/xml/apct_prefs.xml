@@ -33,6 +33,11 @@
             android:title="@string/base_performance_category">
 
         <CheckBoxPreference
+            android:key="chip_temp"
+            android:title="@string/chip_temp"
+            android:summary="@string/chip_temp_summary"/>
+
+        <CheckBoxPreference
             android:key="app_launch_time"
             android:title="@string/app_launch_time"
             android:summary="@string/app_launch_time_summary"/>

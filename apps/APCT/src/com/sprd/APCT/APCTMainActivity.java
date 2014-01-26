@@ -69,6 +69,7 @@ import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.app.ActivityManager;
 import android.util.Log;
+import android.app.Fragment;
 
 public class APCTMainActivity extends Activity{
     Context mContext;
@@ -86,7 +87,8 @@ public class APCTMainActivity extends Activity{
                                  "PWR_CHARGE_TIME",
                                  "HOME_IDLE_TIME",
                                  "TOP_RECORDER",
-                                 "PROCRANK_RECORDER"
+                                 "PROCRANK_RECORDER",
+                                 "CHIP_TEMP"
                                 };
 
 	@Override
@@ -127,6 +129,8 @@ public class APCTMainActivity extends Activity{
     private CheckBoxPreference mEnableTopRecorder;
     private CheckBoxPreference mEnableProcrankRecorder;
 
+    private CheckBoxPreference mEnableChipTemp;
+
     private PreferenceScreen mTpRate;
     private PreferenceScreen mSensorRate;
     private PreferenceScreen mRamThroughput;
@@ -142,6 +146,11 @@ public class APCTMainActivity extends Activity{
     private final HashSet<Preference> mDisabledPrefs = new HashSet<Preference>();
 
     public APCTFragment(){};
+
+    public Fragment instantiate()
+    {
+        return this;
+    }
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -167,7 +176,7 @@ public class APCTMainActivity extends Activity{
         mEnableBootData = findAndInitCheckboxPref("boot_data");
         mEnableTopRecorder = findAndInitCheckboxPref("top_recorder");
         mEnableProcrankRecorder = findAndInitCheckboxPref("procrank_recorder");
-
+        mEnableChipTemp = findAndInitCheckboxPref("chip_temp");
         updateAllEnableStatus();
 
         mTpRate = (PreferenceScreen)findPreference("tp_rate");
@@ -205,7 +214,7 @@ public class APCTMainActivity extends Activity{
               || mEnablePwrOnTime.isChecked() || mEnableCamInitTime.isChecked() || mEnableNetSearchTime.isChecked()
               || mEnablePwrOffTime.isChecked() || mEnableChargeTime.isChecked() || mEnableHome2IdleTime.isChecked()
               || mEnableAppData.isChecked() || mEnableBootData.isChecked() || mEnableTopRecorder.isChecked()
-              || mEnableProcrankRecorder.isChecked())
+              || mEnableProcrankRecorder.isChecked() || mEnableChipTemp.isChecked())
            {
                ret1 = true;
            }
@@ -283,6 +292,7 @@ public class APCTMainActivity extends Activity{
         mEnableTopRecorder.setEnabled(APCTSettings.isApctTopSupport());
         mEnableProcrankRecorder.setEnabled(APCTSettings.isApctProcrankSupport());
         mEnableMemDisp.setEnabled(APCTSettings.isApctMemInfoSupport());
+        mEnableChipTemp.setEnabled(true);
     }
 
     private void updateAllCheckStatus() {
@@ -299,6 +309,7 @@ public class APCTMainActivity extends Activity{
         updateCheckBox(mEnableHome2IdleTime, sp.getBoolean(item_name[10], false));
         updateCheckBox(mEnableTopRecorder, sp.getBoolean(item_name[11], false));
         updateCheckBox(mEnableProcrankRecorder, sp.getBoolean(item_name[12], false));
+        updateCheckBox(mEnableChipTemp, sp.getBoolean(item_name[13], false));
     }
 
     private int getCheckboxIdx(Preference pref)
@@ -318,6 +329,7 @@ public class APCTMainActivity extends Activity{
         else if (pref == mEnableHome2IdleTime)    idx = 10;
         else if (pref == mEnableTopRecorder)      idx = 11;
         else if (pref == mEnableProcrankRecorder) idx = 12;
+        else if (pref == mEnableChipTemp)          idx = 13;
 
         return idx;
     }
