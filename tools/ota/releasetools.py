@@ -16,6 +16,7 @@ OPTIONS = common.OPTIONS
 OPTIONS.modem_update = True
 OPTIONS.uboot_update = True
 OPTIONS.wipe_product_info = False
+OPTIONS.cache_path = "/cache"
 
 class EdifyGeneratorExt(object):
   def __init__(self, script):
@@ -35,11 +36,17 @@ class EdifyGeneratorExt(object):
     destination file."""
     self.script.append('package_extract_file("%s", "%s");' % (src, dst))
 
-  def WriteEmmcImage(self, filename, device_path):
+  def WritePartitionImage(self, p, fn, dev_path):
     """write the given filename into the partition for the
     given device path"""
-    self.script.append(
-            'write_emmc_image("%s", "%s");' % (filename, device_path))
+    partition_type = common.PARTITION_TYPES[p.fs_type]
+    args = {'dev_path':dev_path, 'fn': fn, 'pt':partition_type}
+    if partition_type == "EMMC":
+      self.script.append(
+            'write_emmc_image("%(fn)s", "%(dev_path)s");' % args)
+    else:
+      self.script.append(
+            'write_raw_image("%(fn)s", "%(dev_path)s", "%(pt)s");' % args)
 
   def AddToZipExt(self, input_zip, output_zip, input_path=None):
     """Write the accumulated script to the output_zip file.  input_zip
@@ -125,7 +132,7 @@ class PartitionUpdater(object):
       return True
 
   @classmethod
-  def ComputeSdcardSpace(cls, updater):
+  def ComputeNeedSpace(cls, updater):
     if updater.extract and (updater.partition):
       if updater.need_extract == "/sdcard" or updater.need_extract == "/external":
         cls.need_sdcard_space += updater.target.size
@@ -157,14 +164,14 @@ class PartitionUpdater(object):
       raise common.ExternalError("no fstab")
     self.partition = fstab.get(mount_point, None)
     if mount_point == "/spl" or mount_point == "/fixnv" or mount_point == "/wfixnv" or mount_point == "/tdfixnv" or mount_point == "/wcnfixnv":
-      self.need_extract = "/cache"
+      self.need_extract = OPTIONS.cache_path
     if self.partition is None and mount_point2 is not None:
       self.partition = fstab.get(mount_point2, None)
     if self.partition is None:
       print ("[Warning:] no patition in fstab for mount point %s" % mount_point)
       self.partition = Partition()
       self.partition.mount_point = mount_point
-      self.partition.extract = "/cache"
+      self.partition.extract = OPTIONS.cache_path
       self.partition.fs_type = "yaffs2"
       print ("[Warning:] auto create patition %s" % self.partition)
       self.extract = True
@@ -174,7 +181,7 @@ class PartitionUpdater(object):
       raise common.ExternalError("init PartitionUpdater error")
 
   def AddToOutputZip(self, output_zip, **kwargs):
-    PartitionUpdater.ComputeSdcardSpace(self)
+    PartitionUpdater.ComputeNeedSpace(self)
 
   def Check(self, **kwargs):
     pass
@@ -183,7 +190,7 @@ class PartitionUpdater(object):
     pass
 
   def Formated(self):
-    if self.partition.fs_type in ("yaffs2", "mtd", "ext4"):
+    if self.partition.fs_type in ("yaffs2", "mtd", "ubifs", "ext4"):
       return True
     return False
 
@@ -194,10 +201,21 @@ class PartitionUpdater(object):
       self.script.FormatPartition(self.partition.mount_point)
 
   def IsExtract(self):
-    if self.partition.fs_type in ("yaffs2", "ext4"):
+    if self.partition.fs_type in ("yaffs2", "ubifs", "ext4"):
       return True
     else:
       return self.extract
+
+  def GetRealDevicePath(self, p, dev_path):
+    partition_type = common.PARTITION_TYPES[p.fs_type]
+    if partition_type == "EMMC":
+      return dev_path
+    elif partition_type == "MTD":
+      return dev_path
+    elif partition_type == "UBI":
+      return "/dev/ubi0_"+dev_path
+    else:
+      raise ValueError("don't know how to get \"%s\" partitions's device path" % (p.fs_type,))
 
   # if self.extract is true
   #   if extract dir exist
@@ -219,43 +237,51 @@ class PartitionUpdater(object):
     if not extract or self.need_extract is None:
       mount_point_temp = mount_point[1:]
       common.CheckSize(self.target.bin.data, mount_point_temp, self.options.info_dict)
+
+    p = self.options.info_dict["fstab"].get(self.mount_point, None)
+    if p is not None:
+      p1 = None
+      pt_dev1 = None
+    else:
+      p = self.options.info_dict["fstab"][self.mount_point2]
+      p1 = self.options.info_dict["fstab"][self.mount_point3]
+      pt_dev1 = p1.device
+      if p is None:
+        raise common.ExternalError("no partion %s in fstab" % (self.mount_point2))
+      if p1 is None:
+        print ("no partion %s in fstab" % (self.mount_point3))
+    pt_dev = p.device
+
     if extract:
       self.script_ext.UnpackPackageFile(self.target.file_name, os.path.join(mount_point, self.target.file_name))
     else:
       self.script.WriteRawImage(mount_point, self.target.file_name)
+
     if(self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin"):
-      nvmerge_cfg = "/cache/nvmerge.cfg"
-      part = self.options.info_dict["fstab"].get(self.mount_point, None)
-      if part is not None:
-        p = self.options.info_dict["fstab"][self.mount_point]
-      else:
-        p = self.options.info_dict["fstab"][self.mount_point2]
-        p1 = self.options.info_dict["fstab"][self.mount_point3]
-        nv_dev1 = p1.device
-      nv_dev = p.device
-      new_nv = "/cache/" + self.target.file_name
-      merged_nv = "/cache/" + "merged_" + self.target.file_name
-      self.script_ext.Run_program("/cache/nvmerge", nvmerge_cfg, nv_dev, new_nv, merged_nv)
-      self.script_ext.WriteEmmcImage(merged_nv, nv_dev)
-      if part is None:
-        self.script_ext.WriteEmmcImage(merged_nv, nv_dev1)
+      nvmerge_exe = os.path.join(OPTIONS.cache_path, "nvmerge")
+      nvmerge_cfg = os.path.join(OPTIONS.cache_path, "nvmerge.cfg")
+      new_nv = os.path.join(OPTIONS.cache_path, self.target.file_name)
+      merged_nv = os.path.join(OPTIONS.cache_path, "merged_" + self.target.file_name)
+      self.script_ext.Run_program(nvmerge_exe, nvmerge_cfg, self.GetRealDevicePath(p, pt_dev), new_nv, merged_nv)
+      self.script_ext.WritePartitionImage(p, merged_nv, pt_dev)
+      if p1 is not None:
+        self.script_ext.WritePartitionImage(p1, merged_nv, pt_dev1)
       self.script.DeleteFiles([new_nv, merged_nv])
+
     if self.file_name == "u-boot-spl-16k.bin":
-      p = self.options.info_dict["fstab"][self.mount_point]
-      spl_dev = p.device
-      new_spl = "/cache/" + self.target.file_name
-      merged_spl = "/cache/" + "merged_" + self.target.file_name
-      self.script_ext.Run_program("/cache/splmerge", new_spl, merged_spl)
-      self.script_ext.WriteEmmcImage(merged_spl, spl_dev)
+      splmerge_exe = os.path.join(OPTIONS.cache_path, "splmerge")
+      new_spl =os.path.join(OPTIONS.cache_path, self.target.file_name)
+      merged_spl = os.path.join(OPTIONS.cache_path, "merged_" + self.target.file_name)
+      self.script_ext.Run_program(splmerge_exe, new_spl, merged_spl)
+      self.script_ext.WritePartitionImage(p, merged_spl, pt_dev)
       self.script.DeleteFiles([new_spl, merged_spl])
+
     if self.file_name == "wcnnvitem.bin":
-      p = self.options.info_dict["fstab"][self.mount_point2]
-      p1 = self.options.info_dict["fstab"][self.mount_point3]
-      nv_dev = p.device
-      nv_dev1 = p1.device
-      self.script_ext.WriteEmmcImage("/cache/" + self.target.file_name, nv_dev)
-      self.script_ext.WriteEmmcImage("/cache/" + self.target.file_name, nv_dev1)
-      self.script.DeleteFiles(["/cache/" + self.target.file_name])
+      cache_nv = os.path.join(OPTIONS.cache_path, "wcnnvitem.bin")
+      self.script_ext.WritePartitionImage(p, cache_nv, pt_dev)
+      if p1 is not None:
+        self.script_ext.WritePartitionImage(p1, cache_nv, pt_dev1)
+      self.script.DeleteFiles([cache_nv])
 
   #verify patch file source
   def CheckPatchSource(self):
@@ -417,10 +443,10 @@ def FullOTA_InstallBegin(info):
   script_ext.AddToZipExt(input_zip, output_zip)
 
   if OPTIONS.modem_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", "/cache/nvmerge")
-    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", "/cache/nvmerge.cfg")
+    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", os.path.join(OPTIONS.cache_path, "nvmerge"))
+    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", os.path.join(OPTIONS.cache_path, "nvmerge.cfg"))
   if OPTIONS.uboot_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", "/cache/splmerge")
+    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", os.path.join(OPTIONS.cache_path, "splmerge"))
 
   if OPTIONS.uboot_update:
     #spl.bin
@@ -511,9 +537,9 @@ def FullOTA_InstallBegin(info):
     partion_productinfo.FormatPartition("format productinfo ....")
 
   if OPTIONS.modem_update:
-    script.DeleteFiles(["/cache/nvmerge", "/cache/nvmerge.cfg"])
+    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "nvmerge"), os.path.join(OPTIONS.cache_path, "nvmerge.cfg")])
   if OPTIONS.uboot_update:
-    script.DeleteFiles(["/cache/splmerge"])
+    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "splmerge")])
 
 def FullOTA_InstallEnd(info):
   print "FullOTA_InstallEnd"
@@ -540,10 +566,10 @@ def IncrementalOTA_InstallBegin(info):
   script_ext.AddToZipExt(target_zip, output_zip)
 
   if OPTIONS.modem_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", "/cache/nvmerge")
-    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", "/cache/nvmerge.cfg")
+    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", os.path.join(OPTIONS.cache_path, "nvmerge"))
+    script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", os.path.join(OPTIONS.cache_path, "nvmerge.cfg"))
   if OPTIONS.uboot_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", "/cache/splmerge")
+    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", os.path.join(OPTIONS.cache_path, "splmerge"))
 
   if OPTIONS.uboot_update:
     #spl.bin
@@ -673,9 +699,9 @@ def IncrementalOTA_InstallBegin(info):
     partion_productinfo.FormatPartition("format productinfo ....")
 
   if OPTIONS.modem_update:
-    script.DeleteFiles(["/cache/nvmerge", "/cache/nvmerge.cfg"])
+    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "nvmerge"), os.path.join(OPTIONS.cache_path, "nvmerge.cfg")])
   if OPTIONS.uboot_update:
-    script.DeleteFiles(["/cache/splmerge"])
+    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "splmerge")])
 
 def IncrementalOTA_InstallEnd(info):
   print "IncrementalOTA_InstallEnd"
