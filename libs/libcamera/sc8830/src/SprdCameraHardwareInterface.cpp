@@ -821,12 +821,12 @@ status_t SprdCameraHardware::autoFocus()
 	}
 	mMsgEnabled |= CAMERA_MSG_FOCUS;
 
+	setCameraState(SPRD_FOCUS_IN_PROGRESS, STATE_FOCUS);
 	if(0 != camera_start_autofocus(CAMERA_AUTO_FOCUS, camera_cb, this)){
 		LOGE("auto foucs fail.");
+		setCameraState(SPRD_IDLE, STATE_FOCUS);
 		//return INVALID_OPERATION;
 	}
-
-	setCameraState(SPRD_FOCUS_IN_PROGRESS, STATE_FOCUS);
 
 	LOGV("mLock:autoFocus X.\n");
 	return NO_ERROR;
