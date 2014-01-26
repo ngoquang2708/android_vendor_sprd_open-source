@@ -215,6 +215,7 @@ int waitAcquireFence(hwc_display_contents_1_t *list)
 int syncReleaseFence(hwc_display_contents_1_t *list, int display)
 {
     static int releaseFenceFd = -1;
+    int fenceFd = -1;
     unsigned val = 1;
     const char *name = "HWCReleaseFence";
 
@@ -243,12 +244,14 @@ int syncReleaseFence(hwc_display_contents_1_t *list, int display)
         }
     }
 
-    releaseFenceFd = sprd_fence_create(const_cast<char *>(name), val);
-    if (releaseFenceFd < 0)
+    fenceFd = sprd_fence_create(const_cast<char *>(name), val);
+    if (fenceFd < 0)
     {
         ALOGE("create release fence fd failed");
         return -1;
     }
+
+    releaseFenceFd = dup(fenceFd);
 
 DupFenceFD:
     if (list)
@@ -264,10 +267,12 @@ DupFenceFD:
 
             if (l->releaseFenceFd < 0)
             {
-                l->releaseFenceFd = dup(releaseFenceFd);
+                l->releaseFenceFd = dup(fenceFd);
             }
         }
     }
+
+    close(fenceFd);
 
     return releaseFenceFd;
 }

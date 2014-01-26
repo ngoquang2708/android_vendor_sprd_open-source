@@ -107,24 +107,15 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
         }
     }
 
+    closeAcquireFDs(list);
+
     /*
-     *  Virtual display just have outbufAcquireFenceFd
+     *  Virtual display just have outbufAcquireFenceFd.
+     *  We do not touch this outbuf, and do not need
+     *  wait this fence, so just send this acquireFence
+     *  back to SurfaceFlinger as retireFence.
      * */
-    if (list->outbufAcquireFenceFd >= 0)
-    {
-        String8 name("HWCOBVirtual::Post");
-
-        FenceWaitForever(name, list->outbufAcquireFenceFd);
-
-        if (list->outbufAcquireFenceFd >= 0)
-        {
-            close(list->outbufAcquireFenceFd);
-            list->outbufAcquireFenceFd = -1;
-        }
-    }
-
-
-    createRetiredFence(list);
+    list->retireFenceFd = list->outbufAcquireFenceFd;
 
     return 0;
 }
