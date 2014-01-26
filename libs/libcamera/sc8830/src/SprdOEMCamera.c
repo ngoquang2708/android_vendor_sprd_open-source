@@ -256,6 +256,7 @@ static uint32_t camera_get_rot_enum(uint32_t rot_val);
 static void camera_buffer_copy(struct img_frm  *src_img, struct img_frm  *dst_img);
 static int camera_capture_way_out(void);
 static uint32_t camera_safe_scale_th(void);
+static int camera_reset_rotation_state(int rot_sate);
 
 int camera_capture_way_out(void)
 {
@@ -2753,6 +2754,9 @@ int camera_stop_preview_internal(void)
 	if (ret) {
 		CMR_LOGE("ae disable fail %d", ret);
 	}
+
+	/*rotation state maybe IMG_CVT_ROTATING*/
+	camera_reset_rotation_state(IMG_CVT_IDLE);
 
 	pthread_mutex_unlock(&g_cxt->prev_mutex);
 	CMR_PRINT_TIME;
@@ -8116,4 +8120,14 @@ uint32_t camera_safe_scale_th(void)
 		scale_threshold = CMR_SHARK_SCALING_TH;
 	}
 	return scale_threshold;
+}
+
+static int camera_reset_rotation_state(int rot_sate)
+{
+	int ret = CAMERA_SUCCESS;
+	struct rotation_context  *cxt  = &g_cxt->rot_cxt;
+
+	cxt->rot_state = rot_sate;
+
+	return ret;
 }

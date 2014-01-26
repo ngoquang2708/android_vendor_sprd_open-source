@@ -292,7 +292,7 @@ private:
 		                              uint32_t phy_addr,
 		                              char *virtual_addr);
 	void                            handleDataCallback(int32_t msg_type,
-						sprd_camera_memory_t *data, unsigned int index,
+						uint32_t frame_index, unsigned int index,
 						camera_frame_metadata_t *metadata, void *user,
 						uint32_t isPrev);
 	void                            handleDataCallbackTimestamp(int64_t timestamp,
@@ -306,6 +306,7 @@ private:
 	bool                            checkPreviewStateForCapture();
 	bool                            getLcdSize(uint32_t *width, uint32_t *height);
 	status_t                        waitSetParamsOK();
+	bool                            switchBufferMode(uint32_t src, uint32_t dst);
 
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera

@@ -470,23 +470,36 @@ bool SprdCameraHardware::previewEnabled()
 
 status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 {
-    int min_bufs;
+	int min_bufs;
+	bool switch_ret = false;
+	status_t  ret = 0;
 
 	LOGV("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
 	mPreviewWindowLock.lock();
-    mPreviewWindow = w;
+	mPreviewWindow = w;
 	mPreviewWindowLock.unlock();
 
     LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
-    if (!w) {
-        /*mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
-        */
-        LOGE("preview window is NULL!");
-        return NO_ERROR;
-    }
+	if (!w) {
+		switch_ret = switchBufferMode(mPreviewBufferUsage, PREVIEW_BUFFER_USAGE_DCAM);
+		if (switch_ret) {
+			ret = NO_ERROR;
+		} else {
+			ret = INVALID_OPERATION;
+		}
+
+		LOGE("preview window is NULL!");
+		return ret;
+	} else {
+		switch_ret = switchBufferMode(mPreviewBufferUsage, mOriginalPreviewBufferUsage);
+		if (!switch_ret) {
+			ret = INVALID_OPERATION;
+			return ret;
+		}
+	}
 
     if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
         LOGE("%s: could not retrieve min undequeued buffer count", __func__);
@@ -522,9 +535,13 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
     LOGV("%s: preview format %s", __func__, str_preview_format);
 
 	if (preview_width < 640) {
-		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+		switch_ret = switchBufferMode(mPreviewBufferUsage, PREVIEW_BUFFER_USAGE_DCAM);
 	} else {
-		mPreviewBufferUsage = mOriginalPreviewBufferUsage;
+		switch_ret = switchBufferMode(mPreviewBufferUsage, mOriginalPreviewBufferUsage);
+	}
+	if (!switch_ret) {
+		ret = INVALID_OPERATION;
+		return ret;
 	}
 
 #ifdef CONFIG_CAMERA_DMA_COPY
@@ -2746,6 +2763,11 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 		buffer_handle_t *buffer_handle = NULL;
 		struct private_handle_t *private_h = NULL;
 
+		if(!mPreviewWindow) {
+			LOGE("mPreviewWindow is NULL");
+			return 0;
+		}
+
 		if (0 != mPreviewWindow->set_buffer_count(mPreviewWindow, kPreviewBufferCount)) {
 			LOGE("allocatePreviewMemByGraphics: could not set buffer count");
 			return -1;
@@ -2834,7 +2856,7 @@ bool SprdCameraHardware::allocatePreviewMem()
 		buffer_end_id += 1;
 	}
 
-	if (mPreviewDcamAllocBufferCnt > 0) {
+	if (mPreviewDcamAllocBufferCnt > 0 && NULL == mPreviewHeapArray) {
 		mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewDcamAllocBufferCnt * sizeof(sprd_camera_memory_t*));
 		if (mPreviewHeapArray == NULL) {
 			return false;
@@ -3003,6 +3025,33 @@ bool SprdCameraHardware::initPreview()
 	return true;
 }
 
+bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
+{
+	bool ret = true;
+
+
+	if ( (src != dst) && (!isPreviewing()) ) {
+		if (mPreviewHeapArray != NULL) {
+			/*free original memory*/
+			freePreviewMem();
+
+			/*change to new value*/
+			mPreviewBufferUsage = dst;
+
+			/*alloc new memory*/
+			if (!allocatePreviewMem()) {
+				freePreviewMem();
+				ret = false;
+			}
+		} else {
+			/*change to new value*/
+			mPreviewBufferUsage = dst;
+		}
+	}
+
+	LOGV("switchBufferMode ret=%d", ret);
+	return ret;
+}
 void SprdCameraHardware::deinitPreview()
 {
 	freePreviewMem();
@@ -3537,6 +3586,8 @@ bool SprdCameraHardware::getLcdSize(uint32_t *width, uint32_t *height)
 
 status_t SprdCameraHardware::setCameraParameters()
 {
+	bool switch_ret = false;
+
 	LOGV("setCameraParameters: E");
 
 	// Because libqcamera is broken, for the camera_set_parm() calls
@@ -3605,10 +3656,15 @@ status_t SprdCameraHardware::setCameraParameters()
         rotation = 0;
 
     SET_PARM(CAMERA_PARM_SENSOR_ROTATION, rotation);
-    if (0 != rotation) {
-        mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
-        mOriginalPreviewBufferUsage = mPreviewBufferUsage;
-    }
+	if (0 != rotation) {
+		switch_ret = switchBufferMode(mPreviewBufferUsage, PREVIEW_BUFFER_USAGE_DCAM);
+	} else {
+		switch_ret = switchBufferMode(mPreviewBufferUsage, mOriginalPreviewBufferUsage);
+	}
+	if (!switch_ret) {
+		LOGV("setCameraParameters switch buffer fail");
+		return UNKNOWN_ERROR;
+	}
 
     SET_PARM(CAMERA_PARM_SHOT_NUM, mParameters.getInt("capture-mode"));
 /*	if (1 == mParameters.getInt("hdr")) {
@@ -3914,7 +3970,12 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 							0, 0, SIZE_ALIGN(width), SIZE_ALIGN(height), &vaddr);
 
 	if (0 != ret || NULL == vaddr) {
-		LOGE("%s: failed to lock gralloc buffer", __func__);
+		LOGE("%s: failed to lock gralloc buffer ret=%d,vaddr=0x%x", __func__, ret,(int)vaddr);
+
+		ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
+		if (0 != ret) {
+			LOGE("%s cancel buffer fail", __func__);
+		}
 		return false;
 	}
 
@@ -3932,6 +3993,11 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 	ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
 	if (0 != ret) {
 		LOGE("%s: enqueue_buffer() failed.", __func__);
+
+		ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
+		if (0 != ret) {
+			LOGE("%s cancel buffer fail", __func__);
+		}
 		return false;
 	}
 
@@ -3980,7 +4046,12 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 		}
 
 		if (0 != ret || NULL == vaddr) {
-			LOGE("%s: failed to lock gralloc buffer", __func__);
+			LOGE("%s: failed to lock gralloc buffer ret=%d, vaddr=0x%x", __func__,ret,(int)vaddr);
+
+			ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
+			if (0 != ret) {
+				LOGE("%s cancel buffer fail", __func__);
+			}
 			return false;
 		}
 
@@ -4000,6 +4071,12 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			LOGE("%s: camera copy data failed.", __func__);
 		} else {
 			ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
+			if (0 != ret) {
+				ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
+				if (0 != ret) {
+					LOGE("%s cancel buffer fail", __func__);
+				}
+			}
 		}
 
 		if (0 != ret) {
@@ -4023,6 +4100,11 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			mGrallocHal->unlock(mGrallocHal, *mPreviewBufferHandle[id]);
 			if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, mPreviewBufferHandle[id])) {
 				LOGE("displayOneFrame fail: Could not enqueue gralloc buffer!\n");
+
+				if (0 != mPreviewWindow->cancel_buffer(mPreviewWindow, mPreviewBufferHandle[id])) {
+					LOGE("%s cancel buffer fail", __func__);
+				}
+
 				return false;
 			}
 			mCancelBufferEb[id] = 0;
@@ -4078,7 +4160,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 			}
 
 			handleDataCallback(CAMERA_MSG_PREVIEW_METADATA,
-				mPreviewHeapArray[tmpIndex],
+				tmpIndex,
 				0, &metadata, mUser, 1);
 		} else {
 			uint32_t dataSize = frame->dx * frame->dy * 3 / 2;
@@ -4086,7 +4168,7 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 				frame->buf_Virt_Addr, dataSize);
 
 			handleDataCallback(CAMERA_MSG_PREVIEW_METADATA,
-				mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1],
+				mPreviewDcamAllocBufferCnt -1,
 				0, &metadata, mUser, 1);
 		}
 	} else {
@@ -4095,16 +4177,24 @@ void SprdCameraHardware::receivePreviewFDFrame(camera_frame_type *frame)
 }
 
 void SprdCameraHardware::handleDataCallback(int32_t msg_type,
-		sprd_camera_memory_t *data, unsigned int index,
+		uint32_t frame_index, unsigned int index,
 		camera_frame_metadata_t *metadata, void *user,
 		uint32_t isPrev)
 {
+	sprd_camera_memory_t *data;
 	if (isPrev)
 		Mutex::Autolock l(&mCbPrevDataBusyLock);
 	else
 		Mutex::Autolock cl(&mCbCapDataBusyLock);
 
 	LOGV("handleDataCallback E");
+	if (isPrev) {
+		if(!isPreviewing()) return;
+		data = mPreviewHeapArray[frame_index];
+	} else {
+		if (!isCapturing()) return;
+		data = mRawHeap;
+	}
 	data->busy_flag = true;
 	mData_cb(msg_type, data->camera_memory, index, metadata, user);
 	data->busy_flag = false;
@@ -4119,6 +4209,7 @@ void SprdCameraHardware::handleDataCallbackTimestamp(int64_t timestamp,
 {
 	Mutex::Autolock l(&mCbPrevDataBusyLock);
 	LOGV("handleDataCallbackTimestamp E");
+	if(!isPreviewing()) return;
 	data->busy_flag = true;
 	mData_cb_timestamp(timestamp, msg_type, data->camera_memory, index, user);
 	data->busy_flag = false;
@@ -4211,7 +4302,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				uint32_t tmpIndex = frame->order_buf_id;
 
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-					mPreviewHeapArray[tmpIndex],
+					tmpIndex,
 					0, NULL, mUser, 1);
 
 			} else {
@@ -4221,7 +4312,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 					frame->buf_Virt_Addr, dataSize);
 
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-					mPreviewHeapArray[mPreviewDcamAllocBufferCnt - 1],
+					mPreviewDcamAllocBufferCnt - 1,
 					0, NULL, mUser, 1);
 
 			}
@@ -4240,6 +4331,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 			}
 			/*LOGV("test slowmotion:%lld.",timestamp);*/
 			if (mIsStoreMetaData) {
+				uint32_t tmpIndex = frame->order_buf_id;
 				uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
 				*data++ = kMetadataBufferTypeCameraSource;
 				*data++ = frame->buffer_phy_addr;
@@ -4248,10 +4340,28 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				*data++ = height;
 				*data++ = mPreviewWidth_trimx;
 				*data     = mPreviewHeight_trimy;
-				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
+				{
+					Mutex::Autolock l(&mCbPrevDataBusyLock);
+					//LOGV("handleDataCallbackTimestamp E");
+					if(!isPreviewing()) return;
+
+					if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+						tmpIndex = mPreviewDcamAllocBufferCnt - 1;
+					}
+					mPreviewHeapArray[tmpIndex]->busy_flag = true;
+					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
+					mPreviewHeapArray[tmpIndex]->busy_flag = false;
+					//LOGV("handleDataCallbackTimestamp X");
+				}
+			//	mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
 			} else {
 				//mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
 				uint32_t tmpIndex = frame->order_buf_id;
+
+
+				if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+					tmpIndex = mPreviewDcamAllocBufferCnt - 1;
+				}
 
 				handleDataCallbackTimestamp(timestamp,
 					CAMERA_MSG_VIDEO_FRAME,
@@ -4380,7 +4490,7 @@ callbackraw:
 			LOGV("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
 
 			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
-				handleDataCallback(CAMERA_MSG_RAW_IMAGE, mRawHeap, offset, NULL, mUser, 0);
+				handleDataCallback(CAMERA_MSG_RAW_IMAGE, 0, offset, NULL, mUser, 0);
 			}
 
 			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
