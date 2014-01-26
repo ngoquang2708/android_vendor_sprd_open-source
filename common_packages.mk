@@ -14,3 +14,11 @@ PRODUCT_PACKAGES += \
         Carddav-Sync \
         Caldav-Sync.apk
 #	libsprddm \
+
+ifeq ($(TARGET_LOWCOST_SUPPORT),true)
+    ifneq ($(MULTILANGUAGE_SUPPORT),true)
+        PRODUCT_PACKAGES += PinyinIME
+    endif
+else
+    PRODUCT_PACKAGES += PinyinIME
+endif
