@@ -17619,8 +17619,8 @@
         apn="net2.vodafone.pt"
         proxy=""
         port=""
-        user="odafone"
-        password="odafone"
+        user="vodafone"
+        password="vodafone"
         type="default,supl"
         authtype="3"
     />
