@@ -12,9 +12,10 @@ PRODUCT_PACKAGES += \
 	CellBroadcastReceiver \
 	SprdQuickSearchBox \
         Carddav-Sync \
-        Caldav-Sync.apk
+        Caldav-Sync.apk\
+        libsprd2000agent
 #	libsprddm \
-
+     
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
     ifneq ($(MULTILANGUAGE_SUPPORT),true)
         PRODUCT_PACKAGES += PinyinIME
