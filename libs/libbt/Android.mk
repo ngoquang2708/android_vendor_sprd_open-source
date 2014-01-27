@@ -20,6 +20,18 @@ LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog
 
+ifeq ($(findstring 8830,$(TARGET_BOOTLOADER_BOARD_NAME)),8830)
+      LOCAL_CFLAGS += -DHW_ADC_ADAPT_SUPPORT
+endif
+
+ifeq ($(findstring 7715,$(TARGET_BOOTLOADER_BOARD_NAME)),7715)
+      LOCAL_CFLAGS += -DHW_ADC_ADAPT_SUPPORT
+endif
+
+ifeq ($(findstring 8815,$(TARGET_BOOTLOADER_BOARD_NAME)),8815)
+      LOCAL_CFLAGS += -DHW_ADC_ADAPT_SUPPORT
+endif
+
 LOCAL_MODULE := libbt-vendor
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
