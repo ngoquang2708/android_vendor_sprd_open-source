@@ -4270,14 +4270,12 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		GET_USE_TIME;
 		LOGE("Launch Camera Time:%d(ms).",s_use_time);
 
-        /* SPRD: add for apct functions @{ */
-		float cam_init_time;
-        if (getApctCamInitSupport())
-        {
-            cam_init_time =  ((float)(systemTime() - cam_init_begin_time))/1000000000;
-            writeCamInitTimeToProc(cam_init_time);
-        }
-        /* @} */
+	float cam_init_time;
+	if (getApctCamInitSupport())
+	{
+		cam_init_time =  ((float)(systemTime() - cam_init_begin_time))/1000000000;
+		writeCamInitTimeToProc(cam_init_time);
+	}
 		miSPreviewFirstFrame = 0;
 	}
 
@@ -4329,7 +4327,6 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 					LOGV("first frame.");
 				}
 			}
-			/*LOGV("test slowmotion:%lld.",timestamp);*/
 			if (mIsStoreMetaData) {
 				uint32_t tmpIndex = frame->order_buf_id;
 				uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
@@ -4342,7 +4339,6 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				*data     = mPreviewHeight_trimy;
 				{
 					Mutex::Autolock l(&mCbPrevDataBusyLock);
-					//LOGV("handleDataCallbackTimestamp E");
 					if(!isPreviewing()) return;
 
 					if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
@@ -4351,13 +4347,9 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 					mPreviewHeapArray[tmpIndex]->busy_flag = true;
 					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
 					mPreviewHeapArray[tmpIndex]->busy_flag = false;
-					//LOGV("handleDataCallbackTimestamp X");
 				}
-			//	mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
 			} else {
-				//mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mPreviewHeap->mBuffers[offset], mUser);
 				uint32_t tmpIndex = frame->order_buf_id;
-
 
 				if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
 					tmpIndex = mPreviewDcamAllocBufferCnt - 1;
@@ -4368,15 +4360,8 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 					mPreviewHeapArray[tmpIndex],
 					0, mUser);
 			}
-		//LOGV("receivePreviewFrame: record index: %d, offset: %x, size: %x, frame->buf_Virt_Addr: 0x%x.", offset, off, size, (uint32_t)frame->buf_Virt_Addr);
 		} else {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-				if (isPreviewing()) {
-					flush_buffer(CAMERA_FLUSH_PREVIEW_HEAP, frame->order_buf_id,
-							(void*)frame->buf_Virt_Addr,
-							(void*)frame->buffer_phy_addr,
-							(int)frame->dx * frame->dy * 3 /2);
-				}
 				if (CAMERA_SUCCESS != camera_release_frame(offset)) {
 					LOGE("receivePreviewFrame: fail to camera_release_frame().offset: %d.", (int)offset);
 				}
@@ -4393,14 +4378,12 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		// camera_release_frame() in this method because we first
 		// need to check to see if mPreviewCallback != NULL, which
 		// requires holding mCallbackLock.
-
 	}
 	else
 		LOGE("receivePreviewFrame: mData_cb is null.");
 
 }
 
-//can not use callback lock?
 void SprdCameraHardware::notifyShutter()
 {
 	LOGV("notifyShutter: E");

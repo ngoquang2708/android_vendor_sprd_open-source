@@ -951,7 +951,10 @@ void *camera_prev_thread_proc(void *data)
 			sem_post(&g_cxt->prev_sync_sem);
 			CMR_PRINT_TIME;
 			break;
-
+		case CMR_EVT_PREV_STOP:
+			CMR_LOGV("prev thread paused");
+			camera_stop_done(g_cxt);
+			break;
 		default:
 			break;
 		}
@@ -2806,15 +2809,25 @@ camera_ret_code_type camera_stop_preview(void)
 
 	CMR_PRINT_TIME;
 	/*camera_flush_msg_queue();*/
+	CMR_LOGV("To wait for image grab stopped");
 	message.msg_type = CMR_EVT_STOP;
 	message.sub_msg_type = CMR_PREVIEW;
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 	if (ret) {
-		CMR_LOGE("Fail to send message to camera main thread");
+		CMR_LOGE("Failed to send message to camera main thread");
 		return ret;
 	}
-
 	camera_wait_stop(g_cxt);
+
+	CMR_LOGV("To wait for all the messages processed");
+	message.msg_type = CMR_EVT_PREV_STOP;
+	ret = cmr_msg_post(g_cxt->prev_msg_que_handle, &message);
+	if (ret) {
+		CMR_LOGE("Failed to send message to preview thread");
+		return ret;
+	}
+	camera_wait_stop(g_cxt);
+
 	CMR_PRINT_TIME;
 	CMR_LOGV("stop preview... %d", ret);
 
@@ -4455,7 +4468,7 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 
 	(void)sub_type;
 
-	if (CHN_1 == info->channel_id) {
+	if (CHN_1 == info->channel_id && IS_PREVIEW) {
 		/* the source frame can be freed here*/
 		CMR_LOGV("Rot Done");
 		ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
@@ -5906,6 +5919,7 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 	} else {
 		CMR_LOGV("Need rotate");
 		ret = camera_start_rotate(data);
+		camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
 	}
 	pthread_mutex_lock(&g_cxt->recover_mutex);
 	if (g_cxt->recover_status) {
@@ -7002,7 +7016,6 @@ int camera_start_rotate(struct frm_info *data)
 				CMR_LOGE("Rot error");
 			} else {
 				g_cxt->rot_cxt.frm_data.reserved = (void*)data->frame_id;
-				camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&g_cxt->rot_cxt.frm_data);
 			}
 		}
 
