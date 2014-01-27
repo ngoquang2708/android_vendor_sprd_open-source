@@ -20,10 +20,12 @@ import android.util.Log;
 import android.os.SystemProperties;
 
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.PhoneConstants;
 
 import java.nio.ByteBuffer;
+
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.net.Uri;
@@ -33,6 +35,7 @@ import com.android.internal.telephony.TelephonyIntents;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 
+import android.provider.Settings;
 import android.provider.Telephony;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -40,7 +43,7 @@ import com.android.internal.telephony.TelephonyProperties;
 import com.spreadtrum.dm.transaction.DMTransaction;
 import com.spreadtrum.dm.vdmc.MyTreeIoHandler;
 import com.spreadtrum.dm.vdmc.Vdmc;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 import android.app.PendingIntent;
 import android.app.Activity;
 
@@ -186,51 +189,86 @@ public class DmService extends Service {
     private  DmNativeInterface mDmNativeInterface;
 
     private PhoneStateListener[] mPhoneStateListener;
-    
-    public static boolean SUPPORT_DM_SELF_REG = false;
 
     private int mPhoneCnt = 0;
     private int curPhoneId = 0;
-    public int mStartid= 0;
+    public int mStartid= 0;  
+    
+    //CMCC Config share prefence
+    private static final String CMCC_CONFIG = "CMCCConfig";
+    
+    private static int mCurrentCMCCSimNum;
+  //4 send sms
+    private static final String ITEM_CMCC_REGISTED_STATUS = "DmRegistedStatus";
+    private static final String ITEM_CMCC_LAST_IMSI = "DmLastImsi";
+
+    private static final String ITEM_CMCC_REJECT_STATUS_PHONE0 = "DmRejectStatusPhone0";
+    private static final String ITEM_CMCC_REJECT_IMSI0 = "DmRejectImsi0";
+    private static final String ITEM_CMCC_REJECT_STATUS_PHONE1 = "DmRejectStatusPhone1";
+    private static final String ITEM_CMCC_REJECT_IMSI1 = "DmRejectImsi1";
+    
+    private static final String ITEM_CMCC_IMSI_1 = "DmImsi1";
+    private static final String ITEM_CMCC_IMSI_2 = "DmImsi2";
+    
+    private static String mImsi1;
+    private static String mImsi2;    
+    private static String mRejectImsi0;    
+    private static String mRejectImsi1;
+    private static boolean mIsRejectPhone0;
+    private static boolean mIsRejectPhone1;
+    
+    //4 NIA
+    private static final String ITEM_CMCC_ALLOWED_DATACONNECT = "DmAllowDataConnect";
+    private static final String ITEM_CMCC_DATACONNECT_ALWAYS_STATUS = "DmDataConnectAlwaysStatus";      
+    private static boolean mAllowedDataConnect;
+    private static boolean mDataConnectAlwaysStatus;
+    
+    public static final int SEND_SELF_SMS = 20;
+    public static final int DATA_CONNECT_CONFRIM = 21;    
+    public static boolean isDialogShowed = false;    
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            //TelephonyIntents.ACTION_IS_SIM_SMS_READY
-            if (action.startsWith("android.intent.action.ACTION_IS_SIM_SMS_READY")) {//|| action.equals(TelephonyIntents.ACTION_IS_SIM2_SMS_READY)) {
-                int phoneId = intent.getIntExtra("phoneId", 0);
-                mSmsReady[phoneId] = intent.getBooleanExtra("isReady", false);
+            if (action.startsWith(TelephonyIntents.ACTION_IS_SIM_SMS_READY)) {//|| action.equals(TelephonyIntents.ACTION_IS_SIM2_SMS_READY)) {
 
+                int phoneId = intent.getIntExtra(TelephonyIntents.EXTRA_PHONE_ID, 0);
+                mSmsReady[phoneId] = intent.getBooleanExtra("isReady", true);
+                
                 Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY mSmsReady["+ phoneId + "] = " + mSmsReady[phoneId]);
                 if (mSmsReady[phoneId]) {
                     if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
                             && mInService[phoneId]) {
 
                         if (getIsCmccCard(phoneId)) {
-	                    curPhoneId = phoneId;
-                            Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: is cmcc card!");
+	                    curPhoneId = phoneId;	                    
+                            Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: is cmcc card! curPhoneId = " + curPhoneId);
 
                             // send self registe message
                             if(mPhoneCnt > 1 /*TelephonyManager.isMultiSim() */){
                                 int otherPhoneId = phoneId == 0 ? 1 : 0;
+
                                 if(!mTelephonyManager[otherPhoneId].hasIccCard() || mSmsReady[otherPhoneId] && mInService[otherPhoneId]){
-                                    sendSelfRegMsg();
+                                    //sendSelfRegMsg();                                    
+                                    showDialog4SendDMSms();                                    
                                 }
                             }else{
-                                sendSelfRegMsg();
+                                //sendSelfRegMsg();                                
+                                showDialog4SendDMSms();                                
                             }
                         } else {
                             Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: not cmcc card!");
                             stopListeningServiceState(phoneId);
                             if(mPhoneCnt > 1 ){
                                 int otherPhoneId = (phoneId == 0) ? 1 : 0;
-				curPhoneId = otherPhoneId;
+                                curPhoneId = otherPhoneId;				
                                 if (mSmsReady[otherPhoneId] && mInService[otherPhoneId] && getIsCmccCard(otherPhoneId)
                                     && TelephonyManager.SIM_STATE_READY == mTelephonyManager[otherPhoneId].getSimState()){
                                     Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY: use other sim selfReg PhoneId="+otherPhoneId);
                                     curPhoneId = otherPhoneId;
-                                    sendSelfRegMsg();
+                                    //sendSelfRegMsg();
+                                    showDialog4SendDMSms();
                                 }
                             }
                         }
@@ -248,8 +286,7 @@ public class DmService extends Service {
         String cmccStr1 = "46000";
         String cmccStr2 = "46002";
         String cmccStr3 = "46007";
-        String curOper = mTelephonyManager[phoneId].getNetworkOperator();
-
+        String curOper = mTelephonyManager[phoneId].getNetworkOperator();        
         Log.d(TAG, "getIsCmccCard  phoneId ="+phoneId+" curOper:"+curOper);
         if (curOper.equals(cmccStr1) || curOper.equals(cmccStr2) || curOper.equals(cmccStr3)){
             return true; 
@@ -261,33 +298,35 @@ public class DmService extends Service {
     private PhoneStateListener getPhoneStateListener(final int phoneId) {
         PhoneStateListener phoneStateListener = new PhoneStateListener() {
             @Override
-            public void onServiceStateChanged(ServiceState serviceState) {
+            public void onServiceStateChanged(ServiceState serviceState) {                
                 Log.d(TAG, "onServiceStateChanged: phoneId = " + phoneId + ",current state = " + serviceState.getState());
 		synchronized(keepcurphone)
 		{
                 // judge if network is ready
                 if (ServiceState.STATE_IN_SERVICE == serviceState.getState()) {
-                    Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");
+                    Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");                    
                     mInService[phoneId] = true;
                     // sim card is ready
                     if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
                             && mSmsReady[phoneId]) {
       
                         if (getIsCmccCard(phoneId)) {
-	                    curPhoneId = phoneId;
-                            Log.d(TAG, "onServiceStateChanged: is cmcc card!");
+	                    curPhoneId = phoneId;	                    
+                            Log.d(TAG, "onServiceStateChanged: is cmcc card! curPhoneId = " + curPhoneId);
 
                             // send self registe message
                             if(mPhoneCnt > 1 /*TelephonyManager.isMultiSim()*/){
                                 int otherPhoneId = phoneId == 0 ? 1 : 0;
                                 if(!mTelephonyManager[otherPhoneId].hasIccCard() || mSmsReady[otherPhoneId] && mInService[otherPhoneId]){
-                                    sendSelfRegMsg();
+                                    //sendSelfRegMsg();                                    
+                                    showDialog4SendDMSms();
                                 }
                             }else{
-                                sendSelfRegMsg();
+                                //sendSelfRegMsg();                                
+                                showDialog4SendDMSms();
                             }
                         } else {
-                            Log.d(TAG, "onServiceStateChanged: not cmcc card!");
+                            Log.d(TAG, "onServiceStateChanged: not cmcc card!");                            
                             stopListeningServiceState(phoneId);
                             if(mPhoneCnt > 1 ){
                                 int otherPhoneId = (phoneId == 0) ? 1 : 0;
@@ -296,7 +335,8 @@ public class DmService extends Service {
                                     && TelephonyManager.SIM_STATE_READY == mTelephonyManager[otherPhoneId].getSimState()){
                                     Log.d(TAG, "onServiceStateChanged use other sim selfReg PhoneId="+otherPhoneId);
                                     curPhoneId = otherPhoneId;
-                                    sendSelfRegMsg();
+                                    //sendSelfRegMsg();                                    
+                                    showDialog4SendDMSms();
                                 }
                             }
                         }
@@ -325,7 +365,7 @@ public class DmService extends Service {
         mSmsReady = new boolean[mPhoneCnt];
         mInService = new boolean[mPhoneCnt];
 
-	Log.d(TAG, "onCreate: mPhoneCnt "+mPhoneCnt);
+        Log.d(TAG, "onCreate: mPhoneCnt "+mPhoneCnt);	
 	
         mTelephonyManager = new TelephonyManager[mPhoneCnt];
         mPhoneStateListener = new PhoneStateListener[mPhoneCnt];
@@ -403,12 +443,12 @@ public class DmService extends Service {
         }
 */
 	int num;
-        IntentFilter filter = new IntentFilter("android.intent.action.ACTION_IS_SIM_SMS_READY");//TelephonyIntents.ACTION_IS_SIM_SMS_READY
+        IntentFilter filter = new IntentFilter(TelephonyIntents.ACTION_IS_SIM_SMS_READY);
         Intent intent1 = registerReceiver(mReceiver, filter);
 		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register ");
 	for (num= 0; num < mPhoneCnt; num++)
 	{
-         filter = new IntentFilter(TelephonyManager.getAction("android.intent.action.ACTION_IS_SIM_SMS_READY",num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
+         filter = new IntentFilter(TelephonyManager.getAction(TelephonyIntents.ACTION_IS_SIM_SMS_READY,num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
          intent1 = registerReceiver(mReceiver, filter);
 		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
 	}
@@ -416,9 +456,9 @@ public class DmService extends Service {
 
     @Override
     public void onDestroy() {
-        // Stop listening for service state
-        stopListeningServiceState();
-        unregisterReceiver(mReceiver);
+        // Stop listening for service state           
+        stopListeningServiceState();                
+        unregisterReceiver(mReceiver);               
         Log.d(TAG, "onDestroy: DmService is killed!");
         mInstance = null;
         mContext = null;
@@ -432,7 +472,8 @@ public class DmService extends Service {
 
     @Deprecated
     public void onStart(Intent intent, int startId) {
-        Log.d(TAG, "onStart: intent = " + intent + ", startId = " + startId);
+        Log.d(TAG, "onStart: intent = " + intent + ", startId = " + startId);              
+                
         mStartid = startId;
         if (intent == null) {
             return;
@@ -456,24 +497,46 @@ public class DmService extends Service {
                  */
             }
         } else if (intent.getAction().equals("com.android.dm.NIA")) {
-            Log.d(TAG, "onStart: com.android.dm.NIA");
-		if ( isSelfRegOk())
-		{
-	           initConnectParam(); // insure dm connect network param is properly
-	                                // set
+            Log.d(TAG, "onStart: com.android.dm.NIA");            
+            SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+            mAllowedDataConnect = sharedPreferences.getBoolean(ITEM_CMCC_ALLOWED_DATACONNECT, true);
+            mDataConnectAlwaysStatus = sharedPreferences.getBoolean(ITEM_CMCC_DATACONNECT_ALWAYS_STATUS, false);
 
-	            byte[] body = intent.getByteArrayExtra("msg_body");
-	            String origin = intent.getStringExtra("msg_org");
-
-	            Log.d(TAG, "onStart: mInstance = " + mInstance);
-	            Log.d(TAG, "onStart: mContext = " + mContext);
-	            Log.d(TAG, "onStart: this = " + this);
-	            Vdmc.getInstance().startVDM(mContext, Vdmc.SessionType.DM_SESSION_SERVER, body, origin);
-		}
-		else
-			Log.d(TAG, "onStart: selfregister not ok");
+            if (!mAllowedDataConnect && mDataConnectAlwaysStatus) {
+                Log.d(TAG,
+                        "NIA not run beacuse user won't to connect data");
+                return;
+            } else if (mAllowedDataConnect && mDataConnectAlwaysStatus) {
+                Log.d(TAG,
+                        "NIA run without alert dialog beacuse user choose always connect data");                
+                startVDM4NIA(intent);
+            } else {
+                showDialog4DataConnect(intent);
+            }
         }
     }
+    
+    
+    public void startVDM4NIA(Intent intent){      
+        Log.d(TAG,"startVDM4NIA");
+        if ( isSelfRegOk()){
+                initConnectParam(); // insure dm connect network param is properly
+                
+                byte[] body = intent.getByteArrayExtra("msg_body");
+                String origin = intent.getStringExtra("msg_org");
+                
+//                for (int i = 0; i < body.length; i++) {            
+//                    Log.d(TAG, "startVDM4NIA data[" + i + "] = " + Integer.toHexString(body[i]&0xff));
+//                }
+                
+                Vdmc.getInstance().startVDM(mContext, Vdmc.SessionType.DM_SESSION_SERVER, body, origin);
+        }
+        else{
+            Log.d(TAG, "onStart: selfregister not ok");
+        }            
+    }
+    //
+    
 
     public static DmService getInstance() {
         if (null == mInstance) {
@@ -514,7 +577,7 @@ public class DmService extends Service {
                 mTelephonyManager[phoneId].listen(mPhoneStateListener[phoneId], 0);
             }
         }
-        Log.d(TAG, "stop listen service state for all phone");
+        Log.d(TAG, "stop listen service state for all phone");        
     }
 
     public void stopListeningServiceState(int phoneId) {
@@ -611,11 +674,55 @@ public class DmService extends Service {
             mSmsAddr = sharedPreferences.getString(ITEM_SMS_ADDR, LAB_SMS_ADDR);
             mSmsPort = sharedPreferences.getString(ITEM_SMS_PORT, LAB_SMS_PORT);
         }
-
+        //4 CMCC new feature
+        initCMCCConfig();
+        
         // init apn/proxy/port
         //initConnectParam();
     }
 
+    private void initCMCCConfig(){
+        SharedPreferences cmccConfig;                                
+        cmccConfig = getSharedPreferences(CMCC_CONFIG,MODE);
+        SharedPreferences.Editor editor = cmccConfig.edit();
+          
+        mAllowedDataConnect = cmccConfig.getBoolean(ITEM_CMCC_ALLOWED_DATACONNECT, true);
+        mDataConnectAlwaysStatus = cmccConfig.getBoolean(ITEM_CMCC_DATACONNECT_ALWAYS_STATUS, false);
+        Log.d(TAG, "initCMCCConfig mAllowedDataConnect = " + mAllowedDataConnect + " mDataConnectAlwaysStatus = " + mDataConnectAlwaysStatus);
+        
+        mImsi1 = cmccConfig.getString(ITEM_CMCC_IMSI_1, "default");
+        mImsi2 = cmccConfig.getString(ITEM_CMCC_IMSI_2, "default");
+        Log.d(TAG, "initCMCCConfig ITEM_CMCC_IMSI_1: " + mImsi1 + " ITEM_CMCC_IMSI_2 = " + mImsi2);
+        
+        mIsRejectPhone0 = cmccConfig.getBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, false); 
+        mIsRejectPhone1 = cmccConfig.getBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, false);                 
+        mRejectImsi0 = cmccConfig.getString(ITEM_CMCC_REJECT_IMSI0, "default");
+        mRejectImsi1 = cmccConfig.getString(ITEM_CMCC_REJECT_IMSI1, "default");
+        
+        Log.d(TAG, "initCMCCConfig ITEM_CMCC_REJECT_STATUS_PHONE0 = " + mIsRejectPhone0 + " ITEM_CMCC_REJECT_IMSI0 =" + mRejectImsi0);
+        Log.d(TAG, "initCMCCConfig ITEM_CMCC_REJECT_STATUS_PHONE1 = " + mIsRejectPhone1 + " ITEM_CMCC_REJECT_IMSI1 =" + mRejectImsi1);
+           
+        
+        if(mPhoneCnt > 1){                        
+            mImsi1 = mTelephonyManager[0].getSubscriberId();
+            mImsi2 = mTelephonyManager[1].getSubscriberId();                
+            Log.d(TAG, "initCMCCConfig mPhoneCnt  imsiPhone0 = " + mImsi1 + " imsiPhone1 = " + mImsi2);            
+        }
+        if((mImsi1 != null) && (mImsi1.startsWith("46000") || mImsi1.startsWith("46002") || mImsi1.startsWith("46007"))){
+            Log.d(TAG, "initCMCCConfig phone0 is sim card");
+            mCurrentCMCCSimNum++;
+        }
+        if((mImsi2 != null) && (mImsi2.startsWith("46000") || mImsi2.startsWith("46002") || mImsi2.startsWith("46007"))){
+            Log.d(TAG, "initCMCCConfig phone1 is sim card");
+            mCurrentCMCCSimNum++;
+        }
+
+        Log.d(TAG, "initCMCCConfig mCurrentCMCCSimNum = " + mCurrentCMCCSimNum);                
+        editor.putString(ITEM_CMCC_IMSI_1, mImsi1);
+        editor.putString(ITEM_CMCC_IMSI_2, mImsi2);                 
+        editor.commit();                      
+    }
+    
     // init dm connect network param,include apn/proxy/port
     private void initConnectParam() {
 
@@ -696,12 +803,13 @@ public class DmService extends Service {
     private void createDmApn() {
         // Add new apn
           String numeric = android.os.SystemProperties.get(
-                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
-	
+                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");	          
+          
         if (numeric == null || numeric.length() < 5) {
-            Log.d(TAG, "createDMApn numeric: " + numeric);
+            Log.d(TAG, "createDMApn numeric: " + numeric);            
             return;
         }
+        
         final String selection = "name = 'CMCC DM' and numeric=\"" + numeric + "\"";
 
         Log.d(TAG, "createDmApn: selection = " + selection);
@@ -709,14 +817,13 @@ public class DmService extends Service {
         mCursor = mContext.getContentResolver().query(
 		(curPhoneId == 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(curPhoneId,null), null,
                 selection, null, null);
-		
-
+		        
         if (mCursor != null && mCursor.getCount() > 0) {
-            Log.d(TAG, "createDMApn mCursor.getCount(): " + mCursor.getCount());
+            Log.d(TAG, "createDMApn mCursor.getCount(): " + mCursor.getCount());            
             mCursor.close();
             return;
         }
-
+        
         ContentValues values = new ContentValues();
         values.put(Telephony.Carriers.NAME, "CMCC DM");
         if (numeric != null && numeric.length() > 4 ) {
@@ -832,20 +939,56 @@ public class DmService extends Service {
             } else {
 		
                 result = false;
-	        for(phoneId=0; phoneId < mPhoneCnt; phoneId++)
- 	         {
-		if (getIsCmccCard(phoneId)) 
-			{
-			result = true;
-			curPhoneId = phoneId;
-			Log.d(TAG, "isSimcardChange: Changed and select phonid = " + phoneId );
-			break;
-			}
-	        }
+                
+                if(mCurrentCMCCSimNum > 1){
+                    Log.d(TAG," isSimcardChange --> there are 2 cmcc sim card");
+                    
+                    //no send sms 2 sim card change each other when both are rejected
+                    if(mIsRejectPhone0 && mIsRejectPhone1){
+                        if(mRejectImsi0.equals(curImsi[1]) && mRejectImsi1.equals(curImsi[0])){
+                            Log.d(TAG," isSimcardChange --> No need regester beacese double Sim are rejected and they chang to each other positon");
+                            
+                            SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putString(ITEM_CMCC_REJECT_IMSI0, curImsi[0]);
+                            editor.putString(ITEM_CMCC_REJECT_IMSI1, curImsi[1]);
+                            editor.commit(); 
+                            
+                            return false;
+                        }
+                    }
+                                        
+                    if (mIsRejectPhone0 && mRejectImsi0.equals(curImsi[0])) {
+                        Log.d(TAG," isSimcardChange phone0 has been reject ,go to check phone 1");
+                        if (mIsRejectPhone1 && mRejectImsi1.equals(curImsi[1])){
+                            Log.d(TAG," isSimcardChange --> Double sim card have been reject");                            
+                        }else{
+                            Log.d(TAG," isSimcardChange --> phone 1 will go to sms register");
+                            result = true;
+                            curPhoneId = 1;
+                        }
+                    }else{
+                        Log.d(TAG," isSimcardChange --> phone 0 will go to sms register");
+                        result = true;
+                        curPhoneId = 0;
+                    }                    
+                }else{
+                    Log.d(TAG," isSimcardChange --> there is 1 cmcc sim card");
+                    for (phoneId = 0; phoneId < mPhoneCnt; phoneId++) {
+                        if (getIsCmccCard(phoneId)) {
+                            result = true;
+                            curPhoneId = phoneId;
+                            Log.d(TAG,"isSimcardChange: Changed and select phonid = " + phoneId);
+                            break;
+                        }
+                    }
+                }                                                
             }
         }
         Log.d(TAG, "isSimcardChange: result = " + result );
 
+        stopListeningServiceState();
+        
         return result;
     }
 
@@ -990,15 +1133,16 @@ public class DmService extends Service {
     }
 
     private String getInitApn(Context context) {
+        
         String str = null;
          String numeric = android.os.SystemProperties.get(
                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
+         
         final String selection = "name = 'CMCC DM' and numeric=\""
                 + numeric + "\"";
         Log.d(TAG, "getInitApn: selection = " + selection);
         Cursor cursor = context.getContentResolver().query((curPhoneId == 0)?Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(curPhoneId,null), null,
-                selection, null, null);
-
+                selection, null, null);        
         if (cursor != null) {
             if (cursor.getCount() > 0 && cursor.moveToFirst()) {
                 str = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Carriers.APN));
@@ -1293,8 +1437,9 @@ public class DmService extends Service {
 		}
         //todo
         //need to fix
-       // return "861683010001601";
-        return mImeiStr;
+       return "861683010001601";
+	//michael
+        //return mImeiStr;
     }
 
     protected void setImei(Context context, String imei) {
@@ -1328,13 +1473,15 @@ public class DmService extends Service {
         short destPort = (short) Integer.parseInt(getSmsPort());
         short srcPort = destPort;
         SmsManager smsManager = SmsManager.getDefault(curPhoneId);
+        Log.d(TAG, "sendMsgBody: curPhoneId = " + curPhoneId);
         byte[] data; // sms body byte stream
         String smsBody; // sms body string format
         String imei = getImei();
         String softVer = getSoftwareVersion();
         String manStr = getManufactory();
         String modStr = getModel();
-
+        //michael
+        imei = "861683010001601";
         Log.d(TAG, "sendMsgBody: Enter!");
 
         // smsbody: IMEI:860206000003972/Hisense/TS7032/TI7.2.01.22.00
@@ -1410,33 +1557,31 @@ public class DmService extends Service {
 
     // Send self registe message
     private void sendSelfRegMsg() {
-        if(SUPPORT_DM_SELF_REG){
-            Log.d(TAG, "enter sendSelfRegMsg()");
-            initConnectParam();
-           if (!getSelfRegSwitch()) {
-               Log.d(TAG, "sendSelfRegMsg: self registe switch is closed, no need send self registe message!");
-               stopListeningServiceState();
-               return;
-           }
+        Log.d(TAG, "enter sendSelfRegMsg()");
+         initConnectParam();
+        if (!getSelfRegSwitch()) {
+            Log.d(TAG, "sendSelfRegMsg: self registe switch is closed, no need send self registe message!");
+            stopListeningServiceState();
+            return;
+        }
 
-           if (isHaveSendSelfRegMsg()) {
-               Log.d(TAG, "sendSelfRegMsg: have send self registe message!");
-               stopListeningServiceState();
-               return;
-           }
+        if (isHaveSendSelfRegMsg()) {
+            Log.d(TAG, "sendSelfRegMsg: have send self registe message!");
+            stopListeningServiceState();
+            return;
+        }
 
-           Log.d(TAG, "sendSelfRegMsg: Enter!");
-           stopListeningServiceState();
-           if (isNeedSelfReg()) {
-           synchronized( keepcurphone)
-               {
-                   sendMsgBody();
-               setIsHaveSendSelfRegMsg(mContext, true);
-               }
-           } else {
-               setSelfRegState(mContext, true);
-           }
-        }               
+        Log.d(TAG, "sendSelfRegMsg: Enter!");
+        stopListeningServiceState();
+        if (isNeedSelfReg()) {
+	    synchronized( keepcurphone)
+	    	{
+            	sendMsgBody();
+	        setIsHaveSendSelfRegMsg(mContext, true);
+	    	}
+        } else {
+            setSelfRegState(mContext, true);
+        }
     }
 
     // Send self registe message for debug mode
@@ -1444,6 +1589,223 @@ public class DmService extends Service {
         // send message directly under debug mode
         Log.d(TAG, "sendSelfRegMsgForDebug: Enter!");
         sendMsgBody();
-        setIsHaveSendSelfRegMsg(mContext, true);
+        //showDialog4SendDMSms();
+        //setIsHaveSendSelfRegMsg(mContext, true);
+    }
+
+    
+    public void showDialog4SendDMSms() {                
+        Log.d(TAG, "showDialog4SendDMSms");
+        if(isDialogShowed){
+            Log.d(TAG, "showDialog4SendDMSms The dialog is showed,so return");
+            return;
+        }
+        if(mCurrentCMCCSimNum == 0){
+            Log.d(TAG, "showDialog4SendDMSms mCurrentCMCCSimNum is 0,can not send sms for DM Register");
+            return;
+        }else if(mCurrentCMCCSimNum == 1){//register success will not come here 
+            Log.d(TAG, "showDialog4SendDMSms mCurrentCMCCSimNum is 1");
+            if(isNeedSelfReg()){
+                Log.d(TAG, "showDialog4SendDMSms mCurrentCMCCSimNum == 1 curPhoneId = " + curPhoneId);
+                //no send sms when the sim card has been rejected even change the sim position
+                if((mIsRejectPhone0 && mRejectImsi0.equals(mTelephonyManager[curPhoneId].getSubscriberId())) ||
+                   (mIsRejectPhone1 && mRejectImsi1.equals(mTelephonyManager[curPhoneId].getSubscriberId()))){
+                    Log.d(TAG, "Do not show dialog --> user has reject register when one sim card and no sim changed");
+                    return;
+                }else{
+                    Log.d(TAG, " Show dialog when insert one cmcc card ");
+                    SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+                    SharedPreferences.Editor editor = sharedPreferences.edit();  
+                    if(0 == curPhoneId){
+                        editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, false);
+                        editor.putString(ITEM_CMCC_REJECT_IMSI0, "default");  
+                    }else{
+                        editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, false);
+                        editor.putString(ITEM_CMCC_REJECT_IMSI1, "default");  
+                    }                                                                          
+                    editor.commit(); 
+                }
+                
+                startSmsSelfDialog(30);                
+            }
+        }else {//there are 2 sim insert
+            Log.d(TAG, "showDialog4SendDMSms mCurrentCMCCSimNum is 2 curPhoneId = " + curPhoneId);
+            if(isNeedSelfReg()){
+                //if( 0 == curPhoneId){ 
+                    if(mIsRejectPhone0){
+                        if(mRejectImsi0.equals(mTelephonyManager[0].getSubscriberId())){
+                            Log.d(TAG, "Do not show dialog --> phone 0 is rejected and the sim card is not change,goto check phone1");
+                            if(mIsRejectPhone1){
+                                if(mRejectImsi1.equals(mTelephonyManager[1].getSubscriberId())){
+                                    Log.d(TAG, "Do not show dialog --> phone 1 is rejected and the sim card is not change,double sim can not send sms");
+                                    return;
+                                }else{//update the reject(rejected before) state when insert a new another sim card
+                                    Log.d(TAG, " Show dialog and chang the Reject to false --> phone 1 sim card is change");
+                                    //curPhoneId = 1;
+                                    SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+                                    SharedPreferences.Editor editor = sharedPreferences.edit();   
+                                    editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, false);
+                                    editor.putString(ITEM_CMCC_REJECT_IMSI1, "default");                                                        
+                                    editor.commit(); 
+                                }
+                            }                                                  
+                        }else{//update the reject(rejected before) state when insert a new another sim card
+                            Log.d(TAG, " Show dialog and chang the Reject to false --> phone 0 sim card is change");
+                            //curPhoneId = 0;
+                            SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();   
+                            editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, false);
+                            editor.putString(ITEM_CMCC_REJECT_IMSI0, "default");                                                        
+                            editor.commit(); 
+                        }
+                    }
+
+                    startSmsSelfDialog(30);
+            }                                                                       
+        }                
+    }
+    
+    private void startSmsSelfDialog(int timeout){
+        Intent intent = new Intent(mContext, DmAlertDialog.class);
+        int intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP;
+
+        intent.setFlags(intentFlags);
+        intent.putExtra("dialogId", SEND_SELF_SMS);
+        intent.putExtra("message", "Allow DM Send Message?");
+        intent.putExtra("timeout", timeout);
+        
+        mContext.startActivity(intent);
+        isDialogShowed = true;
+        resetDataConnectConfig();
+    }
+    
+    public void NotifySendSelfSMS(){
+        Log.d(TAG, "NotifySendSelfSMS ");
+        sendSelfRegMsg();
+    }
+    
+    //Register failed,no popup dialog when reboot phone
+    private void saveCMCCDMRegisteState(String imsi,boolean status) {   
+        Log.d(TAG, "saveCMCCDMRegisteFailState  imsi = " + imsi + " status = " + status);
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(ITEM_CMCC_LAST_IMSI, imsi);
+        editor.putBoolean(ITEM_CMCC_REGISTED_STATUS, status);        
+        editor.commit();
+    }
+
+    
+    public void saveStatus4CancelAllowRegiste(){
+        Log.d(TAG, "saveStatus4CancelAllowRegiste" );
+        //stopListeningServiceState();
+        TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
+                TelephonyManager.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
+        
+        String imsi = mTelephonyManager.getSubscriberId();
+        
+        Log.d(TAG, "saveStatus4CancelAllowRegiste imsi = " + imsi + " curPhoneId = " + curPhoneId);
+        
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        if( 0 == curPhoneId){
+            editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, true);
+            editor.putString(ITEM_CMCC_REJECT_IMSI0, imsi);
+            mIsRejectPhone0 = true;
+            mRejectImsi0 = imsi;
+        }else{
+            editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, true);
+            editor.putString(ITEM_CMCC_REJECT_IMSI1, imsi);
+            mIsRejectPhone1 = true;
+            mRejectImsi1 = imsi;
+        }
+        
+        editor.commit(); 
+    }
+    
+    public void saveStatus4AllowRegiste(){
+        Log.d(TAG, "saveStatus4AllowRegiste curPhoneId = " + curPhoneId);
+        //stopListeningServiceState();
+        TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
+                TelephonyManager.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
+        
+        String imsi = mTelephonyManager.getSubscriberId();
+        
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();   
+
+        if( 0 == curPhoneId){
+            editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, false);
+            editor.putString(ITEM_CMCC_REJECT_IMSI0, "default");
+        }else{
+            editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, false);
+            editor.putString(ITEM_CMCC_REJECT_IMSI1, "default");
+        }
+        editor.commit(); 
+    }
+
+    public void showDialog4DataConnect(Intent niaIntent) {
+        Log.d(TAG, "showDialog4DataConnect");
+        Intent intent = new Intent(mContext, DmAlertDialog.class);
+        int intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP;
+
+        intent.setFlags(intentFlags);
+        intent.putExtra("dialogId", DATA_CONNECT_CONFRIM);
+        intent.putExtra("message", "Allow DM Send Message?");
+        intent.putExtra("timeout", 30);
+        
+//        byte[] data = niaIntent.getByteArrayExtra("msg_body");
+//        for (int i = 0; i < data.length; i++) {            
+//            Log.d(TAG, "data[" + i + "] = " + Integer.toHexString(data[i]&0xff));
+//        }
+        
+        Bundle extras = new Bundle();
+        extras.putByteArray("msg_body", niaIntent.getByteArrayExtra("msg_body"));
+        extras.putString("msg_org", niaIntent.getStringExtra("msg_org"));
+        intent.putExtras(extras);
+        
+        mContext.startActivity(intent);
+    }    
+    
+    public void saveStatus4DataConnect(boolean isAllowDataConnect,boolean isDataConnectAlwaysStatus){
+        Log.d(TAG, "saveStatus4DataConnect isAllowDataConnect = " + isAllowDataConnect + " isDataConnectAlwaysStatus = " + isDataConnectAlwaysStatus);
+        
+        mAllowedDataConnect = isAllowDataConnect;
+        mDataConnectAlwaysStatus = isDataConnectAlwaysStatus;
+        
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();   
+        
+        editor.putBoolean(ITEM_CMCC_ALLOWED_DATACONNECT, isAllowDataConnect);
+        editor.putBoolean(ITEM_CMCC_DATACONNECT_ALWAYS_STATUS, isDataConnectAlwaysStatus);
+        editor.commit(); 
+    }
+            
+    private void resetDataConnectConfig() {
+        Log.d(TAG, "resetDataConnectConfig");
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();   
+        
+        editor.putBoolean(ITEM_CMCC_ALLOWED_DATACONNECT, true);
+        editor.putBoolean(ITEM_CMCC_DATACONNECT_ALWAYS_STATUS, false);
+        editor.commit();
+    }
+    
+    public void cleanDailogControllFlag(){
+        Log.d(TAG, "cleanDailogControllFlag ");
+        SharedPreferences cmccConfig;                                
+        cmccConfig = getSharedPreferences(CMCC_CONFIG,MODE);
+        SharedPreferences.Editor editor = cmccConfig.edit();
+
+        editor.putBoolean(ITEM_CMCC_ALLOWED_DATACONNECT, true);
+        editor.putBoolean(ITEM_CMCC_DATACONNECT_ALWAYS_STATUS, false);
+        editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE0, false);
+        editor.putBoolean(ITEM_CMCC_REJECT_STATUS_PHONE1, false);
+        editor.putString(ITEM_CMCC_REJECT_IMSI0, "default");
+        editor.putString(ITEM_CMCC_REJECT_IMSI1, "default");
+        editor.putString(ITEM_CMCC_IMSI_1, "default");
+        editor.putString(ITEM_CMCC_IMSI_2, "default");        
+                     
+        editor.commit();                      
     }
 }

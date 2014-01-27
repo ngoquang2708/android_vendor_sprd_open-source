@@ -13,7 +13,7 @@ import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.net.NetworkInfo;
 import android.os.SystemProperties;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 
 	
 public class DmNetwork {
@@ -48,7 +48,7 @@ public class DmNetwork {
         mInstance = this;
     }
 
-    public void init() {
+    public void init() {        
         if(!isInit){
 		Log.v(TAG,"dmnetwork init ,phoneid:"+DmService.getInstance().getCurrentPhoneID());
             mConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -190,8 +190,7 @@ public class DmNetwork {
         if (mNetworkStateIntentReceiver != null) {
             return;
         }
-        Log.v(TAG, "[ppp link] create a net state receiver");
-
+        Log.v(TAG, "[ppp link] create a net state receiver");        
         mNetworkStateChangedFilter = new IntentFilter();
         mNetworkStateChangedFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
 
@@ -201,23 +200,23 @@ public class DmNetwork {
                 Log.v(TAG, "[ppp link] network state receiver on-receive");
                 Log.v(TAG, "[ppp link] intent.getAction() = " + intent.getAction());
 			//int phoneId = intent.getIntExtra("phoneId", 0);
-                Log.v(TAG, "[ppp link] network state receiver on-receive phoneid:");
+                Log.v(TAG, "[ppp link] network state receiver on-receive phoneid:");                
 			
                 if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)
 				) {
-                    Log.v(TAG, "[ppp link] network state receiver got CONNECTIVITY_ACTION");
+                    Log.v(TAG, "[ppp link] network state receiver got CONNECTIVITY_ACTION");                    
                     boolean Connectivity = false;
                     NetworkInfo ni = (NetworkInfo) intent
                             .getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-
+             
                     if (ni != null && (ni.getType() == ConnectivityManager.TYPE_MOBILE_DM  ||
 		    (ni.getType() ==
                   ConnectivityManager.getNetworkTypeByPhoneId(DmService.getInstance().getCurrentPhoneID(), ConnectivityManager.TYPE_MOBILE_DM))
-					)) {
-
+					)) {                        
+                        
                         if (ni.getState() == NetworkInfo.State.CONNECTED) {
                             Connectivity = true;
-                            Log.d(TAG, "connected: " + Connectivity);
+                            Log.d(TAG, "connected: " + Connectivity);                            
 
                             if (Connectivity) {
                                 //                            
@@ -233,7 +232,7 @@ public class DmNetwork {
                                     }
                                 }
 
-                            } else {
+                            } else {                                
                                 mConnectStatus = PhoneConstants.APN_REQUEST_FAILED;
                                 //TODO: to be confirm
                                 //DmJniInterface.setNetworkState(mConnectStatus);
@@ -256,14 +255,14 @@ public class DmNetwork {
         };
     }
 
-    private void registe_netstate_receiver() {
+    private void registe_netstate_receiver() {        
         if (mNetworkStateChangedFilter != null && mNetworkStateIntentReceiver != null) {
-            Log.v(TAG, "[ppp link] registe receiver");
+            Log.v(TAG, "[ppp link] registe receiver");            
             mContext.registerReceiver(mNetworkStateIntentReceiver, mNetworkStateChangedFilter);
         }
     }
 
-    private void unregiste_netstate_receiver() {
+    private void unregiste_netstate_receiver() {        
         if (mNetworkStateIntentReceiver != null) {
             Log.v(TAG, "[ppp link] unregiste receiver");
             mContext.unregisterReceiver(mNetworkStateIntentReceiver);

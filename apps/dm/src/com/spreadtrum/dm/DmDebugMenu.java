@@ -3,6 +3,7 @@ package com.spreadtrum.dm;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.ListView;
 import android.widget.AdapterView;
@@ -64,10 +65,16 @@ public class DmDebugMenu extends Activity {
     
     protected static final int ITEM_SIMULATOR = 15;	//for simulator wap push
     
+    protected static final int ITEM_CLEAN_DIALOG_CONTROLL_FLAGE = 16;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+        
+        if(0 == Settings.System.getInt(getContentResolver(), "dm_config", 1)){
+            setContentView(R.layout.cmcc_not_need_service);
+        }else{
+            setContentView(R.layout.main);
 
         mListView = (ListView) findViewById(R.id.app_list);
 
@@ -78,7 +85,8 @@ public class DmDebugMenu extends Activity {
         mListView.setAdapter(adapter);
         mListView.setOnItemClickListener(mItemClickListenter);
 
-        mContext = this;
+            mContext = this;
+        }        
     }
 
     @Override
@@ -228,10 +236,13 @@ public class DmDebugMenu extends Activity {
                     // APN
                     intent = new Intent(mContext, DmEditItem.class);
                     intent.putExtra("EditType", mlistItem[ITEM_APN]);
-		    if (null != DmService.getInstance().getSavedAPN())
-                    intent.putExtra("EditContent", DmService.getInstance().getSavedAPN());				
-			else
-                    intent.putExtra("EditContent", DmService.getInstance().getAPN());
+                if (null != DmService.getInstance().getSavedAPN()) {
+                    intent.putExtra("EditContent", DmService.getInstance()
+                            .getSavedAPN());
+                } else {
+                    intent.putExtra("EditContent", DmService.getInstance()
+                            .getAPN());
+                }
                     startActivity(intent);
                     break;
 
@@ -300,6 +311,12 @@ public class DmDebugMenu extends Activity {
                         ShowMessage("Open debug mode first!");
                     }
                     break;
+                    
+                case ITEM_CLEAN_DIALOG_CONTROLL_FLAGE:                                    
+                    DmService.getInstance().cleanDailogControllFlag();                                        
+                    ShowMessage("Clean finished!");
+                    break;
+                    
                 default:
                     break;
             }

@@ -24,7 +24,7 @@ import android.content.Intent;
 import android.database.ContentObserver;
 import java.lang.Thread;
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 import android.telephony.TelephonyManager;
 public class Vdmc {
     protected static final String DM_TAG = "DM ==> ";
@@ -204,7 +204,7 @@ public class Vdmc {
 
         // Log.d(TAG, "startVDM : message = " + message);
         Log.d(TAG, "startVDM : msgOrigin = " + msgOrigin);
-        Log.d(TAG, "startVDM : me = " + me);
+        Log.d(TAG, "startVDM : me = " + me);        
 	
 	tmpUpdateStream = false;
 	tmpStreamUpdated = false;
@@ -217,7 +217,7 @@ public class Vdmc {
 
         // Log.d(TAG, "startVDM : _msgHandler = " + _msgHandler);
 
-        if (!DmService.getInstance().getDmNativeInterface().spdm_jni_isDmRunning()) {
+        if (!DmService.getInstance().getDmNativeInterface().spdm_jni_isDmRunning()) {            
             int i = message.length;
             int inttype = 0;
         /*    while (message[i] != 0)
@@ -230,8 +230,7 @@ public class Vdmc {
             else if (type == SessionType.DM_SESSION_CLIENT)
                 inttype = 2;
             else if (type == SessionType.DM_SESSION_SERVER)
-                inttype = 3;
-
+                inttype = 3;            
             DmNetwork.getInstance().init();
 
             DMThread dmthd = new DMThread(inttype, message, i);
