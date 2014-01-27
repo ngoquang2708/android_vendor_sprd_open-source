@@ -4,10 +4,15 @@ package com.spreadtrum.dm;
 import android.app.Activity;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.content.ContentResolver;
@@ -21,6 +26,7 @@ import android.content.DialogInterface; //import com.redbend.vdm.*;
 import android.database.Cursor;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.os.Handler;
 
 import java.io.File;
@@ -64,7 +70,7 @@ public class DmAlertDialog extends Activity {
     private Toast mToast = null;
 	
     private AlertDialog builder = null;
-
+    private AlertDialog builderSub = null;
     private Handler handler = new Handler();
 
     private Runnable runnable = new Runnable() {
@@ -102,14 +108,24 @@ public class DmAlertDialog extends Activity {
                     // MyConfirmation.getInstance().handleTimeoutEvent();
                     // cancel dm session
                     break;
-
+                case DmService.SEND_SELF_SMS:
+                case DmService.DATA_CONNECT_CONFRIM:                    
+                    if(builder != null )
+                        builder.dismiss();
+                    if(builderSub != null)
+                        builderSub.dismiss();
+                    mNotificationMgr.cancel(R.drawable.icon);
+                    finish();
+                    DestroyAlertDialog();
+                    break;
+                                                       
                 default:
                     Log.d(TAG, "run() : mDialogId is invalid ");
                     break;
             }
         }
-    };
-
+    };    
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -133,25 +149,26 @@ public class DmAlertDialog extends Activity {
         getUnlock();
 
         Intent intent = getIntent();
-	 int id = intent.getIntExtra("dialogId", Vdmc.DM_NULL_DIALOG);        
-	 Log.d(TAG, "OnCreate: id = " + id);
+        int id = intent.getIntExtra("dialogId", Vdmc.DM_NULL_DIALOG);
+        Log.d(TAG, "OnCreate: id = " + id);
         String msg = intent.getStringExtra("message");
-	// Log.d(TAG, "OnCreate: msg = " + msg);
+        // Log.d(TAG, "OnCreate: msg = " + msg);
         int timeout = intent.getIntExtra("timeout", 60); // default 1min
-         Log.d(TAG, "OnCreate: timeout = " + timeout);
+        Log.d(TAG, "OnCreate: timeout = " + timeout);
         Log.d(TAG, "OnCreate: mContext = " + mContext);
-
-      
         
-       
-
-        CreateAlertDialog(id, msg, timeout);
+        if(id == DmService.DATA_CONNECT_CONFRIM){
+            createDataConnectConfrimDialog(msg,timeout,intent);
+        }else{
+            CreateAlertDialog(id, msg, timeout);            
+        }
+        
         mDialogId = id;
+        
     }
 
     @Override
-    public void onDestroy() {
-        Log.d(TAG, "onDestroy:");
+    public void onDestroy() {        
         super.onDestroy();
         stopTimer(); // if switch to horizontal display, the window will auto
                      // close by system, and create new window, need stop timer
@@ -159,6 +176,10 @@ public class DmAlertDialog extends Activity {
             mNotificationMgr.cancel(100);
             mNotificationMgr = null;
         }
+        
+        DmService.isDialogShowed = false;
+        
+        Log.d(TAG, "DestroyAlertDialog  DmService.isDialogShowed = " + DmService.isDialogShowed);
         /*
          * mContext = null; mInstance = null; 
          * mNotificationMgr.cancel(100);
@@ -177,6 +198,8 @@ public class DmAlertDialog extends Activity {
         mInstance = null;
         mNotificationMgr.cancel(100);
         mNotificationMgr = null;
+        DmService.isDialogShowed = false;
+        Log.d(TAG, "DestroyAlertDialog  DmService.isDialogShowed = " + DmService.isDialogShowed);
 
         stopTimer();
         releaseUnlock();
@@ -381,12 +404,141 @@ public class DmAlertDialog extends Activity {
             case Vdmc.DM_PROGRESS_DIALOG:
                 Log.d(TAG, "CreateAlertDialog: DM_PROGRESS_DIALOG");
                 break;
+                
+            case DmService.SEND_SELF_SMS:                
+                createShowSelfRegisterDialog(message,timeout);
+                break;
 
             default:
                 break;
         }
     }
+    //CheckBox checkBox;
+    private void createDataConnectConfrimDialog(String message, final int timeout,final Intent intent) {
+        final String softkey_yes = getResources().getString(R.string.menu_yes);
+        final String softkey_no = getResources().getString(R.string.menu_no);
+        LinearLayout wappushLayout = (LinearLayout)getLayoutInflater().inflate(R.layout.cmcc_wappush_dialog, null);
+        final CheckBox checkBox = (CheckBox)wappushLayout.findViewById(R.id.cb);
+        //final Intent niaIntent = intent;        
+//        byte[] data = intent.getByteArrayExtra("msg_body");
+//        for (int i = 0; i < data.length; i++) {            
+//            Log.d(TAG, "createDataConnectConfrimDialog data[" + i + "] = " + Integer.toHexString(data[i]&0xff));
+//        }
+        
+        playAlertSound();
+        
+        builder = new AlertDialog.Builder(mContext).setTitle("").setView(wappushLayout)
+                .setPositiveButton(softkey_yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        Log.d(TAG, "DmAlertDailog createDataConnectConfrimDialog yes on click");
+                        DmService.getInstance().startVDM4NIA(intent);
+                        DmService.getInstance().saveStatus4DataConnect(true, checkBox.isChecked());
+                        mNotificationMgr.cancel(R.drawable.icon);
+                        finish();
+                        DestroyAlertDialog();
+                    }
+                }).setNegativeButton(softkey_no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        Log.d(TAG, "DmAlertDailog createDataConnectConfrimDialog no on click");                        
+                       //create double check when user click no
+                        stopTimer();
+                        startTimer(timeout);
+                        builderSub = new AlertDialog.Builder(mContext).setTitle("").setMessage(getResources().getString(R.string.network_connect_prompt_cancel))
+                        .setPositiveButton(softkey_yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {                                                                  
+                                Log.d(TAG, "createDataConnectConfrimDialog setNegativeButton checkBox = " + checkBox.isChecked());
+                                DmService.getInstance().saveStatus4DataConnect(false, checkBox.isChecked());//checkBox.isChecked()
+                                mNotificationMgr.cancel(R.drawable.icon);
+                                finish();
+                                DestroyAlertDialog();
+                            }
+                        }).setNegativeButton(softkey_no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                stopTimer();
+                                startTimer(timeout);
+                                Log.d(TAG, "DmAlertDailog createDataConnectConfrimDialog cliick no session!");
+                                builder.show();
+                            }
+                        })
+                        .create();
+                        builderSub.setCanceledOnTouchOutside(false);
+                        builderSub.setCancelable(false);
+                        builderSub.show();                        
+                        showNotification();
+                    }
+                }).setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    public void onCancel(DialogInterface dialog) {                                                                                               
+                    }
+                })
+                .create();
+               //.show();
+        builder.setCanceledOnTouchOutside(false);
+        builder.setCancelable(false);
+        builder.show();                
+        showNotification();
+        startTimer(timeout);
+    }
+    
+    private void createShowSelfRegisterDialog(String message, final int timeout) {
+        String softkey_yes = getResources().getString(R.string.menu_yes);
+        String softkey_no = getResources().getString(R.string.menu_no);
+        
+        playAlertSound();
+        
+        builder = new AlertDialog.Builder(mContext).setTitle("").setMessage(getResources().getString(R.string.sms_prompt))
+                .setPositiveButton(softkey_yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        Log.d(TAG, "DmAlertDailog createShowSelfRegisterDialog yes on click");
+                        DmService.getInstance().saveStatus4AllowRegiste();
+                        DmService.getInstance().NotifySendSelfSMS();
+                        
+                        mNotificationMgr.cancel(R.drawable.icon);
+                        finish();
+                        DestroyAlertDialog();
+                    }
+                }).setNegativeButton(softkey_no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        Log.d(TAG, "DmAlertDailog createShowSelfRegisterDialog no on click");
+                        //stopTimer();
+                        //startTimer(timeout);
+                        //create double check when user click no
+                        builderSub = new AlertDialog.Builder(mContext).setTitle("").setMessage(getResources().getString(R.string.sms_prompt_cancel))
+                        .setPositiveButton(getResources().getString(R.string.menu_yes), new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                Log.d(TAG, "createShowSelfRegisterDialog setNegativeButton click");                                
+                                DmService.getInstance().saveStatus4CancelAllowRegiste();
+                                mNotificationMgr.cancel(R.drawable.icon);
+                                finish();
+                                DestroyAlertDialog();
+                            }
+                        }).setNegativeButton(getResources().getString(R.string.menu_no), new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                Log.d(TAG, "DmAlertDailog createShowSelfRegisterDialog cliick no session!");
+                                //stopTimer();
+                                //startTimer(timeout);
+                                builder.show();
+                            }
+                        })
+                        .create();
+                        builderSub.setCanceledOnTouchOutside(false);
+                        builderSub.setCancelable(false);
+                        builderSub.show();                        
+                        showNotification();                                                                                   
+                    }
+                }).setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    public void onCancel(DialogInterface dialog) {
 
+                    }
+                })
+                .create();
+                //.show();
+        builder.setCanceledOnTouchOutside(false);
+        builder.setCancelable(false);
+        builder.show();                
+        showNotification();
+        //startTimer(timeout);
+    }
+    
     private void createNiaInformDialog(String message, int timeout) {
         String softkey_ok = getResources().getString(R.string.menu_ok);
 
@@ -533,5 +685,37 @@ public class DmAlertDialog extends Activity {
         };
         t.start();
 */        
+    }
+    
+    private void showNotification(){                        
+                //NotificationManager notificationManager = (NotificationManager)           
+                 //   this.getSystemService(android.content.Context.NOTIFICATION_SERVICE);                                                                
+                Notification notification =new Notification(R.drawable.icon,          
+                        "手机终端消息提醒", System.currentTimeMillis());        
+                //FLAG_AUTO_CANCEL         
+                //FLAG_NO_CLEAR         
+                //FLAG_ONGOING_EVENT 
+                //FLAG_INSISTENT        
+                notification.flags |= Notification.FLAG_ONGOING_EVENT; //        
+                notification.flags |= Notification.FLAG_NO_CLEAR; //           
+                //notification.flags |= Notification.FLAG_SHOW_LIGHTS;          
+                //DEFAULT_ALL          
+                //DEFAULT_LIGHTS          
+                //DEFAULT_SOUNDS          
+                //DEFAULT_VIBRATE use vibrate need add <uses-permission android:name="android.permission.VIBRATE" /> 
+                notification.defaults = Notification.DEFAULT_LIGHTS;        
+                //
+                //notification.defaults=Notification.DEFAULT_LIGHTS|Notification.DEFAULT_SOUND;        
+                //notification.ledARGB = Color.BLUE;          
+                //notification.ledOnMS =5000;          
+                //           
+                CharSequence contentTitle ="增强售后服务"; // 
+                CharSequence contentText ="增强售后服务"; //           
+                Intent notificationIntent =new Intent(DmAlertDialog.this, DmAlertDialog.class); //          
+                PendingIntent contentItent = PendingIntent.getActivity(this, 0, notificationIntent, 0);          
+                notification.setLatestEventInfo(this, contentTitle, contentText, contentItent);                  
+                //           
+                mNotificationMgr.notify(R.drawable.icon, notification);
+                //mNotificationMgr.notify(id, notification);
     }
 }

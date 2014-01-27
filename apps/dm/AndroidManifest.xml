@@ -81,15 +81,11 @@
 		        <data android:mimeType="application/vnd.syncml.dm+wbxml" />
 		        <data android:mimeType="application/vnd.syncml.dm+xml" />
 		        <data android:mimeType="application/vnd.syncml.notification" />
-		    </intent-filter>            
-		</receiver>   
-		
-		<!-- For CMCC DM Feature:Get the SMS Ringtone use .DmSmsSoundReceiver-->
-		<receiver android:name=".DmSmsSoundReceiver" android:enabled="true">
-            <intent-filter>
+		    </intent-filter>    
+		    <intent-filter>
                <action android:name="com.android.dm.SmsSound" />
-            </intent-filter>                      
-		</receiver>   
+            </intent-filter>        
+		</receiver>   		
 		
 		
     <service android:name=".DmService" android:enabled="true">

@@ -2,7 +2,7 @@
 package com.spreadtrum.dm;
 
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -16,6 +16,7 @@ import android.telephony.TelephonyManager;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
 import android.os.IBinder; //import com.redbend.vdm.VdmException;
+import android.provider.Settings;
 import android.widget.Toast;
 
 public class DmReceiver extends BroadcastReceiver {
@@ -35,6 +36,8 @@ public class DmReceiver extends BroadcastReceiver {
     private static final String DM_MIME_XML = "application/vnd.syncml.dm+xml";
 
     private static final String DM_MIME_NOTIFY = "application/vnd.syncml.notification";
+    
+    private static final String SMSSOUND_ACTION = "com.android.dm.SmsSound";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -43,16 +46,35 @@ public class DmReceiver extends BroadcastReceiver {
         Log.d(TAG, "onReceive, action is " + action);
 
         if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
-            Log.d(TAG, "onReceive, ACTION_BOOT_COMPLETED");
-            Intent selfRegService = new Intent("com.android.dm.SelfReg");
-            context.startService(selfRegService);
+            Log.d(TAG, "onReceive, ACTION_BOOT_COMPLETED");            
+            if(0 != Settings.System.getInt(context.getContentResolver(), "dm_config", 1)){                
+                Intent selfRegService = new Intent("com.android.dm.SelfReg");
+                context.startService(selfRegService);
+            }else{
+                Log.d(TAG, "onReceive, ACTION_BOOT_COMPLETED not run");
+            }
         } else if (DATA_SMS_RECEIVED_ACTION.equals(action)) {
             Log.d(TAG, "onReceive, DATA_SMS_RECEIVED_ACTION");
             processDataSms(context, intent);
         } else if (WAP_PUSH_RECEIVED_ACTION.equals(action)) {
-            Log.d(TAG, "onReceive, WAP_PUSH_RECEIVED_ACTION");
-            processWapPush(context, intent);
-        }
+            Log.d(TAG, "onReceive, WAP_PUSH_RECEIVED_ACTION");            
+            if(0 != Settings.System.getInt(context.getContentResolver(), "dm_config", 1)){                
+                processWapPush(context, intent);
+            }else{
+                Log.d(TAG, "onReceive, WAP_PUSH_RECEIVED_ACTION not run");
+            }
+            
+            //processWapPush(context, intent);
+        } else if (SMSSOUND_ACTION.equals(action)) {
+            Bundle bundle= intent.getExtras();
+            String smsSoundUrlString = bundle.getString("smssound");
+            Log.i(TAG, "DmSmsSoundReceiver  smsSoundUrlString = " + smsSoundUrlString);
+            if(null != smsSoundUrlString){              
+                DmService.getInstance().setSMSSoundUri(smsSoundUrlString);
+            }else {
+                Log.i(TAG, "DmSmsSoundReceiver:smsSoundUrlString is null");
+            }   
+        }        
 /*
         else if (WALLPAPER_CHANGED_ACTION.equals(action))
         {
@@ -263,14 +285,12 @@ public class DmReceiver extends BroadcastReceiver {
         String type = intent.getType(); // data type
         String addr = intent.getStringExtra("from");
         String dmSmsAddr = DmService.getInstance().getSmsAddr();
-
+                                     
         Log.d(TAG, "processWapPush: enter!");
         Log.d(TAG, "processWapPush: data type  " + type);
         Log.d(TAG, "processWapPush: from  " + addr);
 
-        if (((DM_MIME_WBXML.equals(type)) || (DM_MIME_XML.equals(type)) || (DM_MIME_NOTIFY
-                .equals(type)))
-                && (addr.equals(dmSmsAddr))) {
+        if (((DM_MIME_WBXML.equals(type)) || (DM_MIME_XML.equals(type)) || (DM_MIME_NOTIFY.equals(type))) && (addr.equals(dmSmsAddr))) {
             Log.d(TAG, "processWapPush: is for dm");
 
             if (DmService.getInstance().isDebugMode()) {

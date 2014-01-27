@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileWriter;
 import java.io.FileOutputStream;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 import android.telephony.TelephonyManager;
 
 public class DMTransaction implements Runnable {

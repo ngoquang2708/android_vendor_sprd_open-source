@@ -32,7 +32,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.content.SharedPreferences;
 import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
+//import com.android.internal.telephony.PhoneFactory;
 import android.telephony.TelephonyManager;
 /*End   of  oasis_zp@hisense  2011.2.14*/
 
@@ -1119,8 +1119,8 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 			            Settings.System.putString(resolver, "CMCC_HOMEPAGE", str);
 				}
 				break;
-			case BROWSER_HOMEPAGE_IO_HANDLER:
-				str =  Settings.System.getString(resolver, "BROWSER_HOMEPAGE");
+			case BROWSER_HOMEPAGE_IO_HANDLER:			    
+				str =  Settings.System.getString(resolver, "BROWSER_HOMEPAGE");				
 				if (str == null)
 				{
 			            str = "http://wap.monternet.com";
@@ -1554,7 +1554,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
 			            _context.sendBroadcast(i);
 				}
 				break;
-			case  BROWSER_HOMEPAGE_IO_HANDLER:
+			case  BROWSER_HOMEPAGE_IO_HANDLER:			     
 				 Settings.System.putString(resolver, "BROWSER_HOMEPAGE", str);
 				 { 
 				 //
