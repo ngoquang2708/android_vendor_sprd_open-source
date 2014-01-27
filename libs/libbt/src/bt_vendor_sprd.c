@@ -122,19 +122,23 @@ static int op(bt_vendor_opcode_t opcode, void *param)
 
         case BT_VND_OP_FW_CFG:
             {
-			ALOGI("bt-vendor : BT_VND_OP_FW_CFG");
+                    ALOGI("bt-vendor : BT_VND_OP_FW_CFG");
 
-			sprd_config_init(s_bt_fd,NULL,NULL);
-			ALOGI("bt-vendor : eee");
-                // call hciattach to initalize the stack
-                if(bt_vendor_cbacks){
-                   ALOGI("Bluetooth Firmware and smd is initialized");
-                   bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_SUCCESS);
-                }
-                else{
-                   ALOGI("Error : hci, smd initialization Error");
-                   bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_FAIL);
-                }
+                    retval = sprd_config_init(s_bt_fd,NULL,NULL);
+                    ALOGI("bt-vendor : sprd_config_init retval = %d.",retval);
+                    if(bt_vendor_cbacks)
+                    {
+                        if(retval == 0)
+                        {
+                            ALOGI("Bluetooth Firmware and smd is initialized");
+                            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_SUCCESS);
+                        }
+                        else
+                        {
+                            ALOGE("Error : hci, smd initialization Error");
+                            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_FAIL);
+                        }
+                    }
             }
             break;
 
