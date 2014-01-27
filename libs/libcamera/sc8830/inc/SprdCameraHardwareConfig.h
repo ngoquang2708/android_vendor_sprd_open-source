@@ -587,8 +587,17 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"sharpness-values", "0,1,2,3,4,5,6"},
 	{"sharpness", "3"},
 #endif
+#ifndef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
 	{"focus-mode-values", "auto,auto-multi,macro"},
 	{"focus-mode", "auto"},
+	{"focus-distances", "2.0,2.5,3.75"},
+	{"max-num-focus-areas", "3"},
+#else
+	{"focus-mode-values", "infinity"},
+	{"focus-mode", "infinity"},
+	{"focus-distances", "2.0,2.5,Infinity"},
+	{"max-num-focus-areas", "0"},
+#endif
 	{"min-exposure-compensation", "-3"},
 	{"max-exposure-compensation", "3"},
 	{"exposure-compensation","0"},
@@ -608,13 +617,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
         {"flash-mode", "off"},
         {"flash-mode-supported", "false"},
 #endif
-	{"focus-distances", "2.0,2.5,3.75"},
 #if defined(CONFIG_CAMERA_FACE_DETECT)
         {"max-num-detected-faces-hw", "10"},
 #else
         {"max-num-detected-faces-hw", "0"},
 #endif
-	{"max-num-focus-areas", "3"},
 	{"iso-supported", "true"},
 	{"max-iso", "5"},
 	{"iso-values", "auto,100,200,400,800,1600"},
@@ -633,7 +640,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"max-slow-motion","3"},
 	{"slow-motion-values", "1,2,3"},
 	{"slow-motion", "1"},
+#ifndef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
 	{"max-num-metering-areas", "1"},
+#else
+	{"max-num-metering-areas", "0"},
+#endif
 	{"auto-exposure","frame-average"},
 	{"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
 	{"preview-env","0"},
