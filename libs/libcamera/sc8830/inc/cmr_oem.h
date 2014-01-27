@@ -57,6 +57,7 @@ extern "C"
 #define CMR_EVT_PREV_V4L2_CSI2_ERR                   (CMR_EVT_PREV_V4L2_BASE + CMR_V4L2_CSI2_ERR - CMR_EVT_V4L2_BASE)
 #define CMR_EVT_PREV_CVT_BASE                        (CMR_EVT_PREV_BASE + 0x20)
 #define CMR_EVT_PREV_CVT_ROT_DONE                    (CMR_EVT_PREV_CVT_BASE + CMR_IMG_CVT_ROT_DONE - CMR_EVT_CVT_BASE)
+#define CMR_EVT_PREV_STOP                            (CMR_EVT_PREV_BASE + 0x30)
 
 
 #define CMR_EVT_CAP_BASE                             (CMR_EVT_OEM_BASE + 0x200)
