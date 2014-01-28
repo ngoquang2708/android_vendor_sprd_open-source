@@ -926,6 +926,7 @@ void *command_handler(void *arg)
 	int ret, server_sock, client_sock;
 	pthread_t thread_pid;
 
+restart_socket:
 	/* init unix domain socket */
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sun_family=AF_UNIX;
@@ -935,19 +936,22 @@ void *command_handler(void *arg)
 	server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
         if (server_sock < 0) {
 		err_log("create socket failed!");
-		return NULL;
+		sleep(2);
+		goto restart_socket;
 	}
 
 	if (bind(server_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		err_log("bind socket failed!");
 		close(server_sock);
-		return NULL;
+		sleep(2);
+		goto restart_socket;
 	}
 
 	if (listen(server_sock, 5) < 0) {
 		err_log("listen socket failed!");
 		close(server_sock);
-		return NULL;
+		sleep(2);
+		goto restart_socket;
 	}
 
 	while(1) {
