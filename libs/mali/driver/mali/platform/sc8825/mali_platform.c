@@ -115,7 +115,12 @@ int mali_platform_device_register(void)
 	if(g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(g_gpu_clock);
+#else
 		clk_disable(g_gpu_clock);
+#endif
+
 	}
 	if(g_gpu_power_on)
 	{
@@ -135,7 +140,11 @@ void mali_platform_device_unregister(void)
 	if(g_gpu_clock_on)
 	{
 		g_gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(g_gpu_clock);
+#else
 		clk_disable(g_gpu_clock);
+#endif
 	}
 	if(g_gpu_power_on)
 	{
@@ -175,14 +184,22 @@ void mali_platform_power_mode_change(int power_mode)
 		if(g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(g_gpu_clock);
+#else
 			clk_disable(g_gpu_clock);
+#endif
 		}
 		break;
 	case 2://MALI_POWER_MODE_DEEP_SLEEP:
 		if(g_gpu_clock_on)
 		{
 			g_gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(g_gpu_clock);
+#else
 			clk_disable(g_gpu_clock);
+#endif
 		}
 		if(g_gpu_power_on)
 		{

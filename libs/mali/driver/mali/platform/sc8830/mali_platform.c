@@ -115,7 +115,7 @@ extern int mali_dfs_flag;
 void mali_power_initialize(struct platform_device *pdev)
 {
 
-#ifdef CONFIG_OF && CONFIG_COMMON_CLK
+#ifdef CONFIG_OF
 	struct device_node *np;
 
 	np = of_find_matching_node(NULL, gpu_ids);
@@ -207,8 +207,14 @@ int mali_platform_device_register(void)
 	if(gpu_clock_on)
 	{
 		gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(gpu_clock);
+		clk_disable_unprepare(gpu_clock_i);
+#else
 		clk_disable(gpu_clock);
 		clk_disable(gpu_clock_i);
+#endif
+
 	}
 	if(gpu_power_on)
 	{
@@ -227,8 +233,13 @@ void mali_platform_device_unregister(void)
 	if(gpu_clock_on)
 	{
 		gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(gpu_clock);
+		clk_disable_unprepare(gpu_clock_i);
+#else
 		clk_disable(gpu_clock);
 		clk_disable(gpu_clock_i);
+#endif
 	}
 	if(gpu_power_on)
 	{
@@ -293,8 +304,13 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_clock_on)
 		{
 			gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+			clk_disable_unprepare(gpu_clock_i);
+#else
 			clk_disable(gpu_clock);
 			clk_disable(gpu_clock_i);
+#endif
 		}
 		if(gpu_power_on)
 		{
@@ -307,8 +323,13 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_clock_on)
 		{
 			gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+			clk_disable_unprepare(gpu_clock_i);
+#else
 			clk_disable(gpu_clock);
 			clk_disable(gpu_clock_i);
+#endif
 		}
 		if(gpu_power_on)
 		{
@@ -462,8 +483,11 @@ static void gpu_change_freq_div(void)
 #endif
 			old_mali_freq_select=mali_freq_select;
 
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+#else
 			clk_disable(gpu_clock);
-
+#endif
 			switch(old_mali_freq_select)
 			{
 				case 3:
@@ -496,7 +520,13 @@ static void gpu_change_freq_div(void)
 		else
 		{
 			old_gpu_clock_div = gpu_clock_div;
+
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+#else
 			clk_disable(gpu_clock);
+#endif
+
 			mali_set_div(gpu_clock_div);
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_clock);
