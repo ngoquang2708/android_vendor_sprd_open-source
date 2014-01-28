@@ -202,8 +202,14 @@ int mali_platform_device_register(void)
 	if(gpu_clock_on)
 	{
 		gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(gpu_clock);
+		clk_disable_unprepare(gpu_clock_i);
+#else
 		clk_disable(gpu_clock);
 		clk_disable(gpu_clock_i);
+#endif
+
 	}
 	if(gpu_power_on)
 	{
@@ -222,8 +228,13 @@ void mali_platform_device_unregister(void)
 	if(gpu_clock_on)
 	{
 		gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+		clk_disable_unprepare(gpu_clock);
+		clk_disable_unprepare(gpu_clock_i);
+#else
 		clk_disable(gpu_clock);
 		clk_disable(gpu_clock_i);
+#endif
 	}
 	if(gpu_power_on)
 	{
@@ -275,8 +286,13 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_clock_on)
 		{
 			gpu_clock_on = 0;
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+			clk_disable_unprepare(gpu_clock_i);
+#else
 			clk_disable(gpu_clock);
 			clk_disable(gpu_clock_i);
+#endif
 		}
 		if(gpu_power_on)
 		{
@@ -289,8 +305,14 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_clock_on)
 		{
 			gpu_clock_on = 0;
+
+#ifdef CONFIG_COMMON_CLK
+			clk_disable_unprepare(gpu_clock);
+			clk_disable_unprepare(gpu_clock_i);
+#else
 			clk_disable(gpu_clock);
 			clk_disable(gpu_clock_i);
+#endif
 		}
 		if(gpu_power_on)
 		{
@@ -424,7 +446,12 @@ static void gpu_change_freq_div(void)
 					clk_enable(clock_312m);
 #endif
 					clk_set_parent(gpu_clock,clock_312m);
+
+#ifdef CONFIG_COMMON_CLK
+					clk_disable_unprepare(clock_256m);
+#else
 					clk_disable(clock_256m);
+#endif
 					udelay(200);
 					break;
 				case 0:
@@ -438,7 +465,11 @@ static void gpu_change_freq_div(void)
 					clk_enable(clock_256m);
 #endif
 					clk_set_parent(gpu_clock,clock_256m);
+#ifdef CONFIG_COMMON_CLK
+					clk_disable_unprepare(clock_312m);
+#else
 					clk_disable(clock_312m);
+#endif
 					udelay(200);
 					break;
 			}
