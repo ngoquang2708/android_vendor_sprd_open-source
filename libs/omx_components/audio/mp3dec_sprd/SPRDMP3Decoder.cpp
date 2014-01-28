@@ -429,6 +429,7 @@ void SPRDMP3Decoder::onQueueFilled(OMX_U32 portIndex) {
                 // to add any padding at the end either.
                 outHeader->nFilledLen = 0;
             }
+            outHeader->nTimeStamp = mLastInTimeUs;
             outHeader->nFlags = OMX_BUFFERFLAG_EOS;
 
             outQueue.erase(outQueue.begin());
