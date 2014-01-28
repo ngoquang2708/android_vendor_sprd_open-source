@@ -191,6 +191,8 @@ MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *pInput, MMDecOutput *pOu
 /*****************************************************************************/
 MMDecRet VP8DecRelease(VPXHandle *vpxHandle);
 
+int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput);
+
 typedef void (*FT_VPXGetBufferDimensions)(VPXHandle *vpxHandle, int32 *width, int32 *height);
 typedef MMDecRet (*FT_VPXGetCodecCapability)(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 typedef void (*FT_VPXDecSetCurRecPic)(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
@@ -198,6 +200,7 @@ typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer *pInterMem
 typedef MMDecRet (*FT_VPXDecDecode)(VPXHandle *vpxHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_VPXDecRelease)(VPXHandle *vpxHandle);
 typedef void (* FT_VPXDecReleaseRefBuffers)(VPXHandle *vpxHandle);
+typedef int (* FT_VPXDecGetLastDspFrm)(VPXHandle *vpxHandle,void **pOutput);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

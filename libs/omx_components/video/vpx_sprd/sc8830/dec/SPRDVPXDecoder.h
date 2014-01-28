@@ -44,6 +44,16 @@ protected:
     virtual OMX_ERRORTYPE internalSetParameter(
         OMX_INDEXTYPE index, const OMX_PTR params);
 
+    virtual OMX_ERRORTYPE allocateBuffer(
+        OMX_BUFFERHEADERTYPE **header,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size);
+
+    virtual OMX_ERRORTYPE freeBuffer(
+        OMX_U32 portIndex,
+        OMX_BUFFERHEADERTYPE *header);
+
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortFlushPrepare(OMX_U32 portIndex);
@@ -54,6 +64,12 @@ protected:
 private:
     enum {
         kNumBuffers = 4
+    };
+
+    enum EOSStatus {
+        INPUT_DATA_AVAILABLE,
+        INPUT_EOS_SEEN,
+        OUTPUT_FRAMES_FLUSHED,
     };
 
     tagVPXHandle *mHandle;
@@ -82,6 +98,7 @@ private:
 
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
+    EOSStatus mEOSStatus;
     void* mLibHandle;
     FT_VPXGetBufferDimensions mVPXGetBufferDimensions;
     FT_VPXGetCodecCapability mVPXGetCodecCapability;
@@ -90,6 +107,7 @@ private:
     FT_VPXDecDecode mVPXDecDecode;
     FT_VPXDecRelease mVPXDecRelease;
     FT_VPXDecReleaseRefBuffers  mVPXDecReleaseRefBuffers;
+    FT_VPXDecGetLastDspFrm mVPXDecGetLastDspFrm;
 
     static int32_t BindFrameWrapper(void *aUserData, void *pHeader, int flag);
     static int32_t UnbindFrameWrapper(void *aUserData, void *pHeader, int flag);
@@ -105,7 +123,7 @@ private:
 
     void initPorts();
     status_t initDecoder();
-
+    bool drainAllOutputBuffers();
     void updatePortDefinitions();
     bool openDecoder(const char* libName);
 
