@@ -317,8 +317,9 @@ void *stream_log_handler(void *arg)
 	return NULL;
 }
 
-#define		KMEMLEAK_SCAN_CMD		"scan"
+#define		KMEMLEAK_SCAN_CMD	"scan"
 #define		KMEMLEAK_SCANOFF_CMD	"scan=off"
+#define		KMEMLEAK_CLEAR_CMD	"clear"
 
 extern int enable_kmemleak;
 static int auto_scan_off = 0;
@@ -384,6 +385,25 @@ label0:
 			write(fd_ml, KMEMLEAK_SCANOFF_CMD, strlen(KMEMLEAK_SCANOFF_CMD));
 			auto_scan_off = 1;
 		}
+		n_write = write(fd_ml, KMEMLEAK_CLEAR_CMD, strlen(KMEMLEAK_CLEAR_CMD));
+		if(n_write <= 0){
+			err_log("write device clear cmd error, need rewrite, errno=%d\n", errno);
+			if(errno == EBUSY)
+			{
+				retry++;
+				close(fd_ml);
+				sleep(1);
+				if(retry == 4)
+				{
+					err_log("device always busy, exit\n");
+					break;
+				}
+				fd_ml = open("/sys/kernel/debug/kmemleak", O_RDWR);
+				goto label0;
+			}
+		}
+		retry = 0;
+
 		n_write = write(fd_ml, KMEMLEAK_SCAN_CMD, strlen(KMEMLEAK_SCAN_CMD));
 		if(n_write <= 0){
 			err_log("write device error, need rewrite, errno=%d\n", errno);
