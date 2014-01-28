@@ -31,7 +31,7 @@
 #include <mach/sci.h>
 #include <mach/sci_glb_regs.h>
 #include <linux/workqueue.h>
-
+#include <linux/semaphore.h>
 #include "mali_kernel_common.h"
 #include "base.h"
 
@@ -237,14 +237,27 @@ void mali_platform_device_unregister(void)
 	}
 }
 
- void mali_platform_device_release(struct device *device)
+void mali_platform_device_release(struct device *device)
 {
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
+}
+
+DEFINE_SEMAPHORE(change_freq_div_lock);
+void mali_change_freq_div_lock(void)
+{
+	down(&change_freq_div_lock);
+}
+
+void mali_change_freq_div_unlock(void)
+{
+	up(&change_freq_div_lock);
 }
 
 void mali_platform_power_mode_change(int power_mode)
 {
 #if 1
+	mali_change_freq_div_lock();
+
 	switch(power_mode)
 	{
 	//MALI_POWER_MODE_ON
@@ -304,6 +317,8 @@ void mali_platform_power_mode_change(int power_mode)
 		}
 		break;
 	};
+
+	mali_change_freq_div_unlock();
 	#endif
 }
 
@@ -410,19 +425,22 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 #endif
 	{
 #if !GPU_GLITCH_FREE_DFS
-		//if(gpu_dfs_workqueue)
-		//	queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
+		if(gpu_dfs_workqueue)
+			queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
 #else
-		/*if (old_mali_freq_select == mali_freq_select) {
-			old_gpu_clock_div = gpu_clock_div;
-			mali_set_div(gpu_clock_div);
-			scaling_cur_freq=scaling_max_freq/gpu_clock_div;
+		if (old_mali_freq_select == mali_freq_select) {
+			//mali_change_freq_div_lock();
+			if (gpu_power_on && gpu_clock_on) {
+				old_gpu_clock_div = gpu_clock_div;
+				mali_set_div(gpu_clock_div);
+				scaling_cur_freq=scaling_max_freq/gpu_clock_div;
+			}
+			//mali_change_freq_div_unlock();
 		} else {
 			if (gpu_dfs_workqueue) {
 				queue_work(gpu_dfs_workqueue, &gpu_dfs_work);
 			}
-		}*/
-		//gpu_change_freq_div();
+		}
 #endif
 	}
 }
@@ -433,6 +451,8 @@ static void gpu_change_freq_div(void)
 #if !GPU_GLITCH_FREE_DFS
 	mali_dev_pause();
 #endif
+	mali_change_freq_div_lock();
+
 	if(gpu_power_on&&gpu_clock_on)
 	{
 		if(old_mali_freq_select!=mali_freq_select)
@@ -441,43 +461,36 @@ static void gpu_change_freq_div(void)
 			mali_dev_pause();
 #endif
 			old_mali_freq_select=mali_freq_select;
+
+			clk_disable(gpu_clock);
+
 			switch(old_mali_freq_select)
 			{
 				case 3:
 					scaling_max_freq=GPU_LEVEL3_MAX;
-#ifdef CONFIG_COMMON_CLK
-					clk_prepare_enable(clock_312m);
-#else
-					clk_enable(clock_312m);
-#endif
 					clk_set_parent(gpu_clock,clock_312m);
-					clk_disable(clock_256m);
-					udelay(200);
 					break;
 				case 0:
 				case 1:
 				case 2:
 				default:
 					scaling_max_freq=GPU_LEVEL1_MAX;
-#ifdef CONFIG_COMMON_CLK
-					clk_prepare_enable(clock_256m);
-#else
-					clk_enable(clock_256m);
-#endif
 					clk_set_parent(gpu_clock,clock_256m);
-					clk_disable(clock_312m);
-					udelay(200);
 					break;
 			}
-#if GPU_GLITCH_FREE_DFS
-			mali_dev_resume();
-#endif
+			
 			old_gpu_clock_div=1;
 			gpu_clock_div=1;
 			mali_set_div(gpu_clock_div);
-
-#if !GPU_GLITCH_FREE_DFS
+#ifdef CONFIG_COMMON_CLK
+			clk_prepare_enable(gpu_clock);
+#else
+			clk_enable(gpu_clock);
+#endif
 			udelay(100);
+
+#if GPU_GLITCH_FREE_DFS
+			mali_dev_resume();
 #endif
 		}
 		else
@@ -485,13 +498,20 @@ static void gpu_change_freq_div(void)
 			old_gpu_clock_div = gpu_clock_div;
 			clk_disable(gpu_clock);
 			mali_set_div(gpu_clock_div);
+#ifdef CONFIG_COMMON_CLK
+			clk_prepare_enable(gpu_clock);
+#else
 			clk_enable(gpu_clock);
+#endif
 #if !GPU_GLITCH_FREE_DFS
 			udelay(100);
 #endif
 		}
 		scaling_cur_freq=scaling_max_freq/gpu_clock_div;
 	}
+
+	mali_change_freq_div_unlock();
+
 #if !GPU_GLITCH_FREE_DFS
 	mali_dev_resume();
 #endif
