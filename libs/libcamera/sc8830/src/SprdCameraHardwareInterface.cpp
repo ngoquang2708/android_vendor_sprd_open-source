@@ -4905,7 +4905,6 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 				cb, parm4, getCameraStateStr(getCaptureState()));
 	bool encode_location = true;
 	camera_position_type pt = {0, 0, 0, 0, NULL};
-	encode_location = getCameraLocation(&pt);
 
 	switch (cb) {
 	case CAMERA_EVT_CB_FLUSH:
@@ -4922,9 +4921,17 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 					SPRD_WAITING_RAW,
 					STATE_CAPTURE);
 		break;
-
+	case CAMERA_EVT_CB_CAPTURE_FRAME_DONE:
+		LOGV("HandleTakePicture: CAMERA_EVT_CB_CAPTURE_FRAME_DONE");
+		if (checkPreviewStateForCapture()) {
+			notifyShutter();
+		} else {
+			LOGE("HandleTakePicture: no shutter");
+		}
+		break;
 	case CAMERA_EVT_CB_SNAPSHOT_DONE:
 		LOGV("HandleTakePicture: CAMERA_EVT_CB_SNAPSHOT_DONE");
+		encode_location = getCameraLocation(&pt);
 		if (encode_location) {
 			if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
 			LOGE("receiveRawPicture: camera_set_position: error");
@@ -4934,7 +4941,6 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 		else
 			LOGV("receiveRawPicture: not setting image location");
 		if (checkPreviewStateForCapture()) {
-			notifyShutter();
 			receiveRawPicture((camera_frame_type *)parm4);
 		} else {
 			LOGE("HandleTakePicture: drop current rawPicture");
