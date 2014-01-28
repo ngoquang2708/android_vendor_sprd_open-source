@@ -2072,15 +2072,8 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
     Mutex::Autolock lock(m_afTrigLock);
     HAL_LOGD("id(%x), %d, %d afmode=%d", trigger_id, ext1, ext2, m_staticReqInfo.afMode);
 	if (CAMERA2_TRIGGER_CANCEL_AUTOFOCUS != trigger_id) {
-		if (getPreviewState() != SPRD_PREVIEW_IN_PROGRESS) {
-			if (GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_RECORD || GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_SNAPSHOT) {
-				return 1;
-			} else {
-				WaitForPreviewStart();
-			}
-		}
+		WaitForPreviewStart();
 	}
-
     switch (trigger_id) {
     case CAMERA2_TRIGGER_AUTOFOCUS:
 		m_camCtlInfo.afTrigID = ext1;
@@ -3504,7 +3497,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 SprdCameraHWInterface2::Sprd_camera_state
 SprdCameraHWInterface2::transitionState(SprdCameraHWInterface2::Sprd_camera_state from,
 									SprdCameraHWInterface2::Sprd_camera_state to,
-									SprdCameraHWInterface2::state_owner owner, bool lock)
+									SprdCameraHWInterface2::state_owner owner, bool lock,bool IsBroadcast)
 {
 	volatile SprdCameraHWInterface2::Sprd_camera_state *which_ptr = NULL;
 	HAL_LOGV("owner = %d, lock = %d", owner, lock);
@@ -3541,7 +3534,11 @@ SprdCameraHWInterface2::transitionState(SprdCameraHWInterface2::Sprd_camera_stat
 								   getCameraStateStr(to));
 		if (*which_ptr != to) {
 			*which_ptr = to;
-			mStateWait.signal();
+			if (IsBroadcast) {
+				mStateWait.broadcast();
+			} else {
+				mStateWait.signal();
+			}
 		}
 	}
 	if (lock) mStateLock.unlock();
@@ -3571,7 +3568,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 	case CAMERA_RSP_CB_SUCCESS:
 		transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
 					SPRD_PREVIEW_IN_PROGRESS,
-					STATE_PREVIEW);
+					STATE_PREVIEW, true);
 		break;
 
 	case CAMERA_EVT_CB_FRAME:
@@ -3595,7 +3592,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 	case CAMERA_EXIT_CB_FAILED:
 		HAL_LOGE("camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
 				parm4, getCameraStateStr(getPreviewState()));
-		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW,true);
 		//receiveCameraExitError();
 		break;
 	case CAMERA_EVT_CB_FLUSH:
@@ -3613,7 +3610,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 		}
 		break;
 	default:
-		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW);
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW,true);
 		HAL_LOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.", cb);
 		break;
 	}
@@ -3879,8 +3876,8 @@ void SprdCameraHWInterface2::receivePrevFrmWithCacheMem(camera_frame_type *frame
     targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW - 1]->m_parameters);
 	targetStreamParms->bufIndex = frame->buf_id;
 	targetStreamParms->m_timestamp = frame->timestamp - mRecordingTimeOffset;
-	HAL_LOGD("%s@@@ Index=%d status=%d Firstfrm=%d outMask=0x%x",__FUNCTION__,targetStreamParms->bufIndex,\
-		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm, GetOutputStreamMask());
+	HAL_LOGD("%s@@@ Index=%d status=%d Firstfrm=%d outMask=0x%x time=%lld",__FUNCTION__,targetStreamParms->bufIndex,\
+		   targetStreamParms->svcBufStatus[targetStreamParms->bufIndex], StreamSP->m_IsFirstFrm, GetOutputStreamMask(),targetStreamParms->m_timestamp);
     if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
 	    int i = 0;
         for (; i < NUM_MAX_SUBSTREAM ; i++) {
