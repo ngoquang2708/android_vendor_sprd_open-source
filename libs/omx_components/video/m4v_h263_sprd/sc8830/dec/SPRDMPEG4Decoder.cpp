@@ -1124,6 +1124,8 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
 
         updatePortDefinitions();
 
+        (*mMP4DecReleaseRefBuffers)(mHandle);
+
         mFramesConfigured = false;
 
         notify(OMX_EventPortSettingsChanged, 1, 0, NULL);
@@ -1255,7 +1257,7 @@ int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int extra_mem_size) {
 
 int SPRDMPEG4Decoder::VSP_bind_cb(void *pHeader,int flag) {
     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
-    ALOGI("VSP_bind_cb, ref frame: 0x%x, %x; iRefCount=%d",
+    ALOGI("VSP_bind_cb, ref frame: 0x%x, 0x%x; iRefCount=%d",
           ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
     pBufCtrl->iRefCount++;
     return 0;
@@ -1264,7 +1266,7 @@ int SPRDMPEG4Decoder::VSP_bind_cb(void *pHeader,int flag) {
 int SPRDMPEG4Decoder::VSP_unbind_cb(void *pHeader,int flag) {
     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
 
-    ALOGI("VSP_unbind_cb, ref frame: 0x%x, %x; iRefCount=%d",
+    ALOGI("VSP_unbind_cb, ref frame: 0x%x, 0x%x; iRefCount=%d",
           ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
 
     if (pBufCtrl->iRefCount  > 0) {
