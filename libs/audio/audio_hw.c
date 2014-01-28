@@ -166,6 +166,9 @@
 
 #define RECORD_POP_COUNT    5   //5 * 29 ms
 
+#define BT_SCO_UPLINK_IS_STARTED        (1 << 0)
+#define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
+#define BT_SCO_DOWNLINK_OPEN_FAIL       (1 << 8)
 #define AUDFIFO "/data/local/media/audiopara_tuning"
 
 struct pcm_config pcm_config_mm = {
@@ -290,6 +293,17 @@ struct stream_routing_manager {
     sem_t           device_switch_sem;
 };
 
+struct bt_sco_thread_manager {
+    bool             thread_is_exit;
+    pthread_t        dup_thread;
+    pthread_mutex_t  dup_mutex;
+    pthread_mutex_t  cond_mutex;
+    pthread_cond_t   cond;
+    sem_t            dup_sem;
+    volatile bool    dup_count;
+    volatile bool    dup_need_start;
+};
+
 #define VOIP_PIPE_NAME_MAX    16
 
 
@@ -331,6 +345,9 @@ struct tiny_audio_device {
     audio_modem_t *cp;
     AUDIO_TOTAL_T *audio_para;
     pthread_t        audiopara_tuning_thread;
+
+    volatile int bt_sco_state;
+    struct bt_sco_thread_manager bt_sco_manager;
 
     struct stream_routing_manager  routing_mgr;
 
@@ -533,6 +550,8 @@ static void *stream_routing_thread_entry(void * adev);
 static int stream_routing_manager_create(struct tiny_audio_device *adev);
 static void stream_routing_manager_close(struct tiny_audio_device *adev);
 
+static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool enable);
+
 /*
  * NOTE: audio stream(playback, capture) dump just for debug.
  */
@@ -614,7 +633,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp0 >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_cp0,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-                        count = write(modem->i2s_bt.fd_sys_cp0,ctl_off,1);
+                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
@@ -641,7 +660,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_cp1,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-                        count = write(modem->i2s_bt.fd_sys_cp1,ctl_off,1);
+                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
@@ -656,7 +675,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
         }
     }
     else if(type == 2) {
-        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+        {
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0))
                     count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
@@ -665,10 +684,10 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_ap,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-                        count = write(modem->i2s_bt.fd_sys_ap,ctl_off,1);
+                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
-                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
                         count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
                 }
@@ -1270,6 +1289,26 @@ static int start_bt_sco_output_stream(struct tiny_stream_out *out)
     else {
         memset(out->buffer_bt_sco, 0, RESAMPLER_BUFFER_SIZE);
     }
+
+    /* if bt sco capture stream has already been started, we just close bt sco capture
+       stream. we will call start_input_stream in the next in_read func to start bt sco
+       capture stream again.
+       here we must get in->lock, because in_read maybe call pcm_read in the same time.
+    */
+    ALOGE("bt sco : %s before", __func__);
+    if(adev->bt_sco_state & BT_SCO_UPLINK_IS_STARTED) {
+        struct tiny_stream_in *bt_sco_in = adev->active_input;
+        if(bt_sco_in) {
+            ALOGE("bt sco : %s do_input_standby", __func__);
+            pthread_mutex_lock(&bt_sco_in->lock);
+            do_input_standby(bt_sco_in);
+            pthread_mutex_unlock(&bt_sco_in->lock);
+        }
+    }
+    adev->bt_sco_state |= BT_SCO_DOWNLINK_IS_EXIST;
+
+    ALOGE("bt sco : %s after", __func__);
+
     //out->pcm_voip = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
 
     ALOGD("start_bt_sco_output_stream ok 1 ");
@@ -1506,37 +1545,57 @@ static int do_output_standby(struct tiny_stream_out *out)
         if(out->pcm_voip) {
             pcm_close(out->pcm_voip);
             out->pcm_voip = NULL;
-	}
-	if(out->buffer_voip) {
-	    free(out->buffer_voip);
-	    out->buffer_voip = 0;
-	}
-	if(out->resampler_sco) {
-	    release_resampler(out->resampler_sco);
-	    out->resampler_sco= 0;
-	}
+        }
+        if(out->buffer_voip) {
+            free(out->buffer_voip);
+            out->buffer_voip = 0;
+        }
+        if(out->resampler_sco) {
+            release_resampler(out->resampler_sco);
+            out->resampler_sco= 0;
+        }
         if(out->is_voip) {
             adev->voip_state &= (~VOIP_PLAYBACK_STREAM);
             if(!adev->voip_state) {
-               if(!adev->voip_state) {
-                  close_voip_codec_pcm(adev);
-               }
-	    }
-	    out->is_voip = false;
+                if(!adev->voip_state) {
+                    close_voip_codec_pcm(adev);
+                }
+            }
+            out->is_voip = false;
         }
         if(out->pcm_bt_sco) {
+            /* if bt sco capture stream is started now, we must stop bt sco capture
+               stream first when we close bt sco playback stream.
+               we will call start_input_stream in the next in_read func to start bt
+               sco capture stream again.
+            */
+            ALOGE("bt sco : %s before", __func__);
+            if(adev->bt_sco_state & BT_SCO_UPLINK_IS_STARTED) {
+                struct tiny_stream_in *bt_sco_in = adev->active_input;
+                if(bt_sco_in) {
+                    ALOGE("bt sco : %s do_input_standby", __func__);
+                    pthread_mutex_lock(&bt_sco_in->lock);
+                    do_input_standby(bt_sco_in);
+                    pthread_mutex_unlock(&bt_sco_in->lock);
+                }
+            }
+            ALOGE("bt sco : %s after", __func__);
+
             pcm_close(out->pcm_bt_sco);
             out->pcm_bt_sco = NULL;
-	}
-	if(out->buffer_bt_sco) {
-	    free(out->buffer_bt_sco);
-	    out->buffer_bt_sco = 0;
-	}
-	if(out->resampler_bt_sco) {
-	    release_resampler(out->resampler_bt_sco);
-	    out->resampler_bt_sco= 0;
-	}
-	if(out->is_bt_sco) {
+
+            ALOGE("bt sco : %s downlink is not exist", __func__);
+            adev->bt_sco_state &= (~BT_SCO_DOWNLINK_IS_EXIST);
+        }
+        if(out->buffer_bt_sco) {
+            free(out->buffer_bt_sco);
+            out->buffer_bt_sco = 0;
+        }
+        if(out->resampler_bt_sco) {
+            release_resampler(out->resampler_bt_sco);
+            out->resampler_bt_sco= 0;
+        }
+        if(out->is_bt_sco) {
             out->is_bt_sco=false;
         }
         if(out->pcm_vplayback) {
@@ -2167,6 +2226,154 @@ err:
     return ret;
 }
 
+/* audio_bt_sco_dup_thread_func is just to handle bt sco capture stream.
+   The thread will write zero data to bt_sco_card if bt sco playback is
+   not started. The thread will stop to write zero data to bt_sco_card
+   if bt sco playback is started.
+*/
+static void *audio_bt_sco_dup_thread_func(void * param)
+{
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
+    struct pcm *bt_sco_playback = NULL;
+    int ret = 0;
+    void *buf = NULL;
+
+    buf = malloc(SHORT_PERIOD_SIZE);
+    if(!buf) {
+        ALOGE("bt sco : alloc buffer for bt sco output fail");
+        goto exit;
+    } else {
+        memset(buf, 0, SHORT_PERIOD_SIZE);
+    }
+
+    while(!adev->bt_sco_manager.thread_is_exit) {
+        pthread_mutex_lock(&adev->bt_sco_manager.cond_mutex);
+        if(adev->bt_sco_manager.dup_need_start) {
+            pthread_mutex_unlock(&adev->bt_sco_manager.cond_mutex);
+            if(bt_sco_playback == NULL) {
+                ALOGE("bt sco : duplicate downlink card opening");
+                bt_sco_playback = pcm_open(s_bt_sco, PORT_MM, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);
+                if(!pcm_is_ready(bt_sco_playback)) {
+                    ALOGE("bt sco : duplicate downlink card open fail");
+                    pcm_close(bt_sco_playback);
+                    bt_sco_playback = NULL;
+                    adev->bt_sco_state |= BT_SCO_DOWNLINK_OPEN_FAIL;
+                } else {
+                    adev->bt_sco_state &= (~BT_SCO_DOWNLINK_OPEN_FAIL);
+                }
+
+                ALOGE("bt sco : duplicate open downlink card signal");
+                sem_post(&adev->bt_sco_manager.dup_sem);
+            }
+
+            ALOGV("bt sco : duplicate thread write");
+            if(bt_sco_playback) {
+                ret = pcm_mmap_write(bt_sco_playback, buf, SHORT_PERIOD_SIZE / 2);
+                ALOGV("bt sco : duplicate thread write ret is %d", ret);
+            }
+        } else {
+            if(bt_sco_playback) {
+                pcm_close(bt_sco_playback);
+                bt_sco_playback = NULL;
+
+                ALOGE("bt sco : duplicate close downlink card signal");
+                sem_post(&adev->bt_sco_manager.dup_sem);
+            }
+
+            ALOGE("bt sco : duplicate thread wait for start");
+            pthread_cond_wait(&adev->bt_sco_manager.cond, &adev->bt_sco_manager.cond_mutex);
+            pthread_mutex_unlock(&adev->bt_sco_manager.cond_mutex);
+
+            ALOGE("bt sco : duplicate thread is started now ...");
+        }
+    }
+
+exit:
+    ALOGE("bt sco : duplicate thread exit");
+    if(bt_sco_playback) {
+        pcm_close(bt_sco_playback);
+    }
+    if(buf) {
+        free(buf);
+    }
+    return NULL;
+}
+
+/* if bt sco playback stream is not started and bt sco capture stream is started, we will
+   start duplicate_thread to write zero data to bt_sco_card.
+   we will stop duplicate_thread to write zero data to bt_sco_card if bt sco playback stream
+   is started or bt sco capture stream is stoped.
+*/
+static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool enable)
+{
+    int ret = 0;
+    ALOGE("bt sco : %s duplicate thread %s", __func__, (enable ? "start": "stop"));
+    pthread_mutex_lock(&adev->bt_sco_manager.dup_mutex);
+    if(enable != adev->bt_sco_manager.dup_count) {
+        adev->bt_sco_manager.dup_count = enable;
+
+        pthread_mutex_lock(&adev->bt_sco_manager.cond_mutex);
+        adev->bt_sco_manager.dup_need_start = enable;
+        pthread_cond_signal(&adev->bt_sco_manager.cond);
+        pthread_mutex_unlock(&adev->bt_sco_manager.cond_mutex);
+
+        ALOGE("bt sco : %s %s before wait", __func__, (enable ? "start": "stop"));
+        sem_wait(&adev->bt_sco_manager.dup_sem);
+        ALOGE("bt sco : %s %s after wait", __func__, (enable ? "start": "stop"));
+    }
+    if(enable && (adev->bt_sco_state & BT_SCO_DOWNLINK_OPEN_FAIL)) {
+        adev->bt_sco_manager.dup_count = ~enable;
+        adev->bt_sco_manager.dup_need_start = ~enable;
+        ret = -1;
+    } else {
+        ret = 0;
+    }
+    pthread_mutex_unlock(&adev->bt_sco_manager.dup_mutex);
+    return ret;
+}
+
+static int audio_bt_sco_thread_create(struct tiny_audio_device *adev)
+{
+    int ret = 0;
+    pthread_attr_t attr;
+
+    /* create a thread to bt sco playback.*/
+    pthread_attr_init(&attr);
+    memset(&adev->bt_sco_manager, 0, sizeof(struct bt_sco_thread_manager));
+    adev->bt_sco_manager.thread_is_exit = false;
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    ret = pthread_create(&adev->bt_sco_manager.dup_thread, &attr,
+            audio_bt_sco_dup_thread_func, (void *)adev);
+    if (ret) {
+        ALOGE("bt sco : duplicate thread create fail, code is %d", ret);
+    }
+    pthread_attr_destroy(&attr);
+
+    /* initialize mutex and condition variable objects */
+    pthread_mutex_init(&adev->bt_sco_manager.dup_mutex, NULL);
+    pthread_mutex_init(&adev->bt_sco_manager.cond_mutex, NULL);
+    pthread_cond_init(&adev->bt_sco_manager.cond, NULL);
+    sem_init(&adev->bt_sco_manager.dup_sem, 0, 0);
+
+    return ret;
+}
+
+static void audio_bt_sco_thread_destory(struct tiny_audio_device *adev)
+{
+    int ret = 0;
+
+    adev->bt_sco_manager.thread_is_exit = true;
+    ALOGE("bt sco : duplicate thread destory before");
+    ret = pthread_join(adev->bt_sco_manager.dup_thread, NULL);
+    ALOGE("bt sco : duplicate thread destory ret is %d", ret);
+    adev->bt_sco_manager.dup_thread = NULL;
+
+    pthread_mutex_destroy(&adev->bt_sco_manager.dup_mutex);
+    pthread_mutex_destroy(&adev->bt_sco_manager.cond_mutex);
+    pthread_cond_destroy(&adev->bt_sco_manager.cond);
+    sem_destroy(&adev->bt_sco_manager.dup_sem);
+}
+
 /* must be called with hw device and input stream mutexes locked */
 static int start_input_stream(struct tiny_stream_in *in)
 {
@@ -2212,6 +2419,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 		BLUE_TRACE("voip:start bt sco input stream in");
         in->config = pcm_config_scocapture;
         if(in->config.channels  != in->requested_channels) {
+            ALOGE("bt sco input : in->requested_channels is %d, in->config.channels is %d",in->requested_channels, in->config.channels);
             in->config.channels = in->requested_channels;
         }
         in->active_rec_proc = 0;
@@ -2222,6 +2430,29 @@ static int start_input_stream(struct tiny_stream_in *in)
         }
         in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
+
+        if(in->requested_rate != in->config.rate) {
+            ALOGE("bt sco input : in->requested_rate is %d, in->config.rate is %d",in->requested_rate, in->config.rate);
+            ret= in_init_resampler(in);
+            ALOGE("bt sco input : in_init_resampler ret is %d",ret);
+            if(ret){
+                goto err;
+            }
+        }
+
+        /* we will start duplicate_thread to write zero data to bt_sco_card if bt sco playback stream is not started.
+           we will let start_input_stream return error if duplicate_thread open bt_sco_card fail.
+        */
+        adev->bt_sco_state |= BT_SCO_UPLINK_IS_STARTED;
+
+        ALOGE("bt sco : %s before", __func__);
+        if(!(adev->bt_sco_state & BT_SCO_DOWNLINK_IS_EXIST)) {
+            if(audio_bt_sco_duplicate_start(adev, true)) {
+                ALOGE("bt sco : %s start duplicate fail");
+                goto err;
+            }
+        }
+        ALOGE("bt sco : %s after", __func__);
     }
     else if(adev->call_start) {
         int card=0;
@@ -2410,18 +2641,24 @@ static int do_input_standby(struct tiny_stream_in *in)
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
-	    }
-    	if(in->is_voip) {
-    	    if(adev->voip_state) {
-    		    adev->voip_state &= (~VOIP_CAPTURE_STREAM);
-    	        if(!adev->voip_state)
-    		    close_voip_codec_pcm(adev);
-    	    }
-    	    in->is_voip = false;
-    	}
-    	if(in->is_bt_sco) {
-    	    in->is_bt_sco = false;
-    	}
+        }
+
+        if(in->is_voip) {
+            if(adev->voip_state) {
+                adev->voip_state &= (~VOIP_CAPTURE_STREAM);
+                if(!adev->voip_state)
+                close_voip_codec_pcm(adev);
+            }
+            in->is_voip = false;
+        }
+        if(in->is_bt_sco) {
+            /* we will stop writing zero data to bt_sco_card. */
+            in->is_bt_sco = false;
+            adev->bt_sco_state &= (~BT_SCO_UPLINK_IS_STARTED);
+            ALOGE("bt sco : %s before", __func__);
+            audio_bt_sco_duplicate_start(adev, false);
+            ALOGE("bt sco : %s after", __func__);
+        }
         adev->active_input = 0;
 
         if(in->resampler){
@@ -3252,6 +3489,8 @@ static int adev_close(hw_device_t *device)
 {
     unsigned int i, j;
     struct tiny_audio_device *adev = (struct tiny_audio_device *)device;
+
+    audio_bt_sco_thread_destory(adev);
     /* free audio PGA */
     audio_pga_free(adev->pga);
     ALOGD("voip:enter into vbc_ctrl_close");
@@ -4540,6 +4779,13 @@ this is used to loopback test.
         ALOGE("Unable to create stream_routing_manager, aborting.");
         goto ERROR;
     }
+
+    ret = audio_bt_sco_thread_create(adev);
+    if (ret) {
+        ALOGE("bt sco : Unable to create audio_bt_sco_thread_create, aborting.");
+        goto ERROR;
+    }
+
     return 0;
 
 ERROR:
