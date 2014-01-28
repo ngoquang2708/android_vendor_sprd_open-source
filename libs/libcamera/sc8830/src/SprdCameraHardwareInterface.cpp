@@ -474,6 +474,8 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	bool switch_ret = false;
 	status_t  ret = 0;
 
+	waitSetParamsOK();
+
 	LOGV("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
@@ -691,24 +693,28 @@ status_t SprdCameraHardware::waitSetParamsOK()
 {
 	status_t ret = NO_ERROR;
 	uint32_t i_count = 0;
+	LOGV("waitSetParamsOK:startRecording E.\n");
 
 	while (SPRD_IDLE != getSetParamsState() || mBakParamFlag) {
 		usleep(10*1000);
 		if (i_count < SET_PARAMS_TIMEOUT) {
 			i_count++;
 		} else {
-			LOGE("timeout to wait set Parameter OK, skip that!");
+			LOGE("waitSetParamsOK timeout to wait set Parameter OK, skip that!");
 			ret = TIMED_OUT;
 			break;
 		}
 	}
 
+	LOGV("waitSetParamsOK:startRecording X.\n");
 	return ret;
 }
 
 status_t SprdCameraHardware::startRecording()
 {
 	status_t ret = NO_ERROR;
+	char * isZslSupport = (char *)mParameters.get("zsl-supported");;
+
 	LOGV("mLock:startRecording E.\n");
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
@@ -718,7 +724,8 @@ status_t SprdCameraHardware::startRecording()
 
 #if 1
 	if (isPreviewing()) {
-		if (camera_is_need_stop_preview()) {
+		if (camera_is_need_stop_preview()
+			|| ((0 == strcmp("true", isZslSupport)) && (1 != mParameters.getInt("zsl")))) {
 			LOGV("call stopPreviewInternal in startRecording().");
 			camera_set_stop_preview_mode(1);
 			setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
@@ -1086,6 +1093,7 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	//CameraId
 	{
 	const char* new_camera_id = params.get_CameraId();
+	if (new_camera_id)
 		cur_params.setCameraId(new_camera_id);
 	}
 
@@ -3031,7 +3039,10 @@ bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
 
 
 	if ( (src != dst) && (!isPreviewing()) ) {
-		if (mPreviewHeapArray != NULL) {
+		if (SPRD_INTERNAL_PREVIEW_STOPPING == mCameraState.preview_state) {
+			/*change to new value*/
+			mPreviewBufferUsage = dst;
+		} else if (mPreviewHeapArray != NULL) {
 			/*free original memory*/
 			freePreviewMem();
 
@@ -4068,7 +4079,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		if (0 != ret) {
 			ret = mPreviewWindow->cancel_buffer(mPreviewWindow, buf_handle);
-			LOGE("%s: camera copy data failed.", __func__);
+			LOGW("%s: camera copy data skipped.", __func__);
 		} else {
 			ret = mPreviewWindow->enqueue_buffer(mPreviewWindow, buf_handle);
 			if (0 != ret) {
