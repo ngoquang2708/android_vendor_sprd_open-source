@@ -14,6 +14,8 @@
 #include <tinyalsa/asoundlib.h>
 
 #include "aud_enha.h"
+#include <cutils/sockets.h>
+
 
 //#ifdef __cplusplus
 //extern "c"
@@ -1111,7 +1113,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     pthread_mutex_lock(&adev->lock);
     ALOGW("voice:vbc_call_end_process, got lock");
     if(adev->call_start){
-	force_all_standby(adev);
+        force_all_standby(adev);
 	if(adev->pcm_modem_ul) {
 	    pcm_close(adev->pcm_modem_ul);
 	    adev->pcm_modem_ul = NULL;
@@ -1685,3 +1687,123 @@ EXIT:
     return 0;
 }
 
+char *mystrstr(char *s1 , char *s2)
+{
+  if(*s1==0)
+  {
+    if(*s2) return(char*)NULL;
+    return (char*)s1;
+  }
+  while(*s1)
+  {
+    int i=0;
+    while(1)
+   {
+      if(s2[i]==0) return s1;
+      if(s2[i]!=s1[i]) break;
+      i++;
+    }
+    s1++;
+  }
+  return (char*)NULL;
+}
+
+static void do_select_devices_l(struct tiny_audio_device *adev,int devices_out_l)
+{
+    unsigned int i;
+    adev->prev_out_devices = 0;
+    if(adev->eq_available)
+        vb_effect_sync_devices(devices_out_l, adev->in_devices);
+
+    /* Turn on new devices first so we don't glitch due to powerdown... */
+    for (i = 0; i < adev->num_dev_cfgs; i++) {
+    /* separate INPUT/OUTPUT case for some common bit used. */
+        if ((devices_out_l & adev->dev_cfgs[i].mask)
+        && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+                    adev->dev_cfgs[i].on_len);
+        }
+    }
+
+    /* ...then disable old ones. */
+    for (i = 0; i < adev->num_dev_cfgs; i++) {
+        if (!(devices_out_l & adev->dev_cfgs[i].mask)
+        && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
+                    adev->dev_cfgs[i].off_len);
+        }
+    }
+    /* update EQ profile*/
+    if(adev->eq_available)
+        vb_effect_profile_apply();
+    SetAudio_gain_route(adev,1);
+}
+
+
+static void * vbc_ctl_modem_monitor_routine(void *arg)
+{
+    int cur_out_devices_l;
+    int fd = -1;
+    int numRead = 0;
+    int buf[128] = {0};
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)arg ;
+    ALOGD("vbc_ctl_modem_monitor_routine in");
+    if( !adev) {
+            ALOGD("vbc_ctl_modem_monitor_routine:error adev is null");
+            return -1;
+    }
+    do {
+       fd = socket_local_client("modemd",
+           ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+       if(fd <0 ) {
+           ALOGE("vbc_ctl_modem_monitor_routine:socket_local_client failed %d", errno);
+               usleep(2000*1000);
+           }
+   } while(fd < 0);
+
+   while(1)
+   {
+        memset (buf, 0 , sizeof(buf));
+        do {
+               numRead = read(fd, buf, sizeof(buf));
+           } while(numRead < 0 && errno == EINTR);
+
+        ALOGD("modem_monitor: %s",buf);
+        if(mystrstr(buf,"Assert")) {
+            ALOGD("modem asserted1");
+            cur_out_devices_l = adev->out_devices;
+            cur_out_devices_l &= ~AUDIO_DEVICE_OUT_ALL;
+            pthread_mutex_lock(&adev->lock);
+            if(adev->call_start){
+                do_select_devices_l(adev,cur_out_devices_l);
+            }
+            pthread_mutex_unlock(&adev->lock);
+
+            ALOGD("modem_monitor assert:vbc_call_end_process");
+            vbc_call_end_process(adev,true);
+            ALOGD("modem asserted2");
+        }
+    }
+
+    return 0;
+}
+
+int vb_ctl_modem_monitor_open(void * arg)
+{
+    int rc;
+    pthread_t thread_id;
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)arg ;
+    ALOGD("vb_ctl_modem_monitor_open in");
+    if( !adev) {
+        ALOGD("vb_ctl_modem_monitor_open:error adev is null");
+        return -1;
+    }
+    rc = pthread_create((pthread_t *)&(thread_id), NULL,
+            vbc_ctl_modem_monitor_routine, (void *)adev);
+    if (rc) {
+        ALOGE("vb_ctl_modem_monitor_open,voip pthread_create failed, rc=%d", rc);
+        return -1;
+    }
+     ALOGE("vb_ctl_modem_monitor_open,voip pthread_create ok, rc=%d", rc);
+    return 0;
+}

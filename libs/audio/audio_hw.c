@@ -4523,6 +4523,9 @@ static int adev_open(const hw_module_t* module, const char* name,
 	goto ERROR;
 	}
 #endif
+
+vb_ctl_modem_monitor_open (adev);
+
 /*
 this is used to loopback test.
 */

@@ -399,7 +399,7 @@ rewrite:
 		start_rild(modem);
 
 		MODEMD_LOGD("restart mediaserver!");
-		property_set("ctl.restart", "media");
+        //property_set("ctl.restart", "media");
 	} else {
 		MODEMD_LOGD("start rild!");
 		start_rild(modem);
