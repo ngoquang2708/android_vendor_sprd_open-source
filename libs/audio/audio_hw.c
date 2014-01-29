@@ -872,7 +872,14 @@ static void do_select_devices(struct tiny_audio_device *adev)
     unsigned int i;
 
     if(adev->voip_state) {
-        ALOGI("do_select_devices in %x,but voip is on so skip",adev->out_devices);
+        int ret;
+        ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
+        ret = at_cmd_route(adev);  //send at command to cp
+        ALOGI("do_select_devices in %x,but voip is on so send at to cp out ret is %d",adev->out_devices,
+ret);
+        if (ret < 0) {
+            ALOGE("do_seletc devices at_cmd_route error(%d) ",ret);
+        }
         return;
     }
     if (adev->cache_mute == adev->master_mute) {
@@ -1375,10 +1382,6 @@ static int start_output_stream(struct tiny_stream_out *out)
         if((adev->out_devices &AUDIO_DEVICE_OUT_ALL) != out->devices) {
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
-        }
-        ret = at_cmd_route(adev);  //send at command to cp
-        if (ret < 0) {
-            ALOGE("start_output_stream at_cmd_route error(%d) ",ret);
         }
     }
     /* default to low power: will be corrected in out_write if necessary before first write to
