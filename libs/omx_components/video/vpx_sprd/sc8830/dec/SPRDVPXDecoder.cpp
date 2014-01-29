@@ -415,10 +415,7 @@ OMX_ERRORTYPE SPRDVPXDecoder::internalSetParameter(
             port->mDef.format.video.nSliceHeight = port->mDef.format.video.nFrameHeight;
             mWidth = port->mDef.format.video.nFrameWidth;
             mHeight = port->mDef.format.video.nFrameHeight;
-            //mCropWidth = mWidth;
-            //mCropHeight = mHeight;
             port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
-            //mPictureSize = port->mDef.nBufferSize;
         }
 
         return OMX_ErrorNone;
@@ -686,10 +683,13 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
             }
 
             if (buf_width != mWidth || buf_height != mHeight) {
+                ALOGI("%s, %d, mWidth: %d, mHeight: %d, buf_width: %d, buf_height: %d", __FUNCTION__, __LINE__, mWidth, mHeight, buf_width, buf_height);
                 mWidth = buf_width;
                 mHeight = buf_height;
 
                 updatePortDefinitions();
+
+                (*mVPXDecReleaseRefBuffers)(mHandle);
 
                 notify(OMX_EventPortSettingsChanged, 1, 0, NULL);
                 mOutputPortSettingsChange = AWAITING_DISABLED;
