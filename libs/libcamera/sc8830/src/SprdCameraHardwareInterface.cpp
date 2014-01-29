@@ -713,16 +713,15 @@ status_t SprdCameraHardware::waitSetParamsOK()
 status_t SprdCameraHardware::startRecording()
 {
 	status_t ret = NO_ERROR;
-	char * isZslSupport = (char *)mParameters.get("zsl-supported");;
+	char * isZslSupport = (char *)mParameters.get("zsl-supported");
 
 	LOGV("mLock:startRecording E.\n");
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
 	mRecordingTimeOffset = systemTime(SYSTEM_TIME_REALTIME) - systemTime();
-	//should wait the camera setPrameters OK to startRecording
+	/*should wait the camera setPrameters OK to startRecording*/
 	waitSetParamsOK();
 
-#if 1
 	if (isPreviewing()) {
 		if (camera_is_need_stop_preview()
 			|| ((0 == strcmp("true", isZslSupport)) && (1 != mParameters.getInt("zsl")))) {
@@ -742,9 +741,9 @@ status_t SprdCameraHardware::startRecording()
 			freePreviewMem();
 		}
 	}
-#endif
 	ret = startPreviewInternal(true);
 	LOGV("mLock:startRecording X.\n");
+
 	return ret;
 }
 
@@ -3353,7 +3352,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		deinitPreview();
 		return UNKNOWN_ERROR;
 	}
-	if (iSZslMode()) {
+	if (1 == mParameters.getInt("zsl")) {
 		set_ddr_freq("500000");
 		mSetFreqCount++;
 		deinitCapture();
@@ -3448,23 +3447,24 @@ void SprdCameraHardware::stopPreviewInternal()
 takepicture_mode SprdCameraHardware::getCaptureMode()
 {
 	Mutex::Autolock          paramLock(&mParamLock);
-	if (6 == mParameters.getInt("scene-mode")) {
-        mCaptureMode = CAMERA_HDR_MODE;
-    } else if ((1 == mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
+
+	if (0 == strcmp("hdr",mParameters.get_SceneMode()) && (1 != mParameters.getRecordingHint())) {
+		mCaptureMode = CAMERA_HDR_MODE;
+	} else if ((1 == mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
 		mCaptureMode = CAMERA_ZSL_CONTINUE_SHOT_MODE;
-    } else if ((1 != mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
+	} else if ((1 != mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
 		mCaptureMode = CAMERA_NORMAL_CONTINUE_SHOT_MODE;
-    } else if (1 == mParameters.getInt("zsl")) {
+	} else if (1 == mParameters.getInt("zsl")) {
 		mCaptureMode = CAMERA_ZSL_MODE;
-    } else if (1 != mParameters.getInt("zsl")) {
+	} else if (1 != mParameters.getInt("zsl")) {
 		mCaptureMode = CAMERA_NORMAL_MODE;
-    } else {
+	} else {
 		mCaptureMode = CAMERA_NORMAL_MODE;
-    }
+	}
 	if (1 == mCaptureRawMode) {
 		mCaptureMode = CAMERA_RAW_MODE;
 	}
-/*	mCaptureMode = CAMERA_HDR_MODE;*/
+
 	LOGI("cap mode %d.\n", mCaptureMode);
 
 	return mCaptureMode;
