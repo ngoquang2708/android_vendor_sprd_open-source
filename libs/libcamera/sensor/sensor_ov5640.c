@@ -594,12 +594,69 @@ LOCAL const SENSOR_REG_T ov5640_640X480_new[] = {
 	{0x3035, 0x11},		/* MIPI global timing*/
 	{0x3036, 0x46},		/* PCLK manual divider*/
 	{0x3037, 0x13},		/* SDE on, CMX on, AWB on*/
+	{0x3108, 0x01}, 	/* clock divider*/
 
 	{0x3406, 0x00},		/*awb auto*/
 
 	{0x3503, 0x00},		/* AEC/AGC on*/
 	{0x4202, 0x00},		/*kenxu add 20120207 for stream on*/
 };
+
+LOCAL const SENSOR_REG_T ov5640_1280X960_YUV[] = {
+	{0x4202, 0x0f}, 	/*kenxu add 20120207 for stream off*/
+	{SENSOR_WRITE_DELAY, 0x10},
+	{0x3c07, 0x08}, 	/* lightmeter 1 threshold[7:0]*/
+	{0x3820, 0x41}, 	/* flip*/
+	{0x3821, 0x07}, 	/* mirror*/
+	{0x3814, 0x31}, 	/* timing X inc*/
+	{0x3815, 0x31}, 	/* timing Y inc*/
+	{0x3800, 0x00}, 	/* HS*/
+	{0x3801, 0x00}, 	/* HS*/
+	{0x3802, 0x00}, 	/* VS*/
+	{0x3803, 0x04}, 	/* VS*/
+	{0x3804, 0x0a}, 	/* HW (HE)*/
+	{0x3805, 0x3f}, 	/* HW (HE)*/
+	{0x3806, 0x07}, 	/* VH (VE)*/
+	{0x3807, 0x9b}, 	/* VH (VE)*/
+	{0x3808, 0x05}, 	/* DVPHO*/
+	{0x3809, 0x00}, 	/* DVPHO*/
+	{0x380a, 0x03}, 	/* DVPVO*/
+	{0x380b, 0xc0}, 	/* DVPVO*/
+	{0x380c, 0x07}, 	/* HTS*/
+	{0x380d, 0x68}, 	/* HTS*/
+	{0x380e, 0x03}, 	/* VTS*/
+	{0x380f, 0xd8}, 	/* VTS*/
+	{0x3813, 0x06}, 	/* timing V offset*/
+	{0x3618, 0x00},
+	{0x3612, 0x29},
+	{0x3709, 0x52},
+	{0x370c, 0x03},
+	{0x3a02, 0x0b}, 	/* 60Hz max exposure, night mode 5fps*/
+	{0x3a03, 0x88}, 	/* 60Hz max exposure*/
+	{0x3a14, 0x0b}, 	/* 50Hz max exposure, night mode 5fps*/
+	{0x3a15, 0x88}, 	/* 50Hz max exposure*/
+	{0x4004, 0x02}, 	/* BLC line number*/
+	{0x3002, 0x1c}, 	/* reset JFIFO, SFIFO, JPG*/
+	{0x3006, 0xc3}, 	/* disable clock of JPEG2x, JPEG*/
+	{0x4713, 0x03}, 	/* JPEG mode 3*/
+	{0x4407, 0x04}, 	/* Quantization sacle*/
+	{0x460b, 0x35},
+	{0x460c, 0x22},
+	{0x4837, 0x22}, 	/* MIPI global timing*/
+	{0x3824, 0x01},		/* PCLK manual divider*/
+	{0x5001, 0xa3}, 	/* SDE on, CMX on, AWB on*/
+
+	{0x3034, 0x1a},
+	{0x3035, 0x11}, 	/* MIPI global timing*/
+	{0x3036, 0x46}, 	/* PCLK manual divider*/
+	{0x3037, 0x13}, 	/* SDE on, CMX on, AWB on*/
+	{0x3108, 0x01}, 	/* clock divider*/
+
+	//{0x3406, 0x00}, 	/*awb auto*/
+	//{0x3503, 0x00}, 	/* AEC/AGC on*/
+	{0x4202, 0x00}, 	/*kenxu add 20120207 for stream on*/
+};
+
 
 /*1280X960  YUV   Mode*/
 LOCAL const SENSOR_REG_T ov5640_1280X960[] = {
@@ -878,24 +935,25 @@ LOCAL const SENSOR_REG_T ov5640_2592X1944[] = {
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 12, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480_new), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200_YUV), 1600, 1200,  12, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_YUV), 1280, 960,  12, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200), 1600, 1200,  24, SENSOR_IMAGE_FORMAT_JPEG},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536), 2048, 1536, 24, SENSOR_IMAGE_FORMAT_JPEG},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_JPEG},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0}};
+	{PNULL, 0, 0, 0, 0, 0}
+};
 
 LOCAL SENSOR_TRIM_T s_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 640, 480, 68, 56, 0},
+	{0, 0, 1280, 960, 68, 56, 0},
 	{0, 0, 1600, 1200, 122, 42, 0},
 	{0, 0, 2048, 1536, 122, 42, 0},
 	{0, 0, 2592, 1944, 122, 42, 0},
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0}
 };
 
 
@@ -6955,7 +7013,7 @@ LOCAL const SENSOR_REG_BITS_T ov5640_iso_tab[][8] =
 	},
 	/*ISO 1600*/
 	{
-		{0x3a18, 0x02,0xff}, {0x3a19, 0xf8,0xff}, {0xffff, 0xff,0}
+		{0x3a18, 0x03,0xff}, {0x3a19, 0xf8,0xff}, {0xffff, 0xff,0}
 	}
 };
 
