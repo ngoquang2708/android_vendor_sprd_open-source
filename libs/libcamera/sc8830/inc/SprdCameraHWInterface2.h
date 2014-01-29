@@ -433,7 +433,7 @@ class RequestQueueThread : public SprdBaseThread{
 	Sprd_camera_state transitionState(Sprd_camera_state from,
 						Sprd_camera_state to,
 						state_owner owner,
-						bool lock = true);
+						bool lock = true,bool IsBroadcast = false);
 	void                            setCameraState(Sprd_camera_state state,
 								state_owner owner = STATE_CAMERA);
 	inline Sprd_camera_state        getCameraState()
