@@ -12,6 +12,7 @@ typedef enum
 {
     DIAG_AP_CMD_ADC  = 0x0001,
     DIAG_AP_CMD_LOOP,
+    DIAG_AP_CMD_FILE_OPER,
     MAX_DIAG_AP_CMD
 } DIAG_AP_CMD_E;
 

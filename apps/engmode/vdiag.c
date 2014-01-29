@@ -20,9 +20,9 @@
 int g_ass_start = 0;
 extern int g_assert_cmd;
 
-#define DATA_BUF_SIZE (4096*2)
+#define DATA_BUF_SIZE (4096*4)
 #define MAX_OPEN_TIMES  10
-#define DATA_EXT_DIAG_SIZE (4096*2)
+#define DATA_EXT_DIAG_SIZE (4096*4)
 
 static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
@@ -333,7 +333,7 @@ void *eng_vdiag_thread(void *x)
                     g_diag_status = ENG_DIAG_RECV_TO_AP;
                     memcpy(backup_data_buf,log_data,r_cnt);
                     backup_data_len = r_cnt; // not a diag framer, so send data to CP
-                }else if(DATA_EXT_DIAG_SIZE == ext_buf_len){
+                }else if(DATA_EXT_DIAG_SIZE/2 <= ext_buf_len){
                         ENG_LOG("%s: Current data is not a complete diag framer,but buffer is full\n", __FUNCTION__);
                         type = eng_diag_parse(ext_data_buf, ext_buf_len);
                         if(type != CMD_COMMON){
