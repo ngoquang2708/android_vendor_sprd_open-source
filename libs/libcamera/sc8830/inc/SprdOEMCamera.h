@@ -243,6 +243,7 @@ typedef enum {
 	CAMERA_EXIT_CB_FILE_SIZE_EXCEEDED, /* Specified file size not achieved,
 		                  encoded file written & returned anyway */
 	CAMERA_EXIT_CB_BUFFER,    /* A buffer is returned         */
+	CAMERA_EVT_CB_CAPTURE_FRAME_DONE,/*after captur frame, notify shutter*/
 	CAMERA_EVT_CB_SNAPSHOT_DONE,/*  Snapshot updated               */
 	CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE,
 	CAMERA_EVT_CB_FD,

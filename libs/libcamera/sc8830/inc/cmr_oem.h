@@ -66,6 +66,8 @@ extern "C"
 #define CMR_EVT_CAP_TX_DONE                          (CMR_EVT_CAP_BASE + 2)
 #define CMR_EVT_CAP_START_CAP                        (CMR_EVT_CAP_BASE + 3)
 #define CMR_EVT_CAP_RAW_TX_DONE                      (CMR_EVT_CAP_BASE + 4)
+#define CMR_EVT_CAP_FRAME_DONE                       (CMR_EVT_CAP_BASE + 5)
+#define CMR_EVT_CAP_COMPLETE_DONE                    (CMR_EVT_CAP_BASE + 6)
 
 #define CMR_EVT_CB_BASE                              (CMR_EVT_OEM_BASE + 0x800)
 #define CMR_EVT_CB_INIT                              (CMR_EVT_CB_BASE + 0)
@@ -370,6 +372,12 @@ struct camera_context {
 
 	int32_t                  set_flag;
 	sem_t                    set_sem;
+
+
+	pthread_t                cap_sub2_thread;
+	uint32_t                 cap_sub2_inited;
+	uint32_t                 cap_sub2_msg_queue_handle;
+	sem_t                    cap_sub2_sync_sem;
 
 	/*for preview*/
 	struct img_size          display_size;
