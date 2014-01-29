@@ -439,46 +439,46 @@ OMX_ERRORTYPE SPRDVPXDecoder::allocateBuffer(
     case OMX_DirOutput:
     {
 
-            MemoryHeapIon* pMem = NULL;
-            int phyAddr = 0;
-            int bufferSize = 0;
-            unsigned char* pBuffer = NULL;
-            OMX_U32 size64word = (size + 1024*4 - 1) & ~(1024*4 - 1);
+        MemoryHeapIon* pMem = NULL;
+        int phyAddr = 0;
+        int bufferSize = 0;
+        unsigned char* pBuffer = NULL;
+        OMX_U32 size64word = (size + 1024*4 - 1) & ~(1024*4 - 1);
 
-            if (mIOMMUEnabled) {
-                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-            } else {
-                pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-            }
+        if (mIOMMUEnabled) {
+            pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+        } else {
+            pMem = new MemoryHeapIon(SPRD_ION_DEV, size64word, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+        }
 
-            if(pMem->getHeapID() < 0) {
-                ALOGE("Failed to alloc outport pmem buffer");
+        if(pMem->getHeapID() < 0) {
+            ALOGE("Failed to alloc outport pmem buffer");
+            return OMX_ErrorInsufficientResources;
+        }
+
+        if (mIOMMUEnabled) {
+            if(pMem->get_mm_iova(&phyAddr, &bufferSize)) {
+                ALOGE("get_mm_iova fail");
                 return OMX_ErrorInsufficientResources;
             }
-
-            if (mIOMMUEnabled) {
-                if(pMem->get_mm_iova(&phyAddr, &bufferSize)) {
-                    ALOGE("get_mm_iova fail");
-                    return OMX_ErrorInsufficientResources;
-                }
-            } else {
-                if(pMem->get_phy_addr_from_ion(&phyAddr, &bufferSize)) {
-                    ALOGE("get_phy_addr_from_ion fail");
-                    return OMX_ErrorInsufficientResources;
-                }
+        } else {
+            if(pMem->get_phy_addr_from_ion(&phyAddr, &bufferSize)) {
+                ALOGE("get_phy_addr_from_ion fail");
+                return OMX_ErrorInsufficientResources;
             }
+        }
 
-            pBuffer = (unsigned char*)(pMem->base());
-            BufferPrivateStruct* bufferPrivate = new BufferPrivateStruct();
-            bufferPrivate->pMem = pMem;
-            bufferPrivate->phyAddr = phyAddr;
-            bufferPrivate->bufferSize = bufferSize;
-            ALOGI("allocateBuffer, allocate buffer from pmem, pBuffer: 0x%x, phyAddr: 0x%x, size: %d", pBuffer, phyAddr, bufferSize);
+        pBuffer = (unsigned char*)(pMem->base());
+        BufferPrivateStruct* bufferPrivate = new BufferPrivateStruct();
+        bufferPrivate->pMem = pMem;
+        bufferPrivate->phyAddr = phyAddr;
+        bufferPrivate->bufferSize = bufferSize;
+        ALOGI("allocateBuffer, allocate buffer from pmem, pBuffer: 0x%x, phyAddr: 0x%x, size: %d", pBuffer, phyAddr, bufferSize);
 
-            SprdSimpleOMXComponent::useBuffer(header, portIndex, appPrivate, bufferSize, pBuffer, bufferPrivate);
-            delete bufferPrivate;
+        SprdSimpleOMXComponent::useBuffer(header, portIndex, appPrivate, bufferSize, pBuffer, bufferPrivate);
+        delete bufferPrivate;
 
-            return OMX_ErrorNone;
+        return OMX_ErrorNone;
     }
 
     default:
@@ -768,7 +768,7 @@ bool SPRDVPXDecoder::drainAllOutputBuffers() {
 
     while (!outQueue.empty() && mEOSStatus != OUTPUT_FRAMES_FLUSHED) {
 
-        if (0){//((*mVPXDecGetLastDspFrm)(mHandle, &pBufferHeader) ) {
+        if ((*mVPXDecGetLastDspFrm)(mHandle, &pBufferHeader) ) {
             ALOGI("%s, %d, VPXDecGetLastDspFrm, pBufferHeader: 0x%x", __FUNCTION__, __LINE__, pBufferHeader);
             List<BufferInfo *>::iterator it = outQueue.begin();
             while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader && it != outQueue.end()) {
@@ -834,6 +834,7 @@ void SPRDVPXDecoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
 
 void SPRDVPXDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
     if(portIndex == OMX_DirOutput) {
+        ALOGI("%s, %d", __FUNCTION__, __LINE__);
         (*mVPXDecReleaseRefBuffers)(mHandle);
     }
 }
@@ -980,7 +981,7 @@ bool SPRDVPXDecoder::openDecoder(const char* libName) {
         mLibHandle = NULL;
         return false;
     }
-#if 0
+
     mVPXDecGetLastDspFrm = (FT_VPXDecGetLastDspFrm)dlsym(mLibHandle, "VP8DecGetLastDspFrm");
     if(mVPXDecGetLastDspFrm == NULL) {
         ALOGE("Can't find VPXDecGetLastDspFrm in %s",libName);
@@ -988,7 +989,7 @@ bool SPRDVPXDecoder::openDecoder(const char* libName) {
         mLibHandle = NULL;
         return false;
     }
-#endif
+
     return true;
 }
 
