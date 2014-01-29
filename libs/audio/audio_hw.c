@@ -1383,6 +1383,7 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
         }
+        select_devices_signal(adev);
     }
     /* default to low power: will be corrected in out_write if necessary before first write to
      * tinyalsa.
