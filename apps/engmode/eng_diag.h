@@ -186,7 +186,8 @@ typedef struct
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);
 void *eng_vlog_thread(void *x);
-void *eng_vdiag_thread(void *x);
+void *eng_vdiag_wthread(void *x);
+void *eng_vdiag_rthread(void *x);
 void * eng_sd_log(void * args);
 
 #endif

@@ -6,6 +6,7 @@
 #include <sys/resource.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <semaphore.h>
 #include "cutils/sockets.h"
 #include "cutils/properties.h"
 #include <private/android_filesystem_config.h>
@@ -14,37 +15,18 @@
 #include "engopt.h"
 #include "eng_at.h"
 #include "eng_sqlite.h"
+#include "eng_uevent.h"
 
 #define VLOG_PRI  -20
 #define SYS_CLASS_ANDUSB_ENABLE "/sys/class/android_usb/android0/enable"
 
+sem_t g_armlog_sem;
 extern void	disconnect_vbus_charger(void);
-
-// current run mode: TD or W
-int g_run_mode = ENG_RUN_TYPE_TD;
-
-// devices' at nodes for PC
-char* s_at_ser_path = "/dev/ttyGS0";
-
-// devices' diag nodes for PC
-char* s_connect_ser_path[] = {
-    "/dev/ttyS1", //uart
-    "/dev/vser", //usb
-    NULL
-};
-
-// devices' nodes for cp
-char* s_cp_pipe[] = {
-    "/dev/slog_td", //cp_td : slog_td
-    "/dev/slog_w", //cp_w
-    "/dev/slog_wcn", //cp_btwifi
-    NULL
-};
 
 static struct eng_param cmdparam = {
     .califlag = 0,
     .engtest = 0,
-    .cp_type = CP_TD,
+    .cp_type = ENG_RUN_TYPE_TD,
     .connect_type = CONNECT_USB,
     .nativeflag = 0
 };
@@ -193,13 +175,13 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         case 5:
                         case 7:
                         case 8:
-                            cmdvalue->cp_type = CP_TD;
+                            cmdvalue->cp_type = ENG_RUN_TYPE_TD;
                             break;
                         case 11:
                         case 12:
                         case 14:
                         case 15:
-                            cmdvalue->cp_type = CP_WCDMA;
+                            cmdvalue->cp_type = ENG_RUN_TYPE_WCDMA;
                             break;
                         default:
                             break;
@@ -218,7 +200,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                 }
             }else{
                 /*if not in calibration mode, use default */
-                cmdvalue->cp_type = CP_TD;
+                cmdvalue->cp_type = ENG_RUN_TYPE_TD;
                 cmdvalue->connect_type = CONNECT_USB;
             }
             /*engtest*/
@@ -248,88 +230,134 @@ static void eng_usb_enable(void)
     }
 }
 
-int main (int argc, char** argv)
+static int eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev, char* log_dev)
 {
-    static char atPath[ENG_DEV_PATH_LEN];
-    static char diagPath[ENG_DEV_PATH_LEN];
-    char cmdline[ENG_CMDLINE_LEN];
-    int opt;
-    int type;
-    int run_type = ENG_RUN_TYPE_TD;
-    eng_thread_t t1,t2;
+    int opt  = -1;
+    int type = -1;
 
-    while ( -1 != (opt = getopt(argc, argv, "t:a:d:"))) {
-        switch (opt) {
+    do {
+        opt = getopt(argc, argv, "t:a:d:l:");
+        if(-1 == opt)
+            continue;
+
+        switch(opt){
             case 't':
                 type = atoi(optarg);
-                switch(type) {
-                    case 0:
-                        run_type = ENG_RUN_TYPE_WCDMA; // W Mode
-                        break;
-                    case 1:
-                        run_type = ENG_RUN_TYPE_TD; // TD Mode
-                        break;
-                    case 2:
-                        run_type = ENG_RUN_TYPE_BTWIFI; // BT WIFI Mode
-                        break;
-                    default:
-                        ENG_LOG("engpcclient error run type: %d\n", run_type);
-                        return 0;
-                }
                 break;
-            case 'a': // AT port path
-                strcpy(atPath, optarg);
-                s_at_ser_path = atPath;
+            case 'a':
+                strcpy(at_dev, optarg);
                 break;
-            case 'd': // Diag port path
-                strcpy(diagPath, optarg);
-                s_connect_ser_path[CONNECT_USB] = diagPath;
+            case 'd':
+                strcpy(diag_dev, optarg);
+                break;
+            case 'l':
+                strcpy(log_dev, optarg);
                 break;
             default:
-                exit(EXIT_FAILURE);
+                break;
         }
+    }while(-1 != opt);
+
+    return type;
+}
+
+static void eng_get_modem_int(int type, char* at_chan, char* diag_chan, char* log_chan)
+{
+    switch(type){
+        case ENG_RUN_TYPE_WCDMA:
+            property_get("ro.modem.w.diag", diag_chan, "not_find");
+            property_get("ro.modem.w.tty", at_chan, "not_find");
+            break;
+        case ENG_RUN_TYPE_TD:
+            property_get("ro.modem.t.diag", diag_chan, "not_find");
+            property_get("ro.modem.t.tty", at_chan, "not_find");
+            break;
+        case ENG_RUN_TYPE_LTE:
+            property_get("ro.modem.lte.diag", diag_chan, "not_find");
+            property_get("ro.modem.lte.tty", at_chan, "not_find");
+            break;
+        case ENG_RUN_TYPE_WCN:
+            property_get("ro.modem.wcn.diag", diag_chan, "not_find");
+            break;
+        default:
+            ENG_LOG("%s: Not find corresponding modem interface !\n", __FUNCTION__);
+            return;
     }
 
-    ENG_LOG("engpcclient runtype:%d, atPath:%s, diagPath:%s", run_type,
-            s_at_ser_path, s_connect_ser_path[CONNECT_USB]);
-
-    // Remember the run type for at channel's choice.
-    g_run_mode = run_type;
-
-    // Create the sqlite database for factory mode.
-    if(ENG_RUN_TYPE_BTWIFI != run_type){
-        eng_sqlite_create();
+    if(ENG_RUN_TYPE_WCN != type && 0 != strcmp(at_chan, "not_find")){
+        strcat(at_chan, "31"); // channel31 is reserved for eng at
     }
+}
+
+int main (int argc, char** argv)
+{
+    char cmdline[ENG_CMDLINE_LEN];
+    int run_type = ENG_RUN_TYPE_TD;
+    eng_thread_t t0,t1,t2,t3;
+    eng_dev_info_t dev_info = {{"/dev/ttyGS0", "/dev/vser", 0, 1}, {0, 0, 0}};
+
+    run_type = eng_get_usb_int(argc, argv, dev_info.host_int.dev_at,
+            dev_info.host_int.dev_diag, dev_info.host_int.dev_log);
+    ENG_LOG("engpcclient runtype:%d, atPath:%s, diagPath:%s, type: %d\n", run_type,
+            dev_info.host_int.dev_at, dev_info.host_int.dev_diag, dev_info.host_int.dev_type);
 
     // Get the status of calibration mode & device type.
     eng_parse_cmdline(&cmdparam);
-
-    if(cmdparam.califlag != 1){
-        cmdparam.cp_type = run_type;
-        // Check factory mode and switch device mode.
-        if(ENG_RUN_TYPE_BTWIFI != run_type){
-            eng_check_factorymode(0);
+    // Correct diag path and run type by cmdline.
+    if(1 == cmdparam.califlag){
+        run_type = cmdparam.cp_type;
+        if(CONNECT_UART == cmdparam.connect_type){
+            strcpy(dev_info.host_int.dev_diag, "/dev/ttyS1");
+            dev_info.host_int.dev_type = CONNECT_UART;
         }
-    }else{
-        // Enable usb enum
-        eng_usb_enable();
+    }
+
+    eng_get_modem_int(run_type, dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan,
+            dev_info.modem_int.log_chan);
+    ENG_LOG("eng_pcclient: modem at chan: %s, modem diag chan: %s\n",
+            dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan);
+
+    // Create the sqlite database for factory mode.
+    // FIX ME:temporarily check by ENG_RUN_TYPE_WCN/LTE
+    if(ENG_RUN_TYPE_WCN != run_type && ENG_RUN_TYPE_LTE != run_type){
+        eng_sqlite_create();
+        if(cmdparam.califlag != 1){
+            // Check factory mode and switch device mode.
+            eng_check_factorymode(0);
+        }else{
+            // Enable usb enum
+            eng_usb_enable();
+            // Initialize file for ADC
+            initialize_ctrl_file();
+        }
     }
 
     set_vlog_priority();
 
+    // Semaphore initialization
+    sem_init(&g_armlog_sem, 0, 0);
+
+    if(0 != eng_thread_create(&t0, eng_uevt_thread, NULL)){
+        ENG_LOG("uevent thread start error");
+    }
+
     // Create vlog thread for reading diag data from modem and send it to PC.
-    if (0 != eng_thread_create( &t1, eng_vlog_thread, &cmdparam)){
+    if (0 != eng_thread_create( &t1, eng_vlog_thread, &dev_info)){
         ENG_LOG("vlog thread start error");
     }
 
     // Create vdiag thread for reading diag data from PC, some data will be
     // processed by ENG/AP, and some will be pass to modem transparently.
-    if (0 != eng_thread_create( &t2, eng_vdiag_thread, &cmdparam)){
-        ENG_LOG("vdiag thread start error");
+    if (0 != eng_thread_create( &t2, eng_vdiag_wthread, &dev_info)){
+        ENG_LOG("vdiag wthread start error");
+    }
+
+    if (0 != eng_thread_create( &t3, eng_vdiag_rthread, &dev_info)){
+        ENG_LOG("vdiag rthread start error");
     }
 
     if(cmdparam.califlag != 1 || cmdparam.nativeflag != 1){
-        eng_at_pcmodem(run_type);
+        eng_at_pcmodem(&dev_info);
     }
 
     while(1){

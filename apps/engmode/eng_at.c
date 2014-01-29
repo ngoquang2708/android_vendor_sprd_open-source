@@ -8,17 +8,11 @@
 #include "eng_pcclient.h"
 #include "eng_cmd4linuxhdlr.h"
 
-// SIPC interfaces in AP linux for AT CMD
-static char *at_mux_devname[] = {
-    "/dev/stty_td31", // AT channel in TD mode
-    "/dev/stty_w31", // AT channel in W mode
-    NULL // BT/WIFI mode
-};
-
+static eng_dev_info_t* s_dev_info;
 static int at_mux_fd = -1;
 static int pc_fd=-1;
 
-static int start_gser()
+static int start_gser(char* ser_path)
 {
     struct termios ser_settings;
 
@@ -28,7 +22,7 @@ static int start_gser()
     }
 
     ENG_LOG("open serial\n");
-    pc_fd = open(s_at_ser_path,O_RDWR);
+    pc_fd = open(ser_path,O_RDWR);
     if(pc_fd < 0) {
         ENG_LOG("cannot open vendor serial\n");
         return -1;
@@ -52,6 +46,7 @@ static void *eng_readpcat_thread(void *par)
     char engbuf[ENG_BUFFER_SIZE];
     char databuf[ENG_BUFFER_SIZE];
     int i, offset_read, length_read, status;
+    eng_dev_info_t* dev_info = (eng_dev_info_t*)par;
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
@@ -66,7 +61,7 @@ read_again:
             if (len <= 0) {
                 ENG_LOG("%s: read length error %s",__FUNCTION__,strerror(errno));
                 sleep(1);
-                start_gser();
+                start_gser(dev_info->host_int.dev_at);
                 goto read_again;
             }else{
                 // Just send to modem transparently.
@@ -90,7 +85,7 @@ read_again:
             }
         }else{
             sleep(1);
-            start_gser();
+            start_gser(dev_info->host_int.dev_at);
         }
     }
     return NULL;
@@ -101,6 +96,7 @@ static void *eng_readmodemat_thread(void *par)
     int ret;
     int len;
     char engbuf[ENG_BUFFER_SIZE];
+    eng_dev_info_t* dev_info = (eng_dev_info_t*)par;
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
@@ -118,7 +114,7 @@ write_again:
                 if (ret <= 0) {
                     ENG_LOG("%s: write length error %s\n",__FUNCTION__,strerror(errno));
                     sleep(1);
-                    start_gser();
+                    start_gser(dev_info->host_int.dev_at);
                     goto write_again;
                 }
             }else{
@@ -129,25 +125,25 @@ write_again:
     return NULL;
 }
 
-int eng_at_pcmodem(int run_type)
+int eng_at_pcmodem(eng_dev_info_t* dev_info)
 {
     eng_thread_t t1,t2;
 
     ENG_LOG("%s",__func__);
 
-    start_gser();
+    start_gser(dev_info->host_int.dev_at);
 
-    at_mux_fd = open(at_mux_devname[run_type], O_RDWR);
+    at_mux_fd = open(dev_info->modem_int.at_chan, O_RDWR);
     if(at_mux_fd < 0){
-        ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, at_mux_devname[run_type],strerror(errno));
+        ENG_LOG("%s: open %s fail [%s]\n",__FUNCTION__, dev_info->modem_int.at_chan,strerror(errno));
         return -1;
     }
 
-    if (0 != eng_thread_create( &t1, eng_readpcat_thread, (void*)run_type)){
+    if (0 != eng_thread_create( &t1, eng_readpcat_thread, (void*)dev_info)){
         ENG_LOG("read pcat thread start error");
     }
 
-    if (0 != eng_thread_create( &t2, eng_readmodemat_thread, (void*)run_type)){
+    if (0 != eng_thread_create( &t2, eng_readmodemat_thread, (void*)dev_info)){
         ENG_LOG("read modemat thread start error");
     }
     return 0;

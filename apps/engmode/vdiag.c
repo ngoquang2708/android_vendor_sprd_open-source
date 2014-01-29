@@ -216,9 +216,9 @@ static void set_raw_data_speed(int fd, int speed)
     }
 }
 
-void *eng_vdiag_thread(void *x)
+void *eng_vdiag_wthread(void *x)
 {
-    int sipc_fd;
+    int modem_fd;
     int ser_fd;
     int r_cnt, w_cnt, offset;
     int has_processed = 0;
@@ -226,32 +226,24 @@ void *eng_vdiag_thread(void *x)
     int wait_cnt = 0;
     int type;
     int ret=0;
-    struct eng_param * param = (struct eng_param *)x;
-
-    if(param == NULL){
-        ALOGE("eng_vdiag invalid input\n");
-        return NULL;
-    }
-
-    if(param->califlag)
-        initialize_ctrl_file();
+    eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
 
     /*open usb/usart*/
-    ser_fd = eng_open_dev(s_connect_ser_path[param->connect_type], O_RDONLY);
+    ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_RDONLY);
     if(ser_fd < 0){
         ENG_LOG("eng_vdiag cannot open general serial\n");
         return NULL;
     }
 
-    if(param->connect_type == CONNECT_UART){
+    if(dev_info->host_int.dev_type == CONNECT_UART){
         set_raw_data_speed(ser_fd, 115200);
     }
 
-    /*open SIPC*/
+    /*open modem int*/
     do{
-        sipc_fd = open(s_cp_pipe[param->cp_type], O_WRONLY);
-        if(sipc_fd < 0) {
-            ENG_LOG("eng_vdiag cannot open %s, times:%d\n", s_cp_pipe[param->cp_type], wait_cnt);
+        modem_fd = open(dev_info->modem_int.diag_chan, O_WRONLY);
+        if(modem_fd < 0) {
+            ENG_LOG("eng_vdiag cannot open %s, times:%d\n", dev_info->modem_int.diag_chan, wait_cnt);
             if(wait_cnt++ >= MAX_OPEN_TIMES){
                 ENG_LOG("eng_vdiag cannot open SIPC, try times exceed the max open times\n");
                 close(ser_fd);
@@ -259,15 +251,15 @@ void *eng_vdiag_thread(void *x)
             }
             sleep(5);
         }
-    }while(sipc_fd < 0);
+    }while(modem_fd < 0);
 
  
     audio_total = calloc(1,sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng());
     if(!audio_total)
     {
-        ENG_LOG("eng_vdiag_thread malloc audio_total memory error\n");
-	 close(sipc_fd);
-	 close(ser_fd);
+        ENG_LOG("eng_vdiag_wthread malloc audio_total memory error\n");
+	    close(modem_fd);
+	    close(ser_fd);
         return NULL;
     }
     memset(audio_total, 0, sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng());
@@ -291,10 +283,10 @@ void *eng_vdiag_thread(void *x)
 
             wait_cnt = 0; //reset wait count
             do {
-                ser_fd = eng_open_dev(s_connect_ser_path[param->connect_type], O_RDONLY);
+                ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_RDONLY);
                 if(ser_fd < 0) {
                     ENG_LOG("eng_vdiag cannot open vendor serial: %s, error: %s\n",
-                            s_connect_ser_path[param->connect_type], strerror(errno));
+                            dev_info->host_int.dev_diag, strerror(errno));
                     sleep(1);
                 }else {
                     ENG_LOG("eng_vdiag reopen serial port success.\n");
@@ -303,7 +295,7 @@ void *eng_vdiag_thread(void *x)
 
                 if((++wait_cnt) > MAX_OPEN_TIMES) {
                     ENG_LOG("eng_vdiag serial port open times exceed the max open times !!!\n");
-                    close(sipc_fd);
+                    close(modem_fd);
                     return NULL;
                 }
             } while(ser_fd < 0);
@@ -374,7 +366,7 @@ void *eng_vdiag_thread(void *x)
 
         offset = 0; // reset offset value
         do {
-            w_cnt = write(sipc_fd, backup_data_buf + offset, backup_data_len);
+            w_cnt = write(modem_fd, backup_data_buf + offset, backup_data_len);
             if (w_cnt < 0) {
                 ENG_LOG("eng_vdiag no log data write:%d ,%s\n", w_cnt, strerror(errno));
                 continue;
@@ -385,7 +377,7 @@ void *eng_vdiag_thread(void *x)
             ENG_LOG("eng_vdiag: rcnt:%d, w_cnt:%d, offset:%d\n", r_cnt, w_cnt, offset);
         }while(backup_data_len >0);
     }
-    close(sipc_fd);
+    close(modem_fd);
     close(ser_fd);
     return 0;
 }

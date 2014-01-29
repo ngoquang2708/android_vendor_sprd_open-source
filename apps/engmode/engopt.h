@@ -99,11 +99,6 @@ extern "C" {
     };
 
     typedef enum{
-        CP_TD = 0,
-        CP_WCDMA ,
-    }eng_cp_type;
-
-    typedef enum{
         CONNECT_UART  = 0,
         CONNECT_USB,
         CONNECT_PIPE,

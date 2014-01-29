@@ -37,7 +37,8 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
                eng_testhardware.c \
                power.c \
                backlight.c \
-               eng_util.c
+               eng_util.c \
+               eng_uevent.c
 
 ifeq ($(strip $(BOARD_USE_SPRD_4IN1_GPS)),true)
 LOCAL_SRC_FILES     += sprd_gps_eut.c
