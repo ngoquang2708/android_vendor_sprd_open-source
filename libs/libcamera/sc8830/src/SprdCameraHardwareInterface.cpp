@@ -2741,7 +2741,8 @@ int SprdCameraHardware::releasePreviewFrame()
 {
 	int ret = 0;
 
-	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage
+		&& mPreviewWindow) {
 		int stride = 0;
 		uint32_t free_buffer_id = 0xffffffff;
 		buffer_handle_t *buffer_handle;
@@ -4020,6 +4021,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 {
 
 	void				*vaddr = NULL;
+	int				ret = 0;
 	Mutex::Autolock pwl(&mPreviewWindowLock);
 	Mutex::Autolock pbl(&mPrevBufLock);
 
@@ -4038,7 +4040,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 		buffer_handle_t 	*buf_handle = NULL;
 		int 				stride = 0;
-		int					ret = 0;
+
 		struct _dma_copy_cfg_tag dma_copy_cfg;
 		struct private_handle_t *private_h = NULL;
 		uint32_t dst_phy_addr = 0;
@@ -4100,12 +4102,22 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			camera_release_frame(id);
 			return true;
 		} else {
+			if (!mPreviewWindow) {
+				return false;
+			}
+
 			if (mIsDvPreview) {
-				mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
+				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
 										0, 0, SIZE_ALIGN(width), SIZE_ALIGN(height), &vaddr);
 			} else {
-				mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
+				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
 										0, 0, width, height, &vaddr);
+			}
+			if (0 != ret || NULL == vaddr) {
+				LOGE("%s: failed to lock buffer ret=%d, vaddr=0x%x id=%d",
+						__func__,ret,(int)vaddr, id);
+
+				return false;
 			}
 
 			mGrallocHal->unlock(mGrallocHal, *mPreviewBufferHandle[id]);
