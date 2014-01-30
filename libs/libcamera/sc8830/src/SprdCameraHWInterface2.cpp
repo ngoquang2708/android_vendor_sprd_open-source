@@ -1671,11 +1671,12 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 	    encode_location = false;
 	}
 	switch (cb) {
+	case CAMERA_EVT_CB_CAPTURE_FRAME_DONE:
+		HAL_LOGD("CAMERA_EVT_CB_CAPTURE_FRAME_DONE not proc");
+		break;
 	case CAMERA_EVT_CB_FLUSH:
 		HAL_LOGD("CAMERA_EVT_CB_FLUSH");
-		//#ifdef PREVIEW_USE_DCAM_BUF
 		flush_buffer(CAMERA_FLUSH_RAW_HEAP_ALL, 0,(void*)0,(void*)0,0);
-		//#endif
 		break;
 	case CAMERA_RSP_CB_SUCCESS:
 		if (GetOutputStreamMask() & STREAM_MASK_JPEG) {
@@ -3568,7 +3569,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 	case CAMERA_RSP_CB_SUCCESS:
 		transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
 					SPRD_PREVIEW_IN_PROGRESS,
-					STATE_PREVIEW, true);
+					STATE_PREVIEW, true, true);
 		break;
 
 	case CAMERA_EVT_CB_FRAME:
@@ -3592,7 +3593,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 	case CAMERA_EXIT_CB_FAILED:
 		HAL_LOGE("camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
 				parm4, getCameraStateStr(getPreviewState()));
-		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW,true);
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW, true, true);
 		//receiveCameraExitError();
 		break;
 	case CAMERA_EVT_CB_FLUSH:
@@ -3610,7 +3611,7 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 		}
 		break;
 	default:
-		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW,true);
+		transitionState(getPreviewState(), SPRD_ERROR, STATE_PREVIEW, true, true);
 		HAL_LOGE("unexpected cb %d for CAMERA_FUNC_START_PREVIEW.", cb);
 		break;
 	}
