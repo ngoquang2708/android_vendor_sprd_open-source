@@ -4929,9 +4929,13 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 		break;
 	case CAMERA_RSP_CB_SUCCESS:
 		LOGV("HandleTakePicture: CAMERA_RSP_CB_SUCCESS");
-		transitionState(SPRD_INTERNAL_RAW_REQUESTED,
-					SPRD_WAITING_RAW,
-					STATE_CAPTURE);
+		if (SPRD_WAITING_RAW == getCaptureState()) {
+			LOGV("CAMERA_RSP_CB_SUCCESS has been called before, skip it");
+		} else {
+			transitionState(SPRD_INTERNAL_RAW_REQUESTED,
+						SPRD_WAITING_RAW,
+						STATE_CAPTURE);
+		}
 		break;
 	case CAMERA_EVT_CB_CAPTURE_FRAME_DONE:
 		LOGV("HandleTakePicture: CAMERA_EVT_CB_CAPTURE_FRAME_DONE");

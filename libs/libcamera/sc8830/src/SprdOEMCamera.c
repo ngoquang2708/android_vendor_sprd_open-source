@@ -2937,7 +2937,7 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 		}
 	}
 
-	g_cxt->skip_mode      = IMG_SKIP_HW;
+	g_cxt->skip_mode = IMG_SKIP_HW;
 
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
 		skip_number = g_cxt->sn_cxt.sensor_info->capture_skip_num;
@@ -4094,7 +4094,7 @@ int camera_v4l2_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info *da
 				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
 				camera_callback_start(&cb_info);
 			}
-		} else if (IS_CHN_BUSY(CHN_2)){
+		} else if (IS_CHN_BUSY(CHN_2) || IS_CHN_BUSY(CHN_0)){
 			ret = camera_capture_err_handle(evt_type);
 			if (ret) {
 				memset(&cb_info, 0, sizeof(camera_cb_info));
@@ -4322,6 +4322,7 @@ int camera_jpeg_codec_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 {
 	int                      ret = CAMERA_SUCCESS;
 	camera_cb_info           cb_info;
+	struct img_frm           *frm;
 
 	CMR_LOGV("status %d, evt 0x%x, data 0x%x",
 		g_cxt->jpeg_cxt.jpeg_state, evt_type, (uint32_t)data);
@@ -4353,6 +4354,35 @@ int camera_jpeg_codec_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 	case CMR_JPEG_DEC_ERR:
 		CMR_LOGE("jpeg codec dec error.");
 
+		if (IMG_ROT_0 == g_cxt->cap_rot) {
+			if (CAP_SIM_ROT) {
+				frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].cap_yuv;
+			} else if (NO_SCALING) {
+				frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg;
+			} else {
+				frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg;
+			}
+		} else {
+			frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].cap_yuv;
+		}
+		ret = camera_save_to_file(333,
+			IMG_DATA_TYPE_JPEG,
+			g_cxt->picture_size.width,
+			g_cxt->picture_size.height,
+			&frm->addr_vir);
+
+		if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
+			camera_jpeg_specify_notify_done(CAMERA_FAILED);
+		}
+		ret = camera_capture_err_handle(evt_type);
+		if (ret) {
+			memset(&cb_info, 0, sizeof(camera_cb_info));
+			cb_info.cb_type = CAMERA_EXIT_CB_FAILED;
+			cb_info.cb_func = CAMERA_FUNC_TAKE_PICTURE;
+			camera_callback_start(&cb_info);
+		}
+
+/*
 		g_cxt->err_code = -CAMERA_FAILED;
 		if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
 			camera_jpeg_specify_notify_done(CAMERA_FAILED);
@@ -4362,6 +4392,7 @@ int camera_jpeg_codec_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 			cb_info.cb_func = CAMERA_FUNC_TAKE_PICTURE;
 			camera_callback_start(&cb_info);
 		}
+*/
 		break;
 
 	}
@@ -6242,8 +6273,6 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 
 	CMR_PRINT_TIME;
 	camera_post_cap_frame_done_msg();
-
-
 
 	if ((IMG_ROT_0 != g_cxt->cap_rot) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 != g_cxt->cfg_cap_rot))) {
 		if (IMG_ROT_0 != g_cxt->cfg_cap_rot && IMG_ROT_180 != g_cxt->cfg_cap_rot) {
