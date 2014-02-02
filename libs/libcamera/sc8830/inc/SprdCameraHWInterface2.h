@@ -73,6 +73,7 @@ namespace android {
 #define SUBSTREAM_TYPE_JPEG         (1)
 #define SUBSTREAM_TYPE_RECORD       (2)
 #define SUBSTREAM_TYPE_PRVCB        (3)
+#define SUBSTREAM_TYPE_ZSL          (4)
 #define FLASH_STABLE_WAIT_TIMEOUT        (10)
 
 #define SIG_WAITING_TICK            (5000)
@@ -123,7 +124,6 @@ typedef struct substream_parameters {
             uint32_t                usage;
             int                     numSvcBuffers;
 			int                     dataSize;//get encode jpeg size
-            int                     numOwnSvcBuffers;
             buffer_handle_t         svcBufHandle[NUM_MAX_CAMERA_BUFFERS];
             uint32_t                subStreamAddVirt[NUM_MAX_CAMERA_BUFFERS];
 			int                     subStreamGraphicFd[NUM_MAX_CAMERA_BUFFERS];//previewCbAddPhy
@@ -380,6 +380,15 @@ class RequestQueueThread : public SprdBaseThread{
 	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
 	static int Callback_FreeCapturePmem(void* handle);
     bool                 allocateCaptureMem(void);
+	status_t			initCapMem(void);
+	void				initStreamParam(int type, uint32_t width, uint32_t height, const camera2_stream_ops_t *stream_ops,
+							uint32_t stream_id, uint32_t format_actual, uint32_t usage, int bufInHal, int unDeqBuf,int totalBuf = 4);
+	void				enqeueMetaDataBufFrmHalToFramework(camera_metadata_t *metData);
+	bool				prvFrmCbCheckPrvIsProc(camera_frame_type *frame);
+	#ifndef PREVIEW_USE_DCAM_BUF
+	bool				streamDeqNewBuf(stream_parameters_t *stream, int *IndexRet);
+	void				streamPushQAndReleaseFrm(stream_parameters_t *stream);
+	#endif
 	int                 ConstructProduceReq(camera_metadata_t **request,bool sizeRequest);
 	void                freeCaptureMem();
 	void				freePreviewMem(int num);
@@ -395,6 +404,7 @@ class RequestQueueThread : public SprdBaseThread{
 	void                SetSensorTimeStamp(camera_req_info *reqInfo, int64_t timestamp);
 	capture_intent      GetCameraCaptureIntent(camera_req_info *reqInfo);
 	void                SetCameraCaptureIntent(camera_req_info *reqInfo, capture_intent intent);
+	void				SetCameraZoomRect(cropZoom *crop);
 	takepicture_mode    GetCameraPictureMode();
 	void                SetCameraPictureMode(takepicture_mode mode);
 	int32_t             GetOutputStreamMask();
@@ -402,6 +412,7 @@ class RequestQueueThread : public SprdBaseThread{
     bool                GetStartPreviewAftPic();
 	void                SetStartPreviewAftPic(bool IsPicPreview);
 	void                Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
+	void                Camera2ProcessReq( camera_req_info *srcreq);
 	int                CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
 	status_t            Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
 	status_t            CamconstructDefaultRequest(SprdCamera2Info *camHal, int request_template,camera_metadata_t **request, bool sizeRequest);
@@ -424,7 +435,6 @@ class RequestQueueThread : public SprdBaseThread{
 	status_t            cancelPictureInternal(void);
 	void                deinitPreview(void);
 	bool                iSZslMode(void);
-	int                 coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror, cam_size *preview_size, cropZoom *preview_rect);
 	void                PushReqQ(camera_metadata_t *reqInfo);
 	int              GetReqQueueSize();
 	camera_metadata_t *PopReqQ();
@@ -483,7 +493,7 @@ class RequestQueueThread : public SprdBaseThread{
 	bool                               m_reqIsProcess;
 	bool                               m_IsPrvAftPic;
 	bool                               m_recStopMsg;
-	bool                               m_dcDircToDvSnap;//for cts testVideoSnapshot start
+	bool                               m_dcDircToDvSnap;//for cts testVideoSnapshot
 	camera_metadata_t                   *m_halRefreshReq;
     static gralloc_module_t const*      m_grallocHal;
 
