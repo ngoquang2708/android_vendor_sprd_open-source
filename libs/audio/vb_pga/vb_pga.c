@@ -39,6 +39,7 @@ typedef struct {
     unsigned short adc_pga_gain_l;
     unsigned short adc_pga_gain_r;
     unsigned short pa_config;
+    unsigned short fm_pa_config;
     uint32_t fm_pga_gain_l;
     uint32_t fm_pga_gain_r;
     uint32_t dac_pga_gain_l;
@@ -80,8 +81,12 @@ static int  GetAudio_pga_nv(AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_ga
         | ((aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_DGAIN_INDEX]<<16) & 0xffff0000));  //18,19
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
     pga_gain_nv->pa_config = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_INTPA_GAIN_INDEX];    //45
-    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x vol_level:0x%x ",
-        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,pga_gain_nv->pa_config,vol_level);
+    pga_gain_nv->fm_pa_config =
+    aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX];//47
+    ALOGW("vb_pga.c %s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x, 0x%x(fm), vol_level:0x%x ",
+        __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,
+        pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,
+        pga_gain_nv->pa_config,pga_gain_nv->fm_pa_config,vol_level);
     return 0;
 }
 
@@ -91,6 +96,7 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
     int32_t lmode = 0;
     struct mixer *mixer = NULL;
     struct mixer_ctl *pa_config_ctl = NULL;
+    ALOGD("vb_pga.c  %s", __func__);
     if((NULL == aud_params_ptr) || (NULL == pga_gain_nv) || (NULL == pga)){
         ALOGE("%s aud_params_ptr or pga_gain_nv or audio_pga is NULL",__func__);
         return -1;
@@ -107,6 +113,7 @@ static int SetAudio_gain_4eng(struct audio_pga *pga, pga_gain_nv_t *pga_gain_nv,
     }
     pa_config_ctl = mixer_get_ctl_by_name(mixer, MIXER_CTL_INNER_PA_CONFIG);
     lmode = GetAudio_mode_number_from_nv(aud_params_ptr);
+    ALOGD("vb_pga.c  %s, mode: %d", __func__, lmode);
     if(0 == lmode){ //Headset
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_l,"linein-hp-l");
         audio_pga_apply(pga,pga_gain_nv->fm_pga_gain_r,"linein-hp-r");
