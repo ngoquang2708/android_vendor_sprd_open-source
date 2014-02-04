@@ -5264,7 +5264,7 @@ int camera_get_sensor_capture_mode(struct img_size* target_size, uint32_t *work_
 	for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
 		if (SENSOR_MODE_MAX != sn_info->sensor_mode_info[i].mode) {
 			if (sn_info->sensor_mode_info[i].image_format == SENSOR_IMAGE_FORMAT_JPEG &&
-				cpu_is(CPU_DOLPHIN1)) {
+				NEED_V4L2_POSTPOROCESS()) {
 				i = SENSOR_MODE_MAX;
 				break;
 			}
