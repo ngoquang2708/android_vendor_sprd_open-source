@@ -59,7 +59,11 @@ SPRDMP3Decoder::SPRDMP3Decoder(
       mEOSFlag(false),
       mSignalledError(false),
       mLibHandle(NULL),
-      mOutputPortSettingsChange(NONE) {
+      mOutputPortSettingsChange(NONE),
+      mMP3_ARM_DEC_Construct(NULL),
+      mMP3_ARM_DEC_Deconstruct(NULL),
+      mMP3_ARM_DEC_InitDecoder(NULL),
+      mMP3_ARM_DEC_DecodeFrame(NULL) {
     bool ret = false;
     ret = openDecoder("libomx_mp3dec_sprd.so");
     CHECK_EQ(ret, true);
