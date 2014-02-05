@@ -307,6 +307,7 @@ private:
 	bool                            getLcdSize(uint32_t *width, uint32_t *height);
 	status_t                        waitSetParamsOK();
 	bool                            switchBufferMode(uint32_t src, uint32_t dst);
+	status_t                        checkHDRParameter(SprdCameraParameters& params);
 
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera

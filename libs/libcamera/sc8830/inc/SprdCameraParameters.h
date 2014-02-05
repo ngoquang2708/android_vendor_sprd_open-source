@@ -46,6 +46,7 @@ public:
     ~SprdCameraParameters();
 
 	void setDefault(ConfigType config);
+	const char *getDefaultValue(ConfigType config, const char * const KEY) const;
 
 	int chekFocusAreas(int max_num) const;
 	void getFocusAreas(int *area, int *count);

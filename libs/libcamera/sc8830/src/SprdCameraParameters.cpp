@@ -156,6 +156,41 @@ void SprdCameraParameters::setDefault(ConfigType config)
 	}
 }
 
+const char *SprdCameraParameters::getDefaultValue(ConfigType config, const char * const KEY) const
+{
+	struct config_element *element = NULL;
+	int count = 0;
+	int i = 0;
+
+	switch (config) {
+	case kFrontCameraConfig:
+		element = sprd_front_camera_hardware_config;
+		count = kFrontCameraConfigCount;
+		break;
+
+	case kBackCameraConfig:
+		element = sprd_back_camera_hardware_config;
+		count = kBackCameraConfigCount;
+		break;
+	}
+
+
+	for (i=0; i<count; i++) {
+		if (0 == strcmp(element[i].key, KEY)) {
+			LOGV("got Default: key = %s, value = %s", element[i].key, element[i].value);
+			break;
+		}
+	}
+
+	if (i >= count) {
+		LOGW("can't found the default value return NULL");
+		return  NULL;
+	} else {
+		return element[i].value;
+	}
+
+}
+
 //return rectangle: (x1, y1, x2, y2, weight), the values are on the screen's coordinate
 void SprdCameraParameters::getFocusAreas(int *area, int *count)
 {

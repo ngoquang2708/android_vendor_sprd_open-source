@@ -1550,6 +1550,8 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		return BAD_VALUE;
 	}
 
+	checkHDRParameter((SprdCameraParameters&)params);
+
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
 	LOGV("flash_mode:%s.",flash_mode);
 	if (!flash_mode) {
@@ -1629,6 +1631,22 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	}
 	mParamLock.unlock();
 	usleep(10*1000);
+	return ret;
+}
+
+status_t SprdCameraHardware::checkHDRParameter(SprdCameraParameters& params)
+{
+	status_t ret =  NO_ERROR;
+	SprdCameraParameters::ConfigType configType;
+	const char* flash_support_value;
+
+
+	//check the scene HDR mode and set the flash mode
+	if (0 == strcmp("hdr",params.get_SceneMode())) {
+		LOGV("hdr enable - set flash-mode off");
+		params.setFlashMode("off");
+	}
+
 	return ret;
 }
 
