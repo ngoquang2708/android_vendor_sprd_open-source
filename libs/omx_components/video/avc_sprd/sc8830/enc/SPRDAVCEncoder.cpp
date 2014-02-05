@@ -144,7 +144,7 @@ inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
 }
 
 inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* outyuv,
-                    int32_t width, int32_t height) {
+                    int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 #define RGB2Y(_r, _g, _b) (((66 * (_r) + 129 * (_g) + 25 * (_b)) >> 8) + 16)
 #define RGB2CB(_r, _g, _b) (((-38 * (_r) - 74 * (_g) + 112 * (_b)) >> 8) + 128)
 #define RGB2CR(_r, _g, _b) (((112 * (_r) - 94 * (_g) - 18 * (_b)) >> 8) + 128)
@@ -152,17 +152,17 @@ inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* out
     uint32_t i, j;
     uint32_t *argb_ptr = (uint32_t *)inrgb;
     uint8_t *y_ptr = outyuv;
-    uint8_t *vu_ptr = outyuv + width * height;
+    uint8_t *vu_ptr = outyuv + width_dst * height_dst;
 
     if (NULL == inrgb || NULL == outyuv)
         return;
 
-    if (0 != (width & 1) || 0 != (height & 1))
+    if (0 != (width_org & 1) || 0 != (height_org & 1))
         return;
 
-    for (i=0; i<height; i+=2)
+    for (i=0; i<height_org; i+=2)
     {
-        for (j=0; j<width; j+=2)
+        for (j=0; j<width_org; j+=2)
         {
             uint8 y, cb, cr;
             int32 r, g, b;
@@ -190,29 +190,29 @@ inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* out
             y = RGB2Y(r, g, b);
             *(y_ptr + 1) = y;
 
-            argb = *(argb_ptr + width);
+            argb = *(argb_ptr + width_org);
             //abgr
             b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
             r = (argb >> 0) & 0xff;
             y = RGB2Y(r, g, b);
-            *(y_ptr + width) = y;
+            *(y_ptr + width_dst) = y;
 
-            argb = *(argb_ptr + width + 1);
+            argb = *(argb_ptr + width_org + 1);
 
             //abgr
             b = (argb >> 16) & 0xff;
             g = (argb >> 8) & 0xff;
             r = (argb >> 0) & 0xff;
             y = RGB2Y(r, g, b) ;
-            *(y_ptr + width + 1) = y;
+            *(y_ptr + width_dst + 1) = y;
 
             y_ptr += 2;
             argb_ptr += 2;
         }
 
-        y_ptr += width;
-        argb_ptr += width;
+        y_ptr += width_dst;
+        argb_ptr += width_org;
     }
 }
 
@@ -1125,7 +1125,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
                         ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-                        ConvertARGB888ToYUV420SemiPlanar((uint8_t*)vaddr, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                        ConvertARGB888ToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     } else {
                         memcpy(py, vaddr, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                     }
@@ -1170,7 +1170,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                 if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
                     ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-                    ConvertARGB888ToYUV420SemiPlanar(inputData, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                    ConvertARGB888ToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                 } else {
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                 }
