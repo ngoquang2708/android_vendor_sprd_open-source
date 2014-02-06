@@ -2772,6 +2772,7 @@ int SprdCameraHardware::releasePreviewFrame()
 			free_buffer_id = getPreviewBufferID(buffer_handle);
 			if (mPreviewCancelBufHandle[free_buffer_id]  == mPreviewBufferHandle[free_buffer_id]) {
 				mPreviewCancelBufHandle[free_buffer_id] = NULL;
+				LOGV("It's cancelled buf 0x%x, no need to release", free_buffer_id);
 			} else {
 				if (CAMERA_SUCCESS != camera_release_frame(free_buffer_id)) {
 					ret = -1;
@@ -4124,6 +4125,11 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 				return false;
 			}
 
+			if (!isRecordingMode()) {
+				if (releasePreviewFrame())
+					return false;
+			}
+
 			if (mIsDvPreview) {
 				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
 										0, 0, SIZE_ALIGN(width), SIZE_ALIGN(height), &vaddr);
@@ -4151,10 +4157,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			mCancelBufferEb[id] = 0;
 		}
 
-		if (!isRecordingMode()) {
-			if (releasePreviewFrame())
-				return false;
-		}
 
 	}
 	return true;

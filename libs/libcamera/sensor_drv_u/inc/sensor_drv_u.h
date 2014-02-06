@@ -747,6 +747,8 @@ int Sensor_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level);
 int Sensor_SetMode_WaitDone();
 int Sensor_set_calibration(uint32_t value);
 int Sensor_RegisterFlashCB(cmr_set_flash set_flash_cb);
+int Sensor_StreamCtrl(uint32_t on_off);
+
 #ifdef	 __cplusplus
 }
 #endif

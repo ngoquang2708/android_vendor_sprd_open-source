@@ -112,6 +112,9 @@ struct frm_info {
 	uint32_t                            length;
 	uint32_t                            free;
 };
+
+typedef int (*v4l2_stream_on)(uint32_t is_on);
+
 int cmr_v4l2_init(void);
 int cmr_v4l2_deinit(void);
 void cmr_v4l2_evt_reg(cmr_evt_cb  v4l2_event_cb);
@@ -128,6 +131,7 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index);
 int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 int cmr_v4l2_get_cap_time(uint32_t *sec, uint32_t *usec);
 int cmr_v4l2_flash_cb(uint32_t opt);
+int cmr_v4l2_stream_cb(v4l2_stream_on str_on);
 #ifdef __cplusplus
 }
 #endif

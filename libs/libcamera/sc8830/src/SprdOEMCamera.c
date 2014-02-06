@@ -477,6 +477,7 @@ int camera_v4l2_init(void)
 			goto exit;
 		}
 		cmr_v4l2_evt_reg(camera_v4l2_evt_cb);
+		cmr_v4l2_stream_cb(Sensor_StreamCtrl);
 		cxt->v4l2_state = V4L2_IDLE;
 		ctrl->v4l2_inited = 1;
 		for (i = 0; i < CHN_MAX; i++) {

@@ -84,6 +84,7 @@ static uint32_t           is_on = 0;
 static pthread_t          v4l2_thread;
 static uint32_t           chn_status[CHN_MAX];
 static int                chn_frm_num[CHN_MAX];
+static v4l2_stream_on     stream_on_cb = NULL;
 
 static int      cmr_v4l2_create_thread(void);
 static int      cmr_v4l2_kill_thread(void);
@@ -118,6 +119,7 @@ int cmr_v4l2_init(void)
 
 	ret = cmr_v4l2_create_thread();
 	v4l2_evt_cb = NULL;
+	stream_on_cb = NULL;
 	memset(chn_status, 0, sizeof(chn_status));
 	return ret;
 }
@@ -442,6 +444,9 @@ int cmr_v4l2_cap_start(uint32_t skip_num)
 		is_on = 1;
 		pthread_mutex_unlock(&status_mutex);
 	}
+	if (stream_on_cb) {
+		(*stream_on_cb)(1);
+	}
 exit:
 	CMR_LOGV("ret = %d.",ret);
 	return ret;
@@ -458,12 +463,15 @@ int cmr_v4l2_cap_stop(void)
 	pthread_mutex_unlock(&status_mutex);
 
 	ret = ioctl(fd, VIDIOC_STREAMOFF, &buf_type);
-	CMR_LOGV("streamoff done.");
 	for (i = 0; i < CHN_MAX; i ++) {
 		chn_status[i] = CHN_IDLE;
 	}
+	if (stream_on_cb) {
+		(*stream_on_cb)(0);
+	}
 
 exit:
+	CMR_LOGV("ret = %d.",ret);
 	return ret;
 }
 
@@ -777,6 +785,14 @@ int cmr_v4l2_flash_cb(uint32_t opt)
 	if (ret) {
 		CMR_LOGE("error");
 	}
+	return ret;
+}
+int cmr_v4l2_stream_cb(v4l2_stream_on str_on)
+{
+	int                      ret = 0;
+
+	stream_on_cb = str_on;
+
 	return ret;
 }
 

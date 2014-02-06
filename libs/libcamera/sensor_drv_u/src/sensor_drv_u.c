@@ -2218,7 +2218,6 @@ int _Sensor_SetMode(uint32_t mode)
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 		_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
 						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
-		_Sensor_StreamOn();/*stream on at last*/
 	}
 
 	return SENSOR_SUCCESS;
@@ -2297,6 +2296,18 @@ int _Sensor_StreamOn(void)
 	return err;
 }
 
+int Sensor_StreamCtrl(uint32_t on_off)
+{
+	int                      ret = 0;
+
+	if (on_off) {
+		ret = _Sensor_StreamOn();
+	} else {
+		ret = _Sensor_StreamOff();
+	}
+
+	return ret;
+}
 int Sensor_AutoFocusInit(void)
 {
 	int                      ret = 0;
