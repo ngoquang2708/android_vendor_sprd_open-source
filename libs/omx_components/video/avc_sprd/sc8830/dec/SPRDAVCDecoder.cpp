@@ -549,6 +549,12 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalSetParameter(
             mPictureSize = port->mDef.nBufferSize;
         }
 
+        if (!((mWidth <= 1280 && mHeight <= 720) || (mWidth <= 720 && mHeight <= 1280))) {
+            PortInfo *port = editPortInfo(kInputPortIndex);
+            if(port->mDef.nBufferSize < 384*1024)
+                port->mDef.nBufferSize = 384*1024;
+        }
+
         return OMX_ErrorNone;
     }
 
@@ -1006,9 +1012,10 @@ void SPRDAVCDecoder::drainOneOutputBuffer(int32_t picId, void* pBufferHeader) {
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
 
     List<BufferInfo *>::iterator it = outQueue.begin();
-    while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader) {
+    while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader && it != outQueue.end()) {
         ++it;
     }
+    CHECK((*it)->mHeader == (OMX_BUFFERHEADERTYPE*)pBufferHeader);
 
     BufferInfo *outInfo = *it;
     OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
@@ -1046,10 +1053,10 @@ bool SPRDAVCDecoder::drainAllOutputBuffers() {
         if (mHeadersDecoded &&
                 MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &pBufferHeader, &picId) ) {
             List<BufferInfo *>::iterator it = outQueue.begin();
-            while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader) {
+            while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader && it != outQueue.end()) {
                 ++it;
             }
-
+            CHECK((*it)->mHeader == (OMX_BUFFERHEADERTYPE*)pBufferHeader);
             outInfo = *it;
             outQueue.erase(it);
             outHeader = outInfo->mHeader;
