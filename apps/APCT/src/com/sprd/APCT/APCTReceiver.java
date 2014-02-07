@@ -162,13 +162,18 @@ public class APCTReceiver extends BroadcastReceiver
             if (fr != null)
             {
                 fr.write(buffer);
-                fr.close();
             }
-        }
-        catch (IOException e)
-        {
+        }catch (IOException e){
             Log.d(TAG, "+++APCT Cannot write /proc/benchMark/net_time");
             e.printStackTrace();
+        }finally {
+            try{
+                if (fr != null){
+                    fr.close();
+                }
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
