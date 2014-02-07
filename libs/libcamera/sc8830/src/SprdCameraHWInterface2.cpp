@@ -2717,6 +2717,7 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 	}
 	srcreq->isCropSet = false;
+	SetDcDircToDvSnap(false);
 }
 
 void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq)
