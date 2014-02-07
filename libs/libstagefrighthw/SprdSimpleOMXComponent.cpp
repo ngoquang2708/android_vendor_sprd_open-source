@@ -329,7 +329,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
             if (header->pPlatformPrivate != NULL) {
                 // This buffer's data was allocated by us.
                 if(portIndex == OMX_DirOutput) {
-                    delete[] header->pPlatformPrivate;
+                    delete[] (OMX_U8*)(header->pPlatformPrivate);
                     header->pPlatformPrivate = NULL;
                     header->pBuffer = NULL;
                 } else {
@@ -347,7 +347,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
                     MemoryHeapIon::Free_mm_iova((int)(pBufCtrl->bufferFd), (int)(pBufCtrl->phyAddr), (int)(pBufCtrl->bufferSize));
                 }
 
-                delete header->pOutputPortPrivate;
+                delete (BufferCtrlStruct*)(header->pOutputPortPrivate);
                 header->pOutputPortPrivate = NULL;
             }
 
@@ -464,7 +464,8 @@ void SprdSimpleOMXComponent::onMessageReceived(const sp<AMessage> &msg) {
                 if(pBufCtrl != NULL && pBufCtrl->iRefCount > 0) {
                     pBufCtrl->iRefCount--;
                 }
-                ALOGI("fillThisBuffer, buffer: 0x%x, header: 0x%x, iRefCount: %d",buffer, header,pBufCtrl->iRefCount);
+                if(pBufCtrl != NULL)
+                    ALOGI("fillThisBuffer, buffer: 0x%x, header: 0x%x, iRefCount: %d",buffer, header,pBufCtrl->iRefCount);
                 port->mQueue.push_back(buffer);
 
                 onQueueFilled(OMX_DirOutput);
