@@ -514,6 +514,7 @@ class RequestQueueThread : public SprdBaseThread{
     volatile camera_state           mCameraState;
 
     nsecs_t                         mRecordingTimeOffset;
+	int32_t                         mIsOutPutStream;
 };
 
 }; // namespace android

@@ -117,7 +117,8 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	        m_dcDircToDvSnap(false),
 	        m_halRefreshReq(NULL),
 	        mMiscHeapNum(0),
-            m_CameraId(cameraId)
+            m_CameraId(cameraId),
+            mIsOutPutStream(1)
 {
     int res = 0;
 
@@ -365,6 +366,9 @@ int SprdCameraHWInterface2::getInProgressCount()
 	   ProcNum++ ;
 	}
 	HAL_LOGV("ProcNum=%d.",ProcNum);
+	if (ProcNum == 0) {
+		mIsOutPutStream = 0;
+	}
     return ProcNum;
 }
 
@@ -2503,6 +2507,7 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		HAL_LOGD("Err para is NULL!");
 		return;
 	}
+	mIsOutPutStream = 1;
 	tmpMask = GetOutputStreamMask();
 	tmpIntent = GetCameraCaptureIntent(srcreq);
 	IsCapIntChange = GetDcDircToDvSnap();
@@ -3515,6 +3520,11 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	#ifndef PREVIEW_USE_DCAM_BUF
 	Mutex::Autolock lock(m_stopPrvFrmCBMutex);
 	#endif
+	if (mIsOutPutStream == 0) {
+		res = camera_release_frame(frame->buf_id);
+		HAL_LOGE("wjp test return:%d",res);
+		return;
+	}
 	if (NULL == frame) {
 		HAL_LOGE("invalid frame pointer");
 		return;
