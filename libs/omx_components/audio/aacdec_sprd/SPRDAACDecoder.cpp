@@ -199,7 +199,7 @@ OMX_ERRORTYPE SPRDAACDecoder::internalGetParameter(
             pcmParams->eChannelMapping[1] = OMX_AUDIO_ChannelRF;
 
             if (!isConfigured()) {
-                pcmParams->nChannels = 1;
+                pcmParams->nChannels = 2;
                 pcmParams->nSamplingRate = 44100;
             } else {
                 pcmParams->nChannels = 2;
