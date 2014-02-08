@@ -5926,10 +5926,9 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		return ret;
 	}*/
 	_v4l2_postfix(data);
-	pthread_mutex_unlock(&g_cxt->prev_mutex);
-
 
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
+		pthread_mutex_unlock(&g_cxt->prev_mutex);
 		if(g_cxt->set_flag > 0){
 			camera_set_done(g_cxt);
 			g_cxt->set_flag--;
@@ -5945,6 +5944,7 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 		CMR_LOGV("Need rotate");
 		ret = camera_start_rotate(data);
 		camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
+		pthread_mutex_unlock(&g_cxt->prev_mutex);
 	}
 	pthread_mutex_lock(&g_cxt->recover_mutex);
 	if (g_cxt->recover_status) {

@@ -4126,8 +4126,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 			}
 
 			if (!isRecordingMode()) {
-				if (releasePreviewFrame())
-					return false;
+				releasePreviewFrame();
 			}
 
 			if (mIsDvPreview) {
