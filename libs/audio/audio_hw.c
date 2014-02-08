@@ -909,8 +909,6 @@ ret);
 	/* separate INPUT/OUTPUT case for some common bit used. */
         if ((adev->out_devices & adev->dev_cfgs[i].mask)
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
-                    adev->dev_cfgs[i].on_len);
         if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
             pthread_mutex_lock(&adev->lock);
@@ -927,6 +925,8 @@ ret);
             }
             pthread_mutex_unlock(&adev->lock);
         }
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+                    adev->dev_cfgs[i].on_len);
     }
 
 	if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
