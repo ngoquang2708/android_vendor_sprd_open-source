@@ -377,6 +377,11 @@ static void handle_dump_modem_memory(struct slog_info *info)
 	char cmddumpmemory[2]={'3',0x0a};
 
 	err_log("Start to dump %s memory.", info->name);
+	if( strncmp(info->name, "cp0", 3) && strncmp(info->name, "cp1", 3) && strncmp(info->name, "cp2", 3) )
+	{
+		err_log("info name error %s.", info->name);
+		return;
+	}
 write_cmd:
 	n = write(info->fd_device, cmddumpmemory, 2);
 	if (n <= 0) {
