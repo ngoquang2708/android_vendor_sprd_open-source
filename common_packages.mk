@@ -13,7 +13,7 @@ PRODUCT_PACKAGES += \
 	SprdQuickSearchBox \
         Carddav-Sync \
         Caldav-Sync.apk\
-        libsprd2000agent
+        libsprd_agps_agent
 #	libsprddm \
      
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
