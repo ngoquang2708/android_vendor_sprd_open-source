@@ -56,35 +56,25 @@ int mali_debug_level = 2;
 module_param(mali_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
 MODULE_PARM_DESC(mali_debug_level, "Higher number, more dmesg output");
 
-int gpuinfo_min_freq=0;
-module_param(gpuinfo_min_freq, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
-MODULE_PARM_DESC(gpuinfo_min_freq, "GPU min frequency");
+int gpu_cur_freq=0;
+module_param(gpu_cur_freq, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
+MODULE_PARM_DESC(gpu_cur_freq, "GPU gpu_cur_freq");
 
-int gpuinfo_max_freq=0;
-module_param(gpuinfo_max_freq, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
-MODULE_PARM_DESC(gpuinfo_max_freq, "GPU max frequency");
+#if MALI_ENABLE_GPU_CONTROL_IN_PARAM
+extern int gpufreq_min_limit;
+module_param(gpufreq_min_limit, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(gpufreq_min_limit, "GPU min_freq limit");
 
-int gpuinfo_transition_latency=0;
-module_param(gpuinfo_transition_latency, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
-MODULE_PARM_DESC(gpuinfo_transition_latency, "GPU transition latency");
+extern int gpufreq_max_limit;
+module_param(gpufreq_max_limit, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(gpufreq_max_limit, "GPU max_freq limit");
 
-int scaling_min_freq=0;
-module_param(scaling_min_freq, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
-MODULE_PARM_DESC(scaling_min_freq, "GPU scaling_min_freq");
-
-int scaling_max_freq=0;
-module_param(scaling_max_freq, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
-MODULE_PARM_DESC(scaling_max_freq, "GPU scaling_max_freq");
-
-int scaling_cur_freq=0;
-module_param(scaling_cur_freq, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
-MODULE_PARM_DESC(scaling_cur_freq, "GPU scaling_cur_freq");
+extern char* gpufreq_table;
+module_param(gpufreq_table, charp,S_IRUSR | S_IRGRP | S_IROTH ); /* r-r-r-- */
+MODULE_PARM_DESC(gpufreq_table, "GPU freq table");
+#endif
 
 int gpu_level=0;
-
-int mali_dfs_flag=0;
-module_param(mali_dfs_flag, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); /* rw-r-r-- */
-MODULE_PARM_DESC(mali_dfs_flag, "Enable/Disable mali DFS.");
 
 extern int mali_max_job_runtime;
 module_param(mali_max_job_runtime, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH);
