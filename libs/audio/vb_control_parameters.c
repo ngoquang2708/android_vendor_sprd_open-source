@@ -97,6 +97,7 @@ typedef struct {
     unsigned short  adc_pga_gain_l;
     unsigned short  adc_pga_gain_r;
     unsigned short  pa_config;
+    unsigned short  fm_pa_config;
     uint32_t        fm_pga_gain_l;
     uint32_t        fm_pga_gain_r;
     uint32_t        dac_pga_gain_l;
@@ -461,11 +462,15 @@ static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_p
     pga_gain_nv->fm_pga_gain_r  = pga_gain_nv->fm_pga_gain_l;
 
     pga_gain_nv->pa_config = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_INTPA_GAIN_INDEX];    //45
+    pga_gain_nv->fm_pa_config =
+    aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX];//47
+
     pga_gain_nv->out_devices = adev->out_devices;
     pga_gain_nv->in_devices = adev->in_devices;
 
-    ALOGW("%s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x  vol_level:0x%x ",
-            __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,pga_gain_nv->pa_config,vol_level);
+    ALOGW("vb_control_parameters.c %s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x pa_config:0x%x, 0x%x(fm),  vol_level:0x%x ",
+            __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,
+            pga_gain_nv->pa_config,pga_gain_nv->fm_pa_config,vol_level);
     return 0;
 }
 
@@ -557,7 +562,7 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     }else if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
-        mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, pga_gain_nv->pa_config);
+        mixer_ctl_set_value(adev->private_ctl.internal_pa, 0, pga_gain_nv->fm_pa_config);
     }else if((pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
         audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_l,"capture-l");
         audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_r,"capture-r");
@@ -1183,7 +1188,7 @@ RESTART:
     if (para->vbpipe_fd == -1) {
         para->vbpipe_fd = open(para->vbpipe, O_RDWR);//open("/dev/vbpipe6", O_RDWR);
         if (para->vbpipe_fd < 0) {
-            MY_TRACE("VBC_CMD_HAL_RESTART release vbc_lock, pipe_name:%s.", para->vbpipe);
+            MY_TRACE("vbc_ctrl_voip_thread_routine open fail, pipe_name:%s, %d.", para->vbpipe, errno);
             sleep(1);
             goto RESTART;
         } else {
@@ -1410,7 +1415,7 @@ RESTART:
     if (para->vbpipe_fd == -1) {
         para->vbpipe_fd = open(para->vbpipe, O_RDWR);//open("/dev/vbpipe6", O_RDWR);
         if (para->vbpipe_fd < 0) {
-            MY_TRACE("voice:VBC_CMD_HAL_RESTART try vbc_lock, pipe_name:%s.", para->vbpipe);
+            MY_TRACE("vbc_ctrl_thread_routine open fail, pipe_name:%s, %d.", para->vbpipe, errno);
             sleep(1);
             goto RESTART;
         } else {
