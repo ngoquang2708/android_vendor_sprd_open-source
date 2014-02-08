@@ -22,6 +22,7 @@ MALI_PP_SCHEDULER_FORCE_NO_JOB_OVERLAP_BETWEEN_APPS ?= 0
 MALI_UPPER_HALF_SCHEDULING ?= 1
 USING_PP_CORE ?= 2
 MALI_ENABLE_CPU_CYCLES ?= 0
+MALI_ENABLE_GPU_CONTROL_IN_PARAM ?= 1
 
 # For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
 # The ARM proprietary product will only include the license/proprietary directory
@@ -40,6 +41,12 @@ ifeq ($(wildcard $(src)/linux/license/gpl/*),)
     $(error Linux Device integration is incompatible with non-GPL license)
 else
     ccflags-y += -I$(src)/linux/license/gpl
+endif
+
+ifeq ($(CONFIG_MALI400),y)
+    MALI_ENABLE_GPU_CONTROL_IN_PARAM = 0
+else
+    MALI_ENABLE_GPU_CONTROL_IN_PARAM = 1
 endif
 
 mali-y += \
@@ -146,6 +153,7 @@ ccflags-y += -DMALI_OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB=$(OS_MEMORY_KERNEL_BUFFER
 ccflags-y += -DUSING_GPU_UTILIZATION=$(USING_GPU_UTILIZATION)
 ccflags-y += -DMALI_PP_CORE_NUMBER=$(USING_PP_CORE)
 ccflags-y += -DMALI_ENABLE_CPU_CYCLES=$(MALI_ENABLE_CPU_CYCLES)
+ccflags-y += -DMALI_ENABLE_GPU_CONTROL_IN_PARAM=$(MALI_ENABLE_GPU_CONTROL_IN_PARAM)
 
 ifeq ($(MALI_UPPER_HALF_SCHEDULING),1)
 	ccflags-y += -DMALI_UPPER_HALF_SCHEDULING

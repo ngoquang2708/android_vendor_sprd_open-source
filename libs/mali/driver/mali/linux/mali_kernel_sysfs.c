@@ -1212,8 +1212,104 @@ static const struct file_operations version_fops = {
 	.read = version_read,
 };
 
+#if MALI_ENABLE_GPU_CONTROL_IN_PARAM==0
+extern struct kobject *power_kobj;
+extern struct gpu_freq_table_data freq_table_data;
+extern int gpufreq_min_limit;
+extern int gpufreq_max_limit;
+
+static ssize_t gpufreq_min_limit_show(struct device *dev, struct device_attribute *attr,char *buf)
+{
+	sprintf(buf, "%d\n", gpufreq_min_limit);
+	return sizeof(int);
+}
+
+static ssize_t gpufreq_max_limit_show(struct device *dev, struct device_attribute *attr,char *buf)
+{
+	sprintf(buf, "%d\n", gpufreq_max_limit);
+	return sizeof(int);
+}
+
+static ssize_t gpufreq_min_limit_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count)
+{
+	int value=0,i=0;
+
+	if (kstrtos32(buf, 0, &value))
+		return -EINVAL;
+
+	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
+	{
+		if(value==freq_table_data.freq_tbl[i].frequency)
+		{
+			gpufreq_min_limit = value;
+			MALI_DEBUG_PRINT(3, ("set gpufreq_min_limit:%d\n",gpufreq_min_limit));
+			break;
+		}
+	}
+	return count;
+}
+
+static ssize_t gpufreq_max_limit_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count)
+{
+	int value=0,i=0;
+
+	if (kstrtos32(buf, 0, &value))
+		return -EINVAL;
+
+	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
+	{
+		if(value==freq_table_data.freq_tbl[i].frequency)
+		{
+			gpufreq_max_limit = value;
+			MALI_DEBUG_PRINT(3, ("set gpufreq_max_limit:%d\n",gpufreq_max_limit));
+			break;
+		}
+	}
+	return count;
+}
+
+static ssize_t gpufreq_table_show(struct device *dev, struct device_attribute *attr,char *buf)
+{
+	int i=0,len=0,size=0;
+
+	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
+	{
+		if(0!=freq_table_data.freq_tbl[i].frequency)
+		{
+			len=sprintf(buf,"%2d  %d\n", freq_table_data.freq_tbl[i].index, freq_table_data.freq_tbl[i].frequency);
+			buf += len;
+			size += len;
+		}
+	}
+	return size;
+}
+
+static DEVICE_ATTR(gpufreq_min_limit, S_IWUGO | S_IRUGO, gpufreq_min_limit_show, gpufreq_min_limit_store);
+static DEVICE_ATTR(gpufreq_max_limit, S_IWUGO | S_IRUGO, gpufreq_max_limit_show, gpufreq_max_limit_store);
+static DEVICE_ATTR(gpufreq_table, S_IWUGO | S_IRUGO, gpufreq_table_show, NULL);
+
+static struct attribute *g[] = {
+	&dev_attr_gpufreq_min_limit.attr,
+	&dev_attr_gpufreq_max_limit.attr,
+	&dev_attr_gpufreq_table.attr,
+	NULL,
+};
+
+static struct attribute_group attr_group = {
+	.attrs = g,
+};
+#endif
+
 int mali_sysfs_register(const char *mali_dev_name)
 {
+#if MALI_ENABLE_GPU_CONTROL_IN_PARAM==0
+	int ret=0;
+	ret=sysfs_create_group(power_kobj, &attr_group);
+	if(ret!=0)
+	{
+		MALI_DEBUG_PRINT(2, ("failed to create gpu limit in power sysfs\n"));
+	}
+#endif
 	mali_debugfs_dir = debugfs_create_dir(mali_dev_name, NULL);
 	if(ERR_PTR(-ENODEV) == mali_debugfs_dir) {
 		/* Debugfs not supported. */
