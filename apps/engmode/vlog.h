@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
     int get_ser_fd(void);
-    int restart_gser(void);
+    int restart_gser(int* fd, char* dev_path);
 
 #ifdef __cplusplus
 }

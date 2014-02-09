@@ -15,7 +15,7 @@
 #define ENG_ATDIAG_AT			"AT+SPBTWIFICALI="
 #define ENG_BUFFER_SIZE			2048
 #define ENG_CMDLINE_LEN			1024
-#define ENG_DEV_PATH_LEN        80
+#define ENG_DEV_PATH_LEN        260
 
 enum {
     ENG_CMDERROR = -1,
@@ -24,13 +24,30 @@ enum {
 };
 
 enum {
+    ENG_RUN_TYPE_WCDMA = 0,
     ENG_RUN_TYPE_TD,
-    ENG_RUN_TYPE_WCDMA,
-    ENG_RUN_TYPE_BTWIFI
+    ENG_RUN_TYPE_WCN,
+    ENG_RUN_TYPE_LTE,
+    ENG_RUN_TYPE_MAX
 };
 
-extern char* s_connect_ser_path[];
-extern char* s_cp_pipe[];
-extern char* s_at_ser_path;
+typedef struct eng_host_int {
+    char dev_at[ENG_DEV_PATH_LEN];
+    char dev_diag[ENG_DEV_PATH_LEN];
+    char dev_log[ENG_DEV_PATH_LEN];
+    int dev_type;
+    int cali_flag;
+}eng_host_int_t;
+
+typedef struct eng_modem_int {
+    char at_chan[ENG_DEV_PATH_LEN];
+    char diag_chan[ENG_DEV_PATH_LEN];
+    char log_chan[ENG_DEV_PATH_LEN];
+}eng_modem_int_t;
+
+typedef struct eng_dev_info {
+    eng_host_int_t host_int;
+    eng_modem_int_t modem_int;
+}eng_dev_info_t;
 
 #endif

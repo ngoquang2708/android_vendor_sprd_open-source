@@ -1,6 +1,8 @@
 #ifndef __ENG_AT_H__
 #define __ENG_AT_H__
 
+#include "eng_pcclient.h"
+
 typedef enum {
     ENG_AT_REQUEST_MODEM_VERSION                = 0,   //get version
     ENG_AT_REQUEST_IMEI                         = 1,    //get imei
@@ -85,6 +87,6 @@ typedef enum {
         ENG_AT_CMD_END,
 }ENG_AT_CMD;
 
-int eng_at_pcmodem(int run_type);
+int eng_at_pcmodem(eng_dev_info_t* dev_info);
 
 #endif /*__ENG_AT_H__*/

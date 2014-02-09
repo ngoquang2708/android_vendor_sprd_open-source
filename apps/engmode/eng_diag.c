@@ -55,6 +55,7 @@ extern void disable_calibration(void);
 extern void enable_calibration(void);
 extern void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes);
 extern void  nvstruct2stringfile(char* filename,void *para_ptr, int lenbytes);
+extern char* get_ser_diag_path(void);
 
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
@@ -145,7 +146,7 @@ static int eng_diag_write2pc(unsigned char* buf, unsigned int len)
     int error = 0;
 
     do{
-        fd = get_ser_fd();
+        fd = get_ser_diag_fd();
         error = 0;
         ret = write(fd,buf,len);
         if(ret < 0){
@@ -285,6 +286,7 @@ int eng_diag_user_handle(int type, char *buf,int len)
     MSG_HEAD_T head,*head_ptr=NULL;
     char rsp[512];
     int adc_rsp[8];
+    int fd = -1;
 
     memset(rsp, 0, sizeof(rsp));
     memset(adc_rsp, 0, sizeof(adc_rsp));
@@ -325,7 +327,7 @@ int eng_diag_user_handle(int type, char *buf,int len)
             // send a empty diag framer first.
             {
                 char emptyDiag[] = {0x7e,0x00,0x00,0x00,0x00,0x08,0x00,0xd5,0x00,0x7e};
-                write(get_ser_fd(), emptyDiag, sizeof(emptyDiag));
+                write(get_ser_diag_fd(), emptyDiag, sizeof(emptyDiag));
             }
             rlen = eng_diag_apcmd_hdlr(buf, len, rsp);
             break;
@@ -390,8 +392,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
     eng_diag_len = head.len+extra_len+2;
     ret = eng_diag_write2pc(eng_diag_buf, eng_diag_len);
     if ( ret<=0 ){
+        fd = get_ser_diag_fd();
         ENG_LOG("%s: write to pc failed \n", __FUNCTION__);
-        restart_gser();
+        restart_gser(&fd, get_ser_diag_path());
+        update_ser_diag_fd(fd);
     }
 
     if (g_reset){
@@ -650,6 +654,7 @@ int eng_diag(char *buf,int len)
     int type;
     int retry_time = 0;
     int ret_val = 0;
+    int fd = -1;
     char rsp[512];
     MSG_HEAD_T head,*head_ptr=NULL;
 
@@ -681,7 +686,9 @@ int eng_diag(char *buf,int len)
 write_again:
             ret = eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             if (ret <= 0) {
-                restart_gser();
+                fd = get_ser_diag_fd();
+                restart_gser(&fd, get_ser_diag_path());
+                update_ser_diag_fd();
                 if((++retry_time) <= 10){
                     goto write_again; // try 10 times.
                 }
