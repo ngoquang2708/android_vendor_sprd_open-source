@@ -36,7 +36,7 @@
         server=""
         password=""
         mmsc="http://mmsc.monternet.com"
-        type="default,mms,hipri,wap"
+        type="default,mms,hipri,supl,wap"
     />
     <apn carrier="CMWAP"
         mcc="460"
@@ -50,7 +50,7 @@
         server=""
         password=""
         mmsc="http://mmsc.monternet.com"
-        type="default,mms,hipri,wap"
+        type="default,mms,hipri,supl,wap"
     />
     <apn carrier="CMWAP"
         mcc="460"
@@ -64,7 +64,7 @@
         server=""
         password=""
         mmsc="http://mmsc.monternet.com"
-        type="default,mms,hipri,wap"
+        type="default,mms,hipri,supl,wap"
     />
     <apn carrier="CMNET"
         mcc="460"
@@ -73,7 +73,7 @@
         user=""
         server=""
         password=""
-        type="default,hipri"
+        type="default,hipri,supl"
     />
     <apn carrier="CMNET"
         mcc="460"
@@ -82,7 +82,7 @@
         user=""
         server=""
         password=""
-        type="default,hipri"
+        type="default,hipri,supl"
     />
      <apn carrier="CMNET"
         mcc="460"
@@ -91,7 +91,7 @@
         user=""
         server=""
         password=""
-        type="default,hipri"
+        type="default,hipri,supl"
     />
     <apn carrier="China Unicom 3G NET"
         mcc="460"
@@ -111,7 +111,7 @@
         user=""
         server=""
         password=""
-        type="default,hipri,wap"
+        type="default,hipri,supl,wap"
     />
     <apn carrier="China Unicom 3G MMS"
         mcc="460"
@@ -143,7 +143,7 @@
         user=""
         server=""
         password=""
-        type="default,hipri,wap"
+        type="default,hipri,supl,wap"
     />
     <apn carrier="China Unicom 3G MMS"
         mcc="460"
