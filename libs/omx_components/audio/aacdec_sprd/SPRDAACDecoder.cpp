@@ -200,7 +200,7 @@ OMX_ERRORTYPE SPRDAACDecoder::internalGetParameter(
 
             if (!isConfigured()) {
                 pcmParams->nChannels = 2;
-                pcmParams->nSamplingRate = 44100;
+                pcmParams->nSamplingRate = mSamplingRate;
             } else {
                 pcmParams->nChannels = 2;
                 pcmParams->nSamplingRate = mSamplingRate;
