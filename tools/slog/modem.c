@@ -164,7 +164,7 @@ static void handle_dump_modem_memory_from_proc(struct slog_info *info)
 		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log", current_log_path, top_logdir, info->name, info->name,
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	} else if(!strncmp(info->name, "cp2", 3)){
-		sprintf(buffer, "cat /proc/cptwcn/mem > %s/%s/%s/%s_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir, info->name, info->name,
+		sprintf(buffer, "cat /proc/cpwcn/mem > %s/%s/%s/%s_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir, info->name, info->name,
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 	if(buffer[0] != 0)
@@ -465,8 +465,6 @@ void *modem_log_handler(void *arg)
 		memset(ring_buffer_start, 0, MODEM_CIRCULAR_SIZE);
 	}
 #endif
-	if(slog_enable == SLOG_DISABLE)
-		return NULL;
 
 	info = stream_log_head;
 	FD_ZERO(&readset_tmp);
@@ -526,6 +524,9 @@ void *modem_log_handler(void *arg)
 
 	if(max == 0) {
 		err_log("modem all disabled!");
+#ifdef LOW_POWER_MODE
+		free(ring_buffer_start);
+#endif
 		return NULL;
 	}
 
