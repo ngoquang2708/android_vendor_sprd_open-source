@@ -324,9 +324,10 @@ void file_name_rotate(struct slog_info *info, int num, char *buffer)
 					err_log("asprintf return err!");
 					exit(0);
 				}
-				if (i + 1 > num)
+				if (i + 1 > num) {
 					remove(file1);
-				else {
+					free(file1);
+				} else {
 					sprintf(filename, "%s", p_dirent->d_name);
 					err = asprintf(&file0, "%s/%s/%s/%d%s", current_log_path, top_logdir, info->log_path, i + 1, filename + 1);
 					if(err == -1) {
@@ -401,6 +402,9 @@ char *parse_string(char *src, char c, char *token)
 void log_buffer_flush(void)
 {
 	struct slog_info *info;
+
+	if(slog_enable != SLOG_ENABLE)
+		return;
 
 	info = stream_log_head;
 	while(info){
