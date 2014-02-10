@@ -2385,12 +2385,10 @@ int camera_before_set_internal(enum restart_mode re_mode)
 	case RESTART_HEAVY:
 	case RESTART_MIDDLE:
 		if (RESTART_HEAVY == re_mode) {
-			g_cxt->stop_preview_mode = 1;
 			ret = camera_stop_preview_internal();
 			Sensor_Close(0);
 			CMR_LOGI("id:%d.",g_cxt->sn_cxt.cur_id);
 		} else {
-			g_cxt->stop_preview_mode = 0;
 			ret = camera_stop_preview_internal();
 		}
 		break;
@@ -2469,7 +2467,6 @@ int camera_after_set_internal(enum restart_mode re_mode)
 		ret = camera_preview_weak_init(g_cxt->preview_fmt, re_mode);
 		if (ret) {
 			if (CMR_V4L2_RET_RESTART == ret) {
-				g_cxt->stop_preview_mode = 1;
 				ret = camera_stop_preview_internal();
 				if (ret) {
 					CMR_LOGE("Failed to stop preview");
@@ -7946,12 +7943,6 @@ void camera_capture_step_statisic(void)
 		}
 	}
 	ALOGE("*********************Take picture statistic********End*******************");
-}
-
-void camera_set_stop_preview_mode(uint32_t stop_mode)
-{
-	g_cxt->stop_preview_mode = stop_mode;
-	CMR_LOGI("stop preview mode is %d.",stop_mode);
 }
 
 int camera_is_sensor_support_zsl(void)

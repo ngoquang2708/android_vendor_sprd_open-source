@@ -161,8 +161,6 @@ private:
 	sprd_camera_memory_t* GetPmem(int buf_size, int num_bufs);
 	void                  FreePmem(sprd_camera_memory_t* camera_memory);
 	void                  clearPmem(sprd_camera_memory_t* camera_memory);
-	void                  setFdmem(uint32_t size);
-	void                  FreeFdmem(void);
 	uint32_t              getPreviewBufferID(buffer_handle_t *buffer_handle);
 	void                  canclePreviewMem();
 	int                     releasePreviewFrame();
@@ -279,10 +277,7 @@ private:
 							const SprdCameraParameters& oriParams);
 	bool                            setCameraDimensions();
 	void                            setCameraPreviewMode(bool isRecordMode);
-	void                            changeEmcFreq(char flag);
-	void                            setPreviewFreq();
 	void                            set_ddr_freq(const char* freq_in_khz);
-	void                            restoreFreq();
 	bool                            displayOneFrame(uint32_t width,
 							          uint32_t height,
 							          uint32_t phy_addr, char *frame_addr,

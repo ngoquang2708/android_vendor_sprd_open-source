@@ -541,7 +541,6 @@ int camera_get_is_scale(void);
 int camera_dma_copy_data(struct _dma_copy_cfg_tag dma_copy_cfg);
 camera_ret_code_type camera_cfg_rot_cap_param_reset(void);
 int camera_get_is_nonzsl(void);
-void camera_set_stop_preview_mode(uint32_t stop_mode);
 int camera_is_sensor_support_zsl(void);
 
 

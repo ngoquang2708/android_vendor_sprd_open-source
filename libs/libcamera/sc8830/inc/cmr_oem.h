@@ -359,7 +359,6 @@ struct camera_context {
 	uint32_t                 prev_msg_que_handle;
 	uint32_t                 prev_inited;
 	sem_t                    prev_sync_sem;
-	uint32_t                 stop_preview_mode;
 	/* capture thread */
 	pthread_t                cap_thread;
 	pthread_t                cap_sub_thread;

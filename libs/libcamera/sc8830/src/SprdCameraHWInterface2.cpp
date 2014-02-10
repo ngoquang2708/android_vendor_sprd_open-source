@@ -2624,7 +2624,6 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 					}
 					if (camera_set_change_size(StreamParameter->width, StreamParameter->height, targetStreamParms->width, targetStreamParms->height) || IsCapIntChange) {
 						HAL_LOGV("need restart preview.");
-						camera_set_stop_preview_mode(1);
 						stopPreviewInternal();
 						IsSetPara = false;
 						SetStartPreviewAftPic(true);
@@ -2675,7 +2674,6 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 			if(GetCameraPictureMode() == CAMERA_NORMAL_MODE) {
 				if(mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS) {
 					m_Stream[STREAM_ID_PREVIEW]->setHalStopMsg(true);
-					camera_set_stop_preview_mode(0);
 					HAL_LOGD("stop preview bef picture");
 					stopPreviewSimple();
 				}
