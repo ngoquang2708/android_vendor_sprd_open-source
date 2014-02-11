@@ -41,9 +41,11 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 
 
 const int32_t jpegResolutionSensorBack[] = {
+#if  defined(CONFIG_CAMERA_ZSL_CAPTURE)
     2592, 1944,
     2048, 1536,
     1600, 1200,
+#endif
     1280,  960,
      720,  480,
      640,  480,
