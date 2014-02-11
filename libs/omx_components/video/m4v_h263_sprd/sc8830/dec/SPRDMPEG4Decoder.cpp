@@ -281,6 +281,7 @@ status_t SPRDMPEG4Decoder::initDecoder() {
             mPbuf_stream_v = (uint8 *)mPmem_stream->base();
             mPbuf_stream_p = phy_addr;
             mPbuf_stream_size = size;
+            ALOGI("pmem %p - %p - %d", mPbuf_stream_p, mPbuf_stream_v, mPbuf_stream_size);
         }
     }
 
@@ -1240,6 +1241,7 @@ int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int extra_mem_size) {
             mPbuf_extra_p = phy_addr;
             mPbuf_extra_size = buffer_size;
             mPbuf_extra_v = (uint8 *)mPmem_extra->base();
+            ALOGI("pmem %p - %p - %d", mPbuf_extra_p, mPbuf_extra_v, mPbuf_extra_size);
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) mPbuf_extra_v;
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)mPbuf_extra_p;
             extra_mem[HW_NO_CACHABLE].size = extra_mem_size;
