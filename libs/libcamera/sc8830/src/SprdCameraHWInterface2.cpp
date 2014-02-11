@@ -363,7 +363,7 @@ int SprdCameraHWInterface2::getInProgressCount()
 
 	ProcNum += m_ReqQueue.size();
 	if (SPRD_WAITING_RAW == getCaptureState() || SPRD_WAITING_JPEG == getCaptureState()) {
-	   ProcNum++ ;
+		ProcNum++ ;
 	}
 	HAL_LOGV("ProcNum=%d.",ProcNum);
 	if (ProcNum == 0) {
@@ -1507,6 +1507,10 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 
 void SprdCameraHWInterface2::HandleCancelPicture(camera_cb_type cb, int32_t parm4)
 {
+	if (SPRD_IDLE == getCaptureState()) {
+		HAL_LOGV("dont need to change capture state.");
+		return;
+	}
 	transitionState(SPRD_INTERNAL_CAPTURE_STOPPING,
 				SPRD_IDLE,
 				STATE_CAPTURE);
@@ -2668,6 +2672,9 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		encode_properties.format = CAMERA_JPEG;
 		encode_properties.file_size = 0x0;
 		camera_set_encode_properties(&encode_properties);
+		if (isCapturing()) {
+			WaitForCaptureDone();
+		}
 
 		if (mCameraState.capture_state == SPRD_INIT || mCameraState.capture_state == SPRD_IDLE) {
 			IsSetPara = false;
@@ -3278,7 +3285,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 		HAL_LOGE("ERR: haven't stream ops");
 		return 0;
 	}
-
+    HAL_LOGV("subStream=%d.",subStream);
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
     if (ret != NO_ERROR || buf == NULL) {
         HAL_LOGD("prvcb stream(%d) dequeue_buffer fail res(%d)",stream->m_index,  ret);
@@ -3302,6 +3309,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 	case STREAM_ID_JPEG:
 		{
 			camera2_jpeg_blob * jpegBlob = NULL;
+
 			memcpy((char *)(priv_handle->base),srcBufVirt, subParms->dataSize);
 			jpegBlob = (camera2_jpeg_blob*)((char *)(priv_handle->base) + (priv_handle->size - sizeof(camera2_jpeg_blob)));
 	        jpegBlob->jpeg_size = subParms->dataSize;
@@ -3520,7 +3528,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	#endif
 	if (mIsOutPutStream == 0) {
 		res = camera_release_frame(frame->buf_id);
-		HAL_LOGE("wjp test return:%d",res);
+		HAL_LOGE("return:%d",res);
 		return;
 	}
 	if (NULL == frame) {

@@ -74,6 +74,7 @@ struct camera_context        *g_cxt = &cmr_cxt;
 #define USE_SENSOR_OFF_ON_FOR_HDR    1
 
 #define	bzero(b, len)		memset((b), '\0', (len))
+#define WAIT_CAPTURE_PATH_TIME   1000 /*1s*/
 
 //camera_takepic_step timestamp
 enum CAMERA_TAKEPIC_STEP {
@@ -3068,6 +3069,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 					void                 *client_data,takepicture_mode cap_mode)
 {
 	CMR_MSG_INIT(message);
+	int 					 timeout_cnt = 0;
 	int                      ret = CAMERA_SUCCESS;
 
 	TAKE_PICTURE_STEP(CMR_STEP_TAKE_PIC);
@@ -3101,7 +3103,16 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 			ret = g_cxt->err_code;
 		}
 	} else {
-		if ((TAKE_PICTURE_NEEDED == camera_get_take_picture()) && IS_CHN_BUSY(CHN_2)) {
+		if (TAKE_PICTURE_NEEDED == camera_get_take_picture()) {
+			while(IS_CHN_IDLE(CHN_2)) {
+				usleep(10000);
+				timeout_cnt++;
+				CMR_LOGE("wait count %d",timeout_cnt);
+				if (timeout_cnt > WAIT_CAPTURE_PATH_TIME/10) {
+					ret = CAMERA_FAILED;
+					goto camera_take_picture_exit;
+				}
+			}
 			g_cxt->capture_status = CMR_CAPTURE;
 			g_cxt->chn_2_status = CHN_BUSY;
 			g_cxt->v4l2_cxt.waiting_cap_frame = 1;
@@ -3111,6 +3122,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type    callback,
 			CMR_LOGI("send post.");
 		}
 	}
+camera_take_picture_exit:
 	return ret;
 }
 
@@ -5978,8 +5990,13 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 	} else {
 		CMR_LOGV("Need rotate");
 		ret = camera_start_rotate(data);
-		camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
 		pthread_mutex_unlock(&g_cxt->prev_mutex);
+		if (CAMERA_SUCCESS == ret) {
+			camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
+		} else {
+			CMR_LOGV("Just skip this frame");
+			ret = 0;
+		}
 	}
 	pthread_mutex_lock(&g_cxt->recover_mutex);
 	if (g_cxt->recover_status) {
@@ -6619,6 +6636,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 
 	CMR_LOGV("index %d, bitstream size %d", g_cxt->jpeg_cxt.index, jpg_frm->addr_vir.addr_u);
 	/*camera_set_position(NULL,0,0);*/
+	camera_wait_takepic_callback(g_cxt);
 	TAKE_PICTURE_STEP(CMR_STEP_JPG_ENC_E);
 	TAKE_PICTURE_STEP(CMR_STEP_WR_EXIF_S);
 
@@ -6655,7 +6673,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	}
 
 	if (0 == ret) {
-		camera_wait_takepic_callback(g_cxt);
+	//	camera_wait_takepic_callback(g_cxt);
 		CMR_LOGV("take pic done. cap cnt %d, total_cnt %d, cap_mode %d", g_cxt->cap_cnt,
 			g_cxt->total_capture_num,
 			g_cxt->cap_mode);
@@ -7054,8 +7072,8 @@ int camera_start_rotate(struct frm_info *data)
 		CMR_LOGE("Call Rotation in preview");
 		if (IMG_CVT_ROTATING == g_cxt->rot_cxt.rot_state) {
 			CMR_LOGW("Last rotate not finished yet, drop this frame");
-			ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
-			return ret;
+			cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+			return -CAMERA_FAILED;
 		} else {
 			sem_wait(&g_cxt->rot_cxt.cmr_rot_sem);
 			frm_id = data->frame_id - CAMERA_PREV_ID_BASE;
