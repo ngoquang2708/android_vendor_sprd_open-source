@@ -3278,7 +3278,7 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 				af_param.param = SENSOR_EXT_FOCUS_CHECK_AF_GAIN;
 				ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t)&af_param);
 
-				if(af_param.is_need_focus_move) {
+				if(af_param.zone_cnt) {
 					pthread_mutex_lock(&s_p_sensor_cxt->cb_mutex);
 					(*s_p_sensor_cxt->sensor_event_cb)(CMR_SENSOR_FOCUS_MOVE, NULL);
 					pthread_mutex_unlock(&s_p_sensor_cxt->cb_mutex);

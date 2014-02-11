@@ -2631,7 +2631,7 @@ LOCAL uint32_t _ov5640_CheckAFGain(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	delta_gain = ABS((int32_t)cur_af_gain - (int32_t)s_af_gain);
 	//SENSOR_PRINT_HIGH("cur_af_gain %d, s_af_gain %d, delta_gain %d", cur_af_gain, s_af_gain, delta_gain);
 	if (delta_gain > FOCUS_MOVE_GAIN_CHECK && 0 != s_af_gain) {
-		ext_ptr->is_need_focus_move = 1;
+		ext_ptr->zone_cnt = 1;
 	}
 
 	s_af_gain = cur_af_gain;

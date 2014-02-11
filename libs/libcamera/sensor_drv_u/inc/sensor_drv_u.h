@@ -542,7 +542,7 @@ typedef struct _sensor_ext_fun_param_tag {
 	uint8_t param;
 	uint16_t zone_cnt;
 	SENSOR_RECT_T zone[FOCUS_ZONE_CNT_MAX];
-	uint8_t is_need_focus_move; //out pram, for caf
+	//uint8_t is_need_focus_move; //out pram, for caf
 } SENSOR_EXT_FUN_PARAM_T, *SENSOR_EXT_FUN_PARAM_T_PTR;
 
 typedef struct sensor_reg_tab_info_tag {
