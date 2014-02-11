@@ -1629,8 +1629,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		mPreviewFormat = 1;
 	} else if (strcmp(params.getPreviewFormat(), "rgb565") == 0) {
 		mPreviewFormat = 2;
-	}
-	else if (strcmp(params.getPreviewFormat(), "yuv420p") == 0) {
+	} else if (strcmp(params.getPreviewFormat(), "yuv420p") == 0) {
 		mPreviewFormat = 3;
 	} else {
 		LOGE("Onlyyuv422sp/yuv420sp/rgb565 preview is supported.\n");
@@ -4956,6 +4955,11 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 		LOGE("camera cb: autofocus failed");
 		if (mMsgEnabled & CAMERA_MSG_FOCUS)
 			mNotify_cb(CAMERA_MSG_FOCUS, 0, 0, mUser);
+		break;
+
+	case CAMERA_EVT_CB_FOCUS_MOVE:
+		LOGE("camera cb: focus moving  %d", parm4);
+		mNotify_cb(CAMERA_MSG_FOCUS_MOVE, parm4, 0, mUser);
 		break;
 
 	default:

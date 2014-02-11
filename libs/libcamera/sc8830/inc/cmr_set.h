@@ -36,6 +36,8 @@ enum cmr_focus_mode {
 	CAMERA_FOCUS_MODE_AUTO = 0,
 	CAMERA_FOCUS_MODE_AUTO_MULTI = 1,
 	CAMERA_FOCUS_MODE_MACRO = 2,
+	CAMERA_FOCUS_MODE_INFINITY = 3,
+	CAMERA_FOCUS_MODE_CAF =4,
 	CAMERA_FOCUS_MODE_MAX
 };
 
@@ -71,6 +73,7 @@ int camera_autofocus_init(void);
 int camera_autofocus(void);
 int camera_autofocus_start(void);
 int camera_autofocus_stop(uint32_t is_external);
+int camera_autofocus_start_light(void);
 int camera_set_ctrl(camera_parm_type id,
 			uint32_t          parm,
 			cmr_before_set_cb before_set,
@@ -86,7 +89,10 @@ int camera_isp_af_stat(void* data);
 int camera_isp_ae_stab(void* data);
 int camera_autofocus_quit(void);
 int camera_autofocus_need_exit(uint32_t *is_external);
+int camera_set_focusmove_flag(uint32_t is_done);
+uint32_t camera_is_focusmove_done(void);
 int camera_isp_alg_wait(void);
+int camera_get_af_mode(void);
 #ifdef __cplusplus
 }
 #endif

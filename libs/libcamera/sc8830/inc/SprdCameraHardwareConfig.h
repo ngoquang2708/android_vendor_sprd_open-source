@@ -15,7 +15,7 @@
  */
 #ifndef _SPRD_CAMERA_HARDWARE_CONFIG_H_
 #define _SPRD_CAMERA_HARDWARE_CONFIG_H_
-
+#include "cmr_oem.h"
 
 /* White balancing type, used for CAMERA_PARM_WHITE_BALANCING */
 enum {
@@ -169,11 +169,13 @@ enum {
 	CAMERA_EXPOSURW_COMPENSATION_MAX
 };
 
+#if 0
 enum {
 	CAMERA_FOCUS_MODE_AUTO = 0,
 	CAMERA_FOCUS_MODE_AUTO_MULTI = 1,
 	CAMERA_FOCUS_MODE_MACRO = 2,
 	CAMERA_FOCUS_MODE_INFINITY = 3,
+	CAMERA_FOCUS_MODE_CAF =4,
 	CAMERA_FOCUS_MODE_MAX
 };
 
@@ -184,6 +186,8 @@ enum {
 	CAMERA_FLASH_MODE_AUTO = 3,
 	CAMERA_FLASH_MODE_MAX
 };
+#endif
+
 
 enum {
 	CAMERA_RECORDING_FALSE = 0,
@@ -367,6 +371,7 @@ const struct str_map focus_mode_map[] = {
 	{"auto-multi",      CAMERA_FOCUS_MODE_AUTO_MULTI},
 	{"macro",           CAMERA_FOCUS_MODE_MACRO},
 	{"infinity",        CAMERA_FOCUS_MODE_INFINITY},
+	{"continuous-picture",CAMERA_FOCUS_MODE_CAF},
 	{NULL,              0}
 };
 
@@ -588,8 +593,13 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"sharpness", "3"},
 #endif
 #ifndef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
+#if	defined(CONFIG_CAMERA_CAF)
+	{"focus-mode-values", "auto,auto-multi,macro,continuous-picture"},
+	{"focus-mode", "continuous-picture"},
+#else
 	{"focus-mode-values", "auto,auto-multi,macro"},
 	{"focus-mode", "auto"},
+#endif
 	{"focus-distances", "2.0,2.5,3.75"},
 	{"max-num-focus-areas", "3"},
 #else

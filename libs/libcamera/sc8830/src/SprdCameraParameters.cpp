@@ -134,7 +134,11 @@ void SprdCameraParameters::setDefault(ConfigType config)
 	set("jpeg-thumbnail-width", "320");
 	set("jpeg-thumbnail-height", "240");
 	set("jpeg-thumbnail-quality", "80");
+#ifdef CONFIG_CAMERA_CAF
+	set("focus-mode", "continuous-picture");
+#else
 	set("focus-mode", "auto");
+#endif
 
 	switch (config) {
 	case kFrontCameraConfig:

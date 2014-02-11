@@ -188,7 +188,8 @@ typedef int  (*cmr_set_flash)(uint32_t opt);
 /*  isp param for raw  end */
 
 enum sensor_evt {
-	CMR_SENSOR_ERROR = CMR_EVT_SENSOR_BASE
+	CMR_SENSOR_ERROR = CMR_EVT_SENSOR_BASE,
+	CMR_SENSOR_FOCUS_MOVE
 };
 
 typedef enum {
@@ -345,6 +346,7 @@ typedef enum {
 	SENSOR_EXT_FOCUS_ZONE,
 	SENSOR_EXT_FOCUS_MULTI_ZONE,
 	SENSOR_EXT_FOCUS_MACRO,
+	SENSOR_EXT_FOCUS_CHECK_AF_GAIN, //for caf
 	SENSOR_EXT_FOCUS_MAX
 } SENSOR_EXT_FOCUS_CMD_E;
 
@@ -540,6 +542,7 @@ typedef struct _sensor_ext_fun_param_tag {
 	uint8_t param;
 	uint16_t zone_cnt;
 	SENSOR_RECT_T zone[FOCUS_ZONE_CNT_MAX];
+	uint8_t is_need_focus_move; //out pram, for caf
 } SENSOR_EXT_FUN_PARAM_T, *SENSOR_EXT_FUN_PARAM_T_PTR;
 
 typedef struct sensor_reg_tab_info_tag {

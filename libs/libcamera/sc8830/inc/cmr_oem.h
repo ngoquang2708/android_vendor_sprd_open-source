@@ -276,6 +276,7 @@ struct camera_settings {
 	uint32_t                 set_end;
 
 	uint32_t                 af_cancelled;
+	uint32_t                 caf_move_done;
 	uint8_t                  focus_zone_param[CAMERA_FOCUS_RECT_PARAM_LEN];
 	pthread_mutex_t          set_mutex;
 	sem_t                    isp_af_sem;

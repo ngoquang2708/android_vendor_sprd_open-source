@@ -31,6 +31,8 @@
 #define SENSOR_16_BITS_I2C                2
 #define SENSOR_CHECK_STATUS_INTERVAL      50000
 
+#define SENSOR_FOCUS_MOVE_INTERVAL        900000
+
 #define SENSOR_LOW_SIXTEEN_BIT            0xffff
 
 #ifndef SCI_TRUE
@@ -84,6 +86,8 @@ struct sensor_drv_context {
 	uint32_t                            is_calibration;
 	pthread_t                           monitor_thread;
 	uint32_t                            monitor_exit;
+	pthread_t                           focus_move_thread;
+	uint32_t                            focus_move_exit;
 	uint32_t                            stream_on;
 	SENSOR_INFO_T                       *sensor_list_ptr[SENSOR_ID_MAX];
 	SENSOR_INFO_T                       *sensor_info_ptr;
@@ -127,6 +131,8 @@ LOCAL int _Sensor_KillThread(void);
 LOCAL void* _Sensor_ThreadProc(void* data);
 LOCAL int   _Sensor_CreateMonitorThread(void);
 LOCAL int   _Sensor_KillMonitorThread(void);
+LOCAL int   _Sensor_CreateFocusMoveThread(void);
+LOCAL int   _Sensor_KillFocusMoveThread(void);
 LOCAL int _Sensor_AutoFocusInit(void);
 LOCAL int _Sensor_SetId(SENSOR_ID_E sensor_id);
 LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id);
@@ -1405,6 +1411,12 @@ LOCAL int _Sensor_DeviceInit()
 		CMR_LOGV("Failed to create sensor thread");
 		return ret;
 	}
+
+	ret = _Sensor_CreateFocusMoveThread();
+	if (ret) {
+		CMR_LOGV("Failed to create focus move dummy thread");
+	}
+
 	ret = _Sensor_CreateMonitorThread();
 	s_p_sensor_cxt->sensor_event_cb = NULL;
 
@@ -1421,6 +1433,7 @@ LOCAL int _Sensor_DeviceDeInit()
 		CMR_LOGV("SENSOR: _Sensor_DeviceDeInit is done, ret = %d \n", ret);
 	}
 	_Sensor_KillMonitorThread();
+	_Sensor_KillFocusMoveThread();
 	_Sensor_KillThread();
 
 	return 0;
@@ -3238,6 +3251,45 @@ LOCAL void* _Sensor_MonitorProc(void* data)
 	return NULL;
 }
 
+LOCAL void* _Sensor_FocusMoveProc(void* data)
+{
+	uint32_t                 ret = 0;
+	uint32_t                  gain_val = 0;
+	SENSOR_EXT_FUN_PARAM_T   af_param;
+
+	while (1) {
+		usleep(SENSOR_FOCUS_MOVE_INTERVAL);
+		if(s_p_sensor_cxt == NULL){
+			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
+			break;
+		}
+
+		if (s_p_sensor_cxt->focus_move_exit) {
+			s_p_sensor_cxt->focus_move_exit = 0;
+			CMR_LOGV("EXIT");
+			break;
+		} else {
+			if (SENSOR_IMAGE_FORMAT_RAW != s_p_sensor_cxt->sensor_info_ptr->image_format
+				&& CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()) {
+
+				/* check whether need focus move */
+				memset(&af_param, 0, sizeof(af_param));
+				af_param.cmd   = SENSOR_EXT_FOCUS_START;
+				af_param.param = SENSOR_EXT_FOCUS_CHECK_AF_GAIN;
+				ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t)&af_param);
+
+				if(af_param.is_need_focus_move) {
+					pthread_mutex_lock(&s_p_sensor_cxt->cb_mutex);
+					(*s_p_sensor_cxt->sensor_event_cb)(CMR_SENSOR_FOCUS_MOVE, NULL);
+					pthread_mutex_unlock(&s_p_sensor_cxt->cb_mutex);
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
 LOCAL int   _Sensor_CreateMonitorThread(void)
 {
 	int                      ret = 0;
@@ -3276,6 +3328,44 @@ LOCAL int _Sensor_KillMonitorThread(void)
 
 	return ret;
 }
+
+LOCAL int  _Sensor_CreateFocusMoveThread(void)
+{
+	int                      ret = 0;
+	pthread_attr_t           attr;
+
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	if (0 == s_p_sensor_cxt->focus_move_thread) {
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+		ret = pthread_create(&s_p_sensor_cxt->focus_move_thread, &attr, _Sensor_FocusMoveProc, NULL);
+		pthread_attr_destroy(&attr);
+	}
+
+	return ret;
+}
+
+LOCAL int _Sensor_KillFocusMoveThread(void)
+{
+	int                      ret = 0;
+	void                     *dummy;
+
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	if (s_p_sensor_cxt->focus_move_thread) {
+		s_p_sensor_cxt->focus_move_exit = 1;
+		while (1 == s_p_sensor_cxt->focus_move_exit) {
+			CMR_LOGW("Wait 10 ms");
+			usleep(10000);
+		}
+		ret = pthread_join(s_p_sensor_cxt->focus_move_thread, &dummy);
+		s_p_sensor_cxt->focus_move_thread = 0;
+	}
+
+	return ret;
+}
+
 
 LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id)
 {

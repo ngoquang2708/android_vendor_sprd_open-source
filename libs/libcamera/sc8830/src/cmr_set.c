@@ -1710,6 +1710,29 @@ exit:
 	return ret;
 }
 
+int camera_autofocus_start_light(void)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+	SENSOR_EXT_FUN_PARAM_T   af_param;
+	memset(&af_param,0,sizeof(af_param));
+
+	CMR_LOGV(" caf focus move start");
+	if (V4L2_SENSOR_FORMAT_RAWRGB != cxt->sn_cxt.sn_if.img_fmt) {
+		af_param.cmd   = SENSOR_EXT_FOCUS_START;
+		af_param.param = SENSOR_EXT_FOCUS_TRIG;
+		af_param.zone_cnt = 0;
+		ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) &af_param);
+	}
+
+	if (ret) {
+		ret = CAMERA_FAILED;
+	}
+
+	return ret;
+}
+
+
 int camera_autofocus_quit(void)
 {
 	int                      ret = CAMERA_SUCCESS;
@@ -1779,6 +1802,29 @@ int camera_autofocus_need_exit(uint32_t *is_external)
 		CMR_LOGV("af_cancelled val: 0x%x, 0x%x", cxt->cmr_set.af_cancelled, *is_external);
 	}
 	return ret;
+}
+
+int camera_set_focusmove_flag(uint32_t is_done)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+
+	pthread_mutex_lock(&cxt->cmr_set.set_mutex);
+	cxt->cmr_set.caf_move_done= is_done;
+	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
+
+	return CAMERA_SUCCESS;
+}
+
+uint32_t camera_is_focusmove_done(void)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t is_move_done;
+
+	pthread_mutex_lock(&cxt->cmr_set.set_mutex);
+	is_move_done = cxt->cmr_set.caf_move_done;
+	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
+
+	return is_move_done;
 }
 
 int camera_isp_ctrl_done(uint32_t cmd, void* data)
@@ -1941,6 +1987,13 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 	}
 	CMR_LOGI("video mode:%d.",*video_mode);
 	return ret;
+}
+
+int camera_get_af_mode(void)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+
+	return cxt->cmr_set.af_mode;
 }
 
 int camera_ae_enable(uint32_t param)

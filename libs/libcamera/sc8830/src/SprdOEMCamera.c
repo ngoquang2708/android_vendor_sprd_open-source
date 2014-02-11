@@ -3612,7 +3612,11 @@ void camera_sensor_evt_cb(int evt, void* data)
 	}
 
 	message.msg_type = evt;
+	if (CMR_SENSOR_FOCUS_MOVE == evt) {
+	ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
+	} else {
 	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+	}
 	if (ret) {
 		CMR_LOGE("Faile to send one msg to camera main thread");
 	}
@@ -4641,6 +4645,7 @@ void *camera_af_thread_proc(void *data)
 		switch (message.msg_type) {
 		case CMR_EVT_AF_INIT:
 			CMR_PRINT_TIME;
+			camera_set_focusmove_flag(0);
 			ret = camera_autofocus_init();
 			if (ret) {
 				CMR_LOGE("Failed, %d", ret);
@@ -4667,6 +4672,17 @@ void *camera_af_thread_proc(void *data)
 
 			}
 
+			if (camera_is_focusmove_done()) {
+				/*caf move done, return directly*/
+				CMR_LOGV("CAF move done already");
+				camera_call_af_cb((camera_cb_f_type)(message.data),
+					CAMERA_EXIT_CB_DONE,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_FOCUS,
+					0);
+				break;
+			}
+
 			pthread_mutex_lock(&g_cxt->af_cb_mutex);
 			ret = camera_autofocus_start();
 			pthread_mutex_unlock(&g_cxt->af_cb_mutex);
@@ -4686,6 +4702,28 @@ void *camera_af_thread_proc(void *data)
 				CAMERA_FUNC_START_FOCUS,
 				0);
 			CMR_PRINT_TIME;
+			break;
+
+		case CMR_SENSOR_FOCUS_MOVE:
+			if (IS_PREVIEW && CAMERA_FOCUS_MODE_CAF == camera_get_af_mode())
+			{
+				/*YUV sensor caf process, app need move and move done status*/
+				pthread_mutex_lock(&g_cxt->af_cb_mutex);
+				camera_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_FOCUS,
+					1);
+
+				camera_set_focusmove_flag(0);
+				ret = camera_autofocus_start_light();
+				camera_set_focusmove_flag(1);
+
+				camera_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_FOCUS,
+					0);
+				pthread_mutex_unlock(&g_cxt->af_cb_mutex);
+			}
 			break;
 
 		case CMR_EVT_AF_EXIT:
