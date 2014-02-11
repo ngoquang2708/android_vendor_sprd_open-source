@@ -4618,7 +4618,7 @@
     />
     <!-- @} -->
     <!-- France SFR -->
-    <apn carrier="SFR internet"
+    <apn carrier="SFR Internet"
         mcc="208"
         mnc="10"
         apn="wapsfr"
@@ -17622,9 +17622,8 @@
         user="vodafone"
         password="vodafone"
         type="default,supl"
-        authtype="3"
     />
-    <apn carrier="vodafone MMS"
+    <apn carrier="Vodafone MMS"
         mcc="268"
         mnc="01"
         apn="vas.vodafone.pt"
@@ -17634,9 +17633,8 @@
         password="vas"
         mmsc="http://mms/servlets/mms"
         type="mms"
-        authtype="3"
     />
-    <apn carrier="vodafone PT-MMS"
+    <apn carrier="Vodafone PT-MMS"
         mcc="268"
         mnc="01"
         apn="mms.vodafone.net"
@@ -17646,7 +17644,6 @@
         password="vas"
         mmsc="http://mms/servlets/mms"
         type="mms"
-        authtype="3"
     />
     <!-- Portugal Optimus -->
     <apn carrier="Optimus"
@@ -17659,7 +17656,6 @@
         password=""
         mmsc="http://mmsc:10021/mmsc"
         type="default,supl,mms"
-        authtype="3"
     />
     <!-- Portugal TMN -->
     <apn carrier="tmn internet"
@@ -17671,7 +17667,6 @@
         user=""
         password=""
         type="default,supl"
-        authtype="3"
     />
     <apn carrier="mms tmn"
         mcc="268"
@@ -17683,7 +17678,6 @@
         password="tmnnet"
         mmsc="http://mmsc"
         type="mms"
-        authtype="3"
     />
     <!-- Puerto Rico Claro -->
     <apn carrier="PR - Claro Web"
@@ -19290,6 +19284,13 @@
         mmsc="http://mms.telecable.es/mms/"
         type="mms"
     />
+    <!-- Spain DigiMobil -->
+    <apn carrier="Digi.mobil"
+        mcc="214"
+        mnc="22"
+        apn="internet"
+        type="default,supl"
+    />
     <!-- Sri Lanka Mobitel -->
     <apn carrier="Mobitel Internet"
         mcc="413"
@@ -20033,16 +20034,6 @@
         mnc="01"
         apn="internet"
         type="default,supl"
-        authtype="3"
-    />
-    <apn carrier="Turkcell Wap"
-        mcc="286"
-        mnc="01"
-        apn="wap"
-        proxy="212.252.234.168"
-        port="8080"
-        server="http://wap.turkcell.com.tr"
-        type="default,supl"
     />
     <apn carrier="Turkcell MMS"
         mcc="286"
@@ -20054,7 +20045,6 @@
         password="mms"
         mmsc="http://mms.turkcell.com.tr/servlets/mms"
         type="mms"
-        authtype="3"
     />
     <!-- Turkey Vodafone -->
     <apn carrier="Vodafone Internet"
@@ -20066,19 +20056,6 @@
         user="vodafone"
         password="vodafone"
         type="default,supl"
-        authtype="3"
-    />
-    <apn carrier="Vodafone Wap"
-        mcc="286"
-        mnc="02"
-        apn="internet"
-        proxy="212.65.136.226"
-        port="9401"
-        server="http://live.vodafone.com"
-        user="vodafone"
-        password="vodafone"
-        type="default,supl"
-        authtype="3"
     />
     <apn carrier="Vodafone MMS"
         mcc="286"
@@ -20088,9 +20065,8 @@
         mmsport="9401"
         user="vodafone"
         password="vodafone"
-        mmsc="http://217.31.233.18:6001/MMS1Servlet"
+        mmsc="http://217.31.233.18:6001/MM1Servlet"
         type="mms"
-        authtype="3"
     />
     <!-- Turkey Avea -->
     <apn carrier="Avea Internet"
@@ -20102,19 +20078,6 @@
         user=""
         password=""
         type="default,supl"
-        authtype="3"
-    />
-    <apn carrier="Avea Wap"
-        mcc="286"
-        mnc="03"
-        apn="wap"
-        proxy="213.161.151.201"
-        port="8080"
-        server="http://wap.avea.com.tr"
-        user="wap"
-        password=""
-        type="default,supl"
-        authtype="3"
     />
     <apn carrier="Avea MMS"
         mcc="286"
@@ -20126,31 +20089,6 @@
         password="mms"
         mmsc="http://mms.avea.com.tr/servlets/mms"
         type="mms"
-        authtype="3"
-    />
-    <!-- Turkey Aycell -->
-    <apn carrier="TR - Aycell Web"
-        mcc="286"
-        mnc="04"
-        apn="aycell"
-        proxy=""
-        port=""
-        user=""
-        password=""
-        type="default,supl"
-        authtype="1"
-    />
-    <apn carrier="TR - Aycell MMS"
-        mcc="286"
-        mnc="04"
-        apn=""
-        mmsproxy=""
-        mmsport=""
-        user=""
-        password=""
-        mmsc=""
-        type="mms"
-        authtype="1"
     />
     <!-- Tunisian Orange -->
     <apn carrier="TN - Orange Web"
@@ -22743,6 +22681,7 @@
         apn="3gwap"
         proxy="10.0.0.172"
         port="80"
+        type="default,supl"
     />
     <!-- SPRD：Add mcc=454,mnc=00/07 apn type @{ -->
     <apn carrier="CMCC DM"
