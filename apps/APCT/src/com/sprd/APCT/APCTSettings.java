@@ -118,12 +118,17 @@ public class APCTSettings extends Activity{
             if (fr != null)
             {
                 fr.write(buffer);
-                fr.close();
             }
-        }
-        catch (IOException e)
-        {
+        }catch (IOException e){
             e.printStackTrace();
+        }finally {
+            try{
+                if (fr != null){
+                    fr.close();
+                }
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

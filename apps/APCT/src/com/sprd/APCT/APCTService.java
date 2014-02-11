@@ -755,18 +755,20 @@ public class APCTService extends Service {
         FileWriter fr = null;
          try {
             fr = new FileWriter(BOOT_DATA_PROC, true);
-            try{
-                if (fr != null)
-                {
-                    fr.write(buffer);
-                }
-            }finally {
-                fr.close();
+            if (fr != null)
+            {
+                fr.write(buffer);
             }
-        }
-        catch (IOException e)
-        {
+        }catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            try{
+                if (fr != null){
+                    fr.close();
+                }
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
