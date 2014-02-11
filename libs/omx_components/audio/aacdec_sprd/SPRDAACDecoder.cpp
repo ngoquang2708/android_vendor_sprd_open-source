@@ -60,6 +60,12 @@ SPRDAACDecoder::SPRDAACDecoder(
       mNumSamplesOutput(0),
       mLibHandle(NULL),
       mSignalledError(false),
+      mAAC_MemoryFree(NULL),
+      mAAC_MemoryAlloc(NULL),
+      mAAC_DecInit(NULL),
+      mAAC_RetrieveSampleRate(NULL),
+      mAAC_FrameDecode(NULL),
+      mAAC_DecStreamBufferUpdate(NULL),
       mOutputPortSettingsChange(NONE) {
     bool ret = false;
     ret = openDecoder("libomx_aacdec_sprd.so");
