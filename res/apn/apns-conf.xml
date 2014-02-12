@@ -2015,8 +2015,7 @@
         server="http:// wap.google.com"
         type="default,supl"
     />
-    <!-- SPRD: Add Bangladesh Bangladesh 470/04 TT-MMS MMS message @{ -->
-    <apn carrier="RelianceMbWorld"
+    <apn carrier="TT-MMS"
         mcc="470"
         mnc="04"
         apn="MMS"
@@ -2024,7 +2023,6 @@
         mmsc="http://10.5.4.22:38090/was"
         type="mms"
     />
-    <!-- @} -->
     <!-- Bangladesh Airtel Ban -->
     <apn carrier="Airtel Internet BG"
         mcc="470"
@@ -5119,7 +5117,7 @@
         mmsc="mmsc11"
         mmsproxy="10.161.85.4"
         mmsport="8799"
-        type="default"
+        type="mms"
     />
     <!-- Greece Cosmote -->
     <apn carrier="Cosmote Wireless Internet"
@@ -16055,17 +16053,6 @@
         password="webgprs2002"
         type="default,supl"
     />
-    <apn carrier="Telcel WAP"
-        mcc="334"
-        mnc="02"
-        apn="wap.itelcel.com"
-        user="iesgprs"
-        password="iesgprs2002"
-        proxy="148.233.151.240"
-        port="8080"
-        server="http://www.telcel.com"
-        type="default,supl"
-    />
     <apn carrier="Telcel MMS"
         mcc="334"
         mnc="02"
@@ -16125,48 +16112,24 @@
         password="iusacellgsm"
         type="default,supl"
     />
-    <apn carrier="Iusacell/Unefon WAP"
-        mcc="334"
-        mnc="004"
-        apn="wap.iusacellgsm.mx"
-        user="iusacellgsm"
-        password="iusacellgsm"
-        proxy="192.200.1.40"
-        port="80"
-        server="http://www.iusacell3g.com"
-        type="default,supl"
-    />
     <apn carrier="Iusacell/Unefon MMS"
         mcc="334"
         mnc="004"
         apn="mms.iusacellgsm.mx"
-        mmsproxy="192.200.1.32"
-        mmsport="80"
+        mmsproxy="192.200.001.110"
+        mmsport="9201"
         mmsc="http://mms.iusacell3g.com/"
         user="mmsiusacellgsm"
         password="mmsiusacellgsm"
         type="mms"
     />
     <!-- Mexico Telcel -->
-    <!-- SPRD: Add Mexico 334/020 Telcel Internet's server is http://www.telcel.com @{ -->
     <apn carrier="Telcel Internet"
         mcc="334"
         mnc="020"
         apn="internet.itelcel.com"
         user="webgprs"
         password="webgprs2002"
-        server="http://www.telcel.com"
-        type="default,supl"
-    />
-    <!-- @} -->
-    <apn carrier="Telcel WAP"
-        mcc="334"
-        mnc="020"
-        apn="wap.itelcel.com"
-        user="iesgprs"
-        password="iesgprs2002"
-        proxy="148.233.151.240"
-        port="8080"
         server="http://www.telcel.com"
         type="default,supl"
     />
@@ -16190,23 +16153,13 @@
         password="iusacellgsm"
         type="default,supl"
     />
-    <apn carrier="Iusacell/Unefon WAP"
-        mcc="334"
-        mnc="005"
-        apn="wap.iusacellgsm.mx"
-        user="iusacellgsm"
-        password="iusacellgsm"
-        proxy="192.200.1.40"
-        port="80"
-        server="http://www.iusacell3g.com"
-        type="default,supl"
-    />
     <apn carrier="Iusacell/Unefon MMS"
         mcc="334"
         mnc="005"
         apn="mms.iusacellgsm.mx"
         mmsproxy="192.200.1.110"
         mmsport="9201"
+        mmsc="http://mms.iusacell3g.com/"
         user="mmsiusacellgsm"
         password="mmsiusacellgsm"
         type="mms"
@@ -16217,17 +16170,6 @@
         apn="web.iusacellgsm.mx"
         user="iusacellgsm"
         password="iusacellgsm"
-        type="default,supl"
-    />
-    <apn carrier="Iusacell/Unefon WAP"
-        mcc="334"
-        mnc="050"
-        apn="wap.iusacellgsm.mx"
-        user="iusacellgsm"
-        password="iusacellgsm"
-        proxy="192.200.1.40"
-        port="80"
-        server="http://www.iusacell3g.com"
         type="default,supl"
     />
     <apn carrier="Iusacell/Unefon MMS"
