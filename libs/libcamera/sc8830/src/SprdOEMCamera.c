@@ -3625,9 +3625,11 @@ void camera_sensor_evt_cb(int evt, void* data)
 
 	message.msg_type = evt;
 	if (CMR_SENSOR_FOCUS_MOVE == evt) {
-	ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
+		if (g_cxt->af_inited) {
+			ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
+		}
 	} else {
-	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
 	}
 	if (ret) {
 		CMR_LOGE("Faile to send one msg to camera main thread");
