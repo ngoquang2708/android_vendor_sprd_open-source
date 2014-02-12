@@ -17676,7 +17676,7 @@
         mmsport="8080"
         user="tmn"
         password="tmnnet"
-        mmsc="http://mmsc"
+        mmsc="http://mmsc/"
         type="mms"
     />
     <!-- Puerto Rico Claro -->
