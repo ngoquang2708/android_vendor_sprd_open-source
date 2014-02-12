@@ -532,7 +532,6 @@ void camera_direct_call_cb(camera_cb_type cb,
                  int32_t parm4);
 void camera_callback_start(camera_cb_info *cb_info);
 void *camera_get_client_data(void);
-int camera_set_fd_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
 int camera_set_change_size(uint32_t cap_width,uint32_t cap_height,uint32_t preview_width,uint32_t preview_height);
 int camera_get_preview_rect(int *rect_x, int *rect_y, int *rect_width, int *rect_height);
 camera_ret_code_type camera_take_picture_raw(camera_cb_f_type    callback,
