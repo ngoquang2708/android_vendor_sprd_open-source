@@ -512,7 +512,7 @@ static void *modemd_engcontrol_listen(void *par)
 		{
                   MODEMD_LOGD("%s:nengfds = 0 ,continue",__FUNCTION__);
                   sleep(1);
-                  continue ;
+                 continue ;
 		}
 	       tv.tv_sec = 0;
               tv.tv_usec = 1000000ll;
@@ -534,7 +534,11 @@ static void *modemd_engcontrol_listen(void *par)
 					}
 					if(countRead ==controlinfolen ||readnum <= 0 )
 					{
-						engpc_client_fd[i] = -1 ;
+                                          if(readnum <= 0)
+                                          {
+                                              close(engpc_client_fd[i]) ;
+                                              engpc_client_fd[i] = -1 ;
+                                          }
 					       property_get(MODEM_ENGCTRL_PRO,prop, "");
 					       if(!strcmp(prop,ENGPC_REQUSETY_CLOSE))
 						{
@@ -564,10 +568,7 @@ static void *modemd_engcontrol_thread(void *par)
 	pthread_t tid;
 	for(i=0; i<MAX_CLIENT_NUM; i++)
 		engpc_client_fd[i]=-1;
-
 	FD_ZERO(&engpcFds);
-
-
 	sfd = socket_local_server(MODEM_ENGCTRL_NAME,
 			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	if (sfd < 0) {
@@ -596,6 +597,7 @@ static void *modemd_engcontrol_thread(void *par)
 				MODEMD_LOGD("%s: client array is full, just fill %d to client[%d]",
 						__FUNCTION__, n, i);
 				engpc_client_fd[i]=n;
+                            break;
 			}
 		}
 	}
