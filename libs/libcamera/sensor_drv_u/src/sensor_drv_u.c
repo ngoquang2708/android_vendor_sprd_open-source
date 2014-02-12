@@ -1412,12 +1412,6 @@ LOCAL int _Sensor_DeviceInit()
 		return ret;
 	}
 
-	ret = _Sensor_CreateFocusMoveThread();
-	if (ret) {
-		CMR_LOGV("Failed to create focus move dummy thread");
-	}
-
-	ret = _Sensor_CreateMonitorThread();
 	s_p_sensor_cxt->sensor_event_cb = NULL;
 
 	return ret;
@@ -1432,8 +1426,6 @@ LOCAL int _Sensor_DeviceDeInit()
 		s_p_sensor_cxt->fd_sensor = -1;
 		CMR_LOGV("SENSOR: _Sensor_DeviceDeInit is done, ret = %d \n", ret);
 	}
-	_Sensor_KillMonitorThread();
-	_Sensor_KillFocusMoveThread();
 	_Sensor_KillThread();
 
 	return 0;
@@ -2118,6 +2110,13 @@ init_exit:
 				CMR_LOGI("free s_p_sensor_cxt.");
 			}
 		}
+	} else {
+		ret_val = _Sensor_CreateFocusMoveThread();
+		if (ret_val) {
+			CMR_LOGV("Failed to create focus move dummy thread");
+		}
+
+		ret_val = _Sensor_CreateMonitorThread();
 	}
 	CMR_LOGV("2 init OK!");
 	return ret_val;
@@ -2424,6 +2423,9 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
+
+	_Sensor_KillMonitorThread();
+	_Sensor_KillFocusMoveThread();
 
 	_Sensor_StreamOff();
 	_Sensor_Device_MIPI_deinit();

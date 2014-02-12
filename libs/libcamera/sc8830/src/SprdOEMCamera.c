@@ -4686,7 +4686,8 @@ void *camera_af_thread_proc(void *data)
 
 			}
 
-			if (camera_is_focusmove_done()) {
+			if (CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()
+				&& camera_is_focusmove_done()) {
 				/*caf move done, return directly*/
 				CMR_LOGV("CAF move done already");
 				camera_call_af_cb((camera_cb_f_type)(message.data),
@@ -4723,7 +4724,7 @@ void *camera_af_thread_proc(void *data)
 			{
 				/*YUV sensor caf process, app need move and move done status*/
 				pthread_mutex_lock(&g_cxt->af_cb_mutex);
-				camera_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+				camera_direct_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
 					camera_get_client_data(),
 					CAMERA_FUNC_START_FOCUS,
 					1);
@@ -4732,7 +4733,7 @@ void *camera_af_thread_proc(void *data)
 				ret = camera_autofocus_start_light();
 				camera_set_focusmove_flag(1);
 
-				camera_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+				camera_direct_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
 					camera_get_client_data(),
 					CAMERA_FUNC_START_FOCUS,
 					0);
