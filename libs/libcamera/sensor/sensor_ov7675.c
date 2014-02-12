@@ -492,57 +492,58 @@ LOCAL SENSOR_REG_TAB_INFO_T s_OV7675_resolution_Tab_YUV[]=
 
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 {
-        // Internal
-        PNULL,
-        _ov7675_PowerOn,
-        PNULL,
-        OV7675_Identify,
+	// Internal
+	PNULL,
+	_ov7675_PowerOn,
+	PNULL,
+	OV7675_Identify,
 
-        PNULL,			// write register
-        PNULL,			// read  register
-        PNULL,
-        PNULL,
+	PNULL,			// write register
+	PNULL,			// read  register
+	PNULL,
+	PNULL,
 
-        // External
-        set_ov7675_ae_enable,
-        PNULL,//set_hmirror_enable,
-        PNULL,//set_vmirror_enable,
+	// External
+	set_ov7675_ae_enable,
+	PNULL,//set_hmirror_enable,
+	PNULL,//set_vmirror_enable,
 
-        set_brightness,
-        set_contrast,
-        set_sharpness,
-        set_saturation,
+	set_brightness,
+	set_contrast,
+	set_sharpness,
+	set_saturation,
 
-        set_preview_mode,
-        set_image_effect,
+	set_preview_mode,
+	set_image_effect,
 
-        PNULL,//OV7675_BeforeSnapshot,
-        PNULL, //OV7675_After_Snapshot,
+	PNULL,//OV7675_BeforeSnapshot,
+	PNULL, //OV7675_After_Snapshot,
 
-        PNULL,
+	PNULL,
 
-        read_ev_value,
-        write_ev_value,
-        read_gain_value,
-        write_gain_value,
-        read_gain_scale,
-        set_frame_rate,
-        PNULL,
-        PNULL,
-        set_ov7675_awb,
-        PNULL,
-        PNULL,
-        set_ov7675_ev,
-        PNULL,
-        PNULL,
-        PNULL,
-        _ov7675_GetExifInfo,
-        PNULL,
-        set_ov7675_anti_flicker,
-        PNULL,//set_ov7675_video_mode,
-        PNULL,
+	read_ev_value,
+	write_ev_value,
+	read_gain_value,
+	write_gain_value,
+	read_gain_scale,
+	set_frame_rate,
+	PNULL,
+	PNULL,
+	set_ov7675_awb,
+	PNULL,
+	PNULL,
+	set_ov7675_ev,
+	PNULL,
+	PNULL,
+	PNULL,
+	_ov7675_GetExifInfo,
+	PNULL,
+	set_ov7675_anti_flicker,
+	PNULL,//set_ov7675_video_mode,
+	PNULL,
 	PNULL,  //meter_mode
 	PNULL, //get_status
+	PNULL,
 	PNULL,
 	PNULL,
 };

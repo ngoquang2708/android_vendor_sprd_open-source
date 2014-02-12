@@ -3856,13 +3856,13 @@ LOCAL uint32_t s5k4ec_set_vmirror_enable(uint32_t enable)
 LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
 {    
     // COMMON INIT
-    {0, 0, 640, 480, 0, 0},
+    {0, 0, 640, 480, 0, 0, 0},
     
     // YUV422 PREVIEW 1    
 #if 1
     //{0, 0, 640, 480, 680, 40},
-   {0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
-   {0, 0, 2560, 1920, 660, 40},
+   {0, 0, 1280, 960, 664, 40, 0},   //line_time:include dummny time,   (line_time) *10 us
+   {0, 0, 2560, 1920, 660, 40, 0},
 #else
 
    // {0, 0, 1600, 1200, 122, 40},
@@ -3871,10 +3871,10 @@ LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
    //{0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
 #endif    
 #if 1  
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
 
 #else
     {0, 0, 1600, 1200, 122, 40},
@@ -3883,64 +3883,65 @@ LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
     // YUV422 PREVIEW 2 
     {0, 0, 2560, 1920, 660, 40},
 #endif    
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0}
 };
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_s5k4ec_exif;
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4ec_ioctl_func_tab = 
 {
-    // Internal 
-    PNULL, /*0*/
-    _s5k4ec_PowerOn,
-    PNULL,/*2*/
-    _s5k4ec_Identify,
-    PNULL,/*4*/			// write register	
-    PNULL,/*5*/                 // read  register
-    PNULL,//    cus_func_1//s5k4ec_init_by_burst_write,/*6*/
-    _s5k4ec_GetResolutionTrimTab,//PNULL,/*7*/
-    
-    // External
-    PNULL,/*8*///s5k4ec_set_ae_enable,
-    PNULL,/*9*///s5k4ec_set_hmirror_enable,
-    PNULL,/*10*///s5k4ec_set_vmirror_enable,
-    PNULL,//_s5k4ec_set_brightness,//PNULL,//    s5k4ec_set_brightness,/*11*/
-    _s5k4ec_set_contrast,//PNULL,//    s5k4ec_set_contrast,/*12*/
-    PNULL,/*13*///s5k4ec_set_sharpness,
-    PNULL,//_s5k4ec_set_saturation,//PNULL,/*14*///s5k4ec_set_saturation,
-    PNULL,//_s5k4ec_set_work_mode,//PNULL,//    s5k4ec_set_scene_mode ,/*15*///s5k4ec_set_preview_mode,
-    PNULL,//_s5k4ec_set_image_effect,//PNULL,//    s5k4ec_set_image_effect,/*16*/
-    _s5k4ec_BeforeSnapshot,//PNULL,//    s5k4ec_BeforeSnapshot,/*17*/
-    _s5k4ec_after_snapshot,//PNULL,//    s5k4ec_after_snapshot,/*18*/
-    PNULL,//_s5k4ec_flash,//PNULL,/*19*/
-    PNULL,/*20*///read_ae_value
-    PNULL,/*21*///write_ae_value
-    PNULL,/*22*///read_gain_value
-    PNULL,/*23*///write_gain_value
-    PNULL,/*24*///read_gain_scale
-    PNULL,//    set_frame_rate,/*25*/
-    PNULL,//    af_enable/*26*/
-    PNULL,//    af_get_status,/*27*/
-    PNULL,//_s5k4ec_set_awb,//PNULL,//    s5k4ec_set_awb,/*28*/
-    PNULL,//   get_skip_frame,/*29*/
-    PNULL,//_s5k4ec_set_iso,/*30*///iso
-    PNULL,//_s5k4ec_set_ev,//PNULL,/*31*///exposure
-    PNULL,//_s5k4ec_check_image_format_support,//PNULL,/*32*///check_image_format_support
-    PNULL,/*33*///change_image_format)
-    PNULL,/*34*/ //set_zoom
-    PNULL,//_s5k4ec_GetExifInfo,//PNULL,/*35*/// set_focus
-    _s5k4ec_ExtFunc,//PNULL,/*36*///get_exif 
-    PNULL,//_s5k4ec_set_anti_flicker,//PNULL,/*37*///set_anti_banding_flicker
-    PNULL,//_s5k4ec_set_video_mode,//PNULL,/*38*/// set_video_mode
-    PNULL,//_s5k4ec_pick_out_jpeg_stream,//PNULL,/*39*///pick_jpeg_stream
-    PNULL,//    s5k4ec_set_Metering,/*40*///set_meter_mode
-    PNULL, /*41*///get_status
-    _s5k4ec_StreamOn, /*42*///stream_on
+	// Internal
+	PNULL, /*0*/
+	_s5k4ec_PowerOn,
+	PNULL,/*2*/
+	_s5k4ec_Identify,
+	PNULL,/*4*/			// write register
+	PNULL,/*5*/                 // read  register
+	PNULL,//    cus_func_1//s5k4ec_init_by_burst_write,/*6*/
+	_s5k4ec_GetResolutionTrimTab,//PNULL,/*7*/
+
+	// External
+	PNULL,/*8*///s5k4ec_set_ae_enable,
+	PNULL,/*9*///s5k4ec_set_hmirror_enable,
+	PNULL,/*10*///s5k4ec_set_vmirror_enable,
+	PNULL,//_s5k4ec_set_brightness,//PNULL,//    s5k4ec_set_brightness,/*11*/
+	_s5k4ec_set_contrast,//PNULL,//    s5k4ec_set_contrast,/*12*/
+	PNULL,/*13*///s5k4ec_set_sharpness,
+	PNULL,//_s5k4ec_set_saturation,//PNULL,/*14*///s5k4ec_set_saturation,
+	PNULL,//_s5k4ec_set_work_mode,//PNULL,//    s5k4ec_set_scene_mode ,/*15*///s5k4ec_set_preview_mode,
+	PNULL,//_s5k4ec_set_image_effect,//PNULL,//    s5k4ec_set_image_effect,/*16*/
+	_s5k4ec_BeforeSnapshot,//PNULL,//    s5k4ec_BeforeSnapshot,/*17*/
+	_s5k4ec_after_snapshot,//PNULL,//    s5k4ec_after_snapshot,/*18*/
+	PNULL,//_s5k4ec_flash,//PNULL,/*19*/
+	PNULL,/*20*///read_ae_value
+	PNULL,/*21*///write_ae_value
+	PNULL,/*22*///read_gain_value
+	PNULL,/*23*///write_gain_value
+	PNULL,/*24*///read_gain_scale
+	PNULL,//    set_frame_rate,/*25*/
+	PNULL,//    af_enable/*26*/
+	PNULL,//    af_get_status,/*27*/
+	PNULL,//_s5k4ec_set_awb,//PNULL,//    s5k4ec_set_awb,/*28*/
+	PNULL,//   get_skip_frame,/*29*/
+	PNULL,//_s5k4ec_set_iso,/*30*///iso
+	PNULL,//_s5k4ec_set_ev,//PNULL,/*31*///exposure
+	PNULL,//_s5k4ec_check_image_format_support,//PNULL,/*32*///check_image_format_support
+	PNULL,/*33*///change_image_format)
+	PNULL,/*34*/ //set_zoom
+	PNULL,//_s5k4ec_GetExifInfo,//PNULL,/*35*/// set_focus
+	_s5k4ec_ExtFunc,//PNULL,/*36*///get_exif
+	PNULL,//_s5k4ec_set_anti_flicker,//PNULL,/*37*///set_anti_banding_flicker
+	PNULL,//_s5k4ec_set_video_mode,//PNULL,/*38*/// set_video_mode
+	PNULL,//_s5k4ec_pick_out_jpeg_stream,//PNULL,/*39*///pick_jpeg_stream
+	PNULL,//    s5k4ec_set_Metering,/*40*///set_meter_mode
+	PNULL, /*41*///get_status
+	_s5k4ec_StreamOn, /*42*///stream_on
 #ifdef CONFIG_CAMERA_SENSOR_NEW_FEATURE
-    _s5k4ec_StreamOff, /*43*/ // stream_off
-    NULL,
+	_s5k4ec_StreamOff, /*43*/ // stream_off
+	NULL,
 #else 
-	_s5k4ec_StreamOff
+	_s5k4ec_StreamOff,
+	NULL,
 #endif	
 };
 
@@ -3968,16 +3969,16 @@ SENSOR_INFO_T g_s5k4ec_mipi_yuv_info =
 	
 	// image effect
 	SENSOR_IMAGE_EFFECT_NORMAL|\
-        SENSOR_IMAGE_EFFECT_BLACKWHITE|\
-        SENSOR_IMAGE_EFFECT_RED|\
-        SENSOR_IMAGE_EFFECT_GREEN|\
-        SENSOR_IMAGE_EFFECT_BLUE|\
-        SENSOR_IMAGE_EFFECT_YELLOW|\
-        SENSOR_IMAGE_EFFECT_NEGATIVE|\
-        SENSOR_IMAGE_EFFECT_CANVAS,
+	SENSOR_IMAGE_EFFECT_BLACKWHITE|\
+	SENSOR_IMAGE_EFFECT_RED|\
+	SENSOR_IMAGE_EFFECT_GREEN|\
+	SENSOR_IMAGE_EFFECT_BLUE|\
+	SENSOR_IMAGE_EFFECT_YELLOW|\
+	SENSOR_IMAGE_EFFECT_NEGATIVE|\
+	SENSOR_IMAGE_EFFECT_CANVAS,
 	
 	// while balance mode
-        0,
+	0,
 
 	0x7,							
 // bit[0:7]: count of step in brightness, contrast, sharpness, saturation
@@ -3990,14 +3991,14 @@ SENSOR_INFO_T g_s5k4ec_mipi_yuv_info =
 	
 	1,								// count of identify code
 	 {{0x01a4, 0x4ec0},                // supply two code to identify sensor.
-         {0x01a6, 0x0011}},               // for Example: index = 0-> Device id, index = 1 -> version id	
+	{0x01a6, 0x0011}},               // for Example: index = 0-> Device id, index = 1 -> version id
 											
 	SENSOR_AVDD_2800MV,			// voltage of avdd		
 	2560,							// max width of source image
 	1920,							// max height of source image
 	"s5k4ec",						// name of sensor												
 
-    SENSOR_IMAGE_FORMAT_MAX,        // define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
+	SENSOR_IMAGE_FORMAT_MAX,        // define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
                                     // if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
 
 	SENSOR_IMAGE_PATTERN_YUV422_YUYV,	// pattern of input image form sensor;
@@ -4012,14 +4013,16 @@ SENSOR_INFO_T g_s5k4ec_mipi_yuv_info =
 	1,                     // skip frame num before preview 
 	1,                     // skip frame num before capture	
 	0,                     // deci frame num during preview;		
-        0,                     // deci frame num during video preview;
+	0,                     // deci frame num during video preview;
 
 	0,                     // threshold enable
-        0,                     // threshold mode
-        0,                     // threshold start postion	
-        0,                     // threshold end postion 
+	0,                     // threshold mode
+	0,                     // threshold start postion
+	0,                     // threshold end postion
 	0,                     // i2c_dev_handler
-	{SENSOR_INTERFACE_TYPE_CSI2, 2, 8, 1}
+	{SENSOR_INTERFACE_TYPE_CSI2, 2, 8, 1},
+	PNULL,
+	3,                     // skip frame num while change setting
 };
 /******************************************************************************/
 // Description:
@@ -5646,7 +5649,7 @@ LOCAL uint32_t _s5k4ec_StreamOn(uint32_t param)
 		Sensor_WriteReg(0x0028, 0x7000);
 		Sensor_WriteReg(0x002A, 0x023E);
 		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreview
-		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreviewChanged\
+		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreviewChanged
 
 		Sensor_WriteReg (0x0028, 0xD000); 
 		Sensor_WriteReg(0x002A, 0x1000); 

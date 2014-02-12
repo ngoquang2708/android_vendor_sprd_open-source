@@ -45,12 +45,12 @@ extern     "C"
  **---------------------------------------------------------------------------*/
 #define HI255_I2C_ADDR_W        0x20//0x20
 #define HI255_I2C_ADDR_R         0x20//0x20
-
 #define I2C_WRITE_BURST_LENGTH    512
-
 
 static uint32_t  g_flash_mode_en = 0;
 static uint32_t  setmode =0;
+static EXIF_SPEC_PIC_TAKING_COND_T s_HI255_exif;
+
 /**---------------------------------------------------------------------------*
  **                     Local Function Prototypes                              *
  **---------------------------------------------------------------------------*/
@@ -59,11 +59,8 @@ LOCAL uint32_t _HI255_InitExifInfo(void);
 LOCAL uint32_t _HI255_PowerOn(uint32_t power_on);
 LOCAL uint32_t _HI255_Identify(uint32_t param);
 LOCAL uint32_t _HI255_set_brightness(uint32_t level);
-LOCAL uint32_t _HI255_set_contrast(uint32_t level);
-//LOCAL uint32_t _HI255_set_sharpness(uint32_t level);
 LOCAL uint32_t _HI255_set_saturation(uint32_t level);
 LOCAL uint32_t _HI255_set_image_effect(uint32_t effect_type);
-LOCAL uint32_t _HI255_set_ev(uint32_t level);
 LOCAL uint32_t _HI255_set_anti_flicker(uint32_t mode);
 LOCAL uint32_t _HI255_set_video_mode(uint32_t mode);
 LOCAL uint32_t _HI255_set_awb(uint32_t mode);
@@ -76,9 +73,9 @@ LOCAL uint32_t _HI255_after_snapshot(uint32_t param);
 LOCAL uint32_t _HI255_GetExifInfo(uint32_t param);
 //LOCAL uint32_t _HI255_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t HI255_InitExt(uint32_t param);
-
-   LOCAL uint32_t sensor_InitTflash(uint32_t param);
-LOCAL uint32_t _HI255_set_iso(uint32_t level);
+LOCAL uint32_t sensor_InitTflash(uint32_t param);
+LOCAL uint32_t _hi255_StreamOn(uint32_t param);
+LOCAL uint32_t _hi255_StreamOff(uint32_t param);
 
 LOCAL const SENSOR_REG_T HI255_common[]=
 {
@@ -1315,10 +1312,11 @@ LOCAL uint32_t HI255_InitExt(uint32_t param)	//wujinyou, 2012.11.14
 
 	setmode = param;
 
-	if( sensor_InitTflash(param) == SENSOR_SUCCESS)
-      	  return SENSOR_SUCCESS;
-       if(param != SENSOR_MODE_COMMON_INIT)
-      	   return SENSOR_FAIL;
+	if ( sensor_InitTflash(param) == SENSOR_SUCCESS)
+		return SENSOR_SUCCESS;
+
+	if (param != SENSOR_MODE_COMMON_INIT)
+		return SENSOR_FAIL;
 
 	timestamp_old = systemTime(CLOCK_MONOTONIC);
 
@@ -1335,74 +1333,68 @@ LOCAL uint32_t HI255_InitExt(uint32_t param)	//wujinyou, 2012.11.14
 		ret = _Sensor_Device_WriteRegTab(&regTab);
 	}
 
-	//SENSOR_PRINT("SENSOR: Sensor_SendRegValueToSensor -> reg_count = %d, g_is_main_sensor: %d.\n",
-	     			//sensor_reg_tab_info_ptr->reg_count, g_is_main_sensor);
-
 	timestamp_new = systemTime(CLOCK_MONOTONIC);
-	SENSOR_PRINT("SENSOR: HI255_InitExt end, ret=%d, time=%d us\n", ret, (timestamp_new-timestamp_old)/1000);
+	SENSOR_PRINT("SENSOR: HI255_InitExt end, ret=%d, time=%d us\n", ret, (uint32_t)((timestamp_new-timestamp_old)/1000));
 
 	return SENSOR_SUCCESS;
 };
 
-LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_HI255_exif={0x00};
-LOCAL uint32_t _hi255_StreamOn(uint32_t param);
-LOCAL uint32_t _hi255_StreamOff(uint32_t param);
-
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI255_ioctl_func_tab =
 {
-    // Internal
-    PNULL,
-    _HI255_PowerOn,
-    PNULL,
-    _HI255_Identify,
+	// Internal
+	PNULL,
+	_HI255_PowerOn,
+	PNULL,
+	_HI255_Identify,
 
-    PNULL,            // write register
-    PNULL,            // read  register
-    PNULL,     //HI255_InitExt,
-    //_HI255_GetResolutionTrimTab,
-    PNULL,
+	PNULL,            // write register
+	PNULL,            // read  register
+	PNULL,     //HI255_InitExt,
+	//_HI255_GetResolutionTrimTab,
+	PNULL,
 
-    // External
-    PNULL,
-    PNULL,
-    PNULL,
+	// External
+	PNULL,
+	PNULL,
+	PNULL,
 
-    _HI255_set_brightness,
-    _HI255_set_contrast,
-    PNULL,
-    _HI255_set_saturation,
+	_HI255_set_brightness,
+	PNULL,//_HI255_set_contrast,
+	PNULL,
+	_HI255_set_saturation,
 
-    _HI255_set_work_mode,
-    _HI255_set_image_effect,
+	_HI255_set_work_mode,
+	_HI255_set_image_effect,
 
-    _HI255_BeforeSnapshot,
-    _HI255_after_snapshot,
-    PNULL,
-    PNULL,
-    PNULL,
-    PNULL,
-    PNULL,
+	_HI255_BeforeSnapshot,
+	_HI255_after_snapshot,
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL,
 
-    PNULL,
-    PNULL,
-    PNULL,
-    PNULL,
-    _HI255_set_awb,
-    PNULL,
-    _HI255_set_iso,
-    _HI255_set_ev,
-    _HI255_check_image_format_support,
-    PNULL,
-    PNULL,
-    _HI255_GetExifInfo,
-    PNULL,//_HI255_ExtFunc,
-    _HI255_set_anti_flicker,
-   _HI255_set_video_mode,
-    _HI255_pick_out_jpeg_stream,
-    PNULL, //meter_mode
-    PNULL, //get_status
-    _hi255_StreamOn,
-    _hi255_StreamOff
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL,
+	_HI255_set_awb,
+	PNULL,
+	PNULL,//_HI255_set_iso,
+	PNULL,//_HI255_set_ev,
+	_HI255_check_image_format_support,
+	PNULL,
+	PNULL,
+	_HI255_GetExifInfo,
+	PNULL,//_HI255_ExtFunc,
+	_HI255_set_anti_flicker,
+	_HI255_set_video_mode,
+	_HI255_pick_out_jpeg_stream,
+	PNULL, //meter_mode
+	PNULL, //get_status
+	_hi255_StreamOn,
+	_hi255_StreamOff,
+	PNULL
 };
 
 /**---------------------------------------------------------------------------*
@@ -1827,50 +1819,6 @@ LOCAL uint32_t _HI255_set_brightness(uint32_t level)
 }
 
 /******************************************************************************/
-// Description: set contrast
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL const SENSOR_REG_T HI255_contrast_tab[][15]=
-{
-    {0xff,0xff}
-};
-LOCAL uint32_t _HI255_set_contrast(uint32_t level)
-{
-	uint16_t i=0x00;
-	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)HI255_contrast_tab[level];
-
-	if(level>0)
-	return 0;
-
-	//   SCI_ASSERT(PNULL!=sensor_reg_ptr);
-
-	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff != sensor_reg_ptr[i].reg_value); i++)
-	{
-		Sensor_WriteReg_8bits(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
-	}
-
-	//    Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32)level);
-
-	SENSOR_PRINT("sensor: terry HI255_set_contrast = 0x%02x.\n", level);
-	return 0;
-}
-#if 0
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _HI255_set_sharpness(uint32_t level)
-{
-	return 0;
-}
-#endif
-/******************************************************************************/
 // Description:
 // Global resource dependence:
 // Author: Tim.zhu
@@ -2025,64 +1973,6 @@ LOCAL uint32_t _HI255_set_image_effect(uint32_t effect_type)
 	return 0;
 }
 
-LOCAL const SENSOR_REG_T HI255_iso_tab[][4]=
-{
-	{0xff, 0xff}
-};
-
-LOCAL uint32_t _HI255_set_iso(uint32_t level)
-{
-	if(level > 0)
-	{
-		return 0;
-	}
-	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)HI255_iso_tab[level];
-	uint16_t i=0x00;
-
-	//   SCI_ASSERT(PNULL!=sensor_reg_ptr);
-
-	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff != sensor_reg_ptr[i].reg_value); i++)
-	{
-		Sensor_WriteReg_8bits(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
-	}
-
-	SENSOR_PRINT("sensor: terry HI255_set_iso = 0x%02x.\n", level);
-
-	return 0;
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL const SENSOR_REG_T HI255_ev_tab[][3]=
-{
-	{0xff, 0xff},
-};
-
-LOCAL uint32_t _HI255_set_ev(uint32_t level)
-{
-	if(level > 0)
-	{
-		return 0;
-	}
-	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)HI255_ev_tab[level];
-	uint16_t i=0x00;
-
-	//   SCI_ASSERT(PNULL!=sensor_reg_ptr);
-
-	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff != sensor_reg_ptr[i].reg_value); i++)
-	{
-		Sensor_WriteReg_8bits(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
-	}
-
-	SENSOR_PRINT("sensor: terry HI255_set_ev = 0x%02x.\n", level);
-
-	return 0;
-}
 /******************************************************************************/
 // Description: anti 50/60 hz banding flicker
 // Global resource dependence:
@@ -2131,7 +2021,7 @@ LOCAL uint32_t _HI255_set_anti_flicker(uint32_t mode)
 // Note:
 //
 /******************************************************************************/
-LOCAL const SENSOR_REG_T HI255_video_mode_tab[][31]=
+LOCAL const SENSOR_REG_T HI255_video_mode_tab[][44]=
 {
 	{//video preview
 		{0x03, 0x00},
@@ -2282,7 +2172,7 @@ LOCAL uint32_t _HI255_set_video_mode(uint32_t mode)
 // Note:
 //
 /******************************************************************************/
-LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
+LOCAL const SENSOR_REG_T HI255_awb_tab[][10] =
 {
 	{//auto
 		{0x03, 0x22},
@@ -2294,7 +2184,7 @@ LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
 		{0x84, 0x21}, //24
 		{0x85, 0x4f}, //54
 		{0x86, 0x20}, //24 //22
-		    {0xff, 0xff},
+		{0xff, 0xff},
 	},
 	{//incandescence
 		{0x03, 0x22},
@@ -2306,7 +2196,7 @@ LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
 		{0x84, 0x1f},
 		{0x85, 0x58},
 		{0x86, 0x52},
-		    {0xff, 0xff},
+		{0xff, 0xff},
 	},
 	{//u30 not used
 		{0xff, 0xff}
@@ -2325,7 +2215,7 @@ LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
 		{0x84, 0x38},// Rmin
 		{0x85, 0x4d},// Bmax
 		{0x86, 0x44},// Bmin
-		  {0xff, 0xff},
+		{0xff, 0xff},
 	},
 	{//daylight
 		{0x03, 0x22},
@@ -2337,7 +2227,7 @@ LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
 		{0x84, 0x4d},
 		{0x85, 0x2c},
 		{0x86, 0x22},
-		  {0xff, 0xff},
+		{0xff, 0xff},
 	},
 	{//cloudy
 		{0x03, 0x22},
@@ -2349,7 +2239,7 @@ LOCAL const SENSOR_REG_T HI255_awb_tab[][9] =
 		{0x84, 0x6e},
 		{0x85, 0x1e},
 		{0x86, 0x1c},
-		  {0xff, 0xff},
+		{0xff, 0xff},
 	}
 };
 
@@ -2793,10 +2683,10 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 	p_reg_val_tmp = (uint16_t*)malloc(alloc_size);
 	if(0 == p_reg_val_tmp)
               return file_len;
-    if ( file = fopen(filename, "rb") )
+    if (( file = fopen(filename, "rb") ))
     {
 
-        SENSOR_PRINT("%s file=%x.\n",__func__,file);
+        SENSOR_PRINT("%s file=%x.\n",__func__, (int32_t)file);
        fseek(file, 0, TAIL);
 	file_len = ftell(file);
        fseek(file, 0, HEAD);
@@ -2831,14 +2721,14 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_0_X == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
 			  reg = ((unsigned int)v);
 				state = STATE_ARRAY_0_DATA0;
 			} else
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_0_DATA0 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                        reg =reg <<4;
 			  reg |= ((unsigned int)v);
                        if( (reg_addr_value_bits & SENSOR_I2C_REG_16BIT) != SENSOR_I2C_REG_16BIT)
@@ -2854,7 +2744,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_0_DATA1 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                        reg =reg <<4;
 			  reg |= ((unsigned int)v);
 				state = STATE_ARRAY_0_DATA2;
@@ -2862,7 +2752,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_0_DATA2 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                        reg =reg <<4;
 			  reg |= ((unsigned int)v);
 				state = STATE_ARRAY_0_DATA3;
@@ -2883,14 +2773,14 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_1_X == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
 			       value = ((unsigned int)v);
 				state = STATE_ARRAY_1_DATA0;
 			} else
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_ARRAY_1_DATA0 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                             value =value <<4;
 				value |= v;
                        if( (reg_addr_value_bits &SENSOR_I2C_VAL_16BIT) != SENSOR_I2C_VAL_16BIT)
@@ -2901,7 +2791,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		}else if (STATE_ARRAY_1_DATA1 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                             value =value <<4;
 				value |= v;
 				state = STATE_ARRAY_1_DATA2;
@@ -2909,7 +2799,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 				state = STATE_LINE_IGNORE;
 		}else if (STATE_ARRAY_1_DATA2 == state) {
 			v = convert_ascii2num(v);
-			if (v >= 0 && v <= 0xf) {
+			if (v <= 0xf) {
                             value =value <<4;
 				value |= v;
 				state = STATE_ARRAY_1_DATA3;
@@ -2991,7 +2881,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 		regTab.reg_count			= written_num >>1;
 		regTab.reg_bits				= SENSOR_I2C_REG_8BIT | SENSOR_I2C_VAL_8BIT;
 		regTab.burst_mode			= 7;
-		regTab.sensor_reg_tab_ptr 	= p_reg_val_tmp;
+		regTab.sensor_reg_tab_ptr 	= (SENSOR_REG_T_PTR)p_reg_val_tmp;
 
 		_Sensor_Device_WriteRegTab(&regTab);
 	}
@@ -3046,7 +2936,7 @@ LOCAL uint32_t sensor_InitTflash(uint32_t param)
             ret =sensor_tflash_debug("/sdcard/DCIM/Camera/c20481536.txt");
 
 	timestamp_new = systemTime(CLOCK_MONOTONIC);
-	SENSOR_PRINT("SENSOR: sensor_InitTflash end, ret=%d, time=%d us\n", ret, (timestamp_new-timestamp_old)/1000);
+	SENSOR_PRINT("SENSOR: sensor_InitTflash end, ret=%d, time=%d us\n", ret, (uint32_t)((timestamp_new-timestamp_old)/1000));
 
 
        if(ret >0)

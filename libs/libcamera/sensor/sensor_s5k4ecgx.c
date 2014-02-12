@@ -3597,22 +3597,22 @@ LOCAL uint32_t s5k4ec_set_vmirror_enable(uint32_t enable)
 LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
 {
     // COMMON INIT
-    {0, 0, 640, 480, 0, 0},
+    {0, 0, 640, 480, 0, 0, 0},
 
     // YUV422 PREVIEW 1
-    {0, 0, 640, 480, 664, 40},
-   {0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
-   {0, 0, 1600, 1200, 660, 40},
-   {0, 0, 2048, 1536, 660, 40},
+    {0, 0, 640, 480, 664, 40, 0},
+   {0, 0, 1280, 960, 664, 40, 0},   //line_time:include dummny time,   (line_time) *10 us
+   {0, 0, 1600, 1200, 660, 40, 0},
+   {0, 0, 2048, 1536, 660, 40, 0},
    //{0, 0, 2560, 1920, 660, 40},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0}
 };
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_s5k4ec_exif;
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4ec_ioctl_func_tab =
@@ -4130,7 +4130,7 @@ LOCAL uint32_t _s5k4ec_set_contrast(uint32_t level)
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t) level);
-	SENSOR_PRINT("SENSOR: _s5k4ec_set_contrast = 0x%02x,data=0x%x .\n",level);
+	SENSOR_PRINT("SENSOR: _s5k4ec_set_contrast = 0x%02x.\n",level);
 
 	return 0;
 }
@@ -5480,7 +5480,7 @@ LOCAL uint32_t _s5k4ec_StreamOn(uint32_t param)
 		Sensor_WriteReg(0x0028, 0x7000);
 		Sensor_WriteReg(0x002A, 0x023E);
 		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreview
-		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreviewChanged\
+		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreviewChanged
 
 		Sensor_WriteReg (0x0028, 0xD000);
 		Sensor_WriteReg(0x002A, 0x1000);

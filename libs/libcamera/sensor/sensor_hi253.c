@@ -1361,7 +1361,11 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_hi253_ioctl_func_tab = {
 	set_hi253_video_mode,
 
 	PNULL,			//hi253_pick_out_jpeg_stream,
-	//  PNULL
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL,
+	PNULL
 };
 
 LOCAL SENSOR_EXTEND_INFO_T hi253_ext_info = {

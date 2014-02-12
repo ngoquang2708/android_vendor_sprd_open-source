@@ -56,7 +56,7 @@ struct isp_raw_info_update_status
 
 static struct isp_raw_info_update_status raw_info_update_status[2] = {
 	{
-		NULL,
+		0,
 		PNULL,
 		PNULL,
 		PNULL,
@@ -68,7 +68,7 @@ static struct isp_raw_info_update_status raw_info_update_status[2] = {
 		PNULL,
 	},
 	{
-		NULL,
+		0,
 		PNULL,
 		PNULL,
 		PNULL,
@@ -133,7 +133,7 @@ void _isp_raw_para_recover (SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id
 	raw_info_update_status[sensor_id].awb_map_table_addr = 0;
 	
 	if(raw_info_update_status[sensor_id].tune_info_table_org_addr){
-		(*sensor_info_ptr->raw_info_ptr)->tune_ptr = (struct sensor_raw_tune_info* )*raw_info_update_status[sensor_id].tune_info_table_org_addr;
+		(*sensor_info_ptr->raw_info_ptr)->tune_ptr = (struct sensor_raw_tune_info* )raw_info_update_status[sensor_id].tune_info_table_org_addr;
 	}
 	raw_info_update_status[sensor_id].tune_info_table_org_addr = 0;
 
@@ -568,7 +568,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 				CMR_LOGE("AWB MAP Table malloc awb_map_ptr mem fail!!!");
 				goto update_error;
 			}
-			raw_info_update_status[sensor_id].awb_map_table_addr = (uint8_t*)awb_map_ptr;
+			raw_info_update_status[sensor_id].awb_map_table_addr = (uint16_t*)awb_map_ptr;
 			awb_map_ptr = (uint16_t*)((uint32_t)awb_map_ptr>>2<<2);
 			memcpy(awb_map_ptr,temp_buf_16,1024*6*2);
 			raw_fix_info_ptr->awb.addr = awb_map_ptr;

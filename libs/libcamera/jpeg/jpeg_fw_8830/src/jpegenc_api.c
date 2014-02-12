@@ -1046,7 +1046,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	JPEG_ENC_INPUT_PARA_T input_para_ptr;
 	uint32_t slice_height=SLICE_HEIGHT;
 	uint32_t slice_num=0;
-	uint32_t stream_size = 0;
+	int32_t stream_size = 0;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
 	memset(out_ptr, 0, sizeof(JPEGENC_SLICE_OUT_T));
@@ -1102,7 +1102,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 		}
 		ret = (ret == 4) ? 0 : ret;
 		
-		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
+		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext((uint32_t *)&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
 			ret = -1;
 			goto error;

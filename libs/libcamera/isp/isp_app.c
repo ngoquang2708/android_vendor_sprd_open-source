@@ -238,7 +238,7 @@ uint32_t _isp_AppLumMeasureRecover(void)
 *@
 *@ return:
 */
-uint32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
+int32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr=ispAppGetContext();
