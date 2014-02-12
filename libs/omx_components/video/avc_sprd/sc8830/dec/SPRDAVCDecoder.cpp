@@ -298,6 +298,7 @@ status_t SPRDAVCDecoder::initDecoder() {
                 mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
                 mPbuf_stream_p = (int32)phy_addr;
                 mPbuf_stream_size = (int32)size;
+                ALOGI("pmem %p - %p - %d", mPbuf_stream_p, mPbuf_stream_v, mPbuf_stream_size);
             }
         }
     }
@@ -1190,6 +1191,7 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
             mPbuf_extra_p =phy_addr;
             mPbuf_extra_size = buffer_size;
             mPbuf_extra_v = (uint8 *)mPmem_extra->base();
+            ALOGI("pmem %p - %p - %d", mPbuf_extra_p, mPbuf_extra_v, mPbuf_extra_size);
 
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) mPbuf_extra_v;
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (uint32)mPbuf_extra_p;
