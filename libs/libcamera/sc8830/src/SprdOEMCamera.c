@@ -275,6 +275,10 @@ int camera_capture_way_out(void)
 {
 	int ret = CAMERA_SUCCESS;
 	if (camera_capture_need_exit()) {
+		if (JPEG_DECODE == g_cxt->jpeg_cxt.jpeg_state) {
+			CMR_LOGV("exit decode.");
+			camera_is_jpeg_specify_process(CAMERA_SUCCESS);
+		}
 		camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 				camera_get_client_data(),
 				CAMERA_FUNC_RELEASE_PICTURE,
@@ -1157,7 +1161,7 @@ int camera_jpeg_specify_wait_done(void)
 		CMR_LOGE("wait fail");
 	}
 	if (camera_capture_need_exit()) {
-		g_cxt->jpeg_specify_cxt.jpeg_specify_state = CAMERA_FAILED;
+		g_cxt->jpeg_specify_cxt.jpeg_specify_state = CAMERA_EXIT;
 		CMR_LOGW("cancel cap");
 	}
 	ret = g_cxt->jpeg_specify_cxt.jpeg_specify_state;
@@ -1459,9 +1463,13 @@ int camera_cap_post(void *data)
 			jpeg_ret = camera_jpeg_specify_wait_done();
 			if (jpeg_ret) {
 				CMR_LOGE("hdr wait %d", jpeg_ret);
-
-				camera_jpeg_specify_stop_jpeg_decode();
-				return CAMERA_JPEG_SPECIFY_FAILED;
+				if (CAMERA_EXIT == jpeg_ret) {
+					CMR_LOGE("exit");
+					return jpeg_ret;
+				} else {
+					camera_jpeg_specify_stop_jpeg_decode();
+					return CAMERA_JPEG_SPECIFY_FAILED;
+				}
 			} else {
 				((struct frm_info*)data)->data_endian.uv_endian = 1;
 			}
