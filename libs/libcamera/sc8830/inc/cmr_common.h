@@ -30,11 +30,11 @@ extern "C"
 #define DEBUG_STR     "L %d, %s: "
 #define DEBUG_ARGS    __LINE__,__FUNCTION__
 
-#define CMR_LOGV(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGV(format,...) ALOGV(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
 #define CMR_LOGE(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
-#define CMR_LOGI(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGI(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
 #define CMR_LOGW(format,...) ALOGW(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
