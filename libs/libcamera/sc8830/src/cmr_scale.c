@@ -127,9 +127,9 @@ static void* cmr_scale_thread_proc(void* data)
 			pthread_mutex_lock(&scaler_cb_mutex);
 			if (NULL == scaler_evt_cb) {
 				CMR_LOGI("IO Deinit");
+				sem_post(&scaler_sync_sem);
 				ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 				ioctl(scaler_fd, SCALE_IO_DEINIT);
-				sem_post(&scaler_sync_sem);
 			} else {
 				evt_id = CMR_IMG_CVT_SC_DONE;
 				CMR_LOGI("out height %d", sc_frm.height);

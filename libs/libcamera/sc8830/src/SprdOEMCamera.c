@@ -2037,6 +2037,12 @@ int camera_stop_internal(void)
 
 	camera_setting_deinit();
 
+	camera_prev_thread_deinit();
+
+	camera_cap_subthread_deinit();
+
+	camera_cap_thread_deinit();
+
 	camera_dma_copy_deinit();
 
 	camera_scaler_deinit();
@@ -2050,12 +2056,6 @@ int camera_stop_internal(void)
 	camera_v4l2_deinit();
 
 	camera_sensor_deinit();
-
-	camera_prev_thread_deinit();
-
-	camera_cap_subthread_deinit();
-
-	camera_cap_thread_deinit();
 
 	camera_cb_thread_deinit();
 
