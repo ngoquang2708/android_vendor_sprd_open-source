@@ -4911,7 +4911,7 @@
         mmsport="5080"
         user="mms"
         password="eplus"
-        mmsc="http://mms/eplus"
+        mmsc="http://mms/eplus/"
         type="mms"
     />
     <apn carrier="E-Plus WEB GPRS"
@@ -4930,7 +4930,7 @@
         mmsport="5080"
         user="mms"
         password="eplus"
-        mmsc="http://mms/eplus"
+        mmsc="http://mms/eplus/"
         type="mms"
     />
     <!-- Germany O2 -->
