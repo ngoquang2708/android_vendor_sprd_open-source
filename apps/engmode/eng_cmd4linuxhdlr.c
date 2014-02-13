@@ -895,7 +895,59 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 	req++;
 	ptr_parm2[0]=*req;
 	req = strchr(req, ',');
+	req++;
+	ptr_parm3[0]=*req;
 
+	if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='0') && (ptr_parm3[0]=='1'))
+	{
+		fd = open(ENG_WPATEMP, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_WPATEMP, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			temp_val = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+		} else {
+			sprintf(rsp, "+CME Error:NG");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+			close(fd);
+		sprintf(rsp, "+TEMPTEST:1,%d",temp_val );
+		return 0;
+	}
+	if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='1') && (ptr_parm3[0]=='1'))
+	{
+		fd = open(ENG_DCXOTEMP, O_RDONLY);
+		if(fd < 0){
+		ENG_LOG("%s: open %s fail [%s]",__FUNCTION__, ENG_DCXOTEMP, strerror(errno));
+		ret = 0;
+		}
+
+		if(ret==1) {
+			memset(buffer, 0, sizeof(buffer));
+			read(fd, buffer, sizeof(buffer));
+			temp_val = atoi(buffer);
+			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+		} else {
+			sprintf(rsp, "+CME Error:NG");
+			if(fd >= 0)
+				close(fd);
+			return 0;
+		}
+
+		if(fd >= 0)
+			close(fd);
+		sprintf(rsp, "+TEMPTEST:1,%d",temp_val );
+		return 0;
+	}
 	if((ptr_parm1[0]=='1') && (ptr_parm2[0]=='0'))
 	{
 		fd = open(ENG_BATTTEMP, O_RDONLY);
