@@ -3198,7 +3198,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
      * */
     ret = str_parms_get_str(parms, "bt_samplerate", value, sizeof(value));
     if (ret >= 0) {
-        adev->bluetooth_type = value;
+        val = atoi(value);
+        adev->bluetooth_type = val;
     }
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
