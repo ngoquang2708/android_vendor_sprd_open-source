@@ -2245,6 +2245,8 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param)
 		return SENSOR_SUCCESS;
 	}
 	OV5640_capture(param);
+	SENSOR_Sleep(10);//Bug 279043, to skip unstable signal output from sensor
+	SENSOR_PRINT("Sleep out");
 
 	return SENSOR_SUCCESS;
 }
