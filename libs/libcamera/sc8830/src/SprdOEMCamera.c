@@ -290,11 +290,11 @@ int camera_get_sensor_mode_trim(uint32_t mode, cropZoom *sensor_trim, uint16_t *
 	int                      ret = CAMERA_SUCCESS;
 	struct sensor_context    *sensor_cxt = &g_cxt->sn_cxt;
 	uint32_t                 sensor_mode = SENSOR_MODE_MAX;
-	if(!sensor_trim){
+	if (!sensor_trim) {
 		CMR_LOGE("camera_get_sensor_mode_trim para is null");
 		return -1;
 	}
-	switch(mode){
+	switch (mode) {
 	//start preview
 	case 0:
 		sensor_mode = g_cxt->sn_cxt.preview_mode;
@@ -342,7 +342,7 @@ static void camera_pre_init(void)
 	g_cxt->which_cpu =0;
 
 	Sensor_GetSocId(&g_cxt->cpu_id);
-	for (i=0; i< (sizeof(cputab)/sizeof(cputab[0])) ;i++){
+	for (i=0; i< (sizeof(cputab) / sizeof(cputab[0])); i++) {
 		if(memcmp(&g_cxt->cpu_id,&cputab[i].id,sizeof(g_cxt->cpu_id))==0){
 			g_cxt->which_cpu = cputab[i].which_cpu;
 			CMR_LOGV("cpu is %d!",g_cxt->which_cpu);
@@ -1185,6 +1185,8 @@ int camera_take_picture_continue(int cap_cnt)
 		CMR_LOGE("Failed to init raw capture mode.");
 		return -CAMERA_FAILED;
 	}
+	camera_set_flash_hightlight(FLASH_CLOSE_AFTER_OPEN);
+	camera_set_flash_hightlight(FLASH_HIGH_LIGHT);
 
 	CMR_PRINT_TIME;
 	skip_number = 1;
@@ -3921,6 +3923,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 				ret = camera_stop_capture_internal();
 			}
 			ret = camera_stop_preview_internal();
+			camera_flash_handle();
 			camera_preview_stop_set();
 
 #if defined(CONFIG_CAMERA_FACE_DETECT)

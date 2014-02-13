@@ -93,6 +93,7 @@ int camera_set_focusmove_flag(uint32_t is_done);
 uint32_t camera_is_focusmove_done(void);
 int camera_isp_alg_wait(void);
 int camera_get_af_mode(void);
+int camera_set_flash_hightlight(uint32_t flash_mode);
 #ifdef __cplusplus
 }
 #endif

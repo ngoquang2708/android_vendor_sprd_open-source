@@ -20,11 +20,11 @@
 
 #define DV_FLASH_ON_DV_WITH_PREVIEW 1
 
-#define IS_NEED_FLASH(x,y)  ((x)&&((CAMERA_ZSL_MODE == (y))|| \
-	                          (CAMERA_NORMAL_MODE == (y))|| \
+#define IS_NEED_FLASH(x,y)  ((x)&&((CAMERA_NORMAL_MODE == (y))|| \
 	                          (CAMERA_NORMAL_CONTINUE_SHOT_MODE == (y))|| \
-	                          (CAMERA_ZSL_CONTINUE_SHOT_MODE == (y))|| \
 	                          (CAMERA_TOOL_RAW_MODE == (y))))
+
+#define IS_NEED_FLASH_HILIGHT(x,y)  ((x)&&((CAMERA_NORMAL_CONTINUE_SHOT_MODE == (y))))
 
 /* total 2.5s */
 #define ISP_PROCESS_SEC_TIMEOUT (2)
@@ -785,6 +785,18 @@ int camera_preview_stop_set(void)
 	CMR_LOGI("flash process %d.",cxt->is_dv_mode);
 	if (1 != cxt->is_dv_mode) {
 		ret = camera_flash_process(0);
+	}
+	return ret;
+}
+
+int camera_set_flash_hightlight(uint32_t flash_mode)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+
+	if (IS_NEED_FLASH_HILIGHT(cxt->cmr_set.flash,cxt->cap_mode)) {
+		/*open flash*/
+		camera_set_flashdevice((uint32_t)flash_mode);
 	}
 	return ret;
 }
