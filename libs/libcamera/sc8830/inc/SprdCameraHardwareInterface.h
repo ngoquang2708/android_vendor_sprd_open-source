@@ -116,7 +116,8 @@ public:
 	static int                   switch_monitor_thread_init(void *p_data);
 	static int                   switch_monitor_thread_deinit(void *p_data);
 	static void*                 switch_monitor_thread_proc(void *p_data);
-	inline bool                     isCameraInit();
+	inline bool                  isCameraInit();
+	status_t                     waitSetParamsOK();
 
 private:
 	inline void                  print_time();
@@ -300,7 +301,6 @@ private:
 	bool                            iSZslMode();
 	bool                            checkPreviewStateForCapture();
 	bool                            getLcdSize(uint32_t *width, uint32_t *height);
-	status_t                        waitSetParamsOK();
 	bool                            switchBufferMode(uint32_t src, uint32_t dst);
 	status_t                        checkFlashSupportParameter(SprdCameraParameters& params);
 
