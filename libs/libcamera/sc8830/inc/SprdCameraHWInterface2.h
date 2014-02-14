@@ -513,7 +513,6 @@ class RequestQueueThread : public SprdBaseThread{
 	Condition                       mStateWait;
     volatile camera_state           mCameraState;
 
-    nsecs_t                         mRecordingTimeOffset;
 	int32_t                         mIsOutPutStream;
 };
 

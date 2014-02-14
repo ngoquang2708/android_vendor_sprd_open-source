@@ -248,7 +248,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mRecordingMode(0),
 	mBakParamFlag(0),
 	mRecordingFirstFrameTime(0),
-	mRecordingTimeOffset(0),
 	mZoomLevel(0),
 	mJpegSize(0),
 	mNotify_cb(0),
@@ -679,7 +678,6 @@ status_t SprdCameraHardware::startRecording()
 	LOGV("mLock:startRecording E.\n");
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
-	mRecordingTimeOffset = systemTime(SYSTEM_TIME_REALTIME) - systemTime();
 
 	waitSetParamsOK();
 
@@ -4231,7 +4229,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		}
 
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) && isRecordingMode()) {
-			nsecs_t timestamp = frame->timestamp - mRecordingTimeOffset;
+			nsecs_t timestamp = frame->timestamp;
 			LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
 			if (mTimeCoeff > 1) {
 				if (0 != mRecordingFirstFrameTime) {

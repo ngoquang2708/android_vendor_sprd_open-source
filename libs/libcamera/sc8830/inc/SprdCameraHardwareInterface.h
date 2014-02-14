@@ -379,7 +379,6 @@ private:
 	bool                            mBakParamFlag;
 
 	nsecs_t                         mRecordingFirstFrameTime;
-	nsecs_t                         mRecordingTimeOffset;
 	uint32_t                        mZoomLevel;
 	/* mJpegSize keeps track of the size of the accumulated JPEG.  We clear it
 	when we are about to take a picture, so at any time it contains either
