@@ -536,7 +536,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 		return INVALID_OPERATION;
 	}
 
-	if (mParameters.getPreviewEnv()) {
+	if (mParameters.getRecordingHint()) {
 		mIsDvPreview = 1;
 		if (w->set_buffers_geometry(w,
 			SIZE_ALIGN(preview_width), SIZE_ALIGN(preview_height),
@@ -1604,22 +1604,19 @@ status_t SprdCameraHardware::checkFlashSupportParameter(SprdCameraParameters& pa
 	const char* flash_support_value;
 
 	/*check the if support the flash*/
-	if ((NULL != params.get("recording-hint"))
-		&& (0 == strcmp("true",params.get("recording-hint")))) {
+	if ((0 == strcmp("hdr",params.get_SceneMode())
+		|| 1 == params.getInt("zsl"))
+		&& (CAMERA_FLASH_MODE_TORCH != params.getFlashMode()
+		|| (NULL != params.get("recording-hint")
+		&& 0 != strcmp("true",params.get("recording-hint"))))) {
+		LOGV("hdr enable - turnoff flash-mode-support");
+		params.setFlashModeSupport("false");
+	} else {
 		if (params.getIsSupportFlash()) {
 			params.setFlashModeSupport("true");
 		}
-	} else {
-		if ((0 == strcmp("hdr",params.get_SceneMode()))
-			|| (1 == params.getInt("zsl"))) {
-			LOGV("hdr enable - set flash-mode off");
-			params.setFlashModeSupport("false");
-		} else {
-			if (params.getIsSupportFlash()) {
-				params.setFlashModeSupport("true");
-			}
-		}
 	}
+
 
 	return ret;
 }
@@ -1978,13 +1975,15 @@ bool SprdCameraHardware::setCameraDimensions()
 
 void SprdCameraHardware::setCameraPreviewMode(bool isRecordMode)
 {
+	LOGV("@xin isRecordMode %d, mIsDvPreview %d", isRecordMode, mIsDvPreview);
 	if (isRecordMode) {
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, mParameters.getPreviewFameRate());
 	} else {
-		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
 		if (mIsDvPreview) {
+			SET_PARM(CAMERA_PARM_PREVIEW_MODE, mParameters.getPreviewFameRate());
 			SET_PARM(CAMERA_PARM_PREVIEW_ENV, mParameters.getPreviewFameRate());
 		} else {
+			SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
 			SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
 		}
 	}

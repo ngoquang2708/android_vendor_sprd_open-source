@@ -48,6 +48,7 @@ static int s_ov5640_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static uint32_t s_af_gain = 0;
+static uint32_t s_is_dv_mode = 0;
 static uint32_t iso_mode = 0;
 static uint32_t preview_hts;
 LOCAL uint32_t _ov5640_InitExifInfo(void);
@@ -1026,6 +1027,115 @@ LOCAL SENSOR_EXTEND_INFO_T g_ov5640_ext_info = {
     (SENSOR_EXPOSURE_AUTO|  SENSOR_EXPOSURE_ZONE)
 };
 #endif
+
+LOCAL const SENSOR_REG_T s_ov5640_640x480_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_ov5640_1280x960_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_ov5640_1600x1200_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_ov5640_2048x1536_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_ov5640_2592x1944_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+
+LOCAL SENSOR_VIDEO_INFO_T s_ov5640_video_info[] = {
+	{{{0, 0, 0, 0}, {0, 0, 0, 0},        {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {30, 30, 175, 100},  {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_ov5640_640x480_video_tab},
+	{{{0, 0, 0, 0}, {30, 30, 219, 100},  {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_ov5640_1280x960_video_tab},
+	{{{0, 0, 0, 0}, {30, 30, 219, 100},  {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_ov5640_1600x1200_video_tab},
+    {{{0, 0, 0, 0}, {30, 30, 219, 100},  {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_ov5640_2048x1536_video_tab},
+    {{{0, 0, 0, 0}, {30, 30, 219, 100},  {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_ov5640_2592x1944_video_tab},
+
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
+};
+
 SENSOR_INFO_T g_ov5640_yuv_info = {
 	ov5640_I2C_ADDR_W,	// salve i2c write address
 	ov5640_I2C_ADDR_R,	// salve i2c read address
@@ -1093,7 +1203,7 @@ SENSOR_INFO_T g_ov5640_yuv_info = {
 	0,
 	0,
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
-	PNULL,
+	s_ov5640_video_info,
 	1,			// skip frame num while change setting
 };
 
@@ -1637,12 +1747,15 @@ LOCAL uint32_t _ov5640_set_video_mode(uint32_t mode)
 	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)ov5640_video_mode_tab[mode];
 	uint16_t i=0x00;
 
+	SENSOR_PRINT("0x%02x", mode);
+	s_is_dv_mode = mode;
+
 	if(mode>1)
 		return 0;
 	for(i=0x00; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
-	SENSOR_PRINT("0x%02x", mode);
+
 	return 0;
 }
 
@@ -2614,8 +2727,10 @@ LOCAL uint32_t _ov5640_CheckAFGain(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 
 	cur_af_gain = _ov5640_get_cur_af_gain();
 	delta_gain = ABS((int32_t)cur_af_gain - (int32_t)s_af_gain);
-	//SENSOR_PRINT_HIGH("cur_af_gain %d, s_af_gain %d, delta_gain %d", cur_af_gain, s_af_gain, delta_gain);
-	if (delta_gain > FOCUS_MOVE_GAIN_CHECK && 0 != s_af_gain) {
+	SENSOR_PRINT_HIGH("delta_gain %d, s_is_dv_mode %d", delta_gain, s_is_dv_mode);
+	if ((delta_gain > FOCUS_MOVE_GAIN_CHECK)
+		&& (0 != s_af_gain)
+		&& (0 == s_is_dv_mode)) {
 		ext_ptr->zone_cnt = 1;
 	}
 
