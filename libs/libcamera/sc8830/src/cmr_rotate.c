@@ -24,7 +24,7 @@
 #include "cmr_cvt.h"
 #include "sprd_rot_k.h"
 
-static char               rot_dev_name[50] = "/dev/sprd_rotation";
+static char rot_dev_name[50] = "/dev/sprd_rotation";
 
 struct rot_file{
 	int fd;
@@ -33,21 +33,25 @@ struct rot_file{
 
 static ROT_DATA_FORMAT_E cmr_rot_fmt_cvt(uint32_t cmr_fmt)
 {
-	ROT_DATA_FORMAT_E        fmt = ROT_FMT_MAX;
+	ROT_DATA_FORMAT_E fmt = ROT_FMT_MAX;
 
 	switch (cmr_fmt) {
 	case IMG_DATA_TYPE_YUV422:
 		fmt = ROT_YUV422;
 		break;
+
 	case IMG_DATA_TYPE_YUV420:
 		fmt = ROT_YUV420;
 		break;
+
 	case IMG_DATA_TYPE_RGB565:
 		fmt = ROT_RGB565;
 		break;
+
 	case IMG_DATA_TYPE_RGB888:
 		fmt = ROT_RGB888;
 		break;
+
 	default:
 		break;
 	}
@@ -61,7 +65,6 @@ int cmr_rot_open(void)
 	struct rot_file *file = NULL;
 	int fd = -1;
 	int handle = 0;
-
 
 	file = malloc(sizeof(struct rot_file));
 	if (!file) {
@@ -93,17 +96,15 @@ open_out:
 	return handle;
 }
 
-
 int cmr_rot(struct cmr_rot_param *rot_param)
 {
-	struct _rot_cfg_tag      rot_cfg;
-	int                      ret = 0;
-	enum img_rot_angle       angle;
-	struct img_frm           *src_img;
-	struct img_frm           *dst_img;
-	int                      fd;
-	struct rot_file          *file = NULL;
-
+	struct _rot_cfg_tag rot_cfg;
+	int ret = 0;
+	enum img_rot_angle  angle;
+	struct img_frm *src_img;
+	struct img_frm *dst_img;
+	int fd;
+	struct rot_file *file = NULL;
 
 	CMR_LOGV("S");
 
@@ -147,15 +148,13 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 		dst_img->addr_phy.addr_y,
 		dst_img->addr_phy.addr_u);
 
-
 	if ((uint32_t)angle < (uint32_t)(IMG_ROT_90)) {
 		CMR_LOGE("Wrong angle %d", angle);
 		ret = -EINVAL;
 		goto rot_unlock;
 	}
 
-
-	rot_cfg.format          = cmr_rot_fmt_cvt(src_img->fmt);
+	rot_cfg.format = cmr_rot_fmt_cvt(src_img->fmt);
 	if (rot_cfg.format >= ROT_FMT_MAX) {
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
 		ret = -EINVAL;
@@ -169,9 +168,8 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 	rot_cfg.dst_addr.y_addr = dst_img->addr_phy.addr_y;
 	rot_cfg.dst_addr.u_addr = dst_img->addr_phy.addr_u;
 	rot_cfg.dst_addr.v_addr = dst_img->addr_phy.addr_v;
-	rot_cfg.img_size.w      = (uint16_t)src_img->size.width;
-	rot_cfg.img_size.h      = (uint16_t)src_img->size.height;
-
+	rot_cfg.img_size.w = (uint16_t)src_img->size.width;
+	rot_cfg.img_size.h = (uint16_t)src_img->size.height;
 
 	ret = ioctl(fd, ROT_IO_START, &rot_cfg);
 	if (ret) {
@@ -192,9 +190,8 @@ rot_exit:
 
 int cmr_rot_close(int *fd)
 {
-	int                      ret = -1;
+	int ret = -1;
 	struct rot_file *file = (struct rot_file*)(*fd);
-
 
 	CMR_LOGV("Start to close rotation device.");
 

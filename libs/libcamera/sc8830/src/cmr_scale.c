@@ -24,14 +24,13 @@
 #include "img_scale_u.h"
 #include "cmr_cvt.h"
 
-#define CVT_EXIT_IF_ERR(n)                                             \
-		do {                                                   \
-			if (n) {                                       \
-				CMR_LOGW("ret %d", n);                 \
-				goto exit;                             \
-			}                                              \
+#define CVT_EXIT_IF_ERR(n) \
+		do { \
+			if (n) { \
+				CMR_LOGW("ret %d", n); \
+				goto exit; \
+			} \
 		} while(0)
-
 
 enum scale_work_mode {
 	SC_FRAME = SCALE_MODE_NORMAL,
@@ -58,33 +57,37 @@ struct scale_cxt {
 	uint32_t          is_started;
 };
 
-static char               scaler_dev_name[50] = "/dev/sprd_scale";
-static int                scaler_fd = -1;
-static cmr_evt_cb         scaler_evt_cb = NULL;
-static pthread_mutex_t    scaler_cb_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_t          scaler_thread;
-static struct scale_cxt   *sc_cxt;
-static sem_t              scaler_sem;
-static sem_t              scaler_init_sem;
-static sem_t              scaler_sync_sem;
+static char scaler_dev_name[50] = "/dev/sprd_scale";
+static int scaler_fd = -1;
+static cmr_evt_cb scaler_evt_cb = NULL;
+static pthread_mutex_t scaler_cb_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t  scaler_thread;
+static struct scale_cxt *sc_cxt;
+static sem_t scaler_sem;
+static sem_t scaler_init_sem;
+static sem_t scaler_sync_sem;
 
 static enum scale_fmt cmr_scale_fmt_cvt(uint32_t cmt_fmt)
 {
-	enum scale_fmt           sc_fmt = SCALE_FTM_MAX;
+	enum scale_fmt sc_fmt = SCALE_FTM_MAX;
 
 	switch (cmt_fmt) {
 	case IMG_DATA_TYPE_YUV422:
 		sc_fmt = SCALE_YUV422;
 		break;
+
 	case IMG_DATA_TYPE_YUV420:
 		sc_fmt = SCALE_YUV420;
 		break;
+
 	case IMG_DATA_TYPE_RGB565:
 		sc_fmt = SCALE_RGB565;
 		break;
+
 	case IMG_DATA_TYPE_RGB888:
 		sc_fmt = SCALE_RGB888;
 		break;
+
 	default:
 		CMR_LOGE("Unsupported camera format");
 		break;
@@ -104,10 +107,10 @@ int cmr_scale_evt_reg(cmr_evt_cb  scale_event_cb)
 
 static void* cmr_scale_thread_proc(void* data)
 {
-	int                      evt_id;
-	struct img_frm           frame;
-	struct scale_frame       sc_frm;
-	uint32_t                 i, src, dst, height_tmp;
+	int evt_id;
+	struct img_frm frame;
+	struct scale_frame sc_frm;
+	uint32_t i, src, dst, height_tmp;
 
 	CMR_LOGV("scaler_thread In");
 
@@ -175,9 +178,9 @@ static void* cmr_scale_thread_proc(void* data)
 					ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 					ioctl(scaler_fd, SCALE_IO_DEINIT);
 				}
-				frame.reserved        = sc_cxt->sc_user_data;
-				frame.size.width      = sc_frm.width;
-				frame.size.height     = sc_frm.height;
+				frame.reserved = sc_cxt->sc_user_data;
+				frame.size.width = sc_frm.width;
+				frame.size.height = sc_frm.height;
 				frame.addr_phy.addr_y = sc_frm.yaddr;
 				frame.addr_phy.addr_u = sc_frm.uaddr;
 				frame.addr_phy.addr_v = sc_frm.vaddr;
@@ -195,10 +198,10 @@ static void* cmr_scale_thread_proc(void* data)
 	return NULL;
 }
 
-static int   cmr_scale_create_thread(void)
+static int cmr_scale_create_thread(void)
 {
-	int                      ret = 0;
-	pthread_attr_t           attr;
+	int  ret = 0;
+	pthread_attr_t attr;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -209,13 +212,13 @@ static int   cmr_scale_create_thread(void)
 
 int cmr_scale_init(void)
 {
-	int                      ret = 0;
-	int                      time_out = 3;
+	int ret = 0;
+	int time_out = 3;
 
 	CMR_LOGV("In");
 	CMR_PRINT_TIME;
 
-	for ( ;time_out > 0; time_out--) {
+	for ( ; time_out > 0; time_out--) {
 		scaler_fd = open(scaler_dev_name, O_RDWR, 0);
 
 		if (-1 == scaler_fd) {
@@ -260,10 +263,10 @@ int cmr_scale_local_init(uint32_t slice_height,
 		struct img_rect *rect,
 		struct img_frm *dst_img,
 		struct img_frm *tmp_frm,
-		void           *user_data)
+		void *user_data)
 {
-	int                      ret = 0;
-	uint32_t                 size;
+	int ret = 0;
+	uint32_t size;
 
 	if (NULL == src_img || NULL == dst_img) {
 		CMR_LOGE("Parameter Error 0x%x 0x%x", (uint32_t)src_img, (uint32_t)dst_img);
@@ -292,8 +295,8 @@ int cmr_scale_local_init(uint32_t slice_height,
 	if (NULL == rect) {
 		sc_cxt->src_rect.start_x = 0;
 		sc_cxt->src_rect.start_y = 0;
-		sc_cxt->src_rect.width   = src_img->size.width;
-		sc_cxt->src_rect.height  = src_img->size.height;
+		sc_cxt->src_rect.width = src_img->size.width;
+		sc_cxt->src_rect.height = src_img->size.height;
 	} else {
 		memcpy(&sc_cxt->src_rect, rect, sizeof(struct img_rect));
 	}
@@ -349,7 +352,7 @@ int cmr_scale_local_init(uint32_t slice_height,
 	}
 #else
 	if (tmp_frm) {
-		CMR_LOGV("SC8825, slice out YUV420, tmp 0x%x", tmp_frm->addr_phy.addr_y);
+		CMR_LOGV("slice out YUV420, tmp 0x%x", tmp_frm->addr_phy.addr_y);
 		sc_cxt->tmp_buffer = tmp_frm->addr_phy.addr_y;
 	}
 	sc_cxt->tmp_slice.addr_phy.addr_u = dst_img->addr_phy.addr_u;
@@ -375,14 +378,14 @@ int  cmr_scale_start(uint32_t slice_height,
 		struct img_rect *rect,
 		struct img_frm *dst_img,
 		struct img_frm *tmp_frm,
-		void           *user_data)
+		void *user_data)
 {
-	int                      ret = 0;
-	enum scle_mode           sc_mode;
-	enum scale_fmt           fmt;
-	struct img_addr          tmp_addr;
-	struct scale_frame       sc_frm;
-	uint32_t                 act_height = 0;
+	int ret = 0;
+	enum scle_mode sc_mode;
+	enum scale_fmt fmt;
+	struct img_addr tmp_addr;
+	struct scale_frame sc_frm;
+	uint32_t act_height = 0;
 
 	if (-1 == scaler_fd) {
 		CMR_LOGE("Fail to open scaler device.");
@@ -501,19 +504,19 @@ exit:
 	return ret;
 }
 
-int  cmr_scale_next(uint32_t     slice_height,
-		struct img_frm  *src_frm,
-		struct img_rect  *rect,
-		struct img_frm  *dst_frm)
+int  cmr_scale_next(uint32_t slice_height,
+		struct img_frm *src_frm,
+		struct img_rect *rect,
+		struct img_frm *dst_frm)
 {
-	int                      ret = 0;
-	struct img_rect          l_rect;
-	struct img_addr          l_addr;
-	uint32_t                 offset;
-	uint32_t                 offset_fact = 0;
-	struct img_addr          dst_addr;
-	uint32_t                 act_height = 0;
-	uint32_t                 is_end = 0;
+	int ret = 0;
+	struct img_rect l_rect;
+	struct img_addr l_addr;
+	uint32_t offset;
+	uint32_t offset_fact = 0;
+	struct img_addr dst_addr;
+	uint32_t act_height = 0;
+	uint32_t is_end = 0;
 
 	CMR_LOGV("do next slice");
 
@@ -566,8 +569,8 @@ int  cmr_scale_next(uint32_t     slice_height,
 
 		if (sc_cxt->is_started) {
 			l_rect.start_x = sc_cxt->src_rect.start_x;
-			l_rect.width   = sc_cxt->src_rect.width;
-			l_rect.height  = sc_cxt->src_rect.height;
+			l_rect.width = sc_cxt->src_rect.width;
+			l_rect.height = sc_cxt->src_rect.height;
 			ret = ioctl(scaler_fd, SCALE_IO_INPUT_RECT, &l_rect);
 			CVT_EXIT_IF_ERR(ret);
 			CMR_LOGI("trim rect %d %d %d %d, act_height %d",
@@ -665,8 +668,8 @@ exit:
 
 int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor)
 {
-	uint32_t                 rd_word[2];
-	int                      ret = 0;
+	uint32_t rd_word[2];
+	int ret = 0;
 
 	if (NULL == width || NULL == sc_factor) {
 		CMR_LOGE("Wrong param, 0x%x 0x%x", (uint32_t)width, (uint32_t)sc_factor);
@@ -687,16 +690,16 @@ int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor)
 
 static int cmr_scale_kill_thread(void)
 {
-	int                      ret = 0;
-	char                     write_ch = 0;
-	void                     *dummy;
+	int ret = 0;
+	char write_ch = 0;
+	void *dummy;
 
 	if (-1 == scaler_fd) {
 		CMR_LOGE("invalid fd");
 		return -1;
 	}
 
-	ret = write(scaler_fd, &write_ch, 1);// kill thread;
+	ret = write(scaler_fd, &write_ch, 1);/* kill thread;*/
 	if (ret > 0) {
 		ret = pthread_join(scaler_thread, &dummy);
 	}
@@ -706,7 +709,7 @@ static int cmr_scale_kill_thread(void)
 
 int cmr_scale_deinit(void)
 {
-	int                      ret = 0;
+	int ret = 0;
 
 	CMR_LOGV("Start to close scale device.");
 
