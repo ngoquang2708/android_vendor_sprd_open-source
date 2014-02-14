@@ -1601,17 +1601,21 @@ status_t SprdCameraHardware::checkFlashSupportParameter(SprdCameraParameters& pa
 	SprdCameraParameters::ConfigType configType;
 	const char* flash_support_value;
 
-	/*check the scene HDR mode and set the flash mode*/
-	if ((0 == strcmp("hdr",params.get_SceneMode())
-		|| 1 == params.getInt("zsl"))
-		&& (CAMERA_FLASH_MODE_TORCH != params.getFlashMode()
-		|| (NULL != params.get("recording-hint")
-		&& 0 != strcmp("true",params.get("recording-hint"))))) {
-		LOGV("hdr enable - set flash-mode off");
-		params.setFlashModeSupport("false");
-	} else {
+	/*check the if support the flash*/
+	if ((NULL != params.get("recording-hint"))
+		&& (0 == strcmp("true",params.get("recording-hint")))) {
 		if (params.getIsSupportFlash()) {
 			params.setFlashModeSupport("true");
+		}
+	} else {
+		if ((0 == strcmp("hdr",params.get_SceneMode()))
+			|| (1 == params.getInt("zsl"))) {
+			LOGV("hdr enable - set flash-mode off");
+			params.setFlashModeSupport("false");
+		} else {
+			if (params.getIsSupportFlash()) {
+				params.setFlashModeSupport("true");
+			}
 		}
 	}
 
