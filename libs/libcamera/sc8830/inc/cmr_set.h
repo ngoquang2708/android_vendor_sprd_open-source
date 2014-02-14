@@ -28,8 +28,8 @@ extern "C"
 #define INVALID_SET_BYTE                              0xFF
 #define INVALID_SET_WORD                              0xFFFFFFFF
 #define SCENE_MODE_NIGHT                              1
-#define ISP_AE_STAB_TIMEOUT                           5 //sec
-#define ISP_ALG_TIMEOUT                               5 //sec
+#define ISP_AE_STAB_TIMEOUT                           5 /*sec*/
+#define ISP_ALG_TIMEOUT                               5 /*sec*/
 #define EN_WAIT_AE_STAB                               1
 
 enum cmr_focus_mode {
@@ -52,9 +52,9 @@ enum cmr_flash_mode {
 enum cmr_flash_status {
 	FLASH_CLOSE = 0x0,
 	FLASH_OPEN = 0x1,
-	FLASH_TORCH = 0x2,	/*user only set flash to close/open/torch state */
+	FLASH_TORCH = 0x2,/*user only set flash to close/open/torch state */
 	FLASH_AUTO = 0x3,
-	FLASH_CLOSE_AFTER_OPEN = 0x10,	/* following is set to sensor */
+	FLASH_CLOSE_AFTER_OPEN = 0x10,/* following is set to sensor */
 	FLASH_HIGH_LIGHT = 0x11,
 	FLASH_OPEN_ON_RECORDING = 0x22,
 	FLASH_CLOSE_AFTER_AUTOFOCUS = 0x30,
@@ -75,7 +75,7 @@ int camera_autofocus_start(void);
 int camera_autofocus_stop(uint32_t is_external);
 int camera_autofocus_start_light(void);
 int camera_set_ctrl(camera_parm_type id,
-			uint32_t          parm,
+			uint32_t parm,
 			cmr_before_set_cb before_set,
 			cmr_after_set_cb  after_set);
 int camera_isp_ctrl_done(uint32_t cmd, void* data);

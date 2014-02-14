@@ -13,18 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-//#include <linux/i2c.h>
-//#include <linux/gpio.h>
-//#include <linux/delay.h>
-//#include <mach/hardware.h>
-//#include <asm/io.h>
-//#include <linux/list.h>
 #include "sensor_drv_u.h"
 #include "sensor_cfg.h"
 
-/**---------------------------------------------------------------------------*
- **                         extend Variables and function                     *
- **---------------------------------------------------------------------------*/
 #if 0
 extern SENSOR_INFO_T g_OV7675_yuv_info;
 extern SENSOR_INFO_T g_OV7670_yuv_info;
@@ -44,7 +35,7 @@ extern SENSOR_INFO_T g_GC0309_yuv_info;
 extern SENSOR_INFO_T g_ov5640_yuv_info;
 extern SENSOR_INFO_T g_ov5640_raw_info;
 extern SENSOR_INFO_T g_OV7660_yuv_info;
-extern SENSOR_INFO_T g_nmi600_yuv_info;//atv:nmi bonnie
+extern SENSOR_INFO_T g_nmi600_yuv_info;
 extern SENSOR_INFO_T g_ov5640_mipi_raw_info;
 extern SENSOR_INFO_T g_ov5647_mipi_raw_info;
 extern SENSOR_INFO_T g_ov5648_mipi_raw_info;
@@ -67,9 +58,7 @@ extern SENSOR_INFO_T g_ov5640_yuv_info;
 extern SENSOR_INFO_T g_OV7675_yuv_info;
 extern SENSOR_INFO_T g_hi253_yuv_info;
 extern SENSOR_INFO_T g_s5k4ec_yuv_info;
-/**---------------------------------------------------------------------------*
- **                         Constant Variables                                *
- **---------------------------------------------------------------------------*/
+
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
@@ -80,7 +69,7 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	&g_imx179_mipi_raw_info,
 	&g_ov8865_mipi_raw_info,
 	&g_ov13850_mipi_raw_info,
-	//&g_ov5640_mipi_raw_info, // aiden tmp
+	//&g_ov5640_mipi_raw_info,
 	//&g_s5k5ccgx_yuv_info_mipi,
 	//&g_s5k4e1ga_mipi_raw_info,
 	//&g_hi351_mipi_yuv_info,
@@ -117,36 +106,27 @@ const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 
 const SENSOR_INFO_T* atv_infor_tab[]=
 {
-    //&g_nmi600_yuv_info, //&g_tlg1120_yuv_info,  bonnie
+	//&g_nmi600_yuv_info, //&g_tlg1120_yuv_info,
 	PNULL
 };
 
-/*****************************************************************************/
-//  Description:    This function is used to get sensor information table
-//  Author:         Liangwen.Zhen
-//  Note:
-/*****************************************************************************/
 SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 {
 	SENSOR_INFO_T * sensor_infor_tab_ptr=NULL;
 
-	switch(sensor_id)
-	{
+	switch (sensor_id) {
 		case SENSOR_MAIN:
-		{
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&main_sensor_infor_tab;
 			break;
-		}
+
 		case SENSOR_SUB:
-		{
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&sub_sensor_infor_tab;
 			break;
-		}
+
 		case SENSOR_ATV:
-		{
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&atv_infor_tab;
 			break;
-		}
+
 		default:
 			break;
 	}
@@ -154,39 +134,29 @@ SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 	return (SENSOR_INFO_T **)sensor_infor_tab_ptr;
 }
 
-/*****************************************************************************/
-//  Description:    This function is used to get sensor information table
-//  Author:         Liangwen.Zhen
-//  Note:
-/*****************************************************************************/
 uint32_t Sensor_GetInforTabLenght(SENSOR_ID_E sensor_id)
 {
 	uint32_t tab_lenght = 0;
 
-	switch(sensor_id)
-	{
+	switch (sensor_id) {
 		case SENSOR_MAIN:
-		{
 			tab_lenght=(sizeof(main_sensor_infor_tab)/sizeof(SENSOR_INFO_T*));
 			break;
-		}
+
 		case SENSOR_SUB:
-		{
 			tab_lenght=(sizeof(sub_sensor_infor_tab)/sizeof(SENSOR_INFO_T*));
 			break;
-		}
+
 		case SENSOR_ATV:
-		{
 			tab_lenght=(sizeof(atv_infor_tab)/sizeof(SENSOR_INFO_T*));
 			break;
-		}
+
 		default:
 			break;
 	}
 
 	return tab_lenght;
 }
-
 
 #if 0
 static LIST_HEAD(main_sensor_info_list);	/*for back camera */

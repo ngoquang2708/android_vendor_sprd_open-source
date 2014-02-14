@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include <stdlib.h>
-#include <fcntl.h>              /* low-level i/o */
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -23,14 +23,14 @@
 #include <unistd.h>
 #include "cmr_v4l2.h"
 
-#define CMR_TIMING_LEN                   16
+#define CMR_TIMING_LEN 16
 
-#define CMR_CHECK_FD                                                   \
-		do {                                                   \
-			if (-1 == fd) {                                \
-				CMR_LOGE("V4L2 device not opened");    \
-				return -1;                             \
-			}                                              \
+#define CMR_CHECK_FD \
+		do { \
+			if (-1 == fd) { \
+				CMR_LOGE("V4L2 device not opened"); \
+				return -1; \
+			} \
 		} while(0)
 
 enum
@@ -51,7 +51,6 @@ enum
 	EXIT_EXCEPTION,
 };
 
-
 /*
 	capability       parameters                         structure member
 	0x1000           capture mode, single or multi      capture.capturemode
@@ -71,8 +70,8 @@ enum dcam_parm_id {
 	CAPTURE_SET_CROP,
 	CAPTURE_SET_FLASH,
 	PATH_FRM_DECI = 0x2000,
-	PATH_PAUSE    = 0x2001,
-	PATH_RESUME   = 0x2002,
+	PATH_PAUSE = 0x2001,
+	PATH_RESUME = 0x2002,
 };
 
 static char               dev_name[50] = "/dev/video0";
@@ -86,9 +85,9 @@ static uint32_t           chn_status[CHN_MAX];
 static int                chn_frm_num[CHN_MAX];
 static v4l2_stream_on     stream_on_cb = NULL;
 
-static int      cmr_v4l2_create_thread(void);
-static int      cmr_v4l2_kill_thread(void);
-static void*    cmr_v4l2_thread_proc(void* data);
+static int cmr_v4l2_create_thread(void);
+static int cmr_v4l2_kill_thread(void);
+static void* cmr_v4l2_thread_proc(void* data);
 static uint32_t cmr_v4l2_get_4cc(uint32_t img_type);
 
 int cmr_v4l2_init(void)
@@ -162,7 +161,6 @@ void cmr_v4l2_evt_reg(cmr_evt_cb  v4l2_event_cb)
 	pthread_mutex_unlock(&cb_mutex);
 	return;
 }
-
 
 /*
 
@@ -608,18 +606,23 @@ static int cmr_v4l2_evt_id(int isr_flag)
 	case V4L2_FLAG_TX_DONE:
 		ret = CMR_V4L2_TX_DONE;
 		break;
+
 	case V4L2_FLAG_NO_MEM:
 		ret = CMR_V4L2_TX_NO_MEM;
 		break;
+
 	case V4L2_FLAG_TX_ERR:
 		ret = CMR_V4L2_TX_ERROR;
 		break;
+
 	case V4L2_FLAG_CSI2_ERR:
 		ret = CMR_V4L2_CSI2_ERR;
 		break;
+
 	case V4L2_FLAG_TIME_OUT:
 		ret = CMR_V4L2_TIME_OUT;
 		break;
+
 	default:
 		CMR_LOGV("isr_flag 0x%x", isr_flag);
 		break;
@@ -752,18 +755,23 @@ static uint32_t cmr_v4l2_get_4cc(uint32_t img_type)
 	case IMG_DATA_TYPE_YUV422:
 		ret_4cc = V4L2_PIX_FMT_YUV422P;
 		break;
+
 	case IMG_DATA_TYPE_YUV420:
 		ret_4cc = V4L2_PIX_FMT_NV21;
 		break;
+
 	case IMG_DATA_TYPE_RGB565:
 		ret_4cc = V4L2_PIX_FMT_RGB565;
 		break;
+
 	case IMG_DATA_TYPE_RAW:
 		ret_4cc = V4L2_PIX_FMT_GREY;
 		break;
+
 	case IMG_DATA_TYPE_JPEG:
 		ret_4cc = V4L2_PIX_FMT_JPEG;
 		break;
+
 	default:
 		ret_4cc = V4L2_PIX_FMT_NV21;
 		break;
@@ -795,5 +803,3 @@ int cmr_v4l2_stream_cb(v4l2_stream_on str_on)
 
 	return ret;
 }
-
-

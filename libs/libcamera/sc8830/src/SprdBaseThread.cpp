@@ -14,125 +14,120 @@
  * limitations under the License.
  */
 
-//#define LOG_NDEBUG 1
+/*#define LOG_NDEBUG 1*/
 #define LOG_TAG "SprdBaseThread"
 #include <utils/Log.h>
-
 #include "SprdBaseThread.h"
 
 namespace android {
 
-
 SprdBaseThread::SprdBaseThread()
-    :Thread(false)
+	:Thread(false)
 {
-    ALOGV("SprdBaseThread()");
-    m_processingSignal = 0;
-    m_receivedSignal = 0;
-    m_pendingSignal = 0;
-    m_isTerminated = false;
+	ALOGV("SprdBaseThread()");
+	m_processingSignal = 0;
+	m_receivedSignal = 0;
+	m_pendingSignal = 0;
+	m_isTerminated = false;
 }
 
 void SprdBaseThread::Start(const char* name,
-                            int32_t priority, size_t stack)
+	int32_t priority, size_t stack)
 {
-    ALOGV("SignalBaseThread::Start()");
-    run(name, priority, stack);
+	ALOGV("SignalBaseThread::Start()");
+	run(name, priority, stack);
 }
 SprdBaseThread::SprdBaseThread(const char* name,
-                            int32_t priority, size_t stack)
-    :Thread(false)
+	int32_t priority, size_t stack)
+	:Thread(false)
 {
-    ALOGV("SignalBaseThread run");
-    m_processingSignal = 0;
-    m_receivedSignal = 0;
-    m_pendingSignal = 0;
-    m_isTerminated = false;
-    run(name, priority, stack);
-    return;
+	ALOGV("SignalBaseThread run");
+	m_processingSignal = 0;
+	m_receivedSignal = 0;
+	m_pendingSignal = 0;
+	m_isTerminated = false;
+	run(name, priority, stack);
+	return;
 }
 
 SprdBaseThread::~SprdBaseThread()
 {
-    ALOGD("DEBUG(%s):", __func__);
-    return;
+	ALOGD("DEBUG(%s):", __func__);
+	return;
 }
 
 status_t SprdBaseThread::SetSignal(uint32_t signal)
 {
-    ALOGV("DEBUG(%s):Setting Signal (%x)", __FUNCTION__, signal);
+	ALOGV("DEBUG(%s):Setting Signal (%x)", __FUNCTION__, signal);
 
-    Mutex::Autolock lock(m_signalMutex);
-    ALOGV("DEBUG(%s):Signal Set     (%x) - prev(%x)", __FUNCTION__, signal, m_receivedSignal);
-    if (m_receivedSignal & signal) {
-        m_pendingSignal |= signal;
-    } else {
-        m_receivedSignal |= signal;
-    }
-    m_threadCondition.signal();
-    return NO_ERROR;
+	Mutex::Autolock lock(m_signalMutex);
+	ALOGV("DEBUG(%s):Signal Set     (%x) - prev(%x)", __FUNCTION__, signal, m_receivedSignal);
+	if (m_receivedSignal & signal) {
+		m_pendingSignal |= signal;
+	} else {
+		m_receivedSignal |= signal;
+	}
+	m_threadCondition.signal();
+	return NO_ERROR;
 }
 
 uint32_t SprdBaseThread::GetProcessingSignal()
 {
-    ALOGV("DEBUG(%s): Signal (%x)", __FUNCTION__, m_processingSignal);
+	ALOGV("DEBUG(%s): Signal (%x)", __FUNCTION__, m_processingSignal);
 
-    Mutex::Autolock lock(m_signalMutex);
-    return m_processingSignal;
+	Mutex::Autolock lock(m_signalMutex);
+	return m_processingSignal;
 }
 
 bool SprdBaseThread::IsTerminated()
 {
-    Mutex::Autolock lock(m_signalMutex);
-    return m_isTerminated;
+	Mutex::Autolock lock(m_signalMutex);
+	return m_isTerminated;
 }
 
 status_t SprdBaseThread::readyToRun()
 {
-    ALOGV("DEBUG(%s):", __func__);
-    return readyToRunInternal();
+	ALOGV("DEBUG(%s):", __func__);
+	return readyToRunInternal();
 }
 
 status_t SprdBaseThread::readyToRunInternal()
 {
-    ALOGV("DEBUG(%s):", __func__);
-    return NO_ERROR;
+	ALOGV("DEBUG(%s):", __func__);
+	return NO_ERROR;
 }
 
 bool SprdBaseThread::threadLoop()
 {
-    {
-        Mutex::Autolock lock(m_signalMutex);
-        ALOGV("DEBUG(%s):Waiting Signal", __FUNCTION__);
-        while (!m_receivedSignal)
-        {
-            m_threadCondition.wait(m_signalMutex);
-        }
-        m_processingSignal = m_receivedSignal;
-        m_receivedSignal = m_pendingSignal;
-        m_pendingSignal = 0;
-    }
-    ALOGV("DEBUG(%s):Got Signal (%x)", __FUNCTION__, m_processingSignal);
+	{
+	Mutex::Autolock lock(m_signalMutex);
+	ALOGV("DEBUG(%s):Waiting Signal", __FUNCTION__);
+	while (!m_receivedSignal)
+	{
+	m_threadCondition.wait(m_signalMutex);
+	}
+	m_processingSignal = m_receivedSignal;
+	m_receivedSignal = m_pendingSignal;
+	m_pendingSignal = 0;
+	}
 
-    if (m_processingSignal & SIGNAL_THREAD_TERMINATE)
-    {
-        ALOGD("(%s): Thread Terminating by SIGNAL", __func__);
-        Mutex::Autolock lock(m_signalMutex);
-        m_isTerminated = true;
-        return (false);
-    }
-    else if (m_processingSignal & SIGNAL_THREAD_PAUSE)
-    {
-        ALOGV("DEBUG(%s):Thread Paused", __func__);
-        return (true);
-    }
+	ALOGV("DEBUG(%s):Got Signal (%x)", __FUNCTION__, m_processingSignal);
 
-    if (m_isTerminated)
-        m_isTerminated = false;
+	if (m_processingSignal & SIGNAL_THREAD_TERMINATE) {
+		ALOGD("(%s): Thread Terminating by SIGNAL", __func__);
+		Mutex::Autolock lock(m_signalMutex);
+		m_isTerminated = true;
+		return (false);
+	} else if (m_processingSignal & SIGNAL_THREAD_PAUSE) {
+		ALOGV("DEBUG(%s):Thread Paused", __func__);
+		return (true);
+	}
 
-    threadDealWithSiganl();
-    return true;
+	if (m_isTerminated)
+		m_isTerminated = false;
+
+	threadDealWithSiganl();
+	return true;
 }
-
 
 }; // namespace android

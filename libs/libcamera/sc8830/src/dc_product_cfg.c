@@ -30,13 +30,13 @@ static uint32_t _DC_GetExifSpecUserInfo(uint32_t param);
 
 static EXIF_PRI_DESC_T s_dc_exif_pri_desc_info = {
 	{0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01},
-	"Default Date",	/*Date */
+	"Default Date",/*Date */
 	"ImageDescription",	/*ImageDescription */
-	"Maker",		/*Make */
-	"Model",		/*Model */
-	"Software Version v0.0.0",	/*Software */
-	"Artist",		/*Artist */
-	"CopyRight"		/*Copyright */
+	"Maker",/*Make */
+	"Model",/*Model */
+	"Software Version v0.0.0",/*Software */
+	"Artist",/*Artist */
+	"CopyRight"/*Copyright */
 };
 
 static uint8_t  exif_user_comments[20] = {
@@ -71,13 +71,13 @@ static uint32_t _DC_GetExifPrimaryPriDescInfo(uint32_t param)
 	time(&timep);
 	p = gmtime(&timep);
 	sprintf((char *)exif_ptr->DateTime,
-			"%4d:%2d:%2d %2d:%2d:%2d",
-			(1900+p->tm_year),
-			(1+p->tm_mon),
-			p->tm_mday,
-			p->tm_hour,
-			p->tm_min,
-			p->tm_sec);
+		"%4d:%2d:%2d %2d:%2d:%2d",
+		(1900+p->tm_year),
+		(1+p->tm_mon),
+		p->tm_mday,
+		p->tm_hour,
+		p->tm_min,
+		p->tm_sec);
 #ifdef KERNEL_TIME
 	SCI_DATE_T cur_date = {
 		0
@@ -89,30 +89,29 @@ static uint32_t _DC_GetExifPrimaryPriDescInfo(uint32_t param)
 	TM_GetSysDate(&cur_date);
 	TM_GetSysTime(&cur_time);
 	sprintf((int8 *)exif_ptr->DateTime,
-            "%04d:%02d:%02d %02d:%02d:%02d",
-            cur_date.year,
-            cur_date.mon,
-            cur_date.mday,
-            cur_time.hour,
-            cur_time.min,
-            cur_time.sec);
-
+		"%04d:%02d:%02d %02d:%02d:%02d",
+		cur_date.year,
+		cur_date.mon,
+		cur_date.mday,
+		cur_time.hour,
+		cur_time.min,
+		cur_time.sec);
 #endif
 	*(uint32_t *) & s_dc_exif_pri_desc_info.valid = (uint32_t) 0x7F;
 	sprintf((char *) exif_ptr->DateTime,
-			"%04d:%02d:%02d %02d:%02d:%02d",
-			(1900+p->tm_year),
-			(1+p->tm_mon),p->tm_mday,
-			p->tm_hour,
-			p->tm_min,
-			p->tm_sec);
-	/*    sprintf((int8*)s_dc_exif_pri_desc_info.Copyright, "%s", "CopyRight"); */
-	/*    sprintf((int8*)s_dc_exif_pri_desc_info.ImageDescription, "%s", "ImageDescription"); */
+		"%04d:%02d:%02d %02d:%02d:%02d",
+		(1900+p->tm_year),
+		(1+p->tm_mon),p->tm_mday,
+		p->tm_hour,
+		p->tm_min,
+		p->tm_sec);
+	/*sprintf((int8*)s_dc_exif_pri_desc_info.Copyright, "%s", "CopyRight");*/
+	/*sprintf((int8*)s_dc_exif_pri_desc_info.ImageDescription, "%s", "ImageDescription");*/
 	sprintf((char *) s_dc_exif_pri_desc_info.Make, "%s", "Spreadtrum");
 	sprintf((char *) s_dc_exif_pri_desc_info.Model, "%s", "SP8810ga");
 
-	/*   sprintf((int8*)s_dc_exif_pri_desc_info.Software, "%s", "Test Version v0.0.0.1"); */
-	/*/   sprintf((int8*)s_dc_exif_pri_desc_info.Artist, "%s", "Artist"); */
+	/*sprintf((int8*)s_dc_exif_pri_desc_info.Software, "%s", "Test Version v0.0.0.1");*/
+	/*sprintf((int8*)s_dc_exif_pri_desc_info.Artist, "%s", "Artist");*/
 	sprintf((char *) s_dc_exif_pri_desc_info.Copyright, "%s","CopyRight, Spreadtrum, 2012");
 	CMR_LOGI("return 0x%x.",(uint32_t)exif_ptr);
 	return (uint32_t) exif_ptr;
@@ -122,15 +121,14 @@ static uint32_t _DC_GetExifSpecUserInfo(uint32_t param)
 {
 	EXIF_SPEC_USER_T *exif_ptr = &s_dc_exif_spec_user_info;
 
-	/*
-	   s_dc_exif_spec_user_info.valid.MakerNote = 0;
-	   s_dc_exif_spec_user_info.valid.UserComment = 0;
-	   s_dc_exif_spec_user_info.UserComment.count = 1;
-	   s_dc_exif_spec_user_info.UserComment.count = strlen((char*)exif_user_comments);
-	   s_dc_exif_spec_user_info.UserComment.ptr = (void*)exif_user_comments;
-	   s_dc_exif_spec_user_info.UserComment.type = EXIF_ASCII;
-	   s_dc_exif_spec_user_info.UserComment.size = 1;
-	 */
+
+	/*s_dc_exif_spec_user_info.valid.MakerNote = 0;
+	s_dc_exif_spec_user_info.valid.UserComment = 0;
+	s_dc_exif_spec_user_info.UserComment.count = 1;
+	s_dc_exif_spec_user_info.UserComment.count = strlen((char*)exif_user_comments);
+	s_dc_exif_spec_user_info.UserComment.ptr = (void*)exif_user_comments;
+	s_dc_exif_spec_user_info.UserComment.type = EXIF_ASCII;
+	s_dc_exif_spec_user_info.UserComment.size = 1;*/
 	CMR_LOGI(" valid.UserComment %d \n",s_dc_exif_spec_user_info.valid.UserComment);
 	return (uint32_t) exif_ptr;
 }
