@@ -43,7 +43,7 @@ struct gpu_freq_table {
 	unsigned int	freq_select;
 };
 
-#define GPU_FREQ_TABLE_SIZE 4
+#define GPU_FREQ_TABLE_SIZE 5
 
 struct gpu_freq_table_data {
 	struct gpu_freq_table 		freq_tbl[GPU_FREQ_TABLE_SIZE];
