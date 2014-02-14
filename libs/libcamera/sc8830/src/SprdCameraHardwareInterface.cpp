@@ -1516,10 +1516,14 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
 	LOGV("flash_mode:%s.",flash_mode);
 	if (!flash_mode) {
+#ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 		return BAD_VALUE;
+#endif
 	}
 	if (0 == strcmp(flash_mode,"invalid")) {
+#ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 		return BAD_VALUE;
+#endif
 	}
 
 	focus_mode = ((SprdCameraParameters)params).get_FocusMode();

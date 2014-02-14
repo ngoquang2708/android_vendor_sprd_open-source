@@ -482,9 +482,10 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"focal-length", "3.75"},
 	{"horizontal-view-angle", "54"},
 	{"vertical-view-angle", "54"},
-
+#ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 	{"flash-mode-values", "off"},
 	{"flash-mode", "off"},
+#endif
 	{"flash-mode-supported", "false"},
 
 	{"focus-mode-values", "infinity"},
@@ -623,8 +624,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
 #else
-        {"flash-mode-values", "off"},
-        {"flash-mode", "off"},
+        /*{"flash-mode-values", "off"},*/
+        /*{"flash-mode", "off"},*/
         {"flash-mode-supported", "false"},
 #endif
 #if defined(CONFIG_CAMERA_FACE_DETECT)
