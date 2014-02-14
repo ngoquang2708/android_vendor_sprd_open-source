@@ -600,11 +600,10 @@ int camera_set_video_mode(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode
 			ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
 		}
 	}
-	if ((cxt->cmr_set.video_mode != mode) || (cxt->cmr_set.sensor_mode != cxt->sn_cxt.preview_mode)) {
-		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
-		ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
-		cxt->cmr_set.sensor_mode = cxt->sn_cxt.preview_mode;
-	}
+
+	*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
+	ret = Sensor_Ioctl(SENSOR_IOCTL_VIDEO_MODE, mode);
+	cxt->cmr_set.sensor_mode = cxt->sn_cxt.preview_mode;
 
 	return ret;
 }
@@ -698,6 +697,7 @@ int camera_preview_start_set(void)
 	uint32_t                 skip, skip_num;
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 sn_mode;
+	uint32_t                 video_mode;
 
 	if ((CAMERA_ZSL_MODE != cxt->cap_mode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode)) {
 		sn_mode = cxt->sn_cxt.preview_mode;
@@ -766,9 +766,9 @@ int camera_preview_start_set(void)
 	}
 
 	if (INVALID_SET_WORD != set->video_mode) {
-		ret = camera_get_video_mode(set->frame_rate,&set->video_mode);
+		ret = camera_get_video_mode(set->frame_rate,&video_mode);
 		CMR_RTN_IF_ERR(ret);
-		ret = camera_set_video_mode(set->video_mode, set->frame_rate, &skip, &skip_num);
+		ret = camera_set_video_mode(video_mode, set->frame_rate, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
@@ -1987,7 +1987,7 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 	*video_mode = 0;
 	sensor_mode = cxt->sn_cxt.preview_mode;
 	sensor_ae_info = (SENSOR_AE_INFO_T*)&cxt->sn_cxt.sensor_info->sensor_video_info[sensor_mode];
-	CMR_LOGV("%d.",sensor_mode);
+	CMR_LOGV("sensor_mode %d.",sensor_mode);
 	for (i=0 ; i<SENSOR_VIDEO_MODE_MAX ; i++) {
 		if (frame_rate <= sensor_ae_info[i].max_frate) {
 			*video_mode = i;
