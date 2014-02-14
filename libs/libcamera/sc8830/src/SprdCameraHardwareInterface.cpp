@@ -452,8 +452,6 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	bool switch_ret = false;
 	status_t ret = 0;
 
-	waitSetParamsOK();
-
 	LOGV("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
@@ -793,6 +791,8 @@ status_t SprdCameraHardware::autoFocus()
 	LOGV("mLock:autoFocus E.\n");
 	Mutex::Autolock l(&mLock);
 
+	waitSetParamsOK();
+
 	if (!isPreviewing()) {
 		LOGE("autoFocus: not previewing");
 		return INVALID_OPERATION;
@@ -871,7 +871,7 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 
 	params.getPictureSize(&rawWidth, &rawHeight);
 	cur_params.setPictureSize(rawWidth, rawHeight);
-	LOGV("setParametersInternal:requested picture size %d x %d", rawWidth, rawHeight);
+	LOGV("copyParameters:requested picture size %d x %d", rawWidth, rawHeight);
 
 	params.getVideoSize(&width, &height);
 	cur_params.setVideoSize(width, height);
@@ -5366,6 +5366,7 @@ static int HAL_camera_device_set_preview_window(struct camera_device *dev,
 		struct preview_stream_ops *buf)
 {
 	LOGV("%s", __func__);
+	obj(dev)->waitSetParamsOK();
 	return obj(dev)->setPreviewWindow(buf);
 }
 
