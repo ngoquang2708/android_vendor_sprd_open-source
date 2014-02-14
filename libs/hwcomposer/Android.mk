@@ -155,6 +155,10 @@ ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
 	LOCAL_CFLAGS += -DVIDEO_LAYER_USE_RGB
 endif
 
+ifeq ($(strip $(USE_SPRD_DITHER)) , true)
+	LOCAL_CFLAGS += -DSPRD_DITHER_ENABLE
+endif
+
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 

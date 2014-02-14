@@ -41,6 +41,11 @@
 #include "alloc_device.h"
 #include "gralloc_priv.h"
 #include "gralloc_helper.h"
+
+#ifdef SPRD_DITHER_ENABLE
+#include "image_dither.h"
+#endif
+
 // numbers of buffers for page flipping
 #define NUM_BUFFERS NUM_FB_BUFFERS
 #define DEBUG_FB_POST
@@ -203,6 +208,22 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #ifdef DUMP_FB
         {
             dump_fb((void*)(hnd->base),&m->info,m->fbFormat);
+        }
+#endif
+
+#ifdef SPRD_DITHER_ENABLE
+        if(hnd->flags & private_handle_t::PRIV_FLAGS_SPRD_DITHER) {
+            struct img_dither_in_param in_param;
+            struct img_dither_out_param out_param;
+            uint32_t dither_handle = 0;
+
+            dither_handle = dev->reserved[6];
+            in_param.alg_id = 0;
+            in_param.data_addr = (void*)(hnd->base);
+            in_param.format = 0;
+            in_param.height =  m->info.yres;
+            in_param.width =  m->info.xres;
+            img_dither_process(dither_handle, &in_param, &out_param);
         }
 #endif
 
@@ -578,6 +599,17 @@ static int fb_close(struct hw_device_t *device)
 {
 	framebuffer_device_t *dev = reinterpret_cast<framebuffer_device_t *>(device);
 
+#ifdef SPRD_DITHER_ENABLE
+	if (dev->reserved[6]) {
+		int ret = 0;
+		ret = img_dither_deinit(dev->reserved[6]);
+		if (ret) {
+				AERR("dither de-init failed ,ret = 0x%x", ret);
+		}
+		AINF("hait dither close ID %i\n", 1);
+	}
+#endif
+
 	if (dev)
 	{
 #if GRALLOC_ARM_UMP_MODULE
@@ -655,6 +687,27 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	const_cast<int &>(dev->minSwapInterval) = 0;
 	const_cast<int &>(dev->maxSwapInterval) = 1;
 	*device = &dev->common;
+
+#ifdef SPRD_DITHER_ENABLE
+	{
+		int ret = 0;
+		struct img_dither_init_in_param init_in;
+		struct img_dither_init_out_param init_out;
+
+		init_in.alg_id = 0;
+		init_in.height = m->info.yres;
+		init_in.width = m->info.xres;
+
+		ret = img_dither_init(&init_in, &init_out);
+		if (ret) {
+			AERR("dither init failed ,ret = 0x%x", ret);
+		} else {
+			dev->reserved[6] = (uint32_t)init_out.param;
+		}
+		AINF("hait dither open ID %i\n", 1);
+	}
+#endif
+
 	//if (m->finfo.reserved[0] == 0x6f76 &&
 	//		m->finfo.reserved[1] == 0x6572) {
 	//	dev->setUpdateRect = fb_setUpdateRect;

@@ -125,6 +125,11 @@ public:
         return mVideoLayerCount;
     }
 
+    inline int getYuvLayerCount()
+    {
+        return mYUVLayerCount;
+    }
+
     inline hwc_layer_1_t *getFBTargetLayer()
     {
         return mFBTargetLayer;
