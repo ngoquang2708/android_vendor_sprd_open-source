@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include <stdlib.h>
-#include <fcntl.h>              /* low-level i/o */
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -26,20 +26,16 @@
 #include "cmr_msg.h"
 #include "cmr_oem.h"
 
-
 #define ARITHMETIC_EVT_FD_START          (1 << 16)
 #define ARITHMETIC_EVT_FD_EXIT           (1 << 17)
 #define ARITHMETIC_EVT_FD_INIT           (1 << 18)
 #define ARITHMETIC_EVT_MEM               (1 << 19)
-
 #define ARITHMETIC_EVT_MASK_BITS      (uint32_t)(ARITHMETIC_EVT_FD_START | \
-						ARITHMETIC_EVT_FD_EXIT | \
-						ARITHMETIC_EVT_FD_INIT | \
-						ARITHMETIC_EVT_MEM)
-
-
-#define CAMERA_FD_MSG_QUEUE_SIZE      5
-#define IMAGE_FORMAT		          "YVU420_SEMIPLANAR"
+					ARITHMETIC_EVT_FD_EXIT | \
+					ARITHMETIC_EVT_FD_INIT | \
+					ARITHMETIC_EVT_MEM)
+#define CAMERA_FD_MSG_QUEUE_SIZE 5
+#define IMAGE_FORMAT "YVU420_SEMIPLANAR"
 
 enum arithmetic_ret {
 	ARITH_SUCCESS = 0,
@@ -173,9 +169,9 @@ void *arithmetic_fd_thread_proc(void *data)
 					s_arith_cxt->mem_state = ARITH_SUCCESS;
 				}
 			}
-
 			CMR_PRINT_TIME;
 			break;
+
 		case ARITHMETIC_EVT_MEM:
 			mem_size = *(uint32_t *)(message.data);
 			if (0 == mem_size) {
@@ -206,8 +202,8 @@ void *arithmetic_fd_thread_proc(void *data)
 			} else {
 				CMR_LOGV("same size req, use origin buffer");
 			}
-
 			break;
+
 		case ARITHMETIC_EVT_FD_START:
 			CMR_PRINT_TIME;
 			s_arith_cxt->fd_num = 0;
@@ -235,10 +231,10 @@ void *arithmetic_fd_thread_proc(void *data)
 			memcpy(s_arith_cxt->addr,addr,s_arith_cxt->mem_size);
 			sem_post(&s_arith_cxt->fd_sync_sem);
 			frame_type.face_num = 0;
-			if( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
-				                         &face_rect_ptr,
-				                         (int*)&face_num,
-				                         0)) {
+			if ( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
+				&face_rect_ptr,
+				(int*)&face_num,
+				0)) {
 				CMR_LOGE("FaceSolid_Function fail.");
 			} else {
 				frame_type.face_ptr = face_rect_ptr;
@@ -263,10 +259,12 @@ void *arithmetic_fd_thread_proc(void *data)
 			s_arith_cxt->fd_busy = 0;
 			pthread_mutex_unlock(&s_arith_cxt->fd_lock);
 			break;
+
 		case ARITHMETIC_EVT_FD_EXIT:
 			FaceSolid_Finalize();
 			fd_exit_flag = 1;
 			break;
+
 		default:
 			break;
 		}
@@ -350,7 +348,7 @@ int arithmetic_fd_deinit(void)
 		message.msg_type = ARITHMETIC_EVT_FD_EXIT;
 		ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
-		if(CMR_MSG_SUCCESS == ret) {
+		if (CMR_MSG_SUCCESS == ret) {
 			sem_wait(&s_arith_cxt->fd_sync_sem);
 		}
 		sem_destroy(&s_arith_cxt->fd_sync_sem);
@@ -388,7 +386,7 @@ int arithmetic_fd_start(void *data_addr)
 		message.data = data_addr;
 		ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
-		if(CMR_MSG_SUCCESS == ret) {
+		if (CMR_MSG_SUCCESS == ret) {
 			sem_wait(&s_arith_cxt->fd_sync_sem);
 		} else {
 			ret = ARITH_START_FAIL;
@@ -429,7 +427,7 @@ int arithmetic_mem_handle(uint32_t mem_size)
 
 		ret = cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 
-		if(CMR_MSG_SUCCESS == ret) {
+		if (CMR_MSG_SUCCESS == ret) {
 		} else {
 			ret = ARITH_FAIL;
 			CMR_LOGE("fail.");
@@ -504,24 +502,24 @@ static void save_input_data(uint32_t width,uint32_t height)
 	uint32_t size = width*height*3/2;
 
 	fp = fopen("/data/1.raw", "wb");
-	if(0 != fp) {
+	if (0 != fp) {
 		fwrite((void*)s_hdr_cxt->addr[0], 1, size, fp);
 		fclose(fp);
-	}else{
+	} else {
 		CMR_LOGE("can not create savedata");
 	}
 	fp = fopen("/data/2.raw", "wb");
-	if(0 != fp) {
+	if (0 != fp) {
 		fwrite((void*)s_hdr_cxt->addr[1], 1, size, fp);
 		fclose(fp);
-	}else{
+	} else {
 		CMR_LOGE("can not create savedata");
 	}
 	fp = fopen("/data/3.raw", "wb");
-	if(0 != fp) {
+	if (0 != fp) {
 		fwrite((void*)s_hdr_cxt->addr[2], 1, size, fp);
 		fclose(fp);
-	}else{
+	} else {
 		CMR_LOGE("can not create savedata");
 	}
 }
@@ -531,10 +529,10 @@ static void save_hdrdata(void *addr,uint32_t width,uint32_t height)
 	uint32_t size = width*height*3/2;
 
 	fp = fopen("/data/4.raw", "wb");
-	if(0 != fp) {
+	if (0 != fp) {
 		fwrite((void*)addr, 1, size, fp);
 		fclose(fp);
-	}else{
+	} else {
 		CMR_LOGE("can not create savedata");
 	}
 }
@@ -553,11 +551,11 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 	temp_addr1 = s_hdr_cxt->addr[1];
 	temp_addr2 = s_hdr_cxt->addr[2];
 	CMR_LOGI("width %d,height %d.",width,height);
-/*	save_input_data(width,height);*/
+	/*save_input_data(width,height);*/
 
 	if ((NULL != temp_addr0) && (NULL != temp_addr1) && (NULL != temp_addr2)) {
 		if (0 != HDR_Function(temp_addr0,temp_addr1,temp_addr2,	temp_addr0,
-								height,width,p_format)) {
+			height,width,p_format)) {
 			CMR_LOGE("hdr error!");
 			ret = ARITH_FAIL;
 		}
@@ -565,11 +563,11 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 			CMR_LOGE("can't handle hdr.");
 			ret = ARITH_FAIL;
 	}
-	if(NULL != temp_addr0){
-	    memcpy((void *)dst_addr->addr_y,(void *)temp_addr0,size);
-	    memcpy((void *)dst_addr->addr_u,(void *)(temp_addr0+size),size/2);
+	if (NULL != temp_addr0) {
+		memcpy((void *)dst_addr->addr_y,(void *)temp_addr0,size);
+		memcpy((void *)dst_addr->addr_u,(void *)(temp_addr0+size),size/2);
 	}
-/*	save_hdrdata(dst_addr,width,height);*/
+	/*save_hdrdata(dst_addr,width,height);*/
 	pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 	if (ARITH_SUCCESS == ret) {
 		CMR_LOGI("hdr done.");

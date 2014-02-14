@@ -17,13 +17,12 @@
 #include "cmr_common.h"
 #include "cmr_msg.h"
 
-#define MSG_CHECK_MSG_MAGIC(handle)           \
-		do {                                                         \
-		    if (((struct cmr_msg_cxt*)handle)->msg_magic != CMR_MSG_MAGIC_CODE) {    \
-				return CMR_MSG_INVALID_HANDLE;                                        \
-			}                                                                    \
-		} while(0)
-
+#define MSG_CHECK_MSG_MAGIC(handle) \
+	do { \
+		if (((struct cmr_msg_cxt*)handle)->msg_magic != CMR_MSG_MAGIC_CODE) { \
+			return CMR_MSG_INVALID_HANDLE; \
+		} \
+	} while(0)
 
 int cmr_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 {
@@ -47,7 +46,7 @@ int cmr_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 	msg_cxt->msg_magic = CMR_MSG_MAGIC_CODE;
 	msg_cxt->msg_count = count;
 	msg_cxt->msg_number= 0;
-	msg_cxt->msg_read  = msg_cxt->msg_head;
+	msg_cxt->msg_read = msg_cxt->msg_head;
 	msg_cxt->msg_write = msg_cxt->msg_head;
 	pthread_mutex_init(&msg_cxt->mutex, NULL);
 	sem_init(&msg_cxt->msg_sem, 0, 0);
@@ -104,8 +103,8 @@ int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message)
 	struct timespec ts;
 	int    ret;
 
-        /* Posix mandates CLOCK_REALTIME here */
-        clock_gettime( CLOCK_REALTIME, &ts );
+	/* Posix mandates CLOCK_REALTIME here */
+	clock_gettime( CLOCK_REALTIME, &ts );
 	if (0 == queue_handle || NULL == message) {
 		return -CMR_MSG_PARAM_ERR;
 	}
@@ -259,5 +258,3 @@ int cmr_msg_queue_destroy(unsigned int queue_handle)
 
 	return CMR_MSG_SUCCESS;
 }
-
-
