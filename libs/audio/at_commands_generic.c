@@ -93,6 +93,21 @@ int at_cmd_mic_mute(bool mute)
     return 0;
 }
 
+int at_cmd_downlink_mute(bool mute)
+{
+    char r_buf[32];
+    const char *at_cmd;
+    ALOGW("audio at_cmd_downlink_mute set %d", mute);
+    if (mute){
+        at_cmd = "AT+SDMUT=1";
+    }
+    else{
+        at_cmd = "AT+SDMUT=0";
+    }
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
+    return 0;
+}
+
 int at_cmd_audio_loop(int enable, int mode, int volume,int loopbacktype,int voiceformat,int delaytime)
 {
     char buf[89];
