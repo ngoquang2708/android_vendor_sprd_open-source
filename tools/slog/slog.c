@@ -516,7 +516,7 @@ static void check_available_volume()
 		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
 		if(ret > 0 && ret < 50) {
 			err_log("sdcard available %dM", ret);
-			sprintf(cmd, "%s", "am start -n com.spreadtrum.android.eng/.SlogUILowStorage");
+			sprintf(cmd, "%s %d", "am startservice -a slogui.intent.action.LOW_VOLUME --ei freespace ", ret);
 			system(cmd);
 			sleep(300);
 		}
@@ -526,8 +526,14 @@ static void check_available_volume()
 			return;
 		}
 		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
+		if(ret >= 5 && ret < 10) {
+			err_log("internal available %dM is not enough, show alert");
+			sprintf(cmd, "%s %d", "am startservice -a slogui.intent.action.LOW_VOLUME --ei freespace ", ret);
+			system(cmd);
+		}
 		if(ret < 5 && slog_enable != SLOG_DISABLE) {
 			err_log("internal available %dM is not enough, disable slog", ret);
+			sprintf(cmd, "%s %d", "am startservice -a slogui.intent.action.LOW_VOLUME --ei freespace ", ret);
 			slog_enable = SLOG_DISABLE;
 		}
 	}
