@@ -29,9 +29,9 @@
 #define SENSOR_ONE_I2C                    1
 #define SENSOR_ZERO_I2C                   0
 #define SENSOR_16_BITS_I2C                2
-#define SENSOR_CHECK_STATUS_INTERVAL      50000
+#define SENSOR_CHECK_STATUS_INTERVAL      5
 
-#define SENSOR_FOCUS_MOVE_INTERVAL        900000
+#define SENSOR_FOCUS_MOVE_INTERVAL        90
 
 #define SENSOR_LOW_SIXTEEN_BIT            0xffff
 
@@ -3222,10 +3222,11 @@ LOCAL int _Sensor_AutoFocusInit(void)
 
 LOCAL void* _Sensor_MonitorProc(void* data)
 {
-	uint32_t                 ret = 0, param = 0;
+	uint32_t                 ret = 0, param = 0, cnt = 0;
 
 	while (1) {
-		usleep(SENSOR_CHECK_STATUS_INTERVAL);
+		usleep(10000);
+
 		if(s_p_sensor_cxt == NULL){
 			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
 			break;
@@ -3235,7 +3236,11 @@ LOCAL void* _Sensor_MonitorProc(void* data)
 			s_p_sensor_cxt->monitor_exit = 0;
 			CMR_LOGV("EXIT");
 			break;
-		} else {
+		}
+
+		cnt ++;
+		if (cnt >= SENSOR_CHECK_STATUS_INTERVAL) {
+			cnt = 0;
 			if (s_p_sensor_cxt->stream_on) {
 				ret = Sensor_Ioctl(SENSOR_IOCTL_GET_STATUS, (uint32_t)&param);
 				if (ret) {
@@ -3257,10 +3262,12 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 {
 	uint32_t                 ret = 0;
 	uint32_t                  gain_val = 0;
+	uint32_t                 cnt = 0;
 	SENSOR_EXT_FUN_PARAM_T   af_param;
 
 	while (1) {
-		usleep(SENSOR_FOCUS_MOVE_INTERVAL);
+		usleep(10000);
+
 		if(s_p_sensor_cxt == NULL){
 			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
 			break;
@@ -3270,10 +3277,13 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 			s_p_sensor_cxt->focus_move_exit = 0;
 			CMR_LOGV("EXIT");
 			break;
-		} else {
-			if (SENSOR_IMAGE_FORMAT_RAW != s_p_sensor_cxt->sensor_info_ptr->image_format
-				&& CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()) {
+		}
 
+		cnt ++;
+		if (cnt >= SENSOR_FOCUS_MOVE_INTERVAL) {
+			cnt = 0;
+			#if defined(CONFIG_CAMERA_CAF)
+			if (SENSOR_IMAGE_FORMAT_RAW != s_p_sensor_cxt->sensor_info_ptr->image_format) {
 				/* check whether need focus move */
 				memset(&af_param, 0, sizeof(af_param));
 				af_param.cmd   = SENSOR_EXT_FOCUS_START;
@@ -3286,6 +3296,7 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 					pthread_mutex_unlock(&s_p_sensor_cxt->cb_mutex);
 				}
 			}
+			#endif
 		}
 	}
 
