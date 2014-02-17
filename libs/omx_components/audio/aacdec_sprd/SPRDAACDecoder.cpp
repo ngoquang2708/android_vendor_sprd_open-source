@@ -429,6 +429,9 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
                 notify(OMX_EventError, OMX_ErrorUndefined, initRet, NULL);
                 return;
             }
+            inQueue.erase(inQueue.begin());
+            info->mOwnedByUs = false;
+            notifyEmptyBufferDone(header);
             notify(OMX_EventPortSettingsChanged, 1, 0, NULL);
             mOutputPortSettingsChange = AWAITING_DISABLED;
             return;
