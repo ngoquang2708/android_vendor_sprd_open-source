@@ -146,6 +146,20 @@ static void handle_watchdog( int state )
 	system(buffer);
 }
 
+char *parse_string(char *src, char c, char *token)
+{
+	char *results;
+	results = strchr(src, c);
+	if(results == NULL) {
+		err_log("%s is null!", token);
+		return NULL;
+	}
+	*results++ = 0;
+	while(results[0]== c)
+		*results++ = 0;
+	return results;
+}
+
 int parse_3_entries(char *type)
 {
 	char *name, *pos3;

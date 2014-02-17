@@ -21,8 +21,7 @@ include $(BUILD_EXECUTABLE)
 
 #slogctl
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := slogctl.c \
-			common.c
+LOCAL_SRC_FILES := slogctl.c
 LOCAL_MODULE := slogctl
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional

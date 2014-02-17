@@ -198,7 +198,6 @@ extern int request_socket_cmd(int cmd_type);
 extern void cp_file(char *path, char *new_path);
 extern FILE *gen_outfd(struct slog_info *info);
 extern void log_size_handler(struct slog_info *info);
-extern char *parse_string(char *src, char c, char *token);
 extern int write_from_buffer(int fd, char *buf, int len);
 extern void open_device(struct slog_info *info, char *path);
 extern void gen_logfile(char *filename, struct slog_info *info);
