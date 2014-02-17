@@ -53,7 +53,7 @@ struct camera_context        *g_cxt = &cmr_cxt;
 #define IS_ZSL_MODE(x)       ((CAMERA_ZSL_MODE == x) || (CAMERA_ZSL_CONTINUE_SHOT_MODE == x))
 #define IS_NON_ZSL_MODE(x)   ((CAMERA_ZSL_MODE != x) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != x))
 #define IS_NO_MALLOC_MEM     ((CAMERA_HDR_MODE == g_cxt->cap_mode) && ((1 == g_cxt->cap_cnt)||(2 == g_cxt->cap_cnt)))
-#define IS_WAIT_FOR_NORMAL_CONTINUE(x,y)  (((x) == CAMERA_NORMAL_CONTINUE_SHOT_MODE)&&((y) != g_cxt->total_capture_num))
+#define IS_WAIT_FOR_NORMAL_CONTINUE(x,y)  (((x) == CAMERA_NORMAL_CONTINUE_SHOT_MODE)&&((y) < g_cxt->total_capture_num))
 #define USE_SENSOR_OFF_ON_FOR_HDR         1
 
 #define bzero(b, len)            memset((b), '\0', (len))
@@ -1791,7 +1791,8 @@ int camera_local_init(void)
 
 	g_cxt->is_reset_if_cfg = 0;
 
-	pthread_mutex_init(&g_cxt->cb_mutex, NULL);
+	pthread_mutex_init(&g_cxt->prev_cb_mutex, NULL);
+	pthread_mutex_init(&g_cxt->cap_cb_mutex, NULL);
 	pthread_mutex_init(&g_cxt->data_mutex, NULL);
 	pthread_mutex_init(&g_cxt->prev_mutex, NULL);
 	pthread_mutex_init(&g_cxt->take_mutex, NULL);
@@ -1822,7 +1823,8 @@ int camera_local_deinit(void)
 	pthread_mutex_destroy(&g_cxt->take_mutex);
 	pthread_mutex_destroy(&g_cxt->prev_mutex);
 	pthread_mutex_destroy(&g_cxt->data_mutex);
-	pthread_mutex_destroy(&g_cxt->cb_mutex);
+	pthread_mutex_destroy(&g_cxt->prev_cb_mutex);
+	pthread_mutex_destroy(&g_cxt->cap_cb_mutex);
 	pthread_mutex_destroy(&g_cxt->take_raw_mutex);
 	pthread_mutex_destroy(&g_cxt->main_prev_mutex);
 	pthread_mutex_destroy(&g_cxt->jpeg_specify_cxt.jpeg_specify_mutex);
@@ -3981,7 +3983,7 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 				SET_CHN_BUSY(CHN_2);
 				if ((g_cxt->cap_cnt == g_cxt->total_capture_num) ||
 					(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
-					camera_set_take_picture(0);
+					camera_set_take_picture(TAKE_PICTURE_NO);
 				}
 				if (IS_ZSL_MODE(g_cxt->cap_mode)) {
 					frm_num = -1;
@@ -3999,6 +4001,16 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 					CMR_LOGE("error.");
 				}
 			}
+		}
+
+		if ((g_cxt->cap_mode == CAMERA_NORMAL_CONTINUE_SHOT_MODE
+			|| g_cxt->cap_mode == CAMERA_ZSL_CONTINUE_SHOT_MODE)
+			&& camera_capture_need_exit()) {
+			CMR_LOGV("cont cap action has been canceled. direct return!");
+			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+					camera_get_client_data(),
+					CAMERA_FUNC_RELEASE_PICTURE,
+					0);
 		}
 		break;
 
@@ -4715,9 +4727,11 @@ void camera_call_af_cb(camera_cb_f_type cmr_cb,
 void camera_set_hal_cb(camera_cb_f_type cmr_cb)
 {
 	if (cmr_cb != g_cxt->camera_cb) {
-		pthread_mutex_lock(&g_cxt->cb_mutex);
+		pthread_mutex_lock(&g_cxt->prev_cb_mutex);
+		pthread_mutex_lock(&g_cxt->cap_cb_mutex);
 		g_cxt->camera_cb = cmr_cb;
-		pthread_mutex_unlock(&g_cxt->cb_mutex);
+		pthread_mutex_unlock(&g_cxt->cap_cb_mutex);
+		pthread_mutex_unlock(&g_cxt->prev_cb_mutex);
 	} else {
 		CMR_LOGV("same callback: need not set");
 	}
@@ -4729,12 +4743,29 @@ void camera_call_cb(camera_cb_type cb,
 			camera_func_type func,
 			int32_t parm4)
 {
-	pthread_mutex_lock(&g_cxt->cb_mutex);
+	if (CAMERA_FUNC_STOP == func) {
+		pthread_mutex_lock(&g_cxt->prev_cb_mutex);
+		pthread_mutex_lock(&g_cxt->cap_cb_mutex);
+	} else if (CAMERA_FUNC_START_PREVIEW == func) {
+		pthread_mutex_lock(&g_cxt->prev_cb_mutex);
+	} else if (CAMERA_FUNC_TAKE_PICTURE == func
+		|| CAMERA_FUNC_ENCODE_PICTURE == func) {
+		pthread_mutex_lock(&g_cxt->cap_cb_mutex);
+	}
 
 	if (g_cxt->camera_cb) {
 		(*g_cxt->camera_cb)(cb, client_data, func, parm4);
 	}
-	pthread_mutex_unlock(&g_cxt->cb_mutex);
+
+	if (CAMERA_FUNC_STOP == func) {
+		pthread_mutex_unlock(&g_cxt->prev_cb_mutex);
+		pthread_mutex_unlock(&g_cxt->cap_cb_mutex);
+	} else if (CAMERA_FUNC_START_PREVIEW == func) {
+		pthread_mutex_unlock(&g_cxt->prev_cb_mutex);
+	} else if (CAMERA_FUNC_TAKE_PICTURE == func
+		|| CAMERA_FUNC_ENCODE_PICTURE == func) {
+		pthread_mutex_unlock(&g_cxt->cap_cb_mutex);
+	}
 	return;
 }
 
@@ -6597,7 +6628,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 			g_cxt->total_capture_num,
 			g_cxt->cap_mode);
 		encoder_param.need_free = 0;
-		if ((g_cxt->cap_cnt == g_cxt->total_capture_num) ||
+		if ((g_cxt->cap_cnt >= g_cxt->total_capture_num) ||
 			(CAMERA_NORMAL_MODE == g_cxt->cap_mode) ||
 			(CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 			encoder_param.need_free = 1;
@@ -8172,7 +8203,7 @@ static int camera_capture_complete_handle(struct frm_info *data)
 			CMR_LOGV("done.");
 			goto capture_complete_out;
 		}
-		if ((g_cxt->cap_cnt == g_cxt->total_capture_num) || (CAMERA_HDR_MODE == g_cxt->cap_mode)) {
+		if ((g_cxt->cap_cnt >= g_cxt->total_capture_num) || (CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 			g_cxt->capture_status = CMR_IDLE;
 			camera_snapshot_stop_set();
 			ret = camera_set_take_picture(TAKE_PICTURE_NO);
@@ -8183,7 +8214,6 @@ static int camera_capture_complete_handle(struct frm_info *data)
 			camera_cap_continue();
 		}
 	} else {
-
 		if (camera_capture_need_exit()) {
 			message.msg_type = CMR_EVT_AFTER_CAPTURE;
 			message.alloc_flag = 0;
@@ -8193,7 +8223,7 @@ static int camera_capture_complete_handle(struct frm_info *data)
 			}
 		}
 
-		if ((g_cxt->cap_cnt == g_cxt->total_capture_num) || (CAMERA_HDR_MODE == g_cxt->cap_mode)) {
+		if ((g_cxt->cap_cnt >= g_cxt->total_capture_num) || (CAMERA_HDR_MODE == g_cxt->cap_mode)) {
 			g_cxt->capture_status = CMR_IDLE;
 			camera_snapshot_stop_set();
 			ret = camera_set_take_picture(TAKE_PICTURE_NO);

@@ -325,7 +325,8 @@ struct camera_context {
 	uint32_t                 recover_cnt;
 	pthread_mutex_t          recover_mutex;
 
-	pthread_mutex_t          cb_mutex;
+	pthread_mutex_t          prev_cb_mutex;
+	pthread_mutex_t          cap_cb_mutex;
 	camera_cb_f_type         camera_cb;
 	pthread_mutex_t          data_mutex;
 	void*                    client_data;

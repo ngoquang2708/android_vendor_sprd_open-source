@@ -69,9 +69,11 @@ namespace android {
 #define GET_USE_TIME do {\
 			s_use_time = (s_end_timestamp - s_start_timestamp)/1000000;\
 		}while(0)
-#define SET_PARAM_TIMEOUT 2000000000
-#define SET_PARAMS_TIMEOUT 250/*250 means 250*10ms*/
-#define ON_OFF_ACT_TIMEOUT 50/*50 means 50*10ms*/
+#define SET_PARAM_TIMEOUT    2000000000     /*2000ms*/
+#define CAP_TIMEOUT          5000000000     /*5000ms*/
+#define CANCEL_AF_TIMEOUT    1000000000     /*1000ms*/
+#define SET_PARAMS_TIMEOUT   250            /*250 means 250*10ms*/
+#define ON_OFF_ACT_TIMEOUT   50             /*50 means 50*10ms*/
 
 /**********************Static Members**********************/
 static nsecs_t s_start_timestamp = 0;
@@ -268,6 +270,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 #else
 	mIsRotCapture(0),
 #endif
+	mFlashMask(false),
 	mTimeCoeff(1),
 	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
 	mSetFreqCount(0),
@@ -1509,7 +1512,7 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		return BAD_VALUE;
 	}
 
-	checkFlashSupportParameter((SprdCameraParameters&)params);
+	checkFlashParameter((SprdCameraParameters&)params);
 
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
 	LOGV("flash_mode:%s.",flash_mode);
@@ -1597,7 +1600,7 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	return ret;
 }
 
-status_t SprdCameraHardware::checkFlashSupportParameter(SprdCameraParameters& params)
+status_t SprdCameraHardware::checkFlashParameter(SprdCameraParameters& params)
 {
 	status_t ret =  NO_ERROR;
 	SprdCameraParameters::ConfigType configType;
@@ -1609,11 +1612,12 @@ status_t SprdCameraHardware::checkFlashSupportParameter(SprdCameraParameters& pa
 		&& (CAMERA_FLASH_MODE_TORCH != params.getFlashMode()
 		|| (NULL != params.get("recording-hint")
 		&& 0 != strcmp("true",params.get("recording-hint"))))) {
-		LOGV("hdr enable - turnoff flash-mode-support");
-		params.setFlashModeSupport("false");
+		LOGV("checkFlashParameter - turnoff flash");
+		params.setFlashMode("off");
+		mFlashMask = true;
 	} else {
 		if (params.getIsSupportFlash()) {
-			params.setFlashModeSupport("true");
+			mFlashMask = false;
 		}
 	}
 
@@ -2308,7 +2312,15 @@ bool SprdCameraHardware::WaitForCaptureDone()
 	while (SPRD_IDLE != mCameraState.capture_state
 		 && SPRD_ERROR != mCameraState.capture_state) {
 		LOGV("WaitForCaptureDone: waiting for SPRD_IDLE");
-		mStateWait.wait(mStateLock);
+		if (camera_capture_is_idle()) {
+			LOGV("WaitForCaptureDone: for OEM cap is IDLE, set capture state to %s",
+				getCameraStateStr(mCameraState.capture_state));
+			setCameraState(SPRD_IDLE, STATE_CAPTURE);
+		} else {
+			if (mStateWait.waitRelative(mStateLock, CAP_TIMEOUT)) {
+				LOGE("WaitForCaptureDone timeout");
+			}
+		}
 		LOGV("WaitForCaptureDone: woke up");
 	}
 
@@ -2322,7 +2334,9 @@ bool SprdCameraHardware::WaitForFocusCancelDone()
 		 && SPRD_ERROR != mCameraState.focus_state) {
 		LOGV("WaitForFocusCancelDone: waiting for SPRD_IDLE from %s",
 			getCameraStateStr(getFocusState()));
-		mStateWait.waitRelative(mStateLock, 1000000000);
+		if (mStateWait.waitRelative(mStateLock, CANCEL_AF_TIMEOUT)) {
+			LOGE("WaitForFocusCancelDone timeout");
+		}
 		LOGV("WaitForFocusCancelDone: woke up");
 	}
 
@@ -3624,7 +3638,8 @@ status_t SprdCameraHardware::setCameraParameters()
 	if (0 == mCameraId) {
 		SET_PARM(CAMERA_PARM_AF_MODE, mParameters.getFocusMode());
 		if ((NULL != mParameters.get("flash-mode-supported"))
-			&& (0 == strcmp(mParameters.get("flash-mode-supported"),"true"))) {
+			&& (0 == strcmp(mParameters.get("flash-mode-supported"),"true"))
+			&& (false == mFlashMask)) {
 			SET_PARM(CAMERA_PARM_FLASH, mParameters.getFlashMode());
 		} else {
 			SET_PARM(CAMERA_PARM_FLASH, CAMERA_FLASH_MODE_OFF);
