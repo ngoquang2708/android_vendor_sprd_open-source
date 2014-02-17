@@ -36,21 +36,23 @@
 #include "base.h"
 
 #define GPU_GLITCH_FREE_DFS 0
-#define GPU_FREQ_CONTROL	1
+#define GPU_FIX_312MHZ	0
 
 #define GPU_MIN_DIVISION	1
 #define GPU_MAX_DIVISION	1
 
-#if GPU_FREQ_CONTROL
+#define GPU_SELECT0_VAL		0
 #define GPU_SELECT0_MAX		208000
 #define GPU_SELECT0_MIN		(GPU_SELECT0_MAX/GPU_MAX_DIVISION)
+#define GPU_SELECT1_VAL		1
 #define GPU_SELECT1_MAX		256000
 #define GPU_SELECT1_MIN		(GPU_SELECT1_MAX/GPU_MAX_DIVISION)
+#define GPU_SELECT2_VAL		2
 #define GPU_SELECT2_MAX		300000
 #define GPU_SELECT2_MIN		(GPU_SELECT1_MAX/GPU_MAX_DIVISION)
+#define GPU_SELECT3_VAL		3
 #define GPU_SELECT3_MAX		312000
 #define GPU_SELECT3_MIN		(GPU_SELECT1_MAX/GPU_MAX_DIVISION)
-#endif
 
 #define MAX(x,y)	({typeof(x) _x = (x); typeof(y) _y = (y); (void) (&_x == &_y); _x > _y ? _x : _y;})
 
@@ -68,10 +70,8 @@ static struct clk* clock_256m = NULL;
 static struct clk* clock_312m = NULL;
 static int max_div = GPU_MAX_DIVISION;
 static int min_div = GPU_MIN_DIVISION;
-#if GPU_FREQ_CONTROL
 static int mali_freq_select = 1;
 static int old_mali_freq_select = 1;
-#endif
 static int gpu_clock_div = 1;
 static int old_gpu_clock_div = 1;
 
@@ -385,14 +385,13 @@ static inline void mali_set_div(int clock_div)
 	sci_glb_write(REG_GPU_APB_APB_CLK_CTRL,BITS_CLK_GPU_DIV(clock_div-1),BITS_CLK_GPU_DIV(3));
 }
 
-#if GPU_FREQ_CONTROL
 static inline void mali_set_freq(u32 gpu_freq)
 {
 	MALI_DEBUG_PRINT(3,("GPU_DFS gpu_freq select %u\n",gpu_freq));
 	sci_glb_write(REG_GPU_APB_APB_CLK_CTRL,BITS_CLK_GPU_SEL(gpu_freq),BITS_CLK_GPU_SEL(3));
 	return;
 }
-#endif
+
 static void gpu_dfs_func(struct work_struct *work);
 static DECLARE_WORK(gpu_dfs_work, &gpu_dfs_func);
 
@@ -405,13 +404,12 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 {
 	unsigned int utilization = data->utilization_gpu;
 	MALI_DEBUG_PRINT(3,("GPU_DFS mali_utilization  gpu:%d  gp:%d pp:%d\n",data->utilization_gpu,data->utilization_gp,data->utilization_pp));
-#if GPU_FREQ_CONTROL
 	MALI_DEBUG_PRINT(3,("GPU_DFS  gpu_level:%d\n",gpu_level));
 	switch(gpu_level)
 	{
 		case 3:
-			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,3);
-			if(3==mali_freq_select)
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
+			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
 				min_div=GPU_MIN_DIVISION;
@@ -427,8 +425,12 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			break;
 		case 2:
 			gpu_max_freq=GPU_SELECT1_MAX;
-			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,1);
-			if(3==mali_freq_select)
+#if GPU_FIX_312MHZ
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
+#else
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT1_VAL);
+#endif
+			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
 				min_div=GPU_MIN_DIVISION;
@@ -445,10 +447,14 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 		case 0:
 		case 1:
 		default:
-			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,1);
+#if GPU_FIX_312MHZ
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
+#else
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT1_VAL);
+#endif
 			//if gpu frquency select 312MHz, DFS will be disabled
 			//if gpu frquency select 256MHz, DFS will be enabled
-			if(3==mali_freq_select)
+			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
 				min_div=GPU_MIN_DIVISION;
@@ -464,7 +470,7 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			}
 			break;
 	}
-#endif
+
 	// if the loading ratio is greater then 90%, switch the clock to the maximum
 	if(utilization >= (256*9/10))
 	{
@@ -490,14 +496,9 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 		if(gpu_clock_div < min_div) gpu_clock_div = min_div;
 		if(gpu_clock_div > max_div) gpu_clock_div = max_div;
 	}
-#if GPU_FREQ_CONTROL
 	MALI_DEBUG_PRINT(3,("GPU_DFS gpu util %d: old %d-> div %d min_div:%d max_div:%d  old_freq %d ->new_freq %d \n",
 		utilization,old_gpu_clock_div, gpu_clock_div,min_div,max_div,old_mali_freq_select,mali_freq_select));
 	if((gpu_clock_div != old_gpu_clock_div)||(old_mali_freq_select!=mali_freq_select))
-#else
-	MALI_DEBUG_PRINT(3,("GPU_DFS gpu util %d: old %d-> div %d min_div:%d max_div:%d \n", utilization,old_gpu_clock_div, gpu_clock_div,min_div,max_div));
-	if(gpu_clock_div != old_gpu_clock_div)
-#endif
 	{
 #if !GPU_GLITCH_FREE_DFS
 		if(gpu_dfs_workqueue)
@@ -543,30 +544,71 @@ static void gpufreq_limit_init(void)
 	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
 	{
 		freq_table_data.freq_tbl[i].index=i;
-		if(i<GPU_MAX_DIVISION)
-		{
-			freq_table_data.freq_tbl[i].frequency=GPU_SELECT1_MAX/(i+1);
-			freq_table_data.freq_tbl[i].division=i+1;
-			freq_table_data.freq_tbl[i].freq_select=1;
-			MALI_DEBUG_PRINT(2, ("gpu freq table: i:%d frequency:%d division:%d freq_select:%d\n",
-				i,freq_table_data.freq_tbl[i].frequency,freq_table_data.freq_tbl[i].division,
-				freq_table_data.freq_tbl[i].freq_select));
-		}
-		else if(i==GPU_MAX_DIVISION)
-		{
-			freq_table_data.freq_tbl[i].frequency=GPU_SELECT3_MAX;
-			freq_table_data.freq_tbl[i].division=1;
-			freq_table_data.freq_tbl[i].freq_select=3;
-			MALI_DEBUG_PRINT(2, ("gpu freq table: i:%d frequency:%d division:%d freq_select:%d\n",
-				i,freq_table_data.freq_tbl[i].frequency,freq_table_data.freq_tbl[i].division,
-				freq_table_data.freq_tbl[i].freq_select));
-		}
-		else
-		{
-			freq_table_data.freq_tbl[i].frequency=0;
-			freq_table_data.freq_tbl[i].division=0;
-		}
+		freq_table_data.freq_tbl[i].frequency=0;
+		freq_table_data.freq_tbl[i].division=0;
+		freq_table_data.freq_tbl[i].freq_select=0;
 	}
+#if GPU_FIX_312MHZ
+	freq_table_data.freq_tbl[0].index=0;
+	freq_table_data.freq_tbl[0].frequency=GPU_SELECT3_MAX;
+	freq_table_data.freq_tbl[0].division=1;
+	freq_table_data.freq_tbl[0].freq_select=GPU_SELECT3_VAL;
+
+#if GPU_MAX_DIVISION > 1
+	freq_table_data.freq_tbl[1].index=1;
+	freq_table_data.freq_tbl[1].frequency=GPU_SELECT3_MAX/2;
+	freq_table_data.freq_tbl[1].division=2;
+	freq_table_data.freq_tbl[1].freq_select=GPU_SELECT3_VAL;
+#endif
+
+#if GPU_MAX_DIVISION > 2
+	freq_table_data.freq_tbl[2].index=2;
+	freq_table_data.freq_tbl[2].frequency=GPU_SELECT3_MAX/3;
+	freq_table_data.freq_tbl[2].division=3;
+	freq_table_data.freq_tbl[2].freq_select=GPU_SELECT3_VAL;
+#endif
+
+#if GPU_MAX_DIVISION > 3
+	freq_table_data.freq_tbl[3].index=3;
+	freq_table_data.freq_tbl[3].frequency=GPU_SELECT3_MAX/4;
+	freq_table_data.freq_tbl[3].division=4;
+	freq_table_data.freq_tbl[3].freq_select=GPU_SELECT3_VAL;
+#endif
+
+#else
+	freq_table_data.freq_tbl[0].index=0;
+	freq_table_data.freq_tbl[0].frequency=GPU_SELECT3_MAX;
+	freq_table_data.freq_tbl[0].division=1;
+	freq_table_data.freq_tbl[0].freq_select=GPU_SELECT3_VAL;
+
+	freq_table_data.freq_tbl[1].index=1;
+	freq_table_data.freq_tbl[1].frequency=GPU_SELECT1_MAX;
+	freq_table_data.freq_tbl[1].division=1;
+	freq_table_data.freq_tbl[1].freq_select=GPU_SELECT1_VAL;
+
+#if GPU_MAX_DIVISION > 1
+	freq_table_data.freq_tbl[2].index=2;
+	freq_table_data.freq_tbl[2].frequency=GPU_SELECT1_MAX/2;
+	freq_table_data.freq_tbl[2].division=2;
+	freq_table_data.freq_tbl[2].freq_select=GPU_SELECT1_VAL;
+#endif
+
+#if GPU_MAX_DIVISION > 2
+	freq_table_data.freq_tbl[3].index=3;
+	freq_table_data.freq_tbl[3].frequency=GPU_SELECT1_MAX/3;
+	freq_table_data.freq_tbl[3].division=3;
+	freq_table_data.freq_tbl[3].freq_select=GPU_SELECT1_VAL;
+#endif
+
+#if GPU_MAX_DIVISION > 3
+	freq_table_data.freq_tbl[4].index=4;
+	freq_table_data.freq_tbl[4].frequency=GPU_SELECT1_MAX/4;
+	freq_table_data.freq_tbl[4].division=4;
+	freq_table_data.freq_tbl[4].freq_select=GPU_SELECT1_VAL;
+#endif
+
+#endif
+
 #if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 	gpufreq_table=(char*)kzalloc(128*sizeof(char), GFP_KERNEL);
 	gpufreq_table_show(gpufreq_table);
@@ -580,7 +622,6 @@ static void gpufreq_limit_uninit(void)
 	return;
 }
 
-#if GPU_FREQ_CONTROL
 static void gpu_change_freq_div(void)
 {
 #if !GPU_GLITCH_FREE_DFS
@@ -661,23 +702,3 @@ static void gpu_change_freq_div(void)
 	mali_dev_resume();
 #endif
 }
-
-#else
-static void gpu_change_freq_div(void)
-{
-#if !GPU_GLITCH_FREE_DFS
-	mali_dev_pause();
-#endif
-	if(gpu_power_on&&gpu_clock_on)
-	{
-		old_gpu_clock_div = gpu_clock_div;
-		mali_set_div(gpu_clock_div);
-#if !GPU_GLITCH_FREE_DFS
-		udelay(100);
-#endif
-	}
-#if !GPU_GLITCH_FREE_DFS
-	mali_dev_resume();
-#endif
-}
-#endif
