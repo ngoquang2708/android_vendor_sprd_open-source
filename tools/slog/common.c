@@ -1,14 +1,6 @@
 /*
  * Copyright (C) 2012 Spreadtrum Communications Inc.
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #include <stdio.h>
@@ -383,21 +375,6 @@ void log_size_handler(struct slog_info *info)
 	if(info->outbytecount >= DEFAULT_MAX_LOG_SIZE * 1024 * 1024)
 		rotatelogs(MAXROLLLOGS, info);
 }
-
-char *parse_string(char *src, char c, char *token)
-{
-	char *results;
-	results = strchr(src, c);
-	if(results == NULL) {
-		err_log("%s is null!", token);
-		return NULL;
-	}
-	*results++ = 0;
-	while(results[0]== c)
-		*results++ = 0;
-	return results;
-}
-
 
 void log_buffer_flush(void)
 {

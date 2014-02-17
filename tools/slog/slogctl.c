@@ -16,6 +16,51 @@
 
 #include "slog.h"
 
+int send_socket(int sockfd, void* buffer, int size)
+{
+        int result = -1;
+        int ioffset = 0;
+        while(sockfd > 0 && ioffset < size) {
+                result = send(sockfd, (char *)buffer + ioffset, size - ioffset, MSG_NOSIGNAL);
+                if (result > 0) {
+                        ioffset += result;
+                } else {
+                        break;
+                }
+        }
+        return result;
+
+}
+
+int recv_socket(int sockfd, void* buffer, int size)
+{
+        int received = 0, result;
+        while(buffer && (received < size))
+        {
+                result = recv(sockfd, (char *)buffer + received, size - received, MSG_NOSIGNAL);
+                if (result > 0) {
+                        received += result;
+                } else {
+                        received = result;
+                        break;
+                }
+        }
+        return received;
+}
+
+char *parse_string(char *src, char c, char *token)
+{
+	char *results;
+	results = strchr(src, c);
+	if(results == NULL) {
+		return NULL;
+	}
+	*results++ = 0;
+	while(results[0]== c)
+		*results++ = 0;
+	return results;
+}
+
 void update_5_entries(const char *keyword, const char *status, char *line)
 {
 	char *name, *pos3, *pos4, *pos5;
