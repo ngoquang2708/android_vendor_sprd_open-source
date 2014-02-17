@@ -1880,7 +1880,7 @@ static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
         size_t bytes)
 {
     void *buf;
-    int ret;
+    int ret = -1;
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
@@ -1908,11 +1908,14 @@ static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
         BLUE_TRACE("voip:out_write_bt_sco");
         ret = pcm_mmap_write(out->pcm_bt_sco, (void *)buf, out_frames*frame_size/2);
     }
-    else
+    else{
+
         usleep(out_frames*1000*1000/out->config.rate);
+        return ret;
+    }
 
     BLUE_TRACE("voip:out_write_bt_sco out bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_voip %x", bytes, frame_size,in_frames, out_frames,out->pcm_voip);
-    return 0;
+    return ret;
 }
 
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
