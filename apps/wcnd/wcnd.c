@@ -18,10 +18,10 @@
 
 #include "wcnd.h"
 
-//#define CP2_RESET_READY
+#define CP2_RESET_READY
 
 //Macro to control if polling cp2 assert/watdog interface
-//#define CP2_WATCHER_ENABLE
+#define CP2_WATCHER_ENABLE
 
 //for unit test
 //#define FOR_UNIT_TEST
@@ -1029,10 +1029,17 @@ static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, 
 		return -1;
 	}
 
+	int totalsize = 0;
 	while(size > 0)
 	{
 		rsize = min(size, buf_size);
 		rrsize = read(src_fd, buf, rsize);
+		totalsize += rrsize;
+		if(rrsize == 0)
+		{
+			WCND_LOGE("At the end of the file (totalsize: %d)", totalsize);
+			break;
+		}
 		if (rrsize != rsize)
 		{
 			WCND_LOGE("failed to read fd: %d", src_fd);
@@ -1052,7 +1059,7 @@ static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, 
 }
 
 #define LOOP_TEST_CHAR "hi"
-#define WATI_FOR_CP2_READY_TIME_MSECS (2000)
+#define WATI_FOR_CP2_READY_TIME_MSECS (1000)
 #define MAX_LOOP_TEST_COUNT (5)
 #define LOOP_TEST_INTERVAL_MSECS (1000)
 #define RESET_FAIL_RETRY_COUNT (3)
