@@ -7097,7 +7097,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 
 	switch (ext_ptr->cmd) {
 	case SENSOR_EXT_FUNC_INIT:
-		OV5640_set_AE_target(52);
+		/*OV5640_set_AE_target(52);*/
 		OV5640_set_bandingfilter();
 		OV5640_set_AF_gain(0);
 		rtn = _ov5640_init_firmware();
