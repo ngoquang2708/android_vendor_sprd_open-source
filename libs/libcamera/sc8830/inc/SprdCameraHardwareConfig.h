@@ -449,7 +449,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"scene-mode", "auto"},
 	{"cameraid-values",
 	"back_camera,front_camera"},
-	{"cameraid", "back_camera"},
+	{"cameraid", "front_camera"},
 	{"zoom-supported", "true"},
 	{"smooth-zoom-supported", "false"},
 	{"max-zoom", "6"},

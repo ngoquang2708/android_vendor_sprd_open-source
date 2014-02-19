@@ -402,6 +402,7 @@ private:
 	bool                            mCaptureRawMode;
 	bool                            mIsRotCapture;
 	bool                            mFlashMask;
+	bool                            mReleaseFLag;
 	uint32_t                        mTimeCoeff;
 	uint32_t                        mPreviewBufferUsage;
 	uint32_t                        mOriginalPreviewBufferUsage;

@@ -271,6 +271,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mIsRotCapture(0),
 #endif
 	mFlashMask(false),
+	mReleaseFLag(false),
 	mTimeCoeff(1),
 	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
 	mSetFreqCount(0),
@@ -327,6 +328,9 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 SprdCameraHardware::~SprdCameraHardware()
 {
 	LOGV("closeCameraHardware: E cameraId: %d.", mCameraId);
+	if (!mReleaseFLag) {
+		release();
+	}
 	LOGV("closeCameraHardware: X cameraId: %d.", mCameraId);
 }
 
@@ -370,6 +374,7 @@ void SprdCameraHardware::release()
 		if (CAMERA_SUCCESS != camera_stop(camera_cb, this)) {
 			setCameraState(SPRD_ERROR, STATE_CAMERA);
 			mMetadataHeap = NULL;
+			mReleaseFLag = true;
 			LOGE("release: fail to camera_stop().");
 			LOGV("mLock:release X.\n");
 			return;
@@ -404,7 +409,7 @@ void SprdCameraHardware::release()
 	}
 	mRawHeapBakUseFlag = 0;
 	mCbCapDataBusyLock.unlock();
-
+	mReleaseFLag = true;
 	LOGV("release X");
 	LOGV("mLock:release X.\n");
 }
@@ -1515,7 +1520,7 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 	checkFlashParameter((SprdCameraParameters&)params);
 
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
-	LOGV("flash_mode:%s.",flash_mode);
+	LOGV("flash-mode:%s.",flash_mode);
 	if (!flash_mode) {
 #ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 		return BAD_VALUE;
@@ -1528,7 +1533,7 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 	}
 
 	focus_mode = ((SprdCameraParameters)params).get_FocusMode();
-	LOGV("focus_mode:%s",focus_mode);
+	LOGV("focus-mode:%s",focus_mode);
 	if (!focus_mode) {
 		return BAD_VALUE;
 	}
