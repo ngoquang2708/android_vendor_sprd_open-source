@@ -288,7 +288,7 @@ int my_strtol(char *src)
 void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes)
 {
     char nvLine[1024] = {0};
-    char outputstyle[128] = {0};
+    char outputstyle[NAME_LEN_MAX] = {0};
     int i=0;
     FILE *fpRead = NULL;/////////////////////////todo
     //short iValue = 0;
@@ -353,6 +353,11 @@ void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes)
                     }
                     //aud_params_ptr[output_arm].audio_nv_arm_mode_info
                     len = strlen(outputstyle);
+                    if (len > NAME_LEN_MAX){
+                        len = NAME_LEN_MAX;
+                        ALOGE("parse wrong arm,outputstyle too long");
+                    }
+
                     memcpy(aud_params_ptr[output_arm].audio_nv_arm_mode_info.ucModeName,outputstyle,len);
                     aud_params_ptr[output_arm].audio_nv_arm_mode_info.ucModeName[len] = '\0';
 
@@ -713,6 +718,11 @@ void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes)
                     //if(output_eq != output_eq_before)
                     //{//aud_params_ptr[output_eq].audio_enha_eq
                     len = strlen(outputstyle);
+                    if (len > NAME_LEN_MAX){
+                        len = NAME_LEN_MAX;
+                        ALOGE("parse wrong eq,outputstyle too long");
+                    }
+
                     memcpy(aud_params_ptr[output_eq].audio_enha_eq.para_name,outputstyle,len);//todo: do the confirm to shujing
                     aud_params_ptr[output_eq].audio_enha_eq.para_name[len] = '\0';
                     //}
