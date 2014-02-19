@@ -950,6 +950,8 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         } else if (decRet == MMDEC_MEMORY_ERROR) {
             ALOGE("failed to allocate memory.");
             notify(OMX_EventError, OMX_ErrorInsufficientResources, 0, NULL);
+            mSignalledError = true;
+            return;
         } else if (decRet == MMDEC_STREAM_ERROR) {
             ALOGE("failed to decode video frame, stream error");
 //            notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);

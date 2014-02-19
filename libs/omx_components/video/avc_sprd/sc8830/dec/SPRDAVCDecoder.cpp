@@ -866,6 +866,12 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         int64_t end_decode = systemTime();
         ALOGI("%s, %d, decRet: %d, %dms, dec_out.frameEffective: %d, needIVOP: %d", __FUNCTION__, __LINE__, decRet, (unsigned int)((end_decode-start_decode) / 1000000L), dec_out.frameEffective, mNeedIVOP);
 
+        if(iUseAndroidNativeBuffer[OMX_DirOutput]) {
+            if(mapper.unlock((const native_handle_t*)outHeader->pBuffer)) {
+                ALOGE("onQueueFilled, mapper.unlock fail %x",outHeader->pBuffer);
+            }
+        }
+
         if( decRet == MMDEC_OK) {
             mNeedIVOP = false;
         } else {
@@ -873,9 +879,13 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             if (decRet == MMDEC_MEMORY_ERROR) {
                 ALOGE("failed to allocate memory.");
                 notify(OMX_EventError, OMX_ErrorInsufficientResources, 0, NULL);
+                mSignalledError = true;
+                return;
             } else if (decRet == MMDEC_NOT_SUPPORTED) {
                 ALOGE("failed to support this format.");
                 notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
             } else if (decRet == MMDEC_STREAM_ERROR) {
                 ALOGE("failed to decode video frame, stream error");
 //                notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
@@ -884,12 +894,6 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
 //                notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
             } else {
                 ALOGI("now, we don't take care of the decoder return: %d", decRet);
-            }
-        }
-
-        if(iUseAndroidNativeBuffer[OMX_DirOutput]) {
-            if(mapper.unlock((const native_handle_t*)outHeader->pBuffer)) {
-                ALOGE("onQueueFilled, mapper.unlock fail %x",outHeader->pBuffer);
             }
         }
 
