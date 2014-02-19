@@ -814,6 +814,7 @@ status_t SprdCameraHWInterface2::Stream::detachSubStream(int stream_id)
 
 int SprdCameraHWInterface2::Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
 {
+	int ret = 0;
 	HAL_LOGD("Callback_AllocCapturePmem size = %d", size);
 	MemoryHeapIon *pHeapIon = NULL;
 	SprdCameraHWInterface2* camera = (SprdCameraHWInterface2*)handle;
@@ -834,16 +835,22 @@ int SprdCameraHWInterface2::Callback_AllocCapturePmem(void* handle, unsigned int
 		return -1;
 	}
 	if(s_mem_method == 0){
-		pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
 	} else {
-		pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
 	}
-	*addr_vir = (int)(pHeapIon->getBase());
-	camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_addr = *addr_phy;
-	camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_size = size;
-	camera->mMiscHeapArray[camera->mMiscHeapNum++]->ion_heap = pHeapIon;
+	if (0 == ret) {
+		*addr_vir = (int)(pHeapIon->getBase());
+		camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_addr = *addr_phy;
+		camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_size = size;
+		camera->mMiscHeapArray[camera->mMiscHeapNum++]->ion_heap = pHeapIon;
 
-	HAL_LOGD("mMiscHeapNum = %d", camera->mMiscHeapNum);
+		HAL_LOGD("mMiscHeapNum = %d", camera->mMiscHeapNum);
+	} else {
+		*addr_vir = 0;
+		*addr_phy = 0;
+		HAL_LOGE("get_phy_addr_from_ion error %d",ret);
+	}
 
 	return 0;
 }
@@ -879,6 +886,7 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
     int  acc = buf_size * num_bufs;
 	MemoryHeapIon *pHeapIon = NULL;
 	uint8_t tmp = 0;
+	int ret = 0;
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	if(NULL == memory) {
 		HAL_LOGE("Fail to GetCachePmem, memory is NULL.");
@@ -894,20 +902,30 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
         goto getpmem_end;
     }
 	if (s_mem_method == 0){
-		pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
+		ret = pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
 	} else {
-		pHeapIon->get_mm_iova(&paddr, &psize);
+		ret = pHeapIon->get_mm_iova(&paddr, &psize);
 	}
-	memory->ion_heap = pHeapIon;
-	memory->phys_addr = paddr;
-	memory->phys_size = psize;
-	memory->data = pHeapIon->getBase();
-	if (memory->data == NULL || (uint32_t)(memory->data) == 0xffffffff) {
-       HAL_LOGE("Failed to alloc cap virtadd");
-       goto getpmem_end;
-    }
-    HAL_LOGD("phys_addr 0x%x, data: %p,phys_size: 0x%x.",
-                            memory->phys_addr,memory->data, memory->phys_size);
+	if (0 == ret) {
+		memory->ion_heap = pHeapIon;
+		memory->phys_addr = paddr;
+		memory->phys_size = psize;
+		memory->data = pHeapIon->getBase();
+		if (memory->data == NULL || (uint32_t)(memory->data) == 0xffffffff) {
+	       HAL_LOGE("Failed to alloc cap virtadd");
+		   ret = -1;
+	       goto getpmem_end;
+	    }
+	    HAL_LOGD("phys_addr 0x%x, data: %p,phys_size: 0x%x.",
+	                            memory->phys_addr,memory->data, memory->phys_size);
+	}
+	if (ret) {
+		if (memory) {
+			free(memory);
+			memory = NULL;
+			HAL_LOGE("fail %d",ret);
+		}
+	}
 getpmem_end:
 	return memory;
 }
@@ -1060,8 +1078,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
     substream_parameters_t *subParameters;
     status_t res;
 
-    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED || format == CAMERA2_HAL_PIXEL_FORMAT_OPAQUE
-		|| format == HAL_PIXEL_FORMAT_YCrCb_420_SP)  &&
+    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED || format == HAL_PIXEL_FORMAT_YCrCb_420_SP)  &&
             isSupportedResolution(m_Camera2, width, height)) {
 		if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
             *stream_id = STREAM_ID_PREVIEW;//temporate preview thread created on oem, so new streamthread object,but not run.
@@ -1401,7 +1418,7 @@ int SprdCameraHWInterface2::flush_buffer(camera_flush_mem_type_e  type, int inde
 		break;
 	case CAMERA_FLUSH_PREVIEW_HEAP:
 		#ifdef PREVIEW_USE_DCAM_BUF
-		if (index < kPreviewBufferCount && mPreviewHeapArray != NULL) {
+		if (index < kPreviewBufferCount) {
 			pmem = mPreviewHeapArray[index];
 		}
 		#else
@@ -1468,16 +1485,23 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 			//data callback
 			substream_parameters_t  *subParms = &m_subStreams[STREAM_ID_JPEG];
 			sp<Stream> StreamSP = m_Stream[STREAM_ID_CAPTURE];
-			JPEGENC_CBrtnType *tmpCBpara = NULL;
+			JPEGENC_CBrtnType *tmpCBpara = (JPEGENC_CBrtnType *)parm4;
 			int64_t timeStamp = 0;
 			if (GetOutputStreamMask() & STREAM_MASK_JPEG) {
-	            tmpCBpara = (JPEGENC_CBrtnType *)parm4;
+				if (NULL == tmpCBpara) {
+					HAL_LOGE("error:parm4 is NULL");
+					break;
+				}
 				subParms->dataSize = tmpCBpara->size;
 				timeStamp = systemTime();
 				displaySubStream(StreamSP, (int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),
 								timeStamp,(uint16_t)STREAM_ID_JPEG);
 			}
 			if (tmpCBpara->need_free) {
+				if (NULL == tmpCBpara) {
+					HAL_LOGE("error:parm4 is NULL");
+					break;
+				}
 				if(GetCameraPictureMode() == CAMERA_NORMAL_MODE) {
 					freeCaptureMem();
 				}
