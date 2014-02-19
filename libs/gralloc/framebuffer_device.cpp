@@ -143,6 +143,7 @@ bool getApctFpsSupport()
 }
 /* @} */
 
+static int frame_count_fbpost = 0;
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 {
 	if (private_handle_t::validate(buffer) < 0)
@@ -167,6 +168,15 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
         }
     }
     /* @} */
+
+	/*
+	  in surfaceflinger init process, first setTransactionState(...) will evoke a screen update which is not necessary
+	  here we just skip this black frame
+	*/
+	if(frame_count_fbpost < 1) {
+		frame_count_fbpost++;
+		return 0;
+	}
 
 	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(buffer);
 	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
@@ -367,7 +377,7 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	info.reserved[2] = 0;
 	info.xoffset = 0;
 	info.yoffset = 0;
-	info.activate = FB_ACTIVATE_NOW;
+	info.activate = FB_ACTIVATE_NODISP;
 
 	char value[PROPERTY_VALUE_MAX];
 	property_get("ro.sf.lcd_width", value, "1");
