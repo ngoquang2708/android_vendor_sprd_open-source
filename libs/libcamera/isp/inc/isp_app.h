@@ -26,9 +26,7 @@
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
 
-typedef int32_t ( *isp_callback)(uint32_t rtn, void* param_ptr);
-typedef int32_t ( *proc_callback)(int32_t mode, void* param_ptr);
-typedef int32_t ( *isp_ctrl_fun)(uint32_t param);
+typedef int32_t ( *proc_callback)(uint32_t handler_id, int32_t mode, void* param_ptr);
 
 #define ISP_EVT_MASK	0x00000F00
 /**---------------------------------------------------------------------------*
@@ -64,6 +62,13 @@ enum isp_callback_cmd{
 	ISP_CALLBACK_CMD_MAX=0xffffffff
 };
 
+
+enum isp_handler_id{
+	ISP_HANDLER_MAIN=0x00,
+	ISP_HANDLER_SUB,
+	ISP_HANDLER_MAX
+};
+
 enum isp_video_mode{
 	ISP_VIDEO_MODE_CONTINUE=0x00,
 	ISP_VIDEO_MODE_SINGLE,
@@ -77,7 +82,14 @@ enum isp_focus_mode{
 	ISP_FOCUS_MULTI_ZONE,
 	ISP_FOCUS_MACRO,
 	ISP_FOCUS_WIN,
+	ISP_FOCUS_CONTINUE,
 	ISP_FOCUS_MAX
+};
+
+enum isp_focus_move_mode{
+	ISP_FOCUS_MOVE_START=0x00,
+	ISP_FOCUS_MOVE_END,
+	ISP_FOCUS_MOVE_MAX
 };
 
 enum isp_hdr_level{
@@ -238,7 +250,6 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_HDR,
 	ISP_CTRL_GLOBAL_GAIN,
 	ISP_CTRL_CHN_GAIN,
-	ISP_CTRL_EXIF,
 	ISP_CTRL_ISO,
 	ISP_CTRL_WB_TRIM,
 	ISP_CTRL_PARAM_UPDATE,
@@ -317,6 +328,7 @@ struct isp_skip_num{
 };
 
 struct isp_af_notice{
+	uint32_t mode;
 	uint32_t valid_win;
 };
 

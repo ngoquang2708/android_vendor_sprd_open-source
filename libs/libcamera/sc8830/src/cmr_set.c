@@ -45,6 +45,7 @@ static int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *
 static int camera_set_video_mode(uint32_t mode, uint32_t frame_rate, uint32_t *skip_mode, uint32_t *skip_num);
 static int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode);
 static int camera_set_preview_env(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode, uint32_t *skip_num);
+static int camera_init_af_mode(uint32_t af_mode, uint32_t *skip_mode, uint32_t *skip_num);
 
 static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_out_param)
 {
@@ -121,6 +122,34 @@ static int camera_param_to_isp(uint32_t cmd, uint32_t in_param, uint32_t *ptr_ou
 		}
 		break;
 	}
+
+    case ISP_CTRL_AF_MODE:
+	{
+		switch (in_param)
+		{
+			case CAMERA_FOCUS_MODE_AUTO:
+				*ptr_out_param = ISP_FOCUS_TRIG;
+				break;
+
+			case CAMERA_FOCUS_MODE_AUTO_MULTI:
+				*ptr_out_param = ISP_FOCUS_MULTI_ZONE;
+				break;
+
+			case CAMERA_FOCUS_MODE_MACRO:
+				*ptr_out_param = ISP_FOCUS_MACRO;
+				break;
+
+			case CAMERA_FOCUS_MODE_CAF:
+				*ptr_out_param = ISP_FOCUS_CONTINUE;
+				break;
+
+			default :
+				*ptr_out_param = ISP_FOCUS_TRIG;
+				break;
+		}
+		break;
+	}
+
 	case ISP_CTRL_FLICKER:
 		*ptr_out_param = in_param;
 		break;
@@ -1384,6 +1413,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_AF_MODE:
 		CMR_LOGV("Set AF Mode %d", parm);
+		camera_init_af_mode(parm, &skip_mode, &skip_number);
 		cxt->cmr_set.af_mode = (uint32_t)parm;
 		break;
 
@@ -1605,7 +1635,11 @@ int camera_autofocus_start(void)
 			af_param.zone_cnt = 0;
 		}
 	} else {
-		if ((0 == zone_cnt) || (CAMERA_FOCUS_MODE_AUTO == cxt->cmr_set.af_mode)) {
+		if(CAMERA_FOCUS_MODE_CAF == cxt->cmr_set.af_mode){
+			af_param.cmd = SENSOR_EXT_FOCUS_START;
+			af_param.param = SENSOR_EXT_FOCUS_CAF;
+			af_param.zone_cnt = 0;
+		} else if ((0 == zone_cnt) || (CAMERA_FOCUS_MODE_AUTO == cxt->cmr_set.af_mode)) {
 			af_param.cmd = SENSOR_EXT_FOCUS_START;
 			af_param.param = SENSOR_EXT_FOCUS_TRIG;
 			af_param.zone_cnt = 0;
@@ -1813,6 +1847,26 @@ int camera_autofocus_need_exit(uint32_t *is_external)
 	if (ret) {
 		CMR_LOGV("af_cancelled val: 0x%x, 0x%x", cxt->cmr_set.af_cancelled, *is_external);
 	}
+	return ret;
+}
+
+int camera_init_af_mode(uint32_t af_mode, uint32_t *skip_mode, uint32_t *skip_num)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	int                      ret = CAMERA_SUCCESS;
+
+	CMR_LOGI ("af mode %d\n", af_mode);
+
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		*skip_mode = IMG_SKIP_SW;
+		*skip_num  = cxt->sn_cxt.sensor_info->change_setting_skip_num;
+		camera_param_to_isp(ISP_CTRL_AF_MODE,af_mode,&af_mode);
+		ret = isp_ioctl(ISP_CTRL_AF_MODE,(void *)&af_mode);
+	} else {
+		CMR_LOGW ("set af: sensor not support\n");
+		ret = CAMERA_NOT_SUPPORTED;
+	}
+
 	return ret;
 }
 

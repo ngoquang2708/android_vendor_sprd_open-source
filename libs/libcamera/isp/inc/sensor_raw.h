@@ -373,7 +373,17 @@ struct sensor_af_param{
 	uint8_t fine_count;
 	uint8_t alg_id;
 	uint8_t debug;
-	uint32_t reserved[7];
+	uint16_t default_step_len;
+	uint8_t peak_thr_0;
+	uint8_t peak_thr_1;
+	uint8_t peak_thr_2;
+	uint8_t detect_thr;
+	uint8_t detect_step_mum;
+	uint8_t start_area_range;
+	uint8_t end_area_range;
+	uint8_t noise_thr;
+	uint16_t reserved0;
+	uint32_t reserved[4];
 };
 
 struct sensor_emboss_param{

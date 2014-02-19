@@ -286,6 +286,7 @@ static int handle_img_data(uint32_t format, uint32_t width,uint32_t height, char
 
 static int handle_isp_data(unsigned char *buf, unsigned int len)
 {
+	uint32_t handler_id=0x00;
 	int rlen = 0, rsp_len = 0, extra_len = 0;
 	int ret = 1, res = 0;
 	int image_type = 0;
@@ -701,6 +702,7 @@ void ispvideo_Scale(uint32_t format, uint32_t in_w, uint32_t in_h, char *in_imgp
 
 void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgptr, int imagelen)
 {
+	uint32_t handler_id=0x00;
 	int ret;
 
 	if (0==preview_img_end_flag)
@@ -733,6 +735,7 @@ void send_capture_data_end(uint32_t format)
 
 void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *ch0_ptr, int ch0_len,char *ch1_ptr, int ch1_len,char *ch2_ptr, int ch2_len)
 {
+	uint32_t handler_id=0x00;
 	int ret;
 
 	if ((0 == capture_img_end_flag)&&(format == (uint32_t)capture_format))
@@ -795,6 +798,7 @@ int isp_RecDataCheck(uint8_t* rx_buf_ptr, int rx_bug_len, uint8_t* cmd_buf_ptr, 
 
 static void * isp_diag_handler(void *args)
 {
+	uint32_t handler_id=0x00;
 	int from = *((int *)args);
 	int i, cnt, res, cmd_len, rtn;
 	static char *code = "diag channel exit";
@@ -842,6 +846,7 @@ static void * isp_diag_handler(void *args)
 
 static void * ispserver_thread(void *args)
 {
+	uint32_t handler_id=0x00;
 	struct sockaddr claddr;
 	int lfd, cfd, optval;
 	int log_fd;
@@ -978,6 +983,8 @@ int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)(uint32_t, uint32_t))
 
 void stopispserver()
 {
+	uint32_t handler_id=0x00;
+
 	DBG("ISP_TOOL:stopispserver \n");
 	if(0x00!=sock_fd)
 	{
@@ -997,6 +1004,7 @@ void stopispserver()
 
 void startispserver()
 {
+	uint32_t handler_id=0x00;
 	pthread_t tdiag;
 	pthread_attr_t attr;
 	int ret;

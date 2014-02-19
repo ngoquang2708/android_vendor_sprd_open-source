@@ -28,14 +28,14 @@
 **				Data Prototype					*
 **----------------------------------------------------------------------------*/
 
-int isp_ctrl_init(struct isp_init_param* ptr);
-int isp_ctrl_deinit(void);
-int isp_ctrl_capability(enum isp_capbility_cmd cmd, void* param_ptr);
-int isp_ctrl_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr);
-int isp_ctrl_video_start(struct isp_video_start* param_ptr);
-int isp_ctrl_video_stop(void);
-int isp_ctrl_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_param_ptr);
-int isp_ctrl_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr);
+int isp_ctrl_init(uint32_t handler_id, struct isp_init_param* ptr);
+int isp_ctrl_deinit(uint32_t handler_id);
+int isp_ctrl_capability(uint32_t handler_id, enum isp_capbility_cmd cmd, void* param_ptr);
+int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr);
+int isp_ctrl_video_start(uint32_t handler_id, struct isp_video_start* param_ptr);
+int isp_ctrl_video_stop(uint32_t handler_id);
+int isp_ctrl_proc_start(uint32_t handler_id, struct ips_in_param* in_param_ptr, struct ips_out_param* out_param_ptr);
+int isp_ctrl_proc_next(uint32_t handler_id, struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr);
 
 /**---------------------------------------------------------------------------*/
 #endif

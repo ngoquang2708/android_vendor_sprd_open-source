@@ -134,7 +134,7 @@ static struct {
 #define  NEED_V4L2_POSTPOROCESS() 	  (cpu_is (CPU_DOLPHIN1) ||cpu_is ( CPU_DOLPHIN_T1) )
 
 static void camera_sensor_evt_cb(int evt, void* data);
-static int  camera_isp_evt_cb(int evt, void* data);
+static int  camera_isp_evt_cb(uint32_t handler_id, int evt, void* data);
 static void camera_jpeg_evt_cb(int evt, void* data);
 static void camera_v4l2_evt_cb(int evt, void* data);
 static void camera_post_rot_evt(int evt, struct img_frm *frm_data);
@@ -3325,6 +3325,42 @@ int camera_af_deinit(void)
 	return ret ;
 }
 
+int camera_caf_move_start_handle(void *data)
+{
+	CMR_MSG_INIT(message);
+	int                      ret = CAMERA_SUCCESS;
+
+	CMR_LOGV("caf start move");
+	message.msg_type = CMR_EVT_CAF_MOVE_START;
+	if (g_cxt->af_inited) {
+		ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
+	}
+
+	if (ret) {
+		CMR_LOGE("Faile to send one msg to camera main thread");
+	}
+
+	return ret ;
+}
+
+int camera_caf_move_stop_handle(void *data)
+{
+	CMR_MSG_INIT(message);
+	int                      ret = CAMERA_SUCCESS;
+
+	CMR_LOGV("caf stop move");
+	message.msg_type = CMR_EVT_CAF_MOVE_STOP;
+	if (g_cxt->af_inited) {
+		ret = cmr_msg_post(g_cxt->af_msg_que_handle, &message);
+	}
+
+	if (ret) {
+		CMR_LOGE("Faile to send one msg to camera main thread");
+	}
+
+	return ret ;
+}
+
 int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 {
 	uint32_t                 frm_id;
@@ -3670,7 +3706,7 @@ void camera_v4l2_evt_cb(int evt, void* data)
 	return;
 }
 
-int32_t camera_isp_evt_cb(int32_t evt, void* data)
+int32_t camera_isp_evt_cb(uint32_t handler_id, int32_t evt, void* data)
 {
 	CMR_MSG_INIT(message);
 	uint32_t                 cmd;
@@ -4089,6 +4125,7 @@ int camera_isp_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 {
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 cmd;
+	struct camera_context    *cxt = camera_get_cxt();
 
 	CMR_LOGV("sub_type 0x%x, evt_type 0x%x", sub_type, evt_type);
 
@@ -4097,7 +4134,17 @@ int camera_isp_handle(uint32_t evt_type, uint32_t sub_type, void *data)
 		ret = camera_isp_proc_handle((struct ips_out_param*)data);
 		break;
 	case ISP_AF_NOTICE_CALLBACK:
-		ret = camera_isp_af_done(data);
+		if((CAMERA_FOCUS_MODE_CAF != cxt->cmr_set.af_mode) || cxt->af_busy){
+			ret = camera_isp_af_done(data);
+		}else if(CAMERA_FOCUS_MODE_CAF == cxt->cmr_set.af_mode) {
+			struct isp_af_notice *isp_af = (struct isp_af_notice*)data;
+
+			if(ISP_FOCUS_MOVE_START == isp_af->mode){
+				ret = camera_caf_move_start_handle(data);
+			}else if(ISP_FOCUS_MOVE_END == isp_af->mode){
+				ret = camera_caf_move_stop_handle(data);
+			}
+		}
 		break;
 	case ISP_FLASH_AE_CALLBACK:
 		ret = camera_isp_alg_done(data);
@@ -4678,6 +4725,26 @@ void *camera_af_thread_proc(void *data)
 					CAMERA_FUNC_START_FOCUS,
 					0);
 				pthread_mutex_unlock(&g_cxt->af_cb_mutex);
+			}
+			break;
+
+		case CMR_EVT_CAF_MOVE_START:
+			if (IS_PREVIEW && CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()) {
+				CMR_LOGV("CMR_EVT_CAF_MOVE_START");
+				camera_direct_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_FOCUS,
+					1);
+			}
+			break;
+
+		case CMR_EVT_CAF_MOVE_STOP:
+			if (IS_PREVIEW && CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()) {
+				CMR_LOGV("CMR_EVT_CAF_MOVE_STOP");
+				camera_direct_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,
+					camera_get_client_data(),
+					CAMERA_FUNC_START_FOCUS,
+					0);
 			}
 			break;
 

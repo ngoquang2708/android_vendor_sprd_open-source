@@ -46,6 +46,8 @@ extern "C"
 #define CMR_EVT_AF_START                             (CMR_EVT_OEM_BASE + 10)
 #define CMR_EVT_AF_EXIT                              (CMR_EVT_OEM_BASE + 11)
 #define CMR_EVT_AF_INIT                              (CMR_EVT_OEM_BASE + 12)
+#define CMR_EVT_CAF_MOVE_START                       (CMR_EVT_OEM_BASE + 13)
+#define CMR_EVT_CAF_MOVE_STOP                        (CMR_EVT_OEM_BASE + 14)
 
 #define CMR_EVT_PREV_BASE                            (CMR_EVT_OEM_BASE + 0x100)
 #define CMR_EVT_PREV_INIT                            (CMR_EVT_OEM_BASE + 0x0)

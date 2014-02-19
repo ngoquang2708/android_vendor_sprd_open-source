@@ -31,14 +31,15 @@
 #define ISP_APP_EVT_CONTINUE_STOP (1 << 5)
 #define ISP_APP_EVT_SIGNAL               (1 << 6)
 #define ISP_APP_EVT_SIGNAL_NEXT     (1 << 7)
-#define ISP_APP_EVT_IOCTRL              (1 << 8)
-#define ISP_APP_EVT_SOF                   (1 << 9)
-#define ISP_APP_EVT_CTRL_CALLBAC   (1 << 10)
+#define ISP_APP_EVT_IOCTRL               (1 << 8)
+#define ISP_APP_EVT_CAPABILITY         (1 << 9)
+#define ISP_APP_EVT_SOF                   (1 << 10)
+#define ISP_APP_EVT_CTRL_CALLBAC   (1 << 11)
 
 #define ISP_APP_EVT_MASK                (uint32_t)(ISP_APP_EVT_START | ISP_APP_EVT_STOP | ISP_APP_EVT_INIT \
 					| ISP_APP_EVT_DEINIT | ISP_APP_EVT_CONTINUE | ISP_APP_EVT_CONTINUE_STOP \
 					| ISP_APP_EVT_SIGNAL | ISP_APP_EVT_SIGNAL_NEXT | ISP_APP_EVT_IOCTRL \
-					| ISP_APP_EVT_SOF | ISP_APP_EVT_CTRL_CALLBAC)
+					| ISP_APP_EVT_CAPABILITY | ISP_APP_EVT_SOF | ISP_APP_EVT_CTRL_CALLBAC)
 
 #define ISP_APP_THREAD_QUEUE_NUM 50
 
@@ -52,6 +53,8 @@
 #define ISP_APP_ZERO 0x00
 #define ISP_APP_ONE 0x01
 #define ISP_APP_TWO 0x02
+
+#define ISP_APP_MAX_HANDLE_NUM 0x02
 
 #define ISP_APP_INVALID 0xffffffff
 
@@ -77,12 +80,21 @@ enum isp_app_status{
 };
 
 struct isp_app_context{
+	uint32_t ae_stab;
+	uint32_t af_flag;
+	uint32_t lum_measure_flag;
+	struct isp_af_win af_info;
+	enum isp_ae_weight lum_measure_mode;
+
+	proc_callback ctrl_callback;
+};
+
+struct isp_app_system{
+	uint32_t handler_num;
 	uint32_t isp_status;
-	uint32_t isp_ctrl_sync;
 	pthread_t app_thr;
 	uint32_t app_queue;
 	uint32_t app_status;
-	pthread_mutex_t app_mutex;
 	pthread_mutex_t cond_mutex;
 
 	pthread_cond_t init_cond;
@@ -91,15 +103,13 @@ struct isp_app_context{
 	pthread_cond_t continue_stop_cond;
 	pthread_cond_t signal_cond;
 	pthread_cond_t ioctrl_cond;
+	pthread_cond_t capability_cond;
 	pthread_cond_t thread_common_cond;
+};
 
-	uint32_t ae_stab;
-	uint32_t af_flag;
-	uint32_t lum_measure_flag;
-	struct isp_af_win af_info;
-	enum isp_ae_weight lum_measure_mode;
-
-	proc_callback ctrl_callback;
+struct isp_app_param{
+	struct isp_app_system system;
+	struct isp_app_context context[2];
 };
 
 struct isp_app_respond
@@ -115,7 +125,9 @@ struct isp_app_respond
 **				Local Variables 					*
 **---------------------------------------------------------------------------*/
 
-static struct isp_app_context* s_isp_app_context_ptr=NULL;
+static struct isp_app_param* s_isp_app_context_ptr=NULL;
+static pthread_mutex_t s_app_mutex={0x00};
+
 /**---------------------------------------------------------------------------*
 **					Constant Variables				*
 **---------------------------------------------------------------------------*/
@@ -125,14 +137,24 @@ static int _isp_app_msg_post(struct isp_app_msg *message);
 **					Local Function Prototypes			*
 **---------------------------------------------------------------------------*/
 
+/* ispAppGetSystem --
+*@
+*@
+*@ return:
+*/
+static struct isp_app_system* ispAppGetSystem(void)
+{
+	return &s_isp_app_context_ptr->system;
+}
+
 /* ispAppGetContext --
 *@
 *@
 *@ return:
 */
-static struct isp_app_context* ispAppGetContext(void)
+static struct isp_app_context* ispAppGetContext(uint32_t handler_id)
 {
-	return s_isp_app_context_ptr;
+	return &s_isp_app_context_ptr->context[handler_id];
 }
 
 /* _isp_AppInitContext --
@@ -143,18 +165,16 @@ static struct isp_app_context* ispAppGetContext(void)
 static uint32_t _isp_AppInitContext(void)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 
 	if (NULL == s_isp_app_context_ptr) {
-		s_isp_app_context_ptr = (struct isp_app_context*)malloc(sizeof(struct isp_app_context));
+		s_isp_app_context_ptr = (struct isp_app_param*)malloc(sizeof(struct isp_app_param));
 		if (NULL == s_isp_app_context_ptr) {
 			ISP_LOG("alloc context buf error");
 			rtn=ISP_APP_ALLOC_ERROR;
 			return rtn;
 		}
-	}
-
-	if (NULL != s_isp_app_context_ptr) {
-		memset((void*)s_isp_app_context_ptr, 0x00, sizeof(struct isp_app_context));
+		memset((void*)s_isp_app_context_ptr, 0x00, sizeof(struct isp_app_param));
 	}
 
 	return rtn;
@@ -177,23 +197,65 @@ static int32_t _isp_AppDeinitContext(void)
 	return rtn;
 }
 
+/* _isp_AppLock --
+*@
+*@
+*@ return:
+*/
+static int32_t _isp_AppLock(void)
+{
+	int32_t rtn = ISP_APP_SUCCESS;
+
+	rtn = pthread_mutex_lock(&s_app_mutex);
+
+	return rtn;
+}
+
+/* _isp_AppUnlock --
+*@
+*@
+*@ return:
+*/
+static int32_t _isp_AppUnlock(void)
+{
+	int32_t rtn=ISP_APP_SUCCESS;
+
+	rtn = pthread_mutex_unlock(&s_app_mutex);
+
+	return rtn;
+}
+
+/* _isp_AppCreateHandler --
+*@
+*@
+*@ return:
+*/
+static uint32_t _isp_AppCreateHandler(struct isp_init_param* ptr)
+{
+	uint32_t handler_id = ISP_APP_INVALID;
+
+	handler_id = 0x00;
+
+	return handler_id;
+}
+
 /* _isp_AppAfDenoiseRecover --
 *@
 *@
 *@ return:
 */
-uint32_t _isp_AppAfDenoiseRecover(void)
+uint32_t _isp_AppAfDenoiseRecover(uint32_t handler_id)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
 	uint32_t denoise_level=0x00;
 
-	rtn = isp_ctrl_capability(ISP_DENOISE_LEVEL, (void*)&denoise_level);
+	rtn = isp_ctrl_capability(handler_id, ISP_DENOISE_LEVEL, (void*)&denoise_level);
 
 	if (ISP_APP_ZERO != (0x80000000&denoise_level)) {
 		denoise_level&=0xff;
-		rtn = isp_ctrl_ioctl(ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
+		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
 	} else {
-		rtn = isp_ctrl_ioctl(ISP_CTRL_DENOISE, (void*)&denoise_level);
+		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_DENOISE, (void*)&denoise_level);
 	}
 
 	return rtn;
@@ -204,14 +266,14 @@ uint32_t _isp_AppAfDenoiseRecover(void)
 *@
 *@ return:
 */
-uint32_t _isp_AppSetLumMeasureCond(void)
+uint32_t _isp_AppSetLumMeasureCond(uint32_t handler_id)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 	uint32_t ae_change = ISP_APP_EB;
 
 	if (ISP_APP_EB == isp_context_ptr->lum_measure_flag) {
-		rtn = isp_ctrl_ioctl(ISP_CTRL_GET_AE_CHG, (void*)&ae_change);
+		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_GET_AE_CHG, (void*)&ae_change);
 		isp_context_ptr->lum_measure_flag = ISP_APP_UEB;
 	}
 
@@ -223,12 +285,12 @@ uint32_t _isp_AppSetLumMeasureCond(void)
 *@
 *@ return:
 */
-uint32_t _isp_AppLumMeasureRecover(void)
+uint32_t _isp_AppLumMeasureRecover(uint32_t handler_id)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 
-	rtn = isp_ctrl_ioctl(ISP_CTRL_AE_MEASURE_LUM, (void*)&isp_context_ptr->lum_measure_mode);
+	rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AE_MEASURE_LUM, (void*)&isp_context_ptr->lum_measure_mode);
 
 	return rtn;
 }
@@ -238,17 +300,18 @@ uint32_t _isp_AppLumMeasureRecover(void)
 *@
 *@ return:
 */
-int32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
+int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr=ispAppGetContext();
+	struct isp_app_context* isp_context_ptr=ispAppGetContext(handler_id);
 	ISP_APP_MSG_INIT(isp_ctrl_msg);
 
-	isp_context_ptr->ctrl_callback(mode, param_ptr);
+	isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr);
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
-		if ((ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode))
-			|| (ISP_AE_CHG_CALLBACK == (ISP_AE_CHG_CALLBACK&mode))) {
+		if ((ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode))
+			|| (ISP_AE_CHG_CALLBACK == (ISP_EVT_MASK&mode))) {
+			isp_ctrl_msg.handler_id = handler_id;
 			isp_ctrl_msg.msg_type = ISP_APP_EVT_CTRL_CALLBAC;
 			isp_ctrl_msg.sub_msg_type = mode;
 			isp_ctrl_msg.alloc_flag = 0x00;
@@ -266,17 +329,17 @@ int32_t _isp_AppCtrlCallback(int32_t mode, void* param_ptr)
 *@
 *@ return:
 */
-uint32_t _isp_AppCtrlCallbackHandler(int32_t mode, void* param_ptr)
+uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* param_ptr)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
-		if (ISP_AF_NOTICE_CALLBACK == (ISP_AF_NOTICE_CALLBACK&mode)) {
-			rtn = _isp_AppAfDenoiseRecover();
-			rtn = _isp_AppSetLumMeasureCond();
+		if (ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode)) {
+			rtn = _isp_AppAfDenoiseRecover(handler_id);
+			rtn = _isp_AppSetLumMeasureCond(handler_id);
 		}
-		if (ISP_AE_CHG_CALLBACK == (ISP_AE_CHG_CALLBACK&mode)) {
-			rtn = _isp_AppLumMeasureRecover();
+		if (ISP_AE_CHG_CALLBACK == (ISP_EVT_MASK&mode)) {
+			rtn = _isp_AppLumMeasureRecover(handler_id);
 		}
 	}
 
@@ -288,16 +351,17 @@ uint32_t _isp_AppCtrlCallbackHandler(int32_t mode, void* param_ptr)
 *@
 *@ return:
 */
-uint32_t _isp_AppStopVideoHandler(void)
+uint32_t _isp_AppStopVideoHandler(uint32_t handler_id)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr=ispAppGetContext();
+	struct isp_app_context* isp_context_ptr=ispAppGetContext(handler_id);
 	struct isp_af_notice af_notice;
 
 	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		ISP_LOG("App Stop ISP_AF_NOTICE_CALLBACK");
+		af_notice.mode=ISP_FOCUS_MOVE_END;
 		af_notice.valid_win=0x00;
-		isp_context_ptr->ctrl_callback(ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice);
+		isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice);
 		isp_context_ptr->af_flag = ISP_APP_UEB;
 	}
 
@@ -309,10 +373,10 @@ uint32_t _isp_AppStopVideoHandler(void)
 *@
 *@ return:
 */
-static int32_t _isp_AppCallBack(int32_t mode, void* param_ptr)
+static int32_t _isp_AppCallBack(uint32_t handler_id, int32_t mode, void* param_ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 	ISP_APP_MSG_INIT(isp_ctrl_msg);
 	uint32_t cmd = mode&0xffff;
 
@@ -327,6 +391,7 @@ static int32_t _isp_AppCallBack(int32_t mode, void* param_ptr)
 			if ((ISP_APP_EB == isp_context_ptr->af_flag)
 				&&(ISP_APP_EB == isp_context_ptr->ae_stab)) {
 				ISP_LOG("APP ISP_SOF_CALLBACK");
+				isp_ctrl_msg.handler_id = handler_id;
 				isp_ctrl_msg.msg_type = ISP_APP_EVT_SOF;
 				isp_ctrl_msg.alloc_flag = 0x00;
 				isp_ctrl_msg.respond = 0x00;
@@ -347,15 +412,15 @@ static int32_t _isp_AppCallBack(int32_t mode, void* param_ptr)
 *@
 *@ return:
 */
-static int32_t _isp_AppSofHandler(void)
+static int32_t _isp_AppSofHandler(uint32_t handler_id)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 
 	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		struct isp_af_win af_param;
 		memcpy((void*)&af_param, (void*)&isp_context_ptr->af_info, sizeof(struct isp_af_win));
-		rtn = isp_ctrl_ioctl(ISP_CTRL_AF, (void*)&af_param);
+		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF, (void*)&af_param);
 		isp_context_ptr->af_flag = ISP_APP_UEB;
 	}
 
@@ -367,19 +432,19 @@ static int32_t _isp_AppSofHandler(void)
 *@
 *@ return:
 */
-static int32_t _isp_AppAfIoCtrlHandler(void* param_ptr)
+static int32_t _isp_AppAfIoCtrlHandler(uint32_t handler_id, void* param_ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 	struct isp_af_win* af_param_ptr=(struct isp_af_win*)param_ptr;
 	uint32_t ae_stab = ISP_APP_EB;
 
 	if (ISP_APP_EB == af_param_ptr->ae_touch) {
-		rtn = isp_ctrl_ioctl(ISP_CTRL_AE_TOUCH, (void*)&af_param_ptr->ae_touch_rect);
+		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AE_TOUCH, (void*)&af_param_ptr->ae_touch_rect);
 		if (ISP_APP_SUCCESS == rtn) {
 			isp_context_ptr->lum_measure_flag = ISP_APP_EB;
 			isp_context_ptr->ae_stab=ISP_APP_UEB;
-			rtn = isp_ctrl_ioctl(ISP_CTRL_GET_AE_STAB, (void*)&ae_stab);
+			rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_GET_AE_STAB, (void*)&ae_stab);
 		} else {
 			isp_context_ptr->lum_measure_flag = ISP_APP_UEB;
 			rtn = ISP_APP_SUCCESS;
@@ -401,10 +466,10 @@ static int32_t _isp_AppAfIoCtrlHandler(void* param_ptr)
 *@
 *@ return:
 */
-static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
+static int32_t _isp_AppIoCtrlHandler(uint32_t handler_id, enum isp_ctrl_cmd io_cmd, void* param_ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 	enum isp_ctrl_cmd cmd = io_cmd&0x3fffffff;
 
 	switch (cmd)
@@ -412,8 +477,8 @@ static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
 		case ISP_CTRL_AF:
 		{
 			uint32_t denoise_level=0xfe;
-			rtn = isp_ctrl_ioctl(ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
-			rtn = _isp_AppAfIoCtrlHandler(param_ptr);
+			rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
+			rtn = _isp_AppAfIoCtrlHandler(handler_id, param_ptr);
 			break ;
 		}
 		case ISP_CTRL_AE_MEASURE_LUM:
@@ -436,9 +501,9 @@ static int32_t _isp_AppIoCtrlHandler(enum isp_ctrl_cmd io_cmd, void* param_ptr)
 static int32_t _isp_AppSetStatus(uint32_t status)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
-	isp_context_ptr->isp_status = status;
+	isp_system_ptr->isp_status = status;
 
 	return rtn;
 }
@@ -451,9 +516,9 @@ static int32_t _isp_AppSetStatus(uint32_t status)
 static int32_t _isp_AppGetStatus(void)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
-	return isp_context_ptr->isp_status;
+	return isp_system_ptr->isp_status;
 }
 
 /* _isp_set_app_init_param --
@@ -461,10 +526,10 @@ static int32_t _isp_AppGetStatus(void)
 *@
 *@ return:
 */
-static int32_t _isp_set_app_init_param(struct isp_init_param* ptr)
+static int32_t _isp_set_app_init_param(uint32_t handler_id, struct isp_init_param* ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 
 	ptr->self_callback = _isp_AppCallBack;
 	isp_context_ptr->ctrl_callback = ptr->ctrl_callback;
@@ -478,14 +543,14 @@ static int32_t _isp_set_app_init_param(struct isp_init_param* ptr)
 *@
 *@ return:
 */
-static int _isp_app_init(struct isp_init_param* ptr)
+static int _isp_app_init(uint32_t handler_id, struct isp_init_param* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
 
-	rtn = _isp_set_app_init_param(ptr);
+	rtn = _isp_set_app_init_param(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("set app init param error"));
 
-	rtn = isp_ctrl_init(ptr);
+	rtn = isp_ctrl_init(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("ctr init error"));
 
 	return rtn;
@@ -496,11 +561,11 @@ static int _isp_app_init(struct isp_init_param* ptr)
 *@
 *@ return:
 */
-static int _isp_app_deinit(void)
+static int _isp_app_deinit(uint32_t handler_id)
 {
 	int rtn = ISP_APP_SUCCESS;
 
-	rtn = isp_ctrl_deinit();
+	rtn = isp_ctrl_deinit(handler_id);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("ctr deinit error"));
 
 	return rtn;
@@ -512,10 +577,10 @@ static int _isp_app_deinit(void)
 *@
 *@ return:
 */
-static int32_t _isp_set_app_video_param(struct isp_video_start* ptr)
+static int32_t _isp_set_app_video_param(uint32_t handler_id, struct isp_video_start* ptr)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 
 	isp_context_ptr->ae_stab = ISP_APP_INVALID;
 	isp_context_ptr->af_flag = ISP_APP_INVALID;
@@ -528,14 +593,14 @@ static int32_t _isp_set_app_video_param(struct isp_video_start* ptr)
 *@
 *@ return:
 */
-static int _isp_app_video_start(struct isp_video_start* ptr)
+static int _isp_app_video_start(uint32_t handler_id, struct isp_video_start* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
 
-	rtn = _isp_set_app_video_param(ptr);
+	rtn = _isp_set_app_video_param(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("set app video param error"));
 
-	rtn = isp_ctrl_video_start(ptr);
+	rtn = isp_ctrl_video_start(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app video start error"));
 
 	return rtn;
@@ -577,6 +642,7 @@ static int _isp_msg_queue_destroy(uint32_t queue_handle)
 static int _isp_cond_wait(pthread_cond_t* cond_ptr, pthread_mutex_t* mutex_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 
 	rtn = pthread_mutex_lock(mutex_ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("lock cond mutex %d error", rtn));
@@ -596,6 +662,8 @@ static int _isp_cond_wait(pthread_cond_t* cond_ptr, pthread_mutex_t* mutex_ptr)
 static int _isp_cond_signal(pthread_cond_t* cond_ptr, pthread_mutex_t* mutex_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
+
 	rtn = pthread_mutex_lock(mutex_ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("lock cond mutex %d error", rtn));
 	rtn=pthread_cond_signal(cond_ptr);
@@ -613,9 +681,9 @@ static int _isp_cond_signal(pthread_cond_t* cond_ptr, pthread_mutex_t* mutex_ptr
 static int _isp_app_msg_get(struct isp_app_msg *message)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
-	rtn = isp_app_msg_get( isp_context_ptr->app_queue, message);
+	rtn = isp_app_msg_get( isp_system_ptr->app_queue, message);
 
 	return rtn;
 }
@@ -628,9 +696,9 @@ static int _isp_app_msg_get(struct isp_app_msg *message)
 static int _isp_app_msg_post(struct isp_app_msg *message)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
-	rtn = isp_app_msg_post( isp_context_ptr->app_queue, message);
+	rtn = isp_app_msg_post( isp_system_ptr->app_queue, message);
 
 	return rtn;
 }
@@ -643,11 +711,11 @@ static int _isp_app_msg_post(struct isp_app_msg *message)
 static void *_isp_app_routine(void *client_data)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_respond* map_res_ptr;
 	struct isp_app_respond* res_ptr;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_ctrl_msg);
 	ISP_APP_MSG_INIT(isp_ctrl_self_msg);
+	uint32_t handler_id = 0X00;
 	uint32_t evt = 0X00;
 	uint32_t sub_type = 0X00;
 	void* param_ptr = NULL;
@@ -662,89 +730,97 @@ static void *_isp_app_routine(void *client_data)
 		}
 
 		_isp_AppSetStatus(ISP_APP_RUN);
+		handler_id = isp_ctrl_msg.handler_id;
 		evt = (uint32_t)(isp_ctrl_msg.msg_type & ISP_APP_EVT_MASK);
 		sub_type = isp_ctrl_msg.sub_msg_type;
 		param_ptr = (void*)isp_ctrl_msg.data;
-		map_res_ptr = (void*)isp_ctrl_msg.respond;
+		res_ptr = (void*)isp_ctrl_msg.respond;
 
 		switch (evt) {
 			case ISP_APP_EVT_START:
 				//ISP_LOG("ISP_APP_EVT_START");
 				_isp_AppSetStatus(ISP_APP_IDLE);
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->thread_common_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->thread_common_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_STOP:
 				//ISP_LOG("ISP_APP_EVT_STOP");
 				_isp_AppSetStatus(ISP_APP_CLOSE);
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->thread_common_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->thread_common_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_INIT:
 				//ISP_LOG("ISP_APP_EVT_INIT");
-				rtn = _isp_app_init((struct isp_init_param*)param_ptr);
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->init_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				rtn = _isp_app_init(handler_id, (struct isp_init_param*)param_ptr);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->init_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_DEINIT:
 				//ISP_LOG("ISP_APP_EVT_DEINIT");
-				rtn = _isp_app_deinit();
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->deinit_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				rtn = _isp_app_deinit(handler_id);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->deinit_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_CONTINUE:
 				//ISP_LOG("ISP_APP_EVT_CONTINUE");
-				rtn=_isp_app_video_start((struct isp_video_start*)param_ptr);
-				//rtn = isp_ctrl_video_start((struct isp_video_start*)param_ptr);
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->continue_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				rtn=_isp_app_video_start(handler_id, (struct isp_video_start*)param_ptr);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->continue_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_CONTINUE_STOP:
 				//ISP_LOG("ISP_APP_EVT_CONTINUE_STOP");
-				rtn = isp_ctrl_video_stop();
-				rtn = _isp_AppStopVideoHandler();
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->continue_stop_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				rtn = isp_ctrl_video_stop(handler_id);
+				rtn = _isp_AppStopVideoHandler(handler_id);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->continue_stop_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_SIGNAL:
 				//ISP_LOG("ISP_APP_EVT_SIGNAL");
-				rtn = isp_ctrl_proc_start((struct ips_in_param*)param_ptr, NULL);
+				rtn = isp_ctrl_proc_start(handler_id, (struct ips_in_param*)param_ptr, NULL);
 				break;
 
 			case ISP_APP_EVT_SIGNAL_NEXT:
 				//ISP_LOG("ISP_APP_EVT_SIGNAL_NEXT");
-				rtn=isp_ctrl_proc_next((struct ipn_in_param*)param_ptr, NULL);
+				rtn=isp_ctrl_proc_next(handler_id, (struct ipn_in_param*)param_ptr, NULL);
 				break;
 
 			case ISP_APP_EVT_IOCTRL:
 				//ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
-				rtn = _isp_AppIoCtrlHandler(sub_type, param_ptr);
+				rtn = _isp_AppIoCtrlHandler(handler_id, sub_type, param_ptr);
 				if (ISP_APP_SUCCESS == rtn) {
-					rtn = isp_ctrl_ioctl(sub_type, param_ptr);
+					res_ptr->rtn = isp_ctrl_ioctl(handler_id, sub_type, param_ptr);
 				}
-				pthread_mutex_lock(&isp_context_ptr->cond_mutex);
-				rtn = pthread_cond_signal(&isp_context_ptr->ioctrl_cond);
-				pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+				break;
+
+			case ISP_APP_EVT_CAPABILITY:
+				//ISP_LOG("--isp_ctrl_capability--cmd:0x%x", sub_type);
+				res_ptr->rtn = isp_ctrl_capability(handler_id, sub_type, param_ptr);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn = pthread_cond_signal(&isp_system_ptr->capability_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_APP_EVT_SOF:
-				rtn = _isp_AppSofHandler();
+				rtn = _isp_AppSofHandler(handler_id);
 				break;
 
 			case ISP_APP_EVT_CTRL_CALLBAC:
-				rtn = _isp_AppCtrlCallbackHandler(sub_type, param_ptr);
+				rtn = _isp_AppCtrlCallbackHandler(handler_id, sub_type, param_ptr);
 				break;
 
 			default:
@@ -776,28 +852,30 @@ static void *_isp_app_routine(void *client_data)
 static int _isp_create_app_thread(void)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	uint32_t handler_id=0x00;
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	pthread_attr_t attr;
 	ISP_APP_MSG_INIT(isp_main_msg);
 
-	rtn = _isp_msg_queue_create(ISP_APP_THREAD_QUEUE_NUM, &isp_context_ptr->app_queue);
+	rtn = _isp_msg_queue_create(ISP_APP_THREAD_QUEUE_NUM, &isp_system_ptr->app_queue);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("careate ctrl queue error"));
 
 	pthread_attr_init (&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-	rtn = pthread_create(&isp_context_ptr->app_thr, &attr, _isp_app_routine, NULL);
+	rtn = pthread_create(&isp_system_ptr->app_thr, &attr, _isp_app_routine, NULL);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("careate ctrl thread error"));
 	pthread_attr_destroy(&attr);
 
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_START;
 
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->thread_common_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->thread_common_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 
 	return rtn;
 }
@@ -810,17 +888,19 @@ static int _isp_create_app_thread(void)
 static int _isp_destory_app_thread(void)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	uint32_t handler_id=0x00;
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_main_msg);
 
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_STOP;
 
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_app_msg_post(&isp_main_msg);
 
-	rtn = pthread_cond_wait(&isp_context_ptr->thread_common_cond,&isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
-	rtn = _isp_msg_queue_destroy(isp_context_ptr->app_queue);
+	rtn = pthread_cond_wait(&isp_system_ptr->thread_common_cond,&isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+	rtn = _isp_msg_queue_destroy(isp_system_ptr->app_queue);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("destroy ctrl queue error"));
 
 	return rtn;
@@ -831,21 +911,21 @@ static int _isp_destory_app_thread(void)
 *@
 *@ return:
 */
-int _isp_app_create_Resource(void)
+static int _isp_app_create_Resource(void)
 {
 	int rtn=ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
-	pthread_mutex_init (&isp_context_ptr->app_mutex, NULL);
-	pthread_mutex_init (&isp_context_ptr->cond_mutex, NULL);
+	pthread_mutex_init (&isp_system_ptr->cond_mutex, NULL);
 
-	pthread_cond_init(&isp_context_ptr->init_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->deinit_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->continue_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->continue_stop_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->signal_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->ioctrl_cond, NULL);
-	pthread_cond_init(&isp_context_ptr->thread_common_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->init_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->deinit_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->continue_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->continue_stop_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->signal_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->ioctrl_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->capability_cond, NULL);
+	pthread_cond_init(&isp_system_ptr->thread_common_cond, NULL);
 
 	_isp_create_app_thread();
 
@@ -857,23 +937,23 @@ int _isp_app_create_Resource(void)
 *@
 *@ return:
 */
-int _isp_app_release_resource(void)
+static int _isp_app_release_resource(void)
 {
 	int rtn = ISP_APP_SUCCESS;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 
 	_isp_destory_app_thread();
-	
-	pthread_mutex_destroy(&isp_context_ptr->app_mutex);
-	pthread_mutex_destroy(&isp_context_ptr->cond_mutex);
 
-	pthread_cond_destroy(&isp_context_ptr->init_cond);
-	pthread_cond_destroy(&isp_context_ptr->deinit_cond);
-	pthread_cond_destroy(&isp_context_ptr->continue_cond);
-	pthread_cond_destroy(&isp_context_ptr->continue_stop_cond);
-	pthread_cond_destroy(&isp_context_ptr->signal_cond);
-	pthread_cond_destroy(&isp_context_ptr->ioctrl_cond);
-	pthread_cond_destroy(&isp_context_ptr->thread_common_cond);
+	pthread_mutex_destroy(&isp_system_ptr->cond_mutex);
+
+	pthread_cond_destroy(&isp_system_ptr->init_cond);
+	pthread_cond_destroy(&isp_system_ptr->deinit_cond);
+	pthread_cond_destroy(&isp_system_ptr->continue_cond);
+	pthread_cond_destroy(&isp_system_ptr->continue_stop_cond);
+	pthread_cond_destroy(&isp_system_ptr->signal_cond);
+	pthread_cond_destroy(&isp_system_ptr->ioctrl_cond);
+	pthread_cond_destroy(&isp_system_ptr->capability_cond);
+	pthread_cond_destroy(&isp_system_ptr->thread_common_cond);
 
 	return rtn;
 }
@@ -888,35 +968,65 @@ int _isp_app_release_resource(void)
 int isp_init(struct isp_init_param* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
-	struct isp_app_context* isp_context_ptr = NULL;
+	struct isp_app_system* isp_system_ptr = NULL;
 	ISP_APP_MSG_INIT(isp_main_msg);
+	uint32_t hadler_id = ISP_APP_ZERO;
 
 	ISP_LOG("---isp_app_init-- start");
+
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
 
 	rtn = _isp_AppInitContext();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("init isp app context error"));
 
-	isp_context_ptr = ispAppGetContext();
+	isp_system_ptr = ispAppGetSystem();
 
-	rtn = _isp_app_create_Resource();
-	ISP_APP_RETURN_IF_FAIL(rtn, ("create app resource error"));
+	if(ISP_APP_MAX_HANDLE_NUM <= isp_system_ptr->handler_num) {
+		ISP_LOG("handler num: 0x%x error", isp_system_ptr->handler_num);
+		rtn = ISP_APP_ERROR;
+		goto EXIT;
+	}
+
+	hadler_id = _isp_AppCreateHandler(ptr);
+
+	if(ISP_APP_MAX_HANDLE_NUM <= hadler_id) {
+		ISP_LOG("handler : 0x%x error",hadler_id);
+		rtn = ISP_APP_ERROR;
+		goto EXIT;
+	}
+
+	isp_system_ptr->handler_num++;
+
+	if(ISP_APP_ONE == isp_system_ptr->handler_num) {
+		rtn = _isp_app_create_Resource();
+		ISP_APP_RETURN_IF_FAIL(rtn, ("create app resource error"));
+	}
 
 	respond.rtn = ISP_APP_SUCCESS;
 	isp_main_msg.data = malloc(sizeof(struct isp_init_param));
 	memcpy(isp_main_msg.data, ptr, sizeof(struct isp_init_param));
 	isp_main_msg.alloc_flag = 1;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_INIT;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.respond=(void*)&respond;
 
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to app thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->init_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->init_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
+
+	EXIT:
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("---isp_app_init-- end");
 
@@ -931,34 +1041,50 @@ int isp_init(struct isp_init_param* ptr)
 int isp_deinit(void)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_main_msg);
 
 	ISP_LOG("--isp_app_deinit--");
 
 	// get mutex
-	pthread_mutex_lock(&isp_context_ptr->app_mutex);
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
+	if (ISP_APP_ONE > isp_system_ptr->handler_num) {
+		ISP_LOG("handler num: 0x%x error", isp_system_ptr->handler_num);
+		rtn = ISP_APP_ERROR;
+		goto EXIT;
+	}
+
+	isp_system_ptr->handler_num--;
 
 	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_DEINIT;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.alloc_flag = 0x00;
 	isp_main_msg.respond = (void*)&respond;
 
 	// close hw isp
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->deinit_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->deinit_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	rtn = pthread_mutex_unlock(&isp_context_ptr->app_mutex);
-	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_mutex_unlock error"));
+	if (ISP_APP_ZERO == isp_system_ptr->handler_num) {
+		rtn = _isp_app_release_resource();
+		ISP_APP_RETURN_IF_FAIL(rtn, ("_isp_app_release_resource error"));
+	}
 
-	rtn = _isp_app_release_resource();
-	ISP_APP_RETURN_IF_FAIL(rtn, ("_isp_app_release_resource error"));
+	EXIT:
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_deinit-- end");
 
@@ -973,8 +1099,34 @@ int isp_deinit(void)
 int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
+	struct isp_app_respond respond;
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
+	ISP_APP_MSG_INIT(isp_main_msg);
 
-	rtn = isp_ctrl_capability(cmd, param_ptr);
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
+	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
+	isp_main_msg.msg_type = ISP_APP_EVT_CAPABILITY;
+	isp_main_msg.sub_msg_type = cmd;
+	isp_main_msg.data = (void*)param_ptr;
+	isp_main_msg.alloc_flag = 0x00;
+	isp_main_msg.respond = (void*)&respond;
+
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+	rtn = _isp_app_msg_post(&isp_main_msg);
+	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+
+	rtn = pthread_cond_wait(&isp_system_ptr->capability_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
+
+	rtn = respond.rtn;
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	return rtn;
 }
@@ -987,26 +1139,34 @@ int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_main_msg);
 
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
 	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_IOCTRL;
 	isp_main_msg.sub_msg_type = cmd;
 	isp_main_msg.data = (void*)param_ptr;
 	isp_main_msg.alloc_flag = 0x00;
 	isp_main_msg.respond = (void*)&respond;
 
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->ioctrl_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->ioctrl_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
 	rtn = respond.rtn;
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	return rtn;
 }
@@ -1019,28 +1179,36 @@ int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 int isp_video_start(struct isp_video_start* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_main_msg);
 
 	ISP_LOG("--isp_app_video_start--");
+
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
 
 	respond.rtn = ISP_APP_SUCCESS;
 	isp_main_msg.data = malloc(sizeof(struct isp_video_start));
 	memcpy(isp_main_msg.data, param_ptr, sizeof(struct isp_video_start));
 	isp_main_msg.alloc_flag = 0x01;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_CONTINUE;
-	isp_main_msg.sub_msg_type;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.respond = (void*)&respond;
 
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->continue_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->continue_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_video_start-- end");
 
@@ -1055,26 +1223,34 @@ int isp_video_start(struct isp_video_start* param_ptr)
 int isp_video_stop(void)
 {
 	int rtn=ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
-	struct isp_app_context* isp_context_ptr = ispAppGetContext();
+	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_main_msg);
 
 	ISP_LOG("--isp_app_video_stop--");
 
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
 	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_CONTINUE_STOP;
-	isp_main_msg.sub_msg_type;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.data = NULL;
 	isp_main_msg.alloc_flag = 0x00;
 	isp_main_msg.respond = (void*)&respond;
-	
-	pthread_mutex_lock(&isp_context_ptr->cond_mutex);
+
+	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
-	rtn = pthread_cond_wait(&isp_context_ptr->continue_stop_cond, &isp_context_ptr->cond_mutex);
-	pthread_mutex_unlock(&isp_context_ptr->cond_mutex);
+	rtn = pthread_cond_wait(&isp_system_ptr->continue_stop_cond, &isp_system_ptr->cond_mutex);
+	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_video_stop--end");
 
@@ -1089,14 +1265,19 @@ int isp_video_stop(void)
 int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_param_ptr)
 {
 	int rtn=ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	ISP_APP_MSG_INIT(isp_main_msg);
 
 	ISP_LOG("--isp_app_proc_start--");
 
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
 	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_SIGNAL;
-	isp_main_msg.sub_msg_type;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.data = malloc(sizeof(struct ips_in_param));
 	memcpy(isp_main_msg.data, in_param_ptr, sizeof(struct ips_in_param));
 	isp_main_msg.alloc_flag = 0x01;
@@ -1104,6 +1285,9 @@ int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_
 
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to app thread error"));
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_proc_start--end");
 
@@ -1118,14 +1302,19 @@ int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_
 int isp_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	ISP_APP_MSG_INIT(isp_main_msg);
 
 	ISP_LOG("--isp_app_proc_next--");
 
+	rtn = _isp_AppLock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app lock error"));
+
 	respond.rtn = ISP_APP_SUCCESS;
+	isp_main_msg.handler_id = ISP_APP_ZERO;
 	isp_main_msg.msg_type = ISP_APP_EVT_SIGNAL_NEXT;
-	isp_main_msg.sub_msg_type;
+	isp_main_msg.sub_msg_type = ISP_APP_ZERO;
 	isp_main_msg.data = malloc(sizeof(struct ipn_in_param));
 	memcpy(isp_main_msg.data, in_ptr, sizeof(struct ipn_in_param));
 	isp_main_msg.alloc_flag = 0x01;
@@ -1133,6 +1322,9 @@ int isp_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr)
 
 	rtn = _isp_app_msg_post(&isp_main_msg);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+
+	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_proc_next--end");
 

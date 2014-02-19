@@ -37,16 +37,16 @@ extern   "C"
 #define ISP_DEBUG_STR      "%s, %s, %d line,: "
 #define ISP_DEBUG_ARGS    __FILE__,__FUNCTION__,__LINE__
 #else
-#define ISP_DEBUG_STR      "ISP_RAW: %05d line, %s : "
-#define ISP_DEBUG_ARGS    __LINE__,__FUNCTION__
+#define ISP_DEBUG_STR      "ISP_RAW: id:0x%02x, %05d line, %s : "
+#define ISP_DEBUG_ARGS    handler_id,__LINE__,__FUNCTION__
 #endif
 
-#ifdef ANDROID_4100
-/*android 4.1.0.0*/
-#define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-#else
+#ifdef ANDROID_4003
 /*android 4.0.0.3*/
 #define ISP_LOG(format,...) LOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#else
+/*android 4.1.0.0*/
+#define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
 #endif
 
 /*------------------------------------------------------------------------------*

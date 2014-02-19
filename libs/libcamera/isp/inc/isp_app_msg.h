@@ -39,6 +39,7 @@ enum {
 
 struct isp_app_msg
 {
+	uint32_t                   handler_id;
 	uint32_t                   msg_type;
 	uint32_t                   sub_msg_type;
 	void                       *data;
@@ -59,10 +60,11 @@ struct isp_app_msg_cxt
 
 #define ISPAPPMSGINIT(name) \
 { \
-	.msg_type = 0,              \
-	.sub_msg_type = 0,              \
-	.data = NULL,           \
-	.alloc_flag = 0,              \
+	.handler_id = 0, \
+	.msg_type = 0, \
+	.sub_msg_type = 0, \
+	.data = NULL, \
+	.alloc_flag = 0, \
 	.respond = NULL, \
 }
 

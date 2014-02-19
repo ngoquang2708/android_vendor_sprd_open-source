@@ -90,7 +90,7 @@ static struct isp_raw_info_update_status raw_info_update_status[2] = {
 void _isp_raw_para_recover (SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_E sensor_id)
 {
 	uint32_t i,j;
-	CMR_LOGV("Sensor id:%d",sensor_id);
+	CMR_LOGE("Sensor id:%d",sensor_id);
 
 	for(i=0;i<SENSOR_MAP_NUM;i++){
 		for(j=0;j<SENSOR_AWB_CALI_NUM;j++){
@@ -182,7 +182,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 	fp = (FILE *)fopen(file_name,"rb");
 
 	if(!fp){
-		CMR_LOGW("file:%s not exist",file_name);
+		CMR_LOGE("file:%s not exist",file_name);
 		_isp_raw_para_recover(sensor_info_ptr,sensor_id);
 		return SENSOR_FAIL;
 	}
@@ -197,17 +197,17 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 	}
 
 	if(0 == raw_info_update_status[sensor_id].updata_file_time){
-		CMR_LOGV("file first load");
+		CMR_LOGE("file first load");
 		raw_info_update_status[sensor_id].tune_info_table_org_addr = (uint8_t*)(*sensor_info_ptr->raw_info_ptr)->tune_ptr;
 		raw_info_update_status[sensor_id].fix_info_table_org_addr = (*sensor_info_ptr->raw_info_ptr)->fix_ptr;
 	}else if(raw_info_update_status[sensor_id].updata_file_time == file_status.st_mtime){
-		CMR_LOGV("file has been loaded");
+		CMR_LOGE("file has been loaded");
 		if(fp){
 			fclose(fp);
 		}
 		return SENSOR_SUCCESS;
 	}else{
-		CMR_LOGV("new file load");
+		CMR_LOGE("new file load");
 		_isp_raw_para_recover(sensor_info_ptr,sensor_id);
 		raw_info_update_status[sensor_id].tune_info_table_org_addr = (uint8_t*)(*sensor_info_ptr->raw_info_ptr)->tune_ptr;
 		raw_info_update_status[sensor_id].fix_info_table_org_addr = (*sensor_info_ptr->raw_info_ptr)->fix_ptr;
@@ -328,7 +328,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 			}else{
 				raw_fix_info_ptr->lnc.map[i][j].len = 0;
 				raw_fix_info_ptr->lnc.map[i][j].param_addr = PNULL;
-				CMR_LOGW("LNC table %x%x is empty!!",i,j);
+				CMR_LOGE("LNC table %x%x is empty!!",i,j);
 			}
 		}
 	}
@@ -663,7 +663,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 
 	(*sensor_info_ptr->raw_info_ptr)->tune_ptr = raw_tune_info_ptr;
 	(*sensor_info_ptr->raw_info_ptr)->fix_ptr = raw_fix_info_ptr;
-	CMR_LOGV("file update success!!!");
+	CMR_LOGE("file update success!!!");
 
 	free(file_tmp_buf);
 	file_tmp_buf = PNULL;

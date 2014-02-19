@@ -16,7 +16,7 @@
 #ifndef _ISP_EXIF_H_
 #define _ISP_EXIF_H_
 
-struct exit_blc_param{
+struct exif_blc_param{
 	uint32_t mode;
 	uint16_t r;
 	uint16_t gr;
@@ -24,47 +24,47 @@ struct exit_blc_param{
 	uint16_t b;
 };
 
-struct exit_nlc_param{
+struct exif_nlc_param{
 	uint16_t r_node[29];
 	uint16_t g_node[29];
 	uint16_t b_node[29];
 	uint16_t l_node[29];
 };
 
-struct exit_lnc_param{
+struct exif_lnc_param{
 	uint16_t grid;
 	uint16_t r_pec;
 	uint16_t g_pec;
 	uint16_t b_pec;
 };
 
-struct exit_awb_map{
+struct exif_awb_map{
 	uint16_t *addr;
 	uint32_t len;		//by bytes
 };
 
 
-struct exit_ae_param{
+struct exif_ae_param{
 	uint8_t iso;
 	uint8_t exposure;
 	uint8_t gain;
 };
 
-struct exit_awb_param{
+struct exif_awb_param{
 	uint16_t alg_id;
 	uint16_t r_gain;
 	uint16_t g_gain;
 	uint16_t b_gain;
 };
 
-struct exit_bpc_param{
+struct exif_bpc_param{
 	uint16_t flat_thr;
 	uint16_t std_thr;
 	uint16_t texture_thr;
 	uint16_t reserved;
 };
 
-struct exit_denoise_param{
+struct exif_denoise_param{
 	uint32_t write_back;
 	uint16_t r_thr;
 	uint16_t g_thr;
@@ -75,54 +75,54 @@ struct exit_denoise_param{
 	uint8_t reserved0;
 };
 
-struct exit_grgb_param{
+struct exif_grgb_param{
 	uint16_t edge_thr;
 	uint16_t diff_thr;
 };
 
-struct exit_cfa_param{
+struct exif_cfa_param{
 	uint16_t edge_thr;
 	uint16_t diff_thr;
 };
 
-struct exit_cmc_param{
+struct exif_cmc_param{
 	uint16_t matrix[9];
 	uint16_t reserved;
 };
 
-struct exit_cce_parm{
+struct exif_cce_parm{
 	uint16_t matrix[9];
 	uint16_t y_shift;
 	uint16_t u_shift;
 	uint16_t v_shift;
 };
 
-struct exit_gamma_param{
+struct exif_gamma_param{
 	uint16_t axis[2][26];
 };
 
-struct exit_cce_uvdiv{
+struct exif_cce_uvdiv{
 	uint8_t thrd[7];
 	uint8_t t[2];
 	uint8_t m[3];
 };
 
-struct exit_pref_param{
+struct exif_pref_param{
 	uint8_t write_back;
 	uint8_t y_thr;
 	uint8_t u_thr;
 	uint8_t v_thr;
 };
 
-struct exit_bright_param{
+struct exif_bright_param{
 	uint8_t factor;
 };
 
-struct exit_contrast_param{
+struct exif_contrast_param{
 	uint8_t factor;
 };
 
-struct exit_hist_param
+struct exif_hist_param
 {
 	uint16_t low_ratio;
 	uint16_t high_ratio;
@@ -132,42 +132,42 @@ struct exit_hist_param
 	uint8_t reserved0;
 };
 
-struct exit_auto_contrast_param{
+struct exif_auto_contrast_param{
 	uint8_t mode;
 	uint8_t reserved2;
 	uint8_t reserved1;
 	uint8_t reserved0;
 };
 
-struct exit_saturation_param{
+struct exif_saturation_param{
 	uint8_t factor;
 };
 
-struct exit_af_param{
+struct exif_af_param{
 	uint16_t alg_id;
 	uint16_t cur_step;
 	uint16_t edge_info[32];
 };
 
-struct exit_emboss_param{
+struct exif_emboss_param{
 	uint8_t step;
 	uint8_t reserved2;
 	uint8_t reserved1;
 	uint8_t reserved0;
 };
 
-struct exit_edge_info{
+struct exif_edge_info{
 	uint8_t detail_thr;
 	uint8_t smooth_thr;
 	uint8_t strength;
 	uint8_t reserved;
 };
 
-struct exit_global_gain_param{
+struct exif_global_gain_param{
 	uint32_t gain;
 };
 
-struct exit_chn_gain_param{
+struct exif_chn_gain_param{
 	uint8_t r_gain;
 	uint8_t g_gain;
 	uint8_t b_gain;
@@ -178,7 +178,7 @@ struct exit_chn_gain_param{
 	uint16_t reserved1;
 };
 
-struct exit_flash_cali_param{
+struct exif_flash_cali_param{
 	uint16_t effect;
 	uint16_t lum_ratio;
 	uint16_t r_ratio;
@@ -186,14 +186,14 @@ struct exit_flash_cali_param{
 	uint16_t b_ratio;
 };
 
-struct exit_css_param{
+struct exif_css_param{
 	uint8_t low_thr[7];
 	uint8_t lum_thr;
 	uint8_t low_sum_thr[7];
 	uint8_t chr_thr;
 };
 
-typedef struct {
+struct exif_isp_info{
 	uint32_t is_exif_validate;
 	uint32_t tool_version;
 	uint32_t version_id;
@@ -223,32 +223,32 @@ typedef struct {
 	uint32_t glb_gain_bypass;
 	uint32_t chn_gain_bypass;
 
-	struct exit_blc_param blc;
-	struct exit_nlc_param nlc;
-	struct exit_lnc_param lnc;
-	struct exit_ae_param ae;
-	struct exit_awb_param awb;
-	struct exit_bpc_param bpc;
-	struct exit_denoise_param denoise;
-	struct exit_grgb_param grgb;
-	struct exit_cfa_param cfa;
-	struct exit_cmc_param cmc;
-	struct exit_gamma_param gamma;
-	struct exit_cce_parm cce;
-	struct exit_cce_uvdiv uv_div;
-	struct exit_pref_param pref;
-	struct exit_bright_param bright;
-	struct exit_contrast_param contrast;
-	struct exit_hist_param hist;
-	struct exit_auto_contrast_param auto_contrast;
-	struct exit_saturation_param saturation;
-	struct exit_css_param css;
-	struct exit_af_param af;
-	struct exit_edge_info edge;
-	struct exit_emboss_param emboss;
-	struct exit_global_gain_param global;
-	struct exit_chn_gain_param chn;
-	struct exit_flash_cali_param flash;
- }EXIF_ISP_INFO_T;
+	struct exif_blc_param blc;
+	struct exif_nlc_param nlc;
+	struct exif_lnc_param lnc;
+	struct exif_ae_param ae;
+	struct exif_awb_param awb;
+	struct exif_bpc_param bpc;
+	struct exif_denoise_param denoise;
+	struct exif_grgb_param grgb;
+	struct exif_cfa_param cfa;
+	struct exif_cmc_param cmc;
+	struct exif_gamma_param gamma;
+	struct exif_cce_parm cce;
+	struct exif_cce_uvdiv uv_div;
+	struct exif_pref_param pref;
+	struct exif_bright_param bright;
+	struct exif_contrast_param contrast;
+	struct exif_hist_param hist;
+	struct exif_auto_contrast_param auto_contrast;
+	struct exif_saturation_param saturation;
+	struct exif_css_param css;
+	struct exif_af_param af;
+	struct exif_edge_info edge;
+	struct exif_emboss_param emboss;
+	struct exif_global_gain_param global;
+	struct exif_chn_gain_param chn;
+	struct exif_flash_cali_param flash;
+};
 
 #endif //_ISP_EXIF_H_
