@@ -395,14 +395,18 @@ static void init_external_storage()
 	int type;
 	char value[PROPERTY_VALUE_MAX];
 
-#ifdef ANDROID_VERSION_442
-	p = getenv("SECONDARY_STORAGE");
-	if (p){
-		strcpy(external_path, p);
-		sprintf(external_storage, "%s/slog", p);
-		return;
-	}
-#endif
+// The storage solution has been changed in Kitkat-SPRD,
+// Using orignal solution treated as JellyBeans
+
+//#ifdef ANDROID_VERSION_442
+//	p = getenv("SECONDARY_STORAGE");
+//	if (p){
+//		strcpy(external_path, p);
+//		sprintf(external_storage, "%s/slog", p);
+//		return;
+//	}
+//#endif
+
 	p = getenv("SECOND_STORAGE_TYPE");
 	if(p){
 		type = atoi(p);
