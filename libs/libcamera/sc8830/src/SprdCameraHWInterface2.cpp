@@ -1070,127 +1070,188 @@ void SprdCameraHWInterface2::initStreamParam(int type, uint32_t width, uint32_t 
 	}
 }
 
+int SprdCameraHWInterface2::allocatePreviewStream(uint32_t width,
+															   uint32_t height,
+															   int format,
+															   const camera2_stream_ops_t *stream_ops,
+                                                               uint32_t *stream_id,
+                                                               uint32_t *format_actual,
+                                                               uint32_t *usage,
+                                                               uint32_t *max_buffers)
+{
+	int ret = 0;
+
+	if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
+	    *stream_id = STREAM_ID_PREVIEW;
+
+	    m_Stream[STREAM_ID_PREVIEW]  = new Stream(this, *stream_id);
+	    if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
+	        HAL_LOGD("new preview stream fail due to no mem");
+			ret = 1;
+			goto alloc_preview_stream_exit;
+		}
+
+	    *format_actual = HAL_PIXEL_FORMAT_YCrCb_420_SP;
+	    if (s_mem_method == 0) {
+			*usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
+		} else {
+			*usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+		}
+	    #ifdef PREVIEW_USE_DCAM_BUF
+		*max_buffers = 2;
+		#else
+	    *max_buffers = 6;
+		#endif
+		initStreamParam(0,width,height, stream_ops,STREAM_ID_PREVIEW, *format_actual, *usage, 0,2);
+	    m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream = 1;//parent stream total the num of stream
+	    #ifdef PREVIEW_USE_DCAM_BUF
+	    if (!allocatePreviewMem()) {
+			HAL_LOGE("hal alloc preview mem fail!");
+			ret = 1;
+			goto alloc_preview_stream_exit;
+	    }
+		#endif
+	    HAL_LOGD("m_numRegisteredStream preview format=0x%x", *format_actual);
+	} else {
+		*stream_id = STREAM_ID_RECORD;
+		HAL_LOGD("stream_id (%d) stream_ops(0x%x)", *stream_id,(uint32_t)stream_ops);
+	    if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
+			ret = 1;
+			goto alloc_preview_stream_exit;
+	    }
+	    *format_actual = HAL_PIXEL_FORMAT_YCrCb_420_SP;
+		if(s_mem_method == 0) {
+			*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
+		} else {
+			*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN;
+		}
+	    *max_buffers = 6;
+		initStreamParam(SUBSTREAM_TYPE_RECORD,width,height, stream_ops,STREAM_ID_RECORD, *format_actual, *usage, 0,2);
+		SetRecStopMsg(false);
+	    if (NO_ERROR != m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_RECORD, 20)) {
+			ret = 1;
+			goto alloc_preview_stream_exit;
+	    }
+	}
+alloc_preview_stream_exit:
+	HAL_LOGV("ret %d",ret);
+
+	return ret;
+}
+
+int SprdCameraHWInterface2::allocatePRVCBStream(uint32_t width,
+															 uint32_t height,
+															 int format,
+															 const camera2_stream_ops_t *stream_ops,
+                                                             uint32_t *stream_id,
+                                                             uint32_t *format_actual,
+                                                             uint32_t *usage,
+                                                             uint32_t *max_buffers)
+{
+	int ret = 0;
+
+    *stream_id = STREAM_ID_PRVCB;
+    if (m_Stream[STREAM_ID_PREVIEW] == NULL) {//preview parent stream
+        ret = 1;
+		goto alloc_prvcb_stream_exit;
+    }
+    *format_actual = format;
+	*usage   = GRALLOC_USAGE_SW_WRITE_OFTEN;
+    *max_buffers = 6;
+	initStreamParam(SUBSTREAM_TYPE_PRVCB,width,height,
+		            stream_ops,STREAM_ID_PRVCB, *format_actual,
+		            *usage, 0,2);
+
+    if (NO_ERROR != m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_PRVCB, 20)) {
+		ret = 2;
+    }
+    HAL_LOGD("Enabling previewcb m_numRegisteredStream = %d",
+		      m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream);
+
+alloc_prvcb_stream_exit:
+	HAL_LOGV("ret %d",ret);
+	return ret;
+}
+
+int SprdCameraHWInterface2::allocateJpegStream(uint32_t width,
+											   uint32_t height,
+											   int format,
+											   const camera2_stream_ops_t *stream_ops,
+                                               uint32_t *stream_id,
+                                               uint32_t *format_actual,
+                                               uint32_t *usage,
+                                               uint32_t *max_buffers)
+{
+	int ret = 0;
+
+    *stream_id = STREAM_ID_JPEG;
+	if (m_Stream[STREAM_ID_CAPTURE] == NULL) {
+           m_Stream[STREAM_ID_CAPTURE] = new Stream(this, STREAM_ID_CAPTURE);
+	}
+	if (m_Stream[STREAM_ID_CAPTURE] == NULL) {
+		ret = 1;
+		goto alloc_jpeg_stream_exit;
+	}
+    m_Stream[STREAM_ID_CAPTURE]->m_numRegisteredStream = 1;
+    *format_actual = HAL_PIXEL_FORMAT_BLOB;
+	*usage   = GRALLOC_USAGE_SW_WRITE_OFTEN;
+    *max_buffers = 1;
+	initStreamParam(0,width,height, stream_ops,STREAM_ID_CAPTURE,
+		            HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,2);
+	initStreamParam(SUBSTREAM_TYPE_JPEG,width,height, stream_ops,
+		            STREAM_ID_JPEG, HAL_PIXEL_FORMAT_BLOB, *usage, 0,2);
+
+    if (NO_ERROR != m_Stream[STREAM_ID_CAPTURE]->attachSubStream(STREAM_ID_JPEG, 20)) {
+		ret = 2;
+    }
+
+alloc_jpeg_stream_exit:
+	HAL_LOGV("ret %d",ret);
+	return ret;
+}
 int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int format, const camera2_stream_ops_t *stream_ops,
                                     uint32_t *stream_id, uint32_t *format_actual, uint32_t *usage, uint32_t *max_buffers)
 {
+	int ret = 0;
+
     HAL_LOGD("stream width(%d) height(%d) format(%x)", width, height, format);
-    stream_parameters_t *newParameters;
-    substream_parameters_t *subParameters;
-    status_t res;
 
-    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED || format == HAL_PIXEL_FORMAT_YCrCb_420_SP)  &&
-            isSupportedResolution(m_Camera2, width, height)) {
-		if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
-            *stream_id = STREAM_ID_PREVIEW;//temporate preview thread created on oem, so new streamthread object,but not run.
-
-            m_Stream[STREAM_ID_PREVIEW]  = new Stream(this, *stream_id);
-            if (m_Stream[STREAM_ID_PREVIEW] == NULL) {
-                HAL_LOGD("new preview stream fail due to no mem");
-				return 1;
-			}
-
-            *format_actual                      = HAL_PIXEL_FORMAT_YCrCb_420_SP;
-            if(s_mem_method == 0) {
-				*usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
-			  } else {
-					*usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
-			  }
-            #ifdef PREVIEW_USE_DCAM_BUF
-			*max_buffers                        = 2;
-			#else
-            *max_buffers                        = 6;
-			#endif
-			initStreamParam(0,width,height, stream_ops,STREAM_ID_PREVIEW, *format_actual, *usage, 0,2);
-            m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream = 1;//parent stream total the num of stream
-            #ifdef PREVIEW_USE_DCAM_BUF
-            if(!allocatePreviewMem()) {
-				HAL_LOGE("hal alloc preview mem fail!");
-				return 1;
-            }
-			#endif
-            HAL_LOGD("m_numRegisteredStream preview format=0x%x", *format_actual);
-            return 0;
-		} else {
-			*stream_id = STREAM_ID_RECORD;
-			HAL_LOGD("stream_id (%d) stream_ops(0x%x)", *stream_id,(uint32_t)stream_ops);
-            if (m_Stream[STREAM_ID_PREVIEW] == NULL) {//preview parent stream
-	            return 1;
-	        }
-            *format_actual = HAL_PIXEL_FORMAT_YCrCb_420_SP;
-            if(s_mem_method == 0) {
-				*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
-	  } else {
-			*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN;
-	  }
-            *max_buffers = 6;
-			initStreamParam(SUBSTREAM_TYPE_RECORD,width,height, stream_ops,STREAM_ID_RECORD, *format_actual, *usage, 0,2);
-			SetRecStopMsg(false);
-            res = m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_RECORD, 20);
-            if (res != NO_ERROR) {
-                HAL_LOGE("substream attach failed. res(%d)", res);
-                return 1;
-            }
-            HAL_LOGD("Enabling Record");
-            return 0;
-		}
-    }
-	else if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12) {
-        *stream_id = STREAM_ID_PRVCB;
-        if (m_Stream[STREAM_ID_PREVIEW] == NULL) {//preview parent stream
-            return 1;
-        }
-        *format_actual = format;
-		*usage   = GRALLOC_USAGE_SW_WRITE_OFTEN;
-        *max_buffers = 6;
-		initStreamParam(SUBSTREAM_TYPE_PRVCB,width,height, stream_ops,STREAM_ID_PRVCB, *format_actual, *usage, 0,2);
-        res = m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_PRVCB, 20);
-        if (res != NO_ERROR) {
-            HAL_LOGE("substream attach failed. res(%d)", res);
-            return 1;
-        }
-        HAL_LOGD("Enabling previewcb m_numRegisteredStream = %d", m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream);
-        return 0;
-    }
-    else if (format == HAL_PIXEL_FORMAT_BLOB //first create jpeg substream
-            && isSupportedJpegResolution(m_Camera2, width, height)) {
-        *stream_id = STREAM_ID_JPEG;
-		if (m_Stream[STREAM_ID_CAPTURE] == NULL)
-               m_Stream[STREAM_ID_CAPTURE] = new Stream(this, STREAM_ID_CAPTURE);
-        m_Stream[STREAM_ID_CAPTURE]->m_numRegisteredStream = 1;
-        *format_actual = HAL_PIXEL_FORMAT_BLOB;
-		*usage   = GRALLOC_USAGE_SW_WRITE_OFTEN;
-        *max_buffers = 1;
-		initStreamParam(0,width,height, stream_ops,STREAM_ID_CAPTURE, HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,2);
-		initStreamParam(SUBSTREAM_TYPE_JPEG,width,height, stream_ops,STREAM_ID_JPEG, HAL_PIXEL_FORMAT_BLOB, *usage, 0,2);
-        res = m_Stream[STREAM_ID_CAPTURE]->attachSubStream(STREAM_ID_JPEG, 20);
-        if (res != NO_ERROR) {
-            HAL_LOGE("substream attach failed. jpeg res(%d)", res);
-            return 1;
-        }
-        HAL_LOGD("substream jpeg");
-        return 0;
+    if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED
+		 || format == HAL_PIXEL_FORMAT_YCrCb_420_SP)
+		 && isSupportedResolution(m_Camera2, width, height)) {
+		ret = allocatePreviewStream(width,height,format,stream_ops,stream_id,
+							        format_actual,usage,max_buffers);
+    } else if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12) {
+		ret = allocatePRVCBStream(width,height,format,stream_ops,stream_id,
+							        format_actual,usage,max_buffers);
+    } else if (format == HAL_PIXEL_FORMAT_BLOB
+               && isSupportedJpegResolution(m_Camera2, width, height)) {
+		ret = allocateJpegStream(width,height,format,stream_ops,stream_id,
+							        format_actual,usage,max_buffers);
     } else if ((format == CAMERA2_HAL_PIXEL_FORMAT_ZSL)
-           && ((int32_t)width == g_Camera2[m_CameraId]->sensorW) && ((int32_t)height == g_Camera2[m_CameraId]->sensorH)) {
+                && ((int32_t)width == g_Camera2[m_CameraId]->sensorW)
+                && ((int32_t)height == g_Camera2[m_CameraId]->sensorH)) {
 		*stream_id = STREAM_ID_ZSL;
         *format_actual = HAL_PIXEL_FORMAT_YCrCb_420_SP;
 		if(s_mem_method == 0) {
 			*usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
-		  } else {
-				*usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
-		  }
-        *max_buffers = 1;// 1
+		} else {
+			*usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+		}
+        *max_buffers = 1;
 		if(m_Stream[STREAM_ID_CAPTURE] == NULL) {
 			m_Stream[STREAM_ID_CAPTURE] = new Stream(this, STREAM_ID_CAPTURE);
-			initStreamParam(0,width,height, stream_ops,STREAM_ID_CAPTURE, HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,2);
+			initStreamParam(0,width,height, stream_ops,STREAM_ID_CAPTURE,
+				            HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,2);
         }
-		initStreamParam(SUBSTREAM_TYPE_ZSL,width,height, stream_ops,STREAM_ID_ZSL, HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,0);
+		initStreamParam(SUBSTREAM_TYPE_ZSL,width,height, stream_ops,
+			            STREAM_ID_ZSL, HAL_PIXEL_FORMAT_YCrCb_420_SP, *usage, 0,0);
 		HAL_LOGD("(%s): substream zsl", __FUNCTION__);
         return 0;
-
+    } else {
+	    HAL_LOGE("Unsupported Pixel Format");
     }
-
-    HAL_LOGE("Unsupported Pixel Format");
-    return 1;
+    return ret;
 }
 
 const char* SprdCameraHWInterface2::getCameraStateStr(
@@ -2152,6 +2213,7 @@ void  SprdCameraHWInterface2::Stream::pushBufQ(int index)
 void  SprdCameraHWInterface2::Stream::setRecevStopMsg(bool IsRecevMsg)
 {
     Mutex::Autolock lock(m_stateLock);
+	HAL_LOGV("set %d",IsRecevMsg);
 	m_IsRecevStopMsg = IsRecevMsg;
 }
 
@@ -2561,6 +2623,10 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 			(tmpIntent == CAPTURE_INTENT_VIDEO_RECORD || tmpIntent == CAPTURE_INTENT_PREVIEW)) {
 		if (m_Stream[STREAM_ID_PREVIEW] != NULL) {
 			targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW]->m_parameters);
+		}
+		if (true == m_Stream[STREAM_ID_PREVIEW]->getRecevStopMsg()) {
+			HAL_LOGE("don't handle");
+			return;
 		}
 		if (m_Stream[STREAM_ID_PREVIEW]->getHalStopMsg()) {
 			m_Stream[STREAM_ID_PREVIEW]->setHalStopMsg(false);
