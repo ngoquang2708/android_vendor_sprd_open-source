@@ -192,6 +192,7 @@ bool getApctCamInitSupport()
 	}
 	gIsApctRead = true;
 
+	int ret = 0;
 	char str[10] = {'\0'};
 	const char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
 
@@ -199,11 +200,12 @@ bool getApctCamInitSupport()
 
 	if (NULL != f) {
 		fseek(f, 0, 0);
-		fread(str, 5, 1, f);
+		ret = fread(str, 5, 1, f);
 		fclose(f);
-
-		long apct_config = atol(str);
-		gIsApctCamInitTimeShow = (apct_config & 0x8010) == 0x8010 ? true : false;
+		if(ret){
+			long apct_config = atol(str);
+			gIsApctCamInitTimeShow = (apct_config & 0x8010) == 0x8010 ? true : false;
+		}
 	}
 	return gIsApctCamInitTimeShow;
 }
@@ -2385,6 +2387,7 @@ bool SprdCameraHardware::startCameraIfNecessary()
 int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
 {
 	LOGV("Callback_AllocCapturePmem size = %d", size);
+	int ret = 0;
 
 	sp<MemoryHeapIon> pHeapIon ;
 	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
@@ -2409,15 +2412,19 @@ int SprdCameraHardware::Callback_AllocCapturePmem(void* handle, unsigned int siz
 	}
 
 	if (s_mem_method==0) {
-		pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
 	} else {
-		pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
 	}
-	*addr_vir = (int)(pHeapIon->base());
-	camera->mMiscHeapArray[camera->mMiscHeapNum++] = pHeapIon;
-
-	LOGV("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
-
+	if(0 == ret){
+		*addr_vir = (int)(pHeapIon->base());
+		camera->mMiscHeapArray[camera->mMiscHeapNum++] = pHeapIon;
+		LOGV("Callback_AllocCapturePmem mMiscHeapNum = %d", camera->mMiscHeapNum);
+	}else {
+		*addr_vir = 0;
+		*addr_phy = 0;
+		LOGV("get_phy_addr error %d",ret);
+	}
 	return 0;
 }
 
@@ -3165,13 +3172,15 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 	if (!startCameraIfNecessary())
 		return false;
 
-	camera_set_dimensions(mRawWidth,
+	if (camera_set_dimensions(mRawWidth,
 		mRawHeight,
 		mPreviewWidth,
 		mPreviewHeight,
 		NULL,
 		NULL,
-		mCaptureMode != CAMERA_RAW_MODE);
+		mCaptureMode != CAMERA_RAW_MODE)){
+		return false;
+	}
 
 	if (camera_capture_max_img_size(&local_width, &local_height))
 		return false;
