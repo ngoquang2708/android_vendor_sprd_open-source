@@ -395,9 +395,6 @@ static void init_external_storage()
 	int type;
 	char value[PROPERTY_VALUE_MAX];
 
-	if(slog_enable != SLOG_ENABLE)
-		return;
-
 #ifdef ANDROID_VERSION_442
 	p = getenv("SECONDARY_STORAGE");
 	if (p){
@@ -776,9 +773,6 @@ static void handle_top_logdir()
  */
 static int start_monitor_sdcard_fun()
 {
-	if(slog_enable != SLOG_ENABLE)
-		return 0;
-
 	/* handle sdcard issue */
 	if(!strncmp(config_log_path, external_storage, strlen(external_storage))) {
 		if(!sdcard_mounted())
@@ -790,6 +784,8 @@ static int start_monitor_sdcard_fun()
 			current_log_path = external_storage;
 		}
 		/* create a sdcard monitor thread */
+		if(slog_enable != SLOG_ENABLE)
+			return 0;
 		if(!strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 			pthread_create(&sdcard_tid, NULL, monitor_sdcard_fun, NULL);
 	} else
