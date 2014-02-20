@@ -2773,7 +2773,10 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 			private_h=(struct private_handle_t*) (*buffer_handle);
 			if (s_mem_method==0) {
 				int ion_addr=0,ion_size=0;
-				MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,&ion_addr,&ion_size);
+				if (0 != MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,&ion_addr,&ion_size)) {
+					LOGE("allocatePreviewMemByGraphics: Get_phy_addr_from_ion error");
+					return -1;
+				}
 				LOGD("MemoryHeapIon::Get_mm_ion: %d addr 0x%x size 0x%x",i, ion_addr, ion_size);
 				mPreviewBufferHandle[i] = buffer_handle;
 				mPreviewHeapArray_phy[i] = (uint32_t)ion_addr;
@@ -2781,8 +2784,11 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 				/*mPreviewHeapArray_size[i] = ion_size;*/
 			} else {
 				int iova_addr=0,iova_size=0;
-				LOGD("***frank.dong*** MemoryHeapIon::Get_mm_iova: %d",i);
-				MemoryHeapIon::Get_mm_iova(private_h->share_fd,&iova_addr,&iova_size);
+				LOGD("MemoryHeapIon::Get_mm_iova: %d",i);
+				if (MemoryHeapIon::Get_mm_iova(private_h->share_fd,&iova_addr,&iova_size)) {
+					LOGE("allocatePreviewMemByGraphics: Get_mm_iova error");
+					return -1;
+				}
 				mPreviewBufferHandle[i] = buffer_handle;
 				mPreviewHeapArray_phy[i] = (uint32_t)iova_addr;
 				mPreviewHeapArray_vir[i] = (uint32_t)private_h->base;

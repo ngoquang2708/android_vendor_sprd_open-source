@@ -835,8 +835,6 @@ int camera_prev_thread_deinit(void)
 		}
 		sem_wait(&g_cxt->prev_sync_sem);
 		sem_destroy(&g_cxt->prev_sync_sem);
-		cmr_msg_queue_destroy(g_cxt->prev_msg_que_handle);
-		g_cxt->prev_msg_que_handle = 0;
 		g_cxt->prev_inited = 0;
 	}
 	return ret ;
@@ -1015,8 +1013,6 @@ int camera_cap_thread_deinit(void)
 		}
 		sem_wait(&g_cxt->cap_sync_sem);
 		sem_destroy(&g_cxt->cap_sync_sem);
-		cmr_msg_queue_destroy(g_cxt->cap_msg_que_handle);
-		g_cxt->cap_msg_que_handle = 0;
 		g_cxt->cap_inited = 0;
 	}
 	return ret ;
@@ -1069,8 +1065,6 @@ int camera_cap_subthread_deinit(void)
 		}
 		sem_wait(&g_cxt->cap_sub_sync_sem);
 		sem_destroy(&g_cxt->cap_sub_sync_sem);
-		cmr_msg_queue_destroy(g_cxt->cap_sub_msg_que_handle);
-		g_cxt->cap_sub_msg_que_handle = 0;
 		g_cxt->cap_sub_inited = 0;
 	}
 	return ret ;
@@ -1828,6 +1822,18 @@ int camera_local_deinit(void)
 	pthread_mutex_destroy(&g_cxt->take_raw_mutex);
 	pthread_mutex_destroy(&g_cxt->main_prev_mutex);
 	pthread_mutex_destroy(&g_cxt->jpeg_specify_cxt.jpeg_specify_mutex);
+
+	cmr_msg_queue_destroy(g_cxt->prev_msg_que_handle);
+	g_cxt->prev_msg_que_handle = 0;
+
+	cmr_msg_queue_destroy(g_cxt->cap_sub_msg_que_handle);
+	g_cxt->cap_sub_msg_que_handle = 0;
+
+	cmr_msg_queue_destroy(g_cxt->cap_msg_que_handle);
+	g_cxt->cap_msg_que_handle = 0;
+
+	cmr_msg_queue_destroy(g_cxt->cb_msg_que_handle);
+	g_cxt->cb_msg_que_handle = 0;
 
 	cmr_msg_queue_destroy(g_cxt->msg_queue_handle);
 	g_cxt->msg_queue_handle = 0;
@@ -7660,8 +7666,6 @@ int camera_cb_thread_deinit(void)
 		}
 		sem_wait(&g_cxt->cb_sync_sem);
 		sem_destroy(&g_cxt->cb_sync_sem);
-		cmr_msg_queue_destroy(g_cxt->cb_msg_que_handle);
-		g_cxt->cb_msg_que_handle = 0;
 		g_cxt->cb_inited = 0;
 	}
 	return ret ;
