@@ -314,8 +314,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 			LOGE("ERR(%s):Fail on loading gralloc HAL", __func__);
 	}
 
-	switch_monitor_thread_init((void *)this);
-
 	if (1 == getPropertyAtv()) {
 		mCameraId = 5;
 	} else {
@@ -323,6 +321,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	}
 
 	initDefaultParameters();
+	switch_monitor_thread_init((void *)this);
 
 	LOGV("openCameraHardware: X cameraId: %d.", cameraId);
 }
@@ -3478,6 +3477,7 @@ status_t SprdCameraHardware::cancelPictureInternal()
 status_t SprdCameraHardware::initDefaultParameters()
 {
 	uint32_t lcd_w = 0, lcd_h = 0;
+	status_t ret = NO_ERROR;
 
 	LOGV("initDefaultParameters E");
 	SprdCameraParameters p;
@@ -3494,15 +3494,19 @@ status_t SprdCameraHardware::initDefaultParameters()
 		p.updateSupportedPreviewSizes(lcd_w, lcd_h);
 	}
 
-	copyParameters(mSetParameters, p);
-	copyParameters(mSetParametersBak, p);
 	if (setParametersInternal(p) != NO_ERROR) {
 		LOGE("Failed to set default parameters?!");
-		return UNKNOWN_ERROR;
+		ret = UNKNOWN_ERROR;
 	}
+
+	mParamLock.lock();
+	copyParameters(mSetParameters, p);
+	copyParameters(mSetParametersBak, p);
+	mParamLock.unlock();
+
 	LOGV("initDefaultParameters X.");
 
-	return NO_ERROR;
+	return ret;
 }
 
 bool SprdCameraHardware::getLcdSize(uint32_t *width, uint32_t *height)

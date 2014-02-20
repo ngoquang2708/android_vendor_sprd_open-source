@@ -162,12 +162,17 @@ int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message)
 
 int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message)
 {
-	struct cmr_msg_cxt *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
-	struct cmr_msg     *ori_node = msg_cxt->msg_write;
+	struct cmr_msg_cxt *msg_cxt = NULL;
+	struct cmr_msg     *ori_node = NULL;
 
 	if (0 == queue_handle || NULL == message) {
+		CMR_LOGW("post msg to NULL queue! discard");
 		return -CMR_MSG_PARAM_ERR;
 	}
+
+	msg_cxt = (struct cmr_msg_cxt*)queue_handle;
+	ori_node = msg_cxt->msg_write;
+
 	CMR_LOGI("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
 		queue_handle,
 		message->msg_type,

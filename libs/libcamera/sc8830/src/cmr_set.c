@@ -914,7 +914,6 @@ int camera_snapshot_stop_set(void)
 int camera_autofocus_init(void)
 {
 	int                      ret = CAMERA_SUCCESS;
-	struct camera_context    *cxt = camera_get_cxt();
 
 	ret = Sensor_AutoFocusInit();
 

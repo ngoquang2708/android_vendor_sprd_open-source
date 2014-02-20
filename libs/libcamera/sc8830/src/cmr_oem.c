@@ -145,7 +145,10 @@ int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoomRatio, float
 	float    minOutputRatio;
 	float    zoomWidth,zoomHeight,SensorRatio;
 
-	if (NULL == src_trim_rect || src_trim_rect->width == 0 || src_trim_rect->height == 0) {
+	if (NULL == src_trim_rect) {
+		CMR_LOGE("NULL");
+		return -CAMERA_INVALID_PARM;
+	} else if (src_trim_rect->width == 0 || src_trim_rect->height == 0) {
 		CMR_LOGE("0x%x w=%d h=%d", (uint32_t)src_trim_rect,src_trim_rect->width,src_trim_rect->height);
 		return -CAMERA_INVALID_PARM;
 	}

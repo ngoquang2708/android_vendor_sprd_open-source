@@ -488,16 +488,19 @@ int Sensor_GetSocId(SENSOR_SOCID_T *p_id)
 {
 	int ret = SENSOR_SUCCESS;
 	int fd_sensor = open(dev_name, O_RDWR, 0);
-
-	ret = xioctl(fd_sensor, SENSOR_IO_GET_SOCID, p_id);
-	if (0 != ret)
-	{
-		CMR_LOGE("Sensor_GetSocId failed, ret=%d \n",  ret);
+	if (0 > fd_sensor) {
+		CMR_LOGE("open dev failed, ret=%d \n",  fd_sensor);
 		ret = -1;
+	} else {
+		ret = xioctl(fd_sensor, SENSOR_IO_GET_SOCID, p_id);
+		if (0 != ret)
+		{
+			CMR_LOGE("Sensor_GetSocId failed, ret=%d \n",  ret);
+			ret = -1;
+		}
+		close(fd_sensor);
+		CMR_LOGV("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
 	}
-	close(fd_sensor);
-	CMR_LOGV("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
-
 	return ret;
 }
 

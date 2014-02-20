@@ -2689,11 +2689,17 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
         SENSOR_PRINT("%s file=%x.\n",__func__, (int32_t)file);
        fseek(file, 0, TAIL);
 	file_len = ftell(file);
+	if (0 > ((int)file_len)) {
+		SENSOR_PRINT("ftell file length negative %d", (int)file_len);
+		return file_len;
+	}
        fseek(file, 0, HEAD);
 	SENSOR_PRINT("load sensor setting from file: %s ;file_len=%d;\n", filename,file_len);
 
 	for (i = 0 ; i < file_len ; i++) {
-		fread( (char *)&v, 1, 1,file);
+		if (fread((char *)&v, 1, 1,file))
+			continue;
+
 		if (' ' == v || '\t' == v)
 			continue;
 		if ('\n' == v) {
@@ -2707,8 +2713,6 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 			if ('/' == v)
 				state = STATE_LINE_IGNORE;
 		} else if (STATE_LINE_IGNORE == state) {
-			if ('\n' == v)
-				state = STATE_LINE_BEGIN;
 		} else if (STATE_LEFT == state) {
 			if ('0' == v)
 				state = STATE_ARRAY_0_0;

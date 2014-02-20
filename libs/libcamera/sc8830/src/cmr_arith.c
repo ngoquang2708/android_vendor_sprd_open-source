@@ -121,7 +121,6 @@ void *arithmetic_fd_thread_proc(void *data)
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
 	camera_cb_info      cb_info;
-	struct camera_context  *cxt = camera_get_cxt();
 	uint32_t            mem_size = 0;
 
 	sem_post(&s_arith_cxt->fd_sync_sem);

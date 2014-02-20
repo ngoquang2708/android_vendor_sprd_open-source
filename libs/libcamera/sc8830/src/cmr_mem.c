@@ -1081,7 +1081,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 		cap_mem->cap_yuv_rot.addr_phy.addr_y = addr_phy;
 		cap_mem->cap_yuv_rot.addr_vir.addr_y = addr_vir;
 		if (cap_2_frm->alloc_mem(cap_2_frm->handle,
-			need_rot ? channel_size : (channel_size>>1),
+			channel_size,
 			&addr_phy,
 			&addr_vir) != 0) {
 			CMR_LOGE("Failed to alloc the buffer used in capture");
