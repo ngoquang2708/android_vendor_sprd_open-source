@@ -167,13 +167,13 @@ void mali_power_initialize(struct platform_device *pdev)
 #else
 		clk_enable(gpu_clock_i);
 #endif
-		clk_set_parent(gpu_clock,clock_256m);
+
 #ifdef CONFIG_COMMON_CLK
 		clk_prepare_enable(gpu_clock);
 #else
 		clk_enable(gpu_clock);
 #endif
-		udelay(300);
+		udelay(100);
 	}
 	if(gpu_dfs_workqueue == NULL)
 	{
@@ -290,13 +290,13 @@ void mali_platform_power_mode_change(int power_mode)
 #else
 			clk_enable(gpu_clock_i);
 #endif
-			clk_set_parent(gpu_clock,clock_256m);
+
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_clock);
 #else
 			clk_enable(gpu_clock);
 #endif
-			udelay(300);
+			udelay(100);
 		}
 		break;
 	//MALI_POWER_MODE_LIGHT_SLEEP
