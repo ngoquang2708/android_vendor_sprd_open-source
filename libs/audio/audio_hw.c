@@ -4713,7 +4713,16 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
     ALOGE("%s produc.hardware:%s",__func__,value);
     memcpy(currentPosition,value,sizeof(value));
 
-    //2,get and fill digital/linein fm flag.
+    //2,get and fill build.version info.
+    currentPosition = currentPosition + AUDIO_AT_HARDWARE_NAME_LENGTH;
+    if (!property_get("ro.build.version.release", value, "0")){
+        result = false;
+    }
+    ALOGE("%s ro.build.version.release:%s",__func__,value);
+    memcpy(currentPosition,value,sizeof(value));
+
+
+    //3,get and fill digital/linein fm flag.
     currentPosition = currentPosition + AUDIO_AT_HARDWARE_NAME_LENGTH;
     strcpy(currentPosition,AUDIO_AT_DIGITAL_FM_NAME);
     currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
@@ -4724,7 +4733,7 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
     }
     ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
 
-    //3,get and fill wether fm loop vbc or not.
+    //4,get and fill wether fm loop vbc or not.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     strcpy(currentPosition,AUDIO_AT_FM_LOOP_VBC_NAME );
     currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
@@ -4736,7 +4745,7 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
         sprintf(currentPosition,"%d",0);
     }
 
-    //4,get and fill whether voip process by DSP.
+    //5,get and fill whether voip process by DSP.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     strcpy(currentPosition,AUDIO_AT_VOIP_DSP_PROCESS_NAME);
     currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
@@ -4747,7 +4756,7 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
 #endif
     ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
 
-    //5,get and fill anthoer item.
+    //6,get and fill anthoer item.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     result = currentPosition - startPosition;
     ALOGE("%s :result length:%d",__func__,result);
