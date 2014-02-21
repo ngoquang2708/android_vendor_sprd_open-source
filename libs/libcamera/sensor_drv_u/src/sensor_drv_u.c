@@ -3295,7 +3295,9 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 
 				if(af_param.zone_cnt) {
 					pthread_mutex_lock(&s_p_sensor_cxt->cb_mutex);
-					(*s_p_sensor_cxt->sensor_event_cb)(CMR_SENSOR_FOCUS_MOVE, NULL);
+					if (s_p_sensor_cxt->sensor_event_cb) {
+						(*s_p_sensor_cxt->sensor_event_cb)(CMR_SENSOR_FOCUS_MOVE, NULL);
+					}
 					pthread_mutex_unlock(&s_p_sensor_cxt->cb_mutex);
 				}
 			}
