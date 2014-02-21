@@ -1529,6 +1529,36 @@ int camera_preflash(void)
 	return ret;
 }
 
+int camera_caf_preflash(void)
+{
+	int                      ret = CAMERA_SUCCESS;
+	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t                 af_cancel_is_ext = 0;
+
+#ifndef CONFIG_CAMERA_FLASH_CTRL
+	if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
+		uint32_t skip_mode = 0;
+		uint32_t skip_number = 0;
+		ret = camera_set_flash(cxt->cmr_set.flash_mode, &skip_mode, &skip_number);
+	}
+
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
+		CMR_LOGV("@xin open flash");
+		camera_set_flashdevice((uint32_t)FLASH_OPEN);
+	}
+#endif
+
+	usleep(200*1000);
+
+	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
+		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_AUTOFOCUS);
+	}
+
+exit:
+	return ret;
+}
+
+
 static int camera_check_autofocus_area(SENSOR_RECT_T *rect_ptr,uint32_t rect_num)
 {
 	uint32_t                 ret = CAMERA_SUCCESS;

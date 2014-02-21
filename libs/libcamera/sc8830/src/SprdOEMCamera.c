@@ -4683,6 +4683,7 @@ void *camera_af_thread_proc(void *data)
 				&& camera_is_focusmove_done()) {
 				/*caf move done, return directly*/
 				CMR_LOGV("CAF move done already");
+				camera_caf_preflash();
 				camera_call_af_cb((camera_cb_f_type)(message.data),
 					CAMERA_EXIT_CB_DONE,
 					camera_get_client_data(),

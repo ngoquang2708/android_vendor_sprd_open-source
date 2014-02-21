@@ -1985,7 +1985,6 @@ bool SprdCameraHardware::setCameraDimensions()
 
 void SprdCameraHardware::setCameraPreviewMode(bool isRecordMode)
 {
-	LOGV("@xin isRecordMode %d, mIsDvPreview %d", isRecordMode, mIsDvPreview);
 	if (isRecordMode) {
 		SET_PARM(CAMERA_PARM_PREVIEW_MODE, mParameters.getPreviewFameRate());
 	} else {
