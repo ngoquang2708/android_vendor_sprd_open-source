@@ -58,7 +58,10 @@ extern SENSOR_INFO_T g_ov5640_yuv_info;
 extern SENSOR_INFO_T g_OV7675_yuv_info;
 extern SENSOR_INFO_T g_hi253_yuv_info;
 extern SENSOR_INFO_T g_s5k4ec_yuv_info;
-
+extern SENSOR_INFO_T g_sr352_yuv_info;
+/**---------------------------------------------------------------------------*
+ **                         Constant Variables                                *
+ **---------------------------------------------------------------------------*/
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
@@ -82,6 +85,7 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	&g_hi253_yuv_info,
 	&g_GT2005_yuv_info,
 	&g_s5k4ec_yuv_info,
+	&g_sr352_yuv_info,
 	//&g_OV7675_yuv_info,
 	//&g_OV2655_yuv_info,
 	//&g_OV7675_yuv_info,
