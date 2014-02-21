@@ -385,6 +385,8 @@ class RequestQueueThread : public SprdBaseThread{
 	int        allocateJpegStream(uint32_t width, uint32_t height,
                                     int format, const camera2_stream_ops_t *stream_ops,
                                     uint32_t *stream_id, uint32_t *format_actual, uint32_t *usage, uint32_t *max_buffers);
+    int 	   CameraPreviewReq(camera_req_info *srcreq,bool *IsSetPara);
+    int 	   CameraCaptureReq(camera_req_info *srcreq,bool *IsSetPara);
 	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
 	static int Callback_FreeCapturePmem(void* handle);
     bool                 allocateCaptureMem(void);
