@@ -335,7 +335,6 @@ struct camera_context {
 	uint32_t                 af_inited;
 	pthread_mutex_t          af_cb_mutex;
 	uint32_t                 af_busy;
-	uint32_t                 ae_wait_stab;
 
 	camera_cb_f_type         camera_af_cb;
 	uint32_t                 zoom_level;
