@@ -29,6 +29,7 @@
 #endif
 #include "string_exchange_bin.h"
 #include "calibration.h"
+#include "eng_cmd4linuxhdlr.h"
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 #define NVITEM_ERROR_E  int
@@ -231,6 +232,9 @@ int eng_diag_parse(char *buf,int len)
                 ENG_LOG("%s: Handle DIAG_CMD_AUDIO\n",__FUNCTION__);
                 ret = CMD_USER_AUDIO;
             } else if(is_ap_at_cmd_need_to_handle(buf,len)){
+                if(CMD_TO_APCP == eng_cmd_get_type(s_cmd_index)){
+                    s_cp_ap_proc = 1;
+                }
                 ret = CMD_USER_APCMD;
             } else{
                 ret = CMD_COMMON;

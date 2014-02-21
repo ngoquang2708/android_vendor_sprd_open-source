@@ -805,16 +805,16 @@ int eng_linuxcmd_infactorymode(char *req, char *rsp)
 #define DEEP_WAIT_TIME 15
 void *thread_fastsleep(void *para)
 {
-    ALOGE("##: delay 3 seconds to wait AT command has been sent to modem...\n");
-    //sleep(3);
+    ALOGE("##: delay 2 seconds to wait AT command has been sent to modem...\n");
+    sleep(2);
     ALOGE("##: Going to sleep mode!\n");
     turnoff_lcd_backlight();
     set_screen_state(0);
     ALOGE("##: Waiting for a while...\n");
 
-    system("lookat -s 0x12080006 0x402b003c");
-    system("lookat -s 0x12080006 0x402b0060");
-    system("lookat -s 0x270 0x402b00f4");
+    system("lookat -s 0x7 0x402b00a8");
+    sleep(1);
+    system("lookat -s 0x6 0x402b00a8");
 
     return NULL;
 }
