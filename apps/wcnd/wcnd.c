@@ -1035,24 +1035,27 @@ static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, 
 		rsize = min(size, buf_size);
 		rrsize = read(src_fd, buf, rsize);
 		totalsize += rrsize;
+
 		if(rrsize == 0)
 		{
 			WCND_LOGE("At the end of the file (totalsize: %d)", totalsize);
 			break;
 		}
-		if (rrsize != rsize)
+
+		if (rrsize < 0  || rrsize > rsize)
 		{
-			WCND_LOGE("failed to read fd: %d", src_fd);
+			WCND_LOGE("failed to read fd: %d (ret = %d)", src_fd, rrsize);
 			return -1;
 		}
-		wsize = write(dst_fd, buf, rsize);
-		if (wsize != rsize)
+
+		wsize = write(dst_fd, buf, rrsize);
+		if (wsize != rrsize)
 		{
-			WCND_LOGE("failed to write fd: %d [wsize = %d  rsize = %d  remain = %d]",
-					dst_fd, wsize, rsize, size);
+			WCND_LOGE("failed to write fd: %d [wsize = %d  rrsize = %d  remain = %d]",
+					dst_fd, wsize, rrsize, size);
 			return -1;
 		}
-		size -= rsize;
+		size -= rrsize;
 	}
 
 	return 0;
@@ -1732,6 +1735,26 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 #endif
 
 
+/**
+* Start engineer service , such as for get CP2 log from PC.
+* return -1 fail;
+*/
+static int start_engineer_service(void)
+{
+	char prop[PROPERTY_VALUE_MAX] = {'\0'};;
+	WCND_LOGD("start engservice!");
+	property_get(WCND_ENGCTRL_PROP_KEY,prop, "0");
+	if(!strcmp(prop, "1")) {
+		WCND_LOGD("persist.engpc.disable is true return  ");
+		return 0;
+	}
+
+	property_set("ctl.start", "engservicewcn");//not used just now
+	property_set("ctl.start", "engmodemclientwcn");//not used just now
+	property_set("ctl.start", "engpcclientwcn");
+
+	return 0;
+}
 
 #ifndef FOR_UNIT_TEST
 
@@ -1780,6 +1803,9 @@ int main(int argc, char *argv[])
 		WCND_LOGE("Start CP2loop_check Fail!!!");
 	}
 #endif
+
+	//Start engineer service , such as for get CP2 log from PC.
+	start_engineer_service();
 
 	//register builin cmd executer
 	wcnd_register_cmdexecuter(pWcndManger, &wcn_cmdexecuter);
