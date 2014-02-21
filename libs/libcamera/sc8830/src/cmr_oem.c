@@ -852,9 +852,6 @@ void camera_sensor_inf(struct sensor_context *sensor_cxt)
 		sensor_cxt->sn_if.frm_deci = sensor_cxt->sensor_info->preview_deci_num;
 		sensor_cxt->sn_if.img_ptn = sensor_cxt->sensor_info->image_pattern;
 	}
-
-	return;
-
 }
 
 int camera_set_sensormark(void)
