@@ -36,9 +36,19 @@
 #define ENG_RAM_OPS 0x01
 #define ENG_FLASH_OPS 0x10
 #define ENG_PGA_OPS 0x100
+#define ENG_PHONEINFO_OPS 0x1000
+#define AUDIO_AT_HARDWARE_NAME_LENGTH 32
+#define AUDIO_AT_ITEM_NAME_LENGTH 15
+#define AUDIO_AT_ITEM_VALUE_LENGTH 1
+#define AUDIO_AT_DIGITAL_FM_NAME "Digital FM"
+#define AUDIO_AT_ITEM_NUM 120
+#define AUDIO_AT_FM_LOOP_VBC_NAME "FM loop vbc"
+#define AUDIO_AT_VOIP_DSP_PROCESS_NAME "VOIP DSP Pro"
 
 #define ENG_AUDIO_PARA  			"/etc/audio_para"
 #define ENG_AUDIO_PARA_DEBUG 			"/data/local/media/audio_para"
+#define AUDFIFO "/data/local/media/audiopara_tuning"
+#define AUDFIFO_2 "/data/local/media/audiopara_tuning_2"
 
 enum{
     GET_AUDIO_MODE_COUNT,

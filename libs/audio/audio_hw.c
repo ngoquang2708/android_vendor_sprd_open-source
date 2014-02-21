@@ -111,7 +111,8 @@
 #define PRIVATE_SPEAKER2_MUTE           "spk2 mute"
 #define PRIVATE_EARPIECE_MUTE           "earpiece mute"
 #define PRIVATE_HEADPHONE_MUTE           "hp mute"
-
+#define PRIVATE_AUD_LOOP_VBC  "Aud Loop in VBC Switch"
+#define PRIVATE_AUD1_LOOP_VBC  "Aud1 Loop in VBC Switch"
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -285,6 +286,8 @@ struct tiny_private_ctl {
     struct mixer_ctl *speaker2_mute;
     struct mixer_ctl *earpiece_mute;
     struct mixer_ctl *headphone_mute;
+    struct mixer_ctl *fm_loop_vbc;
+    struct mixer_ctl *ad1_fm_loop_vbc;
 };
 
 struct stream_routing_manager {
@@ -562,7 +565,7 @@ static int stream_routing_manager_create(struct tiny_audio_device *adev);
 static void stream_routing_manager_close(struct tiny_audio_device *adev);
 
 static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool enable);
-
+static int audiopara_get_compensate_phoneinfo(void* pmsg);
 /*
  * NOTE: audio stream(playback, capture) dump just for debug.
  */
@@ -3654,6 +3657,16 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.headphone_mute);
         }
+        else if (strcmp(s->private_name, PRIVATE_AUD_LOOP_VBC) == 0) {
+            s->adev->private_ctl.fm_loop_vbc=
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.fm_loop_vbc);
+        }
+        else if (strcmp(s->private_name, PRIVATE_AUD1_LOOP_VBC) == 0) {
+            s->adev->private_ctl.ad1_fm_loop_vbc=
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.ad1_fm_loop_vbc);
+        }
     }
 }
 
@@ -4576,10 +4589,14 @@ static void *audiopara_tuning_thread_entry(void * param)
     struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
     int fd_aud = -1;
     int fd_dum = -1;
+    int send_fd_aud = -1;
     int ops_bit = 0;
     int result = -1;
     AUDIO_TOTAL_T ram_from_eng;
     int mode_index = 0;
+    int buffersize = 0;
+    void* pmem = NULL;
+    int length = 0;
     //mode_t mode_f = 0;
     ALOGE("%s E\n",__FUNCTION__);
     memset(&ram_from_eng,0x00,sizeof(AUDIO_TOTAL_T));
@@ -4591,6 +4608,15 @@ static void *audiopara_tuning_thread_entry(void * param)
     }
     if(chmod(AUDFIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0) {
         ALOGE("%s Cannot set RW to \"%s\": %s", __FUNCTION__,AUDFIFO, strerror(errno));
+    }
+    if (mkfifo(AUDFIFO_2,S_IFIFO|0666) <0) {
+        if (errno != EEXIST) {
+            ALOGE("%s create audio fifo_2 error %s\n",__FUNCTION__,strerror(errno));
+            return NULL;
+        }
+    }
+    if(chmod(AUDFIFO_2, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0) {
+        ALOGE("%s Cannot set RW to \"%s\": %s", __FUNCTION__,AUDFIFO_2, strerror(errno));
     }
     fd_aud = open(AUDFIFO,O_RDONLY);
     if (fd_aud == -1) {
@@ -4608,27 +4634,47 @@ static void *audiopara_tuning_thread_entry(void * param)
         ALOGE("%s read audio FIFO result %d,ram_req:%d\n",__FUNCTION__,result,ops_bit);
         if (result >0) {
             pthread_mutex_lock(&adev->lock);
-            if(ops_bit & ENG_FLASH_OPS)
-            {
+            //1、write parameter to Flash or RAM
+            if(ops_bit & ENG_FLASH_OPS){
                 ALOGE("%s audio para --> update from flash\n",__FUNCTION__);
-                if (adev->audio_para)
-                {
+                if (adev->audio_para){
                     free(adev->audio_para);
                 }
                 vb_effect_getpara(adev);
                 vb_effect_setpara(adev->audio_para);
-            }
-            else if(ops_bit & ENG_RAM_OPS)
-            {
+            }else if(ops_bit & ENG_RAM_OPS){
                 ALOGE("%s audio para --> update from RAM\n",__FUNCTION__);
                 result = read(fd_aud,&mode_index,sizeof(int));
                 result = read(fd_aud,&ram_from_eng,sizeof(AUDIO_TOTAL_T));
                 ALOGE("%s read audio FIFO result %d,mode_index:%d,size:%d\n",__FUNCTION__,result,mode_index,sizeof(AUDIO_TOTAL_T));
                 adev->audio_para[mode_index] = ram_from_eng;
             }
-			if(ENG_PGA_OPS & ops_bit) {
-				SetAudio_gain_route(adev,1);
-			}
+            //2、mandatory to set PGA GAIN
+            if(ENG_PGA_OPS & ops_bit) {
+                SetAudio_gain_route(adev,1);
+            }
+            //3、mandatory to get Phone information,include hardware version,FM type,DSP-Process-Voip,VBC LoopBack
+            if(ENG_PHONEINFO_OPS & ops_bit) {
+                buffersize = AUDIO_AT_HARDWARE_NAME_LENGTH + (AUDIO_AT_ITEM_NAME_LENGTH + AUDIO_AT_ITEM_VALUE_LENGTH )*AUDIO_AT_ITEM_NUM ;
+                pmem = malloc(buffersize);
+                if(pmem!=NULL){
+                    memset(pmem,0,buffersize);
+                    length = audiopara_get_compensate_phoneinfo(pmem);
+                    send_fd_aud = open(AUDFIFO_2,O_WRONLY);
+                    if (send_fd_aud == -1) {
+                        ALOGE("%s open audio FIFO_2 error %s\n",__FUNCTION__,strerror(errno));
+                    } else {
+                        ALOGE("%s ENG_PHONEINFO_OPS enter :%d!\n",__FUNCTION__,length);
+                        result = write(send_fd_aud ,&length,sizeof(int));
+                        result = write(send_fd_aud ,pmem,length);
+                        close(send_fd_aud );
+                        free(pmem);
+                        ALOGE("%s ENG_PHONEINFO_OPS complete!\n",__FUNCTION__);
+                    }
+                } else {
+                    ALOGE("%s allocate ENG_PHONEINFO_OPS error!\n",__FUNCTION__);
+                }
+            }
             pthread_mutex_unlock(&adev->lock);
             ALOGE("%s read audio FIFO X.\n",__FUNCTION__);
         }
@@ -4654,6 +4700,59 @@ static int audiopara_tuning_manager_create(struct tiny_audio_device *adev)
     return ret;
 }
 
+static int audiopara_get_compensate_phoneinfo(void* pmsg)
+{
+    char value[PROPERTY_VALUE_MAX]={0};
+    int result = true;
+    char* currentPosition = (char*)pmsg;
+    char* startPosition = (char*)pmsg;
+    //1,get and fill product hareware info.
+    if (!property_get("ro.product.hardware", value, "0")){
+        result = false;
+    }
+    ALOGE("%s produc.hardware:%s",__func__,value);
+    memcpy(currentPosition,value,sizeof(value));
+
+    //2,get and fill digital/linein fm flag.
+    currentPosition = currentPosition + AUDIO_AT_HARDWARE_NAME_LENGTH;
+    strcpy(currentPosition,AUDIO_AT_DIGITAL_FM_NAME);
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+    if (property_get(FM_DIGITAL_SUPPORT_PROPERTY, value, "0") && strcmp(value, "1") == 0){
+        sprintf(currentPosition,"%d",1);
+    } else {
+        sprintf(currentPosition,"%d",0);
+    }
+    ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
+
+    //3,get and fill wether fm loop vbc or not.
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    strcpy(currentPosition,AUDIO_AT_FM_LOOP_VBC_NAME );
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+
+    if(s_adev->private_ctl.fm_loop_vbc !=NULL && 1 == mixer_ctl_get_value(s_adev->private_ctl.fm_loop_vbc, 0)){
+        sprintf(currentPosition,"%d",1);
+    ALOGE("%s :%s:%s,ctrl:%0x,value:%d,ctrl1:%0x,value:%d \n",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition,s_adev->private_ctl.fm_loop_vbc,mixer_ctl_get_value(s_adev->private_ctl.fm_loop_vbc, 0),s_adev->private_ctl.ad1_fm_loop_vbc,mixer_ctl_get_value(s_adev->private_ctl.ad1_fm_loop_vbc, 0));
+    } else {
+        sprintf(currentPosition,"%d",0);
+    }
+
+    //4,get and fill whether voip process by DSP.
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    strcpy(currentPosition,AUDIO_AT_VOIP_DSP_PROCESS_NAME);
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+#ifdef VOIP_DSP_PROCESS
+        sprintf(currentPosition,"%d",1);
+#else
+        sprintf(currentPosition,"%d",0);
+#endif
+    ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
+
+    //5,get and fill anthoer item.
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    result = currentPosition - startPosition;
+    ALOGE("%s :result length:%d",__func__,result);
+    return result;
+}
 
 static int adev_open(const hw_module_t* module, const char* name,
         hw_device_t** device)
@@ -4670,6 +4769,7 @@ static int adev_open(const hw_module_t* module, const char* name,
         return -ENOMEM;
     }
     memset(adev, 0, sizeof(struct tiny_audio_device));
+    s_adev = adev;
 
     adev->hw_device.common.tag = HARDWARE_DEVICE_TAG;
     adev->hw_device.common.version = AUDIO_DEVICE_API_VERSION_2_0;

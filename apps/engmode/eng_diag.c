@@ -102,13 +102,14 @@ void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration en
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
 static const char *at_calibr="AT+CALIBR";
+static const char *at_phoneinfo="AT+PEINFO";
 
 //static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
 static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
 //static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 
-#define AUDFIFO "/data/local/media/audiopara_tuning"
+
 
 struct eut_cmd eut_cmds[]={
     {EUT_REQ_INDEX,ENG_EUT_REQ},
@@ -1250,6 +1251,12 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len){
         return 1;
     }
 
+    //AT+PEINFO
+    ret = strncmp(ptr,at_phoneinfo,strlen(at_phoneinfo));
+    if (0==ret) {
+        ENG_LOG("%s,PEINFO",__FUNCTION__);
+        return 1;
+    }
     ENG_LOG("%s,cmd don't need to handle",__FUNCTION__);
 
     return 0;
@@ -1332,16 +1339,18 @@ static void eng_setpara(AUDIO_TOTAL_T * ptr)
     ALOGW("wangzuo eng_setpara 2");
     nvstruct2stringfile(ENG_AUDIO_PARA_DEBUG, ptr, len);
 }
-static void eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T *aud_params_ptr)
+static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T *aud_params_ptr)
 {
     int result = 0;
     int fifo_id = -1;
+    int receive_fifo_id = -1;
     int ret;
+    int length = 0;
     ALOGE("eng_notify_mediaserver_updatapara E,%d:%d!\n",ram_ops,index);
-    fifo_id = open( AUDFIFO ,O_WRONLY|O_NONBLOCK);
+    fifo_id = open( AUDFIFO ,O_WRONLY);
     if(fifo_id != -1) {
         int buff = 1;
-        ALOGE("eng_notify_mediaserver_updatapara notify buff!\n");
+        ALOGE("eng_notify_mediaserver_updatapara notify OPS!\n");
         result = write(fifo_id,&ram_ops,sizeof(int));
         if(ram_ops & ENG_RAM_OPS)
         {
@@ -1349,12 +1358,28 @@ static void eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_
             result = write(fifo_id,aud_params_ptr,sizeof(AUDIO_TOTAL_T));
             ALOGE("eng_notify_mediaserver_updatapara,index:%d,size:%d!\n",index,sizeof(AUDIO_TOTAL_T));
         }
+        if(ram_ops & ENG_PHONEINFO_OPS)
+        {
+            receive_fifo_id = open( AUDFIFO_2 ,O_RDONLY);
+            if(receive_fifo_id !=-1 )
+            {
+                result = read(receive_fifo_id,&length,sizeof(int));
+                sprintf((char*)aud_params_ptr,"%d",length);
+                result = read(receive_fifo_id,(void*)aud_params_ptr+sizeof(int),length);
+                result += sizeof(int);
+                close(receive_fifo_id);
+                ALOGE("eng_notify_mediaserver_updatapara,result:%d,received:%d!\n",result,length);
+            }else {
+                ALOGE("%s open audio FIFO_2 error %s,fifo_id:%d\n",__FUNCTION__,strerror(errno),fifo_id);
+            }
+
+        }
         close(fifo_id);
     } else {
         ALOGE("%s open audio FIFO error %s,fifo_id:%d\n",__FUNCTION__,strerror(errno),fifo_id);
     }
 
-    ALOGE("eng_notify_mediaserver_updatapara X,result:%d!\n",result);
+    ALOGE("eng_notify_mediaserver_updatapara X,result:%d,length:%d!\n",result,length);
     return result;
 }
 
@@ -1407,6 +1432,7 @@ int eng_diag_audio(char *buf,int len, char *rsp)
     head_ptr = (MSG_HEAD_T *)(buf+1);
     ENG_LOG("Call %s, subtype=%x\n",__FUNCTION__, head_ptr->subtype);
     ptr = buf + 1 + sizeof(MSG_HEAD_T);
+    ENG_LOG("Call %s, ptr=%s\n",__FUNCTION__, ptr);
 
     //AT+CALIBR
     ret = strncmp(ptr,at_calibr,strlen(at_calibr));
@@ -1422,9 +1448,24 @@ int eng_diag_audio(char *buf,int len, char *rsp)
         //return rsp != NULL ? strlen(rsp):0;
         return strlen(rsp);
     }
-
+    //AT+PEINFO
+    //buffer format like bellow: [+PEINFO:][int][-----------phoneinfo---------------------]
+    ret = strncmp(ptr,at_phoneinfo,strlen(at_phoneinfo));
+    if ( 0==ret )
+    {
+        int length = 0;
+        char bin_tmp[2*ENG_DIAG_SIZE];
+        memcpy(rsp,"+PEINFO:",sizeof("+PEINFO:"));
+        length =  eng_notify_mediaserver_updatapara(ENG_PHONEINFO_OPS,0, bin_tmp);
+        bin2ascii(rsp+strlen("+PEINFO:"),bin_tmp,length);
+        ENG_LOG("Call %s, rsp=%s\n",__FUNCTION__, rsp);
+        ENG_LOG("Call %s, rsp=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")),(rsp+strlen("+PEINFO:")));
+        ENG_LOG("Call %s, item1=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH),(rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH));
+        ENG_LOG("Call %s, item2=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH),rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH );
+        return strlen(rsp+strlen("+PEINFO:"))+strlen("+PEINFO:");
+    }
     //audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
-    ENG_LOG("Call %s, ptr=%s\n",__FUNCTION__, ptr);
+
 
     if(g_is_data){
         ENG_LOG("HEY,DATA HAS COME!!!!");
