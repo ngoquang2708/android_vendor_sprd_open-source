@@ -1,61 +1,38 @@
-/******************************************************************************
- ** Copyright (c)
- ** File Name:		sensor_sr352.c 										  *
- ** Author:                                                       *
- ** DATE:                                                         *
- ** Description:   This file contains driver for sensor sr352.
- **
- ******************************************************************************
-
- ******************************************************************************
- ** 					   Edit History 									  *
- ** ------------------------------------------------------------------------- *
- ** DATE		   NAME 			DESCRIPTION 							  *
- **
- ******************************************************************************/
-
-/**---------------------------------------------------------------------------*
- ** 						Dependencies									  *
- **---------------------------------------------------------------------------*/
+/*
+ * Copyright (C) 2012 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <utils/Log.h>
 #include "sensor.h"
 #include "jpeg_exif_header.h"
 #include "sensor_drv_u.h"
 
-/**---------------------------------------------------------------------------*
- ** 						Compiler Flag									  *
- **---------------------------------------------------------------------------*/
-#ifdef	 __cplusplus
+#ifdef __cplusplus
 	extern	 "C"
 	{
 #endif
-/**---------------------------------------------------------------------------*
- ** 					Extern Function Declaration 						  *
- **---------------------------------------------------------------------------*/
 
-/**---------------------------------------------------------------------------*
- ** 						Const variables 								  *
- **---------------------------------------------------------------------------*/
-
-/**---------------------------------------------------------------------------*
- ** 						   Macro Define
- **---------------------------------------------------------------------------*/
 #define sr352_I2C_ADDR_W               0x20
 #define sr352_I2C_ADDR_R               0x20
-
-
 #define FOCUS_ZONE_W 80
 #define FOCUS_ZONE_H 60
-
 #define EXPOSURE_ZONE_W 1280
 #define EXPOSURE_ZONE_H 960
 
 static uint32_t  g_flash_mode_en = 0;
 static uint32_t is_cap = 0;
 
-/**---------------------------------------------------------------------------*
- ** 					Local Function Prototypes							  *
- **---------------------------------------------------------------------------*/
 LOCAL uint32_t _sr352_InitExifInfo(void);
 LOCAL uint32_t _sr352_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _sr352_PowerOn(uint32_t power_on);
@@ -71,7 +48,6 @@ LOCAL uint32_t _sr352_set_awb(uint32_t mode);
 LOCAL uint32_t _sr352_set_work_mode(uint32_t mode);
 LOCAL uint32_t _sr352_BeforeSnapshot(uint32_t param);
 LOCAL uint32_t _sr352_check_image_format_support(uint32_t param);
-LOCAL uint32_t _sr352_pick_out_jpeg_stream(uint32_t param);
 LOCAL uint32_t _sr352_after_snapshot(uint32_t param);
 LOCAL uint32_t _sr352_flash(uint32_t param);
 LOCAL uint32_t _sr352_GetExifInfo(uint32_t param);
@@ -81,9 +57,7 @@ LOCAL uint32_t _sr352_set_iso(uint32_t level);
 LOCAL uint32_t _sr352_StreamOff(uint32_t param);
 LOCAL uint32_t _sr352_recovery_init();
 LOCAL uint8_t gv_scene_mode = DCAMERA_ENVIRONMENT_NORMAL, gv_brightness_value=4;
-LOCAL BOOLEAN flash_needed	=	SENSOR_FAIL;
-
-
+LOCAL BOOLEAN flash_needed = SENSOR_FAIL;
 
 LOCAL const SENSOR_REG_T sr352_common_init[]=
 {
@@ -116,111 +90,111 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 
 {0x03, 0x00},
 //OUTPUT: Parallel interface /////////////////////////////////////
-{0x02, 0x77},		// pclk_drive = 111b}, i2c_drive = 111b
-{0x0c, 0x77},		// d_pad_drive = 111b}, gpio_pad_drive = 111b
+{0x02, 0x77},// pclk_drive = 111b}, i2c_drive = 111b
+{0x0c, 0x77},// d_pad_drive = 111b}, gpio_pad_drive = 111b
 //////////////////////////////////////////////////////////////////
-{0x07, 0x25}, //mode_pll1  24mhz / (5+1) = 4mhz
-{0x08, 0x6c}, //mode_pll2  isp clk = 108Mhz;
-{0x09, 0x81}, //mode_pll3  // MIPI 4x div 1/1 // isp clk div = 1/4 //Fullsize
+{0x07, 0x25},//mode_pll1  24mhz / (5+1) = 4mhz
+{0x08, 0x6c},//mode_pll2  isp clk = 108Mhz;
+{0x09, 0x81},//mode_pll3  // MIPI 4x div 1/1 // isp clk div = 1/4 //Fullsize
 {0x07, 0xa5},
 {0x07, 0xa5},
 {0x07, 0xa5},
 //OUTPUT: Parallel interface /////////////////////////////////////
-{0x0A, 0x80},		//mode_pll4 for parallel mode
+{0x0A, 0x80},//mode_pll4 for parallel mode
 
 {0x03, 0x26},
-{0x1B, 0x03},		// bus clk div = 1/4
+{0x1B, 0x03},// bus clk div = 1/4
 
 ///////////////////////////////////////////////////////////////////////////////
 // 7 Page(memory configuration)
 ///////////////////////////////////////////////////////////////////////////////
 {0x03, 0x07},
-{0x21, 0x01},	// SSD sram clock inv on
-{0x33, 0x45},	// bit[6]:C-NR DC 관련 설정
+{0x21, 0x01},// SSD sram clock inv on
+{0x33, 0x45},// bit[6]:C-NR DC 관련 설정
 
 ///////////////////////////////////////////////////////////////////////////////
 // mcu reset
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x26},
-{0x10, 0x80},		// mcu reset
-{0x10, 0x89},		// mcu clk enable
-{0x11, 0x08},		// xdata clear
-{0x11, 0x00},		// xdata clear
-{0xff, 0x01},   // delay 10ms
+{0x10, 0x80},// mcu reset
+{0x10, 0x89},// mcu clk enable
+{0x11, 0x08},// xdata clear
+{0x11, 0x00},// xdata clear
+{0xff, 0x01},// delay 10ms
 
 ///////////////////////////////////////////////////////////////////////////////
 // opt download
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x0A},
-{0x12, 0x00},	// otp clock enable
+{0x12, 0x00},// otp clock enable
 
 // timing for 108mhz
-{0x40, 0x3B},	// otp cfg 1
-{0x41, 0x55},	// otp cfg 2
-{0x42, 0x3B},	// otp cfg 3
-{0x43, 0x3B},	// otp cfg 4
-{0x44, 0x3B},	// otp cfg 5
-{0x45, 0x2B},	// otp cfg 6
-{0x46, 0x71},	// otp cfg 7
-{0x47, 0x0B},	// otp cfg 8
-{0x48, 0x03},	// otp cfg 9
-{0x49, 0x6A},	// otp cfg 10
-{0x4A, 0x3B},	// otp cfg 11
-{0x4B, 0x85},	// otp cfg 12
-{0x4C, 0x55},	// otp cfg 13
+{0x40, 0x3B},// otp cfg 1
+{0x41, 0x55},// otp cfg 2
+{0x42, 0x3B},// otp cfg 3
+{0x43, 0x3B},// otp cfg 4
+{0x44, 0x3B},// otp cfg 5
+{0x45, 0x2B},// otp cfg 6
+{0x46, 0x71},// otp cfg 7
+{0x47, 0x0B},// otp cfg 8
+{0x48, 0x03},// otp cfg 9
+{0x49, 0x6A},// otp cfg 10
+{0x4A, 0x3B},// otp cfg 11
+{0x4B, 0x85},// otp cfg 12
+{0x4C, 0x55},// otp cfg 13
 
-{0xff, 0x01},	//delay 10ms
+{0xff, 0x01},//delay 10ms
 
 // downlaod otp - system data
-{0x20, 0x00},	// otp addr = Otp:0000h
-{0x21, 0x00},	// otp addr = Otp:0000h
-{0x20, 0x00},	// otp addr = Otp:0000h (otp addr must be set twice)
-{0x21, 0x00},	// otp addr = Otp:0000h (otp addr must be set twice)
-{0x2e, 0x00},	// otp download size = 0080
-{0x2f, 0x80},	// otp download size = 0080
-{0x13, 0x01},	// start download system data
-{0x13, 0x00},	// toggle start
+{0x20, 0x00},// otp addr = Otp:0000h
+{0x21, 0x00},// otp addr = Otp:0000h
+{0x20, 0x00},// otp addr = Otp:0000h (otp addr must be set twice)
+{0x21, 0x00},// otp addr = Otp:0000h (otp addr must be set twice)
+{0x2e, 0x00},// otp download size = 0080
+{0x2f, 0x80},// otp download size = 0080
+{0x13, 0x01},// start download system data
+{0x13, 0x00},// toggle start
 
-{0xff, 0x01},   // delay 10ms
+{0xff, 0x01}, // delay 10ms
 
 // download otp - mcu data
-{0x20, 0x00},	// otp addr = Otp:0080h
-{0x21, 0x80},	// otp addr = Otp:0080h
-{0x20, 0x00},	// otp addr = Otp:0080h (otp addr must be set twice)
-{0x21, 0x80},	// otp addr = Otp:0080h (otp addr must be set twice)
-{0x2e, 0x01},	// otp download size = 0100
-{0x2f, 0x00},	// otp download size = 0100
-{0x18, 0x01},	// link xdata to otp
-{0x30, 0x10},	// otp mcu buffer addr = Xdata:105Dh
-{0x31, 0x5D},	// otp mcu buffer addr = Xdata:105Dh
-{0x13, 0x02},	// start download mcu data
-{0x13, 0x00},	// toggle start
+{0x20, 0x00},// otp addr = Otp:0080h
+{0x21, 0x80},// otp addr = Otp:0080h
+{0x20, 0x00},// otp addr = Otp:0080h (otp addr must be set twice)
+{0x21, 0x80},// otp addr = Otp:0080h (otp addr must be set twice)
+{0x2e, 0x01},// otp download size = 0100
+{0x2f, 0x00},// otp download size = 0100
+{0x18, 0x01},// link xdata to otp
+{0x30, 0x10},// otp mcu buffer addr = Xdata:105Dh
+{0x31, 0x5D},// otp mcu buffer addr = Xdata:105Dh
+{0x13, 0x02},// start download mcu data
+{0x13, 0x00},// toggle start
 
-{0xff, 0x01},	//delay 10ms
+{0xff, 0x01},//delay 10ms
 
-{0x18, 0x00},	// link xdata to mcu
+{0x18, 0x00},// link xdata to mcu
 
 // download otp - dpc data
-{0x20, 0x01},	// otp addr = Otp:0180h
-{0x21, 0x80},	// otp addr = Otp:0180h
-{0x20, 0x01},	// otp addr = Otp:0180h (otp addr must be set twice)
-{0x21, 0x80},	// otp addr = Otp:0180h (otp addr must be set twice)
-{0x2e, 0x00},	// otp download size = 0080
-{0x2f, 0x80},	// otp download size = 0080
-{0x18, 0x01},	// link xdata to otp
-{0x30, 0x33},	// otp mcu buffer addr = Xdata:3384h
-{0x31, 0x84},	// otp mcu buffer addr = Xdata:3384h
-{0x13, 0x04},	// start download dpc data
-{0x13, 0x00},	// toggle start
+{0x20, 0x01},// otp addr = Otp:0180h
+{0x21, 0x80},// otp addr = Otp:0180h
+{0x20, 0x01},// otp addr = Otp:0180h (otp addr must be set twice)
+{0x21, 0x80},// otp addr = Otp:0180h (otp addr must be set twice)
+{0x2e, 0x00},// otp download size = 0080
+{0x2f, 0x80},// otp download size = 0080
+{0x18, 0x01},// link xdata to otp
+{0x30, 0x33},// otp mcu buffer addr = Xdata:3384h
+{0x31, 0x84},// otp mcu buffer addr = Xdata:3384h
+{0x13, 0x04},// start download dpc data
+{0x13, 0x00},// toggle start
 
-{0xff, 0x01},	//delay 10ms
+{0xff, 0x01},//delay 10ms
 
-{0x18, 0x00},	// link xdata to mcu
+{0x18, 0x00},// link xdata to mcu
 
 {0x03, 0x0A},
-{0x12, 0x80},	// otp clock disable
+{0x12, 0x80},// otp clock disable
 
 ///////////////////////////////////////////////////////////////////////////////
 // TAP for capture function
@@ -228,14 +202,14 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 
 {0x03, 0x26},
 
-{0x16, 0x00},		// set tap address (high)
-{0x17, 0x00},		// set tap address (low)
-{0x18, 0x01},		// use tap memory
+{0x16, 0x00},// set tap address (high)
+{0x17, 0x00},// set tap address (low)
+{0x18, 0x01},// use tap memory
 
-{0x40, 0x02},		// set auto increment mode
-{0x44, 0x00},		// select rom
-{0x45, 0x00},		// set high address
-{0x46, 0x00},		// set low address
+{0x40, 0x02},// set auto increment mode
+{0x44, 0x00},// select rom
+{0x45, 0x00},// set high address
+{0x46, 0x00},// set low address
 
 // tap code download - start
 // (caution : data length must be even)
@@ -463,32 +437,32 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x42, 0x0a},
 // tap code download - end
 
-{0x44, 0x01},		// select ram
+{0x44, 0x01},// select ram
 
-{0x16, 0xf8},		// set tap address (high)
-{0x17, 0x00},		// set tap address (low)
+{0x16, 0xf8},// set tap address (high)
+{0x17, 0x00},// set tap address (low)
 
 ///////////////////////////////////////////////////////////////////////////////
 // 0 Page
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x00},
-{0x10, 0x41}, //binning + prev1 // Vsync Type1 Bit[3] off
-{0x11, 0x80}, //Fixed mode off
+{0x10, 0x41},//binning + prev1 // Vsync Type1 Bit[3] off
+{0x11, 0x80},//Fixed mode off
 {0x12, 0x00},
 {0x13, 0x28},
 {0x15, 0x01},
-{0x17, 0x04}, //Rising edge for AP
+{0x17, 0x04},//Rising edge for AP
 {0x18, 0x00},
-{0x1d, 0x05},	//Group_frame_update
-{0x1E, 0x01},	//Group_frame_update_reset
+{0x1d, 0x05},//Group_frame_update
+{0x1E, 0x01},//Group_frame_update_reset
 {0x20, 0x00},
-{0x21, 0x00}, // preview row start set
+{0x21, 0x00},// preview row start set
 {0x22, 0x00},
-{0x23, 0x00}, // preview col start set
-{0x24, 0x06}, // height = 1536
+{0x23, 0x00},// preview col start set
+{0x24, 0x06},// height = 1536
 {0x25, 0x00},
-{0x26, 0x08}, // width = 2048
+{0x26, 0x08},// width = 2048
 {0x27, 0x00},
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -498,18 +472,18 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x4d, 0x98},
 
 ///////////////////////////////////////////////////////////////////////////////
-{0x52, 0x00},	//Vsync H
-{0x53, 0x14},	//Vsync L
+{0x52, 0x00},//Vsync H
+{0x53, 0x14},//Vsync L
 ///////////////////////////////////////////////////////////////////////////////
 
 //Pixel windowing
-{0x80, 0x00}, // bayer y start
+{0x80, 0x00},// bayer y start
 {0x81, 0x00},
-{0x82, 0x06}, // bayer height
+{0x82, 0x06},// bayer height
 {0x83, 0x24},
-{0x84, 0x00},	//pixel_col_start
+{0x84, 0x00},//pixel_col_start
 {0x85, 0x00},
-{0x86, 0x08},	//pixel_width
+{0x86, 0x08},//pixel_width
 {0x87, 0x24},
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -517,21 +491,21 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x01},
-{0x10, 0x62},	// BLC=ON}, column BLC}, col_OBP DPC
-{0x11, 0x11},   // BLC offset ENB + Adaptive BLC ENB B[4]
+{0x10, 0x62},// BLC=ON}, column BLC}, col_OBP DPC
+{0x11, 0x11},// BLC offset ENB + Adaptive BLC ENB B[4]
 {0x12, 0x00},
-{0x13, 0x39},	// BLC(Frame BLC ofs - Column ALC ofs)+FrameALC skip
+{0x13, 0x39},// BLC(Frame BLC ofs - Column ALC ofs)+FrameALC skip
 {0x14, 0x00},
-{0x23, 0x8F},	// Frame BLC avg 누적 for 8 frame
+{0x23, 0x8F},// Frame BLC avg 누적 for 8 frame
 {0x50, 0x04}, // blc height = 4
 {0x51, 0x44},
 {0x60, 0x00},
 {0x61, 0x00},
 {0x62, 0x00},
 {0x63, 0x00},
-{0x78, 0x7f},	// ramp_rst_offset = 128
-{0x79, 0x04},	// ramp offset
-{0x7b, 0x04},	// ramp offset
+{0x78, 0x7f},// ramp_rst_offset = 128
+{0x79, 0x04},// ramp offset
+{0x7b, 0x04},// ramp offset
 {0x7e, 0x00},
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -543,9 +517,9 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x1d, 0x40},
 {0x23, 0x10},
 {0x40, 0x08},
-{0x41, 0x8a},	// 20130213 Rev BC ver. ADC input range @ 800mv
-{0x46, 0x0a},	// + 3.3V}, -0.9V
-{0x47, 0x17}, // 20121129 2.9V
+{0x41, 0x8a},// 20130213 Rev BC ver. ADC input range @ 800mv
+{0x46, 0x0a},// + 3.3V}, -0.9V
+{0x47, 0x17},// 20121129 2.9V
 {0x48, 0x1a},
 {0x49, 0x13},
 {0x54, 0xc0},
@@ -595,9 +569,9 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x5b, 0xaa},
 {0x6A, 0x00},
 {0x6B, 0xf8},
-{0x72, 0x06}, // s_addr_cut
+{0x72, 0x06},// s_addr_cut
 {0x73, 0x90},
-{0x78, 0x06}, // rx half_rst
+{0x78, 0x06},// rx half_rst
 {0x79, 0x8b},
 {0x7A, 0x06},
 {0x7B, 0x95},
@@ -613,18 +587,18 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x89, 0x8b},
 {0x8A, 0x06},
 {0x8B, 0x95},
-{0x92, 0x06}, // sx
+{0x92, 0x06},// sx
 {0x93, 0x81},
 {0x96, 0x06},
 {0x97, 0x81},
-{0x98, 0x06}, // sxb
+{0x98, 0x06},// sxb
 {0x99, 0x81},
 {0x9c, 0x06},
 {0x9d, 0x81},
 
-{0xb6, 0x01}, // --------------> s_hb_cnt_hold = 500
+{0xb6, 0x01},// --------------> s_hb_cnt_hold = 500
 {0xb7, 0xf4},
-{0xc0, 0x00}, // i_addr_mux_prev
+{0xc0, 0x00},// i_addr_mux_prev
 {0xc1, 0xb4},
 {0xc2, 0x00},
 {0xc3, 0xf4},
@@ -632,7 +606,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xc5, 0xb4},
 {0xc6, 0x00},
 {0xc7, 0xf4},
-{0xc8, 0x00}, // i_addr_cut_prev
+{0xc8, 0x00},// i_addr_cut_prev
 {0xc9, 0xb8},
 {0xca, 0x00},
 {0xcb, 0xf0},
@@ -640,7 +614,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xcd, 0xb8},
 {0xce, 0x00},
 {0xcf, 0xf0},
-{0xd0, 0x00}, // Rx_exp_prev
+{0xd0, 0x00},// Rx_exp_prev
 {0xd1, 0xba},
 {0xd2, 0x00},
 {0xd3, 0xee},
@@ -648,7 +622,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xd5, 0xba},
 {0xd6, 0x00},
 {0xd7, 0xee},
-{0xd8, 0x00}, // Tx_exp_prev
+{0xd8, 0x00},// Tx_exp_prev
 {0xd9, 0xbc},
 {0xdA, 0x00},
 {0xdB, 0xec},
@@ -667,9 +641,9 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x04},
-{0x10, 0x03},	//Ramp multiple sampling
+{0x10, 0x03},//Ramp multiple sampling
 
-{0x5a, 0x06}, // cds_pxl_smpl
+{0x5a, 0x06},// cds_pxl_smpl
 {0x5b, 0x78},
 {0x5e, 0x06},
 {0x5f, 0x78},
@@ -681,25 +655,25 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x26},
-{0x62, 0x00},	// normal mode start
-{0x65, 0x00},	// watchdog disable
-{0x10, 0x09},	// mcu reset release
+{0x62, 0x00},// normal mode start
+{0x65, 0x00},// watchdog disable
+{0x10, 0x09},// mcu reset release
 //Analog setting 이후에 MCU를 reset 시킴.
 
 ///////////////////////////////////////////////////////////////////////////////
 // b Page
 ///////////////////////////////////////////////////////////////////////////////
 {0x03, 0x0b},
-{0x10, 0x01}, // otp_dpc_ctl
-{0x11, 0x11}, //Preview1 0410
-{0x12, 0x02}, //Preview1 0410
+{0x10, 0x01},// otp_dpc_ctl
+{0x11, 0x11},//Preview1 0410
+{0x12, 0x02},//Preview1 0410
 
 ///////////////////////////////////////////////////////////////////////////////
 // 15 Page (LSC)
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x15},
-{0x10, 0x00},	// LSC OFF
+{0x10, 0x00},// LSC OFF
 {0x11, 0x00}, //gap y disable
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -709,17 +683,17 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x03, 0x0a},
 {0x19, 0x01},
 
-{0x11, 0x80}, // B[7] LSC burst mode ENB
+{0x11, 0x80},// B[7] LSC burst mode ENB
 
 {0x03, 0x26},
-{0x40, 0x02},	// auto increment enable
+{0x40, 0x02},// auto increment enable
 {0x44, 0x01},
-{0x45, 0xa3},	// LSC bank0 start addr H
-{0x46, 0x00},	// LSC bank0 start addr L
+{0x45, 0xa3},// LSC bank0 start addr H
+{0x46, 0x00},// LSC bank0 start addr L
 
 //LSC G channel reg________________________ 20130625 LSC Blending DNP 90_CWF 5_TL84 5
 
-{0x0e, 0x01}, //BURST_START
+{0x0e, 0x01},//BURST_START
 
 //G Value
 {0x42, 0x38},
@@ -966,8 +940,8 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x42, 0x73},
 {0x42, 0x22},
 
-{0x0e, 0x00}, //BURST_END
-{0x0e, 0x01}, //BURST_START
+{0x0e, 0x00},//BURST_END
+{0x0e, 0x01},//BURST_START
 
 {0x42, 0x32},
 {0x42, 0x22},
@@ -1461,8 +1435,8 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x42, 0x24},
 {0x42, 0xc9},
 
-{0x0e, 0x00}, //BURST_END
-{0x0e, 0x01}, //BURST_START
+{0x0e, 0x00},//BURST_END
+{0x0e, 0x01},//BURST_START
 
 {0x42, 0x4c},
 {0x42, 0x94},
@@ -2203,84 +2177,84 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x42, 0xd3},
 {0x42, 0xe9},
 
-{0x0e, 0x00}, //BURST_END
+{0x0e, 0x00},//BURST_END
 
 {0x03, 0x0a},
-{0x19, 0x02},	// Bus Switch
+{0x19, 0x02},// Bus Switch
 
-{0x03, 0x15},	// Shading FPGA(Hi-352)
-{0x10, 0x01},	// LSC ON
-{0x11, 0x00}, //gap y off}, gap x off
+{0x03, 0x15},// Shading FPGA(Hi-352)
+{0x10, 0x01},// LSC ON
+{0x11, 0x00},//gap y off}, gap x off
 
-{0x27, 0x80},	// LSC G
-{0x28, 0x80},	// LSC B
-{0x29, 0x80},	// LSC R
+{0x27, 0x80},// LSC G
+{0x28, 0x80},// LSC B
+{0x29, 0x80},// LSC R
 
 ///////////////////////////////////
 // 10 Page Saturation (H/W)
 ///////////////////////////////////
 {0x03, 0x10},
 {0x10, 0x01},
-{0x12, 0x10}, //YOFS ENB
-{0x18, 0x00}, //20121127 CSP option
-{0x20, 0x00}, //16_235 range scale down off
-{0x60, 0x03}, //Sat ENB Transfer Function     //Transfunction on
+{0x12, 0x10},//YOFS ENB
+{0x18, 0x00},//20121127 CSP option
+{0x20, 0x00},//16_235 range scale down off
+{0x60, 0x03},//Sat ENB Transfer Function     //Transfunction on
 
 ///////////////////////////////////
 // 11 Page D-LPF (H/W)
 ///////////////////////////////////
-{0x03, 0x11}, //11 page
+{0x03, 0x11},//11 page
 {0x10, 0x1f},//D-LPF ENB //DPC marker
 
-{0x12, 0x28}, //20121120 character long line detection th
-{0x13, 0x2c}, //20121120 character short line detection th
+{0x12, 0x28},//20121120 character long line detection th
+{0x13, 0x2c},//20121120 character short line detection th
 
-{0x1d, 0x12}, // ORG_STD Ctrl
+{0x1d, 0x12},// ORG_STD Ctrl
 {0x1e, 0x00},// 20130410_STD 03 -> 00
-{0x21, 0x78}, // Color STD Gain
+{0x21, 0x78},// Color STD Gain
 //Bayer Sharpness Gain Ctrl
-{0xb7, 0x22}, //SpColor_gain1
-{0xb8, 0x22}, //SpColor_gain2
-{0xb9, 0x21}, //SpColor_gain3
-{0xba, 0x1e}, //SpColor_gain4
-{0xbb, 0x1c}, //SpColor_gain5
-{0xbc, 0x1a}, //SpColor_gain6
+{0xb7, 0x22},//SpColor_gain1
+{0xb8, 0x22},//SpColor_gain2
+{0xb9, 0x21},//SpColor_gain3
+{0xba, 0x1e},//SpColor_gain4
+{0xbb, 0x1c},//SpColor_gain5
+{0xbc, 0x1a},//SpColor_gain6
 
-{0xf2, 0x7a}, //pga_dark1_hi //Enter Dark1
-{0xf3, 0x72}, //pga_dark_lo  //Escape Dark1
+{0xf2, 0x7a},//pga_dark1_hi //Enter Dark1
+{0xf3, 0x72},//pga_dark_lo  //Escape Dark1
 ///////////////////////////////////
 // 12 Page DPC},GBGR (H/W)//////////
 ///////////////////////////////////
-{0x03, 0x12}, //12 page
-{0x10, 0x57}, //DPC ON
+{0x03, 0x12},//12 page
+{0x10, 0x57},//DPC ON
 {0x12, 0x30},
-{0x2b, 0x08}, //white_th
-{0x2c, 0x08}, //middle_h_th
-{0x2d, 0x08}, //middle_l_th
-{0x2e, 0x06}, //dark_th
-{0x2f, 0x40}, //20121127 _DPC TH
-{0x30, 0x40}, //20121127 _DPC TH
-{0x31, 0x40}, //20121127 _DPC TH
-{0x32, 0x40}, //20121127 _DPC TH
-{0x41, 0x88}, //GBGR Cut off //46
+{0x2b, 0x08},//white_th
+{0x2c, 0x08},//middle_h_th
+{0x2d, 0x08},//middle_l_th
+{0x2e, 0x06},//dark_th
+{0x2f, 0x40},//20121127 _DPC TH
+{0x30, 0x40},//20121127 _DPC TH
+{0x31, 0x40},//20121127 _DPC TH
+{0x32, 0x40},//20121127 _DPC TH
+{0x41, 0x88},//GBGR Cut off //46
 
 ///////////////////////////////////
 // 12 Page CI-LPF (H/W)////////////
 ///////////////////////////////////
 
-{0xEF, 0x01}, //Interpol Color filter On/Off
+{0xEF, 0x01},//Interpol Color filter On/Off
 
 ///////////////////////////////////
 // 13 Page YC-2D_Y-NR (H/W)/////////
 ///////////////////////////////////
 {0x03, 0x13},
 
-{0x80, 0x2d}, //YC-2D_C-NR ENB, C-Filter DC option on B[7] //DC on 8b //DC off 2d
-{0x81, 0xff}, // add 20121210
-{0x82, 0xfe}, // add 20121210
+{0x80, 0x2d},//YC-2D_C-NR ENB, C-Filter DC option on B[7] //DC on 8b //DC off 2d
+{0x81, 0xff},// add 20121210
+{0x82, 0xfe},// add 20121210
 
 {0x85, 0x32},
-{0x86, 0x08}, // add 20121210
+{0x86, 0x08},// add 20121210
 
 //==========================================================================
 // C-Filter PS Reducing (Mask-Size Adjustment)
@@ -2289,9 +2263,9 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x88, 0x70},//C-mask middle STD TH
 {0x89, 0x50},//C-mask far STD TH
 
-{0x8a, 0x86}, //color STD
+{0x8a, 0x86},//color STD
 
-{0x97, 0x0f}, // C-filter Lum gain 1
+{0x97, 0x0f},// C-filter Lum gain 1
 {0x98, 0x0e},
 {0x99, 0x0d},
 {0x9a, 0x0c},
@@ -2300,7 +2274,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x9d, 0x09},
 {0x9e, 0x08},
 
-{0xa7, 0x0f}, // C-filter STD gain 1
+{0xa7, 0x0f},// C-filter STD gain 1
 {0xa8, 0x0e},
 {0xa9, 0x0d},
 {0xaa, 0x0c},
@@ -2335,14 +2309,14 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x16},
-{0x10, 0x7f},	// CMC ENB	3f(spGrap off) 7f(spGrap on)
+{0x10, 0x7f},// CMC ENB	3f(spGrap off) 7f(spGrap on)
 {0x20, 0x52},// PS / LN
 
-{0xa0, 0x03},	// WB gain on
-{0xa2, 0x05},	// R_h (12bit = 8bit * 16)
-{0xa3, 0x80},	// R_l
-{0xa4, 0x07},	// B_h (12bit = 8bit * 16)
-{0xa5, 0x80},	// B_l
+{0xa0, 0x03},// WB gain on
+{0xa2, 0x05},// R_h (12bit = 8bit * 16)
+{0xa3, 0x80},// R_l
+{0xa4, 0x07},// B_h (12bit = 8bit * 16)
+{0xa5, 0x80},// B_l
 
 {0xd0, 0x01},//Bayer gain enable
 ///////////////////////////////////////////////////////////////////////////////
@@ -2350,52 +2324,52 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x17},
-{0x10, 0x07},	// GMA ENB //PS On
+{0x10, 0x07},// GMA ENB //PS On
 {0x12, 0x52},// old:43 new:65
 
 ///////////////////////////////////////////////////////////////////////////////
 // 18 Page MCMC
 ///////////////////////////////////////////////////////////////////////////////
 
-{0x03, 0x18},	// Page 18
-{0x10, 0x01},	// mcmc_ctl1
-{0x11, 0x7f},	// mcmc_ctl2
-{0x53, 0x10},	// mcmc_ctl3
+{0x03, 0x18},// Page 18
+{0x10, 0x01},// mcmc_ctl1
+{0x11, 0x7f},// mcmc_ctl2
+{0x53, 0x10},// mcmc_ctl3
 
-{0x56, 0x1b},	// mcmc_glb_sat_lvl_sp1
-{0x57, 0x39},	// mcmc_glb_sat_lvl_sp2
-{0x58, 0x5a},	// mcmc_glb_sat_lvl_sp3
-{0x59, 0x80},	// mcmc_glb_sat_lvl_sp4
-{0x5a, 0xa6},	// mcmc_glb_sat_lvl_sp5
-{0x5b, 0xc1},	// mcmc_glb_sat_lvl_sp6
-{0x5c, 0xe8},	// mcmc_glb_sat_lvl_sp7
-{0x5d, 0x38},	// mcmc_glb_sat_gain_sp1
-{0x5e, 0x3a},	// mcmc_glb_sat_gain_sp2
-{0x5f, 0x3c},	// mcmc_glb_sat_gain_sp3
-{0x60, 0x3f},	// mcmc_glb_sat_gain_sp4
-{0x61, 0x3f},	// mcmc_glb_sat_gain_sp5
-{0x62, 0x3f},	// mcmc_glb_sat_gain_sp6
-{0x63, 0x3f},	// mcmc_glb_sat_gain_sp7
-{0x64, 0x3f},	// mcmc_glb_sat_gain_sp8
-{0x65, 0x00},	// mcmc_std_ctl1
-{0x66, 0x00},	// mcmc_std_ctl2
-{0x67, 0x00},	// mcmc_std_ctl3
+{0x56, 0x1b},// mcmc_glb_sat_lvl_sp1
+{0x57, 0x39},// mcmc_glb_sat_lvl_sp2
+{0x58, 0x5a},// mcmc_glb_sat_lvl_sp3
+{0x59, 0x80},// mcmc_glb_sat_lvl_sp4
+{0x5a, 0xa6},// mcmc_glb_sat_lvl_sp5
+{0x5b, 0xc1},// mcmc_glb_sat_lvl_sp6
+{0x5c, 0xe8},// mcmc_glb_sat_lvl_sp7
+{0x5d, 0x38},// mcmc_glb_sat_gain_sp1
+{0x5e, 0x3a},// mcmc_glb_sat_gain_sp2
+{0x5f, 0x3c},// mcmc_glb_sat_gain_sp3
+{0x60, 0x3f},// mcmc_glb_sat_gain_sp4
+{0x61, 0x3f},// mcmc_glb_sat_gain_sp5
+{0x62, 0x3f},// mcmc_glb_sat_gain_sp6
+{0x63, 0x3f},// mcmc_glb_sat_gain_sp7
+{0x64, 0x3f},// mcmc_glb_sat_gain_sp8
+{0x65, 0x00},// mcmc_std_ctl1
+{0x66, 0x00},// mcmc_std_ctl2
+{0x67, 0x00},// mcmc_std_ctl3
 
-{0x6c, 0xff},	// mcmc_lum_ctl1 sat hue offset
-{0x6d, 0x3f},	// mcmc_lum_ctl2 gain
-{0x6e, 0x00},	// mcmc_lum_ctl3 hue
-{0x6f, 0x00},	// mcmc_lum_ctl4 rgb offset
-{0x70, 0x00},	// mcmc_lum_ctl5 rgb scale
+{0x6c, 0xff},// mcmc_lum_ctl1 sat hue offset
+{0x6d, 0x3f},// mcmc_lum_ctl2 gain
+{0x6e, 0x00},// mcmc_lum_ctl3 hue
+{0x6f, 0x00},// mcmc_lum_ctl4 rgb offset
+{0x70, 0x00},// mcmc_lum_ctl5 rgb scale
 
 {0xa1, 0x00},
-{0xa2, 0x01},	//star gain enb
+{0xa2, 0x01},//star gain enb
 
 ///////////////////////////////////////////////////////////////////////////////
 // 1A Page_RGB Y-NR}, Y-Sharpness
 ///////////////////////////////////////////////////////////////////////////////
 
 {0x03, 0x1a},
-{0x30, 0x9f},	// RGB-Sharpness ENB // Flat-region RGB ENB B[1] //Green dis [7] On
+{0x30, 0x9f},// RGB-Sharpness ENB // Flat-region RGB ENB B[1] //Green dis [7] On
 
 {0x8d, 0x20},//RGB-Color_Gain1
 {0x8e, 0x20},//RGB-Color_Gain2
@@ -2408,31 +2382,31 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 // 20 Page (FZY)
 ///////////////////////////////////////////////////////////////////////////////
 
-{0x03, 0x20}, //Page 20
+{0x03, 0x20},//Page 20
 {0x12, 0x20},
 
 {0x18, 0x00},//Check Flicker Lock Off
 
-{0x36, 0x00}, //EXP Unit
+{0x36, 0x00},//EXP Unit
 {0x37, 0x08},
 {0x38, 0x98},
 
-{0x51, 0xff}, //PGA Max
-{0x52, 0x20}, //PGA Min x0.9
+{0x51, 0xff},//PGA Max
+{0x52, 0x20},//PGA Min x0.9
 
-{0x61, 0xFF},	// max ramp gain
-{0x62, 0x00},	// min ramp gain
-{0x60, 0xE0},	// ramp gain
+{0x61, 0xFF},// max ramp gain
+{0x62, 0x00},// min ramp gain
+{0x60, 0xE0},// ramp gain
 
-{0x80, 0x3a}, //Y Target
+{0x80, 0x3a},//Y Target
 ///////////////////////////////////////////////////////////////////////////////
 // 23 Page (AFC)
 ///////////////////////////////////////////////////////////////////////////////
 
-{0x03, 0x23}, //Page 23
-{0x14, 0x7A}, //Flicker Line 100
-{0x15, 0x66}, //Flicker Line 120
-{0x10, 0x01}, //Frame Interval
+{0x03, 0x23},//Page 23
+{0x14, 0x7A},//Flicker Line 100
+{0x15, 0x66},//Flicker Line 120
+{0x10, 0x01},//Frame Interval
 
 ///////////////////////////////////////////////////////////////////////////////
 // 2A Page (SSD)
@@ -2441,7 +2415,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x03, 0x2A},
 {0x10, 0x11},
 {0x11, 0x01},
-{0x16, 0x50},	//SSD B gain int gain 1.5
+{0x16, 0x50},//SSD B gain int gain 1.5
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -2533,7 +2507,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 {0x03, 0xd9},
 {0x7c, 0xe0},
-{0x8c, 0x20},	//en_ramp_gain_auto
+{0x8c, 0x20},//en_ramp_gain_auto
 
 ///////////////////////////////////////////////////////////////////////////////
 // C8 ~ CC Page (AWB)
@@ -2675,22 +2649,22 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x91, 0x00},
 {0x92, 0x00},
 
-{0x93, 0x00}, //Indoor_wRgIntOfs
+{0x93, 0x00},//Indoor_wRgIntOfs
 {0x94, 0xc0},//Indoor_wRgIntOfs_n01
-{0x95, 0x00}, //Indoor_wBgIntOfs
-{0x96, 0xc0}, //Indoor_wBgIntOfs_n01
-{0x97, 0x10}, //Indoor_bRgStep
-{0x98, 0x10}, //Indoor_bBgStep
-{0x99, 0x26}, //Indoor_aTgtWhtRgnBg
-{0x9a, 0x29}, //Indoor_aTgtWhtRgnBg_a01
-{0x9b, 0x2c}, //Indoor_aTgtWhtRgnBg_a02
-{0x9c, 0x38}, //Indoor_aTgtWhtRgnBg_a03
-{0x9d, 0x43}, //Indoor_aTgtWhtRgnBg_a04
-{0x9e, 0x4d}, //Indoor_aTgtWhtRgnBg_a05
-{0x9f, 0x59}, //Indoor_aTgtWhtRgnBg_a06
-{0xa0, 0x64}, //Indoor_aTgtWhtRgnBg_a07
-{0xa1, 0x6f}, //Indoor_aTgtWhtRgnBg_a08
-{0xa2, 0x7b}, //Indoor_aTgtWhtRgnBg_a09
+{0x95, 0x00},//Indoor_wBgIntOfs
+{0x96, 0xc0},//Indoor_wBgIntOfs_n01
+{0x97, 0x10},//Indoor_bRgStep
+{0x98, 0x10},//Indoor_bBgStep
+{0x99, 0x26},//Indoor_aTgtWhtRgnBg
+{0x9a, 0x29},//Indoor_aTgtWhtRgnBg_a01
+{0x9b, 0x2c},//Indoor_aTgtWhtRgnBg_a02
+{0x9c, 0x38},//Indoor_aTgtWhtRgnBg_a03
+{0x9d, 0x43},//Indoor_aTgtWhtRgnBg_a04
+{0x9e, 0x4d},//Indoor_aTgtWhtRgnBg_a05
+{0x9f, 0x59},//Indoor_aTgtWhtRgnBg_a06
+{0xa0, 0x64},//Indoor_aTgtWhtRgnBg_a07
+{0xa1, 0x6f},//Indoor_aTgtWhtRgnBg_a08
+{0xa2, 0x7b},//Indoor_aTgtWhtRgnBg_a09
 {0xa3, 0x8e},//Indoor_aTgtWhtRgnBg_a10
 {0xa4, 0xa0},//Indoor_aTgtWhtRgnRgLtLmt
 {0xa5, 0x98},//Indoor_aTgtWhtRgnRgLtLmt_a01
@@ -2714,18 +2688,18 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xb7, 0x5a},//Indoor_aTgtWhtRgnRgRtLmt_a08
 {0xb8, 0x50},//Indoor_aTgtWhtRgnRgRtLmt_a09
 {0xb9, 0x4a},//Indoor_aTgtWhtRgnRgRtLmt_a10
-{0xba, 0x1b}, //Indoor_aOptWhtRgnBg
-{0xbb, 0x1d}, //Indoor_aOptWhtRgnBg_a01
-{0xbc, 0x1f}, //Indoor_aOptWhtRgnBg_a02
-{0xbd, 0x2a}, //Indoor_aOptWhtRgnBg_a03
-{0xbe, 0x38}, //Indoor_aOptWhtRgnBg_a04
-{0xbf, 0x47}, //Indoor_aOptWhtRgnBg_a05
-{0xc0, 0x54}, //Indoor_aOptWhtRgnBg_a06
-{0xc1, 0x61}, //Indoor_aOptWhtRgnBg_a07
-{0xc2, 0x72}, //Indoor_aOptWhtRgnBg_a08
-{0xc3, 0x82}, //Indoor_aOptWhtRgnBg_a09
+{0xba, 0x1b},//Indoor_aOptWhtRgnBg
+{0xbb, 0x1d},//Indoor_aOptWhtRgnBg_a01
+{0xbc, 0x1f},//Indoor_aOptWhtRgnBg_a02
+{0xbd, 0x2a},//Indoor_aOptWhtRgnBg_a03
+{0xbe, 0x38},//Indoor_aOptWhtRgnBg_a04
+{0xbf, 0x47},//Indoor_aOptWhtRgnBg_a05
+{0xc0, 0x54},//Indoor_aOptWhtRgnBg_a06
+{0xc1, 0x61},//Indoor_aOptWhtRgnBg_a07
+{0xc2, 0x72},//Indoor_aOptWhtRgnBg_a08
+{0xc3, 0x82},//Indoor_aOptWhtRgnBg_a09
 {0xc4, 0x9a},//Indoor_aOptWhtRgnBg_a10
-{0xc5, 0xad}, //Indoor_aOptWhtRgnRgLtLmt
+{0xc5, 0xad},//Indoor_aOptWhtRgnRgLtLmt
 {0xc6, 0x98},//Indoor_aOptWhtRgnRgLtLmt_a01
 {0xc7, 0x8a},//Indoor_aOptWhtRgnRgLtLmt_a02
 {0xc8, 0x74},//Indoor_aOptWhtRgnRgLtLmt_a03
@@ -2739,61 +2713,61 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xd0, 0xba},//Indoor_aOptWhtRgnRgRtLmt
 {0xd1, 0xb9},//Indoor_aOptWhtRgnRgRtLmt_a01
 {0xd2, 0xb8},//Indoor_aOptWhtRgnRgRtLmt_a02
-{0xd3, 0xb5}, //Indoor_aOptWhtRgnRgRtLmt_a03
-{0xd4, 0xae}, //Indoor_aOptWhtRgnRgRtLmt_a04
-{0xd5, 0xa1}, //Indoor_aOptWhtRgnRgRtLmt_a05
-{0xd6, 0x8c}, //Indoor_aOptWhtRgnRgRtLmt_a06
+{0xd3, 0xb5},//Indoor_aOptWhtRgnRgRtLmt_a03
+{0xd4, 0xae},//Indoor_aOptWhtRgnRgRtLmt_a04
+{0xd5, 0xa1},//Indoor_aOptWhtRgnRgRtLmt_a05
+{0xd6, 0x8c},//Indoor_aOptWhtRgnRgRtLmt_a06
 {0xd7, 0x78},//Indoor_aOptWhtRgnRgRtLmt_a07
 {0xd8, 0x60},//Indoor_aOptWhtRgnRgRtLmt_a08
 {0xd9, 0x54},//Indoor_aOptWhtRgnRgRtLmt_a09
 {0xda, 0x4d},//Indoor_aOptWhtRgnRgRtLmt_a10
 
-{0xdb, 0x36}, //Indoor_aCtmpWgtWdhTh
-{0xdc, 0x40}, //Indoor_aCtmpWgtWdhTh_a01
-{0xdd, 0x4c}, //Indoor_aCtmpWgtWdhTh_a02
-{0xde, 0x5c}, //Indoor_aCtmpWgtWdhTh_a03
-{0xdf, 0x6e}, //Indoor_aCtmpWgtWdhTh_a04
-{0xe0, 0x7f}, //Indoor_aCtmpWgtWdhTh_a05
-{0xe1, 0xa4}, //Indoor_aCtmpWgtWdhTh_a06
-{0xe2, 0x27}, //Indoor_aCtmpWgtHgtTh
-{0xe3, 0x32}, //Indoor_aCtmpWgtHgtTh_a01
-{0xe4, 0x3c}, //Indoor_aCtmpWgtHgtTh_a02
-{0xe5, 0x48}, //Indoor_aCtmpWgtHgtTh_a03
-{0xe6, 0x5c}, //Indoor_aCtmpWgtHgtTh_a04
-{0xe7, 0x70}, //Indoor_aCtmpWgtHgtTh_a05
-{0xe8, 0x7c}, //Indoor_aCtmpWgtHgtTh_a06
-{0xe9, 0x86}, //Indoor_aCtmpWgtHgtTh_a07
-{0xea, 0x90}, //Indoor_aCtmpWgtHgtTh_a08
-{0xeb, 0x11}, //Indoor_aCtmpWgt
-{0xec, 0x11}, //Indoor_aCtmpWgt_a01
-{0xed, 0x12}, //Indoor_aCtmpWgt_a02
-{0xee, 0x11}, //Indoor_aCtmpWgt_a03
-{0xef, 0x11}, //Indoor_aCtmpWgt_a04
-{0xf0, 0x33}, //Indoor_aCtmpWgt_a05
-{0xf1, 0x11}, //Indoor_aCtmpWgt_a06
-{0xf2, 0x14}, //Indoor_aCtmpWgt_a07
-{0xf3, 0x43}, //Indoor_aCtmpWgt_a08
-{0xf4, 0x11}, //Indoor_aCtmpWgt_a09
-{0xf5, 0x55}, //Indoor_aCtmpWgt_a10
-{0xf6, 0x41}, //Indoor_aCtmpWgt_a11
-{0xf7, 0x16}, //Indoor_aCtmpWgt_a12
-{0xf8, 0x65}, //Indoor_aCtmpWgt_a13
-{0xf9, 0x11}, //Indoor_aCtmpWgt_a14
-{0xfa, 0x48}, //Indoor_aCtmpWgt_a15
-{0xfb, 0x61}, //Indoor_aCtmpWgt_a16
-{0xfc, 0x11}, //Indoor_aCtmpWgt_a17
-{0xfd, 0x46}, //Indoor_aCtmpWgt_a18
-{0x0e, 0x00}, // burst end
+{0xdb, 0x36},//Indoor_aCtmpWgtWdhTh
+{0xdc, 0x40},//Indoor_aCtmpWgtWdhTh_a01
+{0xdd, 0x4c},//Indoor_aCtmpWgtWdhTh_a02
+{0xde, 0x5c},//Indoor_aCtmpWgtWdhTh_a03
+{0xdf, 0x6e},//Indoor_aCtmpWgtWdhTh_a04
+{0xe0, 0x7f},//Indoor_aCtmpWgtWdhTh_a05
+{0xe1, 0xa4},//Indoor_aCtmpWgtWdhTh_a06
+{0xe2, 0x27},//Indoor_aCtmpWgtHgtTh
+{0xe3, 0x32},//Indoor_aCtmpWgtHgtTh_a01
+{0xe4, 0x3c},//Indoor_aCtmpWgtHgtTh_a02
+{0xe5, 0x48},//Indoor_aCtmpWgtHgtTh_a03
+{0xe6, 0x5c},//Indoor_aCtmpWgtHgtTh_a04
+{0xe7, 0x70},//Indoor_aCtmpWgtHgtTh_a05
+{0xe8, 0x7c},//Indoor_aCtmpWgtHgtTh_a06
+{0xe9, 0x86},//Indoor_aCtmpWgtHgtTh_a07
+{0xea, 0x90},//Indoor_aCtmpWgtHgtTh_a08
+{0xeb, 0x11},//Indoor_aCtmpWgt
+{0xec, 0x11},//Indoor_aCtmpWgt_a01
+{0xed, 0x12},//Indoor_aCtmpWgt_a02
+{0xee, 0x11},//Indoor_aCtmpWgt_a03
+{0xef, 0x11},//Indoor_aCtmpWgt_a04
+{0xf0, 0x33},//Indoor_aCtmpWgt_a05
+{0xf1, 0x11},//Indoor_aCtmpWgt_a06
+{0xf2, 0x14},//Indoor_aCtmpWgt_a07
+{0xf3, 0x43},//Indoor_aCtmpWgt_a08
+{0xf4, 0x11},//Indoor_aCtmpWgt_a09
+{0xf5, 0x55},//Indoor_aCtmpWgt_a10
+{0xf6, 0x41},//Indoor_aCtmpWgt_a11
+{0xf7, 0x16},//Indoor_aCtmpWgt_a12
+{0xf8, 0x65},//Indoor_aCtmpWgt_a13
+{0xf9, 0x11},//Indoor_aCtmpWgt_a14
+{0xfa, 0x48},//Indoor_aCtmpWgt_a15
+{0xfb, 0x61},//Indoor_aCtmpWgt_a16
+{0xfc, 0x11},//Indoor_aCtmpWgt_a17
+{0xfd, 0x46},//Indoor_aCtmpWgt_a18
+{0x0e, 0x00},// burst end
 
-{0x03, 0xc9}, //c9 page
-{0x0e, 0x01}, // burst start
+{0x03, 0xc9},//c9 page
+{0x0e, 0x01},// burst start
 
-{0x10, 0x11}, //Indoor_aCtmpWgt_a19
-{0x11, 0x11}, //Indoor_aCtmpWgt_a20
-{0x12, 0x23}, //Indoor_aCtmpWgt_a21
-{0x13, 0x11}, //Indoor_aCtmpWgt_a22
-{0x14, 0x11}, //Indoor_aCtmpWgt_a23
-{0x15, 0x10}, //Indoor_aCtmpWgt_a24
+{0x10, 0x11},//Indoor_aCtmpWgt_a19
+{0x11, 0x11},//Indoor_aCtmpWgt_a20
+{0x12, 0x23},//Indoor_aCtmpWgt_a21
+{0x13, 0x11},//Indoor_aCtmpWgt_a22
+{0x14, 0x11},//Indoor_aCtmpWgt_a23
+{0x15, 0x10},//Indoor_aCtmpWgt_a24
 
 {0x16, 0x11},//Indoor_aYlvlWgt
 {0x17, 0x11},//Indoor_aYlvlWgt_a01
@@ -2868,32 +2842,32 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x57, 0x06},//Indoor_wInitBg
 {0x58, 0x40},//Indoor_wInitBg_n01
 
-{0x59, 0x02}, //Indoor_aRatioBox
-{0x5a, 0xee}, //Indoor_aRatioBox_a01
-{0x5b, 0x06}, //Indoor_aRatioBox_a02
-{0x5c, 0x40}, //Indoor_aRatioBox_a03
-{0x5d, 0x08}, //Indoor_aRatioBox_a04
-{0x5e, 0x34}, //Indoor_aRatioBox_a05
+{0x59, 0x02},//Indoor_aRatioBox
+{0x5a, 0xee},//Indoor_aRatioBox_a01
+{0x5b, 0x06},//Indoor_aRatioBox_a02
+{0x5c, 0x40},//Indoor_aRatioBox_a03
+{0x5d, 0x08},//Indoor_aRatioBox_a04
+{0x5e, 0x34},//Indoor_aRatioBox_a05
 {0x5f, 0x0b},//Indoor_aRatioBox_a06
 {0x60, 0x54},//Indoor_aRatioBox_a07
-{0x61, 0x03}, //Indoor_aRatioBox_a08
-{0x62, 0x52}, //Indoor_aRatioBox_a09
-{0x63, 0x07}, //Indoor_aRatioBox_a10
-{0x64, 0xd0}, //Indoor_aRatioBox_a11
-{0x65, 0x06}, //Indoor_aRatioBox_a12
-{0x66, 0xa4}, //Indoor_aRatioBox_a13
-{0x67, 0x08}, //Indoor_aRatioBox_a14
-{0x68, 0xfc}, //Indoor_aRatioBox_a15
-{0x69, 0x03}, //Indoor_aRatioBox_a16
-{0x6a, 0xe8}, //Indoor_aRatioBox_a17
-{0x6b, 0x0a}, //Indoor_aRatioBox_a18
-{0x6c, 0x8c}, //Indoor_aRatioBox_a19
-{0x6d, 0x04}, //Indoor_aRatioBox_a20
-{0x6e, 0xb0}, //Indoor_aRatioBox_a21
-{0x6f, 0x07}, //Indoor_aRatioBox_a22
-{0x70, 0x6c}, //Indoor_aRatioBox_a23
-{0x71, 0x04}, //Indoor_aRatioBox_a24
-{0x72, 0xe2}, //Indoor_aRatioBox_a25
+{0x61, 0x03},//Indoor_aRatioBox_a08
+{0x62, 0x52},//Indoor_aRatioBox_a09
+{0x63, 0x07},//Indoor_aRatioBox_a10
+{0x64, 0xd0},//Indoor_aRatioBox_a11
+{0x65, 0x06},//Indoor_aRatioBox_a12
+{0x66, 0xa4},//Indoor_aRatioBox_a13
+{0x67, 0x08},//Indoor_aRatioBox_a14
+{0x68, 0xfc},//Indoor_aRatioBox_a15
+{0x69, 0x03},//Indoor_aRatioBox_a16
+{0x6a, 0xe8},//Indoor_aRatioBox_a17
+{0x6b, 0x0a},//Indoor_aRatioBox_a18
+{0x6c, 0x8c},//Indoor_aRatioBox_a19
+{0x6d, 0x04},//Indoor_aRatioBox_a20
+{0x6e, 0xb0},//Indoor_aRatioBox_a21
+{0x6f, 0x07},//Indoor_aRatioBox_a22
+{0x70, 0x6c},//Indoor_aRatioBox_a23
+{0x71, 0x04},//Indoor_aRatioBox_a24
+{0x72, 0xe2},//Indoor_aRatioBox_a25
 {0x73, 0x0c}, //Indoor_aRatioBox_a26
 {0x74, 0x1c}, //Indoor_aRatioBox_a27
 {0x75, 0x03}, //Indoor_aRatioBox_a28
@@ -3256,7 +3230,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 // D3 ~ D8 Page (Adaptive)
 ///////////////////////////////////////////////////////////////////////////////
 
-{0x03, 0xd3},	// Adaptive start
+{0x03, 0xd3},// Adaptive start
 
 {0x0e, 0x01}, // burst start
 
@@ -3271,9 +3245,9 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x18, 0x00},
 {0x19, 0x00},
 
-{0x1a, 0x00},	// Def_Yoffset
-{0x1b, 0x23},	// DYOFS_Ratio
-{0x1c, 0x04},	// DYOFS_Limit
+{0x1a, 0x00},// Def_Yoffset
+{0x1b, 0x23},// DYOFS_Ratio
+{0x1c, 0x04},// DYOFS_Limit
 
 {0x1d, 0x00},//EV Th OutEnd
 {0x1e, 0x00},
@@ -3285,60 +3259,60 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x23, 0x30},
 {0x24, 0xd4},
 
-{0x25, 0x00},	//EV Th Dark1Str
+{0x25, 0x00},//EV Th Dark1Str
 {0x26, 0x0b},
 {0x27, 0x71},
 {0x28, 0xb0},
 
-{0x29, 0x00},	//EV Th Dark1End
+{0x29, 0x00},//EV Th Dark1End
 {0x2a, 0x0d},
 {0x2b, 0xbb},
 {0x2c, 0xa0},
 
-{0x2d, 0x00},	//EV Th Dark2Str
+{0x2d, 0x00},//EV Th Dark2Str
 {0x2e, 0x12},
 {0x2f, 0x76},
 {0x30, 0x90},
 
-{0x31, 0x00},	//EV Th Dark2End
+{0x31, 0x00},//EV Th Dark2End
 {0x32, 0x1e},
 {0x33, 0x84},
 {0x34, 0x80},
 
 {0x35, 0x4b}, //Ctmp LT End
 {0x36, 0x52}, //Ctmp LT Str
-{0x37, 0x69},	//Ctmp HT Str
-{0x38, 0x73},	//Ctmp HT End
+{0x37, 0x69},//Ctmp HT Str
+{0x38, 0x73},//Ctmp HT End
 
-{0x39, 0x00},	// LSC_EvTh_OutEnd_4
-{0x3a, 0x00},	// LSC_EvTh_OutEnd_3
-{0x3b, 0x13},	// LSC_EvTh_OutEnd_2
-{0x3c, 0x88},	// LSC_EvTh_OutEnd_1    def : 200fps  Ag 1x Dg 1x
+{0x39, 0x00},// LSC_EvTh_OutEnd_4
+{0x3a, 0x00},// LSC_EvTh_OutEnd_3
+{0x3b, 0x13},// LSC_EvTh_OutEnd_2
+{0x3c, 0x88},// LSC_EvTh_OutEnd_1    def : 200fps  Ag 1x Dg 1x
 
-{0x3d, 0x00},	// LSC_EvTh_OutStr_4
-{0x3e, 0x00},	// LSC_EvTh_OutStr_3
-{0x3f, 0x30},	// LSC_EvTh_OutStr_2
-{0x40, 0xd4},	// LSC_EvTh_OutStr_1    def :  80fps  Ag 1x Dg 1x
+{0x3d, 0x00},// LSC_EvTh_OutStr_4
+{0x3e, 0x00},// LSC_EvTh_OutStr_3
+{0x3f, 0x30},// LSC_EvTh_OutStr_2
+{0x40, 0xd4},// LSC_EvTh_OutStr_1    def :  80fps  Ag 1x Dg 1x
 
-{0x41, 0x00},	// LSC_EvTh_Dark1Str_4
-{0x42, 0x05},	// LSC_EvTh_Dark1Str_3
-{0x43, 0xb8},	// LSC_EvTh_Dark1Str_2
-{0x44, 0xd8},	// LSC_EvTh_Dark1Str_1  def :  8fps  Ag 3x Dg 1x
+{0x41, 0x00},// LSC_EvTh_Dark1Str_4
+{0x42, 0x05},// LSC_EvTh_Dark1Str_3
+{0x43, 0xb8},// LSC_EvTh_Dark1Str_2
+{0x44, 0xd8},// LSC_EvTh_Dark1Str_1  def :  8fps  Ag 3x Dg 1x
 
-{0x45, 0x00},	// LSC_EvTh_Dark1End_4
-{0x46, 0x0b},	// LSC_EvTh_Dark1End_3
-{0x47, 0x71},	// LSC_EvTh_Dark1End_2
-{0x48, 0xb0},	// LSC_EvTh_Dark1End_1  def :  8fps  Ag 6x Dg 1x
+{0x45, 0x00},// LSC_EvTh_Dark1End_4
+{0x46, 0x0b},// LSC_EvTh_Dark1End_3
+{0x47, 0x71},// LSC_EvTh_Dark1End_2
+{0x48, 0xb0},// LSC_EvTh_Dark1End_1  def :  8fps  Ag 6x Dg 1x
 
-{0x49, 0x00},	// LSC_EvTh_Dark2Str_4
-{0x4a, 0x0f},	// LSC_EvTh_Dark2Str_3
-{0x4b, 0x42},	// LSC_EvTh_Dark2Str_2
-{0x4c, 0x40},	// LSC_EvTh_Dark2Str_1  def :  8fps  Ag 8x Dg 1x
+{0x49, 0x00},// LSC_EvTh_Dark2Str_4
+{0x4a, 0x0f},// LSC_EvTh_Dark2Str_3
+{0x4b, 0x42},// LSC_EvTh_Dark2Str_2
+{0x4c, 0x40},// LSC_EvTh_Dark2Str_1  def :  8fps  Ag 8x Dg 1x
 
-{0x4d, 0x00},	// LSC_EvTh_Dark2End_4
-{0x4e, 0x1e},	// LSC_EvTh_Dark2End_3
-{0x4f, 0x84},	// LSC_EvTh_Dark2End_2
-{0x50, 0x80},	// LSC_EvTh_Dark2End_1  def :  4fps  Ag 8x Dg 1x
+{0x4d, 0x00},// LSC_EvTh_Dark2End_4
+{0x4e, 0x1e},// LSC_EvTh_Dark2End_3
+{0x4f, 0x84},// LSC_EvTh_Dark2End_2
+{0x50, 0x80},// LSC_EvTh_Dark2End_1  def :  4fps  Ag 8x Dg 1x
 
 {0x51, 0x55},// LSC Ctmp LTEnd Out
 {0x52, 0x64},// LSC Ctmp LTStr Out
@@ -3350,49 +3324,49 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x57, 0x6e},// LSC Ctmp HTStr In     h6e->h6e
 {0x58, 0x78},// LSC Ctmp HTEnd In     h76->h78
 
-{0x59, 0x50},	// LSC_CTmpTh_LT_End_Dark
-{0x5a, 0x78},	// LSC_CTmpTh_LT_Str_Dark
-{0x5b, 0xa0},	// LSC_CTmpTh_HT_Str_Dark
-{0x5c, 0xb4},	// LSC_CTmpTh_HT_End_Dark
+{0x59, 0x50},// LSC_CTmpTh_LT_End_Dark
+{0x5a, 0x78},// LSC_CTmpTh_LT_Str_Dark
+{0x5b, 0xa0},// LSC_CTmpTh_HT_Str_Dark
+{0x5c, 0xb4},// LSC_CTmpTh_HT_End_Dark
 
-{0x5d, 0x00},	// UniScn_EvMinTh_4
-{0x5e, 0x00},	// UniScn_EvMinTh_3
-{0x5f, 0x04},	// UniScn_EvMinTh_2
-{0x60, 0xe2},	// UniScn_EvMinTh_1    def : 600fps  Ag 1x Dg 1x
+{0x5d, 0x00},// UniScn_EvMinTh_4
+{0x5e, 0x00},// UniScn_EvMinTh_3
+{0x5f, 0x04},// UniScn_EvMinTh_2
+{0x60, 0xe2},// UniScn_EvMinTh_1    def : 600fps  Ag 1x Dg 1x
 
-{0x61, 0x00},	// UniScn_EvMaxTh_4
-{0x62, 0x05},	// UniScn_EvMaxTh_3
-{0x63, 0xb8},	// UniScn_EvMaxTh_2
-{0x64, 0xd8},	// UniScn_EvMaxTh_1     def :  8fps  Ag 3x Dg 1x
+{0x61, 0x00},// UniScn_EvMaxTh_4
+{0x62, 0x05},// UniScn_EvMaxTh_3
+{0x63, 0xb8},// UniScn_EvMaxTh_2
+{0x64, 0xd8},// UniScn_EvMaxTh_1     def :  8fps  Ag 3x Dg 1x
 
-{0x65, 0x4e},	// UniScn_AglMinTh_1
-{0x66, 0x50},	// UniScn_AglMinTh_2
-{0x67, 0x73},	// UniScn_AglMaxTh_1
-{0x68, 0x7d},	// UniScn_AglMaxTh_2
+{0x65, 0x4e},// UniScn_AglMinTh_1
+{0x66, 0x50},// UniScn_AglMinTh_2
+{0x67, 0x73},// UniScn_AglMaxTh_1
+{0x68, 0x7d},// UniScn_AglMaxTh_2
 
 {0x69, 0x03},// UniScn_YstdMinTh
 {0x6a, 0x0a},// UniScn_YstdMaxTh
 {0x6b, 0x1e},// UniScn_BPstdMinTh
 {0x6c, 0x3a},// UniScn_BPstdMaxTh
 
-{0x6d, 0x64},	// Ytgt_ColWgt_Out
-{0x6e, 0x64},	// Ytgt_ColWgt_Dark
-{0x6f, 0x64},	// ColSat_ColWgt_Out
-{0x70, 0x64},	// ColSat_ColWgt_Dark
-{0x71, 0x64},	// CMC_ColWgt_Out
-{0x72, 0x64},	// CMC_ColWgt_Dark
-{0x73, 0x64},	// MCMC_ColWgt_Out
-{0x74, 0x64},	// MCMC_ColWgt_Dark
-{0x75, 0x64},	// CustomReg_CorWgt_Out
-{0x76, 0x64},	// CustomReg_CorWgt_Dark
+{0x6d, 0x64},// Ytgt_ColWgt_Out
+{0x6e, 0x64},// Ytgt_ColWgt_Dark
+{0x6f, 0x64},// ColSat_ColWgt_Out
+{0x70, 0x64},// ColSat_ColWgt_Dark
+{0x71, 0x64},// CMC_ColWgt_Out
+{0x72, 0x64},// CMC_ColWgt_Dark
+{0x73, 0x64},// MCMC_ColWgt_Out
+{0x74, 0x64},// MCMC_ColWgt_Dark
+{0x75, 0x64},// CustomReg_CorWgt_Out
+{0x76, 0x64},// CustomReg_CorWgt_Dark
 
-{0x77, 0x64},	// UniScn_Y_Ratio
-{0x78, 0x50},	// UniScn_Cb_Ratio
-{0x79, 0x50},	// UniScn_Cr_Ratio
+{0x77, 0x64},// UniScn_Y_Ratio
+{0x78, 0x50},// UniScn_Cb_Ratio
+{0x79, 0x50},// UniScn_Cr_Ratio
 
-{0x7a, 0x00},	// Ytgt_offset
-{0x7b, 0x00},	// CbSat_offset
-{0x7c, 0x00},	// CrSat_offset
+{0x7a, 0x00},// Ytgt_offset
+{0x7b, 0x00},// CbSat_offset
+{0x7c, 0x00},// CrSat_offset
 
 {0x7d, 0x34},// Y_target_Outdoor
 {0x7e, 0x34},// Y_target_Indoor
@@ -3415,25 +3389,25 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x8d, 0x75},// Cr _Sat_LowTemp
 {0x8e, 0x92},// Cr _Sat_HighTemp
 
-{0x8f, 0x82},	// BLC_ofs_r_Outdoor
-{0x90, 0x81},	// BLC_ofs_b_Outdoor
-{0x91, 0x82},	// BLC_ofs_gr_Outdoor
-{0x92, 0x82},	// BLC_ofs_gb_Outdoor
+{0x8f, 0x82},// BLC_ofs_r_Outdoor
+{0x90, 0x81},// BLC_ofs_b_Outdoor
+{0x91, 0x82},// BLC_ofs_gr_Outdoor
+{0x92, 0x82},// BLC_ofs_gb_Outdoor
 
-{0x93, 0x81},	// BLC_ofs_r_Indoor
-{0x94, 0x80},	// BLC_ofs_b_Indoor
-{0x95, 0x81},	// BLC_ofs_gr_Indoor
-{0x96, 0x81},	// BLC_ofs_gb_Indoor
+{0x93, 0x81},// BLC_ofs_r_Indoor
+{0x94, 0x80},// BLC_ofs_b_Indoor
+{0x95, 0x81},// BLC_ofs_gr_Indoor
+{0x96, 0x81},// BLC_ofs_gb_Indoor
 
-{0x97, 0x82},	// BLC_ofs_r_Dark1
-{0x98, 0x82},	// BLC_ofs_b_Dark1
-{0x99, 0x82},	// BLC_ofs_gr_Dark1
-{0x9a, 0x82},	// BLC_ofs_gb_Dark1
+{0x97, 0x82},// BLC_ofs_r_Dark1
+{0x98, 0x82},// BLC_ofs_b_Dark1
+{0x99, 0x82},// BLC_ofs_gr_Dark1
+{0x9a, 0x82},// BLC_ofs_gb_Dark1
 
-{0x9b, 0x82},	// BLC_ofs_r_Dark2
-{0x9c, 0x82},	// BLC_ofs_b_Dark2
-{0x9d, 0x82},	// BLC_ofs_gr_Dark2
-{0x9e, 0x82},	// BLC_ofs_gb_Dark2
+{0x9b, 0x82},// BLC_ofs_r_Dark2
+{0x9c, 0x82},// BLC_ofs_b_Dark2
+{0x9d, 0x82},// BLC_ofs_gr_Dark2
+{0x9e, 0x82},// BLC_ofs_gb_Dark2
 
 {0x9f, 0x00},//LSC Out_L ofs G
 {0xa0, 0x00},//LSC Out_L ofs B
@@ -3477,31 +3451,31 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xc1, 0x80},// LSC4_Ind_HighTmp       gain b
 {0xc2, 0x7a},// LSC5_Ind_HighTmp       gain r
 
-{0xc3, 0x00},	// LSC0_Dark1_LowTmp      offset g
-{0xc4, 0x00},	// LSC1_Dark1_LowTmp      offset b
-{0xc5, 0x00},	// LSC2_Dark1_LowTmp      offset r
-{0xc6, 0x68},	// LSC3_Dark1_LowTmp      gain g
+{0xc3, 0x00},// LSC0_Dark1_LowTmp      offset g
+{0xc4, 0x00},// LSC1_Dark1_LowTmp      offset b
+{0xc5, 0x00},// LSC2_Dark1_LowTmp      offset r
+{0xc6, 0x68},// LSC3_Dark1_LowTmp      gain g
 {0xc7, 0x65},// LSC4_Dark1_LowTmp      gain b
 {0xc8, 0x62},// LSC5_Dark1_LowTmp      gain r
 
-{0xc9, 0x00},	// LSC0_Dark1_MiddleTmp   offset g
-{0xca, 0x00},	// LSC1_Dark1_MiddleTmp   offset b
-{0xcb, 0x00},	// LSC2_Dark1_MiddleTmp   offset r
-{0xcc, 0x68},	// LSC3_Dark1_MiddleTmp   gain g
+{0xc9, 0x00},// LSC0_Dark1_MiddleTmp   offset g
+{0xca, 0x00},// LSC1_Dark1_MiddleTmp   offset b
+{0xcb, 0x00},// LSC2_Dark1_MiddleTmp   offset r
+{0xcc, 0x68},// LSC3_Dark1_MiddleTmp   gain g
 {0xcd, 0x65},// LSC4_Dark1_MiddleTmp   gain b
 {0xce, 0x62},// LSC5_Dark1_MiddleTmp   gain r
 
-{0xcf, 0x00},	// LSC0_Dark1_HighTmp   offset g
-{0xd0, 0x00},	// LSC1_Dark1_HighTmp   offset b
-{0xd1, 0x00},	// LSC2_Dark1_HighTmp   offset r
-{0xd2, 0x68},	// LSC3_Dark1_HighTmp   gain g
+{0xcf, 0x00},// LSC0_Dark1_HighTmp   offset g
+{0xd0, 0x00},// LSC1_Dark1_HighTmp   offset b
+{0xd1, 0x00},// LSC2_Dark1_HighTmp   offset r
+{0xd2, 0x68},// LSC3_Dark1_HighTmp   gain g
 {0xd3, 0x65},// LSC4_Dark1_HighTmp   gain b
 {0xd4, 0x62},// LSC5_Dark1_HighTmp   gain r
 
-{0xd5, 0x00},	// LSC0_Dark2           offset g
-{0xd6, 0x00},	// LSC1_Dark2           offset b
-{0xd7, 0x00},	// LSC2_Dark2           offset r
-{0xd8, 0x68},	// LSC3_Dark2           gain g
+{0xd5, 0x00},// LSC0_Dark2           offset g
+{0xd6, 0x00},// LSC1_Dark2           offset b
+{0xd7, 0x00},// LSC2_Dark2           offset r
+{0xd8, 0x68},// LSC3_Dark2           gain g
 {0xd9, 0x65},// LSC4_Dark2           gain b
 {0xda, 0x62},// LSC5_Dark2           gain r
 
@@ -3516,45 +3490,45 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xe3, 0x15}, //CMC_Out_07
 {0xe4, 0x5a}, //CMC_Out_08
 
-{0xe5, 0x04},	// CMC_Out_LumTh1      CMC SP gain axis X(luminance)
-{0xe6, 0x0a},	// CMC_Out_LumTh2
-{0xe7, 0x10},	// CMC_Out_LumTh3
-{0xe8, 0x18},	// CMC_Out_LumTh4
-{0xe9, 0x20},	// CMC_Out_LumTh5
-{0xea, 0x28},	// CMC_Out_LumTh6
-{0xeb, 0x40},	// CMC_Out_LumTh7
+{0xe5, 0x04},// CMC_Out_LumTh1      CMC SP gain axis X(luminance)
+{0xe6, 0x0a},// CMC_Out_LumTh2
+{0xe7, 0x10},// CMC_Out_LumTh3
+{0xe8, 0x18},// CMC_Out_LumTh4
+{0xe9, 0x20},// CMC_Out_LumTh5
+{0xea, 0x28},// CMC_Out_LumTh6
+{0xeb, 0x40},// CMC_Out_LumTh7
 
-{0xec, 0x20},	// CMC_Out_LumGain1_R  CMC SP R gain axis Y (gain):: max32
-{0xed, 0x20},	// CMC_Out_LumGain2_R
-{0xee, 0x20},	// CMC_Out_LumGain3_R
-{0xef, 0x20},	// CMC_Out_LumGain4_R
-{0xf0, 0x20},	// CMC_Out_LumGain5_R
-{0xf1, 0x20},	// CMC_Out_LumGain6_R
-{0xf2, 0x20},	// CMC_Out_LumGain7_R
-{0xf3, 0x20},	// CMC_Out_LumGain8_R    20 = x1.0
+{0xec, 0x20},// CMC_Out_LumGain1_R  CMC SP R gain axis Y (gain):: max32
+{0xed, 0x20},// CMC_Out_LumGain2_R
+{0xee, 0x20},// CMC_Out_LumGain3_R
+{0xef, 0x20},// CMC_Out_LumGain4_R
+{0xf0, 0x20},// CMC_Out_LumGain5_R
+{0xf1, 0x20},// CMC_Out_LumGain6_R
+{0xf2, 0x20},// CMC_Out_LumGain7_R
+{0xf3, 0x20},// CMC_Out_LumGain8_R    20 = x1.0
 
-{0xf4, 0x20},	// CMC_Out_LumGain1_G  CMC SP G gain axis Y (gain):: max32
-{0xf5, 0x20},	// CMC_Out_LumGain2_G
-{0xf6, 0x20},	// CMC_Out_LumGain3_G
-{0xf7, 0x20},	// CMC_Out_LumGain4_G
-{0xf8, 0x20},	// CMC_Out_LumGain5_G
-{0xf9, 0x20},	// CMC_Out_LumGain6_G
-{0xfa, 0x20},	// CMC_Out_LumGain7_G
-{0xfb, 0x20},	// CMC_Out_LumGain8_G    20 = x1.0
+{0xf4, 0x20},// CMC_Out_LumGain1_G  CMC SP G gain axis Y (gain):: max32
+{0xf5, 0x20},// CMC_Out_LumGain2_G
+{0xf6, 0x20},// CMC_Out_LumGain3_G
+{0xf7, 0x20},// CMC_Out_LumGain4_G
+{0xf8, 0x20},// CMC_Out_LumGain5_G
+{0xf9, 0x20},// CMC_Out_LumGain6_G
+{0xfa, 0x20},// CMC_Out_LumGain7_G
+{0xfb, 0x20},// CMC_Out_LumGain8_G    20 = x1.0
 
-{0xfc, 0x20},	// CMC_Out_LumGain1_B  CMC SP B gain axis Y (gain):: max32
-{0xfd, 0x20},	// CMC_Out_LumGain2_B
+{0xfc, 0x20},// CMC_Out_LumGain1_B  CMC SP B gain axis Y (gain):: max32
+{0xfd, 0x20},// CMC_Out_LumGain2_B
 {0x0e, 0x00}, // burst end
 
-{0x03, 0xd4},	// page D4
+{0x03, 0xd4},// page D4
 {0x0e, 0x01}, // burst start
 
-{0x10, 0x20},	// CMC_Out_LumGain3_B
-{0x11, 0x20},	// CMC_Out_LumGain4_B
-{0x12, 0x20},	// CMC_Out_LumGain5_B
-{0x13, 0x20},	// CMC_Out_LumGain6_B
-{0x14, 0x20},	// CMC_Out_LumGain7_B
-{0x15, 0x20},	// CMC_Out_LumGain8_B    20 = x1.0
+{0x10, 0x20},// CMC_Out_LumGain3_B
+{0x11, 0x20},// CMC_Out_LumGain4_B
+{0x12, 0x20},// CMC_Out_LumGain5_B
+{0x13, 0x20},// CMC_Out_LumGain6_B
+{0x14, 0x20},// CMC_Out_LumGain7_B
+{0x15, 0x20},// CMC_Out_LumGain8_B    20 = x1.0
 
 {0x16, 0x2f},//CMCSIGN_In_Mid
 {0x17, 0x53},//CMC_In_Mid_00
@@ -3567,40 +3541,40 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x1e, 0x1d},//CMC_In_Mid_07
 {0x1f, 0x61},//CMC_In_Mid_08
 
-{0x20, 0x04},	// CMC_Ind_LumTh1     CMC SP gain axis X(luminance)
-{0x21, 0x0a},	// CMC_Ind_LumTh2
-{0x22, 0x10},	// CMC_Ind_LumTh3
-{0x23, 0x18},	// CMC_Ind_LumTh4
-{0x24, 0x20},	// CMC_Ind_LumTh5
-{0x25, 0x28},	// CMC_Ind_LumTh6
-{0x26, 0x40},	// CMC_Ind_LumTh7
+{0x20, 0x04},// CMC_Ind_LumTh1     CMC SP gain axis X(luminance)
+{0x21, 0x0a},// CMC_Ind_LumTh2
+{0x22, 0x10},// CMC_Ind_LumTh3
+{0x23, 0x18},// CMC_Ind_LumTh4
+{0x24, 0x20},// CMC_Ind_LumTh5
+{0x25, 0x28},// CMC_Ind_LumTh6
+{0x26, 0x40},// CMC_Ind_LumTh7
 
-{0x27, 0x08},	// CMC_Ind_LumGain1_R   CMC SP R gain axis Y (gain):: max32
-{0x28, 0x12},	// CMC_Ind_LumGain2_R
-{0x29, 0x18},	// CMC_Ind_LumGain3_R
-{0x2a, 0x1c},	// CMC_Ind_LumGain4_R
-{0x2b, 0x1e},	// CMC_Ind_LumGain5_R
-{0x2c, 0x20},	// CMC_Ind_LumGain6_R
-{0x2d, 0x20},	// CMC_Ind_LumGain7_R
-{0x2e, 0x20},	// CMC_Ind_LumGain8_R    20 = x1.0
+{0x27, 0x08},// CMC_Ind_LumGain1_R   CMC SP R gain axis Y (gain):: max32
+{0x28, 0x12},// CMC_Ind_LumGain2_R
+{0x29, 0x18},// CMC_Ind_LumGain3_R
+{0x2a, 0x1c},// CMC_Ind_LumGain4_R
+{0x2b, 0x1e},// CMC_Ind_LumGain5_R
+{0x2c, 0x20},// CMC_Ind_LumGain6_R
+{0x2d, 0x20},// CMC_Ind_LumGain7_R
+{0x2e, 0x20},// CMC_Ind_LumGain8_R    20 = x1.0
 
-{0x2f, 0x08},	// CMC_Ind_LumGain1_G   CMC SP G gain axis Y (gain):: max32
-{0x30, 0x12},	// CMC_Ind_LumGain2_G
-{0x31, 0x18},	// CMC_Ind_LumGain3_G
-{0x32, 0x1c},	// CMC_Ind_LumGain4_G
-{0x33, 0x1e},	// CMC_Ind_LumGain5_G
-{0x34, 0x20},	// CMC_Ind_LumGain6_G
-{0x35, 0x20},	// CMC_Ind_LumGain7_G
-{0x36, 0x20},	// CMC_Ind_LumGain8_G    20 = x1.0
+{0x2f, 0x08},// CMC_Ind_LumGain1_G   CMC SP G gain axis Y (gain):: max32
+{0x30, 0x12},// CMC_Ind_LumGain2_G
+{0x31, 0x18},// CMC_Ind_LumGain3_G
+{0x32, 0x1c},// CMC_Ind_LumGain4_G
+{0x33, 0x1e},// CMC_Ind_LumGain5_G
+{0x34, 0x20},// CMC_Ind_LumGain6_G
+{0x35, 0x20},// CMC_Ind_LumGain7_G
+{0x36, 0x20},// CMC_Ind_LumGain8_G    20 = x1.0
 
-{0x37, 0x08},	// CMC_Ind_LumGain1_B   CMC SP B gain axis Y (gain):: max32
-{0x38, 0x12},	// CMC_Ind_LumGain2_B
-{0x39, 0x18},	// CMC_Ind_LumGain3_B
-{0x3a, 0x1c},	// CMC_Ind_LumGain4_B
-{0x3b, 0x1e},	// CMC_Ind_LumGain5_B
-{0x3c, 0x20},	// CMC_Ind_LumGain6_B
-{0x3d, 0x20},	// CMC_Ind_LumGain7_B
-{0x3e, 0x20},	// CMC_Ind_LumGain8_B   20 = x1.0
+{0x37, 0x08},// CMC_Ind_LumGain1_B   CMC SP B gain axis Y (gain):: max32
+{0x38, 0x12},// CMC_Ind_LumGain2_B
+{0x39, 0x18},// CMC_Ind_LumGain3_B
+{0x3a, 0x1c},// CMC_Ind_LumGain4_B
+{0x3b, 0x1e},// CMC_Ind_LumGain5_B
+{0x3c, 0x20},// CMC_Ind_LumGain6_B
+{0x3d, 0x20},// CMC_Ind_LumGain7_B
+{0x3e, 0x20},// CMC_Ind_LumGain8_B   20 = x1.0
 
 {0x3f, 0x2f},//CMCSIGN_Dark1
 {0x40, 0x53},//CMC_Dark1_00
@@ -3613,40 +3587,40 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x47, 0x23},//CMC_Dark1_07
 {0x48, 0x66},//CMC_Dark1_08
 
-{0x49, 0x04},	// CMC_Dark1_LumTh1     CMC SP gain axis X(luminance)
-{0x4a, 0x0a},	// CMC_Dark1_LumTh2
-{0x4b, 0x10},	// CMC_Dark1_LumTh3
-{0x4c, 0x18},	// CMC_Dark1_LumTh4
-{0x4d, 0x20},	// CMC_Dark1_LumTh5
-{0x4e, 0x28},	// CMC_Dark1_LumTh6
-{0x4f, 0x40},	// CMC_Dark1_LumTh7
+{0x49, 0x04},// CMC_Dark1_LumTh1     CMC SP gain axis X(luminance)
+{0x4a, 0x0a},// CMC_Dark1_LumTh2
+{0x4b, 0x10},// CMC_Dark1_LumTh3
+{0x4c, 0x18},// CMC_Dark1_LumTh4
+{0x4d, 0x20},// CMC_Dark1_LumTh5
+{0x4e, 0x28},// CMC_Dark1_LumTh6
+{0x4f, 0x40},// CMC_Dark1_LumTh7
 
-{0x50, 0x08},	// CMC_Dark1_LumGain1_R  CMC SP R gain axis Y (gain):: max32
-{0x51, 0x12},	// CMC_Dark1_LumGain2_R
-{0x52, 0x18},	// CMC_Dark1_LumGain3_R
-{0x53, 0x1c},	// CMC_Dark1_LumGain4_R
-{0x54, 0x1e},	// CMC_Dark1_LumGain5_R
-{0x55, 0x20},	// CMC_Dark1_LumGain6_R
-{0x56, 0x20},	// CMC_Dark1_LumGain7_R
-{0x57, 0x20},	// CMC_Dark1_LumGain8_R    20 = x1.0
+{0x50, 0x08},// CMC_Dark1_LumGain1_R  CMC SP R gain axis Y (gain):: max32
+{0x51, 0x12},// CMC_Dark1_LumGain2_R
+{0x52, 0x18},// CMC_Dark1_LumGain3_R
+{0x53, 0x1c},// CMC_Dark1_LumGain4_R
+{0x54, 0x1e},// CMC_Dark1_LumGain5_R
+{0x55, 0x20},// CMC_Dark1_LumGain6_R
+{0x56, 0x20},// CMC_Dark1_LumGain7_R
+{0x57, 0x20},// CMC_Dark1_LumGain8_R    20 = x1.0
 
-{0x58, 0x08},	// CMC_Dark1_LumGain1_G   CMC SP G gain axis Y (gain):: max32
-{0x59, 0x12},	// CMC_Dark1_LumGain2_G
-{0x5a, 0x18},	// CMC_Dark1_LumGain3_G
-{0x5b, 0x1c},	// CMC_Dark1_LumGain4_G
-{0x5c, 0x1e},	// CMC_Dark1_LumGain5_G
-{0x5d, 0x20},	// CMC_Dark1_LumGain6_G
-{0x5e, 0x20},	// CMC_Dark1_LumGain7_G
-{0x5f, 0x20},	// CMC_Dark1_LumGain8_G    20 = x1.0
+{0x58, 0x08},// CMC_Dark1_LumGain1_G   CMC SP G gain axis Y (gain):: max32
+{0x59, 0x12},// CMC_Dark1_LumGain2_G
+{0x5a, 0x18},// CMC_Dark1_LumGain3_G
+{0x5b, 0x1c},// CMC_Dark1_LumGain4_G
+{0x5c, 0x1e},// CMC_Dark1_LumGain5_G
+{0x5d, 0x20},// CMC_Dark1_LumGain6_G
+{0x5e, 0x20},// CMC_Dark1_LumGain7_G
+{0x5f, 0x20},// CMC_Dark1_LumGain8_G    20 = x1.0
 
-{0x60, 0x08},	// CMC_Dark1_LumGain1_B   CMC SP B gain axis Y (gain):: max32
-{0x61, 0x12},	// CMC_Dark1_LumGain2_B
-{0x62, 0x18},	// CMC_Dark1_LumGain3_B
-{0x63, 0x1c},	// CMC_Dark1_LumGain4_B
-{0x64, 0x1e},	// CMC_Dark1_LumGain5_B
-{0x65, 0x20},	// CMC_Dark1_LumGain6_B
-{0x66, 0x20},	// CMC_Dark1_LumGain7_B
-{0x67, 0x20},	// CMC_Dark1_LumGain8_B   20 = x1.0
+{0x60, 0x08},// CMC_Dark1_LumGain1_B   CMC SP B gain axis Y (gain):: max32
+{0x61, 0x12},// CMC_Dark1_LumGain2_B
+{0x62, 0x18},// CMC_Dark1_LumGain3_B
+{0x63, 0x1c},// CMC_Dark1_LumGain4_B
+{0x64, 0x1e},// CMC_Dark1_LumGain5_B
+{0x65, 0x20},// CMC_Dark1_LumGain6_B
+{0x66, 0x20},// CMC_Dark1_LumGain7_B
+{0x67, 0x20},// CMC_Dark1_LumGain8_B   20 = x1.0
 
 {0x68, 0x2f},//CMCSIGN_Dark2
 {0x69, 0x53},//CMC_Dark2_00
@@ -3659,13 +3633,13 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x70, 0x23},//CMC_Dark2_07
 {0x71, 0x66},//CMC_Dark2_08
 
-{0x72, 0x04},	// CMC_Dark2_LumTh1        CMC SP gain axis X(luminance)
-{0x73, 0x0a},	// CMC_Dark2_LumTh2
-{0x74, 0x10},	// CMC_Dark2_LumTh3
-{0x75, 0x18},	// CMC_Dark2_LumTh4
-{0x76, 0x20},	// CMC_Dark2_LumTh5
-{0x77, 0x28},	// CMC_Dark2_LumTh6
-{0x78, 0x40},	// CMC_Dark2_LumTh7
+{0x72, 0x04},// CMC_Dark2_LumTh1        CMC SP gain axis X(luminance)
+{0x73, 0x0a},// CMC_Dark2_LumTh2
+{0x74, 0x10},// CMC_Dark2_LumTh3
+{0x75, 0x18},// CMC_Dark2_LumTh4
+{0x76, 0x20},// CMC_Dark2_LumTh5
+{0x77, 0x28},// CMC_Dark2_LumTh6
+{0x78, 0x40},// CMC_Dark2_LumTh7
 
 {0x79, 0x15},// CMC_Dark2_LumGain1_R    CMC SP R gain
 {0x7a, 0x18},// CMC_Dark2_LumGain2_R
@@ -3705,40 +3679,40 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x99, 0x14}, //CMC_In_Low_07
 {0x9a, 0x58}, // CMC_In_Low_08
 
-{0x9b, 0x04},	// CMC_LowTemp_LumTh1     CMC SP gain axis X(luminance)
-{0x9c, 0x0a},	// CMC_LowTemp_LumTh2
-{0x9d, 0x10},	// CMC_LowTemp_LumTh3
-{0x9e, 0x18},	// CMC_LowTemp_LumTh4
-{0x9f, 0x20},	// CMC_LowTemp_LumTh5
-{0xa0, 0x28},	// CMC_LowTemp_LumTh6
-{0xa1, 0x40},	// CMC_LowTemp_LumTh7
+{0x9b, 0x04},// CMC_LowTemp_LumTh1     CMC SP gain axis X(luminance)
+{0x9c, 0x0a},// CMC_LowTemp_LumTh2
+{0x9d, 0x10},// CMC_LowTemp_LumTh3
+{0x9e, 0x18},// CMC_LowTemp_LumTh4
+{0x9f, 0x20},// CMC_LowTemp_LumTh5
+{0xa0, 0x28},// CMC_LowTemp_LumTh6
+{0xa1, 0x40},// CMC_LowTemp_LumTh7
 
-{0xa2, 0x20},	// CMC_LowTemp_LumGain1_R    CMC SP R gain
-{0xa3, 0x20},	// CMC_LowTemp_LumGain2_R
-{0xa4, 0x20},	// CMC_LowTemp_LumGain3_R
-{0xa5, 0x20},	// CMC_LowTemp_LumGain4_R
-{0xa6, 0x20},	// CMC_LowTemp_LumGain5_R
-{0xa7, 0x20},	// CMC_LowTemp_LumGain6_R
-{0xa8, 0x20},	// CMC_LowTemp_LumGain7_R
-{0xa9, 0x20},	// CMC_LowTemp_LumGain8_R    20 = x1.0
+{0xa2, 0x20},// CMC_LowTemp_LumGain1_R    CMC SP R gain
+{0xa3, 0x20},// CMC_LowTemp_LumGain2_R
+{0xa4, 0x20},// CMC_LowTemp_LumGain3_R
+{0xa5, 0x20},// CMC_LowTemp_LumGain4_R
+{0xa6, 0x20},// CMC_LowTemp_LumGain5_R
+{0xa7, 0x20},// CMC_LowTemp_LumGain6_R
+{0xa8, 0x20},// CMC_LowTemp_LumGain7_R
+{0xa9, 0x20},// CMC_LowTemp_LumGain8_R    20 = x1.0
 
-{0xaa, 0x20},	// CMC_LowTemp_LumGain1_G    CMC SP G gain
-{0xab, 0x20},	// CMC_LowTemp_LumGain2_G
-{0xac, 0x20},	// CMC_LowTemp_LumGain3_G
-{0xad, 0x20},	// CMC_LowTemp_LumGain4_G
-{0xae, 0x20},	// CMC_LowTemp_LumGain5_G
-{0xaf, 0x20},	// CMC_LowTemp_LumGain6_G
-{0xb0, 0x20},	// CMC_LowTemp_LumGain7_G
-{0xb1, 0x20},	// CMC_LowTemp_LumGain8_G    20 = x1.0
+{0xaa, 0x20},// CMC_LowTemp_LumGain1_G    CMC SP G gain
+{0xab, 0x20},// CMC_LowTemp_LumGain2_G
+{0xac, 0x20},// CMC_LowTemp_LumGain3_G
+{0xad, 0x20},// CMC_LowTemp_LumGain4_G
+{0xae, 0x20},// CMC_LowTemp_LumGain5_G
+{0xaf, 0x20},// CMC_LowTemp_LumGain6_G
+{0xb0, 0x20},// CMC_LowTemp_LumGain7_G
+{0xb1, 0x20},// CMC_LowTemp_LumGain8_G    20 = x1.0
 
-{0xb2, 0x20},	// CMC_LowTemp_LumGain1_B    CMC SP B gain
-{0xb3, 0x20},	// CMC_LowTemp_LumGain2_B
-{0xb4, 0x20},	// CMC_LowTemp_LumGain3_B
-{0xb5, 0x20},	// CMC_LowTemp_LumGain4_B
-{0xb6, 0x20},	// CMC_LowTemp_LumGain5_B
-{0xb7, 0x20},	// CMC_LowTemp_LumGain6_B
-{0xb8, 0x20},	// CMC_LowTemp_LumGain7_B
-{0xb9, 0x20},	// CMC_LowTemp_LumGain8_B    20 = x1.0
+{0xb2, 0x20},// CMC_LowTemp_LumGain1_B    CMC SP B gain
+{0xb3, 0x20},// CMC_LowTemp_LumGain2_B
+{0xb4, 0x20},// CMC_LowTemp_LumGain3_B
+{0xb5, 0x20},// CMC_LowTemp_LumGain4_B
+{0xb6, 0x20},// CMC_LowTemp_LumGain5_B
+{0xb7, 0x20},// CMC_LowTemp_LumGain6_B
+{0xb8, 0x20},// CMC_LowTemp_LumGain7_B
+{0xb9, 0x20},// CMC_LowTemp_LumGain8_B    20 = x1.0
 
 {0xba, 0x2d}, //CMCSIGN_In_High
 {0xbb, 0x55}, //CMC_In_High_00
@@ -3751,46 +3725,46 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xc2, 0x18}, //CMC_In_High_07
 {0xc3, 0x55}, //CMC_In_High_08
 
-{0xc4, 0x04},	// CMC_HighTemp_LumTh1       CMC SP gain axis X(luminance)
-{0xc5, 0x0a},	// CMC_HighTemp_LumTh2
-{0xc6, 0x10},	// CMC_HighTemp_LumTh3
-{0xc7, 0x18},	// CMC_HighTemp_LumTh4
-{0xc8, 0x20},	// CMC_HighTemp_LumTh5
-{0xc9, 0x28},	// CMC_HighTemp_LumTh6
-{0xca, 0x40},	// CMC_HighTemp_LumTh7
+{0xc4, 0x04},// CMC_HighTemp_LumTh1       CMC SP gain axis X(luminance)
+{0xc5, 0x0a},// CMC_HighTemp_LumTh2
+{0xc6, 0x10},// CMC_HighTemp_LumTh3
+{0xc7, 0x18},// CMC_HighTemp_LumTh4
+{0xc8, 0x20},// CMC_HighTemp_LumTh5
+{0xc9, 0x28},// CMC_HighTemp_LumTh6
+{0xca, 0x40},// CMC_HighTemp_LumTh7
 
-{0xcb, 0x20},	// CMC_HighTemp_LumGain1_R   CMC SP R gain
-{0xcc, 0x20},	// CMC_HighTemp_LumGain2_R
-{0xcd, 0x20},	// CMC_HighTemp_LumGain3_R
-{0xce, 0x20},	// CMC_HighTemp_LumGain4_R
-{0xcf, 0x20},	// CMC_HighTemp_LumGain5_R
-{0xd0, 0x20},	// CMC_HighTemp_LumGain6_R
-{0xd1, 0x20},	// CMC_HighTemp_LumGain7_R
-{0xd2, 0x20},	// CMC_HighTemp_LumGain8_R    20 = x1.0
+{0xcb, 0x20},// CMC_HighTemp_LumGain1_R   CMC SP R gain
+{0xcc, 0x20},// CMC_HighTemp_LumGain2_R
+{0xcd, 0x20},// CMC_HighTemp_LumGain3_R
+{0xce, 0x20},// CMC_HighTemp_LumGain4_R
+{0xcf, 0x20},// CMC_HighTemp_LumGain5_R
+{0xd0, 0x20},// CMC_HighTemp_LumGain6_R
+{0xd1, 0x20},// CMC_HighTemp_LumGain7_R
+{0xd2, 0x20},// CMC_HighTemp_LumGain8_R    20 = x1.0
 
-{0xd3, 0x20},	// CMC_HighTemp_LumGain1_G   CMC SP G gain
-{0xd4, 0x20},	// CMC_HighTemp_LumGain2_G
-{0xd5, 0x20},	// CMC_HighTemp_LumGain3_G
-{0xd6, 0x20},	// CMC_HighTemp_LumGain4_G
-{0xd7, 0x20},	// CMC_HighTemp_LumGain5_G
-{0xd8, 0x20},	// CMC_HighTemp_LumGain6_G
-{0xd9, 0x20},	// CMC_HighTemp_LumGain7_G
-{0xda, 0x20},	// CMC_HighTemp_LumGain8_G    20 = x1.
+{0xd3, 0x20},// CMC_HighTemp_LumGain1_G   CMC SP G gain
+{0xd4, 0x20},// CMC_HighTemp_LumGain2_G
+{0xd5, 0x20},// CMC_HighTemp_LumGain3_G
+{0xd6, 0x20},// CMC_HighTemp_LumGain4_G
+{0xd7, 0x20},// CMC_HighTemp_LumGain5_G
+{0xd8, 0x20},// CMC_HighTemp_LumGain6_G
+{0xd9, 0x20},// CMC_HighTemp_LumGain7_G
+{0xda, 0x20},// CMC_HighTemp_LumGain8_G    20 = x1.
 
-{0xdb, 0x20},	// CMC_HighTemp_LumGain1_B   CMC SP B gain
-{0xdc, 0x20},	// CMC_HighTemp_LumGain2_B
-{0xdd, 0x20},	// CMC_HighTemp_LumGain3_B
-{0xde, 0x20},	// CMC_HighTemp_LumGain4_B
-{0xdf, 0x20},	// CMC_HighTemp_LumGain5_B
-{0xe0, 0x20},	// CMC_HighTemp_LumGain6_B
-{0xe1, 0x20},	// CMC_HighTemp_LumGain7_B
-{0xe2, 0x20},	// CMC_HighTemp_LumGain8_B   20 = x1.0
+{0xdb, 0x20},// CMC_HighTemp_LumGain1_B   CMC SP B gain
+{0xdc, 0x20},// CMC_HighTemp_LumGain2_B
+{0xdd, 0x20},// CMC_HighTemp_LumGain3_B
+{0xde, 0x20},// CMC_HighTemp_LumGain4_B
+{0xdf, 0x20},// CMC_HighTemp_LumGain5_B
+{0xe0, 0x20},// CMC_HighTemp_LumGain6_B
+{0xe1, 0x20},// CMC_HighTemp_LumGain7_B
+{0xe2, 0x20},// CMC_HighTemp_LumGain8_B   20 = x1.0
 
 ////////////////////
 // Adaptive Gamma //
 ////////////////////
 
-{0xe3, 0x00},	// GMA_OUT
+{0xe3, 0x00},// GMA_OUT
 {0xe4, 0x03},
 {0xe5, 0x08},
 {0xe6, 0x0f},
@@ -3820,7 +3794,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 
 {0x0e, 0x00}, // burst end
 
-{0x03, 0xd5},	// Page d5
+{0x03, 0xd5},// Page d5
 
 {0x0e, 0x01}, // burst start
 
@@ -3832,7 +3806,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x15, 0xfb},
 {0x16, 0xff},
 
-{0x17, 0x00},	//GMA_IN
+{0x17, 0x00},//GMA_IN
 {0x18, 0x03},
 {0x19, 0x08},
 {0x1a, 0x0f},
@@ -3867,7 +3841,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x37, 0xfb},
 {0x38, 0xff},
 
-{0x39, 0x00},	// GMA_D1
+{0x39, 0x00},// GMA_D1
 {0x3a, 0x06},
 {0x3b, 0x0e},
 {0x3c, 0x17},
@@ -3902,7 +3876,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x59, 0xfc},
 {0x5a, 0xff},
 
-{0x5b, 0x00},	//GMA_D2
+{0x5b, 0x00},//GMA_D2
 {0x5c, 0x08},
 {0x5d, 0x12},
 {0x5e, 0x1b},
@@ -3967,47 +3941,47 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x93, 0x0b}, //Outdoor_hue_angle5
 {0x94, 0x87}, //Outdoor_hue_angle6
 
-{0x95, 0x00},	// MCMC24_Outdoor  mcmc_rgb_ofs_sign_r
-{0x96, 0x00},	// MCMC25_Outdoor  mcmc_rgb_ofs_sign_g
-{0x97, 0x00},	// MCMC26_Outdoor  mcmc_rgb_ofs_sign_b
+{0x95, 0x00},// MCMC24_Outdoor  mcmc_rgb_ofs_sign_r
+{0x96, 0x00},// MCMC25_Outdoor  mcmc_rgb_ofs_sign_g
+{0x97, 0x00},// MCMC26_Outdoor  mcmc_rgb_ofs_sign_b
 
-{0x98, 0x00},	// MCMC27_Outdoor  mcmc_rgb_ofs_r1 R
-{0x99, 0x00},	// MCMC28_Outdoor  mcmc_rgb_ofs_r1 G
-{0x9a, 0x00},	// MCMC29_Outdoor  mcmc_rgb_ofs_r1 B
+{0x98, 0x00},// MCMC27_Outdoor  mcmc_rgb_ofs_r1 R
+{0x99, 0x00},// MCMC28_Outdoor  mcmc_rgb_ofs_r1 G
+{0x9a, 0x00},// MCMC29_Outdoor  mcmc_rgb_ofs_r1 B
 
-{0x9b, 0x00},	// MCMC30_Outdoor  mcmc_rgb_ofs_r2 R
-{0x9c, 0x00},	// MCMC31_Outdoor  mcmc_rgb_ofs_r2 G
-{0x9d, 0x00},	// MCMC32_Outdoor  mcmc_rgb_ofs_r2 B
+{0x9b, 0x00},// MCMC30_Outdoor  mcmc_rgb_ofs_r2 R
+{0x9c, 0x00},// MCMC31_Outdoor  mcmc_rgb_ofs_r2 G
+{0x9d, 0x00},// MCMC32_Outdoor  mcmc_rgb_ofs_r2 B
 
-{0x9e, 0x00},	// MCMC33_Outdoor  mcmc_rgb_ofs_r3 R
-{0x9f, 0x00},	// MCMC34_Outdoor  mcmc_rgb_ofs_r3 G
-{0xa0, 0x00},	// MCMC35_Outdoor  mcmc_rgb_ofs_r3 B
+{0x9e, 0x00},// MCMC33_Outdoor  mcmc_rgb_ofs_r3 R
+{0x9f, 0x00},// MCMC34_Outdoor  mcmc_rgb_ofs_r3 G
+{0xa0, 0x00},// MCMC35_Outdoor  mcmc_rgb_ofs_r3 B
 
-{0xa1, 0x00},	// MCMC36_Outdoor  mcmc_rgb_ofs_r4 R
-{0xa2, 0x00},	// MCMC37_Outdoor  mcmc_rgb_ofs_r4 G
-{0xa3, 0x00},	// MCMC38_Outdoor  mcmc_rgb_ofs_r4 B
+{0xa1, 0x00},// MCMC36_Outdoor  mcmc_rgb_ofs_r4 R
+{0xa2, 0x00},// MCMC37_Outdoor  mcmc_rgb_ofs_r4 G
+{0xa3, 0x00},// MCMC38_Outdoor  mcmc_rgb_ofs_r4 B
 
-{0xa4, 0x00},	// MCMC39_Outdoor  mcmc_rgb_ofs_r5 R
-{0xa5, 0x00},	// MCMC40_Outdoor  mcmc_rgb_ofs_r5 G
-{0xa6, 0x00},	// MCMC41_Outdoor  mcmc_rgb_ofs_r5 B
+{0xa4, 0x00},// MCMC39_Outdoor  mcmc_rgb_ofs_r5 R
+{0xa5, 0x00},// MCMC40_Outdoor  mcmc_rgb_ofs_r5 G
+{0xa6, 0x00},// MCMC41_Outdoor  mcmc_rgb_ofs_r5 B
 
-{0xa7, 0x00},	// MCMC42_Outdoor  mcmc_rgb_ofs_r6 R
-{0xa8, 0x00},	// MCMC43_Outdoor  mcmc_rgb_ofs_r6 G
-{0xa9, 0x00},	// MCMC44_Outdoor  mcmc_rgb_ofs_r6 B
+{0xa7, 0x00},// MCMC42_Outdoor  mcmc_rgb_ofs_r6 R
+{0xa8, 0x00},// MCMC43_Outdoor  mcmc_rgb_ofs_r6 G
+{0xa9, 0x00},// MCMC44_Outdoor  mcmc_rgb_ofs_r6 B
 
-{0xaa, 0x00},	// MCMC45_Outdoor  mcmc_std_offset1
-{0xab, 0x00},	// MCMC46_Outdoor  mcmc_std_offset2
-{0xac, 0xff},	// MCMC47_Outdoor  mcmc_std_th_max
-{0xad, 0x00},	// MCMC48_Outdoor  mcmc_std_th_min
+{0xaa, 0x00},// MCMC45_Outdoor  mcmc_std_offset1
+{0xab, 0x00},// MCMC46_Outdoor  mcmc_std_offset2
+{0xac, 0xff},// MCMC47_Outdoor  mcmc_std_th_max
+{0xad, 0x00},// MCMC48_Outdoor  mcmc_std_th_min
 
-{0xae, 0x3f},	// MCMC49_Outdoor  mcmc_lum_gain_wgt_th1 R1 magenta
-{0xaf, 0x3f},	// MCMC50_Outdoor  mcmc_lum_gain_wgt_th2 R1
-{0xb0, 0x3f},	// MCMC51_Outdoor  mcmc_lum_gain_wgt_th3 R1
-{0xb1, 0x3f},	// MCMC52_Outdoor  mcmc_lum_gain_wgt_th4 R1
-{0xb2, 0x30},	// MCMC53_Outdoor  mcmc_rg1_lum_sp1      R1
-{0xb3, 0x50},	// MCMC54_Outdoor  mcmc_rg1_lum_sp2      R1
-{0xb4, 0x80},	// MCMC55_Outdoor  mcmc_rg1_lum_sp3      R1
-{0xb5, 0xb0},	// MCMC56_Outdoor  mcmc_rg1_lum_sp4      R1
+{0xae, 0x3f},// MCMC49_Outdoor  mcmc_lum_gain_wgt_th1 R1 magenta
+{0xaf, 0x3f},// MCMC50_Outdoor  mcmc_lum_gain_wgt_th2 R1
+{0xb0, 0x3f},// MCMC51_Outdoor  mcmc_lum_gain_wgt_th3 R1
+{0xb1, 0x3f},// MCMC52_Outdoor  mcmc_lum_gain_wgt_th4 R1
+{0xb2, 0x30},// MCMC53_Outdoor  mcmc_rg1_lum_sp1      R1
+{0xb3, 0x50},// MCMC54_Outdoor  mcmc_rg1_lum_sp2      R1
+{0xb4, 0x80},// MCMC55_Outdoor  mcmc_rg1_lum_sp3      R1
+{0xb5, 0xb0},// MCMC56_Outdoor  mcmc_rg1_lum_sp4      R1
 
 {0xb6, 0x3f},// MCMC57_Outdoor  mcmc_lum_gain_wgt_th1 R2 Skin
 {0xb7, 0x3f},// MCMC58_Outdoor  mcmc_lum_gain_wgt_th2 R2
@@ -4036,32 +4010,32 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xcc, 0x60},// MCMC79_Outdoor  mcmc_rg4_lum_sp3      R4
 {0xcd, 0x90},// MCMC80_Outdoor  mcmc_rg4_lum_sp4      R4
 
-{0xce, 0x3f},	// MCMC81_Outdoor  mcmc_rg5_gain_wgt_th1 R5 Cyan
-{0xcf, 0x3f},	// MCMC82_Outdoor  mcmc_rg5_gain_wgt_th2 R5
-{0xd0, 0x3f},	// MCMC83_Outdoor  mcmc_rg5_gain_wgt_th3 R5
-{0xd1, 0x3f},	// MCMC84_Outdoor  mcmc_rg5_gain_wgt_th4 R5
-{0xd2, 0x28},	// MCMC85_Outdoor  mcmc_rg5_lum_sp1      R5
-{0xd3, 0x50},	// MCMC86_Outdoor  mcmc_rg5_lum_sp2      R5
-{0xd4, 0x80},	// MCMC87_Outdoor  mcmc_rg5_lum_sp3      R5
-{0xd5, 0xb0},	// MCMC88_Outdoor  mcmc_rg5_lum_sp4      R5
+{0xce, 0x3f},// MCMC81_Outdoor  mcmc_rg5_gain_wgt_th1 R5 Cyan
+{0xcf, 0x3f},// MCMC82_Outdoor  mcmc_rg5_gain_wgt_th2 R5
+{0xd0, 0x3f},// MCMC83_Outdoor  mcmc_rg5_gain_wgt_th3 R5
+{0xd1, 0x3f},// MCMC84_Outdoor  mcmc_rg5_gain_wgt_th4 R5
+{0xd2, 0x28},// MCMC85_Outdoor  mcmc_rg5_lum_sp1      R5
+{0xd3, 0x50},// MCMC86_Outdoor  mcmc_rg5_lum_sp2      R5
+{0xd4, 0x80},// MCMC87_Outdoor  mcmc_rg5_lum_sp3      R5
+{0xd5, 0xb0},// MCMC88_Outdoor  mcmc_rg5_lum_sp4      R5
 
-{0xd6, 0x3f},	// MCMC89_Outdoor  mcmc_rg6_gain_wgt_th1 R6 Blue
-{0xd7, 0x3f},	// MCMC90_Outdoor  mcmc_rg6_gain_wgt_th2 R6
-{0xd8, 0x3f},	// MCMC91_Outdoor  mcmc_rg6_gain_wgt_th3 R6
-{0xd9, 0x3f},	// MCMC92_Outdoor  mcmc_rg6_gain_wgt_th4 R6
-{0xda, 0x28},	// MCMC93_Outdoor  mcmc_rg6_lum_sp1      R6
-{0xdb, 0x50},	// MCMC94_Outdoor  mcmc_rg6_lum_sp2      R6
-{0xdc, 0x80},	// MCMC95_Outdoor  mcmc_rg6_lum_sp3      R6
-{0xdd, 0xb0},	// MCMC96_Outdoor  mcmc_rg6_lum_sp4      R6
+{0xd6, 0x3f},// MCMC89_Outdoor  mcmc_rg6_gain_wgt_th1 R6 Blue
+{0xd7, 0x3f},// MCMC90_Outdoor  mcmc_rg6_gain_wgt_th2 R6
+{0xd8, 0x3f},// MCMC91_Outdoor  mcmc_rg6_gain_wgt_th3 R6
+{0xd9, 0x3f},// MCMC92_Outdoor  mcmc_rg6_gain_wgt_th4 R6
+{0xda, 0x28},// MCMC93_Outdoor  mcmc_rg6_lum_sp1      R6
+{0xdb, 0x50},// MCMC94_Outdoor  mcmc_rg6_lum_sp2      R6
+{0xdc, 0x80},// MCMC95_Outdoor  mcmc_rg6_lum_sp3      R6
+{0xdd, 0xb0},// MCMC96_Outdoor  mcmc_rg6_lum_sp4      R6
 
-{0xde, 0x1e},	// MCMC97_Outdoor  mcmc2_allgain_x1
-{0xdf, 0x3c},	// MCMC98_Outdoor  mcmc2_allgain_x2
-{0xe0, 0x3c},	// MCMC99_Outdoor  mcmc2_allgain_x4
-{0xe1, 0x1e},	// MCMC100_Outdoor mcmc2_allgain_x5
-{0xe2, 0x1e},	// MCMC101_Outdoor mcmc2_allgain_x7
-{0xe3, 0x3c},	// MCMC102_Outdoor mcmc2_allgain_x8
-{0xe4, 0x3c},	// MCMC103_Outdoor mcmc2_allgain_x10
-{0xe5, 0x1e},	// MCMC104_Outdoor mcmc2_allgain_x11
+{0xde, 0x1e},// MCMC97_Outdoor  mcmc2_allgain_x1
+{0xdf, 0x3c},// MCMC98_Outdoor  mcmc2_allgain_x2
+{0xe0, 0x3c},// MCMC99_Outdoor  mcmc2_allgain_x4
+{0xe1, 0x1e},// MCMC100_Outdoor mcmc2_allgain_x5
+{0xe2, 0x1e},// MCMC101_Outdoor mcmc2_allgain_x7
+{0xe3, 0x3c},// MCMC102_Outdoor mcmc2_allgain_x8
+{0xe4, 0x3c},// MCMC103_Outdoor mcmc2_allgain_x10
+{0xe5, 0x1e},// MCMC104_Outdoor mcmc2_allgain_x11
 
 {0xe6, 0x16}, //Outdoor_allgain_y0
 {0xe7, 0x16}, //Outdoor_allgain_y1
@@ -4091,7 +4065,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xfd, 0x4f},//Indoor_center6
 {0x0e, 0x00},// burst end
 
-{0x03, 0xd6},	// Page D6
+{0x03, 0xd6},// Page D6
 
 {0x0e, 0x01}, // burst start
 
@@ -4109,65 +4083,65 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x1a, 0x00}, //Indoor_hue_angle5
 {0x1b, 0x02}, //Indoor_hue_angle6
 
-{0x1c, 0x00},	// MCMC24_Indoor   mcmc_rgb_ofs_sign_r
-{0x1d, 0x00},	// MCMC25_Indoor   mcmc_rgb_ofs_sign_g
-{0x1e, 0x00},	// MCMC26_Indoor   mcmc_rgb_ofs_sign_b
+{0x1c, 0x00},// MCMC24_Indoor   mcmc_rgb_ofs_sign_r
+{0x1d, 0x00},// MCMC25_Indoor   mcmc_rgb_ofs_sign_g
+{0x1e, 0x00},// MCMC26_Indoor   mcmc_rgb_ofs_sign_b
 
-{0x1f, 0x00},	// MCMC27_Indoor   mcmc_rgb_ofs_r1 R
-{0x20, 0x00},	// MCMC28_Indoor   mcmc_rgb_ofs_r1 G
-{0x21, 0x00},	// MCMC29_Indoor   mcmc_rgb_ofs_r1 B
+{0x1f, 0x00},// MCMC27_Indoor   mcmc_rgb_ofs_r1 R
+{0x20, 0x00},// MCMC28_Indoor   mcmc_rgb_ofs_r1 G
+{0x21, 0x00},// MCMC29_Indoor   mcmc_rgb_ofs_r1 B
 
-{0x22, 0x00},	// MCMC30_Indoor   mcmc_rgb_ofs_r2 R
-{0x23, 0x00},	// MCMC31_Indoor   mcmc_rgb_ofs_r2 G
-{0x24, 0x00},	// MCMC32_Indoor   mcmc_rgb_ofs_r2 B
+{0x22, 0x00},// MCMC30_Indoor   mcmc_rgb_ofs_r2 R
+{0x23, 0x00},// MCMC31_Indoor   mcmc_rgb_ofs_r2 G
+{0x24, 0x00},// MCMC32_Indoor   mcmc_rgb_ofs_r2 B
 
-{0x25, 0x00},	// MCMC33_Indoor   mcmc_rgb_ofs_r3 R
-{0x26, 0x00},	// MCMC34_Indoor   mcmc_rgb_ofs_r3 G
-{0x27, 0x00},	// MCMC35_Indoor   mcmc_rgb_ofs_r3 B
+{0x25, 0x00},// MCMC33_Indoor   mcmc_rgb_ofs_r3 R
+{0x26, 0x00},// MCMC34_Indoor   mcmc_rgb_ofs_r3 G
+{0x27, 0x00},// MCMC35_Indoor   mcmc_rgb_ofs_r3 B
 
-{0x28, 0x00},	// MCMC36_Indoor   mcmc_rgb_ofs_r4 R
-{0x29, 0x00},	// MCMC37_Indoor   mcmc_rgb_ofs_r4 G
-{0x2a, 0x00},	// MCMC38_Indoor   mcmc_rgb_ofs_r4 B
+{0x28, 0x00},// MCMC36_Indoor   mcmc_rgb_ofs_r4 R
+{0x29, 0x00},// MCMC37_Indoor   mcmc_rgb_ofs_r4 G
+{0x2a, 0x00},// MCMC38_Indoor   mcmc_rgb_ofs_r4 B
 
-{0x2b, 0x00},	// MCMC39_Indoor   mcmc_rgb_ofs_r5 R
-{0x2c, 0x00},	// MCMC40_Indoor   mcmc_rgb_ofs_r5 G
-{0x2d, 0x00},	// MCMC41_Indoor   mcmc_rgb_ofs_r5 B
+{0x2b, 0x00},// MCMC39_Indoor   mcmc_rgb_ofs_r5 R
+{0x2c, 0x00},// MCMC40_Indoor   mcmc_rgb_ofs_r5 G
+{0x2d, 0x00},// MCMC41_Indoor   mcmc_rgb_ofs_r5 B
 
-{0x2e, 0x00},	// MCMC42_Indoor  mcmc_rgb_ofs_r6 R
-{0x2f, 0x00},	// MCMC43_Indoor  mcmc_rgb_ofs_r6 G
-{0x30, 0x00},	// MCMC44_Indoor  mcmc_rgb_ofs_r6 B
+{0x2e, 0x00},// MCMC42_Indoor  mcmc_rgb_ofs_r6 R
+{0x2f, 0x00},// MCMC43_Indoor  mcmc_rgb_ofs_r6 G
+{0x30, 0x00},// MCMC44_Indoor  mcmc_rgb_ofs_r6 B
 
-{0x31, 0x00},	// MCMC45_Indoor  mcmc_std_offset1
-{0x32, 0x00},	// MCMC46_Indoor  mcmc_std_offset2
-{0x33, 0xff},	// MCMC47_Indoor  mcmc_std_th_max
-{0x34, 0x00},	// MCMC48_Indoor  mcmc_std_th_min
+{0x31, 0x00},// MCMC45_Indoor  mcmc_std_offset1
+{0x32, 0x00},// MCMC46_Indoor  mcmc_std_offset2
+{0x33, 0xff},// MCMC47_Indoor  mcmc_std_th_max
+{0x34, 0x00},// MCMC48_Indoor  mcmc_std_th_min
 
-{0x35, 0x10},	// MCMC49_Indoor  mcmc_lum_gain_wgt_th1 R1 magenta
-{0x36, 0x21},	// MCMC50_Indoor  mcmc_lum_gain_wgt_th2 R1
-{0x37, 0x34},	// MCMC51_Indoor  mcmc_lum_gain_wgt_th3 R1
-{0x38, 0x3f},	// MCMC52_Indoor  mcmc_lum_gain_wgt_th4 R1
-{0x39, 0x08},	// MCMC53_Indoor  mcmc_rg1_lum_sp1      R1
-{0x3a, 0x15},	// MCMC54_Indoor  mcmc_rg1_lum_sp2      R1
-{0x3b, 0x2f},	// MCMC55_Indoor  mcmc_rg1_lum_sp3      R1
-{0x3c, 0x51},	// MCMC56_Indoor  mcmc_rg1_lum_sp4      R1
+{0x35, 0x10},// MCMC49_Indoor  mcmc_lum_gain_wgt_th1 R1 magenta
+{0x36, 0x21},// MCMC50_Indoor  mcmc_lum_gain_wgt_th2 R1
+{0x37, 0x34},// MCMC51_Indoor  mcmc_lum_gain_wgt_th3 R1
+{0x38, 0x3f},// MCMC52_Indoor  mcmc_lum_gain_wgt_th4 R1
+{0x39, 0x08},// MCMC53_Indoor  mcmc_rg1_lum_sp1      R1
+{0x3a, 0x15},// MCMC54_Indoor  mcmc_rg1_lum_sp2      R1
+{0x3b, 0x2f},// MCMC55_Indoor  mcmc_rg1_lum_sp3      R1
+{0x3c, 0x51},// MCMC56_Indoor  mcmc_rg1_lum_sp4      R1
 
-{0x3d, 0x3f},	// MCMC57_Indoor  mcmc_lum_gain_wgt_th1 R2 red
-{0x3e, 0x3f},	// MCMC58_Indoor  mcmc_lum_gain_wgt_th2 R2
-{0x3f, 0x3f},	// MCMC59_Indoor  mcmc_lum_gain_wgt_th3 R2
-{0x40, 0x3f},	// MCMC60_Indoor  mcmc_lum_gain_wgt_th4 R2
-{0x41, 0x28},	// MCMC61_Indoor  mcmc_rg2_lum_sp1      R2
-{0x42, 0x50},	// MCMC62_Indoor  mcmc_rg2_lum_sp2      R2
-{0x43, 0x80},	// MCMC63_Indoor  mcmc_rg2_lum_sp3      R2
-{0x44, 0xb0},	// MCMC64_Indoor  mcmc_rg2_lum_sp4      R2
+{0x3d, 0x3f},// MCMC57_Indoor  mcmc_lum_gain_wgt_th1 R2 red
+{0x3e, 0x3f},// MCMC58_Indoor  mcmc_lum_gain_wgt_th2 R2
+{0x3f, 0x3f},// MCMC59_Indoor  mcmc_lum_gain_wgt_th3 R2
+{0x40, 0x3f},// MCMC60_Indoor  mcmc_lum_gain_wgt_th4 R2
+{0x41, 0x28},// MCMC61_Indoor  mcmc_rg2_lum_sp1      R2
+{0x42, 0x50},// MCMC62_Indoor  mcmc_rg2_lum_sp2      R2
+{0x43, 0x80},// MCMC63_Indoor  mcmc_rg2_lum_sp3      R2
+{0x44, 0xb0},// MCMC64_Indoor  mcmc_rg2_lum_sp4      R2
 
-{0x45, 0x3f},	// MCMC65_Indoor  mcmc_lum_gain_wgt_th1 R3 yellow
-{0x46, 0x3f},	// MCMC66_Indoor  mcmc_lum_gain_wgt_th2 R3
-{0x47, 0x3f},	// MCMC67_Indoor  mcmc_lum_gain_wgt_th3 R3
-{0x48, 0x3f},	// MCMC68_Indoor  mcmc_lum_gain_wgt_th4 R3
-{0x49, 0x28},	// MCMC69_Indoor  mcmc_rg3_lum_sp1      R3
-{0x4a, 0x50},	// MCMC70_Indoor  mcmc_rg3_lum_sp2      R3
-{0x4b, 0x80},	// MCMC71_Indoor  mcmc_rg3_lum_sp3      R3
-{0x4c, 0xb0},	// MCMC72_Indoor  mcmc_rg3_lum_sp4      R3
+{0x45, 0x3f},// MCMC65_Indoor  mcmc_lum_gain_wgt_th1 R3 yellow
+{0x46, 0x3f},// MCMC66_Indoor  mcmc_lum_gain_wgt_th2 R3
+{0x47, 0x3f},// MCMC67_Indoor  mcmc_lum_gain_wgt_th3 R3
+{0x48, 0x3f},// MCMC68_Indoor  mcmc_lum_gain_wgt_th4 R3
+{0x49, 0x28},// MCMC69_Indoor  mcmc_rg3_lum_sp1      R3
+{0x4a, 0x50},// MCMC70_Indoor  mcmc_rg3_lum_sp2      R3
+{0x4b, 0x80},// MCMC71_Indoor  mcmc_rg3_lum_sp3      R3
+{0x4c, 0xb0},// MCMC72_Indoor  mcmc_rg3_lum_sp4      R3
 
 {0x4d, 0x3f},	// MCMC73_Indoor  mcmc_lum_gain_wgt_th1 R4 Green
 {0x4e, 0x3f},	// MCMC74_Indoor  mcmc_lum_gain_wgt_th2 R4
@@ -4216,7 +4190,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x75, 0x12},// MCMC113_Indoor mcmc2_allgain_y8
 {0x76, 0x0f},// MCMC114_Indoor mcmc2_allgain_y9
 {0x77, 0x0e},// MCMC115_Indoor mcmc2_allgain_y10
-{0x78, 0x0d},	// MCMC116_Indoor mcmc2_allgain_y11
+{0x78, 0x0d},// MCMC116_Indoor mcmc2_allgain_y11
 
 // Dark1 MCMC
 {0x79, 0x17}, //Dark1_delta1
@@ -4547,90 +4521,90 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x9d, 0x00},	// MCMC40_LowTemp   mcmc_rgb_ofs_r5
 {0x9e, 0x00},	// MCMC41_LowTemp   mcmc_rgb_ofs_r5
 
-{0x9f, 0x00},	// MCMC42_LowTemp  mcmc_rgb_ofs_r6 R
-{0xa0, 0x00},	// MCMC43_LowTemp  mcmc_rgb_ofs_r6 G
-{0xa1, 0x00},	// MCMC44_LowTemp  mcmc_rgb_ofs_r6 B
+{0x9f, 0x00},// MCMC42_LowTemp  mcmc_rgb_ofs_r6 R
+{0xa0, 0x00},// MCMC43_LowTemp  mcmc_rgb_ofs_r6 G
+{0xa1, 0x00},// MCMC44_LowTemp  mcmc_rgb_ofs_r6 B
 
-{0xa2, 0x00},	// MCMC45_LowTemp  mcmc_std_offset1
-{0xa3, 0x00},	// MCMC46_LowTemp  mcmc_std_offset2
-{0xa4, 0xff},	// MCMC47_LowTemp  mcmc_std_th_max
-{0xa5, 0x00},	// MCMC48_LowTemp  mcmc_std_th_min
+{0xa2, 0x00},// MCMC45_LowTemp  mcmc_std_offset1
+{0xa3, 0x00},// MCMC46_LowTemp  mcmc_std_offset2
+{0xa4, 0xff},// MCMC47_LowTemp  mcmc_std_th_max
+{0xa5, 0x00},// MCMC48_LowTemp  mcmc_std_th_min
 
-{0xa6, 0x3f},	// MCMC49_LowTemp  mcmc_lum_gain_wgt R1
-{0xa7, 0x3f},	// MCMC50_LowTemp  mcmc_lum_gain_wgt R1
-{0xa8, 0x3f},	// MCMC51_LowTemp  mcmc_lum_gain_wgt R1
-{0xa9, 0x3f},	// MCMC52_LowTemp  mcmc_lum_gain_wgt R1
-{0xaa, 0x30},	// MCMC53_LowTemp  mcmc_rg1_lum_sp1  R1
-{0xab, 0x50},	// MCMC54_LowTemp  mcmc_rg1_lum_sp2  R1
-{0xac, 0x80},	// MCMC55_LowTemp  mcmc_rg1_lum_sp3  R1
-{0xad, 0xb0},	// MCMC56_LowTemp  mcmc_rg1_lum_sp4  R1
+{0xa6, 0x3f},// MCMC49_LowTemp  mcmc_lum_gain_wgt R1
+{0xa7, 0x3f},// MCMC50_LowTemp  mcmc_lum_gain_wgt R1
+{0xa8, 0x3f},// MCMC51_LowTemp  mcmc_lum_gain_wgt R1
+{0xa9, 0x3f},// MCMC52_LowTemp  mcmc_lum_gain_wgt R1
+{0xaa, 0x30},// MCMC53_LowTemp  mcmc_rg1_lum_sp1  R1
+{0xab, 0x50},// MCMC54_LowTemp  mcmc_rg1_lum_sp2  R1
+{0xac, 0x80},// MCMC55_LowTemp  mcmc_rg1_lum_sp3  R1
+{0xad, 0xb0},// MCMC56_LowTemp  mcmc_rg1_lum_sp4  R1
 
-{0xae, 0x3f},	// MCMC57_LowTemp  mcmc_lum_gain_wgt R2
-{0xaf, 0x3f},	// MCMC58_LowTemp  mcmc_lum_gain_wgt R2
-{0xb0, 0x3f},	// MCMC59_LowTemp  mcmc_lum_gain_wgt R2
-{0xb1, 0x3f},	// MCMC60_LowTemp  mcmc_lum_gain_wgt R2
-{0xb2, 0x28},	// MCMC61_LowTemp  mcmc_rg2_lum_sp1  R2
-{0xb3, 0x50},	// MCMC62_LowTemp  mcmc_rg2_lum_sp2  R2
-{0xb4, 0x80},	// MCMC63_LowTemp  mcmc_rg2_lum_sp3  R2
-{0xb5, 0xb0},	// MCMC64_LowTemp  mcmc_rg2_lum_sp4  R2
+{0xae, 0x3f},// MCMC57_LowTemp  mcmc_lum_gain_wgt R2
+{0xaf, 0x3f},// MCMC58_LowTemp  mcmc_lum_gain_wgt R2
+{0xb0, 0x3f},// MCMC59_LowTemp  mcmc_lum_gain_wgt R2
+{0xb1, 0x3f},// MCMC60_LowTemp  mcmc_lum_gain_wgt R2
+{0xb2, 0x28},// MCMC61_LowTemp  mcmc_rg2_lum_sp1  R2
+{0xb3, 0x50},// MCMC62_LowTemp  mcmc_rg2_lum_sp2  R2
+{0xb4, 0x80},// MCMC63_LowTemp  mcmc_rg2_lum_sp3  R2
+{0xb5, 0xb0},// MCMC64_LowTemp  mcmc_rg2_lum_sp4  R2
 
-{0xb6, 0x3f},	// MCMC65_LowTemp  mcmc_lum_gain_wgt R3
-{0xb7, 0x3f},	// MCMC66_LowTemp  mcmc_lum_gain_wgt R3
-{0xb8, 0x3f},	// MCMC67_LowTemp  mcmc_lum_gain_wgt R3
-{0xb9, 0x3f},	// MCMC68_LowTemp  mcmc_lum_gain_wgt R3
-{0xba, 0x28},	// MCMC69_LowTemp  mcmc_rg3_lum_sp1  R3
-{0xbb, 0x50},	// MCMC70_LowTemp  mcmc_rg3_lum_sp2  R3
-{0xbc, 0x80},	// MCMC71_LowTemp  mcmc_rg3_lum_sp3  R3
-{0xbd, 0xb0},	// MCMC72_LowTemp  mcmc_rg3_lum_sp4  R3
+{0xb6, 0x3f},// MCMC65_LowTemp  mcmc_lum_gain_wgt R3
+{0xb7, 0x3f},// MCMC66_LowTemp  mcmc_lum_gain_wgt R3
+{0xb8, 0x3f},// MCMC67_LowTemp  mcmc_lum_gain_wgt R3
+{0xb9, 0x3f},// MCMC68_LowTemp  mcmc_lum_gain_wgt R3
+{0xba, 0x28},// MCMC69_LowTemp  mcmc_rg3_lum_sp1  R3
+{0xbb, 0x50},// MCMC70_LowTemp  mcmc_rg3_lum_sp2  R3
+{0xbc, 0x80},// MCMC71_LowTemp  mcmc_rg3_lum_sp3  R3
+{0xbd, 0xb0},// MCMC72_LowTemp  mcmc_rg3_lum_sp4  R3
 
-{0xbe, 0x3f},	// MCMC73_LowTemp  mcmc_lum_gain_wgt R4
-{0xbf, 0x3f},	// MCMC74_LowTemp  mcmc_lum_gain_wgt R4
-{0xc0, 0x3f},	// MCMC75_LowTemp  mcmc_lum_gain_wgt R4
-{0xc1, 0x3f},	// MCMC76_LowTemp  mcmc_lum_gain_wgt R4
-{0xc2, 0x10},	// MCMC77_LowTemp  mcmc_rg4_lum_sp1  R4
-{0xc3, 0x30},	// MCMC78_LowTemp  mcmc_rg4_lum_sp2  R4
-{0xc4, 0x60},	// MCMC79_LowTemp  mcmc_rg4_lum_sp3  R4
-{0xc5, 0x90},	// MCMC80_LowTemp  mcmc_rg4_lum_sp4  R4
+{0xbe, 0x3f},// MCMC73_LowTemp  mcmc_lum_gain_wgt R4
+{0xbf, 0x3f},// MCMC74_LowTemp  mcmc_lum_gain_wgt R4
+{0xc0, 0x3f},// MCMC75_LowTemp  mcmc_lum_gain_wgt R4
+{0xc1, 0x3f},// MCMC76_LowTemp  mcmc_lum_gain_wgt R4
+{0xc2, 0x10},// MCMC77_LowTemp  mcmc_rg4_lum_sp1  R4
+{0xc3, 0x30},// MCMC78_LowTemp  mcmc_rg4_lum_sp2  R4
+{0xc4, 0x60},// MCMC79_LowTemp  mcmc_rg4_lum_sp3  R4
+{0xc5, 0x90},// MCMC80_LowTemp  mcmc_rg4_lum_sp4  R4
 
-{0xc6, 0x3f},	// MCMC81_LowTemp  mcmc_rg5_gain_wgt R5
-{0xc7, 0x3f},	// MCMC82_LowTemp  mcmc_rg5_gain_wgt R5
-{0xc8, 0x3f},	// MCMC83_LowTemp  mcmc_rg5_gain_wgt R5
-{0xc9, 0x3f},	// MCMC84_LowTemp  mcmc_rg5_gain_wgt R5
-{0xca, 0x28},	// MCMC85_LowTemp  mcmc_rg5_lum_sp1  R5
-{0xcb, 0x50},	// MCMC86_LowTemp  mcmc_rg5_lum_sp2  R5
-{0xcc, 0x80},	// MCMC87_LowTemp  mcmc_rg5_lum_sp3  R5
-{0xcd, 0xb0},	// MCMC88_LowTemp  mcmc_rg5_lum_sp4  R5
+{0xc6, 0x3f},// MCMC81_LowTemp  mcmc_rg5_gain_wgt R5
+{0xc7, 0x3f},// MCMC82_LowTemp  mcmc_rg5_gain_wgt R5
+{0xc8, 0x3f},// MCMC83_LowTemp  mcmc_rg5_gain_wgt R5
+{0xc9, 0x3f},// MCMC84_LowTemp  mcmc_rg5_gain_wgt R5
+{0xca, 0x28},// MCMC85_LowTemp  mcmc_rg5_lum_sp1  R5
+{0xcb, 0x50},// MCMC86_LowTemp  mcmc_rg5_lum_sp2  R5
+{0xcc, 0x80},// MCMC87_LowTemp  mcmc_rg5_lum_sp3  R5
+{0xcd, 0xb0},// MCMC88_LowTemp  mcmc_rg5_lum_sp4  R5
 
-{0xce, 0x3f},	// MCMC89_LowTemp  mcmc_rg6_gain_wgt R6
-{0xcf, 0x3f},	// MCMC90_LowTemp  mcmc_rg6_gain_wgt R6
-{0xd0, 0x3f},	// MCMC91_LowTemp  mcmc_rg6_gain_wgt R6
-{0xd1, 0x3f},	// MCMC92_LowTemp  mcmc_rg6_gain_wgt R6
-{0xd2, 0x28},	// MCMC93_LowTemp  mcmc_rg6_lum_sp1  R6
-{0xd3, 0x50},	// MCMC94_LowTemp  mcmc_rg6_lum_sp2  R6
-{0xd4, 0x80},	// MCMC95_LowTemp  mcmc_rg6_lum_sp3  R6
-{0xd5, 0xb0},	// MCMC96_LowTemp  mcmc_rg6_lum_sp4  R6
+{0xce, 0x3f},// MCMC89_LowTemp  mcmc_rg6_gain_wgt R6
+{0xcf, 0x3f},// MCMC90_LowTemp  mcmc_rg6_gain_wgt R6
+{0xd0, 0x3f},// MCMC91_LowTemp  mcmc_rg6_gain_wgt R6
+{0xd1, 0x3f},// MCMC92_LowTemp  mcmc_rg6_gain_wgt R6
+{0xd2, 0x28},// MCMC93_LowTemp  mcmc_rg6_lum_sp1  R6
+{0xd3, 0x50},// MCMC94_LowTemp  mcmc_rg6_lum_sp2  R6
+{0xd4, 0x80},// MCMC95_LowTemp  mcmc_rg6_lum_sp3  R6
+{0xd5, 0xb0},// MCMC96_LowTemp  mcmc_rg6_lum_sp4  R6
 
-{0xd6, 0x1a},	// MCMC97_LowTemp  mcmc2_allgain_x1
-{0xd7, 0x38},	// MCMC98_LowTemp  mcmc2_allgain_x2
-{0xd8, 0x38},	// MCMC99_LowTemp  mcmc2_allgain_x4
-{0xd9, 0x1a},	// MCMC100_LowTemp mcmc2_allgain_x5
-{0xda, 0x1a},	// MCMC101_LowTemp mcmc2_allgain_x7
-{0xdb, 0x38},	// MCMC102_LowTemp mcmc2_allgain_x8
-{0xdc, 0x38},	// MCMC103_LowTemp mcmc2_allgain_x10
-{0xdd, 0x1a},	// MCMC104_LowTemp mcmc2_allgain_x11
+{0xd6, 0x1a},// MCMC97_LowTemp  mcmc2_allgain_x1
+{0xd7, 0x38},// MCMC98_LowTemp  mcmc2_allgain_x2
+{0xd8, 0x38},// MCMC99_LowTemp  mcmc2_allgain_x4
+{0xd9, 0x1a},// MCMC100_LowTemp mcmc2_allgain_x5
+{0xda, 0x1a},// MCMC101_LowTemp mcmc2_allgain_x7
+{0xdb, 0x38},// MCMC102_LowTemp mcmc2_allgain_x8
+{0xdc, 0x38},// MCMC103_LowTemp mcmc2_allgain_x10
+{0xdd, 0x1a},// MCMC104_LowTemp mcmc2_allgain_x11
 
-{0xde, 0x10},	// MCMC105_LowTemp mcmc2_allgain_y0
-{0xdf, 0x0f},	// MCMC106_LowTemp mcmc2_allgain_y1
-{0xe0, 0x0e},	// MCMC107_LowTemp mcmc2_allgain_y2
-{0xe1, 0x0e},	// MCMC108_LowTemp mcmc2_allgain_y3
-{0xe2, 0x12},	// MCMC109_LowTemp mcmc2_allgain_y4
-{0xe3, 0x16},	// MCMC110_LowTemp mcmc2_allgain_y5
-{0xe4, 0x16},	// MCMC111_LowTemp mcmc2_allgain_y6
-{0xe5, 0x14},	// MCMC112_LowTemp mcmc2_allgain_y
-{0xe6, 0x12},	// MCMC113_LowTemp mcmc2_allgain_y8
-{0xe7, 0x10},	// MCMC114_LowTemp mcmc2_allgain_y9
-{0xe8, 0x10},	// MCMC115_LowTemp mcmc2_allgain_y10
-{0xe9, 0x10},	// MCMC116_LowTemp mcmc2_allgain_y11
+{0xde, 0x10},// MCMC105_LowTemp mcmc2_allgain_y0
+{0xdf, 0x0f},// MCMC106_LowTemp mcmc2_allgain_y1
+{0xe0, 0x0e},// MCMC107_LowTemp mcmc2_allgain_y2
+{0xe1, 0x0e},// MCMC108_LowTemp mcmc2_allgain_y3
+{0xe2, 0x12},// MCMC109_LowTemp mcmc2_allgain_y4
+{0xe3, 0x16},// MCMC110_LowTemp mcmc2_allgain_y5
+{0xe4, 0x16},// MCMC111_LowTemp mcmc2_allgain_y6
+{0xe5, 0x14},// MCMC112_LowTemp mcmc2_allgain_y
+{0xe6, 0x12},// MCMC113_LowTemp mcmc2_allgain_y8
+{0xe7, 0x10},// MCMC114_LowTemp mcmc2_allgain_y9
+{0xe8, 0x10},// MCMC115_LowTemp mcmc2_allgain_y10
+{0xe9, 0x10},// MCMC116_LowTemp mcmc2_allgain_y11
 {0x0e, 0x00}, // burst end
 
 // HighTemp MCMC
@@ -8168,7 +8142,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x0e, 0x00}, // burst end
 
 //I2CD set
-{0x03, 0x26},	//Xdata mapping for I2C direct E9 page.
+{0x03, 0x26},//Xdata mapping for I2C direct E9 page.
 {0xE2, 0x32},
 {0xE3, 0x6A},
 
@@ -8335,7 +8309,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0xff, 0x02}, // 20ms
 
 {0x03, 0x00},
-{0x01, 0x01},	// Sleep on
+{0x01, 0x01},// Sleep on
 
 {0x03, 0xc1},
 {0x10, 0x07}, // ssd tranfer enable
@@ -8345,7 +8319,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 ///////////////////////////////////////////////////////////////////////////////
 //Shutter Setting
 {0x03, 0xc7},
-{0x10, 0x70},	// AE Off (Band Off) 50hz 70}, 60hz 50
+{0x10, 0x70},// AE Off (Band Off) 50hz 70}, 60hz 50
 {0x12, 0x30}, // Fast speed
 {0x13, 0x61},
 {0x15, 0xc0}, // SSD Patch Weight Y Mean On
@@ -8387,7 +8361,7 @@ LOCAL const SENSOR_REG_T sr352_common_init[]=
 {0x2A, 0x60},
 
 {0x03, 0xc7},
-{0x10, 0xf0},	//AE On 50hz f0}, 60hz d0
+{0x10, 0xf0},//AE On 50hz f0}, 60hz d0
 
 
 };
@@ -8401,7 +8375,7 @@ LOCAL const SENSOR_REG_T sr352_640X480[]=
 {0xff, 0x01},
 
 {0x03, 0x00},
-{0x01, 0x01},	// Sleep On
+{0x01, 0x01},// Sleep On
 
 {0x03, 0xc1},
 {0x10, 0x07}, // ssd tranfer enable
@@ -8429,7 +8403,7 @@ LOCAL const SENSOR_REG_T sr352_640X480[]=
 
 {0x03, 0x00},
 {0x1e, 0x01}, // frame update
-{0x01, 0x00},	// Sleep Off
+{0x01, 0x00},// Sleep Off
 
 {0xff, 0x01}, //delay 10ms
 
@@ -8438,7 +8412,7 @@ LOCAL const SENSOR_REG_T sr352_640X480[]=
 //1280X960  YUV   Mode
 LOCAL const SENSOR_REG_T sr352_1280X960[] =
 {
-{0x03, 0xc8},	//AWB Off
+{0x03, 0xc8},//AWB Off
 {0x10, 0x52},
 
 {0x03, 0xc1},
@@ -8446,31 +8420,31 @@ LOCAL const SENSOR_REG_T sr352_1280X960[] =
 {0xff, 0x01},
 
 {0x03, 0x00},
-{0x01, 0x01},	// Sleep on
+{0x01, 0x01},// Sleep on
 
 {0x03, 0xc1},
 {0x10, 0x07}, // ssd tranfer enable
 
 {0x03, 0xc0},
-{0x7f, 0x00},	// DMA off
-{0x7e, 0x01},	// DMA set
-{0xff, 0x0c},	// 120ms
+{0x7f, 0x00},// DMA off
+{0x7e, 0x01},// DMA set
+{0xff, 0x0c},// 120ms
 
 ///////////////////////////////////////////
 // D9 Page(Capture function)
 ///////////////////////////////////////////
 {0x03, 0xd9},
-{0x1c, 0x04},	// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
+{0x1c, 0x04},// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
 ///////////////////////////////////////////
 // 00 Page
 ///////////////////////////////////////////
 {0x03, 0x00},
-{0x10, 0x00},	// full // Vsync Type1 Bit[3] 0ff
+{0x10, 0x00},// full // Vsync Type1 Bit[3] 0ff
 {0x17, 0x05}, // ISP Divider2 1/2 //Rising edge for AP
 {0x20, 0x00},
-{0x21, 0x08},	// row start set
+{0x21, 0x08},// row start set
 {0x22, 0x00},
-{0x23, 0x01},	// col start set
+{0x23, 0x01},// col start set
 
 ///////////////////////////////////////////////////////////////////////////////
 // b Page
@@ -8483,9 +8457,9 @@ LOCAL const SENSOR_REG_T sr352_1280X960[] =
 //PWR margin setting
 //--------------------------------------//
 {0x03, 0x11},
-{0x10, 0x1F},	//Bit[4]=Hi
+{0x10, 0x1F},//Bit[4]=Hi
 {0x03, 0x12},
-{0x70, 0x9F},	//Bit[0]=Hi
+{0x70, 0x9F},//Bit[0]=Hi
 
 //------------------------------------------------//
 //TAP Capture Setting
@@ -8494,62 +8468,62 @@ LOCAL const SENSOR_REG_T sr352_1280X960[] =
 {0x98, 0x00},
 {0x99, 0x10},
 {0x9a, 0x72},
-{0x9b, 0xf0},		// exp_band_100 * 2
+{0x9b, 0xf0},// exp_band_100 * 2
 {0x9c, 0x00},
 {0x9d, 0x0d},
 {0x9e, 0xb2},
-{0x9f, 0x40},		// exp_band_120 * 2
+{0x9f, 0x40},// exp_band_120 * 2
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x00},		// set custom call address (low)
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x00},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 
 {0xff, 0x01}, //delay 10ms
 
 {0x03, 0x00},
-{0x1e, 0x01}, // frame update
+{0x1e, 0x01},// frame update
 
 {0x03, 0x26},
-{0x30, 0x29},	// Capture On
+{0x30, 0x29},// Capture On
 
 {0x03, 0x00},
-{0x01, 0x00},	// sleep off
+{0x01, 0x00},// sleep off
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x92},		// set custom call address (low)
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x92},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 //------------------------------------------------//
 ///////////////////////////////////////////
 //  Scaler 1280_960
 ///////////////////////////////////////////
 {0x03, 0x19},
-{0x10, 0x00}, //hw scaler off
-{0x14, 0x03}, //sawtooth on
+{0x10, 0x00},//hw scaler off
+{0x14, 0x03},//sawtooth on
 
 //Scaler
 {0x03, 0xc0},
-{0xa0, 0x00}, //fw scaler off
-{0xa2, 0x05}, //scale wid
+{0xa0, 0x00},//fw scaler off
+{0xa2, 0x05},//scale wid
 {0xa3, 0x00},
-{0xa4, 0x03}, //scale hgt
+{0xa4, 0x03},//scale hgt
 {0xa5, 0xc0},
-{0xa6, 0x01},	//fw scaler col start
-{0xa7, 0x06}, //fw scaler row start
+{0xa6, 0x01},//fw scaler col start
+{0xa7, 0x06},//fw scaler row start
 
-{0xa1, 0x00}, //zoom step
-{0xa0, 0xc0}, //fw scaler on
+{0xa1, 0x00},//zoom step
+{0xa0, 0xc0},//fw scaler on
 
 {0x03, 0x19},
-{0x10, 0x07}, //hw scaler on
+{0x10, 0x07},//hw scaler on
 
 {0x03, 0x00},
-{0x1e, 0x01}, // frame update
+{0x1e, 0x01},// frame update
 {0x01, 0x00},
 
 };
@@ -8557,39 +8531,39 @@ LOCAL const SENSOR_REG_T sr352_1280X960[] =
 //1600X1200  YUV   Mode
 LOCAL const SENSOR_REG_T sr352_1600X1200[] =
 {
-{0x03, 0xc8},	//AWB Off
+{0x03, 0xc8},//AWB Off
 {0x10, 0x52},
 
 {0x03, 0xc1},
-{0x10, 0x06}, // ssd tranfer disable
+{0x10, 0x06},// ssd tranfer disable
 {0xff, 0x01},
 
 {0x03, 0x00},
-{0x01, 0x01},	// Sleep on
+{0x01, 0x01},// Sleep on
 
 {0x03, 0xc1},
-{0x10, 0x07}, // ssd tranfer enable
+{0x10, 0x07},// ssd tranfer enable
 
 {0x03, 0xc0},
-{0x7f, 0x00},	// DMA off
-{0x7e, 0x01},	// DMA set
-{0xff, 0x0c},	// 120ms
+{0x7f, 0x00},// DMA off
+{0x7e, 0x01},// DMA set
+{0xff, 0x0c},// 120ms
 
 ///////////////////////////////////////////
 // D9 Page(Capture function)
 ///////////////////////////////////////////
 {0x03, 0xd9},
-{0x1c, 0x04},	// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
+{0x1c, 0x04},// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
 ///////////////////////////////////////////
 // 00 Page
 ///////////////////////////////////////////
 {0x03, 0x00},
-{0x10, 0x00},	// full // Vsync Type1 Bit[3] 0ff
+{0x10, 0x00},// full // Vsync Type1 Bit[3] 0ff
 {0x17, 0x05}, // ISP Divider2 1/2 //Rising edge for AP
 {0x20, 0x00},
-{0x21, 0x08},	// row start set
+{0x21, 0x08},// row start set
 {0x22, 0x00},
-{0x23, 0x01},	// col start set
+{0x23, 0x01},// col start set
 
 ///////////////////////////////////////////////////////////////////////////////
 // b Page
@@ -8602,9 +8576,9 @@ LOCAL const SENSOR_REG_T sr352_1600X1200[] =
 //PWR margin setting
 //--------------------------------------//
 {0x03, 0x11},
-{0x10, 0x1F},	//Bit[4]=Hi
+{0x10, 0x1F},//Bit[4]=Hi
 {0x03, 0x12},
-{0x70, 0x9F},	//Bit[0]=Hi
+{0x70, 0x9F},//Bit[0]=Hi
 
 //------------------------------------------------//
 //TAP Capture Setting
@@ -8613,36 +8587,36 @@ LOCAL const SENSOR_REG_T sr352_1600X1200[] =
 {0x98, 0x00},
 {0x99, 0x10},
 {0x9a, 0x72},
-{0x9b, 0xf0},		// exp_band_100 * 2
+{0x9b, 0xf0},// exp_band_100 * 2
 {0x9c, 0x00},
 {0x9d, 0x0d},
 {0x9e, 0xb2},
-{0x9f, 0x40},		// exp_band_120 * 2
+{0x9f, 0x40},// exp_band_120 * 2
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x00},		// set custom call address (low)
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x00},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 
-{0xff, 0x01}, //delay 10ms
-
-{0x03, 0x00},
-{0x1e, 0x01}, // frame update
-
-{0x03, 0x26},
-{0x30, 0x29},	// Capture On
+{0xff, 0x01},//delay 10ms
 
 {0x03, 0x00},
-{0x01, 0x00},	// sleep off
+{0x1e, 0x01},// frame update
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x92},		// set custom call address (low)
+{0x30, 0x29},// Capture On
+
+{0x03, 0x00},
+{0x01, 0x00},// sleep off
+
+{0x03, 0x26},
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x92},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 //------------------------------------------------//
 ///////////////////////////////////////////
 //  Scaler 1600_1200
@@ -8653,22 +8627,22 @@ LOCAL const SENSOR_REG_T sr352_1600X1200[] =
 
 //Scaler
 {0x03, 0xc0},
-{0xa0, 0x00}, //fw scaler off
-{0xa2, 0x06}, //scale wid
+{0xa0, 0x00},//fw scaler off
+{0xa2, 0x06},//scale wid
 {0xa3, 0x40},
-{0xa4, 0x04}, //scale hgt
+{0xa4, 0x04},//scale hgt
 {0xa5, 0xb0},
-{0xa6, 0x01},	//fw scaler col start
-{0xa7, 0x07}, //fw scaler row start
+{0xa6, 0x01},//fw scaler col start
+{0xa7, 0x07},//fw scaler row start
 
-{0xa1, 0x00}, //zoom step
-{0xa0, 0xc0}, //fw scaler on
+{0xa1, 0x00},//zoom step
+{0xa0, 0xc0},//fw scaler on
 
 {0x03, 0x19},
-{0x10, 0x07}, //hw scaler on
+{0x10, 0x07},//hw scaler on
 
 {0x03, 0x00},
-{0x1e, 0x01}, // frame update
+{0x1e, 0x01},// frame update
 {0x01, 0x00},
 
 };
@@ -8676,54 +8650,54 @@ LOCAL const SENSOR_REG_T sr352_1600X1200[] =
 //20480X1536  YUV   Mode
 LOCAL const SENSOR_REG_T sr352_2048X1536[] =
 {
-{0x03, 0xc8},	//AWB Off
+{0x03, 0xc8},//AWB Off
 {0x10, 0x52},
 
 {0x03, 0xc1},
-{0x10, 0x06}, // ssd tranfer disable
+{0x10, 0x06},// ssd tranfer disable
 {0xff, 0x01},
 
 {0x03, 0x00},
-{0x01, 0x01},	// Sleep on
+{0x01, 0x01},// Sleep on
 
 {0x03, 0xc1},
-{0x10, 0x07}, // ssd tranfer enable
+{0x10, 0x07},// ssd tranfer enable
 
 {0x03, 0xc0},
-{0x7f, 0x00},	// DMA off
-{0x7e, 0x01},	// DMA set
-{0xff, 0x0c},	// 120ms
+{0x7f, 0x00},// DMA off
+{0x7e, 0x01},// DMA set
+{0xff, 0x0c},// 120ms
 
 ///////////////////////////////////////////
 // D9 Page(Capture function)
 ///////////////////////////////////////////
 {0x03, 0xd9},
-{0x1c, 0x04},	// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
+{0x1c, 0x04},// Capture Pll Div (CAP_OPCLK_DIV / 2.0)
 ///////////////////////////////////////////
 // 00 Page
 ///////////////////////////////////////////
 {0x03, 0x00},
-{0x10, 0x00},	// full // Vsync Type1 Bit[3] 0ff
-{0x17, 0x05}, // ISP Divider2 1/2 //Rising edge for AP
+{0x10, 0x00},// full // Vsync Type1 Bit[3] 0ff
+{0x17, 0x05},// ISP Divider2 1/2 //Rising edge for AP
 {0x20, 0x00},
-{0x21, 0x08},	// row start set
+{0x21, 0x08},// row start set
 {0x22, 0x00},
-{0x23, 0x01},	// col start set
+{0x23, 0x01},// col start set
 
 ///////////////////////////////////////////////////////////////////////////////
 // b Page
 ///////////////////////////////////////////////////////////////////////////////
 {0x03, 0x0b},
-{0x11, 0x11}, //Full & HD(crop) 0410
-{0x12, 0x00}, //Full & HD(crop) 0410
+{0x11, 0x11},//Full & HD(crop) 0410
+{0x12, 0x00},//Full & HD(crop) 0410
 
 //--------------------------------------//
 //PWR margin setting
 //--------------------------------------//
 {0x03, 0x11},
-{0x10, 0x1F},	//Bit[4]=Hi
+{0x10, 0x1F},//Bit[4]=Hi
 {0x03, 0x12},
-{0x70, 0x9F},	//Bit[0]=Hi
+{0x70, 0x9F},//Bit[0]=Hi
 
 //------------------------------------------------//
 //TAP Capture Setting
@@ -8732,36 +8706,36 @@ LOCAL const SENSOR_REG_T sr352_2048X1536[] =
 {0x98, 0x00},
 {0x99, 0x10},
 {0x9a, 0x72},
-{0x9b, 0xf0},		// exp_band_100 * 2
+{0x9b, 0xf0},// exp_band_100 * 2
 {0x9c, 0x00},
 {0x9d, 0x0d},
 {0x9e, 0xb2},
-{0x9f, 0x40},		// exp_band_120 * 2
+{0x9f, 0x40},// exp_band_120 * 2
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x00},		// set custom call address (low)
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x00},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 
-{0xff, 0x01}, //delay 10ms
-
-{0x03, 0x00},
-{0x1e, 0x01}, // frame update
-
-{0x03, 0x26},
-{0x30, 0x29},	// Capture On
+{0xff, 0x01},//delay 10ms
 
 {0x03, 0x00},
-{0x01, 0x00},	// sleep off
+{0x1e, 0x01},// frame update
 
 {0x03, 0x26},
-{0x63, 0xf8},		// set custom call address (high)
-{0x64, 0x92},		// set custom call address (low)
+{0x30, 0x29},// Capture On
+
+{0x03, 0x00},
+{0x01, 0x00},// sleep off
+
+{0x03, 0x26},
+{0x63, 0xf8},// set custom call address (high)
+{0x64, 0x92},// set custom call address (low)
 
 {0x03, 0xc0},
-{0x66, 0x01},	// jump custom call
+{0x66, 0x01},// jump custom call
 //------------------------------------------------//
 ///////////////////////////////////////////
 //  Windowing
@@ -8808,133 +8782,90 @@ LOCAL SENSOR_REG_TAB_INFO_T s_sr352_resolution_Tab_YUV[] = {
 
 LOCAL SENSOR_TRIM_T s_sr352_Resolution_Trim_Tab[]=
 {
-    // COMMON INIT
-    {0, 0, 640, 480, 0, 0},
+	// COMMON INIT
+	{0, 0, 640, 480, 0, 0,0},
 
-    // YUV422 PREVIEW 1
-    {0, 0, 640, 480, 664, 40},
-    {0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
-    {0, 0, 1600, 1200, 660, 40},
-    {0, 0, 2048, 1536, 660, 40},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0}
+	// YUV422 PREVIEW 1
+	{0, 0, 640, 480, 664, 40,0},
+	{0, 0, 1280, 960, 664, 40,0},
+	{0, 0, 1600, 1200, 660, 40,0},
+	{0, 0, 2048, 1536, 660, 40,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0},
+	{0, 0, 0, 0, 0, 0,0}
 };
-/**---------------------------------------------------------------------------*
- ** 							Function  Definitions
- **---------------------------------------------------------------------------*/
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author:
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t sr352_set_ae_enable(uint32_t enable)
-{
 
-	return 0;
-
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author:
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t sr352_set_hmirror_enable(uint32_t enable)
-{
-	return 0;
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author:
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t sr352_set_vmirror_enable(uint32_t enable)
-{
-	return 0;
-}
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_sr352_exif;
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_sr352_ioctl_func_tab =
 {
-    // Internal
-    PNULL, /*0*/
-    _sr352_PowerOn,
-    PNULL,/*2*/
-    _sr352_Identify,
-    PNULL,/*4*/			// write register
-    PNULL,/*5*/                 // read  register
-    PNULL,//    cus_func_1//sr352_init_by_burst_write,/*6*/
-    _sr352_GetResolutionTrimTab,//PNULL,/*7*/
+	// Internal
+	PNULL, /*0*/
+	_sr352_PowerOn,
+	PNULL,/*2*/
+	_sr352_Identify,
+	PNULL,/*4*/// write register
+	PNULL,/*5*/// read  register
+	PNULL,//    cus_func_1//sr352_init_by_burst_write,/*6*/
+	_sr352_GetResolutionTrimTab,//PNULL,/*7*/
 
-    // External
-    PNULL,/*8*///sr352_set_ae_enable,
-    PNULL,/*9*///sr352_set_hmirror_enable,
-    PNULL,/*10*///sr352_set_vmirror_enable,
-    PNULL,//_sr352_set_brightness,//PNULL,//    sr352_set_brightness,/*11*/
-    PNULL, //_sr352_set_contrast,//PNULL,//    sr352_set_contrast,/*12*/
-    PNULL,/*13*///sr352_set_sharpness,
-    PNULL,//_sr352_set_saturation,//PNULL,/*14*///sr352_set_saturation,
-    PNULL,//_sr352_set_work_mode,//PNULL,//    sr352_set_scene_mode ,/*15*///sr352_set_preview_mode,
-    PNULL,//_sr352_set_image_effect,//PNULL,//    sr352_set_image_effect,/*16*/
-    _sr352_BeforeSnapshot,//PNULL,//    sr352_BeforeSnapshot,/*17*/
-    _sr352_after_snapshot,//PNULL,//    sr352_after_snapshot,/*18*/
-    PNULL,//_sr352_flash,//PNULL,/*19*/
-    PNULL,/*20*///read_ae_value
-    PNULL,/*21*///write_ae_value
-    PNULL,/*22*///read_gain_value
-    PNULL,/*23*///write_gain_value
-    PNULL,/*24*///read_gain_scale
-    PNULL,//    set_frame_rate,/*25*/
-    PNULL,//    af_enable/*26*/
-    PNULL,//    af_get_status,/*27*/
-    PNULL,//_sr352_set_awb,//PNULL,//    sr352_set_awb,/*28*/
-    PNULL,//   get_skip_frame,/*29*/
-    PNULL,//_sr352_set_iso,/*30*///iso
-    PNULL,//_sr352_set_ev,//PNULL,/*31*///exposure
-    PNULL,//_sr352_check_image_format_support,//PNULL,/*32*///check_image_format_support
-    PNULL,/*33*///change_image_format)
-    PNULL,/*34*/ //set_zoom
-    PNULL,//_sr352_GetExifInfo,//PNULL,/*35*/// set_focus
-    PNULL,//_sr352_ExtFunc,//PNULL,/*36*///get_exif
-    PNULL,//_sr352_set_anti_flicker,//PNULL,/*37*///set_anti_banding_flicker
-    PNULL,//_sr352_set_video_mode,//PNULL,/*38*/// set_video_mode
-    PNULL,//_sr352_pick_out_jpeg_stream,//PNULL,/*39*///pick_jpeg_stream
-    PNULL,//    sr352_set_Metering,/*40*///set_meter_mode
-    PNULL, /*41*///get_status
-    PNULL, //_sr352_StreamOn, /*42*///stream_on
-    PNULL, //_sr352_StreamOff, /*43*/ // stream_off
-    NULL,
+	// External
+	PNULL,/*8*///sr352_set_ae_enable,
+	PNULL,/*9*///sr352_set_hmirror_enable,
+	PNULL,/*10*///sr352_set_vmirror_enable,
+	PNULL,//_sr352_set_brightness,//PNULL,//    sr352_set_brightness,/*11*/
+	PNULL, //_sr352_set_contrast,//PNULL,//    sr352_set_contrast,/*12*/
+	PNULL,/*13*///sr352_set_sharpness,
+	PNULL,//_sr352_set_saturation,//PNULL,/*14*///sr352_set_saturation,
+	PNULL,//_sr352_set_work_mode,//PNULL,//    sr352_set_scene_mode ,/*15*///sr352_set_preview_mode,
+	PNULL,//_sr352_set_image_effect,//PNULL,//    sr352_set_image_effect,/*16*/
+	_sr352_BeforeSnapshot,//PNULL,//    sr352_BeforeSnapshot,/*17*/
+	_sr352_after_snapshot,//PNULL,//    sr352_after_snapshot,/*18*/
+	PNULL,//_sr352_flash,//PNULL,/*19*/
+	PNULL,/*20*///read_ae_value
+	PNULL,/*21*///write_ae_value
+	PNULL,/*22*///read_gain_value
+	PNULL,/*23*///write_gain_value
+	PNULL,/*24*///read_gain_scale
+	PNULL,//set_frame_rate,/*25*/
+	PNULL,//af_enable/*26*/
+	PNULL,//af_get_status,/*27*/
+	PNULL,//_sr352_set_awb,//PNULL,//sr352_set_awb,/*28*/
+	PNULL,//get_skip_frame,/*29*/
+	PNULL,//_sr352_set_iso,/*30*///iso
+	PNULL,//_sr352_set_ev,//PNULL,/*31*///exposure
+	PNULL,//_sr352_check_image_format_support,//PNULL,/*32*///check_image_format_support
+	PNULL,/*33*///change_image_format)
+	PNULL,/*34*/ //set_zoom
+	PNULL,//_sr352_GetExifInfo,//PNULL,/*35*/// set_focus
+	PNULL,//_sr352_ExtFunc,//PNULL,/*36*///get_exif
+	PNULL,//_sr352_set_anti_flicker,//PNULL,/*37*///set_anti_banding_flicker
+	PNULL,//_sr352_set_video_mode,//PNULL,/*38*/// set_video_mode
+	PNULL,//_sr352_pick_out_jpeg_stream,//PNULL,/*39*///pick_jpeg_stream
+	PNULL,//sr352_set_Metering,/*40*///set_meter_mode
+	PNULL, /*41*///get_status
+	PNULL, //_sr352_StreamOn, /*42*///stream_on
+	PNULL, //_sr352_StreamOff, /*43*/ // stream_off
+	NULL,
 };
 
-
-/**---------------------------------------------------------------------------*
- ** 						Global Variables								  *
- **---------------------------------------------------------------------------*/
  SENSOR_INFO_T g_sr352_yuv_info =
 {
 	sr352_I2C_ADDR_W,				// salve i2c write address
-	sr352_I2C_ADDR_R, 				// salve i2c read address
-	SENSOR_I2C_VAL_8BIT|SENSOR_I2C_REG_8BIT|SENSOR_I2C_FREQ_400,//SENSOR_I2C_VAL_8BIT|SENSOR_I2C_REG_8BIT,			// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
-									// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
-									// other bit: reseved
+	sr352_I2C_ADDR_R,					// salve i2c read address
+	SENSOR_I2C_VAL_8BIT|SENSOR_I2C_REG_8BIT|SENSOR_I2C_FREQ_400,//SENSOR_I2C_VAL_8BIT|SENSOR_I2C_REG_8BIT,// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+							// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
+							// other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_P|\
 	SENSOR_HW_SIGNAL_VSYNC_N|\
-	SENSOR_HW_SIGNAL_HSYNC_P,		// bit0: 0:negative; 1:positive -> polarily of pixel clock
-									// bit2: 0:negative; 1:positive -> polarily of horizontal synchronization signal
-									// bit4: 0:negative; 1:positive -> polarily of vertical synchronization signal
-									// other bit: reseved
+	SENSOR_HW_SIGNAL_HSYNC_P,			// bit0: 0:negative; 1:positive -> polarily of pixel clock
+							// bit2: 0:negative; 1:positive -> polarily of horizontal synchronization signal
+							// bit4: 0:negative; 1:positive -> polarily of vertical synchronization signal
+							// other bit: reseved
 
 	// preview mode
 	SENSOR_ENVIROMENT_NORMAL|\
@@ -8942,81 +8873,67 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_sr352_ioctl_func_tab =
 
 	// image effect
 	SENSOR_IMAGE_EFFECT_NORMAL|\
-        SENSOR_IMAGE_EFFECT_BLACKWHITE|\
-        SENSOR_IMAGE_EFFECT_RED|\
-        SENSOR_IMAGE_EFFECT_GREEN|\
-        SENSOR_IMAGE_EFFECT_BLUE|\
-        SENSOR_IMAGE_EFFECT_YELLOW|\
-        SENSOR_IMAGE_EFFECT_NEGATIVE|\
-        SENSOR_IMAGE_EFFECT_CANVAS,
+	SENSOR_IMAGE_EFFECT_BLACKWHITE|\
+	SENSOR_IMAGE_EFFECT_RED|\
+	SENSOR_IMAGE_EFFECT_GREEN|\
+	SENSOR_IMAGE_EFFECT_BLUE|\
+	SENSOR_IMAGE_EFFECT_YELLOW|\
+	SENSOR_IMAGE_EFFECT_NEGATIVE|\
+	SENSOR_IMAGE_EFFECT_CANVAS,
 
 	// while balance mode
-        0,
+	0,
 
 	0x7,
-// bit[0:7]: count of step in brightness, contrast, sharpness, saturation
-									// bit[8:31] reseved
+							// bit[0:7]: count of step in brightness, contrast, sharpness, saturation
+							// bit[8:31] reseved
 
-	SENSOR_LOW_PULSE_RESET,//SENSOR_LOW_PULSE_RESET,		// reset pulse level
-	50,								// reset pulse width(ms)
+	SENSOR_LOW_PULSE_RESET,				// reset pulse level
+	50,						// reset pulse width(ms)
 
 	SENSOR_LOW_LEVEL_PWDN,		// 1: high level valid; 0: low level valid
 
-	1,								// count of identify code
-	{{0x04, 0xc2},                // supply two code to identify sensor.
-    {0x04, 0xc2}},               // for Example: index = 0-> Device id, index = 1 -> version id
+	1,						// count of identify code
+	{{0x04, 0xc2},					// supply two code to identify sensor.
+	{0x04, 0xc2}},					// for Example: index = 0-> Device id, index = 1 -> version id
 
-	SENSOR_AVDD_2800MV,			// voltage of avdd
-	2048,							// max width of source image
-	1536,							// max height of source image
+	SENSOR_AVDD_2800MV,				// voltage of avdd
+	2048,						// max width of source image
+	1536,						// max height of source image
 	"sr352",						// name of sensor
 
-    SENSOR_IMAGE_FORMAT_MAX,        // define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
-                                    // if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
+	SENSOR_IMAGE_FORMAT_MAX,			// define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
+							// if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
 
-	SENSOR_IMAGE_PATTERN_YUV422_UYVY,	// pattern of input image form sensor;
+	SENSOR_IMAGE_PATTERN_YUV422_UYVY,		// pattern of input image form sensor;
 
-	s_sr352_resolution_Tab_YUV,	// point to resolution table information structure
-	&s_sr352_ioctl_func_tab,		// point to ioctl function table
+	s_sr352_resolution_Tab_YUV,				// point to resolution table information structure
+	&s_sr352_ioctl_func_tab,				// point to ioctl function table
 
-	PNULL,							// information and table about Rawrgb sensor
-	PNULL,				// extend information about sensor
-	SENSOR_AVDD_1800MV,                     // iovdd
-	SENSOR_AVDD_1200MV,                      // dvdd
-	1,                     // skip frame num before preview
-	2,                     // skip frame num before capture
-	0,                     // deci frame num during preview;
-        0,                     // deci frame num during video preview;
+	PNULL,						// information and table about Rawrgb sensor
+	PNULL,						// extend information about sensor
+	SENSOR_AVDD_1800MV,				// iovdd
+	SENSOR_AVDD_1200MV,				// dvdd
+	1,						// skip frame num before preview
+	2,						// skip frame num before capture
+	0,						// deci frame num during preview;
+	0,						// deci frame num during video preview;
 
-	0,                     // threshold enable
-        0,                     // threshold mode
-        0,                     // threshold start postion
-        0,                     // threshold end postion
-	0,                     // i2c_dev_handler
+	0,						// threshold enable
+	0,						// threshold mode
+	0,						// threshold start postion
+	0,						// threshold end postion
+	0,						// i2c_dev_handler
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
-	0,			// skip frame num while change setting
+	0,						// skip frame num while change setting
 };
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-/******************************************************************************/
 LOCAL uint32_t _sr352_GetExifInfo(uint32_t param)
 {
 	return (uint32_t)&s_sr352_exif;
 }
 
-
-
-/******************************************************************************/
-// Description: get sr352 rssolution trim tab
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-/******************************************************************************/
 LOCAL uint32_t _sr352_InitExifInfo(void)
 {
 
@@ -9095,38 +9012,22 @@ LOCAL uint32_t _sr352_InitExifInfo(void)
 	return SENSOR_SUCCESS;
 }
 
-
-
-/******************************************************************************/
-// Description: get sr352 rssolution trim tab
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-/******************************************************************************/
 LOCAL uint32_t _sr352_GetResolutionTrimTab(uint32_t param)
 {
-    return (uint32_t)s_sr352_Resolution_Trim_Tab;
+	return (uint32_t)s_sr352_Resolution_Trim_Tab;
 }
-/******************************************************************************/
-// Description: sensor sr352 power on/down sequence
-// Global resource dependence:
-// Author:
-// Note:
-//
-/******************************************************************************/
 
 LOCAL uint32_t _sr352_PowerOn(uint32_t power_on)
 {
-	SENSOR_AVDD_VAL_E		dvdd_val=g_sr352_yuv_info.dvdd_val;
-	SENSOR_AVDD_VAL_E		avdd_val=g_sr352_yuv_info.avdd_val;
-	SENSOR_AVDD_VAL_E		iovdd_val=g_sr352_yuv_info.iovdd_val;
-	SENSOR_AVDD_VAL_E		afvdd_val=SENSOR_AVDD_2800MV;
-	BOOLEAN 				power_down=g_sr352_yuv_info.power_down_level;
-	BOOLEAN 				reset_level=g_sr352_yuv_info.reset_pulse_level;
+	SENSOR_AVDD_VAL_E dvdd_val = g_sr352_yuv_info.dvdd_val;
+	SENSOR_AVDD_VAL_E avdd_val = g_sr352_yuv_info.avdd_val;
+	SENSOR_AVDD_VAL_E iovdd_val = g_sr352_yuv_info.iovdd_val;
+	SENSOR_AVDD_VAL_E afvdd_val = SENSOR_AVDD_2800MV;
+	BOOLEAN power_down = g_sr352_yuv_info.power_down_level;
+	BOOLEAN reset_level = g_sr352_yuv_info.reset_pulse_level;
 
 	SENSOR_PRINT("set_sr352_Power_ON 1 reset %d PWDN %d", reset_level, power_down);
-	if(SENSOR_TRUE==power_on)
-	{
+	if (SENSOR_TRUE == power_on) {
 		Sensor_SetResetLevel(reset_level);
 		Sensor_PowerDown(power_down);
 		SENSOR_Sleep(10);
@@ -9139,12 +9040,10 @@ LOCAL uint32_t _sr352_PowerOn(uint32_t power_on)
 		SENSOR_Sleep(10);
 		Sensor_SetResetLevel(!reset_level);
 		SENSOR_Sleep(20);
-	}
-	else
-	{
+	} else {
 		Sensor_SetResetLevel(reset_level);
-        SENSOR_Sleep(20);
-        Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		SENSOR_Sleep(20);
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		SENSOR_Sleep(1);
 		Sensor_PowerDown(power_down);
 		SENSOR_Sleep(1);
@@ -9156,15 +9055,6 @@ LOCAL uint32_t _sr352_PowerOn(uint32_t power_on)
 
 }
 
-
-
-/******************************************************************************/
-// Description: sr352_Identify
-// Global resource dependence:
-// Author:
-// Note:
-//
-/******************************************************************************/
 LOCAL uint32_t _sr352_Identify(uint32_t param)
 {
 	#define sr352_PID_VALUE    0xc2
@@ -9179,140 +9069,123 @@ LOCAL uint32_t _sr352_Identify(uint32_t param)
 
 	pid_value = Sensor_ReadReg(sr352_PID_ADDR);
 	SENSOR_PRINT("=====sonia SENSOR:sr352 identify  .pid_value=%x\n",pid_value);
-	if (sr352_PID_VALUE == pid_value)
-	{
+	if (sr352_PID_VALUE == pid_value) {
 		ver_value = Sensor_ReadReg(sr352_VER_ADDR);
 		SENSOR_PRINT("SENSOR: sr352_Identify: PID = %x, VER = %x \n",pid_value, ver_value);
 		if (sr352_VER_VALUE == ver_value)
 		{
 			ret_value = SENSOR_SUCCESS;
 			SENSOR_PRINT("SENSOR: this is sr352 sensor ! \n");
-		}
-		else
-		{
+		} else {
 			SENSOR_PRINT("SENSOR: sr352_Identify this is OV%x%x sensor ! \n",pid_value, ver_value);
 		}
-	}
-	else
-	{
+	} else {
 		SENSOR_PRINT("SENSOR:sr352 identify fail,pid_value=%d .\n",pid_value);
 	}
 
 	return ret_value;
 }
 
-
-
-/******************************************************************************/
-// Description: set brightness
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_brightness_tab[][7] =
 {
 	{//level 1
-		{0xFCFC, 0xD000},
-		{0x0028, 0x7000},
-		{0x002A, 0x1484},
-		{0x0F12, 0x002C},
-		{0x002A, 0x0230},
-		{0x0F12, 0xFF80},
-		{0xffff, 0xffff}
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x002C},
+	{0x002A, 0x0230},
+	{0x0F12, 0xFF80},
+	{0xffff, 0xffff}
 	},
 	{//level 2
-        {0xFCFC, 0xD000},
-		{0x0028, 0x7000},
-		{0x002A, 0x1484},
-		{0x0F12, 0x0030},
-		{0x002A, 0x0230},
-		{0x0F12, 0xFFA0},
-		{0xffff, 0xffff}
-    },
-    {//level 3
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0030},
+	{0x002A, 0x0230},
+	{0x0F12, 0xFFA0},
+	{0xffff, 0xffff}
+	},
+	{//level 3
 
-		 {0xFCFC, 0xD000},
-		 {0x0028, 0x7000},
-		 {0x002A, 0x1484},
-		 {0x0F12, 0x0034},
-		 {0x002A, 0x0230},
-		 {0x0F12, 0xFFC0},
-         {0xffff, 0xffff}
-    },
-    {//level 4
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0034},
+	{0x002A, 0x0230},
+	{0x0F12, 0xFFC0},
+	{0xffff, 0xffff}
+	},
+	{//level 4
 
-	   {0xFCFC, 0xD000},
-	   {0x0028, 0x7000},
-	   {0x002A, 0x1484},
-	   {0x0F12, 0x0038},
-	   {0x002A, 0x0230},
-	   {0x0F12, 0xFFE0},
-       {0xffff, 0xffff}
-    },
-    {//level 5
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0038},
+	{0x002A, 0x0230},
+	{0x0F12, 0xFFE0},
+	{0xffff, 0xffff}
+	},
+	{//level 5
 
-		{0xFCFC, 0xD000},
-		{0x0028, 0x7000},
-		{0x002A, 0x1484},
-		{0x0F12, 0x003C},
-		{0x002A, 0x0230},
-		{0x0F12, 0x0000},
-        {0xffff, 0xffff}
-    },
-    {//level 6
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x003C},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0000},
+	{0xffff, 0xffff}
+	},
+	{//level 6
 
-		{0xFCFC, 0xD000},
-		{0x0028, 0x7000},
-		{0x002A, 0x1484},
-		{0x0F12, 0x0040},
-		{0x002A, 0x0230},
-		{0x0F12, 0x0020},
-        {0xffff, 0xffff}
-    },
-    {//level 7
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0040},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0020},
+	{0xffff, 0xffff}
+	},
+	{//level 7
 
-	   {0xFCFC, 0xD000},
-	   {0x0028, 0x7000},
-	   {0x002A, 0x1484},
-	   {0x0F12, 0x0044},
-	   {0x002A, 0x0230},
-	   {0x0F12, 0x0040},
-       {0xffff, 0xffff}
-    },
-    {//level 8
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0044},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0040},
+	{0xffff, 0xffff}
+	},
+	{//level 8
 
-		 {0xFCFC, 0xD000},
-		 {0x0028, 0x7000},
-		 {0x002A, 0x1484},
-		 {0x0F12, 0x0048},
-		 {0x002A, 0x0230},
-		 {0x0F12, 0x0060},
-         {0xffff, 0xffff}
-    },
-    {//level 9
-		{0xFCFC, 0xD000},
-		{0x0028, 0x7000},
-		{0x002A, 0x1484},
-		{0x0F12, 0x004C},
-		{0x002A, 0x0230},
-		{0x0F12, 0x0080},
-		{0xffff, 0xffff}
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x0048},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0060},
+	{0xffff, 0xffff}
+	},
+	{//level 9
+	{0xFCFC, 0xD000},
+	{0x0028, 0x7000},
+	{0x002A, 0x1484},
+	{0x0F12, 0x004C},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0080},
+	{0xffff, 0xffff}
 	}
-
 };
+
 LOCAL uint32_t _sr352_set_brightness(uint32_t level)
 {
 	uint16_t i=0x00;
-	//uint32_t reg_bits = 0;
-	//uint32_t reg_value = 0;
-	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_brightness_tab[level];
 
+	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_brightness_tab[level];
 	if (level > 7)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
@@ -9320,38 +9193,29 @@ LOCAL uint32_t _sr352_set_brightness(uint32_t level)
 	return 0;
 }
 
-
-/******************************************************************************/
-// Description: set contrast
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_contrast_tab[][4] =
 {
 	{//level -3
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFF81}, {0xffff, 0xffff}
-    },
-    {//level -2
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFFAC}, {0xffff, 0xffff}
-    },
-    {//level -1
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFFD5}, {0xffff, 0xffff}
-    },
-    {//level 0
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x0000}, {0xffff, 0xffff}
-    },
-    {//level 1
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x002B}, {0xffff, 0xffff}
-    },
-    {//level 2
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x0057}, {0xffff, 0xffff}
-    },
-    {//level 3
-         {0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x007F}, {0xffff, 0xffff}
-    }
-
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFF81}, {0xffff, 0xffff}
+	},
+	{//level -2
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFFAC}, {0xffff, 0xffff}
+	},
+	{//level -1
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0xFFD5}, {0xffff, 0xffff}
+	},
+	{//level 0
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x0000}, {0xffff, 0xffff}
+	},
+	{//level 1
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x002B}, {0xffff, 0xffff}
+	},
+	{//level 2
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x0057}, {0xffff, 0xffff}
+	},
+	{//level 3
+	{0x0028, 0x7000}, {0x002A ,0x0232}, {0x0F12 ,0x007F}, {0xffff, 0xffff}
+	}
 };
 
 LOCAL uint32_t _sr352_set_contrast(uint32_t level)
@@ -9367,99 +9231,69 @@ LOCAL uint32_t _sr352_set_contrast(uint32_t level)
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_CONTRAST, (uint32_t) level);
-	SENSOR_PRINT("SENSOR: _sr352_set_contrast = 0x%02x,data=0x%x .\n",level);
 
 	return 0;
 }
 
-/******************************************************************************/
-// Description: set contrast
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_iso_tab[][6] = {
-    {/*ISO AUTO*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0000}, {0x0F12 ,0x0000}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    },
-    {/*ISO 100*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0064}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    },
-    {/*ISO 200*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x00C8}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    },
-    {/*ISO 400*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0190}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    },
-    {/*ISO 800*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0320}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    },
-    {/*ISO 1600*/
-         {0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0640}, {0x0F12 ,0x0001},{0xffff, 0xffff}
-    }
-
+	{/*ISO AUTO*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0000}, {0x0F12 ,0x0000}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	},
+	{/*ISO 100*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0064}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	},
+	{/*ISO 200*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x00C8}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	},
+	{/*ISO 400*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0190}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	},
+	{/*ISO 800*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0320}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	},
+	{/*ISO 1600*/
+	{0x0028, 0x7000}, {0x002A ,0x04D0}, {0x0F12 ,0x0001}, {0x0F12 ,0x0640}, {0x0F12 ,0x0001},{0xffff, 0xffff}
+	}
 };
 
 LOCAL uint32_t _sr352_set_iso(uint32_t level)
 {
-        uint16_t i=0x00;
-        SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_iso_tab[level];
+	uint16_t i=0x00;
 
-        if (level > 5)
-                return 0;
+	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_iso_tab[level];
+	if (level > 5)
+		return 0;
 
-        for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-        {
-                        Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
-        }
-        //Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_ISO, (uint32_t) level);
-        SENSOR_PRINT("SENSOR: _sr352_set_iso = 0x%02x.\n",level);
-        return 0;
-}
-
-#if 0
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_set_sharpness(uint32_t level)
-{
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
+	}
+	//Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_ISO, (uint32_t) level);
+	SENSOR_PRINT("SENSOR: _sr352_set_iso = 0x%02x.\n",level);
 	return 0;
 }
-#endif
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
+
 LOCAL const SENSOR_REG_T sr352_saturation_tab[][4] = {
 	{//level -3
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFF81}, {0xffff, 0xffff}
-    },
-    {//level -2
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFFAC}, {0xffff, 0xffff}
-    },
-    {//level -1
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFFD5}, {0xffff, 0xffff}
-    },
-    {//level 0
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x0010}, {0xffff, 0xffff}
-    },
-    {//level 1
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x002B}, {0xffff, 0xffff}
-    },
-    {//level 2
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x0057}, {0xffff, 0xffff}
-    },
-    {//level 3
-         {0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x007F}, {0xffff, 0xffff}
-    }
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFF81}, {0xffff, 0xffff}
+	},
+	{//level -2
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFFAC}, {0xffff, 0xffff}
+	},
+	{//level -1
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0xFFD5}, {0xffff, 0xffff}
+	},
+	{//level 0
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x0010}, {0xffff, 0xffff}
+	},
+	{//level 1
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x002B}, {0xffff, 0xffff}
+	},
+	{//level 2
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x0057}, {0xffff, 0xffff}
+	},
+	{//level 3
+	{0x0028, 0x7000}, {0x002A ,0x0234}, {0x0F12 ,0x007F}, {0xffff, 0xffff}
+	}
 };
 LOCAL uint32_t _sr352_set_saturation(uint32_t level)
 {
@@ -9470,8 +9304,7 @@ LOCAL uint32_t _sr352_set_saturation(uint32_t level)
 	if(level>6)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 	SENSOR_PRINT("SENSOR: _sr352_set_saturation = 0x%02x.\n",level);
@@ -9489,7 +9322,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 {
 
 	{
-		// Normal
+	// Normal
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9529,7 +9362,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		//Bluish
+	//Bluish
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9539,7 +9372,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		//Yellow
+	//Yellow
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
@@ -9548,7 +9381,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 		{0xffff, 0xffff}
 	},
 	{
-		//Negative (Color)
+	//Negative (Color)
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9558,7 +9391,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		//Canvas or Sepia
+	//Canvas or Sepia
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9568,7 +9401,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		//GRAY
+	//GRAY
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
@@ -9578,7 +9411,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		//Emboss
+	//Emboss
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
@@ -9588,7 +9421,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 	},
 
 	{
-		// sketch
+	// sketch
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9597,7 +9430,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 		{0xffff, 0xffff}
 	},
 	{
-		//Relievos
+	//Relievos
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
 		{0xffff, 0xffff},
@@ -9606,7 +9439,7 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 		{0xffff, 0xffff}
 	},
 	{
-		//Aqua
+	//Aqua
 		{0x0028, 0x7000},
 		{0x002A, 0x04E6},
 		{0x0F12, 0x077f},
@@ -9620,90 +9453,73 @@ LOCAL const SENSOR_REG_T sr352_image_effect_tab[][6] =
 LOCAL uint32_t _sr352_set_image_effect(uint32_t effect_type)
 {
 	uint16_t i = 0x00;
-	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_image_effect_tab[effect_type];
 
+	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_image_effect_tab[effect_type];
 	if (effect_type > 7)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
- 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
 	SENSOR_PRINT("SENSOR: _sr352_set_image_effect = 0x%02x\n",effect_type);
 	return 0;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_ev_tab[][7] =
 {
 	{//level -3 TVAR_ae_BrAve
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x000C}, {0xffff, 0xffff}
-    },
-    {//level -2
+	},
+	{//level -2
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x001E}, {0xffff, 0xffff}
-    },
-    {//level -1
+	},
+	{//level -1
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x002E}, {0xffff, 0xffff}
-    },
-    {//level 0
+	},
+	{//level 0
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x003C}, {0xffff, 0xffff}
-    },
-    {//level 1
+	},
+	{//level 1
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x0054}, {0xffff, 0xffff}
-    },
-    {//level 2
+	},
+	{//level 2
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x0066}, {0xffff, 0xffff}
-    },
-    {//level 3
+	},
+	{//level 3
 	{0x0028, 0x7000},{0x002A, 0x1484},{0x0F12, 0x0078}, {0xffff, 0xffff}
-    }
-
+	}
 };
 
 LOCAL uint32_t _sr352_set_ev(uint32_t level)
 {
 	uint16_t i = 0x00;
+
 	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_ev_tab[level];
-
-
 	if (level > 6)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
- 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
 	SENSOR_PRINT("SENSOR: _sr352_set_ev = 0x%02x \n", level);
 	return 0;
 }
-/******************************************************************************/
-// Description: anti 50/60 hz banding flicker
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
+
 LOCAL const SENSOR_REG_T sr352_anti_banding_flicker_tab[][7] = {
-	{			//50hz
+	{//50hz
 		{0x0028, 0x7000},
-    {0x002a, 0x04e6},
+		{0x002a, 0x04e6},
 		{0x0f12, 0x075f},
 		{0x002a, 0x04d6},
 		{0x0f12, 0x0001},
 		{0x0f12, 0x0001},
 		{0xffff, 0xffff}
 	},
-	{			//60hz
-	  {0x0028, 0x7000},
-    {0x002a, 0x04e6},
+	{//60hz
+		{0x0028, 0x7000},
+		{0x002a, 0x04e6},
 		{0x0f12, 0x075f},
 		{0x002a, 0x04d6},
 		{0x0f12, 0x0002},
@@ -9720,9 +9536,8 @@ LOCAL uint32_t _sr352_set_anti_flicker(uint32_t mode)
 	if (mode > 1)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
- 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
 	SENSOR_PRINT("SENSOR: _sr352_set_anti_flicker = 0x%02x \n", mode);
@@ -9730,13 +9545,6 @@ LOCAL uint32_t _sr352_set_anti_flicker(uint32_t mode)
 	return 0;
 }
 
-/******************************************************************************/
-// Description: set video mode
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_video_mode_tab[][40]=
 {
 	/* preview mode: 30 fps*/
@@ -9747,42 +9555,42 @@ LOCAL const SENSOR_REG_T sr352_video_mode_tab[][40]=
 	// Preview Config 0     640*480
 	////////////////////////////////////////////////////
 	{0x002A, 0x02A6},
-	{0x0F12, 0x0280},  //#REG_0TC_PCFG_usWidth
-	{0x0F12, 0x01e0},  //#REG_0TC_PCFG_usHeight
-	{0x0F12, 0x0005},  //#REG_0TC_PCFG_Format
-	{0x0F12, 0x2EE0},  //#REG_0TC_PCFG_usMaxOut4KHzRate
-	{0x0F12, 0x2EE0},  //#REG_0TC_PCFG_usMinOut4KHzRate
-	{0x0F12, 0x0100},  //#REG_0TC_PCFG_OutClkPerPix88
-	{0x0F12, 0x0300},  //#REG_0TC_PCFG_uBpp88
-	{0x0F12, 0x0042},  //#REG_0TC_PCFG_PVIMask
-	{0x0F12, 0x0800},  //#REG_0TC_PCFG_OIFMask
-	{0x0F12, 0x01E0},  //#REG_0TC_PCFG_usJpegPacketSize
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_usJpegTotalPackets
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uClockInd
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_usFrTimeType
-	{0x0F12, 0x0001},  //#REG_0TC_PCFG_FrRateQualityType
-	{0x0F12, 0x03e8},  //#REG_0TC_PCFG_usMaxFrTimeMsecMult10
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_usMinFrTimeMsecMult10
+	{0x0F12, 0x0280},//#REG_0TC_PCFG_usWidth
+	{0x0F12, 0x01e0},//#REG_0TC_PCFG_usHeight
+	{0x0F12, 0x0005},//#REG_0TC_PCFG_Format
+	{0x0F12, 0x2EE0},//#REG_0TC_PCFG_usMaxOut4KHzRate
+	{0x0F12, 0x2EE0},//#REG_0TC_PCFG_usMinOut4KHzRate
+	{0x0F12, 0x0100},//#REG_0TC_PCFG_OutClkPerPix88
+	{0x0F12, 0x0300},//#REG_0TC_PCFG_uBpp88
+	{0x0F12, 0x0042},//#REG_0TC_PCFG_PVIMask
+	{0x0F12, 0x0800},//#REG_0TC_PCFG_OIFMask
+	{0x0F12, 0x01E0},//#REG_0TC_PCFG_usJpegPacketSize
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_usJpegTotalPackets
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uClockInd
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_usFrTimeType
+	{0x0F12, 0x0001},//#REG_0TC_PCFG_FrRateQualityType
+	{0x0F12, 0x03e8},//#REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_usMinFrTimeMsecMult10
 	{0x002A, 0x02D0},
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uPrevMirror
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uCaptureMirror
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uRotation
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uPrevMirror
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uCaptureMirror
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uRotation
 
 	{0x002A, 0x0266},
-	{0x0F12, 0x0000},  //#REG_TC_GP_ActivePrevConfig
+	{0x0F12, 0x0000},//#REG_TC_GP_ActivePrevConfig
 	{0x002A, 0x026A},
-	{0x0F12, 0x0001},  //#REG_TC_GP_PrevOpenAfterChange
+	{0x0F12, 0x0001},//#REG_TC_GP_PrevOpenAfterChange
 	{0x002A, 0x026E},
-	{0x0F12, 0x0000},	 //REG_TC_GP_ActiveCapConfig
+	{0x0F12, 0x0000},//REG_TC_GP_ActiveCapConfig
 	{0x002A, 0x024E},
-	{0x0F12, 0x0001},  //#REG_TC_GP_NewConfigSync
+	{0x0F12, 0x0001},//#REG_TC_GP_NewConfigSync
 	{0x002A, 0x0268},
-	{0x0F12, 0x0001},  //#REG_TC_GP_PrevConfigChanged
+	{0x0F12, 0x0001},//#REG_TC_GP_PrevConfigChanged
 	{0x002A, 0x0270},
-	{0x0F12, 0x0001},  //#REG_TC_GP_CapConfigChanged
+	{0x0F12, 0x0001},//#REG_TC_GP_CapConfigChanged
 	{0x002A, 0x023E},
-	{0x0F12, 0x0001},  //#REG_TC_GP_EnablePreview
-  {0x0F12, 0x0001},  //#REG_TC_GP_EnablePreviewChanged
+	{0x0F12, 0x0001},//#REG_TC_GP_EnablePreview
+	{0x0F12, 0x0001},//#REG_TC_GP_EnablePreviewChanged
 	{0xffff, 0xffff},
 	{0xffff, 0xffff}
 	},
@@ -9794,43 +9602,43 @@ LOCAL const SENSOR_REG_T sr352_video_mode_tab[][40]=
 	// Preview Config 0     640*480
 	////////////////////////////////////////////////////
 	{0x002A, 0x02A6},
-	{0x0F12, 0x0280},  //#REG_0TC_PCFG_usWidth
-	{0x0F12, 0x01e0},  //#REG_0TC_PCFG_usHeight
-	{0x0F12, 0x0005},  //#REG_0TC_PCFG_Format
-	{0x0F12, 0x2EE0},  //#REG_0TC_PCFG_usMaxOut4KHzRate
-	{0x0F12, 0x2EE0},  //#REG_0TC_PCFG_usMinOut4KHzRate
-	{0x0F12, 0x0100},  //#REG_0TC_PCFG_OutClkPerPix88
-	{0x0F12, 0x0300},  //#REG_0TC_PCFG_uBpp88
-	{0x0F12, 0x0042},  //#REG_0TC_PCFG_PVIMask
-	{0x0F12, 0x0800},  //#REG_0TC_PCFG_OIFMask
-	{0x0F12, 0x01E0},  //#REG_0TC_PCFG_usJpegPacketSize
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_usJpegTotalPackets
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uClockInd
-	{0x0F12, 0x0002},  //#REG_0TC_PCFG_usFrTimeType
-	{0x0F12, 0x0001},  //#REG_0TC_PCFG_FrRateQualityType
-	{0x0F12, 0x029a},  //#REG_0TC_PCFG_usMaxFrTimeMsecMult10
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_usMinFrTimeMsecMult10
+	{0x0F12, 0x0280},//#REG_0TC_PCFG_usWidth
+	{0x0F12, 0x01e0},//#REG_0TC_PCFG_usHeight
+	{0x0F12, 0x0005},//#REG_0TC_PCFG_Format
+	{0x0F12, 0x2EE0},//#REG_0TC_PCFG_usMaxOut4KHzRate
+	{0x0F12, 0x2EE0},//#REG_0TC_PCFG_usMinOut4KHzRate
+	{0x0F12, 0x0100},//#REG_0TC_PCFG_OutClkPerPix88
+	{0x0F12, 0x0300},//#REG_0TC_PCFG_uBpp88
+	{0x0F12, 0x0042},//#REG_0TC_PCFG_PVIMask
+	{0x0F12, 0x0800},//#REG_0TC_PCFG_OIFMask
+	{0x0F12, 0x01E0},//#REG_0TC_PCFG_usJpegPacketSize
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_usJpegTotalPackets
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uClockInd
+	{0x0F12, 0x0002},//#REG_0TC_PCFG_usFrTimeType
+	{0x0F12, 0x0001},//#REG_0TC_PCFG_FrRateQualityType
+	{0x0F12, 0x029a},//#REG_0TC_PCFG_usMaxFrTimeMsecMult10
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_usMinFrTimeMsecMult10
 	{0x002A, 0x02D0},
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uPrevMirror
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uCaptureMirror
-	{0x0F12, 0x0000},  //#REG_0TC_PCFG_uRotation
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uPrevMirror
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uCaptureMirror
+	{0x0F12, 0x0000},//#REG_0TC_PCFG_uRotation
 
 	{0x002A, 0x0266},
-	{0x0F12, 0x0000},  //#REG_TC_GP_ActivePrevConfig
+	{0x0F12, 0x0000},//#REG_TC_GP_ActivePrevConfig
 	{0x002A, 0x026A},
-	{0x0F12, 0x0001},  //#REG_TC_GP_PrevOpenAfterChange
+	{0x0F12, 0x0001},//#REG_TC_GP_PrevOpenAfterChange
 	{0x002A, 0x026E},
-	{0x0F12, 0x0000},	 //REG_TC_GP_ActiveCapConfig
+	{0x0F12, 0x0000},//REG_TC_GP_ActiveCapConfig
 	{0x002A, 0x024E},
-	{0x0F12, 0x0001},  //#REG_TC_GP_NewConfigSync
+	{0x0F12, 0x0001},//#REG_TC_GP_NewConfigSync
 	{0x002A, 0x0268},
-	{0x0F12, 0x0001},  //#REG_TC_GP_PrevConfigChanged
+	{0x0F12, 0x0001},//#REG_TC_GP_PrevConfigChanged
 	{0x002A, 0x0270},
-	{0x0F12, 0x0001},  //#REG_TC_GP_CapConfigChanged
+	{0x0F12, 0x0001},//#REG_TC_GP_CapConfigChanged
 	{0x002A, 0x023E},
-	{0x0F12, 0x0001},  //#REG_TC_GP_EnablePreview
-  {0x0F12, 0x0001},  //#REG_TC_GP_EnablePreviewChanged
-  {0xffff, 0xffff},
+	{0x0F12, 0x0001},//#REG_TC_GP_EnablePreview
+	{0x0F12, 0x0001},//#REG_TC_GP_EnablePreviewChanged
+	{0xffff, 0xffff},
 	{0xffff, 0xffff}
 	}
 };
@@ -9839,13 +9647,13 @@ LOCAL uint32_t _sr352_set_video_mode(uint32_t mode)
 {
 	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)sr352_video_mode_tab[mode];
 	uint16_t i=0x00;
-        SENSOR_PRINT("SENSOR: _sr352_set_video_mode,in = 0x%02x \n", mode);
-	if(mode>1)
+
+	SENSOR_PRINT("SENSOR: _sr352_set_video_mode,in = 0x%02x \n", mode);
+	if (mode>1)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
- 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
 	SENSOR_PRINT("SENSOR: _sr352_set_video_mode = 0x%02x \n", mode);
@@ -9934,7 +9742,7 @@ LOCAL const SENSOR_REG_T sr352_awb_tab[][13] =
 LOCAL uint32_t _sr352_set_awb(uint32_t mode)
 {
 	uint16_t i=0x00;
-#if 0   //sunao 20130608
+#if 0//sunao 20130608
 	SENSOR_REG_T_PTR sensor_reg_ptr =(SENSOR_REG_T_PTR) sr352_awb_tab[mode];
 
 	if (mode > 6)
@@ -9953,80 +9761,72 @@ LOCAL uint32_t _sr352_set_awb(uint32_t mode)
 	return 0;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//        mode 0:normal;   1:night
-/******************************************************************************/
 LOCAL const SENSOR_REG_T sr352_work_mode_tab[][16] = {
 	/* Normal Mode,0 */
-	 {    //normal fix 25fps
-            {0x0028, 0x7000},
-            {0x002A, 0x0288},
-            {0x0F12, 0x03E8},
-            {0x0F12, 0x029A},
-            {0x002A, 0x023c},
-            {0x0F12, 0x0000},
-            {0x002A, 0x0240},
-            {0x0F12, 0x0001},
-            {0x002A, 0x0230},
-            {0x0F12, 0x0001},
-            {0x002A, 0x023E},
-            {0x0F12, 0x0001},
-            {0x002A, 0x0220},
-            {0x0F12, 0x0001},
-            {0x0F12, 0x0001},
-            {0xffff, 0xffff}
-    },
-    {    //night mode,1; min 12.5-25fps
-            {0x0028, 0x7000},
-            {0x002A, 0x0288},
-            {0x0F12, 0x0535},
-            {0x0F12, 0x0535},
-            {0x002A, 0x023c},
-            {0x0F12, 0x0000},
-            {0x002A, 0x0240},
-            {0x0F12, 0x0001},
-            {0x002A, 0x0230},
-            {0x0F12, 0x0001},
-            {0x002A, 0x023E},
-            {0x0F12, 0x0001},
-            {0x002A, 0x0220},
-            {0x0F12, 0x0001},
-            {0x0F12, 0x0001},
-            {0xffff, 0xffff}
-    },
-    //sports mode,2
-    {
-        {0xffff, 0xffff}
-    },
-    //portrait mode,3
-    {
-        {0xffff, 0xffff}
-    },
-    //landscape mode,4
-    {
-        {0xffff, 0xffff}
-    },
-    //normal mode,5
-    {
-        {0xffff, 0xffff}
-    }
+	{//normal fix 25fps
+	{0x0028, 0x7000},
+	{0x002A, 0x0288},
+	{0x0F12, 0x03E8},
+	{0x0F12, 0x029A},
+	{0x002A, 0x023c},
+	{0x0F12, 0x0000},
+	{0x002A, 0x0240},
+	{0x0F12, 0x0001},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0001},
+	{0x002A, 0x023E},
+	{0x0F12, 0x0001},
+	{0x002A, 0x0220},
+	{0x0F12, 0x0001},
+	{0x0F12, 0x0001},
+	{0xffff, 0xffff}
+	},
+	{//night mode,1; min 12.5-25fps
+	{0x0028, 0x7000},
+	{0x002A, 0x0288},
+	{0x0F12, 0x0535},
+	{0x0F12, 0x0535},
+	{0x002A, 0x023c},
+	{0x0F12, 0x0000},
+	{0x002A, 0x0240},
+	{0x0F12, 0x0001},
+	{0x002A, 0x0230},
+	{0x0F12, 0x0001},
+	{0x002A, 0x023E},
+	{0x0F12, 0x0001},
+	{0x002A, 0x0220},
+	{0x0F12, 0x0001},
+	{0x0F12, 0x0001},
+	{0xffff, 0xffff}
+	},
+	//sports mode,2
+	{
+	{0xffff, 0xffff}
+	},
+	//portrait mode,3
+	{
+	{0xffff, 0xffff}
+	},
+	//landscape mode,4
+	{
+	{0xffff, 0xffff}
+	},
+	//normal mode,5
+	{
+	{0xffff, 0xffff}
+	}
 };
 
 LOCAL uint32_t _sr352_set_work_mode(uint32_t mode)
 {
 	uint16_t i = 0x00;
 	SENSOR_REG_T_PTR sensor_reg_ptr =
-	    (SENSOR_REG_T_PTR) sr352_work_mode_tab[mode];
+		(SENSOR_REG_T_PTR) sr352_work_mode_tab[mode];
 
 	if (mode > 5)
 		return 0;
 
-	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++)
-	{
+	for (i = 0x00;(0xffff != sensor_reg_ptr[i].reg_addr)|| (0xffff != sensor_reg_ptr[i].reg_value); i++) {
  			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr,sensor_reg_ptr[i].reg_value);
 	}
 
@@ -10035,13 +9835,6 @@ LOCAL uint32_t _sr352_set_work_mode(uint32_t mode)
 	return 0;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL uint16_t s_current_shutter = 0;
 LOCAL uint16_t s_current_gain = 0;
 LOCAL uint32_t _sr352_BeforeSnapshot(uint32_t param)
@@ -10081,18 +9874,11 @@ LOCAL uint32_t _sr352_BeforeSnapshot(uint32_t param)
 	return SENSOR_SUCCESS;
 }
 
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL uint32_t _sr352_check_image_format_support(uint32_t param)
 {
 	uint32_t ret_val = SENSOR_FAIL;
-        SENSOR_PRINT("SENSOR: _sr352_check_image_format_support \n");
+
+	SENSOR_PRINT("SENSOR: _sr352_check_image_format_support \n");
 	switch (param) {
 	case SENSOR_IMAGE_FORMAT_YUV422:
 		ret_val = SENSOR_SUCCESS;
@@ -10106,96 +9892,6 @@ LOCAL uint32_t _sr352_check_image_format_support(uint32_t param)
 	return ret_val;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_pick_out_jpeg_stream(uint32_t param)
-{
-#if 0
-	uint8_t *p_frame =
-	    ((DCAMERA_SNAPSHOT_RETURN_PARAM_T *) param)->return_data_addr;
-	uint32_t buf_len =
-	    ((DCAMERA_SNAPSHOT_RETURN_PARAM_T *) param)->return_data_len;
-	uint32_t i = 0x00;
-
-	SENSOR_PRINT("SENSOR: sr352 jpeg capture head: 0x%x, 0x%x \n",
-		     *((uint8 *) p_frame), *((uint8 *) p_frame + 1));
-
-	/* Find the tail position */
-	for (i = 0x00; i < buf_len; i++)
-	{
-		#define TAIL_VAL 0xffd9
-		uint8_t* p_cur_val = (uint8*)p_frame;
-
-		uint16_t tail_val = ((p_cur_val[i]<<8) | p_cur_val[i+1]);
-
-		if (TAIL_VAL == tail_val)
-		{
-			i += 2;
-			break;
-		}
-	}
-
-	/* check if the tail is found */
-	if (i < buf_len)
-	{
-		SENSOR_PRINT("SENSOR: sr352 Found the jpeg tail at %d: 0x%x 0x%x \n",
-		     i + 1, *((uint8 *) p_frame + i),*((uint8 *) p_frame + i + 1));
-	}
-	else
-	{
-		SENSOR_PRINT("SENSOR: sr352 can not find the jpeg tail: %d \n",i);
-		i = 0x00;
-	}
-
-	return i;
-#endif
-        SENSOR_PRINT("SENSOR: _sr352_pick_out_jpeg_stream \n");
-	return 0;
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-#if 0
-LOCAL uint32_t _sr352_chang_image_format(uint32_t param)
-{
-	uint32_t ret_val = SENSOR_FAIL;
-	SENSOR_REG_TAB_INFO_T st_yuv422_reg_table_info ={ ADDR_AND_LEN_OF_ARRAY(sr352_640X480), 0, 0, 0, 0 };
-
-	switch (param) {
-	case SENSOR_IMAGE_FORMAT_YUV422:
-		SENSOR_PRINT("SENSOR: sr352  chang_image_format  YUV422 \n");
-		ret_val = Sensor_SendRegTabToSensor(&st_yuv422_reg_table_info);
-		break;
-
-		case SENSOR_IMAGE_FORMAT_JPEG:
-			SENSOR_PRINT("SENSOR: sr352  chang_image_format  jpg \n");
-			ret_val = SENSOR_FAIL;//Sensor_SendRegTabToSensor(&st_jpeg_reg_table_info);
-			break;
-
-		default:
-			break;
-	}
-
-	return ret_val;
-}
-#endif
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL uint32_t _sr352_after_snapshot(uint32_t param)
 {
 #if 0
@@ -10214,7 +9910,6 @@ LOCAL uint32_t _sr352_after_snapshot(uint32_t param)
 	return SENSOR_SUCCESS;
 }
 
-
 LOCAL uint32_t _sr352_flash(uint32_t param)
 {
 	SENSOR_PRINT_HIGH("SENSOR: _sr352_flash:param=%d .\n",param);
@@ -10229,77 +9924,60 @@ LOCAL uint32_t _sr352_flash(uint32_t param)
 	return SENSOR_SUCCESS;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL uint32_t _sr352_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 {
 	SENSOR_RECT_T zone_rect;
 	uint32_t rtn=SENSOR_SUCCESS;
-    memset((void*)&zone_rect, 0, sizeof(SENSOR_RECT_T));
-	switch (param_ptr->cmd)
-	{
+
+	memset((void*)&zone_rect, 0, sizeof(SENSOR_RECT_T));
+	switch (param_ptr->cmd) {
 	case SENSOR_EXT_FOCUS_START:
-			switch (param_ptr->param)
-			{
+			switch (param_ptr->param) {
 			case SENSOR_EXT_FOCUS_ZONE:
 			case SENSOR_EXT_FOCUS_MULTI_ZONE:
-					zone_rect.w = FOCUS_ZONE_W;
-					zone_rect.h = FOCUS_ZONE_H;
-					break;
+				zone_rect.w = FOCUS_ZONE_W;
+				zone_rect.h = FOCUS_ZONE_H;
+				break;
 			default:
-					break;
+				break;
 			}
 			break;
 	case SENSOR_EXT_EXPOSURE_START:
-			switch (param_ptr->param)
-			{
+			switch (param_ptr->param) {
 			case SENSOR_EXT_EXPOSURE_ZONE:
-					zone_rect.w = EXPOSURE_ZONE_W;
-					zone_rect.h = EXPOSURE_ZONE_H;
-					break;
+				zone_rect.w = EXPOSURE_ZONE_W;
+				zone_rect.h = EXPOSURE_ZONE_H;
+				break;
 			default:
-					break;
+				break;
 			}
 			break;
-	 default:
+	default:
 		  break;
 	}
 
-	if ((0x00 != s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width)&& (0x00 !=s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height)
-	    && (0x00 != zone_rect.w)&& (0x00 != zone_rect.h))
-	{
+	if ((0x00 != s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width) && (0x00 !=s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height)
+		&& (0x00 != zone_rect.w)&& (0x00 != zone_rect.h)) {
 		param_ptr->zone.x =(zone_rect.w * param_ptr->zone.x) /
-		    s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width;
+		s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].width;
 		param_ptr->zone.y =(zone_rect.h * param_ptr->zone.y) /
-		    s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height;
-	}
-	else
-	{
+		s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height;
+	} else {
 		SENSOR_PRINT_HIGH("SENSOR: _sr352_MatchZone, w:%d, h:%d error \n",zone_rect.w, zone_rect.h);
 		rtn = SENSOR_FAIL;
 	}
 
 	SENSOR_PRINT_HIGH("SENSOR: _sr352_MatchZone, x:%d, y:%d \n",param_ptr->zone.x, param_ptr->zone.y);
+
 	return rtn;
 }
 
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
 LOCAL uint32_t _sr352_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 {
 	uint32_t rtn=SENSOR_SUCCESS;
 	uint16_t i=30;
 	uint16_t reg_value=0x00;
+
 	SENSOR_PRINT_HIGH("Start");
 	Sensor_WriteReg(0xFCFC, 0xD000);
 	Sensor_WriteReg(0x0028, 0x7000);
@@ -10319,376 +9997,95 @@ LOCAL uint32_t _sr352_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			break;
 		}
 	} while (0x2 != reg_value);
-	return rtn;
-}
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
-{
-	uint32_t i=30; // 30 * 100 = 3 seconds
-	uint16_t reg_value=0x00;
-	uint32_t rtn=SENSOR_SUCCESS;
-	uint32_t j=0;
-
-	return rtn;
-}
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
-{
-	uint32_t rtn=SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_T ext_param[5];
-	uint32_t i=100;
-	uint16_t reg_value=0x00;
-	uint32_t zone_cnt = 0;
-	uint32_t zone_num = 0x90;
 
 	return rtn;
 }
 
-LOCAL uint32_t _sr352_AutoFocusMacro(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
-{
-	uint32_t rtn=SENSOR_SUCCESS;
-	uint16_t i=30;
-	uint16_t reg_value=0x00;
-
-	return rtn;
-}
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-
-LOCAL uint32_t _sr352_StartAutoFocus(uint32_t param)
+LOCAL uint32_t _sr352_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
-	SENSOR_PRINT_HIGH("SENSOR: _sr352_StartAutoFocus param =%d", ext_ptr->param);
-
-	switch (ext_ptr->param) {
-	case SENSOR_EXT_FOCUS_TRIG:
-		rtn = _sr352_AutoFocusTrig(ext_ptr);
-		break;
-	case SENSOR_EXT_FOCUS_ZONE:
-		rtn = _sr352_AutoFocusZone(ext_ptr);
-		break;
-	case SENSOR_EXT_FOCUS_MULTI_ZONE:
-		rtn = _sr352_AutoFocusMultiZone(ext_ptr);
-		break;
-	case SENSOR_EXT_FOCUS_MACRO:
-		rtn = _sr352_AutoFocusMacro(ext_ptr);
-		break;
-	default:
-		break;
-	}
-	return rtn;
-}
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_ExposureAuto(void)
-{
-	uint32_t rtn=SENSOR_SUCCESS;
-
-	SENSOR_PRINT("SENSOR: _sr352_ExposureAuto \n");
-
-	//Sensor_WriteReg(0x501d, 0x00);
-
-	return rtn;
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_ExposureZone(SENSOR_EXT_FUN_T_PTR param_ptr)
-{
-	uint32_t rtn=SENSOR_SUCCESS;
-
-#if 0 //exposure zone \B2\BB\B8캘\AF
-
-	SENSOR_EXT_FUN_T_PTR ext_ptr=(SENSOR_EXT_FUN_T_PTR)param_ptr;
-	uint16_t reg_value=0x00;
-
-	SENSOR_PRINT("SENSOR: _sr352_ExposureZone: %d, %d \n",ext_ptr->zone.x,ext_ptr->zone.y);
-
-	rtn=_sr352_MatchZone(ext_ptr);
-
-	if(SENSOR_SUCCESS==rtn)
-	{
-		// h zone
-		if(0x00<(ext_ptr->zone.x-(EXPOSURE_ZONE_W/0x08)))
-		{
-			ext_ptr->zone.x-=(EXPOSURE_ZONE_W/0x08);
-		}
-		else
-		{
-			ext_ptr->zone.x=0x00;
-		}
-		ext_ptr->zone.w=EXPOSURE_ZONE_W/0x04;
-		if(EXPOSURE_ZONE_W<(ext_ptr->zone.x+ext_ptr->zone.w))
-		{
-			ext_ptr->zone.x=EXPOSURE_ZONE_W-(EXPOSURE_ZONE_W/0x04);
-		}
-
-		// v zone
-		if(0x00<(ext_ptr->zone.y-(EXPOSURE_ZONE_H/0x08)))
-		{
-			ext_ptr->zone.y-=(EXPOSURE_ZONE_H/0x08);
-		}
-		else
-		{
-			ext_ptr->zone.y=0x00;
-		}
-		ext_ptr->zone.h=EXPOSURE_ZONE_H/0x04;
-		if(EXPOSURE_ZONE_H<(ext_ptr->zone.y+ext_ptr->zone.h))
-		{
-			ext_ptr->zone.y=EXPOSURE_ZONE_H-(EXPOSURE_ZONE_H/0x04);
-		}
-
-		SENSOR_PRINT("SENSOR: _sr352_ExposureZone: %d, %d, %d, %d \n",
-			     ext_ptr->zone.x, ext_ptr->zone.y, ext_ptr->zone.w,
-			     ext_ptr->zone.h);
-
-		reg_value=((ext_ptr->zone.x>>0x08)&0x07);
-		Sensor_WriteReg(0x5680, reg_value);
-		reg_value=(ext_ptr->zone.x&0xff);
-		Sensor_WriteReg(0x5681, reg_value);
-
-		reg_value=((ext_ptr->zone.y>>0x08)&0x07);
-		Sensor_WriteReg(0x5682, reg_value);
-		reg_value=(ext_ptr->zone.y&0xff);
-		Sensor_WriteReg(0x5683, reg_value);
-
-		reg_value=((ext_ptr->zone.w>>0x08)&0x0f);
-		Sensor_WriteReg(0x5684, reg_value);
-		reg_value=(ext_ptr->zone.w&0xff);
-		Sensor_WriteReg(0x5685, reg_value);
-
-		reg_value=((ext_ptr->zone.h>>0x08)&0x0f);
-		Sensor_WriteReg(0x5686, reg_value);
-		reg_value=(ext_ptr->zone.h&0xff);
-		Sensor_WriteReg(0x5687, reg_value);
-
-		Sensor_WriteReg(0x501d, 0x10);
-
-	}
-#endif
-	return rtn;
-}
-
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-//
-/******************************************************************************/
-LOCAL uint32_t _sr352_StartExposure(uint32_t param)
-{
-	uint32_t rtn=SENSOR_SUCCESS;
-    //exposure
-    SENSOR_EXT_FUN_T_PTR ext_ptr=(SENSOR_EXT_FUN_T_PTR)param;
-
-	SENSOR_PRINT("SENSOR: _sr352_StartExposure param =%d \n",
-		     ext_ptr->param);
-#if 0
-	switch (ext_ptr->param) {
-	case SENSOR_EXT_EXPOSURE_AUTO:
-		rtn = _sr352_ExposureAuto();
-		break;
-	case SENSOR_EXT_EXPOSURE_ZONE:
-		rtn = _sr352_ExposureZone(ext_ptr);
-		break;
-	default:
-		break;
-    }
-#endif
-    return rtn;
-}
-LOCAL uint32_t _sr352_SetEV(uint32_t param)
-{
-    uint32_t rtn = SENSOR_SUCCESS;
-    SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
-    SENSOR_PRINT("SENSOR: _sr352_SetEV param: 0x%x", ext_ptr->param);
-    uint32_t shutter = 0;
-    uint32_t gain = 0;
-
+	SENSOR_PRINT("SENSOR: _sr352_SetEV param: 0x%x", ext_ptr->param);
+	uint32_t shutter = 0;
+	uint32_t gain = 0;
 	uint32_t ev = ext_ptr->param;
-	switch(ev) {
+
+	switch (ev) {
 	case SENSOR_HDR_EV_LEVE_0:
-  Sensor_WriteReg(0x0028, 0x7000);
-  Sensor_WriteReg(0x002A, 0x04E6);
-  Sensor_WriteReg(0x0F12, 0x0679);
-             shutter =(uint32_t) s_current_shutter/2;
-s_current_shutter = s_current_shutter>>2;
-             gain = (uint32_t)s_current_gain/4;
-SENSOR_PRINT("SENSOR: SENSOR_HDR_EV_LEVE_0: 0x%x,0x%x", (uint16_t)shutter,(uint16_t)gain);
-  Sensor_WriteReg(0x0028, 0x7000);
-  Sensor_WriteReg(0x002A, 0x04AC);
-  Sensor_WriteReg(0x0F12, (uint16_t)shutter);
-      Sensor_WriteReg(0x0028, 0x7000);
-      Sensor_WriteReg(0x002A, 0x04B0);
-  Sensor_WriteReg(0x0F12, 0x0001);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04E6);
+		Sensor_WriteReg(0x0F12, 0x0679);
+		shutter =(uint32_t) s_current_shutter/2;
+		s_current_shutter = s_current_shutter>>2;
+		gain = (uint32_t)s_current_gain/4;
+		SENSOR_PRINT("SENSOR: SENSOR_HDR_EV_LEVE_0: 0x%x,0x%x", (uint16_t)shutter,(uint16_t)gain);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04AC);
+		Sensor_WriteReg(0x0F12, (uint16_t)shutter);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04B0);
+		Sensor_WriteReg(0x0F12, 0x0001);
 
-  Sensor_WriteReg(0x0028, 0x7000);
-  Sensor_WriteReg(0x002A, 0x04C8);
-  Sensor_WriteReg(0x0F12, (uint16_t)gain);
-    Sensor_WriteReg(0x0028, 0x7000);
-    Sensor_WriteReg(0x002A, 0x04CA);
-Sensor_WriteReg(0x0F12, 0x0001);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04C8);
+		Sensor_WriteReg(0x0F12, (uint16_t)gain);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04CA);
+		Sensor_WriteReg(0x0F12, 0x0001);
 		break;
+
 	case SENSOR_HDR_EV_LEVE_1:
-
 		break;
-	case SENSOR_HDR_EV_LEVE_2:
-/*
-    Sensor_WriteReg(0x0028, 0x7000);
-    Sensor_WriteReg(0x002A, 0x04E6);
-    Sensor_WriteReg(0x0F12, 0x0679);
-               shutter = s_current_shutter/2;
-               gain = s_current_gain/4;
-    Sensor_WriteReg(0x0028, 0x7000);
-    Sensor_WriteReg(0x002A, 0x02136);
-    Sensor_WriteReg(0x0F12, shutter);
-    Sensor_WriteReg(0x0028, 0x7000);
-    Sensor_WriteReg(0x002A, 0x2BC4);
-    Sensor_WriteReg(0x0F12, gain);
 
-*/		break;
+	case SENSOR_HDR_EV_LEVE_2:
+		/*
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x04E6);
+		Sensor_WriteReg(0x0F12, 0x0679);
+		shutter = s_current_shutter/2;
+		gain = s_current_gain/4;
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x02136);
+		Sensor_WriteReg(0x0F12, shutter);
+		Sensor_WriteReg(0x0028, 0x7000);
+		Sensor_WriteReg(0x002A, 0x2BC4);
+		Sensor_WriteReg(0x0F12, gain);
+		*/
+		break;
+
 	default:
 		break;
 	}
+
 	return rtn;
 }
-/******************************************************************************/
-// Description:
-// Global resource dependence:
-// Author: Tim.zhu
-// Note:
-/******************************************************************************/
-LOCAL uint8_t af_firmware[] = {
-	#if 0 //\B2\BB\D3\C3AF
-	0x80,
-	0x00,
-	#endif
-};
-
-LOCAL int _sr352_init_firmware(uint32_t param)
-{
-	int ret = 0;
-	#if 0
-	uint32_t i = 0;
-	uint32_t init_num = NUMBER_OF_ARRAY(af_firmware);
-	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR)param;
-	uint8_t  *reg_ptr = af_firmware;
-	struct i2c_msg msg_w;
-	struct i2c_client *i2c_client = Sensor_GetI2CClien();
-	uint16_t reg_val_1,reg_val_2;
-
-	if (0 == i2c_client) {
-		SENSOR_PRINT_HIGH("SENSOR: _sr352_init_firmware:error,i2c_client is NULL!.\n");
-	}
-	//      sc8810_i2c_set_clk(1,400000); //wjp
-	SENSOR_PRINT_HIGH("SENSOR: _sr352_init_firmware: cmd=%d!.\n", ext_ptr->cmd);
-	switch (ext_ptr->param)
-	{
-	 case SENSOR_EXT_FOCUS_TRIG:	//auto focus
-		    reg_ptr = af_firmware;
-		    break;
-	 default:
-		    break;
-	}
-	Sensor_WriteReg(0x3000, 0x20);
-	for (i = 0; i < 4; i++) {
-		msg_w.addr = i2c_client->addr;
-		msg_w.flags = 0;
-		msg_w.buf = reg_ptr;
-		msg_w.len = init_num;
-		ret = i2c_transfer(i2c_client->adapter, &msg_w, 1);
-		if (ret != 1) {
-			SENSOR_PRINT_ERR
-			    ("SENSOR: write sensor reg fai, ret : %d, I2C w addr: 0x%x, \n",
-			     ret, i2c_client->addr);
-			continue;
-		} else {
-			ret = 0;
-			break;
-		}
-	}
-	Sensor_WriteReg(0x3022, 0x00);
-	Sensor_WriteReg(0x3023, 0x00);
-	Sensor_WriteReg(0x3024, 0x00);
-	Sensor_WriteReg(0x3025, 0x00);
-	Sensor_WriteReg(0x3026, 0x00);
-	Sensor_WriteReg(0x3027, 0x00);
-	Sensor_WriteReg(0x3028, 0x00);
-	Sensor_WriteReg(0x3029, 0x7F);
-	Sensor_WriteReg(0x3000, 0x00);
-
-	reg_val_1 = Sensor_ReadReg(0x3000);
-	reg_val_2 = Sensor_ReadReg(0x3004);
-	//      sc8810_i2c_set_clk(1,100000); //wjp
-	SENSOR_PRINT_HIGH("SENSOR: _sr352_init_firmware: E!.\n");
-
-	//SENSOR_PRINT_HIGH("SENSOR: 0x3029=0x%x,0x3000=0x%x,0x3004=0x%x.\n",Sensor_ReadReg(0x3029),reg_val_1,reg_val_2);
-	//SENSOR_PRINT_HIGH("SENSOR: 0x8000=0x%x,0x8002=0x%x,0x8f57=0x%x.\n",Sensor_ReadReg(0x8000),Sensor_ReadReg(0x8002),Sensor_ReadReg(0x8f57));
-	#endif
-	return ret;
-}
-
 
 LOCAL uint32_t _sr352_ExtFunc(uint32_t ctl_param)
 {
-	uint32_t					rtn=SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_T_PTR	ext_ptr=(SENSOR_EXT_FUN_T_PTR)ctl_param;
+	uint32_t rtn=SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_T_PTR ext_ptr=(SENSOR_EXT_FUN_T_PTR)ctl_param;
 
 	SENSOR_PRINT("SENSOR: _sr352_ExtFunc cmd:0x%x ",ext_ptr->cmd);
 	switch(ext_ptr->cmd)
 	{
 		case SENSOR_EXT_FUNC_INIT:
-
-//			rtn=sr352_InitExt(ctl_param);
-
-		break;
+			/*rtn=sr352_InitExt(ctl_param);*/
+			break;
 #if 0
 		case SENSOR_EXT_DIGITAL_ZOOM:
 			rtn=sr352_GetZoomLev(ctl_param);
+			break;
 #endif
-		break;
 
 		default :
 
 			SENSOR_PRINT("SENSOR: _sr352_ExtFunc unsupported command");
 			rtn = SENSOR_FAIL;
-
-		break;
+			break;
 	}
 
 	return rtn;
 }
-
-
 
 LOCAL uint32_t _sr352_recovery_init()
 {
@@ -10696,15 +10093,16 @@ LOCAL uint32_t _sr352_recovery_init()
 
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x0242);
-	Sensor_WriteReg(0x0F12, 0x0000);	//#REG_TC_GP_EnablePreview
+	Sensor_WriteReg(0x0F12, 0x0000);//#REG_TC_GP_EnablePreview
 
 	Sensor_WriteReg(0x0028, 0xD000);
 	Sensor_WriteReg(0x002A, 0xB0A0);
-	Sensor_WriteReg(0x0F12, 0x0000);	//Clear cont. clock befor config change
+	Sensor_WriteReg(0x0F12, 0x0000);//Clear cont. clock befor config change
 
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x0244);
-	Sensor_WriteReg(0x0F12, 0x0001);	//#REG_TC_GP_EnablePreviewChanged
+	Sensor_WriteReg(0x0F12, 0x0001);//#REG_TC_GP_EnablePreviewChanged
+
 	return 0;
 }
 
@@ -10716,8 +10114,8 @@ LOCAL uint32_t _sr352_StreamOn(uint32_t param)
 		SENSOR_PRINT("zxdbg preview stream on");
 		Sensor_WriteReg(0x0028, 0x7000);
 		Sensor_WriteReg(0x002A, 0x023E);
-		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreview
-		Sensor_WriteReg(0x0F12, 0x0001);  //#REG_TC_GP_EnablePreviewChanged\
+		Sensor_WriteReg(0x0F12, 0x0001);//#REG_TC_GP_EnablePreview
+		Sensor_WriteReg(0x0F12, 0x0001);//#REG_TC_GP_EnablePreviewChanged
 
 		Sensor_WriteReg (0x0028, 0xD000);
 		Sensor_WriteReg(0x002A, 0x1000);
@@ -10726,14 +10124,15 @@ LOCAL uint32_t _sr352_StreamOn(uint32_t param)
 		SENSOR_PRINT("zxdbg capture stream on");
 		Sensor_WriteReg(0x0028, 0x7000);
 		Sensor_WriteReg(0x002A, 0x0242);
-		Sensor_WriteReg(0x0F12, 0x0001); // #REG_TC_GP_EnableCAPTURE // Start CAPTURE
+		Sensor_WriteReg(0x0F12, 0x0001);// #REG_TC_GP_EnableCAPTURE // Start CAPTURE
 		Sensor_WriteReg(0x002A, 0x024E);
-		Sensor_WriteReg(0x0F12, 0x0001); // #REG_TC_GP_NewConfigSync // Update preview configuration
+		Sensor_WriteReg(0x0F12, 0x0001);// #REG_TC_GP_NewConfigSync // Update preview configuration
 		Sensor_WriteReg(0x002A, 0x0244);
-		Sensor_WriteReg(0x0F12, 0x0001); // #REG_TC_GP_EnableCAPTUREChanged
+		Sensor_WriteReg(0x0F12, 0x0001);// #REG_TC_GP_EnableCAPTUREChanged
 		usleep(70*1000);
 	}
 	usleep(100*1000);
+
 	return 0;
 }
 
@@ -10742,30 +10141,16 @@ LOCAL uint32_t _sr352_StreamOff(uint32_t param)
 	SENSOR_PRINT("Stop");
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x023E);
-	Sensor_WriteReg(0x0F12, 0x0000);	//#REG_TC_GP_EnablePreview
+	Sensor_WriteReg(0x0F12, 0x0000);//#REG_TC_GP_EnablePreview
 
 	Sensor_WriteReg(0x0028, 0xD000);
 	Sensor_WriteReg(0x002A, 0xB0A0);
-	Sensor_WriteReg(0x0F12, 0x0000);	//Clear cont. clock befor config change
+	Sensor_WriteReg(0x0F12, 0x0000);//Clear cont. clock befor config change
 
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x0240);
-	Sensor_WriteReg(0x0F12, 0x0001);	//#REG_TC_GP_EnablePreviewChanged
+	Sensor_WriteReg(0x0F12, 0x0001);//#REG_TC_GP_EnablePreviewChanged
 	usleep(100*1000);
+
 	return 0;
 }
-#if 0
-struct sensor_drv_cfg sensor_sr352 = {
-	.sensor_pos = CONFIG_DCAM_SENSOR_POS_sr352,
-	.sensor_name = "sr352",
-	.driver_info = &g_sr352_yuv_info,
-};
-
-static int __init sensor_sr352_init(void)
-{
-	return dcam_register_sensor_drv(&sensor_sr352);
-}
-
-subsys_initcall(sensor_sr352_init);*/
-#endif
-
