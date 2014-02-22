@@ -902,6 +902,7 @@ sprd_camera_memory_t* SprdCameraHWInterface2::GetCachePmem(int buf_size, int num
         HAL_LOGE("Failed to alloc cap pmem (%d)", acc);
         goto getpmem_end;
     }
+	HAL_LOGV("s_mem_method:%d",s_mem_method);
 	if (s_mem_method == 0){
 		ret = pHeapIon->get_phy_addr_from_ion(&paddr, &psize);
 	} else {
@@ -2870,14 +2871,18 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		}
 	}
 	if ((tmpMask & STREAM_MASK_PREVIEW || tmpMask & STREAM_MASK_PRVCB) && \
-			(tmpIntent == CAPTURE_INTENT_VIDEO_RECORD || tmpIntent == CAPTURE_INTENT_PREVIEW)) {
+		(tmpIntent == CAPTURE_INTENT_VIDEO_RECORD || tmpIntent == CAPTURE_INTENT_PREVIEW)) {
 		if (0 != CameraPreviewReq(srcreq,&IsSetPara)) {
+			HAL_LOGE("preview req fail.");
+			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 			return;
 		}
 	} else if((tmpIntent == CAPTURE_INTENT_STILL_CAPTURE
-											|| tmpIntent == CAPTURE_INTENT_VIDEO_SNAPSHOT)
-											&& tmpMask & STREAM_MASK_JPEG) {
+				|| tmpIntent == CAPTURE_INTENT_VIDEO_SNAPSHOT)
+				&& tmpMask & STREAM_MASK_JPEG) {
 		if (0 != CameraCaptureReq(srcreq,&IsSetPara)) {
+			HAL_LOGE("capture req fail.");
+			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 			return;
 		}
 	}
