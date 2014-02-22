@@ -842,9 +842,9 @@ int SprdCameraHWInterface2::Callback_AllocCapturePmem(void* handle, unsigned int
 	}
 	if (0 == ret) {
 		*addr_vir = (int)(pHeapIon->getBase());
-		camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_addr = *addr_phy;
-		camera->mMiscHeapArray[camera->mMiscHeapNum]->phys_size = size;
-		camera->mMiscHeapArray[camera->mMiscHeapNum++]->ion_heap = pHeapIon;
+		camera->mMiscHeapArray[camera->mMiscHeapNum].phys_addr = *addr_phy;
+		camera->mMiscHeapArray[camera->mMiscHeapNum].phys_size = size;
+		camera->mMiscHeapArray[camera->mMiscHeapNum++].ion_heap = pHeapIon;
 
 		HAL_LOGD("mMiscHeapNum = %d", camera->mMiscHeapNum);
 	} else {
@@ -867,14 +867,14 @@ int SprdCameraHWInterface2::Callback_FreeCapturePmem(void* handle)
 
 	uint32_t i;
 	for (i=0; i<camera->mMiscHeapNum; i++) {
-		MemoryHeapIon *pHeapIon = camera->mMiscHeapArray[i]->ion_heap;
+		MemoryHeapIon *pHeapIon = camera->mMiscHeapArray[i].ion_heap;
 		if (pHeapIon != NULL) {
 			if (s_mem_method != 0){
-				pHeapIon->free_mm_iova(camera->mMiscHeapArray[i]->phys_addr, camera->mMiscHeapArray[i]->phys_size);
+				pHeapIon->free_mm_iova(camera->mMiscHeapArray[i].phys_addr, camera->mMiscHeapArray[i].phys_size);
 			}
 			delete pHeapIon;
 		}
-		camera->mMiscHeapArray[i] = NULL;
+//		camera->mMiscHeapArray[i] = NULL;
 	}
 	camera->mMiscHeapNum = 0;
 
@@ -977,15 +977,15 @@ void SprdCameraHWInterface2::freeCaptureMem()
     mRawHeapSize = 0;
 
     for (i=0; i<mMiscHeapNum; i++) {
-        MemoryHeapIon *pHeapIon = mMiscHeapArray[i]->ion_heap;
+        MemoryHeapIon *pHeapIon = mMiscHeapArray[i].ion_heap;
         if (pHeapIon != NULL) {
             //pHeapIon.clear();
             if (s_mem_method != 0) {
-				pHeapIon->free_mm_iova(mMiscHeapArray[i]->phys_addr, mMiscHeapArray[i]->phys_size);
+				pHeapIon->free_mm_iova(mMiscHeapArray[i].phys_addr, mMiscHeapArray[i].phys_size);
 			}
 			delete pHeapIon;
         }
-        mMiscHeapArray[i] = NULL;
+     //   mMiscHeapArray[i] = NULL;
     }
     mMiscHeapNum = 0;
 }

@@ -510,7 +510,7 @@ class RequestQueueThread : public SprdBaseThread{
 	int32_t						   mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t						   mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t           *mPreviewHeapArray[kPreviewBufferCount+kPreviewRotBufferCount+1];
-	sprd_camera_memory_t                  *mMiscHeapArray[MAX_MISCHEAP_NUM];
+	sprd_camera_memory_t                  mMiscHeapArray[MAX_MISCHEAP_NUM];
 	uint32_t                             mMiscHeapNum;
     int             				    m_CameraId;
     List<camera_metadata_t *>           m_ReqQueue;
