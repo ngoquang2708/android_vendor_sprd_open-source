@@ -367,12 +367,13 @@ const struct str_map antibanding_map[] = {
 };
 
 const struct str_map focus_mode_map[] = {
-	{"auto",            CAMERA_FOCUS_MODE_AUTO},
-	{"auto-multi",      CAMERA_FOCUS_MODE_AUTO_MULTI},
-	{"macro",           CAMERA_FOCUS_MODE_MACRO},
-	{"infinity",        CAMERA_FOCUS_MODE_INFINITY},
-	{"continuous-picture",CAMERA_FOCUS_MODE_CAF},
-	{NULL,              0}
+	{"auto",               CAMERA_FOCUS_MODE_AUTO},
+	{"auto-multi",         CAMERA_FOCUS_MODE_AUTO_MULTI},
+	{"macro",              CAMERA_FOCUS_MODE_MACRO},
+	{"infinity",           CAMERA_FOCUS_MODE_INFINITY},
+	{"continuous-picture", CAMERA_FOCUS_MODE_CAF},
+	{"continuous-video",   CAMERA_FOCUS_MODE_CAF_VIDEO},
+	{NULL,                 0}
 };
 
 const struct str_map flash_mode_map[] = {
@@ -595,13 +596,13 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #endif
 #ifndef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
 #if	defined(CONFIG_CAMERA_CAF)
-	{"focus-mode-values", "auto,macro,continuous-picture"},
+	{"focus-mode-values", "auto,macro,continuous-picture,continuous-video,infinity"},
 	{"focus-mode", "auto"},
 #else
-	{"focus-mode-values", "auto,macro"},
+	{"focus-mode-values", "auto,macro,infinity"},
 	{"focus-mode", "auto"},
 #endif
-	{"focus-distances", "2.0,2.5,3.75"},
+	{"focus-distances", "2.0,2.5,Infinity"},
 	{"max-num-focus-areas", "3"},
 #else
 	{"focus-mode-values", "infinity"},

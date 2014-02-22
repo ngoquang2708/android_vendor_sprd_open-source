@@ -1413,7 +1413,12 @@ int camera_set_ctrl(camera_parm_type id,
 	case CAMERA_PARM_AF_MODE:
 		CMR_LOGV("Set AF Mode %d", parm);
 		camera_init_af_mode(parm, &skip_mode, &skip_number);
-		cxt->cmr_set.af_mode = (uint32_t)parm;
+		if (CAMERA_FOCUS_MODE_CAF_VIDEO != parm) {
+			cxt->cmr_set.af_mode = (uint32_t)parm;
+		} else {
+			CMR_LOGV("force Set AF Mode Auto");
+			cxt->cmr_set.af_mode = CAMERA_FOCUS_MODE_AUTO; /*to do*/
+		}
 		break;
 
 	case CAMERA_PARM_ISO:
