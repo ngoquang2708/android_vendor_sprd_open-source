@@ -60,6 +60,7 @@
 #define WCND_RESET_PROP_KEY "persist.sys.sprd.wcnreset"
 #define WCND_SLOG_ENABLE_PROP_KEY "persist.sys.sprd.wcnlog"
 #define WCND_SLOG_RESULT_PROP_KEY "persist.sys.sprd.wcnlog.result"
+#define WCND_ENGCTRL_PROP_KEY "persist.sys.engpc.disable"
 
 
 //the image file
