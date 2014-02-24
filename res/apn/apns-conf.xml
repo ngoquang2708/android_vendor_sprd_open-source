@@ -631,8 +631,6 @@
         mcc="454"
         mnc="06"
         apn="internet"
-        proxy="010.009.009.009"
-        port="8080"
         type="default,supl"
     />
     <apn carrier="SmarTone HK"
@@ -5685,7 +5683,6 @@
         mcc="708"
         mnc="020"
         apn="internet.tigo.hn"
-        server="Wap.tigo.com.hn"
         type="default,supl"
         authtype="1"
     />
