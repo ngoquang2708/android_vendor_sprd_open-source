@@ -87,14 +87,13 @@ namespace android {
 #define ON_SERVICE          (1 << 3)
 #define ON_HAL_INIT         (1 << 4)//service deq 6 bufs firstly
 
-#define MAX_MISCHEAP_NUM 50 //1024
-#define BACK_SENSOR_ORIG_WIDTH 1632
-#define BACK_SENSOR_ORIG_HEIGHT 1224
-#define FRONT_SENSOR_ORIG_WIDTH 640
-#define FRONT_SENSOR_ORIG_HEIGHT 480
+#define MAX_MISCHEAP_NUM 10
 
 #define ALIGN_ZOOM_CROP_BITS (~0x03)
 #define SIZE_ALIGN(x)   (((x)+15)&(~15))
+#define ZSL_FILT_FRM_NUM(num, base) (!((num) % (base)))
+#define ZSLCAPFRMINTERVAL		3
+#define ZSLPRVFRMINTERVAL		2
 
 
 typedef struct stream_parameters {
@@ -129,6 +128,7 @@ typedef struct substream_parameters {
 			int                     subStreamGraphicFd[NUM_MAX_CAMERA_BUFFERS];//previewCbAddPhy
 			int                     svcBufStatus[NUM_MAX_CAMERA_BUFFERS];
 			int                     phySize[NUM_MAX_CAMERA_BUFFERS];
+			struct	frm_info        zslCapFrmInfo[NUM_MAX_CAMERA_BUFFERS];
             int                     svcBufIndex;
             int                     numSvcBufsInHal;
             int                     minUndequedBuffer;
@@ -179,6 +179,10 @@ typedef struct _SprdCamera2Info
     int32_t    maxFaceCount;
 }SprdCamera2Info;
 
+typedef struct _reprocess_buf_info{
+        buffer_handle_t* reprocessAcqBuf;
+		int reprocessBufIndex;
+    }reprocess_buf_info;
 
 
 class SprdCameraHWInterface2 : public virtual RefBase {
@@ -315,6 +319,7 @@ private:
         ae_state           aeStatus;//control
         int                precaptureTrigID;
 		int                afTrigID;
+		int32_t            reProcMask;
 		takepicture_mode   pictureMode;
     }cam_hal_ctl;
     static const int kPreviewBufferCount = 8;
@@ -403,6 +408,12 @@ class RequestQueueThread : public SprdBaseThread{
 	void                freeCaptureMem();
 	void				freePreviewMem(int num);
 	bool				allocatePreviewMem();
+
+	reprocess_buf_info  GetReprocessAcqBuf();
+	void                SetReprocessAcqBuf(reprocess_buf_info buf);
+	int32_t             GetZslStreamMask();
+	void                SetZslStreamMask(int32_t mask);
+	bool				CheckAndroidZslSupport();
     void                RequestQueueThreadFunc(SprdBaseThread * self);
 	void                SetReqProcessing(bool IsProc);
 	bool                GetReqProcessStatus();
@@ -410,6 +421,11 @@ class RequestQueueThread : public SprdBaseThread{
 	void                SetDcDircToDvSnap(bool dcDircToSnap);
 	bool                GetRecStopMsg();
 	void                SetRecStopMsg(bool recStop);
+	uint8_t				GetReprocessingFlag();
+	bool                GetZslReprocStreamStatus();
+	void                SetZslReprocStreamStatus(bool ok);
+	//void                SetZslEnqueueMetaDataFrm(bool enqMata);
+	bool				ProcZslCapReq(int32_t mask);
 	int64_t             GetSensorTimeStamp(camera_req_info *reqInfo);
 	void                SetSensorTimeStamp(camera_req_info *reqInfo, int64_t timestamp);
 	capture_intent      GetCameraCaptureIntent(camera_req_info *reqInfo);
@@ -469,6 +485,11 @@ class RequestQueueThread : public SprdBaseThread{
 	{
        return mCameraState.capture_state;
 	}
+
+	inline int64_t		halAbs(int64_t value)
+	{
+		return value > 0 ? value : -value;
+	}
 	static void camera_cb(camera_cb_type cb,
             const void *client_data,
             camera_func_type func,
@@ -500,22 +521,35 @@ class RequestQueueThread : public SprdBaseThread{
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
 	uint32_t						mPreviewHeapNum;
+	cam_size						m_zslValidDataSize;
 	bool                               m_reqIsProcess;
 	bool                               m_IsPrvAftPic;
 	bool                               m_recStopMsg;
+	bool                               m_zslEnqMetaFrm;
+	bool                               m_zslReprocOk;
+	bool							   m_degenerated_normal_cap;//zsl degenerated to normal picture
 	bool                               m_dcDircToDvSnap;//for cts testVideoSnapshot
 	camera_metadata_t                   *m_halRefreshReq;
     static gralloc_module_t const*      m_grallocHal;
-
+	uint32_t                       mPreviewFrmRefreshIndex;
+    int64_t                        mPreviewFrmTimestamp[kPreviewBufferCount];
 	int32_t						   mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t						   mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t           *mPreviewHeapArray[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t                  mMiscHeapArray[MAX_MISCHEAP_NUM];
 	uint32_t                             mMiscHeapNum;
+	uint32_t                            m_CapFrmCnt; //for zsl
+	uint32_t                            m_PrvFrmCnt;//for zsl
     int             				    m_CameraId;
+	int32_t                         mIsOutPutStream;
+	int                                 m_reprocessStreamId;
+    const camera2_stream_in_ops_t *     m_reprocessOps;
+	reprocess_buf_info                  m_reprocessBuf;
+    int                                 m_reprocessOutputStreamId;
     List<camera_metadata_t *>           m_ReqQueue;
 	Mutex                               m_requestMutex;
-	Mutex                               m_halCBMutex;
+	Mutex                               m_halCBMutex;//for vary
+	Mutex                               m_zslStopPrvFrmCBMutex;//for zsl proccess
 	Mutex                               m_stopPrvFrmCBMutex;//mutex for stop preview and receivepreviewframe
 	Mutex                               m_metaDataMutex;
 	Mutex                           mStateLock;
@@ -523,7 +557,6 @@ class RequestQueueThread : public SprdBaseThread{
 	Condition                       mStateWait;
     volatile camera_state           mCameraState;
 
-	int32_t                         mIsOutPutStream;
 };
 
 }; // namespace android

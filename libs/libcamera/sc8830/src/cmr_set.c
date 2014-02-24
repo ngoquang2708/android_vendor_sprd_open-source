@@ -723,7 +723,7 @@ int camera_preview_start_set(void)
 	uint32_t                 sn_mode;
 	uint32_t                 video_mode;
 
-	if ((CAMERA_ZSL_MODE != cxt->cap_mode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode)) {
+	if ((CAMERA_ZSL_MODE != cxt->cap_mode) && (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode) && (CAMERA_ANDROID_ZSL_MODE != cxt->cap_mode)) {
 		sn_mode = cxt->sn_cxt.preview_mode;
 	} else {
 		sn_mode = cxt->sn_cxt.capture_mode;

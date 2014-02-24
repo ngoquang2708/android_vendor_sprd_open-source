@@ -36,11 +36,12 @@ extern "C"
 typedef enum {
 	CAMERA_NORMAL_MODE = 0,
 	CAMERA_HDR_MODE,
-	CAMERA_ZSL_MODE,
+	CAMERA_ZSL_MODE,//oem zsl mode
 	CAMERA_RAW_MODE,
 	CAMERA_TOOL_RAW_MODE,
 	CAMERA_ZSL_CONTINUE_SHOT_MODE,
 	CAMERA_NORMAL_CONTINUE_SHOT_MODE,
+	CAMERA_ANDROID_ZSL_MODE,//hal2.0 zsl mode
 	CAMERA_MODE_MAX
 }takepicture_mode;
 
@@ -166,6 +167,15 @@ typedef struct {
 	morpho_FaceRect *face_ptr;
 } camera_frame_type;
 
+typedef struct {
+	uint32_t                 *buf_Virt_Addr;
+	uint32_t                 *buf_Virt_Uaddr;
+	uint32_t                 width;
+	uint32_t                 height;
+	int64_t                  timestamp;
+	struct frm_info          cap_info;
+}	camera_cap_frm_info;
+
 typedef enum
 {
 	JPEGENC_MEM
@@ -249,6 +259,7 @@ typedef enum {
 	CAMERA_EVT_CB_FD,
 	CAMERA_EVT_CB_FOCUS_MOVE,
 	CAMERA_EVT_CB_FLUSH,
+	CAMERA_EVT_CB_HAL2_ZSL_NEW_FRM,
 	CAMERA_CB_MAX
 } camera_cb_type;
 
@@ -417,6 +428,9 @@ typedef struct _cropZoom{
 		uint32_t crop_h;
     }cropZoom;
 
+
+void                 camera_zsl_pic_cb_done();
+
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
 					camera_cb_f_type callback,
@@ -433,14 +447,6 @@ camera_ret_code_type camera_set_dimensions(uint16_t picture_width,
 					camera_cb_f_type callback,
 					void *client_data,
 					uint32_t can_resize);
-#ifdef SPRD_CAMERA_HAL2_VERSION
-camera_ret_code_type camera_set_preview_dimensions(
-					uint16_t display_width,
-					uint16_t display_height,
-					camera_cb_f_type callback,
-					void *client_data);
-
-#endif
 
 camera_ret_code_type camera_set_encode_properties(camera_encode_properties_type *encode_properties);
 
@@ -554,6 +560,11 @@ int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level);
 void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 inline uint32_t camera_get_prev_stat();
 int camera_capture_is_idle(void);
+
+int camera_set_cancel_capture(int set_val); //for hal can invoke
+
+/*following functions are for HAL2.0*/
+int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);
 
 #ifdef __cplusplus
 }
