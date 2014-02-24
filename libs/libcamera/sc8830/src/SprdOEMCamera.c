@@ -2749,12 +2749,6 @@ int camera_stop_preview_internal(void)
 	g_cxt->restart_skip_en = 0;
 
 	if (V4L2_PREVIEW == g_cxt->v4l2_cxt.v4l2_state) {
-		ret = cmr_v4l2_cap_stop();
-		g_cxt->v4l2_cxt.v4l2_state = V4L2_IDLE;
-		if (ret) {
-			CMR_LOGE("Failed to stop V4L2 capture, %d", ret);
-		}
-
 		if (g_cxt->cmr_set.bflash) {
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
 			if (ret) {
@@ -2765,6 +2759,12 @@ int camera_stop_preview_internal(void)
 				g_cxt->cmr_set.bflash = 0;
 			}
 		}
+
+		ret = cmr_v4l2_cap_stop();
+                g_cxt->v4l2_cxt.v4l2_state = V4L2_IDLE;
+                if (ret) {
+                        CMR_LOGE("Failed to stop V4L2 capture, %d", ret);
+                }
 	}
 	CMR_PRINT_TIME;
 
