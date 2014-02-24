@@ -300,13 +300,11 @@ uint32_t _isp_AppLumMeasureRecover(uint32_t handler_id)
 *@
 *@ return:
 */
-int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr)
+int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr, uint32_t param_len)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr=ispAppGetContext(handler_id);
 	ISP_APP_MSG_INIT(isp_ctrl_msg);
-
-	isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr);
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
 		if ((ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode))
@@ -314,11 +312,20 @@ int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr)
 			isp_ctrl_msg.handler_id = handler_id;
 			isp_ctrl_msg.msg_type = ISP_APP_EVT_CTRL_CALLBAC;
 			isp_ctrl_msg.sub_msg_type = mode;
-			isp_ctrl_msg.alloc_flag = 0x00;
+			isp_ctrl_msg.data_len = param_len;
+			if (NULL != param_ptr) {
+				isp_ctrl_msg.data = malloc(param_len);
+				memcpy(isp_ctrl_msg.data, param_ptr, param_len);
+				isp_ctrl_msg.alloc_flag = 0x01;
+			} else {
+				isp_ctrl_msg.alloc_flag = 0x00;
+			}
 			isp_ctrl_msg.respond = 0x00;
 			rtn = _isp_app_msg_post(&isp_ctrl_msg);
 			ISP_APP_RETURN_IF_FAIL(rtn, ("ctrl callback send msg to app thread error"));
 		}
+	} else {
+		isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
 	}
 
 	return rtn;
@@ -329,9 +336,10 @@ int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr)
 *@
 *@ return:
 */
-uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* param_ptr)
+uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* param_ptr, uint32_t param_len)
 {
 	int32_t rtn=ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr=ispAppGetContext(handler_id);
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
 		if (ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode)) {
@@ -342,6 +350,8 @@ uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* pa
 			rtn = _isp_AppLumMeasureRecover(handler_id);
 		}
 	}
+
+	isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
 
 	return rtn;
 }
@@ -361,7 +371,7 @@ uint32_t _isp_AppStopVideoHandler(uint32_t handler_id)
 		ISP_LOG("App Stop ISP_AF_NOTICE_CALLBACK");
 		af_notice.mode=ISP_FOCUS_MOVE_END;
 		af_notice.valid_win=0x00;
-		isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice);
+		isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
 		isp_context_ptr->af_flag = ISP_APP_UEB;
 	}
 
@@ -373,7 +383,7 @@ uint32_t _isp_AppStopVideoHandler(uint32_t handler_id)
 *@
 *@ return:
 */
-static int32_t _isp_AppCallBack(uint32_t handler_id, int32_t mode, void* param_ptr)
+static int32_t _isp_AppCallBack(uint32_t handler_id, int32_t mode, void* param_ptr, uint32_t param_len)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
@@ -715,10 +725,11 @@ static void *_isp_app_routine(void *client_data)
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
 	ISP_APP_MSG_INIT(isp_ctrl_msg);
 	ISP_APP_MSG_INIT(isp_ctrl_self_msg);
-	uint32_t handler_id = 0X00;
-	uint32_t evt = 0X00;
-	uint32_t sub_type = 0X00;
+	uint32_t handler_id = ISP_APP_ZERO;
+	uint32_t evt = ISP_APP_ZERO;
+	uint32_t sub_type = ISP_APP_ZERO;
 	void* param_ptr = NULL;
+	uint32_t param_len = ISP_APP_ZERO;
 
 	ISP_LOG("enter isp ctrl routine.");
 
@@ -734,6 +745,7 @@ static void *_isp_app_routine(void *client_data)
 		evt = (uint32_t)(isp_ctrl_msg.msg_type & ISP_APP_EVT_MASK);
 		sub_type = isp_ctrl_msg.sub_msg_type;
 		param_ptr = (void*)isp_ctrl_msg.data;
+		param_len = isp_ctrl_msg.data_len;
 		res_ptr = (void*)isp_ctrl_msg.respond;
 
 		switch (evt) {
@@ -820,7 +832,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_CTRL_CALLBAC:
-				rtn = _isp_AppCtrlCallbackHandler(handler_id, sub_type, param_ptr);
+				rtn = _isp_AppCtrlCallbackHandler(handler_id, sub_type, param_ptr, param_len);
 				break;
 
 			default:

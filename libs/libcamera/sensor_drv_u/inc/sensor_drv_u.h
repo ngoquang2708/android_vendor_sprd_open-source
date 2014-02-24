@@ -568,6 +568,7 @@ typedef struct sensor_mode_info_tag {
 	uint32_t line_time;
 	SENSOR_IMAGE_FORMAT image_format;
 	uint32_t pclk;
+	uint32_t frame_line;
 } SENSOR_MODE_INFO_T, *SENSOR_MODE_INFO_T_PTR;
 
 typedef struct sensor_extend_info_tag {

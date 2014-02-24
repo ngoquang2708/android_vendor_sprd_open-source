@@ -43,6 +43,7 @@ struct isp_app_msg
 	uint32_t                   msg_type;
 	uint32_t                   sub_msg_type;
 	void                       *data;
+	uint32_t                   data_len;
 	uint32_t                   alloc_flag; /*0 , no alloc; 1, data alloc-ed by the send */
 	void                       *respond;
 };
@@ -64,6 +65,7 @@ struct isp_app_msg_cxt
 	.msg_type = 0, \
 	.sub_msg_type = 0, \
 	.data = NULL, \
+	.data_len = 0, \
 	.alloc_flag = 0, \
 	.respond = NULL, \
 }

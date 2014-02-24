@@ -26,7 +26,7 @@
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
 
-typedef int32_t ( *proc_callback)(uint32_t handler_id, int32_t mode, void* param_ptr);
+typedef int32_t ( *proc_callback)(uint32_t handler_id, int32_t mode, void* param_ptr, uint32_t param_len);
 
 #define ISP_EVT_MASK	0x00000F00
 /**---------------------------------------------------------------------------*

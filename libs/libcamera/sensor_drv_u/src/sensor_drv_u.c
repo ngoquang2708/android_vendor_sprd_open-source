@@ -851,6 +851,12 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 		exp_info_ptr->raw_info_ptr = (struct sensor_raw_info*)*sensor_info_ptr->raw_info_ptr;
 	}
 
+	if ((NULL != exp_info_ptr)
+		&&(NULL != exp_info_ptr->raw_info_ptr)
+		&&(NULL != exp_info_ptr->raw_info_ptr->resolution_info_ptr)) {
+		exp_info_ptr->raw_info_ptr->resolution_info_ptr->image_pattern = sensor_info_ptr->image_pattern;
+	}
+
 	exp_info_ptr->source_width_max = sensor_info_ptr->source_width_max;
 	exp_info_ptr->source_height_max = sensor_info_ptr->source_height_max;
 
@@ -908,6 +914,8 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 				    resolution_trim_ptr[i].line_time;
 				exp_info_ptr->sensor_mode_info[i].pclk =
 				    resolution_trim_ptr[i].pclk;
+				exp_info_ptr->sensor_mode_info[i].frame_line=
+				    resolution_trim_ptr[i].frame_line;
 			} else {
 				exp_info_ptr->sensor_mode_info[i].trim_start_x =
 				    0x00;
@@ -937,6 +945,26 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 				memcpy((void*)&exp_info_ptr->sensor_video_info[i], (void*)video_info_ptr,sizeof(SENSOR_VIDEO_INFO_T));
 			}
 		}
+
+		if ((NULL != exp_info_ptr)
+			&&(NULL != exp_info_ptr->raw_info_ptr)
+			&&(NULL != exp_info_ptr->raw_info_ptr->resolution_info_ptr)) {
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].start_x = exp_info_ptr->sensor_mode_info[i].trim_start_x;
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].start_y = exp_info_ptr->sensor_mode_info[i].trim_start_y;
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].width = exp_info_ptr->sensor_mode_info[i].trim_width;
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].height = exp_info_ptr->sensor_mode_info[i].trim_height;
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].line_time= exp_info_ptr->sensor_mode_info[i].line_time;
+			exp_info_ptr->raw_info_ptr->resolution_info_ptr->tab[i].frame_line= exp_info_ptr->sensor_mode_info[i].frame_line;
+		}
+
+		if ((NULL != exp_info_ptr)
+			&&(NULL != exp_info_ptr->raw_info_ptr)
+			&&(NULL != exp_info_ptr->raw_info_ptr->ioctrl_ptr)) {
+			exp_info_ptr->raw_info_ptr->ioctrl_ptr->set_focus = exp_info_ptr->ioctl_func_ptr->af_enable;
+			exp_info_ptr->raw_info_ptr->ioctrl_ptr->set_exposure = exp_info_ptr->ioctl_func_ptr->write_ae_value;
+			exp_info_ptr->raw_info_ptr->ioctrl_ptr->set_gain = exp_info_ptr->ioctl_func_ptr->write_gain_value;
+		}
+
 	}
 	exp_info_ptr->sensor_interface = sensor_info_ptr->sensor_interface;
 	exp_info_ptr->change_setting_skip_num = sensor_info_ptr->change_setting_skip_num;

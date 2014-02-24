@@ -133,7 +133,7 @@ static struct {
 #define NEED_V4L2_POSTPOROCESS() (cpu_is (CPU_DOLPHIN1) ||cpu_is ( CPU_DOLPHIN_T1) )
 
 static void camera_sensor_evt_cb(int evt, void* data);
-static int camera_isp_evt_cb(uint32_t handler_id, int evt, void* data);
+static int camera_isp_evt_cb(uint32_t handler_id, int evt, void* data, uint32_t data_len);
 static void camera_jpeg_evt_cb(int evt, void* data);
 static void camera_v4l2_evt_cb(int evt, void* data);
 static void camera_post_rot_evt(int evt, struct img_frm *frm_data);
@@ -512,7 +512,7 @@ int camera_isp_init(void)
 	if (0 == ctrl->isp_inited) {
 		isp_param.isp_id = ISP_ID_SC8830;
 		sensor_info_ptr = g_cxt->sn_cxt.sensor_info;
-		isp_param.setting_param_ptr = sensor_info_ptr;
+		isp_param.setting_param_ptr = sensor_info_ptr->raw_info_ptr;
 		if (0 != sensor_info_ptr->sensor_mode_info[SENSOR_MODE_COMMON_INIT].width) {
 			isp_param.size.w = sensor_info_ptr->sensor_mode_info[SENSOR_MODE_COMMON_INIT].width;
 			isp_param.size.h = sensor_info_ptr->sensor_mode_info[SENSOR_MODE_COMMON_INIT].height;
@@ -3669,7 +3669,7 @@ void camera_v4l2_evt_cb(int evt, void* data)
 	return;
 }
 
-int32_t camera_isp_evt_cb(uint32_t handler_id, int32_t evt, void* data)
+int32_t camera_isp_evt_cb(uint32_t handler_id, int32_t evt, void* data, uint32_t data_len)
 {
 	CMR_MSG_INIT(message);
 	uint32_t                 cmd;

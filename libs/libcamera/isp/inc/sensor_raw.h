@@ -542,15 +542,36 @@ struct sensor_raw_cali_info{
 	struct sensor_raw_flashlight_cali flashlight;
 };
 
-struct sensor_raw_info{
+struct sensor_raw_resolution_info {
+	uint16_t start_x;
+	uint16_t start_y;
+	uint16_t width;
+	uint16_t height;
+	uint16_t line_time;
+	uint16_t frame_line;
+};
+
+struct sensor_raw_resolution_info_tab {
+	uint32_t image_pattern;
+	struct sensor_raw_resolution_info tab[10];
+};
+
+struct sensor_raw_ioctrl {
+	uint32_t(*set_focus) (uint32_t param);
+	uint32_t(*set_exposure) (uint32_t param);
+	uint32_t(*set_gain) (uint32_t param);
+};
+
+struct sensor_raw_info {
 	struct sensor_version_info* version_info;
 	struct sensor_raw_tune_info* tune_ptr;
 	struct sensor_raw_fix_info* fix_ptr;
 	struct sensor_raw_cali_info* cali_ptr;
+	struct sensor_raw_resolution_info_tab* resolution_info_ptr;
+	struct sensor_raw_ioctrl* ioctrl_ptr;
 };
 
-
-struct raw_param_info_tab{
+struct raw_param_info_tab {
 	uint32_t param_id;
 	struct sensor_raw_info* info_ptr;
 	uint32_t(*identify_otp) (void* param_ptr);

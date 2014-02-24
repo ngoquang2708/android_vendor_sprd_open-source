@@ -905,7 +905,7 @@ static struct sensor_raw_cali_info s_ov8830_cali_info;
 
 static struct sensor_raw_fix_info s_ov8830_fix_info={
 {
-		(uint8_t*)s_ov8830_ae_weight_customer,
+	(uint8_t*)s_ov8830_ae_weight_customer,
 
 	{
 		{
@@ -1104,8 +1104,43 @@ static struct sensor_raw_fix_info s_ov8830_fix_info={
 },
 };
 
+static struct sensor_raw_resolution_info_tab s_ov8830_trim_info=
+{
+	0x00,
+	{
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	}
+};
+
+static struct sensor_raw_ioctrl s_ov8830_ioctrl=
+{
+	PNULL,
+	PNULL,
+	PNULL
+};
+
 static struct sensor_version_info s_ov8830_version_info={
 	SENSOR_RAW_VERSION_ID,
 	sizeof(struct sensor_raw_info),
 	0x00
 };
+
+static struct sensor_raw_info s_ov8830_mipi_raw_info=
+{
+	&s_ov8830_version_info,
+	(struct sensor_raw_tune_info*)&s_ov8830_tune_info,
+	&s_ov8830_fix_info,
+	&s_ov8830_cali_info,
+	&s_ov8830_trim_info,
+	&s_ov8830_ioctrl
+};
+
