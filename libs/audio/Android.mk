@@ -71,8 +71,8 @@ endif
 LOCAL_C_INCLUDES += vendor/sprd/open-source/libs/audio/vb_effect/$(BOARD_EQ_DIR)
 
 LOCAL_SRC_FILES := audio_hw.c tinyalsa_util.c audio_pga.c \
-			record_process/aud_proc_config.c \
-			record_process/aud_filter_calc.c
+			record_process/aud_proc_config.c.arm \
+			record_process/aud_filter_calc.c.arm
 
 ifeq ($(strip $(AUDIO_MUX_PIPE)), true)
 LOCAL_SRC_FILES  += audio_mux_pcm.c
