@@ -36,12 +36,12 @@ extern "C"
 typedef enum {
 	CAMERA_NORMAL_MODE = 0,
 	CAMERA_HDR_MODE,
-	CAMERA_ZSL_MODE,//oem zsl mode
+	CAMERA_ZSL_MODE,/*oem zsl mode*/
 	CAMERA_RAW_MODE,
 	CAMERA_TOOL_RAW_MODE,
 	CAMERA_ZSL_CONTINUE_SHOT_MODE,
 	CAMERA_NORMAL_CONTINUE_SHOT_MODE,
-	CAMERA_ANDROID_ZSL_MODE,//hal2.0 zsl mode
+	CAMERA_ANDROID_ZSL_MODE,/*hal2.0 zsl mode*/
 	CAMERA_MODE_MAX
 }takepicture_mode;
 
@@ -106,7 +106,6 @@ typedef enum {
 } camera_format_type;
 
 /* Enum Type for different ISO Mode supported */
-
 typedef enum {
 	CAMERA_PREVIEW_MODE_SNAPSHOT,
 	CAMERA_PREVIEW_MODE_MOVIE,
@@ -174,7 +173,7 @@ typedef struct {
 	uint32_t                 height;
 	int64_t                  timestamp;
 	struct frm_info          cap_info;
-}	camera_cap_frm_info;
+} camera_cap_frm_info;
 
 typedef enum
 {
@@ -250,8 +249,7 @@ typedef enum {
 	CAMERA_EVT_CB_FRAME,      /* Preview or video frame ready */
 	CAMERA_EVT_CB_PICTURE,    /* Picture frame ready for multi-shot */
 	CAMERA_STATUS_CB,         /* Status updated               */
-	CAMERA_EXIT_CB_FILE_SIZE_EXCEEDED, /* Specified file size not achieved,
-		                  encoded file written & returned anyway */
+	CAMERA_EXIT_CB_FILE_SIZE_EXCEEDED, /* Specified file size not achieved, ecoded file written & returned anyway */
 	CAMERA_EXIT_CB_BUFFER,    /* A buffer is returned         */
 	CAMERA_EVT_CB_CAPTURE_FRAME_DONE,/*after captur frame, notify shutter*/
 	CAMERA_EVT_CB_SNAPSHOT_DONE,/*  Snapshot updated               */
@@ -426,10 +424,9 @@ typedef struct _cropZoom{
 		uint32_t crop_y;
 		uint32_t crop_w;
 		uint32_t crop_h;
-    }cropZoom;
+} cropZoom;
 
-
-void                 camera_zsl_pic_cb_done();
+void camera_zsl_pic_cb_done();
 
 camera_ret_code_type camera_encode_picture(camera_frame_type *frame,
 					camera_handle_type *handle,
@@ -548,9 +545,6 @@ int camera_dma_copy_data(struct _dma_copy_cfg_tag dma_copy_cfg);
 camera_ret_code_type camera_cfg_rot_cap_param_reset(void);
 int camera_get_is_nonzsl(void);
 int camera_is_sensor_support_zsl(void);
-
-
-
 int camera_isp_start(uint32_t work_mode,uint32_t need_binning,SENSOR_MODE_INFO_T *sensor_mode);
 int camera_isp_ae_info(SENSOR_AE_INFO_T *sensor_aec_info);
 int camera_isp_wb_trim(struct img_frm_cap *frm_cfg);
@@ -560,8 +554,7 @@ int camera_isp_flash_ratio(SENSOR_FLASH_LEVEL_T *flash_level);
 void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 inline uint32_t camera_get_prev_stat();
 int camera_capture_is_idle(void);
-
-int camera_set_cancel_capture(int set_val); //for hal can invoke
+int camera_set_cancel_capture(int set_val); /*for hal can invoke*/
 
 /*following functions are for HAL2.0*/
 int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);
