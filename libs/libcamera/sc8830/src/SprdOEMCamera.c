@@ -84,6 +84,7 @@ struct CAMERA_TAKEPIC_STAT {
 		nsecs_t          timestamp;
 		uint32_t         valid;
 };
+
 struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
 		{"takepicture",           0, 0},
 		{"capture start",        0, 0},
@@ -172,14 +173,14 @@ static int camera_alloc_capture_buf(struct buffer_cfg *buffer, uint32_t cap_numb
 static int camera_start_isp_process(struct frm_info *data);
 static int camera_start_jpeg_decode(struct frm_info *data);
 static int camera_start_jpeg_encode(struct frm_info *data);
-static int camera_start_jpeg_encode_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);
+static int camera_start_jpeg_encode_sub(struct frm_info *data, uint32_t *srcPhy, uint32_t *srcVirt, uint32_t width, uint32_t height);
 static int camera_jpeg_decode_next(struct frm_info *data);
 static int camera_start_scale(struct frm_info *data);
-static int camera_start_scale_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);
+static int camera_start_scale_sub(struct frm_info *data, uint32_t *srcPhy, uint32_t *srcVirt, uint32_t width, uint32_t height);
 static int camera_scale_next(struct frm_info *data);
 static int camera_scale_done(struct frm_info *data);
 static int camera_start_rotate(struct frm_info *data);
-static int camera_start_rotate_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);
+static int camera_start_rotate_sub(struct frm_info *data, uint32_t *srcPhy, uint32_t *srcVirt, uint32_t width, uint32_t height);
 static int camera_start_preview_internal(void);
 static int camera_stop_preview_internal(void);
 static int camera_before_set(enum restart_mode re_mode);
@@ -1201,13 +1202,13 @@ int camera_take_picture_continue(int cap_cnt)
 
 static int _v4l2_postfix(struct frm_info* info)
 {
-	int                       ret = 0;
-	int                       i, total ;
-	uint32_t                  *pval;
-	camera_frame_type         frame_type;
-	uint32_t                  frm_id;
-	uint32_t                  dx,dy;
-	struct img_frm            *cap_frm = NULL;
+	int ret = 0;
+	int i = 0, total = 0;
+	uint32_t *pval;
+	camera_frame_type frame_type;
+	uint32_t frm_id;
+	uint32_t dx,dy;
+	struct img_frm *cap_frm = NULL;
 
 	if (!NEED_V4L2_POSTPOROCESS())
 		return 0;
@@ -1277,54 +1278,61 @@ static int _v4l2_postfix(struct frm_info* info)
 			(uint32_t)&frame_type);
 	}
 	CMR_PRINT_TIME;
+
 	return ret;
 }
 
-static int zsl_cap_data_shift(uint32_t *srcVirt,uint32_t *srcUAdd,uint32_t width,uint32_t height) //for hal2.0 zsl
+static int zsl_cap_data_shift(uint32_t *srcVirt,
+			uint32_t *srcUAdd,
+			uint32_t width,
+			uint32_t height)
 {
-	int                           ret = 0;
-	int                           i, total ;
-	uint32_t                    *pval;
-	uint32_t                 dx,dy;
+	int ret = 0;
+	uint32_t i = 0, total = 0;
+	uint32_t *pval;
+	uint32_t dx, dy;
 	camera_frame_type frame_type = {0};
-	if( !NEED_V4L2_POSTPOROCESS())
+
+	if (!NEED_V4L2_POSTPOROCESS())
 		return 0;
+
 	if (srcVirt == NULL || srcUAdd == NULL) {
 		CMR_LOGV("err add para is null");
 		return 1;
 	}
 	dx = width;
 	dy = height;
-	total  = (uint32_t)((dx)*(dy));
+	total = (uint32_t)((dx) * (dy));
 
 	CMR_LOGV("width=%d,height=%d,y_vaddr=%p uadd=%p", dx, dy, srcVirt, srcUAdd);
 
-	pval  = srcVirt;
-	for (i=0;  i< (total/4) ; i++ ) {
-		*pval++  <<=2;
+	pval = srcVirt;
+	for (i = 0; i < (total >> 2); i++) {
+		*pval++ <<= 2;
 	}
 
-	total  >>= 1;
-	pval  = srcUAdd;
-	for (i=0;  i< (total/4) ; i++ ) {
-		*pval++  <<=2;
+	total >>= 1;
+	pval = srcUAdd;
+	for (i = 0; i< (total >> 2); i++) {
+		*pval++ <<= 2;
 	}
 	camera_call_cb(CAMERA_EVT_CB_FLUSH,
-		camera_get_client_data(),
-		CAMERA_FUNC_TAKE_PICTURE,
-		(uint32_t)&frame_type);
+			camera_get_client_data(),
+			CAMERA_FUNC_TAKE_PICTURE,
+			(uint32_t)&frame_type);
+
 	return ret;
 }
 
 static int _v4l2_postfix_cap(struct frm_info* info)
 {
-	int                       ret = 0;
-	int                       i, total ;
-	uint32_t                  *pval;
-	camera_frame_type         frame_type;
-	uint32_t                  frm_id;
-	uint32_t                  dx,dy;
-	struct img_frm            *cap_frm = NULL;
+	int ret = 0;
+	uint32_t i = 0, total = 0;
+	uint32_t *pval;
+	camera_frame_type frame_type;
+	uint32_t frm_id;
+	uint32_t dx,dy;
+	struct img_frm *cap_frm = NULL;
 
 	if (!NEED_V4L2_POSTPOROCESS())
 		return 0;
@@ -1584,8 +1592,8 @@ void *camera_cap_thread_proc(void *data)
 			if (TAKE_PICTURE_NO == camera_get_take_picture()) {
 				if (CAMERA_ANDROID_ZSL_MODE == g_cxt->cap_mode) {
 					camera_cap_frm_info frame_type = {0};
-					uint32_t            frm_id = 0;
-					uint32_t			y_addr_vir, u_addr_vir;
+					uint32_t frm_id = 0;
+					uint32_t y_addr_vir, u_addr_vir;
 					CMR_LOGV("channel_id %d, frame_id 0x%x mode=%d", data->channel_id, data->frame_id,g_cxt->cap_mode);
 
 					/*HAL2.0 ZSL supprot, path2 cap frame will copy to hal2.0 zsl_subStream buffer*/
@@ -3717,9 +3725,10 @@ void camera_v4l2_evt_cb(int evt, void* data)
 			(CHN_2 == info->channel_id)) {
 			message.msg_type = CMR_EVT_CAP_TX_DONE;
 			queue_handle = g_cxt->cap_msg_que_handle;
-			if (CAMERA_ZSL_CONTINUE_SHOT_MODE != g_cxt->cap_mode &&
-				CAMERA_NORMAL_CONTINUE_SHOT_MODE != g_cxt->cap_mode && CAMERA_ANDROID_ZSL_MODE != g_cxt->cap_mode) {
-				g_cxt->chn_2_status = CHN_IDLE;//close the next frame
+			if (CAMERA_ZSL_CONTINUE_SHOT_MODE != g_cxt->cap_mode
+				&& CAMERA_NORMAL_CONTINUE_SHOT_MODE != g_cxt->cap_mode
+				&& CAMERA_ANDROID_ZSL_MODE != g_cxt->cap_mode) {
+				g_cxt->chn_2_status = CHN_IDLE;/*close the next frame*/
 			}
 		} else if ((CHN_BUSY == g_cxt->chn_0_status) &&
 			(CHN_0 == info->channel_id)) {
@@ -6320,7 +6329,8 @@ int camera_capture_yuv_process(struct frm_info *data)
 	return ret;
 
 }
-void camera_zsl_pic_cb_done() {
+void camera_zsl_pic_cb_done()
+{
 	CMR_LOGV("camera_zsl_pic_cb_done start");
 	camera_takepic_callback_done(g_cxt);
 }
@@ -6914,12 +6924,12 @@ int camera_start_jpeg_encode(struct frm_info *data)
 int camera_start_jpeg_encode_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height)
 {
 	CMR_MSG_INIT(message);
-	uint32_t				 frm_id;
-	struct img_frm			 *src_frm;
-	struct img_frm			 *target_frm;
-	int 					 ret = CAMERA_SUCCESS;
-	struct jpeg_enc_in_param  in_parm;
-	struct jpeg_enc_out_param	 out_parm;
+	uint32_t frm_id;
+	struct img_frm *src_frm;
+	struct img_frm *target_frm;
+	int ret = CAMERA_SUCCESS;
+	struct jpeg_enc_in_param in_parm;
+	struct jpeg_enc_out_param out_parm;
 
 	TAKE_PICTURE_STEP(CMR_STEP_JPG_ENC_S);
 
@@ -6945,31 +6955,31 @@ int camera_start_jpeg_encode_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t
 
 	CMR_LOGE("slice_height=%d",data->height);
 
-	in_parm.quality_level		 = g_cxt->jpeg_cxt.quality;
-	in_parm.slice_mod			 = JPEG_YUV_SLICE_ONE_BUF;
-	in_parm.size.width			 = g_cxt->picture_size.width;
-	in_parm.size.height 		 = g_cxt->picture_size.height;
+	in_parm.quality_level = g_cxt->jpeg_cxt.quality;
+	in_parm.slice_mod = JPEG_YUV_SLICE_ONE_BUF;
+	in_parm.size.width = g_cxt->picture_size.width;
+	in_parm.size.height = g_cxt->picture_size.height;
 	in_parm.src_addr_phy.addr_y  = (uint32_t)srcPhy;
 	in_parm.src_addr_phy.addr_u  = (uint32_t)srcPhy + width * height;
 	in_parm.src_addr_vir.addr_y  = (uint32_t)srcVirt;
 	in_parm.src_addr_vir.addr_u  = (uint32_t)srcVirt + width * height;
-	in_parm.slice_height		 = data->height;
-	in_parm.src_endian.y_endian  = data->data_endian.y_endian;
+	in_parm.slice_height = data->height;
+	in_parm.src_endian.y_endian = data->data_endian.y_endian;
 	in_parm.src_endian.uv_endian = data->data_endian.uv_endian;
-	in_parm.stream_buf_phy		 = target_frm->addr_phy.addr_y;
-	in_parm.stream_buf_vir		 = target_frm->addr_vir.addr_y;
-	in_parm.stream_buf_size 	 = target_frm->buf_size;
+	in_parm.stream_buf_phy = target_frm->addr_phy.addr_y;
+	in_parm.stream_buf_vir = target_frm->addr_vir.addr_y;
+	in_parm.stream_buf_size = target_frm->buf_size;
 
-	in_parm.temp_buf_phy		 = 0;
-	in_parm.temp_buf_vir		 = 0;
-	in_parm.temp_buf_size		 = 0;
+	in_parm.temp_buf_phy = 0;
+	in_parm.temp_buf_vir = 0;
+	in_parm.temp_buf_size = 0;
 
 #if 0
 	camera_save_to_file(302,
-					IMG_DATA_TYPE_YUV420,
-					width,
-					height,
-					&(in_parm.src_addr_vir));
+			IMG_DATA_TYPE_YUV420,
+			width,
+			height,
+			&(in_parm.src_addr_vir));
 #endif
 
 	CMR_LOGI("w h, %d %d, quality level %d", in_parm.size.width, in_parm.size.height,
@@ -7015,9 +7025,9 @@ int camera_start_jpeg_encode_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t
 
 int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height)
 {
-	int                      ret = CAMERA_SUCCESS;
-	uint32_t                 tmp_refer_rot = 0;
-	uint32_t                 tmp_req_rot = 0;
+	int ret = CAMERA_SUCCESS;
+	uint32_t tmp_refer_rot = 0;
+	uint32_t tmp_req_rot = 0;
 
 	/*HAL2.0 ZSL supoort, oem process cap data from hal*/
 
@@ -7033,7 +7043,7 @@ int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t
 		g_cxt->cap_rot);
 
 	TAKE_PICTURE_STEP(CMR_STEP_TAKE_PIC);
-	zsl_cap_data_shift(srcVirt, srcVirt + ((width * height) >>2), width, height);
+	zsl_cap_data_shift(srcVirt, srcVirt + ((width * height) >> 2), width, height);
 	if (IS_CHN_BUSY(CHN_2)) {
 		/*pause path2, and resume it after jpeg encode done*/
 		ret = cmr_v4l2_cap_pause(CHN_2,0);
@@ -7065,7 +7075,6 @@ int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t
 	if (IMG_ROT_0 != g_cxt->cap_rot) {
 		ret = camera_start_rotate_sub(data, srcPhy, srcVirt, width, height);
 	} else {
-//		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot))) {
 		if ((!NO_SCALING) || (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot))) {
 			ret = camera_start_scale_sub(data, srcPhy, srcVirt, width, height);
 		} else {
@@ -7086,7 +7095,6 @@ int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t
 	CMR_LOGV("ret %d", ret);
 	return ret;
 }
-
 
 int camera_start_scale(struct frm_info *data)
 {
@@ -7249,18 +7257,17 @@ int camera_start_scale(struct frm_info *data)
 
 int camera_start_scale_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height)
 {
-	uint32_t                 frm_id;
-	struct img_frm           dst_frame;
-	struct img_size			 size;
-	int                      ret = CAMERA_SUCCESS;
+	uint32_t frm_id;
+	struct img_frm dst_frame;
+	struct img_size size;
+	int ret = CAMERA_SUCCESS;
 	camera_frame_type frame_type = {0};
 	CMR_PRINT_TIME;
 
 	frm_id = data->frame_id - CAMERA_CAP0_ID_BASE;
-	size.width      = g_cxt->cap_orig_size.width;
-	size.height     = g_cxt->cap_orig_size.height;
+	size.width = g_cxt->cap_orig_size.width;
+	size.height = g_cxt->cap_orig_size.height;
 
-    //if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cfg_cap_rot)) {
 	if (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot)) {
 		dst_frame.addr_vir.addr_y = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_vir.addr_y;
 		dst_frame.addr_vir.addr_u = g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_vir.addr_u;
@@ -7269,22 +7276,22 @@ int camera_start_scale_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcV
 		dst_frame.addr_vir.addr_u = g_cxt->cap_mem[frm_id].cap_yuv.addr_vir.addr_u;
 	}
 
-	//copy yuv data to OEM and start scale
+	/*copy yuv data to OEM and start scale*/
 	memcpy((void*)dst_frame.addr_vir.addr_y, (void*)srcVirt, size.width * size.height);
 	memcpy((void*)dst_frame.addr_vir.addr_u, (void*)((uint32_t)srcVirt + size.width * size.height), (size.width * size.height) >> 1);
-	//must flush
-    if (NEED_V4L2_POSTPOROCESS()) {
+	/*must flush*/
+	if (NEED_V4L2_POSTPOROCESS()) {
 		camera_call_cb(CAMERA_EVT_CB_FLUSH,
-		camera_get_client_data(),
-		CAMERA_FUNC_TAKE_PICTURE,
-		(uint32_t)&frame_type);
-    }
+			camera_get_client_data(),
+			CAMERA_FUNC_TAKE_PICTURE,
+			(uint32_t)&frame_type);
+	}
 #if 0
 		camera_save_to_file(1001,
-						IMG_DATA_TYPE_YUV420,
-						size.width,
-						size.height,
-						&(dst_frame.addr_vir));
+				IMG_DATA_TYPE_YUV420,
+				size.width,
+				size.height,
+				&(dst_frame.addr_vir));
 #endif
 
 	CMR_LOGV("Call camera_start_scale");
@@ -7465,12 +7472,12 @@ int camera_start_rotate(struct frm_info *data)
 
 int camera_start_rotate_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height)
 {
-	uint32_t                 frm_id, rot_frm_id;
-	struct img_rect          rect;
-	int                      ret = CAMERA_SUCCESS;
-	struct img_size          refer_size;
-	struct img_frm			 src_yuv_rot;
-	struct cmr_rot_param     rot_param;
+	uint32_t frm_id, rot_frm_id;
+	struct img_rect rect;
+	int ret = CAMERA_SUCCESS;
+	struct img_size refer_size;
+	struct img_frm src_yuv_rot;
+	struct cmr_rot_param rot_param;
 
 	CMR_PRINT_TIME;
 	if (!IS_CAP0_FRM(data->frame_id)){
@@ -7492,7 +7499,7 @@ int camera_start_rotate_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *src
 	rect.height = g_cxt->cap_orig_size.height;
 
 	src_yuv_rot.fmt = IMG_DATA_TYPE_YUV420;
-	src_yuv_rot.size.width  = rect.width;
+	src_yuv_rot.size.width = rect.width;
 	src_yuv_rot.size.height = rect.height;
 	src_yuv_rot.addr_phy.addr_y = (uint32_t)srcPhy;
 	src_yuv_rot.addr_phy.addr_u = (uint32_t)srcPhy + rect.width * rect.height;
@@ -7517,17 +7524,17 @@ int camera_start_rotate_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *src
 
 #if 0
 	camera_save_to_file(99,
-				IMG_DATA_TYPE_YUV420,
-				src_yuv_rot.size.width,
-				src_yuv_rot.size.height,
-				&(src_yuv_rot.addr_vir));
+			IMG_DATA_TYPE_YUV420,
+			src_yuv_rot.size.width,
+			src_yuv_rot.size.height,
+			&(src_yuv_rot.addr_vir));
 
 	CMR_LOGV("refer_size %d %d", refer_size.width, refer_size.height);
 	camera_save_to_file(100,
-					IMG_DATA_TYPE_YUV420,
-					src_yuv_rot.size.width,
-					src_yuv_rot.size.height,
-					&(g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_vir));
+			IMG_DATA_TYPE_YUV420,
+			src_yuv_rot.size.width,
+			src_yuv_rot.size.height,
+			&(g_cxt->cap_mem[frm_id].cap_yuv_rot.addr_vir));
 #endif
 
 	rot_param.fd = g_cxt->rot_cxt.fd;

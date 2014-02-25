@@ -323,6 +323,8 @@ int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr,
 			isp_ctrl_msg.respond = 0x00;
 			rtn = _isp_app_msg_post(&isp_ctrl_msg);
 			ISP_APP_RETURN_IF_FAIL(rtn, ("ctrl callback send msg to app thread error"));
+		} else {
+			isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
 		}
 	} else {
 		isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
