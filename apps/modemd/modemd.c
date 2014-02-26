@@ -21,9 +21,15 @@
 
 int  client_fd[MAX_CLIENT_NUM];
 static char ttydev[256];
-int  engpc_client_fd[MAX_CLIENT_NUM] ;
-static fd_set engpcFds;
-static int nengfds = 0;
+int  engpc_client_fd[MAX_CLIENT_NUM] ;// engpc_client that notify modemd start/stop  engpc_server
+static fd_set engpcFds;//engcontrol_listen thread listen(select) engpc_fd
+static int nengfds = 0; //max engpc_fd ;
+
+ int notifypipe[2] = {-1}; //for engcontrol_thread nofity engcontrol_listen that some engpc_cil connect
+
+
+
+
 static int ttydev_fd;
 
 /*
@@ -385,7 +391,7 @@ rewrite:
 		start_rild(modem);
 
 		MODEMD_LOGD("restart mediaserver!");
-        //property_set("ctl.restart", "media");
+		//property_set("ctl.restart", "media");
 	} else {
 		MODEMD_LOGD("start rild!");
 		start_rild(modem);
@@ -487,24 +493,26 @@ static void *modemd_engcontrol_listen(void *par)
 	for(;;)
 	{
 	       FD_ZERO(&engpcFds);
-	       nengfds = 0 ;
+	       nengfds = notifypipe[0] + 1;
+	       FD_SET(notifypipe[0], &engpcFds);
 		for(i=0; i<MAX_CLIENT_NUM; i++) {
                   if(engpc_client_fd[i]!=-1){
                       FD_SET(engpc_client_fd[i], &engpcFds);
                       if (engpc_client_fd[i] >= nengfds) nengfds = engpc_client_fd[i]+1;
                   }
 		}
-		if (nengfds == 0 )
-		{
-                //  MODEMD_LOGD("%s:nengfds = 0 ,continue",__FUNCTION__);
-                  sleep(1);
-                 continue ;
-		}
 	       tv.tv_sec = 0;
               tv.tv_usec = 1000000ll;
 		MODEMD_LOGD("%s:begin select ",__FUNCTION__);
-		n = select(nengfds, &engpcFds, NULL, NULL, &tv);
+		n = select(nengfds, &engpcFds, NULL, NULL, NULL);
 		 MODEMD_LOGD("%s:after  select n= %d",__FUNCTION__,n);
+		 if(n > 0 && (FD_ISSET(notifypipe[0], &engpcFds)))
+		 {
+                         int  len = 0;
+                         char buf[128];
+                         len = read(notifypipe[0], buf, sizeof(buf));
+			    MODEMD_LOGD("%s:a engcli connect to modemd  n =%d",__FUNCTION__,len);
+               }
 		for (i = 0; (i < MAX_CLIENT_NUM) && (n > 0); i++) {
 			int  nfd=engpc_client_fd[i];
 			if (nfd != -1 && FD_ISSET(nfd, &engpcFds)) {
@@ -545,6 +553,7 @@ static void *modemd_engcontrol_listen(void *par)
 			}
 		}
 	}
+	close(notifypipe[0]);
 	exit(-1);
 }
 
@@ -554,16 +563,19 @@ static void *modemd_engcontrol_thread(void *par)
 	pthread_t tid;
 	for(i=0; i<MAX_CLIENT_NUM; i++)
 		engpc_client_fd[i]=-1;
-	FD_ZERO(&engpcFds);
-	sfd = socket_local_server(MODEM_ENGCTRL_NAME,
-			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-	if (sfd < 0) {
-		MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
-		exit(-1);
-	}
+      if(pipe(notifypipe) < 0)
+      {
+          MODEMD_LOGD("pipe error!\n");
+      }
+      FD_ZERO(&engpcFds);
+      sfd = socket_local_server(MODEM_ENGCTRL_NAME,
+      ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+      if (sfd < 0) {
+          MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
+          exit(-1);
+      }
 	pthread_create(&tid, NULL, (void*)modemd_engcontrol_listen, NULL);
 	for(; ;){
-
 		MODEMD_LOGD("%s: Waiting for new connect ...", __FUNCTION__);
 		if ( (n=accept(sfd,NULL,NULL)) == -1)
 		{
@@ -574,6 +586,7 @@ static void *modemd_engcontrol_thread(void *par)
 		for(i=0; i<MAX_CLIENT_NUM; i++) {
 			if(engpc_client_fd[i]==-1){
 				engpc_client_fd[i]=n;
+			       write(notifypipe[1], "0", 2);
 				MODEMD_LOGD("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
 				break;
 			}
@@ -583,10 +596,12 @@ static void *modemd_engcontrol_thread(void *par)
 				MODEMD_LOGD("%s: client array is full, just fill %d to client[%d]",
 						__FUNCTION__, n, i);
 				engpc_client_fd[i]=n;
-                            break;
+			       write(notifypipe[1], "0", 2);
+                           break;
 			}
 		}
-	}
+        }
+	close(notifypipe[1]);
 }
 
 static void start_modem(int *para)
@@ -666,6 +681,7 @@ int main(int argc, char *argv[])
 
 	pthread_create(&tid, NULL, (void*)modemd_listenaccept_thread, NULL);
 	pthread_create(&tid, NULL, (void*)modemd_engcontrol_thread, NULL);
+
 
 	/* for vlx version, there is only one modem, once one of the follow two functions
 	*   matched, it will execute forever and never retrun to check the next modem
