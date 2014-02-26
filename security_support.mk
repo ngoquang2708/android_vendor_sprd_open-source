@@ -1,5 +1,5 @@
 # Security Feature support config
-USE_PROJECT_SEC :=false
+USE_PROJECT_SEC :=true
 
 ifeq ($(USE_PROJECT_SEC),true)
 PRODUCT_PROPERTY_OVERRIDES += \
