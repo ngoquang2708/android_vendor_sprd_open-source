@@ -812,10 +812,26 @@ void *thread_fastsleep(void *para)
     set_screen_state(0);
     ALOGE("##: Waiting for a while...\n");
 
-    system("lookat -s 0x7 0x402b00a8");
-    sleep(1);
-    system("lookat -s 0x6 0x402b00a8");
+    int fd, stringsize;
 
+    fd = open("proc/syssleep", O_RDWR);
+    if (fd < 0) {
+        ALOGE("Unknown error: %s", strerror(errno));
+        return NULL;
+    }
+
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        ALOGE("Cant lseek error :%s", strerror(errno));
+        goto leave;
+    }
+
+    stringsize = strlen("on");
+    if (write(fd, "on", stringsize) != stringsize) {
+        ALOGE("Could not write error :%s", strerror(errno));
+        goto leave;
+    }
+leave:
+    close(fd);
     return NULL;
 }
 
