@@ -345,6 +345,10 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		image_size->width, image_size->height,
 		cap_size->width, cap_size->height);
 
+	CMR_LOGV("sn_trim x,y,w,h %d %d %d %d ",
+		sn_trim->start_x, sn_trim->start_y,
+		sn_trim->width, sn_trim->height);
+
 	/* get target_jpeg buffer size first, will be used later */
 	memset((void*)cap_mem, 0, sizeof(struct cmr_cap_mem));
 	cap_mem->target_jpeg.buf_size = get_jpeg_size(align16_image_size.width,
@@ -587,6 +591,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	uint32_t       uv_size = 0, useless_raw = 0;
 	struct cmr_cap_mem *cap_mem = capture_mem;/*&capture_mem[0];*/
 	struct img_size align16_image_size, align16_cap_size, sn_align_size;
+	uint32_t yy_to_y2 = 0;
 
 	if (IMG_DATA_TYPE_RAW != orig_fmt ||
 		NULL == io_mem_res ||
@@ -630,9 +635,16 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 		}
 		uv_size = uv_size + (yy_to_y >> 1);
 	} else if (sn_trim && sn_trim->start_y) {
+		yy_to_y2 = (uint32_t)(image_size->width * image_size->height) -
+				    (uint32_t)(cap_size->width * cap_size->height);
+		if (yy_to_y2 < (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width)) {
+			yy_to_y2 = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
+		}
+
 		tmp = sn_size->height - sn_trim->height - sn_trim->start_y;
 		CMR_LOGV("Recovered height, %d", tmp);
 		yy_to_y = (uint32_t)(tmp * sn_size->width);
+		yy_to_y = MAX(yy_to_y2, yy_to_y);
 		uv_size = uv_size + (yy_to_y >> 1);
 		useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
 	}
@@ -764,13 +776,16 @@ int arrange_jpeg_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->cap_yuv.addr_phy.addr_y += gap_size;
 	cap_mem->cap_yuv.addr_vir.addr_y = cap_mem->target_yuv.addr_vir.addr_u - tmp + gap_size;
 
+	cap_mem->target_yuv.addr_phy.addr_u += gap_size;
+	cap_mem->target_yuv.addr_vir.addr_u += gap_size;
+
 	cap_mem->cap_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_u + y_end - tmp + gap_size;
 	cap_mem->cap_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_u + y_end - tmp + gap_size;
 
 	if (need_rot) {
-		offset = ((uint32_t)(y_end * 3) >> 1) + gap_size;
+		offset = ((uint32_t)(y_end * 3) >> 1) + 2 * gap_size;
 	} else {
-		offset = ((y_end) << 1) + gap_size;
+		offset = ((y_end) << 1) + 2 * gap_size;
 	}
 
 	CMR_NO_MEM(offset, mem_res);
@@ -785,12 +800,12 @@ int arrange_jpeg_buf(struct cmr_cap_2_frm *cap_2_frm,
 		mem_res -= cap_mem->target_jpeg.buf_size;
 	}
 
-	cap_mem->cap_yuv.buf_size = offset -gap_size;
+	cap_mem->cap_yuv.buf_size = channel_size * 3 / 2;
 	cap_mem->cap_yuv.size.width = align16_cap_size.width;
 	cap_mem->cap_yuv.size.height = align16_cap_size.height;
 	cap_mem->cap_yuv.fmt = IMG_DATA_TYPE_YUV420;
 
-	cap_mem->target_yuv.buf_size = offset -gap_size;
+	cap_mem->target_yuv.buf_size = channel_size * 3 / 2;
 	cap_mem->target_yuv.size.width = align16_image_size.width;
 	cap_mem->target_yuv.size.height = align16_image_size.height;
 	cap_mem->target_yuv.fmt = IMG_DATA_TYPE_YUV420;

@@ -927,6 +927,24 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 				    resolution_info_ptr->height;
 			}
 
+			/*scaler trim*/
+			if ((PNULL != resolution_trim_ptr)
+			    && (0x00 != resolution_trim_ptr[i].scaler_trim.w)
+			    && (0x00 != resolution_trim_ptr[i].scaler_trim.h)) {
+				exp_info_ptr->sensor_mode_info[i].scaler_trim =
+				    resolution_trim_ptr[i].scaler_trim;
+			} else {
+				exp_info_ptr->sensor_mode_info[i].scaler_trim.x =
+				    0x00;
+				exp_info_ptr->sensor_mode_info[i].scaler_trim.y =
+				    0x00;
+				exp_info_ptr->sensor_mode_info[i].scaler_trim.w =
+				    exp_info_ptr->sensor_mode_info[i].trim_width;
+				exp_info_ptr->sensor_mode_info[i].scaler_trim.h =
+				    exp_info_ptr->sensor_mode_info[i].trim_height;
+			}
+
+
 			if (SENSOR_IMAGE_FORMAT_MAX !=
 			    sensor_info_ptr->image_format) {
 				exp_info_ptr->sensor_mode_info[i].image_format =
@@ -3428,5 +3446,34 @@ LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id)
 		CMR_LOGE("Fail to send message");
 	}
 
+	return ret;
+}
+
+int Sensor_CheckSensorMode(SENSOR_MODE_INFO_T *mode_info)
+{
+	int ret = 0;
+
+
+	if (mode_info) {
+
+		/*jpeg format do not crop
+		*/
+		if (SENSOR_IMAGE_FORMAT_JPEG == mode_info->image_format) {
+			if ((0 != mode_info->trim_start_x)
+				|| (0 != mode_info->trim_start_y)) {
+				ret = -1;
+				goto out;
+			}
+		}
+
+		if (((mode_info->trim_start_x + mode_info->trim_width) > mode_info->width)
+			|| ((mode_info->trim_start_y + mode_info->trim_height) > mode_info->height)
+			|| ((mode_info->scaler_trim.x + mode_info->scaler_trim.w) > mode_info->trim_width)
+			|| ((mode_info->scaler_trim.y + mode_info->scaler_trim.h) > mode_info->trim_height)) {
+			ret = -1;
+		}
+	}
+
+out:
 	return ret;
 }

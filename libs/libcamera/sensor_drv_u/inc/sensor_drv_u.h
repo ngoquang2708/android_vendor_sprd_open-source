@@ -452,6 +452,13 @@ typedef enum {
 	DCAMERA_EFFECT_MAX
 } DCAMERA_PARAM_EFFECT_E;
 
+typedef struct _sensor_rect_tag {
+	uint16_t x;
+	uint16_t y;
+	uint16_t w;
+	uint16_t h;
+} SENSOR_RECT_T, *SENSOR_RECT_T_PTR;
+
 typedef uint32_t(*SENSOR_IOCTL_FUNC_PTR) (uint32_t param);
 
 typedef struct sensor_ioctl_func_tab_tag {
@@ -517,6 +524,7 @@ typedef struct sensor_trim_tag {
 	uint32_t line_time;
 	uint32_t pclk;
 	uint32_t frame_line;
+	SENSOR_RECT_T scaler_trim;
 } SENSOR_TRIM_T, *SENSOR_TRIM_T_PTR;
 
 
@@ -526,13 +534,6 @@ typedef struct sensor_ae_info_tag {
 	uint32_t line_time;  //time of line
 	uint32_t gain;
 } SENSOR_AE_INFO_T, *SENSOR_AE_INFO_T_PTR;
-
-typedef struct _sensor_rect_tag {
-	uint16_t x;
-	uint16_t y;
-	uint16_t w;
-	uint16_t h;
-} SENSOR_RECT_T, *SENSOR_RECT_T_PTR;
 
 typedef struct _sensor_ext_fun_tag {
 	uint32_t cmd;
@@ -569,6 +570,7 @@ typedef struct sensor_mode_info_tag {
 	SENSOR_IMAGE_FORMAT image_format;
 	uint32_t pclk;
 	uint32_t frame_line;
+	SENSOR_RECT_T scaler_trim;
 } SENSOR_MODE_INFO_T, *SENSOR_MODE_INFO_T_PTR;
 
 typedef struct sensor_extend_info_tag {
@@ -754,7 +756,7 @@ int Sensor_SetMode_WaitDone();
 int Sensor_set_calibration(uint32_t value);
 int Sensor_RegisterFlashCB(cmr_set_flash set_flash_cb);
 int Sensor_StreamCtrl(uint32_t on_off);
-
+int Sensor_CheckSensorMode(SENSOR_MODE_INFO_T *mode_info);
 #ifdef	 __cplusplus
 }
 #endif

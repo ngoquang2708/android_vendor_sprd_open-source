@@ -3856,13 +3856,13 @@ LOCAL uint32_t s5k4ec_set_vmirror_enable(uint32_t enable)
 LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
 {    
     // COMMON INIT
-    {0, 0, 640, 480, 0, 0, 0},
+    {0, 0, 640, 480, 0, 0, 0, {0, 0, 640, 480}},
     
     // YUV422 PREVIEW 1    
 #if 1
     //{0, 0, 640, 480, 680, 40},
-   {0, 0, 1280, 960, 664, 40, 0},   //line_time:include dummny time,   (line_time) *10 us
-   {0, 0, 2560, 1920, 660, 40, 0},
+   {0, 0, 1280, 960, 664, 40, 0, {0, 0, 1280, 960}},   //line_time:include dummny time,   (line_time) *10 us
+   {0, 0, 2560, 1920, 660, 40, 0, {0, 0, 2560, 1920}},
 #else
 
    // {0, 0, 1600, 1200, 122, 40},
@@ -3871,10 +3871,10 @@ LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
    //{0, 0, 1280, 960, 664, 40},   //line_time:include dummny time,   (line_time) *10 us
 #endif    
 #if 1  
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 
 #else
     {0, 0, 1600, 1200, 122, 40},
@@ -3883,9 +3883,9 @@ LOCAL SENSOR_TRIM_T s_s5k4ec_Resolution_Trim_Tab[]=
     // YUV422 PREVIEW 2 
     {0, 0, 2560, 1920, 660, 40},
 #endif    
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+    {0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}}
 };
 LOCAL EXIF_SPEC_PIC_TAKING_COND_T s_s5k4ec_exif;
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_s5k4ec_ioctl_func_tab = 
