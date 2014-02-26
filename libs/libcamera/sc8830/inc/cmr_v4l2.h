@@ -82,6 +82,7 @@ struct img_frm_cap {
 
 struct sn_cfg {
 	struct img_size                     sn_size;
+	struct img_rect                     sn_trim;
 	uint32_t                            frm_num;
 };
 

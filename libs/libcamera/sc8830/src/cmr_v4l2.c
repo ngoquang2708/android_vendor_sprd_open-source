@@ -66,6 +66,7 @@ enum dcam_parm_id {
 	CAPTURE_MODE = 0x1000,
 	CAPTURE_SKIP_NUM,
 	CAPTURE_SENSOR_SIZE,
+	CAPTURE_SENSOR_TRIM,
 	CAPTURE_FRM_ID_BASE,
 	CAPTURE_SET_CROP,
 	CAPTURE_SET_FLASH,
@@ -273,6 +274,18 @@ int cmr_v4l2_sn_cfg(struct sn_cfg *config)
 	stream_parm.parm.capture.reserved[3] = config->sn_size.height;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 
+	CMR_LOGV("sn_trim x y w h %d, %d, %d, %d",
+		config->sn_trim.start_x,
+		config->sn_trim.start_y,
+		config->sn_trim.width,
+		config->sn_trim.height);
+
+	stream_parm.parm.capture.capability = CAPTURE_SENSOR_TRIM;
+	stream_parm.parm.capture.reserved[0] = config->sn_trim.start_x;
+	stream_parm.parm.capture.reserved[1] = config->sn_trim.start_y;
+	stream_parm.parm.capture.reserved[2] = config->sn_trim.width;
+	stream_parm.parm.capture.reserved[3] = config->sn_trim.height;
+	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 exit:
 	return ret;
 
