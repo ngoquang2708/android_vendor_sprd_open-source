@@ -136,7 +136,7 @@
 #ifdef _LPA_IRAM
 #define LONG_PERIOD_MULTIPLIER 3 /* 87 ms */
 #else
-#define LONG_PERIOD_MULTIPLIER 8  /* 232 ms */
+#define LONG_PERIOD_MULTIPLIER 6  /* 174 ms */
 #endif
 /* number of frames per long period (low power) */
 #define LONG_PERIOD_SIZE (SHORT_PERIOD_SIZE * LONG_PERIOD_MULTIPLIER)
@@ -165,7 +165,7 @@
 /* sampling rate when using VX port for wide band */
 #define VX_WB_SAMPLING_RATE 16000
 
-#define RECORD_POP_COUNT    5   //5 * 29 ms
+#define RECORD_POP_MIN_TIME    150   // ms
 
 #define BT_SCO_UPLINK_IS_STARTED        (1 << 0)
 #define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
@@ -419,6 +419,7 @@ struct tiny_stream_in {
     size_t ref_frames_in;
     int read_status;
     bool pop_mute;
+    int pop_mute_count;
 
     struct tiny_audio_device *dev;
     int active_rec_proc;
@@ -558,7 +559,7 @@ static int get_route_depth (
 
 static int get_mode_from_devices(int devices);
 static int init_rec_process(int rec_mode, int sample_rate);
-static int aud_rec_do_process(void * buffer, size_t bytes);
+static int aud_rec_do_process(void * buffer, size_t bytes,void * tmp_buffer, size_t tmp_buffer_size);
 
 static void *stream_routing_thread_entry(void * adev);
 static int stream_routing_manager_create(struct tiny_audio_device *adev);
@@ -1528,7 +1529,7 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     /* take resampling into account and return the closest majoring
        multiple of 16 frames, as audioflinger expects audio buffers to
        be a multiple of 16 frames */
-    size_t size = (SHORT_PERIOD_SIZE * DEFAULT_OUT_SAMPLING_RATE) / out->config.rate;
+    size_t size = (LONG_PERIOD_SIZE * DEFAULT_OUT_SAMPLING_RATE) / out->config.rate;
     size = ((size + 15) / 16) * 16;
     BLUE_TRACE("[TH] size=%d, frame_size=%d", size, audio_stream_frame_size(stream));
     return size * audio_stream_frame_size(stream);
@@ -1739,7 +1740,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
 
-    return (SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT * 1000) / out->config.rate;
+    return (LONG_PERIOD_SIZE * PLAYBACK_LONG_PERIOD_COUNT * 1000) / out->config.rate;
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
@@ -2432,7 +2433,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             goto err;
         }
 #ifndef VOIP_DSP_PROCESS
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
+        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 #endif
     }
@@ -2450,7 +2451,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->pcm)) {
             goto err;
         }
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
+        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 
         if(in->requested_rate != in->config.rate) {
@@ -2545,13 +2546,17 @@ static int start_input_stream(struct tiny_stream_in *in)
           if(in->config.channels != in->requested_channels) {
               in->config.channels = in->requested_channels;
             }
+           if(in->config.rate  != in->requested_rate) {
+                    in->config.rate = in->requested_rate;
+            }
           in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
           if(!pcm_is_ready(in->pcm)) {
-            goto err;
+	      ALOGE("start_input_stream pcm open error");
+		goto err;
             }
         }
         /* start to process pcm data captured, such as noise suppression.*/
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->config.rate);
+        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device),in->requested_rate );
         ALOGI("record process module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
 
@@ -2572,6 +2577,23 @@ static int start_input_stream(struct tiny_stream_in *in)
     if (in->resampler) {
         in->resampler->reset(in->resampler);
         in->frames_in = 0;
+    }
+
+    {
+        int size = 0;
+        int buf_size = 0;
+        size = in->config.period_size;
+        size = ((size + 15) / 16) * 16;
+        buf_size =  size * 2 * sizeof(short);
+        if(in->proc_buf_size < buf_size){
+	    if(in->proc_buf)
+		free(in->proc_buf);
+            in->proc_buf = malloc(buf_size);
+            if(in->proc_buf) {
+                goto err;
+            }
+            in->proc_buf_size = buf_size;
+        }
     }
     ALOGE("start input stream out");
     return 0;
@@ -2620,7 +2642,7 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
     /* take resampling into account and return the closest majoring
        multiple of 16 frames, as audioflinger expects audio buffers to
        be a multiple of 16 frames */
-    size = (in->config.period_size * in->requested_rate) / in->config.rate;
+    size = in->config.period_size ;
     size = ((size + 15) / 16) * 16;
 
     return size * in->config.channels * sizeof(short);
@@ -2844,19 +2866,14 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
             buffer->frame_count = 0;
             return in->read_status;
         }
-        if (in->active_rec_proc)
-            aud_rec_do_process((void *)in->buffer,
-                    in->config.period_size *audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
         in->frames_in = in->config.period_size;
     }
-
     buffer->frame_count = (buffer->frame_count > in->frames_in) ?
         in->frames_in : buffer->frame_count;
     buffer->i16 = in->buffer + (in->config.period_size - in->frames_in) *
         in->config.channels;
 
     return in->read_status;
-
 }
 
 static void release_buffer(struct resampler_buffer_provider *buffer_provider,
@@ -3027,15 +3044,16 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             ret = pcm_read(in->pcm, buffer, bytes);
 #else
         ret = pcm_read(in->pcm, buffer, bytes);
-#endif
-        if (ret == 0 && in->active_rec_proc)
-            aud_rec_do_process(buffer, bytes);
+#endif     
     }
+
+    if (ret == 0 && in->active_rec_proc && in->proc_buf)
+            aud_rec_do_process(buffer, bytes,in->proc_buf,in->proc_buf_size);
 
     if(in->pop_mute) {
         memset(buffer, 0, bytes);
         // mute 240ms for pop
-        if(++pop_count >= RECORD_POP_COUNT) {
+        if(++pop_count >= in->pop_mute_count) {
             pop_count = 0;
             in->pop_mute = false;
         }
@@ -3429,7 +3447,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 {
     struct tiny_audio_device *ladev = (struct tiny_audio_device *)dev;
     struct tiny_stream_in *in;
-    int ret;
+    int ret = 0;
     int channel_count = popcount(config->channel_mask);
 
     BLUE_TRACE("[TH], adev_open_input_stream,devices=0x%x,sample_rate=%d, channel_count=%d",
@@ -3470,7 +3488,19 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.channels = channel_count;
     in->requested_channels = channel_count;
 
-
+    {
+	int size = 0;
+	size = in->config.period_size ;
+	size = ((size + 15) / 16) * 16;
+	in->proc_buf_size = size * 2 * sizeof(short);
+	in->proc_buf = malloc(in->proc_buf_size);
+	if(!in->proc_buf) {
+	    goto err;
+	}
+    }
+    if(in->requested_rate) {
+	in->pop_mute_count = RECORD_POP_MIN_TIME/((in->config.period_size*1000)/in->requested_rate);
+    }
     in->dev = ladev;
     in->standby = 1;
     in->device = devices;
@@ -3482,10 +3512,18 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
 err:
     BLUE_TRACE("Failed(%d), adev_open_input_stream.", ret);
-    if (in->buffer)
+    if (in->buffer) {
         free(in->buffer);
-    if (in->resampler)
+        in->buffer = NULL;
+    }
+    if (in->resampler) {
         release_resampler(in->resampler);
+           in->resampler = NULL;
+    }
+    if(in->proc_buf) {
+        free(in->proc_buf);
+        in->proc_buf = NULL;
+    }
 
     free(in);
     *stream_in = NULL;
@@ -3503,8 +3541,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         free(in->buffer);
         release_resampler(in->resampler);
     }
-    if (in->proc_buf)
+    if (in->proc_buf) {
         free(in->proc_buf);
+        in->proc_buf_size = 0;
+    }
     if (in->ref_buf)
         free(in->ref_buf);
 
@@ -3990,23 +4030,29 @@ static int init_rec_process(int rec_mode, int sample_rate)
     return (ret0 || ret1);
 }
 
-static int aud_rec_do_process(void * buffer, size_t bytes)
+static int aud_rec_do_process(void * buffer,size_t bytes,void * tmp_buffer, size_t tmp_buffer_bytes)
 {
     int16_t *temp_buf = NULL;
     size_t read_bytes = bytes;
     unsigned int dest_count = 0;
-
-    temp_buf = (int16_t *) malloc(read_bytes);
-    if (temp_buf) {
-        memset(temp_buf, 0, read_bytes);
+    temp_buf = (int16_t *)tmp_buffer;
+    if (temp_buf && (tmp_buffer_bytes >= 2)) {
+        do { 
+            if(tmp_buffer_bytes <=  bytes) {
+                read_bytes = tmp_buffer_bytes;
+            }
+            else {
+                read_bytes = bytes;
+            }
+            bytes -= read_bytes;
 	AUDPROC_ProcessDp((int16 *) buffer, (int16 *) buffer, read_bytes >> 1, temp_buf, temp_buf, &dest_count);
         memcpy(buffer, temp_buf, read_bytes);
+        buffer = (uint8_t *) buffer + read_bytes;
+        }while(bytes);
     } else {
         ALOGE("temp_buf malloc failed.(len=%d)", (int) read_bytes);
         return -1;
     }
-    if (temp_buf)
-        free(temp_buf);
     return 0;
 }
 
