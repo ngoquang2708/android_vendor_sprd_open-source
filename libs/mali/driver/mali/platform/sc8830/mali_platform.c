@@ -38,8 +38,10 @@
 #define GPU_GLITCH_FREE_DFS	0
 #define GPU_FIX_312MHZ	0
 
-#define GPU_MIN_DIVISION	1
-#define GPU_MAX_DIVISION	3
+#define GPU_MIN_DIVISION		1
+#define GPU_MAX_DIVISION		3
+#define GPU_HARDWARE_MIN_DIVISION	1
+#define GPU_HARDWARE_MAX_DIVISION	4
 
 #define GPU_SELECT0_VAL		0
 #define GPU_SELECT0_MAX		208000
@@ -81,6 +83,7 @@ struct workqueue_struct *gpu_dfs_workqueue = NULL;
 static void gpu_change_freq_div(void);
 static void gpufreq_limit_init(void);
 static void gpufreq_limit_uninit(void);
+static inline void mali_set_div(int clock_div);
 #if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 static void gpufreq_table_show(char* buf);
 #endif
@@ -151,10 +154,17 @@ void mali_power_initialize(struct platform_device *pdev)
 	MALI_DEBUG_ASSERT(gpu_clock_i);
 	MALI_DEBUG_ASSERT(clock_256m);
 	MALI_DEBUG_ASSERT(clock_312m);
+#ifdef CONFIG_COMMON_CLK
+	clk_prepare_enable(clock_312m);
+#else
+	clk_enable(clock_312m);
+#endif
 
 	if(!gpu_power_on)
 	{
 		old_gpu_clock_div = 1;
+		old_mali_freq_select = 1;
+		gpu_cur_freq = GPU_SELECT1_MAX;
 		gpu_power_on = 1;
 		sci_glb_clr(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
 		mdelay(2);
@@ -246,6 +256,11 @@ void mali_platform_device_unregister(void)
 		gpu_power_on = 0;
 		sci_glb_set(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
 	}
+#ifdef CONFIG_COMMON_CLK
+	clk_disable_unprepare(clock_312m);
+#else
+	clk_disable(clock_312m);
+#endif
 }
 
 void mali_platform_device_release(struct device *device)
@@ -290,6 +305,12 @@ void mali_platform_power_mode_change(int power_mode)
 #else
 			clk_enable(gpu_clock_i);
 #endif
+			if(5==gpu_level)
+			{
+				mali_set_div(GPU_HARDWARE_MAX_DIVISION);
+				old_gpu_clock_div = GPU_HARDWARE_MAX_DIVISION;
+				gpu_cur_freq = GPU_SELECT1_MAX/GPU_HARDWARE_MAX_DIVISION;
+			}
 
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_clock);
@@ -414,23 +435,23 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 	MALI_DEBUG_PRINT(3,("GPU_DFS  gpu_level:%d\n",gpu_level));
 	switch(gpu_level)
 	{
-		case 3:
+		case 10:
 			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
 			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
-				min_div=GPU_MIN_DIVISION;
-				max_div=GPU_MIN_DIVISION;
+				min_div=GPU_HARDWARE_MIN_DIVISION;
+				max_div=GPU_HARDWARE_MIN_DIVISION;
 			}
 			else
 			{
 				gpu_max_freq=GPU_SELECT1_MAX;
-				mali_get_div(gpufreq_max_limit,&min_div,GPU_MIN_DIVISION);
-				mali_get_div(gpufreq_max_limit,&max_div,GPU_MIN_DIVISION);
+				mali_get_div(gpufreq_max_limit,&min_div,GPU_HARDWARE_MIN_DIVISION);
+				mali_get_div(gpufreq_max_limit,&max_div,GPU_HARDWARE_MIN_DIVISION);
 			}
 			gpu_level=1;
 			break;
-		case 2:
+		case 9:
 			gpu_max_freq=GPU_SELECT1_MAX;
 #if GPU_FIX_312MHZ
 			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
@@ -440,14 +461,35 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
-				min_div=GPU_MIN_DIVISION;
-				max_div=GPU_MIN_DIVISION;
+				min_div=GPU_HARDWARE_MIN_DIVISION;
+				max_div=GPU_HARDWARE_MIN_DIVISION;
 			}
 			else
 			{
 				gpu_max_freq=GPU_SELECT1_MAX;
-				mali_get_div(gpufreq_max_limit,&min_div,GPU_MIN_DIVISION);
-				mali_get_div(gpufreq_max_limit,&max_div,GPU_MIN_DIVISION);
+				mali_get_div(gpufreq_max_limit,&min_div,GPU_HARDWARE_MIN_DIVISION);
+				mali_get_div(gpufreq_max_limit,&max_div,GPU_HARDWARE_MIN_DIVISION);
+			}
+			gpu_level=1;
+			break;
+		case 5:
+			gpu_max_freq=GPU_SELECT1_MAX;
+#if GPU_FIX_312MHZ
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT3_VAL);
+#else
+			mali_get_freq_select(gpufreq_max_limit,&mali_freq_select,GPU_SELECT1_VAL);
+#endif
+			if(GPU_SELECT3_VAL==mali_freq_select)
+			{
+				gpu_max_freq=GPU_SELECT3_MAX;
+				min_div=GPU_HARDWARE_MIN_DIVISION;
+				max_div=GPU_HARDWARE_MIN_DIVISION;
+			}
+			else
+			{
+				gpu_max_freq=GPU_SELECT1_MAX;
+				mali_get_div(gpufreq_max_limit,&min_div,GPU_HARDWARE_MAX_DIVISION);
+				mali_get_div(gpufreq_max_limit,&max_div,GPU_HARDWARE_MAX_DIVISION);
 			}
 			gpu_level=1;
 			break;
@@ -464,8 +506,8 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			if(GPU_SELECT3_VAL==mali_freq_select)
 			{
 				gpu_max_freq=GPU_SELECT3_MAX;
-				min_div=GPU_MIN_DIVISION;
-				max_div=GPU_MIN_DIVISION;
+				min_div=GPU_HARDWARE_MIN_DIVISION;
+				max_div=GPU_HARDWARE_MIN_DIVISION;
 			}
 			else
 			{
