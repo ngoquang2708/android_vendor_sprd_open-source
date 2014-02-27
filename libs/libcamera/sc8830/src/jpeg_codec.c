@@ -45,6 +45,7 @@ typedef struct
 	pthread_t	jpeg_thread;
 	sem_t stop_sem;
 	sem_t sync_sem;
+	sem_t codec_stop_sem;
 	uint32_t msg_queue_handle;
 	uint32_t active_handle;
 	uint32_t is_exit_thread;
@@ -954,6 +955,7 @@ int jpeg_init(void)
 	memset(&jcontext,0,sizeof(JPEG_CONTEXT_T));
 	sem_init(&jcontext.stop_sem, 0, 0);
 	sem_init(&jcontext.sync_sem, 0, 0);
+	sem_init(&jcontext.codec_stop_sem, 0, 1);
 	ret = cmr_msg_queue_create(JPEG_MSG_QUEUE_SIZE, &jcontext.msg_queue_handle);
 	ret = _create_thread();
 
@@ -1322,24 +1324,33 @@ int jpeg_stop(uint32_t handle)
 	int ret = JPEG_CODEC_SUCCESS;
 	CMR_MSG_INIT(message);
 
-	if (0 == handle) {
-		return JPEG_CODEC_PARAM_ERR;
+	sem_wait(&jcontext.codec_stop_sem);
+
+	if (jcontext.active_handle) {
+		if (0 == handle) {
+			sem_post(&jcontext.codec_stop_sem);
+			return JPEG_CODEC_PARAM_ERR;
+		}
+
+		message.msg_type = JPEG_EVT_STOP;
+
+		CMR_LOGV("jpeg_stop: handle: 0x%x", (uint32_t)handle);
+
+		jcontext.is_stop = 1;
+		message.data = (void*)handle;
+		ret = cmr_msg_post(jcontext.msg_queue_handle, &message);
+
+		if (CMR_MSG_SUCCESS != ret) {
+			sem_post(&jcontext.codec_stop_sem);
+			return JPEG_CODEC_ERROR;
+		}
+
+		sem_wait(&jcontext.stop_sem);
+		jcontext.is_stop = 0;
 	}
 
-	message.msg_type = JPEG_EVT_STOP;
+	sem_post(&jcontext.codec_stop_sem);
 
-	CMR_LOGV("jpeg_stop: handle: 0x%x", (uint32_t)handle);
-
-	jcontext.is_stop = 1;
-	message.data = (void*)handle;
-	ret = cmr_msg_post(jcontext.msg_queue_handle, &message);
-
-	if (CMR_MSG_SUCCESS != ret) {
-		return JPEG_CODEC_ERROR;
-	}
-
-	sem_wait(&jcontext.stop_sem);
-	jcontext.is_stop = 0;
 	CMR_LOGV("jpeg_stop end\n");
 	return JPEG_CODEC_SUCCESS;
 }
@@ -1365,6 +1376,7 @@ int jpeg_deinit(void)
 	}
 	sem_destroy(&jcontext.stop_sem);
 	sem_destroy(&jcontext.sync_sem);
+	sem_destroy(&jcontext.codec_stop_sem);
 	cmr_msg_queue_destroy(jcontext.msg_queue_handle);
 	return ret;
 }
