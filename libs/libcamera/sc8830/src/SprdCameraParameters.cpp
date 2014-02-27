@@ -1498,121 +1498,47 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 					SprdCameraParameters::Rect *preview_rect)
 {
 	int i;
-	int x1,x2,y1,y2;
-	int temp;
-	int recHalfWidth;
-	int recHalfHeight;
-	int centre_x;
-	int centre_y;
+	int x1;
+	int y1;
 	int ret = 0;
-	int width = preview_size->width;
-	int height = preview_size->height;
+	int new_width = preview_rect->width;
+	int new_height = preview_rect->height;
+	int point_x, point_y;
 
-	LOGV("coordinate_convert: mPreviewWidth=%d, mPreviewHeight=%d, arr_size=%d, angle=%d, is_mirror=%d \n",
-	width, height, arr_size, angle, is_mirror);
 
-	for (i=0; i<arr_size*2; i++) {
-		x1 = rect_arr[i*2];
-		y1 = rect_arr[i*2+1];
 
-		if(is_mirror)
-			x1 = -x1;
+	LOGV("coordinate_convert: preview_rect x=%d, y=%d, width=%d, height=%d",
+		preview_rect->x,preview_rect->y,preview_rect->width,preview_rect->height);
+	LOGV("coordinate_convert: arr_size=%d, angle=%d, is_mirror=%d \n",
+		arr_size, angle, is_mirror);
 
-		switch(angle) {
-		case 0:
-			rect_arr[i*2] = (1000 + x1) * height / 2000;
-			rect_arr[i*2 + 1] = (1000 + y1) * width / 2000;
-			break;
 
-		case 90:
-			rect_arr[i*2] = (1000 - y1) * height / 2000;
-			rect_arr[i*2 + 1] = (1000 + x1) * width / 2000;
-			break;
+	for (i = 0; i < arr_size * 2; i++) {
+		x1 = rect_arr[i * 2];
+		y1 = rect_arr[i * 2 + 1];
 
-		case 180:
-			rect_arr[i*2] = (1000 - x1) * height / 2000;
-			rect_arr[i*2 + 1] = (1000 - y1) * width / 2000;
-			break;
+		rect_arr[i * 2] = (1000 + x1) * new_width / 2000;
+		rect_arr[i * 2 + 1] = (1000 + y1) * new_height / 2000;
 
-		case 270:
-			rect_arr[i*2] = (1000 + y1) * height / 2000;
-			rect_arr[i*2 + 1] = (1000 - y1) * width / 2000;
-			break;
-		}
+		LOGV("coordinate_convert rect i=%d x=%d y=%d", i, rect_arr[i * 2], rect_arr[i * 2 + 1]);
 	}
 
-	for (i = 0;i < arr_size; i++)
+	/*move to cap image coordinate*/
+	point_x = preview_rect->x;
+	point_y = preview_rect->y;
+	for (i = 0; i < arr_size; i++)
 	{
-		if(rect_arr[i*4] > rect_arr[i*4+2])
-		{
-			temp = rect_arr[i*4];
-			rect_arr[i*4] = rect_arr[i*4+2];
-			rect_arr[i*4+2] = temp;
-		}
 
-		if(rect_arr[i*4+1] > rect_arr[i*4+3])
-		{
-			temp = rect_arr[i*4+1];
-			rect_arr[i*4+1] = rect_arr[i*4+3];
-			rect_arr[i*4+3] = temp;
-		}
+		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",
+			i, rect_arr[i * 4], rect_arr[i * 4 + 1], rect_arr[i * 4 + 2], rect_arr[i * 4 + 3]);
 
-		LOGV("coordinate_convert: %d: left=%d, top=%d, right=%d, bottom=%d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
-	}
+		rect_arr[i * 4] += point_x;
+		rect_arr[i * 4 + 1] += point_y;
+		rect_arr[i * 4 + 2] += point_x;
+		rect_arr[i * 4 + 3] += point_y;
 
-	/*make sure the coordinate within [width, height] for 90 degree only*/
-	for (i = 0; i < arr_size * 4; i+=2) {
-		if (rect_arr[i] < 0) {
-			rect_arr[i]= 0;
-		}
-		if (rect_arr[i] > height) {
-			rect_arr[i] = height;
-		}
-
-		if (rect_arr[i+1] < 0) {
-			rect_arr[i+1]= 0;
-		}
-
-		if (rect_arr[i+1] > width) {
-			rect_arr[i+1] = width;
-		}
-	}
-
-	int preview_x = preview_rect->x;
-	int preview_y = preview_rect->y;
-	int preview_w = preview_rect->width;
-	int preview_h = preview_rect->height;
-
-	LOGV("coordinate_convert %d: preview rect: x=%d, y=%d, preview_w=%d, preview_h=%d.\n",
-		i, preview_x, preview_y, preview_w, preview_h);
-
-	for (i = 0; i < arr_size; i++) {
-		int point_x, point_y;
-
-		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
-
-		/*only for angle 90/270 calculate the centre point*/
-		recHalfHeight = (rect_arr[i*4+2] - rect_arr[i*4])/2;
-		recHalfWidth = (rect_arr[i*4+3] - rect_arr[i*4+1])/2;
-		centre_y = rect_arr[i*4+2] - recHalfHeight;
-		centre_x = rect_arr[i*4+3] - recHalfWidth;
-		LOGV("CAMERA HAL:coordinate_convert %d: center point: x=%d, y=%d\n", i, centre_x, centre_y);
-
-		/*map to sensor coordinate*/
-		centre_y = height - centre_y;
-		LOGV("coordinate_convert %d: sensor centre pointer: x=%d, y=%d, half_w=%d, half_h=%d.\n",
-				i, centre_x, centre_y, recHalfWidth, recHalfHeight);
-
-		point_x = preview_x + centre_x*preview_w/width;
-		point_y = preview_y + centre_y*preview_h/height;
-		LOGV("coordinate_convert %d: out point: x=%d, y=%d\n", i, point_x, point_y);
-
-		rect_arr[i*4] = point_x - recHalfWidth;
-		rect_arr[i*4+1] = point_y - recHalfHeight;
-		rect_arr[i*4+2] = point_x + recHalfWidth;
-		rect_arr[i*4+3] = point_y + recHalfHeight;
-
-		LOGV("coordinate_convert %d: final: %d, %d, %d, %d.\n",i,rect_arr[i*4],rect_arr[i*4+1],rect_arr[i*4+2],rect_arr[i*4+3]);
+		LOGV("coordinate_convert %d: final: %d, %d, %d, %d.\n",
+			i, rect_arr[i * 4], rect_arr[i * 4 + 1],rect_arr[i * 4 + 2], rect_arr[i * 4 + 3]);
 	}
 
 	return ret;
