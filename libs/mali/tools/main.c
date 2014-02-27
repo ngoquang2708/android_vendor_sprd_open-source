@@ -46,7 +46,7 @@ int main()
 	int i=0;
 	char cipher_key[]="mali";
 
-	char* data_list_level3[] = {
+	char* data_list_level10[] = {
 		"com.glbenchmark.glbenchmark",
 		"com.rightware.tdmm2v10jnifree",
 		"com.rightware.BasemarkX_Free",
@@ -63,26 +63,48 @@ int main()
 		"com.passmark",
 		"com.threed.jpct",
 		"com.smartbench",
-		"fishnoodle.benchmark"
+		"fishnoodle.benchmark",
+		"it.JBench.bench",
+		"com.re3.benchmark",
+		"com.qb"
 	};
-	size_t app_num_level3 = sizeof(data_list_level3)/sizeof(data_list_level3[0]);
-	char* data_list_level2[] = {
-		"com.android.launcher"
+	size_t app_num_level10 = sizeof(data_list_level10)/sizeof(data_list_level10[0]);
+
+	char* data_list_level9[] = {
+		"com.android.launcher",
+		"com.android.cts",
+		"eu.chainfire.cfbench",
+		"com.unstableapps.cpubenchmark",
+		"com.greenecomputing.linpack",
+		"org.broadley.membench"
 	};
-	size_t app_num_level2 = sizeof(data_list_level2)/sizeof(data_list_level2[0]);
+	size_t app_num_level9 = sizeof(data_list_level9)/sizeof(data_list_level9[0]);
+
+	char* data_list_level5[] = {
+	};
+	size_t app_num_level5 = sizeof(data_list_level5)/sizeof(data_list_level5[0]);
+
 	FILE* fp=NULL;
 	fp=fopen("./libboost.so","wb");
 
-	for(i=0;i<app_num_level3;i++)
+	for(i=0;i<app_num_level10;i++)
 	{
-		generate_cipher_data(fp,data_list_level3[i],strlen(data_list_level3[i]),cipher_key,strlen(cipher_key));
+		generate_cipher_data(fp,data_list_level10[i],strlen(data_list_level10[i]),cipher_key,strlen(cipher_key));
 	}
 	fputs("\n",fp);
-	for(i=0;i<app_num_level2;i++)
+
+	for(i=0;i<app_num_level9;i++)
 	{
-		generate_cipher_data(fp,data_list_level2[i],strlen(data_list_level2[i]),cipher_key,strlen(cipher_key));
+		generate_cipher_data(fp,data_list_level9[i],strlen(data_list_level9[i]),cipher_key,strlen(cipher_key));
 	}
 	fputs("\n",fp);
+
+	for(i=0;i<app_num_level5;i++)
+	{
+		generate_cipher_data(fp,data_list_level5[i],strlen(data_list_level5[i]),cipher_key,strlen(cipher_key));
+	}
+	fputs("\n",fp);
+
 	fclose(fp);
 
 	return 0;
