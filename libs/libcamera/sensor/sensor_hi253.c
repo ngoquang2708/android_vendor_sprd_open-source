@@ -1297,6 +1297,77 @@ LOCAL SENSOR_REG_TAB_INFO_T s_hi253_resolution_Tab_YUV[] = {
 	{PNULL, 0, 0, 0, 0, 0}
 };
 
+LOCAL const SENSOR_REG_T s_hi253_640x480_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_hi253_1280x960_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xff, 0xff}
+	}
+};
+
+LOCAL const SENSOR_REG_T s_hi253_1600x1200_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xff, 0xff}
+	}
+};
+
+LOCAL SENSOR_VIDEO_INFO_T s_hi253_video_info[] = {
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {30, 30, 175, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_hi253_640x480_video_tab},
+	{{{0, 0, 0, 0}, {30, 30, 219, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_hi253_1280x960_video_tab},
+	{{{0, 0, 0, 0}, {30, 30, 219, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}}, (SENSOR_REG_T**)s_hi253_1600x1200_video_tab},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
+};
+
+
 LOCAL uint32_t hi253_AfterSnapshot (uint32_t param)
 {
 		#if 1
@@ -1445,7 +1516,7 @@ SENSOR_INFO_T g_hi253_yuv_info = {
         0,                     // atv output end postion
         0,
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
-	PNULL,
+	s_hi253_video_info,
 	0,			// skip frame num while change setting
 };
 
@@ -1498,24 +1569,162 @@ uint32_t set_hi253_anti_flicker(uint32_t mode)
 }
 
 #endif
-LOCAL const SENSOR_REG_T hi253_video_mode_nand_tab[][50] = {
-	 {
-		{0xff, 0xff}
-	 } , // 15fps pclk=24M  normal
-	 {
-		{0xff, 0xff}
-	 }
+LOCAL const SENSOR_REG_T hi253_video_mode_nand_tab[][100] = {
+{
+	{0x01, 0xc1}, //sleep off
+	{0x03, 0x00},
+	{0x10, 0x11}, //0401//0x00}
+	{0x11, 0x97},
+
+	{0x40, 0x01}, //Hblank 408
+	{0x41, 0x68},
+	{0x42, 0x00}, //Vblank 20
+	{0x43, 0x58},
+
+	{0x03, 0x18},//Page 18
+	{0x12, 0x20},
+	{0x10, 0x07},//Open Scaler Function
+	{0x11, 0x00},
+	{0x20, 0x05},
+	{0x21, 0x00},
+	{0x22, 0x01},
+	{0x23, 0xe0},
+	{0x24, 0x00},
+	{0x25, 0x00},
+	{0x26, 0x00},
+	{0x27, 0x00},
+	{0x28, 0x05},
+	{0x29, 0x00},
+	{0x2a, 0x01},
+	{0x2b, 0xe0},
+	{0x2c, 0x0a},
+	{0x2d, 0x00},
+	{0x2e, 0x0a},
+	{0x2f, 0x00},
+	{0x30, 0x44},
+
+	{0x03, 0x20}, //Page 20
+	{0x10, 0x1c},
+	{0x2a, 0x03}, //for fix//0xff);
+	{0x2b, 0x35}, //for fix//0x04);
+	{0x30, 0x78},
+
+	{0x83, 0x01},
+	{0x84, 0x5f},
+	{0x85, 0x00},
+
+	{0x88, 0x03},
+	{0x89, 0xa8},
+	{0x8a, 0x00},
+
+	{0x8B, 0x75}, //EXP100
+	{0x8C, 0x30},
+	{0x8D, 0x61}, //EXP120
+	{0x8E, 0xa8},
+
+	{0x91, 0x05}, //EXP Fix 8 fps
+	{0x92, 0x7e},
+	{0x93, 0x40},
+
+	{0x03, 0x20}, //Page 20
+	{0x10, 0x9c},
+
+	{0x03, 0x00},//dummy1
+	{0x03, 0x00},//dummy2
+	{0x03, 0x00},//dummy3
+	{0x03, 0x00},//dummy4
+	{0x03, 0x00},//dummy5
+	{0x03, 0x00},//dummy6
+	{0x03, 0x00},//dummy7
+	{0x03, 0x00},//dummy8
+	{0x03, 0x00},//dummy9
+	{0x03, 0x00},//dummy10
+
+	{0x01, 0xc0},//dummy10
+	{0xff, 0xff}
+} ,
+{
+	//30fps
+	{0x01, 0xc1}, //sleep off
+	{0x03, 0x00},
+	{0x10, 0x13}, //0401//0x00}
+	{0x11, 0x97},
+
+	{0x40, 0x01}, //Hblank 408
+	{0x41, 0x68},
+	{0x42, 0x00}, //Vblank 20
+	{0x43, 0x14},
+
+	{0x03, 0x18},//Page 18
+	{0x12, 0x20},
+	{0x10, 0x07},//Open Scaler Function
+	{0x11, 0x00},
+	{0x20, 0x02},
+	{0x21, 0x80},
+	{0x22, 0x01},
+	{0x23, 0xe0},
+	{0x24, 0x00},
+	{0x25, 0x00},
+	{0x26, 0x00},
+	{0x27, 0x00},
+	{0x28, 0x02},
+	{0x29, 0x80},
+	{0x2a, 0x01},
+	{0x2b, 0xe0},
+	{0x2c, 0x0a},
+	{0x2d, 0x00},
+	{0x2e, 0x0a},
+	{0x2f, 0x00},
+	{0x30, 0x24},
+
+	{0x03, 0x20}, //Page 20
+	{0x10, 0x1c},
+	{0x2a, 0x03}, //for fix//0xff);
+	{0x2b, 0x35}, //for fix//0x04);
+	{0x30, 0x78},
+
+	{0x83, 0x01},
+	{0x84, 0x5f},
+	{0x85, 0x00},
+
+	{0x88, 0x06},
+	{0x89, 0x66},
+	{0x8a, 0x00},
+
+	{0x8B, 0x74}, //EXP100
+	{0x8C, 0xc8},
+	{0x8D, 0x61}, //EXP120
+	{0x8E, 0x20},
+
+	{0x91, 0x01}, //EXP Fix 30 fps
+	{0x92, 0x86},
+	{0x93, 0x3c},
+
+	{0x03, 0x20}, //Page 20
+	{0x10, 0x9c},
+
+	{0x03, 0x00},//dummy1
+	{0x03, 0x00},//dummy2
+	{0x03, 0x00},//dummy3
+	{0x03, 0x00},//dummy4
+	{0x03, 0x00},//dummy5
+	{0x03, 0x00},//dummy6
+	{0x03, 0x00},//dummy7
+	{0x03, 0x00},//dummy8
+	{0x03, 0x00},//dummy9
+	{0x03, 0x00},//dummy10
+
+	{0x01, 0xc0},//dummy10
+	{0xff, 0xff}
+}
 };
 
 
 LOCAL uint32_t set_hi253_video_mode(uint32_t mode)
 {
-
-		//uint8 data=0x00;
 		uint16_t i;
 		SENSOR_REG_T* sensor_reg_ptr = PNULL;
 
-	  /*SENSOR_ASSERT(mode <= 1);*/
 		if(mode > 1)
 		{
 			SENSOR_PRINT("set_hi253_video_mode:param error,mode=%d .\n",mode);
@@ -1524,15 +1733,13 @@ LOCAL uint32_t set_hi253_video_mode(uint32_t mode)
 
 		sensor_reg_ptr = (SENSOR_REG_T*)hi253_video_mode_nand_tab[mode];
 
-	  //  SENSOR_ASSERT(PNULL != sensor_reg_ptr);
-
 		for(i = 0; (0xFF != sensor_reg_ptr[i].reg_addr) || (0xFF != sensor_reg_ptr[i].reg_value); i++)
 		{
 			Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 		}
 		SENSOR_Sleep(150);
 
-		SENSOR_PRINT("linmingchuang HI253_test SENSOR: set_hi253_video_mode: mode = %d", mode);
+		SENSOR_PRINT("HI253_test SENSOR: set_hi253_video_mode: mode = %d", mode);
 		return 0;
 
 }
