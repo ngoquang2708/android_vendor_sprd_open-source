@@ -3293,6 +3293,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 pthread_mutex_unlock(&adev->lock);
             }
 
+        } else if(((val & (AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) != 0) && ((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val)) {
+            adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
+            adev->out_devices |= val;
+            ALOGW("adev_set_parameters want to set devices:0x%x mode:%d call_start:%d ",adev->out_devices,adev->mode,adev->call_start);
+            select_devices_signal(adev);
+            pthread_mutex_unlock(&adev->lock);
         }
         else {
             pthread_mutex_unlock(&adev->lock);
