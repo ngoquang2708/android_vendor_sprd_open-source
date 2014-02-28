@@ -527,7 +527,7 @@ int camera_isp_init(void)
 		}
 		isp_param.ctrl_callback = camera_isp_evt_cb;
 
-		CMR_LOGE("w %d h %d", isp_param.size.w,isp_param.size.h);
+		CMR_LOGV("w %d h %d", isp_param.size.w,isp_param.size.h);
 
 		ret = isp_init(&isp_param);
 		if (ret) {
