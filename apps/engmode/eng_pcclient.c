@@ -306,6 +306,8 @@ int main (int argc, char** argv)
     // Correct diag path and run type by cmdline.
     if(1 == cmdparam.califlag){
         run_type = cmdparam.cp_type;
+        dev_info.host_int.cali_flag = cmdparam.califlag;
+        dev_info.host_int.dev_type = cmdparam.connect_type;
         if(CONNECT_UART == cmdparam.connect_type){
             strcpy(dev_info.host_int.dev_diag, "/dev/ttyS1");
             dev_info.host_int.dev_type = CONNECT_UART;
