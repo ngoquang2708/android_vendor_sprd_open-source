@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #define LOG_TAG    "vb_effect"
 
 #include <errno.h>
@@ -718,8 +717,7 @@ int vb_effect_profile_apply(void)
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 2);
             ALOGI("profile is Handset, ret=%d", ret);
         }else if((s_cur_out_devices & AUDIO_DEVICE_OUT_SPEAKER)
-                ||(s_cur_out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER)
-                ||(s_cur_in_devices & AUDIO_DEVICE_IN_BUILTIN_MIC)){
+                ||(s_cur_out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER) ){
             //ret = mixer_ctl_set_enum_by_string(s_ctl_eq_select, "Handsfree");
             ret = mixer_ctl_set_value(s_ctl_da_eq_profile_select, 0, 3);
             ALOGI("profile is Handsfree, ret=%d", ret);
