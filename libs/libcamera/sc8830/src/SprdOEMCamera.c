@@ -6915,17 +6915,21 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 				(uint32_t)&encoder_param);
 	}
 
-	if (TAKE_PICTURE_NO != camera_get_take_picture()) {
 		/*HAL1.0 need msg CMR_EVT_AFTER_CAPTURE*/
-	camera_post_capture_complete_msg();
+		camera_post_capture_complete_msg();
 
-	message.msg_type = CMR_EVT_AFTER_CAPTURE;
-	message.alloc_flag = 0;
-	ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
-	if (ret) {
-		CMR_LOGE("Faile to send one msg to camera main thread");
+		message.msg_type = CMR_EVT_AFTER_CAPTURE;
+		message.alloc_flag = 0;
+		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message);
+		if (ret) {
+			CMR_LOGE("Faile to send one msg to camera main thread");
 		}
-	} else {
+
+/*HAL 2.0 should not use the condition
+ *        (TAKE_PICTURE_NO != camera_get_take_picture())
+ *        to judge if go HAL1.0 OR 2.0 Path
+ */
+#if 0
 		/*HAL2.0 ZSL need resume path2 after capture done*/
 		if (IS_CHN_IDLE(CHN_2)) {
 			CMR_LOGE("abnormal! path is idle yet! resume it");
@@ -6941,8 +6945,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 				frm_num);
 			SET_CHN_BUSY(CHN_2);
 		}
-	}
-
+#endif
 	/*camera_takepic_done(g_cxt);*/
 	return ret;
 }
@@ -8181,6 +8184,9 @@ int camera_capture_need_exit(void)
 int camera_capture_is_idle(void)
 {
 	int       ret = 0;
+	CMR_LOGV("capture_status %d, is_take_picture %d",
+		g_cxt->capture_status,
+		camera_get_take_picture());
 	if ((CMR_IDLE == g_cxt->capture_status) &&
 		(TAKE_PICTURE_NO == camera_get_take_picture())) {
 		ret = 1;

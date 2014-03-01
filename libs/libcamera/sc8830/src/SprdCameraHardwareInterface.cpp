@@ -4795,8 +4795,7 @@ void SprdCameraHardware::HandleStopPreview(camera_cb_type cb,
 		cb, parm4, getCameraStateStr(tmpPrevState));
 
 	if ((SPRD_IDLE == tmpPrevState) || (SPRD_INTERNAL_PREVIEW_STOPPING == tmpPrevState)) {
-		transitionState(tmpPrevState,
-			SPRD_IDLE,
+		setCameraState(SPRD_IDLE,
 			STATE_PREVIEW);
 	} else {
 		LOGE("HandleEncode: error preview status, %s",
@@ -4904,8 +4903,7 @@ void SprdCameraHardware::HandleCancelPicture(camera_cb_type cb,
 	LOGV("HandleCancelPicture in: cb = %d, parm4 = 0x%x, state = %s",
 		cb, parm4, getCameraStateStr(getCaptureState()));
 
-	transitionState(getCaptureState(),
-			SPRD_IDLE,
+	setCameraState(SPRD_IDLE,
 			STATE_CAPTURE);
 
 	LOGV("HandleCancelPicture out, state = %s", getCameraStateStr(getCaptureState()));
@@ -4935,16 +4933,15 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 			} else {
 				LOGE("HandleEncode: drop current jpgPicture");
 			}
+
 			tmpCapState = getCaptureState();
 			if ((SPRD_WAITING_JPEG == tmpCapState)
 				|| (SPRD_INTERNAL_CAPTURE_STOPPING == tmpCapState)) {
 				if (((JPEGENC_CBrtnType *)parm4)->need_free) {
-					transitionState(tmpCapState,
-						SPRD_IDLE,
+					setCameraState(SPRD_IDLE,
 						STATE_CAPTURE);
 				} else {
-					transitionState(tmpCapState,
-						SPRD_INTERNAL_RAW_REQUESTED,
+					setCameraState(SPRD_INTERNAL_RAW_REQUESTED,
 						STATE_CAPTURE);
 				}
 			} else if (SPRD_IDLE != tmpCapState) {
@@ -4986,7 +4983,7 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 		return;
 	}
 
-	transitionState(getFocusState(), SPRD_IDLE, STATE_FOCUS);
+	setCameraState(SPRD_IDLE, STATE_FOCUS);
 
 	switch (cb) {
 	case CAMERA_RSP_CB_SUCCESS:
