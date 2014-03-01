@@ -255,6 +255,8 @@ static int camera_capture_complete_handle(struct frm_info *data);
 static int camera_post_capture_complete_msg(void);
 static int camera_recalc_rgbraw_addr(void);
 static int camera_is_later_scaling(void);
+static int camera_get_cap_time(void);
+static int camera_check_cap_time(struct frm_info * data);
 
 int camera_capture_way_out(void)
 {
@@ -1553,6 +1555,21 @@ int camera_cap_post(void *data)
 	}
 
 	return ret;
+}
+
+int camera_check_cap_time(struct frm_info * data)
+{
+	int64_t frame_time = data->sec * 1000000000LL + data->usec * 1000;
+
+	CMR_LOGV("frame_time %d, %d", data->sec, data->usec);
+
+	if (frame_time <= g_cxt->cap_time_stamp) {
+		CMR_LOGW("frame is earlier than picture, drop!");
+		return 1;
+	} else {
+		CMR_LOGV("frame time OK!");
+		return 0;
+	}
 }
 
 void *camera_cap_thread_proc(void *data)
@@ -3065,6 +3082,19 @@ int camera_set_take_picture_cap_mode(takepicture_mode cap_mode)
 	return CAMERA_SUCCESS;
 }
 
+int camera_get_cap_time()
+{
+	uint32_t sec = 0;
+	uint32_t usec = 0;
+	int ret = CAMERA_SUCCESS;
+	pthread_mutex_lock(&g_cxt->take_mutex);
+	ret = cmr_v4l2_get_cap_time(&sec, &usec);
+	CMR_LOGV("cap time %d %d", sec, usec);
+	g_cxt->cap_time_stamp = sec * 1000000000LL + usec * 1000;
+	pthread_mutex_unlock(&g_cxt->take_mutex);
+	return CAMERA_SUCCESS;
+}
+
 int camera_get_take_picture(void)
 {
 	int                      ret = 0;
@@ -3095,6 +3125,7 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type callback,
 	camera_set_hal_cb(callback);
 	camera_set_take_picture_cap_mode(cap_mode);
 	camera_set_take_picture(TAKE_PICTURE_NEEDED);
+	camera_get_cap_time();
 	pthread_mutex_unlock(&g_cxt->recover_mutex);
 
 	if (IS_ZSL_MODE(cap_mode) || (CAMERA_RAW_MODE == cap_mode)) {
@@ -3703,8 +3734,9 @@ void camera_v4l2_evt_cb(int evt, void* data)
 		}
 	}
 	if (CMR_V4L2_TX_DONE == evt) {
-		if ((CHN_BUSY != g_cxt->chn_2_status) &&
-			(CHN_2 == info->channel_id)) {
+		if ((CHN_BUSY != g_cxt->chn_2_status
+			|| camera_check_cap_time(data))
+			&& CHN_2 == info->channel_id) {
 			ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
 			CMR_LOGE("discard, %d", g_cxt->chn_2_status);
 			return;
@@ -4063,7 +4095,8 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 				} else {
 					frm_num = 1;
 				}
-				g_cxt->chn_2_status = CHN_BUSY;
+				if (IS_WAIT_FOR_NORMAL_CONTINUE(g_cxt->cap_mode,g_cxt->cap_cnt))
+					g_cxt->chn_2_status = CHN_BUSY;
 				ret = cmr_v4l2_cap_resume(CHN_2,
 					0,
 					g_cxt->v4l2_cxt.chn_frm_deci[CHN_2],
@@ -5229,7 +5262,8 @@ int camera_capture_init(void)
 		g_cxt->chn_0_status = CHN_BUSY;
 		SET_CHN_BUSY(CHN_0);
 	} else {
-		g_cxt->chn_2_status = CHN_BUSY;
+		if (IS_NON_ZSL_MODE(g_cxt->cap_mode))
+			g_cxt->chn_2_status = CHN_BUSY;
 		SET_CHN_BUSY(CHN_2);
 	}
 

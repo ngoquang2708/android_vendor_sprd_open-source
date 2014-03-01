@@ -414,6 +414,7 @@ struct camera_context {
 	uint32_t                 total_cap_num;
 	uint32_t                 total_capture_num;
 	uint32_t                 cap_cnt;
+	int64_t                  cap_time_stamp;
 	uint32_t                 last_cap_cnt;
 	uint32_t                 cap_cnt_for_err;
 	uint32_t                 cap_process_id;

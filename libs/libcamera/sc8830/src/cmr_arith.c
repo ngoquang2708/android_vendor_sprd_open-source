@@ -585,6 +585,7 @@ void arithmetic_hdr_data(struct img_addr *addr,uint32_t y_size,uint32_t uv_size,
 	pthread_mutex_lock(&s_arith_cxt->hdr_lock);
 	if (PNULL == s_hdr_cxt->addr[cap_cnt-1]) {
 		CMR_LOGE("no memory.");
+		pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 		return;
 	}
 
