@@ -1011,8 +1011,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov5640_ioctl_func_tab = {
 	_ov5640_pick_out_jpeg_stream,
 	PNULL,  //meter_mode
 	_ov5640_check_status, //get_status
-	_ov5640_StreamOn,
-	_ov5640_StreamOff,
+	PNULL, //_ov5640_StreamOn,
+	PNULL, //_ov5640_StreamOff,
 	PNULL,
 };
 
@@ -7246,7 +7246,7 @@ LOCAL uint32_t _ov5640_StreamOn(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_OV5640: StreamOn");
 
-	Sensor_WriteReg(0x3008, 0x02);
+	Sensor_WriteReg(0x4202, 0x00);
 
 	return 0;
 }
@@ -7255,7 +7255,7 @@ LOCAL uint32_t _ov5640_StreamOff(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_OV5640: StreamOff");
 
-	Sensor_WriteReg(0x3008, 0x42);
+	Sensor_WriteReg(0x4202, 0x0f);
 
 	return 0;
 }
