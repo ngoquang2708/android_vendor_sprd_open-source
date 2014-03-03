@@ -613,13 +613,13 @@ int camera_set_video_mode(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode
 	*skip_num = 0;
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		isp_param = frame_rate;
+		*skip_num = 0;
+		CMR_LOGI("frame rate:%d.",isp_param);
+		ret = isp_ioctl(ISP_CTRL_VIDEO_MODE, (void *)&isp_param);
 		if ((0x00 == frame_rate) && (1 != cxt->is_dv_mode)) {
 			CMR_LOGI("frame rate is auto mode, need not set!");
 		} else {
-			isp_param = frame_rate;
-			*skip_num = 0;
-			CMR_LOGI("frame rate:%d.",isp_param);
-			ret = isp_ioctl(ISP_CTRL_VIDEO_MODE, (void *)&isp_param);
 			camera_param_to_isp(ISP_CTRL_ISO, 5, &isp_param);
 			ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
 		}

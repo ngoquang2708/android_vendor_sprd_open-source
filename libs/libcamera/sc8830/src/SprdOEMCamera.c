@@ -6915,6 +6915,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 				(uint32_t)&encoder_param);
 	}
 
+	if (CAMERA_ANDROID_ZSL_MODE != g_cxt->cap_mode) {
 		/*HAL1.0 need msg CMR_EVT_AFTER_CAPTURE*/
 		camera_post_capture_complete_msg();
 
@@ -6924,12 +6925,11 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 		if (ret) {
 			CMR_LOGE("Faile to send one msg to camera main thread");
 		}
-
-/*HAL 2.0 should not use the condition
- *        (TAKE_PICTURE_NO != camera_get_take_picture())
- *        to judge if go HAL1.0 OR 2.0 Path
- */
-#if 0
+	} else {
+		/*HAL 2.0 should not use the condition
+		 *        (TAKE_PICTURE_NO != camera_get_take_picture())
+		 *        to judge if go HAL1.0 OR 2.0 Path
+		 */
 		/*HAL2.0 ZSL need resume path2 after capture done*/
 		if (IS_CHN_IDLE(CHN_2)) {
 			CMR_LOGE("abnormal! path is idle yet! resume it");
@@ -6945,7 +6945,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 				frm_num);
 			SET_CHN_BUSY(CHN_2);
 		}
-#endif
+	}
 	/*camera_takepic_done(g_cxt);*/
 	return ret;
 }
