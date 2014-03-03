@@ -33,6 +33,9 @@
 #include "ion_sprd.h"
 #include "avc_dec_api.h"
 
+//#define VIDEODEC_CURRENT_OPT  /*only open for SAMSUNG currently*/
+
+
 namespace android {
 
 static const CodecProfileLevel kProfileLevels[] = {
@@ -115,6 +118,7 @@ SPRDAVCDecoder::SPRDAVCDecoder(
       mMaxWidth(352),
       mMaxHeight(288),
       mPicId(0),
+      mSetFreqCount(0),
       mHeadersDecoded(false),
       mEOSStatus(INPUT_DATA_AVAILABLE),
       mOutputPortSettingsChange(NONE),
@@ -192,6 +196,12 @@ SPRDAVCDecoder::~SPRDAVCDecoder() {
 
     releaseDecoder();
 
+    while (mSetFreqCount > 0)
+    {
+        set_ddr_freq("0");
+        mSetFreqCount--;
+    }
+
     delete mHandle;
     mHandle = NULL;
 
@@ -258,6 +268,57 @@ void SPRDAVCDecoder::initPorts() {
         (def.format.video.nFrameWidth * def.format.video.nFrameHeight * 3) / 2;
 
     addPort(def);
+}
+
+void SPRDAVCDecoder::set_ddr_freq(const char* freq_in_khz)
+{
+    const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
+    FILE* fp = fopen(set_freq, "w");
+    if (fp != NULL)
+    {
+        fprintf(fp, "%s", freq_in_khz);
+        ALOGE("set ddr freq to %skhz", freq_in_khz);
+        fclose(fp);
+    }
+    else
+    {
+        ALOGE("Failed to open %s", set_freq);
+    }
+}
+
+void SPRDAVCDecoder::change_ddr_freq()
+{
+    if(!mDecoderSwFlag)
+	{
+        uint32_t frame_size = mWidth * mHeight;
+        char* ddr_freq;
+
+        if(frame_size > 1280*720)
+        {
+            ddr_freq = "500000";
+        }
+#ifdef VIDEODEC_CURRENT_OPT
+        else if(frame_size > 864*480)
+        {
+            ddr_freq = "300000";
+        }
+#else
+        else if(frame_size > 720*576)
+        {
+            ddr_freq = "400000";
+        }
+        else if(frame_size > 320*240)
+        {
+            ddr_freq = "300000";
+        }
+#endif
+        else
+        {
+            ddr_freq = "200000";
+        }
+        set_ddr_freq(ddr_freq);
+        mSetFreqCount ++;
+    }
 }
 
 status_t SPRDAVCDecoder::initDecoder() {
@@ -548,6 +609,7 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalSetParameter(
             mCropHeight = mHeight;
             port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
             mPictureSize = port->mDef.nBufferSize;
+            change_ddr_freq();
         }
 
         if (!((mWidth <= 1280 && mHeight <= 720) || (mWidth <= 720 && mHeight <= 1280))) {
@@ -979,6 +1041,7 @@ bool SPRDAVCDecoder::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
         mPictureSize = mWidth * mHeight * 3 / 2;
         mCropWidth = mWidth;
         mCropHeight = mHeight;
+        change_ddr_freq();
 
         if (info->numRefFrames > def->nBufferCountActual-(2+1+info->has_b_frames)) {
             ALOGI("%s, %d, info->numRefFrames: %d, info->has_b_frames: %d, def->nBufferCountActual: %d", __FUNCTION__, __LINE__, info->numRefFrames, info->has_b_frames, def->nBufferCountActual);
