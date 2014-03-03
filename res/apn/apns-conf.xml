@@ -591,10 +591,8 @@
         apn="SmarTone"
         mmsproxy="10.9.9.9"
         mmsport="8080"
-        user=""
-        password=""
         mmsc="http://mms.smartone.com/server"
-        type="default,supl,mms"
+        type="mms"
     />
     <!-- HongKong New World Mobility -->
     <apn carrier="0ne2free 2G"
@@ -14451,6 +14449,16 @@
         type="mms"
         authtype="1"
     />
+    <!-- Japan eMobile -->
+    <apn carrier="em.lite"
+        mcc="440"
+        mnc="00"
+        apn="em.lite"
+        user="em"
+        password="em"
+        type="default,supl,hipri"
+        authtype="1"
+    />
     <!-- Japan SoftBank -->
     <apn carrier="JP - Softbank Web"
         mcc="440"
@@ -15073,27 +15081,60 @@
         authtype="1"
     />
     -->
+    <!-- Laos LTC -->
+    <apn carrier="Lao Telecom net"
+        mcc="457"
+        mnc="01"
+        apn="ltcnet"
+        type="default"
+    />
+    <apn carrier="Lao Telecom mms"
+        mcc="457"
+        mnc="01"
+        apn="ltcnet"
+        mmsproxy="192.168.102.10"
+        mmsport="8080"
+        mmsc="http://192.168.101.169:38090"
+        type="mms"
+    />
     <!-- Laos ETL -->
-    <apn carrier="LA - ETL Web"
+    <apn carrier="ETL web"
         mcc="457"
         mnc="02"
         apn="etlnet"
-        proxy=""
-        port=""
-        user=""
-        password=""
-        type="default,supl"
+        type="default"
+    />
+    <!-- Laos Unitel -->
+    <apn carrier="unitel net"
+        mcc="457"
+        mnc="03"
+        apn="unitel3g"
+        type="default"
+    />
+    <!-- Laos Tigo -->
+    <apn carrier="Beeline net"
+        mcc="457"
+        mnc="08"
+        apn="beelinenet"
+        type="default"
         authtype="1"
     />
-    <apn carrier="LA - ETL MMS"
+    <apn carrier="Beeline wap"
         mcc="457"
-        mnc="02"
-        apn=""
-        mmsproxy=""
-        mmsport=""
-        user=""
-        password=""
-        mmsc=""
+        mnc="08"
+        apn="beelinewap"
+        proxy="192.168.150.196"
+        port="8080"
+        type="default"
+        authtype="1"
+    />
+    <apn carrier="Beeline mms"
+        mcc="457"
+        mnc="08"
+        apn="beelinemms"
+        mmsproxy="192.168.150.196"
+        mmsport="8080"
+        mmsc="http://mms.beeline.la:19090/was"
         type="mms"
         authtype="1"
     />
