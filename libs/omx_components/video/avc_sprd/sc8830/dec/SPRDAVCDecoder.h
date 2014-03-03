@@ -101,6 +101,7 @@ private:
     uint32_t mCropWidth, mCropHeight;
 
     int32 mMaxWidth, mMaxHeight;
+    int mSetFreqCount;
 
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
@@ -154,6 +155,8 @@ private:
     int VSP_bind_cb(void *pHeader);
     int VSP_unbind_cb(void *pHeader);
     bool openDecoder(const char* libName);
+    void set_ddr_freq(const char* freq_in_khz);
+    void change_ddr_freq();
 
     DISALLOW_EVIL_CONSTRUCTORS(SPRDAVCDecoder);
 };
