@@ -478,10 +478,10 @@
 <spnOverride numeric="45608" spn="Metfone"/>
 <spnOverride numeric="45609" spn="Beeline"/>
 <spnOverride numeric="45618" spn="Mfone"/>
-<spnOverride numeric="45701" spn="LAO GSM"/>
+<spnOverride numeric="45701" spn="Lao Telecom"/>
 <spnOverride numeric="45702" spn="ETL MOBILE"/>
 <spnOverride numeric="45703" spn="UNITEL"/>
-<spnOverride numeric="45708" spn="TIGO LAO"/>
+<spnOverride numeric="45708" spn="Beeline"/>
 <spnOverride numeric="46000" spn="China Mobile"/>
 <spnOverride numeric="46001" spn="UNICOM"/>
 <spnOverride numeric="46002" spn="China Mobile"/>
