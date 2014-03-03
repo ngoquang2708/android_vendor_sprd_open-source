@@ -449,6 +449,8 @@ int atc_register_unsolicited(struct at_channel *atc, char *prefix_unso, at_respo
 	struct at_unso_node *unode;
 	work_item_t *work_item;
 	atc = atc_try_init(atc);
+	if (atc == NULL)
+		return -1;
 	unode = (struct at_unso_node *)mmalloc(sizeof (struct at_unso_node));
 	unode->prefix = strdup(prefix_unso);
 	unode->cb = cb;
@@ -462,6 +464,8 @@ int atc_send(struct at_channel *atc, char *at, size_t len, int sync, int timeout
 {
 	int ret;
 	atc = atc_try_init(atc);
+	if (atc == NULL)
+		return -1;
 	/* we can queue all AT in future*/
 	if (sync)
 		pthread_mutex_lock(&atc->s_command_mutex);
