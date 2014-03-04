@@ -96,7 +96,7 @@ static struct eng_linuxcmd_str eng_linuxcmd[] = {
     {CMD_ATDIAG,         CMD_TO_AP,	    "+SPBTWIFICALI",	eng_linuxcmd_atdiag},
     {CMD_BATTTEST,       CMD_TO_AP,     "AT+BATTTEST",      eng_linuxcmd_batttest},
     {CMD_TEMPTEST,       CMD_TO_AP,     "AT+TEMPTEST",      eng_linuxcmd_temptest},
-    {CMD_RTCTEST,        CMD_TO_AP,     "AT+RTCTEST",       eng_linuxcmd_rtctest},
+    {CMD_RTCTEST,        CMD_TO_AP,     "AT+RTCCTEST",       eng_linuxcmd_rtctest},
 };
 
 /** returns 1 if line starts with prefix, 0 if it does not */
@@ -1023,6 +1023,8 @@ int eng_linuxcmd_rtctest(char *req,char *rsp)
 	char ptr_parm1[1];
 	time_t t;
 	struct tm tm;
+    time_t timer;
+    struct timeval tv;
 
 	req = strchr(req, '=');
 	req++;
@@ -1032,15 +1034,53 @@ int eng_linuxcmd_rtctest(char *req,char *rsp)
 	{
 		t = time(NULL);
 		localtime_r(&t, &tm);
-		tm.tm_year = tm.tm_year%100;
-		tm.tm_mon = tm.tm_mon+1;
-		sprintf(rsp, "%d,%04d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
+		tm.tm_year = tm.tm_year + 1900;
+		tm.tm_mon = tm.tm_mon + 1;
+		sprintf(rsp, "1,%04d%02d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
 	}
 	else
 	{
-		sprintf(rsp, "+RTCTEST:2");
+        char ptr_param[10];
+        int value[7];
+        int i = 0;
+        int count = 0;
+
+        memset(value, 0, sizeof(value));
+        for(i=0; i<7; i++){
+            if(0 == i){
+                count = 4;
+            }
+            else if(6 == i){
+                count = 1;
+            }
+            else{
+                count = 2;
+            }
+            req = strchr(req, ',');
+            req++;
+            memset(ptr_param, 0, sizeof(ptr_param));
+            strncpy(ptr_param, req, count);
+            value[i] = atoi(ptr_param);
+            req += count;
+        }
+
+        tm.tm_year = value[0] - 1900;
+        tm.tm_mon = value[1] - 1;
+        tm.tm_mday = value[2];
+        tm.tm_hour = value[3];
+        tm.tm_min = value[4];
+        tm.tm_sec = value[5];
+        tm.tm_wday = value[6];
+
+        timer = mktime(&tm);
+        tv.tv_sec = timer;
+        tv.tv_usec = 0;
+        if(settimeofday(&tv, (struct timezone*)0) < 0){
+            ALOGE("Set timer error \n");
+            sprintf(rsp, "error,%04d%02d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
+            return -1;
+        }
+		sprintf(rsp, "+RTCCTEST:2");
 	}
 	return 0;
 }
-
-
