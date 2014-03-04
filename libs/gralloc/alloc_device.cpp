@@ -502,12 +502,6 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 		return -EINVAL;
 	}
 
-	// display object's width or height should not over 4096 except format HAL_PIXEL_FORMAT_BLOB
-	if((w > 4096 || h > 4096) && (format != HAL_PIXEL_FORMAT_BLOB))
-	{
-		return -EINVAL;
-	}
-
 	size_t size;
 	size_t stride;
 	if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12 )
