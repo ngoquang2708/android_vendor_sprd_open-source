@@ -20,11 +20,15 @@ static int agps_c_plane_stack_init(struct agps_c_plane_hook *hook)
 {
 	int fdm = -1;
 	int rc = 0;
-
+	struct at_channel *atc = NULL;
 
 	dprintf("[%s]: Entry point", __FUNCTION__);
 
-	atc_init(ATC_DEVICE_DEFAULT, O_RDWR, fdm);
+	atc = atc_init(ATC_DEVICE_DEFAULT, O_RDWR, fdm);
+	if(atc == NULL){
+		dprintf("[%s] GPS get at channel failed!\n",__FUNCTION__);
+		return -1;
+	}
 
 	if (hook && hook->size == sizeof(c_plane_stack_hook)) {
 		memset(&c_plane_stack_hook, 0, sizeof(c_plane_stack_hook));
