@@ -15,19 +15,23 @@
  */
 #include <stdlib.h>
 #include <math.h>
+#include <cutils/properties.h>
 #include "SprdOEMCamera.h"
 #include "cmr_oem.h"
 #include "dc_cfg.h"
 #include "sensor_drv_u.h"
 
-#define SENSOR_PARAM_NUM  8
-#define SENSOR_PARA "/data/misc/sensors/sensor.file"
+#define SENSOR_PARAM_NUM        8
+#define SENSOR_PARA             "/data/misc/sensors/sensor.file"
+#define EXIF_DEF_MAKER          "Spreadtrum"
+#define EXIF_DEF_MODEL          "spxxxx"
+
 
 static camera_position_type s_position;
 const char image_desc[] = "Exif_JPEG_420";
-const char image_make[] = "Spreadtrum";
+/* const char image_make[] = "Spreadtrum"; */ /*the value will be read from system property*/
 const char copyright[] = "Copyright,Spreadtrum,2011";
-const char model[] = "SmartPhone";
+/* const char model[] = "SmartPhone"; */ /*the value will be read from system property*/
 
 uint32_t camera_get_rot_angle(uint32_t degree)
 {
@@ -301,6 +305,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	uint32_t gps_second;
 	uint32_t focal_length_numerator;
 	uint32_t focal_length_denominator;
+	char property[PROPERTY_VALUE_MAX];
 
 	getSecondsFromDouble(s_position.latitude, &latitude_ss_numerator, &latitude_ss_denominator);
 
@@ -368,8 +373,13 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 
 	if (NULL != p_exif_info->primary.img_desc_ptr) {
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->ImageDescription, (char *)image_desc);
-		strcpy((char *)p_exif_info->primary.img_desc_ptr->Make, (char *)image_make);
-		strcpy((char *)p_exif_info->primary.img_desc_ptr->Model, (char *)model);
+		memset(property,'\0',sizeof(property));
+		property_get("ro.product.manufacturer", property, EXIF_DEF_MAKER);
+		strcpy((char *)p_exif_info->primary.img_desc_ptr->Make, (char *)property);
+
+		memset(property,'\0',sizeof(property));
+		property_get("ro.product.model", property, EXIF_DEF_MODEL);
+		strcpy((char *)p_exif_info->primary.img_desc_ptr->Model, (char *)property);
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->Copyright, (char *)copyright);
 	}
 
@@ -849,8 +859,8 @@ void camera_sensor_inf(struct sensor_context *sensor_cxt)
 		sensor_cxt->sn_if.if_spec.ccir.v_sync_pol = sensor_cxt->sensor_info->vsync_polarity;
 		sensor_cxt->sn_if.if_spec.ccir.h_sync_pol = sensor_cxt->sensor_info->hsync_polarity;
 		sensor_cxt->sn_if.if_spec.ccir.pclk_pol = sensor_cxt->sensor_info->pclk_polarity;
-		sensor_cxt->sn_if.frm_deci = sensor_cxt->sensor_info->preview_deci_num;
 	}
+	sensor_cxt->sn_if.frm_deci = sensor_cxt->sensor_info->preview_deci_num;
 	sensor_cxt->sn_if.img_ptn = sensor_cxt->sensor_info->image_pattern;
 }
 
