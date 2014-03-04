@@ -2589,7 +2589,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 	    if(in->proc_buf)
 		free(in->proc_buf);
             in->proc_buf = malloc(buf_size);
-            if(in->proc_buf) {
+            if(!in->proc_buf) {
                 goto err;
             }
             in->proc_buf_size = buf_size;
@@ -2935,7 +2935,8 @@ static bool in_bypass_data(struct tiny_stream_in *in,uint32_t frame_size, uint32
        1. If cp stopped calling and in-devices is AUDIO_DEVICE_IN_VOICE_CALL, it means that cp already stopped vt call, we should write
        0 data, otherwise, AudioRecord will obtainbuffer timeout.
        */
-    if ((!adev->call_start) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))){
+    if ((!adev->call_start) && ((in->device == AUDIO_DEVICE_IN_VOICE_CALL))
+        || adev->call_prestop){
         ALOGW("in_bypass_data write 0 data call_start(%d) mode(%d)  in_device(0x%x) call_connected(%d) call_prestop(%d) ",adev->call_start,adev->mode,in->device,adev->call_connected,adev->call_prestop);
         memset(buffer,0,bytes);
         pthread_mutex_unlock(&adev->lock);
