@@ -557,7 +557,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"picture-format", "jpeg"},
 	{"jpeg-quality", "100"},
 	{"preview-frame-rate-values", "10,15,20,25,30,31"},
-	{"preview-frame-rate", "20"},
+	{"preview-frame-rate", "30"},
 	{"preview-fps-range-values", "(1000,30000)"},
 	{"preview-fps-range", "1000,30000"},
 	{"jpeg-thumbnail-size-values", "320x240,0x0"},
