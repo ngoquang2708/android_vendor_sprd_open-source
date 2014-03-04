@@ -80,6 +80,7 @@ private:
     int32_t mHeight;
 
     int32 mMaxWidth, mMaxHeight;
+    int mSetFreqCount;
 
     bool mSignalledError;
 
@@ -126,6 +127,8 @@ private:
     bool drainAllOutputBuffers();
     void updatePortDefinitions();
     bool openDecoder(const char* libName);
+    void set_ddr_freq(const char* freq_in_khz);
+    void change_ddr_freq();
 
     DISALLOW_EVIL_CONSTRUCTORS(SPRDVPXDecoder);
 };

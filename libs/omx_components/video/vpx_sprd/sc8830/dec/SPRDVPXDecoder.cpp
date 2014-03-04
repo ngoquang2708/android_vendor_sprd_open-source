@@ -32,6 +32,9 @@
 #include <dlfcn.h>
 #include "ion_sprd.h"
 
+//#define VIDEODEC_CURRENT_OPT  /*only open for SAMSUNG currently*/
+
+
 namespace android {
 
 template<class T>
@@ -65,6 +68,7 @@ SPRDVPXDecoder::SPRDVPXDecoder(
       mPbuf_stream_v(NULL),
       mPbuf_stream_p(0),
       mPbuf_stream_size(0),
+      mSetFreqCount(0),
       mEOSStatus(INPUT_DATA_AVAILABLE),
       mLibHandle(NULL),
       mVPXDecSetCurRecPic(NULL),
@@ -125,6 +129,11 @@ SPRDVPXDecoder::~SPRDVPXDecoder() {
     if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
+    }
+    while (mSetFreqCount > 0)
+    {
+        set_ddr_freq("0");
+        mSetFreqCount--;
     }
 }
 
@@ -187,6 +196,54 @@ void SPRDVPXDecoder::initPorts() {
     addPort(def);
 
     ALOGI("%s, %d, def.nBufferCountMin: %d,def.nBufferCountActual : %d ", __FUNCTION__, __LINE__, def.nBufferCountMin, def.nBufferCountActual );
+}
+
+void SPRDVPXDecoder::set_ddr_freq(const char* freq_in_khz)
+{
+    const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
+    FILE* fp = fopen(set_freq, "w");
+    if (fp != NULL)
+    {
+        fprintf(fp, "%s", freq_in_khz);
+        ALOGE("set ddr freq to %skhz", freq_in_khz);
+        fclose(fp);
+    }
+    else
+    {
+        ALOGE("Failed to open %s", set_freq);
+    }
+}
+
+void SPRDVPXDecoder::change_ddr_freq()
+{
+    uint32_t frame_size = mWidth * mHeight;
+    char* ddr_freq;
+
+    if(frame_size > 1280*720)
+    {
+        ddr_freq = "500000";
+    }
+#ifdef VIDEODEC_CURRENT_OPT
+    else if(frame_size > 864*480)
+    {
+        ddr_freq = "300000";
+    }
+#else
+    else if(frame_size > 720*576)
+    {
+        ddr_freq = "400000";
+    }
+    else if(frame_size > 320*240)
+    {
+        ddr_freq = "300000";
+    }
+#endif
+    else
+    {
+        ddr_freq = "200000";
+    }
+    set_ddr_freq(ddr_freq);
+    mSetFreqCount ++;
 }
 
 status_t SPRDVPXDecoder::initDecoder() {
@@ -416,6 +473,7 @@ OMX_ERRORTYPE SPRDVPXDecoder::internalSetParameter(
             mWidth = port->mDef.format.video.nFrameWidth;
             mHeight = port->mDef.format.video.nFrameHeight;
             port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
+            change_ddr_freq();
         }
 
         return OMX_ErrorNone;
@@ -686,6 +744,7 @@ void SPRDVPXDecoder::onQueueFilled(OMX_U32 portIndex) {
                 ALOGI("%s, %d, mWidth: %d, mHeight: %d, buf_width: %d, buf_height: %d", __FUNCTION__, __LINE__, mWidth, mHeight, buf_width, buf_height);
                 mWidth = buf_width;
                 mHeight = buf_height;
+                change_ddr_freq();
 
                 updatePortDefinitions();
 
