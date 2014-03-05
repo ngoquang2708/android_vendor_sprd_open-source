@@ -199,6 +199,23 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
     Mutex::Autolock autoLock(mLock);
     CHECK_LT(portIndex, mPorts.size());
 
+    PortInfo *port = &mPorts.editItemAt(portIndex);
+
+    CHECK(mState == OMX_StateLoaded || port->mDef.bEnabled == OMX_FALSE);
+
+    CHECK_LT(port->mBuffers.size(), port->mDef.nBufferCountActual);
+
+    return internalUseBuffer(header, portIndex, appPrivate, size, ptr, bufferPrivate);
+}
+
+OMX_ERRORTYPE SprdSimpleOMXComponent::internalUseBuffer(
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size,
+    OMX_U8 *ptr,
+    BufferPrivateStruct* bufferPrivate) {
+
     *header = new OMX_BUFFERHEADERTYPE;
     (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
     (*header)->nVersion.s.nVersionMajor = 1;
@@ -222,9 +239,7 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
     (*header)->nInputPortIndex = portIndex;
 
     if(portIndex == OMX_DirOutput) {
-        //ALOGI("useBuffer, new BufferCtrlStruct");
         (*header)->pOutputPortPrivate = new BufferCtrlStruct;
-        //ALOGI("useBuffer, new BufferCtrlStruct ok");
         CHECK((*header)->pOutputPortPrivate != NULL);
         BufferCtrlStruct* pBufCtrl= (BufferCtrlStruct*)((*header)->pOutputPortPrivate);
         pBufCtrl->iRefCount = 1; //init by1
@@ -253,15 +268,11 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::useBuffer(
 
     PortInfo *port = &mPorts.editItemAt(portIndex);
 
-    CHECK(mState == OMX_StateLoaded || port->mDef.bEnabled == OMX_FALSE);
-
-    CHECK_LT(port->mBuffers.size(), port->mDef.nBufferCountActual);
-
     port->mBuffers.push();
 
     BufferInfo *buffer =
         &port->mBuffers.editItemAt(port->mBuffers.size() - 1);
-    ALOGI("useBuffer, push buffer, buffer=0x%x,header=0x%x, pBuffer=0x%x",buffer,*header,ptr);
+    ALOGI("internalUseBuffer, header=%p, pBuffer=%p, size=%d",*header, ptr, size);
     buffer->mHeader = *header;
     buffer->mOwnedByUs = false;
 

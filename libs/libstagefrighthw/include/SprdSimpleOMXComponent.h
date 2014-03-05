@@ -74,6 +74,14 @@ protected:
             OMX_U8 *ptr,
             BufferPrivateStruct* bufferPrivate=NULL);
 
+    virtual OMX_ERRORTYPE internalUseBuffer(
+            OMX_BUFFERHEADERTYPE **buffer,
+            OMX_U32 portIndex,
+            OMX_PTR appPrivate,
+            OMX_U32 size,
+            OMX_U8 *ptr,
+            BufferPrivateStruct* bufferPrivate=NULL);
+
     virtual OMX_ERRORTYPE allocateBuffer(
             OMX_BUFFERHEADERTYPE **buffer,
             OMX_U32 portIndex,
@@ -83,6 +91,8 @@ protected:
     virtual OMX_ERRORTYPE freeBuffer(
             OMX_U32 portIndex,
             OMX_BUFFERHEADERTYPE *buffer);
+
+    void checkTransitions();
 
     virtual void onQueueFilled(OMX_U32 portIndex);
     List<BufferInfo *> &getPortQueue(OMX_U32 portIndex);
@@ -134,8 +144,6 @@ private:
     void onChangeState(OMX_STATETYPE state);
     void onPortEnable(OMX_U32 portIndex, bool enable);
     void onPortFlush(OMX_U32 portIndex, bool sendFlushComplete);
-
-    void checkTransitions();
 
     DISALLOW_EVIL_CONSTRUCTORS(SprdSimpleOMXComponent);
 };

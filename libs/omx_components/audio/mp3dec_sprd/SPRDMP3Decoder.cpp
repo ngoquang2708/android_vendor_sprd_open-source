@@ -233,6 +233,54 @@ OMX_ERRORTYPE SPRDMP3Decoder::internalSetParameter(
     }
 }
 
+OMX_ERRORTYPE SPRDMP3Decoder::internalUseBuffer(
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size,
+    OMX_U8 *ptr,
+    BufferPrivateStruct* bufferPrivate) {
+
+    *header = new OMX_BUFFERHEADERTYPE;
+    (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
+    (*header)->nVersion.s.nVersionMajor = 1;
+    (*header)->nVersion.s.nVersionMinor = 0;
+    (*header)->nVersion.s.nRevision = 0;
+    (*header)->nVersion.s.nStep = 0;
+    (*header)->pBuffer = ptr;
+    (*header)->nAllocLen = size;
+    (*header)->nFilledLen = 0;
+    (*header)->nOffset = 0;
+    (*header)->pAppPrivate = appPrivate;
+    (*header)->pPlatformPrivate = NULL;
+    (*header)->pInputPortPrivate = NULL;
+    (*header)->pOutputPortPrivate = NULL;
+    (*header)->hMarkTargetComponent = NULL;
+    (*header)->pMarkData = NULL;
+    (*header)->nTickCount = 0;
+    (*header)->nTimeStamp = 0;
+    (*header)->nFlags = 0;
+    (*header)->nOutputPortIndex = portIndex;
+    (*header)->nInputPortIndex = portIndex;
+
+    PortInfo *port = editPortInfo(portIndex);
+
+    port->mBuffers.push();
+
+    BufferInfo *buffer =
+        &port->mBuffers.editItemAt(port->mBuffers.size() - 1);
+    ALOGI("internalUseBuffer, header=%p, pBuffer=%p, size=%d",*header, ptr, size);
+    buffer->mHeader = *header;
+    buffer->mOwnedByUs = false;
+
+    if (port->mBuffers.size() == port->mDef.nBufferCountActual) {
+        port->mDef.bPopulated = OMX_TRUE;
+        checkTransitions();
+    }
+
+    return OMX_ErrorNone;
+}
+
 uint32_t SPRDMP3Decoder::getCurFrameBitRate(uint8_t *frameBuf)
 {
     uint32_t header = 0;
