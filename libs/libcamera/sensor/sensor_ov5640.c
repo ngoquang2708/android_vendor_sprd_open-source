@@ -48,6 +48,7 @@ static uint32_t s_is_dv_mode = 0;
 static uint32_t iso_mode = 0;
 static uint32_t preview_hts;
 static EXIF_SPEC_PIC_TAKING_COND_T s_ov5640_exif;
+static uint32_t af_quit_flag = 0;
 
 LOCAL uint32_t _ov5640_InitExifInfo(void);
 LOCAL uint32_t _ov5640_GetResolutionTrimTab(uint32_t param);
@@ -2519,6 +2520,7 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	uint32_t rtn = SENSOR_SUCCESS;
 	uint16_t i = AUTOFOCUS_TIMEOUT;
 	uint16_t reg_value = 0x00;
+	af_quit_flag = 0;
 
 	SENSOR_PRINT_HIGH("Start");
 
@@ -2529,6 +2531,10 @@ LOCAL uint32_t _ov5640_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		if (0x00 == i) {
 			SENSOR_PRINT_HIGH("error!");
 			rtn = SENSOR_FAIL;
+			break;
+		} else if (af_quit_flag) {
+			SENSOR_PRINT_HIGH("_ov5640_AutoFocusTrig af will quit!");
+			af_quit_flag = 0;
 			break;
 		}
 		usleep(10*1000);
@@ -2587,6 +2593,10 @@ LOCAL uint32_t _ov5640_AutoFocusZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 			if (0x00 == i) {
 				SENSOR_PRINT_ERR("error!");
 				rtn = SENSOR_FAIL;
+				break;
+			} else if (af_quit_flag) {
+				SENSOR_PRINT_HIGH("af will be quit!");
+				af_quit_flag = 0;
 				break;
 			}
 			usleep(10*1000);
@@ -2663,6 +2673,10 @@ LOCAL uint32_t _ov5640_AutoFocusMultiZone(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		if (0x00 == i) {
 			SENSOR_PRINT_ERR("error!");
 			rtn = SENSOR_FAIL;
+			break;
+		} else if (af_quit_flag) {
+			SENSOR_PRINT_HIGH("quit!");
+			af_quit_flag = 0;
 			break;
 		}
 		usleep(10*1000);
@@ -2772,6 +2786,15 @@ LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 	}
 	return rtn;
 }
+
+LOCAL uint32_t _ov5640_QuitAutoFocus(void)
+{
+	uint32_t ret = SENSOR_SUCCESS;
+	af_quit_flag = 0x1;
+	SENSOR_PRINT("af quit flag setted!");
+	return ret;
+}
+
 
 LOCAL uint32_t _ov5640_ExposureAuto(void)
 {
@@ -7112,6 +7135,9 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 		break;
 	case SENSOR_EXT_FOCUS_START:
 		rtn = _ov5640_StartAutoFocus(ctl_param);
+		break;
+	case SENSOR_EXT_FOCUS_QUIT:
+		rtn = _ov5640_QuitAutoFocus();
 		break;
 	case SENSOR_EXT_EXPOSURE_START:
 		rtn = _ov5640_StartExposure(ctl_param);
