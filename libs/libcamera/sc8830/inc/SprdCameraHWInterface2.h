@@ -222,6 +222,7 @@ public:
 		CAMERA_FLUSH_RAW_HEAP,
 		CAMERA_FLUSH_RAW_HEAP_ALL,
 		CAMERA_FLUSH_PREVIEW_HEAP,
+		CAMERA_FLUSH_HAL2_ZSL_BUF,
 		CAMERA_FLUSH_MAX
 	};
 
@@ -457,7 +458,7 @@ private:
 	void                 HandleStartPreview(camera_cb_type cb, int32_t parm4);
 	void                 HandleStartCamera(camera_cb_type cb, int32_t parm4);
 	status_t             startPreviewInternal(bool isRecording);
-	void                 stopPreviewInternal(void);
+	void                 stopPreviewInternal(bool isCancelAllBuf);
 	void                 stopPreviewSimple(void);/*only call camera_stop_preview*/
 	bool                 isPreviewing(void);
 	bool                 isCapturing(void);

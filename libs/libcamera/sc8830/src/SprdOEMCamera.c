@@ -1301,7 +1301,7 @@ static int zsl_cap_data_shift(uint32_t *srcVirt,
 	camera_frame_type frame_type = {0};
 
 	if (!NEED_V4L2_POSTPOROCESS())
-		return 0;
+		goto flush_buf;
 
 	if (srcVirt == NULL || srcUAdd == NULL) {
 		CMR_LOGV("err add para is null");
@@ -1323,10 +1323,16 @@ static int zsl_cap_data_shift(uint32_t *srcVirt,
 	for (i = 0; i< (total >> 2); i++) {
 		*pval++ <<= 2;
 	}
-	camera_call_cb(CAMERA_EVT_CB_FLUSH,
+
+flush_buf:
+	/******************************************************************
+	if android zsl rot/encode have a flush cach problem, pls open the following code
+	*******************************************************************
+	camera_call_cb(CAMERA_EVT_CB_HAL2_FLUSH_ZSL_BUF,
 			camera_get_client_data(),
 			CAMERA_FUNC_TAKE_PICTURE,
 			(uint32_t)&frame_type);
+	*********************************************************************/
 
 	return ret;
 }
@@ -7468,12 +7474,10 @@ int camera_start_scale_sub(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcV
 	memcpy((void*)dst_frame.addr_vir.addr_y, (void*)srcVirt, size.width * size.height);
 	memcpy((void*)dst_frame.addr_vir.addr_u, (void*)((uint32_t)srcVirt + size.width * size.height), (size.width * size.height) >> 1);
 	/*must flush*/
-	if (NEED_V4L2_POSTPOROCESS()) {
-		camera_call_cb(CAMERA_EVT_CB_FLUSH,
-			camera_get_client_data(),
-			CAMERA_FUNC_TAKE_PICTURE,
-			(uint32_t)&frame_type);
-	}
+	camera_call_cb(CAMERA_EVT_CB_FLUSH,
+		camera_get_client_data(),
+		CAMERA_FUNC_TAKE_PICTURE,
+		(uint32_t)&frame_type);
 #if 0
 		camera_save_to_file(1001,
 				IMG_DATA_TYPE_YUV420,
