@@ -1049,6 +1049,7 @@ bool SPRDAVCDecoder::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
         }
 
         updatePortDefinitions();
+        (*mH264Dec_ReleaseRefBuffers)(mHandle);
         notify(OMX_EventPortSettingsChanged, 1, 0, NULL);
         mOutputPortSettingsChange = AWAITING_DISABLED;
         return true;
