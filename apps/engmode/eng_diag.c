@@ -267,6 +267,8 @@ int eng_diag_parse(char *buf,int len)
             ENG_LOG("%s: Handle DIAG_CMD_CURRENT_TEST", __FUNCTION__);
             if(head_ptr->subtype==0x2) {
                 ret = CMD_USER_DEEP_SLEEP;
+            }else if(head_ptr->subtype==0xe) {
+                ret = CMD_USER_SHUT_DOWN;
             }
             break;
         case DIAG_CMD_ASSERT:
@@ -364,6 +366,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
         case CMD_USER_FILE_OPER:
             ENG_LOG("%s: CMD_USER_FILE_OPER Req!\n", __FUNCTION__);
             rlen = eng_diag_fileoper_hdlr(buf, len, rsp);
+            break;
+        case CMD_USER_SHUT_DOWN:
+            ENG_LOG("%s: CMD_USER_SHUT_DOWN Req!\n", __FUNCTION__);
+            reboot(LINUX_REBOOT_CMD_POWER_OFF);
             break;
         default:
             break;
