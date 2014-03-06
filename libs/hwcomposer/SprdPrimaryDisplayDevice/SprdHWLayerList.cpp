@@ -290,14 +290,48 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
             continue;
         }
 
+        RGBLayer = mOSDLayerList[i];
+        RGBIndex = RGBLayer->getLayerIndex();
+        if (RGBLayer == NULL)
+        {
+            continue;
+        }
+
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+        /*
+         *  if the RGB layer is bottom layer and there is no other layer,
+         *  go overlay.
+         * */
+        bool singleRGBLayerCond = ((RGBIndex == 0) && (LayerCount == 2));
+        if (singleRGBLayerCond)
+        {
+            ALOGI_IF(mDebugFlag, "Force single OSD layer go to Overlay");
+            break;
+        }
+#endif
+
+        /*
+         *  Make sure the OSD layer is the top layer and the layer below it
+         *  is video layer. If so, go overlay.
+         * */
+        bool supportYUVLayerCond = false;
+        if (YUVLayer)
+        {
+            supportYUVLayerCond = ((RGBLayer == NULL) ||
+                                   (RGBLayer && ((RGBIndex + 1) == LayerCount - 1) &&
+                                    (YUVIndex == RGBIndex -1)));
+        }
+
         /*
          *  At present, the HWComposer cannot handle 2 or more than 2 RGB layer.
          *  So, when found RGB layer count > 1, just switch back to SurfaceFlinger.
          * */
-        if (/*mOSDLayerCount > 1 ||*/YUVLayer == NULL)
+        if ((mOSDLayerCount > 0)  && ((mFBLayerCount > 0) || (supportYUVLayerCond == false)))
         {
             resetOverlayFlag(mOSDLayerList[i]);
             mFBLayerCount++;
+            RGBLayer = NULL;
+            RGBIndex = 0;
             ALOGI_IF(mDebugFlag , "no video layer, abandon osd overlay");
             continue;
         }
@@ -305,35 +339,6 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         RGBLayer = mOSDLayerList[i];
         RGBIndex = RGBLayer->getLayerIndex();
     }
-
-#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
-    /*
-     *  if the RGB layer is bottom layer and there is no other layer,
-     *  go overlay.
-     * */
-    if (RGBLayer && (RGBIndex == 0) && (LayerCount == 1))
-    {
-        goto Overlay;
-    }
-#endif
-
-    /*
-     *  Make sure the OSD layer is the top layer and the layer below it
-     *  is video layer. If so, go overlay.
-     * */
-    if (YUVLayer)
-    {
-        if (RGBLayer && ((RGBIndex + 1) == LayerCount) && (YUVIndex == RGBIndex -1))
-        {
-            goto Overlay;
-        }
-        else if (RGBLayer == NULL)
-        {
-            goto Overlay;
-        }
-    }
-
-Overlay:
 
 #ifdef DYNAMIC_RELEASE_PLANEBUFFER
     int ret = -1;

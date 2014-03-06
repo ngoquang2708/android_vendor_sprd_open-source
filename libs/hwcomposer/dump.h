@@ -88,6 +88,7 @@ typedef enum
 extern void queryDebugFlag(int *debugFlag);
 
 extern void queryDumpFlag(int *dumpFlag);
+extern void queryEndianFlag(char* str,int *dumpFlag);
 
 extern int dumpImage(hwc_display_contents_1_t *list);
 

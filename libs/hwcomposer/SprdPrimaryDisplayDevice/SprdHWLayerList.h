@@ -140,6 +140,11 @@ public:
         return mLayerCount;
     }
 
+    inline unsigned int getFBLayerCount()
+    {
+        return mFBLayerCount;
+    }
+
 private:
     FrameBufferInfo* mFBInfo;
     SprdHWLayer *mLayerList;

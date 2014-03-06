@@ -220,6 +220,7 @@ static int getDumpPath(char *pPath)
     }
     if(strchr(value , '/') != NULL) {
         sprintf(pPath , "%s" , value);
+		ALOGE_IF(mDebugFlag, "getDumpPath %s",pPath);
         return 0;
     } else
         pPath[0] = 0;
@@ -378,6 +379,35 @@ int dumpOverlayImage(private_handle_t* buffer, const char *name)
     index++;
 
     return 0;
+}
+
+void queryEndianFlag(char* str,int *dumpFlag)
+{
+    if (dumpFlag == NULL)
+    {
+        ALOGE("queryDumpFlag, input parameter is NULL");
+        return;
+    }
+
+    char value[PROPERTY_VALUE_MAX];
+
+    if (0 != property_get(str, value, "0"))
+    {
+        int flag =atoi(value);
+
+        if (flag != 0)
+        {
+            *dumpFlag = flag;
+        }
+        else
+        {
+            *dumpFlag = 0;
+        }
+    }
+    else
+    {
+        *dumpFlag = 0;
+    }
 }
 
 

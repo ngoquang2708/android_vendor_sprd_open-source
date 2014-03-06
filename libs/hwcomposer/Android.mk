@@ -75,7 +75,7 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	#
 	# DIRECT_DISPLAY_SINGLE_OSD_LAYER need contiguous physcial address.
 	# At present, this condition cannot be satisfied.
-	# LOCAL_CFLAGS += DIRECT_DISPLAY_SINGLE_OSD_LAYER
+        #LOCAL_CFLAGS += -DDIRECT_DISPLAY_SINGLE_OSD_LAYER
 
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 	LOCAL_CFLAGS += -DGSP_ADDR_TYPE_PHY

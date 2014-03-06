@@ -66,6 +66,7 @@ SprdPrimaryPlane::SprdPrimaryPlane(FrameBufferInfo *fbInfo)
     mDefaultDisplayFormat = HAL_PIXEL_FORMAT_RGB_565;
 #else
     mDefaultDisplayFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+    //mDefaultDisplayFormat = HAL_PIXEL_FORMAT_RGBX_8888;
 #endif
 
     SprdDisplayPlane::setGeometry(mFBInfo->fb_width, mFBInfo->fb_height, mDefaultDisplayFormat);
@@ -208,21 +209,28 @@ bool SprdPrimaryPlane::SetDisplayParameters(hwc_layer_1_t *AndroidLayer)
     int phy_addr = 0;
     int size = 0;
 
-    if (privateH->format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
-        privateH->format == HAL_PIXEL_FORMAT_YCrCb_420_SP ||
-        privateH->format == HAL_PIXEL_FORMAT_YV12)
+    if (privateH == NULL)
     {
+        ALOGE("SetDisplayParameters privateH is NULL");
         mDirectDisplayFlag = false;
         return false;
     }
 
-    if (privateH && (!(privateH->flags) & (private_handle_t::PRIV_FLAGS_USES_PHY)))
+    if ((privateH->format == HAL_PIXEL_FORMAT_YCbCr_420_SP) ||
+        (privateH->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) ||
+        (privateH->format == HAL_PIXEL_FORMAT_YV12))
     {
         ALOGI("Current transform device and display device cannot support virtual adress");
         mDirectDisplayFlag = false;
+        return false;
     }
 
-    mDisplayFormat = privateH->format;
+    if (!((privateH->flags) & (private_handle_t::PRIV_FLAGS_USES_PHY)))
+    {
+        ALOGI_IF(mDebugFlag, "Current device cannot support virtual adress");
+        mDirectDisplayFlag = false;
+	return false;
+    }
 
     if (AndroidLayer->transform != 0)
     {
@@ -230,6 +238,8 @@ bool SprdPrimaryPlane::SetDisplayParameters(hwc_layer_1_t *AndroidLayer)
         mDirectDisplayFlag = false;
         return false;
     }
+
+    mDisplayFormat = privateH->format;
 
     mDirectDisplayFlag = true;
 

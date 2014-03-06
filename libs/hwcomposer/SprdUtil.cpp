@@ -636,6 +636,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         layer2 = l2->getAndroidLayer();
         struct sprdRect *srcRect2 = l2->getSprdSRCRect();
         struct sprdRect *FBRect2 = l2->getSprdFBRect();
+
         if (layer2 == NULL ||
             srcRect2 == NULL || FBRect2 == NULL)
         {
@@ -669,7 +670,25 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             }
             else if (layer2_Format == HAL_PIXEL_FORMAT_RGB_565)
             {
+            /*
+                int EndianFlag0 = 0;//rgb swap
+                int EndianFlag1 = 0;// y endian
+                queryEndianFlag("endian0.hwc.flag",&EndianFlag0);
+                queryEndianFlag("endian1.hwc.flag",&EndianFlag1);
                 gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
+                gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = (GSP_RGB_SWAP_MOD_E)(EndianFlag0 & 0x7);
+                gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_BGR;
+                gsp_cfg_info.layer1_info.endian_mode.y_word_endn = (GSP_WORD_ENDN_E)(EndianFlag1 & 0x3);
+                gsp_cfg_info.layer1_info.endian_mode.y_lng_wrd_endn = (GSP_LNG_WRD_ENDN_E)(EndianFlag1 & 0x4);
+            */
+                gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
+                gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_BGR;
+            /*
+            int EndianFlag0 = 0;//rgb swap
+            int EndianFlag1 = 0;// y endian
+
+            queryEndianFlag("layer.hwc.pitch",&EndianFlag0);
+            */
             }
 #ifdef GSP_ADDR_TYPE_PHY
             MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
@@ -719,7 +738,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                     break;
                 }
             }
-            gsp_cfg_info.layer1_info.pitch = private_h2->width;
+
+            gsp_cfg_info.layer1_info.pitch = private_h2->stride;
+            //gsp_cfg_info.layer1_info.pitch = private_h2->width;
             gsp_cfg_info.layer1_info.des_pos.pos_pt_x = gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
             gsp_cfg_info.layer1_info.layer_en = 1;
 
@@ -827,17 +848,14 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         }
         else if (l2 != NULL)
         {
-            if (layer2_Format == HAL_PIXEL_FORMAT_RGBA_8888 ||
-                layer2_Format == HAL_PIXEL_FORMAT_RGBX_8888)
-            {
-                gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_ARGB888;
-                //gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
-                //gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
-            }
-            else if (layer2_Format == HAL_PIXEL_FORMAT_RGB_565)
-            {
-                gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_RGB565;
-            }
+#ifndef PRIMARYPLANE_USE_RGB565
+            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_ARGB888;
+            //gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
+            //gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
+#else
+
+            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_RGB565;
+#endif
         }
 
         //in sc8830 first GSP version hw, GSP don't support odd width/height and x/y
@@ -860,12 +878,13 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
 
 #ifdef GSP_SCALING_UP_TWICE
 
-        if((((gsp_cfg_info.layer0_info.rot_angle & 0x1) == 0) &&
+        if((gsp_cfg_info.layer0_info.layer_en == 1)
+           &&((((gsp_cfg_info.layer0_info.rot_angle & 0x1) == 0) &&
                 (((gsp_cfg_info.layer0_info.clip_rect.rect_w * 4) < gsp_cfg_info.layer0_info.des_rect.rect_w)
                  ||((gsp_cfg_info.layer0_info.clip_rect.rect_h * 4) < gsp_cfg_info.layer0_info.des_rect.rect_h)))
                 ||(((gsp_cfg_info.layer0_info.rot_angle & 0x1) == 1) &&
                    (((gsp_cfg_info.layer0_info.clip_rect.rect_w * 4) < gsp_cfg_info.layer0_info.des_rect.rect_h)
-                    || ((gsp_cfg_info.layer0_info.clip_rect.rect_h * 4) < gsp_cfg_info.layer0_info.des_rect.rect_w))))
+                    || ((gsp_cfg_info.layer0_info.clip_rect.rect_h * 4) < gsp_cfg_info.layer0_info.des_rect.rect_w)))))
         {
             GSP_CONFIG_INFO_T gsp_cfg_info_phase1 = gsp_cfg_info;
             GSP_LAYER_DST_DATA_FMT_E phase1_des_format = GSP_DST_FMT_YUV420_2P;//GSP_DST_FMT_YUV422_2P; //GSP_DST_FMT_ARGB888
@@ -1013,7 +1032,10 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
                        gsp_cfg_info.layer_des_info.pitch,
                        (void *)gsp_cfg_info.layer_des_info.src_addr.addr_y,
-			(void *)buffer->base);
+                       (void *)buffer->base);
+
+            //gsp_cfg_info.layer1_info.rot_angle = GSP_ROT_ANGLE_90;
+
              ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
              if(0 == ret) {
                  ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
