@@ -481,6 +481,7 @@ void mali_l2_cache_invalidate_all_pages(u32 *pages, u32 num_pages)
 				ret = mali_l2_cache_send_command(mali_global_l2_cache_cores[i], MALI400_L2_CACHE_REGISTER_CLEAR_PAGE, pages[j]);
 				if (_MALI_OSK_ERR_OK != ret) {
 					MALI_PRINT_ERROR(("Failed to invalidate page cache\n"));
+					dump_stack();
 				}
 			}
 		}
