@@ -96,7 +96,7 @@ SprdCameraParameters::SprdCameraParameters():CameraParameters(),KSupportFlash(0)
 
 }
 
-SprdCameraParameters::SprdCameraParameters(const String8 &params):CameraParameters(params)
+SprdCameraParameters::SprdCameraParameters(const String8 &params):CameraParameters(params),KSupportFlash(0)
 {
 
 }
