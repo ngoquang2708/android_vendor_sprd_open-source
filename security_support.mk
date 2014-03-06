@@ -7,7 +7,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # prebuild files
 PRODUCT_PACKAGES += \
         Permission.apk \
-        framework-se-res.apk
+        framework-se-res.apk \
+	ASA.apk \
+	RDC.apk \
+	PracticalTools
+
 PRODUCT_COPY_FILES += \
         frameworks/base/core/java/com/sprd/telephonesec.db:/system/etc/telephonesec.db
 endif
