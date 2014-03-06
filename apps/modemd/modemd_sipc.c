@@ -425,6 +425,11 @@ void* detect_sipc_modem(void *param)
 					w_modem_state = MODEM_RESET;
 					pthread_mutex_unlock(&w_state_mutex);
 				}
+
+                                /* info socket clients that modem is reset */
+                                MODEMD_LOGE("Info all the sock clients that modem is reset");
+                                loop_info_sockclients(buf, numRead);
+                                is_assert = 1;
 				load_sipc_modem_img(modem, is_assert);
 				is_assert = 0;
 			} else if(strstr(buf, "Modem Assert") || strstr(buf, "wdtirq")) {
