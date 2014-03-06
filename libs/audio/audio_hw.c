@@ -1391,6 +1391,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             i2s_pin_mux_sel(adev,2);
         }
+	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
     }
     else if (adev->voip_state) {
@@ -1399,6 +1400,7 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
         }
+	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
     }
     /* default to low power: will be corrected in out_write if necessary before first write to
@@ -2411,6 +2413,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
             i2s_pin_mux_sel(adev,2);
         }
+	adev->prev_in_devices = ~adev->in_devices;
         select_devices_signal(adev);
     }
 
