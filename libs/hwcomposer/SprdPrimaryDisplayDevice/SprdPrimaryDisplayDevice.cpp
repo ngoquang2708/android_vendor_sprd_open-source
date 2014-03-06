@@ -241,6 +241,7 @@ int SprdPrimaryDisplayDevice:: attachToDisplayPlane(int DisplayFlag)
     mHWCDisplayFlag = HWC_DISPLAY_MASK;
     int OSDLayerCount = mLayerList->getOSDLayerCount();
     int VideoLayerCount = mLayerList->getVideoLayerCount();
+    int FBLayerCount = mLayerList->getFBLayerCount();
     SprdHWLayer **OSDLayerList = mLayerList->getSprdOSDLayerList();
     SprdHWLayer **VideoLayerList = mLayerList->getSprdVideoLayerList();
     hwc_layer_1_t *FBTargetLayer = mLayerList->getFBTargetLayer();
@@ -319,8 +320,7 @@ int SprdPrimaryDisplayDevice:: attachToDisplayPlane(int DisplayFlag)
         displayType |= DisplayFlag;
     }
     else if (FBTargetLayer &&
-             OSDLayerCount <= 1 &&
-             VideoLayerCount <= 0)
+             FBLayerCount > 0)
     {
         //mPrimary->AttachFrameBufferTargetLayer(mFBTargetLayer);
         ALOGI_IF(mDebugFlag, "Attach Framebuffer Target layer");
@@ -436,8 +436,9 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             DisplayOverlayComposerGSP = true;
             break;
         default:
-            ALOGE("Do not support display type: %d", (mHWCDisplayFlag & ~HWC_DISPLAY_MASK));
-            return -1;
+            ALOGI("Do not support display type: %d", (mHWCDisplayFlag & ~HWC_DISPLAY_MASK));
+            DisplayFBTarget = true;
+            break;
     }
 
 
@@ -486,6 +487,20 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     /*
      *  ==== end ========================
      * */
+
+    /*
+    static int64_t now = 0, last = 0;
+    static int flip_count = 0;
+    flip_count++;
+    now = systemTime();
+    if ((now - last) >= 1000000000LL)
+    {
+        float fps = flip_count*1000000000.0f/(now-last);
+        ALOGI("HWC post FPS: %f", fps);
+        flip_count = 0;
+        last = now;
+    }
+    */
 
 #ifdef OVERLAY_COMPOSER_GPU
     if (DisplayOverlayComposerGPU)
@@ -563,7 +578,10 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
          *  Use GSP to do 2 layer blending, so if PrimaryLayer is not NULL,
          *  disable DisplayPrimaryPlane.
          * */
-        DisplayPrimaryPlane = false;
+        if (DisplayOverlayPlane)
+        {
+            DisplayPrimaryPlane = false;
+        }
 #endif
     }
 
