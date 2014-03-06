@@ -3564,6 +3564,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     }
     if (in->proc_buf) {
         free(in->proc_buf);
+        in->proc_buf = NULL;
         in->proc_buf_size = 0;
     }
     if (in->ref_buf)

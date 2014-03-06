@@ -1774,8 +1774,8 @@ static void * vbc_ctl_modem_monitor_routine(void *arg)
            } while(numRead < 0 && errno == EINTR);
 
         ALOGD("modem_monitor: %s",buf);
-        if(mystrstr(buf,"Assert")) {
-            ALOGD("modem asserted1");
+        if(mystrstr(buf,"Assert") || mystrstr(buf,"Reset")) {
+            ALOGD("modem asserted1 %s",buf);
             cur_out_devices_l = adev->out_devices;
             cur_out_devices_l &= ~AUDIO_DEVICE_OUT_ALL;
             pthread_mutex_lock(&adev->lock);
