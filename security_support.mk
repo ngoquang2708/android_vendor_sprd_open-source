@@ -10,7 +10,7 @@ PRODUCT_PACKAGES += \
         framework-se-res.apk \
 	ASA.apk \
 	RDC.apk \
-	PracticalTools
+	PracticalTools.apk
 
 PRODUCT_COPY_FILES += \
         frameworks/base/core/java/com/sprd/telephonesec.db:/system/etc/telephonesec.db
