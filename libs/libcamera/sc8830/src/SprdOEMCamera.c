@@ -257,6 +257,7 @@ static int camera_recalc_rgbraw_addr(void);
 static int camera_is_later_scaling(void);
 static int camera_get_cap_time(void);
 static int camera_check_cap_time(struct frm_info * data);
+static int camera_search_rot_buffer(void);
 
 int camera_capture_way_out(void)
 {
@@ -2182,8 +2183,8 @@ camera_ret_code_type camera_release_frame(uint32_t index)
 	   only the frame whose rotation angle is zero should be released by app,
 	   otherwise, it will be released after rotation done;
 	 */
-	index += CAMERA_PREV_ID_BASE;
 	if (IMG_ROT_0 == g_cxt->prev_rot) {
+		index += CAMERA_PREV_ID_BASE;
 		if (index >= CAMERA_PREV_ID_BASE &&
 			index < CAMERA_PREV_ID_BASE + g_cxt->prev_mem_num) {
 			ret = cmr_v4l2_free_frame(CHN_1, index);
@@ -2194,6 +2195,9 @@ camera_ret_code_type camera_release_frame(uint32_t index)
 		} else {
 			CMR_LOGE("wrong index, 0x%x ", index);
 		}
+	} else {
+		g_cxt->prev_rot_frm_is_lock[(index - g_cxt->prev_mem_num) % CAMERA_PREV_ROT_FRM_CNT] = 0;
+		CMR_LOGV("release rotation buffer %d", index);
 	}
 
 	return CAMERA_SUCCESS;
@@ -3466,6 +3470,7 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 			frame_type->order_buf_id = frm_id + prev_num;
 			frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->prev_rot_frm[frm_id].addr_vir.addr_y;
 			frame_type->buffer_phy_addr = g_cxt->prev_rot_frm[frm_id].addr_phy.addr_y;
+			g_cxt->prev_rot_frm_is_lock[frm_id] = 1;
 		} else {
 			frm_id = info->frame_id - CAMERA_PREV_ID_BASE;
 			frame_type->buf_id = frm_id;
@@ -4600,6 +4605,9 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 		}
 
 		g_cxt->prev_rot_index ++;
+		if (CAMERA_PREV_ROT_FRM_CNT <= g_cxt->prev_rot_index) {
+			g_cxt->prev_rot_index -= CAMERA_PREV_ROT_FRM_CNT;
+		}
 
 		camera_call_cb(CAMERA_EVT_CB_FRAME,
 				camera_get_client_data(),
@@ -4987,6 +4995,7 @@ int camera_preview_init(int format_mode)
 	}
 
 	g_cxt->prev_rot_index = 0;
+	memset(g_cxt->prev_rot_frm_is_lock, 0, CAMERA_PREV_ROT_FRM_CNT * sizeof(uint32_t));
 	g_cxt->skip_mode = IMG_SKIP_HW;
 	g_cxt->skip_num = g_cxt->sn_cxt.sensor_info->preview_skip_num;
 	g_cxt->pre_frm_cnt = 0;
@@ -5091,6 +5100,7 @@ int camera_preview_weak_init(int format_mode, enum restart_mode re_mode)
 		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.preview_mode];
 	}
 	g_cxt->prev_rot_index = 0;
+	memset(g_cxt->prev_rot_frm_is_lock, 0, CAMERA_PREV_ROT_FRM_CNT * sizeof(uint32_t));
 	v4l2_cfg.cfg.need_isp = 0;
 	v4l2_cfg.cfg.need_binning = 0;
 	if (SENSOR_IMAGE_FORMAT_YUV422 == sensor_mode->image_format) {
@@ -6106,6 +6116,28 @@ int camera_set_capture_mem2(uint32_t cap_index,
 	return ret;
 }
 
+/*search available rotation buffer, success return CAMERA_SUCCESS, fail return CAMERA_FAILED*/
+int camera_search_rot_buffer(void)
+{
+	int ret = CAMERA_FAILED;
+	int search_index = g_cxt->prev_rot_index;
+	int count = 0;
+
+	for (count = 0; count < CAMERA_PREV_ROT_FRM_CNT; count++){
+		search_index += count;
+		search_index %= CAMERA_PREV_ROT_FRM_CNT;
+		if (0 == g_cxt->prev_rot_frm_is_lock[search_index]) {
+			ret = CAMERA_SUCCESS;
+			g_cxt->prev_rot_index = search_index;
+			break;
+		} else {
+			CMR_LOGW("rot buffer %d is locked", search_index);
+		}
+	}
+
+	return ret;
+}
+
 int camera_v4l2_preview_handle(struct frm_info *data)
 {
 	camera_frame_type        frame_type;
@@ -6184,13 +6216,22 @@ int camera_v4l2_preview_handle(struct frm_info *data)
 				(uint32_t)&frame_type);
 	} else {
 		CMR_LOGV("Need rotate");
-		ret = camera_start_rotate(data);
-		pthread_mutex_unlock(&g_cxt->prev_mutex);
-		if (CAMERA_SUCCESS == ret) {
-			camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
+		/*search rotation buffer*/
+		if (CAMERA_SUCCESS == camera_search_rot_buffer()) {
+			ret = camera_start_rotate(data);
+			pthread_mutex_unlock(&g_cxt->prev_mutex);
+			if (CAMERA_SUCCESS == ret) {
+				camera_rotation_handle(CMR_EVT_PREV_CVT_ROT_DONE, 0, &g_cxt->rot_cxt.frm_data);
+			} else {
+				CMR_LOGV("Just skip this frame");
+				ret = 0;
+			}
 		} else {
-			CMR_LOGV("Just skip this frame");
-			ret = 0;
+			CMR_LOGV("no available buffer, drop! preview cnt %d frame_id 0x%x",
+				g_cxt->pre_frm_cnt,
+				data->frame_id);
+			ret = cmr_v4l2_free_frame(data->channel_id, data->frame_id);
+			pthread_mutex_unlock(&g_cxt->prev_mutex);
 		}
 	}
 	pthread_mutex_lock(&g_cxt->recover_mutex);
