@@ -360,6 +360,7 @@ struct tiny_audio_device {
     bool cache_mute;
     int fm_volume;
 
+    int requested_channel_cnt;
     int  input_source;
 };
 
@@ -948,6 +949,12 @@ ret);
 	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
+          /* force close main-mic ADCL when channel count is one for power issue */
+          if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( adev->in_devices & adev->dev_cfgs[i].mask))
+               && (adev->requested_channel_cnt == 1)) {
+              /* force close main-mic ADCL when channel count is one for power issue */
+              close_adc_channel(adev->mixer, true, false, false);
+          }
         }
     }
     /* ...then disable old ones. */
@@ -3491,12 +3498,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     in->requested_rate = config->sample_rate;
 
+
+
     if (ladev->call_start)
         memcpy(&in->config, &pcm_config_vrec_vx, sizeof(pcm_config_vrec_vx));
     else
         memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
     in->requested_channels = channel_count;
+
+    ladev->requested_channel_cnt = channel_count;
 
     {
 	int size = 0;
