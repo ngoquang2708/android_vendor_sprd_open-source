@@ -10,6 +10,9 @@
 #include <utils/Log.h>
 #include <cutils/sockets.h>
 #include "modemd.h"
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
+
 
 static int td_modem_state = MODEM_READY;
 static int w_modem_state = MODEM_READY;
@@ -17,7 +20,8 @@ static pthread_mutex_t td_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t w_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t td_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t w_cond = PTHREAD_COND_INITIALIZER;
-
+static int epollfd = -1;
+static int wakealarm_fd = -1;
 /******************************************************
  *
  ** sipc interface begin
@@ -172,9 +176,52 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 		MODEMD_LOGE("error unkown modem  alive_info");
 	}
 	MODEMD_LOGD("wait for 20s\n");
-
-	sleep(20);
-
+      struct itimerspec itval;
+      struct epoll_event events[1];
+      struct epoll_event ev;
+      int nevents;
+      if (wakealarm_fd < 0)
+          wakealarm_fd = timerfd_create(CLOCK_BOOTTIME_ALARM, TFD_NONBLOCK);
+      if (wakealarm_fd == -1) {
+          MODEMD_LOGE(LOG_TAG, "wakealarm_init: timerfd_create failed\n");
+          return -1;
+      }
+      if(epollfd < 0)
+      {
+          epollfd = epoll_create(1);
+          if (epollfd == -1) {
+                  MODEMD_LOGE(LOG_TAG,
+                  "healthd_mainloop: epoll_create failed; errno=%d\n",
+                  errno);
+              return -1;
+          }
+          ev.events = EPOLLIN | EPOLLWAKEUP;
+          if (epoll_ctl(epollfd, EPOLL_CTL_ADD, wakealarm_fd, &ev) == -1)
+          {
+              MODEMD_LOGD(LOG_TAG,
+              "load_sipc_modem_img: epoll_ctl for wakealarm_fd failed; errno=%d\n",
+              errno);
+              return -1;
+          }
+      }
+      itval.it_interval.tv_sec = 20;
+      itval.it_interval.tv_nsec = 0;
+      itval.it_value.tv_sec = 20;
+      itval.it_value.tv_nsec = 0;
+      if (timerfd_settime(wakealarm_fd, 0, &itval, NULL) == -1){
+          MODEMD_LOGE(LOG_TAG, "load_sipc_modem_img: timerfd_settime failed\n");
+      }
+      do {
+          nevents = epoll_wait(epollfd, events, 1, -1);
+          if (nevents == -1) {
+              if (errno == EINTR)
+              continue;
+              MODEMD_LOGE(LOG_TAG, "load_sipc_modem_img: epoll_wait failed\n");
+              break;
+          }
+         break ;
+      }while(1) ;
+	// sleep(20);
 	if(is_modem_assert) {
 		/* info socket clients that modem is reset */
 		MODEMD_LOGD("Info all the sock clients that modem is alive");
