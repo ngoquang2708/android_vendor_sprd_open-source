@@ -138,3 +138,20 @@ int at_cmd_cp_usecase_type(audio_cp_usecase_t type)
     do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
     return 0;
 }
+
+/* This function is for samsung's extra volume solution, according to cp, extraVolume has a minimum:0x1000 */
+int at_cmd_extra_volume(bool enable, int extraVolume)
+{
+    char buf[89];
+    char *at_cmd = buf;
+    if(extraVolume < 0) {
+        ALOGW("%s, wrong extraVolume(%d), set to default 0x1000 ",__func__, extraVolume);
+        extraVolume = 0x1000;
+    }
+    ALOGW("%s, enable:%d, extraVolume:0x%x ",__func__, enable, extraVolume);
+
+    snprintf(at_cmd, sizeof buf, "AT+SPAUDIOCONFIG=extravgr,%d,%d", enable, extraVolume);
+
+    do_cmd_dual(st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num, at_cmd);
+    return 0;
+}
