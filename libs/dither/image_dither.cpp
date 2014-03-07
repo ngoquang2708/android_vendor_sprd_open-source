@@ -1902,7 +1902,7 @@ uint32_t _img_dither_00(uint32_t handle, uint8_t *data)
 
     end_time = systemTime(SYSTEM_TIME_MONOTONIC);
 
-    IMG_DITHER_LOGE("dither spend time = %lldum", (end_time - begin_time)/1000);
+    IMG_DITHER_LOGV("dither spend time = %lldum", (end_time - begin_time)/1000);
 
     return 0;
 

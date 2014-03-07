@@ -61,6 +61,80 @@ enum
 	PAGE_FLIP = 0x00000001,
 };
 
+#ifdef SPRD_DITHER_ENABLE
+
+struct dither_info {
+    FILE*    fp;
+    uint32_t alg_handle;
+};
+
+uint32_t dither_open(uint32_t w, uint32_t h)
+{
+    struct dither_info *dither = NULL;
+
+    ALOGE("dither: open: %dx%d", w, h);
+
+    dither = (struct dither_info *)malloc(sizeof(struct dither_info));
+    if (NULL != dither) {
+        int ret = 0;
+        struct img_dither_init_in_param init_in;
+        struct img_dither_init_out_param init_out;
+        FILE* fp = NULL;
+
+        memset(dither, 0, sizeof(struct dither_info));
+
+        fp = fopen("/sys/module/mali/parameters/gpu_cur_freq", "r");
+        if(fp == NULL)
+        {
+            AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
+            free (dither);
+            dither = NULL;
+            return 0;
+        }
+
+        dither->fp = fp;
+        init_in.alg_id = 0;
+        init_in.height = h; //m->info.yres;
+        init_in.width = w; //m->info.xres;
+
+        ret = img_dither_init(&init_in, &init_out);
+        if (0 != ret || 0 == init_out.param) {
+            if(dither->fp) {
+                fclose(dither->fp);
+            }
+            free (dither);
+            dither = NULL;
+            ALOGE("dither: init failed ,ret = 0x%x", ret);
+            return 0;
+        }
+
+        dither->alg_handle = (uint32_t)init_out.param;
+
+        AINF("dither open ID %i, handle = 0x%x\n", 1, dither->alg_handle);
+
+    }
+    else {
+        ALOGE("dither: dither_open failed!");
+    }
+
+    return (uint32_t)dither;
+}
+
+void dither_close(uint32_t handle)
+{
+    if (NULL != handle)
+    {
+        struct dither_info *dither = (struct dither_info *)handle;
+
+        img_dither_deinit(dither->alg_handle);
+        dither->alg_handle = NULL;
+        if(dither->fp) {
+            fclose(dither->fp);
+        }
+        free((void *)handle);
+    }
+}
+#endif
 
 static int fb_set_swap_interval(struct framebuffer_device_t *dev, int interval)
 {
@@ -148,6 +222,32 @@ bool getApctFpsSupport()
 }
 /* @} */
 
+#ifdef SPRD_DITHER_ENABLE
+static bool fb_is_dither_enable(struct dither_info *dither, private_handle_t const* hnd)
+{
+    char buf[16] = "312000";
+    FILE *fp = dither->fp;
+
+    if(fp == NULL)
+    {
+        AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
+    }
+    else
+    {
+        fseek(fp, 0, SEEK_SET);
+        fread(buf, 1, 8, dither->fp);
+    }
+
+    int gpu_cur_freq = atoi(buf);
+    if(gpu_cur_freq <= 256000) {
+        if(hnd->flags & private_handle_t::PRIV_FLAGS_SPRD_DITHER) {
+            return true;
+        }
+    }
+    return false;
+}
+#endif
+
 static int frame_count_fbpost = 0;
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 {
@@ -212,20 +312,29 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #endif
 
 #ifdef SPRD_DITHER_ENABLE
-        if(hnd->flags & private_handle_t::PRIV_FLAGS_SPRD_DITHER) {
-            struct img_dither_in_param in_param;
-            struct img_dither_out_param out_param;
-            uint32_t dither_handle = 0;
+        struct dither_info *dither = (struct dither_info *)dev->reserved[6];
 
-            dither_handle = dev->reserved[6];
-            in_param.alg_id = 0;
-            in_param.data_addr = (void*)(hnd->base);
-            in_param.format = 0;
-            in_param.height =  m->info.yres;
-            in_param.width =  m->info.xres;
-            img_dither_process(dither_handle, &in_param, &out_param);
+        if (NULL != dither) {
+            if(fb_is_dither_enable(dither, hnd)) {
+                struct img_dither_in_param in_param;
+                struct img_dither_out_param out_param;
+                uint32_t dither_handle = 0;
+
+                dither_handle = dither->alg_handle;
+                in_param.alg_id = 0;
+                in_param.data_addr = (void*)(hnd->base);
+                in_param.format = 0;
+                in_param.height =  m->info.yres;
+                in_param.width =  m->info.xres;
+                img_dither_process(dither_handle, &in_param, &out_param);
+                m->info.reserved[3] = 1;
+            }
         }
+        else
 #endif
+        {
+            m->info.reserved[3] = 0;
+        }
 
 #ifdef STANDARD_LINUX_SCREEN
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
@@ -396,6 +505,7 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	info.reserved[0] = 0;
 	info.reserved[1] = 0;
 	info.reserved[2] = 0;
+	info.reserved[3] = 0;
 	info.xoffset = 0;
 	info.yoffset = 0;
 	info.activate = FB_ACTIVATE_NODISP;
@@ -600,14 +710,12 @@ static int fb_close(struct hw_device_t *device)
 	framebuffer_device_t *dev = reinterpret_cast<framebuffer_device_t *>(device);
 
 #ifdef SPRD_DITHER_ENABLE
-	if (dev->reserved[6]) {
-		int ret = 0;
-		ret = img_dither_deinit(dev->reserved[6]);
-		if (ret) {
-				AERR("dither de-init failed ,ret = 0x%x", ret);
-		}
-		AINF("hait dither close ID %i\n", 1);
-	}
+    if (dev->reserved[6]) {
+        int ret = 0;
+        dither_close(dev->reserved[6]);
+        dev->reserved[6] = 0;
+        AINF("dither close ID %i\n", 1);
+    }
 #endif
 
 	if (dev)
@@ -689,23 +797,14 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	*device = &dev->common;
 
 #ifdef SPRD_DITHER_ENABLE
-	{
-		int ret = 0;
-		struct img_dither_init_in_param init_in;
-		struct img_dither_init_out_param init_out;
-
-		init_in.alg_id = 0;
-		init_in.height = m->info.yres;
-		init_in.width = m->info.xres;
-
-		ret = img_dither_init(&init_in, &init_out);
-		if (ret) {
-			AERR("dither init failed ,ret = 0x%x", ret);
-		} else {
-			dev->reserved[6] = (uint32_t)init_out.param;
-		}
-		AINF("hait dither open ID %i\n", 1);
-	}
+    uint32_t dither_handle = (uint32_t)dither_open(m->info.xres, m->info.yres);
+    if (dither_handle > 0) {
+        dev->reserved[6] = dither_handle;
+    }
+    else {
+        dev->reserved[6] = 0;
+        ALOGE("dither: dither open failed!");
+    }
 #endif
 
 	//if (m->finfo.reserved[0] == 0x6f76 &&
