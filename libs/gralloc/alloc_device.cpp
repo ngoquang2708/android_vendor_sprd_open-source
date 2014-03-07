@@ -310,6 +310,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             hnd->ion_hnd = ion_hnd;
             hnd->ion_client = m->ion_client;
             *pHandle = hnd;
+            ion_invalidate_fd(hnd->ion_client,hnd->share_fd);
             return 0;
         }
         else
