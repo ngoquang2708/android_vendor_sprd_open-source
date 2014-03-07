@@ -327,7 +327,8 @@ status_t SPRDMPEG4Decoder::initDecoder() {
         mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
-        ALOGE("Failed to alloc bitstream pmem buffer\n");
+        ALOGE("Failed to alloc bitstream pmem buffer, getHeapID failed");
+        return OMX_ErrorInsufficientResources;
     } else
     {
         int32 ret;
@@ -337,7 +338,8 @@ status_t SPRDMPEG4Decoder::initDecoder() {
             ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
         }
         if (ret < 0) {
-            ALOGE("Failed to alloc bitstream pmem buffer\n");
+            ALOGE("Failed to alloc bitstream pmem buffer, get phy addr failed");
+            return OMX_ErrorInsufficientResources;
         } else {
             mPbuf_stream_v = (uint8 *)mPmem_stream->base();
             mPbuf_stream_p = phy_addr;
@@ -1311,6 +1313,7 @@ int SPRDMPEG4Decoder::extMemoryAlloc(unsigned int extra_mem_size) {
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)mPbuf_extra_p;
             extra_mem[HW_NO_CACHABLE].size = extra_mem_size;
         } else {
+            ALOGE ("mPmem_extra: getHeapID fail %d", fd);
             return -1;
         }
     }

@@ -345,7 +345,8 @@ status_t SPRDAVCDecoder::initDecoder() {
             mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
         }
         if (mPmem_stream->getHeapID() < 0) {
-            ALOGE("Failed to alloc bitstream pmem buffer\n");
+            ALOGE("Failed to alloc bitstream pmem buffer, getHeapID failed");
+            return OMX_ErrorInsufficientResources;
         } else {
             int32 ret;
             if (mIOMMUEnabled) {
@@ -354,7 +355,8 @@ status_t SPRDAVCDecoder::initDecoder() {
                 ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
             }
             if (ret < 0) {
-                ALOGE("Failed to alloc bitstream pmem buffer\n");
+                ALOGE("Failed to alloc bitstream pmem buffer, get phy addr failed");
+                return OMX_ErrorInsufficientResources;
             } else {
                 mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
                 mPbuf_stream_p = (int32)phy_addr;
@@ -1265,6 +1267,7 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
             extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (uint32)mPbuf_extra_p;
             extra_mem[HW_NO_CACHABLE].size = size_extra;
         } else {
+            ALOGE ("mPmem_extra: getHeapID fail %d", fd);
             return -1;
         }
     }
