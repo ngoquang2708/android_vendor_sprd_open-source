@@ -353,8 +353,8 @@ void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes)
                     }
                     //aud_params_ptr[output_arm].audio_nv_arm_mode_info
                     len = strlen(outputstyle);
-                    if (len > NAME_LEN_MAX){
-                        len = NAME_LEN_MAX;
+                    if (len > NAME_LEN_MAX - 1){
+                        len = NAME_LEN_MAX - 1;
                         ALOGE("parse wrong arm,outputstyle too long");
                     }
 
@@ -718,8 +718,8 @@ void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes)
                     //if(output_eq != output_eq_before)
                     //{//aud_params_ptr[output_eq].audio_enha_eq
                     len = strlen(outputstyle);
-                    if (len > NAME_LEN_MAX){
-                        len = NAME_LEN_MAX;
+                    if (len > NAME_LEN_MAX - 1){
+                        len = NAME_LEN_MAX - 1;
                         ALOGE("parse wrong eq,outputstyle too long");
                     }
 
