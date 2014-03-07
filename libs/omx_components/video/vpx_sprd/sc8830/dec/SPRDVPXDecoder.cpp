@@ -265,7 +265,8 @@ status_t SPRDVPXDecoder::initDecoder() {
         mPmem_stream = new MemoryHeapIon(SPRD_ION_DEV, size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
-        ALOGE("Failed to alloc bitstream pmem buffer\n");
+        ALOGE("Failed to alloc bitstream pmem buffer, getHeapID failed");
+        return OMX_ErrorInsufficientResources;
     } else {
         int32 ret;
         if (mIOMMUEnabled) {
@@ -274,7 +275,8 @@ status_t SPRDVPXDecoder::initDecoder() {
             ret = mPmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
         }
         if (ret < 0) {
-            ALOGE("Failed to alloc bitstream pmem buffer\n");
+            ALOGE("Failed to alloc bitstream pmem buffer, get phy addr failed");
+            return OMX_ErrorInsufficientResources;
         } else {
             mPbuf_stream_v = (uint8 *)mPmem_stream->base();
             mPbuf_stream_p = (int32)phy_addr;
@@ -293,7 +295,8 @@ status_t SPRDVPXDecoder::initDecoder() {
         mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_extra->getHeapID() < 0) {
-        ALOGE("Failed to alloc extra pmem (%d)", size_extra);
+        ALOGE("Failed to alloc extra pmem (%d), getHeapID failed", size_extra);
+        return OMX_ErrorInsufficientResources;
     } else {
         int32 ret;
         if (mIOMMUEnabled) {
@@ -302,7 +305,8 @@ status_t SPRDVPXDecoder::initDecoder() {
             ret = mPmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
         }
         if (ret < 0) {
-            ALOGE("Failed to alloc extra pmem");
+            ALOGE("Failed to alloc extra pmem, get phy addr failed");
+            return OMX_ErrorInsufficientResources;
         } else {
             mPbuf_extra_v = (uint8 *)mPmem_extra->base();
             mPbuf_extra_p = (uint32)phy_addr;

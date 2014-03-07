@@ -236,7 +236,8 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
         mPmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_extra->getHeapID() < 0) {
-        ALOGE("Failed to alloc extra buffer (%d)", size_extra);
+        ALOGE("Failed to alloc extra buffer (%d), getHeapID failed", size_extra);
+        return OMX_ErrorInsufficientResources;
     } else
     {
         int32 ret;
@@ -247,7 +248,8 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
         }
         if (ret < 0)
         {
-            ALOGE("Failed to alloc extra buffer");
+            ALOGE("Failed to alloc extra buffer, get phy addr failed");
+            return OMX_ErrorInsufficientResources;
         } else
         {
             mPbuf_extra_v = (unsigned char*)mPmem_extra->base();
@@ -263,7 +265,8 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
         mPmem_stream = new MemoryHeapIon("/dev/ion", size_stream, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
     if (mPmem_stream->getHeapID() < 0) {
-        ALOGE("Failed to alloc stream buffer (%d)", size_stream);
+        ALOGE("Failed to alloc stream buffer (%d), getHeapID failed", size_stream);
+        return OMX_ErrorInsufficientResources;
     } else
     {
         int32 ret;
@@ -274,7 +277,8 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
         }
         if (ret < 0)
         {
-            ALOGE("Failed to alloc stream buffer");
+            ALOGE("Failed to alloc stream buffer, get phy addr failed");
+            return OMX_ErrorInsufficientResources;
         } else
         {
             mPbuf_stream_v = (unsigned char*)mPmem_stream->base();
@@ -907,23 +911,24 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                             ALOGE("Failed to alloc yuv buffer");
                             return;
                         }
+                        int ret,phy_addr, buffer_size;
+                        if(mIOMMUEnabled) {
+                            ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
+                        } else {
+                            ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                        }
+                        if(ret) {
+                            ALOGE("Failed to get_phy_addr_from_ion %d", ret);
+                            return;
+                        }
+                        mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
+                        mPbuf_yuv_p = phy_addr;
+                        mPbuf_yuv_size = buffer_size;
                     }
 
-                    int ret,phy_addr, buffer_size;
-                    if(mIOMMUEnabled) {
-                        ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
-                    } else {
-                        ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-                    }
-                    if(ret) {
-                        ALOGE("Failed to get_phy_addr_from_ion %d", ret);
-                        return;
-                    }
-                    mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
-                    mPbuf_yuv_p = phy_addr;
-                    mPbuf_yuv_size = buffer_size;
+
                     py = mPbuf_yuv_v;
-                    py_phy = (uint8_t *)phy_addr;
+                    py_phy = (uint8_t *)mPbuf_yuv_p;
 
                     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
                     buffer_handle_t buf = *((buffer_handle_t *)(inputData + 4));
@@ -959,23 +964,24 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                         ALOGE("Failed to alloc yuv buffer");
                         return;
                     }
+                    int ret,phy_addr, buffer_size;
+                    if(mIOMMUEnabled) {
+                        ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
+                    } else {
+                        ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                    }
+                    if(ret) {
+                        ALOGE("Failed to get_phy_addr_from_ion %d", ret);
+                        return;
+                    }
+                    mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
+                    mPbuf_yuv_p = phy_addr;
+                    mPbuf_yuv_size = buffer_size;
                 }
 
-                int ret,phy_addr, buffer_size;
-                if(mIOMMUEnabled) {
-                    ret = mYUVInPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
-                } else {
-                    ret = mYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-                }
-                if(ret) {
-                    ALOGE("Failed to get_phy_addr_from_ion %d", ret);
-                    return;
-                }
-                mPbuf_yuv_v =(uint8_t *) mYUVInPmemHeap->base();
-                mPbuf_yuv_p = phy_addr;
-                mPbuf_yuv_size = buffer_size;
+
                 py = mPbuf_yuv_v;
-                py_phy = (uint8_t*)phy_addr;
+                py_phy = (uint8_t*)mPbuf_yuv_p;
 
                 if (mVideoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) {
                     ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
