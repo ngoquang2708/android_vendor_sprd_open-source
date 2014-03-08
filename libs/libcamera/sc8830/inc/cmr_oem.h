@@ -388,6 +388,7 @@ struct camera_context {
 	uint32_t                 preview_fmt;
 	uint32_t                 prev_rot;
 	uint32_t                 prev_rot_index;
+	uint32_t                 prev_rot_frm_is_lock[CAMERA_PREV_ROT_FRM_CNT];
 	struct img_frm           prev_frm[CAMERA_PREV_FRM_CNT];
 	struct img_frm           prev_rot_frm[CAMERA_PREV_ROT_FRM_CNT];
 

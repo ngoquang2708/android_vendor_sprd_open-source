@@ -440,8 +440,14 @@ void SprdCameraHardware::stopPreview()
 
 	waitSetParamsOK();
 
+	if(NULL == mParameters.get("video-size-values")) {
+		if (isRecordingMode()) {
+			LOGW("can't stop preview in recording for no-video-size case! return!");
+			return;
+		}
+	}
+
 	stopPreviewInternal();
-	setRecordingMode(false);
 	LOGV("stopPreview: X");
 }
 
@@ -477,18 +483,19 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 			ret = INVALID_OPERATION;
 		}
 
-		LOGE("preview window is NULL!");
+		LOGE("setPreviewWindow X preview window is NULL!");
 		return ret;
 	} else {
 		switch_ret = switchBufferMode(mPreviewBufferUsage, mOriginalPreviewBufferUsage);
 		if (!switch_ret) {
 			ret = INVALID_OPERATION;
+			LOGE("switch buffer error!");
 			return ret;
 		}
 	}
 
 	if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
-		LOGE("%s: could not retrieve min undequeued buffer count", __func__);
+		LOGE("%s: could not retrieve min undequeued buffer count X", __func__);
 		return INVALID_OPERATION;
 	}
 
@@ -499,7 +506,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
 	LOGV("%s: setting buffer count to %d", __func__, kPreviewBufferCount);
 	if (w->set_buffer_count(w, kPreviewBufferCount)) {
-		LOGE("%s: could not set buffer count", __func__);
+		LOGE("%s: could not set buffer count X", __func__);
 		return INVALID_OPERATION;
 	}
 
@@ -527,6 +534,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	}
 	if (!switch_ret) {
 		ret = INVALID_OPERATION;
+		LOGE("setPreviewWindow X buffer switch error");
 		return ret;
 	}
 
@@ -541,7 +549,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 #endif
 
 	if (w->set_usage(w, usage )) {
-		LOGE("%s: could not set usage on gralloc buffer", __func__);
+		LOGE("%s: could not set usage on gralloc buffer X", __func__);
 		return INVALID_OPERATION;
 	}
 
@@ -550,7 +558,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 		if (w->set_buffers_geometry(w,
 			SIZE_ALIGN(preview_width), SIZE_ALIGN(preview_height),
 			hal_pixel_format)) {
-			LOGE("%s: could not set buffers geometry to %s",
+			LOGE("%s: could not set buffers geometry to %s X",
 				__func__, str_preview_format);
 			return INVALID_OPERATION;
 		}
@@ -559,14 +567,14 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 		if (w->set_buffers_geometry(w,
 			preview_width, preview_height,
 			hal_pixel_format)) {
-			LOGE("%s: could not set buffers geometry to %s",
+			LOGE("%s: could not set buffers geometry to %s X",
 				__func__, str_preview_format);
 			return INVALID_OPERATION;
 		}
 	}
 
 	if (w->set_crop(w, 0, 0, preview_width-1, preview_height-1)) {
-		LOGE("%s: could not set crop to %s",
+		LOGE("%s: could not set crop to %s X",
 			__func__, str_preview_format);
 		return INVALID_OPERATION;
 	}
@@ -726,6 +734,8 @@ void SprdCameraHardware::stopRecording()
 void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 {
 	LOGV("releaseRecordingFrame E. ");
+	uint8_t *addr = (uint8_t *)opaque;
+	uint32_t index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
 
 	Mutex::Autolock pbl(&mPrevBufLock);
 
@@ -736,14 +746,10 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		//Mutex::Autolock l(&mLock);
-		uint8_t *addr = (uint8_t *)opaque;
-		uint32_t index;
-
 		uint32_t *vaddr = NULL;
 		uint32_t *paddr = NULL;
 
 		if (mIsStoreMetaData) {
-			index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
 			paddr = (uint32_t *) *((uint32_t*)addr + 1);
 			vaddr = (uint32_t *) *((uint32_t*)addr + 2);
 
@@ -775,11 +781,11 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 				(int)mPreviewHeapSize);
 
 		camera_release_frame(index);
-		LOGV("releaseRecordingFrame: index: %d", index);
 	} else {
 		releasePreviewFrame();
 	}
 
+	LOGV("releaseRecordingFrame: index: %d", index);
 	LOGV("releaseRecordingFrame X. ");
 }
 
@@ -1551,6 +1557,15 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 		return BAD_VALUE;
 	}
 
+	if(NULL == mParameters.get("video-size-values")) {
+		if (isRecordingMode()) {
+			if (mPreviewWidth != w || mPreviewHeight != h) {
+				((SprdCameraParameters&)params).setPreviewSize(mPreviewWidth, mPreviewHeight);
+				LOGW("should not change preview size in recording for no-video-size!");
+			}
+			params.getPreviewSize(&w, &h);
+		}
+	}
 	return NO_ERROR;
 }
 
@@ -2727,6 +2742,7 @@ int SprdCameraHardware::releasePreviewFrame()
 				mPreviewCancelBufHandle[free_buffer_id] = NULL;
 				LOGV("It's cancelled buf 0x%x, no need to release", free_buffer_id);
 			} else {
+				LOGV("releasePreviewFrame 0x%x", free_buffer_id);
 				if (CAMERA_SUCCESS != camera_release_frame(free_buffer_id)) {
 					ret = -1;
 				}
@@ -3265,7 +3281,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	LOGV("startPreviewInternal isRecording=%d.captureMode=%d",isRecording, mCaptureMode);
 
 	if (isPreviewing()) {
-		LOGE("startPreviewInternal: already in progress, doing nothing.X");
+		LOGW("startPreviewInternal: already in progress, doing nothing.X");
 		setRecordingMode(isRecording);
 		setCameraPreviewMode(isRecordingMode());
 		return NO_ERROR;
@@ -4218,7 +4234,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 
 	width = frame->dx;/*mPreviewWidth;*/
 	height = frame->dy;/*mPreviewHeight;*/
-	LOGV("receivePreviewFrame: width=%d, height=%d \n",width, height);
+	LOGV("receivePreviewFrame E: width=%d, height=%d \n",width, height);
 
 	if (miSPreviewFirstFrame) {
 		GET_END_TIME;
@@ -4238,7 +4254,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 			LOGE("%s: displayOneFrame not successful!", __func__);
 		}
 	} else {
-		LOGE("not in preview status, direct return!");
+		LOGE("receivePreviewFrame X not in preview status, direct return!");
 		return;
 	}
 
@@ -4327,6 +4343,8 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	} else {
 		LOGE("receivePreviewFrame: mData_cb is null.");
 	}
+
+	LOGV("receivePreviewFrame X");
 }
 
 void SprdCameraHardware::notifyShutter()
