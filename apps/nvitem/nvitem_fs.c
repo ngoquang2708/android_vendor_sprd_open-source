@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <ubi-user.h>
 #endif
+#include "cutils/properties.h"
 
 typedef struct  _NV_HEADER {
      uint32 magic;
@@ -18,22 +19,22 @@ typedef struct  _NV_HEADER {
 
 static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 {
-        unsigned short num = 0;
-        unsigned long chkSum = 0;
-        while(len>1){
-                num = (unsigned short)(*dat);
-                dat++;
-                num |= (((unsigned short)(*dat))<<8);
-                dat++;
-                chkSum += (unsigned long)num;
-                len -= 2;
-        }
-        if(len){
-                chkSum += *dat;
-        }
-        chkSum = (chkSum >> 16) + (chkSum & 0xffff);
-        chkSum += (chkSum >> 16);
-        return (~chkSum);
+    unsigned short num = 0;
+    unsigned long chkSum = 0;
+    while(len>1){
+        num = (unsigned short)(*dat);
+        dat++;
+        num |= (((unsigned short)(*dat))<<8);
+        dat++;
+        chkSum += (unsigned long)num;
+        len -= 2;
+    }
+    if(len){
+        chkSum += *dat;
+    }
+    chkSum = (chkSum >> 16) + (chkSum & 0xffff);
+    chkSum += (chkSum >> 16);
+    return (~chkSum);
 }
 
 
@@ -60,46 +61,35 @@ static RAM_NV_CONFIG _ramdiskCfg[RAMNV_NUM+1] =
 };
 
 char* config_path;
+//char partition_path[100];
+
+char fixnv_ori_path[100];
+char fixnv_bak_path[100];
+char runnv_ori_path[100];
+char runnv_bak_path[100];
+extern uint32 fixnv_size,runnv_size;
+
 const RAM_NV_CONFIG*	ramDisk_Init(void)
 {
-	FILE *fp;
-	char line[512];
-	uint32 cnt = 2;
-
-	NVITEM_PRINT("NVITEM: ramDisk_Init enter\n");
-	if (!(fp = fopen(config_path, "r"))) {
-		NVITEM_PRINT("NVITEM: use default config!\n");
+	if(strlen(fixnv_ori_path) > 100 || strlen(fixnv_bak_path) > 100
+		|| strlen(runnv_ori_path) > 100 || strlen(runnv_bak_path)>100){
+		NVITEM_PRINT("NVITEM: init config fail: invalid param!\n");
 		return _ramdiskCfg;
 	}
 
-	cnt = 0;
 	memset(_ramdiskCfg,0,sizeof(_ramdiskCfg));
-	NVITEM_PRINT("NVITEM:\tpartId\toriginImage\t\tbackupImage\t\tlength\n");
-	while(fgets(line, sizeof(line), fp)) {
-		line[strlen(line)-1] = '\0';
-		if (line[0] == '#' || line[0] == '\0'){
-		    continue;
-		}
-		if(-1 == sscanf(
-				line,"%x %s %s %x",
-				&_ramdiskCfg[cnt].partId,
-				_ramdiskCfg[cnt].image_path,
-				_ramdiskCfg[cnt].imageBak_path,
-				&_ramdiskCfg[cnt].image_size
-			)
-		){
-			continue;
-		}
-		NVITEM_PRINT("NVITEM:\t0x%8x\t%32s\t%32s\t0x%8x\n",_ramdiskCfg[cnt].partId,_ramdiskCfg[cnt].image_path,_ramdiskCfg[cnt].imageBak_path,_ramdiskCfg[cnt].image_size);
-		cnt++;
-		if(RAMNV_NUM <= cnt){
-			NVITEM_PRINT("NVITEM: Max support %d disk, this config has too many disk item!!!\n",RAMNV_NUM);
-			break;
-		}
-	}
-	fclose(fp);
-	_ramdiskCfg[cnt].partId = 0;
-	NVITEM_PRINT("NVITEM get config finished! \n");
+	_ramdiskCfg[0].partId = 1;
+	strcpy(_ramdiskCfg[0].image_path,fixnv_ori_path);
+	strcpy(_ramdiskCfg[0].imageBak_path,fixnv_bak_path);
+	_ramdiskCfg[0].image_size = fixnv_size;
+	NVITEM_PRINT("NVITEM: i = 0\t0x%x\t%32s\t%32s\t0x%8x\n",_ramdiskCfg[0].partId,_ramdiskCfg[0].image_path,_ramdiskCfg[0].imageBak_path,_ramdiskCfg[0].image_size);
+
+	_ramdiskCfg[1].partId = 2;
+	strcpy(_ramdiskCfg[1].image_path,runnv_ori_path);
+	strcpy(_ramdiskCfg[1].imageBak_path,runnv_bak_path);
+	_ramdiskCfg[1].image_size = runnv_size;
+
+	NVITEM_PRINT("NVITEM:i = 1 \t0x%x\t%32s\t%32s\t0x%8x\n",_ramdiskCfg[1].partId,_ramdiskCfg[1].image_path,_ramdiskCfg[1].imageBak_path,_ramdiskCfg[1].image_size);
 	return _ramdiskCfg;
 }
 
@@ -142,7 +132,7 @@ BOOLEAN		ramDisk_Read(RAMDISK_HANDLE handle, uint8* buf, uint32 size)
 	char *firstName, *secondName;
 
 	NVITEM_PRINT("ramDisk_Read enter\n");
-	header_ptr = header;
+	header_ptr = (nv_header_t *)header;
 	idx = _getIdx(handle);
 	if(-1 == idx){
 		return 0;

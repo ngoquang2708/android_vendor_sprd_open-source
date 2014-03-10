@@ -7,7 +7,7 @@
 #define NVSYN_CMD		"AT+NVSYNLINK=21,1000,5000,512"
 
 static int channel_fd = 0;
-char* channel_path;
+char channel_path[95];
 
 
 void channel_open(void)
