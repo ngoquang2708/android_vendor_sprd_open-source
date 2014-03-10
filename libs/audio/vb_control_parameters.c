@@ -1119,17 +1119,18 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     ALOGW("voice:vbc_call_end_process, got lock");
     if(adev->call_start){
         force_all_standby(adev);
-	if(adev->pcm_modem_ul) {
-	    pcm_close(adev->pcm_modem_ul);
-	    adev->pcm_modem_ul = NULL;
-	}
-	if(adev->pcm_modem_dl) {
-	    pcm_close(adev->pcm_modem_dl);
-	    adev->pcm_modem_dl = NULL;
-	}
-	adev->call_start = 0;
-	adev->call_connected = 0;
-	i2s_pin_mux_sel(adev,2);
+        mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
+        if(adev->pcm_modem_ul) {
+            pcm_close(adev->pcm_modem_ul);
+            adev->pcm_modem_ul = NULL;
+        }
+        if(adev->pcm_modem_dl) {
+            pcm_close(adev->pcm_modem_dl);
+            adev->pcm_modem_dl = NULL;
+        }
+        adev->call_start = 0;
+        adev->call_connected = 0;
+        i2s_pin_mux_sel(adev,2);
     }
     if(is_timeout) {
 		mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
@@ -1553,7 +1554,6 @@ RESTART:
 		if(ret < 0){
 		    ALOGE("voice:VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
 		}
-		mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
 		vbc_call_end_process(adev,false);
 		MY_TRACE("voice:VBC_CMD_HAL_CLOSE OUT.");
 	    }
