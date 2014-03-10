@@ -143,77 +143,88 @@ inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
     }
 }
 
+
+
+static int RGB_r_y[256];
+static int RGB_r_cb[256];
+static int RGB_r_cr_b_cb[256];
+static int RGB_g_y[256];
+static int RGB_g_cb[256];
+static int RGB_g_cr[256];
+static int RGB_b_y[256];
+static int RGB_b_cr[256];
+static  bool mConventFlag = false;
+
+//init the convert table, the Transformation matrix is as:
+// Y  =  ((66 * (_r)  + 129 * (_g)  + 25    * (_b)) >> 8) + 16
+// Cb = ((-38 * (_r) - 74   * (_g)  + 112  * (_b)) >> 8) + 128
+// Cr =  ((112 * (_r) - 94   * (_g)  - 18    * (_b)) >> 8) + 128
+inline static void inittable()
+{
+    ALOGI("init table");
+    int i = 0;
+    for(i = 0; i < 256; i++) {
+        RGB_r_y[i] =  ((66 * i) >> 8);
+        RGB_r_cb[i] = ((38 * i) >> 8);
+        RGB_r_cr_b_cb[i] = ((112 * i) >> 8 );
+        RGB_g_y[i] = ((129 * i) >> 8) + 16 ;
+        RGB_g_cb[i] = ((74 * i) >> 8) + 128 ;
+        RGB_g_cr[i] = ((94 * i) >> 8) + 128;
+        RGB_b_y[i] =  ((25 * i) >> 8);
+        RGB_b_cr[i] = ((18 * i) >> 8);
+    }
+}
 inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* outyuv,
-                    int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
-#define RGB2Y(_r, _g, _b) (((66 * (_r) + 129 * (_g) + 25 * (_b)) >> 8) + 16)
-#define RGB2CB(_r, _g, _b) (((-38 * (_r) - 74 * (_g) + 112 * (_b)) >> 8) + 128)
-#define RGB2CR(_r, _g, _b) (((112 * (_r) - 94 * (_g) - 18 * (_b)) >> 8) + 128)
+        int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
+#define RGB2Y(_r, _g, _b)    (  *(RGB_r_y +_r)      +   *(RGB_g_y+_g)   +    *(RGB_b_y+_b))
+#define RGB2CB(_r, _g, _b)   ( -*(RGB_r_cb +_r)     -   *(RGB_g_cb+_g)  +    *(RGB_r_cr_b_cb+_b))
+#define RGB2CR(_r, _g, _b)   (  *(RGB_r_cr_b_cb +_r)-   *(RGB_g_cr+_g)  -    *(RGB_b_cr+_b))
+    uint8_t *argb_ptr = inrgb;
+    uint8_t *y_p = outyuv;
+    uint8_t *vu_p = outyuv + width_dst * height_dst;
 
-    uint32_t i, j;
-    uint32_t *argb_ptr = (uint32_t *)inrgb;
-    uint8_t *y_ptr = outyuv;
-    uint8_t *vu_ptr = outyuv + width_dst * height_dst;
-
-    if (NULL == inrgb || NULL == outyuv)
+    if (NULL == inrgb || NULL ==  outyuv)
         return;
-
     if (0 != (width_org & 1) || 0 != (height_org & 1))
         return;
-
-    for (i=0; i<height_org; i+=2)
-    {
-        for (j=0; j<width_org; j+=2)
-        {
-            uint8 y, cb, cr;
-            int32 r, g, b;
-            uint32_t argb;
-
-            argb = *argb_ptr;
-
-            //abgr
-            b = (argb >> 16) & 0xff;
-            g = (argb >> 8) & 0xff;
-            r = (argb >> 0) & 0xff;
-            y = RGB2Y(r, g, b);
-            cr = RGB2CR(r, g, b);
-            cb = RGB2CB(r, g, b);
-
-            *y_ptr = y;
-            *vu_ptr++ = cr;
-            *vu_ptr++ = cb;
-
-            argb = *(argb_ptr + 1);
-            //abgr
-            b = (argb >> 16) & 0xff;
-            g = (argb >> 8) & 0xff;
-            r = (argb >> 0) & 0xff;
-            y = RGB2Y(r, g, b);
-            *(y_ptr + 1) = y;
-
-            argb = *(argb_ptr + width_org);
-            //abgr
-            b = (argb >> 16) & 0xff;
-            g = (argb >> 8) & 0xff;
-            r = (argb >> 0) & 0xff;
-            y = RGB2Y(r, g, b);
-            *(y_ptr + width_dst) = y;
-
-            argb = *(argb_ptr + width_org + 1);
-
-            //abgr
-            b = (argb >> 16) & 0xff;
-            g = (argb >> 8) & 0xff;
-            r = (argb >> 0) & 0xff;
-            y = RGB2Y(r, g, b) ;
-            *(y_ptr + width_dst + 1) = y;
-
-            y_ptr += 2;
-            argb_ptr += 2;
-        }
-
-        y_ptr += width_dst;
-        argb_ptr += width_org;
+    if(!mConventFlag) {
+        mConventFlag = true;
+        inittable();
     }
+    ALOGI("rgb2yuv start");
+    uint8_t *y_ptr;
+    uint8_t *vu_ptr;
+    int64_t start_encode = systemTime();
+    uint32 i ;
+    uint32 j = height_org + 1;
+    while(--j) {
+        //the width_dst may be bigger than width_org,
+        //make start byte in every line of Y and CbCr align
+        y_ptr = y_p;
+        y_p += width_dst;
+        if (!(j & 1))  {
+            vu_ptr = vu_p;
+            vu_p += width_dst;
+            i  = width_org / 2 + 1;
+            while(--i) {
+                //format abgr, litter endian
+                *y_ptr++    = RGB2Y(*argb_ptr, *(argb_ptr+1), *(argb_ptr+2));
+                *vu_ptr++ =  RGB2CR(*argb_ptr, *(argb_ptr+1), *(argb_ptr+2));
+                *vu_ptr++  = RGB2CB(*argb_ptr, *(argb_ptr+1), *(argb_ptr+2));
+                *y_ptr++    = RGB2Y(*(argb_ptr + 4), *(argb_ptr+5), *(argb_ptr+6));
+                argb_ptr += 8;
+            }
+        } else {
+            i  = width_org + 1;
+            while(--i) {
+                //format abgr, litter endian
+                *y_ptr++ = RGB2Y(*argb_ptr, *(argb_ptr+1), *(argb_ptr+2));
+                argb_ptr += 4;
+            }
+        }
+    }
+    int64_t end_encode = systemTime();
+    ALOGI("rgb2yuv time: %d",(unsigned int)((end_encode-start_encode) / 1000000L));
 }
 
 #ifdef VIDEOENC_CURRENT_OPT
