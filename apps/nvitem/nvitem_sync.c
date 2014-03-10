@@ -142,7 +142,6 @@ static uint32 _syncGetHead(uint8** buf, uint32 *size)
 		return SYNC_FAIL;
 	}
 	syncReqFrame = head->head.reqIdx;
-	NVITEM_PRINT("NVITEM:_syncGetHead partId 0x%x\n",head->head.partId);
 	_id = getCtlId(head->head.partId);
 	if(((uint32)-1) == _id)
 	{

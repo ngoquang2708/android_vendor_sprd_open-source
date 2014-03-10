@@ -18,7 +18,9 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \
-    libutils liblog
+    libutils \
+    liblog \
+    libcutils
     
 #ifeq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
 #LOCAL_CFLAGS := -DCONFIG_EMMC
