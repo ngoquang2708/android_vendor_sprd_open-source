@@ -48,6 +48,13 @@ class EdifyGeneratorExt(object):
       self.script.append(
             'write_raw_image("%(fn)s", "%(dev_path)s", "%(pt)s");' % args)
 
+  def MergeSpl(self, p, fn, dev_path):
+    """merge spl patition data use given new spl filename"""
+    partition_type = common.PARTITION_TYPES[p.fs_type]
+    args = {'dev_path':dev_path, 'fn': fn, 'pt':partition_type}
+    self.script.append(
+          'merge_spl("%(fn)s", "%(dev_path)s", "%(pt)s");' % args)
+
   def AddToZipExt(self, input_zip, output_zip, input_path=None):
     """Write the accumulated script to the output_zip file.  input_zip
     is used as the source for the 'updater' binary needed to run
@@ -57,18 +64,14 @@ class EdifyGeneratorExt(object):
     if input_path is None:
       data_nv = input_zip.read("OTA/bin/nvmerge")
       data_cfg = input_zip.read("OTA/bin/nvmerge.cfg")
-      data_spl = input_zip.read("OTA/bin/splmerge")
     else:
       data_nv = open(os.path.join(input_path, "nvmerge")).read()
       data_cfg = open(os.path.join(input_path, "nvmerge.cfg")).read()
-      data_spl = open(os.path.join(input_path, "splmerge")).read()
 
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/nvmerge",
                        data_nv, perms=0755)
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/nvmerge.cfg",
                        data_cfg)
-    common.ZipWriteStr(output_zip, "META-INF/com/google/android/splmerge",
-                       data_spl, perms=0755)
 
 ###################################################################################################
 
@@ -269,12 +272,9 @@ class PartitionUpdater(object):
       self.script.DeleteFiles([new_nv, merged_nv])
 
     if self.file_name == "u-boot-spl-16k.bin":
-      splmerge_exe = os.path.join(OPTIONS.cache_path, "splmerge")
       new_spl =os.path.join(OPTIONS.cache_path, self.target.file_name)
-      merged_spl = os.path.join(OPTIONS.cache_path, "merged_" + self.target.file_name)
-      self.script_ext.Run_program(splmerge_exe, new_spl, merged_spl)
-      self.script_ext.WritePartitionImage(p, merged_spl, pt_dev)
-      self.script.DeleteFiles([new_spl, merged_spl])
+      self.script_ext.MergeSpl(p, new_spl, pt_dev)
+      self.script.DeleteFiles([new_spl])
 
     if self.file_name == "wcnnvitem.bin":
       cache_nv = os.path.join(OPTIONS.cache_path, "wcnnvitem.bin")
@@ -445,8 +445,6 @@ def FullOTA_InstallBegin(info):
   if OPTIONS.modem_update:
     script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", os.path.join(OPTIONS.cache_path, "nvmerge"))
     script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", os.path.join(OPTIONS.cache_path, "nvmerge.cfg"))
-  if OPTIONS.uboot_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", os.path.join(OPTIONS.cache_path, "splmerge"))
 
   if OPTIONS.uboot_update:
     #spl.bin
@@ -538,8 +536,6 @@ def FullOTA_InstallBegin(info):
 
   if OPTIONS.modem_update:
     script.DeleteFiles([os.path.join(OPTIONS.cache_path, "nvmerge"), os.path.join(OPTIONS.cache_path, "nvmerge.cfg")])
-  if OPTIONS.uboot_update:
-    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "splmerge")])
 
 def FullOTA_InstallEnd(info):
   print "FullOTA_InstallEnd"
@@ -568,8 +564,6 @@ def IncrementalOTA_InstallBegin(info):
   if OPTIONS.modem_update:
     script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge", os.path.join(OPTIONS.cache_path, "nvmerge"))
     script_ext.UnpackPackageFile("META-INF/com/google/android/nvmerge.cfg", os.path.join(OPTIONS.cache_path, "nvmerge.cfg"))
-  if OPTIONS.uboot_update:
-    script_ext.UnpackPackageFile("META-INF/com/google/android/splmerge", os.path.join(OPTIONS.cache_path, "splmerge"))
 
   if OPTIONS.uboot_update:
     #spl.bin
@@ -700,8 +694,6 @@ def IncrementalOTA_InstallBegin(info):
 
   if OPTIONS.modem_update:
     script.DeleteFiles([os.path.join(OPTIONS.cache_path, "nvmerge"), os.path.join(OPTIONS.cache_path, "nvmerge.cfg")])
-  if OPTIONS.uboot_update:
-    script.DeleteFiles([os.path.join(OPTIONS.cache_path, "splmerge")])
 
 def IncrementalOTA_InstallEnd(info):
   print "IncrementalOTA_InstallEnd"
