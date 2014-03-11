@@ -676,6 +676,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_cp1,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
+			if( modem->i2s_bt.fd_sys_cp2 >= 0)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
@@ -700,6 +701,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_ap,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
+			if( modem->i2s_bt.fd_sys_cp2 >= 0)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
@@ -1147,6 +1149,8 @@ static int open_voip_codec_pcm(struct tiny_audio_device *adev)
               ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
                pcm_close(adev->pcm_modem_dl);
                adev->pcm_modem_dl = NULL;
+		ALOGE("voip:open voip_codec_pcm dl fail");
+		return -1;
            }
        }
     ALOGD("voip:open codec pcm in 2");
@@ -1156,6 +1160,8 @@ static int open_voip_codec_pcm(struct tiny_audio_device *adev)
                ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
               pcm_close(adev->pcm_modem_ul);
                adev->pcm_modem_ul = NULL;
+		ALOGE("voip:open voip_codec_pcm ul fail");
+		return -1;
            }
        }
 
@@ -2354,8 +2360,8 @@ static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool ena
         ALOGE("bt sco : %s %s after wait", __func__, (enable ? "start": "stop"));
     }
     if(enable && (adev->bt_sco_state & BT_SCO_DOWNLINK_OPEN_FAIL)) {
-        adev->bt_sco_manager.dup_count = ~enable;
-        adev->bt_sco_manager.dup_need_start = ~enable;
+        adev->bt_sco_manager.dup_count = !enable;
+        adev->bt_sco_manager.dup_need_start = !enable;
         ret = -1;
     } else {
         ret = 0;
