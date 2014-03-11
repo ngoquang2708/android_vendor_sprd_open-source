@@ -444,6 +444,8 @@ private:
 	void                 SetOutputStreamMask(int32_t mask);
 	bool                 GetStartPreviewAftPic();
 	void                 SetStartPreviewAftPic(bool IsPicPreview);
+	bool                 GetIsOutputStream();/*for panoramic*/
+	void                 SetIsOutputStream(bool OutputStrm);
 	void                 Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
 	void                 Camera2ProcessReq( camera_req_info *srcreq);
 	int                  CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
@@ -542,6 +544,7 @@ private:
 	bool                              m_zslReprocOk;
 	bool                              m_degenerated_normal_cap;/*zsl degenerated to normal picture*/
 	bool                              m_dcDircToDvSnap;/*for cts testVideoSnapshot*/
+	bool                              mIsOutPutStream;
 	camera_metadata_t                 *m_halRefreshReq;
 	static gralloc_module_t const*    m_grallocHal;
 	uint32_t                          mPreviewFrmRefreshIndex;
@@ -554,7 +557,6 @@ private:
 	uint32_t                          m_CapFrmCnt; /*for zsl*/
 	uint32_t                          m_PrvFrmCnt;/*for zsl*/
 	int                               m_CameraId;
-	int32_t                           mIsOutPutStream;
 	int                               m_reprocessStreamId;
 	const camera2_stream_in_ops_t     *m_reprocessOps;
 	reprocess_buf_info                m_reprocessBuf;
