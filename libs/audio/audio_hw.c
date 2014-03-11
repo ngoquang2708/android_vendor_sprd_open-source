@@ -1958,7 +1958,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * on the output stream mutex - e.g. executing select_mode() while holding the hw device
      * mutex
      */
-    ALOGD("out_write1: out->devices %x,start: out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
+    //ALOGD("out_write1: out->devices %x,start: out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
     if (0==out->standby) {//in playing
