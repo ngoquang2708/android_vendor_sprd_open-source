@@ -1937,6 +1937,10 @@ void SprdCameraHWInterface2::HandleFocus(camera_cb_type cb,
 		m_notifyCb(CAMERA2_MSG_AUTOFOCUS, ANDROID_CONTROL_AF_STATE_NOT_FOCUSED_LOCKED, m_camCtlInfo.afTrigID, 0, m_callbackClient);
 		break;
 
+	case CAMERA_EVT_CB_FOCUS_MOVE:
+		m_notifyCb(CAMERA2_MSG_AUTOFOCUS,parm4==0?(ANDROID_CONTROL_AF_STATE_INACTIVE):(ANDROID_CONTROL_AF_STATE_PASSIVE_SCAN), m_camCtlInfo.afTrigID, parm4, m_callbackClient);
+		break;
+
 	default:
 		HAL_LOGE("camera cb: unknown cb %d for CAMERA_FUNC_START_FOCUS!", cb);
 		m_focusStat = FOCUS_STAT_FOCUS_NOT_LOCKED;
