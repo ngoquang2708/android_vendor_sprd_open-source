@@ -722,6 +722,7 @@ int camera_preview_start_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 sn_mode;
 	uint32_t                 video_mode;
+	uint32_t                 skip_mode, skip_number;
 
 	if ((CAMERA_ZSL_MODE != cxt->cap_mode)
 		&& (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode)
@@ -742,6 +743,8 @@ int camera_preview_start_set(void)
 		CMR_LOGW("ae enable fail");
 		goto exit;
 	}
+
+	camera_init_af_mode(cxt->cmr_set.af_mode, &skip_mode, &skip_number);
 
 	/*ret = Sensor_StreamOff();//wait for set mode done*/
 	ret = Sensor_SetMode_WaitDone();
@@ -1819,6 +1822,14 @@ int camera_autofocus_quit(void)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
+	uint32_t                 skip_mode, skip_number;
+
+	if ((CAMERA_FOCUS_MODE_CAF == cxt->cmr_set.af_mode || CAMERA_FOCUS_MODE_CAF_VIDEO == cxt->cmr_set.af_mode)
+		&& (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt))
+	{
+		/*disable isp caf*/
+		camera_init_af_mode(CAMERA_FOCUS_MODE_AUTO, &skip_mode, &skip_number);
+	}
 
 	if (!(cxt->af_busy)) {
 		CMR_LOGV("autofocus is IDLE direct return!");
@@ -1900,7 +1911,6 @@ int camera_init_af_mode(uint32_t af_mode, uint32_t *skip_mode, uint32_t *skip_nu
 		ret = isp_ioctl(ISP_CTRL_AF_MODE,(void *)&af_mode);
 	} else {
 		CMR_LOGW ("set af: sensor not support\n");
-		ret = CAMERA_NOT_SUPPORTED;
 	}
 
 	return ret;
