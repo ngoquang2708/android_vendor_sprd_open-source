@@ -23,7 +23,11 @@
 
 #define FOCUS_ZONE_W 80
 #define FOCUS_ZONE_H 60
-
+#define AUTOFOCUS_TIMEOUT (280)
+#define FOCUS_MOVE_GAIN_CHECK 10000
+#ifndef ABS
+#define ABS(x)  (((x) < 0) ? (-(x)):(x))
+#endif
 #define EXPOSURE_ZONE_W 1280
 #define EXPOSURE_ZONE_H 960
 
@@ -39,6 +43,8 @@ static uint32_t preview_sysclk;
 static int s_ov5640_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
+static uint32_t s_af_gain = 0;
+static uint32_t s_is_dv_mode = 0;
 static uint32_t preview_hts;
 static uint32_t af_quit_flag = 0;
 
@@ -61,6 +67,7 @@ LOCAL uint32_t _ov5640_BeforeSnapshot(uint32_t param);
 LOCAL uint32_t _ov5640_check_image_format_support(uint32_t param);
 LOCAL uint32_t _ov5640_pick_out_jpeg_stream(uint32_t param);
 LOCAL uint32_t _ov5640_after_snapshot(uint32_t param);
+LOCAL uint32_t _ov5640_get_cur_af_gain(void);
 /*LOCAL uint32_t _ov540_flash(uint32_t param);*/
 LOCAL uint32_t _ov5640_GetExifInfo(uint32_t param);
 LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param);
@@ -1791,6 +1798,8 @@ LOCAL uint32_t _ov5640_set_video_mode(uint32_t mode)
 	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)ov5640_video_mode_tab[mode];
 	uint16_t i=0x00;
 
+	SENSOR_PRINT("0x%02x", mode);
+	s_is_dv_mode = mode;
 	if(mode>1)
 		return 0;
 	for(i=0x00; (0xffff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
@@ -2329,7 +2338,12 @@ int OV5640_set_AE_target(int target)
 	return 0;
 }
 
+LOCAL int OV5640_set_AF_gain(uint32_t gain)
+{
+	s_af_gain = gain;
 
+	return 0;
+}
 int OV5640_capture(uint32_t param)
 {
 	int ae_ag_ctrl;
@@ -2799,6 +2813,27 @@ LOCAL uint32_t _ov5640_AutoFocusMacro(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	return rtn;
 }
 
+LOCAL uint32_t _ov5640_CheckAFGain(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param_ptr;
+	uint32_t cur_af_gain = 0;
+	uint32_t delta_gain = 0;
+
+	cur_af_gain = _ov5640_get_cur_af_gain();
+	delta_gain = ABS((int32_t)cur_af_gain - (int32_t)s_af_gain);
+	SENSOR_PRINT_HIGH("delta_gain %d, s_is_dv_mode %d", delta_gain, s_is_dv_mode);
+	if ((delta_gain > FOCUS_MOVE_GAIN_CHECK)
+		&& (0 != s_af_gain)
+		&& (0 == s_is_dv_mode)) {
+		ext_ptr->zone_cnt = 1;
+	}
+
+	s_af_gain = cur_af_gain;
+
+	return rtn;
+}
+
 LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
@@ -2817,6 +2852,9 @@ LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 		break;
 	case SENSOR_EXT_FOCUS_MACRO:
 		rtn = _ov5640_AutoFocusMacro(ext_ptr);
+		break;
+	case SENSOR_EXT_FOCUS_CHECK_AF_GAIN:
+		rtn = _ov5640_CheckAFGain(ext_ptr);
 		break;
 	default:
 		break;
@@ -7153,6 +7191,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 	case SENSOR_EXT_FUNC_INIT:
 		OV5640_set_AE_target(52);
 		OV5640_set_bandingfilter();
+		OV5640_set_AF_gain(0);
 		rtn = _ov5640_init_firmware(ctl_param);
 		break;
 	case SENSOR_EXT_FOCUS_START:
@@ -7259,6 +7298,18 @@ LOCAL uint32_t _ov5640_set_iso(uint32_t mode)
 
 	SENSOR_PRINT("read 0x%x,0x%x", Sensor_ReadReg(0x3a18),Sensor_ReadReg(0x3a19));
 	return 0;
+}
+
+LOCAL uint32_t _ov5640_get_cur_af_gain(void)
+{
+	int preview_shutter, preview_gain16 = 0;
+	uint32_t af_gain = 0;
+
+	preview_shutter = OV5640_get_shutter();
+	preview_gain16  = OV5640_get_gain16();
+	af_gain = preview_shutter * preview_gain16;
+
+	return af_gain;
 }
 
 LOCAL uint32_t _ov5640_flash(uint32_t param)

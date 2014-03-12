@@ -80,7 +80,7 @@ int androidAfModeToDrvAfMode(camera_metadata_enum_android_control_af_mode_t andr
 		break;
 
 	case ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE:
-		*convertDrvMode = CAMERA_FOCUS_MODE_AUTO;//CAMERA_FOCUS_MODE_INFINITY
+		*convertDrvMode = CAMERA_FOCUS_MODE_CAF;
 		break;
 
 	default:

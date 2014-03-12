@@ -44,6 +44,8 @@ enum {
 	CAMERA_FOCUS_MODE_AUTO_MULTI,
 	CAMERA_FOCUS_MODE_MACRO,
 	CAMERA_FOCUS_MODE_INFINITY,
+	CAMERA_FOCUS_MODE_CAF = 4,
+	CAMERA_FOCUS_MODE_CAF_VIDEO = 5,
 	CAMERA_FOCUS_MODE_MAX
 };
 
@@ -90,5 +92,17 @@ typedef enum _ae_lock {
 	AE_LOCK_ON
 }ae_lock;
 
-
+struct str_map {
+	const char *const desc;
+	int val;
+};
+const struct str_map focus_mode_map[] = {
+	{"auto",               CAMERA_FOCUS_MODE_AUTO},
+	{"auto-multi",         CAMERA_FOCUS_MODE_AUTO_MULTI},
+	{"macro",              CAMERA_FOCUS_MODE_MACRO},
+	{"infinity",           CAMERA_FOCUS_MODE_INFINITY},
+	{"continuous-picture", CAMERA_FOCUS_MODE_CAF},
+	{"continuous-video",   CAMERA_FOCUS_MODE_CAF_VIDEO},
+	{NULL,                 0}
+};
 #endif //_SPRD_CAMERA_HARDWARE_CONFIG_H_
