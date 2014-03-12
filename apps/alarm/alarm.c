@@ -15,6 +15,9 @@
 #include <errno.h>
 #include <linux/android_alarm.h>
 
+#include <sys/vfs.h>
+#include <dirent.h>
+#include <sys/mount.h>
 
 extern int check_input_dev(const char * cmstr);
 void *refreshen_screen(void *data);
@@ -40,6 +43,7 @@ static pthread_t alarm_t_ShowUi = -1;
 static int alarm_BootSystem;
 unsigned boot_alarm = 0;
 int time_dm;
+int mount_flag = -1;
 
 struct boot_status gs_boot_state = {0};
 struct alarm_db *g_alarm_db_list = NULL;
@@ -59,6 +63,97 @@ void system_shutdown(void)
 	reboot(LINUX_REBOOT_CMD_POWER_OFF);
 }
 
+static int alarm_mount_externalsd(void)
+{
+        int ret = -1;
+        DIR *dir;
+        struct dirent *ptr;
+        char sd[21] = "/dev/block/";
+        char *device_emmc = "mmcblk1p1";
+	char *device_nand = "mmcblk0p1";
+	char *device =NULL;
+	int flag = 0;
+	char value[10] = {0};
+        dir = opendir("/dev/block");
+	property_get("ro.storage.flash_type", value, "10");
+	flag = atoi(value);
+
+	if( flag == 1){
+		while( (ptr=readdir(dir)) != NULL ){
+			if(strcmp(ptr->d_name, device_nand) == 0){
+				ret = 0;
+				device = device_nand;
+				LOGE("sdcard:%s\n", device);
+				break;
+			}
+		}
+        }else if( flag == 2){
+		while( (ptr=readdir(dir)) != NULL ){
+			if(strcmp(ptr->d_name, device_emmc) == 0){
+				ret = 0;
+				device = device_emmc;
+				LOGE("sdcard:%s\n", device);
+				break;
+			}
+		}
+	}else{
+		while( (ptr=readdir(dir)) != NULL ){
+			if(strcmp(ptr->d_name, device_emmc) == 0){
+				ret = 0;
+				device = device_emmc;
+				flag = 2;
+				LOGE("sdcard:%s\n", device);
+				break;
+			}else if(strncmp(ptr->d_name, "mmcblk0p",8) == 0){
+				if(strcmp(ptr->d_name, device_nand) > 0){
+					flag = 1;
+				}else if(flag != 1){
+					flag =3;
+				}
+			}
+		}
+		if(flag == 2)
+			device = device_emmc;
+		else if(flag == 3){
+			device = device_nand;
+			LOGE("sdcard:%s\n", device);
+			ret = 0;
+		}
+        }
+	closedir(dir);
+	if(ret == -1){
+		LOGE("no external sdcard\n");
+		return ret;
+	}
+	strcat(sd, device);
+
+        ret = mount(sd, "/storage/sdcard0", "vfat", MS_NOATIME | MS_NODEV | MS_NODIRATIME | MS_NOSUID , "utf8=true");
+
+        if(ret == 0){
+                LOGE("alarm_mount sdmount %s done\n", sd);
+                return ret;
+        }
+        LOGE("Can't mount %s\n(%s)\n", sd, strerror(errno));
+        return -1;
+}
+
+static void alarm_umountsd(void)
+{
+	int ret;
+	int n = 50;
+	if(mount_flag < 0)
+		return;
+	while(n){
+		ret= umount("/storage/sdcard0");
+		if(ret == 0){
+			LOGE("alarm_umountsd done\n");
+			return;
+		}
+		LOGE("Can't umount(%s)\n",strerror(errno));
+		usleep(500000);
+		n--;
+	}
+}
 //add list g_alarm_db_list form alarms.db
 int add_alarm_db_list(void)
 {
@@ -97,6 +192,7 @@ char *get_ring_file(void)
 	unsigned long ring_length = 0;
 	unsigned long snooze_length = 0;
 	struct stat s;
+	char file_path1[100] = {0};
 
 	alarm_flag_fd = open(alarm_name, O_RDWR);
 	if(alarm_flag_fd < 0){
@@ -116,7 +212,7 @@ char *get_ring_file(void)
 	char *ring_time = strtok(NULL, " \t\n");
 	char *snooze_time = strtok(NULL, " \t\n");
 	char *time_mdm = strtok(NULL, " \t\n");
-	char *file_path = strtok(NULL, " \t\n");
+	char *file_path = strtok(NULL, "\t\n");
 	if(ring_time != NULL)
 		ring_length = strtoul(ring_time, (char **)NULL, 10);
 	else
@@ -126,8 +222,18 @@ char *get_ring_file(void)
 		ring_length = 1;
 
 	if (file_path != NULL && stat(file_path, &s) != 0) {
-		LOGE("%s cannot find '%s'\n", file_path,strerror(errno));
-		file_path = NULL;
+		if(!strncmp(file_path,"/storage/emulated/",18)){
+			char *temp_sd =strstr(file_path,"temp_sd");
+			if(temp_sd){
+				sprintf(file_path1,"/data/media/%s",temp_sd);
+			}else
+				sprintf(file_path1,"/data/media/%s",file_path+18);
+			file_path = file_path1;
+		}
+		if(file_path != NULL && stat(file_path, &s) != 0){
+			LOGE("%s cannot find '%s'\n", file_path,strerror(errno));
+			file_path = NULL;
+		}
 	}
 
 	if(snooze_time != NULL)
@@ -366,7 +472,7 @@ int alarm_init(void)
 		gs_boot_state.alarm_init = 0;
 		return ERR_BOOT_ALARM_NOT_ALARM_ITEM;
 	}
-
+	mount_flag = alarm_mount_externalsd();
 	get_ring_file();
 	sprintf(g_brightness,"%d", 100);
 	gs_boot_state.alarm_state = BOOT_ALARM_ALARMING;
@@ -443,7 +549,6 @@ int  main(int argc, char **argv)
 	long long time_diff_temp;
 	struct alarm_sec *fire_alarm;
 	int timer = 1;
-
 	log_init();
 	LOGD("alarm start\n");
 
@@ -616,6 +721,7 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 		usleep(5000);
 	}
 	gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
+	alarm_umountsd();
 	boot_alarm_exit();
 	LOGE(" alarm final exit\n");
 	return 0;
@@ -1244,12 +1350,12 @@ int musicProcess(char *filename, int op)
 	}
 	else if (op != 1)
 	{
-		ERROR("%s:%s wrong operation code [%d]!\n", __FILE__, __func__, op);
+		LOGE("%s:%s wrong operation code [%d]!\n", __FILE__, __func__, op);
 		return -1;
 	}
 
 	if (-1 != pid_mp3_player) {
-		ERROR("%s:%s now one mp3 is playing, please close it first!\n", __FILE__, __func__);
+		LOGE("%s:%s now one mp3 is playing, please close it first!\n", __FILE__, __func__);
 		return -5;
 	}
 	if(filename == NULL)
