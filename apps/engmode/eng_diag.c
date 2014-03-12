@@ -1374,8 +1374,16 @@ static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T
             if(receive_fifo_id !=-1 )
             {
                 result = read(receive_fifo_id,&length,sizeof(int));
+                if(result < 0)
+                {
+                    goto error;
+                }
                 sprintf((char*)aud_params_ptr,"%d",length);
                 result = read(receive_fifo_id,(void*)aud_params_ptr+sizeof(int),length);
+                if(result < 0)
+                {
+                    goto error;
+                }
                 result += sizeof(int);
                 close(receive_fifo_id);
                 ALOGE("eng_notify_mediaserver_updatapara,result:%d,received:%d!\n",result,length);
@@ -1388,8 +1396,10 @@ static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T
     } else {
         ALOGE("%s open audio FIFO error %s,fifo_id:%d\n",__FUNCTION__,strerror(errno),fifo_id);
     }
-
     ALOGE("eng_notify_mediaserver_updatapara X,result:%d,length:%d!\n",result,length);
+    return result;
+error:
+    ALOGE("eng_notify_mediaserver_updatapara X,ERROR,result:%d!\n",result);
     return result;
 }
 
@@ -1467,16 +1477,19 @@ int eng_diag_audio(char *buf,int len, char *rsp)
         char bin_tmp[2*ENG_DIAG_SIZE];
         memcpy(rsp,"+PEINFO:",sizeof("+PEINFO:"));
         length =  eng_notify_mediaserver_updatapara(ENG_PHONEINFO_OPS,0, bin_tmp);
-        bin2ascii(rsp+strlen("+PEINFO:"),bin_tmp,length);
-        ENG_LOG("Call %s, rsp=%s\n",__FUNCTION__, rsp);
-        ENG_LOG("Call %s, rsp=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")),(rsp+strlen("+PEINFO:")));
-        ENG_LOG("Call %s, item1=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH),(rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH));
-        ENG_LOG("Call %s, item2=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH),rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH );
-        return strlen(rsp+strlen("+PEINFO:"))+strlen("+PEINFO:");
+        if(length > 0)
+        {
+          bin2ascii(rsp+strlen("+PEINFO:"),bin_tmp,length);
+          ENG_LOG("Call %s, rsp=%s\n",__FUNCTION__, rsp);
+          ENG_LOG("Call %s, rsp=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")),(rsp+strlen("+PEINFO:")));
+          ENG_LOG("Call %s, item1=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH),(rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH));
+          ENG_LOG("Call %s, item2=%s,%s\n",__FUNCTION__, (rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH),rsp+strlen("+PEINFO:")+AUDIO_AT_HARDWARE_NAME_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH+AUDIO_AT_ITEM_VALUE_LENGTH+AUDIO_AT_ITEM_NAME_LENGTH );
+          return strlen(rsp+strlen("+PEINFO:"))+strlen("+PEINFO:");
+        } else {
+          goto out;
+        }
     }
     //audio_fd = open(ENG_AUDIO_PARA_DEBUG,O_RDWR);
-
-
     if(g_is_data){
         ENG_LOG("HEY,DATA HAS COME!!!!");
         g_is_data = g_is_data;
