@@ -42,7 +42,7 @@ struct camera_context        *g_cxt = &cmr_cxt;
 				(g_cxt->cap_orig_size.width == g_cxt->picture_size.width) && \
 				(g_cxt->cap_orig_size.height == g_cxt->picture_size.height))
 
-#define CAP_SIM_ROT (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot))
+#define CAP_SIM_ROT         (g_cxt->is_cfg_rot_cap && (IMG_ROT_0 == g_cxt->cap_rot))
 
 #define NO_SCALING           (YUV_NO_SCALING || RAW_NO_SCALING)
 #define SET_CHN_IDLE(x)      do {g_cxt->v4l2_cxt.chn_status[x] = CHN_IDLE;} while (0)
@@ -7853,7 +7853,11 @@ int camera_get_data_redisplay(int output_addr,
 	rect.start_y = 0;
 	rect.width = input_width;
 	rect.height = input_height;
-	camera_get_trim_rect(&rect, 0, &dst_frame.size);
+	ret = camera_get_trim_rect(&rect, 0, &dst_frame.size);
+	if (ret) {
+		CMR_LOGE("invalid parameters for get trim rect");
+		return ret;
+	}
 	camera_sync_scale_start(g_cxt);
 	cmr_scale_evt_reg(NULL);
 	ret = cmr_scale_start(input_height,

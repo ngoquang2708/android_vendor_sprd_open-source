@@ -1475,7 +1475,6 @@ LOCAL int _Sensor_DeviceDeInit()
 		s_p_sensor_cxt->fd_sensor = -1;
 		CMR_LOGV("SENSOR: _Sensor_DeviceDeInit is done, ret = %d \n", ret);
 	}
-	_Sensor_KillThread();
 
 	return 0;
 }
@@ -2151,6 +2150,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 	*sensor_num_ptr = sensor_num;
 init_exit:
 	if (SENSOR_SUCCESS != ret_val) {
+		_Sensor_KillThread();
 		_Sensor_DeviceDeInit();
 		if (is_first) {
 			if (PNULL != s_p_sensor_cxt) {
@@ -2475,6 +2475,7 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 
 	_Sensor_KillMonitorThread();
 	_Sensor_KillFocusMoveThread();
+	_Sensor_KillThread();
 
 	_Sensor_StreamOff();
 	_Sensor_Device_MIPI_deinit();
@@ -3129,7 +3130,7 @@ LOCAL int _Sensor_KillThread(void)
 	message.msg_type = SENSOR_EVT_DEINIT;
 	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
 	if (ret) {
-		CMR_LOGE("Fail to send message to camera main thread");
+		CMR_LOGE("Fail to send message to camera main thread 0x%x", s_p_sensor_cxt->queue_handle);
 		return ret;
 	}
 
