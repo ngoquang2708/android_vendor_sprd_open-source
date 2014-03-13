@@ -178,6 +178,19 @@ struct pcm_config pcm_config_mm = {
     .period_size = LONG_PERIOD_SIZE,
     .period_count = PLAYBACK_LONG_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
+    .start_threshold = SHORT_PERIOD_SIZE,
+    .avail_min = SHORT_PERIOD_SIZE,
+};
+
+
+struct pcm_config pcm_config_mm_fast = {
+    .channels = 2,
+    .rate = DEFAULT_OUT_SAMPLING_RATE,
+    .period_size = SHORT_PERIOD_SIZE,
+    .period_count = PLAYBACK_SHORT_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = SHORT_PERIOD_SIZE/2,
+    .avail_min = SHORT_PERIOD_SIZE/2,
 };
 
 struct pcm_config pcm_config_mm_ul = {
@@ -389,6 +402,7 @@ struct tiny_stream_out {
     int write_threshold;
     bool low_power;
     FILE * out_dump_fd;
+    audio_output_flags_t flags;
 };
 
 #define MAX_PREPROCESSORS 3 /* maximum one AGC + one NS + one AEC per input stream */
@@ -1460,11 +1474,14 @@ static int start_output_stream(struct tiny_stream_out *out)
         }
         BLUE_TRACE("open s_tinycard in");
         card = s_tinycard;
-        out->config = pcm_config_mm;
-        out->write_threshold = PLAYBACK_LONG_PERIOD_COUNT * LONG_PERIOD_SIZE;
+	if(out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+	    out->config = pcm_config_mm;
+	}
+	else {
+	    out->config = pcm_config_mm_fast;
+	}
         out->low_power = 1;
-        out->config.start_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT / 2;
-        out->config.avail_min = LONG_PERIOD_SIZE;
+
         out->pcm = pcm_open(card, port, PCM_OUT | PCM_MMAP | PCM_NOIRQ, &out->config);
 
         if (!pcm_is_ready(out->pcm)) {
@@ -1544,7 +1561,7 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     /* take resampling into account and return the closest majoring
        multiple of 16 frames, as audioflinger expects audio buffers to
        be a multiple of 16 frames */
-    size_t size = (LONG_PERIOD_SIZE * DEFAULT_OUT_SAMPLING_RATE) / out->config.rate;
+    size_t size = (out->config.period_size * DEFAULT_OUT_SAMPLING_RATE) / out->config.rate;
     size = ((size + 15) / 16) * 16;
     BLUE_TRACE("[TH] size=%d, frame_size=%d", size, audio_stream_frame_size(stream));
     return size * audio_stream_frame_size(stream);
@@ -1755,7 +1772,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
 
-    return (LONG_PERIOD_SIZE * PLAYBACK_LONG_PERIOD_COUNT * 1000) / out->config.rate;
+    return (out->config.period_size * out->config.period_count * 1000) / out->config.rate;
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
@@ -2065,15 +2082,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         in_frames = bytes / frame_size;
         out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
 
-        if (low_power != out->low_power) {
+        if ((low_power != out->low_power) && (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER)) {
             if (low_power) {
-                out->write_threshold = LONG_PERIOD_SIZE * PLAYBACK_LONG_PERIOD_COUNT;
-                //out->config.avail_min = LONG_PERIOD_SIZE;
-                out->config.avail_min = (out->write_threshold * 3) / 4;
+                out->config.avail_min = (out->config.period_size*out->config.period_count * 3) / 4;
                 ALOGW("low_power out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
                         out->write_threshold,out->config.avail_min, out->config.start_threshold);
             } else {
-                out->write_threshold = SHORT_PERIOD_SIZE * PLAYBACK_SHORT_PERIOD_COUNT;
                 out->config.avail_min = SHORT_PERIOD_SIZE;
                 ALOGW("out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
                         out->write_threshold,out->config.avail_min, out->config.start_threshold);
@@ -2097,35 +2111,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         XRUN_TRACE("in_frames=%d, out_frames=%d", in_frames, out_frames);
         XRUN_TRACE("out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
                 out->write_threshold,out->config.avail_min, out->config.start_threshold);
-        /* do not allow more than out->write_threshold frames in kernel pcm driver buffer */
-        do {
-            struct timespec time_stamp;
-
-            if (pcm_get_htimestamp(out->pcm, (unsigned int *)&kernel_frames, &time_stamp) < 0)
-                break;
-            XRUN_TRACE("src_kernel_frames=%d, out_frames=%d", kernel_frames, out_frames);
-
-            kernel_frames = pcm_get_buffer_size(out->pcm) - kernel_frames;
-            XRUN_TRACE("buffer_size =%d, kernel_frames=%d, wirte_threshold=%d",
-                    pcm_get_buffer_size(out->pcm),kernel_frames, out->write_threshold);
-            if (kernel_frames > out->write_threshold) {
-                unsigned long time = (unsigned long)
-                    (((int64_t)(kernel_frames - out->write_threshold) * 1000000) /
-                     DEFAULT_OUT_SAMPLING_RATE);
-                if (time < MIN_WRITE_SLEEP_US)
-                    time = MIN_WRITE_SLEEP_US;
-                if(modem->debug_info.enable) {
-                    time1 = getCurrentTimeUs();
-                }
-                usleep(time);
-                if(modem->debug_info.enable) {
-                    time2 = getCurrentTimeUs();
-                    deltatime = ((time1>time2)?(time1-time2):(time2-time1));
-                    deltatime -= time;
-                }
-            }
-        } while (kernel_frames > out->write_threshold);
-
         if(modem->debug_info.enable) {
             time1 = getCurrentTimeUs();
         }
@@ -3163,11 +3148,17 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.write = out_write;
     out->stream.get_render_position = out_get_render_position;
 
-    out->config = pcm_config_mm;
+    if(flags&AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+	out->config = pcm_config_mm;
+    }
+    else {
+	out->config = pcm_config_mm_fast;
+    }
 
     out->dev = ladev;
     out->standby = 1;
     out->devices = devices;
+    out->flags = flags;
 
     /* FIXME: when we support multiple output devices, we will want to
      * do the following:
