@@ -118,9 +118,10 @@ static char *debugfs_mount(const char *mountpoint)
 		mountpoint = "/sys/kernel/debug/";
 	}
 
-	if (statfs("/debug_12345", &st_fs) < 0)
-		mkdir("/debug_12345/", 0644);
-
+	if (statfs("/debug_12345", &st_fs) < 0){
+		if(mkdir("/debug_12345/", 0644) < 0)
+			return NULL;
+	}
 	if (mount(NULL, mountpoint, "debugfs", 0, NULL) < 0)
 		return NULL;
 
@@ -137,6 +138,8 @@ static int find_create_debugfs(char **p)
 {
 	char *_p = 0;
 	char *debugfs_dir = debugfs_mount("/debug_12345/");
+	if (!debugfs_dir)
+		return -1;
 	_p = debugfs_dir;
 	while (*_p)
 		_p++;
@@ -147,10 +150,8 @@ static int find_create_debugfs(char **p)
 
 	DEBUGSEE("debugfs_dir = %s\n",debugfs_dir);
 	*p = debugfs_dir;
-	if (!debugfs_dir)
-		return -1;
-	else
-		return 0;
+
+	return 0;
 }
 int sub_main(int flags, int addr, int value, int nword)
 {
@@ -160,6 +161,7 @@ int sub_main(int flags, int addr, int value, int nword)
 	char strPath2[256] = {0};
 	char c[12 + 12] = {0};
 	int n = 0;
+	ssize_t cnt = 0;
 
 	if (find_create_debugfs(&dir))
 		return 0;
@@ -194,8 +196,13 @@ int sub_main(int flags, int addr, int value, int nword)
 			addr |= 1;
 		n = snprintf(c, 11,"0x%x", addr);
 		write(fd1, c, n);
-		memset(c, 11, 0);
-		read(fd2, c, 10);
+		memset(c, 0, 11);
+		cnt = read(fd2, c, 10);
+		if((cnt < 0) || (cnt > 10)){
+			perror("read data");
+			exit(EXIT_FAILURE);
+			return -1;
+		}
 		fprintf(stdout, "%s\n",c);
 	} else if ( (flags & LOOKAT_F_GET_MUL) || (flags & LOOKAT_F_GET_MUL_V) ){
         int i;
@@ -207,9 +214,14 @@ int sub_main(int flags, int addr, int value, int nword)
 					addr |= 1;
 				n = snprintf(c, 11,"0x%0x", addr);
 				write(fd1, c, n);
-				memset(c, 11, 0);
-				read(fd2, c, 10);/*It is  simple file system don't support seek method
+				memset(c, 0, 11);
+				cnt = read(fd2, c, 10);/*It is  simple file system don't support seek method
 									 just open again it is quickly.*/
+				if((cnt < 0) || (cnt > 10)){
+					perror("read data");
+					exit(EXIT_FAILURE);
+					return -1;
+				}
 				close(fd2);
 				if((fd2 = open(strPath2, O_RDWR | O_SYNC)) < 0) {
 					fprintf(stderr,"open %s error\n", strPath2);
@@ -220,9 +232,9 @@ int sub_main(int flags, int addr, int value, int nword)
         }
 
 	}
+	close(fd2);
 Exit:
 	close(fd1);
-	close(fd2);
 	return 0;
 }
 
