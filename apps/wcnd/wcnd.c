@@ -27,7 +27,7 @@
 //#define FOR_UNIT_TEST
 
 //Macro to control if polling cp2 loop interface every 5 seconds
-//#define LOOP_CHECK
+#define LOOP_CHECK
 
 //Macro to enable the Wifi Engineer Mode
 #define WIFI_ENGINEER_ENABLE

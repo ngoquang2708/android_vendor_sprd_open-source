@@ -62,17 +62,19 @@ static int eng_runcommand(int client_fd, int argc, char* argv[])
 		if(argc < 2)
 		{
 			wcnd_send_back_cmd_result(client_fd, "Missing argument", 0);
+			return 0;
 		}
 
 		//TODO: call iwnapi run command
 		WCND_LOGD("%s: CALL IWNPI CMD = '%s'", __FUNCTION__, argv[1]);
 		iwnpi_runcommand(client_fd, argc-1, &argv[1]);
 	}
-    else if(!strcmp(argv[0], BT_SUBMODULE))
+	else if(!strcmp(argv[0], BT_SUBMODULE))
         {
-            if(argc < 2)
+		if(argc < 2)
 		{
 			wcnd_send_back_cmd_result(client_fd, "Missing argument", 0);
+			return 0;
 		}
 
 		//TODO: call bt run command
