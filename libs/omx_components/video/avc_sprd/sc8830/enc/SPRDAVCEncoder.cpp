@@ -114,22 +114,30 @@ static status_t ConvertAvcSpecLevelToOmxAvcLevel(
     return BAD_VALUE;
 }
 
-inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
-    uint8_t *inyuv, uint8_t* outyuv,
-    int32_t width, int32_t height) {
+/*
+ * In case of orginal input height_org is not 16 aligned, we shoud copy original data to a larger space
+ * Example: width_org = 640, height_org = 426,
+ * We have to copy this data to a width_dst = 640 height_dst = 432 buffer which is 16 aligned.
+ * Be careful, when doing this convert we MUST keep UV in their right position.
+ *
+ * FIXME: If width_org is not 16 aligned also, this would be much complicate
+ *
+ */
+inline static void ConvertYUV420PlanarToYUV420SemiPlanar(uint8_t *inyuv, uint8_t* outyuv,
+    int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 
-    int32_t outYsize = width * height;
+    int32_t inYsize = width_org * height_org;
     uint32_t *outy =  (uint32_t *) outyuv;
-    uint16_t *incb = (uint16_t *) (inyuv + outYsize);
-    uint16_t *incr = (uint16_t *) (inyuv + outYsize + (outYsize >> 2));
+    uint16_t *incb = (uint16_t *) (inyuv + inYsize);
+    uint16_t *incr = (uint16_t *) (inyuv + inYsize + (inYsize >> 2));
 
     /* Y copying */
-    memcpy(outy, inyuv, outYsize);
+    memcpy(outy, inyuv, inYsize);
 
-    /* U & V copying */
-    uint32_t *outyuv_4 = (uint32_t *) (outyuv + outYsize);
-    for (int32_t i = height >> 1; i > 0; --i) {
-        for (int32_t j = width >> 2; j > 0; --j) {
+    /* U & V copying, Make sure uv data is in their right position*/
+    uint32_t *outUV = (uint32_t *) (outyuv + width_dst * height_dst);
+    for (int32_t i = height_org >> 1; i > 0; --i) {
+        for (int32_t j = width_org >> 2; j > 0; --j) {
             uint32_t tempU = *incb++;
             uint32_t tempV = *incr++;
 
@@ -138,7 +146,7 @@ inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
             uint32_t temp = tempV | (tempU << 8);
 
             // Flip U and V
-            *outyuv_4++ = temp;
+            *outUV++ = temp;
         }
     }
 }
@@ -837,7 +845,9 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
             }
         }
 
-        if(def->nPortIndex == 1) {
+        // As encoder we should modify bufferSize on Input port
+        // Make sure we have enough input date for input buffer
+        if(def->nPortIndex <= 1) {
             uint32_t bufferSize = ((def->format.video.nFrameWidth+15)&(~15))*((def->format.video.nFrameHeight+15)&(~15))*3/2;
             if(bufferSize > def->nBufferSize) {
                 def->nBufferSize = bufferSize;
@@ -1059,7 +1069,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
             return;
         }
 
-        ALOGV("%s, %d, inHeader->nFilledLen: %d, mStoreMetaData: %d, mVideoColorFormat: %x",
+        ALOGV("%s, %d, inHeader->nFilledLen: %d, mStoreMetaData: %d, mVideoColorFormat: 0x%x",
             __FUNCTION__, __LINE__, inHeader->nFilledLen, mStoreMetaData, mVideoColorFormat);
 
         // Save the input buffer info so that it can be
@@ -1138,7 +1148,8 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     }
 
                     if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
-                        ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                        ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
+                                                             (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
                         ConvertARGB888ToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     } else {
@@ -1183,7 +1194,8 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                 py_phy = (uint8_t*)mPbuf_yuv_p;
 
                 if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
-                    ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                    ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
+                                                         (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
                     ConvertARGB888ToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                 } else {
