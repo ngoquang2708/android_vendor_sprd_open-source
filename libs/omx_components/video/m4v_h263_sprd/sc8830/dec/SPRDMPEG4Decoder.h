@@ -45,6 +45,14 @@ protected:
     virtual OMX_ERRORTYPE internalSetParameter(
         OMX_INDEXTYPE index, const OMX_PTR params);
 
+    virtual OMX_ERRORTYPE internalUseBuffer(
+            OMX_BUFFERHEADERTYPE **buffer,
+            OMX_U32 portIndex,
+            OMX_PTR appPrivate,
+            OMX_U32 size,
+            OMX_U8 *ptr,
+            BufferPrivateStruct* bufferPrivate=NULL);
+
     virtual OMX_ERRORTYPE allocateBuffer(
         OMX_BUFFERHEADERTYPE **header,
         OMX_U32 portIndex,
@@ -121,6 +129,7 @@ private:
     EOSStatus mEOSStatus;
     bool mNeedIVOP;
     bool mHeadersDecoded;
+    bool mAllocateBuffers;
     FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
     FT_MP4DecInit mMP4DecInit;
     FT_MP4DecVolHeader mMP4DecVolHeader;
