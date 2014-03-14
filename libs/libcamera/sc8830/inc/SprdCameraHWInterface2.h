@@ -564,7 +564,7 @@ private:
 	List<camera_metadata_t *>         m_ReqQueue;
 	Mutex                             m_requestMutex;
 	Mutex                             m_halCBMutex;//for vary
-	Mutex                             m_zslStopPrvFrmCBMutex;//for zsl proccess
+	Mutex                             m_capBufMutex;
 	Mutex                             m_stopPrvFrmCBMutex;//mutex for stop preview and receivepreviewframe
 	Mutex                             m_metaDataMutex;
 	Mutex                             mStateLock;
