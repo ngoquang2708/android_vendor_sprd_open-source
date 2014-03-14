@@ -42,14 +42,6 @@ protected:
     virtual OMX_ERRORTYPE internalSetParameter(
             OMX_INDEXTYPE index, const OMX_PTR params);
 
-    virtual OMX_ERRORTYPE internalUseBuffer(
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size,
-            OMX_U8 *ptr,
-            BufferPrivateStruct* bufferPrivate=NULL);
-
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortEnableCompleted(OMX_U32 portIndex, bool enabled);

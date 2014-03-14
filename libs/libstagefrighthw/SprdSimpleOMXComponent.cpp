@@ -238,34 +238,6 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::internalUseBuffer(
     (*header)->nOutputPortIndex = portIndex;
     (*header)->nInputPortIndex = portIndex;
 
-    if(portIndex == OMX_DirOutput) {
-        (*header)->pOutputPortPrivate = new BufferCtrlStruct;
-        CHECK((*header)->pOutputPortPrivate != NULL);
-        BufferCtrlStruct* pBufCtrl= (BufferCtrlStruct*)((*header)->pOutputPortPrivate);
-        pBufCtrl->iRefCount = 1; //init by1
-        if(bufferPrivate != NULL) {
-            pBufCtrl->pMem = ((BufferPrivateStruct*)bufferPrivate)->pMem;
-            pBufCtrl->phyAddr = ((BufferPrivateStruct*)bufferPrivate)->phyAddr;
-            pBufCtrl->bufferSize = ((BufferPrivateStruct*)bufferPrivate)->bufferSize;
-        } else {
-            bool iommu_is_enable = MemoryHeapIon::Mm_iommu_is_enabled();
-            if (iommu_is_enable) {
-                int picPhyAddr = 0, bufferSize = 0;
-                native_handle_t *pNativeHandle = (native_handle_t *)((*header)->pBuffer);
-                struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
-                MemoryHeapIon::Get_mm_iova(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
-
-                pBufCtrl->pMem = NULL;
-                pBufCtrl->bufferFd = private_h->share_fd;
-                pBufCtrl->phyAddr = picPhyAddr;
-                pBufCtrl->bufferSize = bufferSize;
-            } else {
-                pBufCtrl->pMem = NULL;
-                pBufCtrl->phyAddr = 0;
-            }
-        }
-    }
-
     PortInfo *port = &mPorts.editItemAt(portIndex);
 
     port->mBuffers.push();
@@ -355,7 +327,9 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
                 bool iommu_is_enable = MemoryHeapIon::Mm_iommu_is_enabled();
                 if (iommu_is_enable) {
                     BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct*)(header->pOutputPortPrivate);
-                    MemoryHeapIon::Free_mm_iova((int)(pBufCtrl->bufferFd), (int)(pBufCtrl->phyAddr), (int)(pBufCtrl->bufferSize));
+                    if(pBufCtrl->bufferFd > 0) {
+                        MemoryHeapIon::Free_mm_iova((int)(pBufCtrl->bufferFd), (int)(pBufCtrl->phyAddr), (int)(pBufCtrl->bufferSize));
+                    }
                 }
 
                 delete (BufferCtrlStruct*)(header->pOutputPortPrivate);

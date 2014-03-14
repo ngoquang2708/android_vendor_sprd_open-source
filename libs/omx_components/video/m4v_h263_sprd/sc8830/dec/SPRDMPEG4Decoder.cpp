@@ -131,6 +131,7 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mEOSStatus(INPUT_DATA_AVAILABLE),
       mNeedIVOP(true),
       mHeadersDecoded(false),
+      mAllocateBuffers(false),
       mMP4DecSetCurRecPic(NULL),
       mMP4DecInit(NULL),
       mMP4DecVolHeader(NULL),
@@ -616,6 +617,92 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::internalSetParameter(
     }
 }
 
+OMX_ERRORTYPE SPRDMPEG4Decoder::internalUseBuffer(
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size,
+    OMX_U8 *ptr,
+    BufferPrivateStruct* bufferPrivate) {
+
+    *header = new OMX_BUFFERHEADERTYPE;
+    (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
+    (*header)->nVersion.s.nVersionMajor = 1;
+    (*header)->nVersion.s.nVersionMinor = 0;
+    (*header)->nVersion.s.nRevision = 0;
+    (*header)->nVersion.s.nStep = 0;
+    (*header)->pBuffer = ptr;
+    (*header)->nAllocLen = size;
+    (*header)->nFilledLen = 0;
+    (*header)->nOffset = 0;
+    (*header)->pAppPrivate = appPrivate;
+    (*header)->pPlatformPrivate = NULL;
+    (*header)->pInputPortPrivate = NULL;
+    (*header)->pOutputPortPrivate = NULL;
+    (*header)->hMarkTargetComponent = NULL;
+    (*header)->pMarkData = NULL;
+    (*header)->nTickCount = 0;
+    (*header)->nTimeStamp = 0;
+    (*header)->nFlags = 0;
+    (*header)->nOutputPortIndex = portIndex;
+    (*header)->nInputPortIndex = portIndex;
+
+    if(portIndex == OMX_DirOutput) {
+        (*header)->pOutputPortPrivate = new BufferCtrlStruct;
+        CHECK((*header)->pOutputPortPrivate != NULL);
+        BufferCtrlStruct* pBufCtrl= (BufferCtrlStruct*)((*header)->pOutputPortPrivate);
+        pBufCtrl->iRefCount = 1; //init by1
+        if(mAllocateBuffers) {
+            if(bufferPrivate != NULL) {
+                pBufCtrl->pMem = ((BufferPrivateStruct*)bufferPrivate)->pMem;
+                pBufCtrl->phyAddr = ((BufferPrivateStruct*)bufferPrivate)->phyAddr;
+                pBufCtrl->bufferSize = ((BufferPrivateStruct*)bufferPrivate)->bufferSize;
+                pBufCtrl->bufferFd = 0;
+            } else {
+                pBufCtrl->pMem = NULL;
+                pBufCtrl->phyAddr = NULL;
+                pBufCtrl->bufferSize = 0;
+                pBufCtrl->bufferFd = 0;
+            }
+        } else {
+            bool iommu_is_enable = MemoryHeapIon::Mm_iommu_is_enabled();
+            if (iommu_is_enable) {
+                int picPhyAddr = 0, bufferSize = 0;
+                native_handle_t *pNativeHandle = (native_handle_t *)((*header)->pBuffer);
+                struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
+                MemoryHeapIon::Get_mm_iova(private_h->share_fd,(int*)&picPhyAddr, &bufferSize);
+
+                pBufCtrl->pMem = NULL;
+                pBufCtrl->bufferFd = private_h->share_fd;
+                pBufCtrl->phyAddr = picPhyAddr;
+                pBufCtrl->bufferSize = bufferSize;
+            } else {
+                pBufCtrl->pMem = NULL;
+                pBufCtrl->bufferFd = 0;
+                pBufCtrl->phyAddr = 0;
+                pBufCtrl->bufferSize = 0;
+            }
+        }
+    }
+
+    PortInfo *port = editPortInfo(portIndex);
+
+    port->mBuffers.push();
+
+    BufferInfo *buffer =
+        &port->mBuffers.editItemAt(port->mBuffers.size() - 1);
+    ALOGI("internalUseBuffer, header=%p, pBuffer=%p, size=%d",*header, ptr, size);
+    buffer->mHeader = *header;
+    buffer->mOwnedByUs = false;
+
+    if (port->mBuffers.size() == port->mDef.nBufferCountActual) {
+        port->mDef.bPopulated = OMX_TRUE;
+        checkTransitions();
+    }
+
+    return OMX_ErrorNone;
+}
+
 OMX_ERRORTYPE SPRDMPEG4Decoder::allocateBuffer(
     OMX_BUFFERHEADERTYPE **header,
     OMX_U32 portIndex,
@@ -628,6 +715,7 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::allocateBuffer(
 
     case OMX_DirOutput:
     {
+        mAllocateBuffers = true;
         if(mDecoderSwFlag) {
             return SprdSimpleOMXComponent::allocateBuffer(header, portIndex, appPrivate, size);
         } else {
