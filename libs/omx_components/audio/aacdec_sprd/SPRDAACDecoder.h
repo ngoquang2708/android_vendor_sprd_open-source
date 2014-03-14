@@ -67,9 +67,13 @@ private:
     void *mDecoderBuf;
     uint32_t mProfile;
     uint32_t mFrameSize;
+    int32_t mChannels;
     int32_t mSamplingRate;
     uint16_t *mPcm_out_l;
     uint16_t *mPcm_out_r;
+    bool mSeekFlag;
+    uint8_t *mSpecialData;
+    uint32_t mSpecialDataLen;
  
     size_t mInputBufferCount;
 //    size_t mUpsamplingFactor;

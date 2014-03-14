@@ -52,7 +52,11 @@ SPRDAACDecoder::SPRDAACDecoder(
        mDecoderBuf(NULL),
        mProfile (0),
        mFrameSize(0),
+       mChannels(1),
        mSamplingRate(44100),
+       mSeekFlag(false),
+       mSpecialData(NULL),
+       mSpecialDataLen(0),
       mPcm_out_l(NULL),
       mPcm_out_r(NULL),
       mInputBufferCount(0),
@@ -79,6 +83,8 @@ SPRDAACDecoder::~SPRDAACDecoder() {
     mDecoderBuf = NULL;
 
     ALOGI("~SPRDAACDecoder.");
+    delete []mSpecialData;
+    mSpecialData = NULL;
     delete []mPcm_out_l;
     mPcm_out_l = NULL;
     delete []mPcm_out_r;
@@ -174,15 +180,8 @@ OMX_ERRORTYPE SPRDAACDecoder::internalGetParameter(
 
             aacParams->eChannelMode = OMX_AUDIO_ChannelModeStereo;
 
-            if (!isConfigured()) {
-                aacParams->nChannels = 1;
-                aacParams->nSampleRate = 44100;
-                aacParams->nFrameLength = 0;
-            } else {
-                aacParams->nChannels = 2;
-                aacParams->nSampleRate = mSamplingRate;
-                //cParams->nFrameLength = mConfig->frameLength;
-            }
+            aacParams->nChannels = mChannels;
+            aacParams->nSampleRate = mSamplingRate;
 
             return OMX_ErrorNone;
         }
@@ -204,13 +203,8 @@ OMX_ERRORTYPE SPRDAACDecoder::internalGetParameter(
             pcmParams->eChannelMapping[0] = OMX_AUDIO_ChannelLF;
             pcmParams->eChannelMapping[1] = OMX_AUDIO_ChannelRF;
 
-            if (!isConfigured()) {
-                pcmParams->nChannels = 2;
-                pcmParams->nSamplingRate = mSamplingRate;
-            } else {
-                pcmParams->nChannels = 2;
-                pcmParams->nSamplingRate = mSamplingRate;
-            }
+            pcmParams->nChannels = mChannels;
+            pcmParams->nSamplingRate = mSamplingRate;
 
             return OMX_ErrorNone;
         }
@@ -248,9 +242,10 @@ OMX_ERRORTYPE SPRDAACDecoder::internalSetParameter(
 
             mProfile = aacParams->eAACProfile;
 
+            mChannels = aacParams->nChannels;
             mSamplingRate = aacParams->nSampleRate;
 
-            ALOGI("sampleRate : %d", mSamplingRate);
+            ALOGI("sampleRate : %d, channels : %d", mSamplingRate, mChannels);
 
             if (aacParams->eAACStreamFormat == OMX_AUDIO_AACStreamFormatMP4FF) {
                 mIsADTS = false;
@@ -341,14 +336,14 @@ bool SPRDAACDecoder::isConfigured() const {
 #if 0
 void dump_aac(int port, void *buffer, size_t size)
 {
-    char indebugflag[10];
-    char outdebugflag[10];
+    char indebugflag[256];
+    char outdebugflag[256];
     static FILE *fpin = NULL;
     static FILE *fpout = NULL;
     static FILE *fpinbak = NULL;
-    char *pathin = "/data/sprdaacinput.aac";
-    char *pathout = "/data/sprdaacoutput.wav";
-    char *pathinbak = "/data/sprdaacinputbak.aac";
+    char *pathin = "/data/local/media/sprdaacinput.aac";
+    char *pathout = "/data/local/media/sprdaacoutput.wav";
+    char *pathinbak = "/data/local/media/sprdaacinputbak.aac";
 
     property_get("debug.sprd.aac.enable.input", indebugflag, "");
     property_get("debug.sprd.aac.enable.output", outdebugflag, "");
@@ -428,11 +423,26 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
     if (portIndex == 0 && mInputBufferCount == 0) {
         ++mInputBufferCount;
 
+        if (mSeekFlag && mDecoderBuf) {
+            mSeekFlag = false;
+            mAAC_MemoryFree(&mDecoderBuf);
+            if(mAAC_MemoryAlloc(&mDecoderBuf)) {
+                ALOGE("Failed to initialize AAC audio decoder when Seek");
+            }
+        }
+
         BufferInfo *info = *inQueue.begin();
         OMX_BUFFERHEADERTYPE *header = info->mHeader;
         if (!(header->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
             ALOGI("not codec config.");
-            goto decoding;
+        } else {
+            if(!mSpecialData) {
+                delete []mSpecialData;
+                mSpecialData = NULL;
+            }
+            mSpecialDataLen = header->nFilledLen;
+            mSpecialData = new uint8_t[mSpecialDataLen];
+            memcpy(mSpecialData, header->pBuffer + header->nOffset, mSpecialDataLen);
         }
         uint8_t latm[] = {'L', 'A', 'T', 'M', 0};
         int16_t initRet;
@@ -453,9 +463,10 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
             ALOGW("AAC Frame is LATM");
         } else {
             sign = 0;
+            pInputBuffer = mSpecialData;
+            inputBufferCurrentLength = mSpecialDataLen;
             ALOGW("AAC Frame is ADTS");
         }
-
 
         initRet = mAAC_DecInit((int8_t *)pInputBuffer,inputBufferCurrentLength,mSamplingRate,sign,mDecoderBuf);
         if(initRet){
@@ -463,7 +474,7 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
             mSignalledError = true;
             notify(OMX_EventError, OMX_ErrorUndefined, initRet, NULL);
             return;
-	    }
+        }
 
         // Check on the sampling rate to see whether it is changed.
         int32_t sampleRate = mAAC_RetrieveSampleRate(mDecoderBuf);
@@ -485,9 +496,11 @@ void SPRDAACDecoder::onQueueFilled(OMX_U32 portIndex) {
             return;
         }
 
-        inQueue.erase(inQueue.begin());
-        info->mOwnedByUs = false;
-        notifyEmptyBufferDone(header);
+        if (header->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
+            inQueue.erase(inQueue.begin());
+            info->mOwnedByUs = false;
+            notifyEmptyBufferDone(header);
+        }
     }
 
 decoding:
@@ -613,15 +626,22 @@ decoding:
             }
         }
 
-        size_t numOutBytes =  mFrameSize * sizeof(int16_t) *2;
+        size_t numOutBytes =  mFrameSize * sizeof(int16_t);
+        if (mChannels == 2) {
+            numOutBytes *=  2;
+        }
         uint16_t * pOutputBuffer = reinterpret_cast<uint16_t *>(outHeader->pBuffer + outHeader->nOffset);
 
-        for(uint32_t i = 0; i < mFrameSize; i++) {
-            if((!mIsLATM && (decoderRet != 0)) || (mIsLATM && (decoderRet != 0) && (decoderRet != 1))) {
-                memset(pOutputBuffer, 0, numOutBytes);
-            } else {
-                pOutputBuffer[2 * i] = mPcm_out_l[i];
-                pOutputBuffer[2 * i + 1] = mPcm_out_r[i];
+        if((!mIsLATM && (decoderRet != 0)) || (mIsLATM && (decoderRet != 0) && (decoderRet != 1))) {
+            memset(pOutputBuffer, 0, numOutBytes);
+        } else {
+            for(uint32_t i = 0; i < mFrameSize; i++) {
+                if (mChannels == 2) {
+                    pOutputBuffer[2 * i] = mPcm_out_l[i];
+                    pOutputBuffer[2 * i + 1] = mPcm_out_r[i];
+                } else {
+                    pOutputBuffer[i] = mPcm_out_l[i];
+                }
             }
         }
 
@@ -665,6 +685,7 @@ void SPRDAACDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
     ALOGI("onPortFlushPrepare.");
     if (portIndex == 0) {
         mInputBufferCount = 0;
+        mSeekFlag = true;
     }
 }
 
