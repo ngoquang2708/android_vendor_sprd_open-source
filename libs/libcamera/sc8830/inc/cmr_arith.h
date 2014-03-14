@@ -24,8 +24,8 @@ extern "C"
 #define FACE_DETECT_GAP_MAX    15
 #define FACE_DETECT_GAP_MIN    1
 
-int arithmetic_fd_init(const struct img_size * fd_size);
-int arithmetic_fd_deinit(void);
+int arithmetic_fd_init(const struct img_size * fd_size, uint32_t is_support_fd);
+int arithmetic_fd_deinit(uint32_t is_support_fd);
 int arithmetic_fd_start(void *data_addr);
 void arithmetic_set_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size);
 int arithmetic_hdr_init(uint32_t pic_width, uint32_t pic_height);

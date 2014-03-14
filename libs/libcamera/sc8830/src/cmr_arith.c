@@ -76,6 +76,27 @@ static struct arithmetic_hdr_conext *s_hdr_cxt = &s_hdr_cntext;
 static uint32_t check_size_data_invalid(struct img_size * fd_size);
 static int arithmetic_fd_call_init(const struct img_size * fd_size);
 
+int FaceSolid_Init(int width, int height)
+{
+	/*dummy function*/
+	CMR_LOGW("dummy function! should not be here!");
+	return ARITH_SUCCESS;
+}
+
+int FaceSolid_Function(unsigned char *src, ACCESS_FaceRect ** ppDstFaces, int *pDstFaceNum ,int skip)
+{
+	/*dummy function*/
+	CMR_LOGW("dummy function! should not be here!");
+	return ARITH_SUCCESS;
+}
+
+int FaceSolid_Finalize()
+{
+	/*dummy function*/
+	CMR_LOGW("dummy function! should not be here!");
+	return ARITH_SUCCESS;
+}
+
 uint32_t arithmetic_fd_is_init(void)
 {
 	if (0 == s_arith_cxt->fd_is_inited) return 0;
@@ -115,9 +136,9 @@ void *arithmetic_fd_thread_proc(void *data)
 	int                 ret = CAMERA_SUCCESS;
 	int                 evt = 0;
 	void                *addr = 0;
-	int                 face_num;
+	int                 face_num = 0;
 	int                 k = 0;
-	morpho_FaceRect     *face_rect_ptr;
+	morpho_FaceRect     *face_rect_ptr = PNULL;
 	camera_frame_type   frame_type;
 	int                 fd_exit_flag = 0;
 	camera_cb_info      cb_info;
@@ -301,10 +322,15 @@ int arithmetic_fd_call_init(const struct img_size * fd_size)
 	return cmr_msg_post(s_arith_cxt->fd_msg_que_handle, &message);
 }
 
-int arithmetic_fd_init(const struct img_size * fd_size)
+int arithmetic_fd_init(const struct img_size * fd_size, uint32_t is_support_fd)
 {
 	int                    ret = ARITH_SUCCESS;
 	pthread_attr_t          attr;
+
+	if (!is_support_fd) {
+		CMR_LOGW("not support fd, direct return!");
+		return ret;
+	}
 
 	CMR_LOGV("inited, %d", s_arith_cxt->fd_is_inited);
 
@@ -321,7 +347,7 @@ int arithmetic_fd_init(const struct img_size * fd_size)
 			sem_wait(&s_arith_cxt->fd_sync_sem);
 
 			if (arithmetic_fd_call_init(fd_size)) {
-				arithmetic_fd_deinit();
+				arithmetic_fd_deinit(1);
 			} else {
 				s_arith_cxt->fd_is_inited = 1;
 			}
@@ -329,17 +355,22 @@ int arithmetic_fd_init(const struct img_size * fd_size)
 	} else if ((s_arith_cxt->fd_size.width != fd_size->width) ||
 			(s_arith_cxt->fd_size.height != fd_size->height)) {
 		if (arithmetic_fd_call_init(fd_size)) {
-				arithmetic_fd_deinit();
+				arithmetic_fd_deinit(1);
 		}
 	}
 
 	return ret;
 }
 
-int arithmetic_fd_deinit(void)
+int arithmetic_fd_deinit(uint32_t is_support_fd)
 {
 	CMR_MSG_INIT(message);
 	int                    ret = ARITH_SUCCESS;
+
+	if (!is_support_fd) {
+		CMR_LOGW("not support fd, direct return!");
+		return ret;
+	}
 
 	CMR_LOGI("s.");
 	CMR_PRINT_TIME;
