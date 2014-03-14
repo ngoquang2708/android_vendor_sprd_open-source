@@ -525,6 +525,7 @@ int camera_get_data_redisplay(int output_addr,
 					int input_height);
 
 uint32_t camera_get_rot_set(void);
+void camera_set_facedetect_support(uint32_t is_support);
 void camera_set_start_facedetect(uint32_t param, uint32_t mem_size);
 void camera_call_cb(camera_cb_type cb,
                  const void *client_data,

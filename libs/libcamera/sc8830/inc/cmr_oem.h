@@ -317,6 +317,7 @@ struct camera_context {
 	uint32_t                 capture_status;
 	uint32_t                 capture_raw_status;
 	uint32_t                 is_take_picture;
+	uint32_t                 is_support_fd;
 	pthread_mutex_t          take_mutex;
 	pthread_mutex_t          take_raw_mutex;
 	pthread_mutex_t          main_prev_mutex;
