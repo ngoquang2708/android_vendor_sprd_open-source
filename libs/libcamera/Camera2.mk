@@ -229,11 +229,7 @@ endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libmorpho_facesolid libmorpho_easy_hdr libcamera_metadata
-endif
-
-ifdef CONFIG_CAMERA_ISP
-LOCAL_SHARED_LIBRARIES += libisp
+LOCAL_SHARED_LIBRARIES := libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -242,11 +238,6 @@ ifeq ($(strip $(sc8830like)),1)
 
 #include $(CLEAR_VARS)
 #LOCAL_PREBUILT_LIBS := sc8830/isp/libisp.so
-#LOCAL_MODULE_TAGS := optional
-#include $(BUILD_MULTI_PREBUILT)
-
-#include $(CLEAR_VARS)
-#LOCAL_PREBUILT_LIBS := arithmetic/sc8825/libmorpho_facesolid.so
 #LOCAL_MODULE_TAGS := optional
 #include $(BUILD_MULTI_PREBUILT)
 

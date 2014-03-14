@@ -2116,9 +2116,7 @@ int camera_stop_internal(void)
 
 	camera_af_deinit();
 
-#if defined(CONFIG_CAMERA_FACE_DETECT)
-	arithmetic_fd_deinit();
-#endif
+	arithmetic_fd_deinit(g_cxt->is_support_fd);
 
 	camera_setting_deinit();
 
@@ -2626,12 +2624,10 @@ int camera_start_preview_internal(void)
 
 	CMR_LOGV("preview format is %d", g_cxt->preview_fmt);
 
-#if defined(CONFIG_CAMERA_FACE_DETECT)
-	ret = arithmetic_fd_init(&g_cxt->display_size);
+	ret = arithmetic_fd_init(&g_cxt->display_size, g_cxt->is_support_fd);
 	if (ret) {
 		CMR_LOGE("Failed to init arithmetic %d", ret);
 	}
-#endif
 
 	CMR_LOGV("previous mode %d, img_fmt= %d",
 		g_cxt->sn_cxt.previous_sensor_mode,
@@ -3491,18 +3487,18 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 		}
 #endif
 
-#if defined(CONFIG_CAMERA_FACE_DETECT)
-		if (0 == arithmetic_get_fd_num()) {
-			skip_frame_gap = FACE_DETECT_GAP_MAX;
-		} else {
-			skip_frame_gap = FACE_DETECT_GAP_MIN;
+		if (g_cxt->is_support_fd) {
+			if (0 == arithmetic_get_fd_num()) {
+				skip_frame_gap = FACE_DETECT_GAP_MAX;
+			} else {
+				skip_frame_gap = FACE_DETECT_GAP_MIN;
+			}
+			if ((arithmetic_fd_is_eb()) && (arithmetic_fd_is_init()) && (0 == g_cxt->is_dv_mode)
+				&& (0 == (g_cxt->pre_frm_cnt % (skip_frame_gap + 1)))) {
+				CMR_LOGI("face detect start.");
+				arithmetic_fd_start((void*)frame_type->buf_Virt_Addr);
+			}
 		}
-		if ((arithmetic_fd_is_eb()) && (arithmetic_fd_is_init()) && (0 == g_cxt->is_dv_mode)
-			&& (0 == (g_cxt->pre_frm_cnt % (skip_frame_gap + 1)))) {
-			CMR_LOGI("face detect start.");
-			arithmetic_fd_start((void*)frame_type->buf_Virt_Addr);
-		}
-#endif
 	} else if (CHN_2 == info->channel_id) {
 		frm_id = info->frame_id - CAMERA_CAP0_ID_BASE;
 		frame_type->buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_y;
@@ -4044,9 +4040,9 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 			camera_flash_handle();
 			camera_preview_stop_set();
 
-#if defined(CONFIG_CAMERA_FACE_DETECT)
-			camera_set_start_facedetect(0, 0);
-#endif
+			if (g_cxt->is_support_fd) {
+				camera_set_start_facedetect(0, 0);
+			}
 
 			camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
 					camera_get_client_data(),
@@ -8164,6 +8160,12 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 
 	return ret;
 
+}
+
+void camera_set_facedetect_support(uint32_t is_support)
+{
+	CMR_LOGV("%d.",is_support);
+	g_cxt->is_support_fd = is_support;
 }
 
 void camera_set_start_facedetect(uint32_t param, uint32_t mem_size)
