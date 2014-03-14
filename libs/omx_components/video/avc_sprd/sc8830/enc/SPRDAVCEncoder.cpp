@@ -124,7 +124,7 @@ static status_t ConvertAvcSpecLevelToOmxAvcLevel(
  *
  */
 inline static void ConvertYUV420PlanarToYUV420SemiPlanar(uint8_t *inyuv, uint8_t* outyuv,
-    int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
+        int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 
     int32_t inYsize = width_org * height_org;
     uint32_t *outy =  (uint32_t *) outyuv;
@@ -289,6 +289,8 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mEncParams(new tagAVCEncParam),
       mSliceGroup(NULL),
       mLibHandle(NULL),
+      mH264EncGetCodecCapability(NULL),
+      mH264EncPreInit(NULL),
       mH264EncInit(NULL),
       mH264EncSetConf(NULL),
       mH264EncGetConf(NULL),
@@ -297,6 +299,12 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mH264EncRelease(NULL) {
 
     ALOGI("Construct SPRDAVCEncoder, this: %0x", (void *)this);
+
+    CHECK(mHandle != NULL);
+    memset(mHandle, 0, sizeof(tagAVCHandle));
+
+    mHandle->videoEncoderData = NULL;
+    mHandle->userData = this;
 
     memset(&mEncInfo, 0, sizeof(mEncInfo));
 
@@ -307,8 +315,21 @@ SPRDAVCEncoder::SPRDAVCEncoder(
     mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
     ALOGI("%s, is IOMMU enabled: %d", __FUNCTION__, mIOMMUEnabled);
 
+    MMCodecBuffer InterMemBfr;
+    int32 size_inter = H264ENC_INTERNAL_BUFFER_SIZE;
+
+    mPbuf_inter = (uint8 *)malloc(size_inter);
+    InterMemBfr.common_buffer_ptr = (uint8 *)mPbuf_inter;
+    InterMemBfr.common_buffer_ptr_phy= 0;
+    InterMemBfr.size = size_inter;
+
+    CHECK_EQ((*mH264EncPreInit)(mHandle, &InterMemBfr), MMENC_OK);
+
+    CHECK_EQ ((*mH264EncGetCodecCapability)(mHandle, &mCapability), MMENC_OK);
+
     initPorts();
-    ALOGI("Construct SPRDAVCEncoder");
+    ALOGI("Construct SPRDAVCEncoder, Capability: profile %d, level %d, max wh=%d %d",
+          mCapability.profile, mCapability.level, mCapability.max_width, mCapability.max_height);
 
 #ifdef SPRD_DUMP_YUV
     mFile_yuv = fopen("/data/video.yuv", "wb");
@@ -351,13 +372,8 @@ SPRDAVCEncoder::~SPRDAVCEncoder() {
 }
 
 OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
-    CHECK(mHandle != NULL);
-    memset(mHandle, 0, sizeof(tagAVCHandle));
     CHECK(mEncConfig != NULL);
     memset(mEncConfig, 0, sizeof(MMEncConfig));
-
-    mHandle->videoEncoderData = NULL;
-    mHandle->userData = this;
 
     CHECK(mEncParams != NULL);
     memset(mEncParams, 0, sizeof(tagAVCEncParam));
@@ -404,14 +420,10 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     }
 #endif
 
-    MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
     MMCodecBuffer StreamMemBfr;
     int32 phy_addr = 0;
     int32 size = 0;
-
-    int32 size_inter = H264ENC_INTERNAL_BUFFER_SIZE;
-    mPbuf_inter = (uint8 *)malloc(size_inter);
 
     unsigned int size_extra = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2 * 2;
     size_extra += (406*2*sizeof(uint32));
@@ -473,10 +485,6 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
         }
     }
 
-    InterMemBfr.common_buffer_ptr = (uint8 *)mPbuf_inter;
-    InterMemBfr.common_buffer_ptr_phy= 0;
-    InterMemBfr.size = size_inter;
-
     ExtraMemBfr.common_buffer_ptr = mPbuf_extra_v;
     ExtraMemBfr.common_buffer_ptr_phy = (void*)mPbuf_extra_p;
     ExtraMemBfr.size	= size_extra;
@@ -496,7 +504,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncInfo.b_anti_shake = 0;
 #endif
 
-    if ((*mH264EncInit)(mHandle, &InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &mEncInfo)) {
+    if ((*mH264EncInit)(mHandle, &ExtraMemBfr,&StreamMemBfr, &mEncInfo)) {
         ALOGE("Failed to init mp4enc");
         return OMX_ErrorUndefined;
     }
@@ -783,9 +791,22 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalGetParameter(
             return OMX_ErrorNoMore;
         }
 
-        profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
-        profileLevel->eLevel = ConversionTable[profileLevel->nProfileIndex].omxLevel;
+        if (mCapability.profile == AVC_BASELINE) {
+            profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+        } else if (mCapability.profile == AVC_MAIN) {
+            profileLevel->eProfile = OMX_VIDEO_AVCProfileMain;
+        } else if (mCapability.profile == AVC_HIGH) {
+            profileLevel->eProfile = OMX_VIDEO_AVCProfileHigh;
+        } else {
+            profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+        }
 
+        if (ConversionTable[profileLevel->nProfileIndex].avcLevel > mCapability.level) {
+            return OMX_ErrorUnsupportedIndex;
+        } else {
+            profileLevel->eLevel = ConversionTable[profileLevel->nProfileIndex].omxLevel;
+        }
+        //ALOGI("Query supported profile level = %d, %d",profileLevel->eProfile, profileLevel->eLevel);
         return OMX_ErrorNone;
     }
 
@@ -1070,7 +1091,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
         }
 
         ALOGV("%s, %d, inHeader->nFilledLen: %d, mStoreMetaData: %d, mVideoColorFormat: 0x%x",
-            __FUNCTION__, __LINE__, inHeader->nFilledLen, mStoreMetaData, mVideoColorFormat);
+              __FUNCTION__, __LINE__, inHeader->nFilledLen, mStoreMetaData, mVideoColorFormat);
 
         // Save the input buffer info so that it can be
         // passed to an output buffer
@@ -1149,7 +1170,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
                     if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
                         ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
-                                                             (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
+                                                              (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
                         ConvertARGB888ToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     } else {
@@ -1195,7 +1216,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
                 if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
                     ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
-                                                         (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
+                                                          (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
                     ConvertARGB888ToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                 } else {
@@ -1312,6 +1333,22 @@ bool SPRDAVCEncoder::openEncoder(const char* libName)
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
         ALOGE("openEncoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mH264EncGetCodecCapability = (FT_H264EncGetCodecCapability)dlsym(mLibHandle, "H264EncGetCodecCapability");
+    if(mH264EncGetCodecCapability == NULL) {
+        ALOGE("Can't find H264EncGetCodecCapability in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264EncPreInit = (FT_H264EncPreInit)dlsym(mLibHandle, "H264EncPreInit");
+    if(mH264EncPreInit == NULL) {
+        ALOGE("Can't find mH264EncPreInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
         return false;
     }
 
