@@ -781,17 +781,16 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
 {
     hwc_layer_1_t *layer = l->getAndroidLayer();
-
-    int sourceLeft   = (int)(layer->sourceCropf.left);
-    int sourceTop    = (int)(layer->sourceCropf.top);
-    int sourceRight  = (int)(layer->sourceCropf.right);
-    int sourceBottom = (int)(layer->sourceCropf.bottom);
-
     if (layer == NULL)
     {
         ALOGE("prepareOverlayComposerLayer input layer is NULL");
         return -1;
     }
+
+    int sourceLeft   = (int)(layer->sourceCropf.left);
+    int sourceTop    = (int)(layer->sourceCropf.top);
+    int sourceRight  = (int)(layer->sourceCropf.right);
+    int sourceBottom = (int)(layer->sourceCropf.bottom);
 
     if (layer->displayFrame.left < 0 ||
         layer->displayFrame.top < 0 ||
@@ -840,9 +839,14 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
         for (int j = 0; j < LayerCount; j++)
         {
             SprdHWLayer *SprdLayer = &(mLayerList[j]);
+            if (SprdLayer == NULL)
+            {
+                continue;
+            }
+
             hwc_layer_1_t *l = SprdLayer->getAndroidLayer();
 
-            if (SprdLayer == NULL || l == NULL)
+            if (l == NULL)
             {
                 continue;
             }
