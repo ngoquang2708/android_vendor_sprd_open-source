@@ -1717,7 +1717,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) || (AUDIO_MODE_IN_CALL == adev->mode)||adev->voip_start) {
+		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
+                  || (AUDIO_MODE_IN_CALL == adev->mode)
+                  ||adev->voip_start) {
             adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
             adev->out_devices |= val;
             out->devices = val;
