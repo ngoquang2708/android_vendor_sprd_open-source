@@ -469,10 +469,6 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	LOGV("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
-	mPreviewWindowLock.lock();
-	mPreviewWindow = w;
-	mPreviewWindowLock.unlock();
-
 	LOGV("%s: mPreviewWindow %p", __func__, mPreviewWindow);
 
 	if (!w) {
@@ -484,15 +480,28 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 		}
 
 		LOGE("setPreviewWindow X preview window is NULL!");
+
+		mPreviewWindowLock.lock();
+		mPreviewWindow = w;
+		mPreviewWindowLock.unlock();
+
 		return ret;
 	} else {
 		switch_ret = switchBufferMode(mPreviewBufferUsage, mOriginalPreviewBufferUsage);
 		if (!switch_ret) {
 			ret = INVALID_OPERATION;
 			LOGE("switch buffer error!");
+			mPreviewWindowLock.lock();
+			mPreviewWindow = w;
+			mPreviewWindowLock.unlock();
 			return ret;
 		}
 	}
+
+	mPreviewWindowLock.lock();
+	mPreviewWindow = w;
+	mPreviewWindowLock.unlock();
+
 
 	if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
 		LOGE("%s: could not retrieve min undequeued buffer count X", __func__);
@@ -585,13 +594,14 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 status_t SprdCameraHardware::takePicture()
 {
 	GET_START_TIME;
-	takepicture_mode mode = getCaptureMode();
-	LOGV("takePicture: %d E", mode);
+	LOGV("takePicture: E");
 	print_time();
 
 	Mutex::Autolock l(&mLock);
 	waitSetParamsOK();
 	print_time();
+	takepicture_mode mode = getCaptureMode();
+	LOGV("takePicture mode %d", mode);
 
 	if (camera_set_dimensions(mRawWidth,
 				mRawHeight,
@@ -3035,7 +3045,7 @@ bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
 {
 	bool ret = true;
 
-	if ( (src != dst) && (!isPreviewing()) ) {
+	if ((src != dst) && (!isPreviewing())) {
 		if (SPRD_INTERNAL_PREVIEW_STOPPING == mCameraState.preview_state) {
 			/*change to new value*/
 			mPreviewBufferUsage = dst;
@@ -3054,6 +3064,15 @@ bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
 		} else {
 			/*change to new value*/
 			mPreviewBufferUsage = dst;
+		}
+	}
+
+	if ((src != dst) && (PREVIEW_BUFFER_USAGE_DCAM == dst) && isPreviewing()) {
+		stopPreviewInternal();
+		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
+		if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
+			LOGE("startPreviewInternal in switchBufferMode error!");
+			ret = false;
 		}
 	}
 
@@ -3415,8 +3434,6 @@ void SprdCameraHardware::stopPreviewInternal()
 
 takepicture_mode SprdCameraHardware::getCaptureMode()
 {
-	Mutex::Autolock paramLock(&mParamLock);
-
 	if (0 == strcmp("hdr",mParameters.get_SceneMode()) && (1 != mParameters.getRecordingHint())) {
 		mCaptureMode = CAMERA_HDR_MODE;
 	} else if ((1 == mParameters.getInt("zsl"))&&(1 != mParameters.getInt("capture-mode"))) {
