@@ -166,6 +166,15 @@ typedef struct tagAVCEncParam
                                     copy excess bits to the overrun buffer */
 } AVCEncParams;
 
+// Encoder video capability structure
+typedef struct
+{
+    AVCProfile profile;
+    AVCLevel   level;
+    int32 max_width;
+    int32 max_height;
+} MMEncCapability;
+
 typedef enum
 {
     MMENC_OK = 0,
@@ -276,6 +285,21 @@ typedef struct tagAVCHandle
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
+/*****************************************************************************/
+//  Description:   Get capability of h264 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capability);
+
+/*****************************************************************************/
+//  Description:   Pre-Init h264 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr);
 
 /*****************************************************************************/
 //  Description:   Init h264 encoder
@@ -283,7 +307,7 @@ typedef struct tagAVCHandle
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet H264EncInit (AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet H264EncInit (AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 
 /*****************************************************************************/
 //  Description:   Set h264 encode config
@@ -325,7 +349,9 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps);
 /*****************************************************************************/
 MMEncRet H264EncRelease(AVCHandle *avcHandle);
 
-typedef MMEncRet (*FT_H264EncInit)(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+typedef MMEncRet (*FT_H264EncGetCodecCapability)(AVCHandle *avcHandle, MMEncCapability *Capability);
+typedef MMEncRet (*FT_H264EncPreInit)(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr);
+typedef MMEncRet (*FT_H264EncInit)(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 typedef MMEncRet (*FT_H264EncSetConf)(AVCHandle *avcHandle, MMEncConfig *pConf);
 typedef MMEncRet (*FT_H264EncGetConf)(AVCHandle *avcHandle, MMEncConfig *pConf);
 typedef MMEncRet (*FT_H264EncStrmEncode) (AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOutput);

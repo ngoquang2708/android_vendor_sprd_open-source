@@ -83,6 +83,7 @@ private:
     int32  mPbuf_extra_size;
 
     MMEncVideoInfo mEncInfo;
+    MMEncCapability mCapability;
 
     int32_t  mVideoWidth;
     int32_t  mVideoHeight;
@@ -110,6 +111,8 @@ private:
     Vector<InputBufferInfo> mInputBufferInfoVec;
 
     void* mLibHandle;
+    FT_H264EncGetCodecCapability	mH264EncGetCodecCapability;
+    FT_H264EncPreInit        mH264EncPreInit;
     FT_H264EncInit        mH264EncInit;
     FT_H264EncSetConf        mH264EncSetConf;
     FT_H264EncGetConf        mH264EncGetConf;
