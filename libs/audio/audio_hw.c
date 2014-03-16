@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #define LOG_TAG "audio_hw_primary"
 /*#define LOG_NDEBUG 0*/
 #include <errno.h>
@@ -321,7 +320,26 @@ struct bt_sco_thread_manager {
 };
 
 #define VOIP_PIPE_NAME_MAX    16
+#define MAX_AT_CMD_LENGTH   32
+#define MAX_AT_CMD_TYPE  8
+/*
+typedef struct{
+   char  s_at_cmd_route[MAX_CMD_LENGTH];
+   char  s_at_cmd_voluem[MAX_CMD_LENGTH];
+   char  s_at_cmd_micmute[MAX_CMD_LENGTH];
+   char  s_at_cmd_downlinkmute[MAX_CMD_LENGTH];
+   char  s_at_cmd_audioloop[MAX_CMD_LENGTH];
+   char  s_at_cmd_usecase[MAX_CMD_LENGTH];
+   char  s_at_cmd_extra_volume[MAX_CMD_LENGTH];
+   char  s_at_cmd_bt_sample[MAX_CMD_LENGTH];
+}T_AT_CMD;
+*/
 
+typedef struct{
+   char  at_cmd[MAX_AT_CMD_TYPE][MAX_AT_CMD_LENGTH];
+   uint32_t   at_cmd_priority[MAX_AT_CMD_TYPE];
+   uint32_t   at_cmd_dirty;
+}T_AT_CMD;
 
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
@@ -366,6 +384,7 @@ struct tiny_audio_device {
     struct bt_sco_thread_manager bt_sco_manager;
 
     struct stream_routing_manager  routing_mgr;
+    struct stream_routing_manager  voice_command_mgr;
 
     int voip_state;
     int voip_start;
@@ -375,6 +394,7 @@ struct tiny_audio_device {
 
     int requested_channel_cnt;
     int  input_source;
+    T_AT_CMD  *at_cmd_vectors;
 };
 
 struct tiny_stream_out {
@@ -579,6 +599,10 @@ static int aud_rec_do_process(void * buffer, size_t bytes,void * tmp_buffer, siz
 static void *stream_routing_thread_entry(void * adev);
 static int stream_routing_manager_create(struct tiny_audio_device *adev);
 static void stream_routing_manager_close(struct tiny_audio_device *adev);
+
+static void *voice_command_thread_entry(void * adev);
+static int voice_command_manager_create(struct tiny_audio_device *adev);
+static void voice_command_manager_close(struct tiny_audio_device *adev);
 
 static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool enable);
 static int audiopara_get_compensate_phoneinfo(void* pmsg);
@@ -3048,7 +3072,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             ret = pcm_read(in->pcm, buffer, bytes);
 #else
         ret = pcm_read(in->pcm, buffer, bytes);
-#endif     
+#endif
     }
 
     if (ret == 0 && in->active_rec_proc && in->proc_buf)
@@ -3609,6 +3633,7 @@ static int adev_close(hw_device_t *device)
     adev_free_audmode();
     mixer_close(adev->mixer);
     stream_routing_manager_close(adev);
+    voice_command_manager_close(adev);
     free(device);
     return 0;
 }
@@ -4058,7 +4083,7 @@ static int aud_rec_do_process(void * buffer,size_t bytes,void * tmp_buffer, size
     unsigned int dest_count = 0;
     temp_buf = (int16_t *)tmp_buffer;
     if (temp_buf && (tmp_buffer_bytes >= 2)) {
-        do { 
+        do {
             if(tmp_buffer_bytes <=  bytes) {
                 read_bytes = tmp_buffer_bytes;
             }
@@ -4130,6 +4155,70 @@ static void stream_routing_manager_close(struct tiny_audio_device *adev)
     sem_destroy(&adev->routing_mgr.device_switch_sem);
 }
 
+
+static void *voice_command_thread_entry(void * param)
+{
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)param;
+    pthread_attr_t attr;
+    struct sched_param m_param;
+    int newprio=39;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    pthread_attr_getschedparam(&attr, &m_param);
+    m_param.sched_priority=newprio;
+    pthread_attr_setschedparam(&attr, &m_param);
+
+    while(!adev->voice_command_mgr.is_exit) {
+        ALOGI(" %s looping now...",__func__);
+        sem_wait(&adev->voice_command_mgr.device_switch_sem);
+        do_voice_command(adev);
+        ALOGI(" %s looping done.",__func__);
+    }
+    ALOGW("%s exit!!!",__func__);
+    return 0;
+}
+
+static int voice_command_manager_create(struct tiny_audio_device *adev)
+{
+    int ret;
+
+    adev->voice_command_mgr.is_exit = false;
+    /* init semaphore to signal thread */
+    ret = sem_init(&adev->voice_command_mgr.device_switch_sem, 0, 0);
+    if (ret) {
+        ALOGE("sem_init falied, code is %s", strerror(errno));
+        return ret;
+    }
+    adev->at_cmd_vectors = malloc(sizeof(T_AT_CMD));
+    if (adev->at_cmd_vectors == NULL) {
+        ALOGE("Unable to allocate at_cmd_vectors ");
+        return -1;
+    }
+    memset(adev->at_cmd_vectors,0x00,sizeof(T_AT_CMD));
+    /* create a thread to manager the device routing switch.*/
+    ret = pthread_create(&adev->voice_command_mgr.routing_switch_thread, NULL,
+            voice_command_thread_entry, (void *)adev);
+    if (ret) {
+        ALOGE("pthread_create falied, code is %s", strerror(errno));
+        return ret;
+    }
+
+    return ret;
+}
+
+static void voice_command_manager_close(struct tiny_audio_device *adev)
+{
+    adev->voice_command_mgr.is_exit = true;
+    if(adev->at_cmd_vectors != NULL)
+    {
+        free(adev->at_cmd_vectors);
+        adev->at_cmd_vectors = NULL;
+    }
+    /* release associated thread resource.*/
+    sem_destroy(&adev->voice_command_mgr.device_switch_sem);
+}
 
 static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const char *num)
 {
@@ -4990,6 +5079,13 @@ this is used to loopback test.
         ALOGE("bt sco : Unable to create audio_bt_sco_thread_create, aborting.");
         goto ERROR;
     }
+
+    ret = voice_command_manager_create(adev);
+    if (ret) {
+        ALOGE("Unable to create voice_command_manager_create, aborting.");
+        goto ERROR;
+    }
+
 
     return 0;
 
