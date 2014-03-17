@@ -85,7 +85,7 @@ static int timeline_compare(struct sync_pt *pta, struct sync_pt *ptb)
 	MALI_DEBUG_ASSERT_POINTER(mptb->flag);
 
 	a = mpta->flag->point;
-	b = mpta->flag->point;
+	b = mptb->flag->point;
 
 	if (a == b) return 0;
 
