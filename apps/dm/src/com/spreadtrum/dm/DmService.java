@@ -1729,7 +1729,7 @@ public class DmService extends Service {
         TelephonyManager mTelephonyManager = (TelephonyManager) mContext.getSystemService(
                 TelephonyManager.getServiceName(mContext.TELEPHONY_SERVICE, curPhoneId));
         
-        String imsi = mTelephonyManager.getSubscriberId();
+        //String imsi = mTelephonyManager.getSubscriberId();//Bug 290164:Fix the converity bug
         
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(CMCC_CONFIG, MODE);
         SharedPreferences.Editor editor = sharedPreferences.edit();   
