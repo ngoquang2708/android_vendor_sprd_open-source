@@ -1082,11 +1082,12 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             continue;
         }
 
+	bufferSize = dec_in.dataLen;
         CHECK_LE(bufferSize, inHeader->nFilledLen);
         inHeader->nOffset += bufferSize;
         inHeader->nFilledLen -= bufferSize;
 
-        if (inHeader->nFilledLen == 0) {
+        if (inHeader->nFilledLen <= 0) {
             inHeader->nOffset = 0;
             inInfo->mOwnedByUs = false;
             inQueue.erase(inQueue.begin());
