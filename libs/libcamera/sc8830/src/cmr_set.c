@@ -1617,6 +1617,12 @@ int camera_autofocus_start(void)
 		ret = CAMERA_INVALID_STATE;
 		CMR_RTN_IF_ERR(ret);
 	}
+
+	if (0 == cxt->pre_frm_cnt) {
+		CMR_LOGE("not preview frame output yet, autofocus fail");
+		ret = CAMERA_FAILED;
+		CMR_RTN_IF_ERR(ret);
+	}
 #ifndef CONFIG_CAMERA_FLASH_CTRL
 	if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
 		uint32_t skip_mode = 0;
