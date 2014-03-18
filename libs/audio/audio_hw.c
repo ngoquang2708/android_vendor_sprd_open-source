@@ -97,6 +97,7 @@
 #define PRIVATE_VBC_EQ_UPDATE            "eq update"
 #define PRIVATE_VBC_EQ_PROFILE            "eq profile"
 #define PRIVATE_INTERNAL_PA              "internal PA"
+#define PRIVATE_INTERNAL_HP_PA              "internal HP PA"
 #define FM_DIGITAL_SUPPORT_PROPERTY  "ro.digital.fm.support"
 
 #define PRIVATE_VBC_DA_EQ_SWITCH            "da eq switch"
@@ -170,6 +171,8 @@
 #define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
 #define BT_SCO_DOWNLINK_OPEN_FAIL       (1 << 8)
 #define AUDFIFO "/data/local/media/audiopara_tuning"
+
+#define VOIP_PIPE_NAME_MAX    16
 
 struct pcm_config pcm_config_mm = {
     .channels = 2,
@@ -288,6 +291,7 @@ struct tiny_private_ctl {
     struct mixer_ctl *vbc_eq_update;
     struct mixer_ctl *vbc_eq_profile_select;
     struct mixer_ctl *internal_pa;
+    struct mixer_ctl *internal_hp_pa;
     struct mixer_ctl *vbc_da_eq_switch;
     struct mixer_ctl *vbc_ad01_eq_switch;
     struct mixer_ctl *vbc_ad23_eq_switch;
@@ -335,6 +339,24 @@ typedef struct{
 }T_AT_CMD;
 */
 
+typedef struct {
+    unsigned short  adc_pga_gain_l;
+    unsigned short  adc_pga_gain_r;
+    uint32_t        pa_config;
+    uint32_t        fm_pa_config;
+    uint32_t        voice_pa_config;
+    uint32_t        hp_pa_config;
+    uint32_t        fm_hp_pa_config;
+    uint32_t        voice_hp_pa_config;
+    uint32_t        fm_pga_gain_l;
+    uint32_t        fm_pga_gain_r;
+    uint32_t        dac_pga_gain_l;
+    uint32_t        dac_pga_gain_r;
+    uint32_t        out_devices;
+    uint32_t        in_devices;
+    uint32_t        mode;
+}pga_gain_nv_t;
+
 typedef struct{
    char  at_cmd[MAX_AT_CMD_TYPE][MAX_AT_CMD_LENGTH];
    uint32_t   at_cmd_priority[MAX_AT_CMD_TYPE];
@@ -374,6 +396,7 @@ struct tiny_audio_device {
 
     struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
+    pga_gain_nv_t *pga_gain_nv;
     bool eq_available;
 
     audio_modem_t *cp;
@@ -617,7 +640,6 @@ static int out_dump_release(FILE **fd);
 
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
-
 static long getCurrentTimeUs()
 {
    struct timeval tv;
@@ -3629,6 +3651,7 @@ static int adev_close(hw_device_t *device)
 
     free(adev->cp->vbc_ctrl_pipe_info);
     free(adev->cp);
+    free(adev->pga_gain_nv);
 
     adev_free_audmode();
     mixer_close(adev->mixer);
@@ -3692,6 +3715,11 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.internal_pa =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.internal_pa);
+        }
+        else if (strcmp(s->private_name, PRIVATE_INTERNAL_HP_PA) == 0) {
+            s->adev->private_ctl.internal_hp_pa =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.internal_hp_pa);
         }
         else if (strcmp(s->private_name, PRIVATE_VBC_DA_EQ_SWITCH) == 0) {
             s->adev->private_ctl.vbc_da_eq_switch =
@@ -5022,6 +5050,11 @@ static int adev_open(const hw_module_t* module, const char* name,
     if (!adev->pga) {
         ALOGE("Warning: Unable to locate PGA from XML.");
     }
+    adev->pga_gain_nv = calloc(1, sizeof(pga_gain_nv_t));
+    if (0==adev->pga_gain_nv) {
+        ALOGW("Warning: Failed to create the parameters file of pga_gain_nv");
+        goto ERROR;
+    }
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
@@ -5093,7 +5126,8 @@ ERROR:
     if (adev->pga)    audio_pga_free(adev->pga);
     if (adev->mixer)  mixer_close(adev->mixer);
     if (adev->audio_para)  free(adev->audio_para);
-    if (adev)         free(adev);
+    if (adev->pga_gain_nv) free(adev->pga_gain_nv);
+    if (adev) free(adev);
     return -EINVAL;
 }
 
