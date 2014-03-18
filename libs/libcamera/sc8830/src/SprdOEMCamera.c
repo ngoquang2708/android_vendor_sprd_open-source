@@ -4795,8 +4795,7 @@ void *camera_af_thread_proc(void *data)
 			break;
 
 		case CMR_SENSOR_FOCUS_MOVE:
-			if (IS_PREVIEW && CAMERA_FOCUS_MODE_CAF == camera_get_af_mode())
-			{
+			if (IS_PREVIEW && CAMERA_FOCUS_MODE_CAF == camera_get_af_mode()) {
 				/*YUV sensor caf process, app need move and move done status*/
 				pthread_mutex_lock(&g_cxt->af_cb_mutex);
 				camera_direct_call_cb(CAMERA_EVT_CB_FOCUS_MOVE,

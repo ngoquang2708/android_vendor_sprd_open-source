@@ -75,6 +75,24 @@ namespace android {
 #define SET_PARAMS_TIMEOUT   250            /*250 means 250*10ms*/
 #define ON_OFF_ACT_TIMEOUT   50             /*50 means 50*10ms*/
 
+#define NO_FREQ_REQ          0
+#define NO_FREQ_STR          "0"
+#if defined(CONFIG_CAMERA_SMALL_PREVSIZE)
+#define BASE_FREQ_REQ        192
+#define BASE_FREQ_STR        "192000"
+#define MEDIUM_FREQ_REQ      200
+#define MEDIUM_FREQ_STR      "200000"
+#define HIGH_FREQ_REQ        300
+#define HIGH_FREQ_STR        "300000"
+#else
+#define BASE_FREQ_REQ        200
+#define BASE_FREQ_STR        "200000"
+#define MEDIUM_FREQ_REQ      300
+#define MEDIUM_FREQ_STR      "300000"
+#define HIGH_FREQ_REQ        500
+#define HIGH_FREQ_STR        "500000"
+#endif
+
 /**********************Static Members**********************/
 static nsecs_t s_start_timestamp = 0;
 static nsecs_t s_end_timestamp = 0;
@@ -276,7 +294,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mReleaseFLag(false),
 	mTimeCoeff(1),
 	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
-	mSetFreqCount(0),
+	mSetDDRFreqCount(0),
+	mSetDDRFreq(NO_FREQ_REQ),
 	mSwitchMonitorMsgQueHandle(0),
 	mSwitchMonitorInited(0)
 {
@@ -354,13 +373,12 @@ void SprdCameraHardware::release()
 		cancelPictureInternal();
 	}
 
-	while (0 < mSetFreqCount) {
-		set_ddr_freq("0");
-		mSetFreqCount--;
-	}
-
 	if (isPreviewing()) {
 		stopPreviewInternal();
+	}
+
+	while (0 < mSetDDRFreqCount) {
+		set_ddr_freq(NO_FREQ_REQ);
 	}
 
 	if (isCameraInit()) {
@@ -708,6 +726,11 @@ status_t SprdCameraHardware::startRecording()
 
 	waitSetParamsOK();
 
+	if ((isZslSupport) && (0 == strcmp("false", isZslSupport))) {
+		LOGV("switch ddr freq when startRecording for non-zsl");
+		set_ddr_freq(MEDIUM_FREQ_REQ);
+	}
+
 	if (isPreviewing()) {
 		if (camera_is_need_stop_preview()
 			|| ((0 == strcmp("true", isZslSupport)) && (1 != mParameters.getInt("zsl")))) {
@@ -734,10 +757,15 @@ status_t SprdCameraHardware::startRecording()
 
 void SprdCameraHardware::stopRecording()
 {
+	char * isZslSupport = (char *)mParameters.get("zsl-supported");
 	LOGV("stopRecording: E");
 	Mutex::Autolock l(&mLock);
 	setRecordingMode(false);
 	mRecordingFirstFrameTime = 0;
+	if ((isZslSupport) && (0 == strcmp("false", isZslSupport))) {
+		LOGV("switch back ddr freq when stopRecording for non-zsl");
+		set_ddr_freq(BASE_FREQ_REQ);
+	}
 	LOGV("stopRecording: X");
 }
 
@@ -2042,9 +2070,41 @@ void SprdCameraHardware::setRecordingMode(bool enable)
 
 void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner owner)
 {
+	Sprd_camera_state   org_state   = SPRD_IDLE;
+	volatile Sprd_camera_state      * state_owner = NULL;
+
 	LOGV("setCameraState:state: E");
 	Mutex::Autolock stateLock(&mStateLock);
 	LOGV("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
+	switch (owner) {
+		case STATE_CAMERA:
+			org_state = mCameraState.camera_state;
+			state_owner = &(mCameraState.camera_state);
+			break;
+
+		case STATE_PREVIEW:
+			org_state = mCameraState.preview_state;
+			state_owner = &(mCameraState.preview_state);
+			break;
+
+		case STATE_CAPTURE:
+			org_state = mCameraState.capture_state;
+			state_owner = &(mCameraState.capture_state);
+			break;
+
+		case STATE_FOCUS:
+			org_state = mCameraState.focus_state;
+			state_owner = &(mCameraState.focus_state);
+			break;
+
+		case STATE_SET_PARAMS:
+			org_state = mCameraState.setParam_state;
+			state_owner = &(mCameraState.setParam_state);
+			break;
+		default:
+			LOGE("setCameraState: owner error!");
+			break;
+	}
 
 	switch (state) {
 	/*camera state*/
@@ -2057,100 +2117,49 @@ void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner own
 		break;
 
 	case SPRD_IDLE:
-		switch (owner) {
-		case STATE_CAMERA:
-			mCameraState.camera_state = SPRD_IDLE;
-			break;
-
-		case STATE_PREVIEW:
-			mCameraState.preview_state = SPRD_IDLE;
-			break;
-
-		case STATE_CAPTURE:
-			mCameraState.capture_state = SPRD_IDLE;
-			break;
-
-		case STATE_FOCUS:
-			mCameraState.focus_state = SPRD_IDLE;
-			break;
-
-		case STATE_SET_PARAMS:
-			mCameraState.setParam_state = SPRD_IDLE;
-			break;
-		}
+		*state_owner = SPRD_IDLE;
 		break;
 
 	case SPRD_INTERNAL_STOPPING:
-		mCameraState.camera_state = SPRD_INTERNAL_STOPPING;
+		mCameraState.camera_state = state;
 		break;
 
 	case SPRD_ERROR:
-		switch (owner) {
-		case STATE_CAMERA:
-			mCameraState.camera_state = SPRD_ERROR;
-			break;
-
-		case STATE_PREVIEW:
-			mCameraState.preview_state = SPRD_ERROR;
-			break;
-
-		case STATE_CAPTURE:
-			mCameraState.capture_state = SPRD_ERROR;
-			break;
-
-		case STATE_FOCUS:
-			mCameraState.focus_state = SPRD_ERROR;
-			break;
-
-		default:
-			break;
-		}
+		*state_owner = SPRD_ERROR;
 		break;
 
 	/*preview state*/
 	case SPRD_PREVIEW_IN_PROGRESS:
-		mCameraState.preview_state = SPRD_PREVIEW_IN_PROGRESS;
-		break;
-
 	case SPRD_INTERNAL_PREVIEW_STOPPING:
-		mCameraState.preview_state = SPRD_INTERNAL_PREVIEW_STOPPING;
-		break;
-
 	case SPRD_INTERNAL_PREVIEW_REQUESTED:
-		mCameraState.preview_state = SPRD_INTERNAL_PREVIEW_REQUESTED;
+		mCameraState.preview_state = state;
 		break;
 
 	/*capture state*/
 	case SPRD_INTERNAL_RAW_REQUESTED:
-		mCameraState.capture_state = SPRD_INTERNAL_RAW_REQUESTED;
-		break;
-
 	case SPRD_WAITING_RAW:
-		mCameraState.capture_state = SPRD_WAITING_RAW;
-		break;
-
 	case SPRD_WAITING_JPEG:
-		mCameraState.capture_state = SPRD_WAITING_JPEG;
-		break;
-
 	case SPRD_INTERNAL_CAPTURE_STOPPING:
-		mCameraState.capture_state = SPRD_INTERNAL_CAPTURE_STOPPING;
+		mCameraState.capture_state = state;
 		break;
 
 	/*focus state*/
 	case SPRD_FOCUS_IN_PROGRESS:
-		mCameraState.focus_state = SPRD_FOCUS_IN_PROGRESS;
+		mCameraState.focus_state = state;
 		break;
 
 	/*set_param state*/
 	case SPRD_SET_PARAMS_IN_PROGRESS:
-		mCameraState.setParam_state = SPRD_SET_PARAMS_IN_PROGRESS;
+		mCameraState.setParam_state = state;
 		break;
 
 	default:
 		LOGD("setCameraState: error");
 		break;
 	}
+
+	if (org_state != state)
+		mStateWait.signal();              /*if state changed should broadcasting*/
 
 	LOGV("setCameraState: X camera state = %s, preview state = %s, capture state = %s focus state = %s set param state = %s",
 				getCameraStateStr(mCameraState.camera_state),
@@ -2403,6 +2412,8 @@ bool SprdCameraHardware::startCameraIfNecessary()
 
 		LOGV("OK to camera_start.");
 		WaitForCameraStart();
+
+		set_ddr_freq(BASE_FREQ_REQ);
 
 		LOGV("init camera: initializing parameters");
 	} else {
@@ -2802,6 +2813,11 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 				return -1;
 			}
 			private_h=(struct private_handle_t*) (*buffer_handle);
+			LOGV("get buffer handle 0x%x", (uint32_t)private_h);
+			if (NULL == private_h) {
+				LOGE("NULL buffer handle!");
+				return -1;
+			}
 			if (s_mem_method==0) {
 				int ion_addr=0,ion_size=0;
 				if (0 != MemoryHeapIon::Get_phy_addr_from_ion(private_h->share_fd,&ion_addr,&ion_size)) {
@@ -2853,8 +2869,10 @@ bool SprdCameraHardware::allocatePreviewMem()
 		LOGV("initPreview: rotation, increase buffer: %d \n", mPreviewHeapNum);
 	}
 
-	if (allocatePreviewMemByGraphics())
+	if (allocatePreviewMemByGraphics()) {
+		canclePreviewMem();
 		return false;
+	}
 
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		mPreviewDcamAllocBufferCnt = mPreviewHeapNum;
@@ -3276,18 +3294,86 @@ void SprdCameraHardware::deinitCapture()
 	freeCaptureMem();
 }
 
-void SprdCameraHardware::set_ddr_freq(const char* freq_in_khz)
+void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 {
-	const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
-	FILE* fp = fopen(set_freq, "wb");
+	const char*     freq_in_khz = NO_FREQ_STR;
+	uint32_t        tmpSetFreqCount = mSetDDRFreqCount;
 
-	if (fp != NULL) {
-		fprintf(fp, "%s", freq_in_khz);
-		LOGE("set ddr freq to %skhz", freq_in_khz);
-		fclose(fp);
-	} else {
-		LOGE("Failed to open %s", set_freq);
+	LOGD("set_ddr_freq to %d now count %d freq %d E", mhzVal, mSetDDRFreqCount, mSetDDRFreq);
+	if (mhzVal == mSetDDRFreq && NO_FREQ_REQ != mhzVal) {
+		LOGW("set_ddr_freq same freq %d need not set", mhzVal);
+		return;
 	}
+
+	const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
+
+	FILE* fp = fopen(set_freq, "wb");
+	if (NULL == fp) {
+		LOGE("set_ddr_freq Failed to open %s X", set_freq);
+		return;
+	}
+
+	switch (mhzVal) {
+		case NO_FREQ_REQ:
+			tmpSetFreqCount--;
+			break;
+
+		case BASE_FREQ_REQ:
+			if (NO_FREQ_REQ == mSetDDRFreq) {
+				tmpSetFreqCount++;
+			} else {
+				LOGV("set_ddr_freq clear freq for change!");
+				fprintf(fp, "%s", NO_FREQ_STR);
+				usleep(1000);
+				fclose(fp);
+				fp = NULL;
+			}
+			freq_in_khz = BASE_FREQ_STR;
+			break;
+
+		case MEDIUM_FREQ_REQ:
+			if (NO_FREQ_REQ == mSetDDRFreq) {
+				tmpSetFreqCount++;
+			} else {
+				LOGV("set_ddr_freq clear freq for change!");
+				fprintf(fp, "%s", NO_FREQ_STR);
+				usleep(1000);
+				fclose(fp);
+				fp = NULL;
+			}
+			freq_in_khz = MEDIUM_FREQ_STR;
+			break;
+
+		case HIGH_FREQ_REQ:
+			if (NO_FREQ_REQ == mSetDDRFreq) {
+				tmpSetFreqCount++;
+			} else {
+				LOGV("set_ddr_freq clear freq for change!");
+				fprintf(fp, "%s", NO_FREQ_STR);
+				usleep(1000);
+				fclose(fp);
+				fp = NULL;
+			}
+			freq_in_khz = HIGH_FREQ_STR;
+			break;
+
+		default:
+			LOGE("set_ddr_freq unrecognize set frequency, error!");
+			break;
+	}
+
+	fp = fopen(set_freq, "wb");
+	if (NULL == fp) {
+		LOGE("set_ddr_freq Failed to open %s X", set_freq);
+		return;
+	}
+
+	fprintf(fp, "%s", freq_in_khz);
+	mSetDDRFreq = mhzVal;
+	mSetDDRFreqCount = tmpSetFreqCount;
+	LOGD("set_ddr_freq to %skhz now count %d freq %d X", freq_in_khz, mSetDDRFreqCount, mSetDDRFreq);
+	usleep(1000);
+	fclose(fp);
 }
 
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
@@ -3341,13 +3427,11 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		return UNKNOWN_ERROR;
 	}
 	if (1 == mParameters.getInt("zsl")) {
-		set_ddr_freq("500000");
-		mSetFreqCount++;
+		set_ddr_freq(HIGH_FREQ_REQ);
 		deinitCapture();
 		if (!initCapture(mData_cb != NULL)) {
 			deinitCapture();
-			set_ddr_freq("0");
-			mSetFreqCount--;
+			set_ddr_freq(BASE_FREQ_REQ);
 			LOGE("startPreviewInternal X initCapture failed. Not taking picture.");
 			return UNKNOWN_ERROR;
 		}
@@ -3362,8 +3446,7 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 		setCameraState(SPRD_ERROR, STATE_PREVIEW);
 		deinitPreview();
 		if (iSZslMode()) {
-			set_ddr_freq("0");
-			mSetFreqCount--;
+			set_ddr_freq(BASE_FREQ_REQ);
 		}
 		return UNKNOWN_ERROR;
 	}
@@ -3403,10 +3486,7 @@ void SprdCameraHardware::stopPreviewInternal()
 	}
 
 	if (iSZslMode()) {
-		while (0 < mSetFreqCount) {
-			set_ddr_freq("0");
-			mSetFreqCount--;
-		}
+		set_ddr_freq(BASE_FREQ_REQ);
 	}
 
 	WaitForPreviewStop();
