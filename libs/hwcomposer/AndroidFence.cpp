@@ -64,10 +64,20 @@ int sprd_fence_create(char *name, int value)
 
     struct ion_custom_data  custom_data;
     struct ion_fence_data data;
+    unsigned int nameSize = 0;
 
     memset(&data, 0, sizeof(struct ion_fence_data));
 
-    strncpy(data.name, name, sizeof(data.name));
+    if (sizeof(name) >= sizeof(data.name))
+    {
+        name[sizeof(data.name) - 1] = '\0';
+        nameSize = sizeof(data.name);
+    }
+    else
+    {
+        nameSize = sizeof(name);
+    }
+    strncpy(data.name, name, nameSize);
     data.value = value;
 
     custom_data.cmd = ION_SPRD_CUSTOM_FENCE_CREATE;
@@ -254,7 +264,7 @@ int syncReleaseFence(hwc_display_contents_1_t *list, int display)
     releaseFenceFd = dup(fenceFd);
 
 DupFenceFD:
-    if (list)
+    if (list && fenceFd >= 0)
     {
         for(unsigned int i = 0; i < list->numHwLayers; i++)
         {
@@ -272,7 +282,10 @@ DupFenceFD:
         }
     }
 
-    close(fenceFd);
+    if (fenceFd >= 0)
+    {
+        close(fenceFd);
+    }
 
     return releaseFenceFd;
 }

@@ -104,6 +104,7 @@ int loadFrameBufferHAL(FrameBufferInfo **fbInfo)
     if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) == -1)
     {
         ALOGE("fail to get FBIOGET_VSCREENINFO");
+        close(fd);
         ret = -1;
         return ret;
     }
@@ -154,6 +155,7 @@ int loadFrameBufferHAL(FrameBufferInfo **fbInfo)
         break;
     default:
         ALOGE("fail to getFrameBufferInfo not support bits per pixel:%d" , vinfo.bits_per_pixel);
+        free(FBInfo);
         return ret;
     }
 
