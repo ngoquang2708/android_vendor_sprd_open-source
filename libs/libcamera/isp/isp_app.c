@@ -117,6 +117,7 @@ struct isp_app_respond
 	uint32_t rtn;
 };
 
+#ifdef CONFIG_CAMERA_ISP
 /**---------------------------------------------------------------------------*
 **				extend Variables and function			*
 **---------------------------------------------------------------------------*/
@@ -124,7 +125,6 @@ struct isp_app_respond
 /**---------------------------------------------------------------------------*
 **				Local Variables 					*
 **---------------------------------------------------------------------------*/
-
 static struct isp_app_param* s_isp_app_context_ptr=NULL;
 static pthread_mutex_t s_app_mutex={0x00};
 
@@ -971,6 +971,7 @@ static int _isp_app_release_resource(void)
 
 	return rtn;
 }
+#endif //endif CONFIG_CAMERA_ISP
 
 // public
 
@@ -982,6 +983,7 @@ static int _isp_app_release_resource(void)
 int isp_init(struct isp_init_param* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = NULL;
@@ -1043,7 +1045,7 @@ int isp_init(struct isp_init_param* ptr)
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("---isp_app_init-- end");
-
+#endif
 	return rtn;
 }
 
@@ -1055,6 +1057,7 @@ int isp_init(struct isp_init_param* ptr)
 int isp_deinit(void)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
@@ -1101,7 +1104,7 @@ int isp_deinit(void)
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_deinit-- end");
-
+#endif
 	return rtn;
 }
 
@@ -1113,6 +1116,7 @@ int isp_deinit(void)
 int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
@@ -1141,7 +1145,7 @@ int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
-
+#endif
 	return rtn;
 }
 
@@ -1153,6 +1157,7 @@ int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
@@ -1181,7 +1186,7 @@ int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
-
+#endif
 	return rtn;
 }
 
@@ -1193,6 +1198,7 @@ int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 int isp_video_start(struct isp_video_start* param_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
@@ -1225,7 +1231,7 @@ int isp_video_start(struct isp_video_start* param_ptr)
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_video_start-- end");
-
+#endif
 	return rtn;
 }
 
@@ -1237,6 +1243,7 @@ int isp_video_start(struct isp_video_start* param_ptr)
 int isp_video_stop(void)
 {
 	int rtn=ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	struct isp_app_system* isp_system_ptr = ispAppGetSystem();
@@ -1267,7 +1274,7 @@ int isp_video_stop(void)
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_video_stop--end");
-
+#endif
 	return rtn;
 }
 
@@ -1279,6 +1286,7 @@ int isp_video_stop(void)
 int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_param_ptr)
 {
 	int rtn=ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	ISP_APP_MSG_INIT(isp_main_msg);
@@ -1304,7 +1312,7 @@ int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_proc_start--end");
-
+#endif
 	return rtn;
 }
 
@@ -1316,6 +1324,7 @@ int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_
 int isp_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+#ifdef CONFIG_CAMERA_ISP
 	uint32_t handler_id=0x00;
 	struct isp_app_respond respond;
 	ISP_APP_MSG_INIT(isp_main_msg);
@@ -1341,7 +1350,7 @@ int isp_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr)
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
 	ISP_LOG("--isp_app_proc_next--end");
-
+#endif
 	return rtn;
 }
 
