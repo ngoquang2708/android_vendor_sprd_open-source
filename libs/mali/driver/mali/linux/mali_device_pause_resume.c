@@ -37,16 +37,18 @@ void mali_dev_pause(void)
 	mali_gp_scheduler_suspend();
 	mali_pp_scheduler_suspend();
 	mali_group_power_off(MALI_FALSE);
-	mali_l2_cache_pause_all(MALI_TRUE);
+
 	mali_pause_lock();
+	mali_l2_cache_pause_all(MALI_TRUE);
 }
 
 EXPORT_SYMBOL(mali_dev_pause);
 
 void mali_dev_resume(void)
 {
-	mali_pause_unlock();
 	mali_l2_cache_pause_all(MALI_FALSE);
+	mali_pause_unlock();
+
 	mali_gp_scheduler_resume();
 	mali_pp_scheduler_resume();
 }
