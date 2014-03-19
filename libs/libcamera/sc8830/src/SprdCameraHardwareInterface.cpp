@@ -1663,7 +1663,6 @@ status_t SprdCameraHardware::checkFlashParameter(SprdCameraParameters& params)
 {
 	status_t ret =  NO_ERROR;
 	SprdCameraParameters::ConfigType configType;
-	const char* flash_support_value;
 
 	/*check the if support the flash*/
 	if ((0 == strcmp("hdr",params.get_SceneMode())
@@ -1675,7 +1674,7 @@ status_t SprdCameraHardware::checkFlashParameter(SprdCameraParameters& params)
 		params.setFlashMode("off");
 		mFlashMask = true;
 	} else {
-		if (params.getIsSupportFlash()) {
+		if (0 == strcmp("true", (char*)mParameters.get("flash-mode-supported"))) {
 			mFlashMask = false;
 		}
 	}
