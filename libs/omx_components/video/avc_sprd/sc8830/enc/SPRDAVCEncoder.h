@@ -110,6 +110,8 @@ private:
 //    Vector<MediaBuffer *> mOutputBuffers;
     Vector<InputBufferInfo> mInputBufferInfoVec;
 
+    int mSetFreqCount;
+
     void* mLibHandle;
     FT_H264EncGetCodecCapability	mH264EncGetCodecCapability;
     FT_H264EncPreInit        mH264EncPreInit;
