@@ -75,6 +75,8 @@ MODULE_PARM_DESC(gpufreq_table, "GPU freq table");
 #endif
 
 int gpu_level=0;
+module_param(gpu_level, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
+MODULE_PARM_DESC(gpu_level, "GPU gpu_level");
 
 extern int mali_max_job_runtime;
 module_param(mali_max_job_runtime, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH);

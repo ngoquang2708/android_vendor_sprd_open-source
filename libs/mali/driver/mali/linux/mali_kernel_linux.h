@@ -36,19 +36,6 @@ void mali_power_initialize(struct platform_device *pdev);
 extern struct workqueue_struct * mali_wq_normal;
 #endif
 
-struct gpu_freq_table {
-	unsigned int	index;     /* any */
-	unsigned int	frequency;
-	unsigned int	division;
-	unsigned int	freq_select;
-};
-
-#define GPU_FREQ_TABLE_SIZE 5
-
-struct gpu_freq_table_data {
-	struct gpu_freq_table 		freq_tbl[GPU_FREQ_TABLE_SIZE];
-};
-
 #ifdef __cplusplus
 }
 #endif
