@@ -1787,9 +1787,14 @@ int camera_autofocus_start(void)
 		cxt->af_busy = 0;
 	}
 
+#ifndef CONFIG_CAMERA_FLASH_CTRL
+
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
-		camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_AUTOFOCUS);
+		if (FLASH_TORCH != cxt->cmr_set.flash) {
+			camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_AUTOFOCUS);
+		}
 	}
+#endif
 	CMR_PRINT_TIME;
 	CMR_LOGV("End. %d", ret);
 
