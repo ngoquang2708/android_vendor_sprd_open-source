@@ -101,6 +101,8 @@ private:
     MMEncConfig *mEncConfig;
     Vector<InputBufferInfo> mInputBufferInfoVec;
 
+    int mSetFreqCount;
+
     void* mLibHandle;
     FT_MP4EncInit        mMP4EncInit;
     FT_MP4EncSetConf        mMP4EncSetConf;

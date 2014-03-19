@@ -288,6 +288,7 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mEncConfig(new MMEncConfig),
       mEncParams(new tagAVCEncParam),
       mSliceGroup(NULL),
+      mSetFreqCount(0),
       mLibHandle(NULL),
       mH264EncGetCodecCapability(NULL),
       mH264EncPreInit(NULL),
@@ -414,9 +415,9 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncParams->use_overrun_buffer = AVC_OFF;
 
 #ifdef VIDEOENC_CURRENT_OPT
-    if (((mVideoWidth <= 720) && (mVideoHeight <= 480)) || ((mVideoWidth <= 480) && (mVideoHeight <= 720)))
-    {
+    if (((mVideoWidth <= 720) && (mVideoHeight <= 480)) || ((mVideoWidth <= 480) && (mVideoHeight <= 720))) {
         set_ddr_freq("200000");
+        mSetFreqCount ++;
     }
 #endif
 
@@ -616,7 +617,10 @@ OMX_ERRORTYPE SPRDAVCEncoder::releaseEncoder() {
     }
 
 #ifdef VIDEOENC_CURRENT_OPT
-    set_ddr_freq("0");
+    while (mSetFreqCount > 0) {
+        set_ddr_freq("0");
+        mSetFreqCount --;
+    }
 #endif
 
     delete mEncParams;

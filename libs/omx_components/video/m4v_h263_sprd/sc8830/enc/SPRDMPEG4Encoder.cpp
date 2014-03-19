@@ -145,6 +145,7 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mPbuf_stream_size(0),
       mHandle(new tagMP4Handle),
       mEncConfig(new MMEncConfig),
+      mSetFreqCount(0),
       mLibHandle(NULL),
       mMP4EncInit(NULL),
       mMP4EncSetConf(NULL),
@@ -223,9 +224,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     mHandle->userData = this;
 
 #ifdef VIDEOENC_CURRENT_OPT
-    if (((mVideoWidth <= 720) && (mVideoHeight <= 480)) || ((mVideoWidth <= 480) && (mVideoHeight <= 720)))
-    {
+    if (((mVideoWidth <= 720) && (mVideoHeight <= 480)) || ((mVideoWidth <= 480) && (mVideoHeight <= 720))) {
         set_ddr_freq("200000");
+        mSetFreqCount ++;
     }
 #endif
 
@@ -412,7 +413,10 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::releaseEncoder() {
     }
 
 #ifdef VIDEOENC_CURRENT_OPT
-    set_ddr_freq("0");
+    while (mSetFreqCount > 0) {
+        set_ddr_freq("0");
+        mSetFreqCount --;
+    }
 #endif
 
     delete mEncConfig;
