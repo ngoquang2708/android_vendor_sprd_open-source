@@ -2982,10 +2982,8 @@
     <!-- Cambodia Mobitel -->
     <apn carrier="Mobitel(pre-paid)-wap"
         mcc="456"
-        mnc="1"
+        mnc="01"
         apn="cellcard"
-        proxy="203.144.95.100"
-        port="8080"
         server="http://www.cellcard.com.kh/mobile"
         user="mobitel"
         password="mobitel"
@@ -2993,7 +2991,7 @@
     />
     <apn carrier="Mobitel(post-paid)-wap"
         mcc="456"
-        mnc="1"
+        mnc="01"
         apn="postpaid"
         proxy="203.144.95.100"
         port="8080"
@@ -3004,7 +3002,7 @@
     />
     <apn carrier="Mobitel(3G)-net"
         mcc="456"
-        mnc="1"
+        mnc="01"
         apn="3g"
         server="http://3g.cellcard.com.kh"
         user="mobitel"
@@ -3013,7 +3011,7 @@
     />
     <apn carrier="Mobitel(pre-paid)-mms"
         mcc="456"
-        mnc="1"
+        mnc="01"
         apn="mms"
         mmsproxy="203.144.95.98"
         mmsport="3130"
@@ -3111,14 +3109,14 @@
     <!-- Cambodia Metfone -->
     <apn carrier="Metfone(pre-paid)-net"
         mcc="456"
-        mnc="8"
+        mnc="08"
         apn="metfone"
-        server="http://www.google.com"
+        server="http://www.metfone.com.kh"
         type="default,supl"
     />
     <apn carrier="Metfone(pre-paid)-mms"
         mcc="456"
-        mnc="8"
+        mnc="08"
         apn="mms"
         mmsproxy="192.168.23.85"
         mmsport="8080"
