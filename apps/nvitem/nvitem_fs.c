@@ -17,6 +17,18 @@ typedef struct  _NV_HEADER {
 #define NV_HEAD_MAGIC   0x00004e56
 #define NV_VERSION      101
 
+#define PRODUCT_PARTITION_PATH    "ro.product.partitionpath"
+#define RO_MODEM_CHAR             "ro.modem."
+#define RO_MODEM_FIXNVSIZE        ".fixnv_size"
+#define RO_MODEM_RUNNVSIZE        ".runnv_size"
+#define RO_MODEM_NV_PATH          ".nvp"
+#define NV_TAIL                   ".nv"
+/*note:
+#define PROPERTY_KEY_MAX   32   //strlen(PRODUCT_PARTITION_PATH) will be letter than MAX
+#define PROPERTY_VALUE_MAX 92
+*/
+
+
 static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 {
     unsigned short num = 0;
@@ -60,14 +72,123 @@ static RAM_NV_CONFIG _ramdiskCfg[RAMNV_NUM+1] =
         {0,	"",							"",	0		}
 };
 
-char* config_path;
-//char partition_path[100];
-
 char fixnv_ori_path[100];
 char fixnv_bak_path[100];
 char runnv_ori_path[100];
 char runnv_bak_path[100];
-extern uint32 fixnv_size,runnv_size;
+uint32 fixnv_size,runnv_size;
+extern char argv1[10];
+extern char channel_path[95];
+
+int initArgs(void)
+{
+	char   fixnv[95],runnv[95];
+	char   fixnv_property[50],runnv_property[50];
+	char   system_prop[20];
+	char   partition_path[100];
+	char   nvp[50];
+	char   path_char[95];
+	char   channel_char[50];
+
+	if(0 == strlen(argv1)){
+		NVITEM_PRINT("invalid argv1\n");
+		return 0;
+	}
+
+	//get system prop eg:ro.modem.t;ro.modem.w ....
+	if(strlen(RO_MODEM_CHAR)+strlen(argv1) < 20){
+		strcpy(system_prop,RO_MODEM_CHAR);
+		strcat(system_prop,argv1);
+	}
+	NVITEM_PRINT("system_prop %s\n",system_prop);
+
+	//get channel
+	if(strlen(system_prop)+strlen(NV_TAIL) < 50){
+		strcpy(channel_char,system_prop);
+		strcat(channel_char,NV_TAIL);
+	}
+	NVITEM_PRINT("channel_char %s\n",channel_char);
+	property_get(channel_char, channel_path, "");
+	if(0 == strlen(channel_path)){
+		NVITEM_PRINT("invalid channel_path \n");
+		return 0;
+	}
+	NVITEM_PRINT("channel_path %s \n",channel_path);
+
+	//get nvsize
+	if(strlen(system_prop) + strlen(RO_MODEM_FIXNVSIZE) < 50){
+		strcpy(fixnv_property,system_prop);
+		strcat(fixnv_property,RO_MODEM_FIXNVSIZE);
+		property_get(fixnv_property,fixnv,"");
+		if(0 == strlen(fixnv)){
+			NVITEM_PRINT("invalid ro.modem.w.fixnv_size\n");
+			return 0;
+		}
+		NVITEM_PRINT("NVITEM: fixnv_property is %s fixnv %s\n",fixnv_property,fixnv);
+	}
+
+	if(strlen(system_prop) + strlen(RO_MODEM_RUNNVSIZE) < 50){
+		strcpy(runnv_property,system_prop);
+		strcat(runnv_property,RO_MODEM_RUNNVSIZE);
+		property_get(runnv_property,runnv,"");
+		if(0 == strlen(runnv)){
+			NVITEM_PRINT("ro.modem.w.runnv_size\n");
+			return 0;
+		}
+		NVITEM_PRINT("NVITEM: runnv_property is %s runnv %s\n",runnv_property,runnv);
+	}
+	fixnv_size = strtol(fixnv,0,16);
+	runnv_size = strtol(runnv,0,16);
+
+	NVITEM_PRINT("NVITEM fixnv_size %x,runnv_size %x\n",fixnv_size,runnv_size);
+
+	//get nv path: eg: partition_path+td+fixnv
+	property_get(PRODUCT_PARTITION_PATH, partition_path, "");
+	NVITEM_PRINT("partition_path %s\n",partition_path);
+
+	if(strlen(system_prop) + strlen(RO_MODEM_NV_PATH) < 50){
+		strcpy(nvp,system_prop);
+		strcat(nvp,RO_MODEM_NV_PATH);
+		property_get(nvp,path_char,"");
+		if(0 == strlen(path_char)){
+			NVITEM_PRINT("invalid ro.modem.w.nvp  \n");
+			return 0;
+		}
+		NVITEM_PRINT("NVITEM path_char %s\n",path_char);
+	}
+
+	if(100 > strlen(partition_path)+strlen(path_char)+strlen("fixnv1")){
+		strcpy(fixnv_ori_path,partition_path);
+		strcat(fixnv_ori_path,path_char);
+		strcat(fixnv_ori_path,"fixnv1");
+
+		strcpy(fixnv_bak_path,partition_path);
+		strcat(fixnv_bak_path,path_char);
+		strcat(fixnv_bak_path,"fixnv2");
+		NVITEM_PRINT("fixnv_ori_path %s fixnv_bak_path %s\n",fixnv_ori_path,fixnv_bak_path);
+	}
+	else{
+		NVITEM_PRINT("fixnv path too long! check it \n");
+		return 0;
+	}
+
+	if(100 > strlen(partition_path)+strlen(path_char)+strlen("runtimenv1")){
+		strcpy(runnv_ori_path,partition_path);
+		strcat(runnv_ori_path,path_char);
+		strcat(runnv_ori_path,"runtimenv1");
+
+		strcpy(runnv_bak_path,partition_path);
+		strcat(runnv_bak_path,path_char);
+		strcat(runnv_bak_path,"runtimenv2");
+		NVITEM_PRINT("runnv_ori_path %s runnv_bak_path %s\n",runnv_ori_path,runnv_bak_path);
+	}
+	else{
+		NVITEM_PRINT("runnv path too long! check it \n");
+		return 0;
+	}
+	return 1;
+}
+
 
 const RAM_NV_CONFIG*	ramDisk_Init(void)
 {

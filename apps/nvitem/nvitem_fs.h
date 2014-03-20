@@ -25,6 +25,8 @@ BOOLEAN		ramDisk_Write(RAMDISK_HANDLE handle, uint8* buf, uint32 size);
 
 void			ramDisk_Close(RAMDISK_HANDLE handle);
 
+int        initArgs(void);
+
 
 #endif
 
