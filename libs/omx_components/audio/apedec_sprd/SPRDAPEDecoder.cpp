@@ -59,6 +59,10 @@ SPRDAPEDecoder::SPRDAPEDecoder(
       mNumSamplesOutput(0),
       mLibHandle(NULL),
       mSignalledError(false),
+      mInputCurrentLength(0),
+      mAPEDecompress_Init(NULL),
+      mAPEDecompress_Dec(NULL),
+      mAPEDecompress_Term(NULL),
       mOutputPortSettingsChange(NONE) {
     bool ret = false;
     ret = openDecoder("libomx_apedec_sprd.so");
@@ -71,6 +75,12 @@ SPRDAPEDecoder::~SPRDAPEDecoder() {
     mAPEDecompress_Term(&mDecoder->HANDLE, &mDecoder->CONFIG);
     if(mDecoder != NULL) {
         free(mDecoder);
+        mDecoder = NULL;
+    }
+
+    if(mLibHandle) {
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
     }
 
     delete []mPcm_out;
@@ -297,8 +307,7 @@ void SPRDAPEDecoder::onQueueFilled(OMX_U32 portIndex) {
         BufferInfo *inInfo = *inQueue.begin();
         OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
         uint8_t *pInputBuffer;
-        uint32_t inputBufferCurrentLength;
-        char remainder;
+        char remainder = 0;
         
         BufferInfo *outInfo = *outQueue.begin();
         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
@@ -323,11 +332,11 @@ void SPRDAPEDecoder::onQueueFilled(OMX_U32 portIndex) {
             mNumSamplesOutput = 0;
 
             pInputBuffer = inHeader->pBuffer + inHeader->nOffset;
-            inputBufferCurrentLength = inHeader->nFilledLen;
+            mInputCurrentLength = inHeader->nFilledLen;
             remainder = *pInputBuffer;
 
             mDecoder->INPUT.pchData = (char *)pInputBuffer + 1;
-            mDecoder->INPUT.nLen = inputBufferCurrentLength;
+            mDecoder->INPUT.nLen = mInputCurrentLength;
             mDecoder->INPUT.counter = 0;
 
             mDecoder->OUTPUT.pchData = mPcm_out;
@@ -337,7 +346,7 @@ void SPRDAPEDecoder::onQueueFilled(OMX_U32 portIndex) {
         }
         currentTime = inHeader->nTimeStamp;
         int decoderRet = 0;
-        if(inputBufferCurrentLength > 0) {
+        if(mInputCurrentLength > 0) {
             if(mDecoder->HANDLE.m_nCurrentTimeUs != mAnchorTimeUs) {
                 int nBlockOffset=1024*mAnchorTimeUs/((int)(1024.0*1000000.0/(float)mDecoder->CONFIG.nSampleRate));
 
@@ -380,7 +389,7 @@ void SPRDAPEDecoder::onQueueFilled(OMX_U32 portIndex) {
 
             decoderRet = mAPEDecompress_Dec(&mDecoder->HANDLE, &mDecoder->CONFIG, &mDecoder->INPUT, &mDecoder->OUTPUT);
         } else {
-            ALOGW("APE decoder stream buf size error %d",inputBufferCurrentLength);
+            ALOGW("APE decoder stream buf size error %d", mInputCurrentLength);
             decoderRet = 2;
         }
 
@@ -487,6 +496,7 @@ bool SPRDAPEDecoder::openDecoder(const char* libName)
 {
     if(mLibHandle) {
         dlclose(mLibHandle);
+        mLibHandle = NULL;
     }
 
     ALOGI("openDecoder, lib: %s", libName);

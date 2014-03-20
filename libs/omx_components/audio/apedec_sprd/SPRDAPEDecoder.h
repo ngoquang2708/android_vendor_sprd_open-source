@@ -58,6 +58,7 @@ private:
     int32_t mSamplingRate;
     char *mPcm_out;
     APE__StreamDecoder *mDecoder;
+    uint32_t mInputCurrentLength;
 
     void *mLibHandle;
 
