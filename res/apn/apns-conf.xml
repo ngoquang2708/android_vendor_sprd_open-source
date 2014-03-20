@@ -3046,6 +3046,13 @@
         mmsc="http://192.168.24.10:38090"
         type="mms"
     />
+    <!-- Cambodia qb -->
+    <apn carrier="QB wap"
+        mcc="456"
+        mnc="04"
+        apn="wap"
+        type="default,supl"
+    />
     <!-- Cambodia Star-Cell -->
     <apn carrier="Star-cell(pre-paid)-net"
         mcc="456"
@@ -3061,6 +3068,32 @@
         mmsproxy="192.168.100.210"
         mmsport="8080"
         mmsc="http://192.168.100.210"
+        type="mms"
+    />
+    <!-- Cambodia Smart Mobile -->
+    <apn carrier="Smart(pre-paid)-net"
+        mcc="456"
+        mnc="06"
+        apn="smart"
+        server="http://wap.yahoo.com"
+        type="default,supl"
+    />
+    <apn carrier="Smart(pre-paid)-wap"
+        mcc="456"
+        mnc="06"
+        apn="smart"
+        proxy="10.12.1.140"
+        port="8080"
+        server="http://wap.yahoo.com"
+        type="default,supl"
+    />
+    <apn carrier="Smart(pre-paid)-mms"
+        mcc="456"
+        mnc="06"
+        apn="mms"
+        mmsproxy="10.12.1.142"
+        mmsport="8080"
+        mmsc="http://mmsc"
         type="mms"
     />
     <!-- Cambodia Mfone -->
@@ -3121,47 +3154,6 @@
         mmsproxy="192.168.23.85"
         mmsport="8080"
         mmsc="http://192.168.24.10:38090"
-        type="mms"
-    />
-    <!-- Cambodia Smart Mobile -->
-    <apn carrier="Smart(pre-paid)-net"
-        mcc="456"
-        mnc="6"
-        apn="smart"
-        server="http://wap.yahoo.com"
-        type="default,supl"
-    />
-    <apn carrier="Smart(pre-paid)-net"
-        mcc="456"
-        mnc="6"
-        apn="smart"
-        type="default,supl"
-    />
-    <apn carrier="Smart(pre-paid)-wap"
-        mcc="456"
-        mnc="6"
-        apn="smart"
-        proxy="10.12.1.140"
-        port="8080"
-        server="http://wap.yahoo.com"
-        type="default,supl"
-    />
-    <apn carrier="Smart(pre-paid)-mms"
-        mcc="456"
-        mnc="6"
-        apn="smart"
-        mmsproxy="10.12.1.140"
-        mmsport="8080"
-        mmsc="http://mmsc"
-        type="mms"
-    />
-    <apn carrier="Smart(pre-paid)-mms"
-        mcc="456"
-        mnc="6"
-        apn="mms"
-        mmsproxy="10.12.1.142"
-        mmsport="8080"
-        mmsc="http://mmsc"
         type="mms"
     />
     <!-- Cameroon MTN Cameroon -->
