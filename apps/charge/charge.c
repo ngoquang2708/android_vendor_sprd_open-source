@@ -162,83 +162,7 @@ main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-#ifdef CONFIG_SYNC_FILE
-	do{
-		i++;
-		if(i>MODE_CHECK_MAX){
-			is_factory = 0;
-			LOGE("has try %d times, give up , non factory\n", i);
-			break;
-		}
-		sleep(1);
-		if ((fd=open(ENG_FACOTRYSYNC_FILE, O_RDWR))<=0) {
-			LOGD("%s not exist\n",ENG_FACOTRYSYNC_FILE);
-			continue;
-		}
-		close(fd);
-		fd = open(ENG_FACOTRYMODE_FILE, O_RDWR);
-		LOGD("open %s fd=%d\n",ENG_FACOTRYMODE_FILE, fd);
-
-		if(fd > 0){
-			is_factory = 1;
-			close(fd);
-			break;
-		}else{
-			is_factory = 0;
-			break;
-		}
-	}while(1);
-#else
-	char buf[5]={0};
-	do{
-		i++;
-		if(i>MODE_CHECK_MAX){
-			is_factory = 0;
-			break;
-		}
-		sleep(1);
-		if (stat(ENG_FACOTRYMODE_FILE, &s) != 0) {
-			LOGE("cannot find '%s'\n", ENG_FACOTRYMODE_FILE);
-			continue;
-		}
-		fd = open(ENG_FACOTRYMODE_FILE, O_RDWR);
-		if(fd < 0){
-			LOGE("open %s error %s\n", ENG_FACOTRYMODE_FILE, strerror(errno));
-			continue;
-		}
-
-		lseek(fd, 0, SEEK_SET);
-		ret = read(fd, buf, 2);
-		buf[4] = '\0';
-		if(ret <= 0){
-			LOGD("factory file read %d error %s\n", ret, strerror(errno));
-			close(fd);
-			continue;
-		}
-
-		ret = atoi(buf);
-		if(ret == 1){
-			LOGD("fatcotry mode\n");
-			is_factory = 1;
-			close(fd);
-			break;
-		}else if(ret == 0){
-			LOGD("not fatcotry mode\n");
-			is_factory = 0;
-			close(fd);
-			break;
-		}else{
-			LOGD("factory mode get %s\n", buf);
-			close(fd);
-			continue;
-		}
-	}while(1);
-
-#endif
-
-	if(!is_factory){
-		system("echo 0 > /sys/class/android_usb/android0/enable");
-	}
+	system("echo 0 > /sys/class/android_usb/android0/enable");
 
 	ui_init();
 
@@ -284,14 +208,11 @@ main(int argc, char **argv) {
 
 	LOGD("all thread start\n");
 
-	int result;
 	pthread_join(t_1, NULL);
 	pthread_join(t_2, NULL);
 	pthread_join(t_3, NULL);
 	pthread_join(t_4, NULL);
-	if(!is_factory){
-		system("echo 1 > /sys/class/android_usb/android0/enable");
-	}
+
 	LOGD("charge app exit\n");
 
 	return EXIT_SUCCESS;
