@@ -246,7 +246,6 @@ public:
 	void setZSLSupport(const char* value);
 	void updateSupportedPreviewSizes(int width, int height);
 	void setFlashModeSupport(const char* value);
-	int  getIsSupportFlash(void);
 
 	// These sizes have to be a multiple of 16 in each dimension
 	static const Size kPreviewSizes[];
@@ -258,7 +257,6 @@ public:
 	static const int kInvalidValue = 0xffffffff;
 	static const int kFrontCameraConfigCount;
 	static const int kBackCameraConfigCount;
-	int              KSupportFlash;
 
 	static const char KEY_FOCUS_AREAS[];
 	static const char KEY_FOCUS_MODE[];

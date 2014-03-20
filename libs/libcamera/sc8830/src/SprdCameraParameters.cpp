@@ -91,12 +91,12 @@ const char SprdCameraParameters::KEY_CAPMODE[] = "capture-mode";
 const char SprdCameraParameters::KEY_SUPPORTED_ZSL[] = "zsl-supported";
 const char SprdCameraParameters::KEY_SUPPORTED_FLASH_MODE[] = "flash-mode-supported";
 
-SprdCameraParameters::SprdCameraParameters():CameraParameters(),KSupportFlash(0)
+SprdCameraParameters::SprdCameraParameters():CameraParameters()
 {
 
 }
 
-SprdCameraParameters::SprdCameraParameters(const String8 &params):CameraParameters(params),KSupportFlash(0)
+SprdCameraParameters::SprdCameraParameters(const String8 &params):CameraParameters(params)
 {
 
 }
@@ -140,13 +140,6 @@ void SprdCameraParameters::setDefault(ConfigType config)
 	for (int i=0; i<count; i++) {
 		set(element[i].key, element[i].value);
 		LOGV("SetDefault: key = %s, value = %s", element[i].key, element[i].value);
-		if (0 == strcmp(element[i].key,"flash-mode-supported")) {
-			if (0 == strcmp(element[i].value,"true")) {
-				KSupportFlash = 1;
-			} else {
-				KSupportFlash = 0;
-			}
-		}
 	}
 }
 
@@ -1300,11 +1293,6 @@ void SprdCameraParameters::setZSLSupport(const char* value)
 void SprdCameraParameters::setFlashModeSupport(const char* value)
 {
 	set(KEY_SUPPORTED_FLASH_MODE,value);
-}
-
-int SprdCameraParameters::getIsSupportFlash(void)
-{
-	return KSupportFlash;
 }
 
 void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
