@@ -378,7 +378,11 @@ void SprdCameraHardware::release()
 	}
 
 	while (0 < mSetDDRFreqCount) {
-		set_ddr_freq(NO_FREQ_REQ);
+		if (BAD_VALUE == set_ddr_freq(NO_FREQ_REQ)) {
+			mSetDDRFreqCount = 0;
+			LOGW("ddr set fail, quit yet!");
+			break;
+		}
 	}
 
 	if (isCameraInit()) {
@@ -726,14 +730,17 @@ status_t SprdCameraHardware::startRecording()
 
 	waitSetParamsOK();
 
-	if ((isZslSupport) && (0 == strcmp("false", isZslSupport))) {
+	if (isZslSupport
+		&& (0 == strcmp("false", isZslSupport))) {
 		LOGV("switch ddr freq when startRecording for non-zsl");
 		set_ddr_freq(MEDIUM_FREQ_REQ);
 	}
 
 	if (isPreviewing()) {
 		if (camera_is_need_stop_preview()
-			|| ((0 == strcmp("true", isZslSupport)) && (1 != mParameters.getInt("zsl")))) {
+			|| (isZslSupport
+			&& (0 == strcmp("true", isZslSupport))
+			&& (1 != mParameters.getInt("zsl")))) {
 			LOGV("call stopPreviewInternal in startRecording().");
 			setCameraState(SPRD_INTERNAL_PREVIEW_STOPPING, STATE_PREVIEW);
 			if (CAMERA_SUCCESS != camera_stop_preview()) {
@@ -3293,7 +3300,7 @@ void SprdCameraHardware::deinitCapture()
 	freeCaptureMem();
 }
 
-void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
+status_t SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 {
 	const char*     freq_in_khz = NO_FREQ_STR;
 	uint32_t        tmpSetFreqCount = mSetDDRFreqCount;
@@ -3301,7 +3308,7 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 	LOGD("set_ddr_freq to %d now count %d freq %d E", mhzVal, mSetDDRFreqCount, mSetDDRFreq);
 	if (mhzVal == mSetDDRFreq && NO_FREQ_REQ != mhzVal) {
 		LOGW("set_ddr_freq same freq %d need not set", mhzVal);
-		return;
+		return NO_ERROR;
 	}
 
 	const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
@@ -3309,7 +3316,7 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 	FILE* fp = fopen(set_freq, "wb");
 	if (NULL == fp) {
 		LOGE("set_ddr_freq Failed to open %s X", set_freq);
-		return;
+		return BAD_VALUE;
 	}
 
 	switch (mhzVal) {
@@ -3324,8 +3331,6 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 				LOGV("set_ddr_freq clear freq for change!");
 				fprintf(fp, "%s", NO_FREQ_STR);
 				usleep(1000);
-				fclose(fp);
-				fp = NULL;
 			}
 			freq_in_khz = BASE_FREQ_STR;
 			break;
@@ -3337,8 +3342,6 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 				LOGV("set_ddr_freq clear freq for change!");
 				fprintf(fp, "%s", NO_FREQ_STR);
 				usleep(1000);
-				fclose(fp);
-				fp = NULL;
 			}
 			freq_in_khz = MEDIUM_FREQ_STR;
 			break;
@@ -3350,8 +3353,6 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 				LOGV("set_ddr_freq clear freq for change!");
 				fprintf(fp, "%s", NO_FREQ_STR);
 				usleep(1000);
-				fclose(fp);
-				fp = NULL;
 			}
 			freq_in_khz = HIGH_FREQ_STR;
 			break;
@@ -3361,10 +3362,14 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 			break;
 	}
 
+	fclose(fp);
+	fp = NULL;
+	usleep(1000);
+
 	fp = fopen(set_freq, "wb");
 	if (NULL == fp) {
 		LOGE("set_ddr_freq Failed to open %s X", set_freq);
-		return;
+		return BAD_VALUE;
 	}
 
 	fprintf(fp, "%s", freq_in_khz);
@@ -3373,6 +3378,7 @@ void SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
 	LOGD("set_ddr_freq to %skhz now count %d freq %d X", freq_in_khz, mSetDDRFreqCount, mSetDDRFreq);
 	usleep(1000);
 	fclose(fp);
+	return NO_ERROR;
 }
 
 status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
@@ -3439,7 +3445,6 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
 
 	camera_ret_code_type qret = camera_start_preview(camera_cb, this,mode);
-	LOGV("startPreviewInternal X");
 	if (qret != CAMERA_SUCCESS) {
 		LOGE("startPreviewInternal failed: sensor error.");
 		setCameraState(SPRD_ERROR, STATE_PREVIEW);
