@@ -3,6 +3,7 @@ PRODUCT_PACKAGES += \
 	AudioProfile \
 	FMPlayer \
 	SprdRamOptimizer \
+        Flashlight \
 	VideoWallpaper \
 	FileExplorer \
 	NoteBook \
