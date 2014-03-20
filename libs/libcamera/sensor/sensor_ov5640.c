@@ -2767,6 +2767,7 @@ LOCAL uint32_t _ov5640_StartAutoFocus(uint32_t param)
 
 	switch (ext_ptr->param) {
 	case SENSOR_EXT_FOCUS_TRIG:
+	case SENSOR_EXT_FOCUS_CAF:
 		rtn = _ov5640_AutoFocusTrig(ext_ptr);
 		break;
 	case SENSOR_EXT_FOCUS_ZONE:
