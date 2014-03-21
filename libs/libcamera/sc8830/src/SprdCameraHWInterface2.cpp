@@ -2311,6 +2311,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 		{
 			case CAMERA_FOCUS_MODE_AUTO:
 			case CAMERA_FOCUS_MODE_MACRO:
+			case CAMERA_FOCUS_MODE_CAF:
 			switch(m_focusStat) {
 			case FOCUS_STAT_INACTIVE:
 			case FOCUS_STAT_FOCUS_LOCKED:
@@ -2343,6 +2344,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
         switch(m_staticReqInfo.afMode) {
 	    case CAMERA_FOCUS_MODE_AUTO:
 		case CAMERA_FOCUS_MODE_MACRO:
+		case CAMERA_FOCUS_MODE_CAF:
 			if (m_focusStat == FOCUS_STAT_ACTIVE_SCAN) {
                 if(camera_cancel_autofocus())
 				   HAL_LOGE("cancel focus fail");
