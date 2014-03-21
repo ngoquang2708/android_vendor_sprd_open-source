@@ -2716,7 +2716,10 @@ uint32_t Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_E cmd, uint32_t param)
 	SENSOR_EXP_INFO_T_PTR sensor_info_ptr = Sensor_GetInfo();
 	EXIF_SPEC_PIC_TAKING_COND_T *sensor_exif_info_ptr = PNULL;
 
-	if (PNULL != sensor_info_ptr->ioctl_func_ptr->get_exif) {
+	if (PNULL == sensor_info_ptr) {
+		CMR_LOGW("sensor not ready yet, direct return");
+		return SENSOR_FAIL;
+	} else if (PNULL != sensor_info_ptr->ioctl_func_ptr->get_exif) {
 		sensor_exif_info_ptr =
 			(EXIF_SPEC_PIC_TAKING_COND_T *)sensor_info_ptr->ioctl_func_ptr->get_exif(0x00);
 	} else {
