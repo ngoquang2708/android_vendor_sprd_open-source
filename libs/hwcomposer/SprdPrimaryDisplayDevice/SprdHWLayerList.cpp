@@ -237,6 +237,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     int RGBIndex = 0;
     int i = -1;
     bool postProcessVideoCond = false;
+    bool singleRGBLayerCond = false;
     mSkipLayerFlag = false;
     int LayerCount = mLayerCount;
 
@@ -302,7 +303,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
          *  if the RGB layer is bottom layer and there is no other layer,
          *  go overlay.
          * */
-        bool singleRGBLayerCond = ((RGBIndex == 0) && (LayerCount == 2));
+        singleRGBLayerCond = ((RGBIndex == 0) && (LayerCount == 2));
         if (singleRGBLayerCond)
         {
             ALOGI_IF(mDebugFlag, "Force single OSD layer go to Overlay");
@@ -342,8 +343,21 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
 
 #ifdef DYNAMIC_RELEASE_PLANEBUFFER
     int ret = -1;
+    bool holdCond = false;
 
-    ret = mPrimary->reclaimPlaneBuffer(YUVLayer);
+#ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
+    if (YUVLayer != NULL || singleRGBLayerCond)
+    {
+        holdCond = true;
+    }
+#else
+    if (YUVLayer != NULL)
+    {
+        holdCond = true;
+    }
+#endif
+
+    ret = mPrimary->reclaimPlaneBuffer(holdCond);
     if (ret == 1)
     {
         resetOverlayFlag(YUVLayer);

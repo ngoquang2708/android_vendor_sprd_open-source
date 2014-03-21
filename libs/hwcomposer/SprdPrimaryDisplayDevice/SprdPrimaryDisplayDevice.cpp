@@ -193,12 +193,12 @@ int SprdPrimaryDisplayDevice:: getDisplayAttributes(DisplayAttributes *dpyAttrib
     return 0;
 }
 
-int SprdPrimaryDisplayDevice:: reclaimPlaneBuffer(SprdHWLayer *YUVLayer)
+int SprdPrimaryDisplayDevice:: reclaimPlaneBuffer(bool condition)
 {
     static int ret = -1;
     enum PlaneRunStatus status = PLANE_STATUS_INVALID;
 
-    if (YUVLayer == NULL)
+    if (condition == false)
     {
         mPrimaryPlane->recordPlaneIdleCount();
 

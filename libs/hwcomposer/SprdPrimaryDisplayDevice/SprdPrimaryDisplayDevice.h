@@ -113,7 +113,7 @@ public:
     /*
      *  Recycle DispalyPlane buffer for saving memory.
      * */
-    int reclaimPlaneBuffer(SprdHWLayer *YUVLayer);
+    int reclaimPlaneBuffer(bool condition);
 
 private:
     FrameBufferInfo   *mFBInfo;
