@@ -278,11 +278,11 @@ private:
 							const SprdCameraParameters& oriParams);
 	bool                            setCameraDimensions();
 	void                            setCameraPreviewMode(bool isRecordMode);
-	void                            set_ddr_freq(const char* freq_in_khz);
+	void                            set_ddr_freq(uint32_t mhzVal);
 	bool                            displayOneFrame(uint32_t width,
-							          uint32_t height,
-							          uint32_t phy_addr, char *frame_addr,
-							          uint32_t id);
+								uint32_t height,
+								uint32_t phy_addr, char *frame_addr,
+								uint32_t id);
 	bool                            displayOneFrameForCapture(uint32_t width,
 		                              uint32_t height,
 		                              uint32_t phy_addr,
@@ -406,7 +406,8 @@ private:
 	uint32_t                        mTimeCoeff;
 	uint32_t                        mPreviewBufferUsage;
 	uint32_t                        mOriginalPreviewBufferUsage;
-	int                             mSetFreqCount;
+	int                             mSetDDRFreqCount;
+	uint32_t                        mSetDDRFreq;
 
 	/*callback thread*/
 	pthread_t                       mSwitchMonitorThread;

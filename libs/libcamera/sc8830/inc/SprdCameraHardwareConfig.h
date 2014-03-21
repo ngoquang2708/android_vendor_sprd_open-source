@@ -276,6 +276,7 @@ const struct str_map zoom_map[] = {
 	{"5",               CAMERA_ZOOM_6X},
 	{"6",               CAMERA_ZOOM_7X},
 	{"7",               CAMERA_ZOOM_8X},
+	{"8",               CAMERA_ZOOM_MAX},
 	{NULL,              0}
 };
 
