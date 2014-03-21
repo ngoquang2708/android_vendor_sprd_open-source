@@ -1386,6 +1386,7 @@ static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T
                 }
                 result += sizeof(int);
                 close(receive_fifo_id);
+                receive_fifo_id = -1;
                 ALOGE("eng_notify_mediaserver_updatapara,result:%d,received:%d!\n",result,length);
             }else {
                 ALOGE("%s open audio FIFO_2 error %s,fifo_id:%d\n",__FUNCTION__,strerror(errno),fifo_id);
@@ -1393,6 +1394,7 @@ static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T
 
         }
         close(fifo_id);
+        fifo_id = -1;
     } else {
         ALOGE("%s open audio FIFO error %s,fifo_id:%d\n",__FUNCTION__,strerror(errno),fifo_id);
     }
@@ -1400,6 +1402,17 @@ static int eng_notify_mediaserver_updatapara(int ram_ops,int index,AUDIO_TOTAL_T
     return result;
 error:
     ALOGE("eng_notify_mediaserver_updatapara X,ERROR,result:%d!\n",result);
+    if(receive_fifo_id != -1)
+    {
+        close(receive_fifo_id);
+        receive_fifo_id = -1;
+    }
+
+    if(fifo_id != -1)
+    {
+        close(fifo_id);
+        fifo_id= -1;
+    }
     return result;
 }
 
