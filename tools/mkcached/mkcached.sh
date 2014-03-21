@@ -2,7 +2,38 @@
 
 sd_cache_mounted=0
 
-if ls /mnt/media_rw/sdcard0 >/dev/null
+mount_cache() {
+  echo "need to create /storage/sdcard0/cachedisk"
+    #create a new virtual partion
+  diskfree=$(dfex |busybox grep /storage/sdcard0 |busybox awk '{print $4}')
+  fsize=61440
+  echo "diskfree size if $diskfree, need size is $fsize"
+  if busybox [ $diskfree -gt $fsize ]
+  then
+    dd if=/dev/zero of=/storage/sdcard0/cachedisk bs=1024 count=$fsize
+    #waiting for cachedisk maded
+    echo "make sd cache"
+    #format cachedisk with ext4
+    make_ext4fs -l 62914560 -b 4096 /storage/sdcard0/cachedisk
+    umount /cache
+    if $(mount -t ext4 -o loop /storage/sdcard0/cachedisk /cache)
+    then
+      echo "mount sd cache succeed"
+            sd_cache_mounted=1
+    else
+      echo "mount sd cache failed"
+      umount /cache
+      mount -t ubifs /dev/ubi0_cache /cache
+    fi
+  else
+    #no space for cache virtual partion
+    echo "no space for cache virtual partion"
+    umount /cache
+    mount -t ubifs /dev/ubi0_cache /cache
+    fi
+}
+
+if ls /storage/sdcard0 >/dev/null
 then
 #with sdcard
     #while until sdcard mounted
@@ -19,47 +50,20 @@ then
     done
 
     fsize=0
-    #mount /mnt/media_rw/sdcard0/cachedisk to /cache
-    if ls /mnt/media_rw/sdcard0/cachedisk >/dev/null
+    #mount /storage/sdcard0/cachedisk to /cache
+    if ls /storage/sdcard0/cachedisk >/dev/null
     then
         umount /cache
-        if $(mount -t ext2 -o loop /mnt/media_rw/sdcard0/cachedisk /cache)
+        if $(mount -t ext4 -o loop /storage/sdcard0/cachedisk /cache)
         then
           echo "mount sd cache succeed"
           sd_cache_mounted=1
         else
-          echo "mount sd cache failed"
-          mount -t ubifs /dev/ubi0_cache /cache
+          rm /storage/sdcard0/cachedisk
+          mount_cache
         fi
     else
-        echo "need to create /mnt/media_rw/sdcard0/cachedisk"
-        #create a new virtual partion
-        diskfree=$(dfex |busybox grep /mnt/media_rw/sdcard0 |busybox awk '{print $4}')
-        fsize=61440
-        echo "diskfree size if $diskfree, need size is $fsize"
-        if busybox [ $diskfree -gt $fsize ]
-        then
-          dd if=/dev/zero of=/mnt/media_rw/sdcard0/cachedisk bs=1024 count=$fsize
-          #waiting for cachedisk maded
-          echo "make sd cache"
-          #format cachedisk with ext2
-          mke2fs -b 4096 -F /mnt/media_rw/sdcard0/cachedisk
-          umount /cache
-          if $(mount -t ext2 -o loop /mnt/media_rw/sdcard0/cachedisk /cache)
-          then
-            echo "mount sd cache succeed"
-            sd_cache_mounted=1
-          else
-            echo "mount sd cache failed"
-            umount /cache
-            mount -t ubifs /dev/ubi0_cache /cache
-          fi
-        else
-          #no space for cache virtual partion
-          echo "no space for cache virtual partion"
-          umount /cache
-          mount -t ubifs /dev/ubi0_cache /cache
-        fi
+        mount_cache
     fi
 else
 #without sdcard
