@@ -6,6 +6,7 @@ PRODUCT_PACKAGES += \
 	VideoWallpaper \
 	FileExplorer \
 	NoteBook \
+	SGPS \
 	EngineerMode \
 	ValidationTools \
 	DrmProvider \
