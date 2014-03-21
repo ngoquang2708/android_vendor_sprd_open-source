@@ -251,7 +251,50 @@ struct error_group
 };
 
 
-#define U_TEST
+#define CHECK_START_X         2      // start offset to left of screen
+#define CHECK_START_Y         2      // start offset to top of screen
+#define CHECK_END_X           2      // end offset to right of screen
+#define CHECK_END_Y           2      // end offset to bottom of screen
+#define ZOOM_RATIO           10      // total samples of n*n points to check within screen range
+#define COLOR_DIFF_ALLOWED    2      // do dither if all color difference in picture is less than this threshhold
+#define ACTUAL_CHECK_POINTS   (ZOOM_RATIO - CHECK_START_Y - CHECK_END_Y) * (ZOOM_RATIO - CHECK_START_X - CHECK_END_X)
+
+static bool image_dither_precheck(struct img_dither_in_param *in_param)
+{
+#ifndef ABS
+#define ABS(x) (((x)> 0) ? (x) : -(x))
+#endif
+    uint32_t *src_ptr = (uint32_t *)in_param->data_addr;
+    int step_x =  in_param->width / ZOOM_RATIO;
+    int step_y =  in_param->height / ZOOM_RATIO;
+    int end_x = in_param->width - CHECK_END_X * step_x;
+    int end_y = in_param->height - CHECK_END_Y * step_y;
+	int i, i0 = CHECK_START_X * step_x + (step_x / 2);
+    int j, j0 = CHECK_START_Y * step_y + (step_y / 2);
+    uint32_t value = *(src_ptr + i0 + in_param->width * j0);
+    uint8_t c0 = value & 0xff;
+    uint8_t c1 = (value >> 8) & 0xff;
+    uint8_t c2 = (value >> 16) & 0xff;\
+
+	IMG_DITHER_LOGV("image_dither_precheck %d %d %d %d %d %d", i0, j0, step_x, step_y, end_x, end_y);
+    for(j = j0; j < end_y; j += step_y) {
+        for(i = i0; i < end_x; i += step_x) {
+            uint8_t x0, x1, x2, x3;
+            value = *(src_ptr + i + j * in_param->width);
+            x0 = value & 0xff;
+            x1 = (value >> 8) & 0xff;
+            x2 = (value >> 16) & 0xff;
+            if((ABS((x0 - c0)) > COLOR_DIFF_ALLOWED) 
+				|| (ABS((x1 - c1)) > COLOR_DIFF_ALLOWED) 
+				|| (ABS((x2 - c2)) > COLOR_DIFF_ALLOWED)) {
+				IMG_DITHER_LOGV("******************** true do dither %d %d %d %d %d %d %d %d", i, j, x0, x1, x2, c0, c1, c2);
+                return true;
+            }
+        }
+    }
+	IMG_DITHER_LOGV("-------------- false no dither %d %d %d %d %d", i, j, c0, c1, c2);
+    return false;
+}
 
 static void dither_block(uint32_t *src_ptr, uint32_t width, struct block_info *blk_info)
 {
@@ -2170,6 +2213,12 @@ int32_t img_dither_process(uint32_t handle, struct img_dither_in_param *in_param
         IMG_DITHER_LOGE(" data pointer is PNULL, data: 0x%x\n", \
             (uint32_t)in_param->data_addr);
         ret = -img_dither_rtn_pointer_null;
+        goto IMG_DITHER_EIXT;
+    }
+
+    if(image_dither_precheck(in_param) == false) {
+        IMG_DITHER_LOGV(" data is pure single color, no dither is performed\n");
+        ret = -img_dither_rtn_param_invalidate;
         goto IMG_DITHER_EIXT;
     }
 

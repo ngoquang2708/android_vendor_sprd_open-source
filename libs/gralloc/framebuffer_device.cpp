@@ -326,8 +326,12 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
                 in_param.format = 0;
                 in_param.height =  m->info.yres;
                 in_param.width =  m->info.xres;
-                img_dither_process(dither_handle, &in_param, &out_param);
-                m->info.reserved[3] = 1;
+                if(img_dither_process(dither_handle, &in_param, &out_param) == img_dither_rtn_sucess) {
+                    m->info.reserved[3] = 1;
+                }
+                else {
+                    m->info.reserved[3] = 0;
+                }
             }
         }
         else
