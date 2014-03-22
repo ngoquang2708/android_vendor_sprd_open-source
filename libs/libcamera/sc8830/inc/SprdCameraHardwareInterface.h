@@ -278,7 +278,7 @@ private:
 							const SprdCameraParameters& oriParams);
 	bool                            setCameraDimensions();
 	void                            setCameraPreviewMode(bool isRecordMode);
-	void                            set_ddr_freq(uint32_t mhzVal);
+	status_t                        set_ddr_freq(uint32_t mhzVal);
 	bool                            displayOneFrame(uint32_t width,
 								uint32_t height,
 								uint32_t phy_addr, char *frame_addr,
