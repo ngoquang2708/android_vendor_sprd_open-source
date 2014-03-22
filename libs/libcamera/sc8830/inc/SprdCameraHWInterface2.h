@@ -108,7 +108,6 @@ typedef struct stream_parameters {
 	int                           phyAdd[NUM_MAX_CAMERA_BUFFERS];/*for s_mem_method = 1*/
 	int                           bufIndex;
 	int                           minUndequedBuffer;
-	int                           cancelBufNum;
 	int64_t                       m_timestamp;
 } stream_parameters_t;
 
@@ -545,6 +544,7 @@ private:
 	bool                              m_degenerated_normal_cap;/*zsl degenerated to normal picture*/
 	bool                              m_dcDircToDvSnap;/*for cts testVideoSnapshot*/
 	bool                              mIsOutPutStream;
+	bool                              mIsChangePicSize;/*for cts testVideoSnapshot*/
 	camera_metadata_t                 *m_halRefreshReq;
 	static gralloc_module_t const*    m_grallocHal;
 	uint32_t                          mPreviewFrmRefreshIndex;
