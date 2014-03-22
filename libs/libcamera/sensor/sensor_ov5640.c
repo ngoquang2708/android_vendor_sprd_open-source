@@ -2912,12 +2912,17 @@ LOCAL uint32_t _ov5640_ReadGain(uint32_t param)
 
 LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
 {
+	SENSOR_PRINT("in param capture_gain16 0x%x, capture_VTS 0x%x capture_shutter 0x%x",
+				capture_gain16,
+				capture_VTS,
+				capture_shutter);
 	// write capture gain
 	OV5640_set_gain16(capture_gain16);
 
 	// write capture shutter
 	if (capture_shutter > (capture_VTS - 4)) {
 		capture_VTS = capture_shutter + 4;
+		SENSOR_PRINT("actual capture_VTS 0x%x", capture_VTS);
 		OV5640_set_VTS_ori(capture_VTS);
 	}
 	OV5640_set_shutter(capture_shutter);

@@ -4733,10 +4733,12 @@ void *camera_af_thread_proc(void *data)
 		case CMR_EVT_AF_INIT:
 			CMR_PRINT_TIME;
 			camera_set_focusmove_flag(0);
+#if 0                /*the af initialize when camera open*/
 			ret = camera_autofocus_init();
 			if (ret) {
 				CMR_LOGE("Failed, %d", ret);
 			}
+#endif
 			CMR_PRINT_TIME;
 			break;
 
