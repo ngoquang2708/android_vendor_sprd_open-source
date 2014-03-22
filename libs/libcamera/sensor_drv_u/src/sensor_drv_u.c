@@ -102,7 +102,6 @@ struct sensor_drv_context {
 	pthread_t                           sensor_thread;
 	uint32_t                            queue_handle;
 	sem_t                               sensor_sync_sem;
-	sem_t                               st_af_sem;
 	sem_t                               st_setmode_sem;
 	uint32_t                            exit_flag;
 };
@@ -2148,6 +2147,12 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 	}
 
 	*sensor_num_ptr = sensor_num;
+
+	/*af initialize after sensor open successs*/
+	if (SENSOR_SUCCESS == ret_val) {
+		Sensor_AutoFocusInit();
+	}
+
 init_exit:
 	if (SENSOR_SUCCESS != ret_val) {
 		_Sensor_KillThread();
@@ -2380,7 +2385,6 @@ int Sensor_AutoFocusInit(void)
 	if (ret) {
 		CMR_LOGE("Fail to send message");
 	}
-	sem_wait(&s_p_sensor_cxt->st_af_sem);
 
 	return ret;
 }
@@ -3093,7 +3097,6 @@ LOCAL int   _Sensor_CreateThread(void)
 	CMR_MSG_INIT(message);
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
-	sem_init(&s_p_sensor_cxt->st_af_sem, 0, 0);
 	sem_init(&s_p_sensor_cxt->sensor_sync_sem, 0, 0);
 	sem_init(&s_p_sensor_cxt->st_setmode_sem, 0, 0);
 	s_p_sensor_cxt->exit_flag = 0;
@@ -3145,7 +3148,6 @@ LOCAL int _Sensor_KillThread(void)
 	ret = pthread_join(s_p_sensor_cxt->sensor_thread, &dummy);
 	s_p_sensor_cxt->sensor_thread = 0;
 	sem_destroy(&s_p_sensor_cxt->st_setmode_sem);
-	sem_destroy(&s_p_sensor_cxt->st_af_sem);
 	sem_destroy(&s_p_sensor_cxt->sensor_sync_sem);
 
 	cmr_msg_queue_destroy(s_p_sensor_cxt->queue_handle);
@@ -3200,7 +3202,6 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 		case SENSOR_EVT_AF_INIT:
 			CMR_LOGV("SENSOR_EVT_AF_INIT");
 			ret = _Sensor_AutoFocusInit();
-			sem_post(&s_p_sensor_cxt->st_af_sem);
 			CMR_LOGV("SENSOR_EVT_AF_INIT, Done");
 			break;
 		case SENSOR_EVT_SET_MODE_DONE:
