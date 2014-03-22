@@ -16,7 +16,7 @@ descritpion: DMCC DM low level API for app and JNI
 #include "sprd_dm_parsexml.h"
 #include "dm_jni.h"
 
-#define XML_MAX_LEN  (1024*9)
+#define XML_MAX_LEN  MAX_XML_BUF_SIZE
 
 static bool dm_task_running = FALSE;
 static SPRD_TASK_REQ_T *gbl_req_ptr = NULL;
