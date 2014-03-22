@@ -2835,15 +2835,26 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
     int len_head                 =0;
     int len                      =0;
     int tag_len                  =0;
-
-    SCI_TRACE_LOW("enter MMIDM_getNextXmlTagBuf");
-    if(PNULL == content)
+	int xmlbuf_len                   =0;
+    
+    if(PNULL == content || PNULL == xmlbuf)
     {
       SCI_TRACE_LOW("MMIDM_getNextXmlTagBuf PNULL == content");
       return PNULL;
     }
-    memset(content,0, buf_size);
+    xmlbuf_len = strlen(xmlbuf);
     tag_len = strlen(MMIDM_GetTagStr(tagid));
+		
+	 SCI_TRACE_LOW("enter MMIDM_getNextXmlTagBuf xmlbuf_len=%d tag=%s", xmlbuf_len, MMIDM_GetTagStr(tagid)); 
+		
+    //Length of less than,don't parse
+    if (xmlbuf_len < ((tag_len * 2) + 5)) //eg. <TAG></TAG>
+  	{
+  	   SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf xmlbuf=%s tag=%s", xmlbuf, MMIDM_GetTagStr(tagid)); 
+		return PNULL;
+	}
+		
+    memset(content,0, buf_size);
     scanner_ptr = xmlbuf;
 
    // MMIDM_GetTagStr(tagid, tagStr, 50);
@@ -2855,14 +2866,27 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
             return PNULL;
         }
         len = strlen(xmlbuf) - strlen(scanner_ptr);
-        if(xmlbuf[len-1] == '<')
+        if(1 <= len && xmlbuf[len-1] == '<')
         {
             break;
         }
         scanner_ptr +=tag_len;
     }
+
+	if (PNULL==scanner_ptr)
+	{
+		SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf PNULL==scanner_ptr"); 
+		return PNULL;
+	}
+	
+	if (strlen(scanner_ptr) < tag_len)
+	{
+		SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf tag_len=%d scanner_len=%d", tag_len, strlen(scanner_ptr)); 
+		return PNULL;
+	}
+		
     scanner_ptr +=tag_len;
-    while(0 != *scanner_ptr)
+    while(PNULL!=scanner_ptr)
     {
         if(scanner_ptr[0] == '>')
         {
@@ -2874,11 +2898,18 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
             scanner_ptr++;/*lint !e831*/
         }
     }
-    if(0 == *scanner_ptr)/*lint !e774*/
+    if(PNULL == scanner_ptr)/*lint !e774*/
     {
         return PNULL;
     }
     len_head = strlen(xmlbuf)-strlen(scanner_ptr);
+
+	if (0 > len_head)
+	{
+		SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf len_head=%d", len_head); 
+       return PNULL;
+	}
+		
     scanner_ptr = strstr(scanner_ptr, MMIDM_GetTagStr(tagid));
     if(PNULL == scanner_ptr)
     {
@@ -2886,11 +2917,23 @@ LOCAL char* MMIDM_getNextXmlTagBuf(char* xmlbuf, MMI_DM_TAGID_E tagid, char* con
     }
     len_end = strlen(xmlbuf)-strlen(scanner_ptr)-3;
 
+   if (0 > len_end || xmlbuf_len < (len_end + 3 + tag_len))
+	{
+		SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf len_end=%d", len_end); 
+       return PNULL;
+	}
+
     if((xmlbuf[len_end+2] == '/')&&(xmlbuf[len_end+1] == '<')&&xmlbuf[len_end+3+tag_len] == '>')
     {
+		  int copy_len = (len_end-len_head+1);
           scanner_ptr = xmlbuf;
-          memset(content, 0, buf_size); //strlen(content)); hongyu20121001
-          strncpy(content, scanner_ptr+len_head, len_end-len_head+1);
+          //memset(content, 0, strlen(content));
+		   if (copy_len > buf_size)
+		   {
+			 	SCI_TRACE_LOW("ERR:MMIDM_getNextXmlTagBuf needbuffer=%d buf_size=%d", copy_len, buf_size); 
+				copy_len = buf_size;
+			}
+          strncpy(content, scanner_ptr+len_head, copy_len);
           scanner_ptr = scanner_ptr+ len_end +tag_len+3+1;
           return scanner_ptr;
     }
@@ -3024,21 +3067,21 @@ LOCAL BOOLEAN MMIDM_generateXMLData(char* sendbuf)
 /*****************************************************************************/
 LOCAL BOOLEAN MMIDM_DealWithExecData(char* execbuf)
 {
-    char locuri[80]={0};
+    char locuri[MAX_TARGET_BUF_SIZE + 1]={0};
     DMXML_TAG_STATUS_T* status_tag = PNULL;
-    char cmdid[20]={0};
-    char target[100]={0};
-    char target_uri[100]={0};
+    char cmdid[MAX_CMDID_BUF_SIZE + 1]={0};
+    char target[MAX_TARGET_BUF_SIZE + 1]={0};
+    char target_uri[MAX_TARGET_BUF_SIZE + 1]={0};
     char str[20]={0};
     BOOLEAN  ret = TRUE;
 
     do {
 
-        MMIDM_getNextXmlTagBuf(execbuf, TAG_CMDIDID, cmdid, 20);
-        MMIDM_getNextXmlTagBuf(execbuf, TAG_TARGETID, target,100);
-        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
+        MMIDM_getNextXmlTagBuf(execbuf, TAG_CMDIDID, cmdid, MAX_CMDID_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(execbuf, TAG_TARGETID, target,MAX_TARGET_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, MAX_TARGET_BUF_SIZE);
 
-        MMIDM_getNextXmlTagBuf(execbuf, TAG_LOCURIID, locuri, 20);
+        MMIDM_getNextXmlTagBuf(execbuf, TAG_LOCURIID, locuri, MAX_TARGET_BUF_SIZE);
 
         if(!strcmp(locuri, "./LAWMO/Operations/FactoryReset")
            || !strcmp(locuri, "./LAWMO/Operations/PartiallyLock")
@@ -3248,12 +3291,12 @@ LOCAL BOOLEAN MMIDM_ParseXMLExec(char* xmlbuf)
 /*****************************************************************************/
 LOCAL BOOLEAN MMIDM_DealWithStatusData(char* statusbuf)
 {
-    char cmd[20]={0};
-    char cmdref[20]={0};
-    char targetref[80]={0};
-    char sourceref[80]={0};
+    char cmd[MAX_CMDID_BUF_SIZE + 1]={0};
+    char cmdref[MAX_CMDID_BUF_SIZE]={0};
+    char targetref[MAX_TARGET_BUF_SIZE + 1]={0};
+    char sourceref[MAX_TARGET_BUF_SIZE + 1]={0};
     char data[20]={0};
-    char msgref[20];
+    char msgref[MAX_CMDID_BUF_SIZE + 1];
     char str[20]={0};
 //    char* scanner_ptr = PNULL;
     DMXML_TAG_STATUS_T* status_tag = PNULL;
@@ -3272,12 +3315,12 @@ LOCAL BOOLEAN MMIDM_DealWithStatusData(char* statusbuf)
         }
 
 
-        MMIDM_getNextXmlTagBuf(statusbuf, TAG_CMDID, cmd, 20);
-        MMIDM_getNextXmlTagBuf(statusbuf, TAG_CMDREFID, cmdref, 20);
+        MMIDM_getNextXmlTagBuf(statusbuf, TAG_CMDID, cmd, MAX_CMDID_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(statusbuf, TAG_CMDREFID, cmdref, MAX_CMDID_BUF_SIZE);
         MMIDM_getNextXmlTagBuf(statusbuf, TAG_DATAID, data, 20);
-        MMIDM_getNextXmlTagBuf(statusbuf, TAG_MSGREFID, msgref, 20);
-        MMIDM_getNextXmlTagBuf(statusbuf, TAG_TARGETREFID, targetref, 80);
-        MMIDM_getNextXmlTagBuf(statusbuf, TAG_SOURCEREFID, sourceref, 80);
+        MMIDM_getNextXmlTagBuf(statusbuf, TAG_MSGREFID, msgref, MAX_CMDID_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(statusbuf, TAG_TARGETREFID, targetref, MAX_TARGET_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(statusbuf, TAG_SOURCEREFID, sourceref, MAX_TARGET_BUF_SIZE);
         if(strlen(cmd))
         {
             if(!strcmp(cmd, "SyncHdr"))
@@ -3560,10 +3603,10 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
     DMXML_TAG_STATUS_T* status_tag = PNULL;
     DMXML_TAG_RESULT_T* result_tag = PNULL;
     DMXML_TAG_ITEM_T* item_ptr = PNULL;
-    char cmdid[20]={0};
+    char cmdid[MAX_CMDID_BUF_SIZE + 1]={0};
 //    char msg[20]={0};
-    char target[100]={0};
-    char target_uri[100]={0};
+    char target[MAX_TARGET_BUF_SIZE + 1]={0};
+    char target_uri[MAX_TARGET_BUF_SIZE + 1]={0};
     char* item=PNULL;
     char*  scanner_ptr = PNULL;
     char* item_buff=PNULL;
@@ -3588,9 +3631,9 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
         }
          SCI_MEMSET(content, 0X0, MAX_TAG_BUF_SIZE);
 
-        MMIDM_getNextXmlTagBuf(getbuf, TAG_CMDIDID, cmdid, 20);
-        MMIDM_getNextXmlTagBuf(getbuf, TAG_TARGETID, target,100);
-        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
+        MMIDM_getNextXmlTagBuf(getbuf, TAG_CMDIDID, cmdid, MAX_CMDID_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(getbuf, TAG_TARGETID, target,MAX_TARGET_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, MAX_TARGET_BUF_SIZE);
 
 
         if(strlen(target_uri))
@@ -3805,8 +3848,8 @@ LOCAL BOOLEAN MMIDM_DealWithGetData(char* getbuf)
 	  while( (scanner_ptr = MMIDM_getNextXmlTagBuf(scanner_ptr, TAG_ITEMID, item_buff, MAX_TAG_BUF_SIZE)) != PNULL)
         {
 
-        MMIDM_getNextXmlTagBuf(item_buff, TAG_TARGETID, target,100);
-        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
+        MMIDM_getNextXmlTagBuf(item_buff, TAG_TARGETID, target,MAX_TARGET_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, MAX_TARGET_BUF_SIZE);
             item_ptr = SCI_ALLOCA(sizeof(DMXML_TAG_ITEM_T));
             if(PNULL== item_ptr)
             {
@@ -3986,11 +4029,11 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
 //    DMXML_TAG_RESULT_T* result_tag = PNULL;
 //    DMXML_TAG_ITEM_T* item_ptr = PNULL;
     char* content=PNULL;
-    char cmdid[20]={0};
+    char cmdid[MAX_CMDID_BUF_SIZE + 1]={0};
 //    char msg[20]={0};
     char*  scanner_ptr = PNULL;
-    char target[100]={0};
-    char target_uri[100]={0};
+    char target[MAX_TARGET_BUF_SIZE + 1]={0};
+    char target_uri[MAX_TARGET_BUF_SIZE + 1]={0};
    // unsigned char test[9000]={0};
     char* data=PNULL;
     char* item_buff=PNULL;
@@ -4020,9 +4063,9 @@ LOCAL BOOLEAN MMIDM_DealWithReplaceData(char* replacebuf)
         }
         SCI_MEMSET(data, 0X0, 200);
 
-        MMIDM_getNextXmlTagBuf(replacebuf, TAG_CMDIDID, cmdid, 20);
-        MMIDM_getNextXmlTagBuf(replacebuf, TAG_TARGETID, target, 100);
-        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, 100);
+        MMIDM_getNextXmlTagBuf(replacebuf, TAG_CMDIDID, cmdid, MAX_CMDID_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(replacebuf, TAG_TARGETID, target, MAX_TARGET_BUF_SIZE);
+        MMIDM_getNextXmlTagBuf(target, TAG_LOCURIID, target_uri, MAX_TARGET_BUF_SIZE);
         MMIDM_getNextXmlTagBuf(replacebuf, TAG_DATAID, data, 200);
 
         if(strlen(target_uri))
@@ -4309,7 +4352,7 @@ LOCAL BOOLEAN MMIDM_DealWithAlertData(char* alertbuf)
 {
 
     char data[10]={0};
-    char cmdid[10]={0};
+    char cmdid[MAX_CMDID_BUF_SIZE + 1]={0};
     char* subdata=PNULL;
     char* item=PNULL;
     char minitime[80]={0};
@@ -4346,7 +4389,7 @@ LOCAL BOOLEAN MMIDM_DealWithAlertData(char* alertbuf)
         }
          SCI_MEMSET(item, 0X0, 200);
 
-        MMIDM_getNextXmlTagBuf(alertbuf, TAG_CMDIDID, cmdid, 10);
+        MMIDM_getNextXmlTagBuf(alertbuf, TAG_CMDIDID, cmdid, MAX_CMDID_BUF_SIZE);
         scanner_ptr = alertbuf;
 
         while( ( scanner_ptr = MMIDM_getNextXmlTagBuf(scanner_ptr, TAG_DATAID, data, 10))!=PNULL)

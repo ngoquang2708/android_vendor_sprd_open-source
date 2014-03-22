@@ -88,9 +88,12 @@ typedef  enum{
 }SPRD_DM_PARSE_RESULT;
 
 
-#define MAX_XML_BUF_SIZE   (1024*9)
+#define MAX_XML_BUF_SIZE   (1024*12)
 #define MAX_TAG_BUF_SIZE   1024
 #define MAX_TAG_ARR_LEN    32
+
+#define MAX_TARGET_BUF_SIZE 128
+#define MAX_CMDID_BUF_SIZE 32
 
 #define DM_SESSIONID_1        27
 #define DM_SESSIONID_2        28
