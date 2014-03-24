@@ -57,7 +57,7 @@ typedef struct sprd_camera_memory {
 }sprd_camera_memory_t;
 
 
-#define MAX_MISCHEAP_NUM 1024
+#define MAX_SUB_RAWHEAP_NUM 10
 
 class SprdCameraHardware : public virtual RefBase {
 public:
@@ -105,7 +105,7 @@ public:
 	};
 
 	int 						 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
-	sprd_camera_memory_t* 		 GetCachePmem(int buf_size, int num_bufs);
+	sprd_camera_memory_t* 		 allocCameraMem(int buf_size, int num_bufs);
 
 public:
 	static int                   getPropertyAtv();
@@ -155,13 +155,11 @@ private:
 						int frame_offset, const char *name);
 	};
 
-	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
-	static int Callback_FreeCapturePmem(void* handle);
+	static int Callback_AllocCaptureMem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
+	static int Callback_FreeCaptureMem(void* handle);
 
-	void                  FreeCameraMem(void);
-	sprd_camera_memory_t* GetPmem(int buf_size, int num_bufs);
-	void                  FreePmem(sprd_camera_memory_t* camera_memory);
-	void                  clearPmem(sprd_camera_memory_t* camera_memory);
+	void                  freeCameraMem(sprd_camera_memory_t* camera_memory);
+	void                  clearCameraMem(sprd_camera_memory_t* camera_memory);
 	uint32_t              getPreviewBufferID(buffer_handle_t *buffer_handle);
 	void                  canclePreviewMem();
 	int                     releasePreviewFrame();
@@ -348,10 +346,8 @@ private:
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
 
-	sprd_camera_memory_t            *mMiscHeap;
-	uint32_t                        mMiscHeapSize;
-	sp<MemoryHeapIon>    mMiscHeapArray[MAX_MISCHEAP_NUM];
-	uint32_t                             mMiscHeapNum;
+	sprd_camera_memory_t            *mSubRawHeapArray[MAX_SUB_RAWHEAP_NUM];
+	uint32_t                        mSubRawHeapNum;
 
 	sp<AshmemPool>                  mJpegHeap;
 	uint32_t                        mJpegHeapSize;

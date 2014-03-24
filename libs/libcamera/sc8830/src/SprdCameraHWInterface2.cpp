@@ -2786,28 +2786,28 @@ status_t SprdCameraHWInterface2::initCapMem(void)
 {
 	status_t Ret = 0;
 	uint32_t local_width = 0, local_height = 0;
-	uint32_t mem_size0 = 0, mem_size1 = 0;
+	uint32_t mem_size = 0;
 	if (camera_capture_max_img_size(&local_width, &local_height)) {
 		HAL_LOGE("camera_capture_max_img_size fail");
 		return 1;
 	}
-	if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size0, &mem_size1)) {
+	if (camera_capture_get_buffer_size(m_CameraId, local_width, local_height, &mem_size)) {
 		HAL_LOGE("camera_capture_get_buffer_size fail");
 		return 1;
 	}
-	mRawHeapSize = mem_size0;
+	mRawHeapSize = mem_size;
 	if (!allocateCaptureMem()) {
 		HAL_LOGE("allocateCaptureMem fail");
 		return 1;
 	}
-	if (camera_set_capture_mem2(0,
+	if (camera_set_capture_mem(0,
 							(uint32_t)mRawHeap->phys_addr,
 							(uint32_t)mRawHeap->data,
 							(uint32_t)mRawHeap->phys_size,
 							(uint32_t)Callback_AllocCapturePmem,
 							(uint32_t)Callback_FreeCapturePmem,
 							(uint32_t)this)) {
-		HAL_LOGE("camera_set_capture_mem2 fail");
+		HAL_LOGE("camera_set_capture_mem fail");
 		freeCaptureMem();
 		return 1;
 	}
