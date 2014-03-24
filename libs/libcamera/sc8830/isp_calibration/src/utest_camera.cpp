@@ -43,7 +43,7 @@ using namespace android;
 #define UTEST_PREVIEW_BUF_NUM 12
 #define UTEST_PREVIEW_WIDTH 640
 #define UTEST_PREVIEW_HEIGHT 480
-#define MAX_MISCHEAP_NUM 1024
+#define UTEST_MAX_MISCHEAP_NUM 10
 
 enum utest_sensor_id {
 	UTEST_SENSOR_MAIN = 0,
@@ -78,12 +78,7 @@ struct utest_cmr_context {
 	int cap_physical_addr ;
 	unsigned char* cap_virtual_addr;
 
-	sp<MemoryHeapIon> misc_pmem_hp;
-	uint32_t misc_pmemory_size;
-	int misc_physical_addr;
-	unsigned char* misc_virtual_addr;
-
-	sp<MemoryHeapIon> misc_heap_array[MAX_MISCHEAP_NUM];
+	sp<MemoryHeapIon> misc_heap_array[UTEST_MAX_MISCHEAP_NUM];
 	uint32_t misc_heap_num;
 
 	sp<MemoryHeapIon> preview_pmem_hp[UTEST_PREVIEW_BUF_NUM];
@@ -208,7 +203,7 @@ static int utest_callback_cap_mem_alloc(void* handle, unsigned int size, unsigne
 		return -1;
 	}
 
-	if (camera->misc_heap_num >= MAX_MISCHEAP_NUM) {
+	if (camera->misc_heap_num >= UTEST_MAX_MISCHEAP_NUM) {
 		return -1;
 	}
 
@@ -289,14 +284,12 @@ static void utest_dcam_cap_memory_release(void)
 	if (cmr_cxt_ptr->cap_physical_addr)
 		cmr_cxt_ptr->cap_pmem_hp.clear();
 
-	if (cmr_cxt_ptr->misc_physical_addr)
-		cmr_cxt_ptr->misc_pmem_hp.clear();
 }
 
 static int utest_dcam_cap_memory_alloc(void)
 {
 	uint32_t local_width, local_height;
-	uint32_t mem_size0, mem_size1;
+	uint32_t mem_size;
 	uint32_t buffer_size = 0;
 	struct utest_cmr_context *cmr_cxt_ptr = g_utest_cmr_cxt_ptr;
 
@@ -304,10 +297,10 @@ static int utest_dcam_cap_memory_alloc(void)
 		return -1;
 
 	if (camera_capture_get_buffer_size(cmr_cxt_ptr->sensor_id, local_width,
-		local_height, &mem_size0, &mem_size1))
+		local_height, &mem_size))
 		return -1;
 
-	buffer_size = camera_get_size_align_page(mem_size0);
+	buffer_size = camera_get_size_align_page(mem_size);
 	cmr_cxt_ptr->cap_pmem_hp = new MemoryHeapIon("/dev/ion", buffer_size,
 		MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 	if (cmr_cxt_ptr->cap_pmem_hp->getHeapID() < 0) {
@@ -322,46 +315,15 @@ static int utest_dcam_cap_memory_alloc(void)
 		return -1;
 	}
 
-	if (mem_size1) {
-		buffer_size = camera_get_size_align_page(mem_size1);
-		cmr_cxt_ptr->misc_pmem_hp = new MemoryHeapIon("/dev/ion", buffer_size,
-			MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-		if (cmr_cxt_ptr->misc_pmem_hp->getHeapID() < 0) {
-			ERR("failed to alloc misc pmem buffer.\n");
-			return -1;
-		}
-		cmr_cxt_ptr->misc_pmem_hp->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->misc_physical_addr),
-			(int *)(&cmr_cxt_ptr->misc_pmemory_size));
-		cmr_cxt_ptr->misc_virtual_addr = (unsigned char*)cmr_cxt_ptr->misc_pmem_hp->base();
-		if (!cmr_cxt_ptr->misc_physical_addr) {
-			ERR("failed to alloc misc  pmem buffer:addr is null.\n");
+	if (camera_set_capture_mem(0,
+		(uint32_t)cmr_cxt_ptr->cap_physical_addr,
+		(uint32_t)cmr_cxt_ptr->cap_virtual_addr,
+		(uint32_t)cmr_cxt_ptr->cap_pmemory_size,
+		(uint32_t)utest_callback_cap_mem_alloc,
+		(uint32_t)utest_callback_cap_mem_release,
+		0)) {
 			utest_dcam_cap_memory_release();
 			return -1;
-		}
-	}
-
-	if(0 != mem_size1) {
-		if (camera_set_capture_mem(0,
-			(uint32_t)cmr_cxt_ptr->cap_physical_addr,
-			(uint32_t)cmr_cxt_ptr->cap_virtual_addr,
-			(uint32_t)cmr_cxt_ptr->cap_pmemory_size,
-			(uint32_t)cmr_cxt_ptr->misc_physical_addr,
-			(uint32_t)cmr_cxt_ptr->misc_virtual_addr,
-			(uint32_t)cmr_cxt_ptr->misc_pmemory_size)) {
-				utest_dcam_cap_memory_release();
-				return -1;
-		}
-	} else {
-		if (camera_set_capture_mem2(0,
-			(uint32_t)cmr_cxt_ptr->cap_physical_addr,
-			(uint32_t)cmr_cxt_ptr->cap_virtual_addr,
-			(uint32_t)cmr_cxt_ptr->cap_pmemory_size,
-			(uint32_t)utest_callback_cap_mem_alloc,
-			(uint32_t)utest_callback_cap_mem_release,
-			0)) {
-				utest_dcam_cap_memory_release();
-				return -1;
-		}
 	}
 
 	return 0;
