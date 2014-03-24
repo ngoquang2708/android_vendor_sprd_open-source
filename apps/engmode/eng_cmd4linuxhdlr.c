@@ -118,7 +118,11 @@ int eng_at2linux(char *buf)
     for (i = 0 ; i < (int)NUM_ELEMS(eng_linuxcmd) ; i++) {
         if (strcasestr(buf, eng_linuxcmd[i].name)!=NULL) {
             ENG_LOG("eng_at2linux %s",eng_linuxcmd[i].name);
-            return i;
+			if((strcasestr(buf,"AT+TEMPTEST")) && ((strcasestr(buf, "AT+TEMPTEST=1,0,1"))||(strcasestr(buf, "AT+TEMPTEST=1,1,1"))
+						||(strcasestr(buf, "AT+TEMPTEST=1,0,4"))||(strcasestr(buf, "AT+TEMPTEST=1,1,4"))))
+				return -1;
+			else
+				return i;
         }
     }
 
@@ -1030,30 +1034,32 @@ int eng_linuxcmd_rtctest(char *req,char *rsp)
 	req++;
 	ptr_parm1[0]=*req;
 
-	if((ptr_parm1[0]=='1'))
-	{
+	memset(&t, 0, sizeof(t));
+	memset(&tm, 0, sizeof(tm));
+	memset(&timer, 0, sizeof(timer));
+	memset(&tv, 0, sizeof(tv));
+	if((ptr_parm1[0]=='1')) {
 		t = time(NULL);
 		localtime_r(&t, &tm);
 		tm.tm_year = tm.tm_year + 1900;
 		tm.tm_mon = tm.tm_mon + 1;
 		sprintf(rsp, "1,%04d%02d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
 	}
-	else
-	{
+	else {
         char ptr_param[10];
         int value[7];
         int i = 0;
         int count = 0;
 
         memset(value, 0, sizeof(value));
-        for(i=0; i<7; i++){
+        for(i=0; i<7; i++) {
             if(0 == i){
                 count = 4;
             }
-            else if(6 == i){
+            else if(6 == i) {
                 count = 1;
             }
-            else{
+            else {
                 count = 2;
             }
             req = strchr(req, ',');
@@ -1073,9 +1079,13 @@ int eng_linuxcmd_rtctest(char *req,char *rsp)
         tm.tm_wday = value[6];
 
         timer = mktime(&tm);
+		if(timer < 0) {
+			sprintf(rsp, "error timer < 0");
+			return -1;
+		}
         tv.tv_sec = timer;
         tv.tv_usec = 0;
-        if(settimeofday(&tv, (struct timezone*)0) < 0){
+        if(settimeofday(&tv, NULL) < 0) {
             ALOGE("Set timer error \n");
             sprintf(rsp, "error,%04d%02d%02d%02d%02d%02d%01d",tm.tm_year,tm.tm_mon,tm.tm_mday,tm.tm_hour,tm.tm_min, tm.tm_sec, tm.tm_wday);
             return -1;
