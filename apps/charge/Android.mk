@@ -41,9 +41,6 @@ LOCAL_SRC_FILES := \
 	log.c \
     ui.c 
 
-ifneq ($(strip $(TARGET_USERIMAGES_USE_EXT4)),true)
-LOCAL_CFLAGS += -DCONFIG_SYNC_FILE
-endif
 
 ifeq ($(strip $(HAVE_KEYBOARD_BACKLIGHT)),true)
 LOCAL_CFLAGS += -DK_BACKLIGHT
