@@ -112,30 +112,30 @@ static void* cmr_scale_thread_proc(void* data)
 	struct scale_frame sc_frm;
 	uint32_t i, src, dst, height_tmp;
 
-	CMR_LOGV("scaler_thread In");
+	CMR_LOGI("scaler_thread In");
 
 	bzero(&frame, sizeof(frame));
 	sem_post(&scaler_init_sem);
 
 	while(1) {
 		if (-1 == ioctl(scaler_fd, SCALE_IO_IS_DONE, &sc_frm)) {
-			CMR_LOGV("To exit scaler thread");
+			CMR_LOGI("To exit scaler thread");
 			break;
 		} else if (SCALE_FLAG_SYS_BUSY == sc_frm.scale_result) {
 			usleep(10000);
-			CMR_LOGV("scale continue.");
+			CMR_LOGI("scale continue.");
 			continue;
 		} else {
 			CMR_PRINT_TIME;
 			pthread_mutex_lock(&scaler_cb_mutex);
 			if (NULL == scaler_evt_cb) {
-				CMR_LOGI("IO Deinit");
+				CMR_LOGD("IO Deinit");
 				sem_post(&scaler_sync_sem);
 				ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 				ioctl(scaler_fd, SCALE_IO_DEINIT);
 			} else {
 				evt_id = CMR_IMG_CVT_SC_DONE;
-				CMR_LOGI("out height %d", sc_frm.height);
+				CMR_LOGD("out height %d", sc_frm.height);
 
 				if (sc_cxt->need_downsample) {
 					src = sc_cxt->tmp_slice.addr_vir.addr_u;
@@ -145,7 +145,7 @@ static void* cmr_scale_thread_proc(void* data)
 					} else {
 						height_tmp = sc_frm.height;
 					}
-					CMR_LOGI("Need downsample, w h %d %d, src dst 0x%x 0x%x, down lines %d",
+					CMR_LOGD("Need downsample, w h %d %d, src dst 0x%x 0x%x, down lines %d",
 						sc_frm.width,
 						sc_frm.height,
 						src,
@@ -159,7 +159,7 @@ static void* cmr_scale_thread_proc(void* data)
 						src += (sc_frm.width << 1);
 					}
 					if (sc_frm.height & 1) {
-						CMR_LOGI("Need copy one line to the 0 offset");
+						CMR_LOGD("Need copy one line to the 0 offset");
 						memcpy((void*)sc_cxt->tmp_slice.addr_vir.addr_u,
 							(void*)src,
 							sc_frm.width);
@@ -169,12 +169,12 @@ static void* cmr_scale_thread_proc(void* data)
 					sc_cxt->last_out_height_u = sc_cxt->last_out_height_y;
 				}
 
-				CMR_LOGI("out height %d, dst height %d",
+				CMR_LOGD("out height %d, dst height %d",
 					sc_cxt->last_out_height_y,
 					sc_cxt->dst_frame.size.height);
 
 				if (sc_cxt->last_out_height_y == sc_cxt->dst_frame.size.height) {
-					CMR_LOGI("IO Deinit");
+					CMR_LOGD("IO Deinit");
 					ioctl(scaler_fd, SCALE_IO_STOP, NULL);
 					ioctl(scaler_fd, SCALE_IO_DEINIT);
 				}
@@ -194,7 +194,7 @@ static void* cmr_scale_thread_proc(void* data)
 		}
 	}
 
-	CMR_LOGV("scaler_thread Out");
+	CMR_LOGI("scaler_thread Out");
 	return NULL;
 }
 
@@ -215,14 +215,14 @@ int cmr_scale_init(void)
 	int ret = 0;
 	int time_out = 3;
 
-	CMR_LOGV("In");
+	CMR_LOGI("In");
 	CMR_PRINT_TIME;
 
 	for ( ; time_out > 0; time_out--) {
 		scaler_fd = open(scaler_dev_name, O_RDWR, 0);
 
 		if (-1 == scaler_fd) {
-			CMR_LOGV("Sleep 50ms");
+			CMR_LOGI("Sleep 50ms");
 			usleep(50*1000);
 		} else {
 			break;
@@ -254,7 +254,7 @@ int cmr_scale_init(void)
 	}
 
 	scaler_evt_cb = NULL;
-	CMR_LOGV("Out");
+	CMR_LOGI("Out");
 	return ret;
 }
 
@@ -323,7 +323,7 @@ int cmr_scale_local_init(uint32_t slice_height,
 	sc_cxt->tmp_slice.addr_phy.addr_y = dst_img->addr_phy.addr_y;
 	sc_cxt->tmp_slice.addr_vir.addr_y = dst_img->addr_vir.addr_y;
 
-	CMR_LOGI("sc_work_mode %d dst_img->fmt %d tmp_frm 0x%x",
+	CMR_LOGD("sc_work_mode %d dst_img->fmt %d tmp_frm 0x%x",
 		sc_cxt->sc_work_mode,
 		dst_img->fmt,
 		(uint32_t)tmp_frm);
@@ -341,7 +341,7 @@ int cmr_scale_local_init(uint32_t slice_height,
 		sc_cxt->need_downsample = 1;
 		sc_cxt->tmp_slice.addr_phy.addr_u = tmp_frm->addr_phy.addr_y;
 		sc_cxt->tmp_slice.addr_vir.addr_u = tmp_frm->addr_vir.addr_y;
-		CMR_LOGV("Need downsample, tmp_slice 0x%x 0x%x",
+		CMR_LOGI("Need downsample, tmp_slice 0x%x 0x%x",
 			sc_cxt->tmp_slice.addr_phy.addr_u,
 			sc_cxt->tmp_slice.addr_vir.addr_u);
 
@@ -352,7 +352,7 @@ int cmr_scale_local_init(uint32_t slice_height,
 	}
 #else
 	if (tmp_frm) {
-		CMR_LOGV("slice out YUV420, tmp 0x%x", tmp_frm->addr_phy.addr_y);
+		CMR_LOGI("slice out YUV420, tmp 0x%x", tmp_frm->addr_phy.addr_y);
 		sc_cxt->tmp_buffer = tmp_frm->addr_phy.addr_y;
 	}
 	sc_cxt->tmp_slice.addr_phy.addr_u = dst_img->addr_phy.addr_u;
@@ -363,9 +363,9 @@ int cmr_scale_local_init(uint32_t slice_height,
 	sc_cxt->ready_height = slice_height;
 	if (sc_cxt->ready_height > sc_cxt->src_rect.start_y) {
 		sc_cxt->is_started = 1;
-		CMR_LOGI("Scaling can be started, %d", sc_cxt->ready_height);
+		CMR_LOGD("Scaling can be started, %d", sc_cxt->ready_height);
 	} else {
-		CMR_LOGI("ready height is lower than start_y, %d %d",
+		CMR_LOGD("ready height is lower than start_y, %d %d",
 			sc_cxt->ready_height,
 			sc_cxt->src_rect.start_y);
 	}
@@ -392,7 +392,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		return -ENODEV;
 	}
 
-	CMR_LOGI("src, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
+	CMR_LOGD("src, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
 		src_img->size.width,
 		src_img->size.height,
 		src_img->addr_phy.addr_y,
@@ -401,7 +401,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		src_img->data_end.y_endian,
 		src_img->data_end.uv_endian);
 
-	CMR_LOGI("dst, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
+	CMR_LOGD("dst, w h %d %d, addr 0x%x 0x%x, fmt %d, endian %d %d",
 		dst_img->size.width,
 		dst_img->size.height,
 		dst_img->addr_phy.addr_y,
@@ -410,7 +410,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		dst_img->data_end.y_endian,
 		dst_img->data_end.uv_endian);
 
-	CMR_LOGI("Crop window, %d %d %d %d",
+	CMR_LOGD("Crop window, %d %d %d %d",
 		rect->start_x,
 		rect->start_y,
 		rect->width,
@@ -473,7 +473,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		}
 		if (sc_cxt->is_started) {
 			act_height = sc_cxt->ready_height - sc_cxt->total_height;
-			CMR_LOGI("ready_height %d, total_height %d",
+			CMR_LOGD("ready_height %d, total_height %d",
 				sc_cxt->ready_height,
 				sc_cxt->total_height);
 			ret = ioctl(scaler_fd, SCALE_IO_SLICE_SCALE_HEIGHT, &act_height);
@@ -491,7 +491,7 @@ int  cmr_scale_start(uint32_t slice_height,
 		} else {
 			pthread_mutex_unlock(&scaler_cb_mutex);
 		}
-		CMR_LOGI("End");
+		CMR_LOGD("End");
 		CMR_PRINT_TIME;
 	}
 	sc_cxt->total_height = sc_cxt->slice_height;
@@ -499,7 +499,7 @@ int  cmr_scale_start(uint32_t slice_height,
 exit:
 	if (ret) {
 		sem_post(&scaler_sem);
-		CMR_LOGV("Err, %d", ret);
+		CMR_LOGI("Err, %d", ret);
 	}
 	return ret;
 }
@@ -518,7 +518,7 @@ int  cmr_scale_next(uint32_t slice_height,
 	uint32_t act_height = 0;
 	uint32_t is_end = 0;
 
-	CMR_LOGV("do next slice");
+	CMR_LOGI("do next slice");
 
 	if (-1 == scaler_fd) {
 		CMR_LOGE("Fail to open scaler device.");
@@ -551,7 +551,7 @@ int  cmr_scale_next(uint32_t slice_height,
 			act_height = sc_cxt->slice_height;
 		}
 		sc_cxt->ready_height += act_height;
-		CMR_LOGV("auto slice scaling, ready_height %d", sc_cxt->ready_height);
+		CMR_LOGI("auto slice scaling, ready_height %d", sc_cxt->ready_height);
 
 		if (sc_cxt->is_started) {
 			l_rect.start_y = 0;
@@ -560,10 +560,10 @@ int  cmr_scale_next(uint32_t slice_height,
 				sc_cxt->is_started = 1;
 				act_height = sc_cxt->ready_height - sc_cxt->src_rect.start_y;
 				l_rect.start_y = sc_cxt->src_rect.start_y - sc_cxt->total_height;
-				CMR_LOGI("Scaling can be started, %d", sc_cxt->ready_height);
+				CMR_LOGD("Scaling can be started, %d", sc_cxt->ready_height);
 			} else {
 				sc_cxt->is_started = 0;
-				CMR_LOGI("Still wait for the next slice ready");
+				CMR_LOGD("Still wait for the next slice ready");
 			}
 		}
 
@@ -573,7 +573,7 @@ int  cmr_scale_next(uint32_t slice_height,
 			l_rect.height = sc_cxt->src_rect.height;
 			ret = ioctl(scaler_fd, SCALE_IO_INPUT_RECT, &l_rect);
 			CVT_EXIT_IF_ERR(ret);
-			CMR_LOGI("trim rect %d %d %d %d, act_height %d",
+			CMR_LOGD("trim rect %d %d %d %d, act_height %d",
 				l_rect.start_x,
 				l_rect.start_y,
 				l_rect.width,
@@ -582,7 +582,7 @@ int  cmr_scale_next(uint32_t slice_height,
 			ret = ioctl(scaler_fd, SCALE_IO_SLICE_SCALE_HEIGHT, &act_height);
 
 			offset = (uint32_t)(sc_cxt->total_height * sc_cxt->src_frame.size.width);
-			CMR_LOGI("total_height %d, offset 0x%x",
+			CMR_LOGD("total_height %d, offset 0x%x",
 				sc_cxt->total_height,
 				offset);
 			l_addr.addr_y = sc_cxt->src_frame.addr_phy.addr_y + offset;
@@ -592,7 +592,7 @@ int  cmr_scale_next(uint32_t slice_height,
 		}
 	} else {
 
-		CMR_LOGV("Not auto slice scaling");
+		CMR_LOGI("Not auto slice scaling");
 
 		if (src_frm) {
 			ret = ioctl(scaler_fd, SCALE_IO_INPUT_ADDR, &src_frm->addr_phy);
@@ -651,7 +651,7 @@ int  cmr_scale_next(uint32_t slice_height,
 		ret = ioctl(scaler_fd, SCALE_IO_OUTPUT_ADDR, &dst_addr);
 		CVT_EXIT_IF_ERR(ret);
 
-		CMR_LOGV("Next dst, phy 0x%x 0x%x, vir 0x%x 0x%x",
+		CMR_LOGI("Next dst, phy 0x%x 0x%x, vir 0x%x 0x%x",
 			dst_addr.addr_y,
 			dst_addr.addr_u,
 			sc_cxt->tmp_slice.addr_vir.addr_y,
@@ -684,7 +684,7 @@ int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor)
 	ret = read(scaler_fd, rd_word, 2*sizeof(uint32_t));
 	*width = rd_word[0];
 	*sc_factor = rd_word[1];
-	CMR_LOGV("width %d, sc_factor %d", *width, *sc_factor);
+	CMR_LOGI("width %d, sc_factor %d", *width, *sc_factor);
 	return ret;
 }
 
@@ -711,7 +711,7 @@ int cmr_scale_deinit(void)
 {
 	int ret = 0;
 
-	CMR_LOGV("Start to close scale device.");
+	CMR_LOGI("Start to close scale device.");
 
 	if (-1 == scaler_fd) {
 		CMR_LOGE("Fail to open scaler device.");
@@ -755,6 +755,6 @@ int cmr_scale_deinit(void)
 	scaler_evt_cb = NULL;
 	pthread_mutex_unlock(&scaler_cb_mutex);
 	pthread_mutex_destroy(&scaler_cb_mutex);
-	CMR_LOGV("close device.");
+	CMR_LOGI("close device.");
 	return 0;
 }

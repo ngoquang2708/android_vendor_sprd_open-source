@@ -135,11 +135,11 @@ void SprdCameraParameters::setDefault(ConfigType config)
 		break;
 	}
 
-	LOGV("setDefault: config = %d, count = %d", config, count);
+	LOGI("setDefault: config = %d, count = %d", config, count);
 
 	for (int i=0; i<count; i++) {
 		set(element[i].key, element[i].value);
-		LOGV("SetDefault: key = %s, value = %s", element[i].key, element[i].value);
+		LOGI("SetDefault: key = %s, value = %s", element[i].key, element[i].value);
 	}
 }
 
@@ -244,7 +244,7 @@ int SprdCameraParameters::chekFocusAreas(int max_num) const
 			if ((left != 0) && (right != 0) && (top != 0) && (bottom != 0)) {
 				if ((left >= right) || (top >= bottom) || (left < -1000) || (top < -1000)
 					|| (right > 1000) || (bottom > 1000) || (weight < 1) || (weight > 1000)) {
-					LOGV("chekFocusAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
+					LOGI("chekFocusAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
 					left, top, right, bottom, weight);
 					return 1;
 				}
@@ -264,7 +264,7 @@ void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview
 	int metering_area[4 * kMeteringAreasMax] = {0};
 	int area_count = 0;
 
-	LOGV("getMeteringAreas: %s", p);
+	LOGI("getMeteringAreas: %s", p);
 
 	parse_rect(&metering_area[0], &area_count, p, true);
 
@@ -273,14 +273,14 @@ void SprdCameraParameters::getMeteringAreas(int *area, int *count, Size *preview
 					preview_size, preview_rect);
 		if (ret) {
 			area_count = 0;
-			LOGV("error: coordinate_convert error, ignore focus \n");
+			LOGE("error: coordinate_convert error, ignore focus \n");
 		} else {
 			coordinate_struct_convert(&metering_area[0], area_count * 4);
 			for (int i=0; i<area_count * 4; i++) {
 				area[i] = metering_area[i];
 				if (metering_area[i+1] < 0) {
 					area_count = 0;
-					LOGV("error: focus area %d < 0, ignore focus \n", metering_area[i+1]);
+					LOGE("error: focus area %d < 0, ignore focus \n", metering_area[i+1]);
 				}
 			}
 		}
@@ -313,7 +313,7 @@ int SprdCameraParameters::chekMeteringAreas(int max_num) const
 			if ((left != 0) && (right != 0) && (top != 0) && (bottom != 0)) {
 				if ((left >= right) || (top >= bottom) || (left < -1000) || (top < -1000)
 					|| (right > 1000) || (bottom > 1000) || (weight < 1) || (weight > 1000)) {
-					LOGV("checkMeteringAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
+					LOGI("checkMeteringAreas: left=%d,top=%d,right=%d,bottom=%d, weight=%d \n",
 					left, top, right, bottom, weight);
 					return 1;
 				}
@@ -1287,7 +1287,7 @@ void SprdCameraParameters::setCapMode(int value)
 void SprdCameraParameters::setZSLSupport(const char* value)
 {
 	set(KEY_SUPPORTED_ZSL,value);
-	LOGV("set ZSL support %s", value);
+	LOGI("set ZSL support %s", value);
 }
 
 void SprdCameraParameters::setFlashModeSupport(const char* value)
@@ -1310,7 +1310,7 @@ void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
 	height = SIZE_ALIGN_16(height);
 	width = SIZE_ALIGN_16(width);
 	sprintf(size_new, "%dx%d", width, height);
-	LOGV("updateSupportedPreviewSizes preview-size %s", size_new);
+	LOGI("updateSupportedPreviewSizes preview-size %s", size_new);
 	pos_1 = strstr(vals_p,",");
 	if (!pos_1) return;
 	pos_2 = pos_1 + 1;
@@ -1343,7 +1343,7 @@ void SprdCameraParameters::updateSupportedPreviewSizes(int width, int height)
 			}
 		}
 	}
-	LOGV("updateSupportedPreviewSizes preview-size-values %s", vals_new);
+	LOGI("updateSupportedPreviewSizes preview-size-values %s", vals_new);
 	set(KEY_SUPPORTED_PREVIEW_SIZES, vals_new);
 	set(KEY_PREVIEW_SIZE, size_new);
 }
@@ -1419,7 +1419,6 @@ lookuprect_done:
 
 static int lookupvalue(const struct str_map *const arr, const char *name)
 {
-	/*LOGV("lookup: name :%s .",name);*/
 	if (name) {
 		const struct str_map * trav = arr;
 		while (trav->desc) {
@@ -1454,7 +1453,7 @@ static void discard_zone_weight(int *arr, uint32_t size)
 	}
 
 	for (i=0;i<size;i++) {
-		LOGV("discard_zone_weight: %d:%d,%d,%d,%d.\n",i,arr[i*4],arr[i*4+1],arr[i*4+2],arr[i*4+3]);
+		LOGI("discard_zone_weight: %d:%d,%d,%d,%d.\n",i,arr[i*4],arr[i*4+1],arr[i*4+2],arr[i*4+3]);
 	}
 }
 
@@ -1474,11 +1473,11 @@ static void coordinate_struct_convert(int *rect_arr,int arr_size)
 		height =(((bottom-top+3) >> 2)<<2);
 		rect_arr[i*4+2] = width;
 		rect_arr[i*4+3] = height;
-		LOGV("test:zone: left=%d,top=%d,right=%d,bottom=%d, w=%d, h=%d \n", left, top, right, bottom, width, height);
+		LOGD("test:zone: left=%d,top=%d,right=%d,bottom=%d, w=%d, h=%d \n", left, top, right, bottom, width, height);
 	}
 
 	for (i=0;i<arr_size/4;i++) {
-		LOGV("test:zone:%d,%d,%d,%d.\n",rect_arr_copy[i*4],rect_arr_copy[i*4+1],rect_arr_copy[i*4+2],rect_arr_copy[i*4+3]);
+		LOGD("test:zone:%d,%d,%d,%d.\n",rect_arr_copy[i*4],rect_arr_copy[i*4+1],rect_arr_copy[i*4+2],rect_arr_copy[i*4+3]);
 	}
 }
 
@@ -1495,9 +1494,9 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 
 
 
-	LOGV("coordinate_convert: preview_rect x=%d, y=%d, width=%d, height=%d",
+	LOGD("coordinate_convert: preview_rect x=%d, y=%d, width=%d, height=%d",
 		preview_rect->x,preview_rect->y,preview_rect->width,preview_rect->height);
-	LOGV("coordinate_convert: arr_size=%d, angle=%d, is_mirror=%d \n",
+	LOGD("coordinate_convert: arr_size=%d, angle=%d, is_mirror=%d \n",
 		arr_size, angle, is_mirror);
 
 
@@ -1508,7 +1507,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 		rect_arr[i * 2] = (1000 + x1) * new_width / 2000;
 		rect_arr[i * 2 + 1] = (1000 + y1) * new_height / 2000;
 
-		LOGV("coordinate_convert rect i=%d x=%d y=%d", i, rect_arr[i * 2], rect_arr[i * 2 + 1]);
+		LOGD("coordinate_convert rect i=%d x=%d y=%d", i, rect_arr[i * 2], rect_arr[i * 2 + 1]);
 	}
 
 	/*move to cap image coordinate*/
@@ -1517,7 +1516,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 	for (i = 0; i < arr_size; i++)
 	{
 
-		LOGV("coordinate_convert %d: org: %d, %d, %d, %d.\n",
+		LOGD("coordinate_convert %d: org: %d, %d, %d, %d.\n",
 			i, rect_arr[i * 4], rect_arr[i * 4 + 1], rect_arr[i * 4 + 2], rect_arr[i * 4 + 3]);
 
 		rect_arr[i * 4] += point_x;
@@ -1525,7 +1524,7 @@ static int coordinate_convert(int *rect_arr,int arr_size,int angle,int is_mirror
 		rect_arr[i * 4 + 2] += point_x;
 		rect_arr[i * 4 + 3] += point_y;
 
-		LOGV("coordinate_convert %d: final: %d, %d, %d, %d.\n",
+		LOGD("coordinate_convert %d: final: %d, %d, %d, %d.\n",
 			i, rect_arr[i * 4], rect_arr[i * 4 + 1],rect_arr[i * 4 + 2], rect_arr[i * 4 + 3]);
 	}
 

@@ -28,7 +28,7 @@ int cmr_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 {
 	struct cmr_msg_cxt       *msg_cxt;
 
-	CMR_LOGI("count 0x%x", count);
+	CMR_LOGD("count 0x%x", count);
 
 	if (0 == count) {
 		return -CMR_MSG_PARAM_ERR;
@@ -51,12 +51,12 @@ int cmr_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 	pthread_mutex_init(&msg_cxt->mutex, NULL);
 	sem_init(&msg_cxt->msg_sem, 0, 0);
 	*queue_handle = (unsigned int)msg_cxt;
-	CMR_LOGI("queue_handle 0x%x", *queue_handle);
+	CMR_LOGD("queue_handle 0x%x", *queue_handle);
 
 	return CMR_MSG_SUCCESS;
 }
 
-int cmr_msg_get(unsigned int queue_handle, struct cmr_msg *message)
+int cmr_msg_get(unsigned int queue_handle, struct cmr_msg *message, uint32_t log_level)
 {
 	struct cmr_msg_cxt *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
 
@@ -88,12 +88,19 @@ int cmr_msg_get(unsigned int queue_handle, struct cmr_msg *message)
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
-
-	CMR_LOGI("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
-		queue_handle,
-		message->msg_type,
-		msg_cxt->msg_number,
-		msg_cxt->msg_count);
+	if (0 != log_level) {
+		CMR_LOGD("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
+			queue_handle,
+			message->msg_type,
+			msg_cxt->msg_number,
+			msg_cxt->msg_count);
+	} else {
+		CMR_LOGV("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
+			queue_handle,
+			message->msg_type,
+			msg_cxt->msg_number,
+			msg_cxt->msg_count);
+	}
 	return CMR_MSG_SUCCESS;
 }
 
@@ -152,7 +159,7 @@ int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message)
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
 
-	CMR_LOGI("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
+	CMR_LOGD("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
 		queue_handle,
 		message->msg_type,
 		msg_cxt->msg_number,
@@ -160,7 +167,7 @@ int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message)
 	return CMR_MSG_SUCCESS;
 }
 
-int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message)
+int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message, uint32_t log_level)
 {
 	struct cmr_msg_cxt *msg_cxt = NULL;
 	struct cmr_msg     *ori_node = NULL;
@@ -173,12 +180,19 @@ int cmr_msg_post(unsigned int queue_handle, struct cmr_msg *message)
 	msg_cxt = (struct cmr_msg_cxt*)queue_handle;
 	ori_node = msg_cxt->msg_write;
 
-	CMR_LOGI("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
-		queue_handle,
-		message->msg_type,
-		msg_cxt->msg_number,
-		msg_cxt->msg_count);
-
+	if (0 != log_level) {
+		CMR_LOGD("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
+			queue_handle,
+			message->msg_type,
+			msg_cxt->msg_number,
+			msg_cxt->msg_count);
+	} else {
+		CMR_LOGV("queue_handle 0x%x, msg type 0x%x num %d cnt %d",
+			queue_handle,
+			message->msg_type,
+			msg_cxt->msg_number,
+			msg_cxt->msg_count);
+	}
 	MSG_CHECK_MSG_MAGIC(queue_handle);
 
 	pthread_mutex_lock(&msg_cxt->mutex);
@@ -229,13 +243,13 @@ int cmr_msg_peak(uint32_t queue_handle, struct cmr_msg *message)
 		}
 		msg_cxt->msg_number --;
 	} else {
-		CMR_LOGV("No more unread msg");
+		CMR_LOGI("No more unread msg");
 		return -CMR_MSG_NO_OTHER_MSG;
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
 
-	CMR_LOGI("queue_handle 0x%x, drop msg type 0x%x", queue_handle, message->msg_type);
+	CMR_LOGD("queue_handle 0x%x, drop msg type 0x%x", queue_handle, message->msg_type);
 	return CMR_MSG_SUCCESS;
 }
 
@@ -243,7 +257,7 @@ int cmr_msg_queue_destroy(unsigned int queue_handle)
 {
 	struct cmr_msg_cxt *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
 
-	CMR_LOGI("queue_handle 0x%x", queue_handle);
+	CMR_LOGD("queue_handle 0x%x", queue_handle);
 
 	if (0 == queue_handle) {
 		CMR_LOGE("zero queue_handle");

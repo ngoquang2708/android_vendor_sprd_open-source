@@ -1297,12 +1297,12 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 	BOOLEAN power_down = g_ov5640_yuv_info.power_down_level;
 	BOOLEAN reset_level = g_ov5640_yuv_info.reset_pulse_level;
 
-	CMR_LOGV("dvdd_val %d, dvdd_val %d, avdd_val %d, iovdd_val %d",
+	SENSOR_PRINT("dvdd_val %d, dvdd_val %d, avdd_val %d, iovdd_val %d",
 			power_on,
 			dvdd_val,
 			avdd_val,
 			iovdd_val);
-	CMR_LOGV("power_down %d reset_level %d", power_down, reset_level);
+	SENSOR_PRINT("power_down %d reset_level %d", power_down, reset_level);
 
 	if (SENSOR_TRUE == power_on) {
 		//reset
@@ -1334,7 +1334,7 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 		usleep(1*1000);
 		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
 	}
-	CMR_LOGV("(1:on, 0:off): %d_end\n ", power_on);
+	SENSOR_PRINT("(1:on, 0:off): %d_end\n ", power_on);
 	return SENSOR_SUCCESS;
 }
 
