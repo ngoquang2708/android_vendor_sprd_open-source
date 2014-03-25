@@ -377,6 +377,7 @@ write_cmd:
 	n = write(info->fd_device, cmddumpmemory, 2);
 	if (n <= 0) {
 		close(info->fd_device);
+		info->fd_device = -1;
 		sleep(1);
 		handle_open_modem_device(info);
 		goto write_cmd;
@@ -412,6 +413,7 @@ read_again:
 			n = read(info->fd_device, buffer, BUFFER_SIZE);
 			if (n == 0) {
 				close(info->fd_device);
+				info->fd_device = -1;
 				sleep(1);
 				handle_open_modem_device(info);
 			} else if (n < 0) {
@@ -593,6 +595,7 @@ void *modem_log_handler(void *arg)
 					err_log("read %s log failed!", info->name);
 					FD_CLR(info->fd_device, &readset_tmp);
 					close(info->fd_device);
+					info->fd_device = -1;
 					sleep(1);
 					handle_open_modem_device(info);
 					FD_SET(info->fd_device, &readset_tmp);

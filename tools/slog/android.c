@@ -167,6 +167,8 @@ void *stream_log_handler(void *arg)
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 			g_eventTagMap = android_openEventTagMap(EVENT_TAG_MAP_FILE);
+			if(g_eventTagMap == NULL)
+				info->state = SLOG_STATE_OFF;
 		} else {
 			info = info->next;
 			continue;
@@ -236,6 +238,7 @@ void *stream_log_handler(void *arg)
 					info = info->next;
 					continue;
 				}
+				buf_kmsg[ret] = '\0';
 				strinst(wbuf_kmsg, buf_kmsg);
 				ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
 				if ( ret != 1 ) {
@@ -268,6 +271,11 @@ void *stream_log_handler(void *arg)
                 		}
 
 				entry = (struct logger_entry *)buf;
+				if (entry->len != ret - sizeof(struct logger_entry)) {
+					err_log("slog read: unexpected length. Expected %d, got %d\n",
+					entry->len, ret - sizeof(struct logger_entry));
+					exit(0);
+				}
 				entry->msg[entry->len] = '\0';
 				/*add android log 'tag' and other format*/
 				if ( !strncmp(info->name, "events", 6) )

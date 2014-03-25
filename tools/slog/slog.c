@@ -342,7 +342,8 @@ static void use_ori_log_dir()
 
 	while((p_dirent = readdir(p_dir))) {
 		if( !strncmp(p_dirent->d_name, "20", 2) ) {
-			strcpy(top_logdir, p_dirent->d_name);
+			memset(top_logdir, 0, MAX_NAME_LEN);
+			strncpy(top_logdir, p_dirent->d_name, MAX_NAME_LEN-1);
 			log_num = 1;
 			debug_log("%s\n",top_logdir);
 			break;
@@ -407,6 +408,7 @@ static void init_external_storage()
 //	}
 //#endif
 
+	memset(external_path, 0, MAX_NAME_LEN);
 	p = getenv("SECOND_STORAGE_TYPE");
 	if(p){
 		type = atoi(p);
@@ -418,7 +420,7 @@ static void init_external_storage()
 		}
 
 		if(p){
-			strcpy(external_path, p);
+			strncpy(external_path, p, MAX_NAME_LEN);
 			sprintf(external_storage, "%s/slog", p);
 			debug_log("the external storage : %s", external_storage);
 			return;
@@ -440,7 +442,7 @@ static void init_external_storage()
 		}
 
 		if(p){
-			strcpy(external_path, p);
+			strncpy(external_path, p, MAX_NAME_LEN-1);
 			sprintf(external_storage, "%s/slog", p);
 			debug_log("the external storage : %s", external_storage);
 			return;
@@ -457,7 +459,7 @@ static void init_external_storage()
 		err_log("Can't find the external storage environment");
 		exit(0);
 	}
-	strcpy(external_path, p);
+	strncpy(external_path, p, MAX_NAME_LEN-1);
 	sprintf(external_storage, "%s/slog", p);
 	debug_log("the external storage : %s", external_storage);
 	return;
@@ -528,7 +530,7 @@ static void check_available_volume()
 		}
 		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
 		if(ret >= 5 && ret < 10) {
-			err_log("internal available %dM is not enough, show alert");
+			err_log("internal available %dM is not enough, show alert", ret);
 			sprintf(cmd, "%s %d", "am startservice -a slogui.intent.action.LOW_VOLUME --ei freespace ", ret);
 			system(cmd);
 		}
@@ -655,9 +657,9 @@ static void handle_uboot_log(void)
 		return;
 	}
 
+	buffer[ret] = '\0';
 	/* parse address and size, format: boot_ram_log=0x..., 0x...*/
 	if ((s1 = strstr(buffer, "boot_ram_log=")) != NULL) {
-		s2= strsep(&s1, "="); /*0x=...*/
 		if ((s2 = strsep(&s1, ",")) != NULL) {
 			pa_start = strtoll(s2, NULL, 16);
 			if ((s2 = strsep(&s1, " ")) != NULL)
