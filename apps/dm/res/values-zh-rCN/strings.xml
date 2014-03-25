@@ -25,6 +25,7 @@
 		<item>自注册开关</item>
 		<item>模拟采配</item>
 		<item>初始化提示框控制位</item>
+		<item>AGPS接入点</item>
     </string-array>    
     <string name="menu_save">保存</string>
     <string name="menu_cancel">取消</string>

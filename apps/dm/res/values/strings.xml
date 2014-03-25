@@ -25,6 +25,7 @@
         <item>Self register switch</item>
         <item>Simulator Connect</item>
         <item>Clean dialog control flag</item>
+        <item>AGPS Apn</item>
     </string-array>    
     <string name="menu_save">Save</string>
     <string name="menu_cancel">Cancel</string>

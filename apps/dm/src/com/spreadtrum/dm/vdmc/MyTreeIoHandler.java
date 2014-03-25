@@ -167,17 +167,21 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
     private static final int STREAMING_NET_INFO_IO_HANDLER = 49;
 
     // AGPS Setting
-    private static final int AGPS_CONNPROFILE_IO_HANDLER = 50;
+    public static final int AGPS_CONNPROFILE_IO_HANDLER = 50;
 
-    private static final int AGPS_SERVER_IO_HANDLER = 51;
+    public static final int AGPS_SERVER_IO_HANDLER = 51;
 
-    private static final int AGPS_SERVER_NAME_IO_HANDLER = 52;
+    public static final int AGPS_SERVER_NAME_IO_HANDLER = 52;
 
-    private static final int AGPS_IAPID_IO_HANDLER = 53;
+    public static final int AGPS_IAPID_IO_HANDLER = 53;
 
-    private static final int AGPS_PORT_IO_HANDLER = 54;
+    public static final int AGPS_PORT_IO_HANDLER = 54;
 
-    private static final int AGPS_PROVIDER_ID_IO_HANDLER = 55;
+    public static final int AGPS_PROVIDER_ID_IO_HANDLER = 55;
+    
+    public static final int AGPS_PREFCONREF_ID_IO_HANDLER=62;
+    
+    public static final int AGPS_CONREF_IO_HANDLER=63;
 
 //DM WAP Setting
 	private static final int DM_WAP_CONN_PROFILE_IO_HANDLER=56;
@@ -634,6 +638,8 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
             case AGPS_IAPID_IO_HANDLER:
             case AGPS_PORT_IO_HANDLER:
             case AGPS_PROVIDER_ID_IO_HANDLER:
+            case AGPS_PREFCONREF_ID_IO_HANDLER:
+            case AGPS_CONREF_IO_HANDLER:
                 str = readAGPSParam(_handlerType);
                 ret = readData(str, offset, data);
                 break;
@@ -758,6 +764,8 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
             case AGPS_IAPID_IO_HANDLER:
             case AGPS_PORT_IO_HANDLER:
             case AGPS_PROVIDER_ID_IO_HANDLER:
+            case AGPS_PREFCONREF_ID_IO_HANDLER:
+            case AGPS_CONREF_IO_HANDLER:
                 str = new String(data);
                 writeAGPSParam(_handlerType, str);
                 break;
@@ -863,6 +871,8 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
             case AGPS_IAPID_IO_HANDLER:
             case AGPS_PORT_IO_HANDLER:
             case AGPS_PROVIDER_ID_IO_HANDLER:
+            case AGPS_PREFCONREF_ID_IO_HANDLER:
+            case AGPS_CONREF_IO_HANDLER:
                 writeAGPSParam(_handlerType, str);
                 break;
 
@@ -1374,7 +1384,26 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
          * AGPS_PROVIDER_ID_IO_HANDLER: str = data.getString("providerid");
          * break; default: break; } Log.d(TAG, "readAGPSParam: type = " + type +
          * ", value = " + str);
-         */
+         */        
+        // bug 292626 begin
+        switch (type) {
+        case AGPS_CONNPROFILE_IO_HANDLER:
+            str = DmService.getInstance().getAGPSApn(_context);
+            break;
+        case AGPS_SERVER_IO_HANDLER:
+        case AGPS_SERVER_NAME_IO_HANDLER:
+        case AGPS_IAPID_IO_HANDLER:
+        case AGPS_PORT_IO_HANDLER:
+        case AGPS_PROVIDER_ID_IO_HANDLER:
+        case AGPS_PREFCONREF_ID_IO_HANDLER:
+        case AGPS_CONREF_IO_HANDLER:
+            str = DmService.getInstance().getAGPSParam(_context, type);
+            break;
+        default:
+            break;
+        }
+        Log.d(TAG, "readAGPSParam: type = " + type + ", value = " + str);
+        // bug 292626 end
         return str;
     }
 
@@ -1793,6 +1822,26 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
          * mLocationManager.syncDeviceManagementInfo(data); Log.d(TAG,
          * "writeAGPSParam: type = " + type + ", value = " + str);
          */
+        // bug 292626 begin
+        switch (type) {
+        case AGPS_CONNPROFILE_IO_HANDLER:
+            Vdmc.tmpCmsuplApn = str;
+
+            break;
+        case AGPS_SERVER_IO_HANDLER:
+        case AGPS_SERVER_NAME_IO_HANDLER:
+        case AGPS_IAPID_IO_HANDLER:
+        case AGPS_PORT_IO_HANDLER:
+        case AGPS_PROVIDER_ID_IO_HANDLER:
+        case AGPS_PREFCONREF_ID_IO_HANDLER:
+        case AGPS_CONREF_IO_HANDLER:
+            DmService.getInstance().setAGPSParam(_context, str, type);
+            break;
+        default:
+            break;
+        }
+        Log.d(TAG, "writeAGPSParam: type = " + type + ", value = " + str);
+        // bug 292626 end
         return;
     }
 
