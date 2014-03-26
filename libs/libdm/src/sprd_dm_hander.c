@@ -79,6 +79,16 @@ LOCAL const DM_TREE_ITEM_T  s_dm_initdata_tab[] =
     {"./Settings/CMWAPDM/Port",                  DM_WAP_PORT_IO_HANDLER}, //m
 
     {"./Settings/Cred/Nonce",                  DM_SAVE_NONCE}, //m
+	//bug 292626 begin for AGPS
+	{ "./Settings/AGPS/ConnProfile", AGPS_CONNPROFILE_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSServer", AGPS_SERVER_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSName", AGPS_SERVER_NAME_IO_HANDLER }, //0
+	{ "./Settings/AGPS/IAPID", AGPS_IAPID_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSServerPort", AGPS_PORT_IO_HANDLER }, //0
+	{ "./Settings/AGPS/ProviderIP", AGPS_PROVIDER_ID_IO_HANDLER }, //0
+	{ "./Settings/AGPS/PrefConRef", AGPS_PREFCONREF_ID_IO_HANDLER }, //O
+	{ "./Settings/AGPS/ConRef", AGPS_CONREF_IO_HANDLER }, //O
+	//bug 292626 end
     	
   
     //{"./DMAcc/TDAcc/AppAddr/SrvAddr/Addr",  DM_GetSrvAddrURL,           PNULL,                      PNULL}, //o

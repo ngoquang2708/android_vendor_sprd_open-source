@@ -67,6 +67,8 @@ public class DmDebugMenu extends Activity {
     
     protected static final int ITEM_CLEAN_DIALOG_CONTROLL_FLAGE = 16;
     
+    protected static final int ITEM_AGPS_APN = 17;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -315,6 +317,13 @@ public class DmDebugMenu extends Activity {
                 case ITEM_CLEAN_DIALOG_CONTROLL_FLAGE:                                    
                     DmService.getInstance().cleanDailogControllFlag();                                        
                     ShowMessage("Clean finished!");
+                    break;
+                    
+                case ITEM_AGPS_APN:
+                    intent = new Intent(mContext, DmEditItem.class);
+                    intent.putExtra("EditType", mlistItem[ITEM_AGPS_APN]);
+                    intent.putExtra("EditContent", DmService.getInstance().getAGPSApn(mContext));
+                    startActivity(intent);
                     break;
                     
                 default:

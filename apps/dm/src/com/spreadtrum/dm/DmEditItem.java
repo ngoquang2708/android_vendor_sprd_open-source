@@ -99,7 +99,10 @@ public class DmEditItem extends Activity {
             } else if (mEditType.equals(listArray[DmDebugMenu.ITEM_SMS_PORT])) {
                 // Sms port
                 DmService.getInstance().setSmsPort(mContext, editContent);
-            } else {
+            }else if (mEditType.equals(listArray[DmDebugMenu.ITEM_AGPS_APN])) {
+             // AGPS apn
+                DmService.getInstance().setAGPSApn(mContext, editContent);
+            }else {
                 Log.d(TAG, "saveEditContent : mEditType is invalid!");
                 isSaved = false;
                 ShowMessage("edit type is invalid!");
