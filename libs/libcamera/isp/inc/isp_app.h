@@ -167,6 +167,13 @@ enum isp_flash_ctrl{
 	ISP_FLASH_MAX
 };
 
+enum isp_ae_ctrl_mode{
+	ISP_AE_CTRL_SET_INDEX=0x00,
+	ISP_AE_CTRL_SET,
+	ISP_AE_CTRL_GET,
+	ISP_AE_CTRL_MODE_MAX
+};
+
 enum isp_ae_mode{
 	ISP_AUTO=0x00,
 	ISP_NIGHT,
@@ -250,6 +257,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_HDR,
 	ISP_CTRL_GLOBAL_GAIN,
 	ISP_CTRL_CHN_GAIN,
+	ISP_CTRL_GET_EXIF_INFO,
 	ISP_CTRL_ISO,
 	ISP_CTRL_WB_TRIM,
 	ISP_CTRL_PARAM_UPDATE,
@@ -270,7 +278,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_CONTINUE_AF,
 	ISP_CTRL_AF_DENOISE,
 	ISP_CTRL_FLASH_CTRL, // for isp tool
-	ISP_CTRL_GET_EXIF_INFO,
+	ISP_CTRL_AE_CTRL, // for isp tool
 	ISP_CTRL_MAX
 };
 
@@ -357,6 +365,18 @@ struct isp_af_win{
 	struct isp_pos_rect ae_touch_rect;
 };
 
+struct isp_ae_ctrl{
+	enum isp_ae_ctrl_mode mode;
+	uint32_t index;
+	uint32_t lum;
+	uint32_t shutter;
+	uint32_t dummy;
+	uint32_t again;
+	uint32_t dgain;
+	uint32_t skipa;
+	uint32_t skipd;
+};
+
 struct isp_smart_ae_param {
 	uint8_t smart;
 	uint8_t smart_mode;
@@ -371,8 +391,8 @@ struct isp_smart_ae_param {
 	uint8_t smart_edge_min_index;
 	uint8_t smart_edge_max_index;
 	uint8_t smart_sta_low_thr;
-	uint8_t smart_sta_high_thr;
-	uint8_t smart_sta_rotio;
+	uint8_t smart_sta_ratio1;
+	uint8_t smart_sta_ratio;
 };
 
 struct isp_img_frm{
