@@ -70,6 +70,18 @@ public class DmService extends Service {
                                                   // registe function
 
     private static final String PREFERENCE_NAME = "LastImsi";
+    
+    // bug 292626 begin
+    private static final String PREFERENCE_AGPS = "AgpsParam";
+    private static final String AGPS_SERVER = "AGPSServer";
+    private static final String AGPS_NAME = "AGPSName";
+    private static final String AGPS_IAPID = "IAPID";
+    private static final String AGPS_PORT = "AGPSServerPort";
+    private static final String AGPS_PROVIDERIP = "ProviderIP";
+    private static final String AGPS_PREFCONREF = "PrefConRef";
+    private static final String AGPS_CONREF = "ConRef";
+    private static final String AGPS_CONNPROFILE = "ConApn";
+    // bug 292626 end
 
     private static int MODE = MODE_PRIVATE;
 
@@ -1808,4 +1820,153 @@ public class DmService extends Service {
                      
         editor.commit();                      
     }
+    
+    // bug 292626 begin
+    public String getAGPSApn(Context context) {
+        String str = null;
+        boolean isExsit = false;
+        final String selection = "name = 'CMSUPL' and numeric=\""
+                + android.os.SystemProperties.get(TelephonyManager.getProperty(
+                        TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC,
+                        curPhoneId), "") + "\"";
+        Log.d(TAG, "getAGPSApn: selection = " + selection);
+        Cursor cursor = context.getContentResolver().query(
+                (curPhoneId == 0) ? Telephony.Carriers.CONTENT_URI
+                        : Telephony.Carriers.CONTENT_URI_SIM2, null, selection,
+                null, null);
+
+        if (null != cursor) {
+            if (cursor.getCount() > 0 && cursor.moveToFirst()) {
+                str = cursor.getString(cursor
+                        .getColumnIndexOrThrow(Telephony.Carriers.APN));
+                isExsit = true;
+            }
+            cursor.close();
+        }
+
+        if (!isExsit) {
+
+            // taipinglai 如果手机中没有预置CMSUPL，则从SharedPreferences读取，确保AGPS参数采集可以执行成功            
+            str = getAGPSParam(context,
+                    MyTreeIoHandler.AGPS_CONNPROFILE_IO_HANDLER);
+            Log.d(TAG, "not found CMSUPL obtained from SharedPreferences ");
+        }
+
+        Log.d(TAG, "getAGPSApn: " + str);
+        return str;
+    }
+    
+    public void setAGPSApn(Context context, String apn) {
+        final String selection = "name = 'CMSUPL' and numeric=\""
+                + android.os.SystemProperties.get(TelephonyManager.getProperty(
+                        TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC,
+                        curPhoneId), "") + "\"";
+        Log.d(TAG, "setAGPSApn: selection = " + selection);
+
+        ContentValues values = new ContentValues();
+
+        values.put(Telephony.Carriers.APN, apn);
+        int c = values.size() > 0 ? context.getContentResolver().update(
+                (curPhoneId == 0) ? Telephony.Carriers.CONTENT_URI
+                        : Telephony.Carriers.CONTENT_URI_SIM2, values,
+                selection, null) : 0;
+
+        if (0 == c) {
+
+            // taipinglai
+            // 如果手机中没有预置CMSUPL，则保存至SharedPreferences中，确保AGPS参数配置可以执行成功 Mar 24
+            setAGPSParam(context, apn,
+                    MyTreeIoHandler.AGPS_CONNPROFILE_IO_HANDLER);
+            Log.d(TAG, "not found CMSUPL save to SharedPreferences ");
+        }
+
+        Log.d(TAG, "setAGPSApn: values.size() = " + values.size() + " c = " + c);
+        return;
+    }
+    
+    public String getAGPSParam(Context context, int type) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(
+                PREFERENCE_AGPS, MODE);
+        String str = "";
+
+        switch (type) {
+        case MyTreeIoHandler.AGPS_SERVER_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_SERVER, "221.176.0.55:7275");
+            break;
+        case MyTreeIoHandler.AGPS_SERVER_NAME_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_NAME,
+                    "China Mobile AGPS server");
+            break;
+        case MyTreeIoHandler.AGPS_IAPID_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_IAPID, "ap0004");
+            break;
+        case MyTreeIoHandler.AGPS_PORT_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_PORT, "IPv4address:port");
+            break;
+        case MyTreeIoHandler.AGPS_PROVIDER_ID_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_PROVIDERIP, "221.176.0.55");
+            break;
+        case MyTreeIoHandler.AGPS_PREFCONREF_ID_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_PREFCONREF, "CMCC WAP");
+            break;
+        case MyTreeIoHandler.AGPS_CONREF_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_CONREF, "");
+            break;
+        case MyTreeIoHandler.AGPS_CONNPROFILE_IO_HANDLER:
+            str = sharedPreferences.getString(AGPS_CONNPROFILE, "cmnet");
+            break;
+        default:
+            Log.d(TAG, "getAGPSParam error type = " + type);
+            break;
+        }
+
+        Log.d(TAG, "getAGPSParam : str = " + str + " type = " + type);
+        return str;
+    }
+    
+    public boolean setAGPSParam(Context context, String str, int type) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(
+                PREFERENCE_AGPS, MODE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        boolean isErrorType = false;
+
+        switch (type) {
+        case MyTreeIoHandler.AGPS_SERVER_IO_HANDLER:
+            editor.putString(AGPS_SERVER, str);
+            break;
+        case MyTreeIoHandler.AGPS_SERVER_NAME_IO_HANDLER:
+            editor.putString(AGPS_NAME, str);
+            break;
+        case MyTreeIoHandler.AGPS_IAPID_IO_HANDLER:
+            editor.putString(AGPS_IAPID, str);
+            break;
+        case MyTreeIoHandler.AGPS_PORT_IO_HANDLER:
+            editor.putString(AGPS_PORT, str);
+            break;
+        case MyTreeIoHandler.AGPS_PROVIDER_ID_IO_HANDLER:
+            editor.putString(AGPS_PROVIDERIP, str);
+            break;
+        case MyTreeIoHandler.AGPS_PREFCONREF_ID_IO_HANDLER:
+            editor.putString(AGPS_PREFCONREF, str);
+            break;
+        case MyTreeIoHandler.AGPS_CONREF_IO_HANDLER:
+            editor.putString(AGPS_CONREF, str);
+            break;
+        case MyTreeIoHandler.AGPS_CONNPROFILE_IO_HANDLER:
+            editor.putString(AGPS_CONNPROFILE, str);
+            break;
+        default:
+            isErrorType = true;
+            Log.d(TAG, "setAGPSParam error type = " + type);
+            break;
+        }
+
+        if (!isErrorType) {
+            editor.commit();
+        }
+        Log.d(TAG, "setAGPSParam : str = " + str + " type = " + type);
+        return (!isErrorType);
+    }
+    // bug 292626 end
+    
 }

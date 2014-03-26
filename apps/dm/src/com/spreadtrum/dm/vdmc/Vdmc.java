@@ -97,6 +97,10 @@ public class Vdmc {
     public static String tmpdmpwapport=null;
     public static String tmpdmpwapproxy=null;
     public static String tmpdmpwapconn=null;
+    
+    // bug 292626 begin
+    public static String tmpCmsuplApn = null;
+    // bug 292626 end
 
     public static boolean tmpUpdateStream = false;
     public static boolean tmpStreamUpdated = false;
@@ -446,7 +450,14 @@ public class Vdmc {
 		tmpdmwapapn = null;
 		tmpdmpwapport = null;
 		tmpdmpwapproxy = null;
-		tmpdmpwapconn = null;
+		tmpdmpwapconn = null;		
+        // bug 292626 begin
+        if (null != tmpCmsuplApn) {
+            DmService.getInstance().setAGPSApn(_appContext,
+                    tmpCmsuplApn.toLowerCase());
+            tmpCmsuplApn = null;
+        }
+        // bug 292626 end     
 		/*
 		while (tmpUpdateStream && tmpStreamUpdatedNum<tmpUpdateStreamNum)
 		{

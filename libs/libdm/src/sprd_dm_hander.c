@@ -8,7 +8,7 @@
 **                         Important Edit History                          *
 ** ------------------------------------------------------------------------*
 ** DATE           NAME             DESCRIPTION                             *
-** 04/2011       maryxiao       ½âÎösyncxmlÐ­Òédm²¿·Öxml      *
+** 04/2011       maryxiao       ï¿½ï¿½ï¿½ï¿½syncxmlÐ­ï¿½ï¿½dmï¿½ï¿½ï¿½ï¿½xml      *
 ****************************************************************************/
 #define MMIPARSEXML_C
 
@@ -39,26 +39,26 @@ LOCAL const DM_TREE_ITEM_T  s_dm_initdata_tab[] =
     {"./Settings/DM/APN",                   DM_CONN_PROFILE_IO_HANDLER}, //m
     {"./Settings/DM/Proxy",                 DM_PROXY_IO_HANDLER}, //m
     {"./Settings/DM/Port",                  DM_PORT_IO_HANDLER}, //m
-    //GPRS_CMNetÅäÖÃÐÅÏ¢
+    //GPRS_CMNetï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     {"./Settings/GPRS/CMNet/APN",           GPRS_CMNET_APN_IO_HANDLER}, //m
     {"./Settings/GPRS/CMNet/UserName",      GPRS_CMNET_USERNAME_IO_HANDLER}, //m
     {"./Settings/GPRS/CMNet/PassWord",      GPRS_CMNET_PASSWORD_IO_HANDLER}, //m
     {"./Settings/GPRS/CMNet/ProxyAddr",     GPRS_CMNET_PROXY_IO_HANDLER}, //m
     {"./Settings/GPRS/CMNet/ProxyPortNbr",  GPRS_CMNET_PORT_IO_HANDLER}, //m
-    //GPRS_CMWapÅäÖÃÐÅÏ¢
+    //GPRS_CMWapï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     {"./Settings/GPRS/CMWap/APN",           GPRS_CMWAP_APN_IO_HANDLER}, //m
     {"./Settings/GPRS/CMWap/UserName",      GPRS_CMWAP_USERNAME_IO_HANDLER}, //m
     {"./Settings/GPRS/CMWap/PassWord",      GPRS_CMWAP_PASSWORD_IO_HANDLER}, //m
     {"./Settings/GPRS/CMWap/ProxyAddr",     GPRS_CMWAP_PROXY_IO_HANDLER}, //m
     {"./Settings/GPRS/CMWap/ProxyPortNbr",  GPRS_CMWAP_PORT_IO_HANDLER}, //m
-    //MMSÅäÖÃÐÅÏ¢
+    //MMSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     {"./Settings/MMS/MMSC",                 MMS_MMSC_IO_HANDLER}, //m
     {"./Settings/MMS/ConnProfile",          MMS_CONNPROFILE_IO_HANDLER}, //m
     //WAP2.0
     {"./Settings/WAP/ConnProfile",          WAP_CONNPROFILE_IO_HANDLER  }, //m
     {"./Settings/WAP/MonternetPage",            WAP_HOMEPAGE_IO_HANDLER }, //m
     {"./Settings/WAP/StartPage",            BROWSER_HOMEPAGE_IO_HANDLER }, //m
-    //PIMÅäÖÃÐÅÏ¢
+    //PIMï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     {"./Settings/PIM/ConnProfile",	PIM_CONNPROFILE_URI_IO_HANDLER},
     {"./Settings/PIM/Addr",                 PIM_SERVER_ADDR_IO_HANDLER}, //m
     {"./Settings/PIM/AddressBookURI",       PIM_ADDRESS_BOOK_URI_IO_HANDLER}, //m
@@ -79,6 +79,16 @@ LOCAL const DM_TREE_ITEM_T  s_dm_initdata_tab[] =
     {"./Settings/CMWAPDM/Port",                  DM_WAP_PORT_IO_HANDLER}, //m
 
     {"./Settings/Cred/Nonce",                  DM_SAVE_NONCE}, //m
+	//bug 292626 begin for AGPS
+	{ "./Settings/AGPS/ConnProfile", AGPS_CONNPROFILE_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSServer", AGPS_SERVER_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSName", AGPS_SERVER_NAME_IO_HANDLER }, //0
+	{ "./Settings/AGPS/IAPID", AGPS_IAPID_IO_HANDLER }, //0
+	{ "./Settings/AGPS/AGPSServerPort", AGPS_PORT_IO_HANDLER }, //0
+	{ "./Settings/AGPS/ProviderIP", AGPS_PROVIDER_ID_IO_HANDLER }, //0
+	{ "./Settings/AGPS/PrefConRef", AGPS_PREFCONREF_ID_IO_HANDLER }, //O
+	{ "./Settings/AGPS/ConRef", AGPS_CONREF_IO_HANDLER }, //O
+	//bug 292626 end
     	
   
     //{"./DMAcc/TDAcc/AppAddr/SrvAddr/Addr",  DM_GetSrvAddrURL,           PNULL,                      PNULL}, //o
