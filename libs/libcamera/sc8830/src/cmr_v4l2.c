@@ -95,14 +95,14 @@ int cmr_v4l2_init(void)
 {
 	int                      ret = 0;
 
-	CMR_LOGV("Start to open V4L2 device.");
+	CMR_LOGI("Start to open V4L2 device.");
 	fd = open(dev_name, O_RDWR, 0);
 	if (-1 == fd) {
 		CMR_LOGE("Failed to open dcam device.errno : %d", errno);
 		fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno,  strerror(errno));
 		exit(EXIT_FAILURE);
 	} else {
-		CMR_LOGV("OK to open device.");
+		CMR_LOGI("OK to open device.");
 	}
 
 	ret = pthread_mutex_init(&cb_mutex, NULL);
@@ -128,7 +128,7 @@ int cmr_v4l2_deinit(void)
 {
 	int                      ret = 0;
 
-	CMR_LOGV("Start to close V4L2 device.");
+	CMR_LOGI("Start to close V4L2 device.");
 
 	/* thread should be killed before fd deinited */
 	ret = cmr_v4l2_kill_thread();
@@ -145,13 +145,13 @@ int cmr_v4l2_deinit(void)
 		}
 		fd = -1;
 	}
-	CMR_LOGI("thread kill done.");
+	CMR_LOGD("thread kill done.");
 	pthread_mutex_lock(&cb_mutex);
 	v4l2_evt_cb = NULL;
 	pthread_mutex_unlock(&cb_mutex);
 	pthread_mutex_destroy(&cb_mutex);
 	pthread_mutex_destroy(&status_mutex);
-	CMR_LOGV("close device.\n");
+	CMR_LOGI("close device.\n");
 	return 0;
 }
 
@@ -220,7 +220,7 @@ int cmr_v4l2_if_cfg(struct sensor_if *sn_if)
 
 	ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
 
-	CMR_LOGV("Set dv timing, ret %d, if type %d, mode %d, deci %d, status %d",
+	CMR_LOGI("Set dv timing, ret %d, if type %d, mode %d, deci %d, status %d",
 		ret,
 		timing_param[CMR_TIMING_LEN-1],
 		timing_param[0],
@@ -246,7 +246,7 @@ int cmr_v4l2_if_decfg(struct sensor_if *sn_if)
 
 	ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
 
-	CMR_LOGV("Set dv timing, ret %d, if type %d, status %d.",
+	CMR_LOGI("Set dv timing, ret %d, if type %d, status %d.",
 		ret,
 		timing_param[CMR_TIMING_LEN-1],
 		timing_param[CMR_TIMING_LEN-2]);
@@ -274,7 +274,7 @@ int cmr_v4l2_sn_cfg(struct sn_cfg *config)
 	stream_parm.parm.capture.reserved[3] = config->sn_size.height;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
 
-	CMR_LOGV("sn_trim x y w h %d, %d, %d, %d",
+	CMR_LOGI("sn_trim x y w h %d, %d, %d, %d",
 		config->sn_trim.start_x,
 		config->sn_trim.start_y,
 		config->sn_trim.width,
@@ -308,7 +308,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 	if (NULL == config)
 		return -1;
 
-	CMR_LOGV("channel_id %d, frm_num %d.", config->channel_id, config->frm_num);
+	CMR_LOGI("channel_id %d, frm_num %d.", config->channel_id, config->frm_num);
 	cfg_id = config->channel_id;
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	stream_parm.parm.capture.capability = PATH_FRM_DECI;
@@ -316,7 +316,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 	stream_parm.parm.capture.reserved[0] = config->channel_id;
 	stream_parm.parm.capture.reserved[1] = config->chn_deci_factor;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
-	CMR_LOGV("channel_id  %d, deci_factor %d, ret %d \n", config->channel_id, config->chn_deci_factor, ret);
+	CMR_LOGI("channel_id  %d, deci_factor %d, ret %d \n", config->channel_id, config->chn_deci_factor, ret);
 
 	buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (CHN_1 == cfg_id) {
@@ -356,7 +356,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 	pxl_fmt = cmr_v4l2_get_4cc(config->cfg.dst_img_fmt);
 	while (0 == ioctl(fd, VIDIOC_ENUM_FMT, &fmtdesc)) {
 		if (fmtdesc.pixelformat == pxl_fmt) {
-			CMR_LOGV("FourCC 0x%x is supported by the low layer", pxl_fmt);
+			CMR_LOGI("FourCC 0x%x is supported by the low layer", pxl_fmt);
 			found = 1;
 			break;
 		}
@@ -372,22 +372,22 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		format.fmt.pix.pixelformat = pxl_fmt; //fourecc
 		format.fmt.pix.priv = config->cfg.need_isp;
 		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
-		CMR_LOGV("need binning, %d", format.fmt.pix.sizeimage);
+		CMR_LOGI("need binning, %d", format.fmt.pix.sizeimage);
 		if (format.fmt.pix.sizeimage) {
 			config->cfg.need_binning = 1;
 		}
 		if (0 == ret) {
 			chn_status[cfg_id] = CHN_BUSY;
 		} else if (ret > 0) {
-			CMR_LOGV("need restart");
+			CMR_LOGI("need restart");
 			ret = CMR_V4L2_RET_RESTART;
 		}
 	} else {
-		CMR_LOGV("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
+		CMR_LOGI("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
 	}
 
 exit:
-	CMR_LOGV("ret %d", ret);
+	CMR_LOGI("ret %d", ret);
 	return ret;
 }
 
@@ -403,7 +403,7 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 	if (NULL == buf_cfg || buf_cfg->count > V4L2_BUF_MAX)
 		return -1;
 
-	CMR_LOGV("%d %d 0x%x ", buf_cfg->channel_id, buf_cfg->count, buf_cfg->base_id);
+	CMR_LOGI("%d %d 0x%x ", buf_cfg->channel_id, buf_cfg->count, buf_cfg->base_id);
 
 	v4l2_buf.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	v4l2_buf.flags = buf_cfg->channel_id;
@@ -421,7 +421,7 @@ int cmr_v4l2_buff_cfg (struct buffer_cfg *buf_cfg)
 		v4l2_buf.m.userptr  = buf_cfg->addr[i].addr_y;
 		v4l2_buf.length        = buf_cfg->addr[i].addr_u;
 		v4l2_buf.reserved   = buf_cfg->addr[i].addr_v;
-		CMR_LOGI("VIDIOC_QBUF: buf %d: Y=0x%x, U=0x%x, V=0x%x \n",
+		CMR_LOGD("VIDIOC_QBUF: buf %d: Y=0x%x, U=0x%x, V=0x%x \n",
 			i, buf_cfg->addr[i].addr_y, buf_cfg->addr[i].addr_u, buf_cfg->addr[i].addr_v);
 		ret = ioctl(fd, VIDIOC_QBUF, &v4l2_buf);
 		if (ret) {
@@ -459,7 +459,7 @@ int cmr_v4l2_cap_start(uint32_t skip_num)
 		(*stream_on_cb)(1);
 	}
 exit:
-	CMR_LOGV("ret = %d.",ret);
+	CMR_LOGI("ret = %d.",ret);
 	return ret;
 }
 
@@ -482,7 +482,7 @@ int cmr_v4l2_cap_stop(void)
 	}
 
 exit:
-	CMR_LOGV("ret = %d.",ret);
+	CMR_LOGI("ret = %d.",ret);
 	return ret;
 }
 
@@ -503,7 +503,7 @@ int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci
 
 	CMR_CHECK_FD;
 
-	CMR_LOGV("channel_id %d, frm_num %d", channel_id,frm_num);
+	CMR_LOGI("channel_id %d, frm_num %d", channel_id,frm_num);
 
 	if (CHN_1 == channel_id) {
 		chn_frm_num[1] = frm_num;
@@ -530,7 +530,7 @@ int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag)
 
 	CMR_CHECK_FD;
 
-	CMR_LOGV("channel_id %d,reconfig_flag %d.", channel_id,reconfig_flag);
+	CMR_LOGI("channel_id %d,reconfig_flag %d.", channel_id,reconfig_flag);
 
 	stream_parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	stream_parm.parm.capture.capability = PATH_PAUSE;
@@ -553,7 +553,7 @@ int cmr_v4l2_get_cap_time(uint32_t *sec, uint32_t *usec)
 
 	*sec  = stream_parm.parm.capture.timeperframe.numerator;
 	*usec = stream_parm.parm.capture.timeperframe.denominator;
-	CMR_LOGV("sec=%d, usec=%d \n", *sec, *usec);
+	CMR_LOGI("sec=%d, usec=%d \n", *sec, *usec);
 
 exit:
 	return ret;
@@ -576,7 +576,7 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 	}
 	pthread_mutex_unlock(&status_mutex);
 	if (CHN_BUSY != chn_status[channel_id]) {
-		CMR_LOGV("channel %d not on, no need to free current frame", channel_id);
+		CMR_LOGI("channel %d not on, no need to free current frame", channel_id);
 		ret = 0;
 		return ret;
 	}
@@ -606,7 +606,7 @@ int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor)
 	ret = read(fd, rd_word, 2*sizeof(uint32_t));
 	*width = rd_word[0];
 	*sc_factor = rd_word[1];
-	CMR_LOGV("width %d, sc_factor %d", *width, *sc_factor);
+	CMR_LOGI("width %d, sc_factor %d", *width, *sc_factor);
 	return ret;
 }
 
@@ -637,7 +637,7 @@ static int cmr_v4l2_evt_id(int isr_flag)
 		break;
 
 	default:
-		CMR_LOGV("isr_flag 0x%x", isr_flag);
+		CMR_LOGI("isr_flag 0x%x", isr_flag);
 		break;
 	}
 
@@ -664,12 +664,12 @@ static int cmr_v4l2_kill_thread(void)
 
 	CMR_CHECK_FD;
 
-	CMR_LOGV("Call write function to kill v4l2 manage thread");
+	CMR_LOGI("Call write function to kill v4l2 manage thread");
 	bzero(&v4l2_buf, sizeof(struct v4l2_buffer));
 	v4l2_buf.flags = CMR_V4L2_WRITE_STOP;
 	ret = write(fd, &v4l2_buf, sizeof(struct v4l2_buffer)); // kill thread;
 	if (ret > 0) {
-		CMR_LOGV("write OK!");
+		CMR_LOGI("write OK!");
 		ret = pthread_join(v4l2_thread, &dummy);
 		v4l2_thread = 0;
 	}
@@ -690,21 +690,21 @@ static void* cmr_v4l2_thread_proc(void* data)
 		return (void*)-1;
 	}
 
-	CMR_LOGV("In");
+	CMR_LOGI("In");
 
 	while(1) {
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		if (-1 == ioctl(fd, VIDIOC_DQBUF, &buf)) {
-			CMR_LOGV("Failed to DQBuf");
+			CMR_LOGI("Failed to DQBuf");
 			break;
 		} else {
 			if (V4L2_FLAG_TX_STOP == buf.flags) {
 				// stopped , to do release resource
-				CMR_LOGV("TX Stopped, exit thread");
+				CMR_LOGI("TX Stopped, exit thread");
 				break;
 			} else if (V4L2_FLAG_SYS_BUSY == buf.flags) {
 				usleep(10000);
-				CMR_LOGV("continue.");
+				CMR_LOGI("continue.");
 				continue;
 			} else {
 				// normal irq
@@ -731,6 +731,7 @@ static void* cmr_v4l2_thread_proc(void* data)
 				} else if (CHN_0 == frame.channel_id) {
 					chn_frm_num[CHN_0] = frm_num;
 				}
+
 				CMR_LOGV("TX got one frame! buf_type 0x%x, id 0x%x, evt_id 0x%x", buf.type, buf.index, evt_id);
 				frame.height   = buf.reserved;
 				frame.frame_id = buf.index;
@@ -756,7 +757,7 @@ static void* cmr_v4l2_thread_proc(void* data)
 		}
 	}
 
-	CMR_LOGV("Out");
+	CMR_LOGI("Out");
 	return NULL;
 }
 

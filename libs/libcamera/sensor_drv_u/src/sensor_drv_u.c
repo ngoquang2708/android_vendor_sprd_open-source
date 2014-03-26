@@ -268,7 +268,7 @@ LOCAL int _Sensor_Device_Reset(uint32_t *reset_val)
 	int ret = SENSOR_SUCCESS;
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	CMR_LOGV("level %d, width %d",reset_val[0],reset_val[1]);
+	CMR_LOGI("level %d, width %d",reset_val[0],reset_val[1]);
 
 	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_RST, reset_val);
 	if (ret) {
@@ -283,14 +283,14 @@ LOCAL int _Sensor_Device_I2CInit(uint32_t senor_id)
 	int ret = SENSOR_SUCCESS;
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	CMR_LOGV("_Sensor_Device_I2CInit in");
+	CMR_LOGI("_Sensor_Device_I2CInit in");
 	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_I2C_INIT, &senor_id);
 	if (0 != ret)
 	{
 		CMR_LOGE("_Sensor_Device_I2CInit failed,  senor_id = %d, ret=%d", senor_id, ret);
 		ret = -1;
 	}
-	CMR_LOGV("_Sensor_Device_I2CInit out");
+	CMR_LOGI("_Sensor_Device_I2CInit out");
 	return ret;
 }
 
@@ -299,14 +299,14 @@ LOCAL int _Sensor_Device_I2CDeInit(uint32_t senor_id)
 	int ret = SENSOR_SUCCESS;
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	CMR_LOGV("_Sensor_Device_I2CDeInit in \n");
+	CMR_LOGI("_Sensor_Device_I2CDeInit in \n");
 	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_I2C_DEINIT, &senor_id);
 	if (0 != ret)
 	{
 		CMR_LOGE("_Sensor_Device_I2CDeInit failed,  senor_id = %d, ret=%d \n", senor_id, ret);
 		ret = -1;
 	}
-	CMR_LOGV("_Sensor_Device_I2CDeInit out \n");
+	CMR_LOGI("_Sensor_Device_I2CDeInit out \n");
 	return ret;
 }
 
@@ -441,11 +441,11 @@ LOCAL int Sensor_SetI2CClock(void)
 
 		default:
 			clock = 100000;
-			CMR_LOGV("Sensor_SetI2CClock: no valid freq, set clock to 100k \n");
+			CMR_LOGI("Sensor_SetI2CClock: no valid freq, set clock to 100k \n");
 			break;
 	}
 
-	CMR_LOGV("Sensor_SetI2CClock: clock = %d \n", clock);
+	CMR_LOGI("Sensor_SetI2CClock: clock = %d \n", clock);
 
 	ret = _Sensor_Device_SetI2CClock(clock);
 
@@ -498,7 +498,7 @@ int Sensor_GetSocId(SENSOR_SOCID_T *p_id)
 			ret = -1;
 		}
 		close(fd_sensor);
-		CMR_LOGV("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
+		CMR_LOGI("chip id:%x,%x \n",  p_id->d_die,p_id->a_die);
 	}
 	return ret;
 }
@@ -510,7 +510,7 @@ LOCAL int _Sensor_Device_MIPI_init(uint32_t lane_num, uint32_t bps)
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
-	CMR_LOGV("Lane num %d, bps %d", lane_num, bps);
+	CMR_LOGI("Lane num %d, bps %d", lane_num, bps);
 	if_cfg.if_type      = INTERFACE_MIPI;
 	if_cfg.is_open      = INTERFACE_OPEN;
 	if_cfg.lane_num     = lane_num;
@@ -530,7 +530,7 @@ LOCAL int _Sensor_Device_MIPI_deinit(void)
 	SENSOR_IF_CFG_T if_cfg;
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	CMR_LOGV("close mipi");
+	CMR_LOGI("close mipi");
 	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
 	if_cfg.if_type      = INTERFACE_MIPI;
 	if_cfg.is_open      = INTERFACE_CLOSE;
@@ -561,7 +561,7 @@ int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length)
 	i2c_tab.i2c_data	= cmd;
 	i2c_tab.i2c_count	= cmd_length;
 
-	CMR_LOGV("Sensor_WriteI2C, slave_addr=0x%x, ptr=0x%x, count=%d\n",
+	CMR_LOGI("Sensor_WriteI2C, slave_addr=0x%x, ptr=0x%x, count=%d\n",
 		i2c_tab.slave_addr, (uint32_t)i2c_tab.i2c_data, i2c_tab.i2c_count);
 
 	ret = _Sensor_Device_I2CWrite(&i2c_tab);
@@ -582,7 +582,7 @@ SENSOR_TYPE_E _Sensor_GetSensorType(void)
 void Sensor_Reset_EX(uint32_t power_down, uint32_t level)
 {
 	SENSOR_IOCTL_FUNC_PTR reset_func = 0;
-	CMR_LOGV("Sensor_Reset_EX.\n");
+	CMR_LOGI("Sensor_Reset_EX.\n");
 	SENSOR_DRV_CHECK_ZERO_VOID(s_p_sensor_cxt);
 
 	if (PNULL == s_p_sensor_cxt->sensor_info_ptr) {
@@ -605,7 +605,7 @@ void Sensor_Reset(uint32_t level)
 	uint32_t rst_val[2];
 	SENSOR_IOCTL_FUNC_PTR reset_func;
 
-	CMR_LOGV("in.\n");
+	CMR_LOGI("in.\n");
 	SENSOR_DRV_CHECK_ZERO_VOID(s_p_sensor_cxt);
 
 	if (PNULL == s_p_sensor_cxt->sensor_info_ptr) {
@@ -627,7 +627,7 @@ void Sensor_Reset(uint32_t level)
 		}
 		_Sensor_Device_Reset(rst_val);
 	}
-	CMR_LOGV("OK out.\n");
+	CMR_LOGI("OK out.\n");
 }
 
 
@@ -635,11 +635,11 @@ int Sensor_SetMCLK(uint32_t mclk)
 {
 	int ret;
 
-	CMR_LOGV("Sensor_SetMCLK mclk = %d \n", mclk);
+	CMR_LOGI("Sensor_SetMCLK mclk = %d \n", mclk);
 
 	ret = _Sensor_Device_SetMCLK(mclk);
 
-	CMR_LOGV("Sensor_SetMCLK Done mclk = %d, ret = %d \n", mclk, ret );
+	CMR_LOGI("Sensor_SetMCLK Done mclk = %d, ret = %d \n", mclk, ret );
 
 	return ret;
 }
@@ -662,7 +662,7 @@ int Sensor_SetVoltage(SENSOR_AVDD_VAL_E dvdd_val, SENSOR_AVDD_VAL_E avdd_val,
 	if(SENSOR_SUCCESS != err)
 		return err;
 
-	CMR_LOGV("Sensor_SetVoltage avdd_val = %d,  dvdd_val=%d, iodd_val=%d \n", avdd_val, dvdd_val, iodd_val);
+	CMR_LOGI("Sensor_SetVoltage avdd_val = %d,  dvdd_val=%d, iodd_val=%d \n", avdd_val, dvdd_val, iodd_val);
 
 	return err;
 }
@@ -671,7 +671,7 @@ int Sensor_SetAvddVoltage(SENSOR_AVDD_VAL_E vdd_val)
 {
 	int rtn  = SENSOR_SUCCESS;
 	rtn = _Sensor_Device_SetVoltageAVDD((uint32_t)vdd_val);
-	CMR_LOGV("Sensor_SetAvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	CMR_LOGI("Sensor_SetAvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
 	return rtn;
 }
 
@@ -679,7 +679,7 @@ int Sensor_SetDvddVoltage(SENSOR_AVDD_VAL_E vdd_val)
 {
 	int rtn  = SENSOR_SUCCESS;
 	rtn = _Sensor_Device_SetVoltageDVDD((uint32_t)vdd_val);
-	CMR_LOGV("Sensor_SetDvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	CMR_LOGI("Sensor_SetDvddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
 	return rtn;
 }
 
@@ -688,7 +688,7 @@ int Sensor_SetIovddVoltage(SENSOR_AVDD_VAL_E vdd_val)
 {
 	int rtn  = SENSOR_SUCCESS;
 	rtn = _Sensor_Device_SetVoltageIOVDD((uint32_t)vdd_val);
-	CMR_LOGV("Sensor_SetIovddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
+	CMR_LOGI("Sensor_SetIovddVoltage vdd_val is %d, set result is =%d \n", vdd_val, rtn);
 	return rtn;
 }
 
@@ -697,7 +697,7 @@ int Sensor_SetMonitorVoltage(SENSOR_AVDD_VAL_E vdd_val)
 	int err = 0;
 
 	err = _Sensor_Device_SetVoltageMonitor((uint32_t)vdd_val);
-	CMR_LOGV("Sensor_SetMonitorVoltage vdd_val = %d \n", vdd_val);
+	CMR_LOGI("Sensor_SetMonitorVoltage vdd_val = %d \n", vdd_val);
 
 	return err;
 }
@@ -723,7 +723,7 @@ LOCAL void Sensor_PowerOn(BOOLEAN power_on)
 	iovdd_val = s_p_sensor_cxt->sensor_info_ptr->iovdd_val;
 	power_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->power;
 
-	CMR_LOGV("SENSOR: Sensor_PowerOn -> power_on = %d, power_down_level = %d, avdd_val = %d\n",
+	CMR_LOGI("SENSOR: Sensor_PowerOn -> power_on = %d, power_down_level = %d, avdd_val = %d\n",
 		power_on, power_down, avdd_val);
 
 	if (PNULL != power_func) {
@@ -769,7 +769,7 @@ LOCAL void Sensor_PowerOn_Ex(uint32_t sensor_id)
 	iovdd_val = s_p_sensor_cxt->sensor_info_ptr->iovdd_val;
 	power_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->power;
 
-	CMR_LOGV("SENSOR:  power_down_level = %d, avdd_val = %d\n", power_down, avdd_val);
+	CMR_LOGI("SENSOR:  power_down_level = %d, avdd_val = %d\n", power_down, avdd_val);
 
 	if (PNULL != power_func) {
 		power_func(1);
@@ -794,7 +794,7 @@ BOOLEAN Sensor_PowerDown(BOOLEAN power_level)
 
 	entersleep_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->enter_sleep;
 
-	CMR_LOGV("SENSOR: Sensor_PowerDown -> main: power_down %d\n",
+	CMR_LOGI("SENSOR: Sensor_PowerDown -> main: power_down %d\n",
 			power_level);
 
 	if (entersleep_func) {
@@ -824,7 +824,7 @@ LOCAL void Sensor_SetExportInfo(SENSOR_EXP_INFO_T * exp_info_ptr)
 	SENSOR_VIDEO_INFO_T          *video_info_ptr = PNULL;
 	uint32_t i = 0;
 
-	CMR_LOGV("SENSOR: Sensor_SetExportInfo.\n");
+	CMR_LOGI("SENSOR: Sensor_SetExportInfo.\n");
 	SENSOR_DRV_CHECK_ZERO_VOID(s_p_sensor_cxt);
 	if (PNULL == s_p_sensor_cxt->sensor_info_ptr) {
 		CMR_LOGE("SENSOR: sensor_info_ptr is null.\n");
@@ -1002,7 +1002,7 @@ int32_t Sensor_WriteReg(uint16_t subaddr, uint16_t data)
 
 	if (PNULL != write_reg_func) {
 		if (SENSOR_OP_SUCCESS != write_reg_func((subaddr << S_BIT_4) + data)) {
-			CMR_LOGV("SENSOR: IIC write : reg:0x%04x, val:0x%04x error\n",
+			CMR_LOGI("SENSOR: IIC write : reg:0x%04x, val:0x%04x error\n",
 					subaddr, data);
 		}
 	} else {
@@ -1060,7 +1060,7 @@ int32_t Sensor_WriteReg_8bits(uint16_t reg_addr, uint8_t value)
 
 	if (0xFFFF == reg_addr) {
 		SENSOR_Sleep(value);
-		CMR_LOGV("Sensor_WriteReg_8bits wait %d ms.\n", value);
+		CMR_LOGI("Sensor_WriteReg_8bits wait %d ms.\n", value);
 		return 0;
 	}
 
@@ -1102,7 +1102,7 @@ ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *
 	uint16_t data;
 	int32_t ret = -1;
 
-	CMR_LOGV("SENSOR: Sensor_SendRegTabToSensor E.\n");
+	CMR_LOGI("SENSOR: Sensor_SendRegTabToSensor E.\n");
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (PNULL == s_p_sensor_cxt->sensor_info_ptr) {
@@ -1117,7 +1117,7 @@ ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *
 			subaddr = sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_addr;
 			data	= sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_value;
 			if (SENSOR_OP_SUCCESS != write_reg_func((subaddr << S_BIT_4) + data))
-				CMR_LOGV("SENSOR: IIC write : reg:0x%04x, val:0x%04x error\n", subaddr, data);
+				CMR_LOGI("SENSOR: IIC write : reg:0x%04x, val:0x%04x error\n", subaddr, data);
 		}
 	}else{
 		SENSOR_REG_TAB_T regTab;
@@ -1130,10 +1130,10 @@ ERR_SENSOR_E Sensor_SendRegTabToSensor(SENSOR_REG_TAB_INFO_T *
 
 	}
 
-	CMR_LOGV("SENSOR: Sensor_SendRegValueToSensor -> reg_count = %d, is_main_sensor: %d.\n",
+	CMR_LOGI("SENSOR: Sensor_SendRegValueToSensor -> reg_count = %d, is_main_sensor: %d.\n",
 		sensor_reg_tab_info_ptr->reg_count, s_p_sensor_cxt->is_main_sensor);
 
-	CMR_LOGV("SENSOR: Sensor_SendRegTabToSensor X.\n");
+	CMR_LOGI("SENSOR: Sensor_SendRegTabToSensor X.\n");
 
 	return SENSOR_SUCCESS;
 }
@@ -1164,7 +1164,7 @@ LOCAL int _Sensor_SetId(SENSOR_ID_E sensor_id)
 	sensor_register_info_ptr->cur_id = sensor_id;
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
-	CMR_LOGV("_Sensor_SetId:sensor_id=%d,is_register_sensor=%d,is_main_sensor=%d \n",
+	CMR_LOGI("_Sensor_SetId:sensor_id=%d,is_register_sensor=%d,is_main_sensor=%d \n",
 		sensor_id, s_p_sensor_cxt->is_register_sensor, s_p_sensor_cxt->is_main_sensor);
 
 	if (1 == s_p_sensor_cxt->is_register_sensor) {
@@ -1190,10 +1190,10 @@ LOCAL int _Sensor_SetId(SENSOR_ID_E sensor_id)
 			if (SENSOR_MAIN == sensor_id) {
 				s_p_sensor_cxt->is_main_sensor = 0;
 			}
-			CMR_LOGV("SENSOR: add I2C driver error\n");
+			CMR_LOGI("SENSOR: add I2C driver error\n");
 			return SENSOR_FAIL;
 		} else {
-			CMR_LOGV("SENSOR: add I2C driver OK.\n");
+			CMR_LOGI("SENSOR: add I2C driver OK.\n");
 			s_p_sensor_cxt->is_register_sensor = 1;
 		}
 	}
@@ -1207,20 +1207,20 @@ SENSOR_ID_E Sensor_GetCurId(void)
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
-	CMR_LOGV("Sensor_GetCurId,sensor_id =%d",
+	CMR_LOGI("Sensor_GetCurId,sensor_id =%d",
 		sensor_register_info_ptr->cur_id);
 	return (SENSOR_ID_E) sensor_register_info_ptr->cur_id;
 }
 
 uint32_t Sensor_SetCurId(SENSOR_ID_E sensor_id)
 {
-	CMR_LOGV("Sensor_SetCurId : %d.\n", sensor_id);
+	CMR_LOGI("Sensor_SetCurId : %d.\n", sensor_id);
 	if (sensor_id >= SENSOR_ID_MAX) {
 		_Sensor_CleanInformation();
 		return SENSOR_FAIL;
 	}
 	if (SENSOR_SUCCESS != _Sensor_SetId(sensor_id)) {
-		CMR_LOGV("SENSOR: Fail to Sensor_SetCurId.\n");
+		CMR_LOGI("SENSOR: Fail to Sensor_SetCurId.\n");
 		return SENSOR_FAIL;
 	}
 	return SENSOR_SUCCESS;
@@ -1255,14 +1255,14 @@ LOCAL void _Sensor_I2CInit(SENSOR_ID_E sensor_id)
 				CMR_LOGE("SENSOR: add I2C driver error\n");
 				return;
 			} else {
-				CMR_LOGV("SENSOR: add I2C driver OK.\n");
+				CMR_LOGI("SENSOR: add I2C driver OK.\n");
 				s_p_sensor_cxt->is_register_sensor = 1;
 			}
 		}
 	} else {
-		CMR_LOGV("Sensor: Init I2c %d ternimal! exits\n", sensor_id);
+		CMR_LOGI("Sensor: Init I2c %d ternimal! exits\n", sensor_id);
 	}
-	CMR_LOGV("_Sensor_I2CInit,sensor_id=%d,is_register_sensor=%d\n",
+	CMR_LOGI("_Sensor_I2CInit,sensor_id=%d,is_register_sensor=%d\n",
 				sensor_id, s_p_sensor_cxt->is_register_sensor);
 }
 
@@ -1273,10 +1273,10 @@ LOCAL int _Sensor_I2CDeInit(SENSOR_ID_E sensor_id)
 		if ((SENSOR_MAIN == sensor_id) || (SENSOR_SUB == sensor_id)) {
 			_Sensor_Device_I2CDeInit(sensor_id);
 			s_p_sensor_cxt->is_register_sensor = 0;
-			CMR_LOGV("SENSOR: delete  I2C  %d driver OK.\n", sensor_id);
+			CMR_LOGI("SENSOR: delete  I2C  %d driver OK.\n", sensor_id);
 		}
 	} else {
-		CMR_LOGV("SENSOR: delete  I2C  %d driver OK.\n", SENSOR_ID_MAX);
+		CMR_LOGI("SENSOR: delete  I2C  %d driver OK.\n", SENSOR_ID_MAX);
 	}
 
 	return SENSOR_SUCCESS;
@@ -1291,18 +1291,18 @@ LOCAL BOOLEAN _Sensor_Identify(SENSOR_ID_E sensor_id)
 	BOOLEAN retValue = SCI_FALSE;
 	SENSOR_REGISTER_INFO_T_PTR sensor_register_info_ptr = PNULL;
 
-	CMR_LOGV("SENSOR: sensor identifing %d", sensor_id);
+	CMR_LOGI("SENSOR: sensor identifing %d", sensor_id);
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 
 	//if already identified
 	if (SCI_TRUE == sensor_register_info_ptr->is_register[sensor_id]) {
-		CMR_LOGV("SENSOR: sensor identified");
+		CMR_LOGI("SENSOR: sensor identified");
 		return SCI_TRUE;
 	}
 	if (s_p_sensor_cxt->sensor_identified && (SENSOR_ATV != sensor_id)) {
 		sensor_index = s_p_sensor_cxt->sensor_index[sensor_id];
-		CMR_LOGV("_Sensor_Identify:sensor_index=%d.\n",sensor_index);
+		CMR_LOGI("_Sensor_Identify:sensor_index=%d.\n",sensor_index);
 		if (0xFF != sensor_index) {
 			sensor_info_tab_ptr=(SENSOR_INFO_T**)Sensor_GetInforTab(sensor_id);
 			_Sensor_I2CInit(sensor_id);
@@ -1318,18 +1318,18 @@ LOCAL BOOLEAN _Sensor_Identify(SENSOR_ID_E sensor_id)
 				s_p_sensor_cxt->i2c_addr = (s_p_sensor_cxt->sensor_info_ptr->salve_i2c_addr_w & 0xFF);
 				_Sensor_Device_SetI2cAddr(s_p_sensor_cxt->i2c_addr);
 
-				CMR_LOGV("SENSOR:identify  Sensor 01\n");
+				CMR_LOGI("SENSOR:identify  Sensor 01\n");
 				if(SENSOR_SUCCESS==sensor_info_ptr->ioctl_func_tab_ptr->identify(SENSOR_ZERO_I2C)) {
 					s_p_sensor_cxt->sensor_list_ptr[sensor_id] = sensor_info_ptr;
 					sensor_register_info_ptr->is_register[sensor_id]=SCI_TRUE;
 					sensor_register_info_ptr->img_sensor_num++;
 					retValue = SCI_TRUE;
-					CMR_LOGV("_Sensor_Identify:sensor_id :%d,img_sensor_num=%d\n",
+					CMR_LOGI("_Sensor_Identify:sensor_id :%d,img_sensor_num=%d\n",
 								sensor_id, sensor_register_info_ptr->img_sensor_num);
 				} else {
 					Sensor_PowerOn(SCI_FALSE);
 					_Sensor_I2CDeInit(sensor_id);
-					CMR_LOGV("_Sensor_Identify:identify fail!.\n");
+					CMR_LOGI("_Sensor_Identify:identify fail!.\n");
 					goto IDENTIFY_SEARCH;
 				}
 			}
@@ -1340,7 +1340,7 @@ LOCAL BOOLEAN _Sensor_Identify(SENSOR_ID_E sensor_id)
 	}
 
 IDENTIFY_SEARCH:
-	CMR_LOGV("_Sensor_Identify:search.\n");
+	CMR_LOGI("_Sensor_Identify:search.\n");
 	sensor_info_tab_ptr=(SENSOR_INFO_T**)Sensor_GetInforTab(sensor_id);
 	valid_tab_index_max=Sensor_GetInforTabLenght(sensor_id)-SENSOR_ONE_I2C;
 	_Sensor_I2CInit(sensor_id);
@@ -1362,7 +1362,7 @@ IDENTIFY_SEARCH:
 				s_p_sensor_cxt->i2c_addr = (s_p_sensor_cxt->sensor_info_ptr->salve_i2c_addr_w & 0xFF);
 				_Sensor_Device_SetI2cAddr(s_p_sensor_cxt->i2c_addr);
 			}
-			CMR_LOGV("SENSOR:identify  Sensor 01\n");
+			CMR_LOGI("SENSOR:identify  Sensor 01\n");
 			if (SENSOR_SUCCESS==sensor_info_ptr->ioctl_func_tab_ptr->identify(SENSOR_ZERO_I2C)) {
 				s_p_sensor_cxt->sensor_list_ptr[sensor_id] = sensor_info_ptr;
 				sensor_register_info_ptr->is_register[sensor_id] = SCI_TRUE;
@@ -1371,7 +1371,7 @@ IDENTIFY_SEARCH:
 				sensor_register_info_ptr->img_sensor_num++;
 				Sensor_PowerOn(SCI_FALSE);
 				retValue = SCI_TRUE;
-				CMR_LOGV("_Sensor_Identify:sensor_id :%d,img_sensor_num=%d\n",
+				CMR_LOGI("_Sensor_Identify:sensor_id :%d,img_sensor_num=%d\n",
 					sensor_id, sensor_register_info_ptr->img_sensor_num);
 				break ;
 			}
@@ -1380,10 +1380,10 @@ IDENTIFY_SEARCH:
 	}
 	_Sensor_I2CDeInit(sensor_id);
 	if (SCI_TRUE == sensor_register_info_ptr->is_register[sensor_id]) {
-		CMR_LOGV("SENSOR TYPE of %d indentify OK",(uint32_t)sensor_id);
+		CMR_LOGI("SENSOR TYPE of %d indentify OK",(uint32_t)sensor_id);
 		s_p_sensor_cxt->sensor_param_saved = SCI_TRUE;
 	} else {
-		CMR_LOGV("SENSOR TYPE of %d indentify FAILURE",(uint32_t)sensor_id);
+		CMR_LOGI("SENSOR TYPE of %d indentify FAILURE",(uint32_t)sensor_id);
 	}
 
 	return retValue;
@@ -1399,7 +1399,7 @@ LOCAL void _Sensor_SetStatus(SENSOR_ID_E sensor_id)
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 
 	/*pwdn all the sensor to avoid confilct as the sensor output*/
-	CMR_LOGV("_Sensor_SetStatus: 1");
+	CMR_LOGI("_Sensor_SetStatus: 1");
 	for (i=0; i<=SENSOR_SUB; i++) {
 		if (i == sensor_id) {
 			continue;
@@ -1412,31 +1412,31 @@ LOCAL void _Sensor_SetStatus(SENSOR_ID_E sensor_id)
 				_Sensor_Device_SetI2cAddr(s_p_sensor_cxt->i2c_addr);
 			}
 			Sensor_PowerDown((BOOLEAN)s_p_sensor_cxt->sensor_info_ptr->power_down_level);
-			CMR_LOGV("SENSOR: Sensor_sleep of id %d",i);
+			CMR_LOGI("SENSOR: Sensor_sleep of id %d",i);
 		}
 	}
 
 	/*Give votage according the target sensor*/
 	/*For dual sensor solution, the dual sensor should share all the power*/
-	CMR_LOGV("_Sensor_SetStatus: 1_1");
+	CMR_LOGI("_Sensor_SetStatus: 1_1");
 
 	Sensor_PowerOn_Ex(sensor_id);
 
-	CMR_LOGV("_Sensor_SetStatus: 2");
+	CMR_LOGI("_Sensor_SetStatus: 2");
 
 	_Sensor_SetId(sensor_id);
 	s_p_sensor_cxt->sensor_info_ptr = s_p_sensor_cxt->sensor_list_ptr[sensor_id];
-	CMR_LOGV("_Sensor_SetStatus: 3");
+	CMR_LOGI("_Sensor_SetStatus: 3");
 	//reset target sensor. and make normal.
 	Sensor_SetExportInfo(&s_p_sensor_cxt->sensor_exp_info);
-	CMR_LOGV("_Sensor_SetStatus: 4");
+	CMR_LOGI("_Sensor_SetStatus: 4");
 }
 
 LOCAL int _Sensor_DeviceInit()
 {
 	int                      ret = 0;
 
-	CMR_LOGV("To open sensor device.");
+	CMR_LOGI("To open sensor device.");
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (-1 == s_p_sensor_cxt->fd_sensor) {
@@ -1445,18 +1445,18 @@ LOCAL int _Sensor_DeviceInit()
 			CMR_LOGE("Failed to open sensor device.errno : %d", errno);
 			fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno,  strerror(errno));
 		} else {
-			CMR_LOGV("OK to open device.");
+			CMR_LOGI("OK to open device.");
 		}
 	}
 
 	ret = pthread_mutex_init(&s_p_sensor_cxt->cb_mutex, NULL);
 	if (ret) {
-		CMR_LOGV("Failed to init mutex : %d", errno);
+		CMR_LOGI("Failed to init mutex : %d", errno);
 	}
 
 	ret = _Sensor_CreateThread();
 	if (ret) {
-		CMR_LOGV("Failed to create sensor thread");
+		CMR_LOGI("Failed to create sensor thread");
 		return ret;
 	}
 
@@ -1472,7 +1472,7 @@ LOCAL int _Sensor_DeviceDeInit()
 	if (-1 != s_p_sensor_cxt->fd_sensor) {
 		ret = close(s_p_sensor_cxt->fd_sensor);
 		s_p_sensor_cxt->fd_sensor = -1;
-		CMR_LOGV("SENSOR: _Sensor_DeviceDeInit is done, ret = %d \n", ret);
+		CMR_LOGI("SENSOR: _Sensor_DeviceDeInit is done, ret = %d \n", ret);
 	}
 
 	return 0;
@@ -1490,15 +1490,15 @@ LOCAL uint32_t _Sensor_Register(SENSOR_ID_E sensor_id)
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 
-	CMR_LOGV("id is %d \n", sensor_id);
+	CMR_LOGI("id is %d \n", sensor_id);
 	//if already identified
 	if (SCI_TRUE == sensor_register_info_ptr->is_register[sensor_id]) {
-		CMR_LOGV("identified \n");
+		CMR_LOGI("identified \n");
 		return SENSOR_SUCCESS;
 	}
 	if (s_p_sensor_cxt->sensor_identified && (SENSOR_ATV != sensor_id)) {
 		sensor_index = s_p_sensor_cxt->sensor_index[sensor_id];
-		CMR_LOGV("sensor_index=%d.\n",sensor_index);
+		CMR_LOGI("sensor_index=%d.\n",sensor_index);
 		if(0xFF != sensor_index) {
 			valid_tab_index_max=Sensor_GetInforTabLenght(sensor_id)-SENSOR_ONE_I2C;
 			if (sensor_index>=valid_tab_index_max) {
@@ -1543,8 +1543,8 @@ void _Sensor_load_sensor_type(void)
 		memset(&sensor_param[0],0xFF,SENSOR_PARAM_NUM);
 	}else{
 		len = fread(sensor_param, 1, SENSOR_PARAM_NUM, fp);
-		CMR_LOGV("_Sensor_load_sensor_type:read sensor param len is %d \n",len);
-		CMR_LOGV("_Sensor_load_sensor_type:read sensor param  is %x,%x,%x,%x,%x,%x,%x,%x \n",
+		CMR_LOGI("_Sensor_load_sensor_type:read sensor param len is %d \n",len);
+		CMR_LOGI("_Sensor_load_sensor_type:read sensor param  is %x,%x,%x,%x,%x,%x,%x,%x \n",
 			sensor_param[0], sensor_param[1], sensor_param[2], sensor_param[3],
 			sensor_param[4], sensor_param[5], sensor_param[6], sensor_param[7]);
 	}
@@ -1567,7 +1567,7 @@ void _Sensor_save_sensor_type(void)
 	if(is_saved){
 		fp = fopen(SENSOR_PARA,"wb+");
 		if(NULL == fp){
-			CMR_LOGV("_Sensor_save_sensor_type: file %s open error:%s \n",SENSOR_PARA,strerror(errno));
+			CMR_LOGI("_Sensor_save_sensor_type: file %s open error:%s \n",SENSOR_PARA,strerror(errno));
 		}else{
 			fwrite(sensor_param, 1, SENSOR_PARAM_NUM, fp);
 			fclose(fp);
@@ -1633,7 +1633,7 @@ static void _sensor_calil_lnc_param_recover(SENSOR_INFO_T *sensor_info_ptr)
 
 	s_p_sensor_cxt->is_calibration = 0;
 
-	CMR_LOGV("test: _sensor_calil_lnc_param_recover is_calibration: %d\n", s_p_sensor_cxt->is_calibration);
+	CMR_LOGI("test: _sensor_calil_lnc_param_recover is_calibration: %d\n", s_p_sensor_cxt->is_calibration);
 
 }
 
@@ -1691,7 +1691,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 
 		fp = fopen(file_name, "rb");
 		if (0 == fp) {
-			CMR_LOGV("_sensor_cali_param_update: does not find calibration file\n");
+			CMR_LOGI("_sensor_cali_param_update: does not find calibration file\n");
 			i++;
 			continue;
 		}
@@ -1704,7 +1704,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			fclose(fp);
 			free(temp_buf_16);
 			temp_buf_16 = NULL;
-			CMR_LOGV("file pointers error!");
+			CMR_LOGI("file pointers error!");
 			rtn = SENSOR_FAIL;
 			goto cali_lnc_param_update_exit;
 		}
@@ -1714,7 +1714,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 		fclose(fp);
 
 		if (file_size != raw_fix_info_ptr->lnc.map[i-1][0].len) {
-			CMR_LOGV("_sensor_cali_param_update: file size dis-match, do not replace, w:%d, h:%d, ori: %d, now:%d/n",
+			CMR_LOGI("_sensor_cali_param_update: file size dis-match, do not replace, w:%d, h:%d, ori: %d, now:%d/n",
 				width, height, raw_fix_info_ptr->lnc.map[i-1][0].len, file_size);
 		} else {
 			if (s_lnc_addr_bakup[index][1]) {
@@ -1724,7 +1724,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			s_lnc_addr_bakup[index][1] = (uint32_t)malloc(file_size);
 			if (0 == s_lnc_addr_bakup[index][1]) {
 				rtn = SENSOR_FAIL;
-				CMR_LOGV("malloc failed i = %d\n", i);
+				CMR_LOGI("malloc failed i = %d\n", i);
 				goto cali_lnc_param_update_exit;
 			}
 			memset((void*)s_lnc_addr_bakup[index][1], 0x00, file_size);
@@ -1736,7 +1736,7 @@ static int _sensor_cali_lnc_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			raw_fix_info_ptr->lnc.map[i-1][0].param_addr = (uint16_t*)data_ptr;
 			memcpy(data_ptr, temp_buf_16, file_size);
 			index++;
-			CMR_LOGV("_sensor_cali_param_update: replace finished/n");
+			CMR_LOGI("_sensor_cali_param_update: replace finished/n");
 		}
 
 		i++;
@@ -1791,11 +1791,11 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 
 	sprintf(file_name_ptr, "_awb_rdm.dat");
 
-	CMR_LOGV("_sensor_cali_awb_param_update: %s\n", file_name);
+	CMR_LOGI("_sensor_cali_awb_param_update: %s\n", file_name);
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
 
-		CMR_LOGV("_sensor_cali_awb_param_update: does not find calibration file\n");
+		CMR_LOGI("_sensor_cali_awb_param_update: does not find calibration file\n");
 
 		cali_info_ptr->r_sum = 1024;
 		cali_info_ptr->b_sum = 1024;
@@ -1817,7 +1817,7 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			file_size = (uint32_t)file_pos;
 		} else {
 			fclose(fp);
-			CMR_LOGV("file pointers error!");
+			CMR_LOGI("file pointers error!");
 			return SENSOR_FAIL;
 		}
 		fseek(fp, 0L, SEEK_SET);
@@ -1841,12 +1841,12 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 
 	sprintf(file_name_ptr, "_awb_gldn.dat");
 
-	CMR_LOGV("_sensor_cali_awb_param_update: %s\n", file_name);
+	CMR_LOGI("_sensor_cali_awb_param_update: %s\n", file_name);
 	cali_info_ptr = (struct sensor_cali_info*)&(((struct sensor_raw_info*)(*(sensor_info_ptr->raw_info_ptr)))->cali_ptr->awb.golden_cali_info);
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
 
-		CMR_LOGV("_sensor_cali_awb_param_update: does not find calibration file\n");
+		CMR_LOGI("_sensor_cali_awb_param_update: does not find calibration file\n");
 
 		cali_info_ptr->r_sum = 1024;
 		cali_info_ptr->b_sum = 1024;
@@ -1869,7 +1869,7 @@ static int _sensor_cali_awb_param_update(char *cfg_file_dir,SENSOR_INFO_T *senso
 			file_size = (uint32_t)file_pos;
 		} else {
 			fclose(fp);
-			CMR_LOGV("file pointers error!");
+			CMR_LOGI("file pointers error!");
 			return SENSOR_FAIL;
 		}
 		fseek(fp, 0L, SEEK_SET);
@@ -1916,11 +1916,11 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 
 	sprintf(file_name_ptr, "_flashlight_rdm.dat");
 
-	CMR_LOGV("_sensor_cali_flashlight_param_update: %s\n", file_name);
+	CMR_LOGI("_sensor_cali_flashlight_param_update: %s\n", file_name);
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
 
-		CMR_LOGV("_sensor_cali_flashlight_param_update: does not find calibration file\n");
+		CMR_LOGI("_sensor_cali_flashlight_param_update: does not find calibration file\n");
 
 		cali_info_ptr->r_sum = 1024;
 		cali_info_ptr->b_sum = 1024;
@@ -1943,7 +1943,7 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 			file_size = (uint32_t)file_pos;
 		} else {
 			fclose(fp);
-			CMR_LOGV("file pointers error!");
+			CMR_LOGI("file pointers error!");
 			return SENSOR_FAIL;
 		}
 		fseek(fp, 0L, SEEK_SET);
@@ -1967,11 +1967,11 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 
 	sprintf(file_name_ptr, "_flashlight_gldn.dat");
 
-	CMR_LOGV("_sensor_cali_flashlight_param_update: %s\n", file_name);
+	CMR_LOGI("_sensor_cali_flashlight_param_update: %s\n", file_name);
 	cali_info_ptr = (struct sensor_cali_info*)&(((struct sensor_raw_info*)(*(sensor_info_ptr->raw_info_ptr)))->cali_ptr->flashlight.golden_cali_info);
 	fp = fopen(file_name, "rb");
 	if (0 == fp) {
-		CMR_LOGV("_sensor_cali_flashlight_param_update: does not find calibration file\n");
+		CMR_LOGI("_sensor_cali_flashlight_param_update: does not find calibration file\n");
 
 		cali_info_ptr->r_sum = 1024;
 		cali_info_ptr->b_sum = 1024;
@@ -1995,7 +1995,7 @@ static int _sensor_cali_flashlight_param_update(char *cfg_file_dir,SENSOR_INFO_T
 			file_size = (uint32_t)file_pos;
 		} else {
 			fclose(fp);
-			CMR_LOGV("file pointers error!");
+			CMR_LOGI("file pointers error!");
 			return SENSOR_FAIL;
 		}
 		fseek(fp, 0L, SEEK_SET);
@@ -2075,11 +2075,11 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 	int ret_val = SENSOR_FAIL;
 	uint32_t sensor_num = 0;
 
-	CMR_LOGV("0, start,id %d.",sensor_id);
+	CMR_LOGI("0, start,id %d.",sensor_id);
 
 	if (NULL != s_p_sensor_cxt) {
 		if (SENSOR_TRUE == Sensor_IsInit()) {
-			CMR_LOGV("sensor close.");
+			CMR_LOGI("sensor close.");
 			Sensor_Close(0);
 		}
 	}
@@ -2099,7 +2099,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 		_Sensor_load_sensor_type();
 
 		if (_Sensor_DeviceInit()) {
-			CMR_LOGV("_Sensor_DeviceInit error, return");
+			CMR_LOGI("_Sensor_DeviceInit error, return");
 			ret_val = SENSOR_FAIL;
 			goto init_exit;
 		}
@@ -2112,7 +2112,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 				sensor_num++;
 			}
 #endif
-			CMR_LOGV("1 is identify, register OK");
+			CMR_LOGI("1 is identify, register OK");
 
 			ret_val = Sensor_Open(sensor_id);
 			if (ret_val != SENSOR_SUCCESS ) {
@@ -2122,7 +2122,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 		}
 		if (ret_val != SENSOR_SUCCESS ) {
 			sensor_num = 0;
-			CMR_LOGV("register sensor fail, start identify \n");
+			CMR_LOGI("register sensor fail, start identify \n");
 			if (_Sensor_Identify(SENSOR_MAIN))
 				sensor_num++;
 #ifndef CONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
@@ -2140,7 +2140,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 		if (SENSOR_SUCCESS == ret_val) {
 			ret_val = _sensor_cali_load_param(cali_file_dir, s_p_sensor_cxt->sensor_info_ptr, sensor_id);
 			if (ret_val) {
-				CMR_LOGV("load cali data fail!! rtn:%d",ret_val);
+				CMR_LOGI("load cali data fail!! rtn:%d",ret_val);
 				goto init_exit;
 			}
 		}
@@ -2161,18 +2161,18 @@ init_exit:
 			if (PNULL != s_p_sensor_cxt) {
 				free(s_p_sensor_cxt);
 				s_p_sensor_cxt = PNULL;
-				CMR_LOGI("free s_p_sensor_cxt.");
+				CMR_LOGD("free s_p_sensor_cxt.");
 			}
 		}
 	} else {
 		ret_val = _Sensor_CreateFocusMoveThread();
 		if (ret_val) {
-			CMR_LOGV("Failed to create focus move dummy thread");
+			CMR_LOGI("Failed to create focus move dummy thread");
 		}
 
 		ret_val = _Sensor_CreateMonitorThread();
 	}
-	CMR_LOGV("2 init OK!");
+	CMR_LOGI("2 init OK!");
 	return ret_val;
 }
 
@@ -2190,9 +2190,9 @@ int Sensor_Open(uint32_t sensor_id)
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 
 	if (SENSOR_TRUE == sensor_register_info_ptr->is_register[sensor_id]) {
-		CMR_LOGV("1, sensor register ok");
+		CMR_LOGI("1, sensor register ok");
 		_Sensor_SetStatus(sensor_id);
-		CMR_LOGV("2, sensor set status");
+		CMR_LOGI("2, sensor set status");
 		s_p_sensor_cxt->sensor_init = SENSOR_TRUE;
 
 		if (SENSOR_ATV != Sensor_GetCurId()) {
@@ -2200,14 +2200,14 @@ int Sensor_Open(uint32_t sensor_id)
 			_Sensor_Device_SetI2cAddr(s_p_sensor_cxt->i2c_addr);
 		}
 
-		CMR_LOGV("3:sensor_id :%d,addr=0x%x", sensor_id, s_p_sensor_cxt->i2c_addr);
+		CMR_LOGI("3:sensor_id :%d,addr=0x%x", sensor_id, s_p_sensor_cxt->i2c_addr);
 		Sensor_SetI2CClock();
 
 		//confirm camera identify OK
 		if (SENSOR_SUCCESS != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->identify(SENSOR_ZERO_I2C)) {
 			sensor_register_info_ptr->is_register[sensor_id] = SENSOR_FALSE;
 			_Sensor_I2CDeInit(sensor_id);
-			CMR_LOGV("sensor identify not correct!!");
+			CMR_LOGI("sensor identify not correct!!");
 			return SENSOR_FAIL;
 		}
 
@@ -2228,7 +2228,7 @@ int Sensor_Open(uint32_t sensor_id)
 				ret_val = SENSOR_FAIL;
 			}
 		}
-		CMR_LOGV("4 open success");
+		CMR_LOGI("4 open success");
 	} else {
 		CMR_LOGE("Sensor not register, open fail, sensor_id = %d", sensor_id);
 	}
@@ -2250,14 +2250,14 @@ int _Sensor_SetMode(uint32_t mode)
 
 	set_reg_tab_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cus_func_1;
 
-	CMR_LOGV("SENSOR: Sensor_SetMode -> mode = %d.\n", mode);
+	CMR_LOGI("SENSOR: Sensor_SetMode -> mode = %d.\n", mode);
 	if (SENSOR_FALSE == Sensor_IsInit()) {
-		CMR_LOGV("SENSOR: Sensor_SetResolution -> sensor has not init");
+		CMR_LOGI("SENSOR: Sensor_SetResolution -> sensor has not init");
 		return SENSOR_OP_STATUS_ERR;
 	}
 
 	if (s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] == mode) {
-		CMR_LOGV("SENSOR: The sensor mode as before");
+		CMR_LOGI("SENSOR: The sensor mode as before");
 		return SENSOR_SUCCESS;
 	}
 
@@ -2279,7 +2279,7 @@ int _Sensor_SetMode(uint32_t mode)
 	} else {
 		if(set_reg_tab_func)
 			set_reg_tab_func(0);
-		CMR_LOGV("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
+		CMR_LOGI("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
 	}
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 		_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
@@ -2297,7 +2297,7 @@ int Sensor_SetMode(uint32_t mode)
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	message.msg_type = SENSOR_EVT_SET_MODE;
 	message.sub_msg_type = mode;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message");
 	}
@@ -2312,7 +2312,7 @@ int Sensor_SetMode_WaitDone(void)
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	message.msg_type = SENSOR_EVT_SET_MODE_DONE;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message");
 	}
@@ -2324,7 +2324,7 @@ int Sensor_GetMode(uint32_t *mode)
 {
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (SENSOR_FALSE == Sensor_IsInit()) {
-		CMR_LOGV("sensor has not init");
+		CMR_LOGI("sensor has not init");
 		return SENSOR_OP_STATUS_ERR;
 	}
 	*mode = s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()];
@@ -2337,11 +2337,11 @@ int _Sensor_StreamOn(void)
 	uint32_t               param = 0;
 	SENSOR_IOCTL_FUNC_PTR  stream_on_func;
 
-	CMR_LOGV("Sensor_StreamOn");
+	CMR_LOGI("Sensor_StreamOn");
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (!Sensor_IsInit()) {
-		CMR_LOGV("SENSOR: Sensor_StreamOn -> sensor has not been initialized");
+		CMR_LOGI("SENSOR: Sensor_StreamOn -> sensor has not been initialized");
 		return SENSOR_FAIL;
 	}
 
@@ -2381,7 +2381,7 @@ int Sensor_AutoFocusInit(void)
 
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	message.msg_type = SENSOR_EVT_AF_INIT;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message");
 	}
@@ -2395,11 +2395,11 @@ int _Sensor_StreamOff(void)
 	uint32_t               param = 0;
 	SENSOR_IOCTL_FUNC_PTR stream_off_func;
 
-	CMR_LOGV("Sensor_StreamOff");
+	CMR_LOGI("Sensor_StreamOff");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	if (!Sensor_IsInit()) {
-		CMR_LOGV("SENSOR: Sensor_StreamOn -> sensor has not been initialized");
+		CMR_LOGI("SENSOR: Sensor_StreamOn -> sensor has not been initialized");
 		return SENSOR_FAIL;
 	}
 
@@ -2429,12 +2429,12 @@ uint32_t Sensor_Ioctl(uint32_t cmd, uint32_t arg)
 	}
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (!Sensor_IsInit()) {
-		CMR_LOGV("SENSOR: Sensor_Ioctl -> sensor has not init.\n");
+		CMR_LOGE("SENSOR: Sensor_Ioctl -> sensor has not init.\n");
 		return SENSOR_OP_STATUS_ERR;
 	}
 
 	if (SENSOR_IOCTL_CUS_FUNC_1 > cmd) {
-		CMR_LOGV("SENSOR: Sensor_Ioctl - > can't access internal command !\n");
+		CMR_LOGW("SENSOR: Sensor_Ioctl - > can't access internal command !\n");
 		return SENSOR_SUCCESS;
 	}
 
@@ -2460,11 +2460,11 @@ SENSOR_EXP_INFO_T *Sensor_GetInfo(void)
 		return PNULL;
 	}
 	if (!Sensor_IsInit()) {
-		CMR_LOGV("SENSOR: Sensor_GetInfo -> sensor has not init");
+		CMR_LOGI("SENSOR: Sensor_GetInfo -> sensor has not init");
 		return PNULL;
 	}
 
-	CMR_LOGV("Sensor_GetInfo: info=%x \n", (uint32_t)&s_p_sensor_cxt->sensor_exp_info);
+	CMR_LOGI("Sensor_GetInfo: info=%x \n", (uint32_t)&s_p_sensor_cxt->sensor_exp_info);
 	return &s_p_sensor_cxt->sensor_exp_info;
 }
 
@@ -2472,7 +2472,7 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 {
 	SENSOR_REGISTER_INFO_T_PTR sensor_register_info_ptr = PNULL;
 
-	CMR_LOGV("SENSOR: Sensor_close");
+	CMR_LOGI("SENSOR: Sensor_close");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
@@ -2501,30 +2501,30 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 		}
 		Sensor_PowerOn(SENSOR_FALSE);
 		if (SENSOR_MAIN == Sensor_GetCurId()) {
-			CMR_LOGV("SENSOR: Sensor_close 0.\n");
+			CMR_LOGI("SENSOR: Sensor_close 0.\n");
 			if (SCI_TRUE == sensor_register_info_ptr->is_register[SENSOR_SUB]) {
-				CMR_LOGV("SENSOR: Sensor_close 1.\n");
+				CMR_LOGI("SENSOR: Sensor_close 1.\n");
 				_Sensor_SetId(SENSOR_SUB);
 				s_p_sensor_cxt->sensor_info_ptr = s_p_sensor_cxt->sensor_list_ptr[SENSOR_SUB];
 				Sensor_SetExportInfo(&s_p_sensor_cxt->sensor_exp_info);
 				Sensor_PowerOn(SENSOR_FALSE);
 				if (1 == s_p_sensor_cxt->is_register_sensor) {
-					CMR_LOGV ("SENSOR: Sensor_close 2.\n");
+					CMR_LOGI ("SENSOR: Sensor_close 2.\n");
 					_Sensor_Device_I2CDeInit(SENSOR_SUB);
 					s_p_sensor_cxt->is_register_sensor = 0;
 					s_p_sensor_cxt->is_main_sensor = 0;
 				}
 			}
 		} else if (SENSOR_SUB == Sensor_GetCurId()) {
-			CMR_LOGV("SENSOR: Sensor_close 3.\n");
+			CMR_LOGI("SENSOR: Sensor_close 3.\n");
 			if (SCI_TRUE ==  sensor_register_info_ptr->is_register[SENSOR_MAIN]) {
-				CMR_LOGV("SENSOR: Sensor_close 4.\n");
+				CMR_LOGI("SENSOR: Sensor_close 4.\n");
 				_Sensor_SetId(SENSOR_MAIN);
 				s_p_sensor_cxt->sensor_info_ptr = s_p_sensor_cxt->sensor_list_ptr[SENSOR_MAIN];
 				Sensor_SetExportInfo(&s_p_sensor_cxt->sensor_exp_info);
 				Sensor_PowerOn(SENSOR_FALSE);
 				if (1 == s_p_sensor_cxt->is_register_sensor) {
-					CMR_LOGV ("SENSOR: Sensor_close 5.\n");
+					CMR_LOGI ("SENSOR: Sensor_close 5.\n");
 					_Sensor_Device_I2CDeInit(SENSOR_MAIN);
 					s_p_sensor_cxt->is_register_sensor = 0;
 					s_p_sensor_cxt->is_main_sensor = 0;
@@ -2532,26 +2532,26 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 			}
 		} else if (SENSOR_ATV == Sensor_GetCurId()) {
 			if (SCI_TRUE == sensor_register_info_ptr->is_register[SENSOR_MAIN]) {
-				CMR_LOGV("SENSOR: Sensor_close 4.\n");
+				CMR_LOGI("SENSOR: Sensor_close 4.\n");
 				_Sensor_SetId(SENSOR_MAIN);
 				s_p_sensor_cxt->sensor_info_ptr = s_p_sensor_cxt->sensor_list_ptr[SENSOR_MAIN];
 				Sensor_SetExportInfo(&s_p_sensor_cxt->sensor_exp_info);
 				Sensor_PowerOn(SENSOR_FALSE);
 				if (1 == s_p_sensor_cxt->is_register_sensor) {
-					CMR_LOGV("SENSOR: Sensor_close 6.\n");
+					CMR_LOGI("SENSOR: Sensor_close 6.\n");
 					_Sensor_Device_I2CDeInit(SENSOR_MAIN);
 					s_p_sensor_cxt->is_register_sensor = 0;
 					s_p_sensor_cxt->is_main_sensor = 0;
 				}
 			}
 			if (SCI_TRUE == sensor_register_info_ptr->is_register[SENSOR_SUB]) {
-				CMR_LOGV("SENSOR: Sensor_close 7.\n");
+				CMR_LOGI("SENSOR: Sensor_close 7.\n");
 				_Sensor_SetId(SENSOR_SUB);
 				s_p_sensor_cxt->sensor_info_ptr = s_p_sensor_cxt->sensor_list_ptr[SENSOR_SUB];
 				Sensor_SetExportInfo(&s_p_sensor_cxt->sensor_exp_info);
 				Sensor_PowerOn(SENSOR_FALSE);
 				if (1 == s_p_sensor_cxt->is_register_sensor) {
-					CMR_LOGV("SENSOR: Sensor_close 8.\n");
+					CMR_LOGI("SENSOR: Sensor_close 8.\n");
 					_Sensor_Device_I2CDeInit(SENSOR_SUB);
 					s_p_sensor_cxt->is_register_sensor = 0;
 					s_p_sensor_cxt->is_main_sensor = 0;
@@ -2559,7 +2559,7 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 			}
 		}
 	}
-	CMR_LOGV("SENSOR: Sensor_close 9.\n");
+	CMR_LOGI("SENSOR: Sensor_close 9.\n");
 
 	_Sensor_DeviceDeInit();
 	s_p_sensor_cxt->sensor_init = SENSOR_FALSE;
@@ -2595,7 +2595,7 @@ ERR_SENSOR_E Sensor_SetTiming(SENSOR_MODE_E mode)
 	sensor_register_info_ptr = &s_p_sensor_cxt->sensor_register_info;
 	cur_id = sensor_register_info_ptr->cur_id;
 
-	CMR_LOGV("SENSOR: Sensor_SetTiming -> mode = %d,sensor_id=%d.\n", mode, cur_id);
+	CMR_LOGI("SENSOR: Sensor_SetTiming -> mode = %d,sensor_id=%d.\n", mode, cur_id);
 
 	if (PNULL !=
 		s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].sensor_reg_tab_ptr) {
@@ -2603,7 +2603,7 @@ ERR_SENSOR_E Sensor_SetTiming(SENSOR_MODE_E mode)
 		Sensor_SendRegTabToSensor(&s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode]);
 		s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] = mode;
 	} else {
-		CMR_LOGV("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
+		CMR_LOGI("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
 	}
 	return SENSOR_SUCCESS;
 }
@@ -2627,7 +2627,7 @@ int Sensor_CheckTiming(SENSOR_MODE_E mode)
 	sensor_reg_tab_info_ptr = &s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode];
 	cur_id = sensor_register_info_ptr->cur_id;
 
-	CMR_LOGV(" -> mode = %d,sensor_id=%d.\n", mode, cur_id);
+	CMR_LOGI(" -> mode = %d,sensor_id=%d.\n", mode, cur_id);
 
 	if (0 != cur_id)
 		return 0;
@@ -2641,11 +2641,11 @@ int Sensor_CheckTiming(SENSOR_MODE_E mode)
 		data = Sensor_ReadReg(sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_addr);
 		if (data != sensor_reg_tab_info_ptr->sensor_reg_tab_ptr[i].reg_value) {
 			ret = -1;
-			CMR_LOGV("report error!.\n");
+			CMR_LOGI("report error!.\n");
 			break;
 		}
 	}
-	CMR_LOGV("return = %d.\n", ret);
+	CMR_LOGI("return = %d.\n", ret);
 	return ret;
 }
 
@@ -2677,7 +2677,7 @@ uint32_t Sensor_SetFlash(uint32_t flash_mode)
 		CMR_LOGE("flash cb have not been registered, error!");
 	}
 
-	CMR_LOGV(" cb flash_mode=0x%x .\n", flash_mode);
+	CMR_LOGI(" cb flash_mode=0x%x .\n", flash_mode);
 
 	return ret;
 }
@@ -2690,7 +2690,7 @@ LOCAL uint32_t _Sensor_InitDefaultExifInfo(void)
 	exif_ptr = &s_p_sensor_cxt->default_exif;
 	memset(&s_p_sensor_cxt->default_exif, 0, sizeof(EXIF_SPEC_PIC_TAKING_COND_T));
 
-	CMR_LOGV("SENSOR: Sensor_InitDefaultExifInfo \n");
+	CMR_LOGI("SENSOR: Sensor_InitDefaultExifInfo \n");
 
 	exif_ptr->valid.FNumber=1;
 	exif_ptr->FNumber.numerator=14;
@@ -2727,7 +2727,7 @@ uint32_t Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_E cmd, uint32_t param)
 		sensor_exif_info_ptr =
 			(EXIF_SPEC_PIC_TAKING_COND_T *)sensor_info_ptr->ioctl_func_ptr->get_exif(0x00);
 	} else {
-		CMR_LOGV("SENSOR: Sensor_SetSensorExifInfo the get_exif fun is null, set it to default\n");
+		CMR_LOGI("SENSOR: Sensor_SetSensorExifInfo the get_exif fun is null, set it to default\n");
 		sensor_exif_info_ptr = &s_p_sensor_cxt->default_exif;
 	}
 
@@ -3006,10 +3006,10 @@ EXIF_SPEC_PIC_TAKING_COND_T *Sensor_GetSensorExifInfo(void)
 		sensor_exif_info_ptr =
 			(EXIF_SPEC_PIC_TAKING_COND_T *)
 			sensor_info_ptr->ioctl_func_ptr->get_exif(0x00);
-		CMR_LOGV("get_exif.");
+		CMR_LOGI("get_exif.");
 	} else {
 		sensor_exif_info_ptr = &s_p_sensor_cxt->default_exif;
-		CMR_LOGV("SENSOR: get_exif fun null, so use the default\n");
+		CMR_LOGI("SENSOR: get_exif fun null, so use the default\n");
 	}
 	return sensor_exif_info_ptr;
 }
@@ -3028,7 +3028,7 @@ int Sensor_SetMark(uint8_t *buf)
 			s_p_sensor_cxt->sensor_index[i] = buf[4+i];
 		}
 	}
-	CMR_LOGV("Sensor_SetSensorParam:sensor_identified=%d,idex is %d,%d.\n",
+	CMR_LOGI("Sensor_SetSensorParam:sensor_identified=%d,idex is %d,%d.\n",
 		s_p_sensor_cxt->sensor_identified,
 		s_p_sensor_cxt->sensor_index[SENSOR_MAIN],
 		s_p_sensor_cxt->sensor_index[SENSOR_SUB]);
@@ -3050,7 +3050,7 @@ int Sensor_GetMark(uint8_t *buf,uint8_t *is_saved_ptr)
 		for( i=0 ; i<2 ; i++) {
 			*ptr++ = s_p_sensor_cxt->sensor_index[i];
 		}
-		CMR_LOGV("Sensor_GetSensorParam:index is %d,%d.\n",
+		CMR_LOGI("Sensor_GetSensorParam:index is %d,%d.\n",
 			s_p_sensor_cxt->sensor_index[SENSOR_MAIN],
 			s_p_sensor_cxt->sensor_index[SENSOR_SUB]);
 	} else {
@@ -3111,7 +3111,7 @@ LOCAL int   _Sensor_CreateThread(void)
 	pthread_attr_destroy(&attr);
 
 	message.msg_type = SENSOR_EVT_INIT;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message to camera main thread");
 		return ret;
@@ -3130,11 +3130,11 @@ LOCAL int _Sensor_KillThread(void)
 	CMR_MSG_INIT(message);
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
-	CMR_LOGV("To kill sensor thread");
+	CMR_LOGI("To kill sensor thread");
 
 	s_p_sensor_cxt->exit_flag = 0;
 	message.msg_type = SENSOR_EVT_DEINIT;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message to camera main thread 0x%x", s_p_sensor_cxt->queue_handle);
 		return ret;
@@ -3162,21 +3162,21 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 	uint32_t                 exit_flag = 0;
 	int                      ret = 0;
 
-	CMR_LOGV("In");
+	CMR_LOGI("In");
 
 	while(1) {
-		ret = cmr_msg_get(s_p_sensor_cxt->queue_handle, &message);
+		ret = cmr_msg_get(s_p_sensor_cxt->queue_handle, &message, 1);
 		if (ret) {
 			CMR_LOGE("Message queue destroied");
 			break;
 		}
 
-		CMR_LOGV("Msg, 0x%x", message.msg_type);
+		CMR_LOGI("Msg, 0x%x", message.msg_type);
 		CMR_PRINT_TIME;
 
 		switch (message.msg_type) {
 		case SENSOR_EVT_INIT:
-			CMR_LOGV("SENSOR_EVT_INIT");
+			CMR_LOGI("SENSOR_EVT_INIT");
 			ret = _Sensor_SyncDone();
 			break;
 
@@ -3185,24 +3185,24 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 			break;
 
 		case SENSOR_EVT_STREAM_ON:
-			CMR_LOGV("SENSOR_EVT_STREAM_ON");
+			CMR_LOGI("SENSOR_EVT_STREAM_ON");
 			_Sensor_StreamOn();
 			break;
 
 		case SENSOR_EVT_STREAM_OFF:
-			CMR_LOGV("SENSOR_EVT_STREAM_OFF");
+			CMR_LOGI("SENSOR_EVT_STREAM_OFF");
 			_Sensor_StreamOff();
 			_Sensor_Device_MIPI_deinit();
 			break;
 
 		case SENSOR_EVT_DEINIT:
-			CMR_LOGV("SENSOR_EVT_DEINIT");
+			CMR_LOGI("SENSOR_EVT_DEINIT");
 			s_p_sensor_cxt->exit_flag = 1;
 			break;
 		case SENSOR_EVT_AF_INIT:
-			CMR_LOGV("SENSOR_EVT_AF_INIT");
+			CMR_LOGI("SENSOR_EVT_AF_INIT");
 			ret = _Sensor_AutoFocusInit();
-			CMR_LOGV("SENSOR_EVT_AF_INIT, Done");
+			CMR_LOGI("SENSOR_EVT_AF_INIT, Done");
 			break;
 		case SENSOR_EVT_SET_MODE_DONE:
 			sem_post(&s_p_sensor_cxt->st_setmode_sem);
@@ -3227,12 +3227,12 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 		}
 
 		if (s_p_sensor_cxt->exit_flag) {
-			CMR_LOGV("Sensor thread Exit!");
+			CMR_LOGI("Sensor thread Exit!");
 			break;
 		}
 	}
 
-	CMR_LOGV("Out");
+	CMR_LOGI("Out");
 	return NULL;
 }
 
@@ -3241,7 +3241,7 @@ LOCAL int _Sensor_WaitSync(void)
 	int                      ret = 0;
 
 	sem_wait(&s_p_sensor_cxt->sensor_sync_sem);
-	CMR_LOGI("wait done.");
+	CMR_LOGD("wait done.");
 
 	return ret;
 }
@@ -3259,7 +3259,7 @@ LOCAL int _Sensor_AutoFocusInit(void)
 	SENSOR_EXT_FUN_PARAM_T   af_param;
 	int                      ret = 0;
 
-	CMR_LOGV("Enter");
+	CMR_LOGI("Enter");
 
 	af_param.cmd = SENSOR_EXT_FUNC_INIT;
 	af_param.param = SENSOR_EXT_FOCUS_TRIG;
@@ -3267,7 +3267,7 @@ LOCAL int _Sensor_AutoFocusInit(void)
 	if (ret) {
 		CMR_LOGE("Failed to init AF");
 	} else {
-		CMR_LOGV("OK to init auto focus");
+		CMR_LOGI("OK to init auto focus");
 	}
 
 	return ret;
@@ -3282,13 +3282,13 @@ LOCAL void* _Sensor_MonitorProc(void* data)
 		usleep(10000);
 
 		if(s_p_sensor_cxt == NULL){
-			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
+			CMR_LOGI("s_p_sensor_cxt is NULL, exit");
 			break;
 		}
 
 		if (s_p_sensor_cxt->monitor_exit) {
 			s_p_sensor_cxt->monitor_exit = 0;
-			CMR_LOGV("EXIT");
+			CMR_LOGI("EXIT");
 			break;
 		}
 
@@ -3323,13 +3323,13 @@ LOCAL void* _Sensor_FocusMoveProc(void* data)
 		usleep(10000);
 
 		if(s_p_sensor_cxt == NULL){
-			CMR_LOGV("s_p_sensor_cxt is NULL, exit");
+			CMR_LOGI("s_p_sensor_cxt is NULL, exit");
 			break;
 		}
 
 		if (s_p_sensor_cxt->focus_move_exit) {
 			s_p_sensor_cxt->focus_move_exit = 0;
-			CMR_LOGV("EXIT");
+			CMR_LOGI("EXIT");
 			break;
 		}
 
@@ -3364,7 +3364,7 @@ LOCAL int   _Sensor_CreateMonitorThread(void)
 	int                      ret = 0;
 	pthread_attr_t           attr;
 
-	CMR_LOGV("Create status monitor thread");
+	CMR_LOGI("Create status monitor thread");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	if (0 == s_p_sensor_cxt->monitor_thread) {
@@ -3382,7 +3382,7 @@ LOCAL int _Sensor_KillMonitorThread(void)
 	int                      ret = 0;
 	void                     *dummy;
 
-	CMR_LOGV("To kill sensor monitor thread");
+	CMR_LOGI("To kill sensor monitor thread");
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	if (s_p_sensor_cxt->monitor_thread) {
@@ -3446,7 +3446,7 @@ LOCAL int Sensor_CfgOtpAndUpdateISPParam(uint32_t sensor_id)
 
 	message.msg_type = SENSOR_EVT_CFG_OTP;
 	message.sub_msg_type = sensor_id;
-	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message);
+	ret = cmr_msg_post(s_p_sensor_cxt->queue_handle, &message, 1);
 	if (ret) {
 		CMR_LOGE("Fail to send message");
 	}

@@ -120,7 +120,7 @@ static void _DC_SetExifSpecificParameter(void)
 		p->tm_min,
 		p->tm_sec);
 
-	CMR_LOGI("_DC_SetExifSpecificParameter %s",s_dc_spec_other.ImageUniqueID);
+	CMR_LOGD("_DC_SetExifSpecificParameter %s",s_dc_spec_other.ImageUniqueID);
 	dc_exif_info_ptr->spec_ptr->other_ptr = &s_dc_spec_other;
 }
 
@@ -192,7 +192,7 @@ void DC_SetExifImageDataTime(void)
 	image_date_time.valid.DateTimeOriginal = 1;
 	image_date_time.valid.DateTimeDigitized = 1;
 
-	CMR_LOGI("DC_SetExifImageDataTime %s",image_date_time.DateTimeOriginal);
+	CMR_LOGD("DC_SetExifImageDataTime %s",image_date_time.DateTimeOriginal);
 
 	dc_specific_info_ptr->date_time_ptr = &image_date_time;
 
@@ -205,7 +205,7 @@ JINF_EXIF_INFO_T* DC_GetExifParameter(void)
 	_DC_SetExifGpsParameter();
 	DC_SetExifImageDataTime();
 
-	CMR_LOGI("DC_GetExifParameter");
+	CMR_LOGD("DC_GetExifParameter");
 	return (JINF_EXIF_INFO_T* )s_dc_exif_info_ptr;
 }
 

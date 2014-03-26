@@ -113,7 +113,7 @@ static uint32_t _DC_GetExifPrimaryPriDescInfo(uint32_t param)
 	/*sprintf((int8*)s_dc_exif_pri_desc_info.Software, "%s", "Test Version v0.0.0.1");*/
 	/*sprintf((int8*)s_dc_exif_pri_desc_info.Artist, "%s", "Artist");*/
 	sprintf((char *) s_dc_exif_pri_desc_info.Copyright, "%s","CopyRight, Spreadtrum, 2012");
-	CMR_LOGI("return 0x%x.",(uint32_t)exif_ptr);
+	CMR_LOGD("return 0x%x.",(uint32_t)exif_ptr);
 	return (uint32_t) exif_ptr;
 }
 
@@ -129,7 +129,7 @@ static uint32_t _DC_GetExifSpecUserInfo(uint32_t param)
 	s_dc_exif_spec_user_info.UserComment.ptr = (void*)exif_user_comments;
 	s_dc_exif_spec_user_info.UserComment.type = EXIF_ASCII;
 	s_dc_exif_spec_user_info.UserComment.size = 1;*/
-	CMR_LOGI(" valid.UserComment %d \n",s_dc_exif_spec_user_info.valid.UserComment);
+	CMR_LOGD(" valid.UserComment %d \n",s_dc_exif_spec_user_info.valid.UserComment);
 	return (uint32_t) exif_ptr;
 }
 

@@ -37,7 +37,7 @@ int cmr_dma_copy_init(void)
 		CMR_LOGE("Fail to open dma copy device.");
 		return -ENODEV;
 	} else {
-		CMR_LOGV("OK to open dma copy device.");
+		CMR_LOGI("OK to open dma copy device.");
 	}
 
 	sem_init(&dma_copy_sem, 0, 1);
@@ -49,7 +49,7 @@ int cmr_dma_copy_deinit(void)
 {
 	int                      ret = 0;
 
-	CMR_LOGV("Start to close dma copy device.");
+	CMR_LOGI("Start to close dma copy device.");
 
 	if (-1 == dma_copy_fd) {
 		CMR_LOGE("Invalid dam copyfd");
@@ -67,7 +67,7 @@ int cmr_dma_copy_deinit(void)
 
 	dma_copy_fd = -1;
 
-	CMR_LOGV("close device.");
+	CMR_LOGI("close device.");
 
 	return 0;
 }

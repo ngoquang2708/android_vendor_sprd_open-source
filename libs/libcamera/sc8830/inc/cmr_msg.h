@@ -73,11 +73,11 @@ struct cmr_msg_cxt
 
 int cmr_msg_queue_create(uint32_t count, uint32_t *queue_handle);
 
-int cmr_msg_get(uint32_t queue_handle, struct cmr_msg *message);
+int cmr_msg_get(uint32_t queue_handle, struct cmr_msg *message, uint32_t log_level);
 
 int cmr_msg_timedget(unsigned int queue_handle, struct cmr_msg *message);
 
-int cmr_msg_post(uint32_t queue_handle, struct cmr_msg *message);
+int cmr_msg_post(uint32_t queue_handle, struct cmr_msg *message, uint32_t log_level);
 
 int cmr_msg_flush(uint32_t queue_handle, struct cmr_msg *message);
 

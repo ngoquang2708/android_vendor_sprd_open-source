@@ -274,7 +274,7 @@ int camera_capture_buf_size(uint32_t camera_id,
 		CMR_LOGE("No matched size for this image, 0x%x", size_pixel);
 		return -1;
 	} else {
-		CMR_LOGV("image size num, %d, mem size 0x%x",
+		CMR_LOGI("image size num, %d, mem size 0x%x",
 			i,
 			mem_tab_ptr[i].mem_size);
 	}
@@ -328,24 +328,24 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 	size_pixel = channel_size;
 	mem_res = cap_2_frm->mem_frm.buf_size;
 
-	CMR_LOGV("Mem frame, 0x%x 0x%x, 0x%x",
+	CMR_LOGI("Mem frame, 0x%x 0x%x, 0x%x",
 		cap_2_frm->mem_frm.addr_phy.addr_y,
 		cap_2_frm->mem_frm.addr_vir.addr_y,
 		cap_2_frm->mem_frm.buf_size);
 
-	CMR_LOGV("channel_size, 0x%x, image_cnt %d, rot %d, orig_fmt %d",
+	CMR_LOGI("channel_size, 0x%x, image_cnt %d, rot %d, orig_fmt %d",
 		channel_size,
 		image_cnt,
 		need_rot,
 		orig_fmt);
 
-	CMR_LOGV("sn_size %d %d, sn_trim %d %d %d %d, image_size %d %d, cap_size %d %d",
+	CMR_LOGI("sn_size %d %d, sn_trim %d %d %d %d, image_size %d %d, cap_size %d %d",
 		sn_size->width, sn_size->height,
 		sn_trim->start_x, sn_trim->start_y, sn_trim->width, sn_trim->height,
 		image_size->width, image_size->height,
 		cap_size->width, cap_size->height);
 
-	CMR_LOGV("sn_trim x,y,w,h %d %d %d %d ",
+	CMR_LOGI("sn_trim x,y,w,h %d %d %d %d ",
 		sn_trim->start_x, sn_trim->start_y,
 		sn_trim->width, sn_trim->height);
 
@@ -411,21 +411,21 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		}
 	}
 
-	CMR_LOGI("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 		cap_mem->cap_raw.addr_phy.addr_y,
 		cap_mem->cap_raw.addr_phy.addr_u,
 		cap_mem->cap_raw.addr_vir.addr_y,
 		cap_mem->cap_raw.addr_vir.addr_u,
 		cap_mem->cap_raw.buf_size);
 
-	CMR_LOGI("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 		cap_mem->target_yuv.addr_phy.addr_y,
 		cap_mem->target_yuv.addr_phy.addr_u,
 		cap_mem->target_yuv.addr_vir.addr_y,
 		cap_mem->target_yuv.addr_vir.addr_u,
 		cap_mem->target_yuv.buf_size);
 
-	CMR_LOGI("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 		cap_mem->cap_yuv.addr_phy.addr_y,
 		cap_mem->cap_yuv.addr_phy.addr_u,
 		cap_mem->cap_yuv.addr_vir.addr_y,
@@ -470,14 +470,14 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		}
 	}
 
-	CMR_LOGV("mem_end, mem_res: 0x%x 0x%x ", mem_end, mem_res);
+	CMR_LOGI("mem_end, mem_res: 0x%x 0x%x ", mem_end, mem_res);
 
 	/* resize target jpeg buffer */
 	cap_mem->target_jpeg.addr_phy.addr_y = cap_mem->target_jpeg.addr_phy.addr_y + JPEG_EXIF_SIZE;
 	cap_mem->target_jpeg.addr_vir.addr_y = cap_mem->target_jpeg.addr_vir.addr_y + JPEG_EXIF_SIZE;
 	cap_mem->target_jpeg.buf_size = cap_mem->target_jpeg.buf_size - JPEG_EXIF_SIZE;
 
-	CMR_LOGI("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
 	cap_mem->target_jpeg.addr_phy.addr_y,
 	cap_mem->target_jpeg.addr_vir.addr_y,
 	cap_mem->target_jpeg.buf_size);
@@ -523,46 +523,46 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 			(void*)&capture_mem[0].isp_tmp,
 			sizeof(struct img_frm));
 
-		CMR_LOGI("Image ID %d", i);
-		CMR_LOGI("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("Image ID %d", i);
+		CMR_LOGD("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 			capture_mem[i].cap_raw.addr_phy.addr_y,
 			capture_mem[i].cap_raw.addr_phy.addr_u,
 			capture_mem[i].cap_raw.addr_vir.addr_y,
 			capture_mem[i].cap_raw.addr_vir.addr_u,
 			capture_mem[i].cap_raw.buf_size);
 
-		CMR_LOGI("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 			capture_mem[i].target_yuv.addr_phy.addr_y,
 			capture_mem[i].target_yuv.addr_phy.addr_u,
 			capture_mem[i].target_yuv.addr_vir.addr_y,
 			capture_mem[i].target_yuv.addr_vir.addr_u,
 			capture_mem[i].target_yuv.buf_size);
 
-		CMR_LOGI("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 			capture_mem[i].cap_yuv.addr_phy.addr_y,
 			capture_mem[i].cap_yuv.addr_phy.addr_u,
 			capture_mem[i].cap_yuv.addr_vir.addr_y,
 			capture_mem[i].cap_yuv.addr_vir.addr_u,
 			capture_mem[i].cap_yuv.buf_size);
 
-		CMR_LOGI("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
 			capture_mem[i].target_jpeg.addr_phy.addr_y,
 			capture_mem[i].target_jpeg.addr_vir.addr_y,
 			capture_mem[i].target_jpeg.buf_size);
 
-		CMR_LOGI("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 			capture_mem[i].thum_yuv.addr_phy.addr_y,
 			capture_mem[i].thum_yuv.addr_phy.addr_u,
 			capture_mem[i].thum_yuv.addr_vir.addr_y,
 			capture_mem[i].thum_yuv.addr_vir.addr_u,
 			capture_mem[i].thum_yuv.buf_size);
 
-		CMR_LOGI("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
 			capture_mem[i].thum_jpeg.addr_phy.addr_y,
 			capture_mem[i].thum_jpeg.addr_vir.addr_y,
 			capture_mem[i].thum_jpeg.buf_size);
 
-		CMR_LOGI("scale_tmp, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("scale_tmp, phy 0x%x, vir 0x%x, size 0x%x",
 			capture_mem[i].scale_tmp.addr_phy.addr_y,
 			capture_mem[i].scale_tmp.addr_vir.addr_y,
 			capture_mem[i].scale_tmp.buf_size);
@@ -599,7 +599,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 		NULL == io_channel_size) {
 		return -1;
 	}
-	CMR_LOGV("raw fmt buf arrange");
+	CMR_LOGI("raw fmt buf arrange");
 
 	align16_image_size.width = CAMERA_ALIGNED_16(image_size->width);
 	align16_image_size.height = CAMERA_ALIGNED_16(image_size->height);
@@ -642,7 +642,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 		}
 
 		tmp = sn_size->height - sn_trim->height - sn_trim->start_y;
-		CMR_LOGV("Recovered height, %d", tmp);
+		CMR_LOGI("Recovered height, %d", tmp);
 		yy_to_y = (uint32_t)(tmp * sn_size->width);
 		yy_to_y = MAX(yy_to_y2, yy_to_y);
 		uv_size = uv_size + (yy_to_y >> 1);
@@ -655,7 +655,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->cap_raw.addr_phy.addr_y = cap_mem->cap_yuv.addr_phy.addr_y + y_to_raw;
 	cap_mem->cap_raw.addr_vir.addr_y = cap_mem->cap_yuv.addr_vir.addr_y + y_to_raw;
 	cap_mem->cap_raw.buf_size = raw_size;
-	CMR_LOGI("y_to_raw 0x%x, yy_to_y 0x%x, raw size 0x%x useless_raw 0x%x",
+	CMR_LOGD("y_to_raw 0x%x, yy_to_y 0x%x, raw size 0x%x useless_raw 0x%x",
 		y_to_raw, yy_to_y, raw_size, useless_raw);
 
 	offset = raw_size + y_to_raw + yy_to_y - useless_raw;/*the end of RawRGB*/
@@ -678,7 +678,7 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 		mem_end += uv_size;
 		mem_res -= uv_size;
 	} else {
-		CMR_LOGV("No more memory reseved in buffer, need to alloc target YUV uv buffer!");
+		CMR_LOGI("No more memory reseved in buffer, need to alloc target YUV uv buffer!");
 		unsigned int addr_phy, addr_vir;
 		if (cap_2_frm->alloc_mem(cap_2_frm->handle, uv_size, &addr_phy, &addr_vir) != 0) {
 			CMR_LOGE("Failed to alloc the buffer used in capture");
@@ -742,7 +742,7 @@ int arrange_jpeg_buf(struct cmr_cap_2_frm *cap_2_frm,
 		NULL == io_channel_size) {
 		return -1;
 	}
-	CMR_LOGV("jpeg fmt buf arrange");
+	CMR_LOGI("jpeg fmt buf arrange");
 
 	align16_image_size.width = CAMERA_ALIGNED_16(image_size->width);
 	align16_image_size.height = CAMERA_ALIGNED_16(image_size->height);
@@ -761,7 +761,7 @@ int arrange_jpeg_buf(struct cmr_cap_2_frm *cap_2_frm,
 	tmp = (uint32_t)(sn_size->height * sn_size->width);
 	y_end = yy_to_y + MAX(channel_size, tmp);
 
-	CMR_LOGV("yy_to_y, 0x%x, tmp 0x%x", yy_to_y, tmp);
+	CMR_LOGI("yy_to_y, 0x%x, tmp 0x%x", yy_to_y, tmp);
 
 	cap_mem->target_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_y + y_end;
 	cap_mem->target_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_y + y_end;
@@ -845,7 +845,7 @@ int arrange_yuv_buf(struct cmr_cap_2_frm *cap_2_frm,
 		NULL == io_channel_size) {
 		return -1;
 	}
-	CMR_LOGV("yuv fmt buf arrange");
+	CMR_LOGI("yuv fmt buf arrange");
 
 	align16_image_size.width = CAMERA_ALIGNED_16(image_size->width);
 	align16_image_size.height = CAMERA_ALIGNED_16(image_size->height);
@@ -946,7 +946,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	mem_res = *io_mem_res;
 	mem_end = *io_mem_end;
 
-	CMR_LOGV("Now to alloc misc buffers");
+	CMR_LOGI("Now to alloc misc buffers");
 	for (i = THUM_YUV; i < BUF_TYPE_NUM; i++) {
 		/* calculate the address of target_jpeg, start */
 		size_pixel = get_size[i](align16_image_size.width, align16_image_size.height, thum_size->width, thum_size->height);
@@ -965,7 +965,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	}
 
 	if (i != BUF_TYPE_NUM) {
-		CMR_LOGV("No more memory reseved in buffer, to alloc misc buffers");
+		CMR_LOGI("No more memory reseved in buffer, to alloc misc buffers");
 		/* Not all the misc buffer have been alloc-ed yet*/
 		for (; i < BUF_TYPE_NUM; i++) {
 			unsigned int addr_phy, addr_vir;
@@ -996,7 +996,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->thum_yuv.addr_vir.addr_u = img_frame[THUM_YUV].addr_vir.addr_u;
 	cap_mem->thum_yuv.size.width = thum_size->width;
 	cap_mem->thum_yuv.size.height = thum_size->height;
-	CMR_LOGI("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 		img_frame[THUM_YUV].addr_phy.addr_y,
 		img_frame[THUM_YUV].addr_phy.addr_u,
 		img_frame[THUM_YUV].addr_vir.addr_y,
@@ -1006,7 +1006,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->thum_jpeg.buf_size = img_frame[THUM_JPEG].buf_size;
 	cap_mem->thum_jpeg.addr_phy.addr_y = img_frame[THUM_JPEG].addr_phy.addr_y;
 	cap_mem->thum_jpeg.addr_vir.addr_y = img_frame[THUM_JPEG].addr_vir.addr_y;
-	CMR_LOGI("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
 		img_frame[THUM_JPEG].addr_phy.addr_y,
 		img_frame[THUM_JPEG].addr_vir.addr_y,
 		img_frame[THUM_JPEG].buf_size);
@@ -1015,7 +1015,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->jpeg_tmp.buf_size = cap_mem->cap_yuv.buf_size;
 	cap_mem->jpeg_tmp.addr_phy.addr_y = cap_mem->cap_yuv.addr_phy.addr_u;
 	cap_mem->jpeg_tmp.addr_vir.addr_y = cap_mem->cap_yuv.addr_vir.addr_u;
-	CMR_LOGI("jpeg_tmp, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("jpeg_tmp, phy 0x%x, vir 0x%x, size 0x%x",
 		cap_mem->jpeg_tmp.addr_phy.addr_y,
 		cap_mem->jpeg_tmp.addr_vir.addr_y,
 		cap_mem->jpeg_tmp.buf_size);
@@ -1061,7 +1061,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 	if (!need_rot) {
 		return -1;
 	}
-	CMR_LOGV("rotation buf arrange");
+	CMR_LOGI("rotation buf arrange");
 
 	mem_res = *io_mem_res;
 	mem_end = *io_mem_end;
@@ -1069,9 +1069,9 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 
 	size_pixel = channel_size << 1;
 
-	CMR_LOGV("Rot channel size 0x%x, buf size 0x%X", channel_size, size_pixel);
+	CMR_LOGI("Rot channel size 0x%x, buf size 0x%X", channel_size, size_pixel);
 	if (mem_res > size_pixel) {
-		CMR_LOGV("Rot buffer located at frame mem");
+		CMR_LOGI("Rot buffer located at frame mem");
 		offset = cap_2_frm->mem_frm.addr_phy.addr_y + mem_end;
 		offset_1 = cap_2_frm->mem_frm.addr_vir.addr_y + mem_end;
 		mem_res -= size_pixel;
@@ -1084,7 +1084,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 
 	} else {
 		unsigned int addr_phy, addr_vir;
-		CMR_LOGV("No more memory reseved in buffer, Rot buffer need alloc");
+		CMR_LOGI("No more memory reseved in buffer, Rot buffer need alloc");
 
 		if (cap_2_frm->alloc_mem(cap_2_frm->handle,
 			channel_size,
@@ -1115,7 +1115,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->target_jpeg.addr_phy.addr_y = cap_mem->cap_yuv_rot.addr_phy.addr_y;
 	cap_mem->target_jpeg.addr_vir.addr_y = cap_mem->cap_yuv_rot.addr_vir.addr_y;
 
-	CMR_LOGI("cap_yuv_rot, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_yuv_rot, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
 		cap_mem->cap_yuv_rot.addr_phy.addr_y,
 		cap_mem->cap_yuv_rot.addr_phy.addr_u,
 		cap_mem->cap_yuv_rot.addr_vir.addr_y,

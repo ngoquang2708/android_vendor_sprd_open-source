@@ -193,10 +193,10 @@ uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode)
 	case CAMERA_FLASH_MODE_AUTO:
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 			ret = isp_capability(ISP_LOW_LUX_EB, (void *)&autoflash);
-			CMR_LOGV("isp auto flash value is %d", autoflash);
+			CMR_LOGI("isp auto flash value is %d", autoflash);
 		} else {
 			ret = Sensor_Ioctl(SENSOR_IOCTL_FLASH, (uint32_t)&autoflash);
-			CMR_LOGV("yuv auto flash value is %d", autoflash);
+			CMR_LOGI("yuv auto flash value is %d", autoflash);
 		}
 		if (ret) {
 			autoflash = 1;
@@ -222,7 +222,7 @@ int camera_set_ae(uint32_t ae_mode, uint32_t *skip_mode, uint32_t *skip_num)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGI ("ae mode %d\n", ae_mode);
+	CMR_LOGD ("ae mode %d\n", ae_mode);
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -241,7 +241,7 @@ int camera_set_ae_measure_lum(uint32_t meas_lum_mode, uint32_t *skip_mode, uint3
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGI ("ae measure lum mode %d\n", meas_lum_mode);
+	CMR_LOGD ("ae measure lum mode %d\n", meas_lum_mode);
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -262,7 +262,7 @@ int camera_set_ae_metering_area(uint32_t *win_ptr)
 	uint32_t                 zone_cnt = *win_ptr;
 	struct isp_trim_size     trim_size;
 
-	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, win_ptr[1], win_ptr[2], win_ptr[3], win_ptr[4]);
+	CMR_LOGI("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, win_ptr[1], win_ptr[2], win_ptr[3], win_ptr[4]);
 
 	if (0 == zone_cnt) {
 		CMR_LOGE ("zone_cnt = 0, no metering area \n");
@@ -289,7 +289,7 @@ int camera_set_alg(uint32_t ae_work_mode, uint32_t *skip_mode, uint32_t *skip_nu
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGI ("ae alg mode %d\n", ae_work_mode);
+	CMR_LOGD ("ae alg mode %d\n", ae_work_mode);
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -309,7 +309,7 @@ int camera_set_hdr(uint32_t hdr_mode, uint32_t *skip_mode, uint32_t *skip_num)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGI ("hdr mode %d", hdr_mode);
+	CMR_LOGD ("hdr mode %d", hdr_mode);
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -328,7 +328,7 @@ int camera_set_brightness(uint32_t brightness, uint32_t *skip_mode, uint32_t *sk
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI ("brightness %d", brightness);
+	CMR_LOGD ("brightness %d", brightness);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -350,7 +350,7 @@ int camera_set_contrast(uint32_t contrast, uint32_t *skip_mode, uint32_t *skip_n
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI ("contrast %d", contrast);
+	CMR_LOGD ("contrast %d", contrast);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -372,7 +372,7 @@ int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *sk
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 isp_param = 0;
 
-	CMR_LOGI ("saturation %d", saturation);
+	CMR_LOGD ("saturation %d", saturation);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -385,7 +385,7 @@ int camera_set_saturation(uint32_t saturation, uint32_t *skip_mode, uint32_t *sk
 	}
 	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_SATURATION, saturation);
 
-	CMR_LOGI ("skip_mode=%d, skip_num=%d", *skip_mode, *skip_num);
+	CMR_LOGD ("skip_mode=%d, skip_num=%d", *skip_mode, *skip_num);
 
 	return ret;
 }
@@ -396,7 +396,7 @@ int camera_set_sharpness(uint32_t sharpness, uint32_t *skip_mode, uint32_t *skip
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 isp_param = 0;
 
-	CMR_LOGI ("sharpness %d", sharpness);
+	CMR_LOGD ("sharpness %d", sharpness);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -418,7 +418,7 @@ int camera_set_effect(uint32_t effect, uint32_t *skip_mode, uint32_t *skip_num)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI ("effect %d", effect);
+	CMR_LOGD ("effect %d", effect);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -439,7 +439,7 @@ int camera_set_ev(uint32_t expo_compen, uint32_t *skip_mode, uint32_t *skip_num)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI ("expo_compen %d", expo_compen);
+	CMR_LOGD ("expo_compen %d", expo_compen);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -460,7 +460,7 @@ int camera_set_wb(uint32_t wb_mode, uint32_t *skip_mode, uint32_t *skip_num)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI ("wb_mode %d", wb_mode);
+	CMR_LOGD ("wb_mode %d", wb_mode);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -483,7 +483,7 @@ int camera_set_scene(uint32_t scene_mode, uint32_t *skip_mode, uint32_t *skip_nu
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 isp_param = 0;
 
-	CMR_LOGI("scene_mode %d", scene_mode);
+	CMR_LOGD("scene_mode %d", scene_mode);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = 0;
@@ -513,7 +513,7 @@ int camera_set_flicker(uint32_t flicker_mode, uint32_t *skip_mode, uint32_t *ski
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI("flicker_mode %d", flicker_mode);
+	CMR_LOGD("flicker_mode %d", flicker_mode);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = cxt->sn_cxt.sensor_info->change_setting_skip_num;
@@ -569,7 +569,7 @@ int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
 
-	CMR_LOGI("iso %d", iso);
+	CMR_LOGD("iso %d", iso);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
 		*skip_num = 0;
@@ -598,7 +598,7 @@ int camera_set_flash(uint32_t flash_mode, uint32_t *skip_mode, uint32_t *skip_nu
 		cxt->cmr_set.flash = status;
 	}
 
-	CMR_LOGV("ret %d, flash %d, flash_mode %d", ret, cxt->cmr_set.flash, flash_mode);
+	CMR_LOGI("ret %d, flash %d, flash_mode %d", ret, cxt->cmr_set.flash, flash_mode);
 	return ret;
 }
 
@@ -608,17 +608,17 @@ int camera_set_video_mode(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mode
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 isp_param = 0;
 
-	CMR_LOGI("preview mode %d", mode);
+	CMR_LOGD("preview mode %d", mode);
 	*skip_mode = IMG_SKIP_SW;
 	*skip_num = 0;
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		isp_param = frame_rate;
 		*skip_num = 0;
-		CMR_LOGI("frame rate:%d.",isp_param);
+		CMR_LOGD("frame rate:%d.",isp_param);
 		ret = isp_ioctl(ISP_CTRL_VIDEO_MODE, (void *)&isp_param);
 		if ((0x00 == frame_rate) && (1 != cxt->is_dv_mode)) {
-			CMR_LOGI("frame rate is auto mode, need not set!");
+			CMR_LOGD("frame rate is auto mode, need not set!");
 		} else {
 			camera_param_to_isp(ISP_CTRL_ISO, 5, &isp_param);
 			ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
@@ -638,13 +638,13 @@ int camera_set_preview_env(uint32_t mode, uint32_t frame_rate,uint32_t *skip_mod
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 isp_param = 0;
 
-	CMR_LOGI("preview env %d", mode);
+	CMR_LOGD("preview env %d", mode);
 	*skip_mode = IMG_SKIP_SW;
 	*skip_num = 0;
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		isp_param = mode;
 		*skip_num = 0;
-		CMR_LOGI("frame rate:%d.",isp_param);
+		CMR_LOGD("frame rate:%d.",isp_param);
 		ret = isp_ioctl(ISP_CTRL_VIDEO_MODE, (void *)&isp_param);
 		camera_param_to_isp(ISP_CTRL_ISO, 5, &isp_param);
 		ret = isp_ioctl(ISP_CTRL_ISO, (void *)&isp_param);
@@ -657,7 +657,7 @@ int camera_flash_process(uint32_t on_off)
 	struct camera_context    *cxt = camera_get_cxt();
 	uint32_t                 status = on_off ? FLASH_TORCH : FLASH_CLOSE_AFTER_OPEN;
 
-	CMR_LOGI("status %d,flash %d.", status, cxt->cmr_set.flash);
+	CMR_LOGD("status %d,flash %d.", status, cxt->cmr_set.flash);
 
 	if ((FLASH_OPEN_ON_RECORDING == cxt->cmr_set.flash)
 		&& (CAMERA_PREVIEW_MODE_MOVIE == cxt->cmr_set.video_mode)){
@@ -677,7 +677,7 @@ int camera_setting_init(void)
 	memset((void*)&cxt->cmr_set, INVALID_SET_BYTE,
 		offsetof(struct camera_settings, set_end));
 
-	CMR_LOGI("0x%x 0x%x 0x%x", cxt->cmr_set.video_mode,
+	CMR_LOGD("0x%x 0x%x 0x%x", cxt->cmr_set.video_mode,
 		cxt->cmr_set.set_end,
 		cxt->cmr_set.af_cancelled);
 
@@ -731,7 +731,7 @@ int camera_preview_start_set(void)
 	} else {
 		sn_mode = cxt->sn_cxt.capture_mode;
 	}
-	CMR_LOGV("Sensor workmode %d", sn_mode);
+	CMR_LOGI("Sensor workmode %d", sn_mode);
 	ret = Sensor_SetMode(sn_mode);
 	if (ret) {
 		CMR_LOGW("Sensor can't work at this mode %d", sn_mode);
@@ -811,7 +811,7 @@ int camera_preview_stop_set(void)
 	int                      ret = CAMERA_SUCCESS;
 	struct camera_context    *cxt = camera_get_cxt();
 	/*Todo something if necessary after preview stopped*/
-	CMR_LOGI("flash process %d.",cxt->is_dv_mode);
+	CMR_LOGD("flash process %d.",cxt->is_dv_mode);
 	if (1 != cxt->is_dv_mode) {
 		ret = camera_flash_process(0);
 	}
@@ -943,7 +943,7 @@ void camera_set_rot_angle(uint32_t *angle)
 	s_cam_orientation[0] = 0;
 #endif
 
-	CMR_LOGI("front cam orientation %d,back cam orientation %d.orientation %d.",
+	CMR_LOGD("front cam orientation %d,back cam orientation %d.orientation %d.",
 		s_cam_orientation[1],s_cam_orientation[0],cxt->orientation);
 
 	if (camera_id >= SUPPORT_CAMERA_SUM) {
@@ -996,7 +996,7 @@ void camera_set_rot_angle(uint32_t *angle)
 			break;
 		}
 	}
-	CMR_LOGI("angle=%d.\n",*angle);
+	CMR_LOGD("angle=%d.\n",*angle);
 }
 
 int camera_set_ctrl(camera_parm_type id,
@@ -1040,7 +1040,7 @@ int camera_set_ctrl(camera_parm_type id,
 		return ret;
 	}
 
-	CMR_LOGI("ID %d or parm %d . camera preview_status %d, capture_status=%d",
+	CMR_LOGD("ID %d or parm %d . camera preview_status %d, capture_status=%d",
 		id, parm, cxt->preview_status, cxt->capture_status);
 
 	if (id >= CAMERA_PARM_MAX || INVALID_SET_WORD == parm) {
@@ -1050,7 +1050,7 @@ int camera_set_ctrl(camera_parm_type id,
 	switch (id) {
 	case CAMERA_PARM_PREVIEW_ENV:
 		cxt->cmr_set.preview_env = parm;
-		CMR_LOGI("preview env %d.",parm);
+		CMR_LOGD("preview env %d.",parm);
 		if ((CMR_PREVIEW == cxt->preview_status) &&
 			(0 != cxt->cmr_set.preview_env)) {
 			if (before_set) {
@@ -1068,7 +1068,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARAM_ROTATION_CAPTURE:
 		cxt->is_cfg_rot_cap = parm;
-		CMR_LOGI("is_cfg_rot_cap:%d.",parm);
+		CMR_LOGD("is_cfg_rot_cap:%d.",parm);
 		break;
 
 	case CAMERA_PARM_SHARPNESS:
@@ -1109,21 +1109,21 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARAM_SLOWMOTION:
 		cxt->cmr_set.slow_motion_mode = parm;
-		CMR_LOGI("slow motion:%d.",parm);
+		CMR_LOGD("slow motion:%d.",parm);
 		break;
 
 	case CAMERA_PARM_SHOT_NUM:
 		if ((0 == parm) || (9 < parm)) {
-			CMR_LOGV("uncommon cap number %d.",parm);
+			CMR_LOGI("uncommon cap number %d.",parm);
 			parm = 1;
 		}
 		cxt->total_capture_num = parm;
-		CMR_LOGI("capture num is %d.",parm);
+		CMR_LOGD("capture num is %d.",parm);
 		break;
 
 	case CAMERA_PARM_DCDV_MODE:
 		cxt->is_dv_mode = parm;
-		CMR_LOGI("camera mode %d.",parm);
+		CMR_LOGD("camera mode %d.",parm);
 		break;
 
 	case CAMERA_PARM_EXPOSURE_COMPENSATION:
@@ -1174,7 +1174,7 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->jpeg_cxt.set_encode_rotation = parm;
 			cxt->cfg_cap_rot = IMG_ROT_0;
 		}
-		CMR_LOGI("is_cfg_rot_cap :%d,rot:%d.",cxt->is_cfg_rot_cap,cxt->cfg_cap_rot);
+		CMR_LOGD("is_cfg_rot_cap :%d,rot:%d.",cxt->is_cfg_rot_cap,cxt->cfg_cap_rot);
 		break;
 
 	case CAMERA_PARM_SENSOR_ROTATION: /* 0, 90, 180, 270 degrees */
@@ -1182,7 +1182,7 @@ int camera_set_ctrl(camera_parm_type id,
 			uint32_t tmp_rot = parm;
 			camera_set_rot_angle(&tmp_rot);
 			if (tmp_rot == cxt->prev_rot){
-				CMR_LOGI("same rot setting, not changed!\n");
+				CMR_LOGD("same rot setting, not changed!\n");
 			} else {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
@@ -1308,7 +1308,7 @@ int camera_set_ctrl(camera_parm_type id,
 	case CAMERA_PARM_ZOOM:
 		cxt->zoom_mode = (uint32_t)CAMERA_PARM_ZOOM;
 		if (parm != cxt->zoom_level) {
-			CMR_LOGV("Set zoom level %d", parm);
+			CMR_LOGI("Set zoom level %d", parm);
 			cxt->zoom_level = parm;
 			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
@@ -1377,7 +1377,7 @@ int camera_set_ctrl(camera_parm_type id,
 
 	case CAMERA_PARM_ORIENTATION:
 		cxt->orientation = parm;
-		CMR_LOGI("set orientation %d.",cxt->orientation);
+		CMR_LOGD("set orientation %d.",cxt->orientation);
 		break;
 
 	case CAMERA_PARM_FLASH:/* Flash control, see camera_flash_type */
@@ -1416,12 +1416,12 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_AF_MODE:
-		CMR_LOGV("Set AF Mode %d", parm);
+		CMR_LOGI("Set AF Mode %d", parm);
 		camera_init_af_mode(parm, &skip_mode, &skip_number);
 		if (CAMERA_FOCUS_MODE_CAF_VIDEO != parm) {
 			cxt->cmr_set.af_mode = (uint32_t)parm;
 		} else {
-			CMR_LOGV("force Set AF Mode Auto");
+			CMR_LOGI("force Set AF Mode Auto");
 			cxt->cmr_set.af_mode = CAMERA_FOCUS_MODE_AUTO; /*to do*/
 		}
 		break;
@@ -1445,13 +1445,13 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_PREVIEW_MODE:/* Use camera_preview_mode_type */
-		CMR_LOGV("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
+		CMR_LOGI("parm=%d, cxt->cmr_set.video_mode = %d \n", parm, cxt->cmr_set.video_mode);
 		{
 			uint32_t video_mode = 0;
 			ret = camera_get_video_mode(parm,&video_mode);
 			CMR_RTN_IF_ERR(ret);
 			cxt->cmr_set.frame_rate = parm;
-			CMR_LOGV("cxt->preview_status = %d \n", cxt->preview_status);
+			CMR_LOGI("cxt->preview_status = %d \n", cxt->preview_status);
 			if (CMR_PREVIEW == cxt->preview_status) {
 				if (before_set) {
 					ret = (*before_set)(RESTART_LIGHTLY);
@@ -1469,7 +1469,7 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_AUTO_EXPOSURE_MODE:
-		CMR_LOGV("CAMERA_PARM_AUTO_EXPOSURE_MODE = %d \n", parm);
+		CMR_LOGI("CAMERA_PARM_AUTO_EXPOSURE_MODE = %d \n", parm);
 		if (parm != cxt->cmr_set.auto_exposure_mode) {
 			ret = camera_set_ae_measure_lum(parm, &skip_mode, &skip_number);
 			cxt->cmr_set.auto_exposure_mode = parm;
@@ -1495,9 +1495,9 @@ int camera_set_hdr_ev(int ev_level)
 
 	ev_param.cmd = SENSOR_EXT_EV;
 	ev_param.param = ev_level;
-	CMR_LOGI("level %d.",ev_param.param);
+	CMR_LOGD("level %d.",ev_param.param);
 	ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & ev_param);
-	CMR_LOGI("done %d.",ret);
+	CMR_LOGD("done %d.",ret);
 	return ret;
 }
 
@@ -1507,7 +1507,7 @@ int camera_preflash(void)
 	struct camera_context    *cxt = camera_get_cxt();
 
 #ifdef CONFIG_CAMERA_FLASH_CTRL
-	CMR_LOGI("start.");
+	CMR_LOGD("start.");
 	if (CAMERA_FLASH_MODE_AUTO == cxt->cmr_set.flash_mode) {
 		uint32_t skip_mode = 0;
 		uint32_t skip_number = 0;
@@ -1553,7 +1553,7 @@ int camera_caf_preflash(void)
 	}
 
 	if (IS_NEED_FLASH(cxt->cmr_set.flash,cxt->cap_mode)) {
-		CMR_LOGV("@xin open flash");
+		CMR_LOGI("@xin open flash");
 		camera_set_flashdevice((uint32_t)FLASH_OPEN);
 	}
 #endif
@@ -1610,7 +1610,7 @@ int camera_autofocus_start(void)
 	SENSOR_EXT_FUN_PARAM_T   af_param;
 	memset(&af_param,0,sizeof(af_param));
 
-	CMR_LOGV("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
+	CMR_LOGI("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, ptr[0], ptr[1], ptr[2], ptr[3]);
 
 	CMR_PRINT_TIME;
 	if (camera_autofocus_need_exit(&af_cancel_is_ext)) {
@@ -1670,7 +1670,7 @@ int camera_autofocus_start(void)
 		af_param.cmd = SENSOR_EXT_FOCUS_START;
 		af_param.param = SENSOR_EXT_FOCUS_MACRO;
 		af_param.zone_cnt = zone_cnt;
-		CMR_LOGV("SPRD OEM: camera_start_focus macro");
+		CMR_LOGI("SPRD OEM: camera_start_focus macro");
 		af_param.zone_cnt = 1;
 		af_param.zone[0].x = *ptr++;
 		af_param.zone[0].y = *ptr++;
@@ -1732,7 +1732,7 @@ int camera_autofocus_start(void)
 			ret = CAMERA_NOT_SUPPORTED;
 		}
 	}
-	CMR_LOGI("cnt %d",af_param.zone_cnt);
+	CMR_LOGD("cnt %d",af_param.zone_cnt);
 	if (CAMERA_SUCCESS == ret) {
 		cxt->af_busy = 1;
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
@@ -1748,7 +1748,7 @@ int camera_autofocus_start(void)
 				isp_af_param.win[i].end_x = af_param.zone[i].x + af_param.zone[i].w - 1;
 				isp_af_param.win[i].end_y = af_param.zone[i].y + af_param.zone[i].h - 1;
 
-				CMR_LOGV("af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
+				CMR_LOGI("af_win num:%d, x:%d y:%d e_x:%d e_y:%d",
 					zone_cnt,
 					isp_af_param.win[i].start_x,
 					isp_af_param.win[i].start_y,
@@ -1796,7 +1796,7 @@ int camera_autofocus_start(void)
 	}
 #endif
 	CMR_PRINT_TIME;
-	CMR_LOGV("End. %d", ret);
+	CMR_LOGI("End. %d", ret);
 
 	if (ret) {
 		ret = CAMERA_FAILED;
@@ -1813,7 +1813,7 @@ int camera_autofocus_start_light(void)
 	SENSOR_EXT_FUN_PARAM_T af_param;
 	memset(&af_param,0,sizeof(af_param));
 
-	CMR_LOGV(" caf focus move start");
+	CMR_LOGI(" caf focus move start");
 	if (V4L2_SENSOR_FORMAT_RAWRGB != cxt->sn_cxt.sn_if.img_fmt) {
 		af_param.cmd = SENSOR_EXT_FOCUS_START;
 		af_param.param = SENSOR_EXT_FOCUS_TRIG;
@@ -1843,11 +1843,11 @@ int camera_autofocus_quit(void)
 	}
 
 	if (!(cxt->af_busy)) {
-		CMR_LOGV("autofocus is IDLE direct return!");
+		CMR_LOGI("autofocus is IDLE direct return!");
 		return ret;
 	}
 
-	CMR_LOGV("set autofocus quit!");
+	CMR_LOGI("set autofocus quit!");
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		struct isp_af_win isp_af_param;
 		memset(&isp_af_param, 0, sizeof(struct isp_af_win));
@@ -1884,11 +1884,11 @@ int camera_autofocus_stop(uint32_t is_external)
 	cxt->cmr_set.af_cancelled |= 0x01;
 	cxt->cmr_set.af_cancelled |= (is_external & 0x1) << 1;
 	cxt->cmr_set.bflash = 1;
-	CMR_LOGV("af_cancelled 0x%x", cxt->cmr_set.af_cancelled);
+	CMR_LOGI("af_cancelled 0x%x", cxt->cmr_set.af_cancelled);
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
 	camera_autofocus_quit();
-	CMR_LOGV("quit.");
+	CMR_LOGI("quit.");
 	return ret;
 }
 
@@ -1903,7 +1903,7 @@ int camera_autofocus_need_exit(uint32_t *is_external)
 	pthread_mutex_unlock(&cxt->cmr_set.set_mutex);
 
 	if (ret) {
-		CMR_LOGV("af_cancelled val: 0x%x, 0x%x", cxt->cmr_set.af_cancelled, *is_external);
+		CMR_LOGI("af_cancelled val: 0x%x, 0x%x", cxt->cmr_set.af_cancelled, *is_external);
 	}
 	return ret;
 }
@@ -1913,7 +1913,7 @@ int camera_init_af_mode(uint32_t af_mode, uint32_t *skip_mode, uint32_t *skip_nu
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 
-	CMR_LOGI ("af mode %d\n", af_mode);
+	CMR_LOGD ("af mode %d\n", af_mode);
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -1960,7 +1960,7 @@ int camera_isp_ctrl_done(uint32_t cmd, void* data)
 		return CAMERA_FAILED;
 	}
 
-	CMR_LOGV("cmd, 0x%x, ret %d", cmd, ret);
+	CMR_LOGI("cmd, 0x%x, ret %d", cmd, ret);
 	return ret;
 }
 
@@ -1975,7 +1975,7 @@ int camera_isp_af_done(void *data)
 		return -1;
 	}
 	pthread_mutex_lock(&cxt->cmr_set.isp_af_mutex);
-	CMR_LOGV("AF done, valid_win 0x%x, isp_af_timeout %d",
+	CMR_LOGI("AF done, valid_win 0x%x, isp_af_timeout %d",
 		isp_af->valid_win, cxt->cmr_set.isp_af_timeout);
 	cxt->cmr_set.isp_af_win_val = isp_af->valid_win;
 	if (cxt->cmr_set.isp_af_timeout == 0) {
@@ -1991,7 +1991,7 @@ int camera_isp_alg_done(void *data)
 	struct camera_context    *cxt = camera_get_cxt();
 
 	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
-	CMR_LOGV("isp ALG done.");
+	CMR_LOGI("isp ALG done.");
 	if (0 == cxt->cmr_set.isp_alg_timeout) {
 		sem_post(&cxt->cmr_set.isp_alg_sem);
 	}
@@ -2003,7 +2003,7 @@ int camera_isp_af_stat(void* data)
 {
 	struct camera_context    *cxt = camera_get_cxt();
 
-	CMR_LOGV("isp get af stat.\n");
+	CMR_LOGI("isp get af stat.\n");
 
 	return 0;
 }
@@ -2014,7 +2014,7 @@ int camera_isp_ae_stab(void* data)
 	int tmpVal = 0;
 
 	pthread_mutex_lock(&cxt->cmr_set.isp_ae_stab_mutex);
-	CMR_LOGV("callback return.now eb: %d timeout: %d", cxt->is_isp_ae_stab_eb ,cxt->cmr_set.isp_ae_stab_timeout);
+	CMR_LOGI("callback return.now eb: %d timeout: %d", cxt->is_isp_ae_stab_eb ,cxt->cmr_set.isp_ae_stab_timeout);
 	sem_getvalue(&cxt->cmr_set.isp_ae_stab_sem, &tmpVal);
 	while (0 < tmpVal) {
 		sem_wait(&cxt->cmr_set.isp_ae_stab_sem);
@@ -2050,7 +2050,7 @@ int camera_isp_alg_wait(void)
 		} else {
 			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			cxt->cmr_set.isp_alg_timeout = 0;
-			CMR_LOGV("done.");
+			CMR_LOGI("done.");
 		}
 	}
 	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
@@ -2062,7 +2062,7 @@ int camera_set_flashdevice(uint32_t param)
 	int                      ret = 0;
 	struct camera_context    *cxt = camera_get_cxt();
 
-	CMR_LOGI("test flash:0x%x.",param);
+	CMR_LOGD("test flash:0x%x.",param);
 
 	if (0 != cxt->camera_id) {
 		CMR_LOGW("don't support flash.");
@@ -2085,13 +2085,13 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 	SENSOR_AE_INFO_T         *sensor_ae_info;
 
 	if (PNULL == video_mode) {
-		CMR_LOGI("null pointer.");
+		CMR_LOGD("null pointer.");
 		return CAMERA_FAILED;
 	}
 	*video_mode = 0;
 	sensor_mode = cxt->sn_cxt.preview_mode;
 	sensor_ae_info = (SENSOR_AE_INFO_T*)&cxt->sn_cxt.sensor_info->sensor_video_info[sensor_mode];
-	CMR_LOGV("sensor_mode %d.",sensor_mode);
+	CMR_LOGI("sensor_mode %d.",sensor_mode);
 	for (i=0 ; i<SENSOR_VIDEO_MODE_MAX ; i++) {
 		if (frame_rate <= sensor_ae_info[i].max_frate) {
 			*video_mode = i;
@@ -2099,9 +2099,9 @@ int camera_get_video_mode(uint32_t frame_rate, uint32_t *video_mode)
 		}
 	}
 	if (SENSOR_VIDEO_MODE_MAX == i) {
-		CMR_LOGI("use default video mode");
+		CMR_LOGD("use default video mode");
 	}
-	CMR_LOGI("video mode:%d.",*video_mode);
+	CMR_LOGD("video mode:%d.",*video_mode);
 	return ret;
 }
 
@@ -2116,7 +2116,7 @@ int camera_ae_enable(uint32_t param)
 {
 	int	ret = CAMERA_SUCCESS;
 
-	CMR_LOGV("ae enable %d.", param);
+	CMR_LOGI("ae enable %d.", param);
 	ret = Sensor_Ioctl(SENSOR_IOCTL_AE_ENABLE, param);
 	if (ret) {
 		CMR_LOGE("ae enable err.");
