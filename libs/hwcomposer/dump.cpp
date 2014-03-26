@@ -307,6 +307,37 @@ void queryDumpFlag(int *dumpFlag)
     }
 }
 
+
+void queryIntFlag(char* strProperty,int *IntFlag)
+{
+    if (IntFlag == NULL || strProperty == NULL)
+    {
+        ALOGE("queryIntFlag, input parameter is NULL");
+        return;
+    }
+
+    char value[PROPERTY_VALUE_MAX];
+
+    if (0 != property_get(strProperty, value, "0"))
+    {
+        int flag =atoi(value);
+
+        if (flag != 0)
+        {
+            *IntFlag = flag;
+        }
+        else
+        {
+            *IntFlag = 0;
+        }
+    }
+    else
+    {
+        *IntFlag = 0;
+    }
+}
+
+
 int dumpImage(hwc_display_contents_1_t *list)
 {
     static int index = 0;
@@ -379,35 +410,6 @@ int dumpOverlayImage(private_handle_t* buffer, const char *name)
     index++;
 
     return 0;
-}
-
-void queryEndianFlag(char* str,int *dumpFlag)
-{
-    if (dumpFlag == NULL)
-    {
-        ALOGE("queryDumpFlag, input parameter is NULL");
-        return;
-    }
-
-    char value[PROPERTY_VALUE_MAX];
-
-    if (0 != property_get(str, value, "0"))
-    {
-        int flag =atoi(value);
-
-        if (flag != 0)
-        {
-            *dumpFlag = flag;
-        }
-        else
-        {
-            *dumpFlag = 0;
-        }
-    }
-    else
-    {
-        *dumpFlag = 0;
-    }
 }
 
 

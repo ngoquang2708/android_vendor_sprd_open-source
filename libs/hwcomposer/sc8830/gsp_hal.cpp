@@ -590,6 +590,7 @@ notes:
 int32_t gsp_hal_close(int32_t gsp_fd)
 {
     if(gsp_fd == -1) {
+        ALOGE("%s[%d]: err gsp_fd is null! return.\n",__func__, __LINE__);
         return GSP_HAL_PARAM_ERR;
     }
 
@@ -635,6 +636,33 @@ int32_t gsp_hal_config(int32_t gsp_fd,GSP_CONFIG_INFO_T *gsp_cfg_info)
     return ret;
 }
 
+
+/*
+func:gsp_get_addr_type
+desc:set GSP device config parameters
+return:
+notes:
+*/
+int32_t gsp_get_addr_type(int32_t gsp_fd,GSP_ADDR_TYPE_E* pType)
+{
+    int32_t ret = 0;
+
+    if(gsp_fd == -1 || pType == NULL){
+        ALOGE("%s[%d]: err gsp_fd is null,or pType is null! return.\n",__func__,__LINE__);
+        return GSP_HAL_PARAM_ERR;
+    }
+
+    ALOGI_IF(debugenable,"gsp get addr type,ctl code:%08x,Line:%d \n", GSP_IO_GET_ADDR_TYPE,__LINE__);
+    ret = ioctl(gsp_fd, GSP_IO_GET_ADDR_TYPE, 1);
+    ALOGI_IF(debugenable,"gsp get addr type return %d,Line:%d \n", ret,__LINE__);
+    if(GSP_ADDR_TYPE_INVALUE < ret && ret < GSP_ADDR_TYPE_MAX){
+        *pType = (GSP_ADDR_TYPE_E)ret;
+        ret = 0;
+    } else {
+        ALOGE("%s[%d]: get addr type return err!\n",__func__,__LINE__);
+    }
+    return ret;
+}
 
 
 /*
@@ -733,7 +761,44 @@ exit:
     //ret = gsp_hal_close(gsp_fd);
     gsp_hal_close(gsp_fd);
     return ret;
+}
 
+
+/*
+func:GSP_GetAddrType
+desc:get the address type of GSP can process, virtual addr, or physical
+return:
+*/
+int32_t GSP_GetAddrType(GSP_ADDR_TYPE_E* pType)
+{
+    int32_t ret = 0;
+    int32_t gsp_fd = -1;
+    static volatile GSP_ADDR_TYPE_E s_GSPAddrType = GSP_ADDR_TYPE_INVALUE;
+
+    if(pType == NULL) {
+        ALOGE("%s[%d]: err pType is null! return.\n",__func__,__LINE__);
+        return GSP_HAL_PARAM_ERR;
+    }
+    *pType = s_GSPAddrType;
+
+    if(*pType == GSP_ADDR_TYPE_INVALUE) {
+        gsp_fd = gsp_hal_open();
+        if(-1 == gsp_fd) {
+            ALOGE("%s:%d,opend gsp failed \n", __func__, __LINE__);
+            return GSP_HAL_KERNEL_DRIVER_NOT_EXIST;
+        }
+
+        ret = gsp_get_addr_type(gsp_fd,pType);
+        if(0 != ret) {
+            ALOGE("%s:%d,gsp_get_addr_type() failed \n", __func__, __LINE__);
+            goto exit;
+        }
+        s_GSPAddrType = *pType;
+
+exit:
+        gsp_hal_close(gsp_fd);
+    }
+    return ret;
 }
 
 
@@ -1679,6 +1744,8 @@ static int open_gsp(const struct hw_module_t* module,
     ctx->device.transform_layer = transform_layer;
 #endif
     ctx->device.GSP_Proccess = GSP_Proccess;
+    ctx->device.GSP_GetAddrType = GSP_GetAddrType;
+
     ctx->mAlpha = 0;
     ctx->mFlags = 0;
     ctx->mFD = 0;//gsp_hal_open();

@@ -50,6 +50,9 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
 #endif
      mVsyncEvent(0),
      mUtil(0),
+#ifdef PROCESS_VIDEO_USE_GSP
+     mGSPAddrType(0),
+#endif
      mPostFrameBuffer(true),
      mHWCDisplayFlag(HWC_DISPLAY_MASK),
      mDebugFlag(0),
@@ -66,7 +69,19 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         return false;
     }
 
+    mUtil = new SprdUtil(mFBInfo);
+    if (mUtil == NULL) {
+        ALOGE("new SprdUtil failed");
+        return false;
+    }
+#ifdef PROCESS_VIDEO_USE_GSP
+    if(mGSPAddrType == 0) {
+        mGSPAddrType = mUtil->getGSPAddrType();
+    }
+    mLayerList = new SprdHWLayerList(mFBInfo,mGSPAddrType);
+#else
     mLayerList = new SprdHWLayerList(mFBInfo);
+#endif
     if (mLayerList == NULL)
     {
         ALOGE("new SprdHWLayerList failed");
@@ -120,12 +135,7 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         return false;
     }
 
-    mUtil = new SprdUtil(mFBInfo);
-    if (mUtil == NULL)
-    {
-        ALOGE("new SprdUtil failed");
-        return false;
-    }
+
 
     *fbInfo = mFBInfo;
 

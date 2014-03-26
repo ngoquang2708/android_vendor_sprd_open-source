@@ -39,6 +39,9 @@
 #include "SprdFrameBufferHAL.h"
 #include "SprdHWLayerList.h"
 #include "dump.h"
+#ifdef PROCESS_VIDEO_USE_GSP
+#include "gsp_types_shark.h"
+#endif
 
 
 using namespace android;
@@ -538,13 +541,11 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifdef PROCESS_VIDEO_USE_GSP
 #ifndef OVERLAY_COMPOSER_GPU
-#ifdef GSP_ADDR_TYPE_PHY
-    if (!(l->checkContiguousPhysicalAddress(privateH)))
+    if((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
         return 0;
     }
-#endif
 #endif
 #else
 #ifndef OVERLAY_COMPOSER_GPU
@@ -574,8 +575,8 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 #ifndef _DMA_COPY_OSD_LAYER
 #ifndef OVERLAY_COMPOSER_GPU
-#ifdef GSP_ADDR_TYPE_PHY
-        if (!(l->checkContiguousPhysicalAddress(privateH)))
+#ifdef PROCESS_VIDEO_USE_GSP
+        if((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not physical address %d", __LINE__);
             return 0;
@@ -587,8 +588,8 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     else if (((unsigned int)privateH->width != mFBHeight)
              || ((unsigned int)privateH->height != mFBWidth)
 #ifndef OVERLAY_COMPOSER_GPU
-#ifdef GSP_ADDR_TYPE_PHY
-             || !(l->checkContiguousPhysicalAddress(privateH))
+#ifdef PROCESS_VIDEO_USE_GSP
+             || ((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
 #endif
 #endif
     )
@@ -684,13 +685,8 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     mYUVLayerCount++;
 
 #ifdef PROCESS_VIDEO_USE_GSP
-#ifdef GSP_ADDR_TYPE_PHY
-	if (!(l->checkContiguousPhysicalAddress(privateH))
+    if(((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
         || l->checkNotSupportOverlay(privateH))
-#elif defined (GSP_ADDR_TYPE_IOVA)
-	if (/*!(l->checkContiguousPhysicalAddress(privateH))
-        || */l->checkNotSupportOverlay(privateH))
-#endif
     {
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;

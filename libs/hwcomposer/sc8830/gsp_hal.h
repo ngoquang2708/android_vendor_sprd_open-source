@@ -123,6 +123,12 @@ note:1 the source and destination image buffer should be physical-coherent memor
 extern int32_t GSP_Proccess(GSP_CONFIG_INFO_T *pgsp_cfg_info);
 
 
+/*
+func:GSP_GetAddrType
+desc:get the address type of GSP can process, virtual addr, or physical
+return:
+*/
+extern int32_t GSP_GetAddrType(GSP_ADDR_TYPE_E* pType);
 
 
 
@@ -358,6 +364,12 @@ typedef struct gsp_device_t
     */
     int32_t (*GSP_Proccess)(GSP_CONFIG_INFO_T *pgsp_cfg_info);//GSP_Proccess
 
+    /*
+    func:GSP_GetAddrType
+    desc:get the address type of GSP can process, virtual addr, or physical
+    return:
+    */
+    int32_t (*GSP_GetAddrType)(GSP_ADDR_TYPE_E* pType);
 
 } gsp_device_t;
 
