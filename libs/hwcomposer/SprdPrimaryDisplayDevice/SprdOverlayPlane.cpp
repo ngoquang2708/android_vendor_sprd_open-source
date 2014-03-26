@@ -265,7 +265,7 @@ private_handle_t* SprdOverlayPlane::flush()
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
 #ifdef GSP_ENDIAN_IMPROVEMENT
         BaseContext->rb_switch = 1;
-        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
+        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B2B3B0B1;
 #else
         BaseContext->rb_switch = 0;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;

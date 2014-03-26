@@ -202,6 +202,11 @@ SprdUtil::~SprdUtil()
 #endif
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
+    if(copyTempBuffer)
+    {
+        GraphicBufferAllocator::get().free((buffer_handle_t)copyTempBuffer);
+        copyTempBuffer = NULL;
+    }
     if (mGspDev)
     {
         mGspDev->common.close(&(mGspDev->common));
@@ -403,11 +408,12 @@ int SprdUtil:: acquireTmpBuffer(int width, int height, int format, private_handl
     return 0;
 
 AllocGFXBuffer:
-#ifdef GSP_ADDR_TYPE_PHY
-    GraphicBufferAllocator::get().alloc(width, height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
-#elif defined (GSP_ADDR_TYPE_IOVA)
-    GraphicBufferAllocator::get().alloc(width, height, format, 0, (buffer_handle_t*)&tmpBuffer, &stride);
-#endif
+    if(mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) {
+        GraphicBufferAllocator::get().alloc(width, height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
+    } else if(mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL) {
+        GraphicBufferAllocator::get().alloc(width, height, format, 0, (buffer_handle_t*)&tmpBuffer, &stride);
+    }
+
     if (tmpBuffer == NULL)
     {
         ALOGE("Cannot alloc the tmpBuffer ION buffer");
@@ -417,12 +423,233 @@ AllocGFXBuffer:
     return 0;
 }
 
+int SprdUtil::getGSPAddrType(void)
+{
+    int32_t ret = 0;
+    if(mGSPAddrType == GSP_ADDR_TYPE_INVALUE) {
+        if (mGspDev == 0) {
+            int r = openGSPDevice();
+            if (r != 0 || mGspDev == 0) {
+                ALOGE("open GSP device failed!");
+                return -1;
+            }
+        }
+        if(mGspDev) {
+            ret = mGspDev->GSP_GetAddrType((GSP_ADDR_TYPE_E*)&mGSPAddrType);
+            if(ret != 0) {
+                ALOGE("GSP_GetAddrType return err!");
+            }
+        }
+    }
+    ALOGE("GSP_GetAddrType : %d",mGSPAddrType);
+    return mGSPAddrType;
+}
+
+#ifdef  GSP_BOUND_BYPASS_COPY2_PA
+/*
+func:gsp_process_va_copy2_pa
+desc:copy va image buffer to pa buffer,
+warning: the layer0 image must yuv420_2p, layer1 must be RGB,
+         the pa buffer size is fixed in the function, can't over that size.
+*/
+int SprdUtil::gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info)
+{
+#ifdef GSP_BOUND_BYPASS_COPY2_PA_720P
+#define VIDEO_MAX_WIDTH 1280
+#define VIDEO_MAX_HEIGHT 720
+#else
+#define VIDEO_MAX_WIDTH 1920
+#define VIDEO_MAX_HEIGHT 1080
+#endif
+	int OSD_MAX_WIDTH = 0;
+	int OSD_MAX_HEIGHT = 0;
+
+    int stride = 0;
+    int ret = 0;
+    int size = 0;
+    //int format = HAL_PIXEL_FORMAT_RGBA_8888;
+    GSP_CONFIG_INFO_T cfg_info;
+    void* vaddr = NULL;
+
+	if((pgsp_cfg_info == NULL)
+		||((pgsp_cfg_info->layer0_info.layer_en == 1)&&((pgsp_cfg_info->layer1_info.layer_en == 1) && (pgsp_cfg_info->layer1_info.pallet_en == 0)))
+		||((pgsp_cfg_info->layer0_info.layer_en == 0)&&(pgsp_cfg_info->layer1_info.layer_en == 0))){
+        ALOGE("%s[%d],pgsp_cfg_info==NULL or two layers are both enabled/disabled, return!",__func__,__LINE__);
+        return -1;
+    }
+	cfg_info = *pgsp_cfg_info;
+
+	if(mFBInfo == NULL){
+        ALOGE("%s[%d],mFBInfo==NULL, return!",__func__,__LINE__);
+        return -1;
+    }
+	OSD_MAX_WIDTH = mFBInfo->fb_width+2;// sometimes , surfaceflinger sends 856x480 rgb data, which is larger than fb size
+	OSD_MAX_HEIGHT = mFBInfo->fb_height+2;
+
+
+    if((cfg_info.layer0_info.layer_en == 1)
+		&&((cfg_info.layer0_info.img_format != GSP_SRC_FMT_YUV420_2P)
+		    ||(cfg_info.layer0_info.pitch*(cfg_info.layer0_info.clip_rect.st_y+cfg_info.layer0_info.clip_rect.rect_h) > VIDEO_MAX_WIDTH*VIDEO_MAX_HEIGHT))){
+        ALOGE("%s[%d], format:%d is not yuv4202p or video src buffer is larger than the pa buffer!",__func__,__LINE__,cfg_info.layer0_info.img_format);
+        return -1;
+    }
+
+    if(cfg_info.layer1_info.layer_en == 1) {
+		if(cfg_info.layer1_info.pallet_en == 0){
+			if(cfg_info.layer1_info.pitch*(cfg_info.layer1_info.clip_rect.st_y+cfg_info.layer1_info.clip_rect.rect_h) > OSD_MAX_WIDTH*OSD_MAX_HEIGHT){
+				ALOGE("%s[%d], osd src buffer is larger than the pa buffer!",__func__,__LINE__);
+				return -1;
+			}
+		} else {
+			ALOGI_IF(mDebugFlag,"%s[%d], osd is pallet, don't need copy!",__func__,__LINE__);
+		}
+    }
+
+    if(copyTempBuffer == NULL){
+        //GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&copyTempBuffer, &stride);
+        if(OSD_MAX_WIDTH*OSD_MAX_HEIGHT*4 > VIDEO_MAX_WIDTH*VIDEO_MAX_HEIGHT*1.5)
+        {
+            GraphicBufferAllocator::get().alloc(OSD_MAX_WIDTH, OSD_MAX_HEIGHT, HAL_PIXEL_FORMAT_RGBA_8888, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&copyTempBuffer, &stride);
+        }
+		else
+		{
+			GraphicBufferAllocator::get().alloc(VIDEO_MAX_WIDTH, VIDEO_MAX_HEIGHT, HAL_PIXEL_FORMAT_YCbCr_420_SP, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&copyTempBuffer, &stride);
+		}
+        if (copyTempBuffer != NULL){
+            Rect bounds(mFBInfo->fb_width, mFBInfo->fb_height);
+            copyTempBuffer->phyaddr = NULL;
+            copyTempBuffer->base = NULL;
+            MemoryHeapIon::Get_phy_addr_from_ion(copyTempBuffer->share_fd, &(copyTempBuffer->phyaddr), &size);
+            GraphicBufferMapper::get().lock((buffer_handle_t)copyTempBuffer, GRALLOC_USAGE_SW_READ_OFTEN, bounds, &vaddr);//(&(copyTempBuffer->base))
+            copyTempBuffer->base = (int)vaddr;
+            if(copyTempBuffer->phyaddr == NULL
+                /*||copyTempBuffer->base == NULL*/){
+                ALOGE("%s[%d],phyaddr==0x%08x base==0x%08x,alloc buffer failed!",__func__,__LINE__,
+                copyTempBuffer->phyaddr,
+                copyTempBuffer->base);
+                ret = -1;
+                return ret;
+            } else {
+                ALOGI_IF(mDebugFlag,"%s[%d],phyaddr==0x%08x base==0x%08x,alloc buffer succes!",__func__,__LINE__,
+                copyTempBuffer->phyaddr,
+                copyTempBuffer->base);
+                ret = 0;
+            }
+        } else {
+            ALOGE("%s[%d],copyTempBuffer==NULL,alloc buffer failed!",__func__,__LINE__);
+            ret = -1;
+            return ret;
+        }
+    }
+
+    if(cfg_info.layer0_info.layer_en == 1) {
+        // video layer : va cpy pa scaling&rotation pa
+        // osd layer : disable, do not care
+        cfg_info.layer1_info.layer_en = 0;
+        cfg_info.layer0_info.clip_rect.rect_w = cfg_info.layer0_info.pitch;
+        cfg_info.layer0_info.clip_rect.st_x = 0;
+        cfg_info.layer0_info.clip_rect.rect_h += cfg_info.layer0_info.clip_rect.st_y;
+        cfg_info.layer0_info.clip_rect.st_y = 0;
+
+        cfg_info.layer_des_info.src_addr.addr_y = copyTempBuffer->phyaddr;
+        cfg_info.layer_des_info.src_addr.addr_uv =
+            cfg_info.layer_des_info.src_addr.addr_v =
+            cfg_info.layer_des_info.src_addr.addr_y +
+            cfg_info.layer0_info.clip_rect.rect_w*cfg_info.layer0_info.clip_rect.rect_h;
+        cfg_info.layer0_info.des_rect = cfg_info.layer0_info.clip_rect;
+        cfg_info.layer0_info.rot_angle = GSP_ROT_ANGLE_0;
+		cfg_info.layer_des_info.img_format = (GSP_LAYER_DST_DATA_FMT_E)cfg_info.layer0_info.img_format;
+		cfg_info.layer_des_info.endian_mode = cfg_info.layer0_info.endian_mode;
+
+        cfg_info.layer_des_info.pitch = cfg_info.layer0_info.clip_rect.rect_w;
+    } else {
+        // video layer : disable, do not care
+        // osd layer : va cpy pa scaling&rotation pa
+        cfg_info.layer0_info.layer_en = 0;
+        cfg_info.layer1_info.clip_rect.rect_w = cfg_info.layer1_info.pitch;
+        cfg_info.layer1_info.clip_rect.st_x = 0;
+        cfg_info.layer1_info.clip_rect.rect_h += cfg_info.layer1_info.clip_rect.st_y;
+        cfg_info.layer1_info.clip_rect.st_y = 0;
+
+        cfg_info.layer_des_info.src_addr.addr_y = copyTempBuffer->phyaddr;
+        cfg_info.layer_des_info.src_addr.addr_uv =
+            cfg_info.layer_des_info.src_addr.addr_v =
+            cfg_info.layer_des_info.src_addr.addr_y +
+            cfg_info.layer1_info.clip_rect.rect_w*cfg_info.layer1_info.clip_rect.rect_h;// u v address should not be used by GSP, color is rgb
+        cfg_info.layer1_info.des_pos.pos_pt_x =
+            cfg_info.layer1_info.des_pos.pos_pt_y = 0;
+        cfg_info.layer1_info.rot_angle = GSP_ROT_ANGLE_0;
+		cfg_info.layer_des_info.img_format = (GSP_LAYER_DST_DATA_FMT_E)cfg_info.layer1_info.img_format;
+		cfg_info.layer_des_info.endian_mode = cfg_info.layer1_info.endian_mode;
+
+        cfg_info.layer_des_info.pitch = cfg_info.layer1_info.clip_rect.rect_w;
+
+    }
+
+    cfg_info.misc_info.split_pages = 1;//
+
+    ALOGI_IF(mDebugFlag,"gsp_process_va_copy2_pa[%d],L1==%d yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+		     cfg_info.layer0_info.layer_en,
+             cfg_info.layer0_info.src_addr.addr_y,
+             cfg_info.layer0_info.pitch,
+             0,//private_h1->height,
+             cfg_info.layer0_info.img_format,
+             cfg_info.layer0_info.clip_rect.st_x,
+             cfg_info.layer0_info.clip_rect.st_y,
+             cfg_info.layer0_info.clip_rect.rect_w,
+             cfg_info.layer0_info.clip_rect.rect_h,
+             cfg_info.layer0_info.rot_angle,
+             cfg_info.layer0_info.des_rect.st_x,
+             cfg_info.layer0_info.des_rect.st_y,
+             cfg_info.layer0_info.des_rect.rect_w,
+             cfg_info.layer0_info.des_rect.rect_h);
+
+    ALOGI_IF(mDebugFlag,"gsp_process_va_copy2_pa[%d],L2==%d yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d]",__LINE__,
+			 cfg_info.layer1_info.layer_en,
+             cfg_info.layer1_info.src_addr.addr_y,
+             cfg_info.layer1_info.pitch,
+             0,//private_h2->height,
+             cfg_info.layer1_info.img_format,
+             cfg_info.layer1_info.clip_rect.st_x,
+             cfg_info.layer1_info.clip_rect.st_y,
+             cfg_info.layer1_info.clip_rect.rect_w,
+             cfg_info.layer1_info.clip_rect.rect_h,
+             cfg_info.layer1_info.rot_angle,
+             cfg_info.layer1_info.des_pos.pos_pt_x,
+             cfg_info.layer1_info.des_pos.pos_pt_y);
+
+    ALOGI_IF(mDebugFlag,"gsp_process_va_copy2_pa[%d],Ld y_addr==%08x size==%08x {p%d,s%d,f%d}!",__LINE__,
+             cfg_info.layer_des_info.src_addr.addr_y,
+             size,
+             cfg_info.layer_des_info.pitch,
+             0,
+             cfg_info.layer_des_info.img_format);
+
+    ret = mGspDev->GSP_Proccess(&cfg_info);
+    if(ret == 0){
+		if(cfg_info.layer0_info.layer_en == 1){
+	        pgsp_cfg_info->layer0_info.src_addr.addr_y = cfg_info.layer_des_info.src_addr.addr_y;
+	        pgsp_cfg_info->layer0_info.src_addr.addr_uv =
+				pgsp_cfg_info->layer0_info.src_addr.addr_v = cfg_info.layer_des_info.src_addr.addr_v;
+		} else {
+			pgsp_cfg_info->layer1_info.src_addr.addr_y = cfg_info.layer_des_info.src_addr.addr_y;
+	        pgsp_cfg_info->layer1_info.src_addr.addr_uv =
+				pgsp_cfg_info->layer1_info.src_addr.addr_v = cfg_info.layer_des_info.src_addr.addr_v;
+		}
+        ALOGI_IF(mDebugFlag,"%s[%d], GSP_Proccess succes!",__func__,__LINE__);
+        pgsp_cfg_info->misc_info.split_pages = 0;//
+    } else {
+        ALOGE("%s[%d], GSP_Proccess failed:%d!",__func__,__LINE__,ret);
+    }
+    return ret;
+}
+#endif
+
 int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2)
 {
     int32_t ret = 0;
     int size = 0;
     int mmu_addr = 0;
-    static int openFlag = 0;
     hwc_layer_1_t *layer1 = NULL;
     hwc_layer_1_t *layer2 = NULL;
     int layer2_Format = -1;
@@ -434,15 +661,10 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
     int buffersize_layert = 0;//scaling up twice temp
 
     queryDebugFlag(&mDebugFlag);
-
-    if (openFlag == 0)
-    {
-        int r = openGSPDevice();
-        openFlag = 1;
-        if (r != 0)
-        {
-            ALOGE("open GSP device failed");
-            openFlag = 0;
+    if(mGSPAddrType == GSP_ADDR_TYPE_INVALUE) {
+        getGSPAddrType();
+        if(mGSPAddrType == GSP_ADDR_TYPE_INVALUE) {
+            ALOGE("ERR:can't get GSP address type!");
             return -1;
         }
     }
@@ -486,6 +708,10 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         }
 
         private_h1 = (struct private_handle_t *)(layer1->handle);
+        if(private_h1 == NULL) {
+            ALOGE("private_h2 == NULL,return,L%d",__LINE__);
+            return -1;
+        }
 
         ALOGI_IF(mDebugFlag,"GSP check layer1 L%d,L1 info [f:%d,x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  private_h1->format,
@@ -496,13 +722,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                  FBRect1->x, FBRect1->y,
                  FBRect1->w, FBRect1->h);
 
-
-#ifdef GSP_ADDR_TYPE_PHY
-        if(private_h1 && (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
-#elif defined (GSP_ADDR_TYPE_IOVA)
-        if(private_h1 /*&& (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY)*/)
-#endif
-        {
+        if(private_h1 &&
+            ((mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL)
+                ||((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && (private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY)))) {
             video_check_result = 1;
 
             //config Video ,use GSP L0
@@ -526,22 +748,20 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 ALOGE("SprdUtil::composerLayers[%d],private_h1->format:%d not supported",__LINE__,private_h1->format);
                 return -1;
             }
-#ifdef GSP_ADDR_TYPE_PHY
-            MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
-            gsp_cfg_info.layer0_info.src_addr.addr_y = private_h1->phyaddr;
-#elif defined (GSP_ADDR_TYPE_IOVA)
-            //gsp_cfg_info.layer0_info.src_addr.addr_y = ion_get_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer1);
-            if((MemoryHeapIon::Get_gsp_iova(private_h1->share_fd, &mmu_addr, &buffersize_layer1) == 0) && (mmu_addr != 0) && (buffersize_layer1 > 0))
-            {
-                gsp_cfg_info.layer0_info.src_addr.addr_y = mmu_addr;
-                ALOGE("[%d] map L0 iommu addr success!",__LINE__);
+            if(mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) {
+                MemoryHeapIon::Get_phy_addr_from_ion(private_h1->share_fd, &(private_h1->phyaddr), &size);
+                gsp_cfg_info.layer0_info.src_addr.addr_y = private_h1->phyaddr;
             }
-            else
-            {
-                ALOGI_IF(mDebugFlag,"[%d] map L0 iommu addr failed!",__LINE__);
-                return -1;
+            else if(mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL) {
+                //gsp_cfg_info.layer0_info.src_addr.addr_y = ion_get_dev_addr(private_h1->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer1);
+                if((MemoryHeapIon::Get_gsp_iova(private_h1->share_fd, &mmu_addr, &buffersize_layer1) == 0) && (mmu_addr != 0) && (buffersize_layer1 > 0)) {
+                    gsp_cfg_info.layer0_info.src_addr.addr_y = mmu_addr;
+                    ALOGE("[%d] map L0 iommu addr success!",__LINE__);
+                } else {
+                    ALOGI_IF(mDebugFlag,"[%d] map L0 iommu addr failed!",__LINE__);
+                    return -1;
+                }
             }
-#endif
             ALOGI_IF(mDebugFlag,"gsp_iommu[%d] mapped L1 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
             gsp_cfg_info.layer0_info.src_addr.addr_v
                 = gsp_cfg_info.layer0_info.src_addr.addr_uv
@@ -636,15 +856,18 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         layer2 = l2->getAndroidLayer();
         struct sprdRect *srcRect2 = l2->getSprdSRCRect();
         struct sprdRect *FBRect2 = l2->getSprdFBRect();
-
         if (layer2 == NULL ||
             srcRect2 == NULL || FBRect2 == NULL)
         {
-            ALOGE("Failed to get OSD SprdHWLayer parameters");
+            ALOGE("Failed to get OSD SprdHWLayer parameters,L%d",__LINE__);
             return -1;
         }
 
         private_h2 = (struct private_handle_t *)(layer2->handle);
+        if(private_h2 == NULL) {
+            ALOGE("private_h2 == NULL,return,L%d",__LINE__);
+            return -1;
+        }
 
         ALOGI_IF(mDebugFlag,"GSP check layer2 L%d,L2 info [f:%d,x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  private_h2->format,
@@ -655,12 +878,9 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                  mFBInfo->fb_width, mFBInfo->fb_height);
 
         layer2_Format = private_h2->format;
-#ifdef GSP_ADDR_TYPE_PHY
-        if(private_h2->flags && (private_h2->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
-#elif defined (GSP_ADDR_TYPE_IOVA)
-        if(private_h2->flags/* && (private_h2->flags & private_handle_t::PRIV_FLAGS_USES_PHY)*/)
-#endif
-        {
+        if(private_h2->flags &&
+            ((mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL)
+                ||((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && (private_h2->flags & private_handle_t::PRIV_FLAGS_USES_PHY)))) {
             osd_check_result = 1;
             //config OSD,use GSP L1
             if (layer2_Format == HAL_PIXEL_FORMAT_RGBA_8888 ||
@@ -670,55 +890,45 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             }
             else if (layer2_Format == HAL_PIXEL_FORMAT_RGB_565)
             {
-            /*
+#if 0
                 int EndianFlag0 = 0;//rgb swap
                 int EndianFlag1 = 0;// y endian
-                queryEndianFlag("endian0.hwc.flag",&EndianFlag0);
-                queryEndianFlag("endian1.hwc.flag",&EndianFlag1);
+                queryIntFlag("endian0.hwc.flag",&EndianFlag0);
+                queryIntFlag("endian1.hwc.flag",&EndianFlag1);
                 gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
                 gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = (GSP_RGB_SWAP_MOD_E)(EndianFlag0 & 0x7);
-                gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_BGR;
                 gsp_cfg_info.layer1_info.endian_mode.y_word_endn = (GSP_WORD_ENDN_E)(EndianFlag1 & 0x3);
                 gsp_cfg_info.layer1_info.endian_mode.y_lng_wrd_endn = (GSP_LNG_WRD_ENDN_E)(EndianFlag1 & 0x4);
-            */
+#else
                 gsp_cfg_info.layer1_info.img_format = GSP_SRC_FMT_RGB565;
                 gsp_cfg_info.layer1_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_BGR;
-            /*
-            int EndianFlag0 = 0;//rgb swap
-            int EndianFlag1 = 0;// y endian
-
-            queryEndianFlag("layer.hwc.pitch",&EndianFlag0);
-            */
+#endif
             }
-#ifdef GSP_ADDR_TYPE_PHY
-            MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
-            gsp_cfg_info.layer1_info.src_addr.addr_v =
-                gsp_cfg_info.layer1_info.src_addr.addr_uv =
-                    gsp_cfg_info.layer1_info.src_addr.addr_y = private_h2->phyaddr;
-#elif defined (GSP_ADDR_TYPE_IOVA)
-            //    gsp_cfg_info.layer1_info.src_addr.addr_v =
-            //        gsp_cfg_info.layer1_info.src_addr.addr_uv =
-            //            gsp_cfg_info.layer1_info.src_addr.addr_y = ion_get_dev_addr(private_h2->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer2);
-            if((MemoryHeapIon::Get_gsp_iova(private_h2->share_fd, &mmu_addr, &buffersize_layer2) == 0) && (mmu_addr != 0) && (buffersize_layer2 > 0))
-            {
+            if(mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) {
+                MemoryHeapIon::Get_phy_addr_from_ion(private_h2->share_fd, &(private_h2->phyaddr), &size);
                 gsp_cfg_info.layer1_info.src_addr.addr_v =
                 gsp_cfg_info.layer1_info.src_addr.addr_uv =
-                gsp_cfg_info.layer1_info.src_addr.addr_y = mmu_addr;
-                ALOGI_IF(mDebugFlag,"[%d] map L2 iommu addr success!",__LINE__);
-            }
-            else
-            {
-                ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
-                return -1;
-            }
+                gsp_cfg_info.layer1_info.src_addr.addr_y = private_h2->phyaddr;
+            } else if(mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL) {
+                //    gsp_cfg_info.layer1_info.src_addr.addr_v =
+                //        gsp_cfg_info.layer1_info.src_addr.addr_uv =
+                //            gsp_cfg_info.layer1_info.src_addr.addr_y = ion_get_dev_addr(private_h2->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layer2);
+                if((MemoryHeapIon::Get_gsp_iova(private_h2->share_fd, &mmu_addr, &buffersize_layer2) == 0) && (mmu_addr != 0) && (buffersize_layer2 > 0)) {
+                    gsp_cfg_info.layer1_info.src_addr.addr_v =
+                    gsp_cfg_info.layer1_info.src_addr.addr_uv =
+                    gsp_cfg_info.layer1_info.src_addr.addr_y = mmu_addr;
+                    ALOGI_IF(mDebugFlag,"[%d] map L2 iommu addr success!",__LINE__);
+                } else {
+                    ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
+                    return -1;
+                }
 
-            if((gsp_cfg_info.layer1_info.src_addr.addr_y == 0)
-            ||(buffersize_layer2 == 0))
-            {
-                ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
-                return -1;
+                if((gsp_cfg_info.layer1_info.src_addr.addr_y == 0)
+                    ||(buffersize_layer2 == 0)) {
+                    ALOGE("[%d] map L2 iommu addr failed!",__LINE__);
+                    return -1;
+                }
             }
-#endif
             ALOGI_IF(mDebugFlag,"	gsp_iommu[%d] mapped L2 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
 
             gsp_cfg_info.layer1_info.clip_rect.rect_w = private_h2->width;
@@ -739,8 +949,8 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 }
             }
 
-            gsp_cfg_info.layer1_info.pitch = private_h2->stride;
             //gsp_cfg_info.layer1_info.pitch = private_h2->width;
+            gsp_cfg_info.layer1_info.pitch = private_h2->stride;
             gsp_cfg_info.layer1_info.des_pos.pos_pt_x = gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
             gsp_cfg_info.layer1_info.layer_en = 1;
 
@@ -841,6 +1051,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
 #else
 #ifdef GSP_OUTPUT_USE_YUV420
             gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV420_2P;
+            gsp_cfg_info.layer_des_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_2;
 #else
             gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV422_2P;
 #endif
@@ -863,8 +1074,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         gsp_cfg_info.layer0_info.clip_rect.st_y &= 0xfffe;
         gsp_cfg_info.layer0_info.clip_rect.rect_w &= 0xfffe;
         gsp_cfg_info.layer0_info.clip_rect.rect_h &= 0xfffe;
+        if(gsp_cfg_info.layer0_info.des_rect.st_y & 0x1) {
+            gsp_cfg_info.layer0_info.des_rect.st_y += 1;
+            gsp_cfg_info.layer0_info.des_rect.rect_h -= 1;
+        }
         gsp_cfg_info.layer0_info.des_rect.st_x &= 0xfffe;
-        gsp_cfg_info.layer0_info.des_rect.st_y &= 0xfffe;
         gsp_cfg_info.layer0_info.des_rect.rect_w &= 0xfffe;
         gsp_cfg_info.layer0_info.des_rect.rect_h &= 0xfffe;
         gsp_cfg_info.layer1_info.clip_rect.st_x &= 0xfffe;
@@ -873,8 +1087,58 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         gsp_cfg_info.layer1_info.clip_rect.rect_h &= 0xfffe;
         gsp_cfg_info.layer1_info.des_pos.pos_pt_x &= 0xfffe;
         gsp_cfg_info.layer1_info.des_pos.pos_pt_y &= 0xfffe;
+        if(mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL){
+            gsp_cfg_info.misc_info.split_pages = 1;//
+        } else {
+            gsp_cfg_info.misc_info.split_pages = 0;//
+        }
+#ifdef  GSP_BOUND_BYPASS_COPY2_PA
+        if((mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL
+			&& (gsp_cfg_info.layer0_info.layer_en == 1) && (gsp_cfg_info.layer0_info.img_format == GSP_SRC_FMT_YUV420_2P))
+            /*&&(!(private_h1->flags & private_handle_t::PRIV_FLAGS_USES_PHY))
+            &&((gsp_cfg_info.layer0_info.layer_en == 1 && gsp_cfg_info.layer0_info.rot_angle != GSP_ROT_ANGLE_0)
+                || (gsp_cfg_info.layer1_info.layer_en == 1 && gsp_cfg_info.layer1_info.rot_angle != GSP_ROT_ANGLE_0))*/){
+            ret = gsp_process_va_copy2_pa(&gsp_cfg_info);
+            if(ret){
+                return ret;
+            }
+        }
+#endif
 
+		ALOGI_IF(mDebugFlag,"GSP_Proccess L%d,L1 yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+                 gsp_cfg_info.layer0_info.src_addr.addr_y,
+				 gsp_cfg_info.layer0_info.pitch,
+				 0,//private_h1->height,
+				 gsp_cfg_info.layer0_info.img_format,
+				 gsp_cfg_info.layer0_info.clip_rect.st_x,
+				 gsp_cfg_info.layer0_info.clip_rect.st_y,
+				 gsp_cfg_info.layer0_info.clip_rect.rect_w,
+				 gsp_cfg_info.layer0_info.clip_rect.rect_h,
+				 gsp_cfg_info.layer0_info.rot_angle,
+				 gsp_cfg_info.layer0_info.des_rect.st_x,
+				 gsp_cfg_info.layer0_info.des_rect.st_y,
+				 gsp_cfg_info.layer0_info.des_rect.rect_w,
+				 gsp_cfg_info.layer0_info.des_rect.rect_h);
 
+		ALOGI_IF(mDebugFlag,"GSP_Proccess L%d,L2 yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d]",__LINE__,
+			     gsp_cfg_info.layer1_info.src_addr.addr_y,
+			     gsp_cfg_info.layer1_info.pitch,
+			     0,//private_h2->height,
+			     gsp_cfg_info.layer1_info.img_format,
+				 gsp_cfg_info.layer1_info.clip_rect.st_x,
+				 gsp_cfg_info.layer1_info.clip_rect.st_y,
+				 gsp_cfg_info.layer1_info.clip_rect.rect_w,
+				 gsp_cfg_info.layer1_info.clip_rect.rect_h,
+				 gsp_cfg_info.layer1_info.rot_angle,
+				 gsp_cfg_info.layer1_info.des_pos.pos_pt_x,
+				 gsp_cfg_info.layer1_info.des_pos.pos_pt_y);
+
+		ALOGI_IF(mDebugFlag,"GSP_Proccess L%d,Ld,{p%d,s%d,f%d} y_addr==%08x buffersize==%08x!",__LINE__,
+			gsp_cfg_info.layer_des_info.pitch,
+			0,
+			gsp_cfg_info.layer_des_info.img_format,
+			gsp_cfg_info.layer_des_info.src_addr.addr_y,
+			buffer->size);
 
 #ifdef GSP_SCALING_UP_TWICE
 
@@ -891,13 +1155,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             ALOGI_IF(mDebugFlag,"GSP process Line%d,nead scale up twice. ",__LINE__);
 
             static bool acquireTmpBufferFlag = false;
-            if (acquireTmpBufferFlag == false)
-            {
+            if (acquireTmpBufferFlag == false) {
                 int ret = -1;
                 int format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
                 ret = acquireTmpBuffer(mFBInfo->fb_width, mFBInfo->fb_height, format, buffer, &outBufferPhy, &outBufferSize);
-                if (ret != 0)
-                {
+                if (ret != 0) {
                     ALOGE("acquireTmpBuffer failed");
                     return -1;
                 }
@@ -907,44 +1169,39 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
 
             /*phase1*/
             gsp_cfg_info_phase1.layer_des_info.img_format = phase1_des_format;
-#ifdef GSP_ADDR_TYPE_PHY
-            if (outBufferPhy != 0 && outBufferSize > 0)
-            {
-                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
-                ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
-            }
-            else
-            {
-                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)tmpBuffer->phyaddr;
-            }
-#elif defined (GSP_ADDR_TYPE_IOVA)
-            //gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)ion_get_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layert);
-            if (outBufferPhy > 0 && outBufferSize > 0)
-            {
-                gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
-                ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
-            }
-            else
-            {
-                if((MemoryHeapIon::Get_gsp_iova(tmpBuffer->share_fd, &mmu_addr, &buffersize_layert) == 0) && (mmu_addr != 0) && (buffersize_layert > 0))
-                {
-                    gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = mmu_addr;
-                    ALOGI_IF(mDebugFlag,"[%d] map temp buffer iommu addr success!",__LINE__);
+            if(mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) {
+                if(outBufferPhy != 0 && outBufferSize > 0) {
+                    gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
+                    ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
+                } else {
+                    gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)tmpBuffer->phyaddr;
                 }
-                else
-                {
-                    ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
-                    return -1;
+            } else if(mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL) {
+                //gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)ion_get_dev_addr(tmpBuffer->share_fd, ION_SPRD_CUSTOM_GSP_MAP,&buffersize_layert);
+                if (outBufferPhy > 0 && outBufferSize > 0) {
+                    gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
+                    ALOGI_IF(mDebugFlag, "Use Friend buffer phy: %p, size: %d", (void *)outBufferPhy, outBufferSize);
+                } else {
+                    if((MemoryHeapIon::Get_gsp_iova(tmpBuffer->share_fd, &mmu_addr, &buffersize_layert) == 0) && (mmu_addr != 0) && (buffersize_layert > 0)) {
+                        gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = mmu_addr;
+                        ALOGI_IF(mDebugFlag,"[%d] map temp buffer iommu addr success!",__LINE__);
+                    } else {
+                        ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
+                        return -1;
+                    }
+                    if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
+                            ||(buffersize_layert == 0)) {
+                        ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                        return -1;
+                    }
+                    ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
                 }
-                if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
-                        ||(buffersize_layert == 0))
-                {
-                    ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
-                    return -1;
-                }
-                ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
             }
-#endif
+            if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
+                    ||(buffersize_layert == 0)){
+                ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+                return -1;
+            }
             ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
 
             gsp_cfg_info_phase1.layer_des_info.src_addr.addr_v =
@@ -978,7 +1235,6 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                      gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y);
 
             ret = mGspDev->GSP_Proccess(&gsp_cfg_info_phase1);
-#ifdef GSP_ADDR_TYPE_IOVA
             if(buffersize_layer1 != 0)
             {
                 ALOGI_IF(mDebugFlag,"gsp_iommu[%d]  unmap L1 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer0_info.src_addr.addr_y,buffersize_layer1);
@@ -988,7 +1244,6 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 gsp_cfg_info.layer0_info.src_addr.addr_y = 0;
                 buffersize_layer1 = 0;
             }
-#endif
             if(0 == ret) {
                 ALOGI_IF(mDebugFlag,"scaling twice phase 1,set_GSP_layers Line%d,GSP_Proccess ret 0",__LINE__);
             } else {
@@ -1012,7 +1267,6 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             } else {
                 ALOGE("scaling twice phase 2,set_GSP_layers Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
             }
-#ifdef GSP_ADDR_TYPE_IOVA
             if(buffersize_layert != 0 && (outBufferPhy == 0 || outBufferSize == 0))
             {
                 ALOGI_IF(mDebugFlag,"		gsp_iommu[%d]  unmap temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
@@ -1021,15 +1275,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = 0;
                 buffersize_layert = 0;
             }
-#endif
         } else {
             ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
                        gsp_cfg_info.layer_des_info.pitch,
                        (void *)gsp_cfg_info.layer_des_info.src_addr.addr_y,
-                       (void *)buffer->base);
-
-            //gsp_cfg_info.layer1_info.rot_angle = GSP_ROT_ANGLE_90;
-
+			(void *)buffer->base);
              ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
              if(0 == ret) {
                  ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
@@ -1051,7 +1301,6 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             }
         }
 #endif
-#ifdef GSP_ADDR_TYPE_IOVA
         if(buffersize_layer2 != 0)
         {
             ALOGI_IF(mDebugFlag,"	gsp_iommu[%d]  unmap L2 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
@@ -1069,7 +1318,6 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             gsp_cfg_info.layer0_info.src_addr.addr_y = 0;
             buffersize_layer1 = 0;
         }
-#endif
     }
     return 0;
 }

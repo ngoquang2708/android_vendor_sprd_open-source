@@ -130,7 +130,9 @@ private:
     int mHWCDisplayFlag;
     int mDebugFlag;
     int mDumpFlag;
-
+#ifdef PROCESS_VIDEO_USE_GSP
+    int mGSPAddrType;
+#endif
     inline SprdHWLayerList *getHWLayerList()
     {
         return mLayerList;

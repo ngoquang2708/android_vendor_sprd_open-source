@@ -121,9 +121,11 @@ public:
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
           tmpBuffer(NULL),
+          copyTempBuffer(NULL),
           mGspDev(NULL),
           outBufferPhy(0),
           outBufferSize(0),
+          mGSPAddrType(0),
 #endif
           mInitFlag(0),
           mDebugFlag(0)
@@ -137,6 +139,8 @@ public:
 
 #ifdef PROCESS_VIDEO_USE_GSP
     int composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2);
+    int getGSPAddrType(void);
+    int gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info);
 #endif
 
 private:
@@ -147,9 +151,11 @@ private:
 #endif
 #ifdef PROCESS_VIDEO_USE_GSP
     private_handle_t* tmpBuffer;
+    private_handle_t* copyTempBuffer;
     gsp_device_t *mGspDev;
     int outBufferPhy;
     int outBufferSize;
+    int mGSPAddrType;
 #endif
     int mInitFlag;
     int mDebugFlag;
