@@ -24,6 +24,7 @@ typedef enum
 #define AP_DIAG_LOOP	5
 #define AP_GET_FGU_VOL_ADC	6
 #define AP_GET_FGU_CURRENT_ADC	7
+#define AP_GET_FGU_TYPE	8
 
 
 #define	CALI_MAGIC	(0x49424143) //CALI
