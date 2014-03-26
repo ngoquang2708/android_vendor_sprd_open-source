@@ -346,6 +346,8 @@ SPRDAVCEncoder::~SPRDAVCEncoder() {
 
     releaseEncoder();
 
+    releaseResource();
+
     List<BufferInfo *> &outQueue = getPortQueue(1);
     List<BufferInfo *> &inQueue = getPortQueue(0);
     CHECK(outQueue.empty());
@@ -572,9 +574,6 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncoder() {
 }
 
 OMX_ERRORTYPE SPRDAVCEncoder::releaseEncoder() {
-    if (!mStarted) {
-        return OMX_ErrorNone;
-    }
 
     (*mH264EncRelease)(mHandle);
 
@@ -582,6 +581,15 @@ OMX_ERRORTYPE SPRDAVCEncoder::releaseEncoder() {
     {
         free(mPbuf_inter);
         mPbuf_inter = NULL;
+    }
+
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE SPRDAVCEncoder::releaseResource() {
+
+    if (!mStarted) {
+        return OMX_ErrorNone;
     }
 
     if (mPbuf_extra_v != NULL)
