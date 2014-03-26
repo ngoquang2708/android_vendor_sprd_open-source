@@ -167,9 +167,17 @@ struct sensor_ae_param{
 	uint8_t smart_edge_max_index;
 	uint8_t smart_mode;
 	uint8_t smart_sta_low_thr;
-	uint8_t smart_sta_high_thr;
-	uint8_t smart_sta_rotio;
-	uint32_t reserved[36];
+	uint8_t smart_sta_ratio1;
+	uint8_t smart_sta_ratio;
+	uint16_t smart_sta_start_index;
+	uint8_t again_skip;
+	uint8_t dgain_skip;
+	uint8_t gamma_start;
+	uint8_t gamma_num;
+	uint8_t gamma_zone;
+	uint8_t gamma_thr[5];
+	uint16_t lux_500_index;
+	uint32_t reserved[33];
 };
 
 struct sensor_ae_tab{
@@ -252,7 +260,8 @@ struct sensor_awb_param{
 	struct sensor_awb_gain_adjust gain_adjust;
 	uint8_t debug_level;
 	uint8_t smart_index;
-	uint8_t reserved0[2];
+	uint8_t skip_num;
+	uint8_t reserved0;
 	uint32_t reserved[9];
 };
 

@@ -42,6 +42,7 @@ enum {
 	CMD_ISP_LEVEL,
 	CMD_READ_SENSOR_REG,
 	CMD_WRITE_SENSOR_REG,
+	CMD_GET_INFO,
 };
 
 enum {
@@ -609,6 +610,59 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 			msg_ret->len = rsp_len-1;
 			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
 			break;
+		}
+		case CMD_GET_INFO:
+		{ // ok
+			DBG("ISP_TOOL:CMD_GET_INFO \n");
+			/* TODO:read isp param operation */
+			// rlen is the size of isp_param
+			// pass eng_rsp_diag+rsp_len
+
+			struct isp_parser_buf_in in_param = {0x00, 0x00};
+			struct isp_parser_buf_rtn rtn_param = {0x00, 0x00};
+			struct isp_parser_cmd_param rtn_cmd;
+			uint8_t* dig_ptr=buf;
+			uint8_t* isp_ptr=buf+sizeof(MSG_HEAD_T)+1;
+			uint8_t i=0x00;
+			uint32_t* addr=(uint32_t*)isp_ptr;
+			uint32_t* ptr=NULL;
+
+			memset(&rtn_cmd, 0, sizeof(rtn_cmd));
+			in_param.buf_len=ispvideo_GetIspParamLenFromSt(dig_ptr);
+			in_param.buf_addr=(uint32_t)ispParserAlloc(in_param.buf_len);
+
+			if((0x00!=in_param.buf_len)
+				&&(0x00!=in_param.buf_addr))
+			{
+				ret=ispvideo_GetIspParamFromSt(isp_ptr, (struct isp_parser_buf_rtn*)&in_param);
+				ret=ispParser(ISP_PARSER_DOWN, (void*)in_param.buf_addr, (void*)&rtn_cmd);
+				ret=ispParserFree((void*)in_param.buf_addr);
+
+				DBG("ISP_TOOL:CMD_GET_INFO rtn cmd:%d \n", rtn_cmd.cmd);
+
+				if(ISP_INFO==rtn_cmd.cmd)
+				{
+					ret=ispParser(ISP_PARSER_UP_INFO, (void*)&rtn_cmd, (void*)&rtn_param);
+					if(0x00==ret)
+					{
+						isp_ptr=eng_rsp_diag+sizeof(MSG_HEAD_T)+1;
+						rlen=ispvideo_SetIspParamToSt(isp_ptr, (struct isp_parser_buf_in*)&rtn_param);
+						ptr=(uint32_t*)rtn_param.buf_addr;
+						for(i=0x00; i<rtn_param.buf_len; i+=0x04){
+
+							DBG("ISP_TOOL:CMD_GET_INFO param:0x%08x \n", *ptr++);
+
+						}
+						ret=ispParserFree((void*)rtn_param.buf_addr);
+					}
+				}
+			}
+
+			rsp_len += rlen;
+			eng_rsp_diag[rsp_len] = 0x7e;
+			msg_ret->len = rsp_len-1;
+			res = send(sockfd, eng_rsp_diag, rsp_len+1, 0);
+			break ;
 		}
 		default:
 			break;

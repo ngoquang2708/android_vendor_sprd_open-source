@@ -21,6 +21,7 @@
 #include "isp_param_tune_v0001.h"
 #include "isp_param_size.h"
 #include "isp_app.h"
+#include "cmr_set.h"
 /**---------------------------------------------------------------------------*
  **				Compiler Flag					*
  **---------------------------------------------------------------------------*/
@@ -36,6 +37,27 @@ extern   "C"
 /**---------------------------------------------------------------------------*
 *				Data Prototype					*
 **----------------------------------------------------------------------------*/
+
+int32_t ispFlashCtrl(enum isp_flash_ctrl mode)
+{
+	int32_t rtn = 0x00;
+	uint32_t flash_ctrl = FLASH_CLOSE;
+
+	if (ISP_FLASH_PRV == mode) {
+		flash_ctrl = FLASH_OPEN;
+	} else if (ISP_FLASH_MAIN == mode) {
+		flash_ctrl = FLASH_HIGH_LIGHT;
+	} else {
+		flash_ctrl = FLASH_CLOSE;
+	}
+
+	CMR_LOGE("ISP_TOOL:ispFlashCtrl flash_ctrl:0x%08x \n", flash_ctrl);
+
+	camera_set_flashdevice(flash_ctrl);
+
+	return rtn;
+}
+
 static int32_t _ispParamVerify(void* in_param_ptr)
 {
 	int32_t rtn=0x00;
@@ -63,96 +85,6 @@ static uint32_t _ispParserGetType(void* in_param_ptr)
 	uint32_t type=param_ptr[2];
 
 	return type;
-}
-
-enum isp_tune_param_level _ispLevelConvert(uint32_t module_id)
-{
-	enum isp_tune_param_level cmd=ISP_TUNE_MAX;
-
-	switch(module_id)
-	{
-		case ISP_TUNE_AWB_MODE:
-		{
-			cmd=ISP_CTRL_AWB_MODE;
-			break;
-		}
-		case ISP_TUNE_AE_MODE:
-		{
-			cmd=ISP_CTRL_AE_MODE;
-			break;
-		}
-		case ISP_TUNE_AE_MEASURE_LUM:
-		{
-			cmd=ISP_CTRL_AE_MEASURE_LUM;
-			break;
-		}
-		case ISP_TUNE_EV:
-		{
-			cmd=ISP_CTRL_EV;
-			break;
-		}
-		case ISP_TUNE_FLICKER:
-		{
-			cmd=ISP_CTRL_FLICKER;
-			break;
-		}
-		case ISP_TUNE_ALG:
-		{
-			cmd=ISP_CTRL_ALG;
-			break;
-		}
-		case ISP_TUNE_SPECIAL_EFFECT:
-		{
-			cmd=ISP_CTRL_SPECIAL_EFFECT;
-			break;
-		}
-		case ISP_TUNE_BRIGHTNESS:
-		{
-			cmd=ISP_CTRL_BRIGHTNESS;
-			break;
-		}
-		case ISP_TUNE_CONTRAST:
-		{
-			cmd=ISP_CTRL_CONTRAST;
-			break;
-		}
-		case ISP_TUNE_AUTO_CONTRAST:
-		{
-			cmd=ISP_CTRL_AUTO_CONTRAST;
-			break;
-		}
-		case ISP_TUNE_SATURATION:
-		{
-			cmd=ISP_CTRL_SATURATION;
-			break;
-		}
-		case ISP_TUNE_AF:
-		{
-			cmd=ISP_CTRL_AF;
-			break;
-		}
-		case ISP_TUNE_CSS:
-		{
-			cmd=ISP_CTRL_CSS;
-			break;
-		}
-		case ISP_TUNE_HDR:
-		{
-			cmd=ISP_CTRL_HDR;
-			break;
-		}
-		case ISP_TUNE_ISO:
-		{
-			cmd=ISP_CTRL_ISO;
-			break;
-		}
-		default :
-		{
-			break;
-		}
-	}
-
-	return cmd;
 }
 
 static int32_t _ispParserDownParam(void* in_param_ptr)
@@ -206,7 +138,9 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 	uint32_t i=0x00;
 	uint32_t start_ndex=0x00;
 
-	cmd=_ispLevelConvert(module_id);
+	cmd=module_id;
+
+	CMR_LOGE("ISP_TOOL:Level cmd :%d level :%d \n", cmd, level);
 
 	if(ISP_CTRL_AF==cmd)
 	{
@@ -222,7 +156,14 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 		ioctl_param_ptr=(void*)&af_param;
 
 		cmd|=ISP_TOOL_SYNC_ID;
-	}else{
+	} else if(ISP_CTRL_FLASH_CTRL==cmd) {
+		ispFlashCtrl(level);
+	} else if(ISP_CTRL_AE_CTRL==cmd) {
+		struct isp_ae_ctrl* ae_ctrl_ptr=(void*)&param_ptr[2];
+
+		CMR_LOGE("ISP_TOOL:aectrl mode :%d index :%d \n", ae_ctrl_ptr->mode, ae_ctrl_ptr->index);
+		ioctl_param_ptr=(void*)&param_ptr[2];
+	} else {
 		ioctl_param_ptr=(void*)&level;
 	}
 
@@ -243,7 +184,6 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 	uint32_t* data_addr=NULL;
 	uint32_t data_len =0x10;
 	struct isp_main_info* param_ptr=NULL;
-	struct isp_size_info* size_info_ptr=ISP_ParamGetSizeInfo();
 
 	data_len=sizeof(struct isp_main_info);
 	data_addr=ispParserAlloc(data_len);
@@ -264,28 +204,24 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 		strcpy((char*)&param_ptr->sensor_id, sensor_info_ptr->name);
 		param_ptr->version_id=sensor_info_ptr->raw_info_ptr->version_info->version_id;
 
-		for(j=0x00; ISP_SIZE_END!=size_info_ptr[j].size_id; j++)
+		/*set preview param*/
+		param_ptr->preview_size=(sensor_info_ptr->sensor_mode_info[1].width<<0x10)&0xffff0000;
+		param_ptr->preview_size|=sensor_info_ptr->sensor_mode_info[1].height&0xffff;
+
+		for(i=SENSOR_MODE_PREVIEW_ONE; i<SENSOR_MODE_MAX; i++)
 		{
-			if((size_info_ptr[j].width==sensor_info_ptr->sensor_mode_info[1].width)
-				&&(size_info_ptr[j].height==sensor_info_ptr->sensor_mode_info[1].height))
+			if((0x00!=sensor_info_ptr->sensor_mode_info[i].width)
+				&&(0x00!=sensor_info_ptr->sensor_mode_info[i].height))
 			{
-				param_ptr->preview_size=size_info_ptr[j].size_id;
+				param_ptr->capture_size[param_ptr->capture_num]=(sensor_info_ptr->sensor_mode_info[i].width<<0x10)&0xffff0000;
+				param_ptr->capture_size[param_ptr->capture_num]|=sensor_info_ptr->sensor_mode_info[i].height&0xffff;
+				param_ptr->capture_num++;
+			} else {
 				break ;
 			}
 		}
-
-		for(i=0x00; i<SENSOR_MODE_MAX; i++)
-		{
-			for(j=0x00; ISP_SIZE_END!=size_info_ptr[j].size_id; j++)
-			{
-				if((size_info_ptr[j].width==sensor_info_ptr->sensor_mode_info[i].width)
-					&&(size_info_ptr[j].height==sensor_info_ptr->sensor_mode_info[i].height))
-				{
-					param_ptr->capture_size|=size_info_ptr[j].size_id;
-					break ;
-				}
-			}
-		}
+		/* new format hsb no equal to zero,*/
+		param_ptr->capture_num|=0x00010000;
 
 		param_ptr->preview_format = ISP_VIDEO_YUV420_2FRAME;
 		param_ptr->capture_format = ISP_VIDEO_YUV420_2FRAME|ISP_VIDEO_JPG;
@@ -301,7 +237,6 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 		rtn_ptr->buf_len = 0x00;
 		rtn = 0x01;
 	}
-
 
 	return rtn;
 }
@@ -449,6 +384,45 @@ static int32_t _ispParserWriteSensorReg(void* in_param_ptr)
 	return rtn;
 }
 
+static int32_t _ispParserGetInfo(void* in_param_ptr, void* rtn_param_ptr)
+{
+	int32_t rtn=0x00;
+	uint32_t* param_ptr=(uint32_t*)in_param_ptr;
+	struct isp_parser_buf_rtn* rtn_ptr=(struct isp_parser_buf_rtn*)rtn_param_ptr;
+	uint32_t cmd_id=param_ptr[0];
+	enum isp_ctrl_cmd cmd=param_ptr[1];
+	void* ioctl_param_ptr=NULL;
+	uint32_t* data_addr=NULL;
+	uint32_t data_len=0x14+param_ptr[2];
+
+	rtn_ptr->buf_addr=NULL;
+	rtn_ptr->buf_len=0x00;
+
+	CMR_LOGV("ISP_TOOL:_ispParserGetInfo %d\n", cmd);
+
+	data_addr=ispParserAlloc(data_len);
+
+	if(NULL!=data_addr)
+	{
+		data_addr[0]=data_len;
+		data_addr[1]=0x14;
+		data_addr[2]=cmd;
+		data_addr[3]=0x00;
+		data_addr[4]=0x00;
+		ioctl_param_ptr=(void*)&data_addr[5];
+		memcpy((void*)&data_addr[5], (void*)&param_ptr[3], param_ptr[2]);
+	}
+
+	cmd|=ISP_TOOL_CMD_ID;
+
+	rtn=isp_ioctl(cmd, ioctl_param_ptr);
+
+	rtn_ptr->buf_addr=data_addr;
+	rtn_ptr->buf_len=data_len;
+
+	return rtn;
+}
+
 static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 {
 	int32_t rtn=0x00;
@@ -460,23 +434,26 @@ static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 
 	rtn_ptr->cmd=cmd;
 
-	CMR_LOGV("ISP_TOOL:_ispParserDownCmd type: 0x%x, 0x%x\n", param_ptr[0], param_ptr[1]);
+	CMR_LOGV("ISP_TOOL:_ispParserDownCmd type: 0x%x, 0x%x, 0x%x\n", param_ptr[0], param_ptr[1], param_ptr[2]);
 
 	switch(cmd)
 	{
 		case ISP_CAPTURE:
 		{
-			rtn_ptr->param[0]=param_ptr[2];//format
-			for(i=0x00; ISP_SIZE_END!=size_info_ptr[i].size_id; i++)
-			{
-				if(size_info_ptr[i].size_id==param_ptr[3])
-				{
-					rtn_ptr->param[1]=size_info_ptr[i].width;//width
-					rtn_ptr->param[2]=size_info_ptr[i].height;//height
-					break ;
+			rtn_ptr->param[0]=param_ptr[2];/*format*/
+
+			if (0x00 !=(param_ptr[3]&0xffff0000)) {
+				rtn_ptr->param[1]=(param_ptr[3]>>0x10)&0xffff; /*width*/
+				rtn_ptr->param[2]=param_ptr[3]&0xffff; /*height*/
+			} else {
+				for(i=0x00; ISP_SIZE_END!=size_info_ptr[i].size_id; i++) {
+					if(size_info_ptr[i].size_id==param_ptr[3]) {
+						rtn_ptr->param[1]=size_info_ptr[i].width;//width
+						rtn_ptr->param[2]=size_info_ptr[i].height;//height
+						break ;
+					}
 				}
 			}
-
 			break;
 		}
 		case ISP_READ_SENSOR_REG:
@@ -497,6 +474,13 @@ static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 		case ISP_TAKE_PICTURE_SIZE:
 		case ISP_MAIN_INFO:
 		{
+			break;
+		}
+		case ISP_INFO:
+		{
+			rtn_ptr->param[0]=param_ptr[2];//thrd cmd
+			memcpy((void*)&rtn_ptr->param[1], (void*)&param_ptr[3], param_ptr[3]+0x04);
+			CMR_LOGV("ISP_TOOL:_ispParserDownCmd thrd cmd: 0x%x\n", rtn_ptr->param[0]);
 			break;
 		}
 		default :
@@ -584,6 +568,13 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 			rtn=_ispParserReadSensorReg(in_param_ptr, rtn_param_ptr);
 			break;
 		}
+		case ISP_PARSER_UP_INFO:
+		{
+			CMR_LOGV("ISP_TOOL:ISP_PARSER_UP_INFO %d\n", cmd);
+			
+			rtn=_ispParserGetInfo(in_param_ptr, rtn_param_ptr);
+			break;
+		}
 		default :
 		{
 			break;
@@ -629,6 +620,11 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 				case ISP_PARSER_UP_SENSOR_REG:
 				{
 					data_addr[1]=ISP_TYPE_SENSOR_REG;
+					break;
+				}
+				case ISP_PARSER_UP_INFO:
+				{
+					data_addr[1]=ISP_TYPE_INFO;
 					break;
 				}
 				default :
@@ -687,6 +683,7 @@ int32_t ispParser(uint32_t cmd, void* in_param_ptr, void* rtn_param_ptr)
 		case ISP_PARSER_UP_CAP_DATA:
 		case ISP_PARSER_UP_CAP_SIZE:
 		case ISP_PARSER_UP_SENSOR_REG:
+		case ISP_PARSER_UP_INFO:
 		{
 			rtn=_ispParserUpHnadle(cmd, in_param_ptr, rtn_param_ptr);
 			break;

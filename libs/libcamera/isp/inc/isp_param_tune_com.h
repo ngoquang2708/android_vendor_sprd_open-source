@@ -58,6 +58,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_PARSER_UP_CAP_SIZE 0x0005
 #define ISP_PARSER_UP_MAIN_INFO 0x0006
 #define ISP_PARSER_UP_SENSOR_REG 0x0007
+#define ISP_PARSER_UP_INFO 0x0008
 
 //packet type
 #define ISP_TYPE_CMD   0x0000
@@ -67,6 +68,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_TYPE_CAP_DATA  0x0004
 #define ISP_TYPE_MAIN_INFO 0x0005
 #define ISP_TYPE_SENSOR_REG 0x0006
+#define ISP_TYPE_INFO 0x0007
 
 #define ISP_PACKET_ALL 0x0000
 #define ISP_PACKET_BLC 0x0001
@@ -125,35 +127,10 @@ enum isp_parser_cmd{
 	ISP_MAIN_INFO,
 	ISP_READ_SENSOR_REG,
 	ISP_WRITE_SENSOR_REG,
+	ISP_BIN_TO_PACKET,
+	ISP_PACKET_TO_BIN,
+	ISP_INFO,
 	ISP_PARSER_CMD_MAX
-};
-
-enum isp_tune_param_level{
-	ISP_TUNE_AWB_MODE,
-	ISP_TUNE_AE_MODE,
-	ISP_TUNE_AE_MEASURE_LUM,
-	ISP_TUNE_EV,
-	ISP_TUNE_FLICKER,
-	ISP_TUNE_ALG,
-	ISP_TUNE_SPECIAL_EFFECT,
-	ISP_TUNE_BRIGHTNESS,
-	ISP_TUNE_CONTRAST,
-	ISP_TUNE_HIST,
-	ISP_TUNE_AUTO_CONTRAST,
-	ISP_TUNE_SATURATION,
-	ISP_TUNE_AF,
-	ISP_TUNE_AF_MODE,
-	ISP_TUNE_CSS,
-	ISP_TUNE_HDR,
-	ISP_TUNE_GLOBAL_GAIN,
-	ISP_TUNE_CHN_GAIN,
-	ISP_TUNE_EXIF,
-	ISP_TUNE_ISO,
-	ISP_TUNE_WB_TRIM,
-	ISP_TUNE_PARAM_UPDATE,
-	ISP_TUNE_FLASH_EG,
-	ISP_TUNE_VIDEO_MODE,
-	ISP_TUNE_MAX
 };
 
 struct isp_main_info{
@@ -162,7 +139,8 @@ struct isp_main_info{
 	uint32_t preview_format;
 	uint32_t preview_size;
 	uint32_t capture_format;
-	uint32_t capture_size;
+	uint32_t capture_num;
+	uint32_t capture_size[8];
 };
 
 struct isp_version_info{
