@@ -536,6 +536,21 @@ inline long long timeval_diff(struct timeval big, struct timeval small)
 	return (long long)(big.tv_sec-small.tv_sec)*1000000 + big.tv_usec - small.tv_usec;
 }
 
+void system_poweron(void)
+{
+	gs_boot_state.battery_state = BATTERY_STATE_EXIT;
+	gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
+	alarm_umountsd();
+	boot_alarm_exit();
+	sync();
+	while(1){
+		LOGD(" %s: %d, %s\n", __func__, __LINE__,"system will power on");
+		__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+				LINUX_REBOOT_CMD_RESTART2, "normal");
+		LOGD(" %s: %d, %s\n", __func__, __LINE__,"reboot failed in alarm mode");
+	}
+}
+
 int  main(int argc, char **argv)
 {
 	char alarm_prop[10] = {0};
@@ -628,16 +643,13 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 						if(alarm_sleep(powertime) != 0)
 						{
 							//start system
-							gs_boot_state.battery_state = BATTERY_STATE_EXIT;
 							break;
 						}
-						gs_boot_state.battery_state = BATTERY_STATE_EXIT;
 						break;
 					}
 					if(alarm_sleep(latest) != 0)
 					{
 						//start system
-						gs_boot_state.battery_state = BATTERY_STATE_EXIT;
 						break;
 					}
 				}
@@ -675,7 +687,6 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 			{
 				musicProcess(g_alarm_ring_path,0);
 				update_delay_time(alarm_item_bak);
-				gs_boot_state.battery_state = BATTERY_STATE_EXIT;
 				break;
 			}
 		}
@@ -715,15 +726,11 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 		if(time(NULL) == abstime_power)
 		{
 			musicProcess(g_alarm_ring_path,0);
-			gs_boot_state.battery_state = BATTERY_STATE_EXIT;
 			break;
 		}
 		usleep(5000);
 	}
-	gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
-	alarm_umountsd();
-	boot_alarm_exit();
-	LOGE(" alarm final exit\n");
+	system_poweron();
 	return 0;
 }
 
