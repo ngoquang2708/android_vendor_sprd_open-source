@@ -134,6 +134,7 @@ private:
     OMX_ERRORTYPE initEncParams();
     OMX_ERRORTYPE initEncoder();
     OMX_ERRORTYPE releaseEncoder();
+    OMX_ERRORTYPE releaseResource();
 //    void releaseOutputBuffers();
     bool openEncoder(const char* libName);
 
