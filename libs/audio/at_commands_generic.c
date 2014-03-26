@@ -36,6 +36,7 @@ int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
     ALOGD("do_cmd_dual Switch incall AT command dirty_count:[%d] : [%d] :[%0x]", dirty_count,sizeof(process_at_cmd.at_cmd)/sizeof(process_at_cmd.at_cmd[0]),process_at_cmd.at_cmd_dirty);
     for(dirty_indx = 0;dirty_indx < dirty_count;dirty_indx++){
         max_pri = process_at_cmd.at_cmd_priority[0];
+        max_pri_bit = 0;
         for(indx=0;indx < sizeof(process_at_cmd.at_cmd)/sizeof(process_at_cmd.at_cmd[0]);indx++){
             if(max_pri < process_at_cmd.at_cmd_priority[indx]){
                 max_pri = process_at_cmd.at_cmd_priority[indx];
