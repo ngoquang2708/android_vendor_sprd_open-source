@@ -257,7 +257,7 @@ LOCAL const SENSOR_REG_T imx179_3264x2448_2lane_setting[] = {
 };
 //30fps
 LOCAL const SENSOR_REG_T imx179_3264x2448_4lane_setting[] = {
-//{0x0100, 0x00},
+{0x0100, 0x00},
 {0x0101, 0x00},
 {0x0202, 0x09},
 {0x0203, 0xAD},
@@ -960,7 +960,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_imx179_resolution_Tab_RAW[] = {
 	{PNULL, 0, 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
 	//{ADDR_AND_LEN_OF_ARRAY(imx179_1632x1224_2lane_setting), 1632, 1224, 24, SENSOR_IMAGE_FORMAT_RAW},
 	//{ADDR_AND_LEN_OF_ARRAY(imx179_3264x2448_2lane_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
-	{ADDR_AND_LEN_OF_ARRAY(imx179_3084x1736_4lane_setting_a), 3084, 1736, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(imx179_3264x2448_4lane_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
 	//{ADDR_AND_LEN_OF_ARRAY(imx179_1280x720_2lane_setting), 1280, 720, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -975,7 +975,7 @@ LOCAL SENSOR_TRIM_T s_imx179_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 
 //	{0, 0, 1920, 1080, 178, 90, 1868},
-	{0, 0, 3084, 1736, 168, 640, 2480, {0, 0, 3084, 1736}},
+	{0, 0, 3264, 2448, 168, 0, 2480, {0, 0, 3264, 2448}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -1190,7 +1190,7 @@ SENSOR_INFO_T g_imx179_mipi_raw_info = {
 	SENSOR_IMAGE_FORMAT_RAW,	// define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
 	// if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
 
-	SENSOR_IMAGE_PATTERN_RAWRGB_B,// pattern of input image form sensor;
+	SENSOR_IMAGE_PATTERN_RAWRGB_R,// pattern of input image form sensor;
 
 	s_imx179_resolution_Tab_RAW,	// point to resolution table information structure
 	&s_imx179_ioctl_func_tab,	// point to ioctl function table
@@ -1209,7 +1209,7 @@ SENSOR_INFO_T g_imx179_mipi_raw_info = {
 	0,
 	0,
 #if defined(IMX179_2_LANES)
-	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
+	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 #elif defined(IMX179_4_LANES)
 	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
 #endif
