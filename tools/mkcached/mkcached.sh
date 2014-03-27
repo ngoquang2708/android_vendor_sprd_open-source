@@ -32,7 +32,37 @@ mount_cache() {
     mount -t ubifs /dev/ubi0_cache /cache
     fi
 }
-
+if busybox [ 1 -ne $# ]
+then
+  echo "Argument is wrong"
+  exit 0
+else
+  sd_cache_mounted=$(getprop persist.sys.cache_on_sd)
+  echo "sd_cache_mounted=$sd_cache_mounted"
+if busybox [ 1 = $sd_cache_mounted -a 1 -eq $1 ]
+then
+    umount /cache
+    umount /cache2
+    mount_cache_times=0
+    while true
+    do
+        if $(mount -t ubifs /dev/ubi0_cache /cache)
+        then
+          echo "mount cache succeed"
+          sd_cache_mounted=0
+          setprop persist.sys.cache_on_sd $sd_cache_mounted
+          break
+        else
+          mount_cache_times=$(busybox expr $mount_cache_times + 1)
+          if busybox [ $mount_cache_times -gt 5 ]
+          then
+            echo "mount times greate than 5, error!"
+            break
+          fi
+        fi
+    done
+elif busybox [ 0 = $sd_cache_mounted -a 0 -eq $1 ]
+then
 if ls /storage/sdcard0 >/dev/null
 then
 #with sdcard
@@ -46,6 +76,7 @@ then
       else
         echo "sdcard not mounted"
         mount -t ubifs /dev/ubi0_cache /cache
+        exit 0
       fi
     done
 
@@ -92,6 +123,7 @@ fi
 echo "setprop persist.sys.cache_on_sd $sd_cache_mounted"
 setprop persist.sys.cache_on_sd $sd_cache_mounted
 
+
 #echo "========mount state=========" >>/data/system/mkcached.log
 #mount >>/data/system/mkcached.log
 #echo "========mount state=========" >>/data/system/mkcached.log
@@ -103,5 +135,9 @@ then
   mkdir /cache/lost+found 0770
   chown root.root /cache/lost+found
   chmod 0770 /cache/lost+found
+fi
+
+fi
+
 fi
 
