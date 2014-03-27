@@ -321,6 +321,20 @@ static int gralloc_lock(gralloc_module_t const *module, buffer_handle_t handle, 
 	if (usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK))
 	{
 		*vaddr = (void *)hnd->base;
+#if GRALLOC_ARM_DMA_BUF_MODULE
+		hw_module_t *pmodule = NULL;
+		private_module_t *m = NULL;
+
+		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
+		{
+			m = reinterpret_cast<private_module_t *>(pmodule);
+			ion_invalidate_fd(m->ion_client, hnd->share_fd);
+		}
+		else
+		{
+			AERR("lock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+		}
+#endif
 	}
 
 	return 0;
@@ -407,7 +421,7 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 		}
 		else
 		{
-			AERR("Couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+			AERR("Unlock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
 		}
 
 #endif
