@@ -90,6 +90,10 @@ int initArgs(void)
 	char   path_char[95];
 	char   channel_char[50];
 
+	fixnv[0] = '\0';
+	runnv[0] = '\0';
+	path_char[0] = '\0';
+
 	if(0 == strlen(argv1)){
 		NVITEM_PRINT("invalid argv1\n");
 		return 0;
