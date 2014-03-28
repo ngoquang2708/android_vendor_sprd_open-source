@@ -929,7 +929,7 @@ SENSOR_INFO_T g_GC2035_yuv_info =
 	PNULL,						//extend information about sensor
 	SENSOR_AVDD_1800MV,				//iovdd
 	SENSOR_AVDD_1800MV,				//dvdd
-	3,						//skip frame num before preview
+	5,						//skip frame num before preview
 	1,						//skip frame num before capture
 	0,						//deci frame num during preview
 	0,						//deci frame num during video preview
