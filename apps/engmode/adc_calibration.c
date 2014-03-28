@@ -470,6 +470,8 @@ static void ap_get_fgu_type(MSG_AP_ADC_CNF *pMsgADC)
             ENG_LOG("%s: read fgu cali file failed,read:%d\n", __FUNCTION__, r_cnt);
             pMsgADC->diag_ap_cnf.status = 1;
         }
+
+        close(fd);
     }
     else
     {
