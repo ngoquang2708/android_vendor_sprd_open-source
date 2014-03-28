@@ -25,18 +25,25 @@ extern "C"
 #include <utils/Log.h>
 #include <utils/Timers.h>
 
+//#define NCMRDBG 1
+#ifndef LOG_NDEBUG
+#ifdef NCMRDBG
+#define LOG_NDEBUG 1
+#else
+#define LOG_NDEBUG 0
+#endif
+#endif
+
 //#define DEBUG_STR     "%s(L %d), %s: "
 //#define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__
 #define DEBUG_STR     "L %d, %s: "
 #define DEBUG_ARGS    __LINE__,__FUNCTION__
 
-#define CMR_LOGV(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
-
 #define CMR_LOGE(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
-
-#define CMR_LOGI(format,...) ALOGD(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
-
 #define CMR_LOGW(format,...) ALOGW(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGI(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGD(format,...) ALOGD(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGV(format,...) ALOGV(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
 #define CMR_EVT_V4L2_BASE                  (1 << 16)
 #define CMR_EVT_CVT_BASE                   (1 << 17)
@@ -66,6 +73,12 @@ extern "C"
 		} while(0)
 
 #define CMR_PRINT_TIME                                                     \
+		do {                                                       \
+                        nsecs_t timestamp = systemTime(CLOCK_MONOTONIC);   \
+                        CMR_LOGI("timestamp = %lld.", timestamp/1000000);  \
+		} while(0)
+
+#define CMR_PRINT_TIME_V                                                     \
 		do {                                                       \
                         nsecs_t timestamp = systemTime(CLOCK_MONOTONIC);   \
                         CMR_LOGV("timestamp = %lld.", timestamp/1000000);  \

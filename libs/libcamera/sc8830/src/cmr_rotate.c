@@ -91,7 +91,7 @@ rot_free:
 	file = NULL;
 open_out:
 
-	CMR_LOGV("handle=0x%x", handle);
+	CMR_LOGI("handle=0x%x", handle);
 
 	return handle;
 }
@@ -106,7 +106,7 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 	int fd;
 	struct rot_file *file = NULL;
 
-	CMR_LOGV("S");
+	CMR_LOGI("S");
 
 	if (!rot_param) {
 		ret = -1;
@@ -139,7 +139,7 @@ int cmr_rot(struct cmr_rot_param *rot_param)
 		goto rot_unlock;
 	}
 
-	CMR_LOGV("angle %d, src 0x%x 0x%x, w h %d %d, dst 0x%x 0x%x",
+	CMR_LOGI("angle %d, src 0x%x 0x%x, w h %d %d, dst 0x%x 0x%x",
 		angle,
 		src_img->addr_phy.addr_y,
 		src_img->addr_phy.addr_u,
@@ -183,7 +183,7 @@ rot_unlock:
 
 rot_exit:
 
-	CMR_LOGV("X ret=%d", ret);
+	CMR_LOGI("X ret=%d", ret);
 
 	return ret;
 }
@@ -193,7 +193,7 @@ int cmr_rot_close(int *fd)
 	int ret = -1;
 	struct rot_file *file = (struct rot_file*)(*fd);
 
-	CMR_LOGV("Start to close rotation device.");
+	CMR_LOGI("Start to close rotation device.");
 
 	if (!file)
 		goto out;
@@ -218,6 +218,6 @@ close_free:
 	ret = 0;
 out:
 
-	CMR_LOGV("ret=%d",ret);
+	CMR_LOGI("ret=%d",ret);
 	return ret;
 }

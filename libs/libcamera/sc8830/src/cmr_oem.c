@@ -132,7 +132,7 @@ int camera_get_trim_rect(struct img_rect *src_trim_rect, uint32_t zoom_level, st
 	src_trim_rect->start_y = CAMERA_HEIGHT(src_trim_rect->start_y);
 	src_trim_rect->width = CAMERA_WIDTH(trim_width);
 	src_trim_rect->height = CAMERA_HEIGHT(trim_height);
-	CMR_LOGV("zoom_level %d, trim rect, %d %d %d %d",
+	CMR_LOGI("zoom_level %d, trim rect, %d %d %d %d",
 		zoom_level,
 		src_trim_rect->start_x,
 		src_trim_rect->start_y,
@@ -176,7 +176,7 @@ int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoomRatio, float
 	src_trim_rect->start_y = CAMERA_HEIGHT(src_trim_rect->start_y);
 	src_trim_rect->width = CAMERA_WIDTH(trim_width);
 	src_trim_rect->height = CAMERA_HEIGHT(trim_height);
-	CMR_LOGV("zoom_level %f, trim rect, %d %d %d %d",
+	CMR_LOGI("zoom_level %f, trim rect, %d %d %d %d",
 		zoomRatio,
 		src_trim_rect->start_x,
 		src_trim_rect->start_y,
@@ -200,7 +200,7 @@ uint32_t getOrientationFromRotationDegrees(int degrees)
 	} else {
 		orientation = 8;/*ExifInterface.ORIENTATION_ROTATE_270;*/
 	}
-	CMR_LOGI("rotation degrees: %d, orientation: %d.", degrees, orientation);
+	CMR_LOGD("rotation degrees: %d, orientation: %d.", degrees, orientation);
 	return orientation;
 }
 
@@ -224,7 +224,7 @@ static void getSecondsFromDouble(double d, uint32_t *numerator, uint32_t *denomi
 	while(str[j] == '0')
 		--j;
 	num = j - i + 1;
-	CMR_LOGV("%s, i=%d, j=%d, num=%d \n", str, i, j, num);
+	CMR_LOGI("%s, i=%d, j=%d, num=%d \n", str, i, j, num);
 
 	for (i=0; i<num; i++)
 		value *=10.0;
@@ -232,7 +232,7 @@ static void getSecondsFromDouble(double d, uint32_t *numerator, uint32_t *denomi
 	*numerator = seconds*value;
 	*denominator = value;
 
-	CMR_LOGV("data=%f, num=%d, denom=%d \n", seconds, *numerator, *denominator);
+	CMR_LOGI("data=%f, num=%d, denom=%d \n", seconds, *numerator, *denominator);
 }
 
 static uint32_t getDataFromDouble(double d, uint32_t type)/*0: dd, 1: mm, 2: ss*/
@@ -250,7 +250,7 @@ static uint32_t getDataFromDouble(double d, uint32_t type)/*0: dd, 1: mm, 2: ss*
 	} else if (2 == type) {
 		retVal = (int)seconds;
 	}
-	CMR_LOGV("GPS: type: %d, ret: 0x%x.", type, retVal);
+	CMR_LOGI("GPS: type: %d, ret: 0x%x.", type, retVal);
 	return retVal;
 }
 
@@ -268,7 +268,7 @@ int camera_set_pos_type(camera_position_type *position)
 	s_position.longitude = -122.441983;
 	s_position.process_method = "GPS NETWORK HYBRID ARE ALL FINE.";*/
 
-	CMR_LOGV("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
+	CMR_LOGI("timestamp %ld, latitude : %f, longitude : %f,altitude: %f. ",
 		position->timestamp,
 		(double)position->latitude,
 		(double)position->longitude,
@@ -338,7 +338,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	datetime_buf[19] = '\0';
 	datetime = datetime_buf;
 
-	CMR_LOGI("datetime %s",datetime);
+	CMR_LOGD("datetime %s",datetime);
 
 	if (0 == s_position.timestamp)
 		time(&s_position.timestamp);
@@ -349,7 +349,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	gps_hour = p->tm_hour;
 	gps_minuter = p->tm_min;
 	gps_second = p->tm_sec;
-	CMR_LOGI("gps_data 2 = %s, %d:%d:%d \n", gps_date, gps_hour, gps_minuter, gps_second);
+	CMR_LOGD("gps_data 2 = %s, %d:%d:%d \n", gps_date, gps_hour, gps_minuter, gps_second);
 
 	gps_process_method = s_position.process_method;
 	focal_length_numerator = p_cxt->cmr_set.focal_len;
@@ -361,7 +361,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 	}
 	p_exif_info->primary.basic.ImageWidth = p_cxt->actual_picture_size.width;
 	p_exif_info->primary.basic.ImageLength = p_cxt->actual_picture_size.height;
-	CMR_LOGI("EXIF width=%d, height=%d \n",
+	CMR_LOGD("EXIF width=%d, height=%d \n",
 			p_exif_info->primary.basic.ImageWidth,
 			p_exif_info->primary.basic.ImageLength);
 
@@ -387,7 +387,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 		if ((0 == latitude_dd_numerator) && (0 == latitude_mm_numerator) && (0 == latitude_ss_numerator)
 			&& (0 == longitude_dd_numerator) && (0 == longitude_mm_numerator) && (0 == longitude_ss_numerator)) {
 			/* if no Latitude and Longitude, do not write GPS to EXIF */
-			CMR_LOGI("GPS: Latitude and Longitude is 0, do not write to EXIF: valid=%d \n",
+			CMR_LOGD("GPS: Latitude and Longitude is 0, do not write to EXIF: valid=%d \n",
 					*(uint32_t*)&p_exif_info->gps_ptr->valid);
 			memset(&p_exif_info->gps_ptr->valid,0,sizeof(EXIF_GPS_VALID_T));
 		} else {
@@ -414,7 +414,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 
 			p_exif_info->gps_ptr->valid.GPSAltitude = 1;
 			p_exif_info->gps_ptr->GPSAltitude.numerator = s_position.altitude;
-			CMR_LOGI("gps_ptr->GPSAltitude.numerator: %d.", p_exif_info->gps_ptr->GPSAltitude.numerator);
+			CMR_LOGD("gps_ptr->GPSAltitude.numerator: %d.", p_exif_info->gps_ptr->GPSAltitude.numerator);
 			p_exif_info->gps_ptr->GPSAltitude.denominator = 1;
 			p_exif_info->gps_ptr->valid.GPSAltitudeRef = 1;
 
@@ -437,7 +437,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 			p_exif_info->gps_ptr->GPSTimeStamp[2].denominator = 1;
 			p_exif_info->gps_ptr->valid.GPSDateStamp = 1;
 			strcpy((char *)p_exif_info->gps_ptr->GPSDateStamp, (char *)gps_date);
-			CMR_LOGI("GPS: valid=%d \n", *(uint32_t*)&p_exif_info->gps_ptr->valid);
+			CMR_LOGD("GPS: valid=%d \n", *(uint32_t*)&p_exif_info->gps_ptr->valid);
 		}
 	}
 
@@ -449,13 +449,13 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 
 	/* TODO: data time is get from user space now */
 	if (NULL != p_exif_info->primary.img_desc_ptr) {
-		CMR_LOGI("set DateTime.");
+		CMR_LOGD("set DateTime.");
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->DateTime, (char *)datetime);
 	}
 
 	if (NULL != p_exif_info->spec_ptr) {
 		if(NULL != p_exif_info->spec_ptr->other_ptr) {
-			CMR_LOGI("set ImageUniqueID.");
+			CMR_LOGD("set ImageUniqueID.");
 			memset(p_exif_info->spec_ptr->other_ptr->ImageUniqueID, 0, sizeof(p_exif_info->spec_ptr->other_ptr->ImageUniqueID));
 			sprintf((char *)p_exif_info->spec_ptr->other_ptr->ImageUniqueID,"IMAGE %s", datetime);
 		}
@@ -463,7 +463,7 @@ JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt)
 		if(NULL != p_exif_info->spec_ptr->date_time_ptr) {
 			strcpy((char *)p_exif_info->spec_ptr->date_time_ptr->DateTimeOriginal, (char *)datetime);
 			strcpy((char *)p_exif_info->spec_ptr->date_time_ptr->DateTimeDigitized, (char *)datetime);
-			CMR_LOGI("set DateTimeOriginal.");
+			CMR_LOGD("set DateTimeOriginal.");
 		}
 	}
 	memset(&s_position, 0, sizeof(camera_position_type));
@@ -558,7 +558,7 @@ int camera_wait_cap_path(struct camera_context *p_cxt)
 
 	sem_wait(&p_cxt->cap_path_sem);
 	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
-	CMR_LOGV("got cap path sem, val = %d", tmpval);
+	CMR_LOGI("got cap path sem, val = %d", tmpval);
 	ret = cxt->err_code;
 	return ret;
 }
@@ -570,7 +570,7 @@ int camera_cap_path_done(struct camera_context *p_cxt)
 
 	sem_post(&p_cxt->cap_path_sem);
 	sem_getvalue(&p_cxt->cap_path_sem, &tmpval);
-	CMR_LOGV("post cap path sem, val = %d", tmpval);
+	CMR_LOGI("post cap path sem, val = %d", tmpval);
 	return ret;
 }
 
@@ -756,7 +756,7 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 	char                     tmp_str[10];
 	FILE                     *fp = NULL;
 
-	CMR_LOGV("index %d, format %d, width %d, heght %d",
+	CMR_LOGI("index %d, format %d, width %d, heght %d",
 		index, img_fmt, width, height);
 
 	bzero(file_name, 40);
@@ -773,11 +773,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		sprintf(tmp_str, "%d", index);
 		strcat(file_name, tmp_str);
 		strcat(file_name, ".raw");
-		CMR_LOGV("file name %s", file_name);
+		CMR_LOGI("file name %s", file_name);
 		fp = fopen(file_name, "wb");
 
 		if (NULL == fp) {
-			CMR_LOGV("can not open file: %s \n", file_name);
+			CMR_LOGI("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -795,10 +795,10 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		sprintf(tmp_str, "%d", index);
 		strcat(file_name, tmp_str);
 		strcat(file_name, ".raw");
-		CMR_LOGV("file name %s", file_name);
+		CMR_LOGI("file name %s", file_name);
 		fp = fopen(file_name, "wb");
 		if (NULL == fp) {
-			CMR_LOGV("can not open file: %s \n", file_name);
+			CMR_LOGI("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -813,11 +813,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		sprintf(tmp_str, "%d", index);
 		strcat(file_name, tmp_str);
 		strcat(file_name, ".jpg");
-		CMR_LOGV("file name %s", file_name);
+		CMR_LOGI("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");
 		if (NULL == fp) {
-			CMR_LOGV("can not open file: %s \n", file_name);
+			CMR_LOGI("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -828,11 +828,11 @@ int camera_save_to_file(uint32_t index, uint32_t img_fmt,
 		sprintf(tmp_str, "%d", index);
 		strcat(file_name, tmp_str);
 		strcat(file_name, ".raw");
-		CMR_LOGV("file name %s", file_name);
+		CMR_LOGI("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");
 		if(NULL == fp){
-			CMR_LOGV("can not open file: %s \n", file_name);
+			CMR_LOGI("can not open file: %s \n", file_name);
 			return 0;
 		}
 
@@ -850,7 +850,7 @@ void camera_sensor_inf(struct sensor_context *sensor_cxt)
 		sensor_cxt->sn_if.if_spec.mipi.bits_per_pxl = sensor_cxt->sensor_info->sensor_interface.pixel_width;
 		sensor_cxt->sn_if.if_spec.mipi.is_loose = sensor_cxt->sensor_info->sensor_interface.is_loose;
 		sensor_cxt->sn_if.if_spec.mipi.use_href = 0;
-		CMR_LOGV("lane_num %d, bits_per_pxl %d, is_loose %d",
+		CMR_LOGI("lane_num %d, bits_per_pxl %d, is_loose %d",
 			sensor_cxt->sn_if.if_spec.mipi.lane_num,
 			sensor_cxt->sn_if.if_spec.mipi.bits_per_pxl,
 			sensor_cxt->sn_if.if_spec.mipi.is_loose);
@@ -884,8 +884,8 @@ int camera_set_sensormark(void)
 
 	if (NULL != fp) {
 		len = fread(sensor_param, 1, SENSOR_PARAM_NUM, fp);
-		CMR_LOGV(":param len %d", len);
-		CMR_LOGV("sensor param: %d, %d, %d, %d, %d, %d, %d, %d",
+		CMR_LOGI(":param len %d", len);
+		CMR_LOGI("sensor param: %d, %d, %d, %d, %d, %d, %d, %d",
 			sensor_param[0], sensor_param[1], sensor_param[2], sensor_param[3],
 			sensor_param[4], sensor_param[5], sensor_param[6], sensor_param[7]);
 		fclose(fp);
@@ -912,7 +912,7 @@ int camera_save_sensormark(void)
 		fp = fopen(SENSOR_PARA,"wb+");
 		if (NULL != fp) {
 			fwrite(sensor_param, 1, SENSOR_PARAM_NUM, fp);
-			CMR_LOGV("sensor param: %d, %d, %d, %d, %d, %d, %d, %d",
+			CMR_LOGI("sensor param: %d, %d, %d, %d, %d, %d, %d, %d",
 				sensor_param[0], sensor_param[1], sensor_param[2], sensor_param[3],
 				sensor_param[4], sensor_param[5], sensor_param[6], sensor_param[7]);
 			fclose(fp);
