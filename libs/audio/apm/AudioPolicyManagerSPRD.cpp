@@ -120,6 +120,12 @@ status_t AudioPolicyManagerSPRD::startOutput(audio_io_handle_t output,
         }
 
         // apply volume rules for current stream and device if necessary
+        // filter devices according to output selected
+        if(!outputDesc->isDuplicated())
+        newDevice = (audio_devices_t)(newDevice & outputDesc->mProfile->mSupportedDevices);
+
+        ALOGW("startOutput() select newDevice %d", newDevice);
+
         checkAndSetVolume(stream,
                           mStreams[stream].getVolumeIndex(newDevice),
                           output,
