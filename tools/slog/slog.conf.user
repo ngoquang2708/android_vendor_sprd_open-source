@@ -30,8 +30,6 @@ snap	meminfo		file	6	300	/proc/meminfo
 snap	slab		file	6	300	/proc/slabinfo
 snap	buddy		file	6	300	/proc/buddyinfo
 snap	slog_conf	file	6	300	/data/local/tmp/slog/slog.conf
-snap	userthreadstack	file	6	300	/sys/kernel/debug/sprd_debug/mem/userthreadstack
-snap	userprocmem	file	6	300	/sys/kernel/debug/sprd_debug/mem/userprocmem
 snap	cpu_usage	file	9	300	/sys/kernel/debug/sprd_debug/cpu/cpu_usage
 snap	traces		file	7	0	/data/anr/traces.txt
 snap	last_kmsg	file	7	0	/sys/fs/pstore/console-ramoops
