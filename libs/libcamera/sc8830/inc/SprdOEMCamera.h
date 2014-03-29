@@ -499,19 +499,11 @@ int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_si
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,
 						uint32_t height,
-						uint32_t *size0,
-						uint32_t *size1);
+						uint32_t *size);
 int camera_set_capture_mem(uint32_t     cap_index,
-						uint32_t phy_addr0,
-						uint32_t vir_addr0,
-						uint32_t mem_size0,
-						uint32_t phy_addr1,
-						uint32_t vir_addr1,
-						uint32_t mem_size1);
-int camera_set_capture_mem2(uint32_t     cap_index,
-						uint32_t phy_addr0,
-						uint32_t vir_addr0,
-						uint32_t mem_size0,
+						uint32_t phy_addr,
+						uint32_t vir_addr,
+						uint32_t mem_size,
 						uint32_t alloc_mem,
 						uint32_t free_mem,
 						uint32_t handle);

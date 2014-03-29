@@ -6033,8 +6033,7 @@ int camera_capture_max_img_size(uint32_t *max_width, uint32_t *max_height)
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,
 						uint32_t height,
-						uint32_t *size0,
-						uint32_t *size1)
+						uint32_t *size)
 {
 	struct img_size          local_size;
 	int                      ret = CAMERA_SUCCESS;
@@ -6049,7 +6048,7 @@ int camera_capture_get_buffer_size(uint32_t camera_id,
 	ret = camera_capture_buf_size(camera_id,
 					g_cxt->sn_cxt.sensor_info->image_format,
 					&local_size,
-					size0);
+					size);
 
 	return ret;
 }
@@ -6080,37 +6079,10 @@ int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_si
 	return 0;
 }
 
-int camera_set_capture_mem(uint32_t  cap_index,
-						uint32_t phy_addr0,
-						uint32_t vir_addr0,
-						uint32_t mem_size0,
-						uint32_t phy_addr1,
-						uint32_t vir_addr1,
-						uint32_t mem_size1)
-{
-	struct img_size          max_size;
-	int                      ret = CAMERA_SUCCESS;
-
-	if (cap_index > CAMERA_CAP_FRM_CNT) {
-		CMR_LOGE("Invalid cap_index %d", cap_index);
-		return -CAMERA_NO_MEMORY;
-	}
-	if (0 == phy_addr0 || 0 == vir_addr0 || 0 == mem_size0) {
-		CMR_LOGE("Invalid parameter 0x%x 0x%x 0x%x", phy_addr0, vir_addr0, mem_size0);
-		return -CAMERA_NO_MEMORY;
-	}
-
-	g_cxt->cap_2_mems.mem_frm.buf_size = mem_size0;
-	g_cxt->cap_2_mems.mem_frm.addr_phy.addr_y = phy_addr0;
-	g_cxt->cap_2_mems.mem_frm.addr_vir.addr_y = vir_addr0;
-
-	return ret;
-}
-
-int camera_set_capture_mem2(uint32_t cap_index,
-						uint32_t phy_addr0,
-						uint32_t vir_addr0,
-						uint32_t mem_size0,
+int camera_set_capture_mem(uint32_t cap_index,
+						uint32_t phy_addr,
+						uint32_t vir_addr,
+						uint32_t mem_size,
 						uint32_t alloc_mem,
 						uint32_t free_mem,
 						uint32_t handle)
@@ -6122,14 +6094,14 @@ int camera_set_capture_mem2(uint32_t cap_index,
 		CMR_LOGE("Invalid cap_index %d", cap_index);
 		return -CAMERA_NO_MEMORY;
 	}
-	if (0 == phy_addr0 || 0 == vir_addr0 || 0 == mem_size0) {
-		CMR_LOGE("Invalid parameter 0x%x 0x%x 0x%x", phy_addr0, vir_addr0, mem_size0);
+	if (0 == phy_addr || 0 == vir_addr || 0 == mem_size) {
+		CMR_LOGE("Invalid parameter 0x%x 0x%x 0x%x", phy_addr, vir_addr, mem_size);
 		return -CAMERA_NO_MEMORY;
 	}
 
-	g_cxt->cap_2_mems.mem_frm.buf_size = mem_size0;
-	g_cxt->cap_2_mems.mem_frm.addr_phy.addr_y = phy_addr0;
-	g_cxt->cap_2_mems.mem_frm.addr_vir.addr_y = vir_addr0;
+	g_cxt->cap_2_mems.mem_frm.buf_size = mem_size;
+	g_cxt->cap_2_mems.mem_frm.addr_phy.addr_y = phy_addr;
+	g_cxt->cap_2_mems.mem_frm.addr_vir.addr_y = vir_addr;
 
 	g_cxt->cap_2_mems.alloc_mem = (alloc_mem_ptr)alloc_mem;
 	g_cxt->cap_2_mems.free_mem = (free_mem_ptr)free_mem;
