@@ -19,8 +19,10 @@
 
 #define VLOG_PRI  -20
 #define SYS_CLASS_ANDUSB_ENABLE "/sys/class/android_usb/android0/enable"
+#define SYS_CLASS_ANDUSB_STATE "/sys/class/android_usb/f_gser/device/state"
 
 sem_t g_armlog_sem;
+extern int g_armlog_enable;
 extern void	disconnect_vbus_charger(void);
 
 static struct eng_param cmdparam = {
@@ -138,6 +140,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 {
     int fd = 0;
     char cmdline[ENG_CMDLINE_LEN] = {0};
+    char ssda_mode[PROPERTY_VALUE_MAX] = {0};
     char *str = NULL;
     int mode =  0;
     int freq = 0;
@@ -183,8 +186,16 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         case 15:
                             cmdvalue->cp_type = ENG_RUN_TYPE_WCDMA;
                             break;
+                        case 16:
+                        case 17:
+                            cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
+                            break;
                         default:
                             break;
+                    }
+                    property_get("persist.ssda.mode", ssda_mode, "not_find");
+                    if(0 != strcmp(ssda_mode, "not_find") && 0 != strcmp(ssda_mode, "svlte")){
+                        cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
                     }
 
                     /*Device[4:6] : device that AP uses;  0: UART 1:USB  2:SPIPE*/
@@ -230,6 +241,34 @@ static void eng_usb_enable(void)
     }
 }
 
+static int eng_usb_state(void)
+{
+    int fd = -1;
+    int ret = 0;
+    char usb_state[32]= {0};
+
+    fd = open(SYS_CLASS_ANDUSB_STATE, O_RDONLY);
+    if(fd >= 0){
+        ret = read(fd, usb_state, 32);
+        if(ret > 0){
+            if(0 == strncmp(usb_state, "CONFIGURED", 10)){
+                ret = 1;
+            }else{
+                ENG_LOG("%s: usb state: %s\n", __FUNCTION__, usb_state);
+                ret = 0;
+            }
+        }else{
+            ret = 0;
+            ENG_LOG("%s: Read sys class androidusb state file failed, read:%d\n", __FUNCTION__, ret);
+        }
+    }else{
+        ret = 0;
+        ENG_LOG("%s: Open sys class androidusb state file failed, err: %s!\n", __FUNCTION__, strerror(errno));
+    }
+
+    return ret;
+}
+
 static int eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev, char* log_dev)
 {
     int opt  = -1;
@@ -267,14 +306,17 @@ static void eng_get_modem_int(int type, char* at_chan, char* diag_chan, char* lo
         case ENG_RUN_TYPE_WCDMA:
             property_get("ro.modem.w.diag", diag_chan, "not_find");
             property_get("ro.modem.w.tty", at_chan, "not_find");
+            property_get("ro.modem.w.log", log_chan, "not_find");
             break;
         case ENG_RUN_TYPE_TD:
             property_get("ro.modem.t.diag", diag_chan, "not_find");
             property_get("ro.modem.t.tty", at_chan, "not_find");
+            property_get("ro.modem.t.log", log_chan, "not_find");
             break;
         case ENG_RUN_TYPE_LTE:
-            property_get("ro.modem.lte.diag", diag_chan, "not_find");
-            property_get("ro.modem.lte.tty", at_chan, "not_find");
+            property_get("ro.modem.l.diag", diag_chan, "not_find");
+            property_get("ro.modem.l.tty", at_chan, "not_find");
+            property_get("ro.modem.l.log", log_chan, "not_find");
             break;
         case ENG_RUN_TYPE_WCN:
             property_get("ro.modem.wcn.diag", diag_chan, "not_find");
@@ -298,8 +340,9 @@ int main (int argc, char** argv)
 
     run_type = eng_get_usb_int(argc, argv, dev_info.host_int.dev_at,
             dev_info.host_int.dev_diag, dev_info.host_int.dev_log);
-    ENG_LOG("engpcclient runtype:%d, atPath:%s, diagPath:%s, type: %d\n", run_type,
-            dev_info.host_int.dev_at, dev_info.host_int.dev_diag, dev_info.host_int.dev_type);
+    ENG_LOG("engpcclient runtype:%d, atPath:%s, diagPath:%s, logPath:%s, type: %d\n", run_type,
+            dev_info.host_int.dev_at, dev_info.host_int.dev_diag,
+            dev_info.host_int.dev_log, dev_info.host_int.dev_type);
 
     // Get the status of calibration mode & device type.
     eng_parse_cmdline(&cmdparam);
@@ -316,13 +359,15 @@ int main (int argc, char** argv)
 
     eng_get_modem_int(run_type, dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan,
             dev_info.modem_int.log_chan);
-    ENG_LOG("eng_pcclient: modem at chan: %s, modem diag chan: %s\n",
-            dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan);
+    ENG_LOG("eng_pcclient: modem at chan: %s, modem diag chan: %s, modem log chan: %s\n",
+            dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan, dev_info.modem_int.log_chan);
 
     // Create the sqlite database for factory mode.
     // FIX ME:temporarily check by ENG_RUN_TYPE_WCN/LTE
-    if(ENG_RUN_TYPE_WCN != run_type && ENG_RUN_TYPE_LTE != run_type){
-        eng_sqlite_create();
+    if(ENG_RUN_TYPE_WCN != run_type){
+        if(ENG_RUN_TYPE_LTE != run_type){
+            eng_sqlite_create();
+        }
         if(cmdparam.califlag != 1){
             // Check factory mode and switch device mode.
             eng_check_factorymode(0);
@@ -336,8 +381,11 @@ int main (int argc, char** argv)
 
     set_vlog_priority();
 
-    // Semaphore initialization
+    // Semaphore & log state initialization
     sem_init(&g_armlog_sem, 0, 0);
+    if(eng_usb_state()) {
+        g_armlog_enable = 1;
+    }
 
     if(0 != eng_thread_create(&t0, eng_uevt_thread, NULL)){
         ENG_LOG("uevent thread start error");

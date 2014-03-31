@@ -23,10 +23,12 @@ extern int g_assert_cmd;
 #define DATA_BUF_SIZE (4096*4)
 #define MAX_OPEN_TIMES  10
 #define DATA_EXT_DIAG_SIZE (4096*4)
+#define DIAG_BUF_SIZE 20
 
 static char log_data[DATA_BUF_SIZE];
 static char ext_data_buf[DATA_EXT_DIAG_SIZE];
 static char backup_data_buf[DATA_EXT_DIAG_SIZE];
+static char diag_header[DIAG_BUF_SIZE];
 static int ext_buf_len,backup_data_len;
 static int g_diag_status = ENG_DIAG_RECV_TO_AP;
 //AUDIO_TOTAL_T audio_total[4];
@@ -327,7 +329,8 @@ void *eng_vdiag_wthread(void *x)
                     backup_data_len = r_cnt; // not a diag framer, so send data to CP
                 }else if(DATA_EXT_DIAG_SIZE/2 <= ext_buf_len){
                         ENG_LOG("%s: Current data is not a complete diag framer,but buffer is full\n", __FUNCTION__);
-                        type = eng_diag_parse(ext_data_buf, ext_buf_len);
+                        memcpy(diag_header, ext_data_buf, DIAG_BUF_SIZE);
+                        type = eng_diag_parse(diag_header, DIAG_BUF_SIZE);
                         if(type != CMD_COMMON){
                             g_diag_status = ENG_DIAG_RECV_TO_AP;
                             ENG_LOG("%s: Buffer is full, so AP will not process the next package\n", __FUNCTION__);

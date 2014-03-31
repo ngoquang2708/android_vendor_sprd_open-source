@@ -191,40 +191,40 @@ void *eng_vdiag_rthread(void *x)
     int dumpmemlen = 0;
     s_dev_info = (eng_dev_info_t*)x;
 
-    ENG_LOG("eng_vlog thread start\n");
+    ENG_LOG("eng_vdiag_r thread start\n");
 
     /*open usb/uart*/
-    ENG_LOG("eng_vlog open serial...\n");
+    ENG_LOG("eng_vdiag_r open serial...\n");
     ser_fd = eng_open_dev(s_dev_info->host_int.dev_diag, O_WRONLY);
     if(ser_fd < 0) {
-        ENG_LOG("eng_vlog open serial failed, error: %s\n", strerror(errno));
+        ENG_LOG("eng_vdiag_r open serial failed, error: %s\n", strerror(errno));
         return NULL;
     }
 
     s_ser_diag_fd = ser_fd;
 
     /*open vbpipe/spipe*/
-    ENG_LOG("eng_vlog open SIPC channel...\n");
+    ENG_LOG("eng_vdiag_r open SIPC channel...\n");
     do{
         modem_fd = open(s_dev_info->modem_int.diag_chan, O_RDONLY);
         if(modem_fd < 0) {
-            ENG_LOG("eng_vlog cannot open %s, error: %s\n", s_dev_info->modem_int.diag_chan, strerror(errno));
+            ENG_LOG("eng_vdiag_r cannot open %s, error: %s\n", s_dev_info->modem_int.diag_chan, strerror(errno));
             sleep(5);
         }
 
         if((++retry_num) > MAX_OPEN_TIMES) {
-            ENG_LOG("eng_vlog SIPC open times exceed the max times, vlog thread stopped.\n");
+            ENG_LOG("eng_vdiag_r SIPC open times exceed the max times, vlog thread stopped.\n");
             goto out;
         }
     }while(modem_fd < 0);
 
-    ENG_LOG("eng_vlog put log data from SIPC to serial\n");
+    ENG_LOG("eng_vdiag_r put log data from SIPC to serial\n");
     while(1) {
         int split_flag = 0;
         memset(log_data, 0, sizeof(log_data));
         r_cnt = read(modem_fd, log_data, DATA_BUF_SIZE);
         if (r_cnt <= 0) {
-            ENG_LOG("eng_vlog read no log data : r_cnt=%d, %s\n",  r_cnt, strerror(errno));
+            ENG_LOG("eng_vdiag_r read no log data : r_cnt=%d, %s\n",  r_cnt, strerror(errno));
             continue;
         }
 
@@ -244,16 +244,16 @@ void *eng_vdiag_rthread(void *x)
                 if(errno == EBUSY)
                     usleep(59000);
                 else {
-                    ENG_LOG("eng_vlog no log data write:%d ,%s\n", w_cnt, strerror(errno));
+                    ENG_LOG("eng_vdiag_r no log data write:%d ,%s\n", w_cnt, strerror(errno));
 
                     // FIX ME: retry to open
                     retry_num = 0; //reset the try number.
                     while (-1 == restart_gser(&ser_fd, s_dev_info->host_int.dev_diag)) {
-                        ENG_LOG("eng_vlog open gser port failed\n");
+                        ENG_LOG("eng_vdiag_r open gser port failed\n");
                         sleep(1);
                         retry_num ++;
                         if(retry_num > MAX_OPEN_TIMES) {
-                            ENG_LOG("eng_vlog: vlog thread stop for gser error !\n");
+                            ENG_LOG("eng_vdiag_r: vlog thread stop for gser error !\n");
                             return 0;
                         }
                     }
@@ -269,7 +269,7 @@ void *eng_vdiag_rthread(void *x)
     }
 
 out:
-    ENG_LOG("eng_vlog thread end\n");
+    ENG_LOG("eng_vdiag_r thread end\n");
     if (modem_fd >= 0)
         close(modem_fd);
     close(ser_fd);
