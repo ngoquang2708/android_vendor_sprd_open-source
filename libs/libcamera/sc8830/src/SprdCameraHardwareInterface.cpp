@@ -2476,12 +2476,12 @@ int SprdCameraHardware::Callback_FreeCaptureMem(void* handle)
 	uint32_t i;
 	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
 
-	LOGI("Callback_FreeCaptureMem: mSubRawHeapNum = %d", camera->mSubRawHeapNum);
-
 	if (camera == NULL) {
 		LOGE("Callback_FreeCaptureMem: error camera is null.");
 		return -1;
 	}
+
+	LOGI("Callback_FreeCaptureMem: mSubRawHeapNum = %d", camera->mSubRawHeapNum);
 
 	for (i = 0; i < camera->mSubRawHeapNum; i++) {
 		if (NULL != camera->mSubRawHeapArray[i]) {
@@ -2574,14 +2574,18 @@ getpmem_end:
 		memory->data = pHeapIon->getBase();
 	}
 
-	if (0 == s_mem_method) {
-		LOGI("allocCameraMem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-			memory->phys_addr, (uint32_t)memory->data,
-			camera_memory->size, memory->phys_size);
+	if (camera_memory) {
+		if (0 == s_mem_method) {
+			LOGI("allocCameraMem: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+				memory->phys_addr, (uint32_t)memory->data,
+				camera_memory->size, memory->phys_size);
+		} else {
+			LOGI("allocCameraMem: mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+				memory->phys_addr, (uint32_t)memory->data,
+				camera_memory->size, memory->phys_size);
+		}
 	} else {
-		LOGI("allocCameraMem: mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-			memory->phys_addr, (uint32_t)memory->data,
-			camera_memory->size, memory->phys_size);
+			LOGE("allocCameraMem: phys_addr or mm_iova: error.");
 	}
 
 	return memory;
@@ -3422,7 +3426,7 @@ takepicture_mode SprdCameraHardware::getCaptureMode()
 bool SprdCameraHardware::iSDisplayCaptureFrame()
 {
 	bool ret = true;
-	return false;
+
 	if ((CAMERA_ZSL_MODE == mCaptureMode)
 		|| (CAMERA_ZSL_CONTINUE_SHOT_MODE == mCaptureMode)) {
 		ret = false;
