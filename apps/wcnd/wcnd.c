@@ -1063,7 +1063,7 @@ static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, 
 
 #define LOOP_TEST_CHAR "hi"
 #define WATI_FOR_CP2_READY_TIME_MSECS (1000)
-#define MAX_LOOP_TEST_COUNT (5)
+#define MAX_LOOP_TEST_COUNT (2)
 #define LOOP_TEST_INTERVAL_MSECS (1000)
 #define RESET_FAIL_RETRY_COUNT (3)
 #define RESET_RETRY_INTERVAL_MSECS (2000)
@@ -1202,7 +1202,9 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger)
 {
 	int len = 0;
 	int loop_fd = -1;
-	loop_fd = open( pWcndManger->wcn_loop_iface_name, O_RDWR|O_NONBLOCK);
+
+	//block mode for using select
+	loop_fd = open( pWcndManger->wcn_loop_iface_name, O_RDWR/*|O_NONBLOCK*/);
 	WCND_LOGD("%s: open polling interface: %s, fd = %d", __func__, pWcndManger->wcn_loop_iface_name, loop_fd);
 	if (loop_fd < 0)
 	{
@@ -1218,6 +1220,7 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger)
 		return -1;
 	}
 
+#if 0 //use select instead
 	//wait
 	usleep(100*1000);
 
@@ -1233,6 +1236,58 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger)
 		close(loop_fd);
 		return -1;
 	}
+#else
+	fd_set read_fds;
+	int rc = 0;
+	int max = -1;
+	struct timeval timeout;
+
+	FD_ZERO(&read_fds);
+
+	max = loop_fd;
+	FD_SET(loop_fd, &read_fds);
+
+	//time out 2.5 seconds
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 500000;
+
+select_retry:
+	if ((rc = select(max + 1, &read_fds, NULL, NULL, &timeout)) < 0)
+	{
+		if (errno == EINTR)
+			goto select_retry;
+
+		WCND_LOGD("select loop_fd(%d) failed: %s", loop_fd, strerror(errno));
+		close(loop_fd);
+		return -1;
+	}
+	else if (!rc)
+	{
+		WCND_LOGD("select loop_fd(%d) TimeOut", loop_fd);
+		close(loop_fd);
+		return -1;
+	}
+
+	if (!(FD_ISSET(loop_fd, &read_fds)))
+	{
+		WCND_LOGD("select loop_fd(%d) return > 0, but loop_fd is not set!", loop_fd);
+		close(loop_fd);
+		return -1;
+	}
+
+	char buffer[32];
+	memset(buffer, 0, sizeof(buffer));
+	do {
+		len = read(loop_fd, buffer, sizeof(buffer));
+	} while(len < 0 && errno == EINTR);
+
+	if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
+	{
+		WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
+		close(loop_fd);
+		return -1;
+	}
+#endif
 
 	WCND_LOGD("%s: loop: %s is OK", __func__, pWcndManger->wcn_loop_iface_name);
 
@@ -1369,6 +1424,10 @@ do_cp2reset:
 	//clear doing_reset flag
 	pWcndManger->doing_reset = 0;
 
+	//clear the cp2 error flag.
+	if(is_alive_ok)
+		pWcndManger->is_cp2_error = 0;
+
 	return 0;
 }
 
@@ -1387,6 +1446,9 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 	}
 
 	WCND_LOGD("handle_cp2_assert\n");
+
+	//set the cp2 error flag, it is cleared when reset successfully
+	pWcndManger->is_cp2_error = 1;
 
 	char rdbuffer[200];
 	char buffer[255];
@@ -1436,6 +1498,9 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 	}
 
 	WCND_LOGD("handle_cp2_watchdog_exception\n");
+
+	//set the cp2 error flag, it is cleared when reset successfully
+	pWcndManger->is_cp2_error = 1;
 
 	char rdbuffer[200];
 	char buffer[255];
@@ -1660,6 +1725,9 @@ static void handle_cp2_loop_check_fail(WcndManager *pWcndManger)
 
 	WCND_LOGD("handle_cp2_loop_check_fail\n");
 
+	//set the cp2 error flag, it is cleared when reset successfully
+	pWcndManger->is_cp2_error = 1;
+
 	char* rdbuffer = "CP2 LOOP CHECK FAIL";
 	char buffer[255];
 	int len;
@@ -1702,6 +1770,12 @@ static void *cp2_loop_check_thread(void *arg)
 
 	while(1)
 	{
+		usleep(LOOP_CHECK_INTERVAL_MSECS*1000);
+
+		//cp2 exception happens just continue for next poll
+		if(pWcndManger->is_cp2_error)
+			continue;
+
 		if(is_cp2_alive_ok(pWcndManger) < 0)
 		{
 			WCND_LOGD("%s: loop check fail, going to reset cp2!!", __FUNCTION__);
@@ -1709,7 +1783,6 @@ static void *cp2_loop_check_thread(void *arg)
 			//wait 20 seconds for reset
 			sleep(20);
 		}
-		usleep(LOOP_CHECK_INTERVAL_MSECS*1000);
 	}
 }
 
