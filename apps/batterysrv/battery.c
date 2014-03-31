@@ -262,7 +262,7 @@ void write_nv(void)
 	close(sys_fd);
 	close(file_fd);
 }
-#define CAPACITY_FILE "/data/.save_capacity"
+#define CAPACITY_FILE "/productinfo/.save_capacity"
 #define INIT_CAPACITY_NODE "/sys/class/power_supply/battery/save_capacity"
 #define CAPACITY_NODE "/sys/class/power_supply/battery/capacity"
 
@@ -274,14 +274,14 @@ void init_capacity(void)
 	int ret;
 	file_fd = open(CAPACITY_FILE, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR);
 	if (file_fd == -1) {
-		LOGE("open file: %s error %d\n", NV_FILE, file_fd);
+		LOGE("open file: %s error %d\n", CAPACITY_FILE, file_fd);
 		return;
 	}
 
 	ret = read(file_fd, nv_value, sizeof(nv_value));
 
 	if (ret == 0) {
-		LOGD("file: %s empty\n", NV_FILE);
+		LOGD("file: %s empty\n", CAPACITY_FILE);
 		nv_value[0] = '3';
 		nv_value[1] = '3';
 		nv_value[2] = '3';
