@@ -395,8 +395,8 @@ static int32_t _ispParserGetInfo(void* in_param_ptr, void* rtn_param_ptr)
 	uint32_t* data_addr=NULL;
 	uint32_t data_len=0x14+param_ptr[2];
 
-	rtn_ptr->buf_addr=NULL;
-	rtn_ptr->buf_len=0x00;
+	rtn_ptr->buf_addr = 0;
+	rtn_ptr->buf_len = 0x00;
 
 	CMR_LOGV("ISP_TOOL:_ispParserGetInfo %d\n", cmd);
 
@@ -417,7 +417,7 @@ static int32_t _ispParserGetInfo(void* in_param_ptr, void* rtn_param_ptr)
 
 	rtn=isp_ioctl(cmd, ioctl_param_ptr);
 
-	rtn_ptr->buf_addr=data_addr;
+	rtn_ptr->buf_addr = (uint32_t)data_addr;
 	rtn_ptr->buf_len=data_len;
 
 	return rtn;
