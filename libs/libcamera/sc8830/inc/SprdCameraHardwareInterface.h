@@ -326,6 +326,7 @@ private:
 	Mutex                           mCapBakDataLock;
 	Mutex                           mPrevBufLock;
 	Mutex                           mCapBufLock;
+	Mutex                           mGraphBufCntLock;
 	uint32_t                        mCapBufIsAvail;
 
 	uint32_t                        mPreviewHeapSize;
@@ -342,6 +343,7 @@ private:
 	buffer_handle_t                 *mPreviewBufferHandle[kPreviewBufferCount];
 	buffer_handle_t                 *mPreviewCancelBufHandle[kPreviewBufferCount];
 	bool                            mCancelBufferEb[kPreviewBufferCount];
+	int32_t                         mGraphBufferCount[kPreviewBufferCount];
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;

@@ -318,6 +318,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	memset(mSubRawHeapArray, 0, sizeof(mSubRawHeapArray));
 	memset(mPreviewBufferHandle, 0, kPreviewBufferCount * sizeof(void*));
 	memset(mPreviewCancelBufHandle, 0, kPreviewBufferCount * sizeof(void*));
+	memset(mGraphBufferCount, 0, kPreviewBufferCount * sizeof(uint32_t));
 	memset(&mPreviewHeapInfoBak, 0, sizeof(mPreviewHeapInfoBak));
 	mPreviewHeapBakUseFlag = 0;
 	memset(&mRawHeapInfoBak, 0, sizeof(mRawHeapInfoBak));
@@ -449,7 +450,7 @@ status_t SprdCameraHardware::startPreview()
 
 	bool isRecordingMode = (mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) > 0 ? true : false;
 	ret = startPreviewInternal(isRecordingMode);
-	
+
 	LOGI("mlock:startPreview: X");
 	return ret;
 }
@@ -826,9 +827,18 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 
 		camera_release_frame(index);
 	} else {
-		releasePreviewFrame();
+		Mutex::Autolock pgbcl(&mGraphBufCntLock);
+		if (isRecordingMode()) {
+			mGraphBufferCount[index]--;
+			LOGV("releasePreviewFrame 0x%x count %d", index, mGraphBufferCount[index]);
+			if (0 == mGraphBufferCount[index]) {
+				if (CAMERA_SUCCESS != camera_release_frame(index)) {
+					goto EXIT;
+				}
+			}
+		}
 	}
-
+EXIT:
 	LOGI("releaseRecordingFrame X: index: %d", index);
 }
 
@@ -2665,6 +2675,7 @@ void SprdCameraHardware::canclePreviewMem()
 	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage && mPreviewWindow) {
 		int i = 0;
 		struct private_handle_t *private_h = NULL;
+		Mutex::Autolock pgbcl(&mGraphBufCntLock);
 
 		for (i = 0; i < kPreviewBufferCount; i++) {
 			if (mPreviewBufferHandle[i]) {
@@ -2676,6 +2687,7 @@ void SprdCameraHardware::canclePreviewMem()
 				if (0 != mPreviewWindow->cancel_buffer(mPreviewWindow, mPreviewBufferHandle[i])) {
 					LOGE("canclePreviewMem: cancel_buffer error id = %d",i);
 				}
+				mGraphBufferCount[i] = 0;
 				mPreviewBufferHandle[i] = NULL;
 			}
 		}
@@ -2701,9 +2713,17 @@ int SprdCameraHardware::releasePreviewFrame()
 				mPreviewCancelBufHandle[free_buffer_id] = NULL;
 				LOGE("It's cancelled buf 0x%x, no need to release", free_buffer_id);
 			} else {
-				LOGV("releasePreviewFrame 0x%x", free_buffer_id);
-				if (CAMERA_SUCCESS != camera_release_frame(free_buffer_id)) {
-					ret = -1;
+				Mutex::Autolock pgbcl(&mGraphBufCntLock);
+				if (isRecordingMode()) {
+					mGraphBufferCount[free_buffer_id]--;
+				} else {
+					mGraphBufferCount[free_buffer_id] = 0;
+				}
+				LOGV("releasePreviewFrame 0x%x count %d", free_buffer_id, mGraphBufferCount[free_buffer_id]);
+				if (0 == mGraphBufferCount[free_buffer_id]) {
+					if (CAMERA_SUCCESS != camera_release_frame(free_buffer_id)) {
+						ret = -1;
+					}
 				}
 			}
 		}
@@ -2742,6 +2762,8 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 			if (0 != mPreviewWindow->dequeue_buffer(mPreviewWindow, &buffer_handle, &stride)) {
 				LOGE("allocatePreviewMemByGraphics: dequeue_buffer error");
 				return -1;
+			} else {
+				mGraphBufferCount[i] = 0;
 			}
 			private_h=(struct private_handle_t*) (*buffer_handle);
 			LOGI("get buffer handle 0x%x", (uint32_t)private_h);
@@ -4054,9 +4076,7 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 				return false;
 			}
 
-			if (!isRecordingMode()) {
-				releasePreviewFrame();
-			}
+			releasePreviewFrame();
 
 			if (mIsDvPreview) {
 				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
@@ -4081,6 +4101,9 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 				return false;
 			}
+			mGraphBufCntLock.lock();
+			mGraphBufferCount[id]++;
+			mGraphBufCntLock.unlock();
 			mCancelBufferEb[id] = 0;
 		}
 	}
@@ -4316,6 +4339,10 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 					mPreviewHeapArray[tmpIndex],
 					0, mUser);
 			}
+			if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+				Mutex::Autolock pgbcl(&mGraphBufCntLock);
+				mGraphBufferCount[offset]++;
+			};
 		} else {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 				if (CAMERA_SUCCESS != camera_release_frame(offset)) {
