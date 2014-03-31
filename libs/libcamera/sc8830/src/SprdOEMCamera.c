@@ -4605,13 +4605,14 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 	if (CHN_1 == info->channel_id && IS_PREVIEW) {
 		/* the source frame can be freed here*/
 		CMR_LOGI("Rot Done");
-		if (IS_PREVIEW_TRACE) {
 			ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
+
+		if (IS_PREVIEW_TRACE)
 			CMR_LOGI("free frame done!");
-			if (ret) {
-				CMR_LOGE("Failed to free frame, %d, %d", info->frame_id, info->channel_id);
-				goto exit;
-			}
+
+		if (ret) {
+			CMR_LOGE("Failed to free frame, %d, %d", info->frame_id, info->channel_id);
+			goto exit;
 		}
 
 		if (g_cxt->set_flag > 0) {
