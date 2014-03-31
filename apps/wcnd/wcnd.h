@@ -132,7 +132,8 @@ typedef struct structWcndManager
 
 	//to identify if a reset process is going on
 	int doing_reset;
-
+	//to identify if CP2 exception happened
+	int is_cp2_error;
 }WcndManager;
 
 //export API
