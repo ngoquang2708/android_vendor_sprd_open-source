@@ -832,16 +832,46 @@ int SprdHWLayerList::prepareOverlayComposerLayer(SprdHWLayer *l)
 int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWLayer *RGBLayer, int LayerCount, int *FBLayerCount, int *DisplayFlag)
 {
     int displayType = HWC_DISPLAY_MASK;
+
     /*
      *  At present, OverlayComposer cannot handle 2 or more than 2 YUV layers.
-     *  And OverlayComposer also cannot handle cropped RGB layer.
+     *  And OverlayComposer do not handle cropped RGB layer except DRM video.
+     *  DRM video must go into Overlay.
      * */
-    if (mYUVLayerCount > 1 ||
-        (mRGBLayerCount > 0 && mRGBLayerFullScreenFlag == false))
+    if (YUVLayer != NULL)
     {
-        ALOGI_IF(mDebugFlag, "YUVLayerCount: %d, mRGBLayerFullScreenFlag: %d",
-                 mYUVLayerCount, mRGBLayerFullScreenFlag);
-        mSkipLayerFlag = true;
+        hwc_layer_1_t *layer = YUVLayer->getAndroidLayer();
+        if (layer == NULL)
+        {
+            ALOGE("Android layer is NULL");
+            return -1;
+        }
+
+        const native_handle_t *pNativeHandle = layer->handle;
+        struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+        if (privateH == NULL)
+        {
+            ALOGE("Android layer handle is NULL");
+            return -1;
+        }
+
+        if (mYUVLayerCount > 1)
+        {
+            ALOGI_IF(mDebugFlag, "YUVLayerCount: %d", mYUVLayerCount);
+            mSkipLayerFlag = true;
+        }
+        else if (((mYUVLayerCount == 1) &&
+            (privateH->usage & GRALLOC_USAGE_PROTECTED) == false) &&
+             ((mRGBLayerCount > 0) && (mRGBLayerFullScreenFlag == false)))
+        {
+            ALOGI_IF(mDebugFlag, "mRGBLayerFullScreenFlag: %d", mRGBLayerFullScreenFlag);
+             mSkipLayerFlag = true;
+        }
+        else if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == true)
+        {
+            ALOGI_IF(mDebugFlag, "Find Protected Video layer, force Overlay");
+            mSkipLayerFlag = false;
+        }
     }
 
     if (mSkipLayerFlag == false)
