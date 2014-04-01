@@ -470,11 +470,12 @@ static int mali_probe(struct platform_device *pdev)
 #ifdef CONFIG_OF
 	mali_prn_resource();
 
-	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32),
-	pdev->dev.platform_data = &mali_gpu_data,
-	pdev->dev.release = mali_platform_device_release,
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	pdev->dev.platform_data = &mali_gpu_data;
+	pdev->dev.release = mali_platform_device_release;
 
-	mali_power_initialize(pdev);
+	if (mali_power_initialize(pdev))
+		return -EFAULT;
 #endif
 
 	if (_MALI_OSK_ERR_OK == _mali_osk_wq_init()) {
