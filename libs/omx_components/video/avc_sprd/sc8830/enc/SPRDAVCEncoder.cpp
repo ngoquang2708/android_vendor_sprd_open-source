@@ -499,7 +499,8 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncInfo.is_h263 = 0;
     mEncInfo.frame_width = mVideoWidth;
     mEncInfo.frame_height = mVideoHeight;
-    mEncInfo.uv_interleaved = 1;
+//    mEncInfo.uv_interleaved = 1;
+    mEncInfo.yuv_format = MMENC_YUV420SP_NV21;
     mEncInfo.time_scale = 1000;
 #ifdef ANTI_SHAKE
     mEncInfo.b_anti_shake = 1;
