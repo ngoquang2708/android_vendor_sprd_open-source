@@ -609,6 +609,16 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::internalSetParameter(
             change_ddr_freq();
         }
 
+        if (!((mWidth < 1280 && mHeight < 720) || (mWidth < 720 && mHeight < 1280))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 384*1024)
+                port->mDef.nBufferSize = 384*1024;
+        } else if (!((mWidth < 720 && mHeight < 480) || (mWidth < 480 && mHeight < 720))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 256*1024)
+                port->mDef.nBufferSize = 256*1024;
+        }
+
         return OMX_ErrorNone;
     }
 
