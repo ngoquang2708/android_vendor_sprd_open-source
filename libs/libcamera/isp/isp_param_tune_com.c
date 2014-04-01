@@ -418,7 +418,7 @@ static int32_t _ispParserGetInfo(void* in_param_ptr, void* rtn_param_ptr)
 	rtn=isp_ioctl(cmd, ioctl_param_ptr);
 
 	rtn_ptr->buf_addr = (uint32_t)data_addr;
-	rtn_ptr->buf_len=data_len;
+	rtn_ptr->buf_len = data_len;
 
 	return rtn;
 }
