@@ -353,19 +353,16 @@ int  mali_power_initialize(struct platform_device *pdev)
 
 
 	if (!gpu_dfs_ctx.gpu_clock) {
-		//MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock\n", __FUNCTION__));
 		printk ("%s, cant get gpu_clock\n", __FUNCTION__);
 		return -1;
 		}
 	if (!gpu_dfs_ctx.gpu_clock_i) {
-		//MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock_i\n", __FUNCTION__));
 		printk ("%s, cant get gpu_clock_i\n", __FUNCTION__);
 		return -1;
 		}
 	for(i=0;i<gpu_clk_num;i++)
 	{
 		if (!gpu_clk_src[i].clk_src) {
-//			MALI_DEBUG_PRINT(2, ("%s, cant get %s\n", __FUNCTION__,gpu_clk_src[i].name));
 			printk ("%s, cant get %s\n", __FUNCTION__,gpu_clk_src[i].name);
 			return -1;
 		}

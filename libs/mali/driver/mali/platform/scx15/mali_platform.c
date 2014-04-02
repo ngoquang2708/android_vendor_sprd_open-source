@@ -328,7 +328,7 @@ static struct platform_device mali_gpu_device =
 	.dev.release = mali_platform_device_release,
 };
 
-void mali_power_initialize(struct platform_device *pdev)
+int  mali_power_initialize(struct platform_device *pdev)
 {
 	int i=0;
 #ifdef CONFIG_OF
@@ -336,7 +336,7 @@ void mali_power_initialize(struct platform_device *pdev)
 
 	np = of_find_matching_node(NULL, gpu_ids);
 	if(!np) {
-		return;
+		return -1;
 	}
 	gpu_dfs_ctx.gpu_clock = of_clk_get(np, 1) ;
 	gpu_dfs_ctx.gpu_clock_i = of_clk_get(np, 0) ;
@@ -344,14 +344,22 @@ void mali_power_initialize(struct platform_device *pdev)
 	gpu_clk_src[1].clk_src = of_clk_get(np, 3) ;
 	gpu_clk_src[2].clk_src = of_clk_get(np, 2) ;
 
-	if (!gpu_dfs_ctx.gpu_clock)
-		MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock\n", __FUNCTION__));
-	if (!gpu_dfs_ctx.gpu_clock_i)
-		MALI_DEBUG_PRINT(2, ("%s, cant get gpu_clock_i\n", __FUNCTION__));
+
+	if (!gpu_dfs_ctx.gpu_clock) {
+		printk ("%s, cant get gpu_clock\n", __FUNCTION__);
+		return -1;
+		}
+	if (!gpu_dfs_ctx.gpu_clock_i) {
+		printk ("%s, cant get gpu_clock_i\n", __FUNCTION__);
+		return -1;
+		}
 	for(i=0;i<gpu_clk_num;i++)
 	{
-		if (!gpu_clk_src[i].clk_src)
-			MALI_DEBUG_PRINT(2, ("%s, cant get %s\n", __FUNCTION__,gpu_clk_src[i].name));
+		if (!gpu_clk_src[i].clk_src) {
+			printk ("%s, cant get %s\n", __FUNCTION__,gpu_clk_src[i].name);
+			return -1;
+		}
+
 	}
 
 #else
@@ -444,6 +452,7 @@ void mali_power_initialize(struct platform_device *pdev)
 #endif
 	pm_runtime_enable(&(pdev->dev));
 #endif
+	return 0;
 }
 
 int mali_platform_device_register(void)
