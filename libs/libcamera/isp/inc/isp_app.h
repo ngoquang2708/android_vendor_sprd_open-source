@@ -174,6 +174,12 @@ enum isp_ae_ctrl_mode{
 	ISP_AE_CTRL_MODE_MAX
 };
 
+enum isp_ctrl_mode{
+	ISP_CTRL_SET=0x00,
+	ISP_CTRL_GET,
+	ISP_CTRL_MODE_MAX
+};
+
 enum isp_ae_mode{
 	ISP_AUTO=0x00,
 	ISP_NIGHT,
@@ -279,6 +285,8 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_AF_DENOISE,
 	ISP_CTRL_FLASH_CTRL, // for isp tool
 	ISP_CTRL_AE_CTRL, // for isp tool
+	ISP_CTRL_AF_CTRL, // for isp tool
+	ISP_CTRL_REG_CTRL, // for isp tool
 	ISP_CTRL_MAX
 };
 
@@ -375,6 +383,18 @@ struct isp_ae_ctrl{
 	uint32_t dgain;
 	uint32_t skipa;
 	uint32_t skipd;
+};
+
+struct isp_af_ctrl{
+	enum isp_ctrl_mode mode;
+	uint32_t step;
+	uint32_t stat_value[9];
+};
+
+struct isp_reg_ctrl{
+	enum isp_ctrl_mode mode;
+	uint32_t num;
+	uint32_t* reg_ptr;
 };
 
 struct isp_smart_ae_param {
