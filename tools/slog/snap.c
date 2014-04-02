@@ -146,6 +146,7 @@ static void handle_notify_file(int wd, const char *name)
 	time_t t;
 	struct tm tm;
 	int ret;
+	FILE *fp;
 
 	if(misc_log->state != SLOG_STATE_ON)
 		return;
@@ -198,11 +199,26 @@ static void handle_notify_file(int wd, const char *name)
 				tm.tm_min,
 				tm.tm_sec);
 
+		/* traces.txt tombstones*/
 		cp_file(src_file, dest_file);
 
+		/* df ps ...... */
 		capture_snap_for_notify(snapshot_log_head, dest_file);
 
+		/* logcat android log*/
 		sprintf(src_file, "logcat -v threadtime -d -f %s", dest_file);
+		system(src_file);
+
+		/* kernel log*/
+		fp = fopen(dest_file, "a+");
+		if(fp == NULL) {
+			err_log("open file %s failed!", dest_file);
+			return;
+		}
+
+		fprintf(fp, "\n============ Kernel log  ==============\n");
+		fclose(fp);
+		sprintf(src_file, "dmesg >> %s", dest_file);
 		system(src_file);
 
 		return;

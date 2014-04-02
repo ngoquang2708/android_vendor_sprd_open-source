@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
 		update_conf("disable", NULL);
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
 	} else if(!strncmp(argv[1], "android", 7)) {
-		if(argc == 3 && ( strcmp(argv[2], "on") == 0 || strcmp(argv[2], "off") == 0 )) {
+		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("android", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	} else if(!strncmp(argv[1], "modem", 5)) {
-		if(argc == 3 && ( strcmp(argv[2], "on") == 0 || strcmp(argv[2], "off") == 0 )) {
+		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("modem", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	} else if(!strncmp(argv[1], "tcp", 3)) {
-		if(argc == 3 && ( strcmp(argv[2], "on") == 0 || strcmp(argv[2], "off") == 0 )) {
+		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("tcp", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	} else if(!strncmp(argv[1], "bt", 2)) {
-		if(argc == 3 && ( strcmp(argv[2], "on") == 0 || strcmp(argv[2], "off") == 0 )) {
+		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("bt", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
 		perror("recv failed");
 		return -1;
 	}
-	if(!strcmp(cmd.content,"FAIL")){
+	if(!strncmp(cmd.content,"FAIL", 4)){
 		printf("slogctl cmd fail \n");
 		return -1;
 	}
