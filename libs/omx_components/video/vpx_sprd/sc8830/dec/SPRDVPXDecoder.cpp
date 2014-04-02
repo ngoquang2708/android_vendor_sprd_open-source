@@ -480,6 +480,12 @@ OMX_ERRORTYPE SPRDVPXDecoder::internalSetParameter(
             change_ddr_freq();
         }
 
+        if (!((mWidth < 1280 && mHeight < 720) || (mWidth < 720 && mHeight < 1280))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 384*1024)
+                port->mDef.nBufferSize = 384*1024;
+        }
+
         return OMX_ErrorNone;
     }
 
