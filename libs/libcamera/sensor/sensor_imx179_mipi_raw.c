@@ -1229,7 +1229,7 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-
+#if 0
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
@@ -1798,7 +1798,7 @@ LOCAL uint32_t Sensor_imx179_InitRawTuneInfo(void)
 	sensor_ptr->chn.r_offset=0x00;
 	sensor_ptr->chn.r_offset=0x00;
 	sensor_ptr->chn.r_offset=0x00;
-
+#endif
 	return rtn;
 }
 

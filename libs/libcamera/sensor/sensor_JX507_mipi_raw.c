@@ -18,1174 +18,375 @@
 #include "jpeg_exif_header.h"
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
-#include "sensor_ov8858_raw_param.c"
+#include "sensor_JX507_mipi_raw_param.c"
 
-#define DW9714_VCM_SLAVE_ADDR (0x18>>1)
+#define JX507_I2C_ADDR_W        	0x30  //0x60
+#define JX507_I2C_ADDR_R         	0x30
 
-#define ov8858_I2C_ADDR_W        (0x6c>>1)
-#define ov8858_I2C_ADDR_R         (0x6c>>1)
+#define DW9714_VCM_SLAVE_ADDR 		(0x18 >> 1)
+#define JX507_RAW_PARAM_COM  		0x0000
+#define JX507_MAX_SHUTTER_OFFSET 	3
 
-#define ov8858_RAW_PARAM_COM  0x0000
+#define JX507_PID_VALUE    0xa5
+#define JX507_PID_ADDR     0x0a
+#define JX507_VER_VALUE    0x07
+#define JX507_VER_ADDR     0x0b
 
-#define ov8858_MIN_FRAME_LEN_PRV  0x5e8
-#define ov8858_4_LANES
-static int s_ov8858_gain = 0;
-static int s_capture_shutter = 0;
-static int s_capture_VTS = 0;
-static int s_video_min_framerate = 0;
-static int s_video_max_framerate = 0;
+#define JX507_GROUP_WRITE_EN		1//1
+#define JX507_FLIP_EN			1//1
+#define JX507_MIRROR_EN			1//1
+#define JX507_USE_VERTICAL_BINNING_EN 	1//0
 
-LOCAL uint32_t _ov8858_GetResolutionTrimTab(uint32_t param);
-LOCAL uint32_t _ov8858_PowerOn(uint32_t power_on);
-LOCAL uint32_t _ov8858_Identify(uint32_t param);
-LOCAL uint32_t _ov8858_BeforeSnapshot(uint32_t param);
-LOCAL uint32_t _ov8858_after_snapshot(uint32_t param);
-LOCAL uint32_t _ov8858_StreamOn(uint32_t param);
-LOCAL uint32_t _ov8858_StreamOff(uint32_t param);
-LOCAL uint32_t _ov8858_write_exposure(uint32_t param);
-LOCAL uint32_t _ov8858_write_gain(uint32_t param);
-LOCAL uint32_t _ov8858_write_af(uint32_t param);
-LOCAL uint32_t _ov8858_flash(uint32_t param);
-LOCAL uint32_t _ov8858_ExtFunc(uint32_t ctl_param);
-LOCAL int _ov8858_get_VTS(void);
-LOCAL int _ov8858_set_VTS(int VTS);
-LOCAL uint32_t _ov8858_ReadGain(uint32_t param);
-LOCAL uint32_t _ov8858_set_video_mode(uint32_t param);
-LOCAL int _ov8858_get_shutter(void);
-LOCAL uint32_t _ov8858_com_Identify_otp(void* param_ptr);
-LOCAL uint32_t _ov8858_dw9714_SRCInit(uint32_t mode);
+static int s_JX507_capture_shutter = 0;
+static int s_JX507_capture_VTS = 0;
+static int s_JX507_video_min_framerate = 0;
+static int s_JX507_video_max_framerate = 0;
 
-LOCAL const struct raw_param_info_tab s_ov8858_raw_param_tab[]={
-	{ov8858_RAW_PARAM_COM, &s_ov8858_mipi_raw_info, _ov8858_com_Identify_otp, PNULL},
-	{RAW_INFO_END_ID, PNULL, PNULL, PNULL}
-};
-
-struct sensor_raw_info* s_ov8858_mipi_raw_info_ptr=NULL;
-
+LOCAL uint32_t _JX507_GetResolutionTrimTab(uint32_t param);
+LOCAL uint32_t _JX507_PowerOn(uint32_t power_on);
+LOCAL uint32_t _JX507_Identify(uint32_t param);
+LOCAL uint32_t _JX507_BeforeSnapshot(uint32_t param);
+LOCAL uint32_t _JX507_after_snapshot(uint32_t param);
+LOCAL uint32_t _JX507_StreamOn(uint32_t param);
+LOCAL uint32_t _JX507_StreamOff(uint32_t param);
+LOCAL uint32_t _JX507_write_exposure(uint32_t param);
+LOCAL uint32_t _JX507_write_gain(uint32_t param);
+LOCAL uint32_t _JX507_SetEV(uint32_t param);
+LOCAL uint32_t _JX507_write_af(uint32_t param);
+LOCAL uint32_t _JX507_flash(uint32_t param);
+LOCAL uint32_t _JX507_ExtFunc(uint32_t ctl_param);
+LOCAL int _JX507_get_VTS(void);
+LOCAL int _JX507_set_VTS(int VTS);
+LOCAL uint32_t _JX507_ReadGain(uint32_t param);
+LOCAL uint32_t _JX507_set_video_mode(uint32_t param);
+LOCAL int _JX507_get_shutter(void);
+LOCAL uint32_t _JX507_com_Identify_otp(void* param_ptr);
+static uint32_t s_JX507_gain = 0;
 static uint32_t g_module_id = 0;
 
 static uint32_t g_flash_mode_en = 0;
 static uint32_t g_af_slewrate = 1;
 
-LOCAL const SENSOR_REG_T ov8858_common_init[] = {
-	//@@ SIZE_1408X792_60FPS_MIPI_4LANE(Cropping)
-	{0x0103, 0x01}, // Change 42 to 6c when copy the setting
-	{0x0100, 0x00},
-	{SENSOR_WRITE_DELAY, 0x0a},  //;delay 5ms
-	{0x0302, 0x1a},
-	{0x0303, 0x00},
-	{0x0304, 0x03},
-	{0x030d, 0x1d},
-	{0x030e, 0x00},
-	{0x030f, 0x09},
-	{0x0312, 0x01},
-	{0x031e, 0x0c},
-	{0x3600, 0x00},
-	{0x3601, 0x00},
-	{0x3602, 0x00},
-	{0x3603, 0x00},
-	{0x3604, 0x22},
-	{0x3605, 0x30},
-	{0x3606, 0x00},
-	{0x3607, 0x20},
-	{0x3608, 0x11},
-	{0x3609, 0x28},
-	{0x360a, 0x00},
-	{0x360b, 0x06},
-	{0x360c, 0xdc},
-	{0x360d, 0x40},
-	{0x360e, 0x0c},
-	{0x360f, 0x20},
-	{0x3610, 0x07},
-	{0x3611, 0x20},
-	{0x3612, 0x88},
-	{0x3613, 0x80},
-	{0x3614, 0x58},
-	{0x3615, 0x00},
-	{0x3616, 0x4a},
-	{0x3617, 0xb0},
-	{0x3618, 0x56},
-	{0x3619, 0x70},
-	{0x361a, 0x99},
-	{0x361b, 0x00},
-	{0x361c, 0x07},
-	{0x361d, 0x00},
-	{0x361e, 0x00},
-	{0x361f, 0x00},
-	{0x3638, 0xff},
-	{0x3633, 0x0c},
-	{0x3634, 0x0c},
-	{0x3635, 0x0c},
-	{0x3636, 0x0c},
-	{0x3645, 0x13},
-	{0x3646, 0x83},
-	{0x364a, 0x07},
-	{0x3015, 0x01},
-	{0x3018, 0x72},
-	{0x3020, 0x93},
-	{0x3022, 0x01},
-	{0x3031, 0x0a},
-	{0x3034, 0x00},
-	{0x3106, 0x01},
-	{0x3305, 0xf1},
-	{0x3308, 0x00},
-	{0x3309, 0x28},
-	{0x330a, 0x00},
-	{0x330b, 0x20},
-	{0x330c, 0x00},
-	{0x330d, 0x00},
-	{0x330e, 0x00},
-	{0x330f, 0x40},
-	{0x3307, 0x04},
-	{0x3500, 0x00},
-	{0x3501, 0x32},
-	{0x3502, 0x80},
-	{0x3503, 0x00},
-	{0x3505, 0x80},
-	{0x3508, 0x04},
-	{0x3509, 0x00},
-	{0x350c, 0x00},
-	{0x350d, 0x80},
-	{0x3510, 0x00},
-	{0x3511, 0x02},
-	{0x3512, 0x00},
-	{0x3700, 0x18},
-	{0x3701, 0x0c},
-	{0x3702, 0x28},
-	{0x3703, 0x19},
-	{0x3704, 0x14},
-	{0x3705, 0x00},
-	{0x3706, 0x35},
-	{0x3707, 0x04},
-	{0x3708, 0x24},
-	{0x3709, 0x33},
-	{0x370a, 0x00},
-	{0x370b, 0xb5},
-	{0x370c, 0x04},
-	{0x3718, 0x12},
-	{0x3719, 0x31},
-	{0x3712, 0x42},
-	{0x3714, 0x24},
-	{0x371e, 0x19},
-	{0x371f, 0x40},
-	{0x3720, 0x05},
-	{0x3721, 0x05},
-	{0x3724, 0x06},
-	{0x3725, 0x01},
-	{0x3726, 0x06},
-	{0x3728, 0x05},
-	{0x3729, 0x02},
-	{0x372a, 0x03},
-	{0x372b, 0x53},
-	{0x372c, 0xa3},
-	{0x372d, 0x53},
-	{0x372e, 0x06},
-	{0x372f, 0x10},
-	{0x3730, 0x01},
-	{0x3731, 0x06},
-	{0x3732, 0x14},
-	{0x3733, 0x10},
-	{0x3734, 0x40},
-	{0x3736, 0x20},
-	{0x373a, 0x05},
-	{0x373b, 0x06},
-	{0x373c, 0x0a},
-	{0x373e, 0x03},
-	{0x3755, 0x10},
-	{0x3758, 0x00},
-	{0x3759, 0x4c},
-	{0x375a, 0x06},
-	{0x375b, 0x13},
-	{0x375c, 0x20},
-	{0x375d, 0x02},
-	{0x375e, 0x00},
-	{0x375f, 0x14},
-	{0x3768, 0x22},
-	{0x3769, 0x44},
-	{0x376a, 0x44},
-	{0x3761, 0x00},
-	{0x3762, 0x00},
-	{0x3763, 0x00},
-	{0x3766, 0xff},
-	{0x376b, 0x00},
-	{0x3772, 0x23},
-	{0x3773, 0x02},
-	{0x3774, 0x16},
-	{0x3775, 0x12},
-	{0x3776, 0x04},
-	{0x3777, 0x00},
-	{0x3778, 0x17},
-	{0x37a0, 0x44},
-	{0x37a1, 0x3d},
-	{0x37a2, 0x3d},
-	{0x37a3, 0x00},
-	{0x37a4, 0x00},
-	{0x37a5, 0x00},
-	{0x37a6, 0x00},
-	{0x37a7, 0x44},
-	{0x37a8, 0x4c},
-	{0x37a9, 0x4c},
-	{0x3760, 0x00},
-	{0x376f, 0x01},
-	{0x37aa, 0x44},
-	{0x37ab, 0x2e},
-	{0x37ac, 0x2e},
-	{0x37ad, 0x33},
-	{0x37ae, 0x0d},
-	{0x37af, 0x0d},
-	{0x37b0, 0x00},
-	{0x37b1, 0x00},
-	{0x37b2, 0x00},
-	{0x37b3, 0x42},
-	{0x37b4, 0x42},
-	{0x37b5, 0x33},
-	{0x37b6, 0x00},
-	{0x37b7, 0x00},
-	{0x37b8, 0x00},
-	{0x37b9, 0xff},
-	{0x3800, 0x00},
-	{0x3801, 0x0c},
-	{0x3802, 0x00},
-	{0x3803, 0x0c},
-	{0x3804, 0x0c},
-	{0x3805, 0xd3},
-	{0x3806, 0x09},
-	{0x3807, 0xa3},
-	{0x3808, 0x05},
-	{0x3809, 0x80},
-	{0x380a, 0x03},
-	{0x380b, 0x18},
-	{0x380c, 0x03},
-	{0x380d, 0xd4},
-	{0x380e, 0x09},
-	{0x380f, 0x3e},
-	{0x3810, 0x00},
-	{0x3811, 0x04},
-	{0x3813, 0x02},
-	{0x3814, 0x03},
-	{0x3815, 0x01},
-	{0x3820, 0x00},
-	{0x3821, 0x67},
-	{0x382a, 0x03},
-	{0x382b, 0x01},
-	{0x3830, 0x08},
-	{0x3836, 0x02},
-	{0x3837, 0x18},
-	{0x3841, 0xff},
-	{0x3846, 0x48},
-	{0x3d85, 0x14},
-	{0x3f08, 0x08},
-	{0x3f0a, 0x80},
-	{0x4000, 0xf1},
-	{0x4001, 0x10},
-	{0x4005, 0x10},
-	{0x4002, 0x27},
-	{0x4009, 0x81},
-	{0x400b, 0x0c},
-	{0x401b, 0x00},
-	{0x401d, 0x00},
-	{0x4020, 0x01},
-	{0x4021, 0x20},
-	{0x4022, 0x01},
-	{0x4023, 0x9f},
-	{0x4024, 0x03},
-	{0x4025, 0xe0},
-	{0x4026, 0x04},
-	{0x4027, 0x5f},
-	{0x4028, 0x00},
-	{0x4029, 0x02},
-	{0x402a, 0x04},
-	{0x402b, 0x04},
-	{0x402c, 0x02},
-	{0x402d, 0x02},
-	{0x402e, 0x08},
-	{0x402f, 0x02},
-	{0x401f, 0x00},
-	{0x4034, 0x3f},
-	{0x403d, 0x04},
-	{0x4300, 0xff},
-	{0x4301, 0x00},
-	{0x4302, 0x0f},
-	{0x4316, 0x00},
-	{0x4500, 0x38},
-	{0x4503, 0x18},
-	{0x4600, 0x00},
-	{0x4601, 0xaf},
-	{0x481f, 0x32},
-	{0x4837, 0x0a},
-	{0x4850, 0x10},
-	{0x4851, 0x32},
-	{0x4b00, 0x2a},
-	{0x4b0d, 0x00},
-#if 1
-	{0x4d00, 0x04},
-	{0x4d01, 0x44},
-	{0x4d02, 0xc1},
-	{0x4d03, 0x72},
-	{0x4d04, 0xb2},
-	{0x4d05, 0xe3},
-#else
-	{0x4d00, 0x04},
-	{0x4d01, 0x18},
-	{0x4d02, 0xc3},
-	{0x4d03, 0xff},
-	{0x4d04, 0xff},
-	{0x4d05, 0xff},
-#endif
-	{0x5000, 0x7e},
-	{0x5001, 0x01},
-	{0x5002, 0x08},
-	{0x5003, 0x20},
-	{0x5046, 0x12},
-	{0x5901, 0x00},
-	{0x5e00, 0x00},
-	{0x5e01, 0x41},
-	{0x382d, 0x7f},
-	{0x4825, 0x3a},
-	{0x4826, 0x40},
-	{0x4808, 0x25},
+LOCAL const struct raw_param_info_tab s_JX507_raw_param_tab[]={
+	{JX507_RAW_PARAM_COM, &s_JX507_mipi_raw_info, _JX507_com_Identify_otp, PNULL},
+	{RAW_INFO_END_ID, PNULL, PNULL, PNULL}
 };
 
-LOCAL const SENSOR_REG_T ov8858_1408X792_setting[] = {
-	//@@ SIZE_1408X792_60FPS_MIPI_4LANE(Cropping)
-	//line_time=7.04us   mipi clk = 312M
-	{0x0103, 0x01}, // Change 42 to 6c when copy the setting
-	{0x0100, 0x00},
-	{0x0302, 0x1a},
-	{0x0303, 0x00},
-	{0x0304, 0x03},
-	{0x030d, 0x1d},
-	{0x030e, 0x00},
-	{0x030f, 0x09},
-	{0x0312, 0x01},
-	{0x031e, 0x0c},
-	{0x3600, 0x00},
-	{0x3601, 0x00},
-	{0x3602, 0x00},
-	{0x3603, 0x00},
-	{0x3604, 0x22},
-	{0x3605, 0x30},
-	{0x3606, 0x00},
-	{0x3607, 0x20},
-	{0x3608, 0x11},
-	{0x3609, 0x28},
-	{0x360a, 0x00},
-	{0x360b, 0x06},
-	{0x360c, 0xdc},
-	{0x360d, 0x40},
-	{0x360e, 0x0c},
-	{0x360f, 0x20},
-	{0x3610, 0x07},
-	{0x3611, 0x20},
-	{0x3612, 0x88},
-	{0x3613, 0x80},
-	{0x3614, 0x58},
-	{0x3615, 0x00},
-	{0x3616, 0x4a},
-	{0x3617, 0xb0},
-	{0x3618, 0x56},
-	{0x3619, 0x70},
-	{0x361a, 0x99},
-	{0x361b, 0x00},
-	{0x361c, 0x07},
-	{0x361d, 0x00},
-	{0x361e, 0x00},
-	{0x361f, 0x00},
-	{0x3638, 0xff},
-	{0x3633, 0x0c},
-	{0x3634, 0x0c},
-	{0x3635, 0x0c},
-	{0x3636, 0x0c},
-	{0x3645, 0x13},
-	{0x3646, 0x83},
-	{0x364a, 0x07},
-	{0x3015, 0x01},
-	{0x3018, 0x72},
-	{0x3020, 0x93},
-	{0x3022, 0x01},
-	{0x3031, 0x0a},
-	{0x3034, 0x00},
-	{0x3106, 0x01},
-	{0x3305, 0xf1},
-	{0x3308, 0x00},
-	{0x3309, 0x28},
-	{0x330a, 0x00},
-	{0x330b, 0x20},
-	{0x330c, 0x00},
-	{0x330d, 0x00},
-	{0x330e, 0x00},
-	{0x330f, 0x40},
-	{0x3307, 0x04},
-	{0x3500, 0x00},
-	{0x3501, 0x32},
-	{0x3502, 0x80},
-	{0x3503, 0x00},
-	{0x3505, 0x80},
-	{0x3508, 0x04},
-	{0x3509, 0x00},
-	{0x350c, 0x00},
-	{0x350d, 0x80},
-	{0x3510, 0x00},
-	{0x3511, 0x02},
-	{0x3512, 0x00},
-	{0x3700, 0x18},
-	{0x3701, 0x0c},
-	{0x3702, 0x28},
-	{0x3703, 0x19},
-	{0x3704, 0x14},
-	{0x3705, 0x00},
-	{0x3706, 0x35},
-	{0x3707, 0x04},
-	{0x3708, 0x24},
-	{0x3709, 0x33},
-	{0x370a, 0x00},
-	{0x370b, 0xb5},
-	{0x370c, 0x04},
-	{0x3718, 0x12},
-	{0x3719, 0x31},
-	{0x3712, 0x42},
-	{0x3714, 0x24},
-	{0x371e, 0x19},
-	{0x371f, 0x40},
-	{0x3720, 0x05},
-	{0x3721, 0x05},
-	{0x3724, 0x06},
-	{0x3725, 0x01},
-	{0x3726, 0x06},
-	{0x3728, 0x05},
-	{0x3729, 0x02},
-	{0x372a, 0x03},
-	{0x372b, 0x53},
-	{0x372c, 0xa3},
-	{0x372d, 0x53},
-	{0x372e, 0x06},
-	{0x372f, 0x10},
-	{0x3730, 0x01},
-	{0x3731, 0x06},
-	{0x3732, 0x14},
-	{0x3733, 0x10},
-	{0x3734, 0x40},
-	{0x3736, 0x20},
-	{0x373a, 0x05},
-	{0x373b, 0x06},
-	{0x373c, 0x0a},
-	{0x373e, 0x03},
-	{0x3755, 0x10},
-	{0x3758, 0x00},
-	{0x3759, 0x4c},
-	{0x375a, 0x06},
-	{0x375b, 0x13},
-	{0x375c, 0x20},
-	{0x375d, 0x02},
-	{0x375e, 0x00},
-	{0x375f, 0x14},
-	{0x3768, 0x22},
-	{0x3769, 0x44},
-	{0x376a, 0x44},
-	{0x3761, 0x00},
-	{0x3762, 0x00},
-	{0x3763, 0x00},
-	{0x3766, 0xff},
-	{0x376b, 0x00},
-	{0x3772, 0x23},
-	{0x3773, 0x02},
-	{0x3774, 0x16},
-	{0x3775, 0x12},
-	{0x3776, 0x04},
-	{0x3777, 0x00},
-	{0x3778, 0x17},
-	{0x37a0, 0x44},
-	{0x37a1, 0x3d},
-	{0x37a2, 0x3d},
-	{0x37a3, 0x00},
-	{0x37a4, 0x00},
-	{0x37a5, 0x00},
-	{0x37a6, 0x00},
-	{0x37a7, 0x44},
-	{0x37a8, 0x4c},
-	{0x37a9, 0x4c},
-	{0x3760, 0x00},
-	{0x376f, 0x01},
-	{0x37aa, 0x44},
-	{0x37ab, 0x2e},
-	{0x37ac, 0x2e},
-	{0x37ad, 0x33},
-	{0x37ae, 0x0d},
-	{0x37af, 0x0d},
-	{0x37b0, 0x00},
-	{0x37b1, 0x00},
-	{0x37b2, 0x00},
-	{0x37b3, 0x42},
-	{0x37b4, 0x42},
-	{0x37b5, 0x33},
-	{0x37b6, 0x00},
-	{0x37b7, 0x00},
-	{0x37b8, 0x00},
-	{0x37b9, 0xff},
-	{0x3800, 0x00},
-	{0x3801, 0x0c},
-	{0x3802, 0x00},
-	{0x3803, 0x0c},
-	{0x3804, 0x0c},
-	{0x3805, 0xd3},
-	{0x3806, 0x09},
-	{0x3807, 0xa3},
-	{0x3808, 0x05},
-	{0x3809, 0x80},
-	{0x380a, 0x03},
-	{0x380b, 0x18},
-	{0x380c, 0x03},   //HTS [15:8]
-	{0x380d, 0xd4},   //HTS [7:0]
-	{0x380e, 0x09},   //VTS [15:8]
-	{0x380f, 0x3e},  //VTS [7:0]
-	{0x3810, 0x00},
-	{0x3811, 0x04},
-	{0x3813, 0x02},
-	{0x3814, 0x03},
-	{0x3815, 0x01},
-	{0x3820, 0x00},
-	{0x3821, 0x67},
-	{0x382a, 0x03},
-	{0x382b, 0x01},
-	{0x3830, 0x08},
-	{0x3836, 0x02},
-	{0x3837, 0x18},
-	{0x3841, 0xff},
-	{0x3846, 0x48},
-	{0x3d85, 0x14},
-	{0x3f08, 0x08},
-	{0x3f0a, 0x80},
-	{0x4000, 0xf1},
-	{0x4001, 0x10},
-	{0x4005, 0x10},
-	{0x4002, 0x27},
-	{0x4009, 0x81},
-	{0x400b, 0x0c},
-	{0x401b, 0x00},
-	{0x401d, 0x00},
-	{0x4020, 0x01},
-	{0x4021, 0x20},
-	{0x4022, 0x01},
-	{0x4023, 0x9f},
-	{0x4024, 0x03},
-	{0x4025, 0xe0},
-	{0x4026, 0x04},
-	{0x4027, 0x5f},
-	{0x4028, 0x00},
-	{0x4029, 0x02},
-	{0x402a, 0x04},
-	{0x402b, 0x04},
-	{0x402c, 0x02},
-	{0x402d, 0x02},
-	{0x402e, 0x08},
-	{0x402f, 0x02},
-	{0x401f, 0x00},
-	{0x4034, 0x3f},
-	{0x403d, 0x04},
-	{0x4300, 0xff},
-	{0x4301, 0x00},
-	{0x4302, 0x0f},
-	{0x4316, 0x00},
-	{0x4500, 0x38},
-	{0x4503, 0x18},
-	{0x4600, 0x00},
-	{0x4601, 0xaf},
-	{0x481f, 0x32},
-	{0x4837, 0x0a},
-	{0x4850, 0x10},
-	{0x4851, 0x32},
-	{0x4b00, 0x2a},
-	{0x4b0d, 0x00},
-#if 1
-	{0x4d00, 0x04},
-	{0x4d01, 0x44},
-	{0x4d02, 0xc1},
-	{0x4d03, 0x72},
-	{0x4d04, 0xb2},
-	{0x4d05, 0xe3},
-#else
-	{0x4d00, 0x04},
-	{0x4d01, 0x18},
-	{0x4d02, 0xc3},
-	{0x4d03, 0xff},
-	{0x4d04, 0xff},
-	{0x4d05, 0xff},
-#endif
-	{0x5000, 0x7e},
-	{0x5001, 0x01},
-	{0x5002, 0x08},
-	{0x5003, 0x20},
-	{0x5046, 0x12},
-	{0x5901, 0x00},
-	{0x5e00, 0x00},
-	{0x5e01, 0x41},
-	{0x382d, 0x7f},
-	{0x4825, 0x3a},
-	{0x4826, 0x40},
-	{0x4808, 0x25},
+struct sensor_raw_info* s_JX507_raw_info_ptr=NULL;
+
+LOCAL const SENSOR_REG_T JX507_com_raw[] =
+{
+	{0xc0, 0x00},  // gain
+
 };
 
-LOCAL const SENSOR_REG_T ov8858_3264X1836_setting[] = {
-	// @@ SIZE_3264X1836_30FPS_MIPI_4LANE
-	//line_time=8.9us   mipi clk = 312M	
-	{0x0100, 0x01}, // Change 42 to 6c when copy the setting
-	{0x0100, 0x00},
-	{0x0302, 0x1a},
-	{0x0303, 0x00},
-	{0x0304, 0x03},
-	{0x030d, 0x1d},
-	{0x030e, 0x00},
-	{0x030f, 0x04},
-	{0x0312, 0x01},
-	{0x031e, 0x0c},
-	{0x3600, 0x00},
-	{0x3601, 0x00},
-	{0x3602, 0x00},
-	{0x3603, 0x00},
-	{0x3604, 0x22},
-	{0x3605, 0x30},
-	{0x3606, 0x00},
-	{0x3607, 0x20},
-	{0x3608, 0x11},
-	{0x3609, 0x28},
-	{0x360a, 0x00},
-	{0x360b, 0x06},
-	{0x360c, 0xdc},
-	{0x360d, 0x40},
-	{0x360e, 0x0c},
-	{0x360f, 0x20},
-	{0x3610, 0x07},
-	{0x3611, 0x20},
-	{0x3612, 0x88},
-	{0x3613, 0x80},
-	{0x3614, 0x58},
-	{0x3615, 0x00},
-	{0x3616, 0x4a},
-	{0x3617, 0xb0},
-	{0x3618, 0x56},
-	{0x3619, 0x70},
-	{0x361a, 0x99},
-	{0x361b, 0x00},
-	{0x361c, 0x07},
-	{0x361d, 0x00},
-	{0x361e, 0x00},
-	{0x361f, 0x00},
-	{0x3638, 0xff},
-	{0x3633, 0x0c},
-	{0x3634, 0x0c},
-	{0x3635, 0x0c},
-	{0x3636, 0x0c},
-	{0x3645, 0x13},
-	{0x3646, 0x83},
-	{0x364a, 0x07},
-	{0x3015, 0x01},
-	{0x3018, 0x72},
-	{0x3020, 0x93},
-	{0x3022, 0x01},
-	{0x3031, 0x0a},
-	{0x3034, 0x00},
-	{0x3106, 0x01},
-	{0x3305, 0xf1},
-	{0x3308, 0x00},
-	{0x3309, 0x28},
-	{0x330a, 0x00},
-	{0x330b, 0x20},
-	{0x330c, 0x00},
-	{0x330d, 0x00},
-	{0x330e, 0x00},
-	{0x330f, 0x40},
-	{0x3307, 0x04},
-	{0x3500, 0x00},
-	{0x3501, 0x74},
-	{0x3502, 0x80},
-	{0x3503, 0x00},
-	{0x3505, 0x80},
-	{0x3508, 0x02},
-	{0x3509, 0x00},
-	{0x350c, 0x00},
-	{0x350d, 0x80},
-	{0x3510, 0x00},
-	{0x3511, 0x02},
-	{0x3512, 0x00},
-	{0x3700, 0x30},
-	{0x3701, 0x18},
-	{0x3702, 0x50},
-	{0x3703, 0x32},
-	{0x3704, 0x28},
-	{0x3705, 0x00},
-	{0x3706, 0x6a},
-	{0x3707, 0x08},
-	{0x3708, 0x48},
-	{0x3709, 0x66},
-	{0x370a, 0x01},
-	{0x370b, 0x6a},
-	{0x370c, 0x07},
-	{0x3718, 0x14},
-	{0x3719, 0x31},
-	{0x3712, 0x44},
-	{0x3714, 0x24},
-	{0x371e, 0x31},
-	{0x371f, 0x7f},
-	{0x3720, 0x0a},
-	{0x3721, 0x0a},
-	{0x3724, 0x0c},
-	{0x3725, 0x02},
-	{0x3726, 0x0c},
-	{0x3728, 0x0a},
-	{0x3729, 0x03},
-	{0x372a, 0x06},
-	{0x372b, 0xa6},
-	{0x372c, 0xa6},
-	{0x372d, 0xa6},
-	{0x372e, 0x0c},
-	{0x372f, 0x20},
-	{0x3730, 0x02},
-	{0x3731, 0x0c},
-	{0x3732, 0x28},
-	{0x3733, 0x10},
-	{0x3734, 0x40},
-	{0x3736, 0x30},
-	{0x373a, 0x0a},
-	{0x373b, 0x0b},
-	{0x373c, 0x14},
-	{0x373e, 0x06},
-	{0x3755, 0x10},
-	{0x3758, 0x00},
-	{0x3759, 0x4c},
-	{0x375a, 0x0c},
-	{0x375b, 0x26},
-	{0x375c, 0x20},
-	{0x375d, 0x04},
-	{0x375e, 0x00},
-	{0x375f, 0x28},
-	{0x3768, 0x22},
-	{0x3769, 0x44},
-	{0x376a, 0x44},
-	{0x3761, 0x00},
-	{0x3762, 0x00},
-	{0x3763, 0x00},
-	{0x3766, 0xff},
-	{0x376b, 0x00},
-	{0x3772, 0x46},
-	{0x3773, 0x04},
-	{0x3774, 0x2c},
-	{0x3775, 0x13},
-	{0x3776, 0x08},
-	{0x3777, 0x00},
-	{0x3778, 0x16},
-	{0x37a0, 0x88},
-	{0x37a1, 0x7a},
-	{0x37a2, 0x7a},
-	{0x37a3, 0x00},
-	{0x37a4, 0x00},
-	{0x37a5, 0x00},
-	{0x37a6, 0x00},
-	{0x37a7, 0x88},
-	{0x37a8, 0x98},
-	{0x37a9, 0x98},
-	{0x3760, 0x00},
-	{0x376f, 0x01},
-	{0x37aa, 0x88},
-	{0x37ab, 0x5c},
-	{0x37ac, 0x5c},
-	{0x37ad, 0x55},
-	{0x37ae, 0x19},
-	{0x37af, 0x19},
-	{0x37b0, 0x00},
-	{0x37b1, 0x00},
-	{0x37b2, 0x00},
-	{0x37b3, 0x84},
-	{0x37b4, 0x84},
-	{0x37b5, 0x66},
-	{0x37b6, 0x00},
-	{0x37b7, 0x00},
-	{0x37b8, 0x00},
-	{0x37b9, 0xff},
-	{0x3800, 0x00},
-	{0x3801, 0x0c},
-	{0x3802, 0x00},
-	{0x3803, 0x0c},
-	{0x3804, 0x0c},
-	{0x3805, 0xd3},
-	{0x3806, 0x09},
-	{0x3807, 0xa3},
-	{0x3808, 0x0c},
-	{0x3809, 0xc0},
-	{0x380a, 0x07},
-	{0x380b, 0x2c},
-	{0x380c, 0x09},  //HTS [15:8]
-	{0x380d, 0xae},  //HTS [7:0]
-	{0x380e, 0x07},  //VTS [15:8]
-	{0x380f, 0x50}, //VTS [7:0]
-	{0x3810, 0x00},
-	{0x3811, 0x04},
-	{0x3813, 0x02},
-	{0x3814, 0x01},
-	{0x3815, 0x01},
-	{0x3820, 0x00},
-	{0x3821, 0x46},
-	{0x382a, 0x01},
-	{0x382b, 0x01},
-	{0x3830, 0x06},
-	{0x3836, 0x01},
-	{0x3837, 0x18},
-	{0x3841, 0xff},
-	{0x3846, 0x48},
-	{0x3d85, 0x14},
-	{0x3f08, 0x10},
-	{0x4000, 0xf1},
-	{0x4001, 0x00},
-	{0x4005, 0x10},
-	{0x4002, 0x27},
-	{0x4009, 0x81},
-	{0x400b, 0x0c},
-	{0x401b, 0x00},
-	{0x401d, 0x00},
-	{0x4020, 0x00},
-	{0x4021, 0x04},
-	{0x4022, 0x0b},
-	{0x4023, 0xc3},
-	{0x4024, 0x0c},
-	{0x4025, 0x36},
-	{0x4026, 0x0c},
-	{0x4027, 0x37},
-	{0x4028, 0x00},
-	{0x4029, 0x02},
-	{0x402a, 0x04},
-	{0x402b, 0x08},
-	{0x402c, 0x02},
-	{0x402d, 0x02},
-	{0x402e, 0x0c},
-	{0x402f, 0x02},
-	{0x401f, 0x00},
-	{0x4034, 0x3f},
-	{0x403d, 0x04},
-	{0x4300, 0xff},
-	{0x4301, 0x00},
-	{0x4302, 0x0f},
-	{0x4316, 0x00},
-	{0x4503, 0x18},
-	{0x4600, 0x01},
-	{0x4601, 0x97},
-	{0x481f, 0x32},
-	{0x4837, 0x0a},
-	{0x4850, 0x10},
-	{0x4851, 0x32},
-	{0x4b00, 0x2a},
-	{0x4b0d, 0x00},
-#if 1
-	{0x4d00, 0x04},
-	{0x4d01, 0x44},
-	{0x4d02, 0xc1},
-	{0x4d03, 0x72},
-	{0x4d04, 0xb2},
-	{0x4d05, 0xe3},
-#else
-	{0x4d00, 0x04},
-	{0x4d01, 0x18},
-	{0x4d02, 0xc3},
-	{0x4d03, 0xff},
-	{0x4d04, 0xff},
-	{0x4d05, 0xff},
-#endif
-	{0x5000, 0x7e},
-	{0x5001, 0x01},
-	{0x5002, 0x08},
-	{0x5003, 0x20},
-	{0x5046, 0x12},
-	{0x5901, 0x00},
-	{0x5e00, 0x00},
-	{0x5e01, 0x41},
-	{0x4825, 0x3a},
-	{0x4826, 0x40},
-	{0x4808, 0x25},
+LOCAL const SENSOR_REG_T JX507_1600X1200_raw[] = {
+	{0x00,0x7f},//;;---Gain
+	{0x01,0xF6},//;;---Exposure
+	{0x02,0x05},
+	{0x03,0xFF},
+	{0x04,0xFF},
+	{0x0C,0x40},
+	{0x0D,0x50},//0x04},//@0226 new setting
+	{0x0E,0x10},
+	{0x0F,0x04},
+	{0x10,0x13},
+	{0x11,0x80},
+	{0x13,0x87},//;;---AEC/AGC
+	{0x14,0x80},
+	{0x15,0x44},
+	{0x16,0xC0},
+	{0x17,0x40},
+	{0x18,0x7D},
+	{0x19,0x29},
+	{0x1A,0x80},
+	{0x1B,0x4F},
+	{0x1D,0x00},
+	{0x1E,0x1C},
+	{0x1F,0x00},
+	{0x20,0xC8},
+	{0x21,0x07},
+	{0x22,0xF6},//;;---Frame
+	{0x23,0x05},
+	{0x24,0x40},
+	{0x25,0xB0},
+	{0x26,0x46},
+	{0x27,0x96},
+	{0x28,0x0c},
+	{0x29,0x01},
+	{0x2A,0x80},
+	{0x2B,0x29},
+	{0x2C,0x3E},
+	{0x2D,0x5D},
+	{0x2E,0x8D},
+	{0x2F,0x04},
+	{0x30,0x9C},
+	{0x31,0x14},
+	{0x32,0xBE},
+	{0x33,0x18},
+	{0x34,0x3E},
+	{0x35,0xEC},
+	{0x3A,0x00},
+	{0x36,0x00},
+	{0x37,0x40},
+	{0x38,0x2D},
+	{0x39,0xFF},
+	{0x3B,0x00},
+	{0x3C,0x08},
+	{0x3D,0x10},
+	{0x3E,0x08},
+	{0x3F,0x10},
+	{0x40,0x08},
+	{0x48,0x00},
+	{0x49,0x04},//;;---BLC
+	{0x4A,0x03},
+	{0x4B,0xA4},
+	{0x4C,0xA4},
+	{0x4D,0xA4},
+	{0x4E,0xA4},
+	{0x4F,0x55},
+	{0x50,0x10},
+	{0x51,0x88},
+	{0x52,0x00},
+	{0x53,0x84},
+	{0x54,0x80},
+	{0x55,0x00},
+	{0x56,0x42},
+	{0x57,0x00},
+	{0x5F,0x03},
+	{0x60,0x27},
+	{0x61,0xFC},
+	{0x62,0x00},//0x03},//@0226 new setting
+	{0x63,0xC0},
+	{0x64,0x07},
+	{0x65,0x80},
+	{0x66,0x10},
+	{0x67,0x79},
+	{0x68,0x00},
+	{0x69,0x72},
+	{0x6A,0x3A},
+	{0x6C,0x00},
+	{0x6B,0x00},
+	{0x6D,0x02},
+	{0x6E,0x8E},
+	{0x70,0x69},
+	{0x71,0x8A},
+	{0x72,0x68},
+	{0x73,0x33},
+	{0x74,0x02},
+	//;;---SDE
+	{0x75,0x2B},
+	{0x76,0xD0},
+	{0x77,0x07},
+	{0x78,0x14},
 };
 
-LOCAL const SENSOR_REG_T ov8858_3264x2448_setting[] = {
-	//@@SIZE_3264X2448_25FPS_MIPI_4LANE
-	//line_time=16.16us   mipi clk = 288M	
-	{0x0103, 0x01}, // Change 42 to 6c when copy the setting
-	{0x0100, 0x00},
-	{0x0302, 0x18},
-	{0x0303, 0x00},
-	{0x0304, 0x03},
-	{0x030d, 0x19},
-	{0x030e, 0x00},
-	{0x030f, 0x04},
-	{0x0312, 0x01},
-	{0x031e, 0x0c},
-	{0x3600, 0x00},
-	{0x3601, 0x00},
-	{0x3602, 0x00},
-	{0x3603, 0x00},
-	{0x3604, 0x22},
-	{0x3605, 0x30},
-	{0x3606, 0x00},
-	{0x3607, 0x20},
-	{0x3608, 0x11},
-	{0x3609, 0x28},
-	{0x360a, 0x00},
-	{0x360b, 0x06},
-	{0x360c, 0xdc},
-	{0x360d, 0x40},
-	{0x360e, 0x0c},
-	{0x360f, 0x20},
-	{0x3610, 0x07},
-	{0x3611, 0x20},
-	{0x3612, 0x88},
-	{0x3613, 0x80},
-	{0x3614, 0x58},
-	{0x3615, 0x00},
-	{0x3616, 0x4a},
-	{0x3617, 0xb0},
-	{0x3618, 0x56},
-	{0x3619, 0x70},
-	{0x361a, 0x99},
-	{0x361b, 0x00},
-	{0x361c, 0x07},
-	{0x361d, 0x00},
-	{0x361e, 0x00},
-	{0x361f, 0x00},
-	{0x3638, 0xff},
-	{0x3633, 0x0c},
-	{0x3634, 0x0c},
-	{0x3635, 0x0c},
-	{0x3636, 0x0c},
-	{0x3645, 0x13},
-	{0x3646, 0x83},
-	{0x364a, 0x07},
-	{0x3015, 0x01},
-	{0x3018, 0x72},
-	{0x3020, 0x93},
-	{0x3022, 0x01},
-	{0x3031, 0x0a},
-	{0x3034, 0x00},
-	{0x3106, 0x01},
-	{0x3305, 0xf1},
-	{0x3308, 0x00},
-	{0x3309, 0x28},
-	{0x330a, 0x00},
-	{0x330b, 0x20},
-	{0x330c, 0x00},
-	{0x330d, 0x00},
-	{0x330e, 0x00},
-	{0x330f, 0x40},
-	{0x3307, 0x04},
-	{0x3500, 0x00},
-	{0x3501, 0x9a},
-	{0x3502, 0x20},
-	{0x3503, 0x00},
-	{0x3505, 0x80},
-	{0x3508, 0x02},
-	{0x3509, 0x00},
-	{0x350c, 0x00},
-	{0x350d, 0x80},
-	{0x3510, 0x00},
-	{0x3511, 0x02},
-	{0x3512, 0x00},
-	{0x3700, 0x30},
-	{0x3701, 0x18},
-	{0x3702, 0x50},
-	{0x3703, 0x32},
-	{0x3704, 0x28},
-	{0x3705, 0x00},
-	{0x3706, 0x6a},
-	{0x3707, 0x08},
-	{0x3708, 0x48},
-	{0x3709, 0x66},
-	{0x370a, 0x01},
-	{0x370b, 0x6a},
-	{0x370c, 0x07},
-	{0x3718, 0x14},
-	{0x3719, 0x31},
-	{0x3712, 0x44},
-	{0x3714, 0x24},
-	{0x371e, 0x31},
-	{0x371f, 0x7f},
-	{0x3720, 0x0a},
-	{0x3721, 0x0a},
-	{0x3724, 0x0c},
-	{0x3725, 0x02},
-	{0x3726, 0x0c},
-	{0x3728, 0x0a},
-	{0x3729, 0x03},
-	{0x372a, 0x06},
-	{0x372b, 0xa6},
-	{0x372c, 0xa6},
-	{0x372d, 0xa6},
-	{0x372e, 0x0c},
-	{0x372f, 0x20},
-	{0x3730, 0x02},
-	{0x3731, 0x0c},
-	{0x3732, 0x28},
-	{0x3733, 0x10},
-	{0x3734, 0x40},
-	{0x3736, 0x30},
-	{0x373a, 0x0a},
-	{0x373b, 0x0b},
-	{0x373c, 0x14},
-	{0x373e, 0x06},
-	{0x3755, 0x10},
-	{0x3758, 0x00},
-	{0x3759, 0x4c},
-	{0x375a, 0x0c},
-	{0x375b, 0x26},
-	{0x375c, 0x20},
-	{0x375d, 0x04},
-	{0x375e, 0x00},
-	{0x375f, 0x28},
-	{0x3768, 0x22},
-	{0x3769, 0x44},
-	{0x376a, 0x44},
-	{0x3761, 0x00},
-	{0x3762, 0x00},
-	{0x3763, 0x00},
-	{0x3766, 0xff},
-	{0x376b, 0x00},
-	{0x3772, 0x46},
-	{0x3773, 0x04},
-	{0x3774, 0x2c},
-	{0x3775, 0x13},
-	{0x3776, 0x08},
-	{0x3777, 0x00},
-	{0x3778, 0x16},
-	{0x37a0, 0x88},
-	{0x37a1, 0x7a},
-	{0x37a2, 0x7a},
-	{0x37a3, 0x00},
-	{0x37a4, 0x00},
-	{0x37a5, 0x00},
-	{0x37a6, 0x00},
-	{0x37a7, 0x88},
-	{0x37a8, 0x98},
-	{0x37a9, 0x98},
-	{0x3760, 0x00},
-	{0x376f, 0x01},
-	{0x37aa, 0x88},
-	{0x37ab, 0x5c},
-	{0x37ac, 0x5c},
-	{0x37ad, 0x55},
-	{0x37ae, 0x19},
-	{0x37af, 0x19},
-	{0x37b0, 0x00},
-	{0x37b1, 0x00},
-	{0x37b2, 0x00},
-	{0x37b3, 0x84},
-	{0x37b4, 0x84},
-	{0x37b5, 0x66},
-	{0x37b6, 0x00},
-	{0x37b7, 0x00},
-	{0x37b8, 0x00},
-	{0x37b9, 0xff},
-	{0x3800, 0x00},
-	{0x3801, 0x0c},
-	{0x3802, 0x00},
-	{0x3803, 0x0c},
-	{0x3804, 0x0c},
-	{0x3805, 0xd3},
-	{0x3806, 0x09},
-	{0x3807, 0xa3},
-	{0x3808, 0x0c},
-	{0x3809, 0xc0},
-	{0x380a, 0x09},
-	{0x380b, 0x90},
-	{0x380c, 0x07},   //HTS [15:8]
-	{0x380d, 0x94},   //HTS [7:0]
-	{0x380e, 0x09},   //VTS [15:8]
-	{0x380f, 0xaa},   //VTS [7:0]
-	{0x3810, 0x00},
-	{0x3811, 0x04},
-	{0x3813, 0x02},
-	{0x3814, 0x01},
-	{0x3815, 0x01},
-	{0x3820, 0x00},
-	{0x3821, 0x46},
-	{0x382a, 0x01},
-	{0x382b, 0x01},
-	{0x3830, 0x06},
-	{0x3836, 0x01},
-	{0x3837, 0x18},
-	{0x3841, 0xff},
-	{0x3846, 0x48},
-	{0x3d85, 0x14},
-	{0x3f08, 0x10},
-	{0x4000, 0xf1},
-	{0x4001, 0x00},
-	{0x4005, 0x10},
-	{0x4002, 0x27},
-	{0x4009, 0x81},
-	{0x400b, 0x0c},
-	{0x401b, 0x00},
-	{0x401d, 0x00},
-	{0x4020, 0x00},
-	{0x4021, 0x04},
-	{0x4022, 0x0b},
-	{0x4023, 0xc3},
-	{0x4024, 0x0c},
-	{0x4025, 0x36},
-	{0x4026, 0x0c},
-	{0x4027, 0x37},
-	{0x4028, 0x00},
-	{0x4029, 0x02},
-	{0x402a, 0x04},
-	{0x402b, 0x08},
-	{0x402c, 0x02},
-	{0x402d, 0x02},
-	{0x402e, 0x0c},
-	{0x402f, 0x02},
-	{0x401f, 0x00},
-	{0x4034, 0x3f},
-	{0x403d, 0x04},
-	{0x4300, 0xff},
-	{0x4301, 0x00},
-	{0x4302, 0x0f},
-	{0x4316, 0x00},
-	{0x4503, 0x18},
-	{0x4600, 0x01},
-	{0x4601, 0x97},
-	{0x481f, 0x32},
-	{0x4837, 0x0a},
-	{0x4850, 0x10},
-	{0x4851, 0x32},
-	{0x4b00, 0x2a},
-	{0x4b0d, 0x00},
-#if 1
-	{0x4d00, 0x04},
-	{0x4d01, 0x44},
-	{0x4d02, 0xc1},
-	{0x4d03, 0x72},
-	{0x4d04, 0xb2},
-	{0x4d05, 0xe3},
-#else
-	{0x4d00, 0x04},
-	{0x4d01, 0x18},
-	{0x4d02, 0xc3},
-	{0x4d03, 0xff},
-	{0x4d04, 0xff},
-	{0x4d05, 0xff},
-#endif
-	{0x5000, 0x7e},
-	{0x5001, 0x01},
-	{0x5002, 0x08},
-	{0x5003, 0x20},
-	{0x5046, 0x12},
-	{0x5901, 0x00},
-	{0x5e00, 0x00},
-	{0x5e01, 0x41},
-	{0x4825, 0x3a},
-	{0x4826, 0x40},
-	{0x4808, 0x25},
+LOCAL const SENSOR_REG_T JX507_1280X960_raw[] = {
+	{0x12,(0x41 | (JX507_MIRROR_EN << 5) |(JX507_FLIP_EN << 4) | (JX507_USE_VERTICAL_BINNING_EN << 1))},
+	{0x00,0x70},
+	{0x01,0x28},
+	{0x02,0x06},
+	{0x03,0xFF},
+	{0x04,0xFF},
+	{0x0C,0x40},
+	{0x0D,0x50},
+	{0x0E,0x10},
+	{0x0F,0x04},
+	{0x10,0x13},
+	{0x11,0x80},
+	{0x13,0x87},
+	{0x14,0x80},
+	{0x15,0x44},
+	{0x16,0xC0},
+	{0x17,0x40},
+	{0x18,0x8A},
+	{0x19,0x29},
+	{0x1A,0x80},
+	{0x1B,0x4F},
+	{0x1D,0x00},
+	{0x1E,0x1C},
+	{0x1F,0x00},
+	{0x20,0x88},
+	{0x21,0x07},
+	{0x22,0x28},
+	{0x23,0x06},
+	{0x24,0x00},
+	{0x25,0xC0},
+	{0x26,0x35},
+	{0x27,(0xA9 + JX507_FLIP_EN*12 + JX507_MIRROR_EN)},//(0x95 + JX507_FLIP_EN*12)},
+	{0x28,(0x06 - JX507_FLIP_EN)},
+	{0x29,0x02},
+	{0x2A,0x91},   //0x81
+	{0x2B,0x2A},
+	{0x2C,0x02},
+	{0x2D,0x03},
+	{0x2E,0xE8},
+	{0x2F,0x04},
+	{0x30,0x9C},
+	{0x31,0x14},
+	{0x32,0xBE},
+	{0x33,0x18},
+	{0x34,0x3E},
+	{0x35,0xEC},
+	{0x3A,0x00},
+	{0x36,0x00},
+	{0x37,0x40},
+	{0x38,0xE9},
+	{0x39,0x20},
+	{0x3B,0x00},
+	{0x3C,0x08},
+	{0x3D,0x10},
+	{0x3E,0x08},
+	{0x3F,0x10},
+	{0x40,0x08},
+	{0x48,0x00},
+	{0x49,0x04},
+	{0x4A,0x03},
+	{0x4B,0xA4},
+	{0x4C,0xA4},
+	{0x4D,0xA4},
+	{0x4E,0xA4},
+	{0x4F,0x55},
+	{0x50,0x10},
+	{0x51,0x88},
+	{0x52,0x00},
+	{0x53,0x84},
+	{0x54,0x80},
+	{0x55,0x00},
+	{0x56,0x42},
+	{0x57,0x00},
+	{0x5F,0x03},
+	{0x60,0x27},
+	{0x61,0xFC},
+	{0x62,0x00},//0x03},//@0226 new setting
+	{0x63,0xC0},
+	{0x64,0x07},
+	{0x65,0x80},
+	{0x66,0x10},
+	{0x67,0x79},
+	{0x68,0x00},
+	{0x69,0x72},
+	{0x6A,0x3A},
+	{0x6C,0x00},
+
+	{0x6B,0x00},
+	{0x6D,0x02},
+	{0x6E,0x8E},
+	{0x70,0x69},
+	{0x71,0x8A},
+	{0x72,0x68},
+	{0x73,0x33},
+	{0x74,0x02},
+	{0x75,0x2B},
+	{0x76,0x40},
+	{0x77,0x06},
+	{0x78,0x14}
 };
 
+LOCAL const SENSOR_REG_T JX507_2592X1944_raw[] = {
+	{0x12,(0x40 | (JX507_MIRROR_EN << 5) |(JX507_FLIP_EN << 4))},
+	{0x03,0xFF},
+	{0x04,0xFF},
+	{0x0C,0x40},
+	{0x0D,0x50},//0x04},//@0226 new setting
+	{0x0E,0x10},
+	{0x0F,0x04},
+	{0x10,0x13},
+	{0x11,0x80},
+	{0x13,0x87},//;;---AEC/AGC
+	{0x14,0x80},
+	{0x15,0x44},
+	{0x16,0xC0},
+	{0x17,0x40},
+	{0x18,0xFE},
+	{0x19,0x28},
+	{0x1A,0x80},
+	{0x1B,0x4F},
+	{0x1D,0x00},
+	{0x1E,0x1C},
+	{0x1F,0x00},
+	{0x20,0xA8},
+	{0x21,0x0B},
+	{0x22,0xF5},//;;---Frame
+	{0x23,0x07},
+	{0x24,0x20},
+	{0x25,0x98},
+	{0x26,0x7A},
+	{0x27,(0xA0 + JX507_FLIP_EN*12 + JX507_MIRROR_EN)},//(0x96 + JX507_FLIP_EN*12)},
+	{0x28,(0x0c - JX507_FLIP_EN)},
+	{0x29,0x01},
+	{0x2A,0x90},  //0x80
+	{0x2B,0x29},
+	{0x2C,0x00},
+	{0x2D,0x00},
+	{0x2E,0xEA},
+	{0x2F,0x04},
+	{0x30,0x9C},
+	{0x31,0x14},
+	{0x32,0xBE},
+	{0x33,0x18},
+	{0x34,0x3E},
+	{0x35,0xEC},
+	{0x3A,0x00},
+	{0x36,0x00},
+	{0x37,0x40},
+	{0x38,0xE7},
+	{0x39,0x34},
+	{0x3B,0x00},
+	{0x3C,0x08},
+	{0x3D,0x10},
+	{0x3E,0x08},
+	{0x3F,0x10},
+	{0x40,0x08},
+	{0x48,0x00},
+	{0x49,0x04},//;;---BLC
+	{0x4A,0x03},//{0x4A,0x03},
+	{0x4B,0xA4},
+	{0x4C,0xA4},
+	{0x4D,0xA4},
+	{0x4E,0xA4},
+	{0x4F,0x55},
+	{0x50,0x10},
+	{0x51,0x88},
+	{0x52,0x00},
+	{0x53,0x84},
+	{0x54,0x80},
+	{0x55,0x00},
+	{0x56,0x42},
+	{0x57,0x00},
+	{0x5F,0x03},
+	{0x60,0x27},
+	{0x61,0xFC},
+	{0x62,0x00},//0x03},//@0226 new setting
+	{0x63,0xC0},
+	{0x64,0x07},
+	{0x65,0x80},
+	{0x66,0x10},
+	{0x67,0x79},
+	{0x68,0x00},
+	{0x69,0x72},
+	{0x6A,0x3A},
+	{0x6C,0x00},
+	{0x6B,0x00},
+	{0x6D,0x02},
+	{0x6E,0x8E},
+	{0x70,0x69},
+	{0x71,0x8A},
+	{0x72,0x68},
+	{0x73,0x33},
+	{0x74,0x02},
+	{0x75,0x2B},
+	{0x76,0xA8},
+	{0x77,0x0C},
+	{0x78,0x14}
+};
 
-LOCAL SENSOR_REG_TAB_INFO_T s_ov8858_resolution_Tab_RAW[] = {
-	{ADDR_AND_LEN_OF_ARRAY(ov8858_common_init), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
-	//{ADDR_AND_LEN_OF_ARRAY(ov8858_1408X792_setting), 1408, 792, 24, SENSOR_IMAGE_FORMAT_RAW},
-	//{ADDR_AND_LEN_OF_ARRAY(ov8858_3264X1836_setting), 3264, 1836, 24, SENSOR_IMAGE_FORMAT_RAW},
-	{ADDR_AND_LEN_OF_ARRAY(ov8858_3264x2448_setting), 3264, 2448, 24, SENSOR_IMAGE_FORMAT_RAW},
+LOCAL SENSOR_REG_TAB_INFO_T s_JX507_resolution_Tab_RAW[] = {
+	{ADDR_AND_LEN_OF_ARRAY(JX507_com_raw), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(JX507_1280X960_raw), 1280, 960, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{ADDR_AND_LEN_OF_ARRAY(JX507_2592X1944_raw), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_RAW},
+
 	{PNULL, 0, 0, 0, 0, 0},
-	{PNULL, 0, 0, 0, 0, 0},
-
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
@@ -1193,12 +394,10 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov8858_resolution_Tab_RAW[] = {
 	{PNULL, 0, 0, 0, 0, 0}
 };
 
-LOCAL SENSOR_TRIM_T s_ov8858_Resolution_Trim_Tab[] = {
+LOCAL SENSOR_TRIM_T s_JX507_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
-	//{0, 0, 1408, 792, 70, 408, 2366},
-	//{0, 0, 3264, 1836, 89, 528, 1872},
-	{0, 0, 3264, 2448, 162, 528, 2474, {0, 0, 3264, 2448}},
-	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 1280,  960, 211, 912, 1576, {0, 0, 1280, 960}},//sysclk*10
+	{0, 0, 2592, 1944, 327, 912, 2038, {0, 0, 2592, 1944}},//sysclk*10
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -1207,25 +406,7 @@ LOCAL SENSOR_TRIM_T s_ov8858_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}}
 };
 
-LOCAL const SENSOR_REG_T s_ov8858_1408x792_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
-	/*video mode 0: ?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* video mode 1:?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* video mode 2:?fps*/
-	{
-		{0xffff, 0xff}
-	},
-	/* video mode 3:?fps*/
-	{
-		{0xffff, 0xff}
-	}
-};
-LOCAL const SENSOR_REG_T ov8858_3264X1836_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+LOCAL const SENSOR_REG_T s_JX507_1280x960_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
 	/*video mode 0: ?fps*/
 	{
 		{0xffff, 0xff}
@@ -1244,7 +425,25 @@ LOCAL const SENSOR_REG_T ov8858_3264X1836_video_tab[SENSOR_VIDEO_MODE_MAX][1] = 
 	}
 };
 
-LOCAL const SENSOR_REG_T  s_ov8858_3264x2448_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+LOCAL const SENSOR_REG_T s_JX507_1600x1200_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
+	/*video mode 0: ?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 1:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 2:?fps*/
+	{
+		{0xffff, 0xff}
+	},
+	/* video mode 3:?fps*/
+	{
+		{0xffff, 0xff}
+	}
+};
+LOCAL const SENSOR_REG_T s_JX507_2592x1944_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
 	/*video mode 0: ?fps*/
 	{
 		{0xffff, 0xff}
@@ -1263,14 +462,10 @@ LOCAL const SENSOR_REG_T  s_ov8858_3264x2448_video_tab[SENSOR_VIDEO_MODE_MAX][1]
 	}
 };
 
-LOCAL SENSOR_VIDEO_INFO_T s_ov8858_video_info[] = {
+LOCAL SENSOR_VIDEO_INFO_T s_JX507_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
-	//{{{30, 30, 70, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov8858_1408x792_video_tab},
-	//{{{30, 30, 89, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)ov8858_3264X1836_video_tab},
-	{{{15, 15, 162, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov8858_3264x2448_video_tab},
-	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
-	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
-
+	{{{30, 30, 211, 100}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_JX507_1280x960_video_tab},
+	{{{15, 15, 327, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_JX507_2592x1944_video_tab},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
@@ -1279,7 +474,7 @@ LOCAL SENSOR_VIDEO_INFO_T s_ov8858_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
 };
 
-LOCAL uint32_t _ov8858_set_video_mode(uint32_t param)
+LOCAL uint32_t _JX507_set_video_mode(uint32_t param)
 {
 	SENSOR_REG_T_PTR sensor_reg_ptr;
 	uint16_t         i = 0x00;
@@ -1293,12 +488,12 @@ LOCAL uint32_t _ov8858_set_video_mode(uint32_t param)
 		return SENSOR_FAIL;
 	}
 
-	if (PNULL == s_ov8858_video_info[mode].setting_ptr) {
+	if (PNULL == s_JX507_video_info[mode].setting_ptr) {
 		SENSOR_PRINT("fail.");
 		return SENSOR_FAIL;
 	}
 
-	sensor_reg_ptr = (SENSOR_REG_T_PTR)&s_ov8858_video_info[mode].setting_ptr[param];
+	sensor_reg_ptr = (SENSOR_REG_T_PTR)&s_JX507_video_info[mode].setting_ptr[param];
 	if (PNULL == sensor_reg_ptr) {
 		SENSOR_PRINT("fail.");
 		return SENSOR_FAIL;
@@ -1308,71 +503,69 @@ LOCAL uint32_t _ov8858_set_video_mode(uint32_t param)
 		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
 
-	SENSOR_PRINT("0x%02x", param);
+	SENSOR_PRINT("_JX507_set_video_mode = 0x%02x", param);
 	return 0;
 }
 
+LOCAL SENSOR_IOCTL_FUNC_TAB_T s_JX507_ioctl_func_tab = {
+	PNULL,
+	_JX507_PowerOn,
+	PNULL,
+	_JX507_Identify,
 
-LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov8858_ioctl_func_tab = {
+	PNULL,// write register
+	PNULL,// read  register
 	PNULL,
-	_ov8858_PowerOn,
-	PNULL,
-	_ov8858_Identify,
-
-	PNULL,			// write register
-	PNULL,			// read  register
-	PNULL,
-	_ov8858_GetResolutionTrimTab,
+	_JX507_GetResolutionTrimTab,
 
 	// External
 	PNULL,
 	PNULL,
 	PNULL,
 
-	PNULL, //_ov8858_set_brightness,
-	PNULL, // _ov8858_set_contrast,
+	PNULL, //_JX507_set_brightness,
+	PNULL, // _JX507_set_contrast,
 	PNULL,
-	PNULL,			//_ov8858_set_saturation,
+	PNULL,//_JX507_set_saturation,
 
-	PNULL, //_ov8858_set_work_mode,
-	PNULL, //_ov8858_set_image_effect,
+	PNULL, //_JX507_set_work_mode,
+	PNULL, //_JX507_set_image_effect,
 
-	_ov8858_BeforeSnapshot,
-	_ov8858_after_snapshot,
-	_ov8858_flash,
+	_JX507_BeforeSnapshot,
+	_JX507_after_snapshot,
+	_JX507_flash,
 	PNULL,
-	_ov8858_write_exposure,
+	_JX507_write_exposure,
 	PNULL,
-	_ov8858_write_gain,
-	PNULL,
-	PNULL,
-	_ov8858_write_af,
-	PNULL,
-	PNULL, //_ov8858_set_awb,
+	_JX507_write_gain,
 	PNULL,
 	PNULL,
-	PNULL, //_ov8858_set_ev,
+	_JX507_write_af,
+	PNULL,
+	PNULL, //_JX507_set_awb,
+	PNULL,
+	PNULL,
+	PNULL, //_JX507_set_ev,
 	PNULL,
 	PNULL,
 	PNULL,
-	PNULL, //_ov8858_GetExifInfo,
-	_ov8858_ExtFunc,
-	PNULL, //_ov8858_set_anti_flicker,
-	_ov8858_set_video_mode,
+	PNULL, //_JX507_GetExifInfo,
+	_JX507_ExtFunc,
+	PNULL, //_JX507_set_anti_flicker,
+	_JX507_set_video_mode, //_JX507_set_video_mode,
 	PNULL, //pick_jpeg_stream
-	PNULL,  //meter_mode
+	PNULL, //meter_mode
 	PNULL, //get_status
-	_ov8858_StreamOn,
-	_ov8858_StreamOff,
-	PNULL,
+	_JX507_StreamOn,
+	_JX507_StreamOff,
+	PNULL
 };
 
+SENSOR_INFO_T g_JX507_mipi_raw_info = {
+	JX507_I2C_ADDR_W,	// salve i2c write address
+	JX507_I2C_ADDR_R,	// salve i2c read address
 
-SENSOR_INFO_T g_ov8858_mipi_raw_info = {
-	ov8858_I2C_ADDR_W,	// salve i2c write address
-	ov8858_I2C_ADDR_R,	// salve i2c read address
-
-	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT | SENSOR_I2C_FREQ_100,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+	SENSOR_I2C_REG_8BIT | SENSOR_I2C_REG_8BIT | SENSOR_I2C_FREQ_400,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
 	// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
 	// other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_N | SENSOR_HW_SIGNAL_VSYNC_N | SENSOR_HW_SIGNAL_HSYNC_P,	// bit0: 0:negative; 1:positive -> polarily of pixel clock
@@ -1399,32 +592,32 @@ SENSOR_INFO_T g_ov8858_mipi_raw_info = {
 	// bit[8:31] reseved
 
 	SENSOR_LOW_PULSE_RESET,	// reset pulse level
-	5,			// reset pulse width(ms)
+	50,			// reset pulse width(ms)
 
 	SENSOR_LOW_LEVEL_PWDN,	// 1: high level valid; 0: low level valid
 
 	1,			// count of identify code
-	{{0x300A, 0x88},		// supply two code to identify sensor.
-	 {0x300B, 0x58}},		// for Example: index = 0-> Device id, index = 1 -> version id
+	{{0x0a, 0xa5},		// supply two code to identify sensor.
+	 {0x0b, 0x07}},		// for Example: index = 0-> Device id, index = 1 -> version id
 
 	SENSOR_AVDD_2800MV,	// voltage of avdd
 
-	3264,			// max width of source image
-	2448,			// max height of source image
-	"ov8858",		// name of sensor
+	2592,			// max width of source image
+	1944,			// max height of source image
+	"JX507",		// name of sensor
 
 	SENSOR_IMAGE_FORMAT_RAW,	// define in SENSOR_IMAGE_FORMAT_E enum,SENSOR_IMAGE_FORMAT_MAX
 	// if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
 
-	SENSOR_IMAGE_PATTERN_RAWRGB_B,// pattern of input image form sensor;
+	SENSOR_IMAGE_PATTERN_RAWRGB_R,// pattern of input image form sensor;
 
-	s_ov8858_resolution_Tab_RAW,	// point to resolution table information structure
-	&s_ov8858_ioctl_func_tab,	// point to ioctl function table
-	&s_ov8858_mipi_raw_info_ptr,		// information and table about Rawrgb sensor
-	NULL,			//&g_ov8858_ext_info,                // extend information about sensor
+	s_JX507_resolution_Tab_RAW,	// point to resolution table information structure
+	&s_JX507_ioctl_func_tab,	// point to ioctl function table
+	&s_JX507_raw_info_ptr,		// information and table about Rawrgb sensor
+	NULL,			//&g_JX507_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
-	SENSOR_AVDD_1500MV,	// dvdd
-	1,			// skip frame num before preview
+	SENSOR_AVDD_CLOSED,	// dvdd
+	3,			// skip frame num before preview
 	3,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
@@ -1434,199 +627,63 @@ SENSOR_INFO_T g_ov8858_mipi_raw_info = {
 	0,
 	0,
 	0,
-#if defined(ov8858_2_LANES)
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
-#elif defined(ov8858_4_LANES)
-	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
-#endif
-
-	s_ov8858_video_info,
+	s_JX507_video_info,
 	3,			// skip frame num while change setting
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
 {
-	return s_ov8858_mipi_raw_info_ptr;
+	return s_JX507_raw_info_ptr;
 }
 
-LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
+LOCAL uint32_t _JX507_InitRawTuneInfo(void)
 {
 	uint32_t rtn=0x00;
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-#if 0
+
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
+#if 0
 	//bypass
-	sensor_ptr->version_id=0x00010000;
-	sensor_ptr->blc_bypass=0x00;
-	sensor_ptr->nlc_bypass=0x01;
-	sensor_ptr->lnc_bypass=0x01;
-	sensor_ptr->ae_bypass=0x00;
-	sensor_ptr->awb_bypass=0x00;
-	sensor_ptr->bpc_bypass=0x01;
-	sensor_ptr->denoise_bypass=0x01;
-	sensor_ptr->grgb_bypass=0x01;
-	sensor_ptr->cmc_bypass=0x00;
-	sensor_ptr->gamma_bypass=0x00;
-	sensor_ptr->uvdiv_bypass=0x01;
-	sensor_ptr->pref_bypass=0x01;
-	sensor_ptr->bright_bypass=0x00;
-	sensor_ptr->contrast_bypass=0x00;
-	sensor_ptr->hist_bypass=0x01;
-	sensor_ptr->auto_contrast_bypass=0x01;
-	sensor_ptr->af_bypass=0x00;
-	sensor_ptr->edge_bypass=0x00;
-	sensor_ptr->fcs_bypass=0x00;
-	sensor_ptr->css_bypass=0x00;
-	sensor_ptr->saturation_bypass=0x00;
-	sensor_ptr->hdr_bypass=0x01;
-	sensor_ptr->glb_gain_bypass=0x01;
-	sensor_ptr->chn_gain_bypass=0x01;
-
-	//blc
-	sensor_ptr->blc.mode=0x00;
-	sensor_ptr->blc.offset[0].r=0x0f;
-	sensor_ptr->blc.offset[0].gr=0x0f;
-	sensor_ptr->blc.offset[0].gb=0x0f;
-	sensor_ptr->blc.offset[0].b=0x0f;
-
-	sensor_ptr->blc.offset[1].r=0x0f;
-	sensor_ptr->blc.offset[1].gr=0x0f;
-	sensor_ptr->blc.offset[1].gb=0x0f;
-	sensor_ptr->blc.offset[1].b=0x0f;
-
-	//nlc
-	sensor_ptr->nlc.r_node[0]=0;
-	sensor_ptr->nlc.r_node[1]=16;
-	sensor_ptr->nlc.r_node[2]=32;
-	sensor_ptr->nlc.r_node[3]=64;
-	sensor_ptr->nlc.r_node[4]=96;
-	sensor_ptr->nlc.r_node[5]=128;
-	sensor_ptr->nlc.r_node[6]=160;
-	sensor_ptr->nlc.r_node[7]=192;
-	sensor_ptr->nlc.r_node[8]=224;
-	sensor_ptr->nlc.r_node[9]=256;
-	sensor_ptr->nlc.r_node[10]=288;
-	sensor_ptr->nlc.r_node[11]=320;
-	sensor_ptr->nlc.r_node[12]=384;
-	sensor_ptr->nlc.r_node[13]=448;
-	sensor_ptr->nlc.r_node[14]=512;
-	sensor_ptr->nlc.r_node[15]=576;
-	sensor_ptr->nlc.r_node[16]=640;
-	sensor_ptr->nlc.r_node[17]=672;
-	sensor_ptr->nlc.r_node[18]=704;
-	sensor_ptr->nlc.r_node[19]=736;
-	sensor_ptr->nlc.r_node[20]=768;
-	sensor_ptr->nlc.r_node[21]=800;
-	sensor_ptr->nlc.r_node[22]=832;
-	sensor_ptr->nlc.r_node[23]=864;
-	sensor_ptr->nlc.r_node[24]=896;
-	sensor_ptr->nlc.r_node[25]=928;
-	sensor_ptr->nlc.r_node[26]=960;
-	sensor_ptr->nlc.r_node[27]=992;
-	sensor_ptr->nlc.r_node[28]=1023;
-
-	sensor_ptr->nlc.g_node[0]=0;
-	sensor_ptr->nlc.g_node[1]=16;
-	sensor_ptr->nlc.g_node[2]=32;
-	sensor_ptr->nlc.g_node[3]=64;
-	sensor_ptr->nlc.g_node[4]=96;
-	sensor_ptr->nlc.g_node[5]=128;
-	sensor_ptr->nlc.g_node[6]=160;
-	sensor_ptr->nlc.g_node[7]=192;
-	sensor_ptr->nlc.g_node[8]=224;
-	sensor_ptr->nlc.g_node[9]=256;
-	sensor_ptr->nlc.g_node[10]=288;
-	sensor_ptr->nlc.g_node[11]=320;
-	sensor_ptr->nlc.g_node[12]=384;
-	sensor_ptr->nlc.g_node[13]=448;
-	sensor_ptr->nlc.g_node[14]=512;
-	sensor_ptr->nlc.g_node[15]=576;
-	sensor_ptr->nlc.g_node[16]=640;
-	sensor_ptr->nlc.g_node[17]=672;
-	sensor_ptr->nlc.g_node[18]=704;
-	sensor_ptr->nlc.g_node[19]=736;
-	sensor_ptr->nlc.g_node[20]=768;
-	sensor_ptr->nlc.g_node[21]=800;
-	sensor_ptr->nlc.g_node[22]=832;
-	sensor_ptr->nlc.g_node[23]=864;
-	sensor_ptr->nlc.g_node[24]=896;
-	sensor_ptr->nlc.g_node[25]=928;
-	sensor_ptr->nlc.g_node[26]=960;
-	sensor_ptr->nlc.g_node[27]=992;
-	sensor_ptr->nlc.g_node[28]=1023;
-
-	sensor_ptr->nlc.b_node[0]=0;
-	sensor_ptr->nlc.b_node[1]=16;
-	sensor_ptr->nlc.b_node[2]=32;
-	sensor_ptr->nlc.b_node[3]=64;
-	sensor_ptr->nlc.b_node[4]=96;
-	sensor_ptr->nlc.b_node[5]=128;
-	sensor_ptr->nlc.b_node[6]=160;
-	sensor_ptr->nlc.b_node[7]=192;
-	sensor_ptr->nlc.b_node[8]=224;
-	sensor_ptr->nlc.b_node[9]=256;
-	sensor_ptr->nlc.b_node[10]=288;
-	sensor_ptr->nlc.b_node[11]=320;
-	sensor_ptr->nlc.b_node[12]=384;
-	sensor_ptr->nlc.b_node[13]=448;
-	sensor_ptr->nlc.b_node[14]=512;
-	sensor_ptr->nlc.b_node[15]=576;
-	sensor_ptr->nlc.b_node[16]=640;
-	sensor_ptr->nlc.b_node[17]=672;
-	sensor_ptr->nlc.b_node[18]=704;
-	sensor_ptr->nlc.b_node[19]=736;
-	sensor_ptr->nlc.b_node[20]=768;
-	sensor_ptr->nlc.b_node[21]=800;
-	sensor_ptr->nlc.b_node[22]=832;
-	sensor_ptr->nlc.b_node[23]=864;
-	sensor_ptr->nlc.b_node[24]=896;
-	sensor_ptr->nlc.b_node[25]=928;
-	sensor_ptr->nlc.b_node[26]=960;
-	sensor_ptr->nlc.b_node[27]=992;
-	sensor_ptr->nlc.b_node[28]=1023;
-
-	sensor_ptr->nlc.l_node[0]=0;
-	sensor_ptr->nlc.l_node[1]=16;
-	sensor_ptr->nlc.l_node[2]=32;
-	sensor_ptr->nlc.l_node[3]=64;
-	sensor_ptr->nlc.l_node[4]=96;
-	sensor_ptr->nlc.l_node[5]=128;
-	sensor_ptr->nlc.l_node[6]=160;
-	sensor_ptr->nlc.l_node[7]=192;
-	sensor_ptr->nlc.l_node[8]=224;
-	sensor_ptr->nlc.l_node[9]=256;
-	sensor_ptr->nlc.l_node[10]=288;
-	sensor_ptr->nlc.l_node[11]=320;
-	sensor_ptr->nlc.l_node[12]=384;
-	sensor_ptr->nlc.l_node[13]=448;
-	sensor_ptr->nlc.l_node[14]=512;
-	sensor_ptr->nlc.l_node[15]=576;
-	sensor_ptr->nlc.l_node[16]=640;
-	sensor_ptr->nlc.l_node[17]=672;
-	sensor_ptr->nlc.l_node[18]=704;
-	sensor_ptr->nlc.l_node[19]=736;
-	sensor_ptr->nlc.l_node[20]=768;
-	sensor_ptr->nlc.l_node[21]=800;
-	sensor_ptr->nlc.l_node[22]=832;
-	sensor_ptr->nlc.l_node[23]=864;
-	sensor_ptr->nlc.l_node[24]=896;
-	sensor_ptr->nlc.l_node[25]=928;
-	sensor_ptr->nlc.l_node[26]=960;
-	sensor_ptr->nlc.l_node[27]=992;
-	sensor_ptr->nlc.l_node[28]=1023;
+	sensor_ptr->version_id		= 0x00010000;
+	sensor_ptr->blc_bypass		= 0x00;
+	sensor_ptr->nlc_bypass		= 	0x01;
+	sensor_ptr->lnc_bypass		= 	0x00;
+	sensor_ptr->ae_bypass		= 0x00;
+	sensor_ptr->awb_bypass		= 0x00;
+	sensor_ptr->bpc_bypass		= 0x00;
+	sensor_ptr->denoise_bypass	= 0x00;
+	sensor_ptr->grgb_bypass		= 	0x01;
+	sensor_ptr->cmc_bypass		= 0x00;
+	sensor_ptr->gamma_bypass	= 0x00;
+	sensor_ptr->uvdiv_bypass	= 	0x01;
+	sensor_ptr->pref_bypass		= 0x00;
+	sensor_ptr->bright_bypass	= 0x00;
+	sensor_ptr->contrast_bypass	= 0x00;
+	sensor_ptr->hist_bypass 	= 	0x01;
+	sensor_ptr->auto_contrast_bypass= 0x00;
+	sensor_ptr->af_bypass		= 0x00;
+	sensor_ptr->edge_bypass 	= 0x00;
+	sensor_ptr->fcs_bypass 		= 0x00;
+	sensor_ptr->css_bypass 		= 0x00;
+	sensor_ptr->saturation_bypass 	= 0x00;
+	sensor_ptr->hdr_bypass 		= 	0x01;
+	sensor_ptr->glb_gain_bypass 	= 	0x01;
+	sensor_ptr->chn_gain_bypass	= 	0x01;
 
 	//ae
-	sensor_ptr->ae.skip_frame=0x01;
-	sensor_ptr->ae.normal_fix_fps=0;
-	sensor_ptr->ae.night_fix_fps=0;
-	sensor_ptr->ae.video_fps=0x1e;
-	sensor_ptr->ae.target_lum=120;
-	sensor_ptr->ae.target_zone=8;
-	sensor_ptr->ae.quick_mode=1;
+	sensor_ptr->ae.min_exposure 	= 1;
+	sensor_ptr->ae.skip_frame	= 0x01;
+	sensor_ptr->ae.normal_fix_fps	= 0;
+	sensor_ptr->ae.night_fix_fps 	= 0;
+	sensor_ptr->ae.video_fps	= 0x1e;
+	sensor_ptr->ae.target_lum	= 120;
+	sensor_ptr->ae.target_zone 	= 8;
+	sensor_ptr->ae.quick_mode	= 1;
 	sensor_ptr->ae.smart=0x00;// bit0: denoise bit1: edge bit2: startion
 	sensor_ptr->ae.smart_rotio=255;
 	sensor_ptr->ae.smart_mode=0; // 0: gain 1: lum
@@ -1642,6 +699,7 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	sensor_ptr->ae.smart_sta_low_thr=40;
 	sensor_ptr->ae.smart_sta_high_thr=120;
 	sensor_ptr->ae.smart_sta_rotio=128;
+
 	sensor_ptr->ae.ev[0]=0xd0;
 	sensor_ptr->ae.ev[1]=0xe0;
 	sensor_ptr->ae.ev[2]=0xf0;
@@ -1783,7 +841,7 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	sensor_ptr->awb.gain_convert[1].g=0x100;
 	sensor_ptr->awb.gain_convert[1].b=0x100;
 
-	//ov8858 awb param
+	//ov8825 awb param
 	sensor_ptr->awb.t_func.a = 274;
 	sensor_ptr->awb.t_func.b = -335;
 	sensor_ptr->awb.t_func.shift = 10;
@@ -1845,12 +903,54 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	sensor_ptr->awb.light.w_thr[6] = 8;
 
 	sensor_ptr->awb.steady_speed = 6;
-	sensor_ptr->awb.debug_level = 2;
-	sensor_ptr->awb.smart = 1;
-#endif
+	sensor_ptr->awb.debug_level = 0;
+
 	sensor_ptr->awb.alg_id = 0;
 	sensor_ptr->awb.smart_index = 4;
-#if 0
+
+	//blc
+	sensor_ptr->blc.mode		= 0x00;
+	sensor_ptr->blc.offset[0].r	= 4;
+	sensor_ptr->blc.offset[0].gr	= 4;
+	sensor_ptr->blc.offset[0].gb	= 4;
+	sensor_ptr->blc.offset[0].b	= 4;
+
+	sensor_ptr->blc.offset[1].r	= 4;
+	sensor_ptr->blc.offset[1].gr	= 4;
+	sensor_ptr->blc.offset[1].gb	= 4;
+	sensor_ptr->blc.offset[1].b	= 4;
+
+	sensor_ptr->cmc.matrix[0][0] = 0x0747;
+	sensor_ptr->cmc.matrix[0][1] = 0x3BD9;
+	sensor_ptr->cmc.matrix[0][2] = 0x00E0;
+	sensor_ptr->cmc.matrix[0][3] = 0x3F0E;
+	sensor_ptr->cmc.matrix[0][4] = 0x04AD;
+	sensor_ptr->cmc.matrix[0][5] = 0x0045;
+	sensor_ptr->cmc.matrix[0][6] = 0x00BE;
+	sensor_ptr->cmc.matrix[0][7] = 0x3B54;
+	sensor_ptr->cmc.matrix[0][8] = 0x07ED;
+
+	//af info
+	sensor_ptr->af.rough_count = 17;
+	sensor_ptr->af.af_rough_step[0] = 0;
+	sensor_ptr->af.af_rough_step[1] = 64;
+	sensor_ptr->af.af_rough_step[2] = 128;
+	sensor_ptr->af.af_rough_step[3] = 192;
+	sensor_ptr->af.af_rough_step[4] = 256;
+	sensor_ptr->af.af_rough_step[5] = 320;
+	sensor_ptr->af.af_rough_step[6] = 384;
+	sensor_ptr->af.af_rough_step[7] = 448;
+	sensor_ptr->af.af_rough_step[8] = 512;
+	sensor_ptr->af.af_rough_step[9] = 576;
+	sensor_ptr->af.af_rough_step[10] = 640;
+	sensor_ptr->af.af_rough_step[11] = 704;
+	sensor_ptr->af.af_rough_step[12] = 768;
+	sensor_ptr->af.af_rough_step[13] = 832;
+	sensor_ptr->af.af_rough_step[14] = 896;
+	sensor_ptr->af.af_rough_step[15] = 960;
+	sensor_ptr->af.af_rough_step[16] = 1023;
+//#if 0
+
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
@@ -2022,6 +1122,7 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	sensor_ptr->gamma.tab[0].axis[1][4]=0x13;
 	sensor_ptr->gamma.tab[0].axis[1][5]=0x1f;
 	sensor_ptr->gamma.tab[0].axis[1][6]=0x2a;
+
 	sensor_ptr->gamma.tab[0].axis[1][7]=0x36;
 	sensor_ptr->gamma.tab[0].axis[1][8]=0x40;
 	sensor_ptr->gamma.tab[0].axis[1][9]=0x58;
@@ -2358,7 +1459,7 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	sensor_ptr->af.min_step=0;
 	sensor_ptr->af.max_tune_step=0;
 	sensor_ptr->af.stab_period=120;
-	sensor_ptr->af.alg_id=3;
+	sensor_ptr->af.alg_id=2;
 	sensor_ptr->af.rough_count=12;
 	sensor_ptr->af.af_rough_step[0]=320;
 	sensor_ptr->af.af_rough_step[2]=384;
@@ -2546,104 +1647,148 @@ LOCAL uint32_t Sensor_ov8858_InitRawTuneInfo(void)
 	return rtn;
 }
 
+LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
+{
+	uint8_t cmd_val[2] = {0x00};
+	uint16_t  slave_addr = 0;
+	uint16_t cmd_len = 0;
+	uint32_t ret_value = SENSOR_SUCCESS;
 
-LOCAL uint32_t _ov8858_GetResolutionTrimTab(uint32_t param)
-{
-	SENSOR_PRINT("0x%x",  (uint32_t)s_ov8858_Resolution_Trim_Tab);
-	return (uint32_t) s_ov8858_Resolution_Trim_Tab;
+	slave_addr = DW9714_VCM_SLAVE_ADDR;
+	switch (mode) {
+		case 1:
+		break;
+
+		case 2:
+		{
+			cmd_len = 2;
+			cmd_val[0] = 0xec;
+			cmd_val[1] = 0xa3;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_JX507: _dw9174_SRCInit fail!1");
+			}
+			cmd_val[0] = 0xf2;
+			cmd_val[1] = 0x00;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_JX507: _dw9174_SRCInit fail!2");
+			}
+
+			cmd_val[0] = 0xdc;
+			cmd_val[1] = 0x51;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_JX507: _dw9174_SRCInit fail!3");
+			}
+		}
+		break;
+
+		case 3:
+		break;
+
+	}
+
+	return ret_value;
 }
-LOCAL uint32_t _ov8858_PowerOn(uint32_t power_on)
+
+LOCAL uint32_t _JX507_GetResolutionTrimTab(uint32_t param)
 {
-	SENSOR_AVDD_VAL_E dvdd_val = g_ov8858_mipi_raw_info.dvdd_val;
-	SENSOR_AVDD_VAL_E avdd_val = g_ov8858_mipi_raw_info.avdd_val;
-	SENSOR_AVDD_VAL_E iovdd_val = g_ov8858_mipi_raw_info.iovdd_val;
-	BOOLEAN power_down = g_ov8858_mipi_raw_info.power_down_level;
-	BOOLEAN reset_level = g_ov8858_mipi_raw_info.reset_pulse_level;
-	//uint32_t reset_width=g_ov8858_yuv_info.reset_pulse_width;
+	SENSOR_PRINT("SENSOR_JX507 GetResolutionTrimTab param = 0x%x, param = 0x%x", (uint32_t)s_JX507_Resolution_Trim_Tab, param);
+	return (uint32_t) s_JX507_Resolution_Trim_Tab;
+}
+
+LOCAL uint32_t _JX507_PowerOn(uint32_t power_on)
+{
+	SENSOR_AVDD_VAL_E dvdd_val = g_JX507_mipi_raw_info.dvdd_val;
+	SENSOR_AVDD_VAL_E avdd_val = g_JX507_mipi_raw_info.avdd_val;
+	SENSOR_AVDD_VAL_E iovdd_val = g_JX507_mipi_raw_info.iovdd_val;
+	BOOLEAN power_down = g_JX507_mipi_raw_info.power_down_level;
+	BOOLEAN reset_level = g_JX507_mipi_raw_info.reset_pulse_level;
 
 	if (SENSOR_TRUE == power_on) {
-		Sensor_PowerDown(power_down);
+
+		Sensor_PowerDown(!power_down);
 		// Open power
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
 		usleep(20*1000);
-		//_ov8858_dw9714_SRCInit(2);
+		_dw9174_SRCInit(2);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		usleep(10*1000);
-		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
+		Sensor_PowerDown(power_down);
 		// Reset sensor
 		Sensor_Reset(reset_level);
-		usleep(20*1000);
 	} else {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
 		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
 	}
-	SENSOR_PRINT("SENSOR_ov8858: _ov8858_Power_On(1:on, 0:off): %d", power_on);
+	SENSOR_PRINT("SENSOR_JX507: _JX507_Power_On(1:on, 0:off): %d  ", power_on);
 	return SENSOR_SUCCESS;
 }
 
-LOCAL uint32_t _ov8858_cfg_otp(uint32_t  param)
+LOCAL uint32_t _JX507_cfg_otp(uint32_t  param)
 {
 	uint32_t rtn=SENSOR_SUCCESS;
-	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_ov8858_raw_param_tab;
+	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_JX507_raw_param_tab;
 	uint32_t module_id=g_module_id;
 
-	SENSOR_PRINT("SENSOR_ov8858: _ov8858_cfg_otp");
+	SENSOR_PRINT("SENSOR_JX507: _JX507_cfg_otp");
 
 	if(PNULL!=tab_ptr[module_id].cfg_otp){
 		tab_ptr[module_id].cfg_otp(0);
-		}
+	}
 
 	return rtn;
 }
 
-LOCAL uint32_t _ov8858_com_Identify_otp(void* param_ptr)
+LOCAL uint32_t _JX507_com_Identify_otp(void* param_ptr)
 {
 	uint32_t rtn=SENSOR_FAIL;
 	uint32_t param_id;
 
-	SENSOR_PRINT("SENSOR_ov8858: _ov8858_com_Identify_otp");
+	SENSOR_PRINT("SENSOR_JX507: _JX507_com_Identify_otp");
 
 	/*read param id from sensor omap*/
-	param_id=ov8858_RAW_PARAM_COM;
+	param_id=JX507_RAW_PARAM_COM;
 
-	if(ov8858_RAW_PARAM_COM==param_id){
+	if(JX507_RAW_PARAM_COM==param_id){
 		rtn=SENSOR_SUCCESS;
 	}
 
 	return rtn;
 }
 
-LOCAL uint32_t _ov8858_GetRawInof(void)
+LOCAL uint32_t _JX507_GetRawInof(void)
 {
 	uint32_t rtn=SENSOR_SUCCESS;
-	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_ov8858_raw_param_tab;
+	struct raw_param_info_tab* tab_ptr = (struct raw_param_info_tab*)s_JX507_raw_param_tab;
 	uint32_t param_id;
 	uint32_t i=0x00;
 
 	/*read param id from sensor omap*/
-	param_id=ov8858_RAW_PARAM_COM;
+	param_id=JX507_RAW_PARAM_COM;
 
 	for(i=0x00; ; i++)
 	{
 		g_module_id = i;
 		if(RAW_INFO_END_ID==tab_ptr[i].param_id){
-			if(NULL==s_ov8858_mipi_raw_info_ptr){
-				SENSOR_PRINT("SENSOR_ov8858: ov5647_GetRawInof no param error");
+			if(NULL==s_JX507_raw_info_ptr){
+				SENSOR_PRINT("SENSOR_JX507: JX507_GetRawInof no param error");
 				rtn=SENSOR_FAIL;
 			}
-			SENSOR_PRINT("SENSOR_ov8858: ov8858_GetRawInof end");
+			SENSOR_PRINT("SENSOR_JX507: JX507_GetRawInof end");
 			break;
 		}
 		else if(PNULL!=tab_ptr[i].identify_otp){
 			if(SENSOR_SUCCESS==tab_ptr[i].identify_otp(0))
 			{
-				s_ov8858_mipi_raw_info_ptr = tab_ptr[i].info_ptr;
-				SENSOR_PRINT("SENSOR_ov8858: ov8858_GetRawInof success");
+				s_JX507_raw_info_ptr = tab_ptr[i].info_ptr;
+				SENSOR_PRINT("SENSOR_JX507: JX507_GetRawInof success");
 				break;
+
 			}
 		}
 	}
@@ -2651,350 +1796,350 @@ LOCAL uint32_t _ov8858_GetRawInof(void)
 	return rtn;
 }
 
-LOCAL uint32_t _ov8858_GetMaxFrameLine(uint32_t index)
+LOCAL uint32_t _JX507_GetMaxFrameLine(uint32_t index)
 {
 	uint32_t max_line=0x00;
-	SENSOR_TRIM_T_PTR trim_ptr=s_ov8858_Resolution_Trim_Tab;
+	SENSOR_TRIM_T_PTR trim_ptr=s_JX507_Resolution_Trim_Tab;
 
 	max_line=trim_ptr[index].frame_line;
 
+	SENSOR_PRINT("SENSOR_JX507: _JX507_GetMaxFrameLine maxline = 0x%x, index = 0x%x", max_line, index);
 	return max_line;
 }
 
-extern int Sensor_Set_slave_adr(uint32_t sensor_slave_adr);
-
-
-LOCAL uint32_t _ov8858_Identify(uint32_t param)
+LOCAL uint32_t _JX507_Identify(uint32_t param)
 {
-#define ov8858_PID_VALUE_0    0x00
-#define ov8858_PID_ADDR_0     0x300A
-#define ov8858_PID_VALUE_1    0x88
-#define ov8858_PID_ADDR_1     0x300B
-#define ov8858_VER_VALUE    0x58
-#define ov8858_VER_ADDR     0x300C
-
-	uint8_t pid_value_0 = 0x01;
-	uint8_t pid_value_1 = 0x00;
+	uint8_t pid_value = 0x00;
 	uint8_t ver_value = 0x00;
 	uint32_t ret_value = SENSOR_FAIL;
 
-	SENSOR_PRINT("SENSOR_ov8858: mipi raw identify\n");
+	SENSOR_PRINT("SENSOR_JX507:  raw identify \n");
 
-	pid_value_0 = Sensor_ReadReg(ov8858_PID_ADDR_0);
-	if (ov8858_PID_VALUE_0 == pid_value_0) {
-		pid_value_1 = Sensor_ReadReg(ov8858_PID_ADDR_1);
-		if (ov8858_PID_VALUE_1 == pid_value_1) {
-			ver_value = Sensor_ReadReg(ov8858_VER_ADDR);
-			SENSOR_PRINT("SENSOR_ov8858: Identify: PID = 0x%x, VER = 0x%x", pid_value_1, ver_value);
-			if (ov8858_VER_VALUE == ver_value) {
-				SENSOR_PRINT("SENSOR_ov8858: this is ov8858 sensor !");
-				ret_value=_ov8858_GetRawInof();
-				if(SENSOR_SUCCESS != ret_value)
-				{
-					SENSOR_PRINT("SENSOR_ov8858: the module is unknow error !");
-				}
-				Sensor_ov8858_InitRawTuneInfo();
-			} else {
-				SENSOR_PRINT("SENSOR_ov8858: Identify this is OV%x%x sensor !", pid_value_1, ver_value);
-			}
+	pid_value = Sensor_ReadReg(JX507_PID_ADDR);
+
+	if (JX507_PID_VALUE == pid_value) {
+		ver_value = Sensor_ReadReg(JX507_VER_ADDR);
+		SENSOR_PRINT("SENSOR_JX507: Identify: PID = %x, VER = %x", pid_value, ver_value);
+		if (JX507_VER_VALUE == ver_value) {
+			_JX507_GetRawInof();
+			_JX507_InitRawTuneInfo();
+			ret_value = SENSOR_SUCCESS;
+			SENSOR_PRINT("SENSOR_JX507: this is JX507 sensor !");
 		} else {
-			SENSOR_PRINT("SENSOR_ov8858: identify fail, PID_ADDR = 0x%x,  pid_value= 0x%d", ov8858_PID_ADDR_1, pid_value_1);
+			SENSOR_PRINT
+			    ("SENSOR_JX507: Identify this is OV%x%x sensor !", pid_value, ver_value);
 		}
 	} else {
-		SENSOR_PRINT("SENSOR_ov8858: identify fail, PID_ADDR = 0x%x, pid_value= 0x%d", ov8858_PID_ADDR_0, pid_value_0);
-		
+		SENSOR_PRINT("SENSOR_JX507: identify fail,pid_value=%x", pid_value);
 	}
 
 	return ret_value;
 }
 
-static uint32_t Sexpsure_line = 0;
-LOCAL uint32_t _ov8858_write_exposure(uint32_t param)
+LOCAL uint32_t _JX507_write_exposure(uint32_t param)
 {
-	int32_t ret_value = SENSOR_SUCCESS;
+	uint32_t ret_value = SENSOR_SUCCESS;
 	uint16_t expsure_line=0x00;
-	uint16_t dummy_line=0x00;
 	uint16_t size_index=0x00;
 	uint16_t frame_len=0x00;
 	uint16_t frame_len_cur=0x00;
 	uint16_t max_frame_len=0x00;
 	uint16_t value=0x00;
-	uint16_t value0=0x00;
-	uint16_t value1=0x00;
-	uint16_t value2=0x00;
+	uint8_t lsb=0x00;
+	uint8_t msb=0x00;
 
 	expsure_line=param&0xffff;
-	dummy_line=(param>>0x10)&0x0fff;
 	size_index=(param>>0x1c)&0x0f;
 
-	SENSOR_PRINT("SENSOR_ov8858: write_exposure line:%d, dummy:%d, size_index:%d", expsure_line, dummy_line, size_index);
+	if (!expsure_line) expsure_line = 1;
 
-	max_frame_len=_ov8858_GetMaxFrameLine(size_index);
+	max_frame_len =_JX507_GetMaxFrameLine(size_index);
 
 	if(0x00!=max_frame_len)
 	{
-		frame_len = ((expsure_line+4)> max_frame_len) ? (expsure_line+4) : max_frame_len;
+		frame_len = ((expsure_line + JX507_MAX_SHUTTER_OFFSET)> max_frame_len) ? (expsure_line + JX507_MAX_SHUTTER_OFFSET) : max_frame_len;
 
 		if(0x00!=(0x01&frame_len))
 		{
 			frame_len+=0x01;
 		}
 
-		frame_len_cur = (Sensor_ReadReg(0x380e)&0xff)<<8;
-		frame_len_cur |= Sensor_ReadReg(0x380f)&0xff;
+		frame_len_cur = (Sensor_ReadReg(0x23)&0xff)<<8;
+		frame_len_cur |= Sensor_ReadReg(0x22)&0xff;
+		if (frame_len_cur != frame_len){
+			lsb=(frame_len)&0xff;
+			msb=(frame_len>>0x08)&0xff;
 
-		if(frame_len_cur != frame_len){
-			value=(frame_len)&0xff;
-			ret_value = Sensor_WriteReg(0x380f, value);
-			value=(frame_len>>0x08)&0xff;
-			ret_value = Sensor_WriteReg(0x380e, value);
-			
+			ret_value = Sensor_WriteReg(0x22, lsb);
+			ret_value = Sensor_WriteReg(0x23, msb);
 		}
+		lsb=(expsure_line)&0xff;
+		msb=(expsure_line>>0x08)&0xff;
+
+		ret_value = Sensor_WriteReg(0x01, lsb);
+		ret_value = Sensor_WriteReg(0x02, msb);
 	}
 
-	value=(expsure_line<<0x04)&0xff;
-	ret_value = Sensor_WriteReg(0x3502, value);
-	value=(expsure_line>>0x04)&0xff;
-	ret_value = Sensor_WriteReg(0x3501, value);
-	value=(expsure_line>>0x0c)&0x0f;
-	ret_value = Sensor_WriteReg(0x3500, value);
-
+	SENSOR_PRINT("SENSOR_JX507: JX507_Write_Shutter expsure_line = 0x%x, max_frame_len = 0x%x", expsure_line, max_frame_len);
 	return ret_value;
 }
 
-LOCAL uint32_t _ov8858_write_gain(uint32_t param)
+LOCAL uint32_t _JX507_write_gain(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
-	uint32_t value=0x00;
-	uint32_t real_gain = 0;
 
-	//param = Sgain;
-	SENSOR_PRINT("SENSOR_ov8825: write_gain:0x%x", param);
-	real_gain = ((param&0xf)+16)*(((param>>4)&0x01)+1)*(((param>>5)&0x01)+1)*(((param>>6)&0x01)+1)*(((param>>7)&0x01)+1);
-	real_gain = real_gain*(((param>>8)&0x01)+1)*(((param>>9)&0x01)+1)*(((param>>10)&0x01)+1)*(((param>>11)&0x01)+1);
+#if JX507_GROUP_WRITE_EN
+	uint16_t val;
+	val = Sensor_ReadReg(0x12);
+	if (val & 0x08) {
+		SENSOR_PRINT("SENSOR_JX507: write gain reg[0x12][3] not clear!! (0x%x)", val);
 
-	value = real_gain*8;
-	SENSOR_PRINT("SENSOR_ov8825: write_gain:0x%x,  real_gain = 0x%x", param, value);
-	real_gain = value & 0xff;
-	ret_value = Sensor_WriteReg(0x3509, real_gain);/*0-7*/
-	real_gain = (value>>0x08)&0x07;
-	ret_value = Sensor_WriteReg(0x3508, real_gain);/*8*/
-
+	}
+	Sensor_WriteReg(0xc0, 0x00); // gain
+	Sensor_WriteReg(0xC1, (param & 0x7f));
+	Sensor_WriteReg(0x12, (val | 0x08));
+#else
+	Sensor_WriteReg(0x00, (param & 0x7f));
+#endif
 	return ret_value;
 }
 
-LOCAL uint32_t _ov8858_write_af(uint32_t param)
+LOCAL uint32_t _JX507_write_af(uint32_t param)
 {
-	return 0;
+	uint32_t ret_value = SENSOR_SUCCESS;
+	uint8_t cmd_val[2] = {0x00};
+	uint16_t slave_addr = 0;
+	uint16_t cmd_len = 0;
 
+	slave_addr = DW9714_VCM_SLAVE_ADDR;
+	cmd_val[0] = (param >> 4) & 0x3f;
+	cmd_val[1] = ((param << 4) & 0xf0) | 0x09;
+	cmd_len = 2;
+	ret_value = Sensor_WriteI2C(slave_addr, (uint8_t*)&cmd_val[0], cmd_len);
+	SENSOR_PRINT("SENSOR_JX507: _JX507_write_af pos = 0x%x", param);
+	return ret_value;
 }
 
-LOCAL uint32_t _ov8858_BeforeSnapshot(uint32_t param)
+LOCAL uint32_t _JX507_BeforeSnapshot(uint32_t param)
 {
 	uint8_t ret_l, ret_m, ret_h;
 	uint32_t capture_exposure, preview_maxline;
 	uint32_t capture_maxline, preview_exposure;
+
 	uint32_t capture_mode = param & 0xffff;
 	uint32_t preview_mode = (param >> 0x10 ) & 0xffff;
-	uint32_t prv_linetime=s_ov8858_Resolution_Trim_Tab[preview_mode].line_time;
-	uint32_t cap_linetime = s_ov8858_Resolution_Trim_Tab[capture_mode].line_time;
+	uint32_t prv_linetime = s_JX507_Resolution_Trim_Tab[preview_mode].line_time;
+	uint32_t cap_linetime = s_JX507_Resolution_Trim_Tab[capture_mode].line_time;
 
-	SENSOR_PRINT("SENSOR_ov8858: BeforeSnapshot mode: 0x%08x",param);
-
-	if (preview_mode == capture_mode) {
-		SENSOR_PRINT("SENSOR_ov8858: prv mode equal to capmode");
-		goto CFG_INFO;
+	if (SENSOR_MODE_PREVIEW_ONE >= param){
+		_JX507_ReadGain(0x00);
+		SENSOR_PRINT("SENSOR_JX507: prvmode equal to capmode");
+		return SENSOR_SUCCESS;
 	}
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x3500);
-	ret_m = (uint8_t) Sensor_ReadReg(0x3501);
-	ret_l = (uint8_t) Sensor_ReadReg(0x3502);
-	preview_exposure = (ret_h << 12) + (ret_m << 4) + (ret_l >> 4);
+	ret_h = (uint8_t) Sensor_ReadReg(0x02);
+	ret_l = (uint8_t) Sensor_ReadReg(0x01);
+	preview_exposure = (ret_h << 8) + ret_l;
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
+	ret_h = (uint8_t) Sensor_ReadReg(0x23);
+	ret_l = (uint8_t) Sensor_ReadReg(0x22);
 	preview_maxline = (ret_h << 8) + ret_l;
+
+	//_JX507_ReadGain(&gain);
 
 	Sensor_SetMode(capture_mode);
 	Sensor_SetMode_WaitDone();
 
 	if (prv_linetime == cap_linetime) {
-		SENSOR_PRINT("SENSOR_ov8858: prvline equal to capline");
-		goto CFG_INFO;
+		SENSOR_PRINT("SENSOR_JX507: prvline equal to capline");
+		return SENSOR_SUCCESS;
 	}
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
+	ret_h = (uint8_t) Sensor_ReadReg(0x23);
+	ret_l = (uint8_t) Sensor_ReadReg(0x22);
 	capture_maxline = (ret_h << 8) + ret_l;
+	capture_exposure = preview_exposure *prv_linetime  / cap_linetime ;
 
-	capture_exposure = preview_exposure * prv_linetime/cap_linetime;
-	//capture_exposure *= 2;
-
-	if(0 == capture_exposure){
+	if (0 == capture_exposure) {
 		capture_exposure = 1;
 	}
 
-	if(capture_exposure > (capture_maxline - 4)){
-		capture_maxline = capture_exposure + 4;
-		ret_l = (unsigned char)(capture_maxline&0x0ff);
+	capture_exposure = capture_exposure * 2;
+	if(capture_exposure > (capture_maxline - JX507_MAX_SHUTTER_OFFSET)){
+		capture_maxline = capture_exposure + JX507_MAX_SHUTTER_OFFSET;
+		ret_l = (unsigned char) (capture_maxline & 0xff);
 		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
-		Sensor_WriteReg(0x380e, ret_h);
-		Sensor_WriteReg(0x380f, ret_l);
+		Sensor_WriteReg(0x23, ret_h);
+		Sensor_WriteReg(0x22, ret_l);
 	}
-	ret_l = ((unsigned char)capture_exposure&0xf) << 4;
-	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4) & 0xff;
-	ret_h = (unsigned char)(capture_exposure >> 12);
+	ret_l = (unsigned char)((capture_exposure)&0xff);
+	ret_h = (unsigned char)((capture_exposure >> 8)&0xff);
 
-	Sensor_WriteReg(0x3502, ret_l);
-	Sensor_WriteReg(0x3501, ret_m);
-	Sensor_WriteReg(0x3500, ret_h);
+	Sensor_WriteReg(0x01, ret_l);
+	Sensor_WriteReg(0x02, ret_h);
 
-	CFG_INFO:
-	s_capture_shutter = _ov8858_get_shutter();
-	s_capture_VTS = _ov8858_get_VTS();
-	_ov8858_ReadGain(capture_mode);
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, s_capture_shutter);
+	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
 
 	return SENSOR_SUCCESS;
 }
 
-LOCAL uint32_t _ov8858_after_snapshot(uint32_t param)
+LOCAL uint32_t _JX507_after_snapshot(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_ov8858: after_snapshot mode:%d", param);
+	uint16_t i, j;
+	uint16_t val[16];
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < 16; j++) {
+			val[j] = Sensor_ReadReg(i*16+j);
+		}
+	}
 	Sensor_SetMode(param);
+
 	return SENSOR_SUCCESS;
 }
 
-LOCAL uint32_t _ov8858_flash(uint32_t param)
+LOCAL uint32_t _JX507_flash(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_ov8858: param=%d", param);
+	SENSOR_PRINT("SENSOR_JX507: param=%d", param);
 
-	/* enable flash, disable in _ov8858_BeforeSnapshot */
+	/* enable flash, disable in _JX507_BeforeSnapshot */
 	g_flash_mode_en = param;
 	Sensor_SetFlash(param);
 	SENSOR_PRINT_HIGH("end");
 	return SENSOR_SUCCESS;
 }
 
-LOCAL uint32_t _ov8858_StreamOn(uint32_t param)
+LOCAL uint32_t _JX507_StreamOn(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_ov8858: StreamOn");
+	int val;
+	SENSOR_PRINT("SENSOR_JX507: StreamOn");
+	val = Sensor_ReadReg(0x12);
+	val &= ~(0x40);
 
-	Sensor_WriteReg(0x0100, 0x01);
+	Sensor_WriteReg(0x12, val);
 
 	return 0;
 }
 
-LOCAL uint32_t _ov8858_StreamOff(uint32_t param)
+LOCAL uint32_t _JX507_StreamOff(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_ov8858: StreamOff");
-
-	Sensor_WriteReg(0x0100, 0x00);
+	int val;
+	SENSOR_PRINT("SENSOR_JX507: StreamOff");
+	val = Sensor_ReadReg(0x12);
+	val |= 0x40;
+	Sensor_WriteReg(0x12, val);
 	usleep(100*1000);
-
 	return 0;
 }
 
-int _ov8858_get_shutter(void)
+int _JX507_get_shutter(void)
 {
 	// read shutter, in number of line period
 	int shutter;
 
-	shutter = (Sensor_ReadReg(0x03500) & 0x0f);
-	shutter = (shutter<<8) + Sensor_ReadReg(0x3501);
-	shutter = (shutter<<4) + (Sensor_ReadReg(0x3502)>>4);
+	shutter = Sensor_ReadReg(0x01);
+	shutter = (shutter<<8) + Sensor_ReadReg(0x02);
 
+	SENSOR_PRINT("SENSOR_JX507: _JX507_get_shutter shutter = 0x%x", shutter);
 	return shutter;
 }
 
-int _ov8858_set_shutter(int shutter)
+int _JX507_set_shutter(int shutter)
 {
 	// write shutter, in number of line period
 	int temp;
 
 	shutter = shutter & 0xffff;
 
-	temp = shutter & 0x0f;
-	temp = temp<<4;
-	Sensor_WriteReg(0x3502, temp);
+	temp = shutter & 0xff;
+	Sensor_WriteReg(0x01, temp);
 
-	temp = shutter & 0xfff;
-	temp = temp>>4;
-	Sensor_WriteReg(0x3501, temp);
+	temp = (shutter >> 8) & 0xff;
+	Sensor_WriteReg(0x02, temp);
 
-	temp = shutter>>12;
-	Sensor_WriteReg(0x3500, temp);
-
+	SENSOR_PRINT("SENSOR_JX507: _JX507_set_shutter shutter = 0x%x", shutter);
 	return 0;
 }
 
-int _ov8858_get_gain16(void)
+int _JX507_get_gain16(void)
 {
 	// read gain, 16 = 1x
-	int gain16;
+	int gain16, param;
 
-	gain16 = Sensor_ReadReg(0x350a) & 0x03;
-	gain16 = (gain16<<8) + Sensor_ReadReg(0x350b);
+	param = Sensor_ReadReg(0x00);
+	gain16 = ((param&0xf)+16)*(((param>>4)&0x01)+1)*(((param>>5)&0x01)+1)*(((param>>6)&0x01)+1);
 
+	SENSOR_PRINT("SENSOR_JX507: _JX507_get_gain16 gain16 = 0x%x", gain16);
 	return gain16;
 }
 
-int _ov8858_set_gain16(int gain16)
+int _JX507_set_gain16(int gain16)
 {
-	// write gain, 16 = 1x
-	int temp;
-	gain16 = gain16 & 0x3ff;
+	uint16_t iReg,temp;
+	uint16_t gainMSB, gainLSB;
+	//param : 1x = 16
+	if (16*16 < gain16)
+		gain16 = 255;
+	if (1*16 > gain16)
+		gain16 = 16;
 
-	temp = gain16 & 0xff;
-	Sensor_WriteReg(0x350b, temp);
+	if(8*16 <= gain16) {
+		gainMSB = 7;
+	} else if (4*16 <= gain16) {
+		gainMSB = 3;
+	} else if (2*16 <= gain16) {
+		gainMSB = 1;
+	} else {
+		gainMSB = 0;
+	}
 
-	temp = gain16>>8;
-	Sensor_WriteReg(0x350a, temp);
+	gainLSB = gain16 / (gainMSB + 1) - 16;
+	if (gainLSB > 15) {
+		gainLSB = 15;
+	}
+	Sensor_WriteReg(0x00, (gainMSB << 4) + gainLSB);
 
+	SENSOR_PRINT("SENSOR_JX507: _JX507_set_gain16 gain16 = 0x%x, gainMSB,LSB = 0x%x,0x%x ", gain16,gainMSB,gainLSB);
 	return 0;
 }
 
 static void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
 {
-	// write capture gain
-	_ov8858_set_gain16(capture_gain16);
+	_JX507_set_gain16(capture_gain16);
 
-	// write capture shutter
-	/*if (capture_shutter > (capture_VTS - 4)) {
-		capture_VTS = capture_shutter + 4;
-		OV5640_set_VTS(capture_VTS);
-	}*/
-	_ov8858_set_shutter(capture_shutter);
+	_JX507_set_shutter(capture_shutter);
 }
 
-static uint32_t _ov8858_SetEV(uint32_t param)
+LOCAL uint32_t _JX507_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
 
 	uint16_t value=0x00;
-	uint32_t gain = s_ov8858_gain;
+	uint32_t gain = s_JX507_gain;
 	uint32_t ev = ext_ptr->param;
 
-	SENSOR_PRINT("SENSOR_ov8858: _ov8858_SetEV param: 0x%x", ext_ptr->param);
+	SENSOR_PRINT("SENSOR: _JX507_SetEV param: 0x%x", ev);
 
 	switch(ev) {
 	case SENSOR_HDR_EV_LEVE_0:
-		_calculate_hdr_exposure(s_ov8858_gain/2,s_capture_VTS,s_capture_shutter);
+		_calculate_hdr_exposure(s_JX507_gain/2,s_JX507_capture_VTS,s_JX507_capture_shutter);
 		break;
 	case SENSOR_HDR_EV_LEVE_1:
-		_calculate_hdr_exposure(s_ov8858_gain,s_capture_VTS,s_capture_shutter);
+		_calculate_hdr_exposure(s_JX507_gain,s_JX507_capture_VTS,s_JX507_capture_shutter);
 		break;
 	case SENSOR_HDR_EV_LEVE_2:
-		_calculate_hdr_exposure(s_ov8858_gain,s_capture_VTS,s_capture_shutter *4);
+		_calculate_hdr_exposure(s_JX507_gain,s_JX507_capture_VTS,s_JX507_capture_shutter *4);
 		break;
 	default:
 		break;
 	}
+
 	return rtn;
 }
-LOCAL uint32_t _ov8858_ExtFunc(uint32_t ctl_param)
+
+LOCAL uint32_t _JX507_ExtFunc(uint32_t ctl_param)
 {
+
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr =
 	    (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
@@ -3008,99 +2153,48 @@ LOCAL uint32_t _ov8858_ExtFunc(uint32_t ctl_param)
 	case SENSOR_EXT_EXPOSURE_START:
 		break;
 	case SENSOR_EXT_EV:
-		rtn = _ov8858_SetEV(ctl_param);
+		rtn = _JX507_SetEV(ctl_param);
 		break;
 	default:
 		break;
 	}
 	return rtn;
 }
-LOCAL int _ov8858_get_VTS(void)
+
+LOCAL int _JX507_get_VTS(void)
 {
-	// read VTS from register settings
 	int VTS;
 
-	VTS = Sensor_ReadReg(0x380e);//total vertical size[15:8] high byte
+	VTS = Sensor_ReadReg(0x23);//total vertical size[15:8] high byte
 
-	VTS = (VTS<<8) + Sensor_ReadReg(0x380f);
+	VTS = (VTS<<8) + Sensor_ReadReg(0x22);
 
 	return VTS;
 }
 
-LOCAL int _ov8858_set_VTS(int VTS)
+LOCAL int _JX507_set_VTS(int VTS)
 {
 	// write VTS to registers
 	int temp;
 
 	temp = VTS & 0xff;
-	Sensor_WriteReg(0x380f, temp);
+	Sensor_WriteReg(0x22, temp);
 
 	temp = VTS>>8;
-	Sensor_WriteReg(0x380e, temp);
+	Sensor_WriteReg(0x23, temp);
 
 	return 0;
 }
-LOCAL uint32_t _ov8858_ReadGain(uint32_t param)
+LOCAL uint32_t _JX507_ReadGain(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	uint16_t value=0x00;
 	uint32_t gain = 0;
 
-	value = Sensor_ReadReg(0x350b);/*0-7*/
-	gain = value&0xff;
-	value = Sensor_ReadReg(0x350a);/*8*/
-	gain |= (value<<0x08)&0x300;
+	value = Sensor_ReadReg(0x00);
+	s_JX507_gain=(int)value;
 
-	s_ov8858_gain=(int)gain;
-
-	SENSOR_PRINT("SENSOR_ov8858: _ov8858_ReadGain gain: 0x%x", s_ov8858_gain);
+	SENSOR_PRINT("SENSOR_JX507: _JX507_ReadGain gain: 0x%x", s_JX507_gain);
 
 	return rtn;
 }
-
-LOCAL uint32_t _ov8858_dw9714_SRCInit(uint32_t mode)
-{
-	uint8_t cmd_val[2] = {0x00};
-	uint16_t  slave_addr = 0;
-	uint16_t cmd_len = 0;
-	uint32_t ret_value = SENSOR_SUCCESS;
-	int i = 0;
-	
-	slave_addr = DW9714_VCM_SLAVE_ADDR;
-	SENSOR_PRINT(" _ov8858_dw9714_SRCInit: mode = %d\n", mode);
-	switch (mode) {
-		case 1:
-		break;
-		
-		case 2:
-		{
-			cmd_val[0] = 0xec;
-			cmd_val[1] = 0xa3;
-			cmd_len = 2;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
-
-			cmd_val[0] = 0xa1;
-			cmd_val[1] = 0x0e;
-			cmd_len = 2;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
-
-			cmd_val[0] = 0xf2;
-			cmd_val[1] = 0x90;
-			cmd_len = 2;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
-
-			cmd_val[0] = 0xdc;
-			cmd_val[1] = 0x51;
-			cmd_len = 2;
-			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
-		}
-		break;
-
-		case 3:
-		break;
-
-	}
-
-	return ret_value;
-}
-
