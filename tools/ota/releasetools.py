@@ -570,7 +570,7 @@ def IncrementalOTA_InstallBegin(info):
     partion_spl = PartitionIncrementalUpdater("/spl", "u-boot-spl-16k.bin", target_radio_dir, source_radio_dir, verbatim=True, extract=True)
     partion_spl.AddToOutputZip(output_zip)
     #uboot.bin
-    partion_uboot = PartitionIncrementalUpdater("/uboot", "u-boot.bin", target_radio_dir, source_radio_dir)
+    partion_uboot = PartitionIncrementalUpdater("/uboot", "u-boot.bin", target_radio_dir, source_radio_dir, verbatim=True)
     partion_uboot.AddToOutputZip(output_zip)
 
   if OPTIONS.modem_update:
