@@ -1121,6 +1121,10 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         {
             ALOGE("failed to decode video frame, hardware error");
 //            notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
+        } else if (decRet == MMDEC_NOT_SUPPORTED)
+        {
+            ALOGE("failed to decode video frame, unsupported");
+            notify(OMX_EventError, OMX_ErrorUnsupportedSetting, 0, NULL);
         } else
         {
             ALOGE("now, we don't take care of the decoder return: %d", decRet);
