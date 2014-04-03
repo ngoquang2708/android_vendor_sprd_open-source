@@ -260,7 +260,7 @@ class PartitionUpdater(object):
     else:
       self.script.WriteRawImage(mount_point, self.target.file_name)
 
-    if(self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin"):
+    if(self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin") or (self.file_name == "wcnnvitem.bin"):
       nvmerge_exe = os.path.join(OPTIONS.cache_path, "nvmerge")
       nvmerge_cfg = os.path.join(OPTIONS.cache_path, "nvmerge.cfg")
       new_nv = os.path.join(OPTIONS.cache_path, self.target.file_name)
@@ -276,12 +276,12 @@ class PartitionUpdater(object):
       self.script_ext.MergeSpl(p, new_spl, pt_dev)
       self.script.DeleteFiles([new_spl])
 
-    if self.file_name == "wcnnvitem.bin":
-      cache_nv = os.path.join(OPTIONS.cache_path, "wcnnvitem.bin")
-      self.script_ext.WritePartitionImage(p, cache_nv, pt_dev)
-      if p1 is not None:
-        self.script_ext.WritePartitionImage(p1, cache_nv, pt_dev1)
-      self.script.DeleteFiles([cache_nv])
+    #if self.file_name == "wcnnvitem.bin":
+    #  cache_nv = os.path.join(OPTIONS.cache_path, "wcnnvitem.bin")
+    #  self.script_ext.WritePartitionImage(p, cache_nv, pt_dev)
+    #  if p1 is not None:
+    #    self.script_ext.WritePartitionImage(p1, cache_nv, pt_dev1)
+    #  self.script.DeleteFiles([cache_nv])
 
   #verify patch file source
   def CheckPatchSource(self):
@@ -467,7 +467,7 @@ def FullOTA_InstallBegin(info):
     #nvitem.bin
     partion_nvitem = PartitionFullUpdater("/fixnv", "nvitem.bin", radio_dir, extract=True, mount_point2="/fixnv1", mount_point3="/fixnv2")
     partion_nvitem.AddToOutputZip(output_zip)
-	#dsp.bin(w)
+    #dsp.bin(w)
     w_partion_dsp = PartitionFullUpdater("/wdsp", "wdsp.bin", radio_dir)
     w_partion_dsp.AddToOutputZip(output_zip)
     #modem.bin(w)
@@ -476,7 +476,7 @@ def FullOTA_InstallBegin(info):
     #nvitem.bin(w)
     w_partion_nvitem = PartitionFullUpdater("/wfixnv", "wnvitem.bin", radio_dir, extract=True, mount_point2="/wfixnv1", mount_point3="/wfixnv2")
     w_partion_nvitem.AddToOutputZip(output_zip)
-	#dsp.bin(td)
+    #dsp.bin(td)
     td_partion_dsp = PartitionFullUpdater("/tddsp", "tddsp.bin", radio_dir)
     td_partion_dsp.AddToOutputZip(output_zip)
     #modem.bin(td)
