@@ -308,16 +308,15 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov9760_resolution_Tab_RAW[] = {
 };
 
 LOCAL SENSOR_TRIM_T s_ov9760_Resolution_Trim_Tab[] = {
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 1280, 960, 272, 408, 1116},
-
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0}
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 1280, 960, 272, 408, 1116, {0, 0, 1280, 960}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}}
 };
 
 LOCAL const SENSOR_REG_T s_ov9760_1280x960_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
@@ -524,7 +523,7 @@ LOCAL uint32_t Sensor_ov9760_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-#if 1
+#if 0
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
@@ -709,8 +708,8 @@ LOCAL uint32_t Sensor_ov9760_InitRawTuneInfo(void)
 	sensor_ptr->ae.smart_edge_min_index=0;
 	sensor_ptr->ae.smart_edge_max_index=6;
 	sensor_ptr->ae.smart_sta_low_thr=40;
-	sensor_ptr->ae.smart_sta_high_thr=120;
-	sensor_ptr->ae.smart_sta_rotio=128;
+//	sensor_ptr->ae.smart_sta_high_thr=120;
+//	sensor_ptr->ae.smart_sta_rotio=128;
 	sensor_ptr->ae.ev[0]=0xd0;
 	sensor_ptr->ae.ev[1]=0xe0;
 	sensor_ptr->ae.ev[2]=0xf0;
@@ -918,7 +917,7 @@ LOCAL uint32_t Sensor_ov9760_InitRawTuneInfo(void)
 #endif
 	sensor_ptr->awb.alg_id = 0;
 	sensor_ptr->awb.smart_index = 4;
-#if 1
+#if 0
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
