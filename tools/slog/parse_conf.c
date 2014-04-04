@@ -424,7 +424,7 @@ int gen_config_string(char *buffer)
 int parse_config()
 {
 	FILE *fp;
-	int ret = 0;
+	int ret = 0, count = 0;
 	char buffer[MAX_LINE_LEN];
 	struct stat st;
 
@@ -473,6 +473,7 @@ int parse_config()
 	}
 
 	/* parse line by line */
+	ret = 0;
 	while(fgets(buffer, MAX_LINE_LEN, fp) != NULL) {
 		if(buffer[0] == '#')
 			continue;
@@ -494,9 +495,21 @@ int parse_config()
 			ret = parse_4_entries(buffer); 
 		else if(!strncmp("misc", buffer, 4)) 
                         ret = parse_5_entries(buffer); 
-		if(ret != 0) break;
+		if(ret != 0) {
+			err_log("parse slog.conf return %d.  reload", ret);
+			fclose(fp);
+			unlink(TMP_SLOG_CONFIG);
+			exit(0);
+		}
+
+               count ++;
 	}
 
 	fclose(fp);
+	if(count < 10) {
+		err_log("parse slog.conf failed.  reload");
+		unlink(TMP_SLOG_CONFIG);
+	}
+
 	return ret;
 }

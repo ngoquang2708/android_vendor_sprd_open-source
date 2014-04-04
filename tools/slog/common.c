@@ -217,6 +217,7 @@ void cp_file(char *path, char *new_path)
 
 	while( (ret = fread(buffer, 1, 4096, fp_src)) > 0)
 		fwrite(buffer, 1, ret, fp_dest);
+	fflush(fp_dest);
 
 	fclose(fp_src);
 	fclose(fp_dest);
