@@ -948,9 +948,9 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
+    int ret;
 
     if(adev->voip_state) {
-        int ret;
         ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
         ret = at_cmd_route(adev);  //send at command to cp
         ALOGI("do_select_devices in %x,but voip is on so send at to cp out ret is %d",adev->out_devices,
@@ -979,6 +979,13 @@ ret);
             adev->prev_in_devices, adev->in_devices);
     adev->prev_out_devices = adev->out_devices;
     adev->prev_in_devices = adev->in_devices;
+
+    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+    if(ret < 0){
+        return;
+    }
+    SetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+
     if(adev->eq_available)
         vb_effect_sync_devices(adev->out_devices, adev->in_devices);
 
