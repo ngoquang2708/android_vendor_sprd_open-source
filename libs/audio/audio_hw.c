@@ -3129,6 +3129,7 @@ exit:
             ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
         }
         do_input_standby(in);
+        memset(buffer, 0, bytes);
     }
     pthread_mutex_unlock(&in->lock);
     return bytes;
