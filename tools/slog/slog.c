@@ -650,7 +650,7 @@ static void handle_uboot_log(void)
 		return;
 	}
 
-	ret = read(fd, buffer, sizeof(buffer));
+	ret = read(fd, buffer, sizeof(buffer) -1);
 	if (ret < 0) {
 		err_log("read cmdline error");
 		close(fd);
@@ -660,6 +660,7 @@ static void handle_uboot_log(void)
 	buffer[ret] = '\0';
 	/* parse address and size, format: boot_ram_log=0x..., 0x...*/
 	if ((s1 = strstr(buffer, "boot_ram_log=")) != NULL) {
+		s2= strsep(&s1, "="); /*0x=...*/
 		if ((s2 = strsep(&s1, ",")) != NULL) {
 			pa_start = strtoll(s2, NULL, 16);
 			if ((s2 = strsep(&s1, " ")) != NULL)

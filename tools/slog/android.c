@@ -221,7 +221,7 @@ void *stream_log_handler(void *arg)
 			if(!strncmp(info->name, "kernel", 6)){
 				memset(buf_kmsg, 0, LOGGER_ENTRY_MAX_LEN);
 				memset(wbuf_kmsg, 0, LOGGER_ENTRY_MAX_LEN *2);
-				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN);
+				ret = read(info->fd_device, buf_kmsg, LOGGER_ENTRY_MAX_LEN -1);
 				if(ret <= 0) {
 					if ( (ret == -1 && (errno == EINTR || errno == EAGAIN) ) || ret == 0 ) {
 						info = info->next;
