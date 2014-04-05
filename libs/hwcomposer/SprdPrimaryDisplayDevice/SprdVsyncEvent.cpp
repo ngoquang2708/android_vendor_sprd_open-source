@@ -140,7 +140,7 @@ bool SprdVsyncEvent::threadLoop() {
         mProcs->vsync(mProcs, DISPLAY_PRIMARY, next_vsync);
     }
 #else //8825 use driver vsync mode now use sleep for temporaryly
-#if 1
+#ifndef USE_FB_HW_VSYNC
     static nsecs_t netxfakevsync = 0;
     const nsecs_t period = mVSyncPeriod;
     const nsecs_t now = systemTime(CLOCK_MONOTONIC);
