@@ -67,7 +67,11 @@ struct fb_dmabuf_export
 
 #endif
 
+#ifdef USE_3_FRAMEBUFFER
+#define NUM_FB_BUFFERS 3
+#else
 #define NUM_FB_BUFFERS 2
+#endif
 
 #if GRALLOC_ARM_UMP_MODULE
 #include <ump/ump.h>
