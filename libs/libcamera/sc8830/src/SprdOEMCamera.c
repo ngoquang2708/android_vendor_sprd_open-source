@@ -8819,10 +8819,10 @@ uint32_t camera_safe_scale_th(void)
 {
 	uint32_t scale_threshold = 0;
 
-	if (cpu_is_dolphin()) {
-		scale_threshold = CMR_DOLPHIN_SCALING_TH;
-	} else {
+	if (cpu_is(CPU_SHARK)) {
 		scale_threshold = CMR_SHARK_SCALING_TH;
+	} else {
+		scale_threshold = CMR_DOLPHIN_SCALING_TH;
 	}
 
 	return scale_threshold;
