@@ -25,14 +25,15 @@ extern "C"
 #include <utils/Log.h>
 #include <utils/Timers.h>
 
-//#define NCMRBUG 1
+//#define NCMRDBG 1
 #ifndef LOG_NDEBUG
-#ifdef NCMRBUG
+#ifdef NCMRDBG
 #define LOG_NDEBUG 1
 #else
 #define LOG_NDEBUG 0
 #endif
 #endif
+
 //#define DEBUG_STR     "%s(L %d), %s: "
 //#define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__
 #define DEBUG_STR     "L %d, %s: "
@@ -82,6 +83,7 @@ extern "C"
                         nsecs_t timestamp = systemTime(CLOCK_MONOTONIC);   \
                         CMR_LOGV("timestamp = %lld.", timestamp/1000000);  \
 		} while(0)
+
 
 #ifndef MIN
 #define MIN(x,y) (((x)<(y))?(x):(y))

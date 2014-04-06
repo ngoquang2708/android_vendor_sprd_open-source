@@ -2195,7 +2195,7 @@ camera_ret_code_type camera_release_frame(uint32_t index)
 		if (index >= CAMERA_PREV_ID_BASE &&
 			index < CAMERA_PREV_ID_BASE + g_cxt->prev_mem_num) {
 			if (IS_PREVIEW_TRACE)
-				CMR_LOGV("release the frame whose index is 0x%x, rot %d, ret %d",
+				CMR_LOGI("release the frame whose index is 0x%x, rot %d, ret %d",
 					index,
 					g_cxt->prev_rot,
 					ret);
@@ -4605,8 +4605,7 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 	if (CHN_1 == info->channel_id && IS_PREVIEW) {
 		/* the source frame can be freed here*/
 		CMR_LOGI("Rot Done");
-			ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
-
+		ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
 		if (IS_PREVIEW_TRACE)
 			CMR_LOGI("free frame done!");
 
@@ -8820,10 +8819,10 @@ uint32_t camera_safe_scale_th(void)
 {
 	uint32_t scale_threshold = 0;
 
-	if (cpu_is_dolphin()) {
-		scale_threshold = CMR_DOLPHIN_SCALING_TH;
-	} else {
+	if (cpu_is(CPU_SHARK)) {
 		scale_threshold = CMR_SHARK_SCALING_TH;
+	} else {
+		scale_threshold = CMR_DOLPHIN_SCALING_TH;
 	}
 
 	return scale_threshold;

@@ -105,7 +105,7 @@ public:
 	};
 
 	int 						 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
-	sprd_camera_memory_t* 		 allocCameraMem(int buf_size, int num_bufs);
+	sprd_camera_memory_t* 		 allocCameraMem(int buf_size, int num_bufs, uint32_t is_cache);
 
 public:
 	static int                   getPropertyAtv();
