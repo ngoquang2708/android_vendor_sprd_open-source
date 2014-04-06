@@ -266,7 +266,7 @@ int  send_connect_message(int fd,int flag)
 	}
 	else
 	{
-		printf("write retval = %d:\n",retval);
+		MODEM_LOGD("write retval = %d:\n",retval);
 	}
 	if(retval > 0){
 		if(flag == 0) {
@@ -278,11 +278,11 @@ int  send_connect_message(int fd,int flag)
 		head.type = (data[0]<<8)|data[1];
                 if(head.type == BSL_REP_ACK)
 		{
-			printf(">>>>>>>ACK CMD_CONNECT\n");
+			MODEM_LOGD(">>>>>>>ACK CMD_CONNECT\n");
 			return 0;
 		}
 	}
-printf("CONNECT_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+MODEM_LOGD("CONNECT_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 /******************************************************************************
@@ -315,6 +315,7 @@ int  send_start_message(int fd,int size,unsigned long addr,int flag)
 	else
 	{
 		retval = write(fd,raw_buffer,size);
+		MODEM_LOGD("send_start_message write retval = %d\n", retval);
 	}
 	if(retval > 0)
 	{
@@ -342,11 +343,11 @@ int  send_start_message(int fd,int size,unsigned long addr,int flag)
 		head.type = (data[0]<<8)|data[1];
 		if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			printf(">>>>>>>ACK DATA_START\n");
+			MODEM_LOGD(">>>>>>>ACK DATA_START\n");
                         return 0;
 		}
 	}
-printf("START_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+MODEM_LOGD("START_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 /******************************************************************************
@@ -372,7 +373,7 @@ int  send_end_message(int fd,int flag)
 			if(retval > 0)
 				translated_size -= retval;
 			else if(retval < 0){
-				printf("write error : error = %d \n",errno);
+				MODEM_LOGE("write error : error = %d \n",errno);
 			}
 		}while(translated_size> 0);
 	}
@@ -406,11 +407,11 @@ int  send_end_message(int fd,int flag)
 		head.type = (data[0]<<8)|data[1];
 		if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			printf(">>>>>>>ACK DATA_END\n");
+			//printf(">>>>>>>ACK DATA_END\n");
                         return 0;
 		}
 	}
-printf("END_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+MODEM_LOGD("END_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 /******************************************************************************
@@ -472,11 +473,11 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 			head.type = (data[0]<<8)|data[1];
                 if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			//printf(">>>>>>>ACK DATA\n");
+			MODEM_LOGD(">>>>>>>ACK DATA %d\n", head.type);
                         return 0;
 		}
 	}
-printf("DATA_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+MODEM_LOGD("DATA_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 /******************************************************************************
@@ -534,11 +535,11 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 		head.type = (data[0]<<8)|data[1];
 		if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			printf(">>>>>>>ACK EXEC\n");
+			MODEM_LOGD(">>>>>>>ACK EXEC\n");
                         return 0;
 		}
 	}
-	printf("EXEC_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+	MODEM_LOGD("EXEC_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
 	return -1;
 }
 
@@ -564,7 +565,7 @@ int  uart_send_change_spi_mode_message(int fd)
 		if(retval > 0)
 			translated_size -= retval;
 		else if(retval < 0){
-			printf("write error : error = %d \n",errno);
+			MODEM_LOGE("write error : error = %d \n",errno);
 		}
 	}while(translated_size> 0);
 
@@ -578,7 +579,7 @@ int  uart_send_change_spi_mode_message(int fd)
 				offset += retval;
 				size -= retval;
 			} else if(retval < 0){
-				printf("read error : error = %d \n",errno);
+				MODEM_LOGE("read error : error = %d \n",errno);
 				sleep(1);
 			}
                 }while(size!=0);
@@ -590,11 +591,11 @@ int  uart_send_change_spi_mode_message(int fd)
 
                 if(head.type == BSL_REP_ACK)
 		{
-			printf(">>>>>>>ACK CMD_CHANGE_MODE\n");
+			MODEM_LOGD(">>>>>>>ACK CMD_CHANGE_MODE\n");
 			return 0;
 		}
         }
-printf("EXEC_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
+MODEM_LOGD("EXEC_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_buffer[2],raw_buffer[3],raw_buffer[4],raw_buffer[5],raw_buffer[6],raw_buffer[7]);
         return -1;
 }
 

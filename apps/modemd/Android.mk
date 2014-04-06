@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= \
 	modemd.c \
 	modemd_vlx.c \
+	modemd_ext.c \
 	modemd_sipc.c
 
 LOCAL_SHARED_LIBRARIES := \

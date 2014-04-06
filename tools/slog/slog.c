@@ -657,7 +657,6 @@ static void handle_uboot_log(void)
 		return;
 	}
 
-	buffer[ret] = '\0';
 	/* parse address and size, format: boot_ram_log=0x..., 0x...*/
 	if ((s1 = strstr(buffer, "boot_ram_log=")) != NULL) {
 		s2= strsep(&s1, "="); /*0x=...*/

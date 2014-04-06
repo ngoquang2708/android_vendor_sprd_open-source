@@ -71,16 +71,18 @@ static void handle_dump_shark_sipc_info()
 
 #ifdef ANDROID_VERSION_442
 #define MODEM_W_DEVICE_PROPERTY "persist.modem.w.enable"
-#define MODEM_TD_DEVICE_PROPERTY "persist.modem.t.enable"
+#define MODEM_TD_DEVICE_PROPERTY "persist.radio.modem.t.enable"
 #else
 #define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
 #define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
 #endif
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
+#define MODEM_L_DEVICE_PROPERTY "persist.radio.modem.l.enable"
 
 #define MODEM_W_DIAG_PROPERTY "ro.modem.w.diag"
 #define MODEM_TD_DIAG_PROPERTY "ro.modem.t.diag"
 #define MODEM_WCN_DIAG_PROPERTY "ro.modem.wcn.diag"
+#define MODEM_L_DIAG_PROPERTY "ro.modem.l.diag"
 
 #define MODME_WCN_DEVICE_RESET "persist.sys.sprd.wcnreset"
 #define MODEM_WCN_DUMP_LOG "persist.sys.sprd.wcnlog"
@@ -112,6 +114,9 @@ static void handle_init_modem_state(struct slog_info *info)
 	} else if (!strncmp(info->name, "cp2", 3)) {
 		property_get(MODEM_WCN_DEVICE_PROPERTY, modem_property, "");
 		ret = atoi(modem_property);
+	} else if (!strncmp(info->name, "cp3", 3)) {
+		property_get(MODEM_L_DEVICE_PROPERTY, modem_property, "");
+		ret = atoi(modem_property);
 	}
 
 	err_log("Init %s state is '%s'.", info->name, ret==0? "disable":"enable");
@@ -133,6 +138,9 @@ static void handle_open_modem_device(struct slog_info *info)
 	} else if (!strncmp(info->name, "cp2", 3)) {
 		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "");
 		open_device(info, modem_property);
+	} else if (!strncmp(info->name, "cp3", 3)) {
+		property_get(MODEM_L_DIAG_PROPERTY, modem_property, "");
+		open_device(info, modem_property);
 	}
 }
 
@@ -149,14 +157,21 @@ static void handle_dump_modem_memory_from_proc(struct slog_info *info)
 	localtime_r(&t, &tm);
 	memset(buffer, 0, MAX_NAME_LEN);
 	if(!strncmp(info->name, "cp0", 3)) {
-		sprintf(buffer, "cat /proc/cpw/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log", current_log_path, top_logdir, info->name, info->name,
-				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+		sprintf(buffer, "cat /proc/cpw/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log",
+			current_log_path, top_logdir, info->name, info->name,
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	} else if(!strncmp(info->name, "cp1", 3)) {
-		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log", current_log_path, top_logdir, info->name, info->name,
-				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log",
+			current_log_path, top_logdir, info->name, info->name,
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	} else if(!strncmp(info->name, "cp2", 3)){
-		sprintf(buffer, "cat /proc/cpwcn/mem > %s/%s/%s/%s_memory_%d%02d%02d%02d%02d%02d.log", current_log_path, top_logdir, info->name, info->name,
-				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+		sprintf(buffer, "cat /proc/cpwcn/mem > %s/%s/%s/%s_memory_%d%02d%02d%02d%02d%02d.log",
+			current_log_path, top_logdir, info->name, info->name,
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	} else if(!strncmp(info->name, "cp3", 3)){
+		sprintf(buffer, "cat /proc/cpl/mem > %s/%s/%s/%s_memory_%d%02d%02d%02d%02d%02d.log",
+			current_log_path, top_logdir, info->name, info->name,
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 	if(buffer[0] != 0)
 	{
@@ -175,6 +190,8 @@ static int handle_correspond_modem(char *buffer)
 		strcpy(modem_buffer, "cp1");
 	} else if (!strncmp(buffer, "W ", 2)) {
 		strcpy(modem_buffer, "cp0");
+	} else if (!strncmp(buffer, "L ", 2)) {
+		strcpy(modem_buffer, "cp3");
 	} else {
 		return 0;
 	}
@@ -368,7 +385,7 @@ static void handle_dump_modem_memory(struct slog_info *info)
 	char cmddumpmemory[2]={'3',0x0a};
 
 	err_log("Start to dump %s memory.", info->name);
-	if( strncmp(info->name, "cp0", 3) && strncmp(info->name, "cp1", 3) && strncmp(info->name, "cp2", 3) )
+	if( strncmp(info->name, "cp0", 3) && strncmp(info->name, "cp1", 3) && strncmp(info->name, "cp2", 3) && strncmp(info->name, "cp3", 3))
 	{
 		err_log("info name error %s.", info->name);
 		return;
@@ -503,6 +520,18 @@ void *modem_log_handler(void *arg)
 				info = info->next;
 				continue;
 			}
+		} else if (!strncmp(info->name, "cp3", 3)) {
+			handle_init_modem_state(info);
+			if(info->state == SLOG_STATE_ON) {
+#ifdef LOW_POWER_MODE
+				if(slog_enable != SLOG_LOW_POWER)
+#endif
+				info->fp_out = gen_outfd(info);
+				handle_open_modem_device(info);
+			} else {
+				info = info->next;
+				continue;
+			}
 		} else {
 			info = info->next;
 			continue;
@@ -584,7 +613,8 @@ void *modem_log_handler(void *arg)
 				continue;
 			}
 
-			if( !strncmp(info->name, "cp0", 3) || !strncmp(info->name, "cp1", 3) || !strncmp(info->name, "cp2", 3) ) {
+			if( !strncmp(info->name, "cp0", 3) || !strncmp(info->name, "cp1", 3) ||
+				!strncmp(info->name, "cp2", 3) || !strncmp(info->name, "cp3", 3) ) {
 				memset(cp_buffer, 0, BUFFER_SIZE);
 				ret = read(info->fd_device, cp_buffer, BUFFER_SIZE);
 				if(ret <= 0) {

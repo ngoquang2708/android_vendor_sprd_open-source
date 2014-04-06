@@ -394,7 +394,10 @@ struct tiny_audio_device {
     struct tiny_dev_cfg *dev_cfgs;
     unsigned int num_dev_cfgs;
 
-    struct tiny_private_ctl private_ctl;
+    struct tiny_dev_cfg *dev_linein_cfgs;
+    unsigned int num_dev_linein_cfgs;
+
+struct tiny_private_ctl private_ctl;
     struct audio_pga *pga;
     pga_gain_nv_t *pga_gain_nv;
     bool eq_available;
@@ -635,9 +638,13 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg);
 static int out_dump_create(FILE **out_fd, const char *path);
 static int out_dump_doing(FILE *out_fd, const void* buffer, size_t bytes);
 static int out_dump_release(FILE **fd);
-
+static void adev_config_end(void *data, const XML_Char *name);
+static void adev_config_parse_private(struct config_parse_state *s, const XML_Char *name);
+#ifdef VB_CONTROL_PARAMETER_V2
+#include "vb_control_parameters_v2.c"
+#else
 #include "vb_control_parameters.c"
-
+#endif
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
 static long getCurrentTimeUs()
@@ -839,9 +846,13 @@ int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
     struct route_setting *cur_setting;
     int cur_depth = 0;
-
+#ifdef VB_CONTROL_PARAMETER_V2
+    cur_setting = get_linein_route_setting(adev, device, on);
+    cur_depth = get_linein_route_depth(adev, device, on);
+#else
     cur_setting = get_route_setting(adev, device, on);
     cur_depth = get_route_depth(adev, device, on);
+#endif
     if (adev->mixer && cur_setting)
         set_route_by_array(adev->mixer, cur_setting, cur_depth);
     return 0;
@@ -3657,6 +3668,22 @@ static int adev_close(hw_device_t *device)
     };
     free(adev->dev_cfgs);
 
+#ifdef VB_CONTROL_PARAMETER_V2
+        //Need to free mixer configs here.
+    for (i=0; i < adev->num_dev_linein_cfgs; i++) {
+        for (j=0; j < adev->dev_linein_cfgs->on_len; j++) {
+            free(adev->dev_linein_cfgs[i].on[j].ctl_name);
+            //Is there a string of strval?
+        };
+        free(adev->dev_linein_cfgs[i].on);
+        for (j=0; j < adev->dev_linein_cfgs->off_len; j++) {
+            free(adev->dev_linein_cfgs[i].off[j].ctl_name);
+        };
+        free(adev->dev_linein_cfgs[i].off);
+    };
+    free(adev->dev_linein_cfgs);
+#endif
+
     free(adev->cp->vbc_ctrl_pipe_info);
     free(adev->cp);
     free(adev->pga_gain_nv);
@@ -5031,7 +5058,18 @@ static int adev_open(const hw_module_t* module, const char* name,
     BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_cfgs);
     BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_cfgs->on_len,  adev->dev_cfgs->off_len);
 
-	ret = dump_parse_xml();
+#ifdef VB_CONTROL_PARAMETER_V2
+	    /* parse mixer ctl */
+    ret = adev_config_parse_linein(adev);
+    if (ret < 0) {
+        ALOGE("Unable to locate all mixer controls from XML, aborting.");
+        goto ERROR;
+    }
+    BLUE_TRACE("ret=%d, num_dev_cfgs=%d", ret, adev->num_dev_linein_cfgs);
+    BLUE_TRACE("dev_cfgs_on depth=%d, dev_cfgs_off depth=%d", adev->dev_linein_cfgs->on_len,  adev->dev_linein_cfgs->off_len);
+#endif
+
+ret = dump_parse_xml();
 	if (ret < 0) {
         ALOGE("Unable to locate dump information  from XML, aborting.");
         goto ERROR;

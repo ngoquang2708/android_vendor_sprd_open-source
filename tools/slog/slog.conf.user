@@ -20,6 +20,7 @@ stream	radio	on	0	0
 stream	cp0	off	0	5
 stream	cp1	off	0	5
 stream	cp2	off	0	5
+stream	cp3	off	0	5
 stream	bt	off	0	7
 stream	tcp	off	0	7
 stream	kmemleak	off	0	7

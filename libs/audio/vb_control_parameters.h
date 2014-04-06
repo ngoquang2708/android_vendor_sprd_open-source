@@ -32,10 +32,51 @@
 
 #define AUDIO_XML_PATH "/system/etc/audio_hw.xml"
 
-#define MODEM_T_ENABLE_PROPERTY     "persist.modem.t.enable"
+#define MODEM_T_ENABLE_PROPERTY     "persist.radio.modem.t.enable"
 #define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
 
 
+#define AUDIO_NV_FM_GAINL_INDEX         18
+#define AUDIO_NV_FM_DGAIN_INDEX         19
+#define AUDIO_NV_CAPTURE_GAIN_INDEX     43
+#define AUDIO_NV_INTPA_SWITCH_INDEX     44
+#define AUDIO_NV_INTPA_GAIN_INDEX       45
+#define AUDIO_NV_LINEIN_GAIN_INDEX      46
+#define AUDIO_NV_LINEIN_APP_CONFIG_INFO      1
+#define AUDIO_NV_PLAYBACK_APP_CONFIG_INFO      0
+
+/* list vbc cmds */
+enum VBC_CMD_E
+{
+    VBC_CMD_NONE = 0,
+    /* current mode and volume gain parameters.*/
+    VBC_CMD_SET_MODE = 1,
+    VBC_CMD_RSP_MODE = 2,
+    VBC_CMD_SET_GAIN = 3,
+    VBC_CMD_RSP_GAIN = 4,
+    /* whether switch vb control to dsp parameters.*/
+    VBC_CMD_SWITCH_CTRL = 5,
+    VBC_CMD_RSP_SWITCH = 6,
+    /* whether mute or not.*/
+    VBC_CMD_SET_MUTE = 7,
+    VBC_CMD_RSP_MUTE = 8,
+    /* open/close device parameters.*/
+    VBC_CMD_DEVICE_CTRL = 9,
+    VBC_CMD_RSP_DEVICE = 10,
+
+    VBC_CMD_HAL_OPEN = 11,
+    VBC_CMD_RSP_OPEN  =12,
+
+    VBC_CMD_HAL_CLOSE = 13,
+    VBC_CMD_RSP_CLOSE = 14,
+
+    VBC_CMD_SET_SAMPLERATE = 15,
+    VBC_CMD_RSP_SAMPLERATE = 16,
+
+    VBC_CMD_LINEIN_CTRL = 17,
+    VBC_CMD_LINEIN_RSP_CTRL = 18,
+    VBC_CMD_MAX
+};
 typedef enum {
     CP_W,
     CP_TG,

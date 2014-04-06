@@ -224,9 +224,11 @@ int eng_diag_parse(char *buf,int len)
             ENG_LOG("%s: Handle DIAG_CMD_DIRECT_PHSCHK\n",__FUNCTION__);
             ret =CMD_USER_DIRECT_PHSCHK;
             break;
+#if 0
         case DIAG_CMD_ADC_F:
             ret =CMD_USER_ADC;
             break;
+#endif
         case DIAG_CMD_AT:
             if(is_audio_at_cmd_need_to_handle(buf,len)){
                 ENG_LOG("%s: Handle DIAG_CMD_AUDIO\n",__FUNCTION__);

@@ -289,6 +289,8 @@ int parse_5_entries(char *type)
 			info->log_path = strdup("cp1");
 		} else if(!strncmp(info->name, "cp2", 3)) {
 			info->log_path = strdup("cp2");
+		} else if(!strncmp(info->name, "cp3", 3)) {
+			info->log_path = strdup("cp3");
 		} else if(!strncmp(info->name, "bt", 2)) {
 			info->log_path = strdup("bt");
 		} else if(!strncmp(info->name, "tcp", 3)) {

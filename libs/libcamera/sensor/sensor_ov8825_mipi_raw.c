@@ -568,8 +568,13 @@ LOCAL const SENSOR_REG_T ov8825_common_init[] = {
 	{0x3813, 0x06}, // VOFF
 	{0x3814, 0x11}, // X INC
 	{0x3815, 0x11}, // Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3f00, 0x02}, // PSRAM Ctrl0
 	{0x4005, 0x18}, // Gain triger for BLC
 	{0x404f, 0x8F}, // Auto BLC while more than value
@@ -677,8 +682,13 @@ LOCAL const SENSOR_REG_T ov8825_720x480_setting[] = {
 	{0x3817, 0x40},
 	{0x3818, 0x00},
 	{0x3819, 0x40},
-	{0x3820, 0x80},
-	{0x3821, 0x16},
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
+	{0x3820, 0x86}, // Timing Reg20:Vflip
+	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3b1f, 0x00},
 	{0x3d00, 0x00},
 	{0x3d01, 0x00},
@@ -895,8 +905,13 @@ LOCAL const SENSOR_REG_T ov8825_1632x1224_setting[] = {
 	{0x3813, 0x04}, // VOFF
 	{0x3814, 0x31}, // X INC
 	{0x3815, 0x31}, // Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x17}, // Timing Reg21:Hmirr
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x11}, // Timing Reg21:Hmirr
+#endif
 	{0x3f00, 0x00}, // PSRAM Ctrl0
 	{0x4005, 0x18}, // Gain trigger for B
 	{0x404f, 0x8F}, // Auto BLC while mor
@@ -961,8 +976,13 @@ LOCAL const SENSOR_REG_T ov8825_1632x1224_setting[] = {
 	{0x3813, 0x04}, //VOFF
 	{0x3814, 0x31}, //X INC
 	{0x3815, 0x31}, //Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x17}, // Timing Reg21:Hmirr
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x11}, // Timing Reg21:Hmirr
+#endif
 	{0x3f00, 0x00}, //PSRAM, 0xctrl0
 	{0x4005, 0x18}, //Gain triger, 0xfor, 0xbLC
 	{0x404f, 0x8F}, //0xauto, 0xbLC while more than value
@@ -1030,8 +1050,13 @@ LOCAL const SENSOR_REG_T ov8825_1920x1080_setting[] = {
 	{0x3813, 0x06}, // VOFF
 	{0x3814, 0x11}, // X INC
 	{0x3815, 0x11}, // Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3f00, 0x02}, //PSRAM Ctrl0
 	{0x4005, 0x18}, // Gain triger for BLC
 	{0x404f, 0x8F}, // Auto BLC while more than value
@@ -1094,8 +1119,13 @@ LOCAL const SENSOR_REG_T ov8825_1920x1080_setting[] = {
 	{0x3813, 0x06}, // VOFF
 	{0x3814, 0x11}, // X INC
 	{0x3815, 0x11}, // Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3f00, 0x02}, // PSRAM Ctrl0
 	{0x4005, 0x18}, // Gain triger for BLC
 	{0x404f, 0x8F}, // Auto BLC while more than value
@@ -1163,8 +1193,13 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 	{0x3813, 0x06}, // VOFF
 	{0x3814, 0x11}, // X INC
 	{0x3815, 0x11}, // Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3f00, 0x02}, // PSRAM Ctrl0
 	{0x4005, 0x1A}, // Every frame do BLC
 	{0x404f, 0x7F}, //
@@ -1229,8 +1264,13 @@ LOCAL const SENSOR_REG_T ov8825_3264x2448_setting[] = {
 
 	{0x3814, 0x11}, //X INC
 	{0x3815, 0x11}, //Y INC
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
 	{0x3820, 0x86}, // Timing Reg20:Vflip
 	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x3f00, 0x02}, //PSRAM, 0xctrl0
 	{0x4005, 0x1A}, //0xevery, 0xframe, 0xdo, 0xbLC
 	{0x404f, 0x7F},
@@ -1295,7 +1335,13 @@ LOCAL const SENSOR_REG_T ov8825_640x480_setting[] = {
 	{0x3813, 0x02},
 	{0x3814, 0x71},
 	{0x3815, 0x35},
-	{0x3821, 0x10},
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x80}, // Timing Reg20:Vflip
+	{0x3821, 0x16}, // Timing Reg21:Hmirror
+#else
+	{0x3820, 0x86}, // Timing Reg20:Vflip
+	{0x3821, 0x10}, // Timing Reg21:Hmirror
+#endif
 	{0x4600, 0x14},
 	{0x4601, 0x14},
 	{0x4602, 0x00},

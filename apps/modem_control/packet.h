@@ -5,6 +5,19 @@
 #ifndef __PACKET_H
 #define __PACKET_H
 
+#define LOG_TAG 	"MODEM_CTRL"
+#include <utils/Log.h>
+
+#define MODEM_DEBUG
+#ifdef MODEM_DEBUG
+#define MODEM_LOGD  ALOGD
+#define MODEM_LOGE  ALOGE
+#else
+#define MODEM_LOGD(x...)    //printf
+#define MODEM_LOGE(x...)    //printf
+#endif
+
+
 #define cpu2be16(wValue)  (((wValue & 0xFF)<<8) | ((wValue>>8)&0xFF))
 #define cpu2be32(dwValue) (((dwValue&0xFF)<<24) | (((dwValue>>8)&0xFF)<<16) | (((dwValue>>16)&0xFF)<<8) | (dwValue>>24))
 
