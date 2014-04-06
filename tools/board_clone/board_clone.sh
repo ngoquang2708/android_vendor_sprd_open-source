@@ -305,7 +305,19 @@ function board_for_kernel()
 	TEMP=$BOARD_NAME_R"-native_defconfig"
 	echo $TEMP
 	TEMP1=$BOARD_NAME_N"-native_defconfig"
-	cp $TEMP $TEMP1
+	if [  -f $TEMP ];then
+		cp $TEMP $TEMP1
+	else
+		TEMP=$BOARD_NAME_R"_defconfig"
+		TEMP1=$BOARD_NAME_N"_defconfig"
+		if [  -f $TEMP ];then
+			cp $TEMP $TEMP1
+		else
+			echo -e $BOARD_NAME_R"***_defconfig not exist,configure kernel fail!!!!"
+			exit 0
+		fi
+	fi
+
 	file=$TEMP1
 
 	TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
@@ -745,6 +757,10 @@ function board_for_device()
 		TEMP1="ro.modem.w.count=2"
 		TEMP2="ro.modem.w.count=3"
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+
+		TEMP1="ro.modem.t.count=2"
+		TEMP2="ro.modem.t.count=3"
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 
 	#---------增加vendor/sprd/open-source/res/productinfo目录下的ini文件begin-------
@@ -772,27 +788,17 @@ function board_for_device()
 	echo "configure device end!"
 }
 
-function printPlatform()
+function select_Platform_and_BoardType()
 {
 	echo "==================================================================="
-	echo "please input platform name:"
-	echo "1. scx15 for dolphin"
-	echo "2. scx35 for shark"
+	echo "please select:"
+	echo "1. scx15 for dolphin and normal(for example:base or plus)"
+	echo "2. scx15 for dolphin and trisim(three sim cards)"
+	echo "3. scx35 for shark and normal(for example:base or plus)"
+	echo "4. scx35 for shark and trisim(three sim cards)"
 	echo "==================================================================="
-	read PLATFORM_CHOOSE
+	read BOARD_PLATFORM_TYPE
 }
-
-function selectBoardType()
-{
-	echo "==================================================================="
-	echo "please select board tyep:"
-	echo "1. normal(for example:base or plus)"
-	echo "2. trisim(three sim cards)"
-	echo "==================================================================="
-	read BOARD_TYPE
-}
-
-
 
 workdir=$PWD
 
@@ -811,22 +817,30 @@ if [ ! -d "./device/sprd" ];then
 	exit 0
 fi
 
-
-PLATFORM_CHOOSE=
-BOARD_TYPE=
+BOARD_PLATFORM_TYPE=
 while true
 do
-	printPlatform
-	if (echo -n $PLATFORM_CHOOSE | grep -q -e "^[1-9][1-9]*$")
+	select_Platform_and_BoardType
+	if (echo -n $BOARD_PLATFORM_TYPE | grep -q -e "^[1-9][1-9]*$")
 	then
-		if [ "$PLATFORM_CHOOSE" -gt "0" ]
+		if [ "$BOARD_PLATFORM_TYPE" -gt "0" ]
 		then
-			case $PLATFORM_CHOOSE in
+			case $BOARD_PLATFORM_TYPE in
 				1)PLATFORM="scx15"
-				echo "you have choose scx15!"
+				BOARD_TYPE=1
+				echo "you have choose scx15 and normal board!!"
 				;;
-				2)PLATFORM="scx35"
-				echo "you have choose scx35!"
+				2)PLATFORM="scx15"
+				BOARD_TYPE=2
+				echo "you have choose scx15 and trisim board!!"
+				;;
+				3)PLATFORM="scx35"
+				BOARD_TYPE=1
+				echo "you have choose scx35 and normal board!!"
+				;;
+				4)PLATFORM="scx35"
+				BOARD_TYPE=2
+				echo "you have choose scx35 and trisim board!!"
 				;;
 				*)echo "Invalid choice !"
 				exit 0
@@ -835,29 +849,6 @@ do
 		break
 	else
 		echo  "you don't hava choose platform!"
-		exit 0
-	fi
-done
-
-while true
-do
-	selectBoardType
-	if (echo -n $BOARD_TYPE | grep -q -e "^[1-9][1-9]*$")
-	then
-		if [ "$BOARD_TYPE" -gt "0" ]
-		then
-			case $BOARD_TYPE in
-				1)echo "you have choose normal board!"
-				;;
-				2)echo "you have choose trisim board!"
-				;;
-				*)echo "Invalid choice !"
-				exit 0
-			esac
-		fi
-		break
-	else
-		echo  "you don't hava choose board type!"
 		exit 0
 	fi
 done
