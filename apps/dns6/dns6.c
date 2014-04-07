@@ -201,7 +201,7 @@ int netdev_getip6(char *name,unsigned char *addr,int *bits)
 #define IPV6_ADDR_MAPPED        0x1000U
 #define IPV6_ADDR_RESERVED      0x2000U
 
-        lprintf(0, "enter netdev_getip6");
+        lprintf(0, "enter netdev_getip6 name %s", name);
         if(name==NULL)
         {
                 lprintf(0,"arguments error\n");
@@ -246,7 +246,7 @@ int netdev_getip(char *name,unsigned int *addr,int *bits)
         struct sockaddr_in *sin;
         unsigned int ipaddr,ipmask;
 
-        DNS6_DEBUG(0, "enter netdev_getip");
+        DNS6_DEBUG(0, "enter netdev_getip name:%s",name);
         sockid=socket( AF_INET, SOCK_DGRAM, 0 );
         if(sockid<0)
         {
@@ -322,7 +322,7 @@ int networktype(void)
                         else if(*p2==':')
                         {
                                 *p2=0;
-                                if(strncmp(p1,"veth_spi", 8)!=0)
+                                if(strncmp(p1,"veth_s", 6)!=0)
                                         continue;
                                 if(netdev_getip(p1,NULL,NULL)==0)
                                         type4=1;
@@ -2340,11 +2340,12 @@ int getcfg(char *cfgfile)
         lprintf(3,"BIH:        %s\n",BIHSTATUS?"OPEN":"CLOSE");
         lprintf(3,"PRIVATE:     %u.%u.%u.%u\n",NIPQUAD(PRIVATE));
 #ifdef ANDROID_CHANGES
-        //get net.dns1 and bakeup the net.dns1 to net.dns1.bak
+#if 0   // Android 4.4 net.dns1 could not change the system dns.
         if(snprintf(pidpropname,sizeof(pidpropname),"net.dns1") >= PROPERTY_KEY_MAX)
                exit(EXIT_FAILURE);
         property_set(pidpropname, "127.0.0.1");
         //check the DNSSERVER if is the 127.0.0.1, if it is not check the dns2
+#endif
 #else
         if(stat(cfgfile, &statnode)!=0)
         {
@@ -2396,7 +2397,12 @@ void catchexit(int signo)
 {
         DNS6_DEBUG(0, "enter catchexit");
 #ifdef ANDROID_CHANGES
-        //reset the DNS1
+#if 0 // Android 4.4 net.dns1 could not change the system dns.
+	if(snprintf(pidpropname,sizeof(pidpropname),"net.dns1") >= PROPERTY_KEY_MAX)
+        exit(EXIT_FAILURE);
+        property_set(pidpropname, "");
+	//reset the DNS1
+#endif
 #else
         rename("/system/etc/resolv.conf.dns6","/system/etc/resolv.conf");
 #endif
@@ -2437,6 +2443,24 @@ int main(int argc,char *argv[])
         getcfg(CONFFILE);
 #endif
         getcmdoption(argc,argv,"-s",DNSSERVER);
+	#ifdef ANDROID_CHANGES
+	// add to set the DNS
+        if(property_get("net.veth_spi4.ipv6_dns1", DNSSERVER, "")==0 &&
+          property_get("net.veth_spi3.ipv6_dns1", DNSSERVER, "")==0 &&
+          property_get("net.veth_spi2.ipv6_dns1", DNSSERVER, "")==0 &&
+          property_get("net.veth_spi1.ipv6_dns1", DNSSERVER, "")==0 &&
+          property_get("net.veth_spi0.ipv6_dns1", DNSSERVER, "")==0 &&
+          property_get("net.veth_sdio4.ipv6_dns1", DNSSERVER, "") == 0 &&
+          property_get("net.veth_sdio3.ipv6_dns1", DNSSERVER, "") == 0 &&
+          property_get("net.veth_sdio2.ipv6_dns1", DNSSERVER, "") == 0 &&
+          property_get("net.veth_sdio1.ipv6_dns1", DNSSERVER, "") == 0 &&
+          property_get("net.veth_sdio0.ipv6_dns1", DNSSERVER, "") == 0)
+          {    char googledns6[21] = "2001:4860:4860::8888";
+              lprintf(5, "\veth_spi or veth_sdio not found use the default DNSSERVER\n");
+              memset(DNSSERVER, 0, sizeof(DNSSERVER) );
+              memcpy(DNSSERVER, googledns6, sizeof(googledns6));
+          }
+#endif
         if(getcmdoption(argc,argv,"-d",NULL)==0)
                 daemonflag=1;
         else
@@ -2445,7 +2469,7 @@ int main(int argc,char *argv[])
         {
                 loglevel=atoi(level);
         }
-        openlog(argv[0],LOG_NDELAY,LOG_USER);
+        //openlog(argv[0],LOG_NDELAY,LOG_USER);
         if(daemonflag)
                 daemon(1,1);
         tcpid=bindsock6(AF_INET,"TCP","0.0.0.0","53");
