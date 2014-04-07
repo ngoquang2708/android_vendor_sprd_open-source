@@ -398,7 +398,7 @@ static int32_t _ispParserGetInfo(void* in_param_ptr, void* rtn_param_ptr)
 	rtn_ptr->buf_addr = 0;
 	rtn_ptr->buf_len = 0x00;
 
-	CMR_LOGV("ISP_TOOL:_ispParserGetInfo %d\n", cmd);
+	CMR_LOGI("ISP_TOOL:_ispParserGetInfo %d\n", (uint32_t)cmd);
 
 	data_addr=ispParserAlloc(data_len);
 
@@ -480,7 +480,7 @@ static int32_t _ispParserDownCmd(void* in_param_ptr, void* rtn_param_ptr)
 		{
 			rtn_ptr->param[0]=param_ptr[2];//thrd cmd
 			memcpy((void*)&rtn_ptr->param[1], (void*)&param_ptr[3], param_ptr[3]+0x04);
-			CMR_LOGV("ISP_TOOL:_ispParserDownCmd thrd cmd: 0x%x\n", rtn_ptr->param[0]);
+			CMR_LOGI("ISP_TOOL:_ispParserDownCmd thrd cmd: 0x%x\n", rtn_ptr->param[0]);
 			break;
 		}
 		default :
@@ -570,7 +570,7 @@ static int32_t _ispParserUpHnadle(uint32_t cmd, void* in_param_ptr, void* rtn_pa
 		}
 		case ISP_PARSER_UP_INFO:
 		{
-			CMR_LOGV("ISP_TOOL:ISP_PARSER_UP_INFO %d\n", cmd);
+			CMR_LOGI("ISP_TOOL:ISP_PARSER_UP_INFO %d\n", cmd);
 			
 			rtn=_ispParserGetInfo(in_param_ptr, rtn_param_ptr);
 			break;
