@@ -21,8 +21,6 @@
 //extern "c"
 //{
 //#endif
-
-
 #define MY_DEBUG
 
 #ifdef MY_DEBUG
@@ -920,11 +918,7 @@ static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_lev
     if(ret < 0){
         return;
     }
-    if(adev->call_start == 1){
-        ret = SetVoice_gain_by_devices(adev,&pga_gain_nv);
-    } else {
-        ret = SetAudio_gain_by_devices(adev,&pga_gain_nv);
-    }
+    ret = SetAudio_gain_by_devices(adev,&pga_gain_nv);
     if(ret < 0){
         return;
     }
@@ -1083,9 +1077,10 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
     }
     adev->out_devices = s_call_dl_devices;
     adev->in_devices = s_call_ul_devices;
-    GetCall_VolumePara(adev, mode_gain_paras);
 
-    SetVoice_PaConfig_by_devices(adev,adev->pga_gain_nv);
+    GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+    SetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+
     for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
     {
         if(switch_table[i]){
