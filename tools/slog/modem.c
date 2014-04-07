@@ -71,13 +71,13 @@ static void handle_dump_shark_sipc_info()
 
 #ifdef ANDROID_VERSION_442
 #define MODEM_W_DEVICE_PROPERTY "persist.modem.w.enable"
-#define MODEM_TD_DEVICE_PROPERTY "persist.radio.modem.t.enable"
+#define MODEM_TD_DEVICE_PROPERTY "persist.modem.t.enable"
 #else
 #define MODEM_W_DEVICE_PROPERTY "ro.modem.w.enable"
 #define MODEM_TD_DEVICE_PROPERTY "ro.modem.t.enable"
 #endif
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
-#define MODEM_L_DEVICE_PROPERTY "persist.radio.modem.l.enable"
+#define MODEM_L_DEVICE_PROPERTY "persist.modem.l.enable"
 
 #define MODEM_W_DIAG_PROPERTY "ro.modem.w.diag"
 #define MODEM_TD_DIAG_PROPERTY "ro.modem.t.diag"

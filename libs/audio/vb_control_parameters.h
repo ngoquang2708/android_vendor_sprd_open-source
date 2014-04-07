@@ -32,7 +32,7 @@
 
 #define AUDIO_XML_PATH "/system/etc/audio_hw.xml"
 
-#define MODEM_T_ENABLE_PROPERTY     "persist.radio.modem.t.enable"
+#define MODEM_T_ENABLE_PROPERTY     "persist.modem.t.enable"
 #define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
 
 

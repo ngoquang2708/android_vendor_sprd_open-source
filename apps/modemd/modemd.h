@@ -24,9 +24,9 @@
 #define min(A,B)                    (((A) < (B)) ? (A) : (B))
 
 /* indicate which modem is enable */
-#define TD_MODEM_ENABLE_PROP        "persist.radio.modem.t.enable"
-#define  W_MODEM_ENABLE_PROP        "persist.radio.modem.w.enable"
-#define LTE_MODEM_ENABLE_PROP        "persist.radio.modem.l.enable"
+#define TD_MODEM_ENABLE_PROP        "persist.modem.t.enable"
+#define  W_MODEM_ENABLE_PROP        "persist.modem.w.enable"
+#define LTE_MODEM_ENABLE_PROP        "persist.modem.l.enable"
 
 // modem is external or not, default is internal
 #define MODEM_EXTERNAL_PROP        "ro.modem.external.enable"
