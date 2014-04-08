@@ -482,7 +482,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
         {
             memcpy(bt_para_setting.device_addr, bt_mac_bin, sizeof(bt_para_setting.device_addr));
         }
-        if (write(s_bt_fd, (char *)&bt_para_setting, sizeof(BT_PSKEY_CONFIG_T)) != sizeof(BT_PSKEY_CONFIG_T)) 
+        if (write(fd, (char *)&bt_para_setting, sizeof(BT_PSKEY_CONFIG_T)) != sizeof(BT_PSKEY_CONFIG_T))
         {
             ALOGI("Failed to write pskey command from default arry\n");
             return -1;
@@ -490,15 +490,16 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
     }
     else
     {
-        ALOGI("get_pskey_from_file ok \n");
+        ALOGI("get_pskey_from_file ok, fd = %d \n", fd);
         /* Send command from pskey_bt.txt*/
         if(read_btmac == 1)
         {
             memcpy(bt_para_tmp.device_addr, bt_mac_bin, sizeof(bt_para_tmp.device_addr));
         }
-        if (write(s_bt_fd, (char *)&bt_para_tmp, sizeof(BT_PSKEY_CONFIG_T)) != sizeof(BT_PSKEY_CONFIG_T)) 
+
+	if (write(fd, (char *)&bt_para_tmp, sizeof(BT_PSKEY_CONFIG_T)) != sizeof(BT_PSKEY_CONFIG_T))
         {
-            ALOGI("Failed to write pskey command from pskey file\n");
+            ALOGI("Failed to write pskey command from pskey file, erro:%s\n", strerror(errno));
             return -1;
         }
     }
@@ -506,7 +507,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
 
     while (1) 
     {
-        r = read(s_bt_fd, resp, 1);
+        r = read(fd, resp, 1);
         if (r <= 0)
         return -1;
         if (resp[0] == 0x05)
