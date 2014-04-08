@@ -13,6 +13,10 @@
 #include <pthread.h>
 #include "modemd.h"
 #include "modemd_ext.h"
+#include <hardware_legacy/power.h>
+
+
+#define  ANDROID_WAKE_LOCK_NAME "modemd-ext"
 
 #define  SOCKET_NAME_MODEM_CTL  "modem_control"
 
@@ -220,11 +224,21 @@ static void start_svlte_mode(void)
     }
 }
 
+static void getPartialWakeLock() {
+    acquire_wake_lock(PARTIAL_WAKE_LOCK, ANDROID_WAKE_LOCK_NAME);
+}
+
+static void releaseWakeLock() {
+    release_wake_lock(ANDROID_WAKE_LOCK_NAME);
+}
+
 static void start_external_modem(void)
 {
     if (is_svlte_mode()) {
         sSSDAMode   = 0;
+        getPartialWakeLock();
         start_modem(&sTDmodem);
+        releaseWakeLock();
         MODEMD_LOGD("start TD modem service for SVLTE.");
         pthread_mutex_lock(&td_state_mutex);
         td_modem_state = MODEM_READY;
@@ -243,7 +257,9 @@ static void start_external_modem(void)
         }
     } else {
         MODEMD_LOGD("start LTE modem service for CSFB.");
+        getPartialWakeLock();
         start_modem(&sLTEmodem);
+        releaseWakeLock();
         sSSDAMode   = 1;
 
         pthread_mutex_lock(&lte_state_mutex);
@@ -259,12 +275,16 @@ static void stop_external_modem(void)
         pthread_mutex_lock(&lte_state_mutex);
         lte_modem_state = MODEM_ASSERT;
         pthread_mutex_unlock(&lte_state_mutex);
+        getPartialWakeLock();
         stop_service(sLTEmodem, 0);
+        releaseWakeLock();
     } else {
         pthread_mutex_lock(&td_state_mutex);
         td_modem_state = MODEM_ASSERT;
         pthread_mutex_unlock(&td_state_mutex);
+        getPartialWakeLock();
         stop_service(sTDmodem, 0);
+        releaseWakeLock();
 
         if (sTestMode == SSDA_TEST_MODE_SVLTE) {  // SVLTE TESTMODE, Start svlte thread
             pthread_mutex_lock(&lte_state_mutex);
