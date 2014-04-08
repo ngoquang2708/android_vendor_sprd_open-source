@@ -2455,7 +2455,7 @@ int SprdCameraHardware::Callback_AllocCaptureMem(void* handle, unsigned int size
 		return -1;
 	}
 
-	memory = camera->allocCameraMem(size, 1);
+	memory = camera->allocCameraMem(size, 1, true);
 
 	if (NULL == memory) {
 		LOGE("Callback_AllocCaptureMem: error memory is null.");
@@ -2504,7 +2504,7 @@ int SprdCameraHardware::Callback_FreeCaptureMem(void* handle)
 	return 0;
 }
 
-sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_bufs)
+sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_bufs, uint32_t is_cache)
 {
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	MemoryHeapIon *pHeapIon = NULL;
@@ -2525,10 +2525,19 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_b
 	void *base = NULL;
 	int result = 0;
 
-	if (0 == s_mem_method)
-		pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
-	else
-		pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);
+	if (0 == s_mem_method) {
+		if (is_cache) {
+			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
+		} else {
+			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+		}
+	} else {
+		if (is_cache) {
+			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);
+		} else {
+			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+		}
+	}
 
 	if (NULL == pHeapIon) {
 		LOGE("allocCameraMem: error pHeapIon is null.");
@@ -2855,7 +2864,7 @@ bool SprdCameraHardware::allocatePreviewMem()
 		}
 
 		for (i = buffer_start_id; i < buffer_end_id; i++) {
-			sprd_camera_memory_t* PreviewHeap = allocCameraMem(buffer_size, 1);
+			sprd_camera_memory_t* PreviewHeap = allocCameraMem(buffer_size, 1, true);
 			if (NULL == PreviewHeap) {
 				LOGE("allocatePreviewMem: error PreviewHeap is null, index=%d", i);
 				return false;
@@ -2891,7 +2900,7 @@ uint32_t SprdCameraHardware::getRedisplayMem()
 		buffer_size <<= 1 ;
 	}
 
-	mReDisplayHeap = allocCameraMem(buffer_size, 1);
+	mReDisplayHeap = allocCameraMem(buffer_size, 1, false);
 
 	if (NULL == mReDisplayHeap)
 		return 0;
@@ -3070,7 +3079,7 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 	LOGI("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
 	{
 		Mutex::Autolock cbufl(&mCapBufLock);
-		mRawHeap = allocCameraMem(buffer_size, kRawBufferCount);
+		mRawHeap = allocCameraMem(buffer_size, kRawBufferCount, true);
 		if (NULL == mRawHeap) {
 			LOGE("allocateCaptureMem: error mRawHeap is null.");
 			goto allocate_capture_mem_failed;
