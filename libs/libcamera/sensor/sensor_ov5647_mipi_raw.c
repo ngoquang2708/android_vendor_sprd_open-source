@@ -241,15 +241,15 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5647_resolution_Tab_RAW[] = {
 };
 
 LOCAL SENSOR_TRIM_T s_ov5647_Resolution_Trim_Tab[] = {
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 1280, 960, 337, 560, 1184},
-	{0, 0, 2592, 1944, 331, 816, 1974},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 1280, 960, 337, 560, 1184, {0, 0, 1280, 960}},
+	{0, 0, 2592, 1944, 331, 816, 1974, {0, 0, 2592, 1944}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}}
 };
 
 LOCAL const SENSOR_REG_T s_ov5647_1280x960_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
@@ -864,10 +864,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.steady_speed = 6;
 	sensor_ptr->awb.debug_level = 2;
 	sensor_ptr->awb.smart = 1;
-#endif
+
 	sensor_ptr->awb.alg_id = 0;
 	sensor_ptr->awb.smart_index = 4;
-#if 0
+
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
@@ -1721,7 +1721,7 @@ LOCAL uint32_t _ov5647_write_exposure(uint32_t param)
 	uint16_t frame_len=0x00;
 	uint16_t frame_len_cur=0x00;
 	uint16_t size_index = 0;
-	uint32_t max_frame_len = 0;
+	uint16_t max_frame_len = 0;
 	uint16_t value=0x00;
 	uint16_t value0=0x00;
 	uint16_t value1=0x00;

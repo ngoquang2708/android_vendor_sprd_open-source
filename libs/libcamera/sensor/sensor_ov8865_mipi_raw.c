@@ -1071,7 +1071,7 @@ LOCAL uint32_t Sensor_ov8865_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-
+#if 0
 	sensor_ptr->ae.smart=0x00;// bit0: denoise bit1: edge bit2: startion
 	sensor_ptr->ae.smart_rotio=255;
 	sensor_ptr->ae.smart_mode=0; // 0: gain 1: lum
@@ -1213,7 +1213,7 @@ LOCAL uint32_t Sensor_ov8865_InitRawTuneInfo(void)
 	sensor_ptr->special_effect[7].y_shift=0xff00;
 	sensor_ptr->special_effect[7].u_shift=0xffe2;
 	sensor_ptr->special_effect[7].v_shift=0x0028;
-
+#endif
 	return rtn;
 }
 

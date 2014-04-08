@@ -1364,7 +1364,7 @@ static uint8_t s_s5k4e1ga_tune_info[sizeof(struct sensor_raw_tune_info)]=
 	0x00,0x00,0x00,0x00,0x10,0x20,0x30,0x44,0x50,0x60,0x70,0x40,0x40,0x40,0x40,0x40,
 	0x40,0x40,0x40,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,
-	0x03,0x04,0x05,0x06,0x07,0x08,0x09,0xFF,0x06,0x08,0x0A,0x0C,0x0E,0x10,0x12,0x02,
+	0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x03,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -1525,59 +1525,59 @@ static struct sensor_raw_tune_info s_s5k4e1ga_tune_info;
 static struct sensor_raw_cali_info s_s5k4e1ga_cali_info;
 
 static struct sensor_raw_fix_info s_s5k4e1ga_fix_info = {
-																																			{
-																																				(uint8_t*)s_s5k4e1ga_ae_weight_customer,
+	{
+		(uint8_t*)s_s5k4e1ga_ae_weight_customer,
 
-																																				{
-																																					{
-																																						(uint32_t*)s_s5k4e1ga_aes_00,
-																																						(uint16_t*)s_s5k4e1ga_aeg_00,
-																																						{
-																																							{101, 101},
-																																							{112, 112},
-																																							{124, 124},
-																																							{128, 135},
-																																							{128, 135},
-																																						}
-																																					},
+		{
+			{
+				(uint32_t*)s_s5k4e1ga_aes_00,
+				(uint16_t*)s_s5k4e1ga_aeg_00,
+				{
+					{101, 101},
+					{112, 112},
+					{124, 124},
+					{128, 135},
+					{128, 135},
+				}
+			},
 
-																																					{
-																																						(uint32_t*)s_s5k4e1ga_aes_10,
-																																						(uint16_t*)s_s5k4e1ga_aeg_10,
-																																						{
-																																							{103, 103},
-																																							{114, 114},
-																																							{126, 126},
-																																							{128, 137},
-																																							{128, 137},
-																																						},
-																																					},
+			{
+				(uint32_t*)s_s5k4e1ga_aes_10,
+				(uint16_t*)s_s5k4e1ga_aeg_10,
+				{
+					{103, 103},
+					{114, 114},
+					{126, 126},
+					{128, 137},
+					{128, 137},
+				},
+			},
 
-																																					{
-																																						(uint32_t*)s_s5k4e1ga_aes_01,
-																																						(uint16_t*)s_s5k4e1ga_aeg_01,
-																																						{
-																																							{121, 121},
-																																							{128, 132},
-																																							{128, 144},
-																																							{128, 155},
-																																							{128, 155},
-																																						},
-																																					},
+			{
+				(uint32_t*)s_s5k4e1ga_aes_01,
+				(uint16_t*)s_s5k4e1ga_aeg_01,
+				{
+					{121, 121},
+					{128, 132},
+					{128, 144},
+					{128, 155},
+					{128, 155},
+				},
+			},
 
-																																					{
-																																						(uint32_t*)s_s5k4e1ga_aes_11,
-																																						(uint16_t*)s_s5k4e1ga_aeg_11,
-																																						{
-																																							{118, 118},
-																																							{128, 129},
-																																							{128, 141},
-																																							{128, 152},
-																																							{128, 152},
-																																						},
-																																					},
-																																				},
-																																			},
+			{
+				(uint32_t*)s_s5k4e1ga_aes_11,
+				(uint16_t*)s_s5k4e1ga_aeg_11,
+				{
+					{118, 118},
+					{128, 129},
+					{128, 141},
+					{128, 152},
+					{128, 152},
+				},
+			},
+		},
+	},
 
 	{
 		{
