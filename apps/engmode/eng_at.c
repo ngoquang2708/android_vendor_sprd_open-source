@@ -38,6 +38,20 @@ static int start_gser(char* ser_path)
     return 0;
 }
 
+#ifdef CONFIG_BQBTEST
+static int g_bqb_mode_start = 0;
+
+int eng_controller2tester(char * controller_buf, unsigned int data_len)
+{
+    int len;
+
+    len = write(pc_fd,controller_buf,data_len);
+
+    ENG_LOG("bqb test eng_controller2tester %d", len);
+    return len;
+}
+#endif
+
 static void *eng_readpcat_thread(void *par)
 {
     int len;
@@ -50,20 +64,42 @@ static void *eng_readpcat_thread(void *par)
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
+
 read_again:
         memset(engbuf, 0, ENG_BUFFER_SIZE);
         if (pc_fd >= 0){
             len = read(pc_fd, engbuf, ENG_BUFFER_SIZE);
             ENG_LOG("%s: wait pcfd=%d buf=%s len=%d",__func__,pc_fd,engbuf,len);
-            for (i=0;i<len;i++){
-                ENG_LOG("%c %x",engbuf[i],engbuf[i]);
-            }
+
             if (len <= 0) {
                 ENG_LOG("%s: read length error %s",__FUNCTION__,strerror(errno));
                 sleep(1);
                 start_gser(dev_info->host_int.dev_at);
                 goto read_again;
             }else{
+
+            #ifdef CONFIG_BQBTEST
+		if(strstr(engbuf, "AT+SPBQBTEST=1")) {
+			int ret = 0;
+			ENG_LOG("bqb test receive AT+SPBQBTEST");
+			g_bqb_mode_start = 1;
+
+			 write(pc_fd, "OK\n", strlen("OK\n"));
+
+			 ret = eng_controller_bqb_start();
+			ENG_LOG("bqb test test eng_controller_bqb_start ret %d", ret);
+
+			continue;
+		}
+
+		if(1 == g_bqb_mode_start) {
+		    ENG_LOG("bqb test  send data to cp2, len = %d", len);
+		    eng_send_data(engbuf, len);
+
+		    continue;
+		}
+	    #endif
+
                 // Just send to modem transparently.
                 if(at_mux_fd >= 0) {
                     cur = 0;
@@ -102,7 +138,7 @@ static void *eng_readmodemat_thread(void *par)
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
         memset(engbuf, 0, ENG_BUFFER_SIZE);
         len = read(at_mux_fd, engbuf, ENG_BUFFER_SIZE);
-        ENG_LOG("muxfd=%d buf=%s,len=%d\n",at_mux_fd,engbuf,len);
+        ENG_LOG("muxfd =%d buf=%s,len=%d\n",at_mux_fd,engbuf,len);
         if (len <= 0) {
             ENG_LOG("%s: read length error %s\n",__FUNCTION__,strerror(errno));
             sleep(1);
@@ -129,7 +165,7 @@ int eng_at_pcmodem(eng_dev_info_t* dev_info)
 {
     eng_thread_t t1,t2;
 
-    ENG_LOG("%s",__func__);
+    ENG_LOG("%s ",__func__);
 
     start_gser(dev_info->host_int.dev_at);
 
