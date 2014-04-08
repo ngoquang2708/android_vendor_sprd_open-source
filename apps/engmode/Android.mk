@@ -1,10 +1,16 @@
 ifneq ($(TARGET_SIMULATOR),true)
 
+
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel
+
+ifeq ($(USE_SPRD_BQBTEST),true)
+LOCAL_SHARED_LIBRARIES  += libbt-vendor
+endif
+
 LOCAL_STATIC_LIBRARIES  :=
 LOCAL_LDLIBS        += -Idl
 ifeq ($(strip $(BOARD_USE_EMMC)),true)
@@ -17,6 +23,10 @@ endif
 
 ifeq ($(USE_BOOT_AT_DIAG),true)
 LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
+endif
+
+ifeq ($(USE_SPRD_BQBTEST),true)
+LOCAL_CFLAGS += -DCONFIG_BQBTEST
 endif
 
 LOCAL_C_INCLUDES    +=  external/sqlite/dist/
@@ -49,6 +59,10 @@ ifeq ($(strip $(BOARD_USE_SPRD_4IN1_GPS)),true)
 LOCAL_SRC_FILES     += sprd_gps_eut.c
 else
 LOCAL_SRC_FILES     += gps_eut.c
+endif
+
+ifeq ($(USE_SPRD_BQBTEST),true)
+LOCAL_SRC_FILES     += eng_controllerbqbtest.c
 endif
 
 LOCAL_MODULE := engpc
