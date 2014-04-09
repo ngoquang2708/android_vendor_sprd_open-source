@@ -7,8 +7,10 @@ include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
-LOCAL_SHARED_LIBRARIES  += libbt-vendor
+	LOCAL_SHARED_LIBRARIES  += libbt-vendor
+endif
 endif
 
 LOCAL_STATIC_LIBRARIES  :=
@@ -25,8 +27,10 @@ ifeq ($(USE_BOOT_AT_DIAG),true)
 LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
 endif
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
-LOCAL_CFLAGS += -DCONFIG_BQBTEST
+	LOCAL_CFLAGS += -DCONFIG_BQBTEST
+endif
 endif
 
 LOCAL_C_INCLUDES    +=  external/sqlite/dist/
@@ -61,8 +65,10 @@ else
 LOCAL_SRC_FILES     += gps_eut.c
 endif
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
-LOCAL_SRC_FILES     += eng_controllerbqbtest.c
+	LOCAL_SRC_FILES     += eng_controllerbqbtest.c
+endif
 endif
 
 LOCAL_MODULE := engpc
