@@ -174,6 +174,8 @@
 
 #define VOIP_PIPE_NAME_MAX    16
 
+#define MAX_STOP_THRESHOLD ((unsigned int)-1)/2-1
+
 struct pcm_config pcm_config_mm = {
     .channels = 2,
     .rate = DEFAULT_OUT_SAMPLING_RATE,
@@ -209,14 +211,40 @@ struct pcm_config pcm_config_vx = {
     .period_size = VBC_BASE_FRAME_COUNT,
     .period_count = 2,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = MAX_STOP_THRESHOLD,
 };
 
-struct pcm_config pcm_config_vrec_vx = {    //voice record in vlx mode
+struct pcm_config pcm_config_vrec_vx = {
     .channels = 1,
     .rate = VX_NB_SAMPLING_RATE,
     .period_size = 320,
     .period_count = 8,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = MAX_STOP_THRESHOLD,
+};
+struct pcm_config pcm_config_record_incall = {
+    .channels = 1,
+    .rate = VX_NB_SAMPLING_RATE,
+    .period_size = 320,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+struct pcm_config pcm_config_vx_voip = {
+    .channels = 2,
+    .rate = VX_NB_SAMPLING_RATE,
+    .period_size = VBC_BASE_FRAME_COUNT,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = MAX_STOP_THRESHOLD,
+};
+struct pcm_config pcm_config_vrec_vx_voip = {
+    .channels = 1,
+    .rate = VX_NB_SAMPLING_RATE,
+    .period_size = 320,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = MAX_STOP_THRESHOLD,
 };
 
 #define VOIP_CAPTURE_STREAM     0x1
@@ -241,7 +269,26 @@ struct pcm_config pcm_config_scoplayback = {
     .format = PCM_FORMAT_S16_LE,
 };
 
+
+struct pcm_config pcm_config_btscoplayback = {
+    .channels = 1,
+    .rate = VX_NB_SAMPLING_RATE,
+    //.period_size = 320,
+    .period_size = 640,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+
 struct pcm_config pcm_config_scocapture = {
+    .channels = 1,
+    .rate = VX_NB_SAMPLING_RATE,
+    .period_size = 640,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+struct pcm_config pcm_config_btscocapture = {
     .channels = 1,
     .rate = VX_NB_SAMPLING_RATE,
     .period_size = 640,
@@ -1222,7 +1269,7 @@ static int open_voip_codec_pcm(struct tiny_audio_device *adev)
 
     ALOGD("voip:open codec pcm in adev->voip_state is %x",adev->voip_state);
        if(!adev->pcm_modem_dl) {
-           adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx);
+           adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx_voip);
            if (!pcm_is_ready(adev->pcm_modem_dl)) {
               ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
                pcm_close(adev->pcm_modem_dl);
@@ -1233,7 +1280,7 @@ static int open_voip_codec_pcm(struct tiny_audio_device *adev)
        }
     ALOGD("voip:open codec pcm in 2");
        if(!adev->pcm_modem_ul) {
-           adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx);
+           adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx_voip);
            if (!pcm_is_ready(adev->pcm_modem_ul)) {
                ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
               pcm_close(adev->pcm_modem_ul);
@@ -1425,7 +1472,7 @@ static int start_bt_sco_output_stream(struct tiny_stream_out *out)
     //out->pcm_voip = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
 
     ALOGD("start_bt_sco_output_stream ok 1 ");
-    out->pcm_bt_sco = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);///////////////
+    out->pcm_bt_sco = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_btscoplayback);
     ALOGD("start_bt_sco_output_stream ok 4");////
 
 
@@ -1434,7 +1481,7 @@ static int start_bt_sco_output_stream(struct tiny_stream_out *out)
     }
     else {
         ret = create_resampler( DEFAULT_OUT_SAMPLING_RATE,
-                pcm_config_scoplayback.rate,
+                pcm_config_btscoplayback.rate,
                 out->config.channels,
                 RESAMPLER_QUALITY_DEFAULT,
                 NULL,
@@ -1970,12 +2017,15 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
         }
 
         ret = pcm_mmap_write(out->pcm_voip, (void *)buf, out_frames*frame_size/2);
+        if(ret < 0) {
+            ALOGE("out_write_sco: pcm_mmap_write error: ret %d", ret);
+        }
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
 
     //BLUE_TRACE("voip:out_write_sco out bytes is %d,frame_size %d, in_frames %d, out_frames %d,out->pcm_voip %x", bytes, frame_size,in_frames, out_frames,out->pcm_voip);
-    return 0;
+    return ret;
 }
 
 static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
@@ -2341,7 +2391,7 @@ static void *audio_bt_sco_dup_thread_func(void * param)
             pthread_mutex_unlock(&adev->bt_sco_manager.cond_mutex);
             if(bt_sco_playback == NULL) {
                 ALOGE("bt sco : duplicate downlink card opening");
-                bt_sco_playback = pcm_open(s_bt_sco, PORT_MM, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);
+                bt_sco_playback = pcm_open(s_bt_sco, PORT_MM, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_btscoplayback);
                 if(!pcm_is_ready(bt_sco_playback)) {
                     ALOGE("bt sco : duplicate downlink card open fail");
                     pcm_close(bt_sco_playback);
@@ -2507,7 +2557,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     else if(in->is_bt_sco) {
         //BLUE_TRACE("start sco input stream in");
 		BLUE_TRACE("voip:start bt sco input stream in");
-        in->config = pcm_config_scocapture;
+        in->config = pcm_config_btscocapture;
         if(in->config.channels  != in->requested_channels) {
             ALOGE("bt sco input : in->requested_channels is %d, in->config.channels is %d",in->requested_channels, in->config.channels);
             in->config.channels = in->requested_channels;
@@ -2548,7 +2598,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         int card=0;
         cp_type_t cp_type = CP_MAX;
         in->active_rec_proc = 0;
-        in->config = pcm_config_vrec_vx;
+        in->config = pcm_config_record_incall;
         if(in->config.channels  != in->requested_channels) {
             ALOGE("%s, voice-call input : in->requested_channels is %d, in->config.channels is %d",
                     __func__,in->requested_channels, in->config.channels);
@@ -3031,7 +3081,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
 
-    ALOGD("into in_read1: start: in->is_voip is %d, voip_state is %d",in->is_voip,adev->voip_state);
+    ALOGD("into in_read1: start: in->is_voip is %d, voip_state is %d in_devices is %x",in->is_voip,adev->voip_state,in->device);
     if(in_bypass_data(in,audio_stream_frame_size((const struct audio_stream *)(&stream->common)),in_get_sample_rate(&stream->common),buffer,bytes)){
         return bytes;
     }
@@ -3565,7 +3615,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
 
     if (ladev->call_start)
-        memcpy(&in->config, &pcm_config_vrec_vx, sizeof(pcm_config_vrec_vx));
+        memcpy(&in->config, &pcm_config_record_incall, sizeof(pcm_config_record_incall));
     else
         memcpy(&in->config, &pcm_config_mm_ul, sizeof(pcm_config_mm_ul));
     in->config.channels = channel_count;
