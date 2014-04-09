@@ -22,6 +22,7 @@
 #define SYS_CLASS_ANDUSB_STATE "/sys/class/android_usb/f_gser/device/state"
 
 sem_t g_armlog_sem;
+int g_ap_cali_flag = 0;
 extern int g_armlog_enable;
 extern void	disconnect_vbus_charger(void);
 
@@ -190,10 +191,13 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         case 17:
                             cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
                             break;
+                        case 22:
+                            g_ap_cali_flag = 1;
+                            break;
                         default:
                             break;
                     }
-                    property_get("persist.radio.ssda.mode", ssda_mode, "not_find");
+                    property_get("persist.ssda.mode", ssda_mode, "not_find");
                     if(0 != strcmp(ssda_mode, "not_find") && 0 != strcmp(ssda_mode, "svlte")){
                         cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
                     }
@@ -206,8 +210,8 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                     else
                         cmdvalue->nativeflag = 0;
 
-                    ALOGD("eng_pcclient: cp_type=%d, connent_type(AP) =%d, is_native=%d\n",
-                            cmdvalue->cp_type, cmdvalue->connect_type, cmdvalue->nativeflag );
+                    ALOGD("eng_pcclient: cp_type=%d, connent_type(AP) =%d, is_native=%d, g_ap_cali_flag:%d\n",
+                            cmdvalue->cp_type, cmdvalue->connect_type, cmdvalue->nativeflag, g_ap_cali_flag);
                 }
             }else{
                 /*if not in calibration mode, use default */
@@ -261,6 +265,8 @@ static int eng_usb_state(void)
             ret = 0;
             ENG_LOG("%s: Read sys class androidusb state file failed, read:%d\n", __FUNCTION__, ret);
         }
+
+        close(fd);
     }else{
         ret = 0;
         ENG_LOG("%s: Open sys class androidusb state file failed, err: %s!\n", __FUNCTION__, strerror(errno));

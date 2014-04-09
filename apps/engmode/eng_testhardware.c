@@ -402,24 +402,29 @@ static int test_gps(int test_item, char *ret_buf)
 
 static int test_gsensor(int test_item, char *ret_buf)
 {
-    int fd = 0;
+    int fd = -1;
+    int ret = 0;
     char device_info[32] = { 0 };
 
     ENG_LOG("gsensor\n");
 
     fd = eng_gsensortest_open();
 
-    if (ioctl(fd, LIS3DH_ACC_IOCTL_GET_CHIP_ID, device_info)) {
-        ENG_LOG("%s: Get device info error", __FUNCTION__);
-        strcpy(ret_buf, "FAIL");
-        close(fd);
-        return -1;
+    if(fd >= 0){
+        if (ioctl(fd, LIS3DH_ACC_IOCTL_GET_CHIP_ID, device_info)) {
+            ENG_LOG("%s: Get device info error", __FUNCTION__);
+            strcpy(ret_buf, "FAIL");
+            close(fd);
+            ret = -1;
+        }else{
+            strcpy(ret_buf, "PASS");
+            close(fd);
+        }
+    }else{
+        ret = -1;
     }
 
-    strcpy(ret_buf, "PASS");
-
-    close(fd);
-    return 0;
+    return ret;
 }
 
 static int test_msensor(int test_item, char *ret_buf)
