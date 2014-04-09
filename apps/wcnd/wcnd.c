@@ -720,9 +720,9 @@ static int check_if_wcnmodem_enable(void)
 	char value[PROPERTY_VALUE_MAX] = {'\0'};
 
 	property_get(WCND_MODEM_ENABLE_PROP_KEY, value, "1");
-	int is_reset = atoi(value);
+	int is_enabled = atoi(value);
 
-	return is_reset;
+	return is_enabled;
 }
 
 /*
@@ -1774,7 +1774,10 @@ static void *cp2_loop_check_thread(void *arg)
 
 		//cp2 exception happens just continue for next poll
 		if(pWcndManger->is_cp2_error)
+		{
+			WCND_LOGD("%s: CP2 exception happened and not reset success!!", __FUNCTION__);
 			continue;
+		}
 
 		if(is_cp2_alive_ok(pWcndManger) < 0)
 		{
@@ -1793,6 +1796,9 @@ static void *cp2_loop_check_thread(void *arg)
 static int start_cp2_loop_check(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
+
+	//if wcn modem is not enabled, just return
+	if(!check_if_wcnmodem_enable()) return 0;
 
 	pthread_t thread_id;
 
@@ -1827,6 +1833,30 @@ static int start_engineer_service(void)
 	property_set("ctl.start", "engpcclientwcn");
 
 	return 0;
+}
+
+//To get the build type
+#define BUILD_TYPE_PROP_KEY "ro.build.type"
+#define USER_DEBUG_VERSION_STR "userdebug"
+#define DISABLE_CP2_LOG_CMD "AT+ARMLOG=0\r"
+/**
+* Disable the CP2 log, if it is a user version
+*/
+static int check_disable_cp2_log(WcndManager *pWcndManger)
+{
+	char value[PROPERTY_VALUE_MAX] = {'\0'};
+
+	property_get(BUILD_TYPE_PROP_KEY, value, USER_DEBUG_VERSION_STR);
+
+	if(strstr(value, USER_DEBUG_VERSION_STR))
+	{
+		WCND_LOGD("userdebug version: %s, do not need to disable cp2 log!!!", value);
+		return 0;
+	}
+
+	WCND_LOGD("in user version: %s, need to disable cp2 log!!!", value);
+
+	return wcn_process_atcmd(-1, DISABLE_CP2_LOG_CMD, pWcndManger);
 }
 
 #ifndef FOR_UNIT_TEST
@@ -1887,6 +1917,9 @@ int main(int argc, char *argv[])
 	//register external cmd executer such eng mode
 	wcnd_register_cmdexecuter(pWcndManger, &wcn_eng_cmdexecuter);
 #endif
+
+	// Disable the CP2 log, if it is a user version
+	check_disable_cp2_log(pWcndManger);
 
 	//do nothing, just sleep
 	do {
