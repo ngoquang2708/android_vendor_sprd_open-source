@@ -3,10 +3,10 @@ PRODUCT_PACKAGES += \
 	AudioProfile \
 	FMPlayer \
 	SprdRamOptimizer \
-	VideoWallpaper \
+        Flashlight \
 	FileExplorer \
 	NoteBook \
-	SGPS \
+        SGPS \
 	EngineerMode \
 	ValidationTools \
 	DrmProvider \
@@ -16,7 +16,13 @@ PRODUCT_PACKAGES += \
         Caldav-Sync.apk\
         libsprd_agps_agent
 #	libsprddm \
-     
+
+ifneq (none,$(strip $(PRODUCT_VIDEO_WALLPAPERS)))
+PRODUCT_VIDEO_WALLPAPERS := Sunny Cloud Rain Cartoon
+$(call inherit-product-if-exists, frameworks/base/data/videos/VideoPackageForUUI.mk)
+PRODUCT_PACKAGES += VideoWallpaper
+endif
+
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
     ifneq ($(MULTILANGUAGE_SUPPORT),true)
         PRODUCT_PACKAGES += PinyinIME
