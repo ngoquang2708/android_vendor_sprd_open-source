@@ -19,6 +19,7 @@
 
 int g_ass_start = 0;
 extern int g_assert_cmd;
+extern int g_ap_cali_flag;
 
 #define DATA_BUF_SIZE (4096*4)
 #define MAX_OPEN_TIMES  10
@@ -242,19 +243,20 @@ void *eng_vdiag_wthread(void *x)
     }
 
     /*open modem int*/
-    do{
-        modem_fd = open(dev_info->modem_int.diag_chan, O_WRONLY);
-        if(modem_fd < 0) {
-            ENG_LOG("eng_vdiag cannot open %s, times:%d\n", dev_info->modem_int.diag_chan, wait_cnt);
-            if(wait_cnt++ >= MAX_OPEN_TIMES){
-                ENG_LOG("eng_vdiag cannot open SIPC, try times exceed the max open times\n");
-                close(ser_fd);
-                return NULL;
+    if(!g_ap_cali_flag){
+        do{
+            modem_fd = open(dev_info->modem_int.diag_chan, O_WRONLY);
+            if(modem_fd < 0) {
+                ENG_LOG("eng_vdiag cannot open %s, times:%d\n", dev_info->modem_int.diag_chan, wait_cnt);
+                if(wait_cnt++ >= MAX_OPEN_TIMES){
+                    ENG_LOG("eng_vdiag cannot open SIPC, try times exceed the max open times\n");
+                    close(ser_fd);
+                    return NULL;
+                }
+                sleep(5);
             }
-            sleep(5);
-        }
-    }while(modem_fd < 0);
-
+        }while(modem_fd < 0);
+    }
  
     audio_total = calloc(1,sizeof(AUDIO_TOTAL_T)*adev_get_audiomodenum4eng());
     if(!audio_total)
@@ -351,7 +353,7 @@ void *eng_vdiag_wthread(void *x)
                 break;
         }
 
-        if(1 == has_processed){// Data has been processed & should not send to modem
+        if(1 == has_processed || 1 == g_ap_cali_flag){// Data has been processed & should not send to modem
             backup_data_len = 0;
             continue;
         }

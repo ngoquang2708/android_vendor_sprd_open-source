@@ -50,7 +50,10 @@ typedef enum
 
 #define DIAG_CMD_DIRECT_PHSCHK  0x5F
 
-#define DIAG_CMD_IMEIBIT		0x01
+#define DIAG_CMD_IMEI1BIT       0x01
+#define DIAG_CMD_IMEI2BIT       0x02
+#define DIAG_CMD_IMEI3BIT       0x10
+#define DIAG_CMD_IMEI4BIT       0x20
 #define DIAG_CMD_BTBIT			0x04
 #define DIAG_CMD_WIFIBIT		0x40
 
@@ -71,7 +74,7 @@ typedef enum
 {
     CMD_COMMON=-1,
     CMD_USER_VER,
-    CMD_USER_BTWIFI,
+    CMD_USER_BTWIFIIMEI,
     CMD_USER_FACTORYMODE,
     CMD_USER_AUDIO,
     CMD_USER_RESET,
