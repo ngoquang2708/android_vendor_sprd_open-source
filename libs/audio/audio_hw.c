@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 
+
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
@@ -2609,6 +2610,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->mux_pcm)) {
             ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->mux_pcm));
             mux_pcm_close(in->mux_pcm);
+            in->mux_pcm = NULL;
             adev->active_input = NULL;
             return -ENOMEM;
         }
