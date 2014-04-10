@@ -14852,7 +14852,7 @@
         mmsport="8080"
         user="saf"
         password="data"
-        mmsc="http://mms.gprs.safaricom.com"
+        mmsc="http://www.safaricom.com"
         type="mms"
         authtype="1"
     />
