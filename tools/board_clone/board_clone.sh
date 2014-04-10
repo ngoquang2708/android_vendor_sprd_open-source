@@ -148,7 +148,7 @@ function add_to_file()
 	fi
 }
 
-#用此函数,关键字不可以说最后一个串,否则被删掉一个字符,将出现错误
+#用此函数,关键字不可以是最后一个串,否则被删掉一个字符,将出现错误
 function add_to_file_e()
 {
 	file=$1
@@ -157,6 +157,13 @@ function add_to_file_e()
 	replacement=$4
 	var2=$5
 	var1=$6
+	have_second_end_string=0
+
+	if [ $# -ge 7 ];then
+		echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,以它结束为准
+		second_end_string=$7
+		have_second_end_string=1
+	fi
 
 	declare -i n
 	declare -i begin
@@ -169,6 +176,7 @@ function add_to_file_e()
 	file_t="$file""_bak"
 	file_m="$file""_bak_bak"  #computer lines
 	file_n="$file""_bak_b"    #避免屏幕输出
+	file_s="$file""_bak_s"    #找到第二结束字符串
 	is_one_line='skip_one_line'
 
 	sed 's/.$//' $file >$file_m  #删除每行的最后一个字符,可能是"\",引起计算行错误
@@ -181,12 +189,27 @@ function add_to_file_e()
 		echo "$line" |grep -qi "$var2""\>" >$file_n   #字符串向后须全配比
 		m=$?
 		if [ $begin -gt 0 ];then
+			#echo "$line"
+			#echo $var1
 			echo "$line" |grep -qi "$var1" >$file_n
 			if [ $? -eq 0 ];then
 				end=$n
 				#echo $begin >$file_t
-				echo $end >$file_t
+				echo $end >$file_t   #end变量在do...done循环里的值,仅在循环的内部启作用,故保存到一个临时文件
 				echo "find"" end=""$end"
+				if [ $have_second_end_string -eq 1 ];then
+					have_second_end_string=2
+					var1=$second_end_string
+					echo have_second_end_string
+					continue
+				elif [ $have_second_end_string -eq 2 ];then
+					echo "find second_end_string:"$var1
+					echo $have_second_end_string >$file_s
+				fi
+				break
+			elif [ $have_second_end_string -eq 2 ];then  #没找到第二结束字符串,以第一结束字符串为准
+				echo "not find second_end_string:"$var1
+				have_second_end_string=1
 				break
 			fi
 		elif [ $m -eq 0 ];then
@@ -209,6 +232,16 @@ function add_to_file_e()
 	    end=$line
 		done < $file_t
 		rm $file_t -rf
+	fi
+	if [[ -f $file_s ]];then
+		while read line
+		do
+	    have_second_end_string=$line
+		done < $file_s
+		rm $file_s -rf
+		if [ $have_second_end_string -eq 2 ];then
+			var1=$second_end_string  #以第二结束字符串为准
+		fi
 	fi
 
 	if [[ -f $file_m ]];then
@@ -305,7 +338,19 @@ function board_for_kernel()
 	TEMP=$BOARD_NAME_R"-native_defconfig"
 	echo $TEMP
 	TEMP1=$BOARD_NAME_N"-native_defconfig"
-	cp $TEMP $TEMP1
+	if [  -f $TEMP ];then
+		cp $TEMP $TEMP1
+	else
+		TEMP=$BOARD_NAME_R"_defconfig"
+		TEMP1=$BOARD_NAME_N"_defconfig"
+		if [  -f $TEMP ];then
+			cp $TEMP $TEMP1
+		else
+			echo -e $BOARD_NAME_R"***_defconfig not exist,configure kernel fail!!!!"
+			exit 0
+		fi
+	fi
+
 	file=$TEMP1
 
 	TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
@@ -457,32 +502,32 @@ function board_for_uboot()
 		begin_string="$begin_string""_config"
 		replacement="$BOARD_NAME_N"
 		path="./u-boot"
-		end_string='arm armv7'
+		end_string='armv7'
 		add_to_file_e $file $path $substring $replacement $begin_string $end_string
 	#---------修改文件 end-------
 
 
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' begin-------
-	cd $workdir
-	cd u-boot/
-	BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	substring="(CONFIG_$BOARD_NAME_R_b)"
-	addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
-	replacestring=$substring$addstring
-	#echo -e $substring
-	#echo -e $addstring
-	if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
-	then
-		echo "NULL"
-	else
-		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
-		echo "===========================notice========================================"
-		echo "===========================notice========================================"
-		echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
-		echo "please check that if need!!!!!"
-	fi
+		cd $workdir
+		cd u-boot/
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
+		substring="(CONFIG_$BOARD_NAME_R_b)"
+		addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
+		replacestring=$substring$addstring
+		#echo -e $substring
+		#echo -e $addstring
+		if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
+		then
+			echo "NULL"
+		else
+			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			echo "===========================notice========================================"
+			echo "===========================notice========================================"
+			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
+			echo "please check that if need!!!!!"
+		fi
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' end-------
 
 	break
@@ -544,32 +589,33 @@ function board_for_chipram()
 		begin_string="$begin_string""_config"
 		replacement="$BOARD_NAME_N"
 		path="./chipram"
-		end_string='arm armv7'
-		add_to_file_e $file $path $substring $replacement $begin_string $end_string
+		end_string='armv7'
+		s_e_end_string='(obj)include'
+		add_to_file_e $file $path $substring $replacement $begin_string $end_string $s_e_end_string
 	#---------修改文件 end-------
 
 
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' begin-------
-	cd $workdir
-	cd chipram/
-	BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	substring="(CONFIG_$BOARD_NAME_R_b)"
-	addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
-	replacestring=$substring$addstring
-	#echo -e $substring
-	#echo -e $addstring
-	if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
-	then
-		echo "NULL"
-	else
-		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
-		echo "===========================notice========================================"
-		echo "===========================notice========================================"
-		echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
-		echo "please check that if need!!!!!"
-	fi
+		cd $workdir
+		cd chipram/
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
+		substring="(CONFIG_$BOARD_NAME_R_b)"
+		addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
+		replacestring=$substring$addstring
+		#echo -e $substring
+		#echo -e $addstring
+		if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
+		then
+			echo "NULL"
+		else
+			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			echo "===========================notice========================================"
+			echo "===========================notice========================================"
+			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
+			echo "please check that if need!!!!!"
+		fi
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' end-------
 
 	break
@@ -745,6 +791,10 @@ function board_for_device()
 		TEMP1="ro.modem.w.count=2"
 		TEMP2="ro.modem.w.count=3"
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+
+		TEMP1="ro.modem.t.count=2"
+		TEMP2="ro.modem.t.count=3"
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 
 	#---------增加vendor/sprd/open-source/res/productinfo目录下的ini文件begin-------
@@ -772,27 +822,17 @@ function board_for_device()
 	echo "configure device end!"
 }
 
-function printPlatform()
+function select_Platform_and_BoardType()
 {
 	echo "==================================================================="
-	echo "please input platform name:"
-	echo "1. scx15 for dolphin"
-	echo "2. scx35 for shark"
+	echo "please select:"
+	echo "1. scx15 for dolphin and normal(for example:base or plus)"
+	echo "2. scx15 for dolphin and trisim(three sim cards)"
+	echo "3. scx35 for shark and normal(for example:base or plus)"
+	echo "4. scx35 for shark and trisim(three sim cards)"
 	echo "==================================================================="
-	read PLATFORM_CHOOSE
+	read BOARD_PLATFORM_TYPE
 }
-
-function selectBoardType()
-{
-	echo "==================================================================="
-	echo "please select board tyep:"
-	echo "1. normal(for example:base or plus)"
-	echo "2. trisim(three sim cards)"
-	echo "==================================================================="
-	read BOARD_TYPE
-}
-
-
 
 workdir=$PWD
 
@@ -811,22 +851,30 @@ if [ ! -d "./device/sprd" ];then
 	exit 0
 fi
 
-
-PLATFORM_CHOOSE=
-BOARD_TYPE=
+BOARD_PLATFORM_TYPE=
 while true
 do
-	printPlatform
-	if (echo -n $PLATFORM_CHOOSE | grep -q -e "^[1-9][1-9]*$")
+	select_Platform_and_BoardType
+	if (echo -n $BOARD_PLATFORM_TYPE | grep -q -e "^[1-9][1-9]*$")
 	then
-		if [ "$PLATFORM_CHOOSE" -gt "0" ]
+		if [ "$BOARD_PLATFORM_TYPE" -gt "0" ]
 		then
-			case $PLATFORM_CHOOSE in
+			case $BOARD_PLATFORM_TYPE in
 				1)PLATFORM="scx15"
-				echo "you have choose scx15!"
+				BOARD_TYPE=1
+				echo "you have choose scx15 and normal board!!"
 				;;
-				2)PLATFORM="scx35"
-				echo "you have choose scx35!"
+				2)PLATFORM="scx15"
+				BOARD_TYPE=2
+				echo "you have choose scx15 and trisim board!!"
+				;;
+				3)PLATFORM="scx35"
+				BOARD_TYPE=1
+				echo "you have choose scx35 and normal board!!"
+				;;
+				4)PLATFORM="scx35"
+				BOARD_TYPE=2
+				echo "you have choose scx35 and trisim board!!"
 				;;
 				*)echo "Invalid choice !"
 				exit 0
@@ -835,29 +883,6 @@ do
 		break
 	else
 		echo  "you don't hava choose platform!"
-		exit 0
-	fi
-done
-
-while true
-do
-	selectBoardType
-	if (echo -n $BOARD_TYPE | grep -q -e "^[1-9][1-9]*$")
-	then
-		if [ "$BOARD_TYPE" -gt "0" ]
-		then
-			case $BOARD_TYPE in
-				1)echo "you have choose normal board!"
-				;;
-				2)echo "you have choose trisim board!"
-				;;
-				*)echo "Invalid choice !"
-				exit 0
-			esac
-		fi
-		break
-	else
-		echo  "you don't hava choose board type!"
 		exit 0
 	fi
 done
