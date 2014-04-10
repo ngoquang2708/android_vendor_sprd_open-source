@@ -772,10 +772,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	sensor_ptr->awb.steady_speed = 6;
 	sensor_ptr->awb.debug_level = 0;
-#endif
+
 	sensor_ptr->awb.alg_id = 0;
 	sensor_ptr->awb.smart_index = 4;
-#if 0
+
 	//bpc
 	sensor_ptr->bpc.flat_thr=80;
 	sensor_ptr->bpc.std_thr=20;
