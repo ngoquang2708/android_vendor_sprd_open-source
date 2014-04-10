@@ -468,7 +468,6 @@ static int32_t _isp_AppAfIoCtrlHandler(uint32_t handler_id, void* param_ptr)
 		isp_context_ptr->af_flag = ISP_APP_EB;
 		rtn = ISP_APP_ERROR;
 	}
-
 	return rtn;
 }
 

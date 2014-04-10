@@ -90,6 +90,9 @@ LOCAL_SRC_FILES:= \
 	jpeg/jpeg_fw_8830/src/exif_writer.c  \
 	jpeg/jpeg_fw_8830/src/jpeg_stream.c \
 	isp/isp_app.c \
+	isp/isp_msg.c \
+	isp/isp_drv.c \
+	isp/isp_ctrl.c \
 	isp/isp_app_msg.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \
