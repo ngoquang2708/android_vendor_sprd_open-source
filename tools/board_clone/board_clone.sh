@@ -148,7 +148,7 @@ function add_to_file()
 	fi
 }
 
-#用此函数,关键字不可以说最后一个串,否则被删掉一个字符,将出现错误
+#用此函数,关键字不可以是最后一个串,否则被删掉一个字符,将出现错误
 function add_to_file_e()
 {
 	file=$1
@@ -157,6 +157,13 @@ function add_to_file_e()
 	replacement=$4
 	var2=$5
 	var1=$6
+	have_second_end_string=0
+
+	if [ $# -ge 7 ];then
+		echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,以它结束为准
+		second_end_string=$7
+		have_second_end_string=1
+	fi
 
 	declare -i n
 	declare -i begin
@@ -169,6 +176,7 @@ function add_to_file_e()
 	file_t="$file""_bak"
 	file_m="$file""_bak_bak"  #computer lines
 	file_n="$file""_bak_b"    #避免屏幕输出
+	file_s="$file""_bak_s"    #找到第二结束字符串
 	is_one_line='skip_one_line'
 
 	sed 's/.$//' $file >$file_m  #删除每行的最后一个字符,可能是"\",引起计算行错误
@@ -181,12 +189,27 @@ function add_to_file_e()
 		echo "$line" |grep -qi "$var2""\>" >$file_n   #字符串向后须全配比
 		m=$?
 		if [ $begin -gt 0 ];then
+			#echo "$line"
+			#echo $var1
 			echo "$line" |grep -qi "$var1" >$file_n
 			if [ $? -eq 0 ];then
 				end=$n
 				#echo $begin >$file_t
-				echo $end >$file_t
+				echo $end >$file_t   #end变量在do...done循环里的值,仅在循环的内部启作用,故保存到一个临时文件
 				echo "find"" end=""$end"
+				if [ $have_second_end_string -eq 1 ];then
+					have_second_end_string=2
+					var1=$second_end_string
+					echo have_second_end_string
+					continue
+				elif [ $have_second_end_string -eq 2 ];then
+					echo "find second_end_string:"$var1
+					echo $have_second_end_string >$file_s
+				fi
+				break
+			elif [ $have_second_end_string -eq 2 ];then  #没找到第二结束字符串,以第一结束字符串为准
+				echo "not find second_end_string:"$var1
+				have_second_end_string=1
 				break
 			fi
 		elif [ $m -eq 0 ];then
@@ -209,6 +232,16 @@ function add_to_file_e()
 	    end=$line
 		done < $file_t
 		rm $file_t -rf
+	fi
+	if [[ -f $file_s ]];then
+		while read line
+		do
+	    have_second_end_string=$line
+		done < $file_s
+		rm $file_s -rf
+		if [ $have_second_end_string -eq 2 ];then
+			var1=$second_end_string  #以第二结束字符串为准
+		fi
 	fi
 
 	if [[ -f $file_m ]];then
@@ -469,32 +502,32 @@ function board_for_uboot()
 		begin_string="$begin_string""_config"
 		replacement="$BOARD_NAME_N"
 		path="./u-boot"
-		end_string='arm armv7'
+		end_string='armv7'
 		add_to_file_e $file $path $substring $replacement $begin_string $end_string
 	#---------修改文件 end-------
 
 
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' begin-------
-	cd $workdir
-	cd u-boot/
-	BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	substring="(CONFIG_$BOARD_NAME_R_b)"
-	addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
-	replacestring=$substring$addstring
-	#echo -e $substring
-	#echo -e $addstring
-	if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
-	then
-		echo "NULL"
-	else
-		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
-		echo "===========================notice========================================"
-		echo "===========================notice========================================"
-		echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
-		echo "please check that if need!!!!!"
-	fi
+		cd $workdir
+		cd u-boot/
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
+		substring="(CONFIG_$BOARD_NAME_R_b)"
+		addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
+		replacestring=$substring$addstring
+		#echo -e $substring
+		#echo -e $addstring
+		if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
+		then
+			echo "NULL"
+		else
+			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			echo "===========================notice========================================"
+			echo "===========================notice========================================"
+			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
+			echo "please check that if need!!!!!"
+		fi
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' end-------
 
 	break
@@ -556,32 +589,33 @@ function board_for_chipram()
 		begin_string="$begin_string""_config"
 		replacement="$BOARD_NAME_N"
 		path="./chipram"
-		end_string='arm armv7'
-		add_to_file_e $file $path $substring $replacement $begin_string $end_string
+		end_string='armv7'
+		s_e_end_string='(obj)include'
+		add_to_file_e $file $path $substring $replacement $begin_string $end_string $s_e_end_string
 	#---------修改文件 end-------
 
 
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' begin-------
-	cd $workdir
-	cd chipram/
-	BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	substring="(CONFIG_$BOARD_NAME_R_b)"
-	addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
-	replacestring=$substring$addstring
-	#echo -e $substring
-	#echo -e $addstring
-	if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
-	then
-		echo "NULL"
-	else
-		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
-		echo "===========================notice========================================"
-		echo "===========================notice========================================"
-		echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
-		echo "please check that if need!!!!!"
-	fi
+		cd $workdir
+		cd chipram/
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
+		substring="(CONFIG_$BOARD_NAME_R_b)"
+		addstring=" || defined(CONFIG_$BOARD_NAME_N_b)"
+		replacestring=$substring$addstring
+		#echo -e $substring
+		#echo -e $addstring
+		if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
+		then
+			echo "NULL"
+		else
+			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			echo "===========================notice========================================"
+			echo "===========================notice========================================"
+			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
+			echo "please check that if need!!!!!"
+		fi
 	#---------增加'|| defined(CONFIG_BOARD_NAME_N)' end-------
 
 	break
