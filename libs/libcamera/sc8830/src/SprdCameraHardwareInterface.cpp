@@ -71,6 +71,7 @@ namespace android {
 		}while(0)
 #define SET_PARAM_TIMEOUT    2000000000     /*2000ms*/
 #define CAP_TIMEOUT          5000000000     /*5000ms*/
+#define PREV_TIMEOUT         5000000000     /*5000ms*/
 #define CANCEL_AF_TIMEOUT    1000000000     /*1000ms*/
 #define SET_PARAMS_TIMEOUT   250            /*250 means 250*10ms*/
 #define ON_OFF_ACT_TIMEOUT   50             /*50 means 50*10ms*/
@@ -491,7 +492,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	LOGI("setPreviewWindow E");
 	Mutex::Autolock l(&mParamLock);
 
-	LOGI("%s: mPreviewWindow %p", __func__, mPreviewWindow);
+	LOGI("%s: mPreviewWindow %p target window %p", __func__, mPreviewWindow, w);
 
 	if (!w) {
 		switch_ret = switchBufferMode(mPreviewBufferUsage, PREVIEW_BUFFER_USAGE_DCAM);
@@ -521,12 +522,11 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	}
 
 	mPreviewWindowLock.lock();
-	mPreviewWindow = w;
-	mPreviewWindowLock.unlock();
 
 
 	if (w->get_min_undequeued_buffer_count(w, &min_bufs)) {
 		LOGE("%s: could not retrieve min undequeued buffer count X", __func__);
+		mPreviewWindowLock.unlock();
 		return INVALID_OPERATION;
 	}
 
@@ -538,8 +538,12 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	LOGI("%s: setting buffer count to %d", __func__, kPreviewBufferCount);
 	if (w->set_buffer_count(w, kPreviewBufferCount)) {
 		LOGE("%s: could not set buffer count X", __func__);
+		mPreviewWindowLock.unlock();
 		return INVALID_OPERATION;
 	}
+	mPreviewWindow = w;
+
+	mPreviewWindowLock.unlock();
 
 	int preview_width;
 	int preview_height;
@@ -620,10 +624,19 @@ status_t SprdCameraHardware::takePicture()
 	print_time();
 
 	Mutex::Autolock l(&mLock);
-	waitSetParamsOK();
 	print_time();
 	takepicture_mode mode = getCaptureMode();
 	LOGI("takePicture mode %d", mode);
+
+	if (SPRD_ERROR == mCameraState.capture_state) {
+		LOGE("takePicture in error status, deinit capture at first ");
+		deinitCapture();
+	} else if (SPRD_IDLE != mCameraState.capture_state) {
+		LOGE("take picture: action alread exist, direct return!");
+		return ALREADY_EXISTS;
+	}
+
+	waitSetParamsOK();
 
 	if (camera_set_dimensions(mRawWidth,
 				mRawHeight,
@@ -634,14 +647,6 @@ status_t SprdCameraHardware::takePicture()
 				mCaptureMode != CAMERA_RAW_MODE)) {
 		LOGE("take picture parameters error!");
 		return UNKNOWN_ERROR;
-	}
-
-	if (SPRD_ERROR == mCameraState.capture_state) {
-		LOGE("takePicture in error status, deinit capture at first ");
-		deinitCapture();
-	} else if (SPRD_IDLE != mCameraState.capture_state) {
-		LOGE("take picture: action alread exist, direct return!");
-		return ALREADY_EXISTS;
 	}
 
 	if (!iSZslMode()) {
@@ -856,8 +861,6 @@ status_t SprdCameraHardware::autoFocus()
 	LOGI("mLock:autoFocus E.\n");
 	Mutex::Autolock l(&mLock);
 
-	waitSetParamsOK();
-
 	if (!isPreviewing()) {
 		LOGE("autoFocus: not previewing");
 		return INVALID_OPERATION;
@@ -867,6 +870,9 @@ status_t SprdCameraHardware::autoFocus()
 		LOGE("autoFocus existing, direct return!");
 		return NO_ERROR;
 	}
+
+	waitSetParamsOK();
+
 	mMsgEnabled |= CAMERA_MSG_FOCUS;
 
 	setCameraState(SPRD_FOCUS_IN_PROGRESS, STATE_FOCUS);
@@ -2318,10 +2324,13 @@ bool SprdCameraHardware::WaitForPreviewStart()
 {
 	Mutex::Autolock stateLock(&mStateLock);
 
-	while(SPRD_PREVIEW_IN_PROGRESS != mCameraState.preview_state
+	while (SPRD_PREVIEW_IN_PROGRESS != mCameraState.preview_state
 		&& SPRD_ERROR != mCameraState.preview_state) {
 		LOGI("WaitForPreviewStart: waiting for SPRD_PREVIEW_IN_PROGRESS");
-		mStateWait.wait(mStateLock);
+		if (mStateWait.waitRelative(mStateLock, PREV_TIMEOUT)) {
+			LOGE("WaitForPreviewStart: timeout");
+			break;
+		}
 		LOGI("WaitForPreviewStart: woke up");
 	}
 
@@ -2378,6 +2387,7 @@ bool SprdCameraHardware::WaitForCaptureDone()
 		} else {
 			if (mStateWait.waitRelative(mStateLock, CAP_TIMEOUT)) {
 				LOGE("WaitForCaptureDone timeout");
+				break;
 			}
 		}
 		LOGI("WaitForCaptureDone: woke up");
@@ -4775,9 +4785,7 @@ void SprdCameraHardware::HandleStartPreview(camera_cb_type cb,
 
 	switch(cb) {
 	case CAMERA_RSP_CB_SUCCESS:
-		transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
-			SPRD_PREVIEW_IN_PROGRESS,
-			STATE_PREVIEW);
+		setCameraState(SPRD_PREVIEW_IN_PROGRESS, STATE_PREVIEW);
 		break;
 
 	case CAMERA_EVT_CB_FRAME:

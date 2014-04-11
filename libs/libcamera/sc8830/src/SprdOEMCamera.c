@@ -3738,6 +3738,7 @@ void camera_v4l2_evt_cb(int evt, void* data)
 	struct frm_info          *info = (struct frm_info*)data;
 	uint32_t                 queue_handle = g_cxt->msg_queue_handle;
 	uint32_t                 log_level = 1;
+	camera_cb_info           cb_info;
 
 	if (NULL == data ||
 		CMR_EVT_V4L2_BASE != (CMR_EVT_V4L2_BASE & evt)) {
@@ -3747,6 +3748,12 @@ void camera_v4l2_evt_cb(int evt, void* data)
 
 	if ((V4L2_IDLE == g_cxt->v4l2_cxt.v4l2_state) || (1 == info->free)) {
 		if (CMR_V4L2_TX_DONE == evt) {
+			if (CHN_1 == info->channel_id && 0 == g_cxt->pre_frm_cnt) {
+				memset(&cb_info, 0, sizeof(camera_cb_info));
+				cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
+				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
+				camera_callback_start(&cb_info);
+			}
 			CMR_LOGW("Wrong status, %d free frame %d 0x%x",
 				g_cxt->v4l2_cxt.v4l2_state,
 				info->channel_id,
@@ -3788,6 +3795,13 @@ void camera_v4l2_evt_cb(int evt, void* data)
 				log_level = 0;
 			else
 				log_level = 1;
+			/*callback and notify HAL preview OK*/
+			if (0 == g_cxt->pre_frm_cnt) {
+				memset(&cb_info, 0, sizeof(camera_cb_info));
+				cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
+				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
+				camera_callback_start(&cb_info);
+			}
 		} else if ((CHN_BUSY == g_cxt->chn_2_status) &&
 			(CHN_2 == info->channel_id)) {
 			message.msg_type = CMR_EVT_CAP_TX_DONE;
@@ -3989,7 +4003,6 @@ void camera_scaler_evt_cb(int evt, void* data)
 int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info *data)
 {
 	int                      ret = CAMERA_SUCCESS;
-	camera_cb_info           cb_info;
 	int                      frm_num = -1;
 
 	CMR_LOGI("evt_type 0x%x, sub_type %d", evt_type, sub_type);
@@ -4031,12 +4044,6 @@ int camera_internal_handle(uint32_t evt_type, uint32_t sub_type, struct frm_info
 		if (CMR_PREVIEW == sub_type) {
 			g_cxt->prev_buf_id = 0;
 			ret = camera_start_preview_internal();
-			if (CAMERA_SUCCESS == ret) {
-				memset(&cb_info, 0, sizeof(camera_cb_info));
-				cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
-				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
-				camera_callback_start(&cb_info);
-			}
 		} else {
 			if ((CMR_CAPTURE == sub_type)) {
 				takepicture_mode cap_mode = (uint32_t)data;
