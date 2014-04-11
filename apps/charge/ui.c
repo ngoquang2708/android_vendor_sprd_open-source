@@ -433,6 +433,7 @@ rechk_pwr_key:
 				break;
 			}else if(ev.code == pwr_key){
 				LOGD(" %s: %d %s\n", __func__, __LINE__, "power key up found");
+				usleep(500000);
 				cmd = BACKLIGHT_ON_CMD;
 				write(cmd_fd, &cmd, sizeof(char));
 				continue;
@@ -469,6 +470,7 @@ rechk_pwr_key:
 				LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm reboot failed");
 				break;
 			}else{
+				usleep(500000);
 				write(cmd_fd, &cmd, sizeof(char));
 				LOGD(" %s: %d %s\n", __func__, __LINE__, "other key, just recheck");
 				continue;
