@@ -159,7 +159,7 @@ int setup_packet(CMD_TYPE msg,char *buffer,int offset,int data_size,int flag)
 				else
 					*((unsigned short *)&buffer[0]) =  data_size;
 				*((unsigned short *)&buffer[2]) = (unsigned short)msg;
-				*((unsigned short *)&buffer[4]) = 0;//boot_checksum((const unsigned char *)(buffer+offset),data_size);
+				*((unsigned short *)&buffer[4]) = boot_checksum((const unsigned char *)(buffer+offset),data_size);
 				*((unsigned short *)&buffer[6]) = boot_checksum((const unsigned char *)buffer,6);
 				//printf("data_size = %x check_sum(0x%02x) : 0x%04x \n",data_size,buffer[offset],*((unsigned short *)&buffer[4]));
 				total_size = data_size + 8;
@@ -473,7 +473,7 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 			head.type = (data[0]<<8)|data[1];
                 if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			//MODEM_LOGD(">>>>>>>ACK DATA %d\n", head.type);
+			MODEM_LOGD(">>>>>>>ACK DATA %d\n", head.type);
                         return 0;
 		}
 	}
