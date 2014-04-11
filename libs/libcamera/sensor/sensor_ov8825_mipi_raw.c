@@ -2838,25 +2838,25 @@ LOCAL uint32_t _ov8825_Identify(uint32_t param)
 	uint8_t ver_value = 0x00;
 	uint32_t ret_value = SENSOR_FAIL;
 
-	SENSOR_PRINT("SENSOR_ov8825: mipi raw identify\n");
+	SENSOR_PRINT_HIGH("SENSOR_ov8825: mipi raw identify\n");
 
 	pid_value = Sensor_ReadReg(ov8825_PID_ADDR);
 	if (ov8825_PID_VALUE == pid_value) {
 		ver_value = Sensor_ReadReg(ov8825_VER_ADDR);
 		SENSOR_PRINT("SENSOR_ov8825: Identify: PID = %x, VER = %x", pid_value, ver_value);
 		if (ov8825_VER_VALUE == ver_value) {
-			SENSOR_PRINT("SENSOR_ov8825: this is ov8825 sensor !");
+			SENSOR_PRINT_HIGH("SENSOR_ov8825: this is ov8825 sensor !");
 			ret_value=_ov8825_GetRawInof();
 			if(SENSOR_SUCCESS != ret_value)
 			{
-				SENSOR_PRINT("SENSOR_ov8825: the module is unknow error !");
+				SENSOR_PRINT_ERR("SENSOR_ov8825: the module is unknow error !");
 			}
 			Sensor_ov8825_InitRawTuneInfo();
 		} else {
-			SENSOR_PRINT("SENSOR_ov8825: Identify this is OV%x%x sensor !", pid_value, ver_value);
+			SENSOR_PRINT_HIGH("SENSOR_ov8825: Identify this is OV%x%x sensor !", pid_value, ver_value);
 		}
 	} else {
-		SENSOR_PRINT("SENSOR_ov8825: identify fail,pid_value=%d", pid_value);
+		SENSOR_PRINT_ERR("SENSOR_ov8825: identify fail,pid_value=%d", pid_value);
 	}
 
 	return ret_value;

@@ -1415,19 +1415,18 @@ LOCAL uint32_t _s5k3h2yx_Identify(uint32_t param)
 		ver_value = Sensor_ReadReg(s5k3h2yx_VER_ADDR);
 		SENSOR_PRINT("SENSOR_s5k3h2yx: Identify: PID = %x, VER = %x", pid_value, ver_value);
 		if (s5k3h2yx_VER_VALUE == ver_value) {
-			SENSOR_PRINT("SENSOR_s5k3h2yx: this is s5k3h2yx sensor !");
+			SENSOR_PRINT_HIGH("SENSOR_s5k3h2yx: this is s5k3h2yx sensor !");
 			ret_value=_s5k3h2yx_GetRawInof();
 			if(SENSOR_SUCCESS != ret_value)
 			{
-				SENSOR_PRINT("SENSOR_s5k3h2yx: the module is unknow error !");
+				SENSOR_PRINT_ERR("SENSOR_s5k3h2yx: the module is unknow error !");
 			}
 			Sensor_s5k3h2yx_InitRawTuneInfo();
 		} else {
-			SENSOR_PRINT
-			    ("SENSOR_s5k3h2yx: identify fail,ver_value=%d", ver_value);
+			SENSOR_PRINT_HIGH("SENSOR_s5k3h2yx: identify fail,ver_value=%d", ver_value);
 		}
 	} else {
-		SENSOR_PRINT("SENSOR_s5k3h2yx: identify fail,pid_value=%d", pid_value);
+		SENSOR_PRINT_ERR("SENSOR_s5k3h2yx: identify fail,pid_value=%d", pid_value);
 	}
 	
 	return ret_value;

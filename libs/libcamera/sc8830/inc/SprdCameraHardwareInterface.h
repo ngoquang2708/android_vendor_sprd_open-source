@@ -301,6 +301,7 @@ private:
 	bool                            getLcdSize(uint32_t *width, uint32_t *height);
 	bool                            switchBufferMode(uint32_t src, uint32_t dst);
 	status_t                        checkFlashParameter(SprdCameraParameters& params);
+	void                            setCameraPrivateData(void);
 
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera

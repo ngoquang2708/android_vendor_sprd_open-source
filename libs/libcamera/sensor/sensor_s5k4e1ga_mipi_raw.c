@@ -1741,13 +1741,12 @@ LOCAL uint32_t _s5k4e1ga_Identify(uint32_t param)
 			ret_value=_s5k4e1ga_GetRawInof();
 			Sensor_InitRawTuneInfo();
 			ret_value = SENSOR_SUCCESS;
-			SENSOR_PRINT("SENSOR_s5k4e1ga: this is s5k4e1ga sensor !");
+			SENSOR_PRINT_HIGH("SENSOR_s5k4e1ga: this is s5k4e1ga sensor !");
 		} else {
-			SENSOR_PRINT
-			    ("SENSOR_s5k4e1ga: identify fail,ver_value=%d", ver_value);
+			SENSOR_PRINT_ERR("SENSOR_s5k4e1ga: identify fail,ver_value=%d", ver_value);
 		}
 	} else {
-		SENSOR_PRINT("SENSOR_s5k4e1ga: identify fail,pid_value=%d", pid_value);
+		SENSOR_PRINT_ERR("SENSOR_s5k4e1ga: identify fail,pid_value=%d", pid_value);
 	}
 
 	return ret_value;

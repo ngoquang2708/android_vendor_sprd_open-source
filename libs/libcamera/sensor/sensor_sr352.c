@@ -9912,14 +9912,14 @@ LOCAL uint32_t _sr352_after_snapshot(uint32_t param)
 
 LOCAL uint32_t _sr352_flash(uint32_t param)
 {
-	SENSOR_PRINT_HIGH("SENSOR: _sr352_flash:param=%d .\n",param);
+	SENSOR_PRINT("SENSOR: _sr352_flash:param=%d .\n",param);
 
 	/* enable flash, disable in _sr352_BeforeSnapshot */
 	g_flash_mode_en = param;
 
 	Sensor_SetFlash(param);
 
-	SENSOR_PRINT_HIGH("SENSOR: _sr352_flash:end .\n");
+	SENSOR_PRINT("SENSOR: _sr352_flash:end .\n");
 
 	return SENSOR_SUCCESS;
 }
@@ -9963,7 +9963,7 @@ LOCAL uint32_t _sr352_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 		param_ptr->zone.y =(zone_rect.h * param_ptr->zone.y) /
 		s_sr352_resolution_Tab_YUV[SENSOR_MODE_PREVIEW_ONE].height;
 	} else {
-		SENSOR_PRINT_HIGH("SENSOR: _sr352_MatchZone, w:%d, h:%d error \n",zone_rect.w, zone_rect.h);
+		SENSOR_PRINT("SENSOR: _sr352_MatchZone, w:%d, h:%d error \n",zone_rect.w, zone_rect.h);
 		rtn = SENSOR_FAIL;
 	}
 
@@ -9978,7 +9978,7 @@ LOCAL uint32_t _sr352_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	uint16_t i=30;
 	uint16_t reg_value=0x00;
 
-	SENSOR_PRINT_HIGH("Start");
+	SENSOR_PRINT("Start");
 	Sensor_WriteReg(0xFCFC, 0xD000);
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x028E);
@@ -9992,7 +9992,7 @@ LOCAL uint32_t _sr352_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		reg_value = Sensor_ReadReg(0x0F12);
 		i--;
 		if ((0x00 == i) || (0x0 == reg_value)) {
-			SENSOR_PRINT_HIGH("error!");
+			SENSOR_PRINT_ERR("error!");
 			rtn = SENSOR_FAIL;
 			break;
 		}

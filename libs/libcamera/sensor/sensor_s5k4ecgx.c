@@ -3945,20 +3945,20 @@ LOCAL uint32_t _s5k4ec_Identify(uint32_t param)
 		Sensor_WriteReg(0x002c, 0x7000);
 		Sensor_WriteReg(0x002e, s5k4ec_VER_ADDR);
 		ver_value = Sensor_ReadReg(0x0f12);
-		SENSOR_PRINT("SENSOR: s5k4ec_Identify: PID = %x, VER = %x \n",pid_value, ver_value);
+		SENSOR_PRINT_HIGH("SENSOR: s5k4ec_Identify: PID = %x, VER = %x \n",pid_value, ver_value);
 		if (s5k4ec_VER_VALUE == ver_value)
 		{
 			ret_value = SENSOR_SUCCESS;
-			SENSOR_PRINT("SENSOR: this is s5k4ec sensor ! \n");
+			SENSOR_PRINT_ERR("SENSOR: this is s5k4ec sensor ! \n");
 		}
 		else
 		{
-			SENSOR_PRINT("SENSOR: s5k4ec_Identify this is OV%x%x sensor ! \n",pid_value, ver_value);
+			SENSOR_PRINT_HIGH("SENSOR: s5k4ec_Identify this is OV%x%x sensor ! \n",pid_value, ver_value);
 		}
 	}
 	else
 	{
-		SENSOR_PRINT("SENSOR:s5k4ec identify fail,pid_value=%d .\n",pid_value);
+		SENSOR_PRINT_ERR("SENSOR:s5k4ec identify fail,pid_value=%d .\n",pid_value);
 	}
 
 	return ret_value;
@@ -4980,14 +4980,14 @@ LOCAL uint32_t _s5k4ec_after_snapshot(uint32_t param)
 
 LOCAL uint32_t _s5k4ec_flash(uint32_t param)
 {
-	SENSOR_PRINT_HIGH("SENSOR: _s5k4ec_flash:param=%d .\n",param);
+	SENSOR_PRINT("SENSOR: _s5k4ec_flash:param=%d .\n",param);
 
 	/* enable flash, disable in _s5k4ec_BeforeSnapshot */
 	g_flash_mode_en = param;
 
 	Sensor_SetFlash(param);
 
-	SENSOR_PRINT_HIGH("SENSOR: _s5k4ec_flash:end .\n");
+	SENSOR_PRINT("SENSOR: _s5k4ec_flash:end .\n");
 
 	return SENSOR_SUCCESS;
 }
@@ -5043,11 +5043,11 @@ LOCAL uint32_t _s5k4ec_MatchZone(SENSOR_EXT_FUN_T_PTR param_ptr)
 	}
 	else
 	{
-		SENSOR_PRINT_HIGH("SENSOR: _s5k4ec_MatchZone, w:%d, h:%d error \n",zone_rect.w, zone_rect.h);
+		SENSOR_PRINT_ERR("SENSOR: _s5k4ec_MatchZone, w:%d, h:%d error \n",zone_rect.w, zone_rect.h);
 		rtn = SENSOR_FAIL;
 	}
 
-	SENSOR_PRINT_HIGH("SENSOR: _s5k4ec_MatchZone, x:%d, y:%d \n",param_ptr->zone.x, param_ptr->zone.y);
+	SENSOR_PRINT("SENSOR: _s5k4ec_MatchZone, x:%d, y:%d \n",param_ptr->zone.x, param_ptr->zone.y);
 	return rtn;
 }
 
@@ -5063,7 +5063,7 @@ LOCAL uint32_t _s5k4ec_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 	uint32_t rtn=SENSOR_SUCCESS;
 	uint16_t i=30;
 	uint16_t reg_value=0x00;
-	SENSOR_PRINT_HIGH("Start");
+	SENSOR_PRINT("Start");
 	Sensor_WriteReg(0xFCFC, 0xD000);
 	Sensor_WriteReg(0x0028, 0x7000);
 	Sensor_WriteReg(0x002A, 0x028E);
@@ -5077,7 +5077,7 @@ LOCAL uint32_t _s5k4ec_AutoFocusTrig(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 		reg_value = Sensor_ReadReg(0x0F12);
 		i--;
 		if ((0x00 == i) || (0x0 == reg_value)) {
-			SENSOR_PRINT_HIGH("error!");
+			SENSOR_PRINT_ERR("error!");
 			rtn = SENSOR_FAIL;
 			break;
 		}
@@ -5139,7 +5139,7 @@ LOCAL uint32_t _s5k4ec_StartAutoFocus(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
-	SENSOR_PRINT_HIGH("SENSOR: _s5k4ec_StartAutoFocus param =%d", ext_ptr->param);
+	SENSOR_PRINT("SENSOR: _s5k4ec_StartAutoFocus param =%d", ext_ptr->param);
 
 	switch (ext_ptr->param) {
 	case SENSOR_EXT_FOCUS_TRIG:

@@ -54,7 +54,7 @@ extern	 "C"
 #endif
 
 #define SENSOR_PRINT_ERR                              CMR_LOGE
-#define SENSOR_PRINT_HIGH                             CMR_LOGV
+#define SENSOR_PRINT_HIGH                             CMR_LOGI
 #define SENSOR_TRACE                                  SENSOR_PRINT
 
 

@@ -1087,21 +1087,21 @@ LOCAL uint32_t OV2640_Identify(uint32_t param)
 	BOOLEAN ret_value = 0XFF;
 	//pid_value = Sensor_ReadReg(OV2640_PID_ADDR);
 	Sensor_ReadReg_8bits(OV2640_PID_ADDR, &pid_value);
-	SENSOR_PRINT_HIGH("[OV2640_Identify:pid_value=0x%x]\n", pid_value);
+	SENSOR_PRINT("[OV2640_Identify:pid_value=0x%x]\n", pid_value);
 
 	if (OV2640_PID_VALUE == pid_value) {
 		// Get Device Code
 		Sensor_ReadReg_8bits(OV2640_VER_ADDR, &ver_value);
 		SENSOR_PRINT_HIGH("[OV2640_Identify:ver_value=0x%x]\n", ver_value);
 		if (OV2640_VER_VALUE == ver_value) {
-			SENSOR_TRACE("That is OV2640 sensor !");
+			SENSOR_PRINT_HIGH("That is OV2640 sensor !");
 		} else {
-			SENSOR_TRACE("OV2640_Identify: That is OV%x%x sensor !",
+			SENSOR_PRINT_HIGH("OV2640_Identify: That is OV%x%x sensor !",
 				     pid_value, ver_value);
 		}
 		ret_value = 0;
 	}
-	SENSOR_TRACE("OV2640_Identify: PID = %x, VER = %x\n",
+	SENSOR_PRINT_HIGH("OV2640_Identify: PID = %x, VER = %x\n",
 		     pid_value, ver_value);
 	return (uint32_t) ret_value;
 }

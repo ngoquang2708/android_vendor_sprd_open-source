@@ -1002,10 +1002,10 @@ static uint32_t GC2035_Identify(uint32_t param)
 	for (i=0; i<3; i++) {
 		sensor_id = Sensor_ReadReg(GC2035_PID_ADDR1) << 8;
 		sensor_id |= Sensor_ReadReg(GC2035_PID_ADDR2);
-		SENSOR_PRINT("%s sensor_id is %x\n", __func__, sensor_id);
+		SENSOR_PRINT_HIGH("%s sensor_id is %x\n", __func__, sensor_id);
 
 		if (sensor_id == GC2035_SENSOR_ID) {
-			SENSOR_PRINT("the main sensor is GC2035\n");
+			SENSOR_PRINT_HIGH("the main sensor is GC2035\n");
 			return SENSOR_SUCCESS;
 		}
 	}

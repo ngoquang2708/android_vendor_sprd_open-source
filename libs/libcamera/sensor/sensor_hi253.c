@@ -1982,7 +1982,7 @@ LOCAL uint32_t hi253_Identify(uint32_t param)
 				err_cnt++;
 				if(err_cnt>3)
 				{
-					SENSOR_PRINT("linmingchuang  It is not hi253\n");
+					SENSOR_PRINT_ERR("linmingchuang  It is not hi253\n");
 					return SENSOR_FAIL;
 				}
 				else
@@ -1996,7 +1996,7 @@ LOCAL uint32_t hi253_Identify(uint32_t param)
 	        	err_cnt = 0;
 			i++;
 		}
-		SENSOR_PRINT("linmingchuang  hi253 identify: It is hi253\n");
+		SENSOR_PRINT_HIGH("linmingchuang  hi253 identify: It is hi253\n");
 
 		return SENSOR_SUCCESS;
 
