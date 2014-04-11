@@ -660,7 +660,7 @@ AllocNormalBuffer:
 
 static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 {
-	ALOGD("%s buffer_handle_t:0x%x start",__FUNCTION__,(unsigned int)handle);
+
 	if (private_handle_t::validate(handle) < 0)
 	{
 		return -EINVAL;
@@ -755,7 +755,7 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 
 	delete hnd;
 
-	ALOGD("%s end",__FUNCTION__);
+
 	return 0;
 }
 
