@@ -413,12 +413,12 @@ CAM_DEBUG("The S5K5CCGX sensor is not Connecting3\n");
 
         if(Sensor_ReadReg(0x0F12) != 0x05CC)
         {
-                SENSOR_TRACE("The S5K5CCGX sensor is not Connected..!!");
+                SENSOR_PRINT_ERR("The S5K5CCGX sensor is not Connected..!!");
                 return SENSOR_OP_ERR;
         }
         else
         {
-                 SENSOR_TRACE("The S5K5CCGX sensor is Connected..!!");
+                 SENSOR_PRINT_HIGH("The S5K5CCGX sensor is Connected..!!");
                 return SENSOR_OP_SUCCESS;
         }
 
@@ -1384,7 +1384,7 @@ I2C_RETRY:
 			{
 				SENSOR_Sleep(value);
 			}
-                SENSOR_PRINT_HIGH("s5k5ccgx_sensor_burst_write, delay %dms\n",value);
+                SENSOR_PRINT("s5k5ccgx_sensor_burst_write, delay %dms\n",value);
             break;
 
 		default:
@@ -1397,7 +1397,7 @@ I2C_RETRY:
 
 	if (err < 0)
         {
-            SENSOR_PRINT_HIGH("[S5K5CCGX]%s: register set failed. try again.\n",__func__);
+            SENSOR_PRINT_ERR("[S5K5CCGX]%s: register set failed. try again.\n",__func__);
 		retry++;
             if((retry++)<3) goto I2C_RETRY;
             return err;
@@ -1405,7 +1405,7 @@ I2C_RETRY:
 
     //do_gettimeofday(&time2);
     //printk("SENSOR: _s5k5ccgx_InitExt time=%d.\n",((time2.tv_sec-time1.tv_sec)*1000+(time2.tv_usec-time1.tv_usec)/1000));
-    SENSOR_PRINT_HIGH("SENSOR: _s5k5ccgx_InitExt, success \n");
+    SENSOR_PRINT("SENSOR: _s5k5ccgx_InitExt, success \n");
 
     return 0;
 }

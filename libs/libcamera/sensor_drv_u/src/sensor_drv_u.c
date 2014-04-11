@@ -2854,7 +2854,6 @@ uint32_t Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_E cmd, uint32_t param)
 			break;
 		}
 	case SENSOR_EXIF_CTRL_FLASH:
-		sensor_exif_info_ptr->valid.Flash = 1;
 		sensor_exif_info_ptr->Flash = param;
 		break;
 	case SENSOR_EXIF_CTRL_FOCALLENGTH:

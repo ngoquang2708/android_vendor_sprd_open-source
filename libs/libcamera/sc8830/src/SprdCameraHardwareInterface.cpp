@@ -3520,7 +3520,19 @@ status_t SprdCameraHardware::cancelPictureInternal()
 	LOGI("cancelPictureInternal: X");
 	return result ? NO_ERROR : UNKNOWN_ERROR;
 }
+void SprdCameraHardware::setCameraPrivateData()
+{
+	camera_sensor_exif_info exif_info;
+	const char * isFlashSupport = mParameters.get("flash-mode-supported");
+	memset(&exif_info, 0, sizeof(camera_sensor_exif_info));
 
+	if (isFlashSupport
+		&& 0 == strcmp("true", (char*)isFlashSupport)) {
+		exif_info.flash = 1;
+	}
+
+	camera_config_exif_info(&exif_info);
+}
 status_t SprdCameraHardware::initDefaultParameters()
 {
 	uint32_t lcd_w = 0, lcd_h = 0;
@@ -3545,6 +3557,7 @@ status_t SprdCameraHardware::initDefaultParameters()
 		LOGE("Failed to set default parameters?!");
 		ret = UNKNOWN_ERROR;
 	}
+	setCameraPrivateData();
 
 	mParamLock.lock();
 	copyParameters(mSetParameters, p);

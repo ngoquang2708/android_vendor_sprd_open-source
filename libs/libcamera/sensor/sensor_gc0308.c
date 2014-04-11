@@ -739,7 +739,7 @@ static uint32_t GC0308_Identify(uint32_t param)
 		if( ret != value[i]) {
 			err_cnt++;
 			if(err_cnt>3) {
-				SENSOR_PRINT_HIGH("It is not GC0308\n");
+				SENSOR_PRINT_ERR("It is not GC0308\n");
 				return SENSOR_FAIL;
 			} else {
 				while(nLoop--);
@@ -750,7 +750,7 @@ static uint32_t GC0308_Identify(uint32_t param)
 		i++;
 	}
 
-	SENSOR_TRACE("GC0308_Identify: it is GC0308\n");
+	SENSOR_PRINT_HIGH("GC0308_Identify: it is GC0308\n");
 	return (uint32_t)SENSOR_SUCCESS;
 }
 

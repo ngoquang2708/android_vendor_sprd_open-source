@@ -614,7 +614,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
         PNULL,							// information and table about Rawrgb sensor
         PNULL,							// extend information about sensor
         SENSOR_AVDD_1800MV,                     // iovdd
-        SENSOR_AVDD_1800MV,                      // dvdd
+        SENSOR_AVDD_CLOSED,                     // dvdd
         3,                     // skip frame num before preview
         1,                      // skip frame num before capture
         0,                      // deci frame num during preview
@@ -663,12 +663,12 @@ LOCAL uint32_t _ov7675_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		usleep(10*1000);
 		Sensor_SetIovddVoltage(iovdd_val);
-		usleep(1*1000);
+		usleep(5*1000);
 		Sensor_SetAvddVoltage(avdd_val);
 		usleep(5*1000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
+		usleep(20*1000);
 	} else {
 		Sensor_PowerDown(power_down);
 		usleep(2*1000);
@@ -676,7 +676,7 @@ LOCAL uint32_t _ov7675_PowerOn(uint32_t power_on)
 		usleep(2*1000);
 		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
 		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
-		usleep(120*1000);
+		usleep(20*1000);
 	}
 	SENSOR_PRINT("(1:on, 0:off): %d", power_on);
 	return SENSOR_SUCCESS;
@@ -702,7 +702,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
                 if( ret != value[i]) {
                         err_cnt++;
                         if(err_cnt>3) {
-                                SENSOR_TRACE("Fail to OV7690_Identify: ret: %d, value[%d]: %d", ret, i, value[i]);
+                                SENSOR_PRINT_ERR("Fail to OV7690_Identify: ret: %d, value[%d]: %d", ret, i, value[i]);
                                 return SENSOR_FAIL;
                         } else {
                                 //Masked by frank.yang,SENSOR_Sleep() will cause a  Assert when called in boot precedure
@@ -717,7 +717,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
         }
 
         _ov7675_InitExifInfo();
-        SENSOR_TRACE("SENSOR: OV7675_Identify: it is OV7675");
+        SENSOR_PRINT_HIGH("SENSOR: OV7675_Identify: it is OV7675");
         return 0;
 }
 /******************************************************************************/

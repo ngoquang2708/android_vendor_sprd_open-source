@@ -1869,14 +1869,14 @@ LOCAL uint32_t _ov13850_Identify(uint32_t param)
 			ret_value=_ov13850_GetRawInof();
 			if(SENSOR_SUCCESS != ret_value)
 			{
-				SENSOR_PRINT("SENSOR_ov13850: the module is unknow error !");
+				SENSOR_PRINT_ERR("SENSOR_ov13850: the module is unknow error !");
 			}
 			Sensor_ov13850_InitRawTuneInfo();
 		} else {
-			SENSOR_PRINT("SENSOR_ov13850: Identify this is OV%x%x sensor !", pid_value, ver_value);
+			SENSOR_PRINT_HIGH("SENSOR_ov13850: Identify this is OV%x%x sensor !", pid_value, ver_value);
 		}
 	} else {
-		SENSOR_PRINT("SENSOR_ov13850: identify fail,pid_value=%d", pid_value);
+		SENSOR_PRINT_ERR("SENSOR_ov13850: identify fail,pid_value=%d", pid_value);
 	}
 
 	return ret_value;
@@ -2147,7 +2147,7 @@ LOCAL uint32_t _ov13850_flash(uint32_t param)
 	/* enable flash, disable in _ov13850_BeforeSnapshot */
 	g_flash_mode_en = param;
 	Sensor_SetFlash(param);
-	SENSOR_PRINT_HIGH("end");
+	SENSOR_PRINT("end");
 	return SENSOR_SUCCESS;
 }
 
@@ -2273,7 +2273,7 @@ LOCAL uint32_t _ov13850_ExtFunc(uint32_t ctl_param)
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr =
 	    (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
-	SENSOR_PRINT_HIGH("0x%x", ext_ptr->cmd);
+	SENSOR_PRINT("0x%x", ext_ptr->cmd);
 
 	switch (ext_ptr->cmd) {
 	case SENSOR_EXT_FUNC_INIT:

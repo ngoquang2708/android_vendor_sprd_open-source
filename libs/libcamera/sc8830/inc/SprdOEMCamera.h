@@ -334,7 +334,9 @@ typedef struct
 	const char               *process_method;
 } camera_position_type;
 
-
+typedef struct {
+	uint32_t flash;
+} camera_sensor_exif_info;
 
 typedef enum {
 	/* read only operation states: camera_state_type */
@@ -549,6 +551,7 @@ void camera_isp_ae_stab_set (uint32_t is_ae_stab_eb);
 inline uint32_t camera_get_prev_stat();
 int camera_capture_is_idle(void);
 int camera_set_cancel_capture(int set_val); /*for hal can invoke*/
+void camera_config_exif_info(camera_sensor_exif_info * exif_info);
 
 /*following functions are for HAL2.0*/
 int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);

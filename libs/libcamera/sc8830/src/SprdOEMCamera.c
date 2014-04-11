@@ -364,6 +364,13 @@ static void camera_pre_init(void)
 	return;
 }
 
+void camera_config_exif_info(camera_sensor_exif_info * exif_info)
+{
+	EXIF_SPEC_PIC_TAKING_COND_T* img_sensor_exif_ptr = Sensor_GetSensorExifInfo();
+
+	img_sensor_exif_ptr->valid.Flash = exif_info->flash;
+}
+
 int camera_sensor_init(int32_t camera_id)
 {
 	struct camera_ctrl       *ctrl = &g_cxt->control;
