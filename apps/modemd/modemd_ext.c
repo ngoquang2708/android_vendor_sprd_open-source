@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <cutils/properties.h>
-#include <cutils/android_reboot.h>
 #include <utils/Log.h>
 #include <cutils/sockets.h>
 #include <pthread.h>
@@ -117,20 +116,23 @@ reconnect:
        }
 
        MODEMD_LOGD("%s: read numRead=%d, buf=%s", __func__, numRead, buf);
-       if (strstr(buf, TD_MODEM_ALIVE_STR) || strstr(buf, LTE_MODEM_ALIVE_STR)) {
+       if (strstr(buf, TD_MODEM_ALIVE_STR) ||
+           strstr(buf, LTE_MODEM_ALIVE_STR) ||
+           strstr(buf, GEN_MODEM_ALIVE_STR)) {
            // Start external modem, when receive modem alive info.
            ext_modem_ops.start_modem_service();
 
            MODEMD_LOGD("Info modem alive to all clients.");
            loop_info_sockclients("Modem Alive", strlen("Modem Alive"));
-       } else if (strstr(buf, TD_MODEM_ASSERT_STR) || strstr(buf, LTE_MODEM_ASSERT_STR)) {
+       } else if (strstr(buf, TD_MODEM_ASSERT_STR) ||
+                  strstr(buf, LTE_MODEM_ASSERT_STR) ||
+                  strstr(buf, GEN_MODEM_ASSERT_STR)) {
            ext_modem_ops.stop_modem_service();
            MODEMD_LOGD("Info modem assert to all clients.");
            loop_info_sockclients(buf, numRead);
+
            if (is_modem_reset()) {
                MODEMD_LOGD("Modem reset is enabled, reload modem image");
-               //sleep(5);
-               //property_set(ANDROID_RB_PROPERTY, "reboot");
                if (ext_modem_ops.load_modem_image() < 0) {
                    close(sfd);
                    sFdModemCtl = -1;
@@ -139,9 +141,12 @@ reconnect:
            } else {
                MODEMD_LOGD("modem reset is not enabled , do not reset");
            }
-       } else if (strstr(buf, LTE_MODEM_RESET_STR) || strstr(buf, WTD_MODEM_RESET_STR)) {
+       } else if (strstr(buf, LTE_MODEM_RESET_STR) ||
+                  strstr(buf, WTD_MODEM_RESET_STR) ||
+                  strstr(buf, GEN_MODEM_RESET_STR)) {
            MODEMD_LOGD("modem reset happen, reload modem...");
            loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
+
            ext_modem_ops.stop_modem_service();
            if (ext_modem_ops.load_modem_image() < 0) {
                close(sfd);

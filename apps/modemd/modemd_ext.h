@@ -25,10 +25,13 @@
 
 #define  TD_MODEM_ALIVE_STR          "_TD Modem _Alive"
 #define  LTE_MODEM_ALIVE_STR         "LTE Modem _Alive"
+#define  GEN_MODEM_ALIVE_STR         "Modem Alive"
 #define  LTE_MODEM_ASSERT_STR        "LTE Modem Assert"
 #define  TD_MODEM_ASSERT_STR         "_TD Modem Assert"
+#define  GEN_MODEM_ASSERT_STR         "Modem Assert"
 #define  LTE_MODEM_RESET_STR         "LTE Modem _Reset"
 #define  WTD_MODEM_RESET_STR         "WDG Modem _Reset"
+#define  GEN_MODEM_RESET_STR         "Modem Reset"
 
 #define  LTE_RELOAD_SVLTE_STR        "LTE Modem Reload,SVLTE"
 #define  LTE_RELOAD_CSFB_STR         "LTE Modem Reload,_CSFB"
