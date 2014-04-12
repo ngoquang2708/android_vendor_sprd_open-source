@@ -259,6 +259,9 @@ static int camera_is_later_scaling(void);
 static int camera_get_cap_time(void);
 static int camera_check_cap_time(struct frm_info * data);
 static int camera_search_rot_buffer(void);
+static int raw_data_rect_copy(void *src_vaddr, uint32_t width,uint32_t height,
+				struct img_rect rect, void *dst_vaddr);
+
 
 int camera_capture_way_out(void)
 {
@@ -5227,9 +5230,6 @@ int camera_capture_init(void)
 	*/
 	if ((SENSOR_IMAGE_FORMAT_RAW == sensor_mode->image_format)
 			&& (sensor_mode->width > g_cxt->isp_cxt.width_limit)) {
-		sensor_mode->trim_start_x = 0;
-		sensor_mode->trim_width = sensor_mode->width;
-
 		sensor_cfg.sn_trim.start_x = 0;
 		sensor_cfg.sn_trim.start_y = 0;
 		sensor_cfg.sn_trim.width = sensor_mode->width;
@@ -5354,9 +5354,6 @@ int camera_capture_init_continue(void)
 	*/
 	if ((SENSOR_IMAGE_FORMAT_RAW == sensor_mode->image_format)
 			&& (sensor_mode->width > g_cxt->isp_cxt.width_limit)) {
-		sensor_mode->trim_start_x = 0;
-		sensor_mode->trim_width = sensor_mode->width;
-
 		sensor_cfg.sn_trim.start_x = 0;
 		sensor_cfg.sn_trim.start_y = 0;
 		sensor_cfg.sn_trim.width = sensor_mode->width;
@@ -5456,12 +5453,6 @@ int camera_capture_init_raw(void)
 	sensor_cfg.sn_size.width = sensor_mode->width;
 	sensor_cfg.sn_size.height = sensor_mode->height;
 	sensor_cfg.frm_num = 1;
-
-	/*
-	* rgbraw can not crop from path0,because it is packet.
-	*/
-	sensor_mode->trim_start_x = 0;
-	sensor_mode->trim_width = sensor_mode->width;
 
 	sensor_cfg.sn_trim.start_x = 0;
 	sensor_cfg.sn_trim.start_y = 0;
@@ -9103,29 +9094,59 @@ static int camera_cap_sub2_thread_init(void)
 	return ret;
 }
 
+static int raw_data_rect_copy(void *src_vaddr, uint32_t width,uint32_t height,
+				struct img_rect rect, void *dst_vaddr)
+{
+	int ret = CAMERA_SUCCESS;
+	uint32_t y = 0;
+	uint32_t from_w;
+	uint32_t to_w;
+	void *from_addr;
+	void *to_addr;
+
+
+	from_addr = (char*)src_vaddr + (rect.start_y * width + rect.start_x) * RAWRGB_BIT_WIDTH / 8;
+	to_addr = dst_vaddr;
+
+	from_w = width * RAWRGB_BIT_WIDTH / 8;
+	to_w = rect.width * RAWRGB_BIT_WIDTH / 8;
+
+	for (y = 0; y < rect.height; y++) {
+		memcpy(to_addr, from_addr, to_w);
+		from_addr = (char*)from_addr + from_w;
+		to_addr = (char*)to_addr + to_w;
+	}
+
+	return ret;
+}
+
 static int camera_recalc_rgbraw_addr(void)
 {
 	int ret = CAMERA_SUCCESS;
 	SENSOR_MODE_INFO_T *sensor_mode;
 	int max_frame_cnt = 1;
 	int i = 0;
-	uint32_t offset = 0;
-	uint32_t buffer_size = 0;
+	uint32_t src_vaddr;
+	struct img_rect rect;
 
 
-	if (IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt) {
-
-		sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+	sensor_mode = &g_cxt->sn_cxt.sensor_info->sensor_mode_info[g_cxt->sn_cxt.capture_mode];
+	if ((IMG_DATA_TYPE_RAW == g_cxt->cap_original_fmt)
+		&& ((sensor_mode->width != sensor_mode->trim_width)
+			|| (sensor_mode->height != sensor_mode->trim_height))) {
 
 		CMR_LOGI("sn_trim x,y,w,h %d,%d,%d,%d",
 				sensor_mode->trim_start_x, sensor_mode->trim_start_y,
 				sensor_mode->trim_width, sensor_mode->trim_height);
 
 		for (i = 0; i < max_frame_cnt; i++) {
-			offset = sensor_mode->width * sensor_mode->trim_start_y * RAWRGB_BIT_WIDTH / 8;
-
-			g_cxt->cap_mem[i].cap_raw.addr_phy.addr_y += offset;
-			g_cxt->cap_mem[i].cap_raw.addr_vir.addr_y += offset;
+			src_vaddr = g_cxt->cap_mem[i].cap_raw.addr_vir.addr_y;
+			rect.start_x = sensor_mode->trim_start_x;
+			rect.start_y = sensor_mode->trim_start_y;
+			rect.width = sensor_mode->trim_width;
+			rect.height = sensor_mode->trim_height;
+			raw_data_rect_copy((void*)src_vaddr, sensor_mode->width, sensor_mode->height,
+								rect, (void*)src_vaddr);
 
 			g_cxt->cap_mem[i].cap_raw.size.width = sensor_mode->trim_width;
 			g_cxt->cap_mem[i].cap_raw.size.height = sensor_mode->trim_height;
