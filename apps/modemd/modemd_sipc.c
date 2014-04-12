@@ -186,24 +186,20 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
       if (wakealarm_fd < 0)
           wakealarm_fd = timerfd_create(CLOCK_BOOTTIME_ALARM, TFD_NONBLOCK);
       if (wakealarm_fd == -1) {
-          MODEMD_LOGE(LOG_TAG, "wakealarm_init: timerfd_create failed\n");
+          MODEMD_LOGE("wakealarm_init: timerfd_create failed\n");
           return -1;
       }
       if(epollfd < 0)
       {
           epollfd = epoll_create(1);
           if (epollfd == -1) {
-                  MODEMD_LOGE(LOG_TAG,
-                  "healthd_mainloop: epoll_create failed; errno=%d\n",
-                  errno);
+              MODEMD_LOGE("healthd_mainloop: epoll_create failed; errno=%d\n", errno);
               return -1;
           }
           ev.events = EPOLLIN | EPOLLWAKEUP;
           if (epoll_ctl(epollfd, EPOLL_CTL_ADD, wakealarm_fd, &ev) == -1)
           {
-              MODEMD_LOGD(LOG_TAG,
-              "load_sipc_modem_img: epoll_ctl for wakealarm_fd failed; errno=%d\n",
-              errno);
+              MODEMD_LOGD("load_sipc_modem_img: epoll_ctl for wakealarm_fd failed; errno=%d\n", errno);
               return -1;
           }
       }
@@ -212,14 +208,14 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
       itval.it_value.tv_sec = 20;
       itval.it_value.tv_nsec = 0;
       if (timerfd_settime(wakealarm_fd, 0, &itval, NULL) == -1){
-          MODEMD_LOGE(LOG_TAG, "load_sipc_modem_img: timerfd_settime failed\n");
+          MODEMD_LOGE("load_sipc_modem_img: timerfd_settime failed\n");
       }
       do {
           nevents = epoll_wait(epollfd, events, 1, -1);
           if (nevents == -1) {
               if (errno == EINTR)
               continue;
-              MODEMD_LOGE(LOG_TAG, "load_sipc_modem_img: epoll_wait failed\n");
+              MODEMD_LOGE("load_sipc_modem_img: epoll_wait failed\n");
               break;
           }
          break ;
