@@ -52,7 +52,7 @@ static int gr_vt_fd = -1;
 
 static struct fb_var_screeninfo vi;
 
-static int get_framebuffer(GGLSurface *fb)
+static int get_framebuffer(GGLSurface * fb)
 {
 	int fd;
 	struct fb_fix_screeninfo fi;
@@ -97,7 +97,7 @@ static int get_framebuffer(GGLSurface *fb)
 		fb->width = vi.xres;
 		fb->height = vi.yres;
 		fb->stride = vi.xres;
-		fb->data = (void*) (((unsigned) bits) + vi.yres * vi.xres * 2);
+		fb->data = (void *)(((unsigned)bits) + vi.yres * vi.xres * 2);
 		fb->format = GGL_PIXEL_FORMAT_RGB_565;
 	} else {
 		fb->version = sizeof(*fb);
@@ -113,14 +113,15 @@ static int get_framebuffer(GGLSurface *fb)
 		fb->width = vi.xres;
 		fb->height = vi.yres;
 		fb->stride = vi.xres;
-		fb->data = (void*) (((unsigned) bits) + vi.yres * vi.xres * 4);
+		fb->data = (void *)(((unsigned)bits) + vi.yres * vi.xres * 4);
 		fb->format = GGL_PIXEL_FORMAT_RGBA_8888;
 	}
 
 	return fd;
 }
 
-static void get_memory_surface(GGLSurface* ms) {
+static void get_memory_surface(GGLSurface * ms)
+{
 	ms->version = sizeof(*ms);
 	ms->width = vi.xres;
 	ms->height = vi.yres;
@@ -137,8 +138,10 @@ static void get_memory_surface(GGLSurface* ms) {
 
 static void set_active_framebuffer(unsigned n)
 {
-	if (n > 1) return;
-	vi.yres_virtual = vi.yres * 2;
+	if (n > 1)
+		return;
+	/* here we needn't to set 2 fbbuffer, we use 2 or 3 buffer */
+	/* vi.yres_virtual = vi.yres * 2; */
 	vi.yoffset = n * vi.yres;
 	//vi.bits_per_pixel = 16;
 	if (ioctl(gr_fb_fd, FBIOPUT_VSCREENINFO, &vi) < 0) {
@@ -158,10 +161,10 @@ void gr_flip(void)
 
 	if (vi.bits_per_pixel == 16) {
 		memcpy(gr_framebuffer[gr_active_fb].data, gr_mem_surface.data,
-				vi.xres * vi.yres * 2);
+		       vi.xres * vi.yres * 2);
 	} else {
 		memcpy(gr_framebuffer[gr_active_fb].data, gr_mem_surface.data,
-				vi.xres * vi.yres * 4);
+		       vi.xres * vi.yres * 4);
 	}
 	/* inform the display driver */
 	set_active_framebuffer(gr_active_fb);
@@ -171,17 +174,16 @@ void gr_clean(void)
 {
 	//gr_active_fb = (gr_active_fb + 1) & 1;
 	if (vi.bits_per_pixel == 16) {
-		memset(gr_mem_surface.data, 0,
-				vi.xres * vi.yres * 2);
+		memset(gr_mem_surface.data, 0, vi.xres * vi.yres * 2);
 	} else {
-		memset(gr_mem_surface.data, 0,
-				vi.xres * vi.yres * 4);
+		memset(gr_mem_surface.data, 0, vi.xres * vi.yres * 4);
 	}
 	//set_active_framebuffer(gr_active_fb);
 	gr_flip();
 }
 
-void gr_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+void gr_color(unsigned char r, unsigned char g, unsigned char b,
+	      unsigned char a)
 {
 	GGLContext *gl = gr_context;
 	GGLint color[4];
@@ -211,11 +213,12 @@ int gr_text(int x, int y, const char *s)
 	gl->texGeni(gl, GGL_T, GGL_TEXTURE_GEN_MODE, GGL_ONE_TO_ONE);
 	gl->enable(gl, GGL_TEXTURE_2D);
 
-	while((off = *s++)) {
+	while ((off = *s++)) {
 		off -= 32;
 		if (off < 96) {
 			gl->texCoord2i(gl, (off * font->cwidth) - x, 0 - y);
-			gl->recti(gl, x, y, x + font->cwidth, y + font->cheight);
+			gl->recti(gl, x, y, x + font->cwidth,
+				  y + font->cheight);
 		}
 		x += font->cwidth;
 	}
@@ -230,13 +233,14 @@ void gr_fill(int x, int y, int w, int h)
 	gl->recti(gl, x, y, w, h);
 }
 
-void gr_blit(gr_surface source, int sx, int sy, int w, int h, int dx, int dy) {
+void gr_blit(gr_surface source, int sx, int sy, int w, int h, int dx, int dy)
+{
 	if (gr_context == NULL) {
 		return;
 	}
 	GGLContext *gl = gr_context;
 
-	gl->bindTexture(gl, (GGLSurface*) source);
+	gl->bindTexture(gl, (GGLSurface *) source);
 	gl->texEnvi(gl, GGL_TEXTURE_ENV, GGL_TEXTURE_ENV_MODE, GGL_REPLACE);
 	gl->texGeni(gl, GGL_S, GGL_TEXTURE_GEN_MODE, GGL_ONE_TO_ONE);
 	gl->texGeni(gl, GGL_T, GGL_TEXTURE_GEN_MODE, GGL_ONE_TO_ONE);
@@ -245,18 +249,20 @@ void gr_blit(gr_surface source, int sx, int sy, int w, int h, int dx, int dy) {
 	gl->recti(gl, dx, dy, dx + w, dy + h);
 }
 
-unsigned int gr_get_width(gr_surface surface) {
+unsigned int gr_get_width(gr_surface surface)
+{
 	if (surface == NULL) {
 		return 0;
 	}
-	return ((GGLSurface*) surface)->width;
+	return ((GGLSurface *) surface)->width;
 }
 
-unsigned int gr_get_height(gr_surface surface) {
+unsigned int gr_get_height(gr_surface surface)
+{
 	if (surface == NULL) {
 		return 0;
 	}
-	return ((GGLSurface*) surface)->height;
+	return ((GGLSurface *) surface)->height;
 }
 
 static void gr_init_font(void)
@@ -274,11 +280,11 @@ static void gr_init_font(void)
 	ftex->width = font.width;
 	ftex->height = font.height;
 	ftex->stride = font.width;
-	ftex->data = (void*) bits;
+	ftex->data = (void *)bits;
 	ftex->format = GGL_PIXEL_FORMAT_A_8;
 
 	in = font.rundata;
-	while((data = *in++)) {
+	while ((data = *in++)) {
 		memset(bits, (data & 0x80) ? 255 : 0, data & 0x7f);
 		bits += (data & 0x7f);
 	}
@@ -298,7 +304,7 @@ int gr_init(void)
 	if (gr_vt_fd < 0) {
 		// This is non-fatal; post-Cupcake kernels don't have tty0.
 		perror("can't open /dev/tty0");
-	} else if (ioctl(gr_vt_fd, KDSETMODE, (void*) KD_GRAPHICS)) {
+	} else if (ioctl(gr_vt_fd, KDSETMODE, (void *)KD_GRAPHICS)) {
 		// However, if we do open tty0, we expect the ioctl to work.
 		perror("failed KDSETMODE to KD_GRAPHICS on tty0");
 		gr_exit();
@@ -314,13 +320,12 @@ int gr_init(void)
 	get_memory_surface(&gr_mem_surface);
 
 	fprintf(stderr, "framebuffer: fd %d (%d x %d)\n",
-			gr_fb_fd, gr_framebuffer[0].width, gr_framebuffer[0].height);
+		gr_fb_fd, gr_framebuffer[0].width, gr_framebuffer[0].height);
 
 	/* start with 0 as front (displayed) and 1 as back (drawing) */
 	gr_active_fb = 0;
 	set_active_framebuffer(0);
 	gl->colorBuffer(gl, &gr_mem_surface);
-
 
 	gl->activeTexture(gl, 0);
 	gl->enable(gl, GGL_BLEND);
@@ -336,7 +341,7 @@ void gr_exit(void)
 
 	free(gr_mem_surface.data);
 
-	ioctl(gr_vt_fd, KDSETMODE, (void*) KD_TEXT);
+	ioctl(gr_vt_fd, KDSETMODE, (void *)KD_TEXT);
 	close(gr_vt_fd);
 	gr_vt_fd = -1;
 }
@@ -353,5 +358,5 @@ int gr_fb_height(void)
 
 gr_pixel *gr_fb_data(void)
 {
-	return (unsigned short *) gr_mem_surface.data;
+	return (unsigned short *)gr_mem_surface.data;
 }
