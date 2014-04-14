@@ -355,7 +355,15 @@ function board_for_kernel()
 
 	TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
 	TEMP2=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ]
+	then
+		#在defconfig文件里未找到宏的那个字符串
+		echo -e "CONFIG_""$TEMP1"" is not in ""$TEMP"",configure kernel fail!!!!"
+		exit 0
+	else
+		#echo "find $TEMP1"
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	fi
 	#---------产生*native_defconfig文件 end-------
 
 
