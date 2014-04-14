@@ -30,8 +30,10 @@
 
 #define  TD_MODEM_ALIVE_STR          "_TD Modem _Alive"
 #define  LTE_MODEM_ALIVE_STR         "LTE Modem _Alive"
+#define  MODEM_ALIVE_STR             "Modem Alive"
 #define  LTE_MODEM_ASSERT_STR        "LTE Modem Assert"
 #define  TD_MODEM_ASSERT_STR         "_TD Modem Assert"
+#define  MODEM_ASSERT_STR            "Modem Assert"
 #define  LTE_MODEM_RESET_STR         "LTE Modem _Reset"
 #define  WTD_MODEM_RESET_STR         "WDG Modem _Reset"
 
@@ -351,7 +353,7 @@ static void process_modem_state_message(char *message,int size)
 					int pid;
 					modem_state = MODEM_STA_ALIVE;
 					MODEM_LOGD("modem_state5 = MODEM_STA_ALIVE\n");
-                    broadcast_modem_state(TD_MODEM_ALIVE_STR, strlen(TD_MODEM_ALIVE_STR));
+                    broadcast_modem_state(MODEM_ALIVE_STR, strlen(MODEM_ALIVE_STR));
 					pid = get_task_pid(MONITOR_APP);
 					if((pid > 0)&&(!first_alive)){
 						kill(pid, SIGUSR2);
@@ -370,7 +372,7 @@ static void process_modem_state_message(char *message,int size)
                 if(ret > 0){
                         broadcast_modem_state(assert_info_buffer,strlen(assert_info_buffer));
                 } else {
-                        broadcast_modem_state("Modem Assert\n",strlen("Modem Assert\n"));
+                        broadcast_modem_state(MODEM_ASSERT_STR,strlen(MODEM_ASSERT_STR));
                 }
 			}
             if(reset_status==1){
