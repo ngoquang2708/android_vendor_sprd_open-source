@@ -1918,7 +1918,7 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
         size_t bytes)
 {
     void *buf;
-    int ret;
+    int ret = 0;
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
@@ -1947,7 +1947,7 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     else
         usleep(out_frames*1000*1000/out->config.rate);
 
-    return 0;
+    return ret;
 }
 
 static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
