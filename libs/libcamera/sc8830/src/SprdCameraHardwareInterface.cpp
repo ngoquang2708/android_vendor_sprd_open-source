@@ -4332,7 +4332,10 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) && isRecordingMode()) {
 			nsecs_t timestamp = frame->timestamp;
-			LOGV("test timestamp = %lld, mIsStoreMetaData: %d.",timestamp, mIsStoreMetaData);
+			LOGI("test timestamp = %lld, mIsStoreMetaData: %d. buffer_id 0x%x",
+				timestamp,
+				mIsStoreMetaData,
+				frame->buf_id);
 			if (mTimeCoeff > 1) {
 				if (0 != mRecordingFirstFrameTime) {
 					timestamp = mRecordingFirstFrameTime + (timestamp - mRecordingFirstFrameTime)*mTimeCoeff;
