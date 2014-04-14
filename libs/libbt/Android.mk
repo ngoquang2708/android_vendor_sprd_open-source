@@ -19,9 +19,10 @@ LOCAL_C_INCLUDES += \
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog
-
+ifneq ($(findstring 8830gea,$(TARGET_BOOTLOADER_BOARD_NAME)),8830gea)
 ifeq ($(findstring 8830,$(TARGET_BOOTLOADER_BOARD_NAME)),8830)
       LOCAL_CFLAGS += -DHW_ADC_ADAPT_SUPPORT
+endif
 endif
 
 ifeq ($(findstring 7715,$(TARGET_BOOTLOADER_BOARD_NAME)),7715)
