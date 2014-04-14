@@ -528,6 +528,7 @@ static int try_to_connect_modem(int uart_fd)
 				 		if(*data == 0x7E){
 							status = 1;
 							MODEM_LOGD("Version string received:");
+
 							i=0;
 							do{
 								MODEM_LOGD("0x%02x",version_string[i]);
@@ -603,6 +604,8 @@ static int try_to_connect_fdl(int uart_fd)
 		} else {
 			//MODEM_LOGE(" fdl connect read error %d, %s  \n", ret, strerror(errno));
 		}
+		if(rev)
+			break;
 		usleep(10*1000);
 	}
 	return rev;
@@ -659,8 +662,8 @@ int download_image(int channel_fd,struct image_info *info)
 				test_buffer[i+8] = 0xFF;
 			image_size = 0;
 		}else { image_size -= HS_PACKET_SIZE;}
-		ret = send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1);
-		continue;
+		ret = send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1,HS_PACKET_SIZE,image_fd);
+		//break;
 		if(ret != DL_SUCCESS){
 			close(image_fd);
 			return DL_FAILURE;
@@ -752,7 +755,7 @@ static int download_fdl(int uart_fd)
                 return ret;
         }
 	while(size){
-		ret = send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0);
+		ret = send_data_message(uart_fd,buffer,FDL_PACKET_SIZE,0,0,0);
 		if(ret == DL_FAILURE){
 			free(ret_val);
 			return ret;
@@ -917,7 +920,7 @@ reboot_modem:
     //send message to change modem_intf mode to boot mode
     set_modem_state("0");
 
-    uart_send_change_spi_mode_message(uart_fd);
+    uart_send_change_spi_mode_message(uart_fd,32*1024);
 #endif
 
     modem_interface_fd = open(DLOADER_PATH, O_RDWR);

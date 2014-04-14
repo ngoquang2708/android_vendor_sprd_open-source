@@ -14,6 +14,7 @@
 #define BSL_UART_PACKET 0
 #define BSL_SPI_PACKET	1
 static unsigned long send_buffer[1000]={0};
+static unsigned max_transfer_size = 0;
 
 /******************************************************************************
 **  Description:    This function scan the data in src buffer ,add 0x7e as begin
@@ -104,7 +105,7 @@ static int untranslate_packet(char *dest,char *src,int size)
 **                  data_size: length of message body
 **                  packet_type: UART message or SPI message.
 ******************************************************************************/
-int setup_packet(CMD_TYPE msg,char *buffer,int offset,int data_size,int flag)
+int setup_packet(CMD_TYPE msg,char *buffer,int offset,int data_size,int flag,int image_size)
 {
 	struct pkt_header_tag *head;
 	int length = sizeof(struct pkt_header_tag)+data_size;
@@ -157,9 +158,9 @@ int setup_packet(CMD_TYPE msg,char *buffer,int offset,int data_size,int flag)
 				if(data_size == 0)
 					*((unsigned short *)&buffer[0]) =  4;
 				else
-					*((unsigned short *)&buffer[0]) =  data_size;
-				*((unsigned short *)&buffer[2]) = (unsigned short)msg;
-				*((unsigned short *)&buffer[4]) = boot_checksum((const unsigned char *)(buffer+offset),data_size);
+					*((unsigned short *)&buffer[0]) =image_size&0xffff;
+				*((unsigned short *)&buffer[2]) = (unsigned short)msg|((image_size&0xff0000)>>8);
+				*((unsigned short *)&buffer[4]) = 0;//boot_checksum((const unsigned char *)(buffer+offset),data_size);
 				*((unsigned short *)&buffer[6]) = boot_checksum((const unsigned char *)buffer,6);
 				//printf("data_size = %x check_sum(0x%02x) : 0x%04x \n",data_size,buffer[offset],*((unsigned short *)&buffer[4]));
 				total_size = data_size + 8;
@@ -234,7 +235,7 @@ int  send_connect_message(int fd,int flag)
 	int retval,i;
 	char *data;
 	struct pkt_header_tag head;
-	size = setup_packet(BSL_CMD_CONNECT,raw_buffer,8,0,flag);
+	size = setup_packet(BSL_CMD_CONNECT,raw_buffer,8,0,flag,0);
 	if(flag ==0)
 	{
 		translated_size = translate_packet((char *)send_buffer,(char *)&raw_buffer[4],size);
@@ -302,7 +303,7 @@ int  send_start_message(int fd,int size,unsigned long addr,int flag)
 
         *(unsigned long *)&raw_buffer[8] = cpu2be32(addr);
         *(unsigned long *)&raw_buffer[12] = cpu2be32(size);
-	size = setup_packet(BSL_CMD_START_DATA,raw_buffer,8,8,flag);
+	size = setup_packet(BSL_CMD_START_DATA,raw_buffer,8,8,flag,0);
 	if(flag ==0)
 	{
 		translated_size = translate_packet((char *)send_buffer,(char *)&raw_buffer[4],size);
@@ -365,7 +366,7 @@ int  send_end_message(int fd,int flag)
 	int retval;
 	struct pkt_header_tag head;
 
-	size = setup_packet(BSL_CMD_END_DATA,raw_buffer,8,0,flag);
+	size = setup_packet(BSL_CMD_END_DATA,raw_buffer,8,0,flag,0);
 	if(flag ==0)
 	{	translated_size = translate_packet((char *)send_buffer,(char *)&raw_buffer[4],size);
 		do{
@@ -419,7 +420,7 @@ MODEM_LOGD("END_NACK:%x %x %x %x %x %x %x %x\n",raw_buffer[0],raw_buffer[1],raw_
 **  Author:         jiayong.yang
 **  parameter:      none
 ******************************************************************************/
-int  send_data_message(int fd,char *buffer,int data_size,int flag)
+int  send_data_message(int fd,char *buffer,int data_size,int flag,int image_size,int image_fd)
 {
 	char raw_buffer[32] = {0};
         char    uart_buffer[300]={0};
@@ -433,7 +434,7 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 	if(flag ==0)
 	{
 		memcpy(&uart_buffer[8],buffer,data_size);
-		size = setup_packet(BSL_CMD_MIDST_DATA,uart_buffer,8,data_size,flag);
+		size = setup_packet(BSL_CMD_MIDST_DATA,uart_buffer,8,data_size,flag,0);
 		translated_size = translate_packet((char *)send_buffer,(char *)&uart_buffer[4],size);
 		do{
 			retval = write(fd,send_buffer,translated_size);
@@ -443,9 +444,14 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 	}
 	else
 	{
-	//	memcpy(&send_buffer[2],buffer,data_size);
-		size = setup_packet(BSL_CMD_MIDST_DATA,(char *)buffer,8,data_size,flag);
+		int count,i;
+		size = setup_packet(BSL_CMD_MIDST_DATA,(char *)buffer,8,data_size,flag,image_size);
 		retval = write(fd,buffer,size);
+		count = image_size/data_size;
+		for(i=1;i<count;i++){
+			retval = read(image_fd,buffer,data_size);
+			retval = write(fd,buffer,data_size);
+		}
 	}
 	if(retval >0)
 	{
@@ -471,9 +477,9 @@ int  send_data_message(int fd,char *buffer,int data_size,int flag)
 			data = (char *)raw_buffer;
 		}
 			head.type = (data[0]<<8)|data[1];
-                if((head.type == BSL_REP_ACK)||(head.type == 0))
+        if((head.type == BSL_REP_ACK)||(head.type == 0))
 		{
-			MODEM_LOGD(">>>>>>>ACK DATA %d\n", head.type);
+		//	MODEM_LOGD(">>>>>>>ACK DATA %d\n", head.type);
                         return 0;
 		}
 	}
@@ -496,7 +502,7 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 	struct pkt_header_tag head;
 
 	*(unsigned long *)&raw_buffer[8] = cpu2be32(addr);
-	size = setup_packet(BSL_CMD_EXEC_DATA,raw_buffer,8,4,flag);
+	size = setup_packet(BSL_CMD_EXEC_DATA,raw_buffer,8,4,flag,0);
 	if(flag == 0)
 	{
 		translated_size = translate_packet((char *)send_buffer,(char *)&raw_buffer[4],size);
@@ -548,7 +554,7 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 **  Author:         jiayong.yang
 **  parameter:      none
 ******************************************************************************/
-int  uart_send_change_spi_mode_message(int fd)
+int  uart_send_change_spi_mode_message(int fd,int max_tran_sz)
 {
         char raw_buffer[32] = {0};
         char *data = raw_buffer;
@@ -558,7 +564,9 @@ int  uart_send_change_spi_mode_message(int fd)
         int retval;
         struct pkt_header_tag head;
 
-        size = setup_packet(BSL_CMD_SWITCH_MODE,raw_buffer,8,0,BSL_UART_PACKET);
+	max_transfer_size = max_tran_sz;
+	*(unsigned long *)&raw_buffer[8] = cpu2be32(max_tran_sz);
+        size = setup_packet(BSL_CMD_SWITCH_MODE,raw_buffer,8,0,BSL_UART_PACKET,0);
         translated_size = translate_packet((char *)send_buffer,(char *)&raw_buffer[4],size);
 	do{
 		retval = write(fd,(char *)send_buffer,translated_size);
