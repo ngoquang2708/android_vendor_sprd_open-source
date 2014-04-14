@@ -161,7 +161,7 @@ int add_alarm_db_list(void)
 	char db_item[1024]= {0,};
 	char cmd[1024]= {0};
 
-	sprintf(cmd,"/system/xbin/sqlite3 %s \" select * from alarm_instances\"",BOOT_ALARM_DB_FILE);
+	sprintf(cmd,"/system/xbin/sqlite3 %s \" select * from alarm_templates\"",BOOT_ALARM_DB_FILE);
 	fp = popen(cmd,"r");
 	if(fp == NULL )
 	{
@@ -800,7 +800,6 @@ int parse_db_item(char *db_buf)
 	p_db_item->hour      =  atoi(strtok(NULL, "|"));
 	p_db_item->min       =  atoi(strtok(NULL, "|"));
 	p_db_item->dayofweek =  atoi(strtok(NULL, "|"));
-	p_db_item->time      =  atoi(strtok(NULL, "|"));
 	p_db_item->enable      =  atoi(strtok(NULL, "|"));
 	p_db_item->vibrate      =  atoi(strtok(NULL, "|"));
 	strncpy(p_db_item->message, strtok(NULL, "|"), 512);
@@ -841,23 +840,6 @@ void show_alarm_seclist(struct alarm_sec *p)
 		ERROR("day = %d\n",p->day);
 		ERROR("vib = %d\n",p->vibrate);
 		ERROR("ala = %s\n",p->alert);
-		p= p->next;
-	}
-}
-
-void show_list(struct alarm_db * p)
-{
-	while(p != NULL)
-	{
-		ERROR("id = %d\n",p->id);
-		ERROR("hour = %d\n",p->hour);
-		ERROR("min = %d\n",p->min);
-		ERROR("day = %d\n",p->dayofweek);
-		ERROR("tiome = %d\n",p->time);
-		ERROR("enable = %d\n",p->enable);
-		ERROR("vibra = %d\n",p->vibrate);
-		ERROR("ms = %s\n",p->message);
-		ERROR("alert = %s\n",p->alert);
 		p= p->next;
 	}
 }
