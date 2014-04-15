@@ -102,10 +102,10 @@ static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_2P0_MEGA, (8  << 20)},
 	{PIXEL_3P0_MEGA, (12 << 20)},
 	{PIXEL_4P0_MEGA, (13 << 20)},
-	{PIXEL_5P0_MEGA, (15 << 20)},
-	{PIXEL_6P0_MEGA, (17 << 20)},
-	{PIXEL_7P0_MEGA, (20 << 20)},
-	{PIXEL_8P0_MEGA, (21 << 20)},
+	{PIXEL_5P0_MEGA, (16 << 20)},
+	{PIXEL_6P0_MEGA, (19 << 20)},
+	{PIXEL_7P0_MEGA, (22 << 20)},
+	{PIXEL_8P0_MEGA, (25 << 20)},
 	{PIXEL_9P0_MEGA, (35 << 20)},
 	{PIXEL_AP0_MEGA, (35 << 20)},
 	{PIXEL_BP0_MEGA, (36 << 20)},
@@ -1023,7 +1023,9 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	/* update io param */
 	*io_mem_res = mem_res;
 	*io_mem_end = mem_end;
-
+	CMR_LOGD("mem_res, mem_end 0x%x, 0x%x",
+			mem_res,
+			mem_end);
 	return 0;
 }
 
@@ -1067,7 +1069,11 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 	mem_end = *io_mem_end;
 	channel_size = *io_channel_size;
 
-	size_pixel = channel_size << 1;
+	if (IMG_DATA_TYPE_JPEG == orig_fmt) {
+		size_pixel = channel_size << 1;
+	} else {
+		size_pixel = (uint32_t)((channel_size*3) >> 1);
+	}
 
 	CMR_LOGI("Rot channel size 0x%x, buf size 0x%X", channel_size, size_pixel);
 	if (mem_res > size_pixel) {

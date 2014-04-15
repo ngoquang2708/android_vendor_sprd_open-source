@@ -402,6 +402,25 @@ private:
 	int 	   CameraCaptureReq(camera_req_info *srcreq,bool *IsSetPara);
 	static int Callback_AllocCapturePmem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
 	static int Callback_FreeCapturePmem(void* handle);
+
+	static const char *getVendorSectionName(
+				const vendor_tag_query_ops_t *v,
+				uint32_t tag);
+
+	static int getVendorTagType(
+				const vendor_tag_query_ops_t *v,
+				uint32_t tag);
+
+	static const char *getVendorTagName(
+				const vendor_tag_query_ops_t *v,
+				uint32_t tag);
+
+	static int getVendorTagCnt(const vendor_tag_query_ops_t *v);
+
+	static void getVendorTags(
+				const vendor_tag_query_ops_t *v,
+				uint32_t *tag_array);
+
 	bool       allocateCaptureMem(void);
 	status_t   initCapMem(void);
 
@@ -517,6 +536,7 @@ private:
 	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
 	void                  HandleFocus(camera_cb_type cb, int32_t parm4);
 	bool                  getPreviewBuffer(void);
+	status_t              set_ddr_freq(uint32_t mhzVal);
 
 	sp<RequestQueueThread>   m_RequestQueueThread;
 	substream_parameters_t   m_subStreams[STREAM_ID_LAST+1];
@@ -545,6 +565,7 @@ private:
 	bool                              mIsOutPutStream;
 	bool                              mIsChangePicSize;/*for cts testVideoSnapshot*/
 	camera_metadata_t                 *m_halRefreshReq;
+	vendor_tag_query_ops_t            *mVendorTagOps;
 	static gralloc_module_t const*    m_grallocHal;
 	uint32_t                          mPreviewFrmRefreshIndex;
 	int64_t                           mPreviewFrmTimestamp[kPreviewBufferCount];
@@ -555,6 +576,8 @@ private:
 	uint32_t                          mMiscHeapNum;
 	uint32_t                          m_CapFrmCnt; /*for zsl*/
 	uint32_t                          m_PrvFrmCnt;/*for zsl*/
+	uint32_t                          mSetDDRFreq;
+	int                               mSetDDRFreqCount;
 	int                               m_CameraId;
 	int                               m_reprocessStreamId;
 	const camera2_stream_in_ops_t     *m_reprocessOps;
