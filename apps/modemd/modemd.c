@@ -383,11 +383,16 @@ int start_service(int modem, int is_vlx, int restart)
         }
         sprintf(path, "%s0", modem_dev);
         MODEMD_LOGD("open stty dev: %s", path);
+retry:
         stty_fd = open(path, O_RDWR);
         if (stty_fd < 0) {
             MODEMD_LOGE("Failed to open %s error: %s!\n", path, strerror(errno));
-            return -1;
+            if (errno == EAGAIN)
+                goto retry;
+            else
+                return -1;
         }
+
         if(!strcmp(phoneCount, "2"))
             strcpy(at_str, "AT+SMMSWAP=0\r");
         else if(!strcmp(phoneCount, "3"))
@@ -607,7 +612,7 @@ static void *modemd_engcontrol_listen(void *par)
                         }
                         else
                         {
-                             MODEMD_LOGD("%s:error not prop set%s ",__FUNCTION__);
+                             MODEMD_LOGD("%s:error not prop set%s ",__FUNCTION__, prop);
                         }
                         memset(prop,'\0',256);
                         break;
