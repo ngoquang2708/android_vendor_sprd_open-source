@@ -39,8 +39,20 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 
 #define CAMERA2_MAX_FACES 10
 
+#define HAL_VENDOR_SECTION_OFFSET 0x8000 /*for application   must equal to VENDOR_SECTION in camera_metadata_tags.h*/
 
-const int32_t jpegResolutionSensorBack[] = {
+typedef enum cam_hal_metadata_section {
+    ANDROID_ADD_PARAMETERS,
+    ANDROID_VENDOR_SECTION_COUNT
+} cam_hal_metadata_section_t;
+
+typedef struct tags_info {
+    const char *tag_name;
+    uint8_t     tag_type;
+} tags_info_t;
+
+
+const int32_t jpegResolutionSensorBack[] = {/*must order from bigger to smaller*/
     2592, 1944,
     2048, 1536,
     1600, 1200,
@@ -55,10 +67,11 @@ const int32_t jpegResolutionSensorFront[] = {
      320,  240,
 };
 
-const int32_t PreviewResolutionSensorBack[] = {
-/*    1920, 1088, // 16:9
+const int32_t PreviewResolutionSensorBack[] = {/*supported video size must be same as supported preview size*/
+#ifndef CONFIG_CAMERA_SMALL_PREVSIZE
+   // 1920,  1088,
     1280,  720, // 16:9
-     960,  720, // 4:3*/
+#endif
      720,  480, // 3:2
      640,  480, // 4:3
      352,  288, // 11:9
@@ -98,6 +111,10 @@ const uint8_t sceneModeOverridesSensorBack[] = {
     // ANDROID_CONTROL_SCENE_MODE_PARTY
     ANDROID_CONTROL_AE_MODE_ON_AUTO_FLASH,
     ANDROID_CONTROL_AWB_MODE_AUTO,
+    ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE,
+    // ANDROID_CONTROL_SCENE_MODE_HDR
+    ANDROID_CONTROL_AE_MODE_ON,
+    ANDROID_CONTROL_AWB_MODE_AUTO,
     ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE
 };
 
@@ -119,7 +136,8 @@ const uint8_t availableSceneModes[] = {
             ANDROID_CONTROL_SCENE_MODE_ACTION,
             ANDROID_CONTROL_SCENE_MODE_NIGHT,
             ANDROID_CONTROL_SCENE_MODE_SUNSET,
-            ANDROID_CONTROL_SCENE_MODE_PARTY
+            ANDROID_CONTROL_SCENE_MODE_PARTY,
+            ANDROID_CONTROL_SCENE_MODE_HDR
 };
 
 const uint32_t kAvailableSensitivities[5] =
@@ -140,6 +158,18 @@ const uint64_t kAvailableProcessedMinDurations[1] = {
 };
 const uint64_t kAvailableJpegMinDurations[1] = {
     (uint64_t)kFrameDurationRange[0]
+};
+
+const char *cam_hal_metadata_section_names[ANDROID_VENDOR_SECTION_COUNT] = {
+    "com.addParameters",
+};
+
+static tags_info_t android_add_parameters[1] = {
+    //{ "mode",                          TYPE_BYTE   },
+};
+
+tags_info_t *cam_tag_info[ANDROID_VENDOR_SECTION_COUNT] = {
+    android_add_parameters,
 };
 
 }

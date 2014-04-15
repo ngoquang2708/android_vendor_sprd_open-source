@@ -48,6 +48,10 @@ int androidSceneModeToDrvMode(camera_metadata_enum_android_control_scene_mode_t 
 		*convertDrvMode = CAMERA_SCENE_MODE_LANDSCAPE;
 		break;
 
+	case ANDROID_CONTROL_SCENE_MODE_HDR:
+		*convertDrvMode = CAMERA_SCENE_MODE_HDR;
+		break;
+
 	default:
 		*convertDrvMode = CAMERA_SCENE_MODE_AUTO;
 		break;
