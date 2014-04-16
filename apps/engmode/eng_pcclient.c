@@ -230,7 +230,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
     return 0;
 }
 
-static void eng_usb_enable(void)
+void eng_usb_enable(void)
 {
     int fd  = -1;
     int ret = 0;
@@ -378,8 +378,6 @@ int main (int argc, char** argv)
             // Check factory mode and switch device mode.
             eng_check_factorymode(0);
         }else{
-            // Enable usb enum
-            eng_usb_enable();
             // Initialize file for ADC
             initialize_ctrl_file();
         }
