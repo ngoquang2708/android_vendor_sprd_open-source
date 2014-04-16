@@ -1764,7 +1764,7 @@ public class DmService extends Service {
         intent.setFlags(intentFlags);
         intent.putExtra("dialogId", DATA_CONNECT_CONFRIM);
         intent.putExtra("message", "Allow DM Send Message?");
-        intent.putExtra("timeout", 30);
+        intent.putExtra("timeout", 300);
         
 //        byte[] data = niaIntent.getByteArrayExtra("msg_body");
 //        for (int i = 0; i < data.length; i++) {            
