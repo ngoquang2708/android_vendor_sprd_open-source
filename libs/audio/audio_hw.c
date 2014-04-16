@@ -741,12 +741,36 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
             modem->i2s_bt.fd_bt_ap = open(modem->i2s_bt.fd_bt_ap_path,O_RDWR | O_SYNC);
         }
     }
+#ifdef VB_CONTROL_PARAMETER_V2
+    if(modem->i2s_bt.fd_iis1_sys_cp0 < 0) {
+        modem->i2s_bt.fd_iis1_sys_cp0 = open(modem->i2s_bt.fd_iis1_sys_cp0_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis1_sys_cp1 < 0) {
+        modem->i2s_bt.fd_iis1_sys_cp1 = open(modem->i2s_bt.fd_iis1_sys_cp1_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis1_sys_cp2 < 0) {
+        modem->i2s_bt.fd_iis1_sys_cp2 = open(modem->i2s_bt.fd_iis1_sys_cp2_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis1_sys_ap < 0) {
+        modem->i2s_bt.fd_iis1_sys_ap = open(modem->i2s_bt.fd_iis1_sys_ap_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis01_loop< 0) {
+        modem->i2s_bt.fd_iis01_loop= open(modem->i2s_bt.fd_iis01_loop_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis12_loop< 0) {
+        modem->i2s_bt.fd_iis12_loop= open(modem->i2s_bt.fd_iis12_loop_path,O_RDWR | O_SYNC);
+    }
+    if(modem->i2s_bt.fd_iis13_loop< 0) {
+        modem->i2s_bt.fd_iis13_loop= open(modem->i2s_bt.fd_iis13_loop_path,O_RDWR | O_SYNC);
+    }
+#endif
     if(modem->i2s_extspk.fd_sys_cp0 < 0) {
         modem->i2s_extspk.fd_sys_cp0 = open(modem->i2s_extspk.fd_sys_cp0_path,O_RDWR | O_SYNC);
     }
     if(modem->i2s_extspk.fd_sys_cp1 < 0) {
         modem->i2s_extspk.fd_sys_cp1 = open(modem->i2s_extspk.fd_sys_cp1_path,O_RDWR | O_SYNC);
     }
+
     if(modem->i2s_extspk.fd_sys_cp2 < 0) {
         modem->i2s_extspk.fd_sys_cp2 = open(modem->i2s_extspk.fd_sys_cp2_path,O_RDWR | O_SYNC);
     }
@@ -761,6 +785,30 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                     }
             }
             else {
+#ifdef VB_CONTROL_PARAMETER_V2
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0)) {
+                    count = read(modem->i2s_bt.fd_sys_cp2,cur_state,1);
+                    if(strcmp(cur_state,"1") == 0) {
+                        count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
+                    }
+                }
+                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
+                        count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_cp2>= 0))
+                        count = write(modem->i2s_bt.fd_iis1_sys_cp2,ctl_on,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis01_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis01_loop,ctl_off,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis12_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis12_loop,ctl_off,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis13_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis13_loop,ctl_off,1);
+                }
+#else
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp0 >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_cp0,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
@@ -771,6 +819,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
                 }
+#endif
             }
         }
 
@@ -788,10 +837,35 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                    }
             }
             else {
+#ifdef VB_CONTROL_PARAMETER_V2
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0)) {
+                    count = read(modem->i2s_bt.fd_sys_cp2,cur_state,1);
+                    if(strcmp(cur_state,"1") == 0) {
+                        if( modem->i2s_bt.fd_sys_ap >= 0)
+                            count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
+                    }
+                }
+                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
+                        count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_cp2>= 0))
+                        count = write(modem->i2s_bt.fd_iis1_sys_cp2,ctl_on,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis01_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis01_loop,ctl_off,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis12_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis12_loop,ctl_off,1);
+
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis13_loop>= 0))
+                        count = write(modem->i2s_bt.fd_iis13_loop,ctl_off,1);
+                }
+#else
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_cp1,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-			if( modem->i2s_bt.fd_sys_cp2 >= 0)
+                       if( modem->i2s_bt.fd_sys_cp2 >= 0)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
@@ -799,6 +873,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
                 }
+#endif
             }
         }
         if(adev->out_devices& AUDIO_DEVICE_OUT_SPEAKER) {
@@ -811,18 +886,22 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0))
                     count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-            }
-            else {
+            } else {
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_ap,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-			if( modem->i2s_bt.fd_sys_cp2 >= 0)
+                       if( modem->i2s_bt.fd_sys_cp2 >= 0)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
                 {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
                         count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
+
+#ifdef VB_CONTROL_PARAMETER_V2
+                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_ap>= 0))
+                        count = write(modem->i2s_bt.fd_iis1_sys_ap,ctl_on,1);//iis1_sys reset to default value
+#endif
                 }
             }
         }
@@ -4543,7 +4622,82 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
                 }
             }
         }
-    }
+#ifdef VB_CONTROL_PARAMETER_V2
+            if (strcmp(attr[22], "cp0_iis1_ctl_file") == 0) {
+            if((strlen(attr[23]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis1_sys_cp0_path , attr[23], strlen(attr[23])+1);
+                ALOGE(" cp0_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_cp0_path);
+                modem->i2s_bt.fd_iis1_sys_cp0 = open(modem->i2s_bt.fd_iis1_sys_cp0_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis1_sys_cp0 == -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp0_ctl fd,errno is %d",errno);
+                }
+            }
+        }
+        if (strcmp(attr[24], "cp1_iis1_ctl_file") == 0) {
+            if((strlen(attr[25]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis1_sys_cp1_path , attr[25], strlen(attr[25])+1);
+                ALOGE(" cp1_iis1_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_cp1_path);
+                modem->i2s_bt.fd_iis1_sys_cp1 = open(modem->i2s_bt.fd_iis1_sys_cp1_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis1_sys_cp1 == -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp1 ctl fd,errno is %d",errno);
+                }
+            }
+        }
+
+        if (strcmp(attr[26], "cp2_iis1_ctl_file") == 0) {
+            if((strlen(attr[27]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis1_sys_cp2_path , attr[27], strlen(attr[27])+1);
+                ALOGE(" cp1_ct2_file is %s",modem->i2s_bt.fd_iis1_sys_cp2_path);
+                modem->i2s_bt.fd_iis1_sys_cp2 = open(modem->i2s_bt.fd_iis1_sys_cp2_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis1_sys_cp2 == -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp2 ctl fd,errno is %d",errno);
+                }
+            }
+        }
+
+        if (strcmp(attr[28], "ap_iis1_ctl_file") == 0) {
+            if((strlen(attr[29]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis1_sys_ap_path , attr[29], strlen(attr[29])+1);
+                ALOGE(" ap_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_ap_path);
+                modem->i2s_bt.fd_iis1_sys_ap = open(modem->i2s_bt.fd_iis1_sys_ap_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis1_sys_ap == -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_ap ctl fd,errno is %d",errno);
+                }
+            }
+        }
+
+        if (strcmp(attr[30], "iis01_loop_file") == 0) {
+            if((strlen(attr[31]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis01_loop_path , attr[31], strlen(attr[31])+1);
+                ALOGE(" fd_iis01_loop_path is %s",modem->i2s_bt.fd_iis01_loop_path);
+                modem->i2s_bt.fd_iis01_loop= open(modem->i2s_bt.fd_iis01_loop_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis01_loop== -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s fd_iis01_loop_path ctl fd,errno is %d",errno);
+                }
+            }
+        }
+        if (strcmp(attr[32], "iis12_loop_file") == 0) {
+            if((strlen(attr[33]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis12_loop_path , attr[33], strlen(attr[33])+1);
+                ALOGE(" fd_iis12_loop_path is %s",modem->i2s_bt.fd_iis12_loop_path);
+                modem->i2s_bt.fd_iis12_loop= open(modem->i2s_bt.fd_iis12_loop_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis12_loop== -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s fd_iis12_loop_path ctl fd,errno is %d",errno);
+                }
+            }
+        }
+        if (strcmp(attr[34], "iis13_loop_file") == 0) {
+            if((strlen(attr[35]) +1) <= I2S_CTL_PATH_MAX){
+                memcpy(modem->i2s_bt.fd_iis13_loop_path , attr[35], strlen(attr[35])+1);
+                ALOGE(" fd_iis13_loop_path is %s",modem->i2s_bt.fd_iis13_loop_path);
+                modem->i2s_bt.fd_iis13_loop= open(modem->i2s_bt.fd_iis13_loop_path,O_RDWR | O_SYNC);
+                if(modem->i2s_bt.fd_iis13_loop== -1) {
+                    ALOGE(" audio_hw_primary: could not open i2s fd_iis01_loop_path ctl fd,errno is %d",errno);
+                }
+            }
+        }
+#endif
+}
    else if (strcmp(tag_name, "i2s_for_extspeaker") == 0)
     {
         if (strcmp(attr[0], "index") == 0) {

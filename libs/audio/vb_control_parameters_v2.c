@@ -945,8 +945,8 @@ static void close_adc_channel(struct mixer *amixer, bool main, bool aux, bool hp
 static void clean_all_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
-    ALOGW("clean_all_devices.....");
-    adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
+    ALOGW("clean_all_devices for codec expect sco.");
+    adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL | AUDIO_DEVICE_OUT_ALL_SCO);
     adev->in_devices &= (~AUDIO_DEVICE_IN_ALL);
 
    /* ...then disable all in one. */
