@@ -734,7 +734,7 @@ status_t SprdCameraHardware::startRecording()
 	mRecordingFirstFrameTime = 0;
 
 	waitSetParamsOK();
-
+	camera_set_preview_trace(1);
 	if (isZslSupport
 		&& (0 == strcmp("false", isZslSupport))) {
 		LOGI("switch ddr freq when startRecording for non-zsl");
@@ -778,6 +778,7 @@ void SprdCameraHardware::stopRecording()
 		LOGI("switch back ddr freq when stopRecording for non-zsl");
 		set_ddr_freq(BASE_FREQ_REQ);
 	}
+	camera_set_preview_trace(0);
 	LOGI("stopRecording: X");
 }
 
@@ -3179,7 +3180,7 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 	uint32_t mem_size = 0;
 
 	LOGI("initCapture E, %d", initJpegHeap);
-
+	camera_set_capture_trace(1);
 	if (!startCameraIfNecessary())
 		return false;
 
@@ -3223,6 +3224,7 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 void SprdCameraHardware::deinitCapture()
 {
 	freeCaptureMem();
+	camera_set_capture_trace(0);
 }
 
 status_t SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
@@ -4281,9 +4283,9 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	width = frame->dx;/*mPreviewWidth;*/
 	height = frame->dy;/*mPreviewHeight;*/
 	if (!is_preview)
-		LOGI("receivePreviewFrame E: width=%d, height=%d \n",width, height);
+		LOGI("receivePreviewFrame E: width=%d, height=%d offset=0x%x\n",width, height, offset);
 	else
-		LOGV("receivePreviewFrame E: width=%d, height=%d \n",width, height);
+		LOGV("receivePreviewFrame E: width=%d, height=%d offset=0x%x\n",width, height, offset);
 
 	if (miSPreviewFirstFrame) {
 		GET_END_TIME;

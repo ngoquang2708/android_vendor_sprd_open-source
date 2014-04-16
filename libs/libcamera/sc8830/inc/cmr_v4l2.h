@@ -70,6 +70,13 @@ enum cmr_v4l2_wtite_cmd_id {
 	CMR_V4L2_WRITE_FREE_FRAME = 0xA55A,
 	CMR_V4L2_WRITE_MAX
 };
+
+enum
+{
+	PREV_TRACE = 0,
+	CAP_TRACE,
+	TRACE_MAX,
+};
 	
 struct img_frm_cap {
 	struct img_rect                     src_img_rect;
@@ -133,6 +140,8 @@ int cmr_v4l2_scale_capability(uint32_t *width, uint32_t *sc_factor);
 int cmr_v4l2_get_cap_time(uint32_t *sec, uint32_t *usec);
 int cmr_v4l2_flash_cb(uint32_t opt);
 int cmr_v4l2_stream_cb(v4l2_stream_on str_on);
+void cmr_v4l2_set_trace_flag(uint32_t trace_owner, uint32_t val);
+
 #ifdef __cplusplus
 }
 #endif
