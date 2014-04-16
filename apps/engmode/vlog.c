@@ -27,6 +27,7 @@ extern int g_ass_start;
 static char log_data[DATA_BUF_SIZE];
 static int s_ser_diag_fd = 0;
 static eng_dev_info_t* s_dev_info;
+extern void eng_usb_enable(void);
 
 static void dump_mem_len_print(int r_cnt, int* dumplen)
 {
@@ -217,6 +218,10 @@ void *eng_vdiag_rthread(void *x)
             goto out;
         }
     }while(modem_fd < 0);
+
+    if(s_dev_info->host_int.cali_flag && (s_dev_info->host_int.dev_type == CONNECT_USB)){
+        eng_usb_enable();
+    }
 
     ENG_LOG("eng_vdiag_r put log data from SIPC to serial\n");
     while(1) {
