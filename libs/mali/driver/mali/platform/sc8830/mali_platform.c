@@ -37,14 +37,24 @@
 
 #define GPU_GLITCH_FREE_DFS		0
 
-#define DFS_FREQ_NUM			6
 #define UP_THRESHOLD			9/10
 
 #define GPU_HARDWARE_MIN_DIVISION	1
 #define GPU_HARDWARE_MAX_DIVISION	4
 
+#ifdef CONFIG_ARCH_SCX30G
+/*tshark 28nm*/
+#define DFS_FREQ_NUM			8
+
+#define GPU_MAX_FREQ			460800
+#define GPU_MIN_FREQ			64000
+#else
+/*shark 40nm*/
+#define DFS_FREQ_NUM			6
+
 #define GPU_MAX_FREQ			312000
 #define GPU_MIN_FREQ			64000
+#endif
 
 struct gpu_clock_source {
 	char* name;
@@ -90,6 +100,50 @@ struct gpu_dfs_context {
 };
 
 DEFINE_SEMAPHORE(gpu_dfs_sem);
+
+#ifdef CONFIG_ARCH_SCX30G
+/*tshark 28nm*/
+static struct gpu_clock_source  gpu_clk_src[]=
+{
+	{
+		.name="clk_460m8",
+		.freq=460800,
+		.freq_select=6,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_384m",
+		.freq=384000,
+		.freq_select=5,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_312m",
+		.freq=312000,
+		.freq_select=4,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_256m",
+		.freq=256000,
+		.freq_select=2,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_208m",
+		.freq=208000,
+		.freq_select=1,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_153m6",
+		.freq=153600,
+		.freq_select=0,
+		.clk_src=NULL,
+	},
+};
+#else
+/*shark 40nm*/
 static struct gpu_clock_source  gpu_clk_src[]=
 {
 	{
@@ -111,6 +165,8 @@ static struct gpu_clock_source  gpu_clk_src[]=
 		.clk_src=NULL,
 	},
 };
+#endif
+
 static const int gpu_clk_num=sizeof(gpu_clk_src)/sizeof(struct gpu_clock_source);
 static struct gpu_freq_info dfs_freq_full_list[32];
 
@@ -122,6 +178,21 @@ static struct gpu_dfs_context gpu_dfs_ctx=
 	.gpu_power_on=0,
 	.gpu_suspended=0,
 
+#ifdef CONFIG_ARCH_SCX30G
+/*tshark 28nm*/
+	.dfs_freq_list=
+	{
+		&dfs_freq_full_list[0],
+		&dfs_freq_full_list[4],
+		&dfs_freq_full_list[8],
+		&dfs_freq_full_list[12],
+		&dfs_freq_full_list[16],
+		&dfs_freq_full_list[20],
+		&dfs_freq_full_list[17],
+		&dfs_freq_full_list[15],
+	},
+#else
+/*shark 40nm*/
 	.dfs_freq_list=
 	{
 		/*index:  0 freq:312000 freq_select:  3  div_select:  1 up:280800  down:218400*/
@@ -137,6 +208,7 @@ static struct gpu_dfs_context gpu_dfs_ctx=
 		/*index:  5 freq: 64000 freq_select:  1  div_select:  4 up: 57600  down: 44800*/
 		&dfs_freq_full_list[7],
 	},
+#endif
 	.sem=&gpu_dfs_sem,
 };
 
@@ -201,7 +273,7 @@ static void gpu_dfs_full_list_generate(void)
 	int i=0,j=0;
 
 /*
-	frequency list:
+	frequency list for tshark 40nm:
 	index:  0 freq:312000 freq_select:  3  div_select:  1 up:280800  down:218400
 	index:  1 freq:156000 freq_select:  3  div_select:  2 up:140400  down:109200
 	index:  2 freq:104000 freq_select:  3  div_select:  3 up: 93600  down: 72800
@@ -215,6 +287,35 @@ static void gpu_dfs_full_list_generate(void)
 	index: 10 freq: 69333 freq_select:  0  div_select:  3 up: 62400  down: 48533
 	index: 11 freq: 52000 freq_select:  0  div_select:  4 up: 46800  down: 36400
 */
+
+/*
+	frequency list for tshark 28nm:
+	index:  0 freq:460800 freq_select:  6  div_select:  1 up:414720  down:     0
+	index:  1 freq:230400 freq_select:  6  div_select:  2 up:207360  down:     0
+	index:  2 freq:153600 freq_select:  6  div_select:  3 up:138240  down:     0
+	index:  3 freq:115200 freq_select:  6  div_select:  4 up:103680  down:     0
+	index:  4 freq:384000 freq_select:  5  div_select:  1 up:345600  down:     0
+	index:  5 freq:192000 freq_select:  5  div_select:  2 up:172800  down:     0
+	index:  6 freq:128000 freq_select:  5  div_select:  3 up:115200  down:     0
+	index:  7 freq: 96000 freq_select:  5  div_select:  4 up: 86400  down:     0
+	index:  8 freq:312000 freq_select:  4  div_select:  1 up:280800  down:     0
+	index:  9 freq:156000 freq_select:  4  div_select:  2 up:140400  down:     0
+	index: 10 freq:104000 freq_select:  4  div_select:  3 up: 93600  down:     0
+	index: 11 freq: 78000 freq_select:  4  div_select:  4 up: 70200  down:     0
+	index: 12 freq:256000 freq_select:  2  div_select:  1 up:230400  down:     0
+	index: 13 freq:128000 freq_select:  2  div_select:  2 up:115200  down:     0
+	index: 14 freq: 85333 freq_select:  2  div_select:  3 up: 76800  down:     0
+	index: 15 freq: 64000 freq_select:  2  div_select:  4 up: 57600  down:     0
+	index: 16 freq:208000 freq_select:  1  div_select:  1 up:187200  down:     0
+	index: 17 freq:104000 freq_select:  1  div_select:  2 up: 93600  down:     0
+	index: 18 freq: 69333 freq_select:  1  div_select:  3 up: 62400  down:     0
+	index: 19 freq: 52000 freq_select:  1  div_select:  4 up: 46800  down:     0
+	index: 20 freq:153600 freq_select:  0  div_select:  1 up:138240  down:     0
+	index: 21 freq: 76800 freq_select:  0  div_select:  2 up: 69120  down:     0
+	index: 22 freq: 51200 freq_select:  0  div_select:  3 up: 46080  down:     0
+	index: 23 freq: 38400 freq_select:  0  div_select:  4 up: 34560  down:     0
+*/
+
     for(i=0;i<gpu_clk_num;i++)
 	{
 		for(j=0;j<GPU_HARDWARE_MAX_DIVISION;j++)
@@ -345,12 +446,22 @@ int  mali_power_initialize(struct platform_device *pdev)
 	if(!np) {
 		return -1;
 	}
-	gpu_dfs_ctx.gpu_clock = of_clk_get(np, 1) ;
-	gpu_dfs_ctx.gpu_clock_i = of_clk_get(np, 0) ;
-	gpu_clk_src[0].clk_src = of_clk_get(np, 4) ;
-	gpu_clk_src[1].clk_src = of_clk_get(np, 3) ;
-	gpu_clk_src[2].clk_src = of_clk_get(np, 2) ;
-
+	gpu_dfs_ctx.gpu_clock = of_clk_get(np, 1);
+	gpu_dfs_ctx.gpu_clock_i = of_clk_get(np, 0);
+#ifdef CONFIG_ARCH_SCX30G
+/*tshark 28nm*/
+	gpu_clk_src[0].clk_src = of_clk_get(np, 7);
+	gpu_clk_src[1].clk_src = of_clk_get(np, 6);
+	gpu_clk_src[2].clk_src = of_clk_get(np, 5);
+	gpu_clk_src[3].clk_src = of_clk_get(np, 4);
+	gpu_clk_src[4].clk_src = of_clk_get(np, 3);
+	gpu_clk_src[5].clk_src = of_clk_get(np, 2);
+#else
+/*shark 40nm*/
+	gpu_clk_src[0].clk_src = of_clk_get(np, 4);
+	gpu_clk_src[1].clk_src = of_clk_get(np, 3);
+	gpu_clk_src[2].clk_src = of_clk_get(np, 2);
+#endif
 
 	if (!gpu_dfs_ctx.gpu_clock) {
 		printk ("%s, cant get gpu_clock\n", __FUNCTION__);
@@ -368,7 +479,6 @@ int  mali_power_initialize(struct platform_device *pdev)
 		}
 
 	}
-
 #else
 	gpu_dfs_ctx.gpu_clock = clk_get(NULL, "clk_gpu");
 	gpu_dfs_ctx.gpu_clock_i = clk_get(NULL, "clk_gpu_i");
@@ -849,6 +959,8 @@ static void gpu_change_freq_div(void)
 #endif
 			if(gpu_dfs_ctx.next_freq_p->freq_select!=gpu_dfs_ctx.cur_freq_p->freq_select)
 			{
+				MALI_DEBUG_PRINT(3,("GPU_DFS set clk cur_freq %6d-> next_freq %6d next_freq clk_src 0x%p\n",
+					gpu_dfs_ctx.cur_freq_p->freq, gpu_dfs_ctx.next_freq_p->freq,gpu_dfs_ctx.next_freq_p->clk_src));
 				clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_dfs_ctx.next_freq_p->clk_src);
 			}
 			if(gpu_dfs_ctx.next_freq_p->div_select!=gpu_dfs_ctx.cur_freq_p->div_select)
