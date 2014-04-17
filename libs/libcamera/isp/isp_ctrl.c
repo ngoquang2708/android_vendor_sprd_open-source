@@ -460,12 +460,12 @@ static int32_t _isp_ContinueFocusTrigeAF(uint32_t handler_id)
 	ISP_LOG("_isp_ContinueFocusTrigeAF");
 
 	isp_context_ptr->af.monitor_bypass=ISP_EB;
-
 	if((ISP_UEB == isp_context_ptr->af.bypass)
 		&&(ISP_AF_CONTINUE != isp_context_ptr->af.status)
 		&&(ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode)){
 
 		af_win.mode = isp_context_ptr->af.mode;
+		af_win.valid_win = 0;
 		_ispCfgAfWin(handler_id, &isp_context_ptr->af, &af_win);
 		ISP_LOG("ae.bypass %d",isp_context_ptr->ae.bypass);
 		isp_context_ptr->af.ae_status = isp_context_ptr->ae.bypass;
@@ -4273,7 +4273,6 @@ static int32_t _ispChangeProcCfg(uint32_t handler_id)
 static int32_t _ispCfgInt(uint32_t handler_id)
 {
 	int32_t rtn = ISP_SUCCESS;
-	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
@@ -5239,9 +5238,9 @@ static int32_t _ispTuneIOCtrl(uint32_t handler_id, enum isp_ctrl_cmd io_cmd, voi
 static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
-	struct sensor_raw_info* raw_info_ptr=(struct sensor_raw_info*)param_ptr->setting_param_ptr;
-	struct sensor_version_info* version_info_ptr=(struct sensor_version_info*)raw_info_ptr->version_info;
-	struct sensor_raw_tune_info* raw_tune_ptr=(struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
+	struct sensor_raw_info* raw_info_ptr=NULL;
+	struct sensor_version_info* version_info_ptr=NULL;
+	struct sensor_raw_tune_info* raw_tune_ptr=NULL;
 
 	if(NULL==param_ptr){
 		rtn=ISP_PARAM_NULL;
@@ -5252,6 +5251,9 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 		rtn=ISP_PARAM_NULL;
 		ISP_RETURN_IF_FAIL(rtn, ("sensor param ptr null error"));
 	}
+	raw_info_ptr=(struct sensor_raw_info*)param_ptr->setting_param_ptr;
+	version_info_ptr=(struct sensor_version_info*)raw_info_ptr->version_info;
+	raw_tune_ptr=(struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
 
 	if(version_info_ptr->version_id!=param_ptr->isp_id){
 		rtn=ISP_PARAM_ERROR;
