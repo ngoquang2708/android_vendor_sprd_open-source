@@ -897,9 +897,11 @@ static GSP_ROT_ANGLE_E HAL2Kernel_RotMirrConvert(int degree)
     case -270:
         result_degree = GSP_ROT_ANGLE_270_M;
         break;
+    case 0:
+        result_degree = GSP_ROT_ANGLE_0;
+        break;
     default:
         ALOGE("Camera_rotation err : angle %d not supported. Line:%d ", degree, __LINE__);
-    case 0:
         result_degree = GSP_ROT_ANGLE_0;
         break;
     }
