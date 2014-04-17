@@ -51,6 +51,7 @@ typedef struct  _NV_HEADER {
 
 #define FDL_OFFSET		0
 #define	FDL_PACKET_SIZE 	256
+#define LS_PACKET_SIZE		(256)
 #define HS_PACKET_SIZE		(32*1024)
 
 #define FDL_CP_PWRON_DLY	(160*1000)//us
@@ -62,7 +63,6 @@ typedef struct  _NV_HEADER {
 
 char test_buffer[HS_PACKET_SIZE+128]={0};
 
-static int modem_images_count=11;
 static char *uart_dev = UART_DEVICE_NAME;
 static int fdl_cp_poweron_delay = FDL_CP_PWRON_DLY;
 static int modem_power_status = 0;
@@ -72,11 +72,12 @@ static int capabilities_flag = 0xff;
 extern void set_modem_assert_information(char *assert_info,int size);
 extern void broadcast_modem_state(char *message,int size);
 
+static int modem_images_count=12;	// modem_images_count and download_image_info[] must keep matched!
 struct image_info download_image_info[] = {
 	{ //fdl
 		"/dev/block/platform/sprd-sdhci.3/by-name/fdl",
 		"/dev/block/platform/sprd-sdhci.3/by-name/fdl",
-		0x3900,
+		0x4000,
 		0x20000000,
 		0xff,
 	},
@@ -154,6 +155,13 @@ struct image_info download_image_info[] = {
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_ldsp",
 		0x0200000,
 		0x82700000,
+        0xff,
+    },
+	{ //DFS ARM7
+		"/dev/block/platform/sprd-sdhci.3/by-name/dfs",
+		"/dev/block/platform/sprd-sdhci.3/by-name/dfs",
+		0xf00,
+		0x2000C000,
 		0xff,
 	},
 	{
@@ -614,7 +622,7 @@ static int try_to_connect_fdl(int uart_fd)
 
 int download_image(int channel_fd,struct image_info *info)
 {
-	int packet_size;
+	int packet_size,trans_size=HS_PACKET_SIZE;
 	int image_fd;
 	int read_len;
 	char *buffer;
@@ -626,6 +634,8 @@ int download_image(int channel_fd,struct image_info *info)
 
         if(info->image_path == NULL)
                 return DL_SUCCESS;
+        if(info->image_size < HS_PACKET_SIZE)
+                trans_size = LS_PACKET_SIZE;
 
 	image_fd = open(info->image_path, O_RDONLY,0);
 
@@ -641,14 +651,14 @@ int download_image(int channel_fd,struct image_info *info)
 	}
 	MODEM_LOGD("Start download image %s image_size 0x%x address 0x%x , nvbuf.magic  0x%x \n",info->image_path,info->image_size,info->address, nv_head->magic);
 	image_size = info->image_size;
-	count = (image_size+HS_PACKET_SIZE-1)/HS_PACKET_SIZE;
-	ret = send_start_message(channel_fd,count*HS_PACKET_SIZE,info->address,1);
+	count = (image_size+trans_size-1)/trans_size;
+	ret = send_start_message(channel_fd,count*trans_size,info->address,1);
 	if(ret != DL_SUCCESS){
 		close(image_fd);
 		return DL_FAILURE;
 	}
 	for(i=0;i<count;i++){
-		packet_size = HS_PACKET_SIZE;
+		packet_size = trans_size;
 		buffer = (char *)&test_buffer[8];
 		do{
 			read_len = read(image_fd,buffer,packet_size);
@@ -657,12 +667,12 @@ int download_image(int channel_fd,struct image_info *info)
 				buffer += read_len;
 			  } else break;
 		}while(packet_size > 0);
-		if(image_size < HS_PACKET_SIZE){
-			for(i=image_size;i<HS_PACKET_SIZE;i++)
+		if(image_size < trans_size){
+			for(i=image_size;i<trans_size;i++)
 				test_buffer[i+8] = 0xFF;
 			image_size = 0;
-		}else { image_size -= HS_PACKET_SIZE;}
-		ret = send_data_message(channel_fd,test_buffer,HS_PACKET_SIZE,1,HS_PACKET_SIZE,image_fd);
+		}else { image_size -= trans_size;}
+		ret = send_data_message(channel_fd,test_buffer,trans_size,1,trans_size,image_fd);
 		//break;
 		if(ret != DL_SUCCESS){
 			close(image_fd);
