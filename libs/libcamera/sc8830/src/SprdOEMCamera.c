@@ -29,7 +29,7 @@ static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
 struct camera_context        *g_cxt = &cmr_cxt;
 #define IS_PREVIEW           (CMR_PREVIEW == g_cxt->preview_status)
-#define IS_PREVIEW_TRACE     (PREV_TRACE_CNT > g_cxt->pre_frm_cnt || (!IS_PREVIEW))
+#define IS_PREVIEW_TRACE     (PREV_TRACE_CNT >= g_cxt->pre_frm_cnt || (!IS_PREVIEW))
 #define IS_CAPTURE           (CMR_CAPTURE == g_cxt->capture_status || CMR_CAPTURE_SLICE == g_cxt->capture_status)
 #define IS_PREV_FRM(id)      ((id & CAMERA_PREV_ID_BASE) == CAMERA_PREV_ID_BASE)
 #define IS_CAP0_FRM(id)      ((id & CAMERA_CAP0_ID_BASE) == CAMERA_CAP0_ID_BASE)
@@ -58,7 +58,7 @@ struct camera_context        *g_cxt = &cmr_cxt;
 
 #define bzero(b, len)            memset((b), '\0', (len))
 #define WAIT_CAPTURE_PATH_TIME   100
-#define PREV_TRACE_CNT           5
+#define PREV_TRACE_CNT           8
 
 /*camera_takepic_step timestamp*/
 enum CAMERA_TAKEPIC_STEP {
@@ -3461,6 +3461,17 @@ int camera_caf_move_stop_handle(void *data)
 	return ret ;
 }
 
+void camera_set_preview_trace(uint32_t is_trace)
+{
+	cmr_v4l2_set_trace_flag(PREV_TRACE, is_trace);
+}
+
+void camera_set_capture_trace(uint32_t is_trace)
+{
+	g_cxt->is_cap_trace = is_trace;
+	cmr_v4l2_set_trace_flag(CAP_TRACE, is_trace);
+}
+
 int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 {
 	uint32_t                 frm_id;
@@ -3776,10 +3787,11 @@ void camera_v4l2_evt_cb(int evt, void* data)
 		if ((CHN_BUSY != g_cxt->chn_2_status
 			|| camera_check_cap_time(data))
 			&& CHN_2 == info->channel_id) {
-			CMR_LOGW("discard, %d, free frame %d 0x%x",
-				g_cxt->chn_2_status,
-				info->channel_id,
-				info->frame_id);
+			if (g_cxt->is_cap_trace)
+				CMR_LOGW("discard, %d, free frame %d 0x%x",
+					g_cxt->chn_2_status,
+					info->channel_id,
+					info->frame_id);
 			ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
 			return;
 		}
