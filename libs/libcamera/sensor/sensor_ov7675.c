@@ -702,7 +702,7 @@ LOCAL uint32_t OV7675_Identify(uint32_t param)
                 if( ret != value[i]) {
                         err_cnt++;
                         if(err_cnt>3) {
-                                SENSOR_PRINT_ERR("Fail to OV7690_Identify: ret: %d, value[%d]: %d", ret, i, value[i]);
+                                SENSOR_PRINT_ERR("Fail to OV7675_Identify: ret: %d, value[%d]: %d", ret, i, value[i]);
                                 return SENSOR_FAIL;
                         } else {
                                 //Masked by frank.yang,SENSOR_Sleep() will cause a  Assert when called in boot precedure
