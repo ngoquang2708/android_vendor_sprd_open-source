@@ -129,6 +129,25 @@ typedef struct
     int8_t fd_bt_cp2_path[I2S_CTL_PATH_MAX];
     int fd_bt_ap;
     int8_t fd_bt_ap_path[I2S_CTL_PATH_MAX];
+
+#ifdef VB_CONTROL_PARAMETER_V2
+    int fd_iis1_sys_cp0;
+    int8_t fd_iis1_sys_cp0_path[I2S_CTL_PATH_MAX];
+    int fd_iis1_sys_cp1;
+    int8_t fd_iis1_sys_cp1_path[I2S_CTL_PATH_MAX];
+    int fd_iis1_sys_cp2;
+    int8_t fd_iis1_sys_cp2_path[I2S_CTL_PATH_MAX];
+    int fd_iis1_sys_ap;
+    int8_t fd_iis1_sys_ap_path[I2S_CTL_PATH_MAX];
+
+    int fd_iis01_loop;
+    int8_t fd_iis01_loop_path[I2S_CTL_PATH_MAX];
+    int fd_iis12_loop;
+    int8_t fd_iis12_loop_path[I2S_CTL_PATH_MAX];
+    int fd_iis13_loop;
+    int8_t fd_iis13_loop_path[I2S_CTL_PATH_MAX];
+#endif
+
     int8_t index;
     int is_switch;
     int8_t is_ext;
