@@ -328,12 +328,12 @@ void queryIntFlag(char* strProperty,int *IntFlag)
         }
         else
         {
-            *IntFlag = 0;
+            *IntFlag = -1;
         }
     }
     else
     {
-        *IntFlag = 0;
+        *IntFlag = -1;
     }
 }
 
