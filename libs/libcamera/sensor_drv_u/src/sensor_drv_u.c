@@ -3000,6 +3000,12 @@ EXIF_SPEC_PIC_TAKING_COND_T *Sensor_GetSensorExifInfo(void)
 {
 	SENSOR_EXP_INFO_T_PTR sensor_info_ptr = Sensor_GetInfo();
 	EXIF_SPEC_PIC_TAKING_COND_T *sensor_exif_info_ptr = PNULL;
+	if (!s_p_sensor_cxt || !sensor_info_ptr) {
+		CMR_LOGE("ZERO poiner s_p_sensor_cxt %p sensor_info_ptr %p",
+			s_p_sensor_cxt,
+			sensor_info_ptr);
+		return NULL;
+	}
 
 	if (PNULL != sensor_info_ptr->ioctl_func_ptr->get_exif) {
 		sensor_exif_info_ptr =

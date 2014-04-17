@@ -3558,8 +3558,9 @@ status_t SprdCameraHardware::initDefaultParameters()
 	if (setParametersInternal(p) != NO_ERROR) {
 		LOGE("Failed to set default parameters?!");
 		ret = UNKNOWN_ERROR;
+	} else {
+		setCameraPrivateData();
 	}
-	setCameraPrivateData();
 
 	mParamLock.lock();
 	copyParameters(mSetParameters, p);
