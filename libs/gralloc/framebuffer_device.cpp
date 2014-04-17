@@ -42,6 +42,8 @@
 #include "gralloc_priv.h"
 #include "gralloc_helper.h"
 
+#include "Properties.h"
+
 #ifdef SPRD_DITHER_ENABLE
 #include "image_dither.h"
 #endif
@@ -460,6 +462,83 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 	return 0;
 }
 
+int init_hwui_cache_param(int fb_size)
+{
+	float one_mega = (1024.0 * 1024.0);
+	do {
+		char property_tcs[PROPERTY_VALUE_MAX];
+		float value_tcs = (float) (6.0 * fb_size) / one_mega;
+		// round the value to unit of .5M and 1.0M
+		value_tcs = ((float)((int)(2 * value_tcs + 1))) / 2.0;
+
+		sprintf(property_tcs, "%3.1f", value_tcs);
+		property_set(PROPERTY_TEXTURE_CACHE_SIZE, property_tcs);
+		AINF("Setting texture cache size to %sMB", property_tcs);
+	} while (0);
+
+	do {
+		char property_lcs[PROPERTY_VALUE_MAX];
+		float value_lcs = (float) (4.0 * fb_size) / one_mega;
+		value_lcs = ((float)((int)(2 * value_lcs + 1))) / 2.0;
+
+		sprintf(property_lcs, "%3.1f", value_lcs);
+		property_set(PROPERTY_LAYER_CACHE_SIZE, property_lcs);
+		AINF("Setting layer cache size to %sMB", property_lcs);
+	} while (0);
+
+	do {
+		char property_rbcs[PROPERTY_VALUE_MAX];
+		float value_rbcs = (float) (0.5 * fb_size) / one_mega;
+		value_rbcs = ((float)((int)(2 * value_rbcs + 1))) / 2.0;
+
+		sprintf(property_rbcs, "%3.1f", value_rbcs);
+		property_set(PROPERTY_RENDER_BUFFER_CACHE_SIZE, property_rbcs);
+		AINF("Setting render buffer cache size to %sMB", property_rbcs);
+	} while (0);
+
+	do {
+		char property_pcs[PROPERTY_VALUE_MAX];
+		float value_pcs = (float) (1.0 * fb_size) / one_mega;
+		value_pcs = ((float)((int)(2 * value_pcs + 1))) / 2.0;
+
+		sprintf(property_pcs, "%3.1f", value_pcs);
+		property_set(PROPERTY_PATH_CACHE_SIZE, property_pcs);
+		AINF("Setting path cache size to %sMB", property_pcs);
+	} while (0);
+
+	do {
+		char property_dscs[PROPERTY_VALUE_MAX];
+		float value_dscs = (float) (0.5 * fb_size) / one_mega;
+		value_dscs = ((float)((int)(2 * value_dscs + 1))) / 2.0;
+
+		sprintf(property_dscs, "%3.1f", value_dscs);
+		property_set(PROPERTY_DROP_SHADOW_CACHE_SIZE, property_dscs);
+		AINF("Setting drop shadow cache size to %sMB", property_dscs);
+	} while (0);
+
+	do {
+		char property_gcs[PROPERTY_VALUE_MAX];
+		float value_gcs = (float) (fb_size) / (8.0 * one_mega);
+		value_gcs = ((float)((int)(2 * value_gcs + 1))) / 2.0;
+
+		sprintf(property_gcs, "%3.1f", value_gcs);
+		property_set(PROPERTY_GRADIENT_CACHE_SIZE, property_gcs);
+		AINF("Setting gradient cache size to %sMB", property_gcs);
+	} while (0);
+
+	do {
+		char property_scs[PROPERTY_VALUE_MAX];
+		float value_scs = (float) (fb_size) / (4.0 * one_mega);
+		value_scs = ((float)((int)(2 * value_scs + 1))) / 2.0;
+
+		sprintf(property_scs, "%3.1f", value_scs);
+		property_set(PROPERTY_SHAPE_CACHE_SIZE, property_scs);
+		AINF("Setting shape cache size to %sMB", property_scs);
+	} while (0);
+
+	return 0;
+}
+
 int init_frame_buffer_locked(struct private_module_t *module)
 {
 	if (module->framebuffer)
@@ -685,6 +764,8 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	close(fd);
 	module->numBuffers = info.yres_virtual / info.yres;
 	module->bufferMask = 0;
+
+	init_hwui_cache_param(fbSize / module->numBuffers);
 
 #if GRALLOC_ARM_UMP_MODULE
 #ifdef IOCTL_GET_FB_UMP_SECURE_ID
