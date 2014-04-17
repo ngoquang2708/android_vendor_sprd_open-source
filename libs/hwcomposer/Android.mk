@@ -69,6 +69,7 @@ ifeq ($(strip $(DEVICE_USE_FB_HW_VSYNC)),true)
 	LOCAL_CFLAGS += -DUSE_FB_HW_VSYNC
 endif
 
+
 ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8830/inc	
 	#LOCAL_CFLAGS += -DVIDEO_LAYER_USE_RGB
@@ -85,7 +86,9 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 
 	LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
+ifneq ($(strip $(DEVICE_GSP_NOT_SCALING_UP_TWICE)),true) # when on tshark, if cpy2_pa is exist, we dont support scaling-up-twice feature
 	LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE
+endif
 	#LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA_1080P
 	endif
 
