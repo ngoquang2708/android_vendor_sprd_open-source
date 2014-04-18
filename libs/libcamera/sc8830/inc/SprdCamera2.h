@@ -39,8 +39,6 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 
 #define CAMERA2_MAX_FACES 10
 
-#define HAL_VENDOR_SECTION_OFFSET 0x8000 /*for application   must equal to VENDOR_SECTION in camera_metadata_tags.h*/
-
 typedef enum cam_hal_metadata_section {
     ANDROID_ADD_PARAMETERS,
     ANDROID_VENDOR_SECTION_COUNT
@@ -164,12 +162,16 @@ const char *cam_hal_metadata_section_names[ANDROID_VENDOR_SECTION_COUNT] = {
     "com.addParameters",
 };
 
-static tags_info_t android_add_parameters[1] = {
-    //{ "mode",                          TYPE_BYTE   },
+static tags_info_t android_add_parameters[VENDOR_SECTION_END - VENDOR_SECTION_START] = {
+    { "brightness",                          TYPE_BYTE   },
 };
 
 tags_info_t *cam_tag_info[ANDROID_VENDOR_SECTION_COUNT] = {
     android_add_parameters,
+};
+
+int cam_hal_metadata_section_bounds[ANDROID_VENDOR_SECTION_COUNT][2] = {
+    { VENDOR_SECTION_START, VENDOR_SECTION_END },
 };
 
 }
