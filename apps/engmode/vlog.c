@@ -25,6 +25,7 @@ extern sem_t g_armlog_sem;
 extern int g_armlog_enable;
 extern int g_ass_start;
 static char log_data[DATA_BUF_SIZE];
+static char diag_data[DATA_BUF_SIZE];
 static int s_ser_diag_fd = 0;
 static eng_dev_info_t* s_dev_info;
 extern void eng_usb_enable(void);
@@ -226,8 +227,8 @@ void *eng_vdiag_rthread(void *x)
     ENG_LOG("eng_vdiag_r put log data from SIPC to serial\n");
     while(1) {
         int split_flag = 0;
-        memset(log_data, 0, sizeof(log_data));
-        r_cnt = read(modem_fd, log_data, DATA_BUF_SIZE);
+        memset(diag_data, 0, sizeof(diag_data));
+        r_cnt = read(modem_fd, diag_data, DATA_BUF_SIZE);
         if (r_cnt <= 0) {
             ENG_LOG("eng_vdiag_r read no log data : r_cnt=%d, %s\n",  r_cnt, strerror(errno));
             continue;
@@ -242,9 +243,9 @@ void *eng_vdiag_rthread(void *x)
             split_flag = 1;
         do {
             if(split_flag)
-                w_cnt = write(ser_fd, log_data + offset, r_cnt-32);
+                w_cnt = write(ser_fd, diag_data + offset, r_cnt-32);
             else
-                w_cnt = write(ser_fd, log_data + offset, r_cnt);
+                w_cnt = write(ser_fd, diag_data + offset, r_cnt);
             if (w_cnt < 0) {
                 if(errno == EBUSY)
                     usleep(59000);
