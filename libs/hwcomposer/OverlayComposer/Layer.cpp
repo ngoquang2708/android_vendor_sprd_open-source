@@ -342,7 +342,7 @@ void Layer::computeTransformMatrix()
                 default:
                     // If we don't recognize the format, we must assume the
                     // worst case (that we care about), which is YUV420.
-                    shrinkAmount = 1.0;
+                    shrinkAmount = 0.0;
                     break;
             }
         }
@@ -382,6 +382,7 @@ void Layer::computeTransformMatrix()
 bool Layer::prepareDrawData()
 {
     sp<GraphicBuffer>& buf(mGFXBuffer);
+    int format = buf->getPixelFormat();
 
     GLfloat left = GLfloat(mRect->left) / GLfloat(mRect->right);
     GLfloat top = GLfloat(mRect->top) / GLfloat(mRect->bottom);
@@ -393,7 +394,6 @@ bool Layer::prepareDrawData()
      *  when GPU transform float number into int number.
      *  Here, just Compensate for the loss.
      * */
-    int format = buf->getPixelFormat();
     if ((mTransform == 0 ) &&
         (format == HAL_PIXEL_FORMAT_YCbCr_420_SP ||
         format == HAL_PIXEL_FORMAT_YCrCb_420_SP ||
@@ -417,6 +417,27 @@ bool Layer::prepareDrawData()
     {
         float pixelOffset = 1.0 / float(mRect->bottom);
         top -= float(mRect->top) * pixelOffset;
+    }
+
+    /*
+     *  At present, the texture coordinate caculation for YUV layer
+     *  is incomplemented when the source crop region do no start from
+     *  (0, 0).
+     *  So here give a compensation for YUV layer texture coordinate.
+     * */
+    if ((format == HAL_PIXEL_FORMAT_YCbCr_420_SP) ||
+        (format == HAL_PIXEL_FORMAT_YCrCb_420_SP) ||
+        (format == HAL_PIXEL_FORMAT_YV12))
+    {
+        if (left > 0)
+        {
+            left = 0;
+        }
+
+        if (top > 0)
+        {
+            top = 0;
+        }
     }
 
     texCoord[0].u = texCoord[1].u = left;
