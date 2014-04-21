@@ -459,7 +459,7 @@ int SprdUtil::gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info)
 #define VIDEO_MAX_HEIGHT 720
 #else
 #define VIDEO_MAX_WIDTH 1920
-#define VIDEO_MAX_HEIGHT 1080
+#define VIDEO_MAX_HEIGHT 1088
 #endif
 	int OSD_MAX_WIDTH = 0;
 	int OSD_MAX_HEIGHT = 0;
@@ -1108,7 +1108,13 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             if(ret){
                 return ret;
             }
+        } else {
+            ALOGE("GSP_Proccess L%d,mGSPAddrType%d,layer0_en%d,layer0format%d",__LINE__,
+                mGSPAddrType,
+                gsp_cfg_info.layer0_info.layer_en,
+                gsp_cfg_info.layer0_info.img_format);
         }
+		gsp_cfg_info.misc_info.split_pages = 0;//no mater copying or not, must set split_pages as zero.
 #endif
 
 		ALOGI_IF(mDebugFlag,"GSP_Proccess L%d,L1 yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
