@@ -66,7 +66,21 @@ static int is_svlte_mode(void)
     }
 }
 
- static int send_reload_modemd_message() {
+static int get_test_mode(void)
+{
+    char prop[PROPERTY_VALUE_MAX]="0";
+    property_get(SSDA_TESTMODE_PROP, prop, 0);
+    MODEMD_LOGD("Test mode %s", prop);
+
+    return atoi(prop);
+}
+
+static int is_test_mode_changed(void)
+{
+    return  (sTestMode == get_test_mode()) ? 0 : 1 ;
+}
+
+static int send_reload_modemd_message() {
     const char* loadcmd = sSSDAMode ? LTE_RELOAD_CSFB_STR : LTE_RELOAD_SVLTE_STR;
 
     if (sFdModemCtl != -1) {
@@ -128,24 +142,32 @@ reconnect:
                   strstr(buf, LTE_MODEM_ASSERT_STR) ||
                   strstr(buf, GEN_MODEM_ASSERT_STR)) {
            ext_modem_ops.stop_modem_service();
-           MODEMD_LOGD("Info modem assert to all clients.");
-           loop_info_sockclients(buf, numRead);
 
-           if (is_modem_reset()) {
+           if (is_test_mode_changed()) {
+                 MODEMD_LOGD("Test mode is changed , reload modem image");
+           } else {
+              if (!is_modem_reset()) {
+                  MODEMD_LOGD("Modem reset is not enabled , do not reset");
+              }
+              MODEMD_LOGD("Info modem assert to all clients.");
+              loop_info_sockclients(buf, numRead);
+           }
+
+           if (is_modem_reset() || is_test_mode_changed()) {
                MODEMD_LOGD("Modem reset is enabled, reload modem image");
                if (ext_modem_ops.load_modem_image() < 0) {
                    close(sfd);
                    sFdModemCtl = -1;
                    goto reconnect;
                }
-           } else {
-               MODEMD_LOGD("modem reset is not enabled , do not reset");
-           }
+           } 
        } else if (strstr(buf, LTE_MODEM_RESET_STR) ||
                   strstr(buf, WTD_MODEM_RESET_STR) ||
                   strstr(buf, GEN_MODEM_RESET_STR)) {
            MODEMD_LOGD("modem reset happen, reload modem...");
-           loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
+           if (!is_test_mode_changed()) {
+               loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
+           }
 
            ext_modem_ops.stop_modem_service();
            if (ext_modem_ops.load_modem_image() < 0) {
@@ -202,15 +224,6 @@ static void* start_svlte_service(void)
     sStartLteThread = 0;
     sTidStartLte = 0;
     return (void*) NULL;
-}
-
-static int get_test_mode(void)
-{
-    char prop[PROPERTY_VALUE_MAX]="0";
-    property_get(SSDA_TESTMODE_PROP, prop, 0);
-    MODEMD_LOGD("Test mode %s", prop);
-
-    return atoi(prop);
 }
 
 static void start_svlte_mode(void)
