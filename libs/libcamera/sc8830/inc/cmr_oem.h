@@ -469,6 +469,8 @@ struct camera_context {
 
 	SENSOR_SOCID_T cpu_id;
 	uint32_t		    which_cpu;
+
+	uint32_t                 ispvideo_format;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

@@ -3056,12 +3056,6 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 		return -CAMERA_FAILED;
 	}
 
-	ret = camera_snapshot_start_set();
-	if (ret) {
-		CMR_LOGE("Failed to snapshot");
-		return -CAMERA_FAILED;
-	}
-
 	g_cxt->skip_mode = IMG_SKIP_HW;
 
 	if (IMG_SKIP_HW == g_cxt->skip_mode) {
@@ -8093,6 +8087,16 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 		}
 		g_cxt->isp_cxt.is_first_slice = 0;
 	} else {
+		if (process->slice_height_out == g_cxt->cap_orig_size.height) {
+			if (is_jpeg_encode) {
+				camera_post_convert_thum_msg();
+				camera_take_picture_done(&process->frame_info);
+			} else {
+				process->frame_info.height = process->slice_height_out;
+				camera_capture_yuv_process(&process->frame_info);
+			}
+		}
+
 		if (is_jpeg_encode) {
 			bzero(&enc_nxt_param, sizeof(struct jpeg_enc_next_param));
 			enc_nxt_param.handle = g_cxt->jpeg_cxt.handle;
@@ -8124,13 +8128,7 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 	}
 
 	if (process->slice_height_out == g_cxt->cap_orig_size.height) {
-		if (is_jpeg_encode) {
-			camera_start_convert_thum();
-			return camera_take_picture_done(&process->frame_info);
-		} else {
-			process->frame_info.height = process->slice_height_out;
-			return camera_capture_yuv_process(&process->frame_info);
-		}
+		return CAMERA_SUCCESS;
 	} else if (process->slice_height_out + process->slice_height_in <
 		g_cxt->cap_orig_size.height) {
 		in_param.src_slice_height = process->slice_height_in;
@@ -8957,6 +8955,7 @@ static int camera_capture_complete_handle(struct frm_info *data)
 		}
 	}
 capture_complete_out:
+	send_capture_complete_msg();
 
 	return ret;
 }
@@ -9214,4 +9213,14 @@ static int camera_is_later_scaling(void)
 
 	CMR_LOGI("is_scaling %d", is_scaling);
 	return is_scaling;
+}
+
+int camera_set_ispvideo_format(int format)
+{
+	int ret = CAMERA_SUCCESS;
+
+	g_cxt->ispvideo_format = format;
+
+	CMR_LOGV("format=%d", format);
+	return ret;
 }

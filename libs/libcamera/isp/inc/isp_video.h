@@ -24,4 +24,5 @@ void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *c
 void startispserver();
 void stopispserver();
 void validispserver(int32_t valid);
+void send_capture_complete_msg();
 #endif

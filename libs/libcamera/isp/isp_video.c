@@ -107,6 +107,7 @@ static int capture_flag = 0; // 1: call get pic
 static int getpic_flag = 0; // 1: call get pic
 static sem_t preview_sem_lock;
 static sem_t capture_sem_lock;
+static pthread_mutex_t ispstream_lock;
 static int wire_connected = 0;
 static int sockfd = 0;
 static int sock_fd=0;
@@ -501,7 +502,7 @@ static int handle_isp_data(unsigned char *buf, unsigned int len)
 						fun_ptr->set_capture_size(rtn_cmd.param[1], rtn_cmd.param[2]);
 					}
 
-					fun_ptr->take_picture(0, 0);
+					fun_ptr->take_picture(0, capture_format);
 					sem_wait(&capture_sem_lock);
 
 					if(NULL!=fun_ptr->stop_preview){
@@ -761,6 +762,8 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 
 	if (0==preview_img_end_flag)
 	{
+		pthread_mutex_lock(&ispstream_lock);
+
 		char *img_ptr = (char *)preview_buf_ptr;
 		int img_len;
 		uint32_t img_w;
@@ -774,13 +777,15 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 		if (ret != 0) {
 			DBG("ISP_TOOL:handle_img_data().error ret = %d.", ret);
 		}
+
+		pthread_mutex_unlock(&ispstream_lock);
 	}
 }
 
-void send_capture_data_end(uint32_t format)
+void send_capture_complete_msg()
 {
-	if ((capture_flag == 1) && (1 == capture_img_end_flag) && (ISP_VIDEO_JPG == format))
-	{/* first raw data -> second yuv data -> the ned jpg data: jpg data end the the capture action complete */
+	if ((capture_flag == 1) && (1 == capture_img_end_flag) )
+	{
 		usleep(1000*1000);
 		sem_post(&capture_sem_lock);
 		capture_flag = 0;
@@ -794,15 +799,17 @@ void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *c
 
 	if ((0 == capture_img_end_flag)&&(format == (uint32_t)capture_format))
 	{
+		pthread_mutex_lock(&ispstream_lock);
+
 		DBG("ISP_TOOL: capture format: %d, width: %d, height: %d.\n", format, width, height);
 		ret = handle_img_data(format, width, height, ch0_ptr, ch0_len, ch1_ptr, ch1_len, ch2_ptr, ch2_len);
 		capture_img_end_flag=1;
 		if (ret != 0) {
 			DBG("ISP_TOOL: handle_img_data().error  ret = %d.", ret);
 		}
-	}
 
-	send_capture_data_end(format);
+		pthread_mutex_unlock(&ispstream_lock);
+	}
 }
 
 int isp_RecDataCheck(uint8_t* rx_buf_ptr, int rx_bug_len, uint8_t* cmd_buf_ptr,  int* cmd_len)
@@ -946,6 +953,7 @@ static void * ispserver_thread(void *args)
 
 	sem_init(&preview_sem_lock, 0, 0);
 	sem_init(&capture_sem_lock, 0, 0);
+	pthread_mutex_init(&ispstream_lock, NULL);
 
 	pthread_attr_init(&attr);
 	for (;;) {                  /* Handle clients iteratively */
@@ -995,6 +1003,8 @@ static void * ispserver_thread(void *args)
 	if (close(lfd) == -1)           /* Close connection */
 		DBG("ISP_TOOL:close socket lfd error\n");
 	sock_fd=0x00;
+
+	pthread_mutex_destroy(&ispstream_lock);
 
 	 return NULL;
 }

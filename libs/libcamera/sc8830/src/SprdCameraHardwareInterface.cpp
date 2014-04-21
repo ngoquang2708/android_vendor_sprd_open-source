@@ -671,6 +671,10 @@ status_t SprdCameraHardware::takePicture()
 		WaitForCaptureDone();
 	}
 
+	if (CAMERA_RAW_MODE == mode) {
+		set_ddr_freq(HIGH_FREQ_REQ);
+	}
+
 	setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
 	LOGI("INTERPOLATION::takePicture:mRawWidth=%d,mZoomLevel=%d",mRawWidth,mZoomLevel);
 	if (CAMERA_SUCCESS != camera_take_picture(camera_cb, this, mode)) {
@@ -3519,6 +3523,10 @@ status_t SprdCameraHardware::cancelPictureInternal()
 		break;
 	}
 
+	if (CAMERA_RAW_MODE == getCaptureMode()) {
+		set_ddr_freq(BASE_FREQ_REQ);
+	}
+
 	LOGI("cancelPictureInternal: X");
 	return result ? NO_ERROR : UNKNOWN_ERROR;
 }
@@ -4665,6 +4673,9 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 	if (!iSZslMode()) {
 		if (encInfo->need_free) {
 			deinitCapture();
+			if (CAMERA_RAW_MODE == getCaptureMode()) {
+				set_ddr_freq(BASE_FREQ_REQ);
+			}
 		}
 	} else {
 		mCapBufLock.lock();
@@ -4961,6 +4972,9 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 			parm4, getCameraStateStr(getCaptureState()));
 		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
 		receiveCameraExitError();
+		if (CAMERA_RAW_MODE == getCaptureMode()) {
+			set_ddr_freq(BASE_FREQ_REQ);
+		}
 		break;
 
 	default:
@@ -5035,6 +5049,9 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 		LOGI("HandleEncode: CAMERA_EXIT_CB_FAILED");
 		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
 		receiveCameraExitError();
+		if (CAMERA_RAW_MODE == getCaptureMode()) {
+			set_ddr_freq(BASE_FREQ_REQ);
+		}
 		break;
 
 	default:
@@ -5815,6 +5832,7 @@ static int HAL_IspVideoTakePicture(uint32_t param1, uint32_t param2)
 	int rtn=0x00;
 	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
 	if (NULL != fun_ptr) {
+		camera_set_ispvideo_format(param2);
 		rtn=fun_ptr->takePicture();
 	}
 	return rtn;
