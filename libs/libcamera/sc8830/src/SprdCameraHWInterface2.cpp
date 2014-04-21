@@ -774,6 +774,9 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
 	ADD_OR_SIZE(ANDROID_CONTROL_AF_MODE, &afMode, 1);
 	ADD_OR_SIZE(ANDROID_CONTROL_AF_REGIONS, controlRegions, 5);
 
+	static const uint8_t brightness = 3;
+	ADD_OR_SIZE(ANDROID_SPRD_BRIGHTNESS, &brightness, 1);
+
 	if (sizeRequest) {
 		HAL_LOGV("Allocating %d entries, %d extra bytes for "
 		"request template type %d",
@@ -885,7 +888,7 @@ const char *SprdCameraHWInterface2::getVendorSectionName(/*get base type*/
 				const vendor_tag_query_ops_t *v,
 				uint32_t tag)
 {
-	uint32_t tag_section = (tag >> 16) - HAL_VENDOR_SECTION_OFFSET;
+	uint32_t tag_section = (tag >> 16) - VENDOR_SECTION;
 
 	if (tag_section >= ANDROID_VENDOR_SECTION_COUNT) {
         return NULL;
@@ -897,10 +900,11 @@ int SprdCameraHWInterface2::getVendorTagType(
 				const vendor_tag_query_ops_t *v,
 				uint32_t tag)
 {
-	uint32_t tag_section = (tag >> 16) - HAL_VENDOR_SECTION_OFFSET;
+	uint32_t tag_section = (tag >> 16) - VENDOR_SECTION;
 	uint32_t tag_index = tag & 0xFFFF;
 
-	if (tag_section >= ANDROID_VENDOR_SECTION_COUNT) {
+	if (tag_section >= ANDROID_VENDOR_SECTION_COUNT
+		|| tag >= (uint32_t)(cam_hal_metadata_section_bounds[tag_section][1])) {
         return -1;
     }
 
@@ -911,10 +915,11 @@ const char *SprdCameraHWInterface2::getVendorTagName(
 				const vendor_tag_query_ops_t *v,
 				uint32_t tag)
 {
-	uint32_t tag_section = (tag >> 16) - HAL_VENDOR_SECTION_OFFSET;
+	uint32_t tag_section = (tag >> 16) - VENDOR_SECTION;
 	uint32_t tag_index = tag & 0xFFFF;
 
-	if (tag_section >= ANDROID_VENDOR_SECTION_COUNT) {
+	if (tag_section >= ANDROID_VENDOR_SECTION_COUNT
+		|| tag >= (uint32_t)(cam_hal_metadata_section_bounds[tag_section][1])) {
         return NULL;
     }
 
@@ -3635,10 +3640,18 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						HAL_LOGE("ERR: drv not support af mode");
 					}
 					if (m_CameraId == 0) {
-					    ASIGNIFNOTEQUAL(srcreq->afMode, AfMode,drvTag)
+					    ASIGNIFNOTEQUAL(srcreq->afMode, AfMode, drvTag)
 					}
 				}
                 break;
+			case ANDROID_SPRD_BRIGHTNESS:
+				{
+					uint8_t brightness = entry.data.u8[0];
+					res = androidParametTagToDrvParaTag(ANDROID_SPRD_BRIGHTNESS, &drvTag);
+					ASIGNIFNOTEQUAL(srcreq->brightness, brightness, drvTag)
+					HAL_LOGD("ANDROID_SPRD_BRIGHTNESS (%d)", brightness);
+				}
+				break;
             case ANDROID_CONTROL_AF_REGIONS:
 				{
 					int area[5 + 1] = {0};
@@ -4238,9 +4251,11 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 
 	switch(cb) {
 	case CAMERA_RSP_CB_SUCCESS:
-		transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
+		if (!(getPreviewState() == SPRD_PREVIEW_IN_PROGRESS && m_staticReqInfo.isCropSet == true)) {/*zoom maybe fail, but hal preview status not be changed*/
+			transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
 					SPRD_PREVIEW_IN_PROGRESS,
 					STATE_PREVIEW, true, true);
+		}
 		break;
 
 	case CAMERA_EVT_CB_FRAME:
@@ -4485,10 +4500,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 					      targetStreamParms->m_timestamp,STREAM_ID_RECORD);
 		}
 	}
-	if (!StreamSP->m_IsFirstFrm) {
-		StreamSP->m_IsFirstFrm = true;
-		m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
-	}
+
     if (GetOutputStreamMask() & STREAM_MASK_PREVIEW) {
 		buf = &(targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]);
 		priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
@@ -4504,7 +4516,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
 			if (res != NO_ERROR || buf == NULL) {
 				HAL_LOGD("dequeue_buffer fail");
-				return;
+				goto proc_req_over;
 	        }
 			for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
 	            if (*buf == targetStreamParms->svcBufHandle[Index]) {
@@ -4518,7 +4530,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
 					HAL_LOGE("Error cancelbuf!");
 				}
-				return;
+				goto proc_req_over;
 			} else {
 				if (targetStreamParms->svcBufStatus[Index] == ON_HAL_INIT) {
 					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
@@ -4531,14 +4543,14 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 					if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
 						HAL_LOGE("Error cancelbuf!");
 					}
-					return;
+					goto proc_req_over;
 				}
 			}
 			Index = StreamSP->popBufQ();
 			HAL_LOGD("@@@ receivePreviewFrame newindex=%d",Index);
 			if (Index == -1) {
 				HAL_LOGD("@@@ Error have not graphic buf!");
-				return;
+				goto proc_req_over;
 			}
 			res = camera_release_frame(Index);
 			if (res) {
@@ -4556,11 +4568,14 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			    if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, &(targetStreamParms->svcBufHandle[targetStreamParms->bufIndex]))) {
 					HAL_LOGE("Error cancelbuf!");
 				}
-				return;
+				goto proc_req_over;
 			} else {
 				targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] = ON_SERVICE;
 			}
-
+			if (!StreamSP->m_IsFirstFrm) {
+				StreamSP->m_IsFirstFrm = true;
+				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
+			}
 			if(CAMERA_ANDROID_ZSL_MODE == GetCameraPictureMode()){
 				if (FILT_FRM_NUM(m_PrvFrmCnt, ZSLPRVFRMINTERVAL)) {
 					if(GetOutputStreamMask() & STREAM_MASK_ZSL && (0 == GetReprocessingFlag())){
@@ -4578,6 +4593,10 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				}
 			}
 		} else {
+			if (!StreamSP->m_IsFirstFrm) {
+				StreamSP->m_IsFirstFrm = true;
+				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
+			}
 			if (targetStreamParms->svcBufStatus[targetStreamParms->bufIndex] == ON_HAL_INIT) {/*cancel buf*/
 				/* must not change buf status*/
 				StreamSP->pushBufQ(targetStreamParms->bufIndex);
@@ -4593,6 +4612,10 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			}
 		}
     } else {
+		if (!StreamSP->m_IsFirstFrm) {
+			StreamSP->m_IsFirstFrm = true;
+			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
+		}
 		StreamSP->pushBufQ(targetStreamParms->bufIndex);
 		Index = StreamSP->popBufQ();
 		HAL_LOGD("stream not output,popIndex=%d",Index);
@@ -4601,6 +4624,11 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
              HAL_LOGD("ERR receivepreviewframe2 release frame!");
 			 StreamSP->pushBufQ(Index);
 		}
+	}
+proc_req_over:
+	if (!StreamSP->m_IsFirstFrm) {
+		StreamSP->m_IsFirstFrm = true;
+		m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 	}
 	}
 }
@@ -5307,6 +5335,13 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
     };
     ADD_OR_SIZE(ANDROID_CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
             availableVstabModes, sizeof(availableVstabModes));
+
+	static const uint8_t availableBrightNess[] = {
+			0, 1, 2, 3, 4, 5, 6
+	};
+	ADD_OR_SIZE(ANDROID_SPRD_AVAILABLE_BRIGHTNESS,
+            availableBrightNess, sizeof(availableBrightNess));
+
 	#ifdef CONFIG_CAMERA_SMALL_PREVSIZE
 	static const uint8_t videoSnapshotSupport = ANDROID_SPRD_VIDEO_SNAPSHOT_SUPPORT_OFF;
 	#else

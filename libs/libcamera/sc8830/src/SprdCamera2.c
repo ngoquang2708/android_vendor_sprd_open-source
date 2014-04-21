@@ -207,6 +207,10 @@ int androidParametTagToDrvParaTag(uint32_t androidParaTag, camera_parm_type *con
 		*convertDrvTag = CAMERA_PARM_AF_MODE;
 		break;
 
+	case ANDROID_SPRD_BRIGHTNESS:
+		*convertDrvTag = CAMERA_PARM_BRIGHTNESS;
+		break;
+
 	case ANDROID_CONTROL_AE_MODE:
 	case ANDROID_FLASH_MODE:
 		*convertDrvTag = CAMERA_PARM_FLASH;

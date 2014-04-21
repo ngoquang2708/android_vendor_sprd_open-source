@@ -304,6 +304,7 @@ private:
 		cam_size           thumbnailJpgSize;
 		uint8_t            gpsProcMethod[32];
 		uint8_t            isReprocessing;
+		uint8_t            brightness;
 		int8_t             sceneMode;
 		int8_t             afMode;
 		int8_t             flashMode;
