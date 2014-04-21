@@ -436,18 +436,16 @@ static void poweron_modem(void)
 static void reset_modem(int type)
 {
 	int modem_reset_fd;
-	//return;
 	MODEM_LOGD("reset modem  up %d, power on status %d ...\n", type, modem_power_status);
 	if(!modem_power_status)
 		return;
 	modem_reset_fd = open(MODEM_RESET_PATH, O_WRONLY);
-        if(modem_reset_fd < 0)
+	if(modem_reset_fd < 0)
 		return;
-        if(type == MODEM_SOFT_RESET){
-		write(modem_reset_fd,"1",2);
-	} else if(type == MODEM_HARD_RESET) {
+	if(type == MODEM_HARD_RESET)
 		write(modem_reset_fd,"2",2);
-	}
+	else if (type == MODEM_SOFT_RESET)
+		write(modem_reset_fd,"1",2);
 	close(modem_reset_fd);
 }
 
@@ -504,6 +502,7 @@ static int try_to_connect_modem(int uart_fd)
 	}
 
 	for(;;){
+		int try_count=0;
 		if(-1 == clock_gettime(CLOCK_MONOTONIC, &tm_end)){
 			MODEM_LOGE("get tm_begin error \n");
 			return -1;
@@ -522,7 +521,16 @@ static int try_to_connect_modem(int uart_fd)
 				return -1;
 			}
 		}
-
+		hand_shake = 0x7E7E7E7E;
+		ret = write(uart_fd,&hand_shake,3);
+		if(ret < 0){
+			MODEM_LOGD("UART Send HandShake(%d) %s %d\n",try_count,strerror(errno),uart_fd);
+			fsync(uart_fd);
+			close(uart_fd);
+			uart_fd = open_uart_device(1,115200);
+			continue;
+		}
+		try_count ++;
 		write(uart_fd,&hand_shake,3);
 		data = version_string;
 		ret = read(uart_fd,version_string,1);
@@ -561,7 +569,7 @@ static int try_to_connect_modem(int uart_fd)
 			}
 		}
 		if(status == 1)
-			return 0;
+			return uart_fd;
 	}
 }
 
@@ -898,20 +906,18 @@ int modem_boot(void)
 
 reboot_modem:
 #ifndef __TEST_SPI_ONLY__
-	reset_modem(MODEM_HARD_RESET);
+	reset_modem(MODEM_SOFT_RESET);
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
 	    return -1;
 
 	ret = try_to_connect_modem(uart_fd);
-	if(ret == 0) {
-		ret = send_connect_message(uart_fd,0);
-    }
-    else {
+	if(ret < 0) {
         close(uart_fd);
 	    goto reboot_modem;
     }
-
+	uart_fd = ret;
+	ret = send_connect_message(uart_fd,0);
 
     ret = download_fdl(uart_fd);
     if(ret == DL_FAILURE){
@@ -922,6 +928,7 @@ reboot_modem:
 		close(uart_fd);
 		goto reboot_modem;
 	}
+	fsync(uart_fd);
     close(uart_fd);
     uart_fd = open_uart_device(0,115200);
     if(uart_fd< 0)
@@ -947,10 +954,8 @@ reboot_modem:
         }
     }
     MODEM_LOGD("open dloader device successfully ... \n");
+	fsync(uart_fd);
     close(uart_fd);
-    /*if(0 != pthread_create(&t1, NULL, (void*)modemd_listen_uart_thread, NULL)){
-				MODEM_LOGE(" modem_listenaccept_thread create error!\n");
-    }*/
     ret = download_images(modem_interface_fd);
     MODEM_LOGD("MODEM boot finished ......\n");
     close(modem_interface_fd);
