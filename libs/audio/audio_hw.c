@@ -2075,7 +2075,7 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
 {
     void *buf;
     //void *buffer1 = NULL;
-    int ret;
+    int ret = 0;
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
@@ -2235,10 +2235,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     //ALOGD("into out_write 2: start:out->devices %x,out->is_voip is %d, voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
     if((!out->is_voip) && adev->voip_state) {
         ALOGE("out_write: drop data and sleep,out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->is_voip,adev->voip_state,adev->voip_start);
-        usleep(100000);
-
         pthread_mutex_unlock(&out->lock);
         pthread_mutex_unlock(&adev->lock);
+	usleep(100000);
         return bytes;
     }
 
@@ -2361,7 +2360,11 @@ exit:
             ALOGW("warning:%d, (%s)", ret, pcm_get_error(out->pcm));
         else if (out->pcm_vplayback)
             ALOGW("vwarning:%d, (%s)", ret, pcm_get_error(out->pcm_vplayback));
+	pthread_mutex_unlock(&out->lock);
+	pthread_mutex_lock(&adev->lock);
+ 	pthread_mutex_lock(&out->lock);
         do_output_standby(out);
+	pthread_mutex_unlock(&adev->lock);
         usleep(10000);
     }
     pthread_mutex_unlock(&out->lock);
@@ -3203,10 +3206,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
 
     if((!in->is_voip) && adev->voip_state){
-        usleep(100000);
         memset(buffer,0,bytes);
         pthread_mutex_unlock(&in->lock);
-        pthread_mutex_unlock(&adev->lock);
+	pthread_mutex_unlock(&adev->lock);
+	usleep(100000);
        return bytes;
     }
 
@@ -3277,7 +3280,11 @@ exit:
         if(in->pcm) {
             ALOGW("in_read,warning: ret=%d, (%s)", ret, pcm_get_error(in->pcm));
         }
+	pthread_mutex_unlock(&in->lock);
+	pthread_mutex_lock(&adev->lock);
+   	pthread_mutex_lock(&in->lock);
         do_input_standby(in);
+	pthread_mutex_unlock(&adev->lock);
         memset(buffer, 0, bytes);
     }
     pthread_mutex_unlock(&in->lock);
