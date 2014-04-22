@@ -34,6 +34,8 @@ enum {
 	ISP_MSG_PARAM_ERR,
 	ISP_MSG_INVALID_HANDLE,
 	ISP_MSG_NO_OTHER_MSG,
+	ISP_MSG_OVERFLOW,
+	ISP_MSG_UNDERFLOW,
 	ISP_MSG_NO_MEM,
 };
 
@@ -52,6 +54,7 @@ struct isp_msg_cxt
 	pthread_mutex_t            mutex;
 	sem_t                      msg_sem;
 	uint32_t                   msg_count;
+	uint32_t		    msg_number;
 	uint32_t                   msg_magic;
 	struct isp_msg             *msg_head;
 	struct isp_msg             *msg_write;

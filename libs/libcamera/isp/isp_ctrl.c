@@ -5797,7 +5797,12 @@ static int _isp_ctrl_msg_post(struct isp_msg *message)
 {
 	int rtn=ISP_SUCCESS;
 	struct isp_system* isp_system_ptr = ispGetSystem();
+	uint32_t           handler_id = 0;
 
+	if (message) {
+		ISP_LOG("isp test,0x%x,0x%x",message->msg_type,
+				message->sub_msg_type);
+	}
 	rtn=isp_msg_post( isp_system_ptr->ctrl_queue, message);
 
 	return rtn;
@@ -6049,6 +6054,7 @@ static void *_isp_ctrl_routine(void *client_data)
 		isp_context_ptr=ispGetContext(handler_id);
 
 //		ISP_LOG("ctrl handler_id: %d", handler_id);
+		ISP_LOG("isp test,0x%x",evt);
 
 		switch (evt) {
 

@@ -371,10 +371,9 @@ static void camera_pre_init(void)
 void camera_config_exif_info(camera_sensor_exif_info * exif_info)
 {
 	EXIF_SPEC_PIC_TAKING_COND_T* img_sensor_exif_ptr = Sensor_GetSensorExifInfo();
-	if (IS_POINTER_INVALID(img_sensor_exif_ptr)) {
+	if (IS_POINTER_INVALID((uint32_t)img_sensor_exif_ptr)) {
 		CMR_LOGE("get sensor exif failed!");
 		return;
-
 	}
 	img_sensor_exif_ptr->valid.Flash = exif_info->flash;
 }
