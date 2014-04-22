@@ -114,6 +114,39 @@ static void add_timestamp(struct slog_info *info)
 	return;
 }
 
+static void filterPriToStr (int pri, char *PriTag)
+{
+	switch (pri) {
+	case ANDROID_LOG_VERBOSE:
+		sprintf(PriTag, "*:V");
+		break;
+	case ANDROID_LOG_DEBUG:
+		sprintf(PriTag, "*:D");
+		break;
+	case ANDROID_LOG_INFO:
+		sprintf(PriTag, "*:I");
+		break;
+	case ANDROID_LOG_WARN:
+		sprintf(PriTag, "*:W");
+		break;
+	case ANDROID_LOG_ERROR:
+		sprintf(PriTag, "*:E");
+		break;
+	case ANDROID_LOG_FATAL:
+		sprintf(PriTag, "*:F");
+		break;
+	case ANDROID_LOG_SILENT:
+		sprintf(PriTag, "*:S");
+		break;
+	case ANDROID_LOG_DEFAULT:
+	case ANDROID_LOG_UNKNOWN:
+	default:
+		sprintf(PriTag, "*:D");
+	}
+
+	return;
+}
+
 void *stream_log_handler(void *arg)
 {
 	struct slog_info *info;
@@ -131,6 +164,7 @@ void *stream_log_handler(void *arg)
 	char defaultBuffer[512];
 	char *outBuffer = NULL;
 	size_t totalLen;
+	char tagName[8];
 
 	stream_log_handler_started = 1;
 
@@ -151,6 +185,7 @@ void *stream_log_handler(void *arg)
 			open_device(info, devname);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
+			filterPriToStr(info->level, tagName);
 		} else if( !strncmp(info->name, "system", 6) ) {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
 			open_device(info, devname);
@@ -187,6 +222,7 @@ void *stream_log_handler(void *arg)
 	g_logformat = android_log_format_new();
 	format = android_log_formatFromString("threadtime");
 	android_log_setPrintFormat(g_logformat, format);
+	android_log_addFilterString(g_logformat, tagName);
 
 	while(slog_enable == SLOG_ENABLE) {
 		FD_ZERO(&readset);
@@ -287,24 +323,26 @@ void *stream_log_handler(void *arg)
 					continue;
 				}
 
-				/* write log to file */
-				outBuffer = android_log_formatLogLine(g_logformat, defaultBuffer, sizeof(defaultBuffer), &entry_write, &totalLen);
-				if (!outBuffer) {
-						info = info->next;
-						continue;
-				}
-				ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
-				if ( ret != 1 ) {
-					fclose(info->fp_out);
-					sleep(1);
-					info->fp_out = gen_outfd(info);
-				} else {
-					info->outbytecount += totalLen;
-					log_size_handler(info);
-				}
+				if (android_log_shouldPrintLine(g_logformat, entry_write.tag, entry_write.priority)) {
+					/* write log to file */
+					outBuffer = android_log_formatLogLine(g_logformat, defaultBuffer, sizeof(defaultBuffer), &entry_write, &totalLen);
+					if (!outBuffer) {
+							info = info->next;
+							continue;
+					}
+					ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
+					if ( ret != 1 ) {
+						fclose(info->fp_out);
+						sleep(1);
+						info->fp_out = gen_outfd(info);
+					} else {
+						info->outbytecount += totalLen;
+						log_size_handler(info);
+					}
 
-				if (outBuffer != defaultBuffer)
-					free(outBuffer);
+					if (outBuffer != defaultBuffer)
+						free(outBuffer);
+				}
 			}
 
 			info = info->next;
