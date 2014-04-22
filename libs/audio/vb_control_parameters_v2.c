@@ -1377,6 +1377,7 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
 {
     char prop_t[PROPERTY_VALUE_MAX] = {0};
     char prop_w[PROPERTY_VALUE_MAX] = {0};
+    bool csfb_enable = false;
     bool t_enable = false;
     bool w_enalbe = false;
     int i=0;
@@ -1392,6 +1393,18 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
     {
         MY_TRACE("%s:%s", __func__, MODEM_W_ENABLE_PROPERTY);
         w_enalbe = true;
+        s_vbc_pipe_count++;
+    }
+    if(property_get(MODEM_TDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+    {
+        MY_TRACE("%s:%s", __func__, MODEM_TDDCSFB_ENABLE_PROPERTY);
+        csfb_enable = true;
+        s_vbc_pipe_count++;
+    }
+    if(property_get(MODEM_FDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+    {
+        MY_TRACE("%s:%s", __func__, MODEM_FDDCSFB_ENABLE_PROPERTY);
+        csfb_enable = true;
         s_vbc_pipe_count++;
     }
 
@@ -1414,7 +1427,8 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
         for(i=0;i<adev->cp->num;i++)
         {
             if((t_enable && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_TG) ||
-                    (w_enalbe && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_W))
+                    (w_enalbe && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_W) ||
+                    (csfb_enable && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_CSFB))
             {
                 memcpy(vbc_ctrl_index->vbpipe, (adev->cp->vbc_ctrl_pipe_info+i)->s_vbc_ctrl_pipe_name, VBC_PIPE_NAME_MAX_LEN);
                 vbc_ctrl_index->vbchannel_id = (adev->cp->vbc_ctrl_pipe_info+i)->channel_id;

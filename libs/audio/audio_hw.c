@@ -1115,6 +1115,7 @@ ret);
             adev->prev_out_devices, adev->out_devices);
     ALOGI("Changing in_devices: from (0x%08x) to (0x%08x)",
             adev->prev_in_devices, adev->in_devices);
+
     adev->prev_out_devices = adev->out_devices;
     adev->prev_in_devices = adev->in_devices;
 
@@ -4506,10 +4507,13 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             {
                 state->vbc_ctrl_pipe_info->cp_type = CP_TG;
             }
+            else if(strcmp(attr[1], "csfb") == 0)
+            {
+                state->vbc_ctrl_pipe_info->cp_type = CP_CSFB;
+            }
             memcpy((void*)state->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
             state->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
             state->vbc_ctrl_pipe_info++;
-
         } else {
             ALOGE("error profile!");
         }

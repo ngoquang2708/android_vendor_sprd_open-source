@@ -34,7 +34,8 @@
 
 #define MODEM_T_ENABLE_PROPERTY     "persist.modem.t.enable"
 #define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
-
+#define MODEM_TDDCSFB_ENABLE_PROPERTY     "persist.modem.tl.enable"
+#define MODEM_FDDCSFB_ENABLE_PROPERTY     "persist.modem.lf.enable"
 
 #define AUDIO_NV_FM_GAINL_INDEX         18
 #define AUDIO_NV_FM_DGAIN_INDEX         19
@@ -80,6 +81,7 @@ enum VBC_CMD_E
 typedef enum {
     CP_W,
     CP_TG,
+    CP_CSFB,
     CP_MAX
 }cp_type_t;
 
