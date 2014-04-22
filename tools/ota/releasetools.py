@@ -166,7 +166,7 @@ class PartitionUpdater(object):
     if fstab is None:
       raise common.ExternalError("no fstab")
     self.partition = fstab.get(mount_point, None)
-    if mount_point == "/spl" or mount_point == "/fixnv" or mount_point == "/wfixnv" or mount_point == "/tdfixnv" or mount_point == "/wcnfixnv":
+    if mount_point == "/spl" or mount_point == "/fixnv" or mount_point == "/wfixnv" or mount_point == "/tdfixnv" or mount_point == "/ltefixnv" or mount_point == "/wcnfixnv":
       self.need_extract = OPTIONS.cache_path
     if self.partition is None and mount_point2 is not None:
       self.partition = fstab.get(mount_point2, None)
@@ -260,7 +260,7 @@ class PartitionUpdater(object):
     else:
       self.script.WriteRawImage(mount_point, self.target.file_name)
 
-    if(self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin") or (self.file_name == "wcnnvitem.bin"):
+    if (self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin") or (self.file_name == "ltenvitem.bin") or (self.file_name == "wcnnvitem.bin"):
       nvmerge_exe = os.path.join(OPTIONS.cache_path, "nvmerge")
       nvmerge_cfg = os.path.join(OPTIONS.cache_path, "nvmerge.cfg")
       new_nv = os.path.join(OPTIONS.cache_path, self.target.file_name)
@@ -485,6 +485,15 @@ def FullOTA_InstallBegin(info):
     #nvitem.bin(td)
     td_partion_nvitem = PartitionFullUpdater("/tdfixnv", "tdnvitem.bin", radio_dir, extract=True, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2")
     td_partion_nvitem.AddToOutputZip(output_zip)
+    #dsp.bin(lte)
+    lte_partion_dsp = PartitionFullUpdater("/ltedsp", "ltedsp.bin", radio_dir)
+    lte_partion_dsp.AddToOutputZip(output_zip)
+    #modem.bin(lte)
+    lte_partion_modem = PartitionFullUpdater("/ltemodem", "ltemodem.bin", radio_dir)
+    lte_partion_modem.AddToOutputZip(output_zip)
+    #nvitem.bin(lte)
+    lte_partion_nvitem = PartitionFullUpdater("/ltefixnv", "ltenvitem.bin", radio_dir, extract=True, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2")
+    lte_partion_nvitem.AddToOutputZip(output_zip)
     #modem.bin(wcn)
     wcn_partion_modem = PartitionFullUpdater("/wcnmodem", "wcnmodem.bin", radio_dir)
     wcn_partion_modem.AddToOutputZip(output_zip)
@@ -524,6 +533,13 @@ def FullOTA_InstallBegin(info):
     td_partion_modem.Update()
     #nvitem.bin(td)
     td_partion_nvitem.Update()
+
+    #dsp(lte)
+    lte_partion_dsp.Update()
+    #modem(lte)
+    lte_partion_modem.Update()
+    #nvitem.bin(lte)
+    lte_partion_nvitem.Update()
 
     #modem(wcn)
     wcn_partion_modem.Update()
@@ -604,6 +620,15 @@ def IncrementalOTA_InstallBegin(info):
     #nvitem.bin(td)
     td_partion_nvitem = PartitionIncrementalUpdater("/tdfixnv", "tdnvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2")
     td_partion_nvitem.AddToOutputZip(output_zip)
+    #dsp.bin(lte)
+    lte_partion_dsp = PartitionIncrementalUpdater("/ltedsp", "ltedsp.bin", target_radio_dir, source_radio_dir)
+    lte_partion_dsp.AddToOutputZip(output_zip)
+    #modem.bin(lte)
+    lte_partion_modem = PartitionIncrementalUpdater("/ltemodem", "ltemodem.bin", target_radio_dir, source_radio_dir)
+    lte_partion_modem.AddToOutputZip(output_zip)
+    #nvitem.bin(lte)
+    lte_partion_nvitem = PartitionIncrementalUpdater("/ltefixnv", "ltenvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2")
+    lte_partion_nvitem.AddToOutputZip(output_zip)
     #modem.bin(wcn)
     wcn_partion_modem = PartitionIncrementalUpdater("/wcnmodem", "wcnmodem.bin", target_radio_dir, source_radio_dir)
     wcn_partion_modem.AddToOutputZip(output_zip)
@@ -645,6 +670,13 @@ def IncrementalOTA_InstallBegin(info):
     #nvitem.bin(td)
     td_partion_nvitem.Check()
 
+    #dsp.bin(lte)
+    lte_partion_dsp.Check()
+    #modem.bin(lte)
+    lte_partion_modem.Check()
+    #nvitem.bin(lte)
+    lte_partion_nvitem.Check()
+
     #modem.bin(wcn)
     wcn_partion_modem.Check()
     #nvitem.bin(wcn)
@@ -682,6 +714,13 @@ def IncrementalOTA_InstallBegin(info):
     td_partion_modem.Update()
     #nvitem.bin(td)
     td_partion_nvitem.Update()
+
+    #dsp(lte)
+    lte_partion_dsp.Update()
+    #modem(lte)
+    lte_partion_modem.Update()
+    #nvitem.bin(lte)
+    lte_partion_nvitem.Update()
 
     #modem(wcn)
     wcn_partion_modem.Update()
