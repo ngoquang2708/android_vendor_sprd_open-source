@@ -72,6 +72,7 @@ int main()
 
 	char* data_list_level9[] = {
 		"com.android.launcher",
+		"com.android.sprdlauncher2",
 		"com.android.cts",
 		"eu.chainfire.cfbench",
 		"com.unstableapps.cpubenchmark",
