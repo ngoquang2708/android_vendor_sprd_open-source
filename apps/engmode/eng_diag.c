@@ -93,6 +93,9 @@ static int eng_diag_fileoper_hdlr(char *buf, int len, char *rsp);
 static int eng_diag_ap_req(char *buf, int len);
 static int eng_diag_read_imei(REF_NVWriteDirect_T* direct, int num);
 static int eng_diag_write_imei(REF_NVWriteDirect_T* direct, int num);
+static void ImeiConvStr2NV(unsigned char* szImei, unsigned char* nvImei);
+static void ImeiConvNV2Str(unsigned char* nvImei, unsigned char* szImei);
+static char MAKE1BYTE2BYTES(unsigned char high4bit, unsigned char low4bit);
 int is_audio_at_cmd_need_to_handle(char *buf,int len);
 int is_rm_cali_nv_need_to_handle(char *buf,int len);
 int eng_diag_factorymode(char *buf,int len, char *rsp);
@@ -973,7 +976,7 @@ static int eng_diag_btwifiimei(char *buf,int len, char *rsp, int rsplen)
             }
 
             if(g_ap_cali_flag && ((cmd_mask & DIAG_CMD_IMEI1BIT) || (cmd_mask & DIAG_CMD_IMEI2BIT) || (cmd_mask & DIAG_CMD_IMEI3BIT)
-                    || (cmd_mask & DIAG_CMD_IMEI4BIT))){
+                        || (cmd_mask & DIAG_CMD_IMEI4BIT))){
                 int imei[IMEI_NUM] = {DIAG_CMD_IMEI1BIT, DIAG_CMD_IMEI2BIT, DIAG_CMD_IMEI3BIT, DIAG_CMD_IMEI4BIT};
                 for(i = 0; i < IMEI_NUM; i ++){
                     if(imei[i]&cmd_mask){
@@ -1965,7 +1968,7 @@ int is_rm_cali_nv_need_to_handle(char *buf,int len)
         ENG_LOG("%s: cmd_mask: %d, subtype: %d\n", __FUNCTION__, cmd_mask, msg_head->subtype);
 
         if((cmd_mask & DIAG_CMD_BTBIT) || (cmd_mask & DIAG_CMD_WIFIBIT) || (g_ap_cali_flag && ((cmd_mask & DIAG_CMD_IMEI1BIT)
-                || (cmd_mask & DIAG_CMD_IMEI2BIT) || (cmd_mask & DIAG_CMD_IMEI3BIT) || (cmd_mask & DIAG_CMD_IMEI4BIT)))){
+                        || (cmd_mask & DIAG_CMD_IMEI2BIT) || (cmd_mask & DIAG_CMD_IMEI3BIT) || (cmd_mask & DIAG_CMD_IMEI4BIT)))){
             ENG_LOG("%s: Get BT/WIFI Mac addr req or IMEI req!\n", __FUNCTION__);
             if((cmd_mask & (~(DIAG_CMD_BTBIT|DIAG_CMD_WIFIBIT|DIAG_CMD_IMEI1BIT|DIAG_CMD_IMEI2BIT
                                 |DIAG_CMD_IMEI3BIT|DIAG_CMD_IMEI4BIT)))){
@@ -2193,26 +2196,27 @@ static int eng_diag_write_imei(REF_NVWriteDirect_T* direct, int num)
     int ret = 0;
     int fd = -1;
     char imei_path[ENG_DEV_PATH_LEN] = {0};
-    char imei[MAX_IMEI_LENGTH] = {0};
+    char imeinv[MAX_IMEI_LENGTH] = {0};
+    char imeistr[MAX_IMEI_STR_LENGTH]={0};
 
     ENG_LOG("%s: imei num: %d\n", __FUNCTION__, num);
 
     switch(num){
         case 1:
             strcpy(imei_path, ENG_IMEI1_CONFIG_FILE);
-            memcpy(imei, direct->imei1, MAX_IMEI_LENGTH);
+            memcpy(imeinv, direct->imei1, MAX_IMEI_LENGTH);
             break;
         case 2:
             strcpy(imei_path, ENG_IMEI2_CONFIG_FILE);
-            memcpy(imei, direct->imei2, MAX_IMEI_LENGTH);
+            memcpy(imeinv, direct->imei2, MAX_IMEI_LENGTH);
             break;
         case 3:
             strcpy(imei_path, ENG_IMEI3_CONFIG_FILE);
-            memcpy(imei, direct->imei3, MAX_IMEI_LENGTH);
+            memcpy(imeinv, direct->imei3, MAX_IMEI_LENGTH);
             break;
         case 4:
             strcpy(imei_path, ENG_IMEI4_CONFIG_FILE);
-            memcpy(imei, direct->imei4, MAX_IMEI_LENGTH);
+            memcpy(imeinv, direct->imei4, MAX_IMEI_LENGTH);
             break;
         default:
             return 0;
@@ -2220,7 +2224,8 @@ static int eng_diag_write_imei(REF_NVWriteDirect_T* direct, int num)
 
     fd = open(imei_path, O_WRONLY);
     if(fd >= 0){
-        ret = write(fd, imei, MAX_IMEI_LENGTH);
+        ImeiConvNV2Str(imeinv,imeistr);
+        ret = write(fd, imeistr, MAX_IMEI_STR_LENGTH);
         if(ret > 0){
             ret = 1;
             fsync(fd);
@@ -2238,26 +2243,27 @@ static int eng_diag_read_imei(REF_NVWriteDirect_T* direct, int num)
     int ret = 0;
     int fd = -1;
     char imei_path[ENG_DEV_PATH_LEN] = {0};
-    char* imei = 0;
+    char imeistr[MAX_IMEI_STR_LENGTH] = {0};
+    char* imeinv = 0;
 
     ENG_LOG("%s: imei num: %d\n", __FUNCTION__, num);
 
     switch(num){
         case 1:
             strcpy(imei_path, ENG_IMEI1_CONFIG_FILE);
-            imei = direct->imei1;
+            imeinv = direct->imei1;
             break;
         case 2:
             strcpy(imei_path, ENG_IMEI2_CONFIG_FILE);
-            imei = direct->imei2;
+            imeinv = direct->imei2;
             break;
         case 3:
             strcpy(imei_path, ENG_IMEI3_CONFIG_FILE);
-            imei = direct->imei3;
+            imeinv = direct->imei3;
             break;
         case 4:
             strcpy(imei_path, ENG_IMEI4_CONFIG_FILE);
-            imei = direct->imei4;
+            imeinv = direct->imei4;
             break;
         default:
             return 0;
@@ -2265,8 +2271,9 @@ static int eng_diag_read_imei(REF_NVWriteDirect_T* direct, int num)
 
     fd = open(imei_path, O_RDONLY);
     if(fd >= 0){
-        ret = read(fd, imei, MAX_IMEI_LENGTH);
+        ret = read(fd, imeistr, MAX_IMEI_STR_LENGTH);
         if(ret > 0){
+            ImeiConvStr2NV(imeistr,imeinv);
             ret = 1;
         }else{
             ret = 0;
@@ -2275,4 +2282,38 @@ static int eng_diag_read_imei(REF_NVWriteDirect_T* direct, int num)
     }
 
     return ret;
+}
+
+static void ImeiConvStr2NV(unsigned char* szImei, unsigned char* nvImei)
+{
+    unsigned char temp1=(unsigned char )(szImei[0]-'0');
+    unsigned char temp2=0;
+    nvImei[0]=(unsigned char)MAKE1BYTE2BYTES(temp1,(unsigned char)0x0A);
+    int i;
+    for(i=1;i<MAX_IMEI_LENGTH;i++)
+    {
+        temp1=(unsigned char)(szImei[2*i-0]-'0');
+        temp2=(unsigned char)(szImei[2*i-1]-'0');
+        nvImei[i]=(unsigned char)MAKE1BYTE2BYTES(temp1,temp2);
+    }
+}
+
+static void ImeiConvNV2Str(unsigned char* nvImei, unsigned char* szImei)
+{
+    int i;
+
+    for(i=0; i<MAX_IMEI_LENGTH-1; i++)
+    {
+        szImei[2*i+0]=((nvImei[i]&0xF0)>>4)+'0';
+        szImei[2*i+1]=(nvImei[i+1]&0x0F)+'0';
+    }
+
+    szImei[14]=((nvImei[7]&0xF0)>>4)+'0';
+}
+
+static char MAKE1BYTE2BYTES(unsigned char high4bit, unsigned char low4bit)
+{
+    char temp;
+    temp=(high4bit<<4)|low4bit;
+    return temp;
 }

@@ -33,6 +33,7 @@ typedef enum
 }MCU_MODE_E;
 
 #define MAX_IMEI_LENGTH		8
+#define MAX_IMEI_STR_LENGTH 15
 #define MAX_BTADDR_LENGTH	6
 #define MAX_WIFIADDR_LENGTH	6
 #define GPS_NVINFO_LENGTH	44
