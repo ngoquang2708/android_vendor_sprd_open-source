@@ -18,10 +18,11 @@ typedef struct  _NV_HEADER {
 #define NV_VERSION      101
 
 #define PRODUCT_PARTITION_PATH    "ro.product.partitionpath"
+#define PERSIST_MODEM_CHAR        "persist.modem."
 #define RO_MODEM_CHAR             "ro.modem."
 #define RO_MODEM_FIXNVSIZE        ".fixnv_size"
 #define RO_MODEM_RUNNVSIZE        ".runnv_size"
-#define RO_MODEM_NV_PATH          ".nvp"
+#define NV_PATH          ".nvp"
 #define NV_TAIL                   ".nv"
 /*note:
 #define PROPERTY_KEY_MAX   32   //strlen(PRODUCT_PARTITION_PATH) will be letter than MAX
@@ -84,7 +85,8 @@ int initArgs(void)
 {
 	char   fixnv[95],runnv[95];
 	char   fixnv_property[50],runnv_property[50];
-	char   system_prop[20];
+	char   ro_prop[20];
+	char   persist_prop[32];
 	char   partition_path[100];
 	char   nvp[50];
 	char   path_char[95];
@@ -98,17 +100,21 @@ int initArgs(void)
 		NVITEM_PRINT("invalid argv1\n");
 		return 0;
 	}
-
 	//get system prop eg:ro.modem.t;ro.modem.w ....
 	if(strlen(RO_MODEM_CHAR)+strlen(argv1) < 20){
-		strcpy(system_prop,RO_MODEM_CHAR);
-		strcat(system_prop,argv1);
+		strcpy(ro_prop,RO_MODEM_CHAR);
+		strcat(ro_prop,argv1);
 	}
-	NVITEM_PRINT("system_prop %s\n",system_prop);
-
+	NVITEM_PRINT("ro_prop %s\n",ro_prop);
+	//get persist prop eg:persist.modem.t.enable
+	if(strlen(PERSIST_MODEM_CHAR)+strlen(argv1)< 32){
+		strcpy(persist_prop,PERSIST_MODEM_CHAR);
+		strcat(persist_prop,argv1);
+	}
+	NVITEM_PRINT("persist_prop %s\n",persist_prop);
 	//get channel
-	if(strlen(system_prop)+strlen(NV_TAIL) < 50){
-		strcpy(channel_char,system_prop);
+	if(strlen(ro_prop)+strlen(NV_TAIL) < 50){
+		strcpy(channel_char,ro_prop);
 		strcat(channel_char,NV_TAIL);
 	}
 	NVITEM_PRINT("channel_char %s\n",channel_char);
@@ -120,8 +126,8 @@ int initArgs(void)
 	NVITEM_PRINT("channel_path %s \n",channel_path);
 
 	//get nvsize
-	if(strlen(system_prop) + strlen(RO_MODEM_FIXNVSIZE) < 50){
-		strcpy(fixnv_property,system_prop);
+	if(strlen(ro_prop) + strlen(RO_MODEM_FIXNVSIZE) < 50){
+		strcpy(fixnv_property,ro_prop);
 		strcat(fixnv_property,RO_MODEM_FIXNVSIZE);
 		property_get(fixnv_property,fixnv,"");
 		if(0 == strlen(fixnv)){
@@ -129,10 +135,12 @@ int initArgs(void)
 			return 0;
 		}
 		NVITEM_PRINT("NVITEM: fixnv_property is %s fixnv %s\n",fixnv_property,fixnv);
+		fixnv_size = strtol(fixnv,0,16);
+		NVITEM_PRINT("NVITEM fixnv_size %x\n",fixnv_size);
 	}
 
-	if(strlen(system_prop) + strlen(RO_MODEM_RUNNVSIZE) < 50){
-		strcpy(runnv_property,system_prop);
+	if(strlen(ro_prop) + strlen(RO_MODEM_RUNNVSIZE) < 50){
+		strcpy(runnv_property,ro_prop);
 		strcat(runnv_property,RO_MODEM_RUNNVSIZE);
 		property_get(runnv_property,runnv,"");
 		if(0 == strlen(runnv)){
@@ -140,25 +148,23 @@ int initArgs(void)
 			return 0;
 		}
 		NVITEM_PRINT("NVITEM: runnv_property is %s runnv %s\n",runnv_property,runnv);
+		runnv_size = strtol(runnv,0,16);
+		NVITEM_PRINT("NVITEM runnv_size %x\n",runnv_size);
 	}
-	fixnv_size = strtol(fixnv,0,16);
-	runnv_size = strtol(runnv,0,16);
-
-	NVITEM_PRINT("NVITEM fixnv_size %x,runnv_size %x\n",fixnv_size,runnv_size);
 
 	//get nv path: eg: partition_path+td+fixnv
 	property_get(PRODUCT_PARTITION_PATH, partition_path, "");
 	NVITEM_PRINT("partition_path %s\n",partition_path);
 
-	if(strlen(system_prop) + strlen(RO_MODEM_NV_PATH) < 50){
-		strcpy(nvp,system_prop);
-		strcat(nvp,RO_MODEM_NV_PATH);
+	if(strlen(persist_prop) + strlen(NV_PATH) < 50){
+		strcpy(nvp,persist_prop);
+		strcat(nvp,NV_PATH);
 		property_get(nvp,path_char,"");
 		if(0 == strlen(path_char)){
 			NVITEM_PRINT("invalid ro.modem.w.nvp  \n");
 			return 0;
 		}
-		NVITEM_PRINT("NVITEM path_char %s\n",path_char);
+		NVITEM_PRINT("NVITEM path_char %s nvp %s\n",path_char,nvp);
 	}
 
 	if(100 > strlen(partition_path)+strlen(path_char)+strlen("fixnv1")){
