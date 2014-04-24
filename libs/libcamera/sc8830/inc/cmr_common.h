@@ -43,7 +43,7 @@ extern "C"
 #define CMR_LOGW(format,...) ALOGW(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 #define CMR_LOGI(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 #define CMR_LOGD(format,...) ALOGD(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
-#define CMR_LOGV(format,...) ALOGV(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
+#define CMR_LOGV(format,...) ALOGI(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
 
 #define CMR_EVT_V4L2_BASE                  (1 << 16)
 #define CMR_EVT_CVT_BASE                   (1 << 17)
