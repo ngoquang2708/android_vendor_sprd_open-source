@@ -10,14 +10,14 @@ if [ "$1" = "-u" ]; then
 	ifname=`getprop sys.data.noarp`
 	ip $ifname
 
-#For Auto Test
-	ethup=`getprop sys.gsps.eth.up`
+##For Auto Test
+	ethup=`getprop ril.gsps.eth.up`
 	if [ "$ethup" = "1" ]; then
 		ifname=`getprop sys.gsps.eth.ifname`
 		localip=`getprop sys.gsps.eth.localip`
 		pcv4addr=`getprop sys.gsps.eth.peerip`
 
-		setprop sys.gsps.eth.up 0
+		setprop ril.gsps.eth.up 0
 		ip route add default via $localip dev $ifname
 		iptables -D FORWARD -j natctrl_FORWARD
 		iptables -D natctrl_FORWARD -j DROP
@@ -26,6 +26,7 @@ if [ "$1" = "-u" ]; then
 		iptables -A FORWARD -i rndis0 -o $ifname -j ACCEPT
 		iptables -t nat -A POSTROUTING -s $pcv4addr -j SNAT --to-source $localip
 	fi
+
 	setprop sys.ifconfig.up done
 	setprop sys.data.noarp done
 elif [ "$1" = "-d" ]; then
@@ -35,9 +36,9 @@ elif [ "$1" = "-d" ]; then
 	ip $ifname
 	setprop sys.ifconfig.down done
 
-	ethdown=`getprop sys.gsps.eth.down`
+	ethdown=`getprop ril.gsps.eth.down`
 	if [ "$ethdown" = "1" ]; then
-		setprop sys.gsps.eth.down 0
+		setprop ril.gsps.eth.down 0
 		setprop sys.gsps.eth.ifname ""
 		setprop sys.gsps.eth.localip ""
 		setprop sys.gsps.eth.peerip ""
