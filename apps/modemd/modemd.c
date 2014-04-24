@@ -335,19 +335,149 @@ int stop_service(int modem, int is_vlx)
     return 0;
 }
 
+int send_atcmd(int stty_fd, char *at_str, char *path)
+{
+    int ret = -1;
+    int count = 0, length = 0;
+    unsigned char buffer[50] = {0};
+    unsigned char *p_buf = buffer;
+
+    MODEMD_LOGD("write %s to %s", at_str, path);
+
+    memset(buffer, 0, sizeof(buffer));
+    p_buf = buffer;
+    length = strlen(at_str);
+    ret = write(stty_fd, at_str, length);
+    if (ret != length) {
+        MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
+        close(stty_fd);
+        exit(-1);
+    }
+    while(1) {
+        ret = read(stty_fd, p_buf, sizeof(buffer) - (p_buf - buffer));
+        MODEMD_LOGD("ret = %d, buffer = %s", ret, buffer);
+        if(ret > 0) {
+            p_buf += ret;
+            if (findInBuf(buffer, sizeof(buffer), "OK")) {
+                MODEMD_LOGD("read OK from %s", path);
+                ret = 1;
+                break;
+            } else if (findInBuf(buffer, sizeof(buffer), "ERROR")) {
+                MODEMD_LOGD("wrong modem state, exit!");
+                close(stty_fd);
+                exit(-1);
+            }
+        } else {
+            ret = write(stty_fd, at_str, length);
+            if (ret != length) {
+                MODEMD_LOGE("rewrite error length = %d  ret = %d\n", length, ret);
+                close(stty_fd);
+                exit(-1);
+            }
+            count++;
+        }
+        if(count > 5) {
+            MODEMD_LOGE("write 5 times, modem no response, exit!");
+            close(stty_fd);
+            exit(-1);
+        }
+    }
+    return ret;
+}
+
+/******************/
+/* Read imei info */
+/******************/
+static int read_imei(int index, char *imeiPtr)
+{
+    int ret = 0;
+    int fd = -1;
+    char imei_path[100] = {0};
+
+    MODEMD_LOGD("%s: imei index: %d\n", __FUNCTION__, index);
+
+    switch(index){
+        case 1:
+            strcpy(imei_path, IMEI1_CONFIG_FILE);
+            break;
+        case 2:
+            strcpy(imei_path, IMEI2_CONFIG_FILE);
+            break;
+        case 3:
+            strcpy(imei_path, IMEI3_CONFIG_FILE);
+            break;
+        case 4:
+            strcpy(imei_path, IMEI4_CONFIG_FILE);
+            break;
+        default:
+            return 0;
+    }
+
+    fd = open(imei_path, O_RDONLY);
+    if (fd >= 0) {
+        ret = read(fd, imeiPtr, MAX_IMEI_STR_LENGTH);
+        if (ret > 0) {
+            MODEMD_LOGD("%s: read imei succ : %s\n", __FUNCTION__, imeiPtr);
+            ret = 1;
+        } else {
+            MODEMD_LOGD("%s: read imei fail\n", __FUNCTION__);
+            ret = 0;
+        }
+        close(fd);
+    } else {
+        MODEMD_LOGD("%s: open imei file failed\n", __FUNCTION__);
+    }
+
+    return ret;
+}
+
+/*******************/
+/* Send imei to CP */
+/*******************/
+void send_imei(int stty_fd, char *path)
+{
+    int i = 0, ret = 0;
+    char imeistr[MAX_IMEI_STR_LENGTH+1] = {0};
+    char at_str[64] = {0};
+
+    /* Send IMEI */
+    for (i = 1; i < IMEI_NUM + 1; i ++) {
+        ret = read_imei(i, imeistr);
+        if (ret <= 0) continue;
+        memset(at_str, 0, sizeof(at_str));
+        sprintf(at_str, "AT+SPIMEI=\"%s\"\r", imeistr);
+        if (send_atcmd(stty_fd, at_str, path) != 1) {
+            close(stty_fd);
+            exit(-1);
+        }
+    }
+}
+
+int open_modem_dev(char *path)
+{
+    int  fd = -1;
+
+retry:
+    fd = open(path, O_RDWR);
+    if (fd < 0) {
+        MODEMD_LOGE("Failed to open %s error: %s!\n", path, strerror(errno));
+        if (errno == EAGAIN)
+            goto retry;
+        else
+            return -1;
+    }
+    return fd;
+}
+
 int start_service(int modem, int is_vlx, int restart)
 {
     char mux_2sim_swap[]="echo 1 > /proc/mux_mode";
     char mux_3sim_swap[]="echo 2 > /proc/mux_mode";
     char phoneCount[PROPERTY_VALUE_MAX]="";
-    char path[256];
-    int stty_fd;
+    char path[256] = {0};
+    int  stty_fd;
     char modem_dev[PROPERTY_VALUE_MAX];
-    int ret, length;
-    char at_str[20];
-    unsigned char buffer[50] = {0};
-    unsigned char *p_buf = buffer;
-    int count =0, resend = 0;
+    char at_str[64] = {0};
 
     MODEMD_LOGD("enter start_service!");
 
@@ -376,22 +506,25 @@ int start_service(int modem, int is_vlx, int restart)
             property_get(W_SIM_NUM_PROP, phoneCount, "");
         } else if(modem == LTE_MODEM) {
             property_get(LTE_TTY_DEV_PROP, modem_dev, "");
+            sprintf(path, "%s0", modem_dev);
+            MODEMD_LOGD("open stty dev: %s", path);
+            stty_fd = open_modem_dev(path);
+            if (stty_fd < 0) return -1;
+            /* Send IMEI */
+            send_imei(stty_fd, path);
+            close(stty_fd);
+
             start_phser(modem);
             start_rild(modem);
             start_engservice(modem);
             return 0;
         }
+        /* For TD & W modem              */
+        /* Open modem dev to send at cmd */
         sprintf(path, "%s0", modem_dev);
         MODEMD_LOGD("open stty dev: %s", path);
-retry:
-        stty_fd = open(path, O_RDWR);
-        if (stty_fd < 0) {
-            MODEMD_LOGE("Failed to open %s error: %s!\n", path, strerror(errno));
-            if (errno == EAGAIN)
-                goto retry;
-            else
-                return -1;
-        }
+        stty_fd = open_modem_dev(path);
+        if (stty_fd < 0) return -1;
 
         if(!strcmp(phoneCount, "2"))
             strcpy(at_str, "AT+SMMSWAP=0\r");
@@ -399,50 +532,18 @@ retry:
             strcpy(at_str, "AT+SMMSWAP=1\r");
         else
             strcpy(at_str, "AT\r");
-rewrite:
-        MODEMD_LOGD("write %s to %s", at_str, path);
-        length = strlen(at_str);
-        ret = write(stty_fd, at_str, length);
-        if (ret != length) {
-            MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
+        if (send_atcmd(stty_fd, at_str, path) != 1) {
             close(stty_fd);
             exit(-1);
         }
-        while(1) {
-            ret = read(stty_fd, p_buf, sizeof(buffer) - (p_buf - buffer));
-            MODEMD_LOGD("ret = %d, buffer = %s", ret, buffer);
-            if(ret > 0) {
-                p_buf += ret;
-                if (findInBuf(buffer, sizeof(buffer), "OK")) {
-                    MODEMD_LOGD("read OK from %s", path);
-                    resend++;
-                    break;
-                } else if (findInBuf(buffer, sizeof(buffer), "ERROR")) {
-                    MODEMD_LOGD("wrong modem state, exit!");
-                    close(stty_fd);
-                    exit(-1);
-                }
-            } else {
-                ret = write(stty_fd, at_str, length);
-                if (ret != length) {
-                    MODEMD_LOGE("rewrite error length = %d  ret = %d\n", length, ret);
-                    close(stty_fd);
-                    exit(-1);
-                }
-                count++;
-            }
-            if(count > 5) {
-                MODEMD_LOGE("write 5 times, modem no response, exit!");
-                close(stty_fd);
-                exit(-1);
-            }
+
+        strcpy(at_str, "AT+CMUX=0\r");
+        if (send_atcmd(stty_fd, at_str, path) != 1) {
+            close(stty_fd);
+            exit(-1);
         }
-        if(resend == 1) {
-            memset(buffer, 0, sizeof(buffer));
-            p_buf = buffer;
-            strcpy(at_str, "AT+CMUX=0\r");
-            goto rewrite;
-        }
+        /* Send IMEI */
+        send_imei(stty_fd, path);
         close(stty_fd);
     }
 

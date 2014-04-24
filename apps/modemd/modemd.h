@@ -99,6 +99,13 @@
 #define ENGPC_REQUSETY_CLOSE         "1"
 #define SSDA_TEST_MODE_SVLTE          0
 
+#define IMEI1_CONFIG_FILE    "/productinfo/imei1.txt"
+#define IMEI2_CONFIG_FILE    "/productinfo/imei2.txt"
+#define IMEI3_CONFIG_FILE    "/productinfo/imei3.txt"
+#define IMEI4_CONFIG_FILE    "/productinfo/imei4.txt"
+#define MAX_IMEI_STR_LENGTH  15
+#define IMEI_NUM             4
+
 typedef enum {
     LTE_MODEM_DEFAULT = -1,
     LTE_MODEM_OFF,
