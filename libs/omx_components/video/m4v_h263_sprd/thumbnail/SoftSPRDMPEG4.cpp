@@ -549,6 +549,17 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
 
             mInitialized = true;
 
+            if (mMode == MODE_MPEG4) {
+                int32_t buf_width, buf_height;
+
+                (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
+                if (!((buf_width <= 1920&& buf_height <= 1088) || (buf_width <= 1088 && buf_height <= 1920))) {
+                    ALOGE("[%d,%d] is out of range [1920, 1088], failed to support this format.",buf_width, buf_height);
+                    notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                    mSignalledError = true;
+                    return;
+                }
+            }
             // Deleted for bug#168365
             //if (mMode == MODE_MPEG4&& portSettingsChanged()) {
             //   return;
@@ -612,7 +623,16 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
 
         if (decRet == MMDEC_OK || decRet == MMDEC_MEMORY_ALLOCED )
         {
-            mNeedIVOP = false;
+            int32_t buf_width, buf_height;
+
+            (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
+            if (!((buf_width <= 1920&& buf_height <= 1088) || (buf_width <= 1088 && buf_height <= 1920))) {
+                ALOGE("[%d,%d] is out of range [1920, 1088], failed to support this format.",buf_width, buf_height);
+                notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
+            }
+
             if (portSettingsChanged()) {
                 return;
             } else if( decRet == MMDEC_MEMORY_ALLOCED)
@@ -620,6 +640,7 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
                 mFramesConfigured =  false;
                 continue;
             }
+            mNeedIVOP = false;
         } else if (decRet == MMDEC_FRAME_SEEK_IVOP)
         {
             inInfo->mOwnedByUs = false;
