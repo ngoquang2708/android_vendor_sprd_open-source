@@ -10,6 +10,7 @@ if [ "$1" = "-t" ]; then
 		ssda_mode=`getprop persist.radio.ssda.mode`
 		if [ "$ssda_mode" = "svlte" ]; then
 			setprop ril.l.sim.power 0
+			setprop ril.service.l.enable -1
 		fi
 	elif [ "$phone_count" = "2" ]; then
 		setprop ril.t.sim.power 0
