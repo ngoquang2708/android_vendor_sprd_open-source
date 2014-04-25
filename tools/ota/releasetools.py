@@ -437,7 +437,7 @@ def FullOTA_InstallBegin(info):
   output_zip = info.output_zip
   input_zip = info.input_zip
 
-  script.ShowProgress(0.2, 0)
+  #script.ShowProgress(0.2, 0)
   PartitionUpdater.SetupEnv(script, script_ext, OPTIONS)
   radio_dir = os.path.join(OPTIONS.input_tmp, "RADIO")
   script_ext.AddToZipExt(input_zip, output_zip)
@@ -502,7 +502,7 @@ def FullOTA_InstallBegin(info):
     wcn_partion_nvitem.AddToOutputZip(output_zip)
 
   PartitionUpdater.FreeSpaceCheck()
-  script.ShowProgress(0.6, 0)
+  #script.ShowProgress(0.6, 0)
 
   if OPTIONS.uboot_update:
     #spl.bin
@@ -637,7 +637,7 @@ def IncrementalOTA_InstallBegin(info):
     wcn_partion_nvitem.AddToOutputZip(output_zip)
 
   script.Print("Verifying current system...")
-  script.ShowProgress(0.2, 0)
+  #script.ShowProgress(0.2, 0)
   PartitionUpdater.FreeSpaceCheck()
 
   if OPTIONS.uboot_update:
@@ -683,7 +683,7 @@ def IncrementalOTA_InstallBegin(info):
     wcn_partion_nvitem.Check()
 
   script.Print("Patching current system...")
-  script.ShowProgress(0.6, 0)
+  #script.ShowProgress(0.6, 0)
 
   if OPTIONS.uboot_update:
     #spl.bin
