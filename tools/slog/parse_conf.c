@@ -70,19 +70,9 @@ static void handle_coredump( const char *state )
 	int ret;
 
 	if(!strncmp(state, "on", 2)) {
-		ret = mkdir(COREFILE, S_IRWXU | S_IRWXG | S_IXOTH);
-		if (-1 == ret && (errno != EEXIST)) {
-			err_log("mkdir %s failed.", COREFILE);
-			exit(0);
-		}
-		ret = chown(COREFILE, AID_SYSTEM, AID_SYSTEM);
-		if (ret < 0) {
-			err_log("chown failed.");
-			exit(0);
-		}
+		system("echo /data/corefile/core-%e-%p > /proc/sys/kernel/core_pattern");
 	} else if (!strncmp(state, "off", 3)) {
-		sprintf(buffer, "rm -r %s", COREFILE);
-		system(buffer);
+		system("echo /dev/null > /proc/sys/kernel/core_pattern");
 	}
 }
 
