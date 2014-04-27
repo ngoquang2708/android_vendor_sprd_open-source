@@ -66,7 +66,7 @@ protected:
 private:
     enum {
         kNumInputBuffers  = 4,
-        kNumOutputBuffers = 2,
+        kNumOutputBuffers = 4,
     };
 
     size_t mInputBufferCount;

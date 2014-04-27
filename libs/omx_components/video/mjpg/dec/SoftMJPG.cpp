@@ -326,6 +326,12 @@ void SoftMJPG::onQueueFilled(OMX_U32 portIndex) {
         /* read parameters with jpeg_read_header() */
         mjpeg_read_header(&cinfo, TRUE);
 
+        cinfo.dct_method = JDCT_IFAST;
+        cinfo.do_fancy_upsampling = FALSE;
+        cinfo.do_block_smoothing = FALSE;
+        cinfo.dither_mode = JDITHER_NONE;
+        cinfo.two_pass_quantize = FALSE;
+
         ALOGI("jpeg %dx%d", cinfo.image_width, cinfo.image_height);
 
         if (((cinfo.image_width+15)&(~15)) != mWidth || ((cinfo.image_height+15)&(~15)) != mHeight) {
@@ -466,7 +472,7 @@ void SoftMJPG::decode_jpeg_frame(unsigned char * yuv_buffer)
         unsigned char* pbuf = buffer[0];
         if (cinfo.out_color_space == JCS_YCbCr) {
             if (cinfo.output_scanline & 1) {
-                for (int i=0; i<mWidth/2; i++) {
+                for (int i=mWidth/2; i>0; i--) {
                     *py ++ = * pbuf ++;
                     *puv ++ = * pbuf ++;
                     *puv ++ = * pbuf ++;
@@ -476,7 +482,11 @@ void SoftMJPG::decode_jpeg_frame(unsigned char * yuv_buffer)
                     pbuf ++;
                 }
             } else {
-                for (int i=0; i<mWidth; i++) {
+                for (int i=mWidth/2; i>0; i--) {
+                    *py ++ = * pbuf ++;
+                    pbuf ++;
+                    pbuf ++;
+
                     *py ++ = * pbuf ++;
                     pbuf ++;
                     pbuf ++;
