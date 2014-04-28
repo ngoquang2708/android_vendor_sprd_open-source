@@ -11,11 +11,20 @@
 #include <cutils/sockets.h>
 #include <time.h>
 #include "packet.h"
+#include <modem_mem_map.h>
 
+#define CMDLINE_LTE_MODE_PREFIX "ltemode="
 enum {
 	MODEM_SOFT_RESET = 0x1,
 	MODEM_HARD_RESET,
 	MODEM_MAX
+};
+
+enum {
+	MODE_SVLTE = 0x1,
+	MODE_TCSFB = 0x1 << 1,
+	MODE_FCSFB = 0x1 << 2,
+	MODE_ALL = 0xFF
 };
 
 struct image_info {
@@ -79,42 +88,42 @@ struct image_info download_image_info[] = {
 		"/dev/block/platform/sprd-sdhci.3/by-name/fdl",
 		0x4000,
 		0x20000000,
-		0xff,
+		MODE_ALL,
 	},
 	{ //PARM DSP
 		"/dev/block/platform/sprd-sdhci.3/by-name/tddsp",
 		"/dev/block/platform/sprd-sdhci.3/by-name/tddsp",
-		0x3E0000,
-		0x80020000,
-		0x01,
+		PARM_DSP_SIZE,
+		PARM_DSP_OFFSET,
+		MODE_SVLTE,
 	},
 	{ //PARM
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdmodem",
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdmodem",
-		0x7c0000,
-		0x80400000,
-		0x01,
+		PARM_CODE_SIZE,
+		PARM_CODE_OFFSET,
+		MODE_SVLTE,
 	},
 	{ //	PARM fixvn
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdfixnv1",
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdfixnv1",
-		0x20000,
-		0x80A10000,
-		0x01,
+		PARM_FIX_NV_SIZE,
+		PARM_FIX_NV_OFFSET,
+		MODE_SVLTE,
        },
        { //	PARM runtimevn
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdruntimenv1",
 		"/dev/block/platform/sprd-sdhci.3/by-name/tdruntimenv1",
-		0x40000,
-		0x80A30000,
-		0x01,
+		PARM_RUN_NV_SIZE,
+		PARM_RUN_NV_OFFSET,
+		MODE_SVLTE,
        },
        { //	cmdline
 		"/proc/cmdline",
 		"/proc/cmdline",
-		0x10000,
-		0x80A70000,
-		0x01,
+		PARM_CMD_LINE_SIZE,
+		PARM_CMD_LINE_OFFSET,
+		MODE_SVLTE,
        },
        /*{ //ca5 DSP
 		"/dev/block/platform/sprd-sdhci.3/by-name/lt_dsp",
@@ -125,44 +134,79 @@ struct image_info download_image_info[] = {
 	{ //	ca5
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_modem",
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_modem",
-		0x800000,
-		0x81F00000,
-		0xff,
+		CA5_CODE_SIZE,
+		CA5_CODE_OFFSET,
+		MODE_SVLTE,
 	},
 	{ //ca5 fixvn
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_fixnv1",
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_fixnv1",
-		0x20000,
-		0x82690000,
-		0xff,
+		CA5_FIX_NV_SIZE,
+		CA5_FIX_NV_OFFSET,
+		MODE_SVLTE,
 	},
 	{ //ca5 runtimevn
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_runtimenv1",
 		"/dev/block/platform/sprd-sdhci.3/by-name/l_runtimenv1",
-		0x40000,
-		0x826B0000,
-		0xff,
+		CA5_RUN_NV_SIZE,
+		CA5_RUN_NV_OFFSET,
+		MODE_SVLTE,
+	},
+	{ //lte tg DSP
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_tdsp",
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_tdsp",
+		CA5_TG_DSP_SIZE,
+		CA5_TG_DSP_OFFSET,
+		MODE_TCSFB,
+	},
+	{ //	ca5
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_modem",
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_modem",
+		CA5_CODE_SIZE,
+		CA5_CODE_OFFSET,
+		MODE_TCSFB,
+	},
+	{ //ca5 fixvn
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_fixnv1",
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_fixnv1",
+		CA5_FIX_NV_SIZE,
+		CA5_FIX_NV_OFFSET,
+		MODE_TCSFB,
+	},
+	{ //ca5 runtimevn
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_runtimenv1",
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_runtimenv1",
+		CA5_RUN_NV_SIZE,
+		CA5_RUN_NV_OFFSET,
+		MODE_TCSFB,
 	},
 	{ //	cmdline
 		"/proc/cmdline",
 		"/proc/cmdline",
-		0x10000,
-		0x826F0000,
-		0xff,
-       },
-	{ //ca5 DSP
-		"/dev/block/platform/sprd-sdhci.3/by-name/l_ldsp",
-		"/dev/block/platform/sprd-sdhci.3/by-name/l_ldsp",
-		0x0200000,
-		0x82700000,
-        0xff,
+		CA5_CMD_LINE_SIZE,
+		CA5_CMD_LINE_OFFSET,
+		MODE_ALL,
     },
+   	{ //ca5 DSP
+   		"/dev/block/platform/sprd-sdhci.3/by-name/l_ldsp",
+   		"/dev/block/platform/sprd-sdhci.3/by-name/l_ldsp",
+   		CA5_LTE_DSP_SIZE,
+   		CA5_LTE_DSP_OFFSET,
+   		MODE_SVLTE,
+   	},
+	{ //ca5 DSP
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_ldsp",
+		"/dev/block/platform/sprd-sdhci.3/by-name/tl_ldsp",
+		CA5_LTE_DSP_SIZE,
+		CA5_LTE_DSP_OFFSET,
+		MODE_TCSFB,
+	},
 	{ //DFS ARM7
 		"/dev/block/platform/sprd-sdhci.3/by-name/dfs",
 		"/dev/block/platform/sprd-sdhci.3/by-name/dfs",
 		0xf00,
 		0x2000C000,
-		0xff,
+		MODE_ALL,
 	},
 	{
 		NULL,
@@ -180,8 +224,15 @@ int name_arr[] = {921600,115200,38400,  19200, 9600,  4800,  2400,  1200,  300,
 
 static int get_modem_capabilities(void)
 {
-   MODEM_LOGD("%s capabilities_flag = %d\n", __func__, capabilities_flag);
-   return capabilities_flag;
+    char prop[100]={0};
+    property_get("persist.radio.ssda.mode", prop, "");
+    if(!strncmp(prop, "csfb", 4)){
+    	capabilities_flag = MODE_TCSFB;
+    } else {
+    	capabilities_flag = MODE_SVLTE;
+    }
+    MODEM_LOGD("get_modem_capabilities: %s, capabilities_flag = %d\n", prop, capabilities_flag);
+    return capabilities_flag;
 }
 void  set_modem_capabilities( int flag)
 {
@@ -334,6 +385,7 @@ int get_modem_images_info(void)
 
 // 1 get image info from config file
 	if (!(fp = fopen("/modem_images.info", "r"))) {
+		modem_images_count = max_item;
 		return 0;
 	}
 	MODEM_LOGD("start parase modem images file\n");
@@ -653,6 +705,26 @@ static int try_to_connect_fdl(int uart_fd)
 	return rev;
 }
 
+static int append_lte_mode(char dst[])
+{
+	int ret = 0;
+
+	switch(capabilities_flag){
+	case MODE_SVLTE:
+		strcat(dst, CMDLINE_LTE_MODE_PREFIX"svlte");
+		break;
+	case MODE_TCSFB:
+		strcat(dst, CMDLINE_LTE_MODE_PREFIX"tcsfb");
+		break;
+	case MODE_FCSFB:
+		strcat(dst, CMDLINE_LTE_MODE_PREFIX"fcsfb");
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
 
 int download_image(int channel_fd,struct image_info *info)
 {
@@ -699,7 +771,12 @@ int download_image(int channel_fd,struct image_info *info)
 			if(read_len > 0){
 				packet_size -= read_len;
 				buffer += read_len;
-			  } else break;
+			  } else {
+				  if(!strcmp(info->image_path, "/proc/cmdline")) {//append lte mode
+					  append_lte_mode(&buffer[read_len]);
+				  }
+				  break;
+			  }
 		}while(packet_size > 0);
 		if(image_size < trans_size){
 			for(i=image_size;i<trans_size;i++)
