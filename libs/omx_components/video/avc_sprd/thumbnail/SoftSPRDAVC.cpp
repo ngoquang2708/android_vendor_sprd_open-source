@@ -562,6 +562,15 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
         MMDecRet ret;
         ret = (*mH264DecGetInfo)(mHandle, &decoderInfo);
         if(ret == MMDEC_OK) {
+            if (!((decoderInfo.picWidth<= 1920&& decoderInfo.picHeight<= 1088)
+                    || (decoderInfo.picWidth <= 1088 && decoderInfo.picHeight <= 1920))) {
+                ALOGE("[%d,%d] is out of range [1920, 1088], failed to support this format.",
+                      decoderInfo.picWidth, decoderInfo.picHeight);
+                notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                mSignalledError = true;
+                return;
+            }
+
             if (handlePortSettingChangeEvent(&decoderInfo)) {
                 return;
             }
