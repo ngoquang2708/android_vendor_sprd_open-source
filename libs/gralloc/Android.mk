@@ -60,6 +60,8 @@ LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc.$(TARGET_BOARD_PLATFORM)\"
 
 endif
 
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../frameworks/base/libs/hwui/
+
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 	LOCAL_CFLAGS += -DUSE_3_FRAMEBUFFER
 endif
