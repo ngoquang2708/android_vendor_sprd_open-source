@@ -8,6 +8,7 @@ PRODUCT_PACKAGES += \
 	NoteBook \
         SGPS \
 	EngineerMode \
+        engmoded \
 	ValidationTools \
 	DrmProvider \
 	CellBroadcastReceiver \
