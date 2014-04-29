@@ -197,7 +197,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         default:
                             break;
                     }
-                    property_get("persist.ssda.mode", ssda_mode, "not_find");
+                    property_get("persist.radio.ssda.mode", ssda_mode, "not_find");
                     if(0 != strcmp(ssda_mode, "not_find") && 0 != strcmp(ssda_mode, "svlte")){
                         cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
                     }
