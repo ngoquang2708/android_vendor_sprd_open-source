@@ -15,6 +15,9 @@
 
 #include "aud_enha.h"
 #include <cutils/sockets.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/time.h>
 
 
 //#ifdef __cplusplus
@@ -41,6 +44,7 @@ exp = read(s_vbpipe_fd, paras_ptr, sizeof(type)); \
 #define KCTL_MAIN_MIC_ADCL  "ADCL Mixer MainMICADCL Switch"
 #define KCTL_AUX_MIC_ADCL   "ADCL Mixer AuxMICADCL Switch"
 #define KCTL_HP_MIC_ADCL    "ADCL Mixer HPMICADCL Switch"
+#define CALL_END_TIMEOUT_SECONDS	3
 
 /* vbc control parameters struct here.*/
 typedef struct Paras_Mode_Gain
@@ -1259,6 +1263,9 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
 		mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
 		adev->call_prestop = 0;
 		adev->call_start = 0;
+                voip_forbid(adev,false);
+    }else{
+        voip_forbid_cancel(adev,CALL_END_TIMEOUT_SECONDS);
     }
     pthread_mutex_unlock(&adev->lock);
     ALOGW("voice:vbc_call_end_process out");
@@ -1498,7 +1505,63 @@ VOIP_EXIT:
     return 0;
 }
 
+//the timeout function to do that set adev->realCall to false for voip
+void timer_handler(union sigval arg){
+   ALOGV("%s in",__func__);
+   struct tiny_audio_device *adev = (struct tiny_audio_device *)arg.sival_ptr;
+   pthread_mutex_lock(&adev->lock);
+   voip_forbid(adev,false);
+   pthread_mutex_unlock(&adev->lock);
+   ALOGV("%s out",__func__);
+}
 
+//this function is the interface to set adev->realCall value  adev-> mutex must get
+void voip_forbid (struct tiny_audio_device * adev  ,bool value){
+    ALOGV("%s, in",__func__);
+	if(adev->voip_timer.created){
+	    ALOGV("%s ,have create timer,so we delete it",__func__);
+	    timer_delete(adev->voip_timer.timer_id);
+	    adev->voip_timer.created = false;
+	}
+	adev->realCall = value;
+	ALOGV("%s, out",__func__);
+}
+
+// set a timer for voip if the real call is end  adev-> mutex must get
+bool voip_is_forbid(struct tiny_audio_device * adev)
+{
+	return adev->realCall;
+
+}
+
+//adev-> mutex must get
+void voip_forbid_cancel(struct tiny_audio_device * adev,int delay){
+    ALOGV("%s ,in",__func__);
+    int status;
+    struct sigevent se;
+    struct itimerspec ts;
+
+    se.sigev_notify = SIGEV_THREAD;
+    se.sigev_value.sival_ptr = adev;
+    se.sigev_notify_function = timer_handler;
+    se.sigev_notify_attributes = NULL;
+
+    ts.it_value.tv_sec = delay;
+    ts.it_value.tv_nsec = 0;
+    ts.it_interval.tv_sec = 0;
+    ts.it_interval.tv_nsec = 0;
+
+    status = timer_create(CLOCK_MONOTONIC, &se,&((adev->voip_timer).timer_id));
+    if(status == 0){
+        adev->voip_timer.created = true;
+        timer_settime((adev->voip_timer).timer_id, 0, &ts, 0);
+        ALOGV("%s :timer for voip when call end is created",__func__);
+    }else{
+        adev->voip_timer.created = false;
+        ALOGE("create timer err !");
+    }
+    ALOGV("%s ,out",__func__);
+}
 
 void *vbc_ctrl_thread_routine(void *arg)
 {
@@ -1665,6 +1728,9 @@ RESTART:
 		if(ret < 0) {
 		    MY_TRACE("VBC_CMD_HAL_OPEN writeparas_head error %d",ret);
 		}
+		pthread_mutex_lock(&adev->lock);
+		voip_forbid(adev, true);
+		pthread_mutex_unlock(&adev->lock);
 		MY_TRACE("voice:VBC_CMD_HAL_OPEN OUT, vbpipe_name:%s.", para->vbpipe);
 	    }
 	    break;

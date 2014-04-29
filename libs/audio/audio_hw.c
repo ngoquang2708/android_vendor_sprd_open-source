@@ -386,6 +386,12 @@ typedef struct{
    char  s_at_cmd_bt_sample[MAX_CMD_LENGTH];
 }T_AT_CMD;
 */
+//this struct describe  timer for real call end;
+typedef struct
+{
+    timer_t timer_id;
+    bool created;
+} voip_timer_t;
 
 typedef struct {
     unsigned short  adc_pga_gain_l;
@@ -438,6 +444,7 @@ struct tiny_audio_device {
     bool bluetooth_nrec;
     int  bluetooth_type;
     bool low_power;
+    bool realCall; //for forbid voip
 
     struct tiny_dev_cfg *dev_cfgs;
     unsigned int num_dev_cfgs;
@@ -469,6 +476,7 @@ struct tiny_private_ctl private_ctl;
     int requested_channel_cnt;
     int  input_source;
     T_AT_CMD  *at_cmd_vectors;
+    voip_timer_t voip_timer; //for forbid voip
 };
 
 struct tiny_stream_out {
@@ -3440,6 +3448,20 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         adev->bluetooth_type = val;
     }
 
+    //this para for Phone to set realcall state,because mode state may be not accurate
+    ret = str_parms_get_str(parms, "real_call", value, sizeof(value));
+    if(ret >= 0){
+        pthread_mutex_lock(&adev->lock);
+        if(strcmp(value, "true") == 0){
+            ALOGV("%s set realCall true",__func__);
+            voip_forbid(adev,true);
+        }else{
+            ALOGV("%s set realCall false",__func__);
+            voip_forbid(adev,false);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
@@ -3453,7 +3475,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret > 0) {
         if(strcmp(value, "true") == 0) {
             ALOGI("%s, voip turn on by output", __FUNCTION__);
-            adev->voip_start = 1;
+            //if now in real call we do nothing
+            pthread_mutex_lock(&adev->lock);
+            if( !voip_is_forbid(adev)){
+                ALOGV("%s,voip is not forbid",__FUNCTION__);
+                adev->voip_start = 1;
+            }
+            pthread_mutex_unlock(&adev->lock);
         } else if (strcmp(value, "false") == 0) {
             ALOGI("%s, voip turn off by output", __FUNCTION__);
             adev->voip_start = 0;
@@ -5238,6 +5266,7 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.open_input_stream = adev_open_input_stream;
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
+    adev->realCall = false;
 
     pthread_mutex_lock(&adev->lock);
     ret = adev_modem_parse(adev);
