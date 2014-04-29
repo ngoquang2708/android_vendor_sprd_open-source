@@ -81,6 +81,7 @@ static String16 getServiceName(int modemId, int simId)
 
 #define SOCKET_NAME_RIL_DEBUG_SIM1	"rild-debug"	/* from ril.cpp */
 #define SOCKET_NAME_RIL_DEBUG_SIM2	"rild-debug1"	/* from ril.cpp */
+char rec_buf[1024]={};
 
 const char* sendAt(int modemId, int simId, const char* atCmd)
 {
@@ -106,7 +107,7 @@ const char* sendAt(int modemId, int simId, const char* atCmd)
     int ret =0;
     int num_socket_args = 2;
     char argv[3][100]={};
-    char rec_buf[1024]={};
+    
 
     ALOGI("sendAt: simid is %d, %s \n",simId,atCmd);
 
@@ -126,6 +127,7 @@ const char* sendAt(int modemId, int simId, const char* atCmd)
         goto error;
     }
 
+    memset(rec_buf,sizeof(rec_buf),0);
     //int send( SOCKET s,      const char FAR *buf,      int len,      int flags );
     ret = send(fd, (const void *)&num_socket_args, sizeof(int), 0);
     if(ret != sizeof(int)) {
@@ -161,7 +163,7 @@ const char* sendAt(int modemId, int simId, const char* atCmd)
         if (ret > 0 )   //get response
         {
             ALOGI("sendAt: response is %s\n",rec_buf);
-            break;
+            return  rec_buf;
         }
         ALOGI("sendAt: still no response %d",i);
         sleep(1);
