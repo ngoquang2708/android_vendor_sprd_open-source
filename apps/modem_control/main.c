@@ -394,6 +394,15 @@ static void process_modem_state_message(char *message,int size)
                         } else {
                                 broadcast_modem_state(MODEM_ASSERT_STR,strlen(MODEM_ASSERT_STR));
                         }
+                        //when in charger mode, found modem assert just carsh android
+                        if(poweron_by_charger() == 1) {
+                            int fd = open("/proc/sysrq-trigger", O_WRONLY);
+                            MODEM_LOGE("modem assert in charger mode\n");
+                             if(fd >= 0) {
+                                 write(fd, "c", 2);
+                                 close(fd);
+                            }
+                        }
                 }
                 if(MODEM_INTF_EVENT_CP_REQ_RESET == evt) {
 
@@ -423,10 +432,10 @@ int main(int argc, char *argv[])
         int modem_state_fd = open(MODEM_STATE_PATH, O_RDONLY);
 
         MODEM_LOGD(">>>>>> start modem manager program ......\n");
-        if(poweron_by_charger() == 1) {
+        /*if(poweron_by_charger() == 1) {
                 MODEM_LOGD(">>>>>> power on by charger,modem_reboot exits...\n");
                 return 0;
-        }
+        }*/
         if(modem_state_fd < 0) {
                 MODEM_LOGE("!!! Open %s failed, modem_reboot exit\n",MODEM_STATE_PATH);
                 return 0;
