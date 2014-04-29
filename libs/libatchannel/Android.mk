@@ -17,6 +17,8 @@ LOCAL_PATH:= $(call my-dir)
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS += -DFFOS_TEMP_AT
+
 LOCAL_SRC_FILES :=  IAtChannel.cpp \
 			AtChannel.cpp
 

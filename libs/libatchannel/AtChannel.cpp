@@ -77,21 +77,117 @@ static String16 getServiceName(int modemId, int simId)
     return String16(serviceName);
 }
 
+#ifdef FFOS_TEMP_AT
+
+#define SOCKET_NAME_RIL_DEBUG_SIM1	"rild-debug"	/* from ril.cpp */
+#define SOCKET_NAME_RIL_DEBUG_SIM2	"rild-debug1"	/* from ril.cpp */
+
+const char* sendAt(int modemId, int simId, const char* atCmd)
+{
+//    sp<IServiceManager> sm = defaultServiceManager();
+//    if (sm == NULL) {
+//        ALOGI("Couldn't get default ServiceManager\n");
+//        return "ERROR1";
+//    }
+//
+//    sp<IAtChannel> atChannel;
+//    String16 serviceName = getServiceName(modemId, simId);
+//    atChannel = interface_cast<IAtChannel>(sm->getService(serviceName));
+//    if (atChannel == NULL) {
+//        ALOGI("Couldn't get connection to %s\n", String8(serviceName).string());
+//        return "ERROR2";
+//    }
+//
+//    return atChannel->sendAt(atCmd);
+
+    int fd;
+    int i  = 0;
+    const char* result = "OK";
+    int ret =0;
+    int num_socket_args = 2;
+    char argv[3][100]={};
+    char rec_buf[1024]={};
+
+    ALOGI("sendAt: simid is %d, %s \n",simId,atCmd);
+
+    if (simId == 0 ){
+        fd = socket_local_client(SOCKET_NAME_RIL_DEBUG_SIM1,
+                             ANDROID_SOCKET_NAMESPACE_RESERVED,
+                             SOCK_STREAM);
+    }else{
+        fd = socket_local_client(SOCKET_NAME_RIL_DEBUG_SIM2,
+                             ANDROID_SOCKET_NAMESPACE_RESERVED,
+                             SOCK_STREAM);
+    }
+
+    ALOGI("sendAt: fd is %d\n",fd);
+    if (fd < 0) {
+        perror ("opening radio socket");
+        goto error;
+    }
+
+    //int send( SOCKET s,      const char FAR *buf,      int len,      int flags );
+    ret = send(fd, (const void *)&num_socket_args, sizeof(int), 0);
+    if(ret != sizeof(int)) {
+        perror ("Socket write error when sending num args");
+        close(fd);
+        goto error;
+    }
+    sprintf(argv[0],"11");
+    sprintf(argv[1],"%s",atCmd);
+
+    for (i = 0; i < num_socket_args; i++) {
+        // Send length of the arg, followed by the arg.
+        int len = strlen(argv[i]);
+        ret = send(fd, &len, sizeof(int), 0);
+        if (ret != sizeof(int)) {
+            perror("Socket write Error: when sending arg length");
+            close(fd);
+            goto error;
+        }
+        ret = send(fd, argv[i], sizeof(char) * len, 0);
+        if (ret != len * sizeof(char)) {
+            perror ("Socket write Error: When sending arg");
+            close(fd);
+            goto error;
+        }
+    }
+
+    //wait response
+    for (i=0;i<3;i++)
+    {
+        sleep(1);
+        ret = recv(fd,rec_buf,sizeof(rec_buf),0);
+        if (ret > 0 )   //get response
+        {
+            ALOGI("sendAt: response is %s\n",rec_buf);
+            break;
+        }
+        ALOGI("sendAt: still no response %d",i);
+        sleep(1);
+    }
+
+    close(fd);
+error:
+    return result;
+}
+#else
 const char* sendAt(int modemId, int simId, const char* atCmd)
 {
     sp<IServiceManager> sm = defaultServiceManager();
     if (sm == NULL) {
-        ALOGE("Couldn't get default ServiceManager\n");
-        return "ERROR";
+        ALOGI("Couldn't get default ServiceManager\n");
+        return "ERROR1";
     }
 
     sp<IAtChannel> atChannel;
     String16 serviceName = getServiceName(modemId, simId);
     atChannel = interface_cast<IAtChannel>(sm->getService(serviceName));
     if (atChannel == NULL) {
-        ALOGE("Couldn't get connection to %s\n", String8(serviceName).string());
-        return "ERROR";
+        ALOGI("Couldn't get connection to %s\n", String8(serviceName).string());
+        return "ERROR2";
     }
 
     return atChannel->sendAt(atCmd);
 }
+#endif

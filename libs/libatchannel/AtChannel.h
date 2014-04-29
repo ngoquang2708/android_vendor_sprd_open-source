@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include <cutils/sockets.h>
 const char* sendAt(int modemId, int simId, const char* atCmd);
 
 #ifdef __cplusplus
