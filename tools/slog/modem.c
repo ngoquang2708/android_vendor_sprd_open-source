@@ -79,6 +79,11 @@ static void handle_dump_shark_sipc_info()
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
 #define MODEM_L_DEVICE_PROPERTY "persist.modem.l.enable"
 
+#define MODEM_W_LOG_PROPERTY "ro.modem.w.log"
+#define MODEM_TD_LOG_PROPERTY "ro.modem.t.log"
+#define MODEM_WCN_LOG_PROPERTY "ro.modem.wcn.log"
+#define MODEM_L_LOG_PROPERTY "ro.modem.l.log"
+
 #define MODEM_W_DIAG_PROPERTY "ro.modem.w.diag"
 #define MODEM_TD_DIAG_PROPERTY "ro.modem.t.diag"
 #define MODEM_WCN_DIAG_PROPERTY "ro.modem.wcn.diag"
@@ -130,17 +135,28 @@ static void handle_open_modem_device(struct slog_info *info)
 	char modem_property[MAX_NAME_LEN];
 
 	if (!strncmp(info->name, "cp0", 3)) {
-		property_get(MODEM_W_DIAG_PROPERTY, modem_property, "");
-		open_device(info, modem_property);
+		property_get(MODEM_W_DIAG_PROPERTY, modem_property, "not_find");
+		if(open_device(info, modem_property) < 0)
+			info->state = SLOG_STATE_OFF;
 	} else if (!strncmp(info->name, "cp1", 3)) {
-		property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "");
-		open_device(info, modem_property);
+		property_get(MODEM_TD_LOG_PROPERTY, modem_property, "not_find");
+		if(open_device(info, modem_property) < 0) {
+			property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "not_find");
+			if(open_device(info, modem_property) < 0)
+				info->state = SLOG_STATE_OFF;
+		}
 	} else if (!strncmp(info->name, "cp2", 3)) {
-		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "");
-		open_device(info, modem_property);
+		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
+		if(open_device(info, modem_property) < 0)
+			info->state = SLOG_STATE_OFF;
 	} else if (!strncmp(info->name, "cp3", 3)) {
-		property_get(MODEM_L_DIAG_PROPERTY, modem_property, "");
-		open_device(info, modem_property);
+		property_get(MODEM_L_LOG_PROPERTY, modem_property, "not_find");
+		if(open_device(info, modem_property) < 0) {
+			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
+			if(open_device(info, modem_property) < 0)
+				info->state = SLOG_STATE_OFF;
+		}
+
 	}
 }
 
