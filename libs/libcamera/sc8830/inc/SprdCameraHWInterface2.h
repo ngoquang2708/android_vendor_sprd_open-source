@@ -305,10 +305,10 @@ private:
 		uint8_t            gpsProcMethod[32];
 		uint8_t            isReprocessing;
 		uint8_t            brightness;
+		uint8_t            capMode;
 		int8_t             sceneMode;
 		int8_t             afMode;
 		int8_t             flashMode;
-		int8_t             aeFlashMode;
 		int8_t             awbMode;
 		int8_t             isCropSet;
 		capture_intent     captureIntent;/*android action*/
@@ -322,13 +322,16 @@ private:
 	ae_state           aeStatus;
 	int                precaptureTrigID;
 	int                afTrigID;
+	int                burstCapCnt;
 	int32_t            reProcMask;
 	takepicture_mode   pictureMode;
+	bool               burstCapSync;
 	} cam_hal_ctl;
 
 	static const int kPreviewBufferCount = 8;
 	static const int kPreviewRotBufferCount = 4;
 	static const int kRawBufferCount = 1;
+	static const int64_t kBurstCapWaitTime = 4000000000LL;/*2s*/
 	class RequestQueueThread : public SprdBaseThread {
 		SprdCameraHWInterface2 *mHardware;
 		public:
@@ -448,6 +451,8 @@ private:
 	void                 SetDcDircToDvSnap(bool dcDircToSnap);
 	bool                 GetRecStopMsg();
 	void                 SetRecStopMsg(bool recStop);
+	bool                 GetBurstCapSync();
+	void                 SetBurstCapSync(bool sync);
 	uint8_t              GetReprocessingFlag();
 	bool                 GetZslReprocStreamStatus();
 	void                 SetZslReprocStreamStatus(bool ok);
@@ -461,6 +466,8 @@ private:
 	void                 SetCameraPictureMode(takepicture_mode mode);
 	int32_t              GetOutputStreamMask();
 	void                 SetOutputStreamMask(int32_t mask);
+	int                  GetContinuPicCount();
+	void                 ContinuPicCountReduce();
 	bool                 GetStartPreviewAftPic();
 	void                 SetStartPreviewAftPic(bool IsPicPreview);
 	bool                 GetIsOutputStream();/*for panoramic*/
@@ -565,6 +572,7 @@ private:
 	bool                              m_dcDircToDvSnap;/*for cts testVideoSnapshot*/
 	bool                              mIsOutPutStream;
 	bool                              mIsChangePicSize;/*for cts testVideoSnapshot*/
+	bool                              mIsFrameworkReadyOk;
 	camera_metadata_t                 *m_halRefreshReq;
 	vendor_tag_query_ops_t            *mVendorTagOps;
 	static gralloc_module_t const*    m_grallocHal;
@@ -593,6 +601,7 @@ private:
 	Mutex                             mStateLock;
 	mutable Mutex                     m_afTrigLock;
 	Condition                         mStateWait;
+	Condition                         mBurstCapWait;
 	volatile camera_state             mCameraState;
 
 };

@@ -146,6 +146,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	m_dcDircToDvSnap(false),
 	mIsOutPutStream(true),
 	mIsChangePicSize(false),
+	mIsFrameworkReadyOk(false),
 	m_halRefreshReq(NULL),
 	mVendorTagOps(NULL),
 	mPreviewFrmRefreshIndex(0),
@@ -438,8 +439,10 @@ int SprdCameraHWInterface2::getInProgressCount()
 	}
 
 	ProcNum += m_ReqQueue.size();
-	if (SPRD_WAITING_RAW == getCaptureState() || SPRD_WAITING_JPEG == getCaptureState()) {
-		ProcNum++ ;
+	if (!(GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE && GetContinuPicCount() > 0)) {
+		if (SPRD_WAITING_RAW == getCaptureState() || SPRD_WAITING_JPEG == getCaptureState()) {
+			ProcNum++ ;
+		}
 	}
 	HAL_LOGV("ProcNum=%d.",ProcNum);
 	if (ProcNum == 0) {
@@ -776,6 +779,12 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
 
 	static const uint8_t brightness = 3;
 	ADD_OR_SIZE(ANDROID_SPRD_BRIGHTNESS, &brightness, 1);
+
+	static const uint8_t capmode = 1;
+	ADD_OR_SIZE(ANDROID_SPRD_CAPTURE_MODE, &capmode, 1);
+
+	static const uint8_t burstCapCnt = 0;
+	ADD_OR_SIZE(ANDROID_SPRD_BURST_CAP_CNT, &burstCapCnt, 1);
 
 	if (sizeRequest) {
 		HAL_LOGV("Allocating %d entries, %d extra bytes for "
@@ -1800,7 +1809,7 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 						displaySubStream(StreamSP, (int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),timeStamp,(uint16_t)STREAM_ID_JPEG);
 					}
 					if (tmpCBpara->need_free) {
-						if(GetCameraPictureMode() == CAMERA_NORMAL_MODE) {
+						if(GetCameraPictureMode() == CAMERA_NORMAL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE) {
 							freeCaptureMem();
 							if (m_degenerated_normal_cap) {
 								m_degenerated_normal_cap = false;
@@ -1937,6 +1946,27 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	} else {
 		if (!m_IsNeedHalAllocPrvBuf) {
 			targetStreamParms->svcBufStatus[Index] = ON_SERVICE;
+			if (GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE) {
+				res = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
+				if (res != NO_ERROR || buf == NULL) {
+					HAL_LOGD("dequeue_buffer fail");
+				} else {
+					found = false;
+					for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
+			            if (*buf == targetStreamParms->svcBufHandle[Index]) {
+			                found = true;
+							HAL_LOGD("disp pic,Index=%d handle=0x%x",Index, (uint32_t)buf);
+			                break;
+			            }
+			        }
+					if (!found) {
+						HAL_LOGE("error cannot found buf=%p",buf);
+						goto cancel_buf;
+					} else {
+						targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+					}
+				}
+			}
 		}
 		goto allocate_buf_free;
 	}
@@ -1963,6 +1993,7 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 {
 	bool encode_location = true;
 	camera_position_type pt = {0, 0, 0, 0, NULL};
+	int res = 0;
 
 	HAL_LOGD("in: cb = %d, parm4 = 0x%x, state = %s",
 				cb, parm4, getCameraStateStr(getCaptureState()));
@@ -1996,7 +2027,24 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 
 	case CAMERA_RSP_CB_SUCCESS:
 		if (GetOutputStreamMask() & STREAM_MASK_JPEG) {
-			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
+			if (GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE
+					&& GetContinuPicCount() != m_staticReqInfo.capMode) {
+				Mutex::Autolock lock(m_halCBMutex);
+
+				while (!mIsFrameworkReadyOk) {
+					res = mBurstCapWait.waitRelative(m_halCBMutex, kBurstCapWaitTime);
+					if (res == TIMED_OUT) {
+						break;
+					}
+				}
+				mIsFrameworkReadyOk = false;
+				enqeueMetaDataBufFrmHalToFramework(m_halRefreshReq);
+			} else {
+				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
+			}
+			if (GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE) {
+				ContinuPicCountReduce();
+			}
 		}
 		transitionState(SPRD_INTERNAL_RAW_REQUESTED,
 					SPRD_WAITING_RAW,
@@ -2742,6 +2790,30 @@ void SprdCameraHWInterface2::SetStartPreviewAftPic(bool IsPicPreview)
 	m_IsPrvAftPic = IsPicPreview;
 }
 
+int SprdCameraHWInterface2::GetContinuPicCount()
+{
+	Mutex::Autolock lock(m_halCBMutex);
+	return m_camCtlInfo.burstCapCnt;
+}
+
+void SprdCameraHWInterface2::ContinuPicCountReduce()
+{
+	Mutex::Autolock lock(m_halCBMutex);
+	m_camCtlInfo.burstCapCnt--;
+}
+
+bool SprdCameraHWInterface2::GetBurstCapSync()
+{
+	Mutex::Autolock lock(m_halCBMutex);
+	return m_camCtlInfo.burstCapSync;
+}
+
+void SprdCameraHWInterface2::SetBurstCapSync(bool sync)
+{
+	Mutex::Autolock lock(m_halCBMutex);
+	m_camCtlInfo.burstCapSync = sync;
+}
+
 bool SprdCameraHWInterface2::GetIsOutputStream(void)
 {
 	Mutex::Autolock lock(m_halCBMutex);
@@ -3216,7 +3288,8 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 					getPreviewBuffer();
 				startPreviewInternal(0);
 			} else {
-				if ((GetCameraPictureMode() == CAMERA_ZSL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_MODE)
+				if ((GetCameraPictureMode() == CAMERA_ZSL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_MODE
+					|| GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE)
 					&& mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS) {
 					#if defined(CONFIG_CAMERA_SMALL_PREVSIZE)
 					if ((camera_set_change_size(StreamParameter->width, StreamParameter->height, targetStreamParms->width, targetStreamParms->height) && !mIsChangePicSize)
@@ -3238,7 +3311,8 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 						} else {//for cts testVideoSnapshot start
 							HAL_LOGV("ent cts testVideoSnapshot/testRecordingHint scene!");
 							#ifdef CONFIG_CAMERA_SMALL_PREVSIZE
-							if (GetCameraPictureMode() == CAMERA_NORMAL_MODE) {/*for cts testRecordingHint dv->dc*/
+							if (GetCameraPictureMode() == CAMERA_NORMAL_MODE
+								|| GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE) {/*for cts testRecordingHint dv->dc*/
 								freeCaptureMem();
 							} else {
 								if (camera_set_dimensions(targetStreamParms->width, targetStreamParms->height,
@@ -3269,7 +3343,7 @@ preview_req_exit:
 
 int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSetPara)
 {
-int ret = 0;
+	int ret = 0;
 	status_t res = 0;
 	camera_parm_type drvTag = (camera_parm_type)0;
 	cropZoom zoom1 = {0,0,0,0};
@@ -3317,7 +3391,7 @@ int ret = 0;
 				m_degenerated_normal_cap = true;
 			}
 			if(GetCameraPictureMode() == CAMERA_NORMAL_MODE || GetCameraPictureMode() == CAMERA_HDR_MODE
-				|| m_degenerated_normal_cap) {
+				|| GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE || m_degenerated_normal_cap) {
 				if(mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS) {
 					m_Stream[STREAM_ID_PREVIEW]->setHalStopMsg(true);
 					HAL_LOGD("stop preview bef picture");
@@ -3354,7 +3428,11 @@ int ret = 0;
 		#ifdef CONFIG_CAMERA_SMALL_PREVSIZE
 		}
 		#endif
-		SET_PARM(CAMERA_PARM_SHOT_NUM, 1);
+		{
+			Mutex::Autolock lock(m_halCBMutex);
+			m_camCtlInfo.burstCapCnt = srcreq->capMode;
+		}
+		SET_PARM(CAMERA_PARM_SHOT_NUM, srcreq->capMode);
 		if (srcreq->isCropSet) {
 			camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
 			if(CameraConvertCropRegion(zoom1.crop_w,zoom1.crop_h,&zoom)) {
@@ -3404,6 +3482,9 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		return;
 	}
 	SetIsOutputStream(true);
+	if (GetBurstCapSync()) {
+		goto freeReq;
+	}
 	tmpMask = GetOutputStreamMask();
 	tmpIntent = GetCameraCaptureIntent(srcreq);
 	IsCapIntChange = GetDcDircToDvSnap();
@@ -3439,14 +3520,15 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 			return;
 		}
 	} else if((tmpIntent == CAPTURE_INTENT_STILL_CAPTURE
-											|| tmpIntent == CAPTURE_INTENT_VIDEO_SNAPSHOT)
-											&& tmpMask & STREAM_MASK_JPEG) {
+						|| tmpIntent == CAPTURE_INTENT_VIDEO_SNAPSHOT)
+						&& tmpMask & STREAM_MASK_JPEG) {
 		res = CameraCaptureReq(srcreq,&IsSetPara);
 		if (0 != res && !IsSetPara) {
 			return;
 		}
 	}
 
+freeReq:
 	if (IsSetPara){
 		m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 	}
@@ -3473,6 +3555,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	int32_t tmpMask = 0;
 	takepicture_mode picMode = CAMERA_NORMAL_MODE;
 	int8_t   sceneMode = CAMERA_SCENE_MODE_AUTO;
+	int capMode = 1;
 	Mutex::Autolock lock(m_requestMutex);
     if(!orireq || !srcreq) {
 	    HAL_LOGD("Err para is NULL!");
@@ -3489,7 +3572,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	m_reqIsProcess = true;
 	srcreq->ori_req = orireq;
     reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
-	camera_cfg_rot_cap_param_reset();
+	if (!(GetContinuPicCount() > 0 && GetContinuPicCount() < m_staticReqInfo.capMode
+			&& m_staticReqInfo.capMode > 1))
+		camera_cfg_rot_cap_param_reset();
 #ifdef CONFIG_CAMERA_ROTATION_CAPTURE
 	SET_PARM(CAMERA_PARAM_ROTATION_CAPTURE, 1);
 #else
@@ -3652,6 +3737,30 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 					HAL_LOGD("ANDROID_SPRD_BRIGHTNESS (%d)", brightness);
 				}
 				break;
+			case ANDROID_SPRD_CAPTURE_MODE:
+				{
+					Mutex::Autolock lock(m_halCBMutex);
+					capMode = entry.data.u8[0];
+					ASIGNIFNOTEQUAL(srcreq->capMode, capMode, (camera_parm_type)NULL)
+					HAL_LOGD("ANDROID_SPRD_CAPTURE_MODE (%d)", capMode);
+				}
+				break;
+			case ANDROID_SPRD_BURST_CAP_CNT:
+				{
+					Mutex::Autolock lock(m_halCBMutex);
+					uint8_t capCnt = 0;
+					capCnt = entry.data.u8[0];
+					HAL_LOGD("ANDROID_SPRD_BURST_CAP_CNT (%d) burstcap=%d", capCnt, m_camCtlInfo.burstCapCnt);
+					if (capCnt < srcreq->capMode && capCnt > 0 && m_camCtlInfo.burstCapCnt > 0) {/*burst cap sync signal from framework*/
+						ASIGNIFNOTEQUAL(m_camCtlInfo.burstCapSync, true, (camera_parm_type)NULL)
+						if (!mIsFrameworkReadyOk) {
+							mIsFrameworkReadyOk = true;
+							mBurstCapWait.signal();
+						}
+						return;
+					}
+				}
+				break;
             case ANDROID_CONTROL_AF_REGIONS:
 				{
 					int area[5 + 1] = {0};
@@ -3720,9 +3829,8 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						HAL_LOGE("ERR: drv not support ae flash mode");
 					}
 					if (m_CameraId == 0) {
-					    ASIGNIFNOTEQUAL(srcreq->aeFlashMode, FlashMode, drvTag)
+					    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
 					}
-					//SET_PARM(CAMERA_PARM_AUTO_EXPOSURE_MODE, CAMERA_AE_FRAME_AVG);
 				}
                 break;
 			case ANDROID_CONTROL_AE_LOCK:
@@ -3819,6 +3927,13 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	}
 	if (picMode == CAMERA_ANDROID_ZSL_MODE) {
 		set_ddr_freq(HIGH_FREQ_REQ);
+	}
+	if (capMode > 1 && capMode < 256) {
+		if (picMode == CAMERA_NORMAL_MODE) {
+			picMode = CAMERA_NORMAL_CONTINUE_SHOT_MODE;
+		} else if (picMode == CAMERA_ANDROID_ZSL_MODE) {
+
+		}
 	}
 	SetCameraPictureMode(picMode);
 	HAL_LOGD("picmode=%d", picMode);
@@ -4877,7 +4992,11 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 	        m_staticReqInfo.ori_req = NULL;
 	        m_reqIsProcess = false;
         }
-		enqeueMetaDataBufFrmHalToFramework(m_halRefreshReq);
+		if (GetBurstCapSync()) {
+			SetBurstCapSync(false);
+		} else {
+			enqeueMetaDataBufFrmHalToFramework(m_halRefreshReq);
+		}
 		if (GetReqQueueSize() > 0)
 			selfThread->SetSignal(SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY);
     }
@@ -5349,6 +5468,8 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
 	#endif
 	ADD_OR_SIZE(ANDROID_SPRD_VIDEO_SNAPSHOT_SUPPORT, &videoSnapshotSupport, 1);
 
+	static const uint8_t flashModeSupport = 1;
+	ADD_OR_SIZE(ANDROID_SPRD_FLASH_MODE_SUPPORT, &flashModeSupport, 1);
 //    ADD_OR_SIZE(ANDROID_CONTROL_SCENE_MODE_OVERRIDES,
  //           camerahal->sceneModeOverrides, camerahal->numSceneModeOverrides);
     static const uint8_t quirkTriggerAuto = 1;
