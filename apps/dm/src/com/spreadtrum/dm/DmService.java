@@ -48,7 +48,7 @@ import android.app.PendingIntent;
 import android.app.Activity;
 
 public class DmService extends Service {
-    private String TAG = DmReceiver.DM_TAG + "DmService: ";
+    private String TAG = "DmService";
 
     //add for 105942 begin
     private static final boolean IS_CONFIG_SELFREG_REPLY = false;
@@ -237,7 +237,8 @@ public class DmService extends Service {
     
     public static final int SEND_SELF_SMS = 20;
     public static final int DATA_CONNECT_CONFRIM = 21;    
-    public static boolean isDialogShowed = false;    
+    public static boolean isDialogShowed = false;
+    private static boolean mSystemShutDown = false;
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -247,7 +248,7 @@ public class DmService extends Service {
 
                 int phoneId = intent.getIntExtra(TelephonyIntents.EXTRA_PHONE_ID, 0);
                 mSmsReady[phoneId] = intent.getBooleanExtra("isReady", true);
-                
+                initCMCCConfig();
                 Log.d(TAG, "[sms]onReceive ACTION_IS_SIM_SMS_READY mSmsReady["+ phoneId + "] = " + mSmsReady[phoneId]);
                 if (mSmsReady[phoneId]) {
                     if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
@@ -293,6 +294,13 @@ public class DmService extends Service {
 
         }
     };
+    
+    private BroadcastReceiver mShutdownReceiver = new BroadcastReceiver(){
+    	public void onReceive(Context context, Intent intent) {
+    		Log.d(TAG, "onReceive: ACTION_SHUTDOWN, mSystemShutDown is true");
+    		mSystemShutDown = true;
+    	}
+    };
 
     private boolean getIsCmccCard(int phoneId){
         String cmccStr1 = "46000";
@@ -316,7 +324,12 @@ public class DmService extends Service {
 		{
                 // judge if network is ready
                 if (ServiceState.STATE_IN_SERVICE == serviceState.getState()) {
-                    Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");                    
+                    Log.d(TAG, "onServiceStateChanged: STATE_IN_SERVICE");
+                    
+                    if(mSystemShutDown){
+                    	return;
+                    }
+                    
                     mInService[phoneId] = true;
                     // sim card is ready
                     if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
@@ -454,23 +467,29 @@ public class DmService extends Service {
 		Log.d(TAG, "onCreate: ACTION_IS_SIM2_SMS_READY register ");
         }
 */
-	int num;
-        IntentFilter filter = new IntentFilter(TelephonyIntents.ACTION_IS_SIM_SMS_READY);
-        Intent intent1 = registerReceiver(mReceiver, filter);
-		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register ");
-	for (num= 0; num < mPhoneCnt; num++)
-	{
-         filter = new IntentFilter(TelephonyManager.getAction(TelephonyIntents.ACTION_IS_SIM_SMS_READY,num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
-         intent1 = registerReceiver(mReceiver, filter);
-		Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
-	}
+		int num;
+	        IntentFilter filter = new IntentFilter(TelephonyIntents.ACTION_IS_SIM_SMS_READY);
+	        Intent intent1 = registerReceiver(mReceiver, filter);
+			Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register ");
+		for (num= 0; num < mPhoneCnt; num++)
+		{
+	         filter = new IntentFilter(TelephonyManager.getAction(TelephonyIntents.ACTION_IS_SIM_SMS_READY,num));//TelephonyIntents.ACTION_IS_SIM_SMS_READY
+	         intent1 = registerReceiver(mReceiver, filter);
+			Log.d(TAG, "onCreate: ACTION_IS_SIM_SMS_READY register "+num);
+		}
+		//bug272743 begin
+		IntentFilter shutdownFilter = new IntentFilter();
+		shutdownFilter.addAction(Intent.ACTION_SHUTDOWN);
+		registerReceiver(mShutdownReceiver, shutdownFilter);
+		//bug272743 end
     }
 
     @Override
     public void onDestroy() {
         // Stop listening for service state           
         stopListeningServiceState();                
-        unregisterReceiver(mReceiver);               
+        unregisterReceiver(mReceiver);
+        unregisterReceiver(mShutdownReceiver);//bug272743
         Log.d(TAG, "onDestroy: DmService is killed!");
         mInstance = null;
         mContext = null;
@@ -536,10 +555,6 @@ public class DmService extends Service {
                 
                 byte[] body = intent.getByteArrayExtra("msg_body");
                 String origin = intent.getStringExtra("msg_org");
-                
-//                for (int i = 0; i < body.length; i++) {            
-//                    Log.d(TAG, "startVDM4NIA data[" + i + "] = " + Integer.toHexString(body[i]&0xff));
-//                }
                 
                 Vdmc.getInstance().startVDM(mContext, Vdmc.SessionType.DM_SESSION_SERVER, body, origin);
         }
@@ -685,9 +700,7 @@ public class DmService extends Service {
             mServerAddr = sharedPreferences.getString(ITEM_SERVER_ADDR, LAB_SERVER_ADDR);
             mSmsAddr = sharedPreferences.getString(ITEM_SMS_ADDR, LAB_SMS_ADDR);
             mSmsPort = sharedPreferences.getString(ITEM_SMS_PORT, LAB_SMS_PORT);
-        }
-        //4 CMCC new feature
-        initCMCCConfig();
+        }               
         
         // init apn/proxy/port
         //initConnectParam();
@@ -714,20 +727,37 @@ public class DmService extends Service {
         Log.d(TAG, "initCMCCConfig ITEM_CMCC_REJECT_STATUS_PHONE0 = " + mIsRejectPhone0 + " ITEM_CMCC_REJECT_IMSI0 =" + mRejectImsi0);
         Log.d(TAG, "initCMCCConfig ITEM_CMCC_REJECT_STATUS_PHONE1 = " + mIsRejectPhone1 + " ITEM_CMCC_REJECT_IMSI1 =" + mRejectImsi1);
            
+        Log.d(TAG, "initCMCCConfig mPhoneCnt  imsiPhone0 = " + mImsi1 + " imsiPhone1 = " + mImsi2);
         
         if(mPhoneCnt > 1){                        
             mImsi1 = mTelephonyManager[0].getSubscriberId();
             mImsi2 = mTelephonyManager[1].getSubscriberId();                
-            Log.d(TAG, "initCMCCConfig mPhoneCnt  imsiPhone0 = " + mImsi1 + " imsiPhone1 = " + mImsi2);            
-        }
-        if((mImsi1 != null) && (mImsi1.startsWith("46000") || mImsi1.startsWith("46002") || mImsi1.startsWith("46007"))){
-            Log.d(TAG, "initCMCCConfig phone0 is sim card");
-            mCurrentCMCCSimNum++;
-        }
-        if((mImsi2 != null) && (mImsi2.startsWith("46000") || mImsi2.startsWith("46002") || mImsi2.startsWith("46007"))){
-            Log.d(TAG, "initCMCCConfig phone1 is sim card");
-            mCurrentCMCCSimNum++;
-        }
+            Log.d(TAG, "initCMCCConfig mPhoneCnt  imsiPhone0 = " + mImsi1 + " imsiPhone1 = " + mImsi2);
+            
+            if(((mImsi1 != null) && (mImsi1.startsWith("46000") || mImsi1.startsWith("46002") || mImsi1.startsWith("46007"))) &&
+            		((mImsi2 != null) && (mImsi2.startsWith("46000") || mImsi2.startsWith("46002") || mImsi2.startsWith("46007")))){
+            	Log.d(TAG, "initCMCCConfig phone0 and phone1 is sim card");
+            	mCurrentCMCCSimNum = 2;
+            }else if(((mImsi1 != null) && (mImsi1.startsWith("46000") || mImsi1.startsWith("46002") || mImsi1.startsWith("46007"))) ||
+            		((mImsi2 != null) && (mImsi2.startsWith("46000") || mImsi2.startsWith("46002") || mImsi2.startsWith("46007")))){
+            	Log.d(TAG, "initCMCCConfig phone0 or phone1 is sim card");
+            	mCurrentCMCCSimNum = 1;
+            }else{
+            	Log.d(TAG, "initCMCCConfig phone0 and phone1 is not sim card");
+            	mCurrentCMCCSimNum = 0;
+            }                       
+        }else{//for single sim card status        	
+        	mImsi1 = mTelephonyManager[0].getSubscriberId();
+        	Log.d(TAG, "initCMCCConfig mPhoneCnt  imsiPhone0 only one sim card contained mImsi1 = " + mImsi1);
+        	
+        	if((mImsi1 != null) && (mImsi1.startsWith("46000") || mImsi1.startsWith("46002") || mImsi1.startsWith("46007"))){
+        		Log.d(TAG, "initCMCCConfig phone0 is sim card");
+        		mCurrentCMCCSimNum = 1;
+        	}else{
+        		Log.d(TAG, "initCMCCConfig phone0 is not sim card");
+        		mCurrentCMCCSimNum = 0;
+        	}
+        }        
 
         Log.d(TAG, "initCMCCConfig mCurrentCMCCSimNum = " + mCurrentCMCCSimNum);                
         editor.putString(ITEM_CMCC_IMSI_1, mImsi1);
@@ -812,7 +842,7 @@ public class DmService extends Service {
         }
     }
 
-    private void createDmApn() {
+    private void createDmApn() {    	
         // Add new apn
           String numeric = android.os.SystemProperties.get(
                   TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");	          
@@ -1144,8 +1174,7 @@ public class DmService extends Service {
         editor.commit();
     }
 
-    private String getInitApn(Context context) {
-        
+    private String getInitApn(Context context) {    	
         String str = null;
          String numeric = android.os.SystemProperties.get(
                  TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
@@ -1250,11 +1279,11 @@ public class DmService extends Service {
                + android.os.SystemProperties.get(
                        TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "") + "\"";
 
-	
+        
         Cursor cursor = 	context.getContentResolver().query(
         (curPhoneId==0)? Telephony.Carriers.CONTENT_URI:Telephony.Carriers.getContentUri(curPhoneId,null),
         null, selection, null, null);
-
+        
         if (cursor != null) {
             if (cursor.getCount() > 0 && cursor.moveToFirst()) {
                 str = cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Carriers.PROXY));
@@ -1449,9 +1478,8 @@ public class DmService extends Service {
 		}
         //todo
         //need to fix
-       return "861683010001601";
-	//michael
-        //return mImeiStr;
+       //return "861683010001602";
+	     return mImeiStr;
     }
 
     protected void setImei(Context context, String imei) {
@@ -1493,7 +1521,7 @@ public class DmService extends Service {
         String manStr = getManufactory();
         String modStr = getModel();
         //michael
-        imei = "861683010001601";
+        //imei = "861683010001602";
         Log.d(TAG, "sendMsgBody: Enter!");
 
         // smsbody: IMEI:860206000003972/Hisense/TS7032/TI7.2.01.22.00
