@@ -432,6 +432,23 @@ static void poweron_modem(void)
 	modem_power_status = 1;
 }
 
+static void poweroff_modem(void)
+{
+	int modem_power_fd;
+	int ret;
+
+    modem_power_status = 0;
+    MODEM_LOGD("poweroff_modem set modem_power_status %d...\n", modem_power_status);
+
+	modem_power_fd = open(MODEM_POWER_PATH, O_WRONLY);
+	ret = write(modem_power_fd,"2",2);
+	if(ret != 2) {
+		MODEM_LOGE("maybe problem in poweroff modem %d, %s \n ", ret, strerror(errno));
+	}
+	close(modem_power_fd);
+}
+
+
 
 static void reset_modem(int type)
 {
@@ -447,6 +464,15 @@ static void reset_modem(int type)
 	else if (type == MODEM_SOFT_RESET)
 		write(modem_reset_fd,"1",2);
 	close(modem_reset_fd);
+}
+
+static void hard_reset_modem()
+{
+    MODEM_LOGD("hard_reset_modem  modem_power_status %d...\n", modem_power_status);
+
+    poweroff_modem();
+    usleep(300 * 1000);
+    //poweron_modem();
 }
 
 void delay_ms(int ms)
@@ -903,10 +929,16 @@ int modem_boot(void)
     int nread;
     char buff[512];
     unsigned long offset = 0,step = 4*1024;
+    int hard_reset = 0;
 
 reboot_modem:
 #ifndef __TEST_SPI_ONLY__
-	reset_modem(MODEM_SOFT_RESET);
+    if(!hard_reset) {
+        reset_modem(MODEM_SOFT_RESET);
+        hard_reset = 1;
+    } else {
+        hard_reset_modem();
+    }
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
 	    return -1;
