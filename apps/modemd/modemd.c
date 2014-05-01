@@ -445,7 +445,7 @@ void send_imei(int stty_fd, char *path)
         ret = read_imei(i, imeistr);
         if (ret <= 0) continue;
         memset(at_str, 0, sizeof(at_str));
-        sprintf(at_str, "AT+SPIMEI=\"%s\"\r", imeistr);
+        sprintf(at_str, "AT+SPIMEI=%d,\"%s\"\r", i-1, imeistr);
         if (send_atcmd(stty_fd, at_str, path) != 1) {
             close(stty_fd);
             exit(-1);
