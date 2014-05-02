@@ -32,7 +32,6 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
-	sc8830/src/SprdCameraParameters.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
 	sc8830/src/cmr_mem.c \
