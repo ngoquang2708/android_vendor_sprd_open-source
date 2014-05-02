@@ -564,7 +564,27 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr)
     }
     return ret;
 }
-
+int Write_HP_PoleType_Rsp2cp(int fd_pipe, unsigned int cmd)
+{
+    int ret = 0;
+    int count = 0;
+    parameters_head_t write_common_head;
+    memset(&write_common_head, 0, sizeof(parameters_head_t));
+    memcpy(&write_common_head.tag[0], VBC_CMD_TAG, 3);
+    write_common_head.cmd_type = cmd+1;
+    write_common_head.paras_size = headset_no_mic();
+    if(fd_pipe < 0){
+        ALOGE("%s vbpipe has not open...",__func__);
+        return -1;
+    }
+    ret = WriteParas_Head(fd_pipe, &write_common_head);
+    if(ret < 0){
+        ALOGE("%s:send cmd(%d) to cp ret(%d) error(%s)",__func__,write_common_head.cmd_type,ret,strerror(errno));
+    }else{
+        MY_TRACE("%s: send  cmd(%d) to cp ret(%d),Headset-4PoleType:%d",__func__,write_common_head.cmd_type,ret,headset_no_mic());
+    }
+    return ret;
+}
 int Write_Rsp2cp(int fd_pipe, unsigned int cmd)
 {
     int ret = 0;
@@ -2053,6 +2073,16 @@ RESTART:
                     }
                     adev->call_prestop = 0;
                     MY_TRACE("voice:VBC_CMD_RSP_CLOSE OUT.");
+                }
+                break;
+            case VBC_CMD_GET_HP_POLE_TYPE:
+                {
+                    MY_TRACE("voice:VBC_CMD_GET_HP_POLE_TYPE IN.");
+                    ret = Write_HP_PoleType_Rsp2cp(para->vbpipe_fd, VBC_CMD_GET_HP_POLE_TYPE);
+                    if(ret < 0){
+                        ALOGE("voice:VBC_CMD_GET_HP_POLE_TYPE : write2 cmd VBC_CMD_RSP_HP_POLE_TYPE error(%d).",ret);
+                    }
+                    MY_TRACE("voice:VBC_CMD_GET_HP_POLE_TYPE OUT.");
                 }
                 break;
             case VBC_CMD_SET_MODE:

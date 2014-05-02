@@ -76,6 +76,10 @@ enum VBC_CMD_E
 
     VBC_CMD_LINEIN_CTRL = 17,
     VBC_CMD_LINEIN_RSP_CTRL = 18,
+
+    VBC_CMD_GET_HP_POLE_TYPE = 19,
+    VBC_CMD_RSP_HP_POLE_TYPE = 20,
+
     VBC_CMD_MAX
 };
 typedef enum {
