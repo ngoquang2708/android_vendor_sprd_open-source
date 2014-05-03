@@ -355,7 +355,15 @@ function board_for_kernel()
 
 	TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
 	TEMP2=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ]
+	then
+		#在defconfig文件里未找到宏的那个字符串
+		echo -e "CONFIG_""$TEMP1"" is not in ""$TEMP"",configure kernel fail!!!!"
+		exit 0
+	else
+		#echo "find $TEMP1"
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	fi
 	#---------产生*native_defconfig文件 end-------
 
 
@@ -828,8 +836,8 @@ function select_Platform_and_BoardType()
 	echo "please select:"
 	echo "1. scx15 for dolphin and normal(for example:base or plus)"
 	echo "2. scx15 for dolphin and trisim(three sim cards)"
-	echo "3. scx35 for shark and normal(for example:base or plus)"
-	echo "4. scx35 for shark and trisim(three sim cards)"
+	echo "3. scx35 for shark(tshark) and normal(for example:base or plus)"
+	echo "4. scx35 for shark(tshark) and trisim(three sim cards)"
 	echo "==================================================================="
 	read BOARD_PLATFORM_TYPE
 }
@@ -893,12 +901,19 @@ echo $"board type is ""$BOARD_TYPE"
 
 if [ $# -lt 2 ]
 then
-	echo "please input reference board name,for example:sp7715ea"
+	echo "$PLATFORM" | grep "scx15"
+	if [ $? -eq 0 ];then
+		echo "please input reference board name,for example:sp7715ea or sp7715ga or sp8815ga or 6815ea"
+		TEMP="please input new board name,for example:sp7715ed or sp7715gc or sp8815gd or sp6815ef"
+	else
+		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga"
+		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb"
+	fi
 	read BOARD_NAME_R
 	if [ $BOARD_TYPE = 2 ];then
-		echo "please input new board name,for example:sp7715eatrisim"
+		echo "please input new board name,for example:"$BOARD_NAME_R"trisim"
 	else
-		echo "please input new board name,for example:sp7715ga"
+		echo $TEMP
 	fi
 	read BOARD_NAME_N
 else
