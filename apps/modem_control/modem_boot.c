@@ -937,7 +937,7 @@ reboot_modem:
         reset_modem(MODEM_SOFT_RESET);
         hard_reset = 1;
     } else {
-        hard_reset_modem();
+        reset_modem(MODEM_HARD_RESET);
     }
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
