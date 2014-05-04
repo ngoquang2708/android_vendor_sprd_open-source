@@ -737,6 +737,19 @@ void mali_platform_power_mode_change(int power_mode)
 			gpu_dfs_ctx.gpu_power_on = 0;
 			sci_glb_set(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
 		}
+
+		gpu_dfs_ctx.gpu_suspended=1;
+#ifdef CONFIG_COMMON_CLK
+		for(i=0;i<gpu_clk_num;i++)
+		{
+			clk_disable_unprepare(gpu_clk_src[i].clk_src);
+		}
+#else
+		for(i=0;i<gpu_clk_num;i++)
+		{
+			clk_disable(gpu_clk_src[i].clk_src);
+		}
+#endif
 		break;
 	//MALI_POWER_MODE_DEEP_SLEEP
 	case 2:
