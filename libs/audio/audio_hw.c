@@ -674,7 +674,6 @@ static int get_route_depth (
         int devices,
         int on);
 
-static int get_mode_from_devices(int devices);
 static int init_rec_process(int rec_mode, int sample_rate);
 static int aud_rec_do_process(void * buffer, size_t bytes,void * tmp_buffer, size_t tmp_buffer_size);
 
@@ -2642,7 +2641,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             goto err;
         }
 #ifndef VOIP_DSP_PROCESS
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->requested_rate );
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 #endif
     }
@@ -2660,7 +2659,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         if (!pcm_is_ready(in->pcm)) {
             goto err;
         }
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device), in->requested_rate );
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 
         if(in->requested_rate != in->config.rate) {
@@ -2766,7 +2765,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             }
         }
         /* start to process pcm data captured, such as noise suppression.*/
-        in->active_rec_proc = init_rec_process(get_mode_from_devices(in->device),in->requested_rate );
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev),in->requested_rate );
         ALOGI("record process module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
 
@@ -4252,20 +4251,6 @@ static void aud_vb_effect_stop(struct tiny_audio_device *adev)
     }
 }
 
-/* Headset is 0, Handsfree is 3 */
-static int get_mode_from_devices(int devices)
-{
-    int ret = 3;
-
-    if (((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BUILTIN_MIC)
-            ||((devices & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BACK_MIC))
-        ret = 3;
-    else if (((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_WIRED_HEADSET)
-            ||((devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
-        ret = 0;
-
-    return ret;
-}
 /*
  * Read audproc params from nv and config.
  * return value: TRUE:success, FALSE:failed

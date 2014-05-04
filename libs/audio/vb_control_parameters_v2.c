@@ -612,6 +612,20 @@ unsigned short GetAudio_vbcpipe_count(void)
     return s_vbc_pipe_count;
 }
 
+/* Headset is 0, Handsfree is 3 */
+static int32_t GetAudio_InMode_number_from_device(struct tiny_audio_device *adev)
+{
+    int ret = 3;
+
+    if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BUILTIN_MIC)
+        ||((adev->in_devices & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BACK_MIC))
+        ret = 3;//handsfree
+    else if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_WIRED_HEADSET)
+        ||((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+        ret = 0;//headset
+
+    return ret;
+}
 static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
 {
     int32_t lmode;
@@ -676,7 +690,6 @@ static int  GetAudio_PaConfig_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *
         ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
         return -1;
     }
-
     ptArmModeStruct = (AUDIO_NV_ARM_MODE_STRUCT_T *)(&(aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct));
 
     pga_gain_nv->pa_config =
@@ -708,25 +721,21 @@ static int  GetAudio_PaConfig_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *
             ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG2_INDEX]);
     return 0;
 }
-static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
+static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
 {
-    uint32_t adc_index = 0;
     uint32_t dac_index = 0;
  AUDIO_NV_ARM_MODE_STRUCT_T *ptArmModeStruct = NULL;
     if((NULL == aud_params_ptr) || (NULL == pga_gain_nv)){
         ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
         return -1;
-    }   ptArmModeStruct = (AUDIO_NV_ARM_MODE_STRUCT_T *)(&(aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct));
+    }
+    ptArmModeStruct = (AUDIO_NV_ARM_MODE_STRUCT_T *)(&(aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct));
     if(adev->call_start == 1)
     {
-        adc_index = AUDIO_NV_LINEIN_GAIN_INDEX;    //46
         dac_index = AUDIO_NV_LINEIN_APP_CONFIG_INFO;//1
     } else {
-        adc_index = AUDIO_NV_CAPTURE_GAIN_INDEX;   //43
         dac_index = AUDIO_NV_PLAYBACK_APP_CONFIG_INFO; //0
     }
-    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[adc_index];
-    pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
 
     pga_gain_nv->dac_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[dac_index].arm_volume[vol_level];
     pga_gain_nv->dac_pga_gain_r = pga_gain_nv->dac_pga_gain_l;
@@ -763,11 +772,35 @@ static int  GetAudio_pga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_p
             ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG1_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG2_INDEX]);
 
-    ALOGW("vb_control_parameters.c %s, dac_pga_gain_l:0x%x adc_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x vol_level:0x%x ",
-            __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->adc_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,
+    ALOGW("vb_control_parameters.c %s, dac_pga_gain_l:0x%x fm_pga_gain_l:0x%x fm_pga_gain_r:0x%x vol_level:0x%x ",
+            __func__,pga_gain_nv->dac_pga_gain_l,pga_gain_nv->fm_pga_gain_l,pga_gain_nv->fm_pga_gain_r,
             vol_level);
     return 0;
 }
+
+static int  GetAudio_inpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud_params_ptr, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
+{
+    uint32_t adc_index = 0;
+    if((NULL == aud_params_ptr) || (NULL == pga_gain_nv)){
+        ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
+        return -1;
+    }
+    if(adev->call_start == 1)
+    {
+        adc_index = AUDIO_NV_LINEIN_GAIN_INDEX;    //46
+     } else {
+        adc_index = AUDIO_NV_CAPTURE_GAIN_INDEX;   //43
+    }
+
+    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX];    //43
+    pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
+
+    ALOGW("%s, adc_pga_gain_l:0x%x device:0x%x vol_level:0x%x",
+        __func__,pga_gain_nv->adc_pga_gain_l, pga_gain_nv->in_devices,vol_level);
+    return 0;
+}
+
+
 static int GetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv)
 {
     int ret = 0;
@@ -788,13 +821,18 @@ static int GetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain
     }
     return 0;
 }
+
 static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
 {
     int ret = 0;
-    int32_t lmode = 0;
+    int32_t outmode = 0, inmode=0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
-    lmode = GetAudio_mode_number_from_device(adev);
+    outmode = GetAudio_mode_number_from_device(adev);
+    inmode = GetAudio_InMode_number_from_device(adev);
+
+    ALOGW("%s, outmode:%d inmode:%d,indev:0x%x, outdev:0x%x",
+        __func__,outmode, inmode, adev->in_devices, adev->out_devices);
 
     aud_params_ptr = adev->audio_para;//(AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd,0);
     if ( NULL == aud_params_ptr ) {
@@ -802,12 +840,20 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         return -1;
     }
     //get music gain from nv
-    ret = GetAudio_pga_nv(adev, &aud_params_ptr[lmode], pga_gain_nv, vol_level);
+    ret = GetAudio_outpga_nv(adev, &aud_params_ptr[outmode], pga_gain_nv, vol_level);
     if(ret < 0){
+        ALOGE("%s, GetAudio_outpga_nv fail",__func__);
+        return -1;
+    }
+
+    ret = GetAudio_inpga_nv(adev, &aud_params_ptr[inmode], pga_gain_nv, vol_level);
+    if(ret < 0){
+        ALOGE("%s, GetAudio_inpga_nv fail",__func__);
         return -1;
     }
     return 0;
 }
+
 static int SetVoice_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv)
 {
     if(NULL == pga_gain_nv){
