@@ -255,15 +255,23 @@ int write_from_buffer(int fd, char *buf, int len)
  * open log devices
  *
  */
-void open_device(struct slog_info *info, char *path)
+int open_device(struct slog_info *info, char *path)
 {
-	info->fd_device = open(path, O_RDWR);
+	int retry_count = 0;
+
+retry:
+	info->fd_device = open(path, O_RDONLY);
 	if(info->fd_device < 0){
-		err_log("Unable to open log device '%s', close '%s' log.", path, info->name);
-		info->state = SLOG_STATE_OFF;
+		if(errno == EINTR && retry_count < 5) {
+			retry_count ++;
+			sleep(1);
+			goto retry;
+		}
+		err_log("Unable to open log device '%s'.", path);
+		return -1;
 	}
 
-	return;
+	return info->fd_device;
 }
 
 /*

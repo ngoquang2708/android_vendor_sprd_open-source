@@ -138,7 +138,7 @@ struct slog_info {
 
 struct slog_cmd {
 	int type;
-	char content[MAX_LINE_LEN];
+	char content[MAX_LINE_LEN * 2];
 };
 
 struct modem_timestamp {
@@ -199,7 +199,7 @@ extern void cp_file(char *path, char *new_path);
 extern FILE *gen_outfd(struct slog_info *info);
 extern void log_size_handler(struct slog_info *info);
 extern int write_from_buffer(int fd, char *buf, int len);
-extern void open_device(struct slog_info *info, char *path);
+extern int open_device(struct slog_info *info, char *path);
 extern void gen_logfile(char *filename, struct slog_info *info);
 extern void log_buffer_flush(void);
 
