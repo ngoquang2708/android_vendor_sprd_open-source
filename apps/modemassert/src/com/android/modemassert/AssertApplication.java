@@ -6,28 +6,23 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.text.TextUtils;
 import android.util.Log;
-import android.app.ActivityManager;
 import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
-import android.os.Binder;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.Parcel;
-import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
 
 public class AssertApplication extends Application {
     private final String MTAG = "AssertApplication";
@@ -45,6 +40,7 @@ public class AssertApplication extends Application {
 
     //notification id to cancel
     private static final int MODEM_ASSERT_ID = 1;
+    private static final int WCND_ASSERT_ID = 2;
 
     private static final int BUF_SIZE = 128;
 
@@ -60,6 +56,11 @@ public class AssertApplication extends Application {
         mAssertThread.start();
         mAssertHandler = new assertHandler(mAssertThread.getLooper());
         mAssertHandler.sendEmptyMessage(0);
+
+        /* a receiver to receive wcnd assert info */
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WCND_CP2_STATE_CHANGED_ACTION);
+        registerReceiver(mReceiver, filter);
     }
 
     private class assertHandler extends Handler {
@@ -125,12 +126,12 @@ public class AssertApplication extends Application {
                     }
                     if (info.contains("Modem Alive")) {
                         sendModemStatBroadcast(MODEM_ALIVE);
-                        hideNotification();
+                        hideNotification(MODEM_ASSERT_ID);
                     } else if (info.contains("Modem Assert")) {
                         String value = SystemProperties.get("persist.sys.sprd.modemreset", "default");
                         Log.d(MTAG, " modemreset ? : " + value);
                         if(!value.equals("1")){
-                            showNotification(info);
+                            showNotification(MODEM_ASSERT_ID,"modem assert",info);
                         }
                         sendModemStatBroadcast(MODEM_ASSERT);
                     } else {
@@ -151,7 +152,40 @@ public class AssertApplication extends Application {
         }
     }
 
-    private void showNotification(String info) {
+    /**
+     * Broadcast intent action indicating that CP2 status has been assert,
+     * alive,
+     */
+    private static final String WCND_CP2_STATE_CHANGED_ACTION = "com.android.server.wcn.WCND_CP2_STATE_CHANGED";
+
+    /**
+     * The lookup key for an {@code boolean} giving if CP2 is OK.
+     */
+    private static final String EXTRA_IS_CP2_OK = "isCP2OK";
+
+    /**
+     * The lookup key for an {@code String} giving the CP2 assert info.
+     */
+    public static final String EXTRA_CP2_ASSERT_INFO = "CP2AssertInfo";
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (WCND_CP2_STATE_CHANGED_ACTION.equals(action)) {
+                boolean cp2ok = (boolean) intent.getBooleanExtra(EXTRA_IS_CP2_OK, false);
+                String assertInfo = intent.getStringExtra(EXTRA_CP2_ASSERT_INFO);
+                Log.d(MTAG, "CP2 status: " + cp2ok + ", info: " + assertInfo + ", debug: " + Debug.isDebug());
+                if (!cp2ok && Debug.isDebug()) {
+                    Log.d(MTAG, "show assert notification for wcnd.");
+                    showNotification(WCND_ASSERT_ID, "wcnd assert", assertInfo);
+                } else if (cp2ok) {
+                    hideNotification(WCND_ASSERT_ID);
+                }
+            }
+        }
+    };
+
+    private void showNotification(int notificationId, String title, String info) {
         Log.v(MTAG, "show assert Notefication.");
         int icon = R.drawable.modem_assert;
         NotificationManager manager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
@@ -159,7 +193,7 @@ public class AssertApplication extends Application {
         Notification notification = new Notification(icon, info, when);
 
         Context context = getApplicationContext();
-        CharSequence contentTitle = "modem assert";
+        CharSequence contentTitle = title;
         CharSequence contentText = info;
         /** modify 145779 add show assertinfo page **/
         Intent notificationIntent = new Intent(this, AssertInfoActivity.class);
@@ -175,13 +209,13 @@ public class AssertApplication extends Application {
         //notification.sound = Uri.parse("file:///sdcard/assert.mp3");
 
         notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
-        manager.notify(MODEM_ASSERT_ID, notification);
+        manager.notify(notificationId, notification);
     }
 
-    private void hideNotification() {
+    private void hideNotification(int notificationId) {
         Log.v(MTAG, "hideNotification");
         NotificationManager manager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        manager.cancel(MODEM_ASSERT_ID);
+        manager.cancel(notificationId);
     }
 
     private void sendModemStatBroadcast(String modemStat) {
