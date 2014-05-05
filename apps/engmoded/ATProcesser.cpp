@@ -24,7 +24,12 @@ string ATProcesser::response()
     if (m_cmd == "readfile"){
         string filepath = HTTPRequest::URL::getParameter(m_url, "file");
         return this->readfile(filepath);
-    }else if (m_cmd == "property_get"){
+    }
+    else if(m_cmd == "showbinfile"){
+   	string binfilepath = HTTPRequest::URL::getParameter(m_url, "binfile");
+	return this->showbinfile(binfilepath);
+    }
+    else if (m_cmd == "property_get"){
         string key = HTTPRequest::URL::getParameter(m_url, "key");
         return this->property_get(key);
     }else if (m_cmd == "property_set"){
@@ -73,6 +78,168 @@ string ATProcesser::process()
     cout << "response.content=" << content << endl;
     return content;
 }
+
+/*shiwei added*/
+bool ATProcesser::isAscii(char b) 
+{
+        if (b >= 0 && b <= 127) {
+            return true;
+        }
+        return false;
+}
+
+
+ bool ATProcesser::checkPhaseCheck(string stream)
+ {
+    if((stream[0] == '9'||stream[0] == '5')
+            &&stream[1] == '0'
+            &&stream[2] == 'P'
+            &&stream[3] == 'S'){
+        return true;
+    }
+
+    return false;
+}
+
+string ATProcesser::getSn1(string stream)
+{
+    if (stream.empty()) {
+        return "Invalid Sn1!";
+    }
+    if (!isAscii(stream[SN1_START_INDEX])) {
+        return "Invalid Sn1!";
+    }
+
+    string sn1 = stream.substr(SN1_START_INDEX, SP09_MAX_SN_LEN);
+
+    return sn1;
+}
+
+string ATProcesser::getSn2(string stream)
+{
+    if (stream.empty()) {
+        return "Invalid Sn2!";
+    }
+    if (!isAscii(stream[SN2_START_INDEX])) {
+        return "Invalid Sn2!";
+    }
+
+    string sn2 = stream.substr(SN2_START_INDEX, SP09_MAX_SN_LEN);
+
+    return sn2;
+}
+
+bool ATProcesser::isStationTest(int station, string stream) 
+{
+    int flag = 1;
+    if (station < 8) {
+        return (0 == ((flag << station) & stream[TESTFLAG_START_INDEX]));
+    } else if (station >= 8 && station < 16) {
+        return (0 == ((flag << (station - 8)) & stream[TESTFLAG_START_INDEX + 1]));
+    }
+    return false;
+}
+
+
+bool ATProcesser::isStationPass(int station, string stream) 
+{
+    int flag = 1;
+    if (station < 8) {
+        return (0 == ((flag << station) & stream[RESULT_START_INDEX]));
+    } else if (station >= 8 && station < 16) {
+        return (0 == ((flag << (station - 8)) & stream[RESULT_START_INDEX + 1]));
+    }
+    return false;
+}
+
+
+string ATProcesser::getTestsAndResult(string stream) 
+{
+
+    string testResult ;
+    string allResult;
+    int flag = 1;
+    if (stream.empty()) {
+        return "Invalid Phase check!";
+    }
+
+    if (!isAscii(stream[STATION_START_INDEX])) {
+        return "Invalid Phase check!";
+    }
+
+    for (int i = 0; i < SP09_MAX_STATION_NUM; i++) {
+        if (0 == stream[STATION_START_INDEX + i * SP09_MAX_STATION_NAME_LEN]) {
+            break;
+        }
+        testResult = stream.substr(STATION_START_INDEX + i * SP09_MAX_STATION_NAME_LEN,
+                SP09_MAX_STATION_NAME_LEN);
+        if (!isStationTest(i, stream)) {
+            testResult += " Not test";
+        } else if (isStationPass(i, stream)) {
+            testResult += " Pass";
+        } else {
+            testResult += " Failed";
+        }
+        flag = flag << 1;
+        allResult += testResult + "\n";
+    }
+    return allResult;
+}
+
+string ATProcesser::showbinfile(string binfilepath)
+{
+    string content;
+    string result;
+    FILE *fp1 = NULL;
+    unsigned char buf1[300] = {0};
+    int i;
+    if((fp1 = fopen(binfilepath.c_str(), "rb"))==NULL) 
+    {
+        result.append("open file error.");
+        result.append("\n");
+        return result;
+    }
+    else
+    {
+        for(i=0;i<300;i++)
+        {
+            fread(&buf1[i], sizeof(char), 1, fp1);
+            if(buf1[i] > 0xff)
+            {
+                buf1[i]= buf1[i]&0xff;
+            }
+            //printf("0x%x, ", buf1[i]);
+            content += buf1[i];
+        }
+    }
+
+    fclose(fp1);
+
+    if(!checkPhaseCheck(content))
+    {
+            result.append("Check Phase Failed.");
+            result.append("\n");
+            return result;
+    }
+
+    result.append("SN1:");
+    result.append("\n");
+    result.append(getSn1(content));
+    result.append("\n");
+    result.append("SN2:");
+    result.append("\n");
+    result.append("\n");
+    result.append(getSn2(content));
+    result.append("\n");
+    //cout<<getSn1(content)<<endl;
+    //cout<<getSn2(content)<<endl;
+    result.append(getTestsAndResult(content));
+    result.append("\n");
+
+    return result;
+}
+
+/*shiwei added over*/
 
 string ATProcesser::readfile(string filepath)
 {
