@@ -13,6 +13,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+// GMS push need fts to calculate file size ->
+#include <fts.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/statfs.h>
+// GMS push <-
 
 #include "slog.h"
 
@@ -174,6 +180,18 @@ int main(int argc, char *argv[])
 	struct slog_cmd cmd;
 	struct sockaddr_un address;
 	struct timeval tv_out;
+    /* GMS push arguments -> */
+	struct statfs gmsDiskInfo;
+	long gmsAvailableSize;
+	int ftsOptions;
+	FTSENT *p_ftsent;
+	DIR* gms_dir_ptr;
+	FTS* fts;
+	long blocksize;
+	long gmsBlocks;
+	int gmsEval;
+	const char *gmsPath[2];
+    /* GMS push arguments <- */
 
 	/*
 	arguments list:
@@ -216,6 +234,65 @@ int main(int argc, char *argv[])
 			cmd.type = CTRL_CMD_TYPE_EXEC;
 			snprintf(cmd.content, MAX_NAME_LEN, "%s", argv[2]);
 		}
+	} else if(!strncmp(argv[1], "gms", 3)) {
+	    printf("GMS push will be start\n");
+	
+		// ensure the dir exist
+		if (gms_dir_ptr = (DIR*)opendir("/sdcard/gms/") == NULL) {
+			printf("/sdcard/gms/ doesn't exsist or open failed.");
+			return -1;
+		}
+		closedir(gms_dir_ptr);
+
+		// Calculate system partition available size
+		if (statfs("/system", &gmsDiskInfo) < 0) {
+			printf("Get /system usage failed. Operation abandon");
+			return -1;
+		}
+		gmsAvailableSize = gmsDiskInfo.f_bavail * gmsDiskInfo.f_bsize / 1024;
+
+        printf("System partition size: %ld\n", gmsAvailableSize);
+
+		// Calculate gms package size
+		ftsOptions = FTS_PHYSICAL;
+		gmsPath[0] = "/sdcard/gms";
+		gmsPath[1] = NULL;
+		if ((fts = fts_open(__UNCONST(gmsPath), FTS_PHYSICAL, NULL)) == NULL) {
+			printf("open /sdcard/gms/ failed. Please ensure it exist and can be read.");
+			return -1;
+		}
+		for (gmsEval = 0; (p_ftsent = fts_read(fts)) != NULL; ) {
+			p_ftsent->fts_parent->fts_number += 
+			    p_ftsent->fts_number += p_ftsent->fts_statp->st_blocks;
+			/*
+			 * If listing each directory, or not listing files
+			 * or directories and this is post-order of the
+			 * root of a traversal, display the total.
+			 */
+			if (p_ftsent->fts_level <= 0 || (!p_ftsent->fts_level))
+				gmsBlocks = p_ftsent->fts_number / 2;
+		}
+		fts_close(fts);
+
+		printf("GMS package size: %ld\n\n", gmsBlocks);
+
+		if (gmsBlocks > gmsAvailableSize) {
+			if (argc == 2) {
+				printf("We found available size is not enough\n");
+				printf("If still you want to push them, use:\n");
+				printf("slogctl gms force\n");
+				return -1;
+			} else if (argc > 2) {
+			    if (strncmp(argv[2], "force", 5)) {
+			        printf("Invalid intput.\n");
+			        return -1;
+			    }
+			} else {
+			    printf("Invalid input.\n");
+			    return -1;
+			}
+		}
+		cmd.type = CTRL_CMD_TYPE_GMS;
 	} else if(!strncmp(argv[1], "on", 2)) {
 		cmd.type = CTRL_CMD_TYPE_ON;
 	} else if(!strncmp(argv[1], "off", 3)) {
