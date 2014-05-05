@@ -1535,6 +1535,7 @@ bool SprdCameraHWInterface2::WaitForCaptureStart()
 	while (SPRD_WAITING_RAW != mCameraState.capture_state
 		 && SPRD_WAITING_JPEG != mCameraState.capture_state
 		 && SPRD_IDLE != mCameraState.capture_state
+		 && SPRD_ERROR != mCameraState.capture_state	/*solution dead lock between process cap req and getInProgressCount */
 		 && SPRD_ERROR != mCameraState.camera_state) {
 		HAL_LOGD("waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
 		mStateWait.wait(mStateLock);
@@ -1809,11 +1810,13 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 						displaySubStream(StreamSP, (int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),timeStamp,(uint16_t)STREAM_ID_JPEG);
 					}
 					if (tmpCBpara->need_free) {
-						if(GetCameraPictureMode() == CAMERA_NORMAL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE) {
+						if(GetCameraPictureMode() == CAMERA_NORMAL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE
+							|| GetCameraPictureMode() == CAMERA_HDR_MODE) {
 							freeCaptureMem();
 							if (m_degenerated_normal_cap) {
 								m_degenerated_normal_cap = false;
 							}
+							set_ddr_freq(BASE_FREQ_REQ);
 						}
 						transitionState(SPRD_WAITING_JPEG,
 								SPRD_IDLE,
@@ -1829,6 +1832,7 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 		}
 		break;
 	case CAMERA_EXIT_CB_FAILED:
+		set_ddr_freq(BASE_FREQ_REQ);
 		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
 		//receiveCameraExitError();
 		break;
@@ -2125,6 +2129,7 @@ void SprdCameraHWInterface2::HandleTakePicture(camera_cb_type cb, int32_t parm4)
 	case CAMERA_EXIT_CB_FAILED:			//Execution failed or rejected
 		HAL_LOGE("SprdCameraHardware::camera_cb: @CAMERA_EXIT_CB_FAILURE(%d) in state %s.",
 				parm4, getCameraStateStr(getCaptureState()));
+		set_ddr_freq(BASE_FREQ_REQ);
 		transitionState(getCaptureState(), SPRD_ERROR, STATE_CAPTURE);
 		//receiveCameraExitError();
 		break;
@@ -2543,6 +2548,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 			case CAMERA_FOCUS_MODE_AUTO:
 			case CAMERA_FOCUS_MODE_MACRO:
 			case CAMERA_FOCUS_MODE_CAF:
+			case CAMERA_FOCUS_MODE_INFINITY:
 			switch(m_focusStat) {
 			case FOCUS_STAT_INACTIVE:
 			case FOCUS_STAT_FOCUS_LOCKED:
@@ -2576,6 +2582,7 @@ int SprdCameraHWInterface2::triggerAction(uint32_t trigger_id, int ext1, int ext
 	    case CAMERA_FOCUS_MODE_AUTO:
 		case CAMERA_FOCUS_MODE_MACRO:
 		case CAMERA_FOCUS_MODE_CAF:
+		case CAMERA_FOCUS_MODE_INFINITY:
 			if (m_focusStat == FOCUS_STAT_ACTIVE_SCAN) {
                 if(camera_cancel_autofocus())
 				   HAL_LOGE("cancel focus fail");
@@ -3430,7 +3437,8 @@ int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSet
 		#endif
 		{
 			Mutex::Autolock lock(m_halCBMutex);
-			m_camCtlInfo.burstCapCnt = srcreq->capMode;
+			if (srcreq->capMode > 1)
+				m_camCtlInfo.burstCapCnt = srcreq->capMode;
 		}
 		SET_PARM(CAMERA_PARM_SHOT_NUM, srcreq->capMode);
 		if (srcreq->isCropSet) {
@@ -3444,6 +3452,7 @@ int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSet
 			SET_PARM(drvTag,(uint32_t)&zoom);
 			srcreq->isCropSet = false;
 		}
+		set_ddr_freq(HIGH_FREQ_REQ);
 		setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
 		if (CAMERA_SUCCESS != camera_take_picture(camera_cb, this, GetCameraPictureMode())) {
 			setCameraState(SPRD_ERROR, STATE_CAPTURE);
