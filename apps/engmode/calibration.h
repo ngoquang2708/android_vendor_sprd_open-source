@@ -1,5 +1,8 @@
 #ifndef __CALIBRATION_H__
 
+#define ADC_CHANNEL_PATH	"/sys/class/misc/sprd-adc/adc_channel"
+#define ADC_SCALE_PATH		"/sys/class/misc/sprd-adc/adc_scale"
+#define ADC_DATA_RAW_PATH	"/sys/class/misc/sprd-adc/adc_data_raw"
 #define	BATTERY_VOL_PATH	"/sys/class/power_supply/battery/real_time_voltage"
 #define	BATTERY_ADC_PATH	"/sys/class/power_supply/battery/real_time_vbat_adc"
 #define	CALI_CTRL_FILE_PATH	"/productinfo/adc.bin"
