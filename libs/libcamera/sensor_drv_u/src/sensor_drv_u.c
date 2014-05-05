@@ -2256,31 +2256,32 @@ int _Sensor_SetMode(uint32_t mode)
 		return SENSOR_OP_STATUS_ERR;
 	}
 
-	if (s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] == mode) {
-		CMR_LOGI("SENSOR: The sensor mode as before");
-		return SENSOR_SUCCESS;
-	}
-
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 		_Sensor_StreamOff();/*stream off first for MIPI sensor switch*/
 		_Sensor_Device_MIPI_deinit();
 	}
-	if (PNULL != s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].sensor_reg_tab_ptr) {
-		mclk = s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].xclk_to_sensor;
-		Sensor_SetMCLK(mclk);
-		s_p_sensor_cxt->sensor_exp_info.image_format = s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].image_format;
 
-		if((SENSOR_MODE_COMMON_INIT == mode) && set_reg_tab_func){
-			set_reg_tab_func(SENSOR_MODE_COMMON_INIT);
-		}else{
-			Sensor_SendRegTabToSensor(&s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode]);
-		}
-		s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] = mode;
+	if (s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] == mode) {
+		CMR_LOGI("SENSOR: The sensor mode as before");
 	} else {
-		if(set_reg_tab_func)
-			set_reg_tab_func(0);
-		CMR_LOGI("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
+		if (PNULL != s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].sensor_reg_tab_ptr) {
+			mclk = s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode].xclk_to_sensor;
+			Sensor_SetMCLK(mclk);
+			s_p_sensor_cxt->sensor_exp_info.image_format = s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].image_format;
+
+			if((SENSOR_MODE_COMMON_INIT == mode) && set_reg_tab_func){
+				set_reg_tab_func(SENSOR_MODE_COMMON_INIT);
+			}else{
+				Sensor_SendRegTabToSensor(&s_p_sensor_cxt->sensor_info_ptr->resolution_tab_info_ptr[mode]);
+			}
+			s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] = mode;
+		} else {
+			if(set_reg_tab_func)
+				set_reg_tab_func(0);
+			CMR_LOGI("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
+		}
 	}
+
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 		_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
 						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
@@ -2365,11 +2366,22 @@ int _Sensor_StreamOn(void)
 int Sensor_StreamCtrl(uint32_t on_off)
 {
 	int                      ret = 0;
+	uint32_t           		 mode;
+
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	if (on_off) {
 		ret = _Sensor_StreamOn();
 	} else {
 		ret = _Sensor_StreamOff();
+		if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
+			_Sensor_Device_MIPI_deinit();
+			mode = s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()];
+			_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
+						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
+
+		}
+
 	}
 
 	return ret;
