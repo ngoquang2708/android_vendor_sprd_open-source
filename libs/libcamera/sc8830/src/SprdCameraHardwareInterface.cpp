@@ -395,7 +395,13 @@ void SprdCameraHardware::release()
 		LOGI("stopping camera.");
 		if (CAMERA_SUCCESS != camera_stop(camera_cb, this)) {
 			setCameraState(SPRD_ERROR, STATE_CAMERA);
-			mMetadataHeap = NULL;
+			if(NULL != mMetadataHeap){
+				if(NULL != mMetadataHeap->release){
+					LOGV("freePreviewMem start release mMetadataHeap");
+					mMetadataHeap->release(mMetadataHeap);
+					mMetadataHeap = NULL;
+				}
+			}
 			mReleaseFLag = true;
 			LOGE("release X: fail to camera_stop().");
 			return;
@@ -404,7 +410,13 @@ void SprdCameraHardware::release()
 		WaitForCameraStop();
 	}
 
-	mMetadataHeap = NULL;
+	if(NULL != mMetadataHeap){
+		if(NULL != mMetadataHeap->release){
+			LOGV("freePreviewMem start release mMetadataHeap");
+			mMetadataHeap->release(mMetadataHeap);
+			mMetadataHeap = NULL;
+		}
+	}
 	deinitCapture();
 
 	mCbPrevDataBusyLock.lock();
