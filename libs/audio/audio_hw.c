@@ -1160,22 +1160,29 @@ ret);
                     adev->dev_cfgs[i].on_len);
     }
 
-	if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
-	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
-                    adev->dev_cfgs[i].on_len);
-          /* force close main-mic ADCL when channel count is one for power issue */
-          if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( adev->in_devices & adev->dev_cfgs[i].mask))
-               && (adev->requested_channel_cnt == 1)) {
-              /* force close main-mic ADCL when channel count is one for power issue */
-              close_adc_channel(adev->mixer, true, false, false);
-          }
+    if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
+        && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+        /* force close main-mic ADCL when channel count is one for power issue */
+        if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( adev->in_devices & adev->dev_cfgs[i].mask))
+             && (adev->requested_channel_cnt == 1)) {
+            /* force close main-mic ADCL when channel count is one for power issue */
+            //close_adc_channel(adev->mixer, true, false, false);
+            struct mixer_ctl *ctl;
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADCR Mixer MainMICADCR Switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+            ctl = mixer_get_ctl_by_name(adev->mixer,"Mic Function");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else {
+                set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+                        adev->dev_cfgs[i].on_len);
+            }
+
         }
     }
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
         if (!(adev->out_devices & adev->dev_cfgs[i].mask)
-	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
         if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
