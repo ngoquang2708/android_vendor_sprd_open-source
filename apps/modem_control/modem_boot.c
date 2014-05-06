@@ -476,6 +476,10 @@ static void poweron_modem(void)
 	if(modem_power_status)
 		return;
 	modem_power_fd = open(MODEM_POWER_PATH, O_WRONLY);
+    if(modem_power_fd < 0) {
+        MODEM_LOGD("poweron modem open MODEM_POWER_PATH failed!\n");
+		return;
+    }
 	ret = write(modem_power_fd,"1",2);
 	if(ret != 2) {
 		MODEM_LOGE("maybe problem in poweron modem %d, %s \n ", ret, strerror(errno));
@@ -493,7 +497,11 @@ static void poweroff_modem(void)
     MODEM_LOGD("poweroff_modem set modem_power_status %d...\n", modem_power_status);
 
 	modem_power_fd = open(MODEM_POWER_PATH, O_WRONLY);
-	ret = write(modem_power_fd,"2",2);
+    if(modem_power_fd < 0) {
+        MODEM_LOGD("poweron modem open MODEM_POWER_PATH failed!\n");
+		return;
+    }
+	ret = write(modem_power_fd,"0",2);
 	if(ret != 2) {
 		MODEM_LOGE("maybe problem in poweroff modem %d, %s \n ", ret, strerror(errno));
 	}
