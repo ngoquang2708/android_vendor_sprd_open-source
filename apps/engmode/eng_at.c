@@ -12,6 +12,9 @@ static eng_dev_info_t* s_dev_info;
 static int at_mux_fd = -1;
 static int pc_fd=-1;
 
+#ifdef CONFIG_BQBTEST
+static int g_bqb_mode_start = 0;
+#endif
 static int start_gser(char* ser_path)
 {
     struct termios ser_settings;
@@ -33,17 +36,18 @@ static int start_gser(char* ser_path)
 
     ser_settings.c_lflag |= (ECHO | ECHONL);
     ser_settings.c_lflag &= ~ECHOCTL;
+
     tcsetattr(pc_fd, TCSANOW, &ser_settings);
 
     return 0;
 }
 
 #ifdef CONFIG_BQBTEST
-static int g_bqb_mode_start = 0;
-
 int eng_controller2tester(char * controller_buf, unsigned int data_len)
 {
-    int len;
+    int len = 0;
+
+
 
     len = write(pc_fd,controller_buf,data_len);
 
@@ -61,6 +65,9 @@ static void *eng_readpcat_thread(void *par)
     char databuf[ENG_BUFFER_SIZE];
     int i, offset_read, length_read, status;
     eng_dev_info_t* dev_info = (eng_dev_info_t*)par;
+#ifdef CONFIG_BQBTEST
+	struct termios ser_settings;
+#endif
 
     for(;;){
         ENG_LOG("%s: wait pcfd=%d\n",__func__,pc_fd);
@@ -79,27 +86,49 @@ read_again:
             }else{
 
             #ifdef CONFIG_BQBTEST
-		if(strstr(engbuf, "AT+SPBQBTEST=1")) {
+                // start BQB test only the first time receive AT+SPBQBTEST=1
+		if((0==g_bqb_mode_start) && strstr(engbuf, "AT+SPBQBTEST=1")) {
 			int ret = 0;
+
 			ENG_LOG("bqb test receive AT+SPBQBTEST");
 			g_bqb_mode_start = 1;
+                        tcgetattr(pc_fd, &ser_settings);
+                        cfmakeraw(&ser_settings);
+			ser_settings.c_lflag = 0;
+			tcsetattr(pc_fd, TCSANOW, &ser_settings);
 
 			 write(pc_fd, "OK\n", strlen("OK\n"));
 
 			 ret = eng_controller_bqb_start();
-			ENG_LOG("bqb test test eng_controller_bqb_start ret %d", ret);
+			 ENG_LOG("start BQB test ret= %d", ret);
 
 			continue;
-		}
+		}else if((1==g_bqb_mode_start) &&strstr(engbuf, "AT+SPBQBTEST=0")){
+		// stop BQB test if receive AT+SPBQBTEST=0, only when BQB test has been started
+			int ret = 0;
 
-		if(1 == g_bqb_mode_start) {
-		    ENG_LOG("bqb test  send data to cp2, len = %d", len);
+			g_bqb_mode_start = 0;
+                        tcgetattr(pc_fd, &ser_settings);
+                        cfmakeraw(&ser_settings);
+
+			ser_settings.c_lflag |= (ECHO | ECHONL);
+                        ser_settings.c_lflag &= ~ECHOCTL;
+			tcsetattr(pc_fd, TCSANOW, &ser_settings);
+			 write(pc_fd, "OK\n", strlen("OK\n"));
+
+			 ret = eng_controller_bqb_stop();
+			ENG_LOG("stop BQB test ret= %d", ret);
+
+			continue;
+		}else if(1 == g_bqb_mode_start) {
+		    ENG_LOG("BQB test  send data to cp2, len = %d", len);
 		    eng_send_data(engbuf, len);
 
 		    continue;
 		}
 	    #endif
 
+                ENG_LOG("bqb write to at_mux_fd...., engbuf: %s", engbuf);
                 // Just send to modem transparently.
                 if(at_mux_fd >= 0) {
                     cur = 0;
