@@ -168,6 +168,10 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	memset(mMiscHeapArray, 0, sizeof(mMiscHeapArray));
 	memset(mPreviewHeapArray, 0, sizeof(mPreviewHeapArray));
 	memset(&m_staticReqInfo,0,sizeof(camera_req_info));
+	/*for setting only with different value*/
+	m_staticReqInfo.afMode = -1;
+	m_staticReqInfo.flashMode = -1;
+
 	memset(&m_camCtlInfo,0,sizeof(cam_hal_ctl));
 	memset(&m_reprocessBuf,0,sizeof(reprocess_buf_info));
 	memset(mPreviewFrmTimestamp, 0, sizeof(mPreviewFrmTimestamp));
@@ -3734,7 +3738,10 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						HAL_LOGE("ERR: drv not support af mode");
 					}
 					if (m_CameraId == 0) {
-					    ASIGNIFNOTEQUAL(srcreq->afMode, AfMode, drvTag)
+						if (srcreq->afMode != AfMode) {
+							srcreq->afMode = AfMode;
+							SET_PARM(drvTag,AfMode);
+						}
 					}
 				}
                 break;
@@ -3838,7 +3845,10 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 						HAL_LOGE("ERR: drv not support ae flash mode");
 					}
 					if (m_CameraId == 0) {
-					    ASIGNIFNOTEQUAL(srcreq->flashMode, FlashMode, drvTag)
+						if (srcreq->flashMode != FlashMode) {
+							srcreq->flashMode = FlashMode;
+							SET_PARM(drvTag,FlashMode);
+						}
 					}
 				}
                 break;
@@ -4191,7 +4201,9 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 		HAL_LOGE("ERR: haven't stream ops");
 		return 0;
 	}
-
+	if (subStream == STREAM_ID_RECORD) {
+		m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, m_PrvFrmCnt, 0, m_callbackClient);
+	}
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
 	if (ret != NO_ERROR || buf == NULL) {
 		HAL_LOGD("sub stream(%d) dequeue_buffer fail res(%d)", subStream, ret);

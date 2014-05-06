@@ -165,6 +165,7 @@ const char *cam_hal_metadata_section_names[ANDROID_VENDOR_SECTION_COUNT] = {
 static tags_info_t android_add_parameters[VENDOR_SECTION_END - VENDOR_SECTION_START] = {
     { "brightness",                          TYPE_BYTE   },
     { "capture-mode",                        TYPE_BYTE   },
+    { "burstcap-cnt",                        TYPE_BYTE   },
 };
 
 tags_info_t *cam_tag_info[ANDROID_VENDOR_SECTION_COUNT] = {
