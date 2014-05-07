@@ -12,7 +12,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -174,8 +173,8 @@ public class AssertApplication extends Application {
             if (WCND_CP2_STATE_CHANGED_ACTION.equals(action)) {
                 boolean cp2ok = (boolean) intent.getBooleanExtra(EXTRA_IS_CP2_OK, false);
                 String assertInfo = intent.getStringExtra(EXTRA_CP2_ASSERT_INFO);
-                Log.d(MTAG, "CP2 status: " + cp2ok + ", info: " + assertInfo + ", debug: " + Debug.isDebug());
-                if (!cp2ok && Debug.isDebug()) {
+                Log.d(MTAG, "CP2 status: " + cp2ok + ", info: " + assertInfo);
+                if (!cp2ok) {
                     Log.d(MTAG, "show assert notification for wcnd.");
                     showNotification(WCND_ASSERT_ID, "wcnd assert", assertInfo);
                 } else if (cp2ok) {
