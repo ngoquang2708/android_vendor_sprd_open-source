@@ -4276,7 +4276,7 @@ static int32_t _ispCfgInt(uint32_t handler_id)
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
-		rtn=ispRegIRQ(handler_id, ISP_MONITOR_EVT_AWB|ISP_MONITOR_EVT_AF);
+		rtn=ispRegIRQ(handler_id, ISP_MONITOR_EVT_AWB|ISP_MONITOR_EVT_AF|ISP_MONITOR_EVT_SOF);
 		ISP_RETURN_IF_FAIL(rtn, ("reg irq error"));
 
 		rtn=ispCfgDcamIRQ(handler_id, ISP_EB);
