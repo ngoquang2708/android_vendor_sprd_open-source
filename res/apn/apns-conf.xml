@@ -14914,28 +14914,17 @@
         authtype="1"
     />
     <!-- Kenya Safaricom -->
-    <apn carrier="safaricom"
+    <apn carrier="Safaricom"
         mcc="639"
         mnc="02"
-        apn="Safaricom"
+        apn="safaricom"
         user="saf"
         password="data"
+        server="http://wap.safaricom.co.ke"
         mmsc="http://www.safaricom.com"
         mmsproxy="172.22.2.38"
         mmsport="8080"
-        type="default,mms"
-        authtype="1"
-    />
-    <apn carrier="safaricom internet"
-        mcc="639"
-        mnc="02"
-        apn="Safaricom"
-        proxy=""
-        port=""
-        server="http://wap.safaricom.co.ke"
-        user="saf"
-        password="data"
-        type="default,supl"
+        type="default,mms,supl"
         authtype="1"
     />
     <!-- Kenya ZAIN -->
