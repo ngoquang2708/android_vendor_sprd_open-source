@@ -2762,13 +2762,25 @@ static int start_input_stream(struct tiny_stream_in *in)
           if(in->config.channels != in->requested_channels) {
               in->config.channels = in->requested_channels;
             }
-           if(in->config.rate  != in->requested_rate) {
-                    in->config.rate = in->requested_rate;
+
+            if(in->config.rate != in->requested_rate)
+            {
+                in->config.rate = in->requested_rate;
             }
-          in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
-          if(!pcm_is_ready(in->pcm)) {
-	      ALOGE("start_input_stream pcm open error");
-		goto err;
+            ALOGE("start_input_stream pcm_open_0");
+            in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
+            if(!pcm_is_ready(in->pcm)) {
+                if(in->pcm) {
+                    pcm_close(in->pcm);
+                    in->pcm = NULL;
+                }
+                in->config.rate = pcm_config_mm_ul.rate;
+                ALOGE("start_input_stream pcm_open_1");
+                in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
+                if(!pcm_is_ready(in->pcm)) {
+                    ALOGE("start_input_stream pcm open err");
+                    goto err;
+                }
             }
         }
         /* start to process pcm data captured, such as noise suppression.*/
