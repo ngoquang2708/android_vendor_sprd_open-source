@@ -14914,10 +14914,10 @@
         authtype="1"
     />
     <!-- Kenya Safaricom -->
-    <apn carrier="Safaricom"
+    <apn carrier="safaricom"
         mcc="639"
         mnc="02"
-        apn="safaricom"
+        apn="Safaricom"
         user="saf"
         password="data"
         server="http://wap.safaricom.co.ke"
