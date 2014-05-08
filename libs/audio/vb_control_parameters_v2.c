@@ -2101,11 +2101,11 @@ RESTART:
                     MY_TRACE("voice:VBC_CMD_HAL_CLOSE IN.");
                     cur_timeout = &timeout;
                     adev->call_prestop = 1;
+                    vbc_call_end_process(adev,false);
                     ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
                     if(ret < 0){
                         ALOGE("voice:VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
                     }
-                    vbc_call_end_process(adev,false);
                     MY_TRACE("voice:VBC_CMD_HAL_CLOSE OUT.");
                 }
                 break;
