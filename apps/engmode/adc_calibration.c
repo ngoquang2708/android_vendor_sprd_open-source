@@ -387,7 +387,7 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
 
 static int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
 {
-    int channel = pMsgADC->ap_adc_req.parameters[0];
+    int channel = pMsgADC->ap_adc_req.parameters[0] - 1;
     int adc_value = 0;
     int adc_result = 0;
     int i = 0;
