@@ -1170,7 +1170,7 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
                 pthread_mutex_unlock(&adev->lock);
             }
             set_call_route(adev,switch_device[i],1);
-        }
+       }
     }
     for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
     {
@@ -1369,6 +1369,7 @@ int SetParas_Linein_Incall(int fd_pipe,struct tiny_audio_device *adev)
     int ret = 0;
     parameters_head_t write_common_head;
     switch_ctrl_t swtich_ctrl_paras;
+    struct mixer_ctl *air_adcr = NULL;
     memset(&swtich_ctrl_paras,0,sizeof(swtich_ctrl_paras));
     MY_TRACE("%s in...",__func__);
     ret = GetParas_Switch_Incall(fd_pipe,&swtich_ctrl_paras);
@@ -1376,6 +1377,15 @@ int SetParas_Linein_Incall(int fd_pipe,struct tiny_audio_device *adev)
         return ret;
     }
     set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
+    if(adev->out_devices == AUDIO_DEVICE_OUT_EARPIECE){
+        air_adcr = mixer_get_ctl_by_name(adev->mixer, "ADCR Mixer AIRADCR Switch");
+        if (!air_adcr) {
+            ALOGE("%s Unknown control '%s'\n", __func__,"ADCR Mixer AIRADCR Switch");
+            return ret;
+        }
+        ALOGE("%s:handhold mode close ADCR Mixer AIRADCR Switch",__func__);
+        mixer_ctl_set_value(air_adcr, 0, 0);
+    }
     return ret;
 }
 int SetParas_Switch_Incall(int fd_pipe,int vbchannel_id,struct tiny_audio_device *adev)
@@ -1963,6 +1973,7 @@ void *vbc_ctrl_thread_linein_routine(void *arg)
     pthread_attr_t attr;
     struct sched_param m_param;
     int newprio=39;
+    struct mixer_ctl *air_adcr = NULL;
 
     pthread_attr_init(&attr);
     pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
@@ -2143,6 +2154,18 @@ RESTART:
                     }
 
                     ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
+                    //configure line routine again for low power
+                    set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
+                    if(adev->out_devices == AUDIO_DEVICE_OUT_EARPIECE){
+                        air_adcr = mixer_get_ctl_by_name(adev->mixer, "ADCR Mixer AIRADCR Switch");
+                        if (!air_adcr) {
+                            ALOGE("%s Unknown control '%s'\n", __func__,"ADCR Mixer AIRADCR Switch");
+                        } else {
+                            ALOGE("%s:handhold mode close ADCR Mixer AIRADCR Switch",__func__);
+                            mixer_ctl_set_value(air_adcr, 0, 0);
+                        }
+                    }
+
                     if(ret < 0){
                         MY_TRACE("voice:VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s",
                                 para->vbpipe);
