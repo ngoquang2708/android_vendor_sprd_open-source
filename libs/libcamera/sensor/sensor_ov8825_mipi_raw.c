@@ -27,6 +27,8 @@
 #define OV8825_MIN_FRAME_LEN_PRV  0x5e8
 #define OV8825_4_LANES
 static int s_ov8825_gain = 0;
+static int s_ov8825_gain_bak = 0;
+static int s_ov8825_shutter_bak = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static int s_video_min_framerate = 0;
@@ -2756,7 +2758,7 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		usleep(20*1000);
 		//step 0 power up DOVDD, the AVDD
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
 		Sensor_SetIovddVoltage(iovdd_val);
 		usleep(2000);
 		Sensor_SetAvddVoltage(avdd_val);
@@ -3090,7 +3092,7 @@ LOCAL uint32_t _ov8825_StreamOff(uint32_t param)
 	SENSOR_PRINT("SENSOR_ov8825: StreamOff");
 
 	Sensor_WriteReg(0x0100, 0x00);
-	usleep(100*1000);
+	usleep(40*1000);
 
 	return 0;
 }
@@ -3193,6 +3195,42 @@ static uint32_t _ov8825_SetEV(uint32_t param)
 	}
 	return rtn;
 }
+
+LOCAL uint32_t _ov8825_saveLoad_exposure(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	uint8_t  ret_h, ret_m, ret_l;
+	uint32_t dummy = 0;
+	SENSOR_EXT_FUN_PARAM_T_PTR sl_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR)param;
+
+	uint32_t sl_param = sl_ptr->param;
+	if (sl_param) {
+//		usleep(180*1000);     /*wait for effect after init stable(AWB)*/
+		/*load exposure params to sensor*/
+		SENSOR_PRINT_HIGH("_ov8825_saveLoad_exposure load shutter 0x%x gain 0x%x",
+					s_ov8825_shutter_bak,
+					s_ov8825_gain_bak);
+		_ov8825_set_gain16(s_ov8825_gain_bak);
+		ret_l = ((unsigned char)s_ov8825_shutter_bak&0xf) << 4;
+		ret_m = (unsigned char)((s_ov8825_shutter_bak&0xfff) >> 4) & 0xff;
+		ret_h = (unsigned char)(s_ov8825_shutter_bak >> 12);
+		Sensor_WriteReg(0x3502, ret_l);
+		Sensor_WriteReg(0x3501, ret_m);
+		Sensor_WriteReg(0x3500, ret_h);
+	} else {
+		/*ave exposure params from sensor*/
+		ret_h = (uint8_t) Sensor_ReadReg(0x3500);
+		ret_m = (uint8_t) Sensor_ReadReg(0x3501);
+		ret_l = (uint8_t) Sensor_ReadReg(0x3502);
+		s_ov8825_shutter_bak = (ret_h << 12) + (ret_m << 4) + (ret_l >> 4);
+		s_ov8825_gain_bak = _ov8825_ReadGain(dummy);
+		SENSOR_PRINT_HIGH("_ov8825_saveLoad_exposure save shutter 0x%x gain 0x%x",
+					s_ov8825_shutter_bak,
+					s_ov8825_gain_bak);
+	}
+	return rtn;
+}
+
 LOCAL uint32_t _ov8825_ExtFunc(uint32_t ctl_param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
@@ -3210,6 +3248,11 @@ LOCAL uint32_t _ov8825_ExtFunc(uint32_t ctl_param)
 	case SENSOR_EXT_EV:
 		rtn = _ov8825_SetEV(ctl_param);
 		break;
+
+	case SENSOR_EXT_EXPOSURE_SL:
+		rtn = _ov8825_saveLoad_exposure(ctl_param);
+		break;
+
 	default:
 		break;
 	}

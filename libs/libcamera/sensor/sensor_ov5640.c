@@ -41,6 +41,8 @@
 static uint32_t ae_low = 0, ae_high = 0, ae_target = 0;
 static uint32_t preview_sysclk;
 static int s_ov5640_gain = 0;
+static int s_ov5640_gain_bak = 0;
+static int s_ov5640_shutter_bak = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
 static uint32_t s_af_gain = 0;
@@ -940,9 +942,9 @@ LOCAL const SENSOR_REG_T ov5640_2592X1944[] = {
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5640_resolution_Tab_YUV[] = {
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 12, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_common_init), 0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_640X480_new), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_YUV), 1280, 960,  12, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(ov5640_1280X960_YUV), 1280, 960, 12, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_1600X1200), 1600, 1200,  24, SENSOR_IMAGE_FORMAT_JPEG},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_2048X1536), 2048, 1536, 24, SENSOR_IMAGE_FORMAT_JPEG},
 	{ADDR_AND_LEN_OF_ARRAY(ov5640_2592X1944), 2592, 1944, 24, SENSOR_IMAGE_FORMAT_JPEG},
@@ -1333,6 +1335,8 @@ LOCAL uint32_t _ov5640_PowerOn(uint32_t power_on)
 		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
 		usleep(1*1000);
 		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(20*1000);
+
 	}
 	SENSOR_PRINT("(1:on, 0:off): %d_end\n ", power_on);
 	return SENSOR_SUCCESS;
@@ -2931,6 +2935,31 @@ LOCAL uint32_t _ov5640_SetEV(uint32_t param)
 		break;
 	default:
 		break;
+	}
+	return rtn;
+}
+
+LOCAL uint32_t _ov5640_saveLoad_exposure(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T_PTR sl_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR)param;
+
+	uint32_t sl_param = sl_ptr->param;
+	if (sl_param) {
+		usleep(180*1000);     /*wait for effect after init stable(AWB)*/
+		/*load exposure params to sensor*/
+		SENSOR_PRINT_HIGH("_ov5640_saveLoad_exposure load shutter 0x%x gain 0x%x",
+					s_ov5640_shutter_bak,
+					s_ov5640_gain_bak);
+		OV5640_set_gain16(s_ov5640_gain_bak);
+		OV5640_set_shutter(s_ov5640_shutter_bak);
+	} else {
+		/*ave exposure params from sensor*/
+		s_ov5640_shutter_bak = OV5640_get_shutter();
+		s_ov5640_gain_bak = OV5640_get_gain16();
+		SENSOR_PRINT_HIGH("_ov5640_saveLoad_exposure save shutter 0x%x gain 0x%x",
+					s_ov5640_shutter_bak,
+					s_ov5640_gain_bak);
 	}
 	return rtn;
 }
@@ -7102,7 +7131,7 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr =
-		(SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
+		(SENSOR_EXT_FUN_PARAM_T_PTR)ctl_param;
 	SENSOR_PRINT("0x%x", ext_ptr->cmd);
 
 	switch (ext_ptr->cmd) {
@@ -7123,6 +7152,9 @@ LOCAL uint32_t _ov5640_ExtFunc(uint32_t ctl_param)
 		break;
 	case SENSOR_EXT_EV:
 		rtn = _ov5640_SetEV(ctl_param);
+		break;
+	case SENSOR_EXT_EXPOSURE_SL:
+		rtn = _ov5640_saveLoad_exposure(ctl_param);
 		break;
 	default:
 		break;

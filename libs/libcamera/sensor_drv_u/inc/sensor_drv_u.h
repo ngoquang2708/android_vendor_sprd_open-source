@@ -366,6 +366,7 @@ typedef enum {
 	SENSOR_EXT_FOCUS_QUIT,
 	SENSOR_EXT_EXPOSURE_START,
 	SENSOR_EXT_EV,
+	SENSOR_EXT_EXPOSURE_SL,	/*0 is save the value, 1 is load the value*/
 	SENSOR_EXT_FUNC_MAX
 } SENSOR_EXT_FUNC_CMD_E;
 

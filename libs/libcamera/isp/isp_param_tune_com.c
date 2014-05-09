@@ -131,40 +131,39 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 	uint32_t* param_ptr=(uint32_t*)((uint8_t*)in_param_ptr+0x0c);// packet data
 	uint32_t module_id=param_ptr[0];
 	enum isp_ctrl_cmd cmd=ISP_CTRL_MAX;
-	uint32_t level=param_ptr[2];
-	struct isp_af_win af_param;
-	struct isp_af_win* in_af_ptr=(struct isp_af_win*)&param_ptr[2];
 	void* ioctl_param_ptr=NULL;
-	uint32_t i=0x00;
-	uint32_t start_ndex=0x00;
 
 	cmd=module_id;
 
-	CMR_LOGE("ISP_TOOL:Level cmd :%d level :%d \n", cmd, level);
+	//CMR_LOGE("ISP_TOOL:Level cmd :%d level :%d \n", cmd, level);
+	//CMR_LOGE("ISP_TOOL:0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x \n", param_ptr[0], param_ptr[1], param_ptr[2], param_ptr[3], param_ptr[4],param_ptr[5]);
 
 	if(ISP_CTRL_AF==cmd)
 	{
+		SENSOR_EXP_INFO_T_PTR sensor_info_ptr=Sensor_GetInfo();
+		struct isp_af_win af_param;
+		struct isp_af_win* in_af_ptr=(struct isp_af_win*)&param_ptr[3];
+		uint16_t img_width=(param_ptr[2]>>0x10)&0xffff;
+		uint16_t img_height=param_ptr[2]&0xffff;
+		uint16_t prv_width=sensor_info_ptr->sensor_mode_info[1].width;
+		uint16_t prv_height=sensor_info_ptr->sensor_mode_info[1].height;
+		uint32_t i=0x00;
+
 		af_param.valid_win=in_af_ptr->valid_win;
 		af_param.mode=in_af_ptr->mode;
 		for(i=0x00; i<af_param.valid_win; i++)
 		{
-			af_param.win[i].start_x=in_af_ptr->win[i].start_x;
-			af_param.win[i].start_y=in_af_ptr->win[i].start_y;
-			af_param.win[i].end_x=in_af_ptr->win[i].end_x;
-			af_param.win[i].end_y=in_af_ptr->win[i].end_y;
+			af_param.win[i].start_x=(in_af_ptr->win[i].start_x*prv_width)/img_width;
+			af_param.win[i].start_y=(in_af_ptr->win[i].start_y*prv_height)/img_height;
+			af_param.win[i].end_x=(in_af_ptr->win[i].end_x*prv_width)/img_width;
+			af_param.win[i].end_y=(in_af_ptr->win[i].end_y*prv_height)/img_height;
 		}
 		ioctl_param_ptr=(void*)&af_param;
 
-		cmd|=ISP_TOOL_SYNC_ID;
 	} else if(ISP_CTRL_FLASH_CTRL==cmd) {
-		ispFlashCtrl(level);
-	} else if(ISP_CTRL_AE_CTRL==cmd) {
-		struct isp_ae_ctrl* ae_ctrl_ptr=(void*)&param_ptr[2];
-
-		CMR_LOGE("ISP_TOOL:aectrl mode :%d index :%d \n", ae_ctrl_ptr->mode, ae_ctrl_ptr->index);
-		ioctl_param_ptr=(void*)&param_ptr[2];
+		ispFlashCtrl(param_ptr[2]);
 	} else {
-		ioctl_param_ptr=(void*)&level;
+		ioctl_param_ptr=(void*)&param_ptr[2];
 	}
 
 	cmd|=ISP_TOOL_CMD_ID;

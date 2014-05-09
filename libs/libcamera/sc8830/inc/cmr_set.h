@@ -96,6 +96,9 @@ uint32_t camera_is_focusmove_done(void);
 int camera_isp_alg_wait(void);
 int camera_get_af_mode(void);
 int camera_set_flash_hightlight(uint32_t flash_mode);
+int camera_recover_start_set(void);
+int camera_savaload_expose_val(int sl_ops);
+
 #ifdef __cplusplus
 }
 #endif

@@ -577,7 +577,7 @@ struct isp_context{
 
 	struct isp_resolution_info input_size_trim[ISP_INPUT_SIZE_NUM_MAX];
 
-	uint32_t isp_ctrl_sync;
+	uint32_t isp_callback_bypass;
 
 };
 

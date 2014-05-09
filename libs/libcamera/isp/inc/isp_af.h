@@ -56,6 +56,7 @@ struct isp_awbm_param{
 
 struct isp_af_param{
 	uint32_t bypass;
+	uint32_t back_bypass;
 	uint32_t init;
 	enum isp_focus_mode mode;
 	uint32_t status;

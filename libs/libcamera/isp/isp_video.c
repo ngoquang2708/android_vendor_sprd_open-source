@@ -29,6 +29,7 @@
 #include <cutils/log.h>
 #include "isp_param_tune_com.h"
 #include "isp_log.h"
+#include "isp_video.h"
 
 enum {
 	CMD_START_PREVIEW = 1,
@@ -716,7 +717,8 @@ void ispvideo_Scale(uint32_t format, uint32_t in_w, uint32_t in_h, char *in_imgp
 	*out_w=img_w;
 	*out_h=img_h;
 
-	if (2 ==format){
+	if ((ISP_TOOL_YUV420_2FRAME == format)
+		||(ISP_TOOL_YVU420_2FRAME == format)) {
 		*out_imglen=img_w*img_h+(img_w*img_h)/2;
 		shift_num-=0x01;
 		shift_num<<=0x01;

@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_mem"
+
 #include "cmr_mem.h"
 #include "cmr_oem.h"
 #include <unistd.h>
@@ -1023,9 +1025,11 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	/* update io param */
 	*io_mem_res = mem_res;
 	*io_mem_end = mem_end;
+
 	CMR_LOGD("mem_res, mem_end 0x%x, 0x%x",
-			mem_res,
-			mem_end);
+		mem_res,
+		mem_end);
+
 	return 0;
 }
 

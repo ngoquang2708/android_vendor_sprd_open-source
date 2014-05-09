@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_set"
 
 #include "cmr_set.h"
 #include "sensor_drv_u.h"
@@ -806,6 +807,81 @@ exit:
 	return ret;
 }
 
+int camera_recover_start_set(void)
+{
+	struct camera_context    *cxt = camera_get_cxt();
+	struct camera_settings   *set = &cxt->cmr_set;
+	uint32_t                 skip, skip_num;
+	int                      ret = CAMERA_SUCCESS;
+	uint32_t                 sn_mode;
+	uint32_t                 skip_mode, skip_number;
+
+	if ((CAMERA_ZSL_MODE != cxt->cap_mode)
+		&& (CAMERA_ZSL_CONTINUE_SHOT_MODE != cxt->cap_mode)
+		&& (CAMERA_ANDROID_ZSL_MODE != cxt->cap_mode)) {
+		sn_mode = cxt->sn_cxt.preview_mode;
+	} else {
+		sn_mode = cxt->sn_cxt.capture_mode;
+	}
+/*
+	CMR_LOGI("Sensor workmode %d", sn_mode);
+	ret = Sensor_SetMode(sn_mode);
+	if (ret) {
+		CMR_LOGW("Sensor can't work at this mode %d", sn_mode);
+		goto exit;
+	}
+*/
+	ret = Sensor_SetMode_WaitDone();
+	if (ret) {
+		CMR_LOGE("Fail to switch off the sensor stream");
+		goto exit;
+	}
+
+	if (INVALID_SET_WORD != set->brightness) {
+		ret = camera_set_brightness(set->brightness, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->contrast) {
+		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->effect) {
+		ret = camera_set_effect(set->effect, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->expo_compen) {
+		ret = camera_set_ev(set->expo_compen, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->wb_mode) {
+		ret = camera_set_wb(set->wb_mode, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->flicker_mode) {
+		ret = camera_set_flicker(set->flicker_mode, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->iso) {
+		ret = camera_set_iso(set->iso, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	/*the flicker should be set after iso, because some mode will set the iso level*/
+	if (INVALID_SET_WORD != set->scene_mode) {
+		ret = camera_set_scene(set->scene_mode, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+exit:
+	return ret;
+}
+
 int camera_preview_stop_set(void)
 {
 	int                      ret = CAMERA_SUCCESS;
@@ -1496,7 +1572,23 @@ int camera_set_hdr_ev(int ev_level)
 	ev_param.cmd = SENSOR_EXT_EV;
 	ev_param.param = ev_level;
 	CMR_LOGD("level %d.",ev_param.param);
-	ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t) & ev_param);
+	ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t)&ev_param);
+	CMR_LOGD("done %d.",ret);
+	return ret;
+}
+
+int camera_savaload_expose_val(int sl_ops)
+{
+	int                      ret = CAMERA_SUCCESS;
+	SENSOR_EXT_FUN_PARAM_T   sl_param;
+
+	sl_param.cmd = SENSOR_EXT_EXPOSURE_SL;
+	sl_param.param = (uint8_t)sl_ops;
+	if (sl_param.param)
+		CMR_LOGD("load exposure value");
+	else
+		CMR_LOGD("save exposure value");
+	ret = Sensor_Ioctl(SENSOR_IOCTL_FOCUS, (uint32_t)&sl_param);
 	CMR_LOGD("done %d.",ret);
 	return ret;
 }

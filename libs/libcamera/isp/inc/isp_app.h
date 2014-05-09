@@ -83,6 +83,7 @@ enum isp_focus_mode{
 	ISP_FOCUS_MACRO,
 	ISP_FOCUS_WIN,
 	ISP_FOCUS_CONTINUE,
+	ISP_FOCUS_BYPASS,
 	ISP_FOCUS_MAX
 };
 
@@ -287,6 +288,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_AE_CTRL, // for isp tool
 	ISP_CTRL_AF_CTRL, // for isp tool
 	ISP_CTRL_REG_CTRL, // for isp tool
+	ISP_CTRL_AF_END_INFO, // for isp tool
 	ISP_CTRL_MAX
 };
 
@@ -388,13 +390,18 @@ struct isp_ae_ctrl{
 struct isp_af_ctrl{
 	enum isp_ctrl_mode mode;
 	uint32_t step;
+	uint32_t num;
 	uint32_t stat_value[9];
+};
+
+struct isp_af_end_info{
+	uint32_t suc_win;
 };
 
 struct isp_reg_ctrl{
 	enum isp_ctrl_mode mode;
 	uint32_t num;
-	uint32_t* reg_ptr;
+	uint32_t reg_tab[40];
 };
 
 struct isp_smart_ae_param {
