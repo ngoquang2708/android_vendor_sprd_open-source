@@ -125,6 +125,6 @@ void start_modem(int *param);
 
 void* detect_sipc_modem(void *param);
 void* detect_modem_blocked(void *param);
-
+void wait_phone_app_start(void);
 
 #endif
