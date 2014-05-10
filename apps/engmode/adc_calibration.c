@@ -392,27 +392,19 @@ static int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
     int adc_result = 0;
     int i = 0;
 
-    if(5 == channel){ // FIX ME@alvin.zhou: This 5 is a special channel.
-        for(i=0; i < 16; i++){
-            adc_value = get_battery_adc_value();
-            adc_result += adc_value;
-        }
-        adc_result >>= 4;
-        pMsgADC->diag_ap_cnf.status = 0;
+    pMsgADC->diag_ap_cnf.status = 0;
+    adc_result = get_other_ch_adc_value(channel, 0); // small scale
+    if(adc_result >= 0){
         pMsgADC->ap_adc_req.parameters[0] = (unsigned short)(adc_result&0xFFFF);
-    }else{
-        pMsgADC->diag_ap_cnf.status = 0;
-	adc_result = get_other_ch_adc_value(channel, 0); // small scale
-        if(adc_result >= 0){
-	    pMsgADC->ap_adc_req.parameters[0] = (unsigned short)(adc_result&0xFFFF);
-	    adc_result = get_other_ch_adc_value(channel, 1); // large scale
+        if(channel != 5){
+            adc_result = get_other_ch_adc_value(channel, 1); // large scale
             if(adc_result >= 0)
                 pMsgADC->ap_adc_req.parameters[1] = (unsigned short)(adc_result&0xFFFF);
-	    else
-		pMsgADC->diag_ap_cnf.status = 1;
-	}else{
-            pMsgADC->diag_ap_cnf.status = 1;
-	}
+            else
+                pMsgADC->diag_ap_cnf.status = 1;
+        }
+    }else{
+        pMsgADC->diag_ap_cnf.status = 1;
     }
 
     return adc_result;
@@ -599,6 +591,7 @@ static int get_other_ch_adc_value(int channel, int scale)
    int i = 0, len = 0, fd = -1;
    char data_buf[16] = {0};
    char *endptr;
+   char ch[8] = {0};
 
    fd = open(ADC_CHANNEL_PATH, O_WRONLY);
    if(fd < 0){
@@ -606,7 +599,8 @@ static int get_other_ch_adc_value(int channel, int scale)
        return -1;
    }
 
-   len = write(fd, &channel, sizeof(int));
+   sprintf(ch, "%d", channel);
+   len = write(fd, ch, strlen(ch));
    if(len <= 0){
        ALOGE("%s: write %s failed, err: %s\n", __func__,ADC_CHANNEL_PATH,strerror(errno));
        close(fd);
@@ -620,7 +614,8 @@ static int get_other_ch_adc_value(int channel, int scale)
        return -1;
    }
 
-   len = write(fd, &scale, sizeof(int));
+   sprintf(ch, "%d", scale);
+   len = write(fd, ch, strlen(ch));
    if(len <= 0){
        ALOGE("%s: write %s failed, err: %s\n", __func__,ADC_SCALE_PATH,strerror(errno));
        close(fd);
