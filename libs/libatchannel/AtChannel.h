@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 #include <cutils/sockets.h>
-const char* sendAt(int modemId, int simId, const char* atCmd);
+size_t sendAt(void *buf, size_t bufLen, int simId, const char* atCmd);
 
 #ifdef __cplusplus
 }

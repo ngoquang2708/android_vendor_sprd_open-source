@@ -7,6 +7,7 @@
 #include "IAtChannel.h"
 #include "AtChannel.h"
 #include <cutils/properties.h>
+#include <cutils/sockets.h>
 
 using namespace android;
 
@@ -19,6 +20,10 @@ const int MAX_SERVICE_NAME = 100;
 #define  MODEM_WCDMA_ENABLE_PROP           "persist.modem.w.enable"
 #define  MODEM_WCDMA_ID_PROP               "ro.modem.w.id"
 #define  MODEM_WCDMA_COUNT_PROP            "ro.modem.w.count"
+
+#define SOCKET_NAME_RIL	 "rild-oem"
+#define ALOGI(x...)  fprintf(stderr, "AtChannel: " x)
+
 
 
 static int getPhoneId(int modemId, int simId)
@@ -76,7 +81,7 @@ static String16 getServiceName(int modemId, int simId)
 
     return String16(serviceName);
 }
-
+#if 0
 #ifdef FFOS_TEMP_AT
 
 #define SOCKET_NAME_RIL_DEBUG_SIM1	"rild-debug"	/* from ril.cpp */
@@ -189,7 +194,116 @@ const char* sendAt(int modemId, int simId, const char* atCmd)
         ALOGI("Couldn't get connection to %s\n", String8(serviceName).string());
         return "ERROR2";
     }
-
     return atChannel->sendAt(atCmd);
 }
 #endif
+#endif
+
+static const char* getModem() {
+	const char * modemType = "";
+	char prop[PROPERTY_VALUE_MAX] = "";
+	int tdEnable, wEnable;
+
+	property_get(MODEM_TD_ENABLE_PROP, prop, "0");
+	tdEnable = atoi(prop);
+	memset(prop, '\0', sizeof(prop));
+	property_get(MODEM_WCDMA_ENABLE_PROP, prop, "0");
+	wEnable = atoi(prop);
+
+	if (tdEnable) {
+		modemType = "t";
+	} else if (wEnable) {
+		modemType = "w";
+	} else {
+		ALOGI("getModem: Invalid modem type");
+	}
+	return modemType;
+}
+
+static const char * modem = getModem();
+
+
+size_t sendAt(void *buf, size_t bufLen, int simId, const char* atCmd)
+{
+	int fd;
+	int i = 0;
+	int count = 20;
+	int len = strlen(atCmd);
+	int num = 1;
+	char name_ril_oem[20] = { 0 };
+	unsigned int ret = 0;
+	unsigned int responselen = 0;
+	fd_set readfd;
+	struct timeval timeout;
+
+	ALOGI("sendAt: simId is %d\n", simId);
+	if (simId == 0) {
+		snprintf(name_ril_oem, sizeof(name_ril_oem), "%s%s", modem,
+				SOCKET_NAME_RIL);
+	} else {
+		snprintf(name_ril_oem, sizeof(name_ril_oem), "%s%s%d", modem,
+				SOCKET_NAME_RIL, simId);
+	}
+	ALOGI("sendAt: SOCKET_NAME_RIL is %s\n", name_ril_oem);
+
+	fd = socket_local_client(name_ril_oem, ANDROID_SOCKET_NAMESPACE_RESERVED,
+			SOCK_STREAM);
+	ALOGI("sendAt: fd is %d\n", fd);
+	if (fd < 0) {
+		ALOGI("sendAt failed error is Errorsocket");
+		return -1;
+	}
+
+	ret = send(fd, &len, sizeof(int), 0);
+	ALOGI("sendAt: lenret is %d\n", ret);
+	if (ret != sizeof(int)) {
+		ALOGI("Socket write Error: when sending atCmd length");
+		close(fd);
+                return -1;
+
+	}
+
+	ret = send(fd, atCmd, sizeof(char) * len, 0);
+	ALOGI("sendAt: atret is %d\n", ret);
+	if (ret != sizeof(char) * len) {
+		ALOGI("Socket write error when sending atCmd");
+		close(fd);
+                return -1;
+
+	}
+
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 0;
+	FD_ZERO(&readfd);
+	FD_SET(fd, &readfd);
+	ret = select(fd + 1, &readfd, NULL, NULL, &timeout);
+	if (ret > 0 && FD_ISSET(fd, &readfd)) {
+		ret = recv(fd, &responselen, sizeof(int), 0);
+		if (ret > 0 && bufLen > responselen) {
+			ALOGI("sendAt: responselen is %d\n", responselen);
+
+			ret = recv(fd, buf, sizeof(char) * responselen, 0);
+			if (ret > 0) //get response
+					{
+                                ALOGI("sendAt: response is %s\n", (char*)buf);
+			} else {
+				close(fd);
+                                ALOGI("sendAt failed error is ErrorRevData");
+                                return -1;
+			}
+		} else {
+			close(fd);
+                        ALOGI("sendAt failed error is ErrorRevLen");
+                        return -1;
+		}
+	} else {
+		close(fd);
+                ALOGI("sendAt failed error is Error");
+                return -1;
+	}
+
+	close(fd);
+
+	return responselen;
+}
+
