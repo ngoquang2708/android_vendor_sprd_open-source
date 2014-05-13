@@ -792,7 +792,7 @@ static int  GetAudio_inpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud
         adc_index = AUDIO_NV_CAPTURE_GAIN_INDEX;   //43
     }
 
-    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX];    //43
+    pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[adc_index];
     pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
 
     ALOGW("%s, adc_pga_gain_l:0x%x device:0x%x vol_level:0x%x",
