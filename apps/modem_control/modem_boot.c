@@ -47,6 +47,7 @@ typedef struct  _NV_HEADER {
 #define	MODEM_POWER_PATH	"/sys/devices/platform/modem_interface/modempower"
 #define	MODEM_RESET_PATH	         "/sys/devices/platform/modem_interface/modemreset"
 #define	MODEM_STATE_PATH	        "/sys/devices/platform/modem_interface/state"
+#define   CP_AVDD18_EN_PATH 	"/sys/cp_ldo/cp_ldo"
 
 #define	DLOADER_PATH		"/dev/dloader"
 #define	UART_DEVICE_NAME	"/dev/ttyS2"
@@ -963,6 +964,20 @@ void set_modem_state(char * buf)
 	numRead = write(modem_state_fd,buf,2);
 	close(modem_state_fd);
 }
+
+//"1" enable "0" disable
+void set_avdd18_en(char * buf)
+{
+	int fd = 0;
+	ssize_t numRead;
+
+	fd = open(CP_AVDD18_EN_PATH, O_WRONLY);
+	MODEM_LOGE("set_avdd18_en: modem_state_fd =%d, buf:%s\n", fd, buf);
+	if(fd < 0)
+		return ;
+	numRead = write(fd,buf,2);
+	close(fd);
+}
 static void *modemd_listen_uart_thread(void *par)
 {
 	int modem_uart_fd = 0;
@@ -1057,6 +1072,7 @@ reboot_modem:
     uart_send_change_spi_mode_message(uart_fd,32*1024);
 #endif
 
+    set_avdd18_en("1");
     modem_interface_fd = open(DLOADER_PATH, O_RDWR);
     if(modem_interface_fd < 0){
 	MODEM_LOGD("open dloader device failed retry ......\n");
