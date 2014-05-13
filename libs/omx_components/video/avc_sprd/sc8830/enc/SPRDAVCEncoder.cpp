@@ -589,10 +589,6 @@ OMX_ERRORTYPE SPRDAVCEncoder::releaseEncoder() {
 
 OMX_ERRORTYPE SPRDAVCEncoder::releaseResource() {
 
-    if (!mStarted) {
-        return OMX_ErrorNone;
-    }
-
     if (mPbuf_extra_v != NULL)
     {
         if (mIOMMUEnabled) {
