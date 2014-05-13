@@ -14,5 +14,7 @@
 
          <activity android:name="AssertInfoActivity"
              android:icon="@drawable/modem_assert"></activity>
+         <activity android:name="SystemInfoDumpingActivity"
+         android:theme="@android:style/Theme.Holo.Dialog"></activity>
     </application>
 </manifest>

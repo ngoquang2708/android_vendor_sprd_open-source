@@ -46,7 +46,6 @@ public class AssertApplication extends Application {
     private final Object mObjectLock = new Object();
     private Handler mAssertHandler;
     private HandlerThread mAssertThread;
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -59,6 +58,8 @@ public class AssertApplication extends Application {
         /* a receiver to receive wcnd assert info */
         IntentFilter filter = new IntentFilter();
         filter.addAction(WCND_CP2_STATE_CHANGED_ACTION);
+        filter.addAction(SLOG_DUMP_START_ACTION);
+        filter.addAction(SLOG_DUMP_END_ACTION);
         registerReceiver(mReceiver, filter);
     }
 
@@ -156,6 +157,8 @@ public class AssertApplication extends Application {
      * alive,
      */
     private static final String WCND_CP2_STATE_CHANGED_ACTION = "com.android.server.wcn.WCND_CP2_STATE_CHANGED";
+    private static final String SLOG_DUMP_START_ACTION = "slogui.intent.action.DUMP_START";
+    private static final String SLOG_DUMP_END_ACTION = "slogui.intent.action.DUMP_END";
 
     /**
      * The lookup key for an {@code boolean} giving if CP2 is OK.
@@ -180,6 +183,14 @@ public class AssertApplication extends Application {
                 } else if (cp2ok) {
                     hideNotification(WCND_ASSERT_ID);
                 }
+            } else if (SLOG_DUMP_START_ACTION.equals(action)) {
+                showProgressDialog();
+            } else if (SLOG_DUMP_END_ACTION.equals(action)) {
+                Log.d(MTAG, "SLOG_DUMP_END_ACTION");
+                Intent closeIntent = new Intent(context, SystemInfoDumpingActivity.class);
+                closeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                closeIntent.putExtra("closeFlag", true);
+                startActivity(closeIntent);
             }
         }
     };
@@ -224,4 +235,10 @@ public class AssertApplication extends Application {
         sendBroadcast(intent);
     }
 
+    private void showProgressDialog() {
+       Intent intent = new Intent(this, SystemInfoDumpingActivity.class);
+       intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+       intent.putExtra("closeFlag", false);
+       startActivity(intent);
+    }
 }
