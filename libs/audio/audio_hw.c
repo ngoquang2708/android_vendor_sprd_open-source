@@ -2046,6 +2046,12 @@ static ssize_t out_write_mux(struct tiny_stream_out *out, const void* buffer,
         buf = out->buffer_vplayback;
         ret = mux_pcm_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
         ALOGE(": mux_pcm_write out ret is %d",ret);
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buf;
+    dump_info.buf_len = out_frames * frame_size;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_MIX_VAUDIO;
+    dump_data(dump_info);
+#endif        
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
@@ -2085,6 +2091,13 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
 
         ret = pcm_mmap_write(out->pcm_vplayback, (void *)buf, out_frames*frame_size);
         BLUE_TRACE("out_write_vaudio out out frames  is %d",out_frames);
+
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buf;
+    dump_info.buf_len = out_frames * frame_size;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_MIX_VAUDIO;
+    dump_data(dump_info);
+#endif
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
@@ -2121,6 +2134,14 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
         ret = pcm_mmap_write(out->pcm_voip, (void *)buf, out_frames*frame_size/2);
         if(ret < 0) {
             ALOGE("out_write_sco: pcm_mmap_write error: ret %d", ret);
+        }
+        else {
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buf;
+    dump_info.buf_len = out_frames * frame_size/2;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_VOIP_WRITE;
+    dump_data(dump_info);
+#endif     
         }
     }
     else
@@ -2161,6 +2182,12 @@ static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
 
         BLUE_TRACE("voip:out_write_bt_sco");
         ret = pcm_mmap_write(out->pcm_bt_sco, (void *)buf, out_frames*frame_size/2);
+#ifdef AUDIO_DUMP_EX
+    dump_info.buf = buf;
+    dump_info.buf_len = out_frames * frame_size/2;
+    dump_info.dump_switch_info = DUMP_MUSIC_HWL_BT_SCO_WRITE;
+    dump_data(dump_info);
+#endif     
     }
     else{
 
