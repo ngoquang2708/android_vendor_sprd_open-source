@@ -793,11 +793,8 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
             }
             else {
 #ifdef VB_CONTROL_PARAMETER_V2
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0)) {
-                    count = read(modem->i2s_bt.fd_sys_cp2,cur_state,1);
-                    if(strcmp(cur_state,"1") == 0) {
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                         count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-                    }
                 }
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
@@ -845,12 +842,8 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
             }
             else {
 #ifdef VB_CONTROL_PARAMETER_V2
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0)) {
-                    count = read(modem->i2s_bt.fd_sys_cp2,cur_state,1);
-                    if(strcmp(cur_state,"1") == 0) {
-                        if( modem->i2s_bt.fd_sys_ap >= 0)
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                             count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-                    }
                 }
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
@@ -894,22 +887,27 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0))
                     count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
             } else {
+#ifdef VB_CONTROL_PARAMETER_V2
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0))
+                    count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
+
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
+                    count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
+
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_ap>= 0))
+                    count = write(modem->i2s_bt.fd_iis1_sys_ap,ctl_on,1);//iis1_sys reset to default value
+#else
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                     count = read(modem->i2s_bt.fd_sys_ap,cur_state,1);
                     if(strcmp(cur_state,"1") == 0) {
-                       if( modem->i2s_bt.fd_sys_cp2 >= 0)
-                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
+                        if( modem->i2s_bt.fd_sys_cp2 >= 0)
+                            count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
-                {
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
-                        count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
+                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
+                    count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
 
-#ifdef VB_CONTROL_PARAMETER_V2
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_ap>= 0))
-                        count = write(modem->i2s_bt.fd_iis1_sys_ap,ctl_on,1);//iis1_sys reset to default value
 #endif
-                }
             }
         }
         if(adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
