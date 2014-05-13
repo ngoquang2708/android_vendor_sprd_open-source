@@ -258,11 +258,12 @@ int write_from_buffer(int fd, char *buf, int len)
 int open_device(struct slog_info *info, char *path)
 {
 	int retry_count = 0;
+	int fd;
 
 retry:
-	info->fd_device = open(path, O_RDONLY);
-	if(info->fd_device < 0){
-		if(errno == EINTR && retry_count < 5) {
+	fd = open(path, O_RDWR);
+	if(fd < 0){
+		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
 			retry_count ++;
 			sleep(1);
 			goto retry;
@@ -271,7 +272,7 @@ retry:
 		return -1;
 	}
 
-	return info->fd_device;
+	return fd;
 }
 
 /*

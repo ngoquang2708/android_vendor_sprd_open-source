@@ -99,7 +99,7 @@ void update_conf(const char *keyword, const char *status)
 {
 	FILE *fp;
 	int len = 0;
-	char buffer[MAX_LINE_LEN], line[MAX_NAME_LEN];
+	char buffer[MAX_LINE_LEN *2], line[MAX_NAME_LEN];
 
 	fp = fopen(TMP_SLOG_CONFIG, "r");
 	if(fp == NULL) {

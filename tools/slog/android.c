@@ -177,28 +177,28 @@ void *stream_log_handler(void *arg)
 			continue;
 		}
 		if(!strncmp(info->name, "kernel", 6)) {
-			open_device(info, KERNEL_LOG_SOURCE);
+			info->fd_device = open_device(info, KERNEL_LOG_SOURCE);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 		} else if( !strncmp(info->name, "main", 4) ) {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
-			open_device(info, devname);
+			info->fd_device = open_device(info, devname);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 			filterPriToStr(info->level, tagName);
 		} else if( !strncmp(info->name, "system", 6) ) {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
-			open_device(info, devname);
+			info->fd_device = open_device(info, devname);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 		} else if( !strncmp(info->name, "radio", 5) ) {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
-			open_device(info, devname);
+			info->fd_device = open_device(info, devname);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 		} else if( !strncmp(info->name, "events", 6) ) {
 			sprintf(devname, "%s/%s", "/dev/log", info->name);
-			open_device(info, devname);
+			info->fd_device = open_device(info, devname);
 			info->fp_out = gen_outfd(info);
 			add_timestamp(info);
 			g_eventTagMap = android_openEventTagMap(EVENT_TAG_MAP_FILE);
@@ -267,7 +267,7 @@ void *stream_log_handler(void *arg)
 					FD_CLR(info->fd_device, &readset_tmp);
 					close(info->fd_device);
 					sleep(1);
-					open_device(info, KERNEL_LOG_SOURCE);
+					info->fd_device = open_device(info, KERNEL_LOG_SOURCE);
 					FD_SET(info->fd_device, &readset_tmp);
 					if(info->fd_device > max)
 						max = info->fd_device;
@@ -298,7 +298,7 @@ void *stream_log_handler(void *arg)
 					close(info->fd_device);
 					sleep(1);
 					sprintf(devname, "%s/%s", "/dev/log", info->name);
-					open_device(info, devname);
+					info->fd_device = open_device(info, devname);
 					FD_SET(info->fd_device, &readset_tmp);
 					if(info->fd_device > max)
 						max = info->fd_device;
