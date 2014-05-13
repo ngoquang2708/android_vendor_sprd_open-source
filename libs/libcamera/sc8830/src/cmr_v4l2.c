@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_v4l2"
+
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -80,6 +82,9 @@ static int                fd = -1;
 static cmr_evt_cb         v4l2_evt_cb = NULL;
 static pthread_mutex_t    cb_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t    status_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t    path_mutex[CHN_MAX] = {PTHREAD_MUTEX_INITIALIZER,
+				PTHREAD_MUTEX_INITIALIZER,
+				PTHREAD_MUTEX_INITIALIZER};
 static uint32_t           is_on = 0;
 static uint32_t           is_prev_trace = 0;
 static uint32_t           is_cap_trace = 0;
@@ -96,6 +101,7 @@ static uint32_t cmr_v4l2_get_4cc(uint32_t img_type);
 int cmr_v4l2_init(void)
 {
 	int                      ret = 0;
+	uint32_t                 channel_id = 0;
 
 	CMR_LOGI("Start to open V4L2 device.");
 	fd = open(dev_name, O_RDWR, 0);
@@ -119,6 +125,14 @@ int cmr_v4l2_init(void)
 		exit(EXIT_FAILURE);
 	}
 
+	for (channel_id = 0; channel_id < CHN_MAX; channel_id++) {
+		ret = pthread_mutex_init(&path_mutex[channel_id], NULL);
+		if (ret) {
+			CMR_LOGE("Failed to init path_mutex %d : %d", channel_id, errno);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	ret = cmr_v4l2_create_thread();
 	v4l2_evt_cb = NULL;
 	stream_on_cb = NULL;
@@ -131,6 +145,7 @@ int cmr_v4l2_init(void)
 int cmr_v4l2_deinit(void)
 {
 	int                      ret = 0;
+	uint32_t                 channel_id = 0;
 
 	CMR_LOGI("Start to close V4L2 device.");
 
@@ -157,6 +172,9 @@ int cmr_v4l2_deinit(void)
 	pthread_mutex_unlock(&cb_mutex);
 	pthread_mutex_destroy(&cb_mutex);
 	pthread_mutex_destroy(&status_mutex);
+	for (channel_id = 0; channel_id < CHN_MAX; channel_id++) {
+		pthread_mutex_destroy(&path_mutex[channel_id]);
+	}
 	CMR_LOGI("close device.\n");
 	return 0;
 }
@@ -377,6 +395,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 		format.fmt.pix.height = config->cfg.dst_img_size.height;
 		format.fmt.pix.pixelformat = pxl_fmt; //fourecc
 		format.fmt.pix.priv = config->cfg.need_isp;
+		pthread_mutex_lock(&path_mutex[cfg_id]);
 		ret = ioctl(fd, VIDIOC_TRY_FMT, &format);
 		CMR_LOGI("need binning, %d", format.fmt.pix.sizeimage);
 		if (format.fmt.pix.sizeimage) {
@@ -388,6 +407,7 @@ int cmr_v4l2_cap_cfg(struct cap_cfg *config)
 			CMR_LOGI("need restart");
 			ret = CMR_V4L2_RET_RESTART;
 		}
+		pthread_mutex_unlock(&path_mutex[cfg_id]);
 	} else {
 		CMR_LOGI("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
 	}
@@ -479,9 +499,13 @@ int cmr_v4l2_cap_stop(void)
 	is_on = 0;
 	pthread_mutex_unlock(&status_mutex);
 
+	for (i = 0; i < CHN_MAX; i++) {
+		pthread_mutex_lock(&path_mutex[i]);
+	}
 	ret = ioctl(fd, VIDIOC_STREAMOFF, &buf_type);
 	for (i = 0; i < CHN_MAX; i ++) {
 		chn_status[i] = CHN_IDLE;
+		pthread_mutex_unlock(&path_mutex[i]);
 	}
 	if (stream_on_cb) {
 		(*stream_on_cb)(0);
@@ -535,8 +559,10 @@ int cmr_v4l2_cap_resume(uint32_t channel_id, uint32_t skip_number, uint32_t deci
 	stream_parm.parm.capture.capability = PATH_RESUME;
 
 	stream_parm.parm.capture.reserved[0] = channel_id;
+	pthread_mutex_lock(&path_mutex[channel_id]);
 	chn_status[channel_id] = CHN_BUSY;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	pthread_mutex_unlock(&path_mutex[channel_id]);
 	return ret;
 }
 
@@ -554,8 +580,10 @@ int cmr_v4l2_cap_pause(uint32_t channel_id, uint32_t reconfig_flag)
 
 	stream_parm.parm.capture.reserved[0] = channel_id;
 	stream_parm.parm.capture.reserved[1] = reconfig_flag;
+	pthread_mutex_lock(&path_mutex[channel_id]);
 	chn_status[channel_id] = CHN_IDLE;
 	ret = ioctl(fd, VIDIOC_S_PARM, &stream_parm);
+	pthread_mutex_unlock(&path_mutex[channel_id]);
 	return ret;
 }
 
@@ -592,9 +620,10 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 		return ret;
 	}
 	pthread_mutex_unlock(&status_mutex);
+	pthread_mutex_lock(&path_mutex[channel_id]);
 	if (CHN_BUSY != chn_status[channel_id]) {
 		CMR_LOGI("channel %d not on, no need to free current frame", channel_id);
-		ret = 0;
+		pthread_mutex_unlock(&path_mutex[channel_id]);
 		return ret;
 	}
 	bzero(&v4l2_buf, sizeof(struct v4l2_buffer));
@@ -602,6 +631,7 @@ int cmr_v4l2_free_frame(uint32_t channel_id, uint32_t index)
 	v4l2_buf.type  = channel_id;
 	v4l2_buf.index = index;
 	ret = write(fd, &v4l2_buf, sizeof(struct v4l2_buffer));
+	pthread_mutex_unlock(&path_mutex[channel_id]);
 	if (ret) {
 		CMR_LOGE("Failed to free frame, %d", ret);
 		ret = 0;

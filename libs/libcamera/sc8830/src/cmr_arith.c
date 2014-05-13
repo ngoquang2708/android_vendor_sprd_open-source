@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_arith"
+
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -20,6 +22,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 #include <semaphore.h>
 #include "SprdOEMCamera.h"
 #include "cmr_common.h"
@@ -64,9 +67,16 @@ struct arithmetic_conext{
 };
 
 struct arithmetic_hdr_conext{
-	unsigned char *addr[HDR_CAP_NUM];
-	uint32_t       mem_size;
-	uint32_t       inited;
+	unsigned char  *addr[HDR_CAP_NUM];
+	uint32_t        mem_size;
+	uint32_t        inited;
+
+	uint32_t        msg_que_handle;
+	pthread_t       hdr_thread;
+	sem_t           hdr_sync_sem;
+	struct img_addr *dst_addr;
+	uint32_t        width;
+	uint32_t        height;
 };
 
 static struct arithmetic_conext s_arithmetix_cxt;
@@ -75,6 +85,11 @@ static struct arithmetic_hdr_conext s_hdr_cntext;
 static struct arithmetic_hdr_conext *s_hdr_cxt = &s_hdr_cntext;
 static uint32_t check_size_data_invalid(struct img_size * fd_size);
 static int arithmetic_fd_call_init(const struct img_size * fd_size);
+static int arithmetic_hdr_thread_init(void);
+static int arithmetic_hdr_thread_deinit(void);
+static void *arithmetic_hdr_thread_proc(void *data);
+static int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height);
+static void arithmetic_hdr_signal_func(int);
 
 int FaceSolid_Init(int width, int height)
 {
@@ -476,12 +491,22 @@ int arithmetic_hdr_init(uint32_t pic_width, uint32_t pic_height)
 	uint32_t size = pic_width * pic_height * 3/2;
 
 	CMR_LOGD("test log.");
-	if (s_hdr_cxt->addr[0]) {
-		CMR_LOGD("no need to init");
-		return ret;
+
+	if (PNULL != s_hdr_cxt->addr[0]) {
+		CMR_LOGD("mem not free, free it");
+		free(s_hdr_cxt->addr[0]);
+		s_hdr_cxt->addr[0] = PNULL;
 	}
+	if (PNULL != s_hdr_cxt->addr[1]) {
+		free(s_hdr_cxt->addr[1]);
+		s_hdr_cxt->addr[1] = PNULL;
+	}
+	if (PNULL != s_hdr_cxt->addr[2]) {
+		free(s_hdr_cxt->addr[2]);
+		s_hdr_cxt->addr[2] = PNULL;
+	}
+
 	pthread_mutex_init(&s_arith_cxt->hdr_lock, NULL);
-	s_hdr_cxt->inited = 1;
 
 	s_hdr_cxt->addr[0] = (uint8_t*)malloc(size);
 	s_hdr_cxt->addr[1] = (uint8_t*)malloc(size);
@@ -494,18 +519,25 @@ int arithmetic_hdr_init(uint32_t pic_width, uint32_t pic_height)
 	} else {
 		s_hdr_cxt->mem_size = size;
 	}
+
+	ret = arithmetic_hdr_thread_init();
+	if (ret) {
+		CMR_LOGE("hdr thread init fail.");
+	}
+
 	return ret;
 }
 
 int arithmetic_hdr_deinit(void)
 {
 	int ret = ARITH_SUCCESS;
-	CMR_LOGD("test log.");
 
-	if (0 == s_hdr_cxt->inited) {
-		CMR_LOGD("already deinit.");
+	CMR_LOGD("test log. %d", s_hdr_cxt->inited);
+	if (!s_hdr_cxt->inited) {
+		CMR_LOGD("already deinit");
 		return ret;
 	}
+
 	pthread_mutex_lock(&s_arith_cxt->hdr_lock);
 	if (PNULL != s_hdr_cxt->addr[0]) {
 		free(s_hdr_cxt->addr[0]);
@@ -519,13 +551,168 @@ int arithmetic_hdr_deinit(void)
 		free(s_hdr_cxt->addr[2]);
 		s_hdr_cxt->addr[2] = PNULL;
 	}
-	s_hdr_cxt->inited = 0;
+
 	pthread_mutex_unlock(&s_arith_cxt->hdr_lock);
 	pthread_mutex_destroy(&s_arith_cxt->hdr_lock);
 
-	CMR_LOGD("e.");
+	ret = arithmetic_hdr_thread_deinit();
+
+	CMR_LOGD("end.");
 	return ret;
 }
+
+int arithmetic_hdr_kill(void)
+{
+	int ret = ARITH_SUCCESS;
+
+	if (!s_hdr_cxt->inited) {
+		CMR_LOGD("already deinit");
+		return ret;
+	}
+	CMR_LOGD("directly kill hdr thread");
+
+	ret = pthread_kill(s_hdr_cxt->hdr_thread, SIGTERM);
+
+	return ret;
+}
+
+
+static int arithmetic_hdr_thread_init(void)
+{
+	CMR_MSG_INIT(message);
+	int                      ret = ARITH_SUCCESS;
+	pthread_attr_t           attr;
+
+	CMR_LOGI("inited, %d", s_hdr_cxt->inited);
+
+	if (!s_hdr_cxt->inited) {
+		ret = cmr_msg_queue_create(CAMERA_HDR_MSG_QUEUE_SIZE, &s_hdr_cxt->msg_que_handle);
+		if (ret) {
+			CMR_LOGE("NO Memory, Failed to create hdr message queue \n");
+			return ret;
+		}
+		sem_init(&s_hdr_cxt->hdr_sync_sem, 0, 0);
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		ret = pthread_create(&s_hdr_cxt->hdr_thread, &attr, arithmetic_hdr_thread_proc, NULL);
+		sem_wait(&s_hdr_cxt->hdr_sync_sem);
+		s_hdr_cxt->inited = 1;
+		message.msg_type = CMR_EVT_HDR_INIT;
+		message.data = 0;
+		ret = cmr_msg_post(s_hdr_cxt->msg_que_handle, &message, 1);
+		if (ret) {
+			CMR_LOGE("Faile to send one msg to hdr thread");
+		}
+	}
+
+	return ret;
+}
+
+static int arithmetic_hdr_thread_deinit(void)
+{
+	CMR_MSG_INIT(message);
+	int	ret = ARITH_SUCCESS;
+
+	CMR_LOGI("inited, %d", s_hdr_cxt->inited);
+
+	if (s_hdr_cxt->inited) {
+		message.msg_type = CMR_EVT_HDR_EXIT;
+		message.data = 0;
+		ret = cmr_msg_post(s_hdr_cxt->msg_que_handle, &message, 1);
+		if (ret) {
+			CMR_LOGE("Faile to send one msg to hdr thread");
+		}
+		sem_wait(&s_hdr_cxt->hdr_sync_sem);
+		sem_destroy(&s_hdr_cxt->hdr_sync_sem);
+
+		cmr_msg_queue_destroy(s_hdr_cxt->msg_que_handle);
+		s_hdr_cxt->msg_que_handle = 0;
+		s_hdr_cxt->inited = 0;
+	}
+
+	return ret;
+}
+
+static void arithmetic_hdr_signal_func(int signo)
+{
+	CMR_LOGI("called signo %d", signo);
+
+	if (SIGTERM == signo) {
+		s_hdr_cxt->inited = 0;
+		sem_post(&s_hdr_cxt->hdr_sync_sem);
+
+		CMR_LOGI("hdr thread killed");
+		pthread_exit(0);
+	} else {
+		CMR_LOGI("signo %d", signo);
+	}
+}
+
+
+static void *arithmetic_hdr_thread_proc(void *data)
+{
+	CMR_MSG_INIT(message);
+	int                      exit_flag = 0;
+	int                      ret = CAMERA_SUCCESS;
+	struct sigaction 	 action;
+	int			 act_ret = 0;
+
+	memset(&action, 0, sizeof(struct sigaction));
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+	action._u._sa_handler = arithmetic_hdr_signal_func;
+	act_ret = sigaction(SIGTERM, &action, NULL);
+	if (act_ret) {
+		CMR_LOGE("hdr thread: sigaction error");
+	}
+
+	sem_post(&s_hdr_cxt->hdr_sync_sem);
+
+	while (1) {
+		ret = cmr_msg_get(s_hdr_cxt->msg_que_handle, &message, 1);
+		if (ret) {
+			CMR_LOGE("hdr thread: Message queue destroied");
+			break;
+		}
+
+		switch (message.msg_type) {
+		case CMR_EVT_HDR_INIT:
+			CMR_LOGI("hdr thread inited\n");
+			break;
+
+		case CMR_EVT_HDR_START:
+			CMR_LOGI("hdr thread proc start \n");
+			arithmetic_hdr(s_hdr_cxt->dst_addr, s_hdr_cxt->width, s_hdr_cxt->height);
+			CMR_LOGI("hdr thread proc done \n");
+			sem_post(&s_hdr_cxt->hdr_sync_sem);
+			break;
+
+		case CMR_EVT_HDR_EXIT:
+			exit_flag = 1;
+			sem_post(&s_hdr_cxt->hdr_sync_sem);
+			break;
+
+		default:
+			break;
+		}
+
+		if (1 == message.alloc_flag) {
+			if (message.data) {
+				free(message.data);
+				message.data = 0;
+			}
+		}
+
+		if (exit_flag) {
+			CMR_LOGD("hdr thread exit ");
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+
 static void save_input_data(uint32_t width,uint32_t height)
 {
 	FILE *fp = NULL;
@@ -604,6 +791,34 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 	}
 	return ret;
 }
+
+int arithmetic_hdr_start(struct img_addr *dst_addr,uint32_t width,uint32_t height)
+{
+	CMR_MSG_INIT(message);
+	int	ret = ARITH_SUCCESS;
+
+	s_hdr_cxt->dst_addr = dst_addr;
+	s_hdr_cxt->width    = width;
+	s_hdr_cxt->height   = height;
+
+	message.msg_type = CMR_EVT_HDR_START;
+	message.data = 0;
+
+	if (0 == s_hdr_cxt->msg_que_handle) {
+		CMR_LOGE("hdr thread invalid");
+		return ARITH_START_FAIL;
+	}
+
+	ret = cmr_msg_post(s_hdr_cxt->msg_que_handle, &message, 1);
+	if (ret) {
+		CMR_LOGE("Faile to send one msg to hdr thread");
+	}
+
+	sem_wait(&s_hdr_cxt->hdr_sync_sem);
+
+	return ret;
+}
+
 
 void arithmetic_hdr_data(struct img_addr *addr,uint32_t y_size,uint32_t uv_size,uint32_t cap_cnt)
 {

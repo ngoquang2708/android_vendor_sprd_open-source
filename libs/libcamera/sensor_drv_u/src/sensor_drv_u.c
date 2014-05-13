@@ -13,6 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+#define LOG_TAG "sensor_drv_u"
 
 #include <utils/Log.h>
 #include <fcntl.h>              /* low-level i/o */
@@ -2437,7 +2438,7 @@ uint32_t Sensor_Ioctl(uint32_t cmd, uint32_t arg)
 	uint32_t ret_value = SENSOR_SUCCESS;
 
 	if (SENSOR_IOCTL_GET_STATUS != cmd) {
-		CMR_LOGV("SENSOR: Sensor_Ioctl -> cmd = %d, arg = %d.\n", cmd, arg);
+		CMR_LOGI("SENSOR: Sensor_Ioctl -> cmd = %d, arg = 0x%x.\n", cmd, arg);
 	}
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	if (!Sensor_IsInit()) {
@@ -3323,7 +3324,6 @@ LOCAL void* _Sensor_MonitorProc(void* data)
 				}
 			}
 		}
-
 	}
 
 	return NULL;

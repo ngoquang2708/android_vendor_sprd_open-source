@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_msg"
+
 #include <stdlib.h>
 #include "cmr_common.h"
 #include "cmr_msg.h"
@@ -84,7 +86,7 @@ int cmr_msg_get(unsigned int queue_handle, struct cmr_msg *message, uint32_t log
 				msg_cxt->msg_read = msg_cxt->msg_head;
 			}
 		}
-		msg_cxt->msg_number --;
+		msg_cxt->msg_number--;
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);

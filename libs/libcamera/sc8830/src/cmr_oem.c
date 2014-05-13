@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "cmr_oem"
+
 #include <stdlib.h>
 #include <math.h>
 #include <cutils/properties.h>

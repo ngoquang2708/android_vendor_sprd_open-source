@@ -81,11 +81,18 @@ extern "C"
 #define CMR_EVT_SW_MON_EXIT                          (CMR_EVT_SW_MON_BASE + 1)
 #define CMR_EVT_SW_MON_SET_PARA                      (CMR_EVT_SW_MON_BASE + 2)
 
+#define CMR_EVT_HDR_BASE			     (CMR_EVT_OEM_BASE + 0xA00)
+#define CMR_EVT_HDR_INIT			     (CMR_EVT_HDR_BASE + 0)
+#define CMR_EVT_HDR_START			     (CMR_EVT_HDR_BASE + 1)
+#define CMR_EVT_HDR_EXIT			     (CMR_EVT_HDR_BASE + 2)
+
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
 #define CAMERA_PREV_MSG_QUEUE_SIZE                   20
 #define CAMERA_CAP_MSG_QUEUE_SIZE                    20
 #define CAMERA_CB_MSG_QUEUE_SIZE                     40
+#define CAMERA_HDR_MSG_QUEUE_SIZE                     5
+
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
 #define CAMERA_CAP1_ID_BASE                          0x4000
@@ -344,6 +351,7 @@ struct camera_context {
 	uint32_t                 skip_mode;
 	uint32_t                 skip_num;
 	uint32_t                 pre_frm_cnt;
+	uint32_t                 prev_trac_cnt;
 	int64_t                  restart_timestamp;
 	uint32_t                 restart_skip_cnt;
 	uint32_t                 restart_skip_en;

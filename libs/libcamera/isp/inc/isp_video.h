@@ -18,6 +18,14 @@
 
 #include <stdio.h>
 
+#define ISP_TOOL_YUV422_2FRAME (1<<0)
+#define ISP_TOOL_YUV420_2FRAME (1<<1)
+#define ISP_TOOL_NORMAL_RAW10 (1<<2)
+#define ISP_TOOL_MIPI_RAW10 (1<<3)
+#define ISP_TOOL_JPG (1<<4)
+#define ISP_TOOL_YVU422_2FRAME (1<<5)
+#define ISP_TOOL_YVU420_2FRAME (1<<6)
+
 int ispvideo_RegCameraFunc(uint32_t cmd, int(*func)(uint32_t, uint32_t));
 void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgptr, int imagelen);
 void send_capture_data(uint32_t format, uint32_t width, uint32_t height, char *ch0_ptr, int ch0_len,char *ch1_ptr, int ch1_len,char *ch2_ptr, int ch2_len);

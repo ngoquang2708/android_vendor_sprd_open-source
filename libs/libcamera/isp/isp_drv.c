@@ -8466,7 +8466,7 @@ int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr)
 	}
 
 	for (i=0x00; i<reg_num; i++) {
-		reg_config[i].reg_addr = reg_addr++;
+		reg_config[i].reg_addr = reg_addr + i*0x04;
 	}
 
 	read_param.reg_param = (uint32_t)&reg_config[0];
@@ -8475,7 +8475,7 @@ int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr)
 	if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param)) {
 		reg_addr=reg_ptr[0];
 		for (i=0x00; i<reg_num; i++) {
-			*reg_ptr++ = reg_addr++;
+			*reg_ptr++ = reg_addr + i*0x04;
 			*reg_ptr++ = reg_config[i].reg_value;
 		}
 	}

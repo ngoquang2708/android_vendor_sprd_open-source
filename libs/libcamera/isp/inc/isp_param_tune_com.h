@@ -48,7 +48,6 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_PACKET_END_ID 0x69656e64
 
 #define ISP_TOOL_CMD_ID 0x80000000
-#define ISP_TOOL_SYNC_ID 0x40000000
 
 //parser cmd
 #define ISP_PARSER_DOWN 0x0000

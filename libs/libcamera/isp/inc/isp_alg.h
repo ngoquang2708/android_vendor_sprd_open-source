@@ -201,11 +201,9 @@ int32_t _ispSmartAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)(
 int32_t _ispContinueAfIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispAfDenoiseIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
-int32_t _ispAfInfoIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispHueIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t isp_GetChipVersion(void);
-
 /**----------------------------------------------------------------------------*
 **					Compiler Flag				**
 **----------------------------------------------------------------------------*/

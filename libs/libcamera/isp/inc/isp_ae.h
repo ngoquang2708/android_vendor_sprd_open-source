@@ -259,6 +259,8 @@ struct isp_ae_param
 	int32_t (*flash_effect)(uint32_t prv_lum, uint32_t final_lum,uint32_t* effect);
 
 	int32_t (*set_gamma)(struct isp_gamma_param* gamma_param, struct isp_gamma_tab* tab_ptr);
+	int32_t (*awbm_skip)(uint32_t handler_id, uint8_t num);
+	int32_t (*awbm_bypass)(uint32_t handler_id, uint8_t bypass);
 
 	proc_callback callback;
 	proc_callback self_callback;

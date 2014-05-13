@@ -2946,6 +2946,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->auto_contrast.bypass=raw_tune_ptr->auto_contrast_bypass;
 	isp_context_ptr->saturation.bypass=raw_tune_ptr->saturation_bypass;
 	isp_context_ptr->af.bypass=raw_tune_ptr->af_bypass;
+	isp_context_ptr->af.back_bypass=raw_tune_ptr->af_bypass;
 	isp_context_ptr->af.monitor_bypass=ISP_EB;
 	isp_context_ptr->edge.bypass=raw_tune_ptr->edge_bypass;
 	isp_context_ptr->emboss.bypass=ISP_EB;
@@ -3478,7 +3479,6 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->ae.gamma_thr[1]=raw_tune_ptr->ae.gamma_thr[1];
 	isp_context_ptr->ae.gamma_thr[2]=raw_tune_ptr->ae.gamma_thr[2];
 	isp_context_ptr->ae.gamma_thr[3]=raw_tune_ptr->ae.gamma_thr[3];
-/*	isp_context_ptr->ae.gamma_thr[4]=raw_tune_ptr->ae.gamma_thr[4];*/
 
 	isp_context_ptr->ae.ev=raw_tune_ptr->ae.ev[3];
 	isp_ae_set_ev(handler_id, raw_tune_ptr->ae.ev[3]);
@@ -3567,8 +3567,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 
 	isp_context_ptr->ae.callback = param_ptr->callback;
 	isp_context_ptr->ae.self_callback = param_ptr->self_callback;
-	isp_context_ptr->ae.set_gamma = isp_set_gamma;
-
+	isp_context_ptr->ae.awbm_skip = ispAwbmSkip;
+	isp_context_ptr->ae.awbm_bypass = ispAwbcBypass;
 	isp_context_ptr->ae.ae_set_eb=ISP_UEB;
 
 	/*flash*/
@@ -5117,6 +5117,33 @@ int32_t _ispSmartAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)(
 }
 
 
+
+/* _ispAfIOCtrl --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispAfInfoIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_af_ctrl* af_ctrl_ptr = (struct isp_af_ctrl*)param_ptr;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+
+	ISP_LOG("--IOCtrl--AF_CTRL--mode:0x%x", af_ctrl_ptr->mode);
+
+	if (ISP_CTRL_SET==af_ctrl_ptr->mode) {
+		isp_af_set_postion(handler_id, af_ctrl_ptr->step);
+		ispAFMSkipNum(handler_id, 2);
+		ispAFMbypass(handler_id, ISP_UEB);
+	} else {
+		af_ctrl_ptr->step = isp_context_ptr->af.cur_step;
+		af_ctrl_ptr->num = 9;
+		isp_af_get_stat_value(handler_id, (void*)af_ctrl_ptr->stat_value);
+	}
+
+	return rtn;
+}
+
 /* _ispRegIOCtrl --
 *@
 *@
@@ -5130,9 +5157,9 @@ int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 	ISP_LOG("--IOCtrl--REG_CTRL--mode:0x%x", reg_ctrl_ptr->mode);
 
 	if (ISP_CTRL_SET==reg_ctrl_ptr->mode) {
-		ispRegWrite(handler_id, reg_ctrl_ptr->num, reg_ctrl_ptr->reg_ptr);
+		ispRegWrite(handler_id, reg_ctrl_ptr->num, reg_ctrl_ptr->reg_tab);
 	} else {
-		ispRegRead(handler_id, reg_ctrl_ptr->num, reg_ctrl_ptr->reg_ptr);
+		ispRegRead(handler_id, reg_ctrl_ptr->num, reg_ctrl_ptr->reg_tab);
 	}
 
 	return rtn;
@@ -5182,6 +5209,7 @@ struct isp_io_ctrl_fun _s_isp_io_ctrl_fun_tab[]=
 	{ISP_CTRL_AE_CTRL,                  _ispAeIOCtrl}, // for tool cali
 	{ISP_CTRL_AF_CTRL,                  _ispAfInfoIOCtrl}, // for tool cali
 	{ISP_CTRL_REG_CTRL,                _ispRegIOCtrl}, // for tool cali
+	{ISP_CTRL_AF_END_INFO,           _ispRegIOCtrl}, // for tool cali
 	{ISP_CTRL_MAX, PNULL}
 };
 
@@ -5213,11 +5241,11 @@ static io_fun _ispGetIOCtrlFun(enum isp_ctrl_cmd cmd)
 static int32_t _ispTuneIOCtrl(uint32_t handler_id, enum isp_ctrl_cmd io_cmd, void* param_ptr, int(*call_back)())
 {
 	int32_t rtn = ISP_SUCCESS;
-	enum isp_ctrl_cmd cmd = io_cmd&0x3fffffff;
+	enum isp_ctrl_cmd cmd = io_cmd&0x7fffffff;
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	io_fun io_ctrl = PNULL;
 
-	isp_context_ptr->isp_ctrl_sync = io_cmd&0x40000000;
+	isp_context_ptr->isp_callback_bypass = io_cmd&0x80000000;
 
 	io_ctrl=_ispGetIOCtrlFun(cmd);
 
@@ -5799,10 +5827,10 @@ static int _isp_ctrl_msg_post(struct isp_msg *message)
 	struct isp_system* isp_system_ptr = ispGetSystem();
 	uint32_t           handler_id = 0;
 
-	if (message) {
+/*	if (message) {
 		ISP_LOG("isp test,0x%x,0x%x",message->msg_type,
 				message->sub_msg_type);
-	}
+	}*/
 	rtn=isp_msg_post( isp_system_ptr->ctrl_queue, message);
 
 	return rtn;
@@ -6054,7 +6082,6 @@ static void *_isp_ctrl_routine(void *client_data)
 		isp_context_ptr=ispGetContext(handler_id);
 
 //		ISP_LOG("ctrl handler_id: %d", handler_id);
-		ISP_LOG("isp test,0x%x",evt);
 
 		switch (evt) {
 
@@ -6126,12 +6153,9 @@ static void *_isp_ctrl_routine(void *client_data)
 				res_ptr=map_res_ptr;
 				rtn = _ispTuneIOCtrl(handler_id, sub_type, param_ptr,NULL);
 				res_ptr->rtn = rtn;
-				if(ISP_ZERO==isp_context_ptr->isp_ctrl_sync)
-				{
 					pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 					rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 					pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
-				}
 				break;
 
 			case ISP_CTRL_EVT_CTRL_SYNC:
@@ -6347,12 +6371,6 @@ static void *_isp_proc_routine(void *client_data)
 				if(ISP_SUCCESS!=(rtn&ISP_AF_END_FLAG))
 				{
 					isp_af_end(handler_id, ISP_ZERO);
-					if (ISP_ZERO!=isp_context_ptr->isp_ctrl_sync) {
-						isp_ctrl_msg.handler_id = handler_id;
-						isp_ctrl_msg.msg_type = ISP_CTRL_EVT_CTRL_SYNC;
-						isp_ctrl_msg.sub_msg_type = rtn&0x7fffffff;
-						rtn = _isp_ctrl_msg_post(&isp_ctrl_msg);
-					}
 
 					if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) {
 						_isp_ContinueFocusStartInternal(handler_id);
