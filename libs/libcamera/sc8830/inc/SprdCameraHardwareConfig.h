@@ -426,7 +426,7 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"picture-size", "640x480"},
 	{"preview-size-values",	"960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
 	{"preview-size", "640x480"},
-	{"video-size-values",  ""},
+	{"video-size-values",  "720x480"},
 	{"video-size", "720x480"},
 	{"video-picture-size-values", "1280x960,1280x960,1280x960"},
 	{"preferred-preview-size-for-video", ""},
@@ -547,7 +547,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"preview-size-values", "1920x1088,1280x960,1280x720,960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
 	{"preview-size", "1280x960"},
 #endif
-	{"video-size-values", ""},
+	{"video-size-values", "720x480"},
 	{"video-size", "1920x1088"},
 	{"preferred-preview-size-for-video", ""},
 	{"video-frame-format-values", "yuv420sp,yuv420p"},
