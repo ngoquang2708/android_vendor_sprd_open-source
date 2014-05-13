@@ -123,6 +123,9 @@ struct slog_info {
 	/* used for "stream" type, log source handle */
 	int		fd_device;
 
+	/* used for "stream" type, modem memory source handle */
+	int		fd_dump_cp;
+
 	/* log file handle */
 	FILE		*fp_out;
 

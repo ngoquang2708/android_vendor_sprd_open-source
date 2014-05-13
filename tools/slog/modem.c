@@ -136,27 +136,42 @@ static void handle_open_modem_device(struct slog_info *info)
 
 	if (!strncmp(info->name, "cp0", 3)) {
 		property_get(MODEM_W_DIAG_PROPERTY, modem_property, "not_find");
-		if(open_device(info, modem_property) < 0)
+		info->fd_device = open_device(info, modem_property);
+		info->fd_dump_cp = info->fd_device;
+		if(info->fd_device < 0)
 			info->state = SLOG_STATE_OFF;
 	} else if (!strncmp(info->name, "cp1", 3)) {
 		property_get(MODEM_TD_LOG_PROPERTY, modem_property, "not_find");
-		if(open_device(info, modem_property) < 0) {
+		info->fd_device = open_device(info, modem_property);
+		if(info->fd_device < 0) {
 			property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "not_find");
-			if(open_device(info, modem_property) < 0)
+			info->fd_device = open_device(info, modem_property);
+			info->fd_dump_cp = info->fd_device;
+			if(info->fd_device < 0)
 				info->state = SLOG_STATE_OFF;
+		} else {
+			property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "not_find");
+			info->fd_dump_cp = open_device(info, modem_property);
 		}
 	} else if (!strncmp(info->name, "cp2", 3)) {
 		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
-		if(open_device(info, modem_property) < 0)
+		info->fd_device = open_device(info, modem_property);
+		info->fd_dump_cp = info->fd_device;
+		if(info->fd_device < 0)
 			info->state = SLOG_STATE_OFF;
 	} else if (!strncmp(info->name, "cp3", 3)) {
 		property_get(MODEM_L_LOG_PROPERTY, modem_property, "not_find");
-		if(open_device(info, modem_property) < 0) {
+		info->fd_device = open_device(info, modem_property);
+		if(info->fd_device < 0) {
 			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
-			if(open_device(info, modem_property) < 0)
+			info->fd_device = open_device(info, modem_property);
+			info->fd_dump_cp = info->fd_device;
+			if(info->fd_device < 0)
 				info->state = SLOG_STATE_OFF;
+		} else {
+			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
+			info->fd_dump_cp = open_device(info, modem_property);
 		}
-
 	}
 }
 
@@ -202,7 +217,7 @@ static int handle_correspond_modem(char *buffer)
 
 	if(!strncmp(buffer, "WCN", 3)) {
 		strcpy(modem_buffer, "cp2");
-	} else if (!strncmp(buffer, "TD", 2)) {
+	} else if (!strncmp(buffer, "TD", 2) || !strncmp(buffer, "_TD", 3)) {
 		strcpy(modem_buffer, "cp1");
 	} else if (!strncmp(buffer, "W ", 2)) {
 		strcpy(modem_buffer, "cp0");
@@ -282,7 +297,7 @@ void handle_socket_wcn(char *buffer)
 	char modemrst_property[MODEM_SOCKET_BUFFER_SIZE];
 
 	memset(modemrst_property, 0, sizeof(modemrst_property));
-	property_get(MODEM_WCN_DUMP_LOG,  modemrst_property, "0");
+	property_get(MODEM_WCN_DUMP_LOG,  modemrst_property, "1");
 	dump = atoi(modemrst_property);
 
 	memset(modemrst_property, 0, sizeof(modemrst_property));
@@ -291,7 +306,7 @@ void handle_socket_wcn(char *buffer)
 
 
 	if(strstr(buffer, "WCN-CP2-EXCEPTION") != NULL) {
-		if(dump != 0) {
+		if(dump > 0) {
 			if (handle_correspond_modem(buffer) == 1) {
 				modem_assert_flag = 1;
 				handle_dump_shark_sipc_info();
@@ -401,18 +416,16 @@ static void handle_dump_modem_memory(struct slog_info *info)
 	char cmddumpmemory[2]={'3',0x0a};
 
 	err_log("Start to dump %s memory.", info->name);
-	if( strncmp(info->name, "cp0", 3) && strncmp(info->name, "cp1", 3) && strncmp(info->name, "cp2", 3) && strncmp(info->name, "cp3", 3))
-	{
-		err_log("info name error %s.", info->name);
+
+	if(info->fd_dump_cp < 0) {
+		err_log("Dumping cp memory device node is closed.");
 		return;
 	}
+
 write_cmd:
-	n = write(info->fd_device, cmddumpmemory, 2);
+	n = write(info->fd_dump_cp, cmddumpmemory, 2);
 	if (n <= 0) {
-		close(info->fd_device);
-		info->fd_device = -1;
 		sleep(1);
-		handle_open_modem_device(info);
 		goto write_cmd;
 	}
 
@@ -427,13 +440,14 @@ write_cmd:
 		return;
 	}
 
+	receive_from_cp = 0;
 	do {
 		memset(buffer, 0, BUFFER_SIZE);
                 FD_ZERO(&readset);
-                FD_SET(info->fd_device, &readset);
+                FD_SET(info->fd_dump_cp , &readset);
                 timeout.tv_sec = 3;
                 timeout.tv_usec = 0;
-		ret = select(info->fd_device + 1, &readset, NULL, NULL, &timeout);
+		ret = select(info->fd_dump_cp + 1, &readset, NULL, NULL, &timeout);
 
 		if( 0 == ret ){
 			/* for shark, when CP can not send integral log to AP, slog will use another way to save CP memory*/
@@ -443,14 +457,9 @@ write_cmd:
 			finish = 1;
 		} else if( ret > 0 ) {
 read_again:
-			n = read(info->fd_device, buffer, BUFFER_SIZE);
-			if (n == 0) {
-				close(info->fd_device);
-				info->fd_device = -1;
-				sleep(1);
-				handle_open_modem_device(info);
-			} else if (n < 0) {
-				err_log("fd=%d read %d is lower than 0", info->fd_device, n);
+			n = read(info->fd_dump_cp, buffer, BUFFER_SIZE);
+			if (n <= 0) {
+				err_log("fd=%d read %d is lower than 0", info->fd_dump_cp, n);
 				sleep(1);
 				goto read_again;
 			} else {
@@ -578,9 +587,17 @@ void *modem_log_handler(void *arg)
 
 		if(modem_assert_flag == 1) {
 			err_log("Modem %s Assert!", modem_info->name);
+
+			sprintf(buffer, "%s", "am broadcast -a slogui.intent.action.DUMP_START");
+			system(buffer);
 			handle_dump_modem_memory(modem_info);
+			sprintf(buffer, "%s", "am broadcast -a slogui.intent.action.DUMP_END");
+			system(buffer);
+
 			FD_CLR(modem_info->fd_device, &readset_tmp);
 			close(modem_info->fd_device);
+			modem_info->fd_device = -1;
+			modem_info->state = SLOG_STATE_OFF;
 			modem_assert_flag = 0;
 			property_set(MODEM_WCN_DUMP_LOG_COMPLETE, "1");
 		}
@@ -589,12 +606,15 @@ void *modem_log_handler(void *arg)
 			err_log("Modem %s Reset!", modem_info->name);
 			FD_CLR(modem_info->fd_device, &readset_tmp);
 			close(modem_info->fd_device);
+			modem_info->fd_device = -1;
 			modem_reset_flag = 0;
 
 		}
 
 		if(modem_alive_flag == 1) {
 			err_log("Modem %s Alive!", modem_info->name);
+			if(modem_info->fd_device > 0)
+				continue;
 			handle_open_modem_device(modem_info);
 			FD_SET(modem_info->fd_device, &readset_tmp);
 			if(modem_info->fd_device > max)
