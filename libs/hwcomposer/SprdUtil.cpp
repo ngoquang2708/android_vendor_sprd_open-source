@@ -1166,17 +1166,12 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             GSP_LAYER_DST_DATA_FMT_E phase1_des_format = GSP_DST_FMT_YUV420_2P;//GSP_DST_FMT_YUV422_2P; //GSP_DST_FMT_ARGB888
             ALOGI_IF(mDebugFlag,"GSP process Line%d,nead scale up twice. ",__LINE__);
 
-            static bool acquireTmpBufferFlag = false;
-            if (acquireTmpBufferFlag == false) {
-                int ret = -1;
-                int format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
-                ret = acquireTmpBuffer(mFBInfo->fb_width, mFBInfo->fb_height, format, buffer, &outBufferPhy, &outBufferSize);
-                if (ret != 0) {
-                    ALOGE("acquireTmpBuffer failed");
-                    return -1;
-                }
-
-                acquireTmpBufferFlag = true;
+            int ret = -1;
+            int format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+            ret = acquireTmpBuffer(mFBInfo->fb_width, mFBInfo->fb_height, format, buffer, &outBufferPhy, &outBufferSize);
+            if (ret != 0) {
+                ALOGE("acquireTmpBuffer failed");
+                return -1;
             }
 
             /*phase1*/
@@ -1201,18 +1196,10 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                         ALOGE("[%d] map temp buffer iommu addr failed!",__LINE__);
                         return -1;
                     }
-                    if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
-                            ||(buffersize_layert == 0)) {
-                        ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
-                        return -1;
-                    }
-                    ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
                 }
             }
-            if((gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0)
-                ||((mGSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL) && (buffersize_layert == 0))
-                ||((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && (outBufferSize == 0))){
-                ALOGE("phase1 Line%d,des.y_addr==%x or buffersize_layert==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
+            if(gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y == 0){
+                ALOGE("phase1 Line%d,des.y_addr==%x!",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y);
                 return -1;
             }
             ALOGI_IF(mDebugFlag,"		gsp_iommu[%d] mapped temp iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y,buffersize_layert);
@@ -1289,32 +1276,23 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = 0;
                 buffersize_layert = 0;
             }
-        } else {
-            ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
-                       gsp_cfg_info.layer_des_info.pitch,
-                       (void *)gsp_cfg_info.layer_des_info.src_addr.addr_y,
-			(void *)buffer->base);
-             ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
-             if(0 == ret) {
-                 ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
-             } else {
-                 ALOGE("GSP process Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
-             }
-         }
-#else
-        ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
-                  gsp_cfg_info.layer_des_info.pitch,
-                  gsp_cfg_info.layer_des_info.src_addr.addr_y,
-                  (void *)buffer->base);
-        if(mGspDev) {
-            ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
-            if(0 == ret) {
-                ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
-            } else {
-                ALOGE("GSP process Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
-            }
-        }
+        } else 
 #endif
+		{
+	        ALOGI_IF(mDebugFlag,"GSP process layers Line%d,Ld [p%d], the output buffer phyAddr:%p, virAddr:%p",__LINE__,
+	                  gsp_cfg_info.layer_des_info.pitch,
+	                  gsp_cfg_info.layer_des_info.src_addr.addr_y,
+	                  (void *)buffer->base);
+	        if(mGspDev) {
+	            ret = mGspDev->GSP_Proccess(&gsp_cfg_info);
+	            if(0 == ret) {
+	                ALOGI_IF(mDebugFlag,"GSP process Line%d,GSP_Proccess ret 0",__LINE__);
+	            } else {
+	                ALOGE("GSP process Line%d,GSP_Proccess ret err!! debugenable = 1;",__LINE__);
+	            }
+	        }
+		}
+
         if(buffersize_layer2 != 0)
         {
             ALOGI_IF(mDebugFlag,"	gsp_iommu[%d]  unmap L2 iommu addr:%08x,size:%08x",__LINE__,gsp_cfg_info.layer1_info.src_addr.addr_y,buffersize_layer2);
