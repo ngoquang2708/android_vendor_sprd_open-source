@@ -84,6 +84,7 @@ private:
 
     int32_t mIsH263;
     MMEncVideoInfo mEncInfo;
+    MMEncCapability mCapability;
 
     int32_t  mVideoWidth;
     int32_t  mVideoHeight;
@@ -104,6 +105,8 @@ private:
     int mSetFreqCount;
 
     void* mLibHandle;
+    FT_MP4EncGetCodecCapability	mMP4EncGetCodecCapability;
+    FT_MP4EncPreInit        mMP4EncPreInit;
     FT_MP4EncInit        mMP4EncInit;
     FT_MP4EncSetConf        mMP4EncSetConf;
     FT_MP4EncGetConf        mMP4EncGetConf;
