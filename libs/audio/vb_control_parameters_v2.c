@@ -828,9 +828,13 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     int32_t outmode = 0, inmode=0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
-    outmode = GetAudio_mode_number_from_device(adev);
-    inmode = GetAudio_InMode_number_from_device(adev);
-
+    if(adev->call_start == 1){
+        outmode = GetAudio_mode_number_from_device(adev);
+        inmode = outmode;
+    } else {
+        outmode = GetAudio_mode_number_from_device(adev);
+        inmode = GetAudio_InMode_number_from_device(adev);
+    }
     ALOGW("%s, outmode:%d inmode:%d,indev:0x%x, outdev:0x%x",
         __func__,outmode, inmode, adev->in_devices, adev->out_devices);
 
