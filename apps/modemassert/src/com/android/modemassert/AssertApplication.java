@@ -19,6 +19,8 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 
+import com.android.internal.telephony.TelephonyIntents;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -133,6 +135,12 @@ public class AssertApplication extends Application {
                         if(!value.equals("1")){
                             showNotification(MODEM_ASSERT_ID,"modem assert",info);
                         }
+                        /* SPRD:Bug#311987 After modem assert,the lte signal still displayed@{ */
+                        Intent intent = new Intent(TelephonyIntents.ACTION_LTE_READY);
+                        intent.putExtra("lte", false);
+                        Log.i(MTAG,"modem assert Send ACTION_LTE_READY  false");
+                        sendBroadcast(intent);
+                        /* @} */
                         sendModemStatBroadcast(MODEM_ASSERT);
                     } else {
                         Log.d(MTAG, "do nothing with info :" + info);
