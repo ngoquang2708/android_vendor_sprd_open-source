@@ -55,6 +55,8 @@ struct slog_info *notify_log_head, *misc_log;
 pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid,
 kmemleak_tid;
 
+static int handle_gms_push(void);
+
 #ifdef ANDROID_VERSION_442
 extern void operate_bt_status(char *status, char* path);
 #endif
@@ -855,8 +857,17 @@ void *handle_request(void *arg)
 		ret = capture_all(snapshot_log_head);
 		break;
 	case CTRL_CMD_TYPE_EXEC:
-		/* not implement */
-		ret = -1;
+		//err_log("slog %s.", cmd.content);
+		//system(cmd.content);
+		break;
+	case CTRL_CMD_TYPE_GMS:
+		ret = handle_gms_push();
+		if (ret == 0) {
+			sprintf(cmd.content, "All done. Successful.\n");
+		} else {
+			sprintf(cmd.content, "May failed in some steps. All done.");
+		}
+		send_socket(client_sock, (void *)&cmd, sizeof(cmd));
 		break;
 	case CTRL_CMD_TYPE_ON:
 		/* not implement */
@@ -1027,6 +1038,42 @@ static void handle_slog_property(void)
 	property_set("slog.reload", "0");
 
 	err_log("slog.step = %d, slog.reload = %d", slog_start_step, slog_reload_flag);
+}
+
+static int handle_gms_push(void)
+{
+		// Handle push command, verify has been passed. Deamon do actions
+		system("mount -o remount /system");
+
+		// Copy file, if we lose some folders, please added as follows.
+		system("cp -r /sdcard/gms/system/priv-app/*.apk /system/priv-app/.");
+		// Mode in child dir must be changed, if not package manager may has
+		// no permissions to touch.
+		system("chmod -R 0644 /system/priv-app/");
+		// Remove the side effect of chmod -R 
+		system("chmod 0755 /system/priv-app");
+
+		system("cp -r /sdcard/gms/system/app/*.apk /system/app/.");
+		system("chmod -R 0644 /system/app/");
+		system("chmod 0755 /system/app/");
+
+		system("cp -r /sdcard/gms/system/framework/*.jar /system/framework/.");
+		system("chmod -R 0644 /system/framework/");
+		system("chmod 0755 /system/framework/");
+
+		system("cp -r /sdcard/gms/system/etc/permissions/*.xml /system/etc/permissions/.");
+		system("chmod -R 0644 /system/etc/permissions/");
+		system("chmod 0755 /system/etc/permissions/");
+
+		system("cp -r /sdcard/gms/system/lib/*.so /system/lib/.");
+		system("chmod 0644 /system/lib/*");
+		system("chmod 0755 /system/lib/*");
+
+		system("cp -r /sdcard/gms/system/tts/ /system/");
+		system("chmod -R 0644 /system/tts/");
+		system("chmod 0755 /system/tts/");
+		// If we forget some dirs, please add as follow
+		return 0;
 }
 
 /*

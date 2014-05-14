@@ -55,7 +55,8 @@ enum {
 #ifdef LOW_POWER_MODE
 	CTRL_CMD_TYPE_HOOK_MODEM,
 #endif
-	CTRL_CMD_TYPE_RSP
+	CTRL_CMD_TYPE_RSP,
+	CTRL_CMD_TYPE_GMS
 };
 
 #define err_log(fmt, arg...) ALOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
