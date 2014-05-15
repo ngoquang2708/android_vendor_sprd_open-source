@@ -774,7 +774,7 @@ public class DmService extends Service {
         while (attempts < 60) {
           String numeric = android.os.SystemProperties.get(
                   TelephonyManager.getProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, curPhoneId), "");
-            
+          	Log.e("michael", "initConnectParam numeric = " + numeric + " attempts = " + attempts);
             if (numeric != null && numeric.length() >= 5) {
                 Log.d(TAG, "initConnectParam numeric: " + numeric);
                 break;

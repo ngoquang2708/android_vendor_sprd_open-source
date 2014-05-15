@@ -489,8 +489,14 @@ public class DmAlertDialog extends Activity {
                 .setPositiveButton(softkey_yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         Log.d(TAG, "DmAlertDailog createShowSelfRegisterDialog yes on click");
-                        DmService.getInstance().saveStatus4AllowRegiste();
-                        DmService.getInstance().NotifySendSelfSMS();
+                        //Bug312561,Create sub thread to run the send self register sms action
+                        new Thread(){
+							@Override
+							public void run() {
+								// TODO Auto-generated method stub								
+								DmService.getInstance().saveStatus4AllowRegiste();
+								DmService.getInstance().NotifySendSelfSMS();
+							}}.start();
                         
                         mNotificationMgr.cancel(R.drawable.icon);
                         finish();
