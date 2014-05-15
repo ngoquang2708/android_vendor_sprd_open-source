@@ -891,6 +891,10 @@ void *handle_request(void *arg)
 	case CTRL_CMD_TYPE_DUMP:
 		ret = dump_all_log(cmd.content);
 		break;
+	case CTRL_CMD_TYPE_JAVACRASH:
+		handle_javacrash_file();
+		ret = 0;
+		break;
 #ifdef LOW_POWER_MODE
 	case CTRL_CMD_TYPE_HOOK_MODEM:
 		ret = mkdir(HOOK_MODEM_TARGET_DIR, S_IRWXU | S_IRWXG | S_IRWXO);

@@ -55,8 +55,9 @@ enum {
 #ifdef LOW_POWER_MODE
 	CTRL_CMD_TYPE_HOOK_MODEM,
 #endif
-	CTRL_CMD_TYPE_RSP,
-	CTRL_CMD_TYPE_GMS
+	CTRL_CMD_TYPE_JAVACRASH,
+	CTRL_CMD_TYPE_GMS,
+	CTRL_CMD_TYPE_RSP
 };
 
 #define err_log(fmt, arg...) ALOGE("%s: " fmt " [%d]\n", __func__, ## arg, errno);
@@ -207,4 +208,6 @@ extern int open_device(struct slog_info *info, char *path);
 extern void gen_logfile(char *filename, struct slog_info *info);
 extern void log_buffer_flush(void);
 
+/* snap.c */
+extern void handle_javacrash_file(void);
 #endif /*_SLOG_H*/
