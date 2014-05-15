@@ -3640,16 +3640,20 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+    bool need_unmute = false;
     BLUE_TRACE("adev_set_mode, mode=%d", mode);
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         adev->mode = mode;
-        adev_set_master_mute(dev, false);
+        need_unmute = true;
         select_mode(adev);
     }else{
         BLUE_TRACE("adev_set_mode,the same mode(%d)",mode);
     }
     pthread_mutex_unlock(&adev->lock);
+    //there is lock in function adev_set_master_mute,so we can`t call this funciont under lock
+    if(need_unmute)
+        adev_set_master_mute(dev, false);
 
     return 0;
 }
