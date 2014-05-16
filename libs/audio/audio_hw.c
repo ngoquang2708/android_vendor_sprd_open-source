@@ -5287,7 +5287,18 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
 #endif
     ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
 
-    //6,get and fill anthoer item.
+    //6,get and fill whether 9620 modem.
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    strcpy(currentPosition,AUDIO_AT_9620_MODEM);
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+#ifdef VB_CONTROL_PARAMETER_V2
+        sprintf(currentPosition,"%d",1);
+#else
+        sprintf(currentPosition,"%d",0);
+#endif
+    ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
+
+    //7,get and fill anthoer item.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     result = currentPosition - startPosition;
     ALOGE("%s :result length:%d",__func__,result);
