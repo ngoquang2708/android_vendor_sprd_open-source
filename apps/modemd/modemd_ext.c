@@ -252,9 +252,7 @@ static void releaseWakeLock() {
 
 static void start_external_modem(void)
 {
-      wait_phone_app_start();
-
-      if (is_svlte_mode()) {
+    if (is_svlte_mode()) {
         sSSDAMode   = 0;
         getPartialWakeLock();
         start_modem(&sTDmodem);
