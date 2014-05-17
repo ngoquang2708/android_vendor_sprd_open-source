@@ -2150,8 +2150,6 @@ int camera_stop_internal(void)
 
 	arithmetic_fd_deinit(g_cxt->is_support_fd);
 
-	camera_setting_deinit();
-
 	camera_prev_thread_deinit();
 
 	camera_cap_subthread_deinit();
@@ -2167,6 +2165,8 @@ int camera_stop_internal(void)
 	camera_jpeg_deinit();
 
 	camera_isp_deinit();
+
+	camera_setting_deinit();
 
 	camera_v4l2_deinit();
 
