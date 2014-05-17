@@ -857,19 +857,6 @@ void start_modem(int *param)
     }
 }
 
-void wait_phone_app_start(void) {
-
-    int  pid = get_task_pid(PHONE_APP);
-    if (pid > 0) return;
-
-    MODEMD_LOGD("waiting for %s starting", PHONE_APP);
-    while (pid < 0) {
-         sleep(2);
-         pid = get_task_pid(PHONE_APP);
-    }
-    MODEMD_LOGD("%s (%d) has started", PHONE_APP, pid);
-}
-
 int main(int argc, char *argv[])
 {
     pthread_t tid;
@@ -904,7 +891,7 @@ int main(int argc, char *argv[])
         /* start w modem*/
         start_modem(&modem_w);
     } else {
-        /* start external modem*/
+        /* start external  modem*/
         start_ext_modem();
     }
 
