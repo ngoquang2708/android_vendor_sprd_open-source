@@ -27,7 +27,8 @@
 #define ISP_PROCESS_SEC_TIMEOUT (2)
 #define ISP_PROCESS_NSEC_TIMEOUT (800000000)
 #define SUPPORT_CAMERA_SUM 2
-
+#define POWER2(x) (1<<(x))
+int g_iso_value=0;
 static uint32_t s_cam_orientation[SUPPORT_CAMERA_SUM];
 
 static uint32_t camera_flash_mode_to_status(enum cmr_flash_mode f_mode);
@@ -538,7 +539,8 @@ uint32_t camera_convert_iso(uint32_t iso)
 	switch(iso) {
 	case 0:
 		if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-			convert_iso = isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+			isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+			convert_iso = POWER2(isp_param-1)*100;
 		}
 		break;
 
@@ -569,7 +571,7 @@ int camera_set_iso(uint32_t iso, uint32_t *skip_mode, uint32_t *skip_num)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t isp_param = 0;
-
+	g_iso_value = iso;
 	CMR_LOGD("iso %d", iso);
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
 		*skip_mode = IMG_SKIP_SW;
@@ -959,6 +961,9 @@ int camera_snapshot_start_set(void)
 				break;
 			}
 		}
+	}
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_ISOSPEEDRATINGS,camera_convert_iso(g_iso_value));
 	}
 	return ret;
 }
