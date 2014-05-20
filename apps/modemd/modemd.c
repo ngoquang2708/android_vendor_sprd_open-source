@@ -258,13 +258,8 @@ static int stop_rilproxy(int modem)
     if(modem == TD_MODEM) {
         property_get(SSDA_MODE_PROP, prop, "0");
         if (!strcmp(prop,SVLTE_MODE)) {
-
-            memset(prop, 0, PROPERTY_VALUE_MAX);
-            property_get(SSDA_TESTMODE_PROP, prop, "0");
-            if (atoi(prop) == SSDA_TEST_MODE_SVLTE) {
-                MODEMD_LOGD("stop rilproxy!");
-                property_set("ctl.stop", "rilproxy-daemon");
-            }
+            MODEMD_LOGD("stop rilproxy!");
+            property_set("ctl.stop", "rilproxy-daemon");
         }
     }
 
