@@ -316,6 +316,7 @@ function board_for_kernel()
 			workdir=$PWD
 		fi
 	fi
+	USE_INPUT_BOARD_MACRO=0
 
 	echo -e "\n\nconfigure kernel begin......"
 
@@ -341,6 +342,7 @@ function board_for_kernel()
 	if [  -f $TEMP ];then
 		cp $TEMP $TEMP1
 	else
+	  #有些board的defconfig文件取名为BOARD_NAME_N_defconfig,例如:sp5735ea_defconfig
 		TEMP=$BOARD_NAME_R"_defconfig"
 		TEMP1=$BOARD_NAME_N"_defconfig"
 		if [  -f $TEMP ];then
@@ -358,8 +360,33 @@ function board_for_kernel()
 	if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ]
 	then
 		#在defconfig文件里未找到宏的那个字符串
-		echo -e "CONFIG_""$TEMP1"" is not in ""$TEMP"",configure kernel fail!!!!"
-		exit 0
+		echo -e "CONFIG_MACH_""$TEMP1"" is not defined in ""$TEMP""!!!"
+		echo -e "must input board macro that is defined in ""$TEMP"
+		g_count=0
+
+		BOARD_MACRO_IN_KERNLE=
+		while true
+		do
+			input_board_macro_for_kernel
+			g_count=$g_count+1
+			#echo $BOARD_MACRO_IN_KERNLE
+			TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+			#echo $TEMP1
+			if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ];then
+				echo -e "do not find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
+				if [ $g_count -gt 3 ];then
+					echo -e "input times have exceed 3,configure kernel fail and exit!!"
+					exit 0
+				fi
+				echo -e "please input again"
+			else
+				sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+				USE_INPUT_BOARD_MACRO=1
+				echo -e "find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
+				echo -e "input ok,continue configure kernel"
+				break
+			fi
+		done
 	else
 		#echo "find $TEMP1"
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
@@ -408,8 +435,14 @@ function board_for_kernel()
 	#---------修改Kconfig文件 begin-------
 	cd $workdir
 	file=Kconfig
-	substring=$BOARD_NAME_R
-	begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
+	#kconfig中的board宏因为不规范,使用重新输入的串
+		substring=$BOARD_MACRO_IN_KERNLE
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+	else
+		substring=$BOARD_NAME_R
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+	fi
 	replacement=$BOARD_NAME_N
 	path="kernel/arch/arm/mach-sc"
 	end_string='serial'
@@ -836,13 +869,23 @@ function select_Platform_and_BoardType()
 	echo "please select:"
 	echo "1. scx15 for dolphin and normal(for example:base or plus)"
 	echo "2. scx15 for dolphin and trisim(three sim cards)"
-	echo "3. scx35 for shark(tshark) and normal(for example:base or plus)"
-	echo "4. scx35 for shark(tshark) and trisim(three sim cards)"
+	echo "3. scx35 for shark(tshark or 9620) and normal(for example:base or plus)"
+	echo "4. scx35 for shark(tshark or 9620) and trisim(three sim cards)"
 	echo "==================================================================="
 	read BOARD_PLATFORM_TYPE
 }
 
+function input_board_macro_for_kernel()
+{
+	echo "please input board macro in the file of defconfig"
+	echo "for example:"
+	echo "if CONFIG_MACH_SPX35EC,please input SPX35EC"
+	echo "if CONFIG_MACH_SP7730GA,please input SP7730GA"
+	read BOARD_MACRO_IN_KERNLE
+}
+
 workdir=$PWD
+declare -i g_count
 
 if [ ! -d "./kernel" ];then
 	echo "board_clone.sh maybe is not in correct dir,please put it to android top dir!!"
@@ -859,6 +902,7 @@ if [ ! -d "./device/sprd" ];then
 	exit 0
 fi
 
+g_count=0
 BOARD_PLATFORM_TYPE=
 while true
 do
@@ -871,33 +915,40 @@ do
 				1)PLATFORM="scx15"
 				BOARD_TYPE=1
 				echo "you have choose scx15 and normal board!!"
+				break
 				;;
 				2)PLATFORM="scx15"
 				BOARD_TYPE=2
 				echo "you have choose scx15 and trisim board!!"
+				break
 				;;
 				3)PLATFORM="scx35"
 				BOARD_TYPE=1
 				echo "you have choose scx35 and normal board!!"
+				break
 				;;
 				4)PLATFORM="scx35"
 				BOARD_TYPE=2
 				echo "you have choose scx35 and trisim board!!"
+				break
 				;;
 				*)echo "Invalid choice !"
-				exit 0
 			esac
 		fi
-		break
 	else
 		echo  "you don't hava choose platform!"
+	fi
+	g_count=$g_count+1
+	if [ $g_count -ge 3 ];then
+		echo -e "select_Platform_and_BoardType fail,and exit!!!"
 		exit 0
+	else
+		echo -e "please select again"
 	fi
 done
 
 echo $PLATFORM
 echo $"board type is ""$BOARD_TYPE"
-
 
 if [ $# -lt 2 ]
 then
@@ -906,8 +957,8 @@ then
 		echo "please input reference board name,for example:sp7715ea or sp7715ga or sp8815ga or 6815ea"
 		TEMP="please input new board name,for example:sp7715ed or sp7715gc or sp8815gd or sp6815ef"
 	else
-		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga"
-		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb"
+		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga or sc9620openphone"
+		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb or sc9620openphone_zt"
 	fi
 	read BOARD_NAME_R
 	if [ $BOARD_TYPE = 2 ];then
