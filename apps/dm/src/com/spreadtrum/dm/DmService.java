@@ -650,31 +650,57 @@ public class DmService extends Service {
 
         if (mIsDebugMode) {
             // init manufacture
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "K-Touch");
+            if(SystemProperties.get("ro.product.board.customer", "none").equalsIgnoreCase("cgmobile")){
+                mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "YuLong");
 
-            // init model
-            mModel = sharedPreferences.getString(ITEM_MODEL, "K-Touch T621");
+                // init model
+                mModel = sharedPreferences.getString(ITEM_MODEL, "Coolpad 8019");
 
-            // init software version
-            // String softVer =
-            // SystemProperties.get("ro.hisense.software.version",
-            // Build.UNKNOWN);
-            mSoftVer = sharedPreferences.getString(ITEM_SOFTVER, "4G_W4_TD_MocorDroid2.2_W11.32");
+                // init software version
+                // String softVer =
+                // SystemProperties.get("ro.hisense.software.version",
+                // Build.UNKNOWN);
+                mSoftVer = sharedPreferences.getString(ITEM_SOFTVER, "4.4.001.P1.8019");
+            }else{
+                mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "K-Touch");
+
+                // init model
+                mModel = sharedPreferences.getString(ITEM_MODEL, "K-Touch T621");
+
+                // init software version
+                // String softVer =
+                // SystemProperties.get("ro.hisense.software.version",
+                // Build.UNKNOWN);
+                mSoftVer = sharedPreferences.getString(ITEM_SOFTVER, "4G_W4_TD_MocorDroid2.2_W11.32");
+            }
 
             // init imei
             //mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
             mImeiStr = sharedPreferences.getString(ITEM_IMEI, mTelephonyManager[0].getDeviceId());
         } else {
-            // init manufacture
-            // mManufactory = "4G";
-            mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "K-Touch");
-            // init model
-            // mModel = "W4";
-            mModel = sharedPreferences.getString(ITEM_MODEL, "K-Touch T621");
+            if(SystemProperties.get("ro.product.board.customer", "none").equalsIgnoreCase("cgmobile")){
+                        // init manufacture
+                        // mManufactory = "4G";
+                        mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "YuLong");
+                        // init model
+                        // mModel = "W4";
+                        mModel = sharedPreferences.getString(ITEM_MODEL, "Coolpad 8019");
 
-            // init software version
-            mSoftVer = SystemProperties.get("ro.hisense.software.version",
-                    "T72_V2.0_111230_CMCC_120104_W11.49_p3.2");
+                        // init software version
+                        mSoftVer = SystemProperties.get("ro.build.display.id",
+                                "4.4.001.P1.8019");
+            }else{
+                        // init manufacture
+                        // mManufactory = "4G";
+                        mManufactory = sharedPreferences.getString(ITEM_MANUFACTORY, "K-Touch");
+                        // init model
+                        // mModel = "W4";
+                        mModel = sharedPreferences.getString(ITEM_MODEL, "K-Touch T621");
+
+                        // init software version
+                        mSoftVer = SystemProperties.get("ro.hisense.software.version",
+                                "T72_V2.0_111230_CMCC_120104_W11.49_p3.2");
+            }
 
             // init imei
             //mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
@@ -688,7 +714,11 @@ public class DmService extends Service {
             setRealNetParam(mContext, false, false);
         } else {
             // init if use real net parameter
-            mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, true);
+            if(SystemProperties.get("ro.product.board.customer", "none").equalsIgnoreCase("cgmobile")){
+                mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, false);
+            }else{
+                mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, true);
+            }
         }
 
         // init server address/sms address/sms port
@@ -802,7 +832,11 @@ public class DmService extends Service {
             setRealNetParam(mContext, false, true);
         } else {
             // init if use real net parameter
-            mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, true);
+            if(SystemProperties.get("ro.product.board.customer", "none").equalsIgnoreCase("cgmobile")){
+                mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, false);
+            }else{
+                mIsRealNetParam = sharedPreferences.getBoolean(ITEM_REAL_PARAM, true);
+            }
         }
 
         if (mIsRealNetParam) {

@@ -75,7 +75,8 @@ public class DMHttpUtils {
     // private static final String USER_AGENT = "HS-T66";
     // private static final String USER_AGENT =
     // "HS-N56_TD/1.0 ThreadX/4.0 MOCOR/W09B Release/05.25.2010 Browser/NF3.5 Profile/MIDP-2.0 Configuration/CLDC-1.1";
-    private static final String USER_AGENT = "HS-T81_TD/1.0 Android/2.2 Release/05.10.2011 Browser/AppleWebKit533.1 Profile/MIDP-2.0 Configuration/CLDC-1.1";
+    //private static final String USER_AGENT = "HS-T81_TD/1.0 Android/2.2 Release/05.10.2011 Browser/AppleWebKit533.1 Profile/MIDP-2.0 Configuration/CLDC-1.1";
+    private static final String USER_AGENT = "Mozilla/5.0 (Linux; U; Android 4.4.2;  zh-cn; Coolpad 8019; Android/4.4.2; Release/04.21.2014)  AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30";
 
     // private static final String USER_AGENT="Mozilla/5.0
     // (HS-EG968/CIC.6.01.01.00;U;Android/1.6;320*480;CTC/2.0)
