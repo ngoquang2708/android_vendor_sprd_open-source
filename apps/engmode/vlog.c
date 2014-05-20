@@ -24,6 +24,7 @@
 extern sem_t g_armlog_sem;
 extern int g_armlog_enable;
 extern int g_ass_start;
+extern int g_ap_cali_flag;
 static char log_data[DATA_BUF_SIZE];
 static char diag_data[DATA_BUF_SIZE];
 static int s_ser_diag_fd = 0;
@@ -220,7 +221,7 @@ void *eng_vdiag_rthread(void *x)
         }
     }while(modem_fd < 0);
 
-    if(s_dev_info->host_int.cali_flag && (s_dev_info->host_int.dev_type == CONNECT_USB)){
+    if(s_dev_info->host_int.cali_flag && (s_dev_info->host_int.dev_type == CONNECT_USB) && !g_ap_cali_flag){
         eng_usb_enable();
     }
 
