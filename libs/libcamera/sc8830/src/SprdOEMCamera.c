@@ -3313,7 +3313,7 @@ int camera_stop_capture_internal(void)
 			CMR_LOGD("don't need stop jpeg.");
 		}
 	}
-	arithmetic_hdr_kill();
+	arithmetic_hdr_deinit();
 	return ret;
 }
 
@@ -6647,10 +6647,6 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 		g_cxt->cap_rot = camera_get_rot_enum(tmp_req_rot);
 	}
 
-	camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
-		camera_get_client_data(),
-		CAMERA_FUNC_TAKE_PICTURE,
-		0);
 
 	if (CAMERA_HDR_MODE == g_cxt->cap_mode) {
 		struct img_addr *data_addr;
@@ -6663,7 +6659,7 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 				data_addr = &g_cxt->cap_mem[0].cap_yuv.addr_vir;
 			}
 		}
-		if(0 != arithmetic_hdr_start(data_addr,g_cxt->cap_orig_size.width,g_cxt->cap_orig_size.height)) {
+		if(0 != arithmetic_hdr(data_addr,g_cxt->cap_orig_size.width,g_cxt->cap_orig_size.height)) {
 			CMR_LOGE("hdr error.");
 		}
 		camera_call_cb(CAMERA_EVT_CB_FLUSH,
@@ -6689,6 +6685,11 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 		g_cxt->cap_original_fmt,
 		g_cxt->cap_zoom_mode,
 		g_cxt->cap_rot);
+
+	camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+		camera_get_client_data(),
+		CAMERA_FUNC_TAKE_PICTURE,
+		0);
 
 	CMR_LOGI("Call done");
 	TAKE_PICTURE_STEP(CMR_STEP_CAP_E);

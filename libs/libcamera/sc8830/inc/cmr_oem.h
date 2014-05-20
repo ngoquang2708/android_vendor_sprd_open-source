@@ -81,17 +81,11 @@ extern "C"
 #define CMR_EVT_SW_MON_EXIT                          (CMR_EVT_SW_MON_BASE + 1)
 #define CMR_EVT_SW_MON_SET_PARA                      (CMR_EVT_SW_MON_BASE + 2)
 
-#define CMR_EVT_HDR_BASE			     (CMR_EVT_OEM_BASE + 0xA00)
-#define CMR_EVT_HDR_INIT			     (CMR_EVT_HDR_BASE + 0)
-#define CMR_EVT_HDR_START			     (CMR_EVT_HDR_BASE + 1)
-#define CMR_EVT_HDR_EXIT			     (CMR_EVT_HDR_BASE + 2)
-
 #define CAMERA_OEM_MSG_QUEUE_SIZE                    50
 #define CAMERA_AF_MSG_QUEUE_SIZE                     5
 #define CAMERA_PREV_MSG_QUEUE_SIZE                   20
 #define CAMERA_CAP_MSG_QUEUE_SIZE                    20
 #define CAMERA_CB_MSG_QUEUE_SIZE                     40
-#define CAMERA_HDR_MSG_QUEUE_SIZE                     5
 
 #define CAMERA_PREV_ID_BASE                          0x1000
 #define CAMERA_CAP0_ID_BASE                          0x2000
