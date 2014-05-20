@@ -361,6 +361,9 @@ int main (int argc, char** argv)
             strcpy(dev_info.host_int.dev_diag, "/dev/ttyS1");
             dev_info.host_int.dev_type = CONNECT_UART;
         }
+        if(CONNECT_USB == cmdparam.connect_type && g_ap_cali_flag){
+	    eng_usb_enable();
+	}
     }
 
     eng_get_modem_int(run_type, dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan,
