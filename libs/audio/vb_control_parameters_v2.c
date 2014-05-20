@@ -1661,6 +1661,8 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     {
         set_call_route(adev,switch_device[i],0);
     }
+    adev->out_devices = 0;
+    adev->in_devices = 0;
     if(adev->pcm_fm_dl != NULL)
     {
         ALOGE("%s:close FM device",__func__);
