@@ -1337,6 +1337,13 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 		cur_params.setSupportedWhiteBalance(new_SupportedWhiteBalance);
 	}
 
+	/*supported auto exposeure values*/
+	const char* new_Supported_auto_expos_valuses =params.get_Supported_Auto_Exposure_Values();
+	if (new_Supported_auto_expos_valuses)
+		cur_params.set_Supported_Auto_Exposure_Values(new_Supported_auto_expos_valuses);
+
+
+
 	/*SupportedIso*/
 	{
 	const char* new_SupportedIso = params.get_SupportedIso();

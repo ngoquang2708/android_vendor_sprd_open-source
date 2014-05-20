@@ -208,6 +208,8 @@ public:
 	const char* get_SupportedWhiteBalance() const;
 	void setSupportedWhiteBalance(const char* value);
 	const char* get_SupportedIso() const;
+	const char *get_Supported_Auto_Exposure_Values()const;
+	void set_Supported_Auto_Exposure_Values(const char* value);
 	void setSupportedIso(const char* value);
 	const char* get_SupportedContrast() const;
 	void setSupportedContrast(const char* value);

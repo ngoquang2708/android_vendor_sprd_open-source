@@ -1104,6 +1104,16 @@ void SprdCameraParameters::setSupportedWhiteBalance(const char* value)
 	set(KEY_SUPPORTED_WHITE_BALANCE, value);
 }
 
+const char *SprdCameraParameters::get_Supported_Auto_Exposure_Values() const
+{
+	return get("auto-exposure-values");
+}
+void SprdCameraParameters::set_Supported_Auto_Exposure_Values(const char* values)
+{
+	return set("auto-exposure-values",values);
+
+}
+
 const char *SprdCameraParameters::get_SupportedIso() const
 {
 	return get(KEY_SUPPORTED_ISO);
