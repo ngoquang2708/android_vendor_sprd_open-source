@@ -1776,18 +1776,24 @@ RESTART:
 	    {
 		MY_TRACE("voice:VBC_CMD_HAL_CLOSE IN.");
 		cur_timeout = &timeout;
+
+		pthread_mutex_lock(&adev->lock);
 		adev->call_prestop = 1;
+		force_all_standby(adev);
+		pthread_mutex_unlock(&adev->lock);
+
 		ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
 		if(ret < 0){
 		    ALOGE("voice:VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
 		}
-		vbc_call_end_process(adev,false);
 		MY_TRACE("voice:VBC_CMD_HAL_CLOSE OUT.");
 	    }
 	    break;
 	case VBC_CMD_RSP_CLOSE:
 	    {
 		cur_timeout = NULL;
+
+		vbc_call_end_process(adev,false);
 		MY_TRACE("voice:VBC_CMD_RSP_CLOSE IN.");
 		ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
 		if(ret < 0){
