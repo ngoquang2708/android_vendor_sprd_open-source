@@ -33,13 +33,13 @@ public class AssertApplication extends Application {
     //values of extra data in intent.
     private static final String MODEM_ALIVE = "modem_alive";
     private static final String MODEM_ASSERT = "modem_assert";
-
     //name of socket to listen to modem state
     private static final String MODEM_SOCKET_NAME = "modemd";
 
     //notification id to cancel
     private static final int MODEM_ASSERT_ID = 1;
     private static final int WCND_ASSERT_ID = 2;
+    private static final int MODEM_BLOCK_ID = 3;
 
     private static final int BUF_SIZE = 128;
 
@@ -127,6 +127,7 @@ public class AssertApplication extends Application {
                     if (info.contains("Modem Alive")) {
                         sendModemStatBroadcast(MODEM_ALIVE);
                         hideNotification(MODEM_ASSERT_ID);
+                        hideNotification(MODEM_BLOCK_ID);
                     } else if (info.contains("Modem Assert")) {
                         String value = SystemProperties.get("persist.sys.sprd.modemreset", "default");
                         Log.d(MTAG, " modemreset ? : " + value);
@@ -140,6 +141,8 @@ public class AssertApplication extends Application {
                         sendBroadcast(intent);
                         /* @} */
                         sendModemStatBroadcast(MODEM_ASSERT);
+                    } else if (info.contains("Modem Blocked")) {
+                        showNotification(MODEM_BLOCK_ID,"modem block",info);
                     } else {
                         Log.d(MTAG, "do nothing with info :" + info);
                     }
