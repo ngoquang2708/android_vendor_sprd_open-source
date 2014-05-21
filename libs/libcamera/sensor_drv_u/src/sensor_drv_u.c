@@ -504,7 +504,33 @@ int Sensor_GetSocId(SENSOR_SOCID_T *p_id)
 	return ret;
 }
 
-LOCAL int _Sensor_Device_MIPI_init(uint32_t lane_num, uint32_t bps)
+LOCAL uint32_t _Sensor_Get_Mipi_Phy_Id(void)
+{
+	uint32_t phy_id = 0;
+	SENSOR_ID_E sensor_id = Sensor_GetCurId();
+
+	if (SENSOR_MAIN == sensor_id) {
+#if defined(CONFIG_BACK_CAMERA_MIPI_PHYA)
+		phy_id = 0x01;
+#elif defined(CONFIG_BACK_CAMERA_MIPI_PHYB)
+		phy_id = 0x02;
+#elif defined(CONFIG_BACK_CAMERA_MIPI_PHYAB)
+		phy_id = 0x03;
+#endif
+	} else {
+#if defined(CONFIG_FRONT_CAMERA_MIPI_PHYA)
+		phy_id = 0x01;
+#elif defined(CONFIG_FRONT_CAMERA_MIPI_PHYB)
+		phy_id = 0x02;
+#elif defined(CONFIG_FRONT_CAMERA_MIPI_PHYAB)
+		phy_id = 0x03;
+#endif
+	}
+
+	return phy_id;
+}
+
+LOCAL int _Sensor_Device_MIPI_init(uint32_t phy_id, uint32_t lane_num, uint32_t bps)
 {
 	int ret = SENSOR_SUCCESS;
 	SENSOR_IF_CFG_T if_cfg;
@@ -512,9 +538,10 @@ LOCAL int _Sensor_Device_MIPI_init(uint32_t lane_num, uint32_t bps)
 
 	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
 	CMR_LOGI("Lane num %d, bps %d", lane_num, bps);
-	if_cfg.if_type      = INTERFACE_MIPI;
-	if_cfg.is_open      = INTERFACE_OPEN;
-	if_cfg.lane_num     = lane_num;
+	if_cfg.if_type = INTERFACE_MIPI;
+	if_cfg.is_open = INTERFACE_OPEN;
+	if_cfg.phy_id = phy_id;
+	if_cfg.lane_num = lane_num;
 	if_cfg.bps_per_lane = bps;
 	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_IF_CFG, &if_cfg);
 	if (0 != ret) {
@@ -525,7 +552,7 @@ LOCAL int _Sensor_Device_MIPI_init(uint32_t lane_num, uint32_t bps)
 	return ret;
 }
 
-LOCAL int _Sensor_Device_MIPI_deinit(void)
+LOCAL int _Sensor_Device_MIPI_deinit(uint32_t phy_id)
 {
 	int ret = SENSOR_SUCCESS;
 	SENSOR_IF_CFG_T if_cfg;
@@ -533,8 +560,9 @@ LOCAL int _Sensor_Device_MIPI_deinit(void)
 
 	CMR_LOGI("close mipi");
 	memset((void*)&if_cfg, 0, sizeof(SENSOR_IF_CFG_T));
-	if_cfg.if_type      = INTERFACE_MIPI;
-	if_cfg.is_open      = INTERFACE_CLOSE;
+	if_cfg.if_type = INTERFACE_MIPI;
+	if_cfg.is_open = INTERFACE_CLOSE;
+	if_cfg.phy_id = phy_id;
 	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_IF_CFG, &if_cfg);
 	if (0 != ret) {
 		CMR_LOGE("failed, 0x%x", ret);
@@ -2259,7 +2287,7 @@ int _Sensor_SetMode(uint32_t mode)
 
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 		_Sensor_StreamOff();/*stream off first for MIPI sensor switch*/
-		_Sensor_Device_MIPI_deinit();
+		_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
 	}
 
 	if (s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] == mode) {
@@ -2284,8 +2312,9 @@ int _Sensor_SetMode(uint32_t mode)
 	}
 
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
-		_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
-						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
+		_Sensor_Device_MIPI_init(_Sensor_Get_Mipi_Phy_Id(),
+					s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
+					s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
 	}
 
 	return SENSOR_SUCCESS;
@@ -2376,9 +2405,10 @@ int Sensor_StreamCtrl(uint32_t on_off)
 	} else {
 		ret = _Sensor_StreamOff();
 		if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
-			_Sensor_Device_MIPI_deinit();
+			_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
 			mode = s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()];
-			_Sensor_Device_MIPI_init(s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
+			_Sensor_Device_MIPI_init(_Sensor_Get_Mipi_Phy_Id(),
+						s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
 						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
 
 		}
@@ -2495,7 +2525,7 @@ ERR_SENSOR_E Sensor_Close(uint32_t is_last)
 	_Sensor_KillThread();
 
 	_Sensor_StreamOff();
-	_Sensor_Device_MIPI_deinit();
+	_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
 	if (1 == s_p_sensor_cxt->is_register_sensor) {
 		if (1 == s_p_sensor_cxt->is_main_sensor) {
 			_Sensor_Device_I2CDeInit(SENSOR_MAIN);
@@ -3210,7 +3240,7 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 		case SENSOR_EVT_STREAM_OFF:
 			CMR_LOGI("SENSOR_EVT_STREAM_OFF");
 			_Sensor_StreamOff();
-			_Sensor_Device_MIPI_deinit();
+			_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
 			break;
 
 		case SENSOR_EVT_DEINIT:
