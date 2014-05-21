@@ -364,7 +364,6 @@ void SprdCameraParameters::setFocusMode(const char* value)
 int SprdCameraParameters::getWhiteBalance()
 {
 	const char *p = get(KEY_WHITE_BALANCE);
-
 	return lookup(wb_map, p, CAMERA_WB_AUTO);
 }
 

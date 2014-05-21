@@ -1599,6 +1599,7 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 	}
 
 	checkFlashParameter((SprdCameraParameters&)params);
+	checkEffectParameter((SprdCameraParameters&)params);
 
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
 	LOGI("flash-mode:%s.",flash_mode);
@@ -1716,6 +1717,24 @@ status_t SprdCameraHardware::checkFlashParameter(SprdCameraParameters& params)
 	}
 
 
+	return ret;
+}
+
+status_t SprdCameraHardware::checkEffectParameter(SprdCameraParameters& params)
+{
+	status_t ret =  NO_ERROR;
+	static char save_effect[10]="0";
+	const char* cur_effect = params.get_Effect();
+	const char* scenemode=params.get_SceneMode();
+	LOGI("cur effect=%s  scenemode=%s ",cur_effect,scenemode);
+
+	if ((0 == strcmp("hdr",scenemode))) {
+		strcpy(save_effect,cur_effect);
+		params.setEffect("none");
+	} else {
+		LOGI("save_effect=%s ",save_effect);
+
+	}
 	return ret;
 }
 
