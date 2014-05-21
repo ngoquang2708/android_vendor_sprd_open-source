@@ -74,16 +74,16 @@ namespace android {
 #define SUBSTREAM_TYPE_ZSL          (4)
 #define FLASH_STABLE_WAIT_TIMEOUT        (10)
 
-#define SIG_WAITING_TICK            (5000)
+#define SIG_WAITING_TICK            (15000)
 
-#define MAX_REQUEST_NUM              (6)
+#define MAX_REQUEST_NUM              (8)
 
 
 #define ON_HAL_BUFQ         (1)
 #define ON_HAL_BUFERR       (1 << 1)
 #define ON_HAL_DRIVER       (1 << 2)
 #define ON_SERVICE          (1 << 3)
-#define ON_HAL_INIT         (1 << 4)/*service deq 6 bufs firstly*/
+#define ON_HAL_INIT         (1 << 4)
 
 #define MAX_MISCHEAP_NUM 10
 
@@ -106,6 +106,7 @@ typedef struct stream_parameters {
 	int                           svcBufStatus[NUM_MAX_CAMERA_BUFFERS];
 	int                           phySize[NUM_MAX_CAMERA_BUFFERS];
 	int                           phyAdd[NUM_MAX_CAMERA_BUFFERS];/*for s_mem_method = 1*/
+	bool                          bufIsCancel[NUM_MAX_CAMERA_BUFFERS];
 	int                           bufIndex;
 	int                           minUndequedBuffer;
 	int64_t                       m_timestamp;
@@ -178,7 +179,15 @@ typedef struct _reprocess_buf_info{
 	buffer_handle_t  *reprocessAcqBuf;
 	int              reprocessBufIndex;
 } reprocess_buf_info;
-
+/*must be consistency to framework*/
+typedef struct _prv_cb_buf_info{
+	uint32_t    virAdd;
+	uint32_t    width;
+	uint32_t    height;
+	int         format;
+	uint32_t    stride;
+	uint32_t    reserve;
+} prv_cb_buf_info;
 
 class SprdCameraHWInterface2 : public virtual RefBase {
 public:
@@ -226,7 +235,7 @@ public:
 	};
 
 	int                 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
-	sprd_camera_memory_t  *GetCachePmem(int buf_size, int num_bufs);
+	sprd_camera_memory_t  *GetCachePmem(int buf_size, int num_bufs, bool IsCach);
 
 private:
 
@@ -331,7 +340,7 @@ private:
 	static const int kPreviewBufferCount = 8;
 	static const int kPreviewRotBufferCount = 4;
 	static const int kRawBufferCount = 1;
-	static const int64_t kBurstCapWaitTime = 4000000000LL;/*2s*/
+	static const int64_t kBurstCapWaitTime = 3000000000LL;/*be shorter than framework(4s)*/
 	class RequestQueueThread : public SprdBaseThread {
 		SprdCameraHWInterface2 *mHardware;
 		public:
@@ -498,6 +507,7 @@ private:
 	int                  GetReqQueueSize();
 	camera_metadata_t   *PopReqQ();
 	void                ClearReqQ();
+	void                SetDDRFreqBefStartPrv();
 	const char          *getCameraStateStr(Sprd_camera_state s);
 
 	Sprd_camera_state   transitionState(Sprd_camera_state from,
@@ -543,7 +553,7 @@ private:
 	void                  HandleTakePicture(camera_cb_type cb,int32_t parm4);
 	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
 	void                  HandleFocus(camera_cb_type cb, int32_t parm4);
-	bool                  getPreviewBuffer(void);
+	bool                  getPreviewBuffer(bool isPrvAftCap);
 	status_t              set_ddr_freq(uint32_t mhzVal);
 
 	sp<RequestQueueThread>   m_RequestQueueThread;
@@ -580,8 +590,12 @@ private:
 	int64_t                           mPreviewFrmTimestamp[kPreviewBufferCount];
 	int32_t                           mPreviewHeapArray_phy[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	int32_t                           mPreviewHeapArray_vir[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	int32_t                           mPreviewHeapArray_phy_dynamic[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	int32_t                           mPreviewHeapArray_vir_dynamic[kPreviewBufferCount+kPreviewRotBufferCount+1];
+	int32_t                           mPreviewBufIndex_dynamic[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t              *mPreviewHeapArray[kPreviewBufferCount+kPreviewRotBufferCount+1];
 	sprd_camera_memory_t              mMiscHeapArray[MAX_MISCHEAP_NUM];
+	int64_t                           mWaitPicTime;
 	uint32_t                          mMiscHeapNum;
 	uint32_t                          m_CapFrmCnt; /*for zsl*/
 	uint32_t                          m_PrvFrmCnt;/*for zsl*/

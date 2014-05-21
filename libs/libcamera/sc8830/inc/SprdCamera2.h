@@ -53,8 +53,10 @@ typedef struct tags_info {
 const int32_t jpegResolutionSensorBack[] = {/*must order from bigger to smaller*/
     2592, 1944,
     2048, 1536,
+    1920, 1088,
     1600, 1200,
     1280,  960,
+    1280,  720,
      720,  480,
      640,  480,
 };
@@ -67,7 +69,7 @@ const int32_t jpegResolutionSensorFront[] = {
 
 const int32_t PreviewResolutionSensorBack[] = {/*supported video size must be same as supported preview size*/
 #ifndef CONFIG_CAMERA_SMALL_PREVSIZE
-   // 1920,  1088,
+    1920,  1088,
     1280,  720, // 16:9
 #endif
      720,  480, // 3:2
@@ -122,10 +124,9 @@ const uint8_t availableAeModesSensorBack[] = {
     ANDROID_CONTROL_AE_MODE_ON_AUTO_FLASH
 };
 
-const uint32_t kAvailableFormats[5] = {//for preview
+const uint32_t kAvailableFormats[4] = {//for preview
         HAL_PIXEL_FORMAT_RAW_SENSOR,
         HAL_PIXEL_FORMAT_BLOB,
-        HAL_PIXEL_FORMAT_RGBA_8888,
         HAL_PIXEL_FORMAT_YV12,
         HAL_PIXEL_FORMAT_YCrCb_420_SP
 };
