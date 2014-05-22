@@ -1835,9 +1835,9 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 
 	if (!mBakParamFlag) {
 		/*if zoom parameter changed, then the action should be sync*/
-		if (!isZoomChange) {
+		//if (!isZoomChange) {
 			mParamWait.signal();
-		}
+		//}
 	} else {
 		mBakParamFlag = 0;
 	}
@@ -1925,9 +1925,9 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	}
 
 setParamEnd:
-	if (isZoomChange) {
-		mParamWait.signal();
-	}
+	//if (isZoomChange) {
+	//	mParamWait.signal();
+	//}
 	LOGI("setParametersInternal X.\n");
 
 	return ret;
