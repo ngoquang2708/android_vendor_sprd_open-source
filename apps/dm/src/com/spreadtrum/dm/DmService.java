@@ -333,7 +333,7 @@ public class DmService extends Service {
                     mInService[phoneId] = true;
                     // sim card is ready
                     if (TelephonyManager.SIM_STATE_READY == mTelephonyManager[phoneId].getSimState()
-                            && mSmsReady[phoneId]) {
+                            && (mSmsReady[phoneId] || "true".equals(SystemProperties.get(TelephonyManager.getProperty("gsm.sim.smsready", phoneId),"false" )))) {
       
                         if (getIsCmccCard(phoneId)) {
 	                    curPhoneId = phoneId;	                    
