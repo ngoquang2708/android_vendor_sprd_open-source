@@ -138,6 +138,75 @@ static int capture_snap_for_notify(struct slog_info *head, char *filepath)
         return 0;
 }
 
+static int capture_all_for_notify(char *dest_file)
+{
+	char src_file[MAX_NAME_LEN];
+	FILE *fp;
+
+	/* df ps ...... */
+	capture_snap_for_notify(snapshot_log_head, dest_file);
+
+	/* logcat android log*/
+	sprintf(src_file, "logcat -v threadtime -d -f %s", dest_file);
+	system(src_file);
+
+	/* kernel log*/
+	fp = fopen(dest_file, "a+");
+	if(fp == NULL) {
+		err_log("open file %s failed!", dest_file);
+		return 0;
+	}
+
+	fprintf(fp, "\n============ Kernel log  ==============\n");
+	fclose(fp);
+	sprintf(src_file, "dmesg >> %s", dest_file);
+	system(src_file);
+
+        return 0;
+}
+
+void handle_javacrash_file(void)
+{
+	char dest_file[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+	int ret;
+
+	if(misc_log->state != SLOG_STATE_ON)
+		return;
+
+	t = time(NULL);
+	localtime_r(&t, &tm);
+
+	sprintf(dest_file, "%s/%s/%s", current_log_path, top_logdir, "misc");
+	ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)) {
+		err_log("mkdir %s failed.", dest_file);
+		return;
+	}
+
+	sprintf(dest_file, "%s/%s/%s/%s", current_log_path, top_logdir, "misc", "javacrash");
+	ret = mkdir(dest_file, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)) {
+		err_log("mkdir %s failed.", dest_file);
+		return;
+	}
+
+	sprintf(dest_file, "%s/%s/%s/%s/snapshot_%02d-%02d-%02d.log",
+			current_log_path,
+			top_logdir,
+			"misc",
+			"javacrash",
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+
+	capture_all_for_notify(dest_file);
+
+	return;
+
+}
+
 static void handle_notify_file(int wd, const char *name)
 {
 	struct slog_info *info;
@@ -146,7 +215,6 @@ static void handle_notify_file(int wd, const char *name)
 	time_t t;
 	struct tm tm;
 	int ret;
-	FILE *fp;
 
 	if(misc_log->state != SLOG_STATE_ON)
 		return;
@@ -202,24 +270,7 @@ static void handle_notify_file(int wd, const char *name)
 		/* traces.txt tombstones*/
 		cp_file(src_file, dest_file);
 
-		/* df ps ...... */
-		capture_snap_for_notify(snapshot_log_head, dest_file);
-
-		/* logcat android log*/
-		sprintf(src_file, "logcat -v threadtime -d -f %s", dest_file);
-		system(src_file);
-
-		/* kernel log*/
-		fp = fopen(dest_file, "a+");
-		if(fp == NULL) {
-			err_log("open file %s failed!", dest_file);
-			return;
-		}
-
-		fprintf(fp, "\n============ Kernel log  ==============\n");
-		fclose(fp);
-		sprintf(src_file, "dmesg >> %s", dest_file);
-		system(src_file);
+		capture_all_for_notify(dest_file);
 
 		return;
 	}

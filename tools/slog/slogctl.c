@@ -313,6 +313,8 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_QUERY;
 	} else if(!strncmp(argv[1], "sync", 4)) {
 		cmd.type = CTRL_CMD_TYPE_SYNC;
+	} else if(!strncmp(argv[1], "javacrash", 9)) {
+		cmd.type = CTRL_CMD_TYPE_JAVACRASH;
 #ifdef LOW_POWER_MODE
 	} else if(!strncmp(argv[1], "hook_modem", 10)) {
 		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
