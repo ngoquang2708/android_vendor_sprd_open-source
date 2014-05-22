@@ -371,6 +371,9 @@ int mux_pcm_close(struct pcm *pcm_in)
             ret = saudio_send_common_cmd(SAUDIO_CMD_STOP,pcm->stream_type);
             if(ret){
                 pthread_mutex_unlock(&pcm->lock);
+                ret= close(pcm->mux_fd);
+                pcm->mux_fd=-1;
+                free(pcm);
                 return ret;
             }
             pcm->state = 0;
@@ -378,17 +381,16 @@ int mux_pcm_close(struct pcm *pcm_in)
         pthread_mutex_unlock(&pcm->lock);
         ret = saudio_send_common_cmd(SAUDIO_CMD_CLOSE,pcm->stream_type);
         if(ret){
+            ret= close(pcm->mux_fd);
+            pcm->mux_fd=-1;
+            free(pcm);
             return ret;
         }
-       ret= close(pcm->mux_fd);
-       pcm->mux_fd=-1;
+        ret= close(pcm->mux_fd);
+        pcm->mux_fd=-1;
 
     }
-      free(pcm);
+    free(pcm);
     ALOGE(": function is mux_pcm_close out");
     return ret;
-
-
 }
-
-
