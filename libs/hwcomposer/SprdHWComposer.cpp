@@ -231,8 +231,32 @@ int SprdHWComposer:: blank(int disp, int blank)
     return 0;
 }
 
+
+// HWC layer flags
+enum {
+    // Draw a solid color rectangle
+    // The color should be set on the transform member of the hwc_layer_t struct
+    // The expected format is a 32 bit ABGR with 8 bits per component
+    HWC_COLOR_FILL = 0x8,
+    // Swap the RB pixels of gralloc buffer, like RGBA<->BGRA or RGBX<->BGRX
+    // The flag will be set inside LayerRenderState
+    HWC_FORMAT_RB_SWAP = 0x40
+};
+
 int SprdHWComposer:: query(int what, int* value)
 {
+    switch(what)
+    {
+      case HWC_COLOR_FILL:
+        *value = 1;
+        break;
+      case HWC_FORMAT_RB_SWAP:
+        *value = 1;
+        break;
+      default:
+        *value = 0;
+        break;
+    }
     return 0;
 }
 
