@@ -47,6 +47,7 @@
 #define MODEM_INTF_EVENT_CP_REQ_RESET           2
 #define MODEM_INTF_EVENT_SHUTDOWN               4
 #define MODEM_INTF_EVENT_FORCE_RESET            8
+#define MODEM_INTF_EVENT_WDG_RESET		16
 
 
 
@@ -297,6 +298,38 @@ void broadcast_modem_state(char *message,int size)
         }
 }
 
+int chk_assert_info_string(const char *message,int size)
+{
+        if(memcmp(message, LTE_MODEM_ASSERT_STR, strlen(LTE_MODEM_ASSERT_STR)) == 0)
+        {
+                return 1;
+        }
+
+        if(memcmp(message, TD_MODEM_ASSERT_STR, strlen(TD_MODEM_ASSERT_STR)) == 0)
+        {
+                return 1;
+        }
+
+        if(memcmp(message, MODEM_ASSERT_STR, strlen(MODEM_ASSERT_STR)) == 0)
+        {
+                return 1;
+        }
+
+        if(memcmp(message, LTE_MODEM_RESET_STR, strlen(LTE_MODEM_RESET_STR)) == 0)
+        {
+                return 1;
+        }
+
+        if(memcmp(message, MODEM_RESET_STR, strlen(MODEM_RESET_STR)) == 0)
+        {
+                return 1;
+        }
+
+
+        return 0;
+}
+
+
 static void process_modem_state_message(char *message,int size)
 {
         int alive_status=0,reset_status = 0,force_reset = 0;
@@ -389,6 +422,7 @@ static void process_modem_state_message(char *message,int size)
                         ret = get_modem_assert_information(assert_info_buffer,256);
                         MODEM_LOGD("modem_state4 = MODEM_STA_ASSERT(%d)\n",ret);
                         MODEM_LOGD("modem_ctrl ASSERT INFO %s\n",assert_info_buffer);
+                        ret = chk_assert_info_string(assert_info_buffer,strlen(assert_info_buffer));
                         if(ret > 0) {
                                 broadcast_modem_state(assert_info_buffer,strlen(assert_info_buffer));
                         } else {
@@ -408,6 +442,9 @@ static void process_modem_state_message(char *message,int size)
 
                         broadcast_modem_state(MODEM_RESET_STR,strlen(MODEM_RESET_STR));
                 }
+                if(MODEM_INTF_EVENT_WDG_RESET == evt) {
+			broadcast_modem_state(WTD_MODEM_RESET_STR, strlen(WTD_MODEM_RESET_STR));
+		}
                 break;
         default:
                 break;
