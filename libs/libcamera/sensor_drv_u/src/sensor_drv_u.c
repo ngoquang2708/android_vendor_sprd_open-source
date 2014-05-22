@@ -2250,6 +2250,7 @@ int Sensor_Open(uint32_t sensor_id)
 		}
 		if (SENSOR_SUCCESS == ret_val) {
 			Sensor_CfgOtpAndUpdateISPParam(sensor_id);
+			isp_raw_para_update_from_file(s_p_sensor_cxt->sensor_info_ptr,sensor_id);
 
 			if (SENSOR_SUCCESS != Sensor_SetMode(SENSOR_MODE_PREVIEW_ONE)) {
 				CMR_LOGE("Sensor set init mode error!");
@@ -3261,8 +3262,6 @@ LOCAL void* _Sensor_ThreadProc(void* data)
 				&& (PNULL != s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp)) {
 				s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp(0);
 			}
-
-			isp_raw_para_update_from_file(s_p_sensor_cxt->sensor_info_ptr,message.sub_msg_type);
 
 			break;
 		default:

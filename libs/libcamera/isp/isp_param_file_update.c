@@ -175,7 +175,7 @@ uint32_t isp_raw_para_update_from_file(SENSOR_INFO_T *sensor_info_ptr,SENSOR_ID_
 		return SENSOR_FAIL;
 	}
 
-	strcpy(file_name, "/sdcard/");
+	strcpy(file_name, "/data/");
 	strcat(file_name, "sensor_");
 	strcat(file_name, sensor_name);
 	strcat(file_name, "_raw_param.c");
