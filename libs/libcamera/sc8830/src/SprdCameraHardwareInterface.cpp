@@ -684,9 +684,7 @@ status_t SprdCameraHardware::takePicture()
 		WaitForCaptureDone();
 	}
 
-	if (CAMERA_RAW_MODE == mode) {
-		set_ddr_freq(HIGH_FREQ_REQ);
-	}
+	set_ddr_freq(HIGH_FREQ_REQ);
 
 	setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
 	LOGI("INTERPOLATION::takePicture:mRawWidth=%d,mZoomLevel=%d",mRawWidth,mZoomLevel);
@@ -3566,9 +3564,7 @@ status_t SprdCameraHardware::cancelPictureInternal()
 		break;
 	}
 
-	if (CAMERA_RAW_MODE == getCaptureMode()) {
-		set_ddr_freq(BASE_FREQ_REQ);
-	}
+	set_ddr_freq(BASE_FREQ_REQ);
 
 	LOGI("cancelPictureInternal: X");
 	return result ? NO_ERROR : UNKNOWN_ERROR;
@@ -4716,9 +4712,8 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 	if (!iSZslMode()) {
 		if (encInfo->need_free) {
 			deinitCapture();
-			if (CAMERA_RAW_MODE == getCaptureMode()) {
-				set_ddr_freq(BASE_FREQ_REQ);
-			}
+
+			set_ddr_freq(BASE_FREQ_REQ);
 		}
 	} else {
 		mCapBufLock.lock();
