@@ -38,6 +38,9 @@ ifneq ($(filter scx35_sc9620referphone scx35_sc9620openphone scx35_sc9620openpho
 LOCAL_CFLAGS += -DVB_CONTROL_PARAMETER_V2
 endif
 
+ifeq ($(strip $(AUDIO_CONTROL_PARAMETER_V2)), true)
+LOCAL_CFLAGS += -DVB_CONTROL_PARAMETER_V2
+endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
 LOCAL_CFLAGS += -D_LPA_IRAM
