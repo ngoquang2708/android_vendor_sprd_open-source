@@ -292,25 +292,25 @@ reconnect:
             if(modem == TD_MODEM) {
                 pthread_mutex_lock(&td_state_mutex);
                 if(td_modem_state != MODEM_READY) {
-                    MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+                    MODEMD_LOGD("%s: wait for TD  modem ready ...", __func__);
                     pthread_cond_wait(&td_cond, &td_state_mutex);
-                    MODEMD_LOGD("%s: modem ready, wake up", __func__);
+                    MODEMD_LOGD("%s: TD modem ready, wake up", __func__);
                 }
                 pthread_mutex_unlock(&td_state_mutex);
             } else if(modem == W_MODEM) {
                 pthread_mutex_lock(&w_state_mutex);
                 if(w_modem_state != MODEM_READY) {
-                    MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+                    MODEMD_LOGD("%s: wait for W modem ready ...", __func__);
                     pthread_cond_wait(&w_cond, &w_state_mutex);
-                    MODEMD_LOGD("%s: modem ready, wake up", __func__);
+                    MODEMD_LOGD("%s: W modem ready, wake up", __func__);
                 }
                 pthread_mutex_unlock(&w_state_mutex);
             } else if(modem == LTE_MODEM) {
                 pthread_mutex_lock(&lte_state_mutex);
                 if(lte_modem_state != MODEM_READY) {
-                    MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+                    MODEMD_LOGD("%s: wait for LTE modem ready ...", __func__);
                     pthread_cond_wait(&lte_cond, &lte_state_mutex);
-                    MODEMD_LOGD("%s: modem ready, wake up", __func__);
+                    MODEMD_LOGD("%s: LTE modem ready, wake up", __func__);
                 }
                 pthread_mutex_unlock(&lte_state_mutex);
             }

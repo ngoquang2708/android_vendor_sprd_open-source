@@ -23,7 +23,7 @@ static int  sStartLteThread = 0;
 static pthread_t  sTidStartLte = 0;
 static int  sLTEmodem   = LTE_MODEM;
 static int  sTDmodem    = TD_MODEM;
-static int  sSSDAMode   = 0;  // 0 is SVLTE mode, or is CSFB MODE
+static int  sSSDAMode   = 0;  // 0 is SVLTE mode, or CSFB mode
 static int  sTestMode   = 0;  // 0 is Test Mode SVLTE
 static int  sFdModemCtl = -1;
 
@@ -84,7 +84,7 @@ static int send_reload_modemd_message() {
     const char* loadcmd = sSSDAMode ? LTE_RELOAD_CSFB_STR : LTE_RELOAD_SVLTE_STR;
 
     if (sFdModemCtl != -1) {
-        MODEMD_LOGD("Modem reset is enabled, reload modem image");
+        MODEMD_LOGD("Send reload modem image command %s", loadcmd);
         if (write(sFdModemCtl, loadcmd, strlen(loadcmd) + 1) < 0) {
             MODEMD_LOGE("Fail to write reload modem, error: %s", strerror(errno));
             return -1;
@@ -280,6 +280,7 @@ static void start_external_modem(void)
         releaseWakeLock();
         sSSDAMode   = 1;
 
+        sTestMode = get_test_mode();
         pthread_mutex_lock(&lte_state_mutex);
         lte_modem_state = MODEM_READY;
         pthread_cond_signal(&lte_cond);
@@ -343,8 +344,4 @@ int is_external_modem(void) {
 ext_modem_ops_t *get_ext_modem_if() {
     return &ext_modem_ops;
 }
-
-
-
-
 

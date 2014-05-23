@@ -28,9 +28,6 @@ static int nengfds = 0; //max engpc_fd ;
 
  int notifypipe[2] = {-1}; //for engcontrol_thread nofity engcontrol_listen that some engpc_cil connect
 
-
-
-
 static int ttydev_fd;
 
 /*
@@ -296,8 +293,8 @@ int stop_service(int modem, int is_vlx)
     MODEMD_LOGD("enter stop_service!");
 
     /* stop eng */
-       if(atoi(prop))
-            stop_engservice(modem);
+    if(atoi(prop))
+        stop_engservice(modem);
 
     /* stop phoneserver */
     stop_phser(modem);
@@ -772,6 +769,8 @@ void start_modem(int *param)
 {
     pthread_t tid1, tid2, tid3, tid4, tid5, tid6;
     int modem = -1;
+    static int tdblk  = 0;
+    static int lteblk = 0;
     char prop[256];
     char modem_enable[PROPERTY_VALUE_MAX];
     char modem_dev[PROPERTY_VALUE_MAX];
@@ -813,9 +812,12 @@ void start_modem(int *param)
                     MODEMD_LOGE("Failed to create TD SIPC detected thread.");
                 }
             }
-
-            if (pthread_create(&tid3, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
-                MODEMD_LOGE("Failed to create TD modem blocked thread.");
+            if (!tdblk) {
+                if (pthread_create(&tid3, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
+                    MODEMD_LOGE("Failed to create TD modem blocked thread.");
+                } else {
+                    tdblk = 1;
+                }
             }
         } else if(!strcmp(modem_dev, DEFAULT_W_PROC_DEV)) {
             /*  sipc w modem */
@@ -832,8 +834,12 @@ void start_modem(int *param)
                 }
             }
 
-            if (pthread_create(&tid6, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
-                MODEMD_LOGE("Failed to create LTE modem blocked thread.");
+            if (!lteblk) {
+                if (pthread_create(&tid6, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
+                    MODEMD_LOGE("Failed to create LTE modem blocked thread.");
+                } else {
+                    lteblk = 1;
+                }
             }
         } else {
             /*  vlx version, only one modem */
