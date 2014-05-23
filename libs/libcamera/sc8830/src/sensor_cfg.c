@@ -62,6 +62,7 @@ extern SENSOR_INFO_T g_sr352_yuv_info;
 extern SENSOR_INFO_T g_HM2058_yuv_info;
 extern SENSOR_INFO_T g_GC2155_yuv_info;
 extern SENSOR_INFO_T g_SP2529_MIPI_yuv_info;
+extern SENSOR_INFO_T g_GC2155_MIPI_yuv_info;
 
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
@@ -110,6 +111,10 @@ const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 	//&g_GC0309_yuv_info,
 	//g_OV7690_yuv_info,
 	&g_GC2155_yuv_info,
+#endif
+
+#ifdef CONFIG_FRONT_CAMERA_MIPI
+	&g_GC2155_MIPI_yuv_info,
 #endif
 	PNULL
 };
