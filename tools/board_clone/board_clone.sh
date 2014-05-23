@@ -7,11 +7,19 @@ function add_to_file()
 	cd $2
 	substring=$3
 	replacement=$4
+	substring_2=0
 	var2=$5
 	var1=$6
+	is_substring_2=0  #is_substring_2用于是否需要替换第二种字符串
+	if [ $# -ge 9 ];then
+		#echo "$8 $9"
+		substring_2=$8
+		replacement_2=$9
+		is_substring_2=1
+	fi
 	is_add_tab=0  #是否加tab制表符,0表示不需要,表示从第is_add_tab行后开始tab制表符
 	if [ $# -ge 7 ];then
-		echo $7
+		#echo $7
 		is_add_tab=$7
 	fi
 
@@ -57,7 +65,16 @@ function add_to_file()
 				substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring"`
 				replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 				line=${line//$substring_b/$replacement_b}
-				echo $line
+				if [ $is_substring_2 -gt 0 ];then
+					echo "$line" | grep "$substring_2" >$file_n
+					if [ $? -eq 0 ];then
+						line=${line//$substring_2/$replacement_2}
+					else
+						substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring_2"`
+						replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement_2"`
+						line=${line//$substring_b/$replacement_b}
+					fi
+				fi
 				sed -e "$n""a\\$line"  $file >$file_t
 				cp $file_t $file
 				rm $file_t -rf
@@ -92,12 +109,27 @@ function add_to_file()
 				n=n+1
 				echo "$line" | grep "$substring" >$file_n
 				if [ $? -eq 0 ];then
-					echo have
+					#echo have
 					line=${line//$substring/$replacement}
+					#echo $line
 				else
 					substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring"`
 					replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 					line=${line//$substring_b/$replacement_b}
+					#echo $line
+				fi
+				if [ $is_substring_2 -gt 0 ];then
+					echo "$line" | grep "$substring_2" >$file_n
+					if [ $? -eq 0 ];then
+						line=${line//$substring_2/$replacement_2}
+						#echo $substring$replacement
+						#echo "my log aa "$line
+					else
+						substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring_2"`
+						replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement_2"`
+						line=${line//$substring_b/$replacement_b}
+						#echo "my log bb "$line
+					fi
 				fi
 				k=k+1
 				if [ $is_add_tab -gt 0 ];then
@@ -125,10 +157,29 @@ function add_to_file()
 				echo "$line" | grep "$substring" >$file_n
 				if [ $? -eq 0 ];then
 					line=${line//$substring/$replacement}
+					#echo log a ....
+					echo $substring$replacement
+					#echo $line
 				else
 					substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring"`
 					replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 					line=${line//$substring_b/$replacement_b}
+					#echo log b....
+					#echo $line
+				fi
+
+				if [ $is_substring_2 -gt 0 ];then
+					echo "$line" | grep "$substring_2" >$file_n
+					if [ $? -eq 0 ];then
+						line=${line//$substring_2/$replacement_2}
+						#echo $substring$replacement
+						#echo "my log a "$line
+					else
+						substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring_2"`
+						replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement_2"`
+						line=${line//$substring_b/$replacement_b}
+						#echo "my log b "$line
+					fi
 				fi
 
 				if [ $k -gt $is_add_tab ];then
@@ -319,19 +370,6 @@ function board_for_kernel()
 	USE_INPUT_BOARD_MACRO=0
 
 	echo -e "\n\nconfigure kernel begin......"
-
-	#---------修改kernel\arch\arm\mach-sc\Makefile文件 begin-------
-	cd $workdir
-	file=Makefile
-	substring=$BOARD_NAME_R
-	begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	replacement=$BOARD_NAME_N
-	path="kernel/arch/arm/mach-sc"
-	end_string='skip_one_line'
-	add_to_file $file $path $substring $replacement $begin_string $end_string
-	#---------修改kernel\arch\arm\mach-sc\Makefile文件 end-------
-
-
 	#---------产生*native_defconfig文件 begin-------
 	cd $workdir
 	cd "kernel/arch/arm/configs"
@@ -370,6 +408,8 @@ function board_for_kernel()
 			input_board_macro_for_kernel
 			g_count=$g_count+1
 			#echo $BOARD_MACRO_IN_KERNLE
+			#须转换成小写
+			BOARD_MACRO_IN_KERNLE=`tr '[A-Z]' '[a-z]' <<<"$BOARD_MACRO_IN_KERNLE"`
 			TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
 			#echo $TEMP1
 			if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ];then
@@ -392,6 +432,24 @@ function board_for_kernel()
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 	#---------产生*native_defconfig文件 end-------
+
+	#---------修改kernel\arch\arm\mach-sc\Makefile文件 begin-------
+	cd $workdir
+	file=Makefile
+	replacement=$BOARD_NAME_N
+	path="kernel/arch/arm/mach-sc"
+	end_string='skip_one_line'
+	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
+	#kconfig中的board宏因为不规范,使用重新输入的串
+		substring=$BOARD_MACRO_IN_KERNLE
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string 0 $BOARD_NAME_R $replacement
+	else
+		substring=$BOARD_NAME_R
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string
+	fi
+	#---------修改kernel\arch\arm\mach-sc\Makefile文件 end-------
 
 
 	#---------产生*board-BOARD_NAME.c文件 begin-------
@@ -423,37 +481,49 @@ function board_for_kernel()
 	#---------修改board.h文件 begin-------
 	cd $workdir
 	file=board.h
-	substring=$BOARD_NAME_R
-	begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
 	replacement=$BOARD_NAME_N
 	path="kernel/arch/arm/mach-sc/include/mach"
 	end_string=endif
-	add_to_file $file $path $substring $replacement $begin_string $end_string
-	#---------修改board.h文件 end-------
-
-
-	#---------修改Kconfig文件 begin-------
-	cd $workdir
-	file=Kconfig
 	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
 	#kconfig中的board宏因为不规范,使用重新输入的串
 		substring=$BOARD_MACRO_IN_KERNLE
 		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string 0 $BOARD_NAME_R $replacement
 	else
 		substring=$BOARD_NAME_R
 		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string
 	fi
+	#---------修改board.h文件 end-------
+
+	#---------修改Kconfig文件 begin-------
+	cd $workdir
+	file=Kconfig
 	replacement=$BOARD_NAME_N
 	path="kernel/arch/arm/mach-sc"
 	end_string='serial'
-	add_to_file $file $path $substring $replacement $begin_string $end_string 2
+	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
+	#kconfig中的board宏因为不规范,使用重新输入的串
+		substring=$BOARD_MACRO_IN_KERNLE
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string 2 $BOARD_NAME_R $replacement
+	else
+		substring=$BOARD_NAME_R
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		add_to_file $file $path $substring $replacement $begin_string $end_string 2
+	fi
 	#---------修改Kconfig文件 end-------
 
 
 	#---------增加'|| defined(CONFIG_MACH_BOARD_NAME_N)' begin-------
 	cd $workdir
 	cd kernel/
-	BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
+	#kconfig中的board宏因为不规范,使用重新输入的串
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+	else
+		BOARD_NAME_R_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+	fi
 	BOARD_NAME_N_b=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
 	substring="(CONFIG_MACH_$BOARD_NAME_R_b)"
 	addstring=" || defined(CONFIG_MACH_$BOARD_NAME_N_b)"
@@ -473,7 +543,30 @@ function board_for_kernel()
 		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
 		echo "===========================notice========================================"
 		echo "===========================notice========================================"
-		echo "maybe add \"|| defined(CONFIG_MACH_$BOARD_NAME_N_b)\" words!"
+		echo "maybe add \""$addstring"\" words!"
+		echo "please check that if need!!!!!"
+	fi
+
+  #---------增加'|| (defined CONFIG_MACH_BOARD_NAME_N)' begin-------
+	substring="(defined CONFIG_MACH_$BOARD_NAME_R_b)"
+	addstring=" || (defined CONFIG_MACH_$BOARD_NAME_N_b)"
+	replacestring="$substring$addstring"
+	echo -e $substring
+	echo -e $addstring
+	echo -e $replacestring
+	#if [ `grep -Hrn  $substring ./` ];then
+	#echo ok
+	#fi
+	if [ -z "`grep -Hrn --exclude-dir=".git" --include="*.c" --include="*.h" $substring ./`" ]
+	then
+		echo "NULL"
+	else
+		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
+		#sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="*.*" ./`
+		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+		echo "===========================notice========================================"
+		echo "===========================notice========================================"
+		echo "maybe add \""$addstring"\" words!"
 		echo "please check that if need!!!!!"
 	fi
 	#---------增加'|| defined(CONFIG_MACH_BOARD_NAME_N)' end-------
@@ -879,8 +972,8 @@ function input_board_macro_for_kernel()
 {
 	echo "please input board macro in the file of defconfig"
 	echo "for example:"
-	echo "if CONFIG_MACH_SPX35EC,please input SPX35EC"
-	echo "if CONFIG_MACH_SP7730GA,please input SP7730GA"
+	echo "if CONFIG_MACH_SPX35EC,please input SPX35EC or spx35ec"
+	echo "if CONFIG_MACH_SP7730GA,please input SP7730GA or sp7730ga"
 	read BOARD_MACRO_IN_KERNLE
 }
 
@@ -971,6 +1064,10 @@ else
 	BOARD_NAME_R=$1
 	BOARD_NAME_N=$2
 fi
+
+#需转换成小写,如此输入大小写都可
+BOARD_NAME_R=`tr '[A-Z]' '[a-z]' <<<"$BOARD_NAME_R"`
+BOARD_NAME_N=`tr '[A-Z]' '[a-z]' <<<"$BOARD_NAME_N"`
 
 export PATH_R="device/sprd/$PLATFORM""_""$BOARD_NAME_R"
 
