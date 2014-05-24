@@ -173,10 +173,17 @@ static void *modemd_listenaccept_thread(void *par)
         }
 
         for(; ;) {
-
                 MODEM_LOGD("modemctrl_listenaccept_thread: Waiting for new connect ...\n");
-                if ( (n=accept(sfd,NULL,NULL)) == -1) {
-                        MODEM_LOGE("engserver accept error\n");
+                //accept the client connection
+                do {
+                        n = accept(sfd, NULL, NULL);
+                        MODEM_LOGD("%s got %d from accept", MODEM_SOCKET_NAME, n);
+                } while (n < 0 && errno == EINTR);
+
+                if (n < 0)
+                {
+                        MODEM_LOGD("socket %s accept failed (%s)", MODEM_SOCKET_NAME, strerror(errno));
+                        sleep(1);
                         continue;
                 }
 
