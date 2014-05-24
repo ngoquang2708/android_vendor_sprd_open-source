@@ -50,11 +50,9 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
 #endif
      mVsyncEvent(0),
      mUtil(0),
-#ifdef PROCESS_VIDEO_USE_GSP
-     mGSPAddrType(0),
-#endif
      mPostFrameBuffer(true),
      mHWCDisplayFlag(HWC_DISPLAY_MASK),
+     mAcceleratorMode(ACCELERATOR_NON),
      mDebugFlag(0),
      mDumpFlag(0)
     {
@@ -63,6 +61,8 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
 
 bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
 {
+    int GSPAddrType = 0;
+
     loadFrameBufferHAL(&mFBInfo);
     if (mFBInfo == NULL) {
         ALOGE("Can NOT get FrameBuffer info");
@@ -75,13 +75,14 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         return false;
     }
 #ifdef PROCESS_VIDEO_USE_GSP
-    if(mGSPAddrType == 0) {
-        mGSPAddrType = mUtil->getGSPAddrType();
+    if(GSPAddrType == 0) {
+        GSPAddrType = mUtil->getGSPAddrType();
     }
-    mLayerList = new SprdHWLayerList(mFBInfo,mGSPAddrType);
-#else
-    mLayerList = new SprdHWLayerList(mFBInfo);
 #endif
+
+    AcceleratorProbe(GSPAddrType);
+
+    mLayerList = new SprdHWLayerList(mFBInfo);
     if (mLayerList == NULL)
     {
         ALOGE("new SprdHWLayerList failed");
@@ -174,6 +175,69 @@ SprdPrimaryDisplayDevice:: ~SprdPrimaryDisplayDevice()
         delete mLayerList;
         mLayerList = NULL;
     }
+}
+
+int SprdPrimaryDisplayDevice:: AcceleratorProbe(int GSPAddrType)
+{
+    int accelerator = ACCELERATOR_NON;
+
+#ifdef PROCESS_VIDEO_USE_GSP
+    if (GSPAddrType == GSP_ADDR_TYPE_PHYSICAL)
+    {
+        accelerator |= ACCELERATOR_GSP;
+    }
+    else if (GSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL)
+    {
+        //accelerator &= ~ACCELERATOR_GSP;
+        accelerator |= ACCELERATOR_GSP_IOMMU;
+    }
+#endif
+
+#ifdef OVERLAY_COMPOSER_GPU
+    accelerator |= ACCELERATOR_OVERLAYCOMPOSER;
+#endif
+
+    mAcceleratorMode |= accelerator;
+
+    return 0;
+}
+
+int SprdPrimaryDisplayDevice:: AcceleratorAdapt(int DisplayDeviceAccelerator)
+{
+    int value = ACCELERATOR_NON;
+
+    if (DisplayDeviceAccelerator & ACCELERATOR_GSP_IOMMU)
+    {
+        if (mAcceleratorMode & ACCELERATOR_GSP_IOMMU)
+        {
+            value |= ACCELERATOR_GSP_IOMMU;
+            value |= ACCELERATOR_GSP;
+        }
+        else if (mAcceleratorMode & ACCELERATOR_GSP)
+        {
+            value |= ACCELERATOR_GSP;
+            value &= ~ACCELERATOR_GSP_IOMMU;
+        }
+    }
+    else if (DisplayDeviceAccelerator & ACCELERATOR_GSP)
+    {
+        if (mAcceleratorMode & ACCELERATOR_GSP)
+        {
+            value |= ACCELERATOR_GSP;
+            value &= ~ACCELERATOR_GSP_IOMMU;
+        }
+    }
+
+    if (DisplayDeviceAccelerator & ACCELERATOR_OVERLAYCOMPOSER)
+    {
+        if (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER)
+        {
+            value |= ACCELERATOR_OVERLAYCOMPOSER;
+        }
+    }
+
+    ALOGI_IF(mDebugFlag, "SprdPrimaryDisplayDevice:: AcceleratorAdapt accelerator: %x", value);
+    return value;
 }
 
 int SprdPrimaryDisplayDevice:: getDisplayAttributes(DisplayAttributes *dpyAttributes)
@@ -347,10 +411,11 @@ int SprdPrimaryDisplayDevice:: attachToDisplayPlane(int DisplayFlag)
     return 0;
 }
 
-int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
+int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list, unsigned int accelerator)
 {
     int ret = false;
     int displayFlag = HWC_DISPLAY_MASK;
+    int acceleratorLocal = ACCELERATOR_NON;
 
     queryDebugFlag(&mDebugFlag);
 
@@ -362,7 +427,9 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list)
         return -1;
     }
 
-    ret = mLayerList->updateGeometry(list);
+    acceleratorLocal = AcceleratorAdapt(accelerator);
+
+    ret = mLayerList->updateGeometry(list, acceleratorLocal);
     if (ret != 0)
     {
         ALOGE("(FILE:%s, line:%d, func:%s) updateGeometry failed",
@@ -416,7 +483,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
     waitAcquireFence(list);
 
-    syncReleaseFence(list, DISPLAY_PRIMARY);
+    HWCBufferSyncBuild(list, DISPLAY_PRIMARY);
 
     switch ((mHWCDisplayFlag & ~HWC_DISPLAY_MASK))
     {
@@ -576,6 +643,23 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 #endif
 
 #ifdef PROCESS_VIDEO_USE_GSP
+        if (OverlayLayer)
+        {
+#ifdef VIDEO_LAYER_USE_RGB
+             mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+#else
+#ifdef GSP_OUTPUT_USE_YUV420
+            mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV420_2P);
+#else
+            mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV422_2P);
+#endif
+#endif
+        }
+        else if (OverlayLayer == NULL && PrimaryLayer != NULL)
+        {
+            mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+        }
+
         if(mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2))
         {
             ALOGE("%s[%d],composerLayers ret err!!",__func__,__LINE__);
@@ -633,8 +717,6 @@ displayDone:
    }
 
     closeAcquireFDs(list);
-
-    createRetiredFence(list);
 
     return 0;
 }

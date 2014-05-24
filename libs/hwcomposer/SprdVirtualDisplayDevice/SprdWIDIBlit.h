@@ -19,76 +19,74 @@
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          Module              DESCRIPTION                             *
- ** 22/09/2013    Hardware Composer   Responsible for processing some         *
+ ** 16/06/2014    Hardware Composer   Responsible for processing some         *
  **                                   Hardware layers. These layers comply    *
- **                                   with display controller specification,  *
+ **                                   with Virtual Display specification,     *
  **                                   can be displayed directly, bypass       *
  **                                   SurfaceFligner composition. It will     *
  **                                   improve system performance.             *
  ******************************************************************************
- ** File: SprdVirtualDisplayDevice.h  DESCRIPTION                             *
- **                                   Manager Virtual Display device.         *
+ ** File:SprdWIDIBlit.h               DESCRIPTION                             *
+ **                                   WIDIBLIT: Wireless Display Blit         *
+ **                                   Responsible for blit image data to      *
+ **                                   Virtual Display.                        *
  ******************************************************************************
  ******************************************************************************
  ** Author:         zhongjun.chen@spreadtrum.com                              *
  *****************************************************************************/
 
-#ifndef _SPRD_VIRTUAL_DISPLAY_DEVICE_H_
-#define _SPRD_VIRTUAL_DISPLAY_DEVICE_H_
 
+#ifndef _SPRD_WIDI_BLIT_H_
+#define _SPRD_WIDI_BLIT_H_
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <semaphore.h>
+#include <utils/RefBase.h>
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 #include <hardware/hwcomposer.h>
-
 #include <cutils/log.h>
-
-#include "../SprdHWLayer.h"
-#include "SprdVDLayerList.h"
 #include "SprdVirtualPlane.h"
-#include "../SprdDisplayDevice.h"
-#include "SprdWIDIBlit.h"
-#include "../AndroidFence.h"
+#include "../SprdUtil.h"
+#include <arm_neon.h>
 #include "../dump.h"
 
-using namespace android;
+namespace android
+{
 
-class SprdVirtualDisplayDevice
+class SprdWIDIBlit: public Thread
 {
 public:
-    SprdVirtualDisplayDevice();
-    ~SprdVirtualDisplayDevice();
+    SprdWIDIBlit(SprdVirtualPlane *plane);
+    virtual ~SprdWIDIBlit();
 
     /*
-     *  Display configure attribution.
+     *  Start Blit command 
      * */
-    int getDisplayAttributes(DisplayAttributes *dpyAttributes);
+    void onStart();
 
     /*
-     *  Traversal Virtual Display layer list.
-     *  Find which layers comply with Virtual Display standards.
+     *  Query Blit status
      * */
-    int prepare(hwc_display_contents_1_t *list, unsigned int accelerator);
+    int queryBlit();
 
-    /*
-     *  Post found layers to Virtual Display Device.
-     * */
-    int commit(hwc_display_contents_1_t *list);
-
-    /*
-     *  Init Virtual Display.
-     * */
-    int Init();
 
 private:
-    SprdVDLayerList *mLayerList;
     SprdVirtualPlane *mDisplayPlane;
-    sp<SprdWIDIBlit> mBlit;
-    int mDebugFlag;
-    int mDumpFlag;
+    SprdUtil         *mAccelerator;
+    FrameBufferInfo  *mFBInfo;
+    int              mDebugFlag;
+    sem_t            startSem;
 
+    virtual status_t readyToRun();
+    virtual void onFirstRef();
+    virtual bool threadLoop();
+
+    /*
+     *  Blit with NEON from RGBA8888 to YUV420SP.
+     * */
+    int NEONBlit(uint8_t *inrgb, uint8_t *outy, uint8_t *outuv, int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst);
 };
+
+}
 
 #endif

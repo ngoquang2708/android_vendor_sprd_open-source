@@ -69,7 +69,7 @@ public:
      *  Traversal External Display layer list.
      *  Find which layers comply with Virtual Display standards.
      * */
-    int prepare(hwc_display_contents_1_t *list);
+    int prepare(hwc_display_contents_1_t *list, unsigned int accelerator);
 
     /*
      *  Post found layers to Virtual Display Device.

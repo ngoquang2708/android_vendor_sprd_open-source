@@ -40,7 +40,7 @@
 
 #include <cutils/log.h>
 #include "SprdDisplayPlane.h"
-#include "SprdHWLayer.h"
+#include "../SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 
 #ifdef BORROW_PRIMARYPLANE_BUFFER

@@ -691,6 +691,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         return -1;
     }
 
+    if (mOutputFormat == -1)
+    {
+        mOutputFormat = GSP_DST_FMT_YUV420_2P;
+	ALOGI_IF(mDebugFlag, "GSP force output format to GSP_DST_FMT_YUV420_2P");
+    }
 
     GSP_CONFIG_INFO_T gsp_cfg_info;
     uint32_t video_check_result = 0;
@@ -1048,26 +1053,20 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
 
         if (l1 != NULL)
         {
-#ifdef VIDEO_LAYER_USE_RGB
-            //videoOverlayFormat = HAL_PIXEL_FORMAT_RGBX_8888;
-            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_ARGB888;
+            gsp_cfg_info.layer_des_info.img_format = mOutputFormat;
 #ifndef GSP_ENDIAN_IMPROVEMENT
             gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
             gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
 #endif
-#else
-#ifdef GSP_OUTPUT_USE_YUV420
-            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV420_2P;
             gsp_cfg_info.layer_des_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
-#else
-            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV422_2P;
-#endif
-#endif
+            //gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV422_2P;
         }
         else if (l2 != NULL)
         {
 #ifndef PRIMARYPLANE_USE_RGB565
-            gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_ARGB888;
+            //gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_ARGB888;
+            gsp_cfg_info.layer_des_info.img_format = mOutputFormat;
+            gsp_cfg_info.layer_des_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
             //gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
             //gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
 #else

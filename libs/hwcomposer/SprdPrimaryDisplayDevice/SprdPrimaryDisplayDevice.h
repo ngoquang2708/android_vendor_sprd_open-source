@@ -86,7 +86,7 @@ public:
      *  Traversal layer list, and find layers which comply with SprdDisplayPlane
      *  and mark them as HWC_OVERLAY.
      * */
-    int prepare(hwc_display_contents_1_t *list);
+    int prepare(hwc_display_contents_1_t *list, unsigned int accelerator);
 
     /*
      *  Post layers to SprdDisplayPlane.
@@ -128,11 +128,10 @@ private:
     SprdUtil          *mUtil;
     bool mPostFrameBuffer;
     int mHWCDisplayFlag;
+    unsigned int mAcceleratorMode;
     int mDebugFlag;
     int mDumpFlag;
-#ifdef PROCESS_VIDEO_USE_GSP
-    int mGSPAddrType;
-#endif
+
     inline SprdHWLayerList *getHWLayerList()
     {
         return mLayerList;
@@ -147,6 +146,10 @@ private:
      *  And then attach these HWC_OVERLAY layers to SprdDisplayPlane.
      * */
     int attachToDisplayPlane(int DisplayFlag);
+
+    int AcceleratorProbe(int GSPAddrType);
+
+    int AcceleratorAdapt(int DisplayDeviceAccelerator);
 };
 
 #endif
