@@ -287,9 +287,6 @@ int main(int argc, char *argv[])
 			        printf("Invalid intput.\n");
 			        return -1;
 			    }
-			} else {
-			    printf("Invalid input.\n");
-			    return -1;
 			}
 		}
 		cmd.type = CTRL_CMD_TYPE_GMS;

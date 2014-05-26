@@ -4,11 +4,6 @@ disable
 #type	name		value
 var	logpath		external
 var	screenshot	enable
-var	slogsaveall	on
-var	sysdump		crashkey
-var	coredump	off
-var	hprofs		off
-var	sprd_debug	off
 var	kmemleak	off
 
 #type	name	state	size	level
