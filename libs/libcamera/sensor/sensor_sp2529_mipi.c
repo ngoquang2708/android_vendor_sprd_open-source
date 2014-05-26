@@ -81,7 +81,7 @@ static uint32_t SP2529_StreamOff(uint32_t param);
 static uint32_t SP2529_PRE_MODE = 0;
 
 //AE target
-#define  SP2529_P1_0xeb  0x80//78//80//8c fs
+#define  SP2529_P1_0xeb  0x78//78//80//8c fs
 #define  SP2529_P1_0xec  0x78//6e//74//8c fs
 
 //sharpeness
@@ -99,14 +99,14 @@ static uint32_t SP2529_PRE_MODE = 0;
 #define  SP2529_P1_0x13  0x78 //ku low  //0x80
 
 #define  SP2529_P1_0x14  0xc0 //kl outdoor //0xa0
-#define  SP2529_P1_0x15  0xa0 //kl indoor  //0xa0
+#define  SP2529_P1_0x15  0xc0 //kl indoor  //0xa0
 #define  SP2529_P1_0x16  0xb0// kl dummy //0xa0
 #define  SP2529_P1_0x17  0xb0 //kl lowlight //0xa0//a8 fs
 
 LOCAL uint32_t			Antiflicker		 = DCAMERA_FLICKER_50HZ;
 
 #ifdef SP2529_TCARD_TEST
-SENSOR_REG_T SP2529_YUV_COMMON[1000]=
+SENSOR_REG_T SP2529_YUV_COMMON[]=
 #else  
 static SENSOR_REG_T SP2529_YUV_COMMON[]=
 #endif
@@ -196,42 +196,79 @@ static SENSOR_REG_T SP2529_YUV_COMMON[]=
 {0xfd,0x00},
 {0x2e,0x85},
 {0x1e,0x01},
-
+#if 1
+   // 24M 2.5pll binning 30fps 
+  {0xfd,0x00},
+  {0x2f,0x11},
+  {0x03,0x08},
+  {0x04,0xca},
+  {0x05,0x00},
+  {0x06,0x00},
+  {0x07,0x00},
+  {0x08,0x00},
+  {0x09,0x01},
+  {0x0a,0x1b},
+  {0xfd,0x01},
+  {0xf0,0x11},
+  {0xf7,0x77},
+  {0xf8,0x39},
+  {0x02,0x03},
+  {0x03,0x01},
+  {0x06,0x77},
+  {0x07,0x01},
+  {0x08,0x01},
+  {0x09,0x00},
+  {0xfd,0x02},
+  {0x3d,0x04},
+  {0x3e,0x39},
+  {0x3f,0x01},
+  {0x88,0x5d},
+  {0x89,0xa2},
+  {0x8a,0x11},
+  {0xfd,0x02},
+  {0xbe,0x65},
+  {0xbf,0x04},
+  {0xd0,0x65},
+  {0xd1,0x04},
+  {0xc9,0x65},
+  {0xca,0x04},
+#else
+// 24M 2pll binning 8-15fps 
 {0xfd,0x00},
-{0x2f,0x04},
-{0x03,0x02},
-{0x04,0xa0},
+{0x2f,0x04},// 2pll
+{0x03,0x04},
+{0x04,0x5c},
 {0x05,0x00},
 {0x06,0x00},
 {0x07,0x00},
 {0x08,0x00},
-{0x09,0x00},
-{0x0a,0x95},
+{0x09,0x03},
+{0x0a,0x05},
 {0xfd,0x01},
 {0xf0,0x00},
-{0xf7,0x70},
-{0xf8,0x5d},
-{0x02,0x0b},
+{0xf7,0xba},
+{0xf8,0x9b},
+{0x02,0x0c},
 {0x03,0x01},
-{0x06,0x70},
+{0x06,0xba},
 {0x07,0x00},
 {0x08,0x01},
 {0x09,0x00},
 {0xfd,0x02},
-{0x3d,0x0d},
-{0x3e,0x5d},
+{0x3d,0x0f},
+{0x3e,0x9b},
 {0x3f,0x00},
-{0x88,0x92},
-{0x89,0x81},
-{0x8a,0x54},
+{0x88,0xc0},
+{0x89,0x4d},
+{0x8a,0x32},
 {0xfd,0x02},
-{0xbe,0xd0},
-{0xbf,0x04},
-{0xd0,0xd0},
-{0xd1,0x04},
-{0xc9,0xd0},
-{0xca,0x04},
-
+{0xbe,0xb8},
+{0xbf,0x08},
+{0xd0,0xb8},
+{0xd1,0x08},
+{0xc9,0xb8},
+{0xca,0x08},
+#endif
 {0xf2,0x09},
 
 {0xb8,0x70},
@@ -649,6 +686,32 @@ static SENSOR_REG_T SP2529_YUV_COMMON[]=
 {0x66,0x00},
 {0xfd,0x02},                                               
 {0xd6,0x0f},
+
+//binning 800*600
+	//MIPI
+	{0xfd,0x00},
+	{0x19,0x03},
+	{0x31,0x04},
+	{0x33,0x01},
+
+	{0xfd,0x00},
+	{0x95,0x03},
+	{0x94,0x20},
+	{0x97,0x02},
+	{0x96,0x58},
+        #if 0
+	{0xfd,0x02},     
+	{0x40,0x00},     
+	{0x41,0x40},     
+	{0x42,0x00},     
+	{0x43,0x40},     
+	{0x44,0x02},     
+	{0x45,0x58},     
+	{0x46,0x03},     
+	{0x47,0x20},     
+	{0x0f,0x01},  
+	{0x8f,0x02},   
+	#endif
 };
 
 #ifdef SP2529_TCARD_TEST
@@ -775,12 +838,9 @@ unsigned char SP2528_Initialize_from_T_Flash()
 			
 			SP2528_Init_Reg[i].init_reg = sp_strtol((const char *)curr_ptr, 16);
 			curr_ptr += 5;	/* Skip "00, 0x" */
-
-			
 		
 			SP2528_Init_Reg[i].init_val = sp_strtol((const char *)curr_ptr, 16);
 			curr_ptr += 4;	/* Skip "00);" */
-
 		
 		}
 		else									/* DLY */
@@ -826,8 +886,6 @@ return 1;
 		SP2529_YUV_COMMON[i].reg_addr = SP2528_Init_Reg[i].init_reg;
 		SP2529_YUV_COMMON[i].reg_value=SP2528_Init_Reg[i].init_val;
 		//SENSOR_TRACE("gpwreg11 %x = %x\n",SP2529_YUV_COMMON[i].reg_addr ,SP2529_YUV_COMMON[i].reg_value);
-		//CMR_LOGE("gpwreg11 %x = %x\n",SP2529_YUV_COMMON[i].reg_addr ,SP2529_YUV_COMMON[i].reg_value);
-		//CMR_LOGE("gpwreg11 %x = %x\n",SP2528_Init_Reg[i].reg_addr ,SP2528_Init_Reg[i].reg_value);
 	}
 
 	if(num_sd  != 0)
@@ -853,7 +911,7 @@ return 1;
 	SENSOR_TRACE("hello:_sp5408_sdcard(start)\n");
 	
 	memset(data_buff,0,sizeof(data_buff));//before use the buffer,clean
-	fp = fopen("/system/lib/sp2529_sd", "r");
+	fp = fopen("/mnt/sdcard/sp2529_sd", "r");
 	
 	if(NULL == fp){  		
 		SENSOR_TRACE("open file error\n");	
@@ -909,6 +967,7 @@ static SENSOR_REG_T SP2529_YUV_320x240[]=
 
 static SENSOR_REG_T SP2529_YUV_800x600[]=
 {
+#if 0
 //scale 800*600  
 {0xfd,0x02},     
 {0x40,0x00},     
@@ -921,11 +980,13 @@ static SENSOR_REG_T SP2529_YUV_800x600[]=
 {0x47,0x20},     
 {0x0f,0x01},  
 {0x8f,0x02},   
+
 {0xfd,0x00},
 {0x95,0x03},
 {0x94,0x20},
 {0x97,0x02},
 {0x96,0x58},
+#endif
   {0xFF , 0xFF},
 };
 static SENSOR_REG_T SP2529_YUV_640x480[]=
@@ -959,16 +1020,20 @@ static SENSOR_REG_T SP2529_YUV_1600x1200[]=
 	{0x94,0x40},
 	{0x97,0x04},
 	{0x96,0xb0},
-    {0xFF , 0xFF},
+       {0xFF,0xFF},
 };
 
 static SENSOR_REG_TAB_INFO_T s_SP2529_resolution_Tab_YUV[]=
 {
 	// COMMON INIT
 	{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_COMMON), 640, 480, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_1600x1200), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_YUV422},	// YUV422 PREVIEW 1
-	{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_320x240), 320, 240, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},	// YUV422 PREVIEW 1
+	{PNULL, 0, 0, 0, 0, 0},
+	{PNULL, 0, 0, 0, 0, 0},
+	//{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_320x240), 320, 240, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	//{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	//{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},	// YUV422 PREVIEW 1
+	//{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},	// YUV422 PREVIEW 1
 	//{ADDR_AND_LEN_OF_ARRAY(SP2529_YUV_1280x960), 1280, 960, 24, SENSOR_IMAGE_FORMAT_YUV422},
 
 	{PNULL, 0, 0, 0, 0, 0},
@@ -994,7 +1059,7 @@ LOCAL SENSOR_VIDEO_INFO_T s_SP2529_video_info[] = {
 
 static SENSOR_IOCTL_FUNC_TAB_T s_SP2529_ioctl_func_tab =
 {
-#ifdef SP2529_TCARD_TEST
+#if  0//SP2529_TCARD_TEST
 	// Internal
 	PNULL,
 	SP2529_PowerOn,
@@ -1071,10 +1136,10 @@ static SENSOR_IOCTL_FUNC_TAB_T s_SP2529_ioctl_func_tab =
 	set_sharpness,//set_sharpness,
 	set_saturation,//set_saturation,
 
-	set_preview_mode,//set_preview_mode,
+	PNULL,//set_preview_mode,//set_preview_mode,
 	set_image_effect,
 
-	PNULL,
+	PNULL,//
 	PNULL,
 
 	PNULL,
@@ -1096,8 +1161,8 @@ static SENSOR_IOCTL_FUNC_TAB_T s_SP2529_ioctl_func_tab =
 	PNULL,
 	PNULL,
 	PNULL,
-	set_SP2529_anti_flicker,
-	set_SP2529_video_mode,
+	PNULL,//set_SP2529_anti_flicker,
+	PNULL,//set_SP2529_video_mode,
 	PNULL,
 	PNULL,
 	PNULL,
@@ -1259,19 +1324,19 @@ static uint32_t SP2529_Identify(uint32_t param)
 		sensor_id = Sensor_ReadReg(SP2529_PID_ADDR1) << 8;
 		
 		sensor_id |= Sensor_ReadReg(SP2529_PID_ADDR2);
-	//	printf("li_%s sensor_id is %x\n", __func__, sensor_id);
-		usleep(20*1000);
-	//	CMR_LOGV("liyj_CMR_LOGV\n");
-	//	CMR_LOGE("liyj_CMR_LOGE\n");
+		printf("li_%s sensor_id is %x\n", __func__, sensor_id);
+		usleep(10*1000);
+		//CMR_LOGV("liyj_CMR_LOGV\n");
+		//CMR_LOGE("liyj_CMR_LOGE\n");
 		SENSOR_PRINT("%s sensor_id is %x\n", __func__, sensor_id);
 
 		if (sensor_id == SP2529_SENSOR_ID) {
 			SENSOR_PRINT("the main sensor is SP2529\n");
 			ret_value = SENSOR_SUCCESS;
+			break;
 		}
 	}
 #ifdef SP2529_TCARD_TEST
-	CMR_LOGE("SP2529\n");
 	_sp5408_sdcard();
 #endif
 
