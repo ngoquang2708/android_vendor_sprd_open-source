@@ -163,6 +163,11 @@ public:
         mAccelerator = 0;
     }
 
+    inline void updateAndroidLayer(hwc_layer_1_t *l)
+    {
+        mAndroidLayer = l;
+    }
+
     bool checkRGBLayerFormat();
     bool checkYUVLayerFormat();
 

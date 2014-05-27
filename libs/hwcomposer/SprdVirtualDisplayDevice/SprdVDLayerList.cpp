@@ -61,7 +61,7 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     queryDumpFlag(&mDumpFlag);
 
     /*
-     *  Should we recaim it here?
+     *  Should we reclaim it here?
      * */
     reclaimSprdHWLayer();
 
@@ -74,14 +74,14 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     if (mLayerCount <= 0)
     {
         ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: updateGeometry mLayerCount < 0");
-	return 0;
+        return 0;
     }
 
     mLayerList = new SprdHWLayer[mLayerCount];
     if (mLayerList == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: updateGeometry Cannot create Layer list");
-	return -1;
+        return -1;
     }
 
     /*
@@ -92,14 +92,14 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     if (mOSDLayerList == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: updateGeometry Cannot create OSD Layer list");
-	return -1;
+        return -1;
     }
 
     mVideoLayerList = new SprdHWLayer*[mLayerCount - 1];
     if (mVideoLayerList == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: updateGeometry Cannot create Video Layer list");
-	return -1;
+        return -1;
     }
 
     mFBLayerCount = mLayerCount - 1;
@@ -108,47 +108,49 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     {
          hwc_layer_1_t *layer = &list->hwLayers[i];
 
-	 ALOGI_IF(mDebugFlag, "VirtualDisplay process LayerList[%d/%d]", i , mLayerCount);
+         ALOGI_IF(mDebugFlag, "VirtualDisplay process LayerList[%d/%d]", i , mLayerCount);
 
-	 dump_layer(layer);
+         dump_layer(layer);
 
-	 mLayerList[i].setAndroidLayer(layer);
+         mLayerList[i].setAndroidLayer(layer);
 
-	 if (!IsHWCLayer(layer))
-	 {
+         if (!IsHWCLayer(layer))
+         {
              ALOGI_IF(mDebugFlag, "NOT HWC layer");
-	     mSkipLayerFlag = true;
-	     continue;
-	 }
+             mSkipLayerFlag = true;
+             continue;
+         }
 
-	 if (layer->compositionType == HWC_FRAMEBUFFER_TARGET)
-	 {
-             struct private_handle_t *privateH = (struct private_handle_t *)(layer->handle);
-	     if (privateH == NULL)
-	     {
-		 ALOGE("VirtualDisplay FBT layer privateH is NULL, privateH addr: %p", (void *)privateH);
-		 continue;
-	     }
-             ALOGI_IF(mDebugFlag, "VirtualDisplay HWC_FBT layer, ignore it, format: 0x%x", privateH->format);
+         if (layer->compositionType == HWC_FRAMEBUFFER_TARGET)
+         {
              mFBTargetLayer = &mLayerList[i];
-	     if (mFBTargetLayer)
-	     {
-	         mFBTargetLayer->setLayerFormat(privateH->format);
-	     }
-	     else
-	     {
-	         ALOGE("Sprd FBT layer is NULL");
-	     }
-	     continue;
-	 }
 
-	 resetOverlayFlag(&(mLayerList[i]));
+             struct private_handle_t *privateH = (struct private_handle_t *)(layer->handle);
+             if (privateH == NULL)
+             {
+                 ALOGE("VirtualDisplay FBT layer privateH is NULL, privateH addr: %p", (void *)privateH);
+                 continue;
+             }
+             ALOGI_IF(mDebugFlag, "VirtualDisplay HWC_FBT layer, ignore it, format: 0x%x", privateH->format);
 
-	 prepareOSDLayer(&(mLayerList[i]));
+             if (mFBTargetLayer)
+             {
+                 mFBTargetLayer->setLayerFormat(privateH->format);
+             }
+             else
+             {
+                 ALOGE("Sprd FBT layer is NULL");
+             }
+             continue;
+         }
 
-	 prepareVideoLayer(&(mLayerList[i]));
+         resetOverlayFlag(&(mLayerList[i]));
 
-	 setOverlayFlag(&(mLayerList[i]), i);
+         prepareOSDLayer(&(mLayerList[i]));
+
+         prepareVideoLayer(&(mLayerList[i]));
+
+         setOverlayFlag(&(mLayerList[i]), i);
     }
 
     return 0;

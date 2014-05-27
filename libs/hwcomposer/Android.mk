@@ -72,6 +72,7 @@ ifeq ($(strip $(DEVICE_USE_FB_HW_VSYNC)),true)
 	LOCAL_CFLAGS += -DUSE_FB_HW_VSYNC
 endif
 
+#SPRD_HWC_DEBUG_TRACE := true
 
 ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libcamera/sc8830/inc	
@@ -178,6 +179,10 @@ endif
 
 ifeq ($(strip $(USE_SPRD_DITHER)) , true)
 	LOCAL_CFLAGS += -DSPRD_DITHER_ENABLE
+endif
+
+ifeq ($(strip $(SPRD_HWC_DEBUG_TRACE)), true)
+	LOCAL_CFLAGS += -DHWC_DEBUG_TRACE
 endif
 
 LOCAL_MODULE_TAGS := optional
