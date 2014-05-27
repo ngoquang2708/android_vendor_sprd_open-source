@@ -435,8 +435,8 @@ static int  GetAudio_PaConfig_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *
         (ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX] | //45
         ((ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //53
     pga_gain_nv->fm_pa_config =
-        (ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX] |    //47
-        ((ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //48
+        (ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX] |    //47
+        ((ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //48
 
     pga_gain_nv->hp_pa_config =
         (ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG1_INDEX]
@@ -451,8 +451,8 @@ static int  GetAudio_PaConfig_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *
     ALOGW("vb_control_parameters.c pa_config:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x),  hpPaConfig:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x)",
             pga_gain_nv->pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX],
-            pga_gain_nv->fm_pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
-            ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX],
+            pga_gain_nv->fm_pa_config,ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX],
+            ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN2_INDEX],
             pga_gain_nv->hp_pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG1_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG2_INDEX],
             pga_gain_nv->fm_hp_pa_config,
@@ -482,8 +482,8 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
         (ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX] | //45
         ((ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //53
     pga_gain_nv->fm_pa_config =
-        (ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX] |    //47
-        ((ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //48
+        (ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX] |    //47
+        ((ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN2_INDEX]<<16) & 0xffff0000));    //48
 
     pga_gain_nv->hp_pa_config =
         (ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG1_INDEX]
@@ -498,8 +498,8 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
     ALOGW("vb_control_parameters.c pa_config:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x),  hpPaConfig:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x)",
             pga_gain_nv->pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX],
-            pga_gain_nv->fm_pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
-            ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX],
+            pga_gain_nv->fm_pa_config,ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN_INDEX],
+            ptArmModeStruct->reserve[AUDIO_NV_FM_INTPA_GAIN2_INDEX],
             pga_gain_nv->hp_pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG1_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG2_INDEX],
             pga_gain_nv->fm_hp_pa_config,
