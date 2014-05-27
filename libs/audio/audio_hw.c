@@ -2994,7 +2994,6 @@ static int in_standby(struct audio_stream *stream)
 {
     struct tiny_stream_in *in = (struct tiny_stream_in *)stream;
     int status;
-
     pthread_mutex_lock(&in->dev->lock);
     pthread_mutex_lock(&in->lock);
     status = do_input_standby(in);
@@ -3030,11 +3029,14 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     pthread_mutex_lock(&in->lock);
     if (ret >= 0) {
         val = atoi(value);
+        ALOGE("AUDIO_PARAMETER_STREAM_INPUT_SOURCE in_set_parameters val %d",val);
         /* no audio source uses val == 0 */
+#if 0
         if ((in->source != val) && (val != 0)) {
             in->source = val;
-	     adev->input_source =val;
+            adev->input_source =val;
         }
+#endif
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
