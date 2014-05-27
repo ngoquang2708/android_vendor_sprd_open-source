@@ -31,6 +31,14 @@ typedef enum
     MODE_MAX_MASK                       = 0x7F
 
 }MCU_MODE_E;
+typedef enum
+{
+    ENG_WARM_START = 0x1,
+    ENG_COLD_START = 0x7D,
+    ENG_HOT_START = 0x400,
+    ENG_FAC_START = 0xFFFF,
+    ENG_GPS_START_MAX
+}ENG_GPS_START_TYPE_E;
 
 #define MAX_IMEI_LENGTH		8
 #define MAX_IMEI_STR_LENGTH 15
@@ -89,6 +97,7 @@ typedef enum
     CMD_USER_DEEP_SLEEP,
     CMD_USER_FILE_OPER,
     CMD_USER_SHUT_DOWN,
+    CMD_USER_GPS_AUTO_TEST,
     CMD_INVALID
 }DIAG_CMD_TYPE;
 
@@ -106,13 +115,12 @@ typedef enum
 #define RW_MASK                     0x80 //(BIT_7)
 #define WRITE_MODE                  0
 #define RM_VALID_CMD_MASK           0x7f
-
+#define DIAG_CMD_GPS_AUTO_TEST      0x3A
 #define MSG_NACK                    0
 #define MSG_ACK                     1
 
 #define ENG_MAX_NAME_LEN            260
 #define MAX_DIAG_TRANSMIT_FILE_LEN  8192
-
 typedef enum{
     IMEI_ERR_NONE = 0,
     IMEI_CRC_ERR,
@@ -194,5 +202,5 @@ void *eng_vlog_thread(void *x);
 void *eng_vdiag_wthread(void *x);
 void *eng_vdiag_rthread(void *x);
 void * eng_sd_log(void * args);
-
+void *eng_gps_log_thread(void *x);
 #endif

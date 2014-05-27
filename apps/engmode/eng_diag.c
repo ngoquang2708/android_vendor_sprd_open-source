@@ -7,6 +7,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <semaphore.h>
 #include "engopt.h"
 #include "eng_attok.h"
 #include "eng_pcclient.h"
@@ -30,6 +32,7 @@
 #include "string_exchange_bin.h"
 #include "calibration.h"
 #include "eng_cmd4linuxhdlr.h"
+#include "gps_pc_mode.h"
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 #define NVITEM_ERROR_E  int
@@ -44,6 +47,8 @@ char *at_sipc_devname[] = {
 };
 
 int g_reset = 0;
+sem_t g_gps_sem;
+int g_gps_log_enable = 0;
 int g_assert_cmd = 0;
 extern int g_run_mode;
 extern int g_ap_cali_flag;
@@ -77,6 +82,7 @@ static int eq_or_tun_type,eq_mode_sel_type;
 static int s_cmd_index = -1;
 static int s_cp_ap_proc = 0;
 static int s_cur_filepos = 0;
+static eng_thread_t gps_thread_hdlr;
 
 static int write_productnvdata(char* buffer , int size);
 static int read_productnvdata(char* buffer , int size);
@@ -89,6 +95,8 @@ static int eng_diag_product_ctrl(char *buf,int len, char *rsp, int rsplen);
 static int eng_diag_direct_phschk(char *buf,int len, char *rsp, int rsplen);
 static void eng_diag_reboot(int reset);
 static int eng_diag_deep_sleep(char *buf,int len, char *rsp);
+
+static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen);
 static int eng_diag_fileoper_hdlr(char *buf, int len, char *rsp);
 static int eng_diag_ap_req(char *buf, int len);
 static int eng_diag_read_imei(REF_NVWriteDirect_T* direct, int num);
@@ -279,6 +287,10 @@ int eng_diag_parse(char *buf,int len)
                 ret = CMD_USER_SHUT_DOWN;
             }
             break;
+        case DIAG_CMD_GPS_AUTO_TEST:
+            ENG_LOG("%s: Handle DIAG_CMD_GPS_AUTO_TEST", __FUNCTION__);
+            ret = CMD_USER_GPS_AUTO_TEST;
+            break;
         case DIAG_CMD_ASSERT:
             if(head_ptr->subtype==0x4) {
                 ENG_LOG("%s: Handle DIAG_CMD_ASSERT", __FUNCTION__);
@@ -379,6 +391,12 @@ int eng_diag_user_handle(int type, char *buf,int len)
             ENG_LOG("%s: CMD_USER_SHUT_DOWN Req!\n", __FUNCTION__);
             reboot(LINUX_REBOOT_CMD_POWER_OFF);
             break;
+        case CMD_USER_GPS_AUTO_TEST:
+            ENG_LOG("%s: CMD_USER_GPS_AUTO_TEST Req!\n", __FUNCTION__);
+            rlen = eng_diag_gps_autotest_hdlr(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+            return 0;
         default:
             break;
     }
@@ -2316,4 +2334,68 @@ static char MAKE1BYTE2BYTES(unsigned char high4bit, unsigned char low4bit)
     char temp;
     temp=(high4bit<<4)|low4bit;
     return temp;
+}
+static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
+{
+    int ret = 0;
+    char tmpbuf[ENG_DIAG_SIZE] = {0};
+    static int init = 0;
+    MSG_HEAD_T* msg_head = (MSG_HEAD_T*)(buf + 1);
+    MSG_HEAD_T* rsp_head = (MSG_HEAD_T*)tmpbuf;
+
+    memcpy(tmpbuf, buf + 1, sizeof(MSG_HEAD_T));
+    sprintf(tmpbuf + sizeof(MSG_HEAD_T),"%s","\r\nOK\r\n");
+    rsp_head->len = sizeof(MSG_HEAD_T) + strlen("\r\nOK\r\n");
+
+    ENG_LOG("%s: msg_head->subtype: %d\n", __FUNCTION__, msg_head->subtype);
+    switch(msg_head->subtype){
+        case 0: // Hot start
+            set_gps_mode(ENG_HOT_START);
+            ret = 1;
+            break;
+        case 1: // Warm start
+            set_gps_mode(ENG_WARM_START);
+            ret = 1;
+            break;
+        case 2: // Cold start
+            set_gps_mode(ENG_COLD_START);
+            ret = 1;
+            break;
+        case 3:
+            gps_export_stop();
+            g_gps_log_enable = 0;
+            break;
+        case 7:
+            set_pc_mode(1);
+            if(0 == init) {
+                sem_init(&g_gps_sem, 0, 0);
+                if (0 != eng_thread_create(&gps_thread_hdlr, eng_gps_log_thread, 0)){
+                    ENG_LOG("gps log thread start error");
+                }
+                init = 1;
+            }
+            break;
+        default:
+            ENG_LOG("%s: ERROR Subtype !!!", __FUNCTION__);
+            break;
+    }
+
+    if(ret == 1){
+        ENG_LOG("%s: gps_export_start \n", __FUNCTION__);
+        ret = gps_export_start();
+        if(!ret){
+            tmpbuf[sizeof(MSG_HEAD_T)] = 0;
+            g_gps_log_enable = 1;
+            sem_post(&g_gps_sem);
+        }else{
+            tmpbuf[sizeof(MSG_HEAD_T)] = 1;
+        }
+        rsp_head->len = sizeof(MSG_HEAD_T) + 1;
+    }
+
+    ret = translate_packet(rsp, tmpbuf, rsp_head->len);
+
+    ENG_LOG("%s: ret: %d\n", __FUNCTION__, ret);
+
+    return ret;
 }
