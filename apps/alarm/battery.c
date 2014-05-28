@@ -81,14 +81,17 @@ rechk_pwr_key:
 			if(g_sleep == 0)
 			{
 				gs_boot_state.power_key_event = KEY_LONG_PRESS;
+				LOGD("gs_boot_state.power_key_event = KEY_LONG_PRESS\n");
 			}
 			else
 			{
 				gs_boot_state.power_key_event = KEY_SHORT_PRESS;
+				LOGD("gs_boot_state.power_key_event = KEY_SHORT_PRESS\n");
 			}
 		}
 		else if((ev->type == EV_KEY) && (ev->code == KEY_POWER))
 		{
+			LOGD("gs_boot_state.power_key_event = return \n");
 			return;
 		}
 		else
@@ -104,10 +107,12 @@ rechk_pwr_key:
 				if(g_sleep == 0)
 				{
 					gs_boot_state.power_key_event = KEY_LONG_PRESS;
+					LOGD("gs_boot_state.power_key_event = KEY_LONG_PRESS,alarm\n");
 				}
 				else
 				{
 					gs_boot_state.power_key_event = KEY_SHORT_PRESS;
+					LOGD("gs_boot_state.power_key_event = KEY_SHORT_PRESS,alarm\n");
 				}
 			}
 		}
