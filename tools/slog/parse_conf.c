@@ -50,65 +50,6 @@ notify  tombstones      1       /data/tombstones
 notify  hprofs          1       /data/misc/hprofs/
 */
 
-static void handle_sysdump( const char *state )
-{
-	if(!strncmp(state, "off", 3)) {
-		system("echo 0 > /proc/sys/kernel/sysdump_enable");
-	} else if (!strncmp(state, "on", 2)) {
-		system("echo 1 > /proc/sys/kernel/sysdump_enable");
-		system("echo 0 > /proc/sys/kernel/sysdump_crashkey_only");
-	} else if (!strncmp(state, "crashkey", 8)) {
-		system("echo 1 > /proc/sys/kernel/sysdump_enable");
-		system("echo 1 > /proc/sys/kernel/sysdump_crashkey_only");
-	}
-}
-
-#define COREFILE "/data/corefile"
-static void handle_coredump( const char *state )
-{
-	char buffer[MAX_LINE_LEN];
-	int ret;
-
-	if(!strncmp(state, "on", 2)) {
-		system("echo /data/corefile/core-%e-%p > /proc/sys/kernel/core_pattern");
-	} else if (!strncmp(state, "off", 3)) {
-		system("echo /dev/null > /proc/sys/kernel/core_pattern");
-	}
-}
-
-#define HPROFS "/data/misc/hprofs"
-static void handle_hprofs( const char *state )
-{
-	char buffer[MAX_LINE_LEN];
-	int ret;
-
-	if(!strncmp(state, "on", 2)) {
-		ret = mkdir(HPROFS, S_IRWXU | S_IRWXG | S_IXOTH);
-		if (-1 == ret && (errno != EEXIST)) {
-			err_log("mkdir %s failed.", HPROFS);
-			exit(0);
-		}
-		ret = chown(HPROFS, AID_SYSTEM, AID_SYSTEM);
-		if (ret < 0) {
-			err_log("chown failed.");
-			exit(0);
-		}
-	} else if (!strncmp(state, "off", 3)) {
-		sprintf(buffer, "rm -r %s", HPROFS);
-		system(buffer);
-	}
-}
-
-
-static void handle_sprd_debug( const char *state )
-{
-	if(!strncmp(state, "off", 3)) {
-		system("echo 0 > /sys/module/sprd_debug/parameters/enable");
-	} else if (!strncmp(state, "on", 2)) {
-		system("echo 1 > /sys/module/sprd_debug/parameters/enable");
-	}
-}
-
 int enable_kmemleak = 0;
 static void handle_kmemleak(const char *state)
 {
@@ -126,14 +67,6 @@ static void handle_kmemleak(const char *state)
 	{
 	    debug_log("slog cmd kmemleak para error\n");
 	}
-}
-
-static void handle_watchdog( int state )
-{
-	char buffer[MAX_NAME_LEN];
-
-	sprintf(buffer, "echo %d > /sys/module/sprd_wdt_sys/parameters/enabled", state);
-	system(buffer);
 }
 
 char *parse_string(char *src, char c, char *token)
@@ -176,23 +109,9 @@ int parse_3_entries(char *type)
 			screenshot_enable = 1;
 		else
 			screenshot_enable = 0;
-	} else if(!strncmp(name, "slogsaveall", 11)) {
-		if(!strncmp(pos3, "on", 2))
-			handle_watchdog(1);
-		else
-			handle_watchdog(0);
-	} else if(!strncmp(name, "sysdump", 7)) {
-		handle_sysdump(pos3);
-	} else if(!strncmp(name, "coredump", 8)) {
-		handle_coredump(pos3);
-	} else if(!strncmp(name, "hprofs", 6)) {
-		handle_hprofs(pos3);
-	} else if(!strncmp(name, "sprd_debug", 10)) {
-		handle_sprd_debug(pos3);
 	} else if(!strncmp(name, "kmemleak", 8)) {
 		handle_kmemleak(pos3);
 	}
-
 
 	return 0;
 }
