@@ -548,8 +548,13 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"preview-size-values", "720x480,640x480,352x288,320x240,176x144"},
 	{"preview-size", "640x480"},
 #else
+#if defined(CONFIG_CAMERA_NO_720P_PREVIEW)
+	{"preview-size-values", "960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
+	{"preview-size", "960x540"},
+#else
 	{"preview-size-values", "1920x1088,1280x960,1280x720,960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
 	{"preview-size", "1280x960"},
+#endif
 #endif
 	{"video-size-values", ""},
 	{"video-size", "1920x1088"},
