@@ -692,14 +692,16 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 		}
 
 		//check another alarm comming in alarming
-		if(get_latest_alarm_time(&fire_alarm) == 0)
+		if((get_latest_alarm_time(&fire_alarm) == 0) &&
+			(alarm_item_bak != alarm_cur))
 		{
+			LOGD("alarm : another alarm come\n");
 			gs_boot_state.alarm_state = BOOT_ALARM_ANOTHER;
 			musicProcess(g_alarm_ring_path, 0);
 			sleep(1);
 			gr_clean();
 			gs_boot_state.alarm_state = BOOT_ALARM_ALARMING;
-			if((alarm_item_bak->vibrate == 0)&&(alarm_cur->vibrate == 1))
+			if((alarm_cur->vibrate == 1))
 			{
 				pthread_create(&vibrate_t,NULL,pthread_vibrate , NULL);
 			}
@@ -833,6 +835,7 @@ int parse_db_item(char *db_buf)
 
 void show_alarm_seclist(struct alarm_sec *p)
 {
+	LOGD("alarm show_alarm_seclist\n");
 	while(p != NULL)
 	{
 		ERROR("secs = %d\n",p->secs);
@@ -1237,7 +1240,6 @@ int get_latest_alarm_time(struct alarm_sec **fire_alarm)
 	static int first_alarm = 0;
 
 	cur_time = get_secs_in_weeks(LOCALTIME_WEEKDAY_SECS);
-
 	struct alarm_sec *p = g_alarm_sec_list;
 	if(p == NULL)
 	{
@@ -1289,6 +1291,14 @@ int get_latest_alarm_time(struct alarm_sec **fire_alarm)
 			update_alarm_db();
 		}
 		//alarm now
+		LOGD("alarm get_latest_alarm_time, find one\n");
+		LOGD("secs = %d\n",alarm_cur->secs);
+		LOGD("id = %d\n",alarm_cur->db_id);
+		LOGD("day = %d\n",alarm_cur->day);
+		LOGD("vib = %d\n",alarm_cur->vibrate);
+		LOGD("ala = %s\n",alarm_cur->alert);
+
+		show_alarm_seclist(g_alarm_sec_list);
 		return 0;
 	}else{
 		if(fire_alarm != NULL)
@@ -1317,6 +1327,7 @@ int musicProcess(char *filename, int op)
 	int status;
 	int ret = 0;
 
+	LOGD("%s:%s operation code = %d!\n", __FILE__, __func__, op);
 	/*
 	 * There must be 10 parameters, arg[0] is the player app's name when called in a shell.
 	 * So here arg[1] is useless.
