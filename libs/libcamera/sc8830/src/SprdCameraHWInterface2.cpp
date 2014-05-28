@@ -1382,9 +1382,9 @@ int SprdCameraHWInterface2::allocatePreviewStream(uint32_t width,
 			*usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
 		}
 		if (m_IsNeedHalAllocPrvBuf) {
-			*max_buffers = 1;/*2*/
+			*max_buffers = 2;
 		} else {
-			*max_buffers = 6;/*must not be smaller 6*/
+			*max_buffers = 6;/*must not be smaller 5*/
 		}
 		initStreamParam(0,width,height, stream_ops,STREAM_ID_PREVIEW, *format_actual, *usage, 0,2);
 		m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream = 1;//parent stream total the num of stream
@@ -1445,17 +1445,12 @@ int SprdCameraHWInterface2::allocatePRVCBStream(uint32_t width,
 	} else {
 		*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN;
 	}
-	*max_buffers = 2;/*6*/
+	*max_buffers = 2;
 	initStreamParam(SUBSTREAM_TYPE_PRVCB,width,height,
 	stream_ops,STREAM_ID_PRVCB, *format_actual,
 	*usage, 0,2);
 
-	if (NO_ERROR != m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_PRVCB, 20)) {
-		ret = 2;
-	}
-	HAL_LOGD("Enabling previewcb m_numRegisteredStream = %d",
-	m_Stream[STREAM_ID_PREVIEW]->m_numRegisteredStream);
-
+	m_Stream[STREAM_ID_PREVIEW]->attachSubStream(STREAM_ID_PRVCB, 20);
 	alloc_prvcb_stream_exit:
 	HAL_LOGV("ret %d",ret);
 	return ret;
@@ -1508,9 +1503,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
 
 	HAL_LOGD("stream width(%d) height(%d) format(%x)", width, height, format);
 
-	if ((format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED
-	|| format == CAMERA2_HAL_PIXEL_FORMAT_OPAQUE)
-	&& isSupportedResolution(m_Camera2, width, height)) {
+	if (format == CAMERA2_HAL_PIXEL_FORMAT_OPAQUE && isSupportedResolution(m_Camera2, width, height)) {
 		ret = allocatePreviewStream(width,height,format,stream_ops,stream_id,
 		format_actual,usage,max_buffers);
 	} else if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12) {
@@ -1542,6 +1535,7 @@ int SprdCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int 
 		return 0;
 	} else {
 		HAL_LOGE("Unsupported Pixel Format");
+		ret = 1;
 	}
 	return ret;
 }
@@ -1595,7 +1589,7 @@ bool SprdCameraHWInterface2::WaitForCaptureStart()
 		 && SPRD_IDLE != mCameraState.capture_state
 		 && SPRD_ERROR != mCameraState.capture_state	/*solution dead lock between process cap req and getInProgressCount */
 		 && SPRD_ERROR != mCameraState.camera_state) {
-		HAL_LOGD("waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG");
+		HAL_LOGD("waiting for SPRD_WAITING_RAW or SPRD_WAITING_JPEG hdr=%d", isHDRmode);
 		res = mStateWait.waitRelative(mStateLock, isHDRmode ? (kBurstCapWaitTime * 4) : kBurstCapWaitTime);
 		if (res == TIMED_OUT) {
 			HAL_LOGD("wait timeout");
@@ -2426,7 +2420,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 					targetParms->phySize[i] = size;
 					targetParms->subStreamGraphicFd[i] = phyaddr;
 				}
-				//targetParms->subStreamGraphicFd[i] = phyaddr;
+
 				targetParms->subStreamAddVirt[i]   = (uint32_t)priv_handle->base;
 				targetParms->svcBufHandle[i]       = registeringBuffers[i];
 				targetParms->svcBufStatus[i] = ON_HAL_INIT;
@@ -2435,6 +2429,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 						i, size,phyaddr, (uint32_t)(priv_handle->base), registeringBuffers[i]);
 			}
 		}
+
 		return 0;
 	} else {
 		HAL_LOGE("unregistered stream id (%d)", stream_id);
@@ -4328,14 +4323,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 			subParms->width, subParms->height,priv_handle->size,subStream, *buf);
 
 	switch(subStream) {
-	/***************************************************************************************************
 	case STREAM_ID_PRVCB:
-		if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
-			//not memcpy only notify framework to get data address
-			m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, m_PrvFrmCnt, 0, m_callbackClient);
-		}
-		break;
-	*****************************************************************************************************/
 	case STREAM_ID_RECORD:
 		if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
 			memcpy((char *)(priv_handle->base),
@@ -4737,26 +4725,19 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		HAL_LOGE("return:%d",res);
 		return;
 	}
-    if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
-		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_PRVCB];
-		prv_cb_buf_info bufInfo;
 
-		memset(&bufInfo, 0, sizeof(prv_cb_buf_info));
+	if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
+		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_PRVCB];
+
 		if (SUBSTREAM_TYPE_PRVCB == subParameters->type) {
-			if (subParameters->format == HAL_PIXEL_FORMAT_YCrCb_420_SP || subParameters->format == HAL_PIXEL_FORMAT_YV12) {
-				/*not memcpy only notify framework to get data address*/
-				bufInfo.virAdd = (uint32_t)(mPreviewHeapArray_vir[TrueID]);
-				bufInfo.width = subParameters->width;
-				bufInfo.height = subParameters->height;
-				bufInfo.format = (uint32_t)subParameters->format;
-				bufInfo.stride = SIZE_ALIGN(subParameters->width);/*buf stride*/
-				m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, m_PrvFrmCnt, (int)(&bufInfo), m_callbackClient);
-			}
+				displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[TrueID]),\
+							targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
 		}
 	}
+
 	if (GetOutputStreamMask() & STREAM_MASK_RECORD && !GetRecStopMsg()) {
-		substream_parameters_t *subParameters;
-		subParameters = &m_subStreams[STREAM_ID_RECORD];
+		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_RECORD];
+
 		if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
 			displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[TrueID]),\
 						targetStreamParms->m_timestamp,STREAM_ID_RECORD);
