@@ -3066,6 +3066,11 @@ int camera_take_picture_internal_raw(takepicture_mode cap_mode)
 		CMR_LOGE("Sensor can't work at this mode %d", g_cxt->sn_cxt.capture_mode);
 		return -CAMERA_FAILED;
 	}
+	ret = Sensor_SetMode_WaitDone();
+	if (ret) {
+		CMR_LOGE("Failed to wait set mode done");
+		return -CAMERA_FAILED;
+	}
 
 	ret = camera_capture_init_raw();
 	if (ret) {
