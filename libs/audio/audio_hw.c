@@ -126,6 +126,8 @@
 #define PORT_MM 0
 #define PORT_MODEM 1
 #define PORT_FM 4
+#define PORT_MM_C 2
+
 
 /* constraint imposed by VBC: all period sizes must be multiples of 160 */
 #define VBC_BASE_FRAME_COUNT 160
@@ -2802,7 +2804,7 @@ static int start_input_stream(struct tiny_stream_in *in)
                 in->config.rate = in->requested_rate;
             }
             ALOGE("start_input_stream pcm_open_0");
-            in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
+            in->pcm = pcm_open(s_tinycard, PORT_MM_C, PCM_IN, &in->config);
             if(!pcm_is_ready(in->pcm)) {
                 if(in->pcm) {
                     pcm_close(in->pcm);
@@ -2810,7 +2812,7 @@ static int start_input_stream(struct tiny_stream_in *in)
                 }
                 in->config.rate = pcm_config_mm_ul.rate;
                 ALOGE("start_input_stream pcm_open_1");
-                in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
+                in->pcm = pcm_open(s_tinycard, PORT_MM_C, PCM_IN, &in->config);
                 if(!pcm_is_ready(in->pcm)) {
                     ALOGE("start_input_stream pcm open err");
                     goto err;
