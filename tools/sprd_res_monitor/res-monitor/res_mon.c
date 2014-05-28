@@ -68,14 +68,12 @@ static int read_cmdline(char *name,char *process_name)
 static int count_fd(char *name)
 {
 	DIR *procd;
-	struct dirent *pd;
 	char path[MAX_PATH_NAME_LEN];
 	int fd_count = 0;
 
 	sprintf(path,"/proc/%s/fd",name);
 	if((procd = opendir((char *)path)) != NULL) {
-
-		while((pd = readdir(procd)) != NULL)
+		while(readdir(procd) != NULL)
 			fd_count++;
 	}
 	closedir(procd);
@@ -162,6 +160,7 @@ static void lsof(struct tm tm, int pid)
 				tm.tm_sec);
         print_header(fp);
         lsof_dumpinfo(pid,fp);
+	close(fp);
 } 
 
 /* Send signal && save logs */
