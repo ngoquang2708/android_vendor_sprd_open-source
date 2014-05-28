@@ -235,18 +235,18 @@ int main(int argc, char *argv[])
 			snprintf(cmd.content, MAX_NAME_LEN, "%s", argv[2]);
 		}
 	} else if(!strncmp(argv[1], "gms", 3)) {
-	    printf("GMS push will be start\n");
-	
+	    printf("GMS push will start\nChecking filesystem\n");
+
 		// ensure the dir exist
 		if (gms_dir_ptr = (DIR*)opendir("/sdcard/gms/") == NULL) {
-			printf("/sdcard/gms/ doesn't exsist or open failed.");
+			printf("/sdcard/gms/ doesn't exsist or open failed.\n");
 			return -1;
 		}
 		closedir(gms_dir_ptr);
 
 		// Calculate system partition available size
 		if (statfs("/system", &gmsDiskInfo) < 0) {
-			printf("Get /system usage failed. Operation abandon");
+			printf("Get /system usage failed. Operation abandon.\n");
 			return -1;
 		}
 		gmsAvailableSize = gmsDiskInfo.f_bavail * gmsDiskInfo.f_bsize / 1024;
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 		gmsPath[0] = "/sdcard/gms";
 		gmsPath[1] = NULL;
 		if ((fts = fts_open(__UNCONST(gmsPath), FTS_PHYSICAL, NULL)) == NULL) {
-			printf("open /sdcard/gms/ failed. Please ensure it exist and can be read.");
+			printf("open /sdcard/gms/ failed. Please ensure it exist and can be read.\n");
 			return -1;
 		}
 		for (gmsEval = 0; (p_ftsent = fts_read(fts)) != NULL; ) {
@@ -275,6 +275,7 @@ int main(int argc, char *argv[])
 		fts_close(fts);
 
 		printf("GMS package size: %ld\n\n", gmsBlocks);
+        printf("Filesystem checking done.\n");
 
 		if (gmsBlocks > gmsAvailableSize) {
 			if (argc == 2) {
@@ -282,11 +283,13 @@ int main(int argc, char *argv[])
 				printf("If still you want to push them, use:\n");
 				printf("slogctl gms force\n");
 				return -1;
-			} else if (argc > 2) {
+			} else if (argc == 3) {
 			    if (strncmp(argv[2], "force", 5)) {
 			        printf("Invalid intput.\n");
 			        return -1;
 			    }
+			} else {
+			    return -1;
 			}
 		}
 		cmd.type = CTRL_CMD_TYPE_GMS;
