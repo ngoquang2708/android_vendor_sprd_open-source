@@ -147,6 +147,8 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mEncConfig(new MMEncConfig),
       mSetFreqCount(0),
       mLibHandle(NULL),
+      mMP4EncGetCodecCapability(NULL),
+      mMP4EncPreInit(NULL),
       mMP4EncInit(NULL),
       mMP4EncSetConf(NULL),
       mMP4EncGetConf(NULL),
@@ -155,6 +157,12 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mMP4EncRelease(NULL) {
 
     ALOGI("Construct SPRDMPEG4Encoder, this: %0x", (void *)this);
+
+    CHECK(mHandle != NULL);
+    memset(mHandle, 0, sizeof(tagMP4Handle));
+
+    mHandle->videoEncoderData = NULL;
+    mHandle->userData = this;
 
     memset(&mEncInfo, 0, sizeof(mEncInfo));
 
@@ -172,6 +180,18 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
 
     mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
     ALOGI("%s, is IOMMU enabled: %d", __FUNCTION__, mIOMMUEnabled);
+
+    MMCodecBuffer InterMemBfr;
+    int32 size_inter = MP4ENC_INTERNAL_BUFFER_SIZE;
+
+    mPbuf_inter = (uint8 *)malloc(size_inter);
+    InterMemBfr.common_buffer_ptr = (uint8 *)mPbuf_inter;
+    InterMemBfr.common_buffer_ptr_phy = 0;
+    InterMemBfr.size = size_inter;
+
+    CHECK_EQ((*mMP4EncPreInit)(mHandle, &InterMemBfr), MMENC_OK);
+
+    CHECK_EQ ((*mMP4EncGetCodecCapability)(mHandle, &mCapability), MMENC_OK);
 
 #ifdef SPRD_DUMP_YUV
     mFile_yuv = fopen("/data/video.yuv", "wb");
@@ -214,14 +234,9 @@ SPRDMPEG4Encoder::~SPRDMPEG4Encoder() {
 }
 
 OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
-    CHECK(mHandle != NULL);
-    memset(mHandle, 0, sizeof(tagMP4Handle));
 
     CHECK(mEncConfig != NULL);
     memset(mEncConfig, 0, sizeof(MMEncConfig));
-
-    mHandle->videoEncoderData = NULL;
-    mHandle->userData = this;
 
 #ifdef VIDEOENC_CURRENT_OPT
     if (((mVideoWidth <= 720) && (mVideoHeight <= 480)) || ((mVideoWidth <= 480) && (mVideoHeight <= 720))) {
@@ -230,14 +245,10 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     }
 #endif
 
-    MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
     MMCodecBuffer StreamMemBfr;
     int32 phy_addr = 0;
     int32 size = 0;
-
-    int32 size_inter = MP4ENC_INTERNAL_BUFFER_SIZE;
-    mPbuf_inter = (uint8 *)malloc(size_inter);
 
     unsigned int size_extra = ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2 * 2;
     size_extra += 320*2*sizeof(uint32);
@@ -299,10 +310,6 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
         }
     }
 
-    InterMemBfr.common_buffer_ptr = (uint8 *)mPbuf_inter;
-    InterMemBfr.common_buffer_ptr_phy = 0;
-    InterMemBfr.size = size_inter;
-
     ExtraMemBfr.common_buffer_ptr = mPbuf_extra_v;
     ExtraMemBfr.common_buffer_ptr_phy = mPbuf_extra_p;
     ExtraMemBfr.size = size_extra;
@@ -322,7 +329,7 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     mEncInfo.b_anti_shake = 0;
 #endif
 
-    if ((*mMP4EncInit)(mHandle, &InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &mEncInfo) != MMENC_OK) {
+    if ((*mMP4EncInit)(mHandle, &ExtraMemBfr,&StreamMemBfr, &mEncInfo) != MMENC_OK) {
         ALOGE("Failed to init mp4enc");
         return OMX_ErrorUndefined;
     }
@@ -367,9 +374,6 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncoder() {
 }
 
 OMX_ERRORTYPE SPRDMPEG4Encoder::releaseEncoder() {
-    if (!mStarted) {
-        return OMX_ErrorNone;
-    }
 
     (*mMP4EncRelease)(mHandle);
 
@@ -1098,6 +1102,22 @@ bool SPRDMPEG4Encoder::openEncoder(const char* libName)
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
         ALOGE("openEncoder, can't open lib: %s",libName);
+        return false;
+    }
+
+    mMP4EncGetCodecCapability = (FT_MP4EncGetCodecCapability)dlsym(mLibHandle, "MP4EncGetCodecCapability");
+    if(mMP4EncGetCodecCapability == NULL) {
+        ALOGE("Can't find MP4EncGetCodecCapability in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mMP4EncPreInit = (FT_MP4EncPreInit)dlsym(mLibHandle, "MP4EncPreInit");
+    if(mMP4EncPreInit == NULL) {
+        ALOGE("Can't find MP4EncPreInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
         return false;
     }
 
