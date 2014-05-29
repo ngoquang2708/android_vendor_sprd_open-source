@@ -179,15 +179,6 @@ typedef struct _reprocess_buf_info{
 	buffer_handle_t  *reprocessAcqBuf;
 	int              reprocessBufIndex;
 } reprocess_buf_info;
-/*must be consistency to framework*/
-typedef struct _prv_cb_buf_info{
-	uint32_t    virAdd;
-	uint32_t    width;
-	uint32_t    height;
-	int         format;
-	uint32_t    stride;
-	uint32_t    reserve;
-} prv_cb_buf_info;
 
 class SprdCameraHWInterface2 : public virtual RefBase {
 public:
