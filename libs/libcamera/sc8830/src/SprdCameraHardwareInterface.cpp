@@ -4367,16 +4367,30 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 				uint32_t tmpIndex = frame->order_buf_id;
-				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-					tmpIndex,
-					0, NULL, mUser, 1);
+				if (mPreviewWindow && isPreviewing()) {
+					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+							tmpIndex,
+							0, NULL, mUser, 1);
+				} else {
+					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
+						mPreviewWindow,
+						getCameraStateStr(mCameraState.preview_state));
+					return;
+				}
 			} else {
 				uint32_t dataSize = frame->dx * frame->dy * 3 / 2;
-				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
-					frame->buf_Virt_Addr, dataSize);
-				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-					mPreviewDcamAllocBufferCnt - 1,
-					0, NULL, mUser, 1);
+				if (mPreviewWindow && isPreviewing()) {
+					memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
+						frame->buf_Virt_Addr, dataSize);
+					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+						mPreviewDcamAllocBufferCnt - 1,
+						0, NULL, mUser, 1);
+				} else {
+					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
+						mPreviewWindow,
+						getCameraStateStr(mCameraState.preview_state));
+					return;
+				}
 			}
 		}
 
