@@ -82,6 +82,7 @@ public:
           mList(NULL),
           mDisableHWCFlag(false),
           mSkipLayerFlag(false),
+          mForceOverlayComposer(false),
           mDebugFlag(0), mDumpFlag(0)
     {
     }
@@ -101,6 +102,7 @@ public:
           mList(NULL),
           mDisableHWCFlag(false),
           mSkipLayerFlag(false),
+          mForceOverlayComposer(false),
           mDebugFlag(0), mDumpFlag(0)
     {
     }
@@ -183,6 +185,7 @@ private:
     hwc_display_contents_1_t *mList;
     bool mDisableHWCFlag;
     bool mSkipLayerFlag;
+    bool mForceOverlayComposer;
     int mDebugFlag;
     int mDumpFlag;
 #ifdef PROCESS_VIDEO_USE_GSP
