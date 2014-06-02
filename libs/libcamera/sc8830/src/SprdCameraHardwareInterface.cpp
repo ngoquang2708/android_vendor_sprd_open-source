@@ -1103,6 +1103,9 @@ status_t SprdCameraHardware::copyParameters(SprdCameraParameters& cur_params, co
 	const char* new_focus_mode = params.get_FocusMode();
 	if(new_focus_mode)
 		cur_params.setFocusMode(new_focus_mode);
+        if(isRecordingMode()) {
+            cur_params.setFocusMode("infinity");
+        }
 	}
 
 	/*SupportedFocusModes*/
