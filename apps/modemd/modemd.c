@@ -214,16 +214,22 @@ static int start_rild(int modem)
 
     /* start rild */
     if(modem == TD_MODEM) {
-        MODEMD_LOGD("start td rild!");
         property_get(TD_SIM_NUM_PROP, phoneCount, "");
         if(!strcmp(phoneCount, "2")) {
+            MODEMD_LOGD("start td rild!");
             property_set("ctl.start", "tril-daemon");
             property_set("ctl.start", "tril-daemon1");
         } else if(!strcmp(phoneCount, "3")) {
+            MODEMD_LOGD("start td rild!");
             property_set("ctl.start", "tril-daemon");
             property_set("ctl.start", "tril-daemon1");
             property_set("ctl.start", "tril-daemon2");
         } else {
+            /* SPRD: Add for 316447 @{ */
+            MODEMD_LOGD("start td rild: 1st,stop it");
+            property_set("ctl.stop", "tril-daemon");
+            /* @} */
+            MODEMD_LOGD("start td rild!");
             property_set("ctl.start", "tril-daemon");
         }
     } else if(modem == W_MODEM) {
@@ -240,6 +246,10 @@ static int start_rild(int modem)
             property_set("ctl.start", "wril-daemon");
         }
     } else if(modem == LTE_MODEM) {
+        /* SPRD: Add for 316447 @{ */
+        MODEMD_LOGD("start lte rild: 1st,stop it");
+        property_set("ctl.stop", "lril-daemon");
+        /* @} */
         MODEMD_LOGD("start lte rild!");
         property_set("ctl.start", "lril-daemon");
     }

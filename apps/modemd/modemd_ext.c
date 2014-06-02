@@ -298,19 +298,18 @@ static void stop_external_modem(void)
         stop_service(sLTEmodem, 0);
         releaseWakeLock();
     } else {
-        pthread_mutex_lock(&td_state_mutex);
-        td_modem_state = MODEM_ASSERT;
-        pthread_mutex_unlock(&td_state_mutex);
-        getPartialWakeLock();
-        stop_service(sTDmodem, 0);
-        releaseWakeLock();
-
         if (sTestMode == SSDA_TEST_MODE_SVLTE) {  // SVLTE TESTMODE, Start svlte thread
             pthread_mutex_lock(&lte_state_mutex);
             lte_modem_state = MODEM_ASSERT;
             pthread_mutex_unlock(&lte_state_mutex);
             stop_svlte_service();
         }
+        pthread_mutex_lock(&td_state_mutex);
+        td_modem_state = MODEM_ASSERT;
+        pthread_mutex_unlock(&td_state_mutex);
+        getPartialWakeLock();
+        stop_service(sTDmodem, 0);
+        releaseWakeLock();
     }
 }
 
