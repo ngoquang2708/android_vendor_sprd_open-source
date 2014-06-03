@@ -298,7 +298,7 @@ void SPRDMPEG4Decoder::change_ddr_freq()
         }
         else if(frame_size > 320*240)
         {
-            ddr_freq = "300000";
+            ddr_freq = "200000";
         }
 #endif
         else
