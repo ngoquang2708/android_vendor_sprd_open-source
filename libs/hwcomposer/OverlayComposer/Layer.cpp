@@ -380,7 +380,8 @@ bool Layer::prepareDrawData()
     GLfloat left = GLfloat(mRect->left & 0xFFFFFFFE) / GLfloat(mPrivH->width);
     GLfloat top = GLfloat(mRect->top & 0xFFFFFFFE) / GLfloat(mPrivH->height);
     GLfloat right = GLfloat(mRect->right & 0xFFFFFFFE) / GLfloat(mPrivH->width);
-    GLfloat bottom = GLfloat(mRect->bottom & 0xFFFFFFFE) / GLfloat(mPrivH->height);
+    /*Overlay play video maybe loss some accuracy,Bug313521*/
+    GLfloat bottom = GLfloat((mRect->bottom-1) & 0xFFFFFFFE) / GLfloat(mPrivH->height);
 
     texCoord[0].u = texCoord[1].u = left;
     texCoord[0].v = texCoord[3].v = bottom;
