@@ -421,6 +421,11 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
         set_ddr_freq("200000");
         mSetFreqCount ++;
     }
+    else
+    {
+        set_ddr_freq("300000");
+        mSetFreqCount ++;
+    }
 #endif
 
     MMCodecBuffer ExtraMemBfr;
