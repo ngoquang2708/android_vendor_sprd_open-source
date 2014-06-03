@@ -1997,6 +1997,7 @@ static void * vbc_ctl_modem_monitor_routine(void *arg)
             ALOGD("vbc_ctl_modem_monitor_routine:error adev is null");
             return -1;
     }
+reconnect:
     do {
        fd = socket_local_client("modemd",
            ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
@@ -2013,6 +2014,10 @@ static void * vbc_ctl_modem_monitor_routine(void *arg)
                numRead = read(fd, buf, sizeof(buf));
            } while(numRead < 0 && errno == EINTR);
 
+        if(numRead <= 0) {
+            ALOGE("modem_monitor: error: got to reconnect");
+            goto reconnect;
+        }
         ALOGD("modem_monitor: %s",buf);
         if(mystrstr(buf,"Assert") || mystrstr(buf,"Reset")) {
             ALOGD("modem asserted1 %s",buf);
