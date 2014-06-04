@@ -12,7 +12,6 @@
 
 
 
-
 #define SAUDIO_CMD_NONE          0x00000000
 #define SAUDIO_CMD_OPEN           0x00000001
 #define SAUDIO_CMD_CLOSE         0x00000002
@@ -128,31 +127,57 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 
 
 
-
-
-
-
-
  int32_t saudio_wait_common_cmd( uint32_t cmd, uint32_t subcmd)
 {
 	int32_t result = 0;
 	struct cmd_common cmd_common_buffer={0};
-	struct cmd_common *common = &cmd_common_buffer;
-	ALOGE(": function is saudio_wait_common_cmd in");
+    struct cmd_common *common = &cmd_common_buffer;
+    fd_set fds_read;
+    struct timeval timeout = {5,0};
+    int maxfd = 0;
+    int offset = 0;
+    int bytes = 0;
+    int bytes_read = 0;
+    ALOGE(": function is saudio_wait_common_cmd in");
 
-	if(audio_ctrl_fd <0){
-            return -1;
-	}
-	audio_mux_ctrl_lock();
-	result=read(audio_ctrl_fd,common,sizeof(struct cmd_common));
+    if(audio_ctrl_fd <0){
+        return -1;
+    }
+    audio_mux_ctrl_lock();
+    maxfd = audio_ctrl_fd + 1;
+    timeout.tv_sec = 5;;
+    timeout.tv_usec = 0;
+    bytes = sizeof(struct cmd_common);
+    ALOGW(" :saudio_wait_common_cmd timeout %d",timeout.tv_sec);
 
-	ALOGE("common->command is %x ,sub cmd %x,\n", common->command, common->sub_cmd);
-	if (subcmd) {
-		if ((common->command == cmd) && (common->sub_cmd == subcmd)) {
-			result = 0;
-		} else {
-			result = -1;
-		}
+    while(bytes){
+        FD_ZERO(&fds_read);
+        FD_SET(audio_ctrl_fd , &fds_read);
+        result = select(maxfd,&fds_read,NULL,NULL,&timeout);
+        if(result < 0) {
+            ALOGE(" :saudio_wait_common_cmd :select error %d",errno);
+            goto muxerror;
+        }
+        else if(!result) {
+            ALOGE(" :saudio_wait_common_cmd select timeout");
+            goto muxerror;
+        }
+        if(FD_ISSET(audio_ctrl_fd ,&fds_read) <= 0) {
+            ALOGE(" :saudio_wait_common_cmd select ok but no fd is set");
+            goto muxerror;
+        }
+        offset = sizeof(struct cmd_common) - bytes;
+        bytes_read = read(audio_ctrl_fd , (void*)common + offset , bytes);
+        bytes -= bytes_read;
+    }
+
+    ALOGE("common->command is %x ,sub cmd %x,\n", common->command, common->sub_cmd);
+    if (subcmd) {
+        if ((common->command == cmd) && (common->sub_cmd == subcmd)) {
+            result = 0;
+        } else {
+            result = -1;
+        }
 	} else {
 		if (common->command == cmd) {
 			result = 0;
@@ -160,6 +185,7 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 			result = -1;
 		}
 	}
+muxerror:
 	audio_mux_ctrl_unlock();
 	ALOGE(": function is saudio_wait_common_cmdout,result is %d",result);
 	return result;

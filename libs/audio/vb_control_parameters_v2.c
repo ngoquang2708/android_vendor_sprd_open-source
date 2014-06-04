@@ -1640,6 +1640,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     unsigned short switch_table[7] = {0};
     uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_BACK_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET,AUDIO_DEVICE_OUT_WIRED_HEADSET,SPRD_AUDIO_IN_DUALMIC_VOICE};
     int i = 0;
+    int call_reset = 0;
     ALOGW("voice:vbc_call_end_process in");
     pthread_mutex_lock(&adev->lock);
     ALOGW("voice:vbc_call_end_process, got lock");
@@ -1648,6 +1649,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
         adev->call_start = 0;
         adev->call_connected = 0;
         i2s_pin_mux_sel(adev,2);
+        call_reset = 1;
     }
     if(is_timeout) {
         set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 0);
@@ -1657,17 +1659,19 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     }else{
         voip_forbid_cancel(adev,CALL_END_TIMEOUT_SECONDS);
     }
-    for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
-    {
-        set_call_route(adev,switch_device[i],0);
-    }
-    adev->out_devices = 0;
-    adev->in_devices = 0;
-    if(adev->pcm_fm_dl != NULL)
-    {
-        ALOGE("%s:close FM device",__func__);
-        pcm_close(adev->pcm_fm_dl);
-        adev->pcm_fm_dl= NULL;
+    if(1 == call_reset){
+        for(i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
+        {
+            set_call_route(adev,switch_device[i],0);
+        }
+        adev->out_devices = 0;
+        adev->in_devices = 0;
+        if(adev->pcm_fm_dl != NULL)
+        {
+            ALOGE("%s:close FM device",__func__);
+            pcm_close(adev->pcm_fm_dl);
+            adev->pcm_fm_dl= NULL;
+        }
     }
     pthread_mutex_unlock(&adev->lock);
     ALOGW("voice:vbc_call_end_process out");
