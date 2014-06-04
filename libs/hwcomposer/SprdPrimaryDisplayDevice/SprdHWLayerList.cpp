@@ -126,6 +126,7 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     mOSDLayerCount = 0;
     mVideoLayerCount = 0;
     mRGBLayerFullScreenFlag = false;
+    mForceOverlayComposer = false;
 
     if (list == NULL)
     {
@@ -380,12 +381,14 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
 
 #ifdef OVERLAY_COMPOSER_GPU
 #ifdef GSP_BLEND_2_LAYERS
-    postProcessVideoCond = (YUVLayer && (mRGBLayerCount > 1));// 3 layers compose with GPU
+    postProcessVideoCond = (YUVLayer && ((mRGBLayerCount > 1) || mForceOverlayComposer));// 3 layers compose with GPU
 #else
-    postProcessVideoCond = (YUVLayer && (mRGBLayerCount));// 2 layers compose with GPU
+    postProcessVideoCond = (YUVLayer && ((mRGBLayerCount > 0) || mForceOverlayComposer));// 2 layers compose with GPU
 #endif
+    //postProcessVideoCond = 0; // force gsp process
+
 #else
-    postProcessVideoCond = (YUVLayer && mFBLayerCount > 0);
+    postProcessVideoCond = (YUVLayer && ((mFBLayerCount > 0) || mForceOverlayComposer));
 #endif
 
     if (postProcessVideoCond)
@@ -667,6 +670,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     int sourceTop    = (int)(layer->sourceCropf.top);
     int sourceRight  = (int)(layer->sourceCropf.right);
     int sourceBottom = (int)(layer->sourceCropf.bottom);
+    int gsp_scaling_up_limit = 4;
 
     if (privateH == NULL)
     {
@@ -688,8 +692,22 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     if(((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
         || l->checkNotSupportOverlay(privateH))
     {
+#ifdef OVERLAY_COMPOSER_GPU
+        if (privateH->usage & GRALLOC_USAGE_PROTECTED)
+        {
+            ALOGI_IF(mDebugFlag, "prepareOverlayLayer Find Protected video layer, goto OverlayComposer");
+            mForceOverlayComposer = true;
+            goto ForceVideoOverlay;
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x, usage: %x, ret 0 \n", __LINE__, privateH->flags, privateH->usage);
+            return 0;
+        }
+#else
         ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
         return 0;
+#endif
     }
 #endif
 
@@ -745,7 +763,6 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         return 0;
     }
 
-    int gsp_scaling_up_limit = 4;
 #ifdef GSP_SCALING_UP_TWICE
     gsp_scaling_up_limit = 16;
 #endif
@@ -778,6 +795,7 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     }
 #endif
 
+ForceVideoOverlay:
     l->setLayerType(LAYER_OVERLAY);
     ALOGI_IF(mDebugFlag, "prepareVideoLayer[L%d],set type Video", __LINE__);
 
@@ -867,7 +885,7 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             ALOGI_IF(mDebugFlag, "mRGBLayerFullScreenFlag: %d", mRGBLayerFullScreenFlag);
              mSkipLayerFlag = true;
         }
-        else if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == true)
+        else if (privateH->usage & GRALLOC_USAGE_PROTECTED)
         {
             ALOGI_IF(mDebugFlag, "Find Protected Video layer, force Overlay");
             mSkipLayerFlag = false;
