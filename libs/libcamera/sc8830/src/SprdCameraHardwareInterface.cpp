@@ -75,19 +75,19 @@ namespace android {
 #define CANCEL_AF_TIMEOUT    1000000000     /*1000ms*/
 #define SET_PARAMS_TIMEOUT   250            /*250 means 250*10ms*/
 #define ON_OFF_ACT_TIMEOUT   50             /*50 means 50*10ms*/
-
+#define IS_ZOOM_SYNC         0
 #define NO_FREQ_REQ          0
 #define NO_FREQ_STR          "0"
 #if defined(CONFIG_CAMERA_SMALL_PREVSIZE)
 #define BASE_FREQ_REQ        192
-#define BASE_FREQ_STR        "192000"
+#define BASE_FREQ_STR        "0"         /*base mode can treated with AUTO*/
 #define MEDIUM_FREQ_REQ      200
 #define MEDIUM_FREQ_STR      "200000"
 #define HIGH_FREQ_REQ        300
 #define HIGH_FREQ_STR        "300000"
 #else
 #define BASE_FREQ_REQ        200
-#define BASE_FREQ_STR        "200000"
+#define BASE_FREQ_STR        "0"         /*base mode can treated with AUTO*/
 #define MEDIUM_FREQ_REQ      300
 #define MEDIUM_FREQ_STR      "300000"
 #define HIGH_FREQ_REQ        500
@@ -248,7 +248,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mRawHeap(NULL),
 	mRawHeapSize(0),
 	mSubRawHeapNum(0),
-	mJpegHeapSize(0),
 	mFDAddr(0),
 	mMetadataHeap(NULL),
 	mParameters(),
@@ -779,7 +778,6 @@ status_t SprdCameraHardware::startRecording()
 
 void SprdCameraHardware::stopRecording()
 {
-	char * isZslSupport = (char *)mParameters.get("zsl-supported");
 	LOGI("stopRecording: E");
 	Mutex::Autolock l(&mLock);
 	setRecordingMode(false);
@@ -1706,7 +1704,8 @@ status_t SprdCameraHardware::checkFlashParameter(SprdCameraParameters& params)
 		|| (NULL != params.get("recording-hint")
 		&& 0 != strcmp("true",params.get("recording-hint"))))) {
 		LOGI("checkFlashParameter - turnoff flash");
-		params.setFlashMode("off");
+		if (0 == strcmp("true", (char*)mParameters.get("flash-mode-supported")))
+			params.setFlashMode("off");
 		mFlashMask = true;
 	} else {
 		if (0 == strcmp("true", (char*)mParameters.get("flash-mode-supported"))) {
@@ -1790,7 +1789,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 
 	if (mParameters.getZoom() != ((SprdCameraParameters)params).getZoom()) {
 		LOGI("setParametersInternal, zoom level changed");
-		isZoomChange = 1;
+		isZoomChange = IS_ZOOM_SYNC;
 	}
 
 	ret = checkSetParametersEnvironment();
@@ -1832,10 +1831,10 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	}
 
 	if (!mBakParamFlag) {
-		/*if zoom parameter changed, then the action should be sync*/
-		//if (!isZoomChange) {
+		/*if zoom parameter changed, then the action should be sync controlled*/
+		if (!isZoomChange) {
 			mParamWait.signal();
-		//}
+		}
 	} else {
 		mBakParamFlag = 0;
 	}
@@ -1923,9 +1922,9 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	}
 
 setParamEnd:
-	//if (isZoomChange) {
-	//	mParamWait.signal();
-	//}
+	if (isZoomChange) {
+		mParamWait.signal();
+	}
 	LOGI("setParametersInternal X.\n");
 
 	return ret;
@@ -2055,7 +2054,7 @@ status_t SprdCameraHardware::dump(int fd) const
 	result.append(buffer);
 	snprintf(buffer, 255, "raw width(%d) x height (%d)\n", mRawWidth, mRawHeight);
 	result.append(buffer);
-	snprintf(buffer, 255, "preview frame size(%d), raw size (%d), jpeg size (%d) and jpeg max size (%d)\n", mPreviewHeapSize, mRawHeapSize, mJpegSize, mJpegHeapSize);
+	snprintf(buffer, 255, "preview frame size(%d), raw size (%d), jpeg size (%d)\n", mPreviewHeapSize, mRawHeapSize, mJpegSize);
 	result.append(buffer);
 	write(fd, result.string(), result.size());
 	mParameters.dump(fd, args);
@@ -3132,8 +3131,7 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 {
 	uint32_t buffer_size = 0;
 
-	LOGI("allocateCaptureMem, mJpegHeapSize = %d, mRawHeapSize = %d",
-		mJpegHeapSize, mRawHeapSize);
+	LOGI("allocateCaptureMem,mRawHeapSize = %d", mRawHeapSize);
 
 	buffer_size = camera_get_size_align_page(mRawHeapSize);
 	LOGI("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
@@ -3152,32 +3150,12 @@ bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
 		mCapBufIsAvail = 1;
 	}
 
-	if (initJpegHeap) {
-		LOGI("allocateCaptureMem: initJpeg");
-		mJpegHeap = NULL;
-
-		buffer_size = camera_get_size_align_page(mJpegHeapSize);
-		mJpegHeap = new AshmemPool(buffer_size,
-					kJpegBufferCount,
-					0,
-					0,
-					"jpeg");
-
-		if (!mJpegHeap->initialized()) {
-			LOGE("allocateCaptureMem: erro initializing mJpegHeap failed.");
-			goto allocate_capture_mem_failed;
-		}
-
-		LOGI("allocateCaptureMem: initJpeg success");
-	}
 	LOGI("allocateCaptureMem: X");
 
 	return true;
 
 allocate_capture_mem_failed:
 	freeCaptureMem();
-	mJpegHeap = NULL;
-	mJpegHeapSize = 0;
 
 	return false;
 }
@@ -3249,8 +3227,6 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 		return false;
 
 	mRawHeapSize = mem_size;
-	mJpegHeapSize = mRawHeapSize;
-	mJpegHeap = NULL;
 
 	if (!allocateCaptureMem(initJpegHeap)) {
 		return false;
@@ -4616,31 +4592,15 @@ void SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
 	LOGD("receiveJpegPictureFragment ptr val: encInfo 0x%x", (uint32_t)encInfo);
 
 	camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
-	uint8_t *base = (uint8_t *)mJpegHeap->mHeap->base();
-	LOGD("receiveJpegPictureFragment base ptr 0x%x", (uint32_t)base);
 	uint32_t size = encInfo->size;
-	uint32_t remaining = mJpegHeap->mHeap->virtualSize();
-	LOGD("receiveJpegPictureFragment remaining size 0x%x mjpeg size 0x%x", remaining, mJpegSize);
+	LOGD("receiveJpegPictureFragment mjpeg size 0x%x", mJpegSize);
 
-	if (remaining > mJpegSize) {
-		remaining -= mJpegSize;
-	} else {
-		LOGE("size exceed, abnormal!");
-	}
-
-	LOGV("receiveJpegPictureFragment: (status %d size %d remaining %d mJpegSize %d)",
+	LOGV("receiveJpegPictureFragment: (status %d size %d mJpegSize %d)",
 		encInfo->status,
-		size, remaining,mJpegSize);
-
-	if (size > remaining) {
-		LOGE("receiveJpegPictureFragment: size %d exceeds what "
-		"remains in JPEG heap (%d), truncating",
 		size,
-		remaining);
-		size = remaining;
-	}
+		mJpegSize);
 
-	LOGI("receiveJpegPictureFragment : base + mJpegSize: %x, enc->buffer: %x, size: %x", (uint32_t)(base + mJpegSize), (uint32_t)enc->buffer, size);
+	LOGI("receiveJpegPictureFragment : mJpegSize: %x, enc->buffer: %x, size: %x", (uint32_t)(mJpegSize), (uint32_t)enc->buffer, size);
 
 	mJpegSize += size;
 
@@ -4687,8 +4647,8 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 	GET_END_TIME;
 	GET_USE_TIME;
 	camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
-	LOGI("receiveJpegPicture: E image (%d bytes out of %d) Time %d(ms)",
-		mJpegSize, mJpegHeap->mBufferSize, s_use_time);
+	LOGI("receiveJpegPicture: E image (%d bytes) Time %d(ms)",
+		mJpegSize, s_use_time);
 	print_time();
 	Mutex::Autolock cbLock(&mCaptureCbLock);
 
@@ -4696,8 +4656,7 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 
 	if (mData_cb) {
 		LOGI("receiveJpegPicture: mData_cb.");
-		// The reason we do not allocate into mJpegHeap->mBuffers[offset] is
-		// that the JPEG image's size will probably change from one snapshot
+		// the JPEG image's size will probably change from one snapshot
 		// to the next, so we cannot reuse the MemoryBase object.
 		LOGD("receiveJpegPicture: mMsgEnabled: 0x%x.", mMsgEnabled);
 
@@ -4976,8 +4935,6 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 		break;
 	case CAMERA_EVT_CB_CAPTURE_FRAME_DONE:
 		LOGI("HandleTakePicture: CAMERA_EVT_CB_CAPTURE_FRAME_DONE");
-		if (1 != mParameters.getInt("zsl"))
-			set_ddr_freq(HIGH_FREQ_REQ);
 		if (checkPreviewStateForCapture()) {
 			notifyShutter();
 		} else {
@@ -5087,6 +5044,8 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 				if (((JPEGENC_CBrtnType *)parm4)->need_free) {
 					setCameraState(SPRD_IDLE,
 						STATE_CAPTURE);
+					if (1 != mParameters.getInt("zsl"))
+						set_ddr_freq(BASE_FREQ_REQ);
 				} else {
 					setCameraState(SPRD_INTERNAL_RAW_REQUESTED,
 						STATE_CAPTURE);
@@ -5097,9 +5056,9 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 				transitionState(tmpCapState,
 					SPRD_ERROR,
 					STATE_CAPTURE);
+				if (1 != mParameters.getInt("zsl"))
+					set_ddr_freq(BASE_FREQ_REQ);
 			}
-			if (1 != mParameters.getInt("zsl"))
-				set_ddr_freq(BASE_FREQ_REQ);
 		}
 		break;
 

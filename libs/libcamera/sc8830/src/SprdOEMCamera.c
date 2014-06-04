@@ -1883,6 +1883,7 @@ void *camera_cap_subthread_proc(void *data)
 			CMR_PRINT_TIME;
 			break;
 
+		case CMR_JPEG_DEC_DONE:
 		case CMR_JPEG_ENC_DONE:
 			CMR_PRINT_TIME;
 			ret = camera_jpeg_codec_handle(message.msg_type,
@@ -3975,7 +3976,7 @@ void camera_jpeg_evt_cb(int evt, void* data)
 	message.msg_type = evt;
 	CMR_LOGI("evt 0x%x", evt);
 
-	if (CHN_2 == info->channel_id) {
+	if (CHN_2 == info->channel_id || CHN_0 == info->channel_id ) {
 		ret = cmr_msg_post(g_cxt->cap_sub_msg_que_handle, &message, 1);
 	} else {
 		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message, 1);
@@ -6335,7 +6336,7 @@ int camera_preview_err_handle(uint32_t evt_type)
 	case CMR_SENSOR_ERROR:
 	case CMR_V4L2_TIME_OUT:
 		rs_mode = RESTART_HEAVY;
-		/*g_cxt->preview_status = RESTART;*/
+		g_cxt->preview_status = RESTART;
 		CMR_LOGD("Sensor error, restart preview");
 		break;
 
