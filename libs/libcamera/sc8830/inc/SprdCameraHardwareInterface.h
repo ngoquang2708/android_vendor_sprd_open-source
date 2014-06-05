@@ -353,8 +353,6 @@ private:
 	sprd_camera_memory_t            *mSubRawHeapArray[MAX_SUB_RAWHEAP_NUM];
 	uint32_t                        mSubRawHeapNum;
 
-	sp<AshmemPool>                  mJpegHeap;
-	uint32_t                        mJpegHeapSize;
 	uint32_t                        mFDAddr;
 	camera_memory_t                 *mMetadataHeap;
 	sprd_camera_memory_t            *mReDisplayHeap;
