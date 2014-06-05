@@ -412,6 +412,7 @@ private:
 	uint32_t                        mSwitchMonitorMsgQueHandle;
 	uint32_t                        mSwitchMonitorInited;
 	sem_t                           mSwitchMonitorSyncSem;
+	bool                            mIsPerformanceTestable;
 
 };
 
