@@ -37,6 +37,9 @@
 #define WakeFileName  "/sys/power/wait_for_fb_wake"
 #define SleepFileName  "/sys/power/wait_for_fb_sleep"
 
+#define IQ_DEV "/sys/module/sprd_iq/parameters/iq_base"
+#define IQ_BASE_LENGTH 32
+
 enum {
 	REF_PSFREQ_CMD,
 	REF_SETTIME_CMD,
@@ -47,6 +50,7 @@ enum {
 	REF_SLEEP_CMD,
 	REF_WAKE_CMD,
 	REF_RESET_CMD,
+	REF_IQ_CMD,
 	REF_CMD_MAX
 };
 
@@ -61,6 +65,11 @@ struct ref_time {
 	uint8_t sec;
 	uint8_t min;
 	uint8_t hour;
+};
+
+struct iq_info {
+	uint32_t base;
+	uint32_t length;
 };
 
 struct refnotify_cmd {
@@ -240,6 +249,43 @@ static int RefNotify_DoSetDate(struct refnotify_cmd *pcmd)
 	return 0;
 }
 
+static void RefNotify_DoGetIqInfo(int fd, struct refnotify_cmd *cmd)
+{
+	int iq_fd;
+	int ret, length = sizeof(struct refnotify_cmd) + sizeof(struct iq_info);
+	uint32_t base = 0xffffffff;
+	char cbase[IQ_BASE_LENGTH + 1] = {0};
+	struct refnotify_cmd *pcmd = NULL;
+	struct iq_info *piq = NULL;
+	iq_fd = open(IQ_DEV, O_RDONLY);
+	if(iq_fd < 0) {
+		REF_LOGE(" %s failed, error: %s", __func__, strerror(errno));
+		return;
+	}
+	ret = read(iq_fd, cbase, IQ_BASE_LENGTH);
+	REF_LOGD("iq_base %s \n", cbase);
+	close(iq_fd);
+	REF_LOGD("close \n");
+	base = strtoul(cbase, (char**)NULL, 10);
+	REF_LOGD("iq_base %d \n", base);
+
+	if(ret < 0)
+		return;
+	pcmd = (struct refnotify_cmd*)malloc(length);
+	if(pcmd == NULL)
+		return;
+
+	pcmd->cmd_type = REF_IQ_CMD;
+	pcmd->length = length;
+	piq = (struct iq_info*)(pcmd+1);
+	piq->base = base;
+	piq->length = 128*1024*1024;
+	ret = write(fd, pcmd, length);
+	if(ret != length) {
+		REF_LOGE("RefNotify write %d return %d, errno = %s", length , ret, strerror(errno));
+	}
+	free(pcmd);
+}
 
 void RefNotify_DoCmd(int fd, struct refnotify_cmd *pcmd)
 {
@@ -265,6 +311,8 @@ void RefNotify_DoCmd(int fd, struct refnotify_cmd *pcmd)
 		case REF_RESET_CMD:
 			RefNotify_DoReset(pcmd);
 			break;
+		case REF_IQ_CMD:
+			RefNotify_DoGetIqInfo(fd, pcmd);
 		default:
 			break;
 	}
@@ -364,6 +412,8 @@ int main(int argc, char *argv[])
 	}
 	/*start a service to notify cp of sleep/wake state*/
 	pthread_create(&tid, NULL,sleep_monitor, (void *)fd);
+
+	//RefNotify_DoGetIqInfo(fd, NULL);
 
 	for (;;) {
 		pbuf = buf;
