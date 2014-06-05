@@ -226,21 +226,21 @@ do
 	packetState = _getPacket(&buf, &size);
 	if(_PACKET_FAIL == packetState)
 	{
-		NVITEM_PRINT("NVITEM:packetState fail\n");
+		NVITEM_PRINT("packetState fail\n");
 		// packet module connection fail. teminate current req process
 		_syncReset(SYNC_FAIL_RESET);
 		return;
 	}
 	else if((_PACKET_START == packetState)&&_syncBusy)
 	{
-		NVITEM_PRINT("NVITEM:packetState no req tail\n");
+		NVITEM_PRINT("packetState no req tail\n");
 		// 1 == _syncBusy, means current req not finish
 		// _PACKET_START means next req has come. so teminate current req process, and start new process
 		_syncReset(SYNC_FAIL_RESET);
 	}
 	else if((_PACKET_CONTINUE == packetState)&&(!_syncBusy))
 	{
-		NVITEM_PRINT("NVITEM:packetState no req head\n");
+		NVITEM_PRINT("packetState no req head\n");
 		// 0 == _syncBusy, means no req is process.
 		// 1 _PACKET_CONTINUE means body of req. So has no head, skip it.
 		_sendPacktRsp(0);
@@ -248,7 +248,7 @@ do
 	}
 	else if(_PACKET_SKIP == packetState)
 	{
-		NVITEM_PRINT("NVITEM:packetState skip\n");
+		NVITEM_PRINT("packetState skip\n");
 		// invalid packet, skip it
 		continue;
 	}
@@ -262,7 +262,7 @@ do
 			syncRet = _syncGetHead(&buf, &size);
 			if(SYNC_FAIL == syncRet)
 			{
-				NVITEM_PRINT("NVITEM:_syncGetHead fail\n");
+				NVITEM_PRINT("_syncGetHead fail\n");
 				_syncReset(SYNC_FAIL_RESET);
 				_sendPacktRsp(0);
 				break;
@@ -283,7 +283,7 @@ do
 			syncRet = _syncGetBody(&buf, &size);
 			if(SYNC_FAIL == syncRet)
 			{
-				NVITEM_PRINT("NVITEM:_syncGetBody fail\n");
+				NVITEM_PRINT("_syncGetBody fail\n");
 				_syncReset(SYNC_FAIL_RESET);
 				_sendPacktRsp(0);
 				break;
@@ -300,7 +300,7 @@ do
 			}
 			else if(SYNC_DONE == syncRet)
 			{
-				NVITEM_PRINT("NVITEM:sync _syncGetTail success\n");
+				NVITEM_PRINT("sync _syncGetTail success\n");
 				_sendPacktRsp(_syncReset(SYNC_SUC_RESET));
 				break;
 			}

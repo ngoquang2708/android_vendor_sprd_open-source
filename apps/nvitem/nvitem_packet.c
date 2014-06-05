@@ -82,30 +82,30 @@ void _initPacket(void)
 uint32 _getPacket(uint8** buf, uint32* size)
 {
 	uint32 hasRead;
-	NVITEM_PRINT("NVITEM:_getPacket\n");
+	NVITEM_PRINT("_getPacket\n");
 //------------------------------------------------------------
 	if(!channel_read(packeBuf, sizeof(PACKET_HEAD)+PACKETSIZE, &hasRead))
 //------------------------------------------------------------
 	{
-		NVITEM_PRINT("NVITEM:fail channel_read\n");
+		NVITEM_PRINT("fail channel_read\n");
 		return _PACKET_FAIL;
 	}
 	if(hasRead < sizeof(PACKET_HEAD))
 	{
-		NVITEM_PRINT("NVITEM:fail PACKET_HEAD\n");
+		NVITEM_PRINT("fail PACKET_HEAD\n");
 		return _PACKET_SKIP;
 	}
 	if(_MAGICNUM != _packetHead->MAGICNUM){
-		NVITEM_PRINT("NVITEM:fail _MAGICNUM\n");
+		NVITEM_PRINT("fail _MAGICNUM\n");
 		return _PACKET_SKIP;
 	}
 	if(!__chkEcc(0,0,0)){
-		NVITEM_PRINT("NVITEM:fail ECC\n");
+		NVITEM_PRINT("fail ECC\n");
 		return _PACKET_SKIP;
 	}
 	if(hasRead < (sizeof(PACKET_HEAD)+_packetHead->sizeOfPacket))
 	{
-		NVITEM_PRINT("NVITEM:fail SIZE\n");
+		NVITEM_PRINT("fail SIZE\n");
 		return _PACKET_SKIP;
 	}
 //----------------------------------------------------------
@@ -136,12 +136,12 @@ if(0)
 			*buf	= _packetBody;
 			*size	= _packetHead->sizeOfPacket;
 //			__sendPacketRsp(_packetHead, 1);
-			NVITEM_PRINT("NVITEM _getPacket continue read %d size %d grp %d sub %d\n",hasRead,_packetHead->sizeOfPacket,_packetHead->idxGrp,_packetHead->idxSub);
+			NVITEM_PRINT("_getPacket continue read %d size %d grp %d sub %d\n",hasRead,_packetHead->sizeOfPacket,_packetHead->idxGrp,_packetHead->idxSub);
 			return _PACKET_CONTINUE;
 		}
 		else
 		{
-			NVITEM_PRINT("NVITEM:fail GROUP %d %d %d %d\n",_idxGrp,_idxSub,_packetHead->idxGrp,_packetHead->idxSub);
+			NVITEM_PRINT("fail GROUP %d %d %d %d\n",_idxGrp,_idxSub,_packetHead->idxGrp,_packetHead->idxSub);
 			return _PACKET_SKIP;
 		}
 	}
@@ -154,12 +154,12 @@ if(0)
 			*buf	= _packetBody;
 			*size	= _packetHead->sizeOfPacket;
 //			__sendPacketRsp(_packetHead, 1);
-			NVITEM_PRINT("NVITEM _getPacket start read %d size %d grp %d sub %d\n",hasRead,_packetHead->sizeOfPacket,_packetHead->idxGrp,_packetHead->idxSub);
+			NVITEM_PRINT("_getPacket start read %d size %d grp %d sub %d\n",hasRead,_packetHead->sizeOfPacket,_packetHead->idxGrp,_packetHead->idxSub);
 			return _PACKET_START;
 		}
 		else
 		{
-			NVITEM_PRINT("NVITEM:fail SUB %d %d %d %d\n",_idxGrp,_idxSub,_packetHead->idxGrp,_packetHead->idxSub);
+			NVITEM_PRINT("fail SUB %d %d %d %d\n",_idxGrp,_idxSub,_packetHead->idxGrp,_packetHead->idxSub);
 			return _PACKET_SKIP;
 		}
 	}
