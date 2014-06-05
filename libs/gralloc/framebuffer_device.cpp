@@ -51,6 +51,7 @@
 // numbers of buffers for page flipping
 #define NUM_BUFFERS NUM_FB_BUFFERS
 //#define DEBUG_FB_POST
+#define DEBUG_FB_POST_1SECOND
 
 #ifdef DUMP_FB
 extern void dump_fb(void* addr, struct fb_var_screeninfo * info , int format);
@@ -287,6 +288,22 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 
 	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(buffer);
 	private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+
+#ifdef DEBUG_FB_POST_1SECOND
+	{
+		static int64_t now = 0, last = 0;
+		static int flip_count = 0;
+
+		flip_count++;
+		now = systemTime();
+		if ((now - last) >= 1000000000LL)
+		{
+			ALOGD("%s fps = %f\n", __FUNCTION__, flip_count*1000000000.0f/(now-last));
+			flip_count = 0;
+			last = now;
+		}
+	}
+#endif
 
 #ifdef DEBUG_FB_POST
 	AINF( "%s in line=%d\n", __FUNCTION__, __LINE__);
