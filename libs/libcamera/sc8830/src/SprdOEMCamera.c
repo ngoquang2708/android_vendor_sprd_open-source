@@ -26,6 +26,7 @@
 #include "cmr_oem.h"
 #include "sprd_rot_k.h"
 #include "isp_video.h"
+#include <androidfw/SprdIlog.h>
 
 static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
@@ -116,6 +117,8 @@ struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
 		cap_stp[a].timestamp = systemTime(CLOCK_MONOTONIC); \
 		cap_stp[a].valid = 1; \
 	} while (0)
+
+int g_perfor_enable=0;
 
 #define CPUID_DOLPHIN1               (SENSOR_SOCID_T ) {0x7715a000,0x2711a000}
 #define CPUID_DOLPHIN2               (SENSOR_SOCID_T ) {0x7715a000,0x2711a002}
@@ -1627,6 +1630,7 @@ void *camera_cap_thread_proc(void *data)
 
 		CMR_LOGI("capture thread: message.msg_type 0x%x, data 0x%x", message.msg_type, (uint32_t)message.data);
 
+
 		switch (message.msg_type) {
 		case CMR_EVT_CAP_INIT:
 			CMR_PRINT_TIME;
@@ -1646,6 +1650,10 @@ void *camera_cap_thread_proc(void *data)
 				break;
 			} else {
 				CMR_LOGI("cap: frame id=%x \n", data->frame_id);
+			}
+
+			if (g_perfor_enable) {
+				sprd_perfInfo(" got one snapshot frame! \n");
 			}
 			if (TAKE_PICTURE_NO == camera_get_take_picture()) {
 				if (CAMERA_ANDROID_ZSL_MODE == g_cxt->cap_mode) {
@@ -2118,6 +2126,7 @@ camera_ret_code_type camera_init(int32_t camera_id)
 	int                      ret = CAMERA_SUCCESS;
 
 	CMR_LOGI("%d", camera_id);
+	g_perfor_enable = sprd_isPerformanceTestable();
 
 	bzero(g_cxt, sizeof(*g_cxt));
 	ret = camera_local_init();
@@ -2983,6 +2992,13 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 sensor_mode = 0;
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking("camera_take_picture_internal E.\n");
+	} else {
+		CMR_LOGD(" camera_take_picture_internal E.\n");
+	}
+
+
 	g_cxt->cap_mode = cap_mode;
 	camera_set_cancel_capture(0);
 
@@ -3038,6 +3054,12 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 		g_cxt->capture_status = CMR_CAPTURE;
 	}
 	g_cxt->v4l2_cxt.waiting_cap_frame = 1;
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_take_picture_internal X.\n");
+	} else {
+		CMR_LOGD(" camera_take_picture_internal X.\n");
+	}
 
 	return ret;
 }
@@ -3162,6 +3184,12 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type callback,
 	int timeout_cnt = 0;
 	int ret = CAMERA_SUCCESS;
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking("camera_take_picture E.\n");
+	} else {
+		CMR_LOGD(" camera_take_picture E.\n");
+	}
+
 	TAKE_PICTURE_STEP(CMR_STEP_TAKE_PIC);
 	CMR_LOGD("start");
 	if (IS_ZSL_MODE(cap_mode) || (CAMERA_RAW_MODE == cap_mode)) {
@@ -3215,6 +3243,11 @@ camera_ret_code_type camera_take_picture(camera_cb_f_type callback,
 		}
 	}
 camera_take_picture_exit:
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_take_picture X.\n");
+	} else {
+		CMR_LOGD(" camera_take_pictureX.\n");
+	}
 	return ret;
 }
 
@@ -4361,6 +4394,13 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 	uint32_t                 in_slice_height = 0;
 	CMR_MSG_INIT(message);
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking("camera_jpeg_encode_handle E.\n");
+	} else {
+		CMR_LOGD(" camera_jpeg_encode_handle E.\n");
+	}
+
+
 	if (NULL != data)
 		CMR_LOGI("stream buf 0x%x size 0x%x",
 			g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
@@ -4463,6 +4503,12 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 #endif
 	}
 	CMR_LOGD("test time:%d.",g_cxt->jpeg_cxt.jpeg_state);
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_jpeg_encode_handle X.\n");
+	} else {
+		CMR_LOGD("camera_jpeg_encode_handle X.\n");
+	}
 	return ret;
 
 }
@@ -4471,6 +4517,13 @@ int camera_jpeg_decode_handle(JPEG_DEC_CB_PARAM_T *data)
 {
 	int                      ret = CAMERA_SUCCESS;
 	struct frm_info          capture_data;
+
+	if (g_perfor_enable) {
+		sprd_startPerfTracking(" camera_jpeg_decode_handle E.\n");
+	} else {
+		CMR_LOGD("camera_jpeg_decode_handle E.\n");
+	}
+
 
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
@@ -4498,6 +4551,12 @@ int camera_jpeg_decode_handle(JPEG_DEC_CB_PARAM_T *data)
 		}
 	} else {
 		ret = camera_jpeg_decode_next(&capture_data);
+	}
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking(" camera_jpeg_decode_handle X.\n");
+	} else {
+		CMR_LOGD("camera_jpeg_decode_handle X.\n");
 	}
 	return ret;
 
@@ -6617,6 +6676,12 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 	uint32_t                 tmp_refer_rot = 0;
 	uint32_t                 tmp_req_rot = 0;
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking("camera_v4l2_capture_handle E.\n");
+	} else {
+		CMR_LOGD("camera_v4l2_capture_handle E.\n");
+	}
+
 	if (NULL == data) {
 		CMR_LOGE("Invalid parameter, 0x%x", (uint32_t)data);
 		return -CAMERA_INVALID_PARM;
@@ -6730,6 +6795,12 @@ int camera_v4l2_capture_handle(struct frm_info *data)
 
 	default:
 		break;
+	}
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_v4l2_capture_handle X.\n");
+	} else {
+		CMR_LOGD("camera_v4l2_capture_handle X.\n");
 	}
 
 	return ret;
@@ -6859,6 +6930,12 @@ int camera_start_jpeg_decode(struct frm_info *data)
 	struct img_frm           *frm;
 	int                      ret = CAMERA_SUCCESS;
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking("camera_start_jpeg_decode E.\n");
+	} else {
+		CMR_LOGD("camera_start_jpeg_decode E.\n");
+	}
+
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
 		return ret;
@@ -6935,6 +7012,12 @@ int camera_start_jpeg_decode(struct frm_info *data)
 		g_cxt->jpeg_cxt.jpeg_state = JPEG_ERR;
 	}
 
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_start_jpeg_decode X.\n");
+	} else {
+		CMR_LOGD(" camera_start_jpeg_decode X.\n");
+	}
+
 	return ret;
 }
 
@@ -6966,6 +7049,12 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	struct jpeg_wexif_cb_param    wexif_output;
 	int                      frm_num = -1;
 	int                      ret = CAMERA_SUCCESS;
+
+	if (g_perfor_enable) {
+		sprd_startPerfTracking(" camera_jpeg_encode_done E.\n");
+	} else {
+		CMR_LOGD(" camera_jpeg_encode_done E.\n");
+	}
 
 	memset(&wexif_param,0,sizeof(struct jpeg_enc_exif_param));
 	jpg_frm = &g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg;
@@ -7062,6 +7151,12 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 		}
 	}
 	/*camera_takepic_done(g_cxt);*/
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_jpeg_encode_done X.\n");
+	} else {
+		CMR_LOGD(" camera_jpeg_encode_done X.\n");
+	}
 	return ret;
 }
 
@@ -7090,6 +7185,12 @@ int camera_start_jpeg_encode(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct jpeg_enc_in_param  in_parm;
 	struct jpeg_enc_out_param    out_parm;
+
+	if (g_perfor_enable) {
+		sprd_startPerfTracking(" camera_start_jpeg_encode E.\n");
+	} else {
+		CMR_LOGD(" camera_start_jpeg_encode E.\n");
+	}
 
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
@@ -7191,6 +7292,12 @@ int camera_start_jpeg_encode(struct frm_info *data)
 
 	if (in_parm.size.height == in_parm.slice_height) {
 		camera_start_convert_thum();
+	}
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_start_jpeg_encode X.\n");
+	} else {
+		CMR_LOGD(" camera_start_jpeg_encode X.\n");
 	}
 
 	return ret;
@@ -7383,6 +7490,12 @@ int camera_start_scale(struct frm_info *data)
 	struct scaler_context    *cxt = &g_cxt->scaler_cxt;
 	struct frm_info          frm_data;
 
+	if (g_perfor_enable) {
+		sprd_startPerfTracking(" camera_start_scale E.\n");
+	} else {
+		CMR_LOGD("camera_start_scale  E.\n");
+	}
+
 
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
@@ -7555,6 +7668,12 @@ int camera_start_scale(struct frm_info *data)
 	}
 	camera_sync_scale_done(g_cxt);
 
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_start_scale X.\n");
+	} else {
+		CMR_LOGD("camera_start_scale  X.\n");
+	}
+
 	return ret;
 }
 
@@ -7660,6 +7779,12 @@ int camera_start_rotate(struct frm_info *data)
 	struct img_size          refer_size;
 	struct img_size          refer_cap_size;
 	struct cmr_rot_param     rot_param;
+
+	if (g_perfor_enable) {
+		sprd_startPerfTracking(" camera_start_rotate E.\n");
+	} else {
+		CMR_LOGD(" camera_start_rotate E.\n");
+	}
 
 
 	if (IS_PREVIEW && IS_PREV_FRM(data->frame_id)) {
@@ -7770,6 +7895,12 @@ int camera_start_rotate(struct frm_info *data)
 			camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&g_cxt->rot_cxt.frm_data);
 		}
 		TAKE_PICTURE_STEP(CMR_STEP_ROT_E);
+	}
+
+	if (g_perfor_enable) {
+		sprd_stopPerfTracking("camera_start_rotate X.\n");
+	} else {
+		CMR_LOGD(" camera_start_rotate X.\n");
 	}
 
 
