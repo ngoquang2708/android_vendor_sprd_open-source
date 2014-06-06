@@ -1,6 +1,6 @@
 /* IspToolVersion=1.0.8.4 */
 
-static uint16_t s_JX507_lnc_00[]=
+static uint16_t s_JX507_mipi_lnc_00[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -88,7 +88,7 @@ static uint16_t s_JX507_lnc_00[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_01[]=
+static uint16_t s_JX507_mipi_lnc_01[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -176,7 +176,7 @@ static uint16_t s_JX507_lnc_01[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_02[]=
+static uint16_t s_JX507_mipi_lnc_02[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -264,7 +264,7 @@ static uint16_t s_JX507_lnc_02[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_03[]=
+static uint16_t s_JX507_mipi_lnc_03[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -352,7 +352,7 @@ static uint16_t s_JX507_lnc_03[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_04[]=
+static uint16_t s_JX507_mipi_lnc_04[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -440,7 +440,7 @@ static uint16_t s_JX507_lnc_04[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_05[]=
+static uint16_t s_JX507_mipi_lnc_05[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -528,7 +528,7 @@ static uint16_t s_JX507_lnc_05[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_06[]=
+static uint16_t s_JX507_mipi_lnc_06[]=
 {/* R_Percent=600, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x0898,0x08DF,0x083D,0x08C4,0x0803,0x086D,0x07B0,0x0830,0x0777,0x07F3,0x073F,0x0795,0x071B,0x0794,0x06DB,0x072B,
 	0x06CA,0x0742,0x067B,0x06CA,0x0681,0x06FA,0x063B,0x0677,0x0647,0x06BB,0x05FA,0x0643,0x0621,0x068B,0x05C7,0x060F,
@@ -616,17 +616,17 @@ static uint16_t s_JX507_lnc_06[]=
 	0x074B,0x07D9,0x0701,0x077E,0x07E7,0x087B,0x079B,0x0815,0x08CA,0x092D,0x085D,0x0901,0x09DB,0x0A0D,0x0940,0x09F8
 };
 
-static uint16_t s_JX507_lnc_07[]=
+static uint16_t s_JX507_mipi_lnc_07[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_08[]=
+static uint16_t s_JX507_mipi_lnc_08[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_10[]=
+static uint16_t s_JX507_mipi_lnc_10[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -966,7 +966,7 @@ static uint16_t s_JX507_lnc_10[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_11[]=
+static uint16_t s_JX507_mipi_lnc_11[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -1306,7 +1306,7 @@ static uint16_t s_JX507_lnc_11[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_12[]=
+static uint16_t s_JX507_mipi_lnc_12[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -1646,7 +1646,7 @@ static uint16_t s_JX507_lnc_12[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_13[]=
+static uint16_t s_JX507_mipi_lnc_13[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -1986,7 +1986,7 @@ static uint16_t s_JX507_lnc_13[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_14[]=
+static uint16_t s_JX507_mipi_lnc_14[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -2326,7 +2326,7 @@ static uint16_t s_JX507_lnc_14[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_15[]=
+static uint16_t s_JX507_mipi_lnc_15[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -2666,7 +2666,7 @@ static uint16_t s_JX507_lnc_15[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_16[]=
+static uint16_t s_JX507_mipi_lnc_16[]=
 {/* R_Percent=602, G_Percent=713, B_Percent=697, LeftTopR=0, LeftTopG=0, LeftTopB=0, RightTopR=0, RightTopG=0, RightTopB=0, LeftBottomR=0, LeftBottomG=0, LeftBottomB=0, RightBottomR=0, RightBottomG=0, RightBottomB=0 */
 	0x08DA,0x093A,0x0883,0x090A,0x086A,0x08DF,0x083D,0x08AE,0x0823,0x0892,0x07D7,0x0851,0x07C9,0x085D,0x0794,0x07E5,
 	0x0785,0x0821,0x074F,0x07AC,0x074D,0x0803,0x0724,0x0777,0x072F,0x07B7,0x06E7,0x074C,0x06FF,0x07A3,0x06C5,0x071A,
@@ -3006,287 +3006,287 @@ static uint16_t s_JX507_lnc_16[]=
 	0x08AF,0x091F,0x083B,0x08F6,0x0948,0x09AF,0x08B0,0x098E,0x0B08,0x0AD2,0x0A09,0x0B6A,0x0B08,0x0AD2,0x0A09,0x0B6A
 };
 
-static uint16_t s_JX507_lnc_17[]=
+static uint16_t s_JX507_mipi_lnc_17[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_18[]=
+static uint16_t s_JX507_mipi_lnc_18[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_20[]=
+static uint16_t s_JX507_mipi_lnc_20[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_21[]=
+static uint16_t s_JX507_mipi_lnc_21[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_22[]=
+static uint16_t s_JX507_mipi_lnc_22[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_23[]=
+static uint16_t s_JX507_mipi_lnc_23[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_24[]=
+static uint16_t s_JX507_mipi_lnc_24[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_25[]=
+static uint16_t s_JX507_mipi_lnc_25[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_26[]=
+static uint16_t s_JX507_mipi_lnc_26[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_27[]=
+static uint16_t s_JX507_mipi_lnc_27[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_28[]=
+static uint16_t s_JX507_mipi_lnc_28[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_30[]=
+static uint16_t s_JX507_mipi_lnc_30[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_31[]=
+static uint16_t s_JX507_mipi_lnc_31[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_32[]=
+static uint16_t s_JX507_mipi_lnc_32[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_33[]=
+static uint16_t s_JX507_mipi_lnc_33[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_34[]=
+static uint16_t s_JX507_mipi_lnc_34[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_35[]=
+static uint16_t s_JX507_mipi_lnc_35[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_36[]=
+static uint16_t s_JX507_mipi_lnc_36[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_37[]=
+static uint16_t s_JX507_mipi_lnc_37[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_38[]=
+static uint16_t s_JX507_mipi_lnc_38[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_40[]=
+static uint16_t s_JX507_mipi_lnc_40[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_41[]=
+static uint16_t s_JX507_mipi_lnc_41[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_42[]=
+static uint16_t s_JX507_mipi_lnc_42[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_43[]=
+static uint16_t s_JX507_mipi_lnc_43[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_44[]=
+static uint16_t s_JX507_mipi_lnc_44[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_45[]=
+static uint16_t s_JX507_mipi_lnc_45[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_46[]=
+static uint16_t s_JX507_mipi_lnc_46[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_47[]=
+static uint16_t s_JX507_mipi_lnc_47[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_48[]=
+static uint16_t s_JX507_mipi_lnc_48[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_50[]=
+static uint16_t s_JX507_mipi_lnc_50[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_51[]=
+static uint16_t s_JX507_mipi_lnc_51[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_52[]=
+static uint16_t s_JX507_mipi_lnc_52[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_53[]=
+static uint16_t s_JX507_mipi_lnc_53[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_54[]=
+static uint16_t s_JX507_mipi_lnc_54[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_55[]=
+static uint16_t s_JX507_mipi_lnc_55[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_56[]=
+static uint16_t s_JX507_mipi_lnc_56[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_57[]=
+static uint16_t s_JX507_mipi_lnc_57[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_58[]=
+static uint16_t s_JX507_mipi_lnc_58[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_60[]=
+static uint16_t s_JX507_mipi_lnc_60[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_61[]=
+static uint16_t s_JX507_mipi_lnc_61[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_62[]=
+static uint16_t s_JX507_mipi_lnc_62[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_63[]=
+static uint16_t s_JX507_mipi_lnc_63[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_64[]=
+static uint16_t s_JX507_mipi_lnc_64[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_65[]=
+static uint16_t s_JX507_mipi_lnc_65[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_66[]=
+static uint16_t s_JX507_mipi_lnc_66[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_67[]=
+static uint16_t s_JX507_mipi_lnc_67[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_68[]=
+static uint16_t s_JX507_mipi_lnc_68[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_70[]=
+static uint16_t s_JX507_mipi_lnc_70[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_71[]=
+static uint16_t s_JX507_mipi_lnc_71[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_72[]=
+static uint16_t s_JX507_mipi_lnc_72[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_73[]=
+static uint16_t s_JX507_mipi_lnc_73[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_74[]=
+static uint16_t s_JX507_mipi_lnc_74[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_75[]=
+static uint16_t s_JX507_mipi_lnc_75[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_76[]=
+static uint16_t s_JX507_mipi_lnc_76[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_77[]=
+static uint16_t s_JX507_mipi_lnc_77[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint16_t s_JX507_lnc_78[]=
+static uint16_t s_JX507_mipi_lnc_78[]=
 {/* R_Percent=0, G_Percent=0, B_Percent=0 */
 	0x00
 };
 
-static uint8_t s_JX507_ae_weight_customer[]=
+static uint8_t s_JX507_mipi_ae_weight_customer[]=
 {
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -3324,7 +3324,7 @@ static uint8_t s_JX507_ae_weight_customer[]=
 
 /* AE Parameter: LineTime=211, MinLine=1, MaxGain=8, NormalMinFps=10, NightMinFps=2 */
 
-static uint32_t s_JX507_aes_00[]=
+static uint32_t s_JX507_mipi_aes_00[]=
 {
 	0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00039DA6,0x00039DA6,0x00039DA6,
 	0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,
@@ -3424,7 +3424,7 @@ static uint32_t s_JX507_aes_00[]=
 	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000
 };
 
-static uint16_t s_JX507_aeg_00[]=
+static uint16_t s_JX507_mipi_aeg_00[]=
 {
 	0x0000,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x0009,0x000B,0x000D,0x000F,0x0010,0x0001,0x0002,0x0003,
 	0x0005,0x0006,0x0007,0x0009,0x000A,0x000C,0x000E,0x0010,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x000A,
@@ -3524,7 +3524,7 @@ static uint16_t s_JX507_aeg_00[]=
 	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 };
 
-static uint32_t s_JX507_aes_10[]=
+static uint32_t s_JX507_mipi_aes_10[]=
 {
 	0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00039DA6,0x00039DA6,0x00039DA6,
 	0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,
@@ -3624,7 +3624,7 @@ static uint32_t s_JX507_aes_10[]=
 	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000
 };
 
-static uint16_t s_JX507_aeg_10[]=
+static uint16_t s_JX507_mipi_aeg_10[]=
 {
 	0x0000,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x0009,0x000B,0x000D,0x000F,0x0010,0x0001,0x0002,0x0003,
 	0x0005,0x0006,0x0007,0x0009,0x000A,0x000C,0x000E,0x0010,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x000A,
@@ -3724,7 +3724,7 @@ static uint16_t s_JX507_aeg_10[]=
 	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 };
 
-static uint32_t s_JX507_aes_01[]=
+static uint32_t s_JX507_mipi_aes_01[]=
 {
 	0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00039DA6,0x00039DA6,0x00039DA6,
 	0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,
@@ -3824,7 +3824,7 @@ static uint32_t s_JX507_aes_01[]=
 	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000
 };
 
-static uint16_t s_JX507_aeg_01[]=
+static uint16_t s_JX507_mipi_aeg_01[]=
 {
 	0x0000,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x0009,0x000B,0x000D,0x000F,0x0010,0x0001,0x0002,0x0003,
 	0x0005,0x0006,0x0007,0x0009,0x000A,0x000C,0x000E,0x0010,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x000A,
@@ -3924,7 +3924,7 @@ static uint16_t s_JX507_aeg_01[]=
 	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 };
 
-static uint32_t s_JX507_aes_11[]=
+static uint32_t s_JX507_mipi_aes_11[]=
 {
 	0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00073B4D,0x00039DA6,0x00039DA6,0x00039DA6,
 	0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x00039DA6,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,0x0001CED3,
@@ -4024,7 +4024,7 @@ static uint32_t s_JX507_aes_11[]=
 	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000
 };
 
-static uint16_t s_JX507_aeg_11[]=
+static uint16_t s_JX507_mipi_aeg_11[]=
 {
 	0x0000,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x0009,0x000B,0x000D,0x000F,0x0010,0x0001,0x0002,0x0003,
 	0x0005,0x0006,0x0007,0x0009,0x000A,0x000C,0x000E,0x0010,0x0001,0x0002,0x0003,0x0004,0x0005,0x0007,0x0008,0x000A,
@@ -4128,7 +4128,7 @@ static uint16_t s_JX507_aeg_11[]=
 /* AwbPoint:
 	37,162,217,148,218,141,210,138,203,138,199,141,178,148,153,152,131,157,110,159,97,174,87,195,82,209,89,224,86,238,89,248,89,259,97,274,80,289,71,301,69,321,69,331,75,334,90,324,103,302,106,266,118,255,123,236,125,223,123,199,135,191,154,183,173,177,182,176,197,171,208,167,217,153,217
 */
-static uint16_t s_JX507_awb_map[1024*6]=
+static uint16_t s_JX507_mipi_awb_map[1024*6]=
 {
 	0x00A9,0x0045,0x012D,0x012D,0x0046,0x0127,0x012D,0x0047,0x0121,0x012D,0x0048,0x011F,0x012D,0x0049,0x011D,0x012D,
 	0x004A,0x011C,0x012D,0x004B,0x011A,0x012D,0x004C,0x0118,0x012D,0x004D,0x0117,0x012D,0x004E,0x0115,0x012D,0x004F,
@@ -4169,7 +4169,7 @@ static uint16_t s_JX507_awb_map[1024*6]=
 	Domain=1, Range=1
 */
 
-static uint8_t s_JX507_tune_info[sizeof(struct sensor_raw_tune_info)]=
+static uint8_t s_JX507_mipi_tune_info[sizeof(struct sensor_raw_tune_info)]=
 {
 	0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -4487,17 +4487,17 @@ static uint8_t s_JX507_tune_info[sizeof(struct sensor_raw_tune_info)]=
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
-static struct sensor_raw_cali_info s_JX507_cali_info;
+static struct sensor_raw_cali_info s_JX507_mipi_cali_info;
 
 
-static struct sensor_raw_fix_info s_JX507_fix_info=
+static struct sensor_raw_fix_info s_JX507_mipi_fix_info=
 {
 	{
-		(uint8_t*)s_JX507_ae_weight_customer,
+		(uint8_t*)s_JX507_mipi_ae_weight_customer,
 		{
 			{
-				(uint32_t*)s_JX507_aes_00,
-				(uint16_t*)s_JX507_aeg_00,
+				(uint32_t*)s_JX507_mipi_aes_00,
+				(uint16_t*)s_JX507_mipi_aeg_00,
 				{
 					{112,171},
 					{112,148},
@@ -4508,8 +4508,8 @@ static struct sensor_raw_fix_info s_JX507_fix_info=
 				},
 			},
 			{
-				(uint32_t*)s_JX507_aes_10,
-				(uint16_t*)s_JX507_aeg_10,
+				(uint32_t*)s_JX507_mipi_aes_10,
+				(uint16_t*)s_JX507_mipi_aeg_10,
 				{
 					{112,168},
 					{112,145},
@@ -4520,8 +4520,8 @@ static struct sensor_raw_fix_info s_JX507_fix_info=
 				},
 			},
 			{
-				(uint32_t*)s_JX507_aes_01,
-				(uint16_t*)s_JX507_aeg_01,
+				(uint32_t*)s_JX507_mipi_aes_01,
+				(uint16_t*)s_JX507_mipi_aeg_01,
 				{
 					{112,189},
 					{112,166},
@@ -4532,8 +4532,8 @@ static struct sensor_raw_fix_info s_JX507_fix_info=
 				},
 			},
 			{
-				(uint32_t*)s_JX507_aes_11,
-				(uint16_t*)s_JX507_aeg_11,
+				(uint32_t*)s_JX507_mipi_aes_11,
+				(uint16_t*)s_JX507_mipi_aeg_11,
 				{
 					{112,201},
 					{112,178},
@@ -4551,395 +4551,395 @@ static struct sensor_raw_fix_info s_JX507_fix_info=
 				/***********0*************/
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_00,
-					sizeof(s_JX507_lnc_00),
+					(uint16_t*)s_JX507_mipi_lnc_00,
+					sizeof(s_JX507_mipi_lnc_00),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_01,
-					sizeof(s_JX507_lnc_01),
+					(uint16_t*)s_JX507_mipi_lnc_01,
+					sizeof(s_JX507_mipi_lnc_01),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_02,
-					sizeof(s_JX507_lnc_02),
+					(uint16_t*)s_JX507_mipi_lnc_02,
+					sizeof(s_JX507_mipi_lnc_02),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_03,
-					sizeof(s_JX507_lnc_03),
+					(uint16_t*)s_JX507_mipi_lnc_03,
+					sizeof(s_JX507_mipi_lnc_03),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_04,
-					sizeof(s_JX507_lnc_04),
+					(uint16_t*)s_JX507_mipi_lnc_04,
+					sizeof(s_JX507_mipi_lnc_04),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_05,
-					sizeof(s_JX507_lnc_05),
+					(uint16_t*)s_JX507_mipi_lnc_05,
+					sizeof(s_JX507_mipi_lnc_05),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_06,
-					sizeof(s_JX507_lnc_06),
+					(uint16_t*)s_JX507_mipi_lnc_06,
+					sizeof(s_JX507_mipi_lnc_06),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_07,
-					sizeof(s_JX507_lnc_07),
+					(uint16_t*)s_JX507_mipi_lnc_07,
+					sizeof(s_JX507_mipi_lnc_07),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_08,
-					sizeof(s_JX507_lnc_08),
+					(uint16_t*)s_JX507_mipi_lnc_08,
+					sizeof(s_JX507_mipi_lnc_08),
 				},
 			},
 			{
 				/***********1*************/
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_10,
-					sizeof(s_JX507_lnc_10),
+					(uint16_t*)s_JX507_mipi_lnc_10,
+					sizeof(s_JX507_mipi_lnc_10),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_11,
-					sizeof(s_JX507_lnc_11),
+					(uint16_t*)s_JX507_mipi_lnc_11,
+					sizeof(s_JX507_mipi_lnc_11),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_12,
-					sizeof(s_JX507_lnc_12),
+					(uint16_t*)s_JX507_mipi_lnc_12,
+					sizeof(s_JX507_mipi_lnc_12),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_13,
-					sizeof(s_JX507_lnc_13),
+					(uint16_t*)s_JX507_mipi_lnc_13,
+					sizeof(s_JX507_mipi_lnc_13),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_14,
-					sizeof(s_JX507_lnc_14),
+					(uint16_t*)s_JX507_mipi_lnc_14,
+					sizeof(s_JX507_mipi_lnc_14),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_15,
-					sizeof(s_JX507_lnc_15),
+					(uint16_t*)s_JX507_mipi_lnc_15,
+					sizeof(s_JX507_mipi_lnc_15),
 				},
 				{
 					0x20,
-					(uint16_t*)s_JX507_lnc_16,
-					sizeof(s_JX507_lnc_16),
+					(uint16_t*)s_JX507_mipi_lnc_16,
+					sizeof(s_JX507_mipi_lnc_16),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_17,
-					sizeof(s_JX507_lnc_17),
+					(uint16_t*)s_JX507_mipi_lnc_17,
+					sizeof(s_JX507_mipi_lnc_17),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_18,
-					sizeof(s_JX507_lnc_18),
+					(uint16_t*)s_JX507_mipi_lnc_18,
+					sizeof(s_JX507_mipi_lnc_18),
 				},
 			},
 			{
 				/***********2*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_20,
-					sizeof(s_JX507_lnc_20),
+					(uint16_t*)s_JX507_mipi_lnc_20,
+					sizeof(s_JX507_mipi_lnc_20),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_21,
-					sizeof(s_JX507_lnc_21),
+					(uint16_t*)s_JX507_mipi_lnc_21,
+					sizeof(s_JX507_mipi_lnc_21),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_22,
-					sizeof(s_JX507_lnc_22),
+					(uint16_t*)s_JX507_mipi_lnc_22,
+					sizeof(s_JX507_mipi_lnc_22),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_23,
-					sizeof(s_JX507_lnc_23),
+					(uint16_t*)s_JX507_mipi_lnc_23,
+					sizeof(s_JX507_mipi_lnc_23),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_24,
-					sizeof(s_JX507_lnc_24),
+					(uint16_t*)s_JX507_mipi_lnc_24,
+					sizeof(s_JX507_mipi_lnc_24),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_25,
-					sizeof(s_JX507_lnc_25),
+					(uint16_t*)s_JX507_mipi_lnc_25,
+					sizeof(s_JX507_mipi_lnc_25),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_26,
-					sizeof(s_JX507_lnc_26),
+					(uint16_t*)s_JX507_mipi_lnc_26,
+					sizeof(s_JX507_mipi_lnc_26),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_27,
-					sizeof(s_JX507_lnc_27),
+					(uint16_t*)s_JX507_mipi_lnc_27,
+					sizeof(s_JX507_mipi_lnc_27),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_28,
-					sizeof(s_JX507_lnc_28),
+					(uint16_t*)s_JX507_mipi_lnc_28,
+					sizeof(s_JX507_mipi_lnc_28),
 				},
 			},
 			{
 				/***********3*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_30,
-					sizeof(s_JX507_lnc_30),
+					(uint16_t*)s_JX507_mipi_lnc_30,
+					sizeof(s_JX507_mipi_lnc_30),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_31,
-					sizeof(s_JX507_lnc_31),
+					(uint16_t*)s_JX507_mipi_lnc_31,
+					sizeof(s_JX507_mipi_lnc_31),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_32,
-					sizeof(s_JX507_lnc_32),
+					(uint16_t*)s_JX507_mipi_lnc_32,
+					sizeof(s_JX507_mipi_lnc_32),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_33,
-					sizeof(s_JX507_lnc_33),
+					(uint16_t*)s_JX507_mipi_lnc_33,
+					sizeof(s_JX507_mipi_lnc_33),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_34,
-					sizeof(s_JX507_lnc_34),
+					(uint16_t*)s_JX507_mipi_lnc_34,
+					sizeof(s_JX507_mipi_lnc_34),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_35,
-					sizeof(s_JX507_lnc_35),
+					(uint16_t*)s_JX507_mipi_lnc_35,
+					sizeof(s_JX507_mipi_lnc_35),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_36,
-					sizeof(s_JX507_lnc_36),
+					(uint16_t*)s_JX507_mipi_lnc_36,
+					sizeof(s_JX507_mipi_lnc_36),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_37,
-					sizeof(s_JX507_lnc_37),
+					(uint16_t*)s_JX507_mipi_lnc_37,
+					sizeof(s_JX507_mipi_lnc_37),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_38,
-					sizeof(s_JX507_lnc_38),
+					(uint16_t*)s_JX507_mipi_lnc_38,
+					sizeof(s_JX507_mipi_lnc_38),
 				},
 			},
 			{
 				/***********4*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_40,
-					sizeof(s_JX507_lnc_40),
+					(uint16_t*)s_JX507_mipi_lnc_40,
+					sizeof(s_JX507_mipi_lnc_40),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_41,
-					sizeof(s_JX507_lnc_41),
+					(uint16_t*)s_JX507_mipi_lnc_41,
+					sizeof(s_JX507_mipi_lnc_41),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_42,
-					sizeof(s_JX507_lnc_42),
+					(uint16_t*)s_JX507_mipi_lnc_42,
+					sizeof(s_JX507_mipi_lnc_42),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_43,
-					sizeof(s_JX507_lnc_43),
+					(uint16_t*)s_JX507_mipi_lnc_43,
+					sizeof(s_JX507_mipi_lnc_43),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_44,
-					sizeof(s_JX507_lnc_44),
+					(uint16_t*)s_JX507_mipi_lnc_44,
+					sizeof(s_JX507_mipi_lnc_44),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_45,
-					sizeof(s_JX507_lnc_45),
+					(uint16_t*)s_JX507_mipi_lnc_45,
+					sizeof(s_JX507_mipi_lnc_45),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_46,
-					sizeof(s_JX507_lnc_46),
+					(uint16_t*)s_JX507_mipi_lnc_46,
+					sizeof(s_JX507_mipi_lnc_46),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_47,
-					sizeof(s_JX507_lnc_47),
+					(uint16_t*)s_JX507_mipi_lnc_47,
+					sizeof(s_JX507_mipi_lnc_47),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_48,
-					sizeof(s_JX507_lnc_48),
+					(uint16_t*)s_JX507_mipi_lnc_48,
+					sizeof(s_JX507_mipi_lnc_48),
 				},
 			},
 			{
 				/***********5*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_50,
-					sizeof(s_JX507_lnc_50),
+					(uint16_t*)s_JX507_mipi_lnc_50,
+					sizeof(s_JX507_mipi_lnc_50),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_51,
-					sizeof(s_JX507_lnc_51),
+					(uint16_t*)s_JX507_mipi_lnc_51,
+					sizeof(s_JX507_mipi_lnc_51),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_52,
-					sizeof(s_JX507_lnc_52),
+					(uint16_t*)s_JX507_mipi_lnc_52,
+					sizeof(s_JX507_mipi_lnc_52),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_53,
-					sizeof(s_JX507_lnc_53),
+					(uint16_t*)s_JX507_mipi_lnc_53,
+					sizeof(s_JX507_mipi_lnc_53),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_54,
-					sizeof(s_JX507_lnc_54),
+					(uint16_t*)s_JX507_mipi_lnc_54,
+					sizeof(s_JX507_mipi_lnc_54),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_55,
-					sizeof(s_JX507_lnc_55),
+					(uint16_t*)s_JX507_mipi_lnc_55,
+					sizeof(s_JX507_mipi_lnc_55),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_56,
-					sizeof(s_JX507_lnc_56),
+					(uint16_t*)s_JX507_mipi_lnc_56,
+					sizeof(s_JX507_mipi_lnc_56),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_57,
-					sizeof(s_JX507_lnc_57),
+					(uint16_t*)s_JX507_mipi_lnc_57,
+					sizeof(s_JX507_mipi_lnc_57),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_58,
-					sizeof(s_JX507_lnc_58),
+					(uint16_t*)s_JX507_mipi_lnc_58,
+					sizeof(s_JX507_mipi_lnc_58),
 				},
 			},
 			{
 				/***********6*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_60,
-					sizeof(s_JX507_lnc_60),
+					(uint16_t*)s_JX507_mipi_lnc_60,
+					sizeof(s_JX507_mipi_lnc_60),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_61,
-					sizeof(s_JX507_lnc_61),
+					(uint16_t*)s_JX507_mipi_lnc_61,
+					sizeof(s_JX507_mipi_lnc_61),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_62,
-					sizeof(s_JX507_lnc_62),
+					(uint16_t*)s_JX507_mipi_lnc_62,
+					sizeof(s_JX507_mipi_lnc_62),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_63,
-					sizeof(s_JX507_lnc_63),
+					(uint16_t*)s_JX507_mipi_lnc_63,
+					sizeof(s_JX507_mipi_lnc_63),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_64,
-					sizeof(s_JX507_lnc_64),
+					(uint16_t*)s_JX507_mipi_lnc_64,
+					sizeof(s_JX507_mipi_lnc_64),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_65,
-					sizeof(s_JX507_lnc_65),
+					(uint16_t*)s_JX507_mipi_lnc_65,
+					sizeof(s_JX507_mipi_lnc_65),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_66,
-					sizeof(s_JX507_lnc_66),
+					(uint16_t*)s_JX507_mipi_lnc_66,
+					sizeof(s_JX507_mipi_lnc_66),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_67,
-					sizeof(s_JX507_lnc_67),
+					(uint16_t*)s_JX507_mipi_lnc_67,
+					sizeof(s_JX507_mipi_lnc_67),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_68,
-					sizeof(s_JX507_lnc_68),
+					(uint16_t*)s_JX507_mipi_lnc_68,
+					sizeof(s_JX507_mipi_lnc_68),
 				},
 			},
 			{
 				/***********7*************/
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_70,
-					sizeof(s_JX507_lnc_70),
+					(uint16_t*)s_JX507_mipi_lnc_70,
+					sizeof(s_JX507_mipi_lnc_70),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_71,
-					sizeof(s_JX507_lnc_71),
+					(uint16_t*)s_JX507_mipi_lnc_71,
+					sizeof(s_JX507_mipi_lnc_71),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_72,
-					sizeof(s_JX507_lnc_72),
+					(uint16_t*)s_JX507_mipi_lnc_72,
+					sizeof(s_JX507_mipi_lnc_72),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_73,
-					sizeof(s_JX507_lnc_73),
+					(uint16_t*)s_JX507_mipi_lnc_73,
+					sizeof(s_JX507_mipi_lnc_73),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_74,
-					sizeof(s_JX507_lnc_74),
+					(uint16_t*)s_JX507_mipi_lnc_74,
+					sizeof(s_JX507_mipi_lnc_74),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_75,
-					sizeof(s_JX507_lnc_75),
+					(uint16_t*)s_JX507_mipi_lnc_75,
+					sizeof(s_JX507_mipi_lnc_75),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_76,
-					sizeof(s_JX507_lnc_76),
+					(uint16_t*)s_JX507_mipi_lnc_76,
+					sizeof(s_JX507_mipi_lnc_76),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_77,
-					sizeof(s_JX507_lnc_77),
+					(uint16_t*)s_JX507_mipi_lnc_77,
+					sizeof(s_JX507_mipi_lnc_77),
 				},
 				{
 					0x00,
-					(uint16_t*)s_JX507_lnc_78,
-					sizeof(s_JX507_lnc_78),
+					(uint16_t*)s_JX507_mipi_lnc_78,
+					sizeof(s_JX507_mipi_lnc_78),
 				},
 			},
 		},
 	},
 	{
-		(uint16_t*)s_JX507_awb_map,
+		(uint16_t*)s_JX507_mipi_awb_map,
 		0x00,
 	},
 };
 
-static struct sensor_raw_resolution_info_tab s_JX507_trim_info=
+static struct sensor_raw_resolution_info_tab s_JX507_mipi_trim_info=
 {
 	0x00,
 	{
@@ -4956,14 +4956,14 @@ static struct sensor_raw_resolution_info_tab s_JX507_trim_info=
 	}
 };
 
-static struct sensor_raw_ioctrl s_JX507_ioctrl=
+static struct sensor_raw_ioctrl s_JX507_mipi_ioctrl=
 {
 	PNULL,
 	PNULL,
 	PNULL
 };
 
-static struct sensor_version_info s_JX507_version_info=
+static struct sensor_version_info s_JX507_mipi_version_info=
 {
 	0x00010000,
 	sizeof(struct sensor_raw_info),
@@ -4972,10 +4972,10 @@ static struct sensor_version_info s_JX507_version_info=
 
 static struct sensor_raw_info s_JX507_mipi_raw_info=
 {
-	&s_JX507_version_info,
-	(struct sensor_raw_tune_info*)&s_JX507_tune_info,
-	&s_JX507_fix_info,
-	&s_JX507_cali_info,
-	&s_JX507_trim_info,
-	&s_JX507_ioctrl
+	&s_JX507_mipi_version_info,
+	(struct sensor_raw_tune_info*)&s_JX507_mipi_tune_info,
+	&s_JX507_mipi_fix_info,
+	&s_JX507_mipi_cali_info,
+	&s_JX507_mipi_trim_info,
+	&s_JX507_mipi_ioctrl
 };
