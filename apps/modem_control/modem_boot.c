@@ -14,6 +14,7 @@
 #include <modem_mem_map.h>
 
 #define CMDLINE_LTE_MODE_PREFIX "ltemode="
+#define CMDLINE_TEST_MODE_PREFIX "testmode="
 enum {
 	MODEM_SOFT_RESET = 0x1,
 	MODEM_HARD_RESET,
@@ -735,6 +736,22 @@ static int append_lte_mode(char dst[])
 	return ret;
 }
 
+static int append_test_mode(char dst[])
+{
+	char prop[100] = {0};
+	int ret = 0;
+	int i = 0;
+
+	strcpy(prop, CMDLINE_TEST_MODE_PREFIX);
+	ret = strlen(CMDLINE_TEST_MODE_PREFIX);
+	property_get("persist.radio.ssda.testmode", &prop[ret], "");
+	while(prop[ret] != 0)
+		ret++;
+	strcat(dst, prop);
+	
+	return ret;
+}
+
 int download_image(int channel_fd,struct image_info *info)
 {
 	int packet_size,trans_size=HS_PACKET_SIZE;
@@ -745,6 +762,7 @@ int download_image(int channel_fd,struct image_info *info)
 	nv_header_t *nv_head;
 	int i,image_size;
 	int count = 0;
+	int offset = 0;
 	int ret;
 
         if(info->image_path == NULL)
@@ -782,7 +800,8 @@ int download_image(int channel_fd,struct image_info *info)
 				buffer += read_len;
 			  } else {
 				  if(!strcmp(info->image_path, "/proc/cmdline")) {//append lte mode
-					  append_lte_mode(&buffer[read_len]);
+				  	  offset = append_test_mode(buffer);
+					  append_lte_mode(buffer+offset);
 				  }
 				  break;
 			  }
