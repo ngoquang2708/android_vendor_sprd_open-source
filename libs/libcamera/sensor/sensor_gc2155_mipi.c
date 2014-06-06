@@ -1040,7 +1040,7 @@ SENSOR_INFO_T g_GC2155_MIPI_yuv_info =
 
 	SENSOR_IMAGE_FORMAT_YUV422,			// define in SENSOR_IMAGE_FORMAT_E enum,
 							// if set to SENSOR_IMAGE_FORMAT_MAX here, image format depent on SENSOR_REG_TAB_INFO_T
-	SENSOR_IMAGE_PATTERN_YUV422_YUYV,		// pattern of input image form sensor;
+	SENSOR_IMAGE_PATTERN_YUV422_YVYU,		// pattern of input image form sensor;
 
 	s_GC2155_MIPI_resolution_Tab_YUV,			// point to resolution table information structure
 	&s_GC2155_MIPI_ioctl_func_tab,			// point to ioctl function table
