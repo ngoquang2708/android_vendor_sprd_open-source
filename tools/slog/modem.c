@@ -221,7 +221,7 @@ static int handle_correspond_modem(char *buffer)
 		strcpy(modem_buffer, "cp1");
 	} else if (!strncmp(buffer, "W ", 2)) {
 		strcpy(modem_buffer, "cp0");
-	} else if (!strncmp(buffer, "L ", 2)) {
+	} else if (!strncmp(buffer, "LTE", 3)) {
 		strcpy(modem_buffer, "cp3");
 	} else {
 		return 0;
