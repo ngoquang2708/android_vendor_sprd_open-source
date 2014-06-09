@@ -31,6 +31,8 @@
 static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
 struct camera_context        *g_cxt = &cmr_cxt;
+uint32_t isptool_saved_file_count = 0;
+#define SRC_MIPI_RAW "/data/isptool_src_mipi_raw_file.raw"
 #define IS_PREVIEW           (CMR_PREVIEW == g_cxt->preview_status)
 #define IS_PREVIEW_TRACE     (PREV_TRACE_CNT >= g_cxt->pre_frm_cnt || (!IS_PREVIEW) || PREV_TRACE_CNT >= g_cxt->prev_trac_cnt)
 #define IS_CAPTURE           (CMR_CAPTURE == g_cxt->capture_status || CMR_CAPTURE_SLICE == g_cxt->capture_status)
@@ -271,7 +273,11 @@ static int camera_check_cap_time(struct frm_info * data);
 static int camera_search_rot_buffer(void);
 static int raw_data_rect_copy(void *src_vaddr, uint32_t width,uint32_t height,
 				struct img_rect rect, void *dst_vaddr);
-
+static int isp_overwrite_cap_mem(void);
+static int isp_is_have_src_data_from_picture(void);
+static uint32_t camera_get_sensor_interface_pixel_width(void);
+static uint32_t isp_get_saved_file_count(void);
+static void isp_set_saved_file_count(void);
 
 int camera_capture_way_out(void)
 {
@@ -1796,6 +1802,11 @@ void *camera_cap_thread_proc(void *data)
 				} else {
 					CMR_LOGI("cap raw: frame id=%x \n", data->frame_id);
 				}
+				if (CAMERA_RAW_MODE == g_cxt->cap_mode) {
+					if (CAMERA_SUCCESS == isp_is_have_src_data_from_picture()) {
+						isp_overwrite_cap_mem();
+					}
+				}
 
 				ret = camera_v4l2_capture_handle(data);
 				if (ret) {
@@ -2937,6 +2948,7 @@ int camera_take_picture_done(struct frm_info *data)
 				camera_get_client_data(),
 				CAMERA_FUNC_TAKE_PICTURE,
 				(uint32_t)&frame_type);
+
 		CMR_LOGI("CAMERA_EXIT_CB_DONE.");
 
 	} else {
@@ -3646,6 +3658,15 @@ int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 					(char *)g_cxt->cap_mem[frm_id].target_yuv.addr_vir.addr_u,
 					g_cxt->picture_size.width*g_cxt->picture_size.height/2,
 					0, 0);
+
+			if (CAMERA_RAW_MODE == g_cxt->cap_mode) {
+				ret = camera_save_to_file(isp_get_saved_file_count(),
+					IMG_DATA_TYPE_YUV420,
+					g_cxt->picture_size.width,
+					g_cxt->picture_size.height,
+					&g_cxt->cap_mem[frm_id].target_yuv.addr_vir);
+			}
+
 
 			CMR_LOGD("cap yuv addr 0x%x.",(uint32_t)frame_type->buf_Virt_Addr);
 		}
@@ -4437,13 +4458,15 @@ int camera_jpeg_encode_handle(JPEG_ENC_CB_PARAM_T *data)
 				(char *)g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir.addr_y,
 				data->stream_size,
 				0, 0, 0, 0);
-#if 0
-		ret = camera_save_to_file(990,
-			IMG_DATA_TYPE_JPEG,
-			g_cxt->picture_size.width,
-			g_cxt->picture_size.height,
-			&g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir);
-#endif
+
+		if (CAMERA_RAW_MODE == g_cxt->cap_mode) {
+			ret = camera_save_to_file(isp_get_saved_file_count(),
+				IMG_DATA_TYPE_JPEG,
+				g_cxt->picture_size.width,
+				g_cxt->picture_size.height,
+				&g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg.addr_vir);
+		}
+
 		if (CAMERA_EXIT == camera_capture_way_out()) {
 			CMR_LOGW("need exit capture, direct out!");
 			return ret;
@@ -6896,13 +6919,13 @@ int camera_start_isp_process(struct frm_info *data)
 			g_cxt->cap_mem[frm_id].cap_raw.size.width*g_cxt->cap_mem[frm_id].cap_raw.size.height * raw_pixel_width /8,
 			0, 0, 0, 0);
 
-#if 0
-	camera_save_to_file(110,
-			IMG_DATA_TYPE_RAW,
-			g_cxt->cap_mem[frm_id].cap_raw.size.width,
-			g_cxt->cap_mem[frm_id].cap_raw.size.height,
-			&g_cxt->cap_mem[frm_id].cap_raw.addr_vir);
-#endif
+	if (CAMERA_RAW_MODE== g_cxt->cap_mode) {
+		camera_save_to_file(isp_get_saved_file_count(),
+				IMG_DATA_TYPE_RAW,
+				g_cxt->cap_mem[frm_id].cap_raw.size.width,
+				g_cxt->cap_mem[frm_id].cap_raw.size.height,
+				&g_cxt->cap_mem[frm_id].cap_raw.addr_vir);
+	}
 
 	ret = isp_proc_start(&ips_in, &ips_out);
 	if (0 == ret) {
@@ -9443,4 +9466,74 @@ int camera_set_ispvideo_format(int format)
 
 	CMR_LOGV("format=%d", format);
 	return ret;
+}
+
+
+
+static void isp_set_saved_file_count(void)
+{
+	isptool_saved_file_count++;
+}
+
+static uint32_t isp_get_saved_file_count(void)
+{
+	return isptool_saved_file_count;
+}
+
+
+static uint32_t camera_get_sensor_interface_pixel_width(void)
+{
+	return g_cxt->sn_cxt.sensor_info->sensor_interface.pixel_width;
+}
+
+static int isp_is_have_src_data_from_picture(void)
+{
+	FILE* fp = 0;
+	char isptool_src_mipi_raw[] = SRC_MIPI_RAW;
+
+	fp = fopen(isptool_src_mipi_raw, "r");
+	if (fp != NULL) {
+		fclose(fp);
+		CMR_LOGI("sucess : have input_raw source file.\n");
+	} else {
+		CMR_LOGI("fail : no input_raw source file.\n");
+		return -CAMERA_FAILED;
+	}
+
+	return CAMERA_SUCCESS;
+
+}
+
+static int isp_overwrite_cap_mem(void)
+{
+	FILE* fp = 0;
+	char isptool_src_mipi_raw[] = SRC_MIPI_RAW;
+	camera_frame_type frame_type;
+	uint32_t pixel_width = camera_get_sensor_interface_pixel_width();
+	uint32_t memsize = g_cxt->cap_mem[0].cap_raw.size.width * g_cxt->cap_mem[0].cap_raw.size.height * pixel_width / 8;
+
+	fp = fopen(isptool_src_mipi_raw, "r");
+	if (fp != NULL) {
+		fread((void *)g_cxt->cap_mem[0].cap_raw.addr_vir.addr_y, 1,
+			memsize, fp);
+		fclose(fp);
+	} else {
+		CMR_LOGI("fail : no input_raw source file.\n");
+		return -CAMERA_FAILED;
+	}
+
+	isp_set_saved_file_count();
+
+	frame_type.buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[0].cap_raw.addr_vir.addr_y;
+	frame_type.buffer_phy_addr = g_cxt->cap_mem[0].cap_raw.addr_phy.addr_y;
+	frame_type.dx = g_cxt->cap_mem[0].cap_raw.size.width;
+	frame_type.dy = g_cxt->cap_mem[0].cap_raw.size.height * pixel_width /8;
+
+	camera_call_cb(CAMERA_EVT_CB_FLUSH,
+		camera_get_client_data(),
+		CAMERA_FUNC_TAKE_PICTURE,
+		(uint32_t)&frame_type);
+
+	return CAMERA_SUCCESS;
+
 }
