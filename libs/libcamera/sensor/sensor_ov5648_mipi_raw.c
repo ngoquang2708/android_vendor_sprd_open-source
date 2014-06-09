@@ -161,8 +161,13 @@ LOCAL const SENSOR_REG_T ov5648_com_mipi_raw[] = {
 	{0x3814, 0x31}, // x inc
 	{0x3815, 0x31}, // y inc
 	{0x3817, 0x00}, // hsync start
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x0e}, // flip on, v bin off
+	{0x3821, 0x01}, // mirror off, h bin on
+#else
 	{0x3820, 0x08}, // flip off, v bin off
 	{0x3821, 0x07}, // mirror on, h bin on
+#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -267,8 +272,13 @@ LOCAL const SENSOR_REG_T ov5648_1296X972_mipi_raw[] = {
 	{0x3814, 0x31}, // x inc
 	{0x3815, 0x31}, // y inc
 	{0x3817, 0x00}, // hsync start
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x0e}, // flip on, v bin off
+	{0x3821, 0x01}, // mirror off, h bin on
+#else
 	{0x3820, 0x08}, // flip off, v bin off
 	{0x3821, 0x07}, // mirror on, h bin on
+#endif
 	{0x4004, 0x02}, // black line number
 	{0x4005, 0x18}, // blc level trigger
 	{0x350b, 0x40}, // gain = 8x
@@ -310,8 +320,13 @@ LOCAL const SENSOR_REG_T ov5648_2592X1944_mipi_raw[] = {
 	{0x3814, 0x11}, // x inc
 	{0x3815, 0x11}, // y inc
 	{0x3817, 0x00}, // hsync start
+#if CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0x46}, // flip on, v bin off
+	{0x3821, 0x00}, // mirror off, h bin on
+#else
 	{0x3820, 0x40}, // flip off, v bin off
 	{0x3821, 0x06}, // mirror on, v bin off
+#endif
 	{0x4004, 0x04}, // black line number
 	{0x4005, 0x1a}, // blc always update
 	{0x350b, 0x40}, // gain = 4x
