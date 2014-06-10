@@ -1,10 +1,15 @@
+char  argv1[10];
 
 #ifdef WIN32
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
-#define NVITEM_PRINT printf
+#define NVITEM_PRINT(fmt,args...) do {\
+    printf("%s: " fmt,\
+                         argv1, ##args);\
+} while (0)
+
 #else
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,13 +18,15 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <pthread.h>
-//#include "engapi.h"
-//#include "engat.h"
 
-#define LOG_TAG "NVITEM"
 #include <cutils/log.h>
-#define NVITEM_PRINT ALOGD
+#define LOG_TAG "NVITEM"
+#define NVITEM_PRINT(fmt, ...)  do {  \
+            ALOGD("%s: " fmt,   \
+                                argv1, ##__VA_ARGS__);  \
+    } while (0)
 #endif
+
 
 #ifndef _NVITEM_COMMON_H_
 #define _NVITEM_COMMON_H_
