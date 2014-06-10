@@ -71,8 +71,10 @@ string ATProcesser::process()
 #ifdef BUILD_ENG
     
     //eng_request((char *)request, requestlen, response, &responselen, sim);
-    const char* atrsp = NULL;
-    atrsp = sendAt(modem, sim, (char *)request);
+    //const char* atrsp = NULL;
+    char atrsp[MAX_RESPONSE_LEN]={0};
+    size_t ret_val = -1;
+    ret_val = sendAt(atrsp,MAX_RESPONSE_LEN, sim, (char *)request);
     content.append(atrsp);   
 #endif
     cout << "response.content=" << content << endl;

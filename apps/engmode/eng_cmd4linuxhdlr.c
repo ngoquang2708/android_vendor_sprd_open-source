@@ -666,7 +666,7 @@ static int eng_simtest_checksim_euicc(int type)
 
     close(fd);
 #else // use at channel: modemid=0 & simid=0 is temporary
-    atrsp = sendAt(0, 0, "at_euicc?\r");
+    //atrsp = sendAt(0, 0, "at_euicc?\r");
     memset(cmd, 0, sizeof(cmd));
     strcpy(cmd, atrsp);
 #endif
