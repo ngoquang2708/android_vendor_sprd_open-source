@@ -50,6 +50,7 @@ struct pcm_config pcm_config_loopvbc = {
     .format = PCM_FORMAT_S16_LE,
 };
 #define CALL_END_TIMEOUT_SECONDS	3
+#define DEFAULT_VBCST_DG   24
 /* vbc control parameters struct here.*/
 typedef struct Paras_Mode_Gain
 {
@@ -2082,6 +2083,12 @@ RESTART:
                     uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0)
 
                             |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
+
+                    uint32_t gain=0;
+                    gain |= DEFAULT_VBCST_DG;
+                    gain |= DEFAULT_VBCST_DG<<16;
+                    SetAudio_gain_fmradio(adev,gain);
+
                     cur_timeout = &timeout;
                     MY_TRACE("vocie:VBC_CMD_HAL_OPEN IN.");
                     ALOGW("vocie:VBC_CMD_HAL_OPEN, try lock");
