@@ -1711,8 +1711,9 @@ static struct sensor_raw_ioctrl s_s5k4e1ga_ioctrl=
 	PNULL
 };
 
-static struct sensor_version_info s_s5k4e1ga_version_info={
-	SENSOR_RAW_V0001_VERSION_ID,
+static struct sensor_version_info s_s5k4e1ga_version_info=
+{
+	0x00010000,
 	sizeof(struct sensor_raw_info),
 	0x00
 };

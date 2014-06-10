@@ -2184,7 +2184,8 @@ static struct sensor_raw_ioctrl s_imx179_ioctrl=
 	PNULL
 };
 
-static struct sensor_version_info s_imx179_version_info={
+static struct sensor_version_info s_imx179_version_info=
+{
 	0x00010000,
 	sizeof(struct sensor_raw_info),
 	0x00
