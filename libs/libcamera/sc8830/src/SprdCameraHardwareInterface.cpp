@@ -481,7 +481,12 @@ int SprdCameraHardware::getCameraId() const
 
 status_t SprdCameraHardware::startPreview()
 {
-	LOGI("mlock:startPreview: E");
+	if (mIsPerformanceTestable) {
+        sprd_startPerfTracking("startPreview: E");
+	} else {
+		LOGI("startPreview: E");
+	}
+
 	status_t ret = NO_ERROR;
 	Mutex::Autolock l(&mLock);
 
