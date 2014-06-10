@@ -292,6 +292,7 @@ private:
 		int32_t            frmCnt;
 		int32_t            aeCompensation;
 		int32_t            outputStreamMask;
+		int32_t            prvFrmRate;
 		uint32_t           cropRegion0;
 		uint32_t           cropRegion1;
 		uint32_t           cropRegion2;
@@ -485,7 +486,7 @@ private:
 	void                 receivePrevFrmWithCacheMem(camera_frame_type *frame);
 	void                 HandleStartPreview(camera_cb_type cb, int32_t parm4);
 	void                 HandleStartCamera(camera_cb_type cb, int32_t parm4);
-	status_t             startPreviewInternal(bool isRecording);
+	status_t             startPreviewInternal(bool isChangPrvSize);
 	void                 stopPreviewInternal(bool isCancelAllBuf);
 	void                 stopPreviewSimple(void);/*only call camera_stop_preview*/
 	bool                 isPreviewing(void);

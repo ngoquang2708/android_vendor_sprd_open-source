@@ -545,7 +545,7 @@ static int initCamera2Info(int cameraId)
 		g_Camera2[1]->PreviewResolutions   = PreviewResolutionSensorFront;
 		g_Camera2[1]->numJpegResolution   = ARRAY_SIZE(jpegResolutionSensorFront)/2;
 		g_Camera2[1]->jpegResolutions     = jpegResolutionSensorFront;
-		g_Camera2[1]->minFocusDistance    = 0.1f;
+		g_Camera2[1]->minFocusDistance    = 0.0f;
 		g_Camera2[1]->focalLength         = 3.43f;
 		g_Camera2[1]->aperture            = 2.7f;
 		g_Camera2[1]->fnumber             = 2.7f;
@@ -789,10 +789,17 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
 	static const int32_t aeExpCompensation = 0;
 	ADD_OR_SIZE(ANDROID_CONTROL_AE_EXPOSURE_COMPENSATION, &aeExpCompensation, 1);
 
-	static const int32_t aeTargetFpsRange[2] = {
-		15, 30
+	static const int32_t aeTargetFpsRangeFront[2] = {
+		10, 25
 	};
-	ADD_OR_SIZE(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRange, 2);
+	static const int32_t aeTargetFpsRangeBack[2] = {
+		10, 30
+	};
+	if (m_CameraId == 1) {
+		ADD_OR_SIZE(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRangeFront, 2);
+	} else {
+		ADD_OR_SIZE(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRangeBack, 2);
+	}
 
 	static const uint8_t aeAntibandingMode = ANDROID_CONTROL_AE_ANTIBANDING_MODE_AUTO;
 	ADD_OR_SIZE(ANDROID_CONTROL_AE_ANTIBANDING_MODE, &aeAntibandingMode, 1);
@@ -1968,9 +1975,6 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
 			if (*buf == targetStreamParms->svcBufHandle[Index]) {
 				found = true;
-				if (targetStreamParms->svcBufStatus[Index] == ON_SERVICE)
-					(void)StreamSP->popBufQ();
-
 				targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 				HAL_LOGD("Index=%d",Index);
 				break;
@@ -2004,7 +2008,6 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 	} else {
 		if (!m_IsNeedHalAllocPrvBuf) {
 			targetStreamParms->svcBufStatus[Index] = ON_SERVICE;
-			StreamSP->pushBufQ(Index);
 		}
 		goto allocate_buf_free;
 	}
@@ -2274,9 +2277,6 @@ bool SprdCameraHWInterface2::getPreviewBuffer(bool isPrvAftCap)
 	int DynamicIndex = 0;
 	sp<Stream> StreamSP = m_Stream[STREAM_ID_PREVIEW];
 
-	for(;i < targetStreamParms->numSvcBuffers;i++) {
-		HAL_LOGD("@@@ statue0=%d",targetStreamParms->svcBufStatus[i]);
-	}
 	for(i=0; i < (targetStreamParms->numSvcBuffers - targetStreamParms->minUndequedBuffer - 1); i++) {
 		found = false;
 		ret = targetStreamParms->streamOps->dequeue_buffer(targetStreamParms->streamOps, &buf);
@@ -2310,36 +2310,19 @@ bool SprdCameraHWInterface2::getPreviewBuffer(bool isPrvAftCap)
 	/*hal do not release these bufs*/
 	if (isPrvAftCap) {
 		for (i = 0; i < targetStreamParms->numSvcBuffers; i++) {
-			if (targetStreamParms->svcBufStatus[i] == ON_HAL_INIT) {/*first deal with cancel buf*/
+			if (targetStreamParms->svcBufStatus[i] == ON_SERVICE ||
+					targetStreamParms->svcBufStatus[i] == ON_HAL_INIT) {
 				mPreviewHeapArray_phy_dynamic[DynamicIndex] = mPreviewHeapArray_phy[i];
 				mPreviewHeapArray_vir_dynamic[DynamicIndex] = mPreviewHeapArray_vir[i];
 				mPreviewBufIndex_dynamic[DynamicIndex] = i;
-				HAL_LOGD("@@@ dymic=%d i=%d", DynamicIndex, i);
+				HAL_LOGD("@@@ Index=%d dymic=%d sta=%d", i, DynamicIndex, targetStreamParms->svcBufStatus[i]);
 				targetStreamParms->bufIsCancel[i] = true;
-				DynamicIndex++;
-				StreamSP->pushBufQ(i);
-			}
-		}
-		for (i = 0; i < targetStreamParms->numSvcBuffers; i++) {
-			if (targetStreamParms->svcBufStatus[i] == ON_SERVICE) {
-				TmpIndex = StreamSP->popBufQ();
-				if (TmpIndex < 0) {
-					HAL_LOGD("@@@ TmpIndex=%d", TmpIndex);
-					return false;
-				}
-				StreamSP->pushBufQ(TmpIndex);
-				mPreviewHeapArray_phy_dynamic[DynamicIndex] = mPreviewHeapArray_phy[TmpIndex];
-				mPreviewHeapArray_vir_dynamic[DynamicIndex] = mPreviewHeapArray_vir[TmpIndex];
-				mPreviewBufIndex_dynamic[DynamicIndex] = TmpIndex;
-				HAL_LOGD("@@@ Index=%d dymic=%d i=%d", TmpIndex, DynamicIndex, i);
-				targetStreamParms->bufIsCancel[TmpIndex] = true;
 				DynamicIndex++;
 			}
 		}
 	} else {
 		for (i = 0; i < targetStreamParms->numSvcBuffers; i++) {
 			if (targetStreamParms->svcBufStatus[i] == ON_HAL_INIT) {
-				StreamSP->pushBufQ(i);
 				mPreviewHeapArray_phy_dynamic[DynamicIndex] = mPreviewHeapArray_phy[i];
 				mPreviewHeapArray_vir_dynamic[DynamicIndex] = mPreviewHeapArray_vir[i];
 				mPreviewBufIndex_dynamic[DynamicIndex] = i;
@@ -2349,6 +2332,12 @@ bool SprdCameraHWInterface2::getPreviewBuffer(bool isPrvAftCap)
 			}
 		}
 	}
+	/*check buf state*/
+	if (DynamicIndex != targetStreamParms->numSvcBuffers) {
+		HAL_LOGD("buf num is error dymic=%d", DynamicIndex);
+		return false;
+	}
+
 	return true;
 }
 
@@ -2365,7 +2354,6 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 
 	HAL_LOGD("stream_id(%d), num_buff(%d), handle(%x) ",
 			stream_id, num_buffers, (uint32_t)registeringBuffers);
-
 	if (stream_id == STREAM_ID_PREVIEW && m_Stream[STREAM_ID_PREVIEW] != NULL) {
 		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW]->m_parameters);
 		camStatus = getCameraState();
@@ -2416,11 +2404,10 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 						targetParms->subStreamGraphicFd[i] = phyaddr;
 					}
 				} else {
-					MemoryHeapIon::Get_mm_iova(priv_handle->share_fd,&phyaddr,&size);
+					MemoryHeapIon::Get_mm_iova(priv_handle->share_fd,&phyaddr,&size);/*page aligned*/
 					targetParms->phySize[i] = size;
 					targetParms->subStreamGraphicFd[i] = phyaddr;
 				}
-
 				targetParms->subStreamAddVirt[i]   = (uint32_t)priv_handle->base;
 				targetParms->svcBufHandle[i]       = registeringBuffers[i];
 				targetParms->svcBufStatus[i] = ON_HAL_INIT;
@@ -2429,7 +2416,6 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 						i, size,phyaddr, (uint32_t)(priv_handle->base), registeringBuffers[i]);
 			}
 		}
-
 		return 0;
 	} else {
 		HAL_LOGE("unregistered stream id (%d)", stream_id);
@@ -3311,6 +3297,13 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 					srcreq->isCropSet = false;
 				}
 				setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
+				if (!IS_DV_SCENE(m_staticReqInfo)) {
+					SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
+					SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
+				} else {
+					SET_PARM(CAMERA_PARM_PREVIEW_MODE, m_staticReqInfo.prvFrmRate);
+					SET_PARM(CAMERA_PARM_PREVIEW_ENV, m_staticReqInfo.prvFrmRate);
+				}
 			if (!m_IsNeedHalAllocPrvBuf) {
 				for (i=0 ;i < (size_t)targetStreamParms->numSvcBuffers; i++) {
 				   if (targetStreamParms->svcBufStatus[i] != ON_SERVICE) {
@@ -3381,7 +3374,7 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 				}
 				if (!m_IsNeedHalAllocPrvBuf)
 					getPreviewBuffer(false);
-				startPreviewInternal(0);
+				startPreviewInternal(false);
 			} else {
 				if ((GetCameraPictureMode() == CAMERA_ZSL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_MODE
 					|| GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE)
@@ -3425,7 +3418,7 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 						}
 						if (!m_IsNeedHalAllocPrvBuf)
 							getPreviewBuffer(true);
-						startPreviewInternal(0);
+						startPreviewInternal(false);
 					}
 				}
 		}
@@ -4018,12 +4011,13 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		#ifndef CONFIG_CAMERA_SMALL_PREVSIZE
 		picMode = CAMERA_ZSL_MODE;
 		#endif
-		SET_PARM(CAMERA_PARM_PREVIEW_ENV, frameRate);
+		if (srcreq->prvFrmRate != frameRate) {
+			srcreq->prvFrmRate = frameRate;
+		}
 	} else {
 		if (srcreq->sceneMode == CAMERA_SCENE_MODE_HDR) {
 			picMode = CAMERA_HDR_MODE;
 		}
-		SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
 	}
 	if (capMode > 1 && capMode < 256) {
 		if (picMode == CAMERA_NORMAL_MODE) {
@@ -4150,14 +4144,13 @@ void SprdCameraHWInterface2::SetDDRFreqBefStartPrv(void)
 	}
 }
 
-status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
+status_t SprdCameraHWInterface2::startPreviewInternal(bool isChangPrvSize)
 {
-	stream_parameters_t     *StreamParameter = NULL;
 	stream_parameters_t     *targetStreamParms = NULL;
 	bool  ret = true;
 	uint32_t memSize = 0;
 
-	HAL_LOGV("start isRecording=%d.",isRecording);
+	HAL_LOGV("start preview changsize=%d.",isChangPrvSize);
 	if (isPreviewing()) {
 		HAL_LOGE("startPreviewInternal: already in progress, doing nothing.X");
 /*		setRecordingMode(isRecording);
@@ -4183,8 +4176,14 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isRecording)
 		HAL_LOGE("preview stream is NULL.");
 		return SPRD_ERROR;
 	}
-    //hal parameters set
-	SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
+	//hal parameters set
+	if (!IS_DV_SCENE(m_staticReqInfo)) {
+		SET_PARM(CAMERA_PARM_PREVIEW_MODE, CAMERA_PREVIEW_MODE_SNAPSHOT);
+		SET_PARM(CAMERA_PARM_PREVIEW_ENV, CAMERA_PREVIEW_MODE_SNAPSHOT);
+	} else {
+		SET_PARM(CAMERA_PARM_PREVIEW_MODE, m_staticReqInfo.prvFrmRate);
+		SET_PARM(CAMERA_PARM_PREVIEW_ENV, m_staticReqInfo.prvFrmRate);
+	}
 	camerea_set_preview_format(targetStreamParms->format);
 	if (IS_DV_SCENE(m_staticReqInfo)) {
 		memSize = (SIZE_ALIGN(targetStreamParms->width) * SIZE_ALIGN(targetStreamParms->height) * 3) / 2;
@@ -4304,7 +4303,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 		return 0;
 	}
 	if (subStream == STREAM_ID_RECORD) {
-		m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, m_PrvFrmCnt, 0, m_callbackClient);
+		m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, ANDROID_SPRD_NOTIFY_FLAG_REC_SYNC, 0, m_callbackClient);
 	}
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
 	if (ret != NO_ERROR || buf == NULL) {
@@ -4324,6 +4323,33 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 
 	switch(subStream) {
 	case STREAM_ID_PRVCB:
+		if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
+			memcpy((char *)(priv_handle->base), srcBufVirt, (subParms->width * subParms->height * 3) / 2);
+		} else if (subParms->format == HAL_PIXEL_FORMAT_YV12) {
+			register uint32_t i = 0;
+			register uint32_t j = 0;
+			register uint32_t wid = subParms->width;
+			register uint32_t height = subParms->height;
+			register char *dataSrc = (char *)srcBufVirt;
+			register char *dataDst = (char *)(priv_handle->base);
+			register char *dataDstV = NULL;
+			/*width/2 is not align 16, discard some pixels*/
+			memcpy(dataDst, dataSrc, wid * height);
+			dataSrc = (char *)srcBufVirt + wid * height;
+			dataDst = (char *)(priv_handle->base) + SIZE_ALIGN(wid) * height;
+			dataDstV = dataDst + ((SIZE_ALIGN(wid >> 1) * height) >> 1);
+			for (; i < (height >> 1); i++) {
+				for (j = 0; j < (wid >> 1); j++) {
+					*dataDst++ = *dataSrc++;
+					*dataDstV++ = *dataSrc++;
+				}
+			}
+		} else {
+			HAL_LOGE("error not support format=%d",subParms->format);
+			goto cancel_buf;
+		}
+		break;
+
 	case STREAM_ID_RECORD:
 		if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
 			memcpy((char *)(priv_handle->base),
@@ -4488,7 +4514,8 @@ void SprdCameraHWInterface2::HandleStartPreview(camera_cb_type cb,
 
 	switch(cb) {
 	case CAMERA_RSP_CB_SUCCESS:
-		if (!(getPreviewState() == SPRD_PREVIEW_IN_PROGRESS && m_staticReqInfo.isCropSet == true)) {/*zoom maybe fail, but hal preview status not be changed*/
+		if (!(getPreviewState() == SPRD_PREVIEW_IN_PROGRESS && (m_staticReqInfo.isCropSet == true ||
+			GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_RECORD))) {/*zoom maybe fail, but hal preview status not be changed*/
 			transitionState(SPRD_INTERNAL_PREVIEW_REQUESTED,
 					SPRD_PREVIEW_IN_PROGRESS,
 					STATE_PREVIEW, true, true);
@@ -4626,7 +4653,6 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	int Index = 0;
 	int OemIndex = 0;
 	int TrueID = 0;
-	int TmpIndex = 0;
 	sp<Stream> StreamSP = NULL;
 	void *vaddr = NULL;
 	int phyaddr = 0;
@@ -4729,7 +4755,8 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
 		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_PRVCB];
 
-		if (SUBSTREAM_TYPE_PRVCB == subParameters->type) {
+		if (SUBSTREAM_TYPE_PRVCB == subParameters->type &&
+			(subParameters->format == HAL_PIXEL_FORMAT_YCrCb_420_SP || subParameters->format == HAL_PIXEL_FORMAT_YV12)) {
 				displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[TrueID]),\
 							targetStreamParms->m_timestamp,STREAM_ID_PRVCB);
 		}
@@ -4776,20 +4803,11 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				goto proc_req_over;
 			} else {
 				if (targetStreamParms->bufIsCancel[Index]) {
-					uint32_t round = (uint32_t)targetStreamParms->minUndequedBuffer + 1;
 					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 					targetStreamParms->bufIsCancel[Index] = false;
-					TmpIndex = StreamSP->popBufQ();
-					round--;
-					HAL_LOGD("in order to enq buf, change buf stat, pop=%d", TmpIndex);
-					while (TmpIndex != Index && round > 0) {
-						StreamSP->pushBufQ(TmpIndex);
-						TmpIndex = StreamSP->popBufQ();
-						round--;
-					}
 					goto enq_buf;
 				} else if (targetStreamParms->svcBufStatus[Index] == ON_SERVICE) {
-					(void)StreamSP->popBufQ();
+
 				} else {
 					HAL_LOGE("Error buf stat=%d",targetStreamParms->svcBufStatus[Index]);
 					if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
@@ -4839,7 +4857,6 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				goto proc_req_over;
 			} else {
 				targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
-				StreamSP->pushBufQ(TrueID);/*save the newest */
 			}
 			if (!StreamSP->m_IsFirstFrm) {
 				StreamSP->m_IsFirstFrm = true;
@@ -4882,8 +4899,6 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			StreamSP->m_IsFirstFrm = true;
 			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_DONE);
 		}
-		//StreamSP->pushBufQ(TrueID);
-		//Index = StreamSP->popBufQ();
 		HAL_LOGD("stream not output,Index=%d",TrueID);
 		res = camera_release_frame(targetStreamParms->bufIndex);
 		if (res) {
@@ -5509,9 +5524,9 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
 
     int32_t jpegMaxSize = 0;
 	if (cameraId == 0)
-        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorBack[0]) * SIZE_ALIGN(jpegResolutionSensorBack[1]) + 4 * 1024;
+        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorBack[0]) * SIZE_ALIGN(jpegResolutionSensorBack[1]) + 1024;//save camera2_jpeg_blob
     else
-        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorFront[0]) * SIZE_ALIGN(jpegResolutionSensorFront[1]) + 4 * 1024;
+        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorFront[0]) * SIZE_ALIGN(jpegResolutionSensorFront[1]) + 1024;
     ADD_OR_SIZE(ANDROID_JPEG_MAX_SIZE, &jpegMaxSize, 1);
 
     // android.stats
@@ -5572,13 +5587,22 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             exposureCompensationRange,
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
-    static const int32_t availableTargetFpsRanges[] = {
-            4, 25, 5, 30
+    static const int32_t availableTargetFpsRangesBack[] = {
+            10, 20, 10, 25, 10, 30, 10, 31 /*4, 25, 5, 30*/
     };
-    ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
-            availableTargetFpsRanges,
-            sizeof(availableTargetFpsRanges)/sizeof(int32_t));
 
+    static const int32_t availableTargetFpsRangesFront[] = {
+            10, 15, 10, 20, 10, 25, 10, 30 /*4, 25, 5, 30*/
+    };
+    if (cameraId == 1) {
+        ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
+                availableTargetFpsRangesFront,
+                sizeof(availableTargetFpsRangesFront)/sizeof(int32_t));
+    } else {
+        ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
+                availableTargetFpsRangesBack,
+                sizeof(availableTargetFpsRangesBack)/sizeof(int32_t));
+    }
     static const uint8_t availableAntibandingModes[] = {
             ANDROID_CONTROL_AE_ANTIBANDING_MODE_OFF,
             ANDROID_CONTROL_AE_ANTIBANDING_MODE_AUTO
@@ -5619,6 +5643,9 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
 	static const uint8_t videoSnapshotSupport = ANDROID_SPRD_VIDEO_SNAPSHOT_SUPPORT_ON;
 	#endif
 	ADD_OR_SIZE(ANDROID_SPRD_VIDEO_SNAPSHOT_SUPPORT, &videoSnapshotSupport, 1);
+
+	static const uint8_t prvRecDifSize = 0;
+	ADD_OR_SIZE(ANDROID_SPRD_PRV_REC_DIFFERENT_SIZE_SUPPORT, &prvRecDifSize, 1);
 
 	static const uint8_t flashModeSupport = 1;
 	ADD_OR_SIZE(ANDROID_SPRD_FLASH_MODE_SUPPORT, &flashModeSupport, 1);
