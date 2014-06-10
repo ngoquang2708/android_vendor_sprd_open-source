@@ -80,6 +80,8 @@ const int32_t PreviewResolutionSensorBack[] = {/*supported video size must be sa
 };
 
 const int32_t PreviewResolutionSensorFront[] = {
+     960,  540,
+     720,  540,
      720,  480, // 3:2
      640,  480, // 4:3
      352,  288, // 11:9
