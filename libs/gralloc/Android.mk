@@ -78,6 +78,7 @@ endif
 
 ifneq ($(strip $(TARGET_BUILD_VARIANT)), user)
         LOCAL_CFLAGS += -DDUMP_FB
+        LOCAL_CFLAGS += -DSPRD_MONITOR_FBPOST
 endif
 
 ifeq ($(strip $(USE_SPRD_DITHER)) , true)

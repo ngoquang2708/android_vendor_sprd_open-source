@@ -34,6 +34,10 @@
 /* @} */
 #include <GLES/gl.h>
 
+#ifdef SPRD_MONITOR_FBPOST
+#include <signal.h>
+#endif
+
 #ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
 #include "gralloc_vsync_report.h"
 #endif
@@ -63,6 +67,71 @@ enum
 {
 	PAGE_FLIP = 0x00000001,
 };
+
+static int64_t systemTime()
+{
+    struct timespec t;
+    t.tv_sec = t.tv_nsec = 0;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec*1000000000LL + t.tv_nsec;
+}
+
+#ifdef SPRD_MONITOR_FBPOST
+static int TIMEOUT_VALUE = 100000; //us
+static struct itimerval current_value;
+static struct itimerval orignal_value;
+static bool signal_flag;
+static int64_t post_fb_before = 0;
+static int64_t post_fb_after = 0;
+
+static void post_fb_timeout_func(int signo)
+{
+    if (signal_flag == false)
+    {
+        ALOGW("[Gralloc]: post Framebuffer timeout > %d ms", TIMEOUT_VALUE/1000);
+    }
+}
+
+static void insert_timer()
+{
+    int ret = -1;
+    current_value.it_value.tv_sec = 0;
+    current_value.it_value.tv_usec = TIMEOUT_VALUE;
+    orignal_value.it_value.tv_sec = 0;
+    orignal_value.it_value.tv_usec = 0;
+
+    ret = setitimer(ITIMER_REAL, &current_value, &orignal_value);
+    if (ret != 0)
+    {
+        ALOGE("[Gralloc]: insert_timer failed");
+        return;
+    }
+
+    signal(SIGALRM, post_fb_timeout_func);
+
+    signal_flag = false;
+
+    post_fb_before = systemTime();
+}
+
+static void signal_timer()
+{
+    static int64_t diff = 0;
+    signal_flag = true;
+
+    post_fb_after = systemTime();
+
+    diff = post_fb_after - post_fb_before;
+
+    /*
+     *  If FBPost take more than 300ms, need print the Log info.
+     * */
+    if (diff > 300000000LL)
+    {
+        ALOGW("[Gralloc] FBPost actually take %lfms", (((double)diff)/((double)1000000)));
+    }
+}
+#endif
 
 #ifdef SPRD_DITHER_ENABLE
 
@@ -188,14 +257,6 @@ static void writeFpsToProc(float fps)
     }
 }
   
-static int64_t systemTime()
-{
-    struct timespec t;
-    t.tv_sec = t.tv_nsec = 0;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec*1000000000LL + t.tv_nsec;
-}
-
 bool gIsApctFpsShow = false;
 bool gIsApctRead  = false;
 bool getApctFpsSupport()
@@ -307,6 +368,10 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 
 #ifdef DEBUG_FB_POST
 	AINF( "%s in line=%d\n", __FUNCTION__, __LINE__);
+#endif
+
+#ifdef SPRD_MONITOR_FBPOST
+    insert_timer();
 #endif
 	if (m->currentBuffer)
 	{
@@ -476,6 +541,11 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #ifdef DEBUG_FB_POST
 	AINF( "%s out line=%d\n", __FUNCTION__, __LINE__);
 #endif
+
+#ifdef SPRD_MONITOR_FBPOST
+    signal_timer();
+#endif
+
 	return 0;
 }
 
