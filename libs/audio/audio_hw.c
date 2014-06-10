@@ -974,6 +974,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
+    int fm_open = 0;
 
     if(adev->voip_state) {
         int ret;
@@ -1014,6 +1015,7 @@ ret);
         if ((adev->out_devices & adev->dev_cfgs[i].mask)
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
         if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
+#if 0
             ALOGE("%s:open FM device",__func__);
             pthread_mutex_lock(&adev->lock);
             //force_all_standby(adev);
@@ -1032,6 +1034,10 @@ ret);
               }
             }
             pthread_mutex_unlock(&adev->lock);
+#else
+            fm_open = 1;
+            ALOGE("%s:Will open FM device",__func__);
+#endif
         }
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
@@ -1049,6 +1055,7 @@ ret);
           }
         }
     }
+
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
         if (!(adev->out_devices & adev->dev_cfgs[i].mask)
@@ -1075,6 +1082,29 @@ ret);
                     adev->dev_cfgs[i].off_len);
         }
     }
+
+    if (1 == fm_open) {
+        fm_open = 0;
+        ALOGE("%s:open FM device",__func__);
+        pthread_mutex_lock(&adev->lock);
+        //force_all_standby(adev);
+        adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
+        if (!pcm_is_ready(adev->pcm_fm_dl)) {
+            ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+            pcm_close(adev->pcm_fm_dl);
+            adev->pcm_fm_dl= NULL;
+        } else {
+              if( 0 != pcm_start(adev->pcm_fm_dl)){
+                  ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+              }
+              if(adev->master_mute){
+                  ALOGV("open FM and set codec unmute");
+                  set_codec_mute_forFM(adev,false);
+              }
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
     /* update EQ profile*/
     if(adev->eq_available)
         vb_effect_profile_apply();
