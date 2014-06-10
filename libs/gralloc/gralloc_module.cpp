@@ -168,7 +168,9 @@ static int gralloc_register_buffer(gralloc_module_t const *module, buffer_handle
 		size_t size = hnd->size;
 		hw_module_t *pmodule = NULL;
 		private_module_t *m = NULL;
-
+#if 1
+		m = (private_module_t*)module;
+#else
 		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
 		{
 			m = reinterpret_cast<private_module_t *>(pmodule);
@@ -179,7 +181,7 @@ static int gralloc_register_buffer(gralloc_module_t const *module, buffer_handle
 			retval = -errno;
 			goto cleanup;
 		}
-
+#endif
 		/* the test condition is set to m->ion_client <= 0 here, because:
 		 * 1) module structure are initialized to 0 if no initial value is applied
 		 * 2) a second user process should get a ion fd greater than 0.
@@ -325,15 +327,20 @@ static int gralloc_lock(gralloc_module_t const *module, buffer_handle_t handle, 
 		hw_module_t *pmodule = NULL;
 		private_module_t *m = NULL;
 
+#if 1
+		m = (private_module_t*)module;
+#else
 		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
 		{
 			m = reinterpret_cast<private_module_t *>(pmodule);
-			ion_invalidate_fd(m->ion_client, hnd->share_fd);
 		}
 		else
 		{
 			AERR("lock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+			return -EINVAL;
 		}
+#endif
+		ion_invalidate_fd(m->ion_client, hnd->share_fd);
 #endif
 	}
 
@@ -413,17 +420,20 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		hw_module_t *pmodule = NULL;
 		private_module_t *m = NULL;
-
+#if 1
+		m = (private_module_t*)module;
+#else
 		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
 		{
 			m = reinterpret_cast<private_module_t *>(pmodule);
-			ion_sync_fd(m->ion_client, hnd->share_fd);
 		}
 		else
 		{
 			AERR("Unlock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+			return -EINVAL;
 		}
-
+#endif
+		ion_sync_fd(m->ion_client, hnd->share_fd);
 #endif
 	}
 
