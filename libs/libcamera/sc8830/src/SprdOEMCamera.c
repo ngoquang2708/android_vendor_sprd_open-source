@@ -275,7 +275,7 @@ static int raw_data_rect_copy(void *src_vaddr, uint32_t width,uint32_t height,
 				struct img_rect rect, void *dst_vaddr);
 static int isp_overwrite_cap_mem(void);
 static int isp_is_have_src_data_from_picture(void);
-static uint32_t camera_get_sensor_interface_pixel_width(void);
+uint32_t get_sensor_interface_pixel_width(void);
 static uint32_t isp_get_saved_file_count(void);
 static void isp_set_saved_file_count(void);
 
@@ -6857,11 +6857,11 @@ int camera_start_isp_process(struct frm_info *data)
 
 	if (g_cxt->sn_cxt.sn_if.if_type) {
 		ips_in.src_frame.img_fmt = ISP_DATA_CSI2_RAW10;
-		raw_pixel_width=0xa;
+		raw_pixel_width=get_sensor_interface_pixel_width();
 		raw_format=0x08;
 	} else {
 		ips_in.src_frame.img_fmt = ISP_DATA_NORMAL_RAW10;
-		raw_pixel_width=0x10;
+		raw_pixel_width=get_sensor_interface_pixel_width();
 		raw_format=0x04;
 	}
 	ips_in.src_frame.img_addr_phy.chn0 = g_cxt->cap_mem[frm_id].cap_raw.addr_phy.addr_y;
@@ -9481,7 +9481,7 @@ static uint32_t isp_get_saved_file_count(void)
 }
 
 
-static uint32_t camera_get_sensor_interface_pixel_width(void)
+uint32_t get_sensor_interface_pixel_width(void)
 {
 	return g_cxt->sn_cxt.sensor_info->sensor_interface.pixel_width;
 }
@@ -9509,7 +9509,7 @@ static int isp_overwrite_cap_mem(void)
 	FILE* fp = 0;
 	char isptool_src_mipi_raw[] = SRC_MIPI_RAW;
 	camera_frame_type frame_type;
-	uint32_t pixel_width = camera_get_sensor_interface_pixel_width();
+	uint32_t pixel_width = get_sensor_interface_pixel_width();
 	uint32_t memsize = g_cxt->cap_mem[0].cap_raw.size.width * g_cxt->cap_mem[0].cap_raw.size.height * pixel_width / 8;
 
 	fp = fopen(isptool_src_mipi_raw, "r");
