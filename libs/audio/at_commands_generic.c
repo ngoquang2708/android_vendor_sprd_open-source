@@ -1,5 +1,6 @@
 #include "AtChannel.h"
 #define VOICECALL_VOLUME_MAX_UI	6
+#define AT_RESPONSE_LEN 1024
 
 enum {
      ROUTE_BIT = 0,
@@ -14,6 +15,7 @@ enum {
 };
 static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot handle many at commands once
 
+#if 0
 int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
 {
     const char *err_str = NULL;
@@ -55,6 +57,65 @@ int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
     }
     return 0;
 }
+
+#else
+
+int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
+{
+    size_t res = 0;
+    void *buf = NULL;
+    int indx = 0;
+    T_AT_CMD process_at_cmd = {0};
+    int dirty_count= 0;
+    int max_pri = 0;
+    int max_pri_bit = 0;
+    uint8_t dirty_indx = 0;
+    uint8_t cmd_queue_pri[MAX_AT_CMD_TYPE] = {0};
+    uint8_t cmd_bit = 0;
+
+    buf = malloc(AT_RESPONSE_LEN);
+    if (NULL == buf) {
+        ALOGE("do_cmd_dual: malloc fail!");
+        return -1;
+    }
+
+    pthread_mutex_lock(&ATlock);
+    dirty_count = __builtin_popcount(adev->at_cmd_vectors->at_cmd_dirty);
+    if(dirty_count != 0){
+        memcpy(&process_at_cmd, adev->at_cmd_vectors, sizeof(T_AT_CMD ));
+        memset(adev->at_cmd_vectors, 0x00, sizeof(T_AT_CMD ));
+    }
+    pthread_mutex_unlock(&ATlock);
+
+    ALOGD("do_cmd_dual Switch incall AT command dirty_count:[%d] : [%d] :[%0x]", dirty_count,sizeof(process_at_cmd.at_cmd)/sizeof(process_at_cmd.at_cmd[0]),process_at_cmd.at_cmd_dirty);
+    for(dirty_indx = 0;dirty_indx < dirty_count;dirty_indx++){
+        max_pri = process_at_cmd.at_cmd_priority[0];
+        max_pri_bit = 0;
+        for(indx=0;indx < sizeof(process_at_cmd.at_cmd)/sizeof(process_at_cmd.at_cmd[0]);indx++){
+            if(max_pri < process_at_cmd.at_cmd_priority[indx]){
+                max_pri = process_at_cmd.at_cmd_priority[indx];
+                max_pri_bit = indx;
+            }
+        }
+        process_at_cmd.at_cmd_priority[max_pri_bit] = 0;
+        cmd_queue_pri[dirty_indx] = max_pri_bit;
+        ALOGD("do_cmd_dual Switch incall AT command dirty Bit :[%x] ", max_pri_bit);
+    }
+    for(indx=0;indx < dirty_count;indx++){
+        cmd_bit = cmd_queue_pri[dirty_count-indx-1];
+        ALOGD("do_cmd_dual Switch incall AT command [%d][%d][%s][%d] ", modemId,simId,&(process_at_cmd.at_cmd[cmd_bit]),cmd_bit);
+        memset(buf, '\0', AT_RESPONSE_LEN);
+        res = sendAt(buf, AT_RESPONSE_LEN, simId, &(process_at_cmd.at_cmd[cmd_bit]));
+        ALOGD("do_cmd_dual Switch incall AT command [%s][%s][%d] ", &(process_at_cmd.at_cmd[cmd_bit]), buf, res);
+    }
+    if (buf != NULL){
+        free(buf);
+        buf = NULL;
+    }
+    return 0;
+}
+#endif
+
 static uint8_t process_priority(struct tiny_audio_device *adev,int bit){
     int indx = 0;
     int max_priority = adev->at_cmd_vectors->at_cmd_priority[0];
