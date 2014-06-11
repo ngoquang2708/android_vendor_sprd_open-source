@@ -21,6 +21,8 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	$(LOCAL_PATH)/sensor_drv_u/inc \
 	$(LOCAL_PATH)/isp/inc \
+	$(LOCAL_PATH)/isp/uv_denoise \
+	$(LOCAL_PATH)/isp/uv_denoise/inc \
 	external/skia/include/images \
 	external/skia/include/core\
 	external/jhead \
@@ -103,6 +105,9 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_tune_v0001.c \
 	isp/isp_param_size.c \
 	isp/isp_param_file_update.c \
+	isp/isp_stub_proc.c \
+	isp/isp_stub_msg.c \
+	isp/uv_denoise/denoise_app.c \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \
@@ -271,7 +276,7 @@ endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_easy_hdr libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
 endif
 
 include $(BUILD_SHARED_LIBRARY)

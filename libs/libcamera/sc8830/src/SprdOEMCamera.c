@@ -27,6 +27,7 @@
 #include "sprd_rot_k.h"
 #include "isp_video.h"
 #include <androidfw/SprdIlog.h>
+#include "isp/uv_denoise/inc/denoise_app.h"
 
 static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
@@ -7292,6 +7293,15 @@ int camera_start_jpeg_encode(struct frm_info *data)
 		in_parm.temp_buf_phy,
 		in_parm.temp_buf_vir,
 		in_parm.temp_buf_size);
+
+#ifdef CONFIG_CAPTURE_DENOISE
+	struct isp_denoise_input uvdenoise_input;
+	uvdenoise_input.InputHeight = in_parm.size.height;
+	uvdenoise_input.InputWidth = in_parm.size.width;
+	uvdenoise_input.InputAddr = in_parm.src_addr_vir.addr_u;
+	struct isp_denoise_input *denoise_in = &uvdenoise_input;
+	isp_uv_denoise(denoise_in);
+#endif
 
 	g_cxt->jpeg_cxt.proc_status.frame_info = *data;
 	g_cxt->jpeg_cxt.jpeg_state = JPEG_ENCODE;
