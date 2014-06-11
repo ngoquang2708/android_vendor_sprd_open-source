@@ -134,7 +134,7 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
 	struct cmd_common cmd_common_buffer={0};
     struct cmd_common *common = &cmd_common_buffer;
     fd_set fds_read;
-    struct timeval timeout = {5,0};
+    struct timeval timeout = {3,0};
     int maxfd = 0;
     int offset = 0;
     int bytes = 0;
@@ -161,10 +161,12 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
         }
         else if(!result) {
             ALOGE(" :saudio_wait_common_cmd select timeout");
+            result = -1;
             goto muxerror;
         }
         if(FD_ISSET(audio_ctrl_fd ,&fds_read) <= 0) {
             ALOGE(" :saudio_wait_common_cmd select ok but no fd is set");
+            result = -1;
             goto muxerror;
         }
         offset = sizeof(struct cmd_common) - bytes;
