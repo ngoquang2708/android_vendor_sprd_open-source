@@ -53,10 +53,18 @@ int start_oprofile(unsigned long time)
         strcpy(addr.sun_path , OPROFILE_SOCKET_NAME);
         info.cmd = OPROFILE_START;
         info.profiletime = time;
-        sendto(client , &info , sizeof(info) , 0 , (struct sockaddr*)&addr , slen);
-        ALOGD("start oprofile");
+        int ret = sendto(client , &info , sizeof(info) , 0 , (struct sockaddr*)&addr , slen);
         close(client);
-        return 0;
+        if(ret < 0)
+        {
+            ALOGD("start oprofile failed");
+            return -1;
+        }
+        else
+        {
+            ALOGD("start oprofile");
+            return 0;
+        }
     }
     else
     {
@@ -90,7 +98,12 @@ void* oprofile_daemon(void* param)
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path , OPROFILE_SOCKET_NAME);
     unlink(addr.sun_path);
-    bind(serv , (struct sockaddr*) &addr , sizeof(addr));
+    if(bind(serv , (struct sockaddr*) &addr , sizeof(addr)) < 0)
+    {
+        close(serv);
+        ALOGE("start oprofile daemon failed");
+        return NULL;
+    }
     for(;;) {
         len = recvfrom(serv , &pinfo , sizeof(pinfo) , 0 , (struct sockaddr*)&addr , &addr_len);
         ALOGD("----------------------receive from client---------------------");
