@@ -1807,6 +1807,7 @@ void *camera_cap_thread_proc(void *data)
 					if (CAMERA_SUCCESS == isp_is_have_src_data_from_picture()) {
 						isp_overwrite_cap_mem();
 					}
+					isp_set_saved_file_count();
 				}
 
 				ret = camera_v4l2_capture_handle(data);
@@ -9531,8 +9532,6 @@ static int isp_overwrite_cap_mem(void)
 		CMR_LOGI("fail : no input_raw source file.\n");
 		return -CAMERA_FAILED;
 	}
-
-	isp_set_saved_file_count();
 
 	frame_type.buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[0].cap_raw.addr_vir.addr_y;
 	frame_type.buffer_phy_addr = g_cxt->cap_mem[0].cap_raw.addr_phy.addr_y;
