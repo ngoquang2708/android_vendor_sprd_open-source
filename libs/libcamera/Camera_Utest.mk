@@ -18,13 +18,13 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/inc \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
+	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	$(LOCAL_PATH)/sensor_drv_u/inc \
 	$(LOCAL_PATH)/isp/inc \
-	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -65,9 +65,9 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov7675.c\
 	sensor/sensor_hi253.c\
 	sensor/sensor_hi255.c\
-        sensor/sensor_s5k4ecgx_mipi.c \
-        sensor/sensor_s5k4ecgx.c \
-        sensor/sensor_sp2529_mipi.c \
+	sensor/sensor_s5k4ecgx_mipi.c \
+	sensor/sensor_sp2529_mipi.c \
+	sensor/sensor_s5k4ecgx.c \
 	sensor/sensor_sr352.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
@@ -150,10 +150,6 @@ ifeq ($(strip $(TARGET_BOARD_NO_FRONT_SENSOR)),true)
 LOCAL_CFLAGS += -DCONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
 endif
 
-ifeq ($(strip $(TARGET_BOARD_Z788)),true)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_788
-endif
-
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
@@ -197,6 +193,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_MIPI
 endif
+
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),ccir)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_CCIR
 endif
@@ -204,6 +201,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_MIPI
 endif
+
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),ccir)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_CCIR
 endif
