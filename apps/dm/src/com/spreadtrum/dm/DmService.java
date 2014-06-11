@@ -408,13 +408,13 @@ public class DmService extends Service {
         mInstance = this;
         Log.d(TAG, "OnCreate: mInstance = " + mInstance);
 /**** set foreground **************/
-	NotificationManager mNotificationManager=null;
-        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-	Notification notify = new Notification();
-	notify.flags |= Notification.FLAG_FOREGROUND_SERVICE;
-	super.startForeground(10,notify);
-        Log.d(TAG, "OnCreate: setForeground ");
-	mNotificationManager.notify(10, notify);
+//	NotificationManager mNotificationManager=null;
+//        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+//	Notification notify = new Notification();
+//	notify.flags |= Notification.FLAG_FOREGROUND_SERVICE;
+//	super.startForeground(10,notify);
+//        Log.d(TAG, "OnCreate: setForeground ");
+//	mNotificationManager.notify(10, notify);
 /**** set foreground **************/
 
         mHandler = new DMHandler();
