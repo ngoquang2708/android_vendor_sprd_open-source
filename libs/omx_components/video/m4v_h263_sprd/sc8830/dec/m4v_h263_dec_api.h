@@ -72,6 +72,15 @@ typedef enum
     MMDEC_MEMORY_ALLOCED = -10
 } MMDecRet;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
+
 // decoder video format structure
 typedef struct
 {
@@ -81,7 +90,8 @@ typedef struct
     int32	i_extra;
     uint8 *p_extra;
     uint32 p_extra_phy;
-    int32	uv_interleaved;
+    //int32	uv_interleaved;
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure

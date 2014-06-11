@@ -290,7 +290,7 @@ void SPRDAVCDecoder::set_ddr_freq(const char* freq_in_khz)
 void SPRDAVCDecoder::change_ddr_freq()
 {
     if(!mDecoderSwFlag)
-	{
+    {
         uint32_t frame_size = mWidth * mHeight;
         char* ddr_freq;
 
@@ -385,7 +385,8 @@ status_t SPRDAVCDecoder::initDecoder() {
     video_format.p_extra = NULL;
     video_format.p_extra_phy = 0;
     video_format.i_extra = 0;
-    video_format.uv_interleaved = 1;
+    //video_format.uv_interleaved = 1;
+    video_format.yuv_format = YUV420SP_NV21;
 
     if ((*mH264DecInit)(mHandle, &codec_buf,&video_format) != MMDEC_OK) {
         ALOGE("Failed to init AVCDEC");
@@ -1086,7 +1087,7 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             continue;
         }
 
-	bufferSize = dec_in.dataLen;
+        bufferSize = dec_in.dataLen;
         CHECK_LE(bufferSize, inHeader->nFilledLen);
         inHeader->nOffset += bufferSize;
         inHeader->nFilledLen -= bufferSize;
