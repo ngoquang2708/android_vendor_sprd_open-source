@@ -18,13 +18,13 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/inc \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/src \
 	$(LOCAL_PATH)/sc8830/inc \
+	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	$(LOCAL_PATH)/sensor_drv_u/inc \
 	$(LOCAL_PATH)/isp/inc \
-	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -32,6 +32,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
+	sc8830/src/SprdCameraParameters.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
 	sc8830/src/cmr_mem.c \
@@ -64,9 +65,9 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov7675.c\
 	sensor/sensor_hi253.c\
 	sensor/sensor_hi255.c\
-        sensor/sensor_s5k4ecgx_mipi.c \
-        sensor/sensor_sp2529_mipi.c \
-        sensor/sensor_s5k4ecgx.c \
+	sensor/sensor_s5k4ecgx_mipi.c \
+	sensor/sensor_sp2529_mipi.c \
+	sensor/sensor_s5k4ecgx.c \
 	sensor/sensor_sr352.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
@@ -103,13 +104,12 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_tune_v0001.c \
 	isp/isp_param_size.c \
 	isp/isp_param_file_update.c \
-	sc8830/isp_calibration/src/utest_camera.cpp \
+	sc8830/isp_calibration/src/utest_jpeg.cpp \
 	sc8830/isp_calibration/src/isp_calibration.c \
 	sc8830/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \
-	sc8830/src/SprdBaseThread.cpp \
-	sc8830/src/SprdCamera2.c \
-	sc8830/src/SprdCameraHWInterface2.cpp
+	sc8830/src/SprdCameraHardwareInterface.cpp
+
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M -DANDROID_4100
@@ -150,14 +150,9 @@ ifeq ($(strip $(TARGET_BOARD_NO_FRONT_SENSOR)),true)
 LOCAL_CFLAGS += -DCONFIG_DCAM_SENSOR_NO_FRONT_SUPPORT
 endif
 
-ifeq ($(strip $(TARGET_BOARD_Z788)),true)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_788
-endif
-
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
-
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_MODE)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ZSL_CAPTURE
@@ -198,6 +193,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_MIPI
 endif
+
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),ccir)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_CCIR
 endif
@@ -205,6 +201,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_MIPI
 endif
+
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),ccir)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_CCIR
 endif
@@ -223,6 +220,10 @@ endif
 
 ifeq ($(strip $(CAMERA_SENSOR_OUTPUT_ONLY)),true)
 LOCAL_CFLAGS += -DCONFIG_SENSOR_OUTPUT_ONLY
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_FACE_DETECT
 endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_NO_FLASH_DEV)),true)
@@ -262,11 +263,11 @@ ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_MIPI)),phyab)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_MIPI_PHYAB
 endif
 
-LOCAL_MODULE := utest_camera2_$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE := utest_jpeg_$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libmorpho_easy_hdr libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libcamera_metadata
 endif
 
 include $(BUILD_EXECUTABLE)

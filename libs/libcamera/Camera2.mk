@@ -23,8 +23,8 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/isp/inc \
 	external/skia/include/images \
 	external/skia/include/core\
-        external/jhead \
-        external/sqlite/dist \
+	external/jhead \
+	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -65,8 +65,8 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_hi253.c\
 	sensor/sensor_hi255.c\
 	sensor/sensor_s5k4ecgx_mipi.c \
-        sensor/sensor_sp2529_mipi.c \
-        sensor/sensor_s5k4ecgx.c \
+	sensor/sensor_sp2529_mipi.c \
+	sensor/sensor_s5k4ecgx.c \
 	sensor/sensor_sr352.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
@@ -154,7 +154,6 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
 
-
 ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_MODE)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ZSL_CAPTURE
 endif
@@ -191,10 +190,6 @@ ifeq ($(strip $(TARGET_BOARD_CAMERA_DMA_COPY)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_DMA_COPY
 endif
 
-ifeq ($(strip $(TARGET_BOARD_SP7710_CAMERA)),true)
-LOCAL_CFLAGS += -DCONFIG_CAMERA_SP7710_FEATURE
-endif
-
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_MIPI
 endif
@@ -206,6 +201,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),mipi)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_MIPI
 endif
+
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_INTERFACE)),ccir)
 LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_CCIR
 endif
@@ -224,6 +220,10 @@ endif
 
 ifeq ($(strip $(CAMERA_SENSOR_OUTPUT_ONLY)),true)
 LOCAL_CFLAGS += -DCONFIG_SENSOR_OUTPUT_ONLY
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_FACE_DETECT
 endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_NO_FLASH_DEV)),true)
