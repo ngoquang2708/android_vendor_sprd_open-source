@@ -52,7 +52,7 @@ extern "C"
 #define CMR_EVT_JPEG_BASE                  (1 << 20)
 #define CMR_EVT_OEM_BASE                   (1 << 21)
 
-#define RAWRGB_BIT_WIDTH                   10
+#define RAWRGB_BIT_WIDTH                   get_sensor_interface_pixel_width()
 #define CMR_ZOOM_FACTOR                    2
 #define CMR_SLICE_HEIGHT                   256
 #define CMR_SHARK_SCALING_TH               2048
@@ -191,6 +191,7 @@ struct  sensor_if {
 typedef void (*cmr_evt_cb)(int evt, void* data);
 typedef int  (*cmr_before_set_cb)(enum restart_mode re_mode);
 typedef int  (*cmr_after_set_cb)(enum restart_mode re_mode, enum img_skip_mode skip_mode, uint32_t skip_number);
+extern uint32_t get_sensor_interface_pixel_width(void);
 
 #ifdef __cplusplus
 }
