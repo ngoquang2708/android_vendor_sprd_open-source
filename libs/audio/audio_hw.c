@@ -489,6 +489,7 @@ struct tiny_private_ctl private_ctl;
     int  input_source;
     T_AT_CMD  *at_cmd_vectors;
     voip_timer_t voip_timer; //for forbid voip
+    pthread_mutex_t               device_lock;
 };
 
 struct tiny_stream_out {
@@ -1146,6 +1147,11 @@ ret);
     if(adev->eq_available)
         vb_effect_sync_devices(adev->out_devices, adev->in_devices);
 
+    pthread_mutex_lock(&adev->device_lock);
+    if(adev->call_start == 1){
+        pthread_mutex_unlock(&adev->device_lock);
+        return ;
+    }
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
 	/* separate INPUT/OUTPUT case for some common bit used. */
@@ -1224,6 +1230,7 @@ ret);
     if(adev->eq_available)
         vb_effect_profile_apply();
     SetAudio_gain_route(adev,1);
+    pthread_mutex_unlock(&adev->device_lock);
 }
 
 static void select_devices_signal(struct tiny_audio_device *adev)
@@ -3264,7 +3271,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         }
     }
 #endif
-    if((adev->mode  != AUDIO_MODE_IN_CALL) &&
+    if((adev->call_start != 1) &&
             ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
     {
         if(!in->is_bt_sco) {

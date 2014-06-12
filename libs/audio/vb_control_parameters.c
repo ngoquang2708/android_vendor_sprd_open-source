@@ -1747,7 +1747,11 @@ RESTART:
 
 		
 		ALOGW("voice:START CALL,open pcm device...");
+
+        pthread_mutex_lock(&adev->device_lock);
 		adev->call_start = 1;
+        pthread_mutex_unlock(&adev->device_lock);
+
 		SetParas_OpenHal_Incall(adev,para->vbpipe_fd);   //get sim card number
 
 		adev->cp_type = para->cp_type;
