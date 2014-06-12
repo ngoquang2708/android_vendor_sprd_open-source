@@ -1988,8 +1988,17 @@ int is_rm_cali_nv_need_to_handle(char *buf,int len)
         if((cmd_mask & DIAG_CMD_BTBIT) || (cmd_mask & DIAG_CMD_WIFIBIT) || (g_ap_cali_flag && ((cmd_mask & DIAG_CMD_IMEI1BIT)
                         || (cmd_mask & DIAG_CMD_IMEI2BIT) || (cmd_mask & DIAG_CMD_IMEI3BIT) || (cmd_mask & DIAG_CMD_IMEI4BIT)))){
             ENG_LOG("%s: Get BT/WIFI Mac addr req or IMEI req!\n", __FUNCTION__);
-            if((cmd_mask & (~(DIAG_CMD_BTBIT|DIAG_CMD_WIFIBIT|DIAG_CMD_IMEI1BIT|DIAG_CMD_IMEI2BIT
-                                |DIAG_CMD_IMEI3BIT|DIAG_CMD_IMEI4BIT)))){
+            if(cmd_mask = (cmd_mask & (~(DIAG_CMD_BTBIT|DIAG_CMD_WIFIBIT)))){
+                if(g_ap_cali_flag){
+                    if(cmd_mask & (~(DIAG_CMD_IMEI1BIT|DIAG_CMD_IMEI2BIT|DIAG_CMD_IMEI3BIT|DIAG_CMD_IMEI4BIT))){
+                        ENG_LOG("%s: Have other commands !\n", __FUNCTION__);
+                        return 2;
+                    }else{
+                        ENG_LOG("%s: No other commands !\n", __FUNCTION__);
+                        return 1;
+                    }
+                }
+
                 ENG_LOG("%s: Have other commands !\n", __FUNCTION__);
                 return 2;
             }else{
