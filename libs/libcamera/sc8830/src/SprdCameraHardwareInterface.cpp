@@ -5841,6 +5841,7 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 	int ret = 0;
 	sprd_camera_memory_t *pmem = NULL;
 	MemoryHeapIon *pHeapIon = NULL;
+	uint32_t i;
 
 	switch(type)
 	{
@@ -5858,7 +5859,12 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 	case CAMERA_FLUSH_PREVIEW_HEAP:
 		if ( (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage)
 			&& index < (int)mPreviewHeapNum && mPreviewHeapArray != NULL) {
-			pmem = mPreviewHeapArray[index];
+			for (i=0; i<mPreviewHeapNum ;i++) {
+				if (mPreviewHeapArray_vir[i] == (uint32_t)v_addr) {
+					pmem = mPreviewHeapArray[i];
+					break;
+				}
+			}
 		}
 		break;
 
