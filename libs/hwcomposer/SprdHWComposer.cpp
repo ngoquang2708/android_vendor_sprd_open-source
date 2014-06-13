@@ -233,6 +233,11 @@ int SprdHWComposer:: blank(int disp, int blank)
 
 int SprdHWComposer:: query(int what, int* value)
 {
+#ifdef HWC_SUPPORT
+    *value = 1;
+#else
+    *value = 0;
+#endif
     return 0;
 }
 

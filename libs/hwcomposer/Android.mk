@@ -84,6 +84,7 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 	LOCAL_CFLAGS += -DGSP_ADDR_TYPE_PHY
+        LOCAL_CLFAGS += -DHWC_SUPPORT
 	endif
 
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
