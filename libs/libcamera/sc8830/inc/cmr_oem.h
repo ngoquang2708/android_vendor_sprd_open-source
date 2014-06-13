@@ -48,6 +48,9 @@ extern "C"
 #define CMR_EVT_AF_INIT                              (CMR_EVT_OEM_BASE + 12)
 #define CMR_EVT_CAF_MOVE_START                       (CMR_EVT_OEM_BASE + 13)
 #define CMR_EVT_CAF_MOVE_STOP                        (CMR_EVT_OEM_BASE + 14)
+#define CMR_EVT_SCALE_INIT                           (CMR_EVT_OEM_BASE + 16)
+#define CMR_EVT_SCALE_START                          (CMR_EVT_OEM_BASE + 17)
+#define CMR_EVT_SCALE_EXIT                           (CMR_EVT_OEM_BASE + 18)
 
 #define CMR_EVT_PREV_BASE                            (CMR_EVT_OEM_BASE + 0x100)
 #define CMR_EVT_PREV_INIT                            (CMR_EVT_OEM_BASE + 0x0)
@@ -224,6 +227,7 @@ struct jpeg_context {
 };
 
 struct scaler_context {
+	int		fd;
 	uint32_t                 scale_state;
 	struct process_status    proc_status;
 	uint32_t                 sc_capability;

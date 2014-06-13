@@ -24,15 +24,18 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <cutils/log.h>
-#include "img_scale_u.h"
 #include "cmr_common.h"
 #include <semaphore.h>
 #include <linux/ion.h>
+#include "ion_sprd.h"
 #include <binder/MemoryHeapIon.h>
+#include <linux/types.h>
+#include <asm/ioctl.h>
+#include "sprd_scale_k.h"
 
 using namespace android;
 
-#define UTEST_SCALING_COUNTER 3
+#define UTEST_SCALING_COUNTER 0xFFFFFFFF
 #define SAVE_SCALING_OUTPUT_DATA 0
 #define ERR(x...) fprintf(stderr, x)
 #define INFO(x...) fprintf(stdout, x)
@@ -80,6 +83,7 @@ struct utest_scaling_context {
 	uint32_t input_height;
 	uint32_t output_width;
 	uint32_t output_height;
+	uint32_t cnt;
 };
 
 static char utest_scaling_src_y_file[] = "/data/utest_scaling_src_y.raw";
@@ -100,70 +104,41 @@ static int utest_do_scaling(int fd,
 	int ret = 0;
 	struct img_frm src_img, dst_img;
 	struct img_rect src_rect;
-	enum scle_mode scale_mode = SCALE_MODE_NORMAL;
-	struct scale_frame scale_frm;
 
-	src_img.fmt = (uint32_t)input_fmt;
-	src_img.size.width = input_width;
-	src_img.size.height = input_height;
-	src_img.addr_phy.addr_y = input_yaddr;
-	src_img.addr_phy.addr_u = intput_uvaddr;
-	src_img.addr_phy.addr_v = intput_uvaddr;
-	src_img.data_end.y_endian = 1;
-	src_img.data_end.uv_endian = 1;
+//	struct scale_frame scale_frm;
 
-	src_rect.start_x = 0;
-	src_rect.start_y = 0;
-	src_rect.width = input_width;
-	src_rect.height = input_height;
+	struct scale_frame_param_t frame_params;
 
-	dst_img.fmt = (uint32_t)HW_SCALE_DATA_YUV420;
-	dst_img.size.width = output_width;
-	dst_img.size.height = output_height;
-	dst_img.addr_phy.addr_y = output_yaddr;
-	dst_img.addr_phy.addr_u = output_uvaddr;
-	dst_img.addr_phy.addr_v = output_uvaddr;
-	dst_img.data_end.y_endian = 1;
-	dst_img.data_end.uv_endian = 1;
+	memset((void*)&frame_params, 0x00, sizeof(struct scale_frame_param_t));
 
-	ret = ioctl(fd, SCALE_IO_INPUT_SIZE, &src_img.size);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
+	//input params
+	frame_params.input_size.w = input_width;
+	frame_params.input_size.h = input_height;
+	frame_params.input_rect.x = 0;
+	frame_params.input_rect.y = 0;
+	frame_params.input_rect.w = input_width;
+	frame_params.input_rect.h = input_height;
+	frame_params.input_format = (enum scale_fmt_e)input_fmt;
+	frame_params.input_addr.yaddr = input_yaddr;
+	frame_params.input_addr.uaddr = intput_uvaddr;
+	frame_params.input_addr.vaddr = intput_uvaddr;
+	frame_params.input_endian.y_endian = 1;
+	frame_params.input_endian.uv_endian = 1;
 
-	ret = ioctl(fd, SCALE_IO_INPUT_RECT, &src_rect);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
+	//output params
+	frame_params.output_size.w = output_width;
+	frame_params.output_size.h = output_height;
+	frame_params.output_format = (enum scale_fmt_e)HW_SCALE_DATA_YUV420;
+	frame_params.output_addr.yaddr = output_yaddr;
+	frame_params.output_addr.uaddr = output_uvaddr;
+	frame_params.output_addr.vaddr = output_uvaddr;
+	frame_params.output_endian.y_endian = 1;
+	frame_params.output_endian.uv_endian = 1;
 
-	ret = ioctl(fd, SCALE_IO_INPUT_FORMAT, &src_img.fmt );
-	UTEST_SCALING_EXIT_IF_ERR(ret);
+	frame_params.scale_mode = SCALE_MODE_NORMAL;
 
-	ret = ioctl(fd, SCALE_IO_INPUT_ENDIAN, &src_img.data_end);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
+	ret = ioctl(fd, SCALE_IO_START, &frame_params);
 
-	ret = ioctl(fd, SCALE_IO_INPUT_ADDR, &src_img.addr_phy);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_OUTPUT_SIZE, &dst_img.size);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_OUTPUT_FORMAT, &dst_img.fmt);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_OUTPUT_ENDIAN, &dst_img.data_end);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_OUTPUT_ADDR, &dst_img.addr_phy);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_SCALE_MODE, &scale_mode);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_START, NULL);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	ret = ioctl(fd, SCALE_IO_IS_DONE, &scale_frm);
-	UTEST_SCALING_EXIT_IF_ERR(ret);
-
-	exit:
-	ret = ioctl(fd, SCALE_IO_STOP, &scale_frm);
 	if (ret) {
 		ERR("utes_scaling camera_scaling fail. Line:%d", __LINE__);
 		ret = -1;
@@ -177,7 +152,7 @@ static int utest_do_scaling(int fd,
 static void usage(void)
 {
 	INFO("Usage:\n");
-	INFO("utest_scaling -iw input_width -ih input_height -ow out_width -oh out_height\n");
+	INFO("utest_scaling -iw input_width -ih input_height -ow out_width -oh out_height -cnt count\n");
 }
 
 static int utest_scaling_param_set(int argc, char **argv)
@@ -201,6 +176,8 @@ static int utest_scaling_param_set(int argc, char **argv)
 			scaling_cxt_ptr->output_width = atoi(argv[++i]);
 		} else if (strcmp(argv[i], "-oh") == 0 && (i < argc-1)) {
 			scaling_cxt_ptr->output_height = atoi(argv[++i]);
+		} else if (strcmp(argv[i], "-cnt") == 0 && (i < argc-1)) {
+			scaling_cxt_ptr->cnt = atoi(argv[++i]);
 		} else {
 			usage();
 			return -1;
@@ -218,20 +195,41 @@ static int utest_scaling_param_set(int argc, char **argv)
 	return 0;
 }
 
+static int utest_mm_iommu_is_enabled(void)
+{
+	return MemoryHeapIon::Mm_iommu_is_enabled();
+}
+
 static int utest_scaling_mem_alloc(void)
 {
 	struct utest_scaling_context *scaling_cxt_ptr = g_utest_scaling_cxt_ptr;
+	int mem_method = utest_mm_iommu_is_enabled();
 
+//	INFO("utest_scaling_mem_alloc %d\n",mem_method);
 	/* alloc input y buffer */
-	scaling_cxt_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+	if (0 == mem_method ) {
+		scaling_cxt_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
 										scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height,
 										MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	} else {
+		scaling_cxt_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+										scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height,
+										MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+	}
+
 	if (scaling_cxt_ptr->input_y_pmem_hp->getHeapID() < 0) {
 		ERR("failed to alloc input_y pmem buffer.\n");
 		return -1;
 	}
-	scaling_cxt_ptr->input_y_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->input_y_physical_addr),
+
+	if ( 0 == mem_method ) {
+		scaling_cxt_ptr->input_y_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->input_y_physical_addr),
+			(int *)(&scaling_cxt_ptr->input_y_pmemory_size));
+	} else {
+		scaling_cxt_ptr->input_y_pmem_hp->get_mm_iova((int *)(&scaling_cxt_ptr->input_y_physical_addr),
 		(int *)(&scaling_cxt_ptr->input_y_pmemory_size));
+	}
+
 	scaling_cxt_ptr->input_y_virtual_addr = (unsigned char*)scaling_cxt_ptr->input_y_pmem_hp->base();
 	if (!scaling_cxt_ptr->input_y_physical_addr) {
 		ERR("failed to alloc input_y pmem buffer:addr is null.\n");
@@ -239,17 +237,30 @@ static int utest_scaling_mem_alloc(void)
 	}
 	memset(scaling_cxt_ptr->input_y_virtual_addr, 0x80, scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height);
 
-
 	/* alloc input uv buffer */
-	scaling_cxt_ptr->input_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
+	if (0 == mem_method ) {
+		scaling_cxt_ptr->input_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
+											scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height / 2,
+											MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	} else {
+		scaling_cxt_ptr->input_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
 										scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height / 2,
-										MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+										MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+	}
+
 	if (scaling_cxt_ptr->input_uv_pmem_hp->getHeapID() < 0) {
 		ERR("failed to alloc input_uv pmem buffer.\n");
 		return -1;
 	}
-	scaling_cxt_ptr->input_uv_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->input_uv_physical_addr),
-		(int *)(&scaling_cxt_ptr->input_uv_pmemory_size));
+
+	if (0 == mem_method ) {
+		scaling_cxt_ptr->input_uv_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->input_uv_physical_addr),
+				(int *)(&scaling_cxt_ptr->input_uv_pmemory_size));
+	} else {
+		scaling_cxt_ptr->input_uv_pmem_hp->get_mm_iova((int *)(&scaling_cxt_ptr->input_uv_physical_addr),
+			(int *)(&scaling_cxt_ptr->input_uv_pmemory_size));
+	}
+
 	scaling_cxt_ptr->input_uv_virtual_addr = (unsigned char*)scaling_cxt_ptr->input_uv_pmem_hp->base();
 	if (!scaling_cxt_ptr->input_uv_physical_addr) {
 		ERR("failed to alloc input_uv pmem buffer:addr is null.\n");
@@ -258,15 +269,29 @@ static int utest_scaling_mem_alloc(void)
 	memset(scaling_cxt_ptr->input_uv_virtual_addr, 0x80, scaling_cxt_ptr->input_width * scaling_cxt_ptr->input_height / 2);
 
 	/* alloc outout y buffer */
-	scaling_cxt_ptr->output_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+	if ( 0 == mem_method ) {
+		scaling_cxt_ptr->output_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+											scaling_cxt_ptr->output_width * scaling_cxt_ptr->output_height,
+											MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	} else {
+		scaling_cxt_ptr->output_y_pmem_hp = new MemoryHeapIon("/dev/ion",
 										scaling_cxt_ptr->output_width * scaling_cxt_ptr->output_height,
-										MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+										MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+	}
+
 	if (scaling_cxt_ptr->output_y_pmem_hp->getHeapID() < 0) {
 		ERR("failed to alloc output_y pmem buffer.\n");
 		return -1;
 	}
-	scaling_cxt_ptr->output_y_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->output_y_physical_addr),
-		(int *)(&scaling_cxt_ptr->output_y_pmemory_size));
+
+	if ( 0 == mem_method ) {
+		scaling_cxt_ptr->output_y_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->output_y_physical_addr),
+			(int *)(&scaling_cxt_ptr->output_y_pmemory_size));
+	} else {
+		scaling_cxt_ptr->output_y_pmem_hp->get_mm_iova((int *)(&scaling_cxt_ptr->output_y_physical_addr),
+			(int *)(&scaling_cxt_ptr->output_y_pmemory_size));
+	}
+
 	scaling_cxt_ptr->output_y_virtual_addr = (unsigned char*)scaling_cxt_ptr->output_y_pmem_hp->base();
 	if (!scaling_cxt_ptr->output_y_physical_addr) {
 		ERR("failed to alloc output_y pmem buffer:addr is null.\n");
@@ -274,15 +299,28 @@ static int utest_scaling_mem_alloc(void)
 	}
 
 	/* alloc outout uv buffer */
-	scaling_cxt_ptr->output_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
-										scaling_cxt_ptr->output_width * scaling_cxt_ptr->output_height / 2,
-										MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	if ( 0 == mem_method ) {
+		scaling_cxt_ptr->output_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
+											scaling_cxt_ptr->output_width * scaling_cxt_ptr->output_height / 2,
+											MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+	} else {
+		scaling_cxt_ptr->output_uv_pmem_hp = new MemoryHeapIon("/dev/ion",
+											scaling_cxt_ptr->output_width * scaling_cxt_ptr->output_height / 2,
+											MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+	}
 	if (scaling_cxt_ptr->output_uv_pmem_hp->getHeapID() < 0) {
 		ERR("failed to alloc output_uv pmem buffer.\n");
 		return -1;
 	}
-	scaling_cxt_ptr->output_uv_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->output_uv_physical_addr),
-		(int *)(&scaling_cxt_ptr->output_uv_pmemory_size));
+
+	if ( 0 == mem_method ) {
+		scaling_cxt_ptr->output_uv_pmem_hp->get_phy_addr_from_ion((int *)(&scaling_cxt_ptr->output_uv_physical_addr),
+			(int *)(&scaling_cxt_ptr->output_uv_pmemory_size));
+	} else {
+		scaling_cxt_ptr->output_uv_pmem_hp->get_mm_iova((int *)(&scaling_cxt_ptr->output_uv_physical_addr),
+			(int *)(&scaling_cxt_ptr->output_uv_pmemory_size));
+	}
+
 	scaling_cxt_ptr->output_uv_virtual_addr = (unsigned char*)scaling_cxt_ptr->output_uv_pmem_hp->base();
 	if (!scaling_cxt_ptr->output_uv_physical_addr) {
 		ERR("failed to alloc output_uv pmem buffer:addr is null.\n");
@@ -295,21 +333,42 @@ static int utest_scaling_mem_alloc(void)
 static int utest_scaling_mem_release(void)
 {
 	struct utest_scaling_context *scaling_cxt_ptr = g_utest_scaling_cxt_ptr;
+	int mem_method = utest_mm_iommu_is_enabled();
 
 	if (scaling_cxt_ptr->input_y_physical_addr) {
-		scaling_cxt_ptr->input_y_pmem_hp.clear();
+		if( 0 == mem_method ) {
+			scaling_cxt_ptr->input_y_pmem_hp.clear();
+		} else {
+			scaling_cxt_ptr->input_y_pmem_hp->free_mm_iova(scaling_cxt_ptr->input_y_physical_addr,
+				scaling_cxt_ptr->input_y_pmemory_size);
+		}
 	}
 
 	if (scaling_cxt_ptr->input_uv_physical_addr) {
-		scaling_cxt_ptr->input_uv_pmem_hp.clear();
+		if ( 0 == mem_method ) {
+			scaling_cxt_ptr->input_uv_pmem_hp.clear();
+		} else {
+			scaling_cxt_ptr->input_uv_pmem_hp->free_mm_iova(scaling_cxt_ptr->input_uv_physical_addr,
+				scaling_cxt_ptr->input_uv_pmemory_size);
+		}
 	}
 
 	if (scaling_cxt_ptr->output_y_physical_addr) {
-		scaling_cxt_ptr->output_y_pmem_hp.clear();
+		if ( 0 == mem_method ) {
+			scaling_cxt_ptr->output_y_pmem_hp.clear();
+		} else {
+			scaling_cxt_ptr->output_y_pmem_hp->free_mm_iova(scaling_cxt_ptr->output_y_physical_addr,
+				scaling_cxt_ptr->output_y_pmemory_size);
+		}
 	}
 
 	if (scaling_cxt_ptr->output_uv_physical_addr) {
-		scaling_cxt_ptr->output_uv_pmem_hp.clear();
+		if ( 0 == mem_method ) {
+			scaling_cxt_ptr->output_uv_pmem_hp.clear();
+		} else {
+			scaling_cxt_ptr->output_uv_pmem_hp->free_mm_iova(scaling_cxt_ptr->output_uv_physical_addr,
+				scaling_cxt_ptr->output_uv_pmemory_size);
+		}
 	}
 
 	return 0;
@@ -395,9 +454,9 @@ int main(int argc, char **argv)
 	if (utest_scaling_src_cfg())
 		goto err;
 
-	fd = open("/dev/sprd_scale", O_RDONLY);
-	if (fd >= 0) {
 		for (i = 0; i < UTEST_SCALING_COUNTER; i++) {
+
+			fd = open("/dev/sprd_scale", O_RDONLY);
 
 			INFO("utest_scaling testing  start\n");
 			time_start = systemTime();
@@ -408,16 +467,13 @@ int main(int argc, char **argv)
 							scaling_cxt_ptr->input_y_physical_addr, scaling_cxt_ptr->input_uv_physical_addr);
 
 			time_end = systemTime();
-			INFO("utest_scaling testing  end time=%d\n", (unsigned int)((time_end-time_start) / 1000000L));
+			INFO("utest_scaling testing  end time=%d, i = %x\n", (unsigned int)((time_end-time_start) / 1000000L),i);
 
-			usleep(20*1000);
+			//usleep(10*1000);
 			utest_scaling_save_raw_data();
+
+			close(fd);
 		}
-		close(fd);
-	} else {
-		INFO("utest_scaling fail to open scale driver.\n");
-		goto err;
-	}
 
 err:
 

@@ -32,8 +32,8 @@
 
 using namespace android;
 
-#define UTEST_ROTATION_COUNTER 1
-#define SAVE_ROTATION_OUTPUT_DATA 1
+#define UTEST_ROTATION_COUNTER  0XFFFFFFFF
+#define SAVE_ROTATION_OUTPUT_DATA 0
 #define ERR(x...) fprintf(stderr, x)
 #define INFO(x...) fprintf(stdout, x)
 
@@ -145,7 +145,7 @@ static enum img_rot_angle utest_rotation_angle_cvt(int angle)
 	{
 		ERR("utest rotate  error  . Line:%d ", __LINE__);
 	}
-	INFO("utest_rotation_angle_cvt %d \n",tmp_angle);
+//	INFO("utest_rotation_angle_cvt %d \n",tmp_angle);
 	return tmp_angle;
 }
 
@@ -191,7 +191,7 @@ static int utest_rotation_mem_alloc(struct utest_rotation_context *g_utest_rotat
 	struct utest_rotation_context *rotation_cxt_ptr = g_utest_rotation_cxt_ptr;
 	int s_mem_method = utest_mm_iommu_is_enabled();
 
-	INFO("utest_rotation_mem_alloc %d\n",s_mem_method);
+//	INFO("utest_rotation_mem_alloc %d\n",s_mem_method);
 	/* alloc input y buffer */
 	if (0 == s_mem_method) {
 		rotation_cxt_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
@@ -307,7 +307,7 @@ static int utest_rotation_mem_alloc(struct utest_rotation_context *g_utest_rotat
 		ERR("failed to alloc output_uv pmem buffer:addr is null.\n");
 		return -1;
 	}
-	INFO("utest physical addr 0x%x  0x%x  0x%x  0x%x\n",rotation_cxt_ptr->input_y_physical_addr,rotation_cxt_ptr->input_uv_physical_addr,rotation_cxt_ptr->output_y_physical_addr,rotation_cxt_ptr->output_uv_physical_addr);
+//	INFO("utest physical addr 0x%x  0x%x  0x%x  0x%x\n",rotation_cxt_ptr->input_y_physical_addr,rotation_cxt_ptr->input_uv_physical_addr,rotation_cxt_ptr->output_y_physical_addr,rotation_cxt_ptr->output_uv_physical_addr);
 
 	return 0;
 }
@@ -457,13 +457,12 @@ int main(int argc, char **argv)
 	if (utest_rotation_src_cfg(&utest_rotation_cxt))
 		goto err;
 
-	fd = open( "/dev/sprd_rotation", O_RDONLY, 0);
-	if (fd >= 0) {
 		for (i = 0; i < UTEST_ROTATION_COUNTER; i++) {
+
+			fd = open( "/dev/sprd_rotation", O_RDONLY, 0);
 
 			INFO("utest_rotation testing  start\n");
 			time_start = systemTime();
-
 
 			tmp_angle = utest_rotation_angle_cvt(rotation_cxt_ptr->angle);
 			utest_do_rotation(fd, rotation_cxt_ptr->width, rotation_cxt_ptr->height,
@@ -472,20 +471,15 @@ int main(int argc, char **argv)
 							ROT_YUV420,tmp_angle);
 
 			time_end = systemTime();
-			INFO("utest_rotation testing  end time=%d\n", (unsigned int)((time_end-time_start) / 1000000L));
+			INFO("utest_rotation testing  end time=%d, i = %x\n", (unsigned int)((time_end-time_start) / 1000000L), i);
 			//usleep(30*1000);
 			utest_rotation_save_raw_data(&utest_rotation_cxt,rotation_cxt_ptr->angle);
 
+			close(fd);
 
 		}
-		close(fd);
-	} else {
-		INFO("utest_rotation fail to open rotation driver.\n");
-		goto err;
-	}
 
 err:
-
 	utest_rotation_mem_release(&utest_rotation_cxt);
 
 	return 0;

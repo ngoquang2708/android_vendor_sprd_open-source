@@ -53,24 +53,16 @@ int cmr_rot(struct cmr_rot_param *rot_param);
 
 int cmr_rot_close(int *fd);
 
-int cmr_scale_init(void);
+int cmr_scale_open(void);
 
-int cmr_scale_evt_reg(cmr_evt_cb  scale_event_cb);
-
-int  cmr_scale_start(uint32_t slice_height,
+int cmr_scale_start(int fd,
 		struct img_frm *src_img,
 		struct img_rect *rect,
 		struct img_frm *dst_img,
-		struct img_frm *tmp_frm,
-		void           *user_data);
+		cmr_evt_cb cmr_event_cb);
 
-int  cmr_scale_next(uint32_t     slice_height,
-		struct img_frm  *src_frm,
-		struct img_rect  *rect,
-		struct img_frm  *dst_frm);
-
-int cmr_scale_deinit(void);
-int cmr_scale_capability(uint32_t *width, uint32_t *sc_factor);
+int cmr_scale_close(int fd);
+int cmr_scale_capability(int fd, uint32_t *width, uint32_t *sc_factor);
 int cmr_dma_copy_init(void);
 int cmr_dma_copy_deinit(void);
 int cmr_dma_cpy(struct _dma_copy_cfg_tag dma_copy_cfg);

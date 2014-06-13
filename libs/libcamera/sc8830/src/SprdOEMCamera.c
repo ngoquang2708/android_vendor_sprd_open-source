@@ -780,24 +780,25 @@ int camera_scaler_init(void)
 	struct camera_ctrl       *ctrl = &g_cxt->control;
 	struct scaler_context    *cxt  = &g_cxt->scaler_cxt;
 	int                      ret   = CAMERA_SUCCESS;
+	int                      fd    = -1;
 
 	if (1 == ctrl->scaler_inited) {
 		CMR_LOGD("scaler has been intialized");
 		goto exit;
 	}
 
-	ret = cmr_scale_init();
-	if (ret) {
+	fd = cmr_scale_open();
+	if (!fd) {
 		CMR_LOGE("Failed to init scaler %d", ret);
 		ret = -CAMERA_NOT_SUPPORTED;
 	} else {
-		ret = cmr_scale_capability(&cxt->sc_capability, &cxt->sc_factor);
+		ret = cmr_scale_capability(fd,&cxt->sc_capability, &cxt->sc_factor);
 		if (ret) {
 			CMR_LOGE("Failed to get frame scaling capability %d", ret);
 			ret = -CAMERA_NOT_SUPPORTED;
 			goto exit;
 		}
-		cmr_scale_evt_reg(camera_scaler_evt_cb);
+		cxt->fd = fd;
 		cxt->scale_state = IMG_CVT_IDLE;
 		ctrl->scaler_inited = 1;
 	}
@@ -811,13 +812,15 @@ int camera_scaler_deinit(void)
 	struct camera_ctrl       *ctrl = &g_cxt->control;
 	struct scaler_context    *cxt  = &g_cxt->scaler_cxt;
 	int                      ret   = CAMERA_SUCCESS;
+	int                      fd    = -1;
 
 	if (0 == ctrl->scaler_inited) {
 		CMR_LOGD("scaler has been de-intialized");
 		goto exit;
 	}
 
-	ret = cmr_scale_deinit();
+	fd = cxt->fd;
+	ret = cmr_scale_close(fd);
 	if (ret) {
 		CMR_LOGE("Failed to de-init scaler %d", ret);
 		ret = -CAMERA_NOT_SUPPORTED;
@@ -1807,7 +1810,6 @@ void *camera_cap_thread_proc(void *data)
 					if (CAMERA_SUCCESS == isp_is_have_src_data_from_picture()) {
 						isp_overwrite_cap_mem();
 					}
-					isp_set_saved_file_count();
 				}
 
 				ret = camera_v4l2_capture_handle(data);
@@ -7523,6 +7525,7 @@ int camera_start_scale(struct frm_info *data)
 	int                      ret = CAMERA_SUCCESS;
 	struct scaler_context    *cxt = &g_cxt->scaler_cxt;
 	struct frm_info          frm_data;
+	int fd;
 
 	if (g_perfor_enable) {
 		sprd_startPerfTracking(" camera_start_scale E.\n");
@@ -7690,12 +7693,15 @@ int camera_start_scale(struct frm_info *data)
 	cxt->proc_status.is_encoding = 0;
 	camera_sync_scale_start(g_cxt);
 	g_cxt->scaler_cxt.scale_state = IMG_CVT_SCALING;
-	ret = cmr_scale_start(slice_h,
+
+	fd = cxt->fd;
+
+	ret = cmr_scale_start(fd,
 			&src_frame,
 			&rect,
 			&dst_frame,
-			&g_cxt->cap_mem[frm_id].scale_tmp,
-			NULL);
+			camera_scaler_evt_cb);
+
 	if (ret) {
 		CMR_LOGE("Failed to start scaler, %d", ret);
 		g_cxt->scaler_cxt.scale_state = IMG_CVT_IDLE;
@@ -7757,13 +7763,14 @@ int camera_scale_next(struct frm_info *data)
 {
 	struct scaler_context    *cxt = &g_cxt->scaler_cxt;
 	int                      ret = CAMERA_SUCCESS;
+	int 		fd;
+
+	fd = cxt->fd;
 
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
 		return ret;
 	}
-
-	ret = cmr_scale_next(0, NULL, NULL, NULL);
 
 	return ret;
 }
@@ -8048,6 +8055,9 @@ int camera_get_data_redisplay(int output_addr,
 	enum img_rot_angle angle = IMG_ROT_0;
 	struct cmr_rot_param rot_param;
 
+	struct scaler_context    *cxt  = &g_cxt->scaler_cxt;
+	int                      fd    = -1;
+
 	CMR_LOGI("input(w,h,addr)%d %d 0x%x output(w,h,addr)%d %d,0x%x rot %d",
 		input_width, input_height, input_addr_y, output_width,output_height,
 		output_addr,g_cxt->cfg_cap_rot);
@@ -8094,16 +8104,19 @@ int camera_get_data_redisplay(int output_addr,
 		CMR_LOGE("invalid parameters for get trim rect");
 		return ret;
 	}
+
+	fd = cxt->fd;
+
 	camera_sync_scale_start(g_cxt);
-	cmr_scale_evt_reg(NULL);
-	ret = cmr_scale_start(input_height,
+
+	ret = cmr_scale_start(fd,
 			&src_frame,
 			&rect,
 			&dst_frame,
-			NULL,
 			NULL);
-	cmr_scale_evt_reg(camera_scaler_evt_cb);
+
 	camera_sync_scale_done(g_cxt);
+
 	if (ret) {
 		CMR_LOGI("dis scale fail, %d", ret);
 		return -1;
@@ -8191,6 +8204,9 @@ static int camera_convert_to_thumb(void)
 	struct img_rect          rect;
 	int                      ret = CAMERA_SUCCESS;
 
+	struct scaler_context    *cxt  = &g_cxt->scaler_cxt;
+	int                      fd    = -1;
+
 	if (CAMERA_EXIT == camera_capture_way_out()) {
 		CMR_LOGW("need exit capture, direct out!");
 		return ret;
@@ -8227,15 +8243,16 @@ static int camera_convert_to_thumb(void)
 	rect.width = src_frame.size.width;
 	rect.height = src_frame.size.height;
 	camera_sync_scale_start(g_cxt);
-	cmr_scale_evt_reg(NULL);
-	ret = cmr_scale_start(src_frame.size.height,
+
+	fd = cxt->fd;
+	ret = cmr_scale_start(fd,
 			&src_frame,
 			&rect,
 			&dst_frame,
-			NULL,
 			NULL);
-	cmr_scale_evt_reg(camera_scaler_evt_cb);
+
 	camera_sync_scale_done(g_cxt);
+
 	CMR_LOGI("Done, %d", ret);
 	g_cxt->thum_ready = 1;
 	camera_convert_thum_done(g_cxt);
@@ -9532,6 +9549,8 @@ static int isp_overwrite_cap_mem(void)
 		CMR_LOGI("fail : no input_raw source file.\n");
 		return -CAMERA_FAILED;
 	}
+
+	isp_set_saved_file_count();
 
 	frame_type.buf_Virt_Addr = (uint32_t*)g_cxt->cap_mem[0].cap_raw.addr_vir.addr_y;
 	frame_type.buffer_phy_addr = g_cxt->cap_mem[0].cap_raw.addr_phy.addr_y;
