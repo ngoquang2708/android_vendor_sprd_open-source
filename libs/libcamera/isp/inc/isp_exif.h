@@ -16,6 +16,8 @@
 #ifndef _ISP_EXIF_H_
 #define _ISP_EXIF_H_
 
+#define EXIF_APP3	0XFFE3
+#define APP3_STATUS	0X1234
 struct exif_blc_param{
 	uint32_t mode;
 	uint16_t r;
@@ -193,7 +195,11 @@ struct exif_css_param{
 	uint8_t chr_thr;
 };
 
-struct exif_isp_info{
+struct eixf_read_check{
+	uint16_t app_head;
+	uint16_t status;
+};
+typedef struct exif_isp_info{
 	uint32_t is_exif_validate;
 	uint32_t tool_version;
 	uint32_t version_id;
@@ -249,6 +255,7 @@ struct exif_isp_info{
 	struct exif_global_gain_param global;
 	struct exif_chn_gain_param chn;
 	struct exif_flash_cali_param flash;
-};
+	struct eixf_read_check exif_check;
+}EXIT_ISP_INFO_T;
 
 #endif //_ISP_EXIF_H_

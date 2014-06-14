@@ -23,6 +23,7 @@ extern "C"
 
 #include "cmr_common.h"
 #include "jpeg_exif_header.h"
+#include "isp_exif.h"
 
 typedef enum {
 
@@ -185,6 +186,7 @@ struct jpeg_enc_exif_param
 	uint32_t target_addr_virt;
 	uint32_t target_size;
 	JINF_EXIF_INFO_T *exif_ptr;
+	EXIT_ISP_INFO_T *exif_isp_info;
 };
 
 int jpeg_init(void);
