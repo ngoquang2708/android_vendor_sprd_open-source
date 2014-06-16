@@ -104,6 +104,12 @@ struct isp_awb_pos
 	uint16_t	y;
 };
 
+struct isp_awb_range
+{
+	uint16_t	min;
+	uint16_t	max;
+};
+
 struct isp_awb_stat_img_info
 {
 	uint32_t	*r_data;
@@ -130,17 +136,25 @@ struct isp_awb_alg1_init_param
 	uint16_t				outdoor_ev_range[2];
 	uint16_t				low_light_ev_range[2];
 	uint16_t				base_gain;
-	struct isp_awb_size			max_win_num;
+	struct isp_awb_size	max_win_num;
 	uint32_t				mode;	//default: 0
 	uint32_t				max_ev;
+	uint8_t 				*pos_weight;
+	struct isp_awb_range			value_range;	//value range of the statistic image
 };
 
 struct isp_awb_alg1_frame_param
 {
-	struct isp_awb_stat_img_info 	stat_img_info;
+	struct isp_awb_stat_img_info	stat_img_info;
+
+	uint32_t	stab_for_chng_win;
+	uint32_t	setting_index;
 
 	uint32_t	ev;			//index of ev
 	uint32_t	lnc;			//index of lnc
+
+	uint32_t	thr_min;
+	uint32_t	thrd_max;
 
 	uint8_t		recheck;		//whether to do recheck
 };
@@ -151,6 +165,7 @@ struct isp_awb_alg1_result
 	uint32_t	g_gain;
 	uint32_t	b_gain;
 	uint32_t	T;
+	uint32_t param_status;
 	struct isp_awb_pos win_pos;
 	struct isp_awb_size win_size;
 	struct isp_awb_size win_num;
@@ -171,6 +186,7 @@ uint32_t ISP_AWBInitAlg1(uint32_t handler_id, struct isp_awb_alg1_init_param *in
 void ISP_AWBDeinitAlg1(uint32_t handler_id, uint32_t handle);
 uint32_t ISP_AWBCalcGainAlg1(uint32_t handler_id, uint32_t handle, struct isp_awb_alg1_frame_param *frame_param,
 				struct isp_awb_alg1_result *result);
+uint32_t ISP_AWBResetInitParam(uint32_t handler_id, uint32_t handle, struct isp_awb_alg1_init_param *init_param);
 /*------------------------------------------------------------------------------*
 *				Compiler Flag					*
 *-------------------------------------------------------------------------------*/

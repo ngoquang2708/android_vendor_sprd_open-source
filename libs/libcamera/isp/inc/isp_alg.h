@@ -44,6 +44,8 @@ extern	 "C"
 #define AE_SMART_CMC 0x04
 #define AE_SMART_LNC 0x08
 #define AE_SMART_GAMMA 0x10
+#define AE_SMART_CSS 0x20
+#define AE_SMART_HW_STA_HUE 0x40
 
 #define ISP_DENOISE_MAX_LEVEL 0xFE
 
@@ -136,7 +138,7 @@ struct isp_fetch_param{
 
 
 int32_t isp_ae_get_real_gain(uint32_t gain);
-int32_t isp_ae_smart_adjust(uint32_t handler_id, int32_t cur_ev, uint32_t eb);
+int32_t isp_ae_fast_smart_adjust(uint32_t handler_id, int32_t cur_ev, uint32_t eb);
 int32_t isp_ae_stab_smart_adjust(uint32_t handler_id, int32_t cur_ev);
 int32_t isp_get_denoise_tab(uint32_t de_level, uint8_t** diswei, uint8_t** ranwei);
 int32_t isp_flash_calculation(uint32_t handler_id, struct isp_ae_v00_flash_alg_param* v00_flash_ptr);
@@ -204,6 +206,9 @@ int32_t _ispAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispHueIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t isp_GetChipVersion(void);
+int32_t isp_InterplateCMC(uint32_t handler_id, uint16_t *out, uint16_t *src[2], uint16_t weight[2]);
+int32_t isp_SetCMC_By_Reduce(uint32_t handler_id, uint16_t *cmc_out, uint16_t *cmc_in, int32_t percent, uint8_t *is_update);
+
 /**----------------------------------------------------------------------------*
 **					Compiler Flag				**
 **----------------------------------------------------------------------------*/

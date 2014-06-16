@@ -298,6 +298,8 @@ enum isp_capbility_cmd{
 	ISP_LOW_LUX_EB,
 	ISP_CUR_ISO,
 	ISP_DENOISE_LEVEL,
+	ISP_DENOISE_INFO,
+	ISP_REG_VAL,
 	ISP_CAPBILITY_MAX
 };
 
@@ -417,6 +419,7 @@ struct isp_smart_ae_param {
 	uint8_t smart_denoise_max_index;
 	uint8_t smart_edge_min_index;
 	uint8_t smart_edge_max_index;
+	uint8_t smart_sta_start_index;
 	uint8_t smart_sta_low_thr;
 	uint8_t smart_sta_ratio1;
 	uint8_t smart_sta_ratio;

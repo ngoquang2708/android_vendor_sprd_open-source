@@ -8483,6 +8483,30 @@ int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr)
 	return ISP_SUCCESS;
 }
 
+int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint32_t len)
+{
+/*	union _isp_mem_reg_tag* reg_ptr=(union _isp_mem_reg_tag*)ISP_AWBM_OUTPUT;*/
+	int32_t ret = ISP_SUCCESS;
+	uint32_t i = 0x00;
+	uint32_t offset_addr = base_offset;
+	struct isp_reg_bits *reg_config =(struct isp_reg_bits *)buf;
+	struct isp_reg_param read_param;
+	uint32_t isp_id=_isp_GetIspId();
+
+/*	ISP_CHECK_FD;*/
+
+	for(i=0x00; i<len; i++) {
+		reg_config[i].reg_addr = offset_addr;
+		offset_addr += 4;
+	}
+	read_param.reg_param = (uint32_t)reg_config;
+	read_param.counts = len;
+
+	_isp_read((uint32_t *)&read_param);
+
+	return ret;
+}
+
 /**----------------------------------------------------------------------------*
 *			Compiler Flag						*
 **----------------------------------------------------------------------------*/

@@ -24,7 +24,7 @@
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
 #define ISP_CHIP_ID 0x0000
-#define ISP_SOFT_ID 0x20140410
+#define ISP_SOFT_ID 0x20140611
 
 #define ISP_CTRL_EVT_START                (1 << 0)
 #define ISP_CTRL_EVT_STOP                  (1 << 1)
@@ -142,6 +142,7 @@ static const uint8_t e2p_ptr[]=
 
 static const uint8_t ISP_AEAWB_weight_avrg[]=
 {
+#if 0
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -175,6 +176,41 @@ static const uint8_t ISP_AEAWB_weight_avrg[]=
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+#else
+	0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,
+	0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,
+	0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,
+	0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,
+	1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+#endif
 };
 
 static const uint8_t ISP_AEAWB_weight_center[]=
@@ -228,6 +264,83 @@ static uint16_t cce_matrix[][12]=
 
 static struct isp_param* s_isp_param_ptr=NULL;
 static pthread_mutex_t s_ctrl_mutex={0x00};
+
+static uint32_t ctn_af_awb_r_base_tbl[2][1024]= {0};
+static uint32_t ctn_af_awb_g_base_tbl[2][1024]= {0};
+static uint32_t ctn_af_awb_b_base_tbl[2][1024]= {0};
+static uint32_t ctn_af_awb_r_diff_tbl[2][1024]= {0};
+static uint32_t ctn_af_awb_g_diff_tbl[2][1024]= {0};
+static uint32_t ctn_af_awb_b_diff_tbl[2][1024]= {0};
+static uint32_t ctn_af_af_base_tbl[2][9]= {0};
+static uint32_t ctn_af_af_pre_tbl[2][9]= {0};
+static uint32_t ctn_af_af_diff_tbl[2][9]= {0};
+static uint32_t ctn_af_af_diff2_tbl[2][9]= {0};
+
+static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
+{
+	{
+		.awb_r_base = ctn_af_awb_r_base_tbl[0],
+		.awb_g_base = ctn_af_awb_g_base_tbl[0],
+		.awb_b_base = ctn_af_awb_b_base_tbl[0],
+		.awb_r_diff = ctn_af_awb_r_diff_tbl[0],
+		.awb_g_diff = ctn_af_awb_g_diff_tbl[0],
+		.awb_b_diff = ctn_af_awb_b_diff_tbl[0],
+		.af_base = ctn_af_af_base_tbl[0],
+		.af_pre = ctn_af_af_pre_tbl[0],
+		.af_diff = ctn_af_af_diff_tbl[0],
+		.af_diff2 = ctn_af_af_diff2_tbl[0],
+		.awb_cal_count = 0,
+		.af_cal_count = 0,
+		.awb_stab_cal_count = 0,
+		.af_stab_cal_count = 0,
+		.awb_cal_value_threshold = 130,
+		.awb_cal_num_threshold = 300,
+		.awb_cal_value_stab_threshold = 90,
+		.awb_cal_num_stab_threshold = 100,
+		.awb_cal_cnt_stab_threshold = 1,
+		.af_cal_threshold = 0xC0,
+		.af_cal_stab_threshold = 0x70,
+		.af_cal_cnt_stab_threshold = 3,
+		.awb_cal_skip_cnt = 1,
+		.af_cal_skip_cnt = 9,
+		.cal_state = 0,
+		.awb_is_stab = 0,
+		.af_is_stab = 0,
+		.af_cal_need_af = 0,
+	},
+	{
+		.awb_r_base = ctn_af_awb_r_base_tbl[1],
+		.awb_g_base = ctn_af_awb_g_base_tbl[1],
+		.awb_b_base = ctn_af_awb_b_base_tbl[1],
+		.awb_r_diff = ctn_af_awb_r_diff_tbl[1],
+		.awb_g_diff = ctn_af_awb_g_diff_tbl[1],
+		.awb_b_diff = ctn_af_awb_b_diff_tbl[1],
+		.af_base = ctn_af_af_base_tbl[1],
+		.af_pre = ctn_af_af_pre_tbl[1],
+		.af_diff = ctn_af_af_diff_tbl[1],
+		.af_diff2 = ctn_af_af_diff2_tbl[1],
+		.awb_cal_count = 0,
+		.af_cal_count = 0,
+		.awb_stab_cal_count = 0,
+		.af_stab_cal_count = 0,
+		.awb_cal_value_threshold = 130,
+		.awb_cal_num_threshold = 300,
+		.awb_cal_value_stab_threshold = 90,
+		.awb_cal_num_stab_threshold = 100,
+		.awb_cal_cnt_stab_threshold = 1,
+		.af_cal_threshold = 0xC0,
+		.af_cal_stab_threshold = 0x70,
+		.af_cal_cnt_stab_threshold = 3,
+		.awb_cal_skip_cnt = 1,
+		.af_cal_skip_cnt = 9,
+		.cal_state = 0,
+		.awb_is_stab = 0,
+		.af_is_stab = 0,
+		.af_cal_need_af = 0,
+	}
+};
+
+
 /**---------------------------------------------------------------------------*
 **					Constant Variables				*
 **---------------------------------------------------------------------------*/
@@ -436,7 +549,7 @@ uint32_t _isp_ContinueFocusHandler(uint32_t handler_id)
 		&&(ISP_AF_STOP == isp_context_ptr->af.status)) {
 //		ISP_LOG("calc");
 		isp_context_ptr->af.continue_status=ISP_RUN_FLAG;
-		isp_context_ptr->af.continue_stat_flag=ISP_ZERO;
+		//isp_context_ptr->af.continue_stat_flag=ISP_ZERO;
 	} else {
 		rtn=ISP_NO_READY;
 	}
@@ -508,7 +621,7 @@ static int32_t _isp_ContinueFocusStartInternal(uint32_t handler_id)
 		if (ISP_END_FLAG==isp_context_ptr->af.continue_status) {
 			//ISP_LOG("--_isp_ContinueFocusStartInternal start--");
 			isp_context_ptr->af.continue_status=ISP_IDLE_FLAG;
-			isp_context_ptr->af.monitor_bypass=ISP_UEB;
+			//isp_context_ptr->af.monitor_bypass=ISP_UEB;
 			isp_context_ptr->awbm.bypass=ISP_UEB;
 			isp_context_ptr->af.continue_stat_flag=ISP_ZERO;
 			isp_context_ptr->tune.af_stat_continue=ISP_EB;
@@ -1756,6 +1869,7 @@ static int32_t _ispSetSmartParam(struct isp_ae_param *ae_param_ptr, struct isp_s
 	ae_param_ptr->smart_denoise_max_index = smart_ae_ptr->smart_denoise_max_index;
 	ae_param_ptr->smart_edge_min_index = smart_ae_ptr->smart_edge_min_index;
 	ae_param_ptr->smart_edge_max_index = smart_ae_ptr->smart_edge_max_index;
+	ae_param_ptr->smart_sta_start_index = smart_ae_ptr->smart_sta_start_index;
 	ae_param_ptr->smart_sta_low_thr = smart_ae_ptr->smart_sta_low_thr;
 	ae_param_ptr->smart_sta_ratio1 = smart_ae_ptr->smart_sta_ratio1;
 	ae_param_ptr->smart_sta_ratio = smart_ae_ptr->smart_sta_ratio;
@@ -2555,7 +2669,7 @@ static int32_t _ispCfgFlicker(uint32_t handler_id, struct isp_flicker_param* par
 *@
 *@ return:
 */
-static int32_t _ispCfgHue(uint32_t handler_id, struct isp_saturation_param* param_ptr)
+static int32_t _ispCfgHue(uint32_t handler_id, struct isp_hue_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
@@ -2952,6 +3066,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->emboss.bypass=ISP_EB;
 	isp_context_ptr->fcs.bypass=raw_tune_ptr->fcs_bypass;
 	isp_context_ptr->css.bypass=raw_tune_ptr->css_bypass;
+	isp_context_ptr->css.bypass_bakup = raw_tune_ptr->css_bypass;
 	isp_context_ptr->hdr.bypass=ISP_EB;
 	isp_context_ptr->global.bypass=raw_tune_ptr->glb_gain_bypass;
 	isp_context_ptr->chn.bypass=raw_tune_ptr->chn_gain_bypass;
@@ -3461,16 +3576,45 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->ae.smart_pref_min=raw_tune_ptr->ae.smart_pref_min;
 	isp_context_ptr->ae.smart_pref_max=raw_tune_ptr->ae.smart_pref_max;
 	isp_context_ptr->ae.smart_denoise_min_index=raw_tune_ptr->ae.smart_denoise_min_index;
+	isp_context_ptr->ae.smart_denoise_mid_index = raw_tune_ptr->ae.smart_denoise_mid_index;
 	isp_context_ptr->ae.smart_denoise_max_index=raw_tune_ptr->ae.smart_denoise_max_index;
+	isp_context_ptr->ae.denoise_start_index=raw_tune_ptr->ae.denoise_start_index;
+	isp_context_ptr->ae.denoise_start_zone=raw_tune_ptr->ae.denoise_start_zone;
+	isp_context_ptr->ae.denoise_lum_thr=raw_tune_ptr->ae.denoise_lum_thr;
+
 	isp_context_ptr->ae.smart_edge_min_index=raw_tune_ptr->ae.smart_edge_min_index;
 	isp_context_ptr->ae.smart_edge_max_index=raw_tune_ptr->ae.smart_edge_max_index;
-	isp_context_ptr->ae.smart_sta_low_thr=raw_tune_ptr->ae.smart_sta_low_thr=60;
-	isp_context_ptr->ae.smart_sta_ratio1=raw_tune_ptr->ae.smart_sta_ratio1=120;
-	isp_context_ptr->ae.smart_sta_ratio=raw_tune_ptr->ae.smart_sta_ratio=138;
-	isp_context_ptr->ae.smart_sta_start_index=raw_tune_ptr->ae.smart_sta_start_index=170;
+	isp_context_ptr->ae.smart_sta_low_thr=raw_tune_ptr->ae.smart_sta_low_thr;
+	isp_context_ptr->ae.smart_sta_ratio1=raw_tune_ptr->ae.smart_sta_ratio1;
+	isp_context_ptr->ae.smart_sta_ratio=raw_tune_ptr->ae.smart_sta_ratio;
+	isp_context_ptr->ae.smart_sta_start_index=raw_tune_ptr->ae.smart_sta_start_index;
 	isp_context_ptr->ae.again_skip=raw_tune_ptr->ae.again_skip;
 	isp_context_ptr->ae.dgain_skip=raw_tune_ptr->ae.dgain_skip;
 	isp_context_ptr->ae.lux_500_index=raw_tune_ptr->ae.lux_500_index;
+
+	isp_context_ptr->ae.smart_pref_y_min=raw_tune_ptr->ae.smart_pref_y_min;
+	isp_context_ptr->ae.smart_pref_y_max=raw_tune_ptr->ae.smart_pref_y_max;
+	isp_context_ptr->ae.smart_pref_uv_min=raw_tune_ptr->ae.smart_pref_uv_min;
+	isp_context_ptr->ae.smart_pref_uv_max=raw_tune_ptr->ae.smart_pref_uv_max;
+	isp_context_ptr->ae.smart_denoise_diswei_outdoor_index=raw_tune_ptr->ae.smart_denoise_diswei_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_diswei_min_index=raw_tune_ptr->ae.smart_denoise_diswei_min_index;
+	isp_context_ptr->ae.smart_denoise_diswei_mid_index=raw_tune_ptr->ae.smart_denoise_diswei_mid_index;
+	isp_context_ptr->ae.smart_denoise_diswei_max_index=raw_tune_ptr->ae.smart_denoise_diswei_max_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_outdoor_index=raw_tune_ptr->ae.smart_denoise_ranwei_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_min_index=raw_tune_ptr->ae.smart_denoise_ranwei_min_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_mid_index=raw_tune_ptr->ae.smart_denoise_ranwei_mid_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_max_index=raw_tune_ptr->ae.smart_denoise_ranwei_max_index;
+
+	isp_context_ptr->ae.smart_denoise_soft_y_outdoor_index=raw_tune_ptr->ae.smart_denoise_soft_y_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_min_index=raw_tune_ptr->ae.smart_denoise_soft_y_min_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_mid_index=raw_tune_ptr->ae.smart_denoise_soft_y_mid_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_max_index=raw_tune_ptr->ae.smart_denoise_soft_y_max_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_outdoor_index=raw_tune_ptr->ae.smart_denoise_soft_uv_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_min_index=raw_tune_ptr->ae.smart_denoise_soft_uv_min_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_mid_index=raw_tune_ptr->ae.smart_denoise_soft_uv_mid_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_max_index=raw_tune_ptr->ae.smart_denoise_soft_uv_max_index;
+	isp_context_ptr->ae.prv_noise_info.y_level = raw_tune_ptr->ae.smart_denoise_soft_y_outdoor_index;
+	isp_context_ptr->ae.prv_noise_info.uv_level = raw_tune_ptr->ae.smart_denoise_soft_uv_outdoor_index;
 
 	isp_context_ptr->gamma_index=raw_tune_ptr->ae.gamma_start;
 	isp_context_ptr->ae.gamma_num=raw_tune_ptr->ae.gamma_num;
@@ -3479,6 +3623,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->ae.gamma_thr[1]=raw_tune_ptr->ae.gamma_thr[1];
 	isp_context_ptr->ae.gamma_thr[2]=raw_tune_ptr->ae.gamma_thr[2];
 	isp_context_ptr->ae.gamma_thr[3]=raw_tune_ptr->ae.gamma_thr[3];
+	isp_context_ptr->ae.gamma_lum_thr = raw_tune_ptr->ae.gamma_lum_thr;
 
 	isp_context_ptr->ae.ev=raw_tune_ptr->ae.ev[3];
 	isp_ae_set_ev(handler_id, raw_tune_ptr->ae.ev[3]);
@@ -3569,6 +3714,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->ae.self_callback = param_ptr->self_callback;
 	isp_context_ptr->ae.awbm_skip = ispAwbmSkip;
 	isp_context_ptr->ae.awbm_bypass = ispAwbcBypass;
+	isp_context_ptr->ae.set_gamma= isp_set_gamma;
 	isp_context_ptr->ae.ae_set_eb=ISP_UEB;
 
 	/*flash*/
@@ -3726,6 +3872,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->denoise.b_thr=raw_tune_ptr->denoise.b_thr;
 	memcpy((void*)&isp_context_ptr->denoise.diswei, (void*)&raw_tune_ptr->denoise.diswei, 19);
 	memcpy((void*)&isp_context_ptr->denoise.ranwei, (void*)&raw_tune_ptr->denoise.ranwei, 31);
+	memcpy((void*)&isp_context_ptr->denoise_bak,(void*)&isp_context_ptr->denoise,sizeof(isp_context_ptr->denoise));
 	isp_ae_set_denosie_level(handler_id, 0);
 
 	/*grgb*/
@@ -3747,6 +3894,17 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->cmc.matrix[6]=raw_tune_ptr->cmc.matrix[0][6];
 	isp_context_ptr->cmc.matrix[7]=raw_tune_ptr->cmc.matrix[0][7];
 	isp_context_ptr->cmc.matrix[8]=raw_tune_ptr->cmc.matrix[0][8];
+
+	isp_context_ptr->cmc_awb[0]=raw_tune_ptr->cmc.matrix[0][0];
+	isp_context_ptr->cmc_awb[1]=raw_tune_ptr->cmc.matrix[0][1];
+	isp_context_ptr->cmc_awb[2]=raw_tune_ptr->cmc.matrix[0][2];
+	isp_context_ptr->cmc_awb[3]=raw_tune_ptr->cmc.matrix[0][3];
+	isp_context_ptr->cmc_awb[4]=raw_tune_ptr->cmc.matrix[0][4];
+	isp_context_ptr->cmc_awb[5]=raw_tune_ptr->cmc.matrix[0][5];
+	isp_context_ptr->cmc_awb[6]=raw_tune_ptr->cmc.matrix[0][6];
+	isp_context_ptr->cmc_awb[7]=raw_tune_ptr->cmc.matrix[0][7];
+	isp_context_ptr->cmc_awb[8]=raw_tune_ptr->cmc.matrix[0][8];
+	isp_context_ptr->cmc_percent = 255;
 
 	isp_context_ptr->cmc_tab[0][0]=raw_tune_ptr->cmc.matrix[0][0];
 	isp_context_ptr->cmc_tab[0][1]=raw_tune_ptr->cmc.matrix[0][1];
@@ -3917,6 +4075,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->pref.u_thr=raw_tune_ptr->pref.u_thr;
 	isp_context_ptr->pref.v_thr=raw_tune_ptr->pref.v_thr;
 
+	memcpy((void*)&isp_context_ptr->pref_bak,(void*)&isp_context_ptr->pref,sizeof(isp_context_ptr->pref));
+
 	/*bright*/
 	isp_context_ptr->bright.factor=raw_tune_ptr->bright.factor[3];
 	isp_context_ptr->bright_tab[0]=raw_tune_ptr->bright.factor[0];
@@ -3989,10 +4149,13 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->saturation_tab[13]=raw_tune_ptr->saturation.factor[13];
 	isp_context_ptr->saturation_tab[14]=raw_tune_ptr->saturation.factor[14];
 	isp_context_ptr->saturation_tab[15]=raw_tune_ptr->saturation.factor[15];
+	memcpy((void*)&isp_context_ptr->saturation_bak,(void*)&isp_context_ptr->saturation,sizeof(isp_context_ptr->saturation));
 
 	/*hue*/
 	isp_context_ptr->hue.offset = ISP_ZERO;
 	isp_context_ptr->hue.factor = ISP_ZERO;
+	isp_context_ptr->hue.factor = 3;
+	memcpy((void*)&isp_context_ptr->hue_bak,(void*)&isp_context_ptr->hue,sizeof(isp_context_ptr->hue));
 
 	/*af*/
 	isp_context_ptr->af.continue_status=ISP_END_FLAG;
@@ -4022,6 +4185,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->af.AfmEb = ispAfmEb;
 	isp_context_ptr->af.AwbmEb_immediately = ispAwbmEb_immediately;
 	isp_context_ptr->af.CfgAwbm = ispCfgAwbm;
+	memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg, (void*)&ctn_af_cal_cfg[handler_id], sizeof(ctn_af_cal_cfg[handler_id]));
 
 	/*emboss*/
 	isp_context_ptr->emboss.step=raw_tune_ptr->emboss.step;
@@ -4279,7 +4443,7 @@ static int32_t _ispCfgInt(uint32_t handler_id)
 		rtn=ispRegIRQ(handler_id, ISP_MONITOR_EVT_AWB|ISP_MONITOR_EVT_AF|ISP_MONITOR_EVT_SOF);
 		ISP_RETURN_IF_FAIL(rtn, ("reg irq error"));
 
-		rtn=ispCfgDcamIRQ(handler_id, ISP_EB);
+		rtn=ispCfgDcamIRQ(handler_id, ISP_UEB);
 		ISP_RETURN_IF_FAIL(rtn, ("cfg dcam irq error"));
 	}
 
@@ -4331,7 +4495,7 @@ static int32_t _ispCfg(uint32_t handler_id)
 	rtn=_ispCfgHDRIndexTab(handler_id, &isp_context_ptr->hdr_index);
 	rtn=_ispCfgGlobalGain(handler_id, &isp_context_ptr->global);
 	rtn=_ispCfgChnGain(handler_id, &isp_context_ptr->chn);
-	rtn=_ispCfgHue(handler_id, (struct isp_saturation_param*)&isp_context_ptr->hue);
+	rtn=_ispCfgHue(handler_id, (struct isp_hue_param*)&isp_context_ptr->hue);
 
 	return rtn;
 }
@@ -4538,11 +4702,16 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		isp_context_ptr->tune.saturation=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.hue) {
-		_ispCfgHue(handler_id, (struct isp_saturation_param*)&isp_context_ptr->hue);
+		_ispCfgHue(handler_id, (struct isp_hue_param*)&isp_context_ptr->hue);
 		isp_context_ptr->tune.hue=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.css) {
+		_ispCfgSatursationSup(handler_id, &isp_context_ptr->css);
 		isp_context_ptr->tune.css=ISP_UEB;
+	}
+	if(ISP_EB==isp_context_ptr->tune.hue) {
+		_ispCfgHue(handler_id, &isp_context_ptr->hue);
+		isp_context_ptr->tune.hue=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.hdr) {
 		_ispCfgHdr(handler_id, &isp_context_ptr->hdr);
@@ -6367,22 +6536,47 @@ static void *_isp_proc_routine(void *client_data)
 				break;
 
 			case ISP_PROC_EVT_AF:
-				rtn=isp_af_calculation(handler_id);
-				if(ISP_SUCCESS!=(rtn&ISP_AF_END_FLAG))
-				{
-					isp_af_end(handler_id, ISP_ZERO);
-
-					if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) {
-						_isp_ContinueFocusStartInternal(handler_id);
-					}
+				if (ISP_EB==isp_context_ptr->af_get_stat) {
+					//ISP_LOG("callback ISP_AF_STAT_CALLBACK");
+					isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_STAT_CALLBACK, (void*)&isp_context_ptr->af_stat.info, sizeof(struct isp_af_statistic_info));
+					isp_context_ptr->af.monitor_bypass=ISP_UEB;
+					isp_context_ptr->af.AfmEb(handler_id);
+				} else if (ISP_ZERO==isp_context_ptr->af_get_stat) {
+					uint32_t af_stat_end=0x00;
+					//ISP_LOG("callback ISP_AF_STAT_END_CALLBACK");
+					isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_STAT_END_CALLBACK, (void*)&af_stat_end, sizeof(uint32_t));
+					isp_context_ptr->af_get_stat=ISP_END_FLAG;
 				}
 
-				if(ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode){
-					rtn=_isp_ContinueFocusHandler(handler_id);
-					if( ISP_SUCCESS==rtn) {
-						isp_proc_self_msg.handler_id = handler_id;
-						isp_proc_self_msg.msg_type = ISP_PROC_EVT_CONTINUE_AF;
-						rtn = _isp_proc_msg_post(&isp_proc_self_msg);
+				if ((ISP_END_FLAG!=isp_context_ptr->af.continue_status)
+					&&(PNULL!=isp_context_ptr->af.continue_focus_stat)
+					&&(ISP_AF_STOP == isp_context_ptr->af.status)) {
+					isp_context_ptr->af.continue_focus_stat(handler_id, ISP_AF_STAT_FLAG);
+					isp_context_ptr->af.monitor_bypass=ISP_UEB;
+					isp_context_ptr->af.AfmEb(handler_id);
+					if(ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode){
+						rtn=_isp_ContinueFocusHandler(handler_id);
+						if( ISP_SUCCESS==rtn) {
+							isp_proc_self_msg.handler_id = handler_id;
+							isp_proc_self_msg.msg_type = ISP_PROC_EVT_CONTINUE_AF;
+							rtn = _isp_proc_msg_post(&isp_proc_self_msg);
+						}
+					}
+				} else {
+					rtn=isp_af_calculation(handler_id);
+					if (ISP_SUCCESS!=(rtn&ISP_AF_END_FLAG)) {
+						isp_af_end(handler_id, ISP_ZERO);
+						if (ISP_ZERO==isp_context_ptr->isp_callback_bypass) {
+							struct isp_af_notice af_notice={0x00};
+							af_notice.mode=ISP_FOCUS_MOVE_END;
+							af_notice.valid_win=isp_context_ptr->af.suc_win;
+							ISP_LOG("callback ISP_AF_NOTICE_CALLBACK");
+							isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
+						}
+
+						if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) {
+							_isp_ContinueFocusStartInternal(handler_id);
+						}
 					}
 				}
 				break;
@@ -6394,6 +6588,9 @@ static void *_isp_proc_routine(void *client_data)
 			case ISP_PROC_EVT_CONTINUE_AF:
 				rtn=isp_continue_af_calc(handler_id);
 				if(rtn){
+					struct isp_continue_af_notice continue_end;
+					continue_end.af_valid=0x00;
+					isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_CONTINUE_AF_NOTICE_CALLBACK, (void*)&continue_end, sizeof(struct isp_continue_af_notice));
 					isp_ctrl_msg.handler_id = handler_id;
 					isp_ctrl_msg.msg_type = ISP_CTRL_EVT_CONTINUE_AF;
 					rtn = _isp_ctrl_msg_post(&isp_ctrl_msg);
@@ -6735,6 +6932,17 @@ int isp_ctrl_capability(uint32_t handler_id, enum isp_capbility_cmd cmd, void* p
 			rtn = isp_ae_get_denosie_level(handler_id, (uint32_t*)param_ptr);
 			break;
 		}
+		case ISP_DENOISE_INFO:
+		{
+			rtn = isp_ae_get_denosie_info(handler_id, (uint32_t*)param_ptr);
+			break;
+		}
+
+		case ISP_REG_VAL:
+		{
+			rtn = ispGetRegVal(handler_id, 0, (uint32_t*)param_ptr,0x1000);
+			break;
+		}
 		default :
 		{
 			break;
@@ -6758,7 +6966,7 @@ int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 	ISP_MSG_INIT(isp_msg);
 	uint32_t callback_flag=cmd&0x80000000;
 
-	//ISP_LOG("--isp_ioctl--cmd:0x%x", cmd);
+	ISP_LOG("--isp_ioctl--cmd:0x%x", cmd);
 
 	rtn = _isp_CtrlLock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl lock error"));
@@ -6989,7 +7197,7 @@ int isp_ctrl_proc_next(uint32_t handler_id, struct ipn_in_param* in_ptr, struct 
 *@
 *@ return:
 */
-int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd)
+int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 {
 	int rtn = ISP_SUCCESS;
 	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
@@ -7010,21 +7218,55 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd)
 		}
 		case ISP_CHANGE_CMC:
 		{
-			isp_context_ptr->cmc.matrix[0]=isp_context_ptr->cmc_tab[awb_index][0];
-			isp_context_ptr->cmc.matrix[1]=isp_context_ptr->cmc_tab[awb_index][1];
-			isp_context_ptr->cmc.matrix[2]=isp_context_ptr->cmc_tab[awb_index][2];
-			isp_context_ptr->cmc.matrix[3]=isp_context_ptr->cmc_tab[awb_index][3];
-			isp_context_ptr->cmc.matrix[4]=isp_context_ptr->cmc_tab[awb_index][4];
-			isp_context_ptr->cmc.matrix[5]=isp_context_ptr->cmc_tab[awb_index][5];
-			isp_context_ptr->cmc.matrix[6]=isp_context_ptr->cmc_tab[awb_index][6];
-			isp_context_ptr->cmc.matrix[7]=isp_context_ptr->cmc_tab[awb_index][7];
-			isp_context_ptr->cmc.matrix[8]=isp_context_ptr->cmc_tab[awb_index][8];
-			isp_context_ptr->tune.cmc=ISP_EB;
-			break ;
+			uint16_t *cmc_tab[2] = {NULL, NULL};
+			uint16_t *weight = (uint16_t *)param;
+			uint8_t is_update_cmc = ISP_UEB;
+
+			ISP_LOG("--cmc--p%d, a:%d", param_index, awb_index);
+
+			if (NULL == weight)
+			{
+				uint32_t i = 0;
+
+				awb_index = (awb_index > 8) ? 8 : awb_index;
+
+				for (i=0; i<9; i++)
+				{
+					isp_context_ptr->cmc_awb[i] = isp_context_ptr->cmc_tab[awb_index][i];
+				}
+				is_update_cmc = ISP_EB;
+			}
+			else
+			{
+				if (0 == awb_index)
+				{
+					cmc_tab[0] = 	isp_context_ptr->cmc_tab[0];
+					cmc_tab[1] = 	isp_context_ptr->cmc_tab[0];
+				}
+				else if (awb_index >= 8)
+				{
+					cmc_tab[0] = 	isp_context_ptr->cmc_tab[8];
+					cmc_tab[1] = 	isp_context_ptr->cmc_tab[8];
+				}
+				else
+				{
+					cmc_tab[0] = 	isp_context_ptr->cmc_tab[awb_index - 1];
+					cmc_tab[1] = 	isp_context_ptr->cmc_tab[awb_index];
+				}
+
+				isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t**)cmc_tab, weight);//thomaszhang	isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t*)cmc_tab, weight);
+			}
+
+			isp_SetCMC_By_Reduce(handler_id, (uint16_t*)(isp_context_ptr->cmc.matrix),\
+									(uint16_t*)isp_context_ptr->cmc_awb, isp_context_ptr->cmc_percent,
+									(uint8_t*)&is_update_cmc);
+			isp_context_ptr->tune.cmc=is_update_cmc;
+
+			break;
 		}
 		default:
 		{
-			break ;
+			break;
 		}
 
 	}

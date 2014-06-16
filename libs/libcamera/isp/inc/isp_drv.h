@@ -380,6 +380,8 @@ int32_t ispStop(uint32_t handler_id);
 int32_t ispRegWrite(uint32_t handler_id, uint32_t num, void* param_ptr);
 int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr);
 
+int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint32_t len);
+
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*
 *-------------------------------------------------------------------------------*/

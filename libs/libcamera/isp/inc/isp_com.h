@@ -404,6 +404,7 @@ struct isp_fcs_param{
 
 struct isp_css_param{
 	uint32_t bypass;
+	uint32_t bypass_bakup;
 	uint8_t low_thr[7];
 	uint8_t lum_thr;
 	uint8_t low_sum_thr[7];
@@ -516,6 +517,7 @@ struct isp_context{
 	struct isp_awb_statistic_info awb_stat;
 	struct isp_bpc_param bpc;
 	struct isp_denoise_param denoise;
+	struct isp_denoise_param denoise_bak;
 	struct isp_grgb_param grgb;
 	struct isp_cfa_param cfa;
 	struct isp_cmc_param cmc;
@@ -525,13 +527,16 @@ struct isp_context{
 	struct isp_cce_matrix cce_matrix;
 	struct isp_cce_uvdiv uv_div;
 	struct isp_pref_param pref;
+	struct isp_pref_param pref_bak;
 	struct isp_bright_param bright;
 	struct isp_contrast_param contrast;
 	struct isp_hist_param hist;
 	struct isp_hist_statistic_info hist_stat;
 	struct isp_auto_contrast_param auto_contrast;
 	struct isp_saturation_param saturation;
+	struct isp_saturation_param saturation_bak;
 	struct isp_hue_param hue;
+	struct isp_hue_param hue_bak;
 	struct isp_af_param af;
 	struct isp_af_statistic_info af_stat;
 	struct isp_edge_param edge;
@@ -555,6 +560,8 @@ struct isp_context{
 	struct isp_lnc_map lnc_map_tab[ISP_SET_NUM][ISP_COLOR_TEMPRATURE_NUM];
 	uint32_t isp_lnc_addr;
 	uint16_t cmc_tab[ISP_CMC_NUM][9];
+	uint16_t cmc_awb[9];
+	uint32_t cmc_percent;
 	uint8_t bright_tab[16];
 	uint8_t contrast_tab[16];
 	uint8_t saturation_tab[16];
@@ -619,7 +626,7 @@ struct isp_respond
 struct isp_context* ispGetContext(uint32_t handler_id);
 uint32_t ISP_Algin(uint32_t pLen , uint16_t algin_blk, uint16_t algin_bits);
 uint32_t IspGetId(void);
-int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd);
+int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param);
 int32_t isp_set_gamma(struct isp_gamma_param* gamma, struct isp_gamma_tab* tab_ptr);
 int32_t ispAfmEb(uint32_t handler_id);
 int32_t ispCfgAwbm(uint32_t handler_id,struct isp_awbm_param* param_ptr);
