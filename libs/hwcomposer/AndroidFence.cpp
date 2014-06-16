@@ -233,14 +233,10 @@ int HWCBufferSyncBuild(hwc_display_contents_1_t *list, int display)
     HWC_TRACE_CALL;
 
     static int releaseFenceFd = -1;
-    enum SPRD_DEVICE_SYNC_TYPE device_type;
+    enum SPRD_DEVICE_SYNC_TYPE device_type = SPRD_DEVICE_PRIMARY_SYNC;
     struct HWC_fence_data fenceData;
 
-    if (display == DISPLAY_PRIMARY)
-    {
-        device_type = SPRD_DEVICE_PRIMARY_SYNC;
-    }
-    else if (display == DISPLAY_VIRTUAL)
+    if (display == DISPLAY_VIRTUAL)
     {
         device_type = SPRD_DEVICE_VIRTUAL_SYNC;
     }
@@ -352,6 +348,7 @@ int HWCBufferSyncBuildForVirtualDisplay(hwc_display_contents_1_t *list)
     if (fenceData.release_fence_fd >= 0)
     {
         close(fenceData.release_fence_fd);
+	fenceData.release_fence_fd = -1;
     }
 
     list->retireFenceFd = fenceData.retired_fence_fd;
@@ -363,13 +360,14 @@ int HWCBufferSyncReleaseForVirtualDisplay(hwc_display_contents_1_t *list)
 {
     HWC_TRACE_CALL;
 
+    if (releaseFenceFdForVirtualDisplay < 0)
+    {
+        return 0;
+    }
+
     int ret = -1;
     enum SPRD_DEVICE_SYNC_TYPE device_type = SPRD_DEVICE_VIRTUAL_SYNC;
 
-    /*
-     *  The HW blit operation for Virtual Display is in another
-     *  thread, so release operation is independent.  
-     * */
     ret = sprd_fence_signal(device_type);
     close(releaseFenceFdForVirtualDisplay);
     releaseFenceFdForVirtualDisplay = -1;

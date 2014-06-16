@@ -178,7 +178,9 @@ int SprdHWComposer:: prepareDisplays(size_t numDisplays, hwc_display_contents_1_
 {
     int ret = 0;
 
+#ifdef FORCE_ADJUST_ACCELERATOR
     DevicePropertyProbe(numDisplays, displays);
+#endif
 
     for(unsigned int i = 0; i < numDisplays; i++)
     {

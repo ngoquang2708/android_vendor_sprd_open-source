@@ -128,7 +128,7 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
              struct private_handle_t *privateH = (struct private_handle_t *)(layer->handle);
              if (privateH == NULL)
              {
-                 ALOGE("VirtualDisplay FBT layer privateH is NULL, privateH addr: %p", (void *)privateH);
+                 ALOGI_IF(mDebugFlag, "VirtualDisplay FBT layer privateH is NULL, privateH addr: %p", (void *)privateH);
                  continue;
              }
              ALOGI_IF(mDebugFlag, "VirtualDisplay HWC_FBT layer, ignore it, format: 0x%x", privateH->format);

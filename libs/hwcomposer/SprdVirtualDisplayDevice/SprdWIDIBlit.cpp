@@ -203,7 +203,7 @@ bool SprdWIDIBlit:: threadLoop()
     else
     {
         ALOGI_IF(mDebugFlag, "SprdWIDIBlit:: threadLoop Source(SourcePhyAddrType: %d) or Dest(DestPhyAddrType: %d) do not use ION_PhyAddr, will Use NEON to Blit", SourcePhyAddrType, DestPhyAddrType);
-        if (privateH->base == NULL || DisplayHandle->base == NULL)
+        if ((void *)(privateH->base) == NULL || (void *)(DisplayHandle->base) == NULL)
         {
             ALOGE("SprdWIDIBlit:: threadLoop Source virtual address: %p or Dest virtual addr: %p is NULL",
                   (void *)(privateH->base), (void *)(DisplayHandle->base));

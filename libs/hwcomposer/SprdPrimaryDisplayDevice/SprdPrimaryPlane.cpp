@@ -97,48 +97,29 @@ private_handle_t* SprdPrimaryPlane::dequeueBuffer()
     queryDebugFlag(&mDebugFlag);
     queryDumpFlag(&mDumpFlag);
 
-    mBuffer = SprdDisplayPlane::dequeueBuffer();
-    if (mBuffer == NULL)
-    {
-        ALOGE("SprdPrimaryPlane cannot get ION buffer");
-        return NULL;
-    }
-
     mFreePlaneCount = 1;
 
     mBufferIndex = SprdDisplayPlane:: getPlaneBufferIndex();
 
-
     enable();
 
-    /*
-     *  Here, it is a workaround method.
-     *  Mali drawing FrameBuffer in another thread of
-     *  OverlayComposer maybe access the resource released
-     *  by Android framework.
-     *  Just do the safely thread check.
-     *  We just permit directly displaying of OSD layer
-     *  is used in the same thread.
-     * */
-    localThreadID = gettid();
-
-    if (mThreadID == localThreadID)
+    if (mDisplayFBTargetLayerFlag)
     {
-        if (mDisplayFBTargetLayerFlag)
-        {
-            mPlaneBufferPhyAddr = mDisplayFBTargetPhyAddr;
-        }
-        else if (GetDirectDisplay())
-        {
-            mPlaneBufferPhyAddr = mDirectDisplayPhyAddr;
-        }
-        else
-        {
-            mPlaneBufferPhyAddr = (unsigned char *)(mBuffer->phyaddr);
-        }
+        mPlaneBufferPhyAddr = mDisplayFBTargetPhyAddr;
+    }
+    else if (GetDirectDisplay())
+    {
+        mPlaneBufferPhyAddr = mDirectDisplayPhyAddr;
+        ALOGI_IF(mDebugFlag, "SprdPrimaryPlane is in DirectDisplay Mode");
     }
     else
     {
+        mBuffer = SprdDisplayPlane::dequeueBuffer();
+        if (mBuffer == NULL)
+        {
+            ALOGE("SprdPrimaryPlane cannot get ION buffer");
+            return NULL;
+        }
         mPlaneBufferPhyAddr = (unsigned char *)(mBuffer->phyaddr);
     }
 
@@ -149,7 +130,10 @@ private_handle_t* SprdPrimaryPlane::dequeueBuffer()
 
 int SprdPrimaryPlane::queueBuffer()
 {
-    SprdDisplayPlane::queueBuffer();
+    if ((mDisplayFBTargetLayerFlag || GetDirectDisplay()) == false)
+    {
+        SprdDisplayPlane::queueBuffer();
+    }
 
     flush();
 
@@ -229,7 +213,7 @@ bool SprdPrimaryPlane::SetDisplayParameters(hwc_layer_1_t *AndroidLayer)
     {
         ALOGI_IF(mDebugFlag, "Current device cannot support virtual adress");
         mDirectDisplayFlag = false;
-	return false;
+        return false;
     }
 
     if (AndroidLayer->transform != 0)
@@ -363,13 +347,17 @@ private_handle_t* SprdPrimaryPlane::flush()
 {
     enum PlaneFormat format;
     struct overlay_setting *BaseContext = &(mContext->BaseContext);
+    private_handle_t* flushingBuffer = NULL;
 
     queryDebugFlag(&mDebugFlag);
     queryDumpFlag(&mDumpFlag);
 
     InvalidatePlaneContext();
 
-    private_handle_t* flushingBuffer = SprdDisplayPlane::flush();
+    if ((mDisplayFBTargetLayerFlag || GetDirectDisplay()) == false)
+    {
+        flushingBuffer = SprdDisplayPlane::flush();
+    }
 
     BaseContext->layer_index = SPRD_LAYERS_OSD;
 
@@ -384,7 +372,7 @@ private_handle_t* SprdPrimaryPlane::flush()
     else if (format ==  PLANE_FORMAT_RGB565)
     {
         BaseContext->data_type = SPRD_DATA_FORMAT_RGB565;
-        BaseContext->y_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
+        BaseContext->y_endian = SPRD_DATA_ENDIAN_B2B3B0B1;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
         BaseContext->rb_switch = 0;
     }

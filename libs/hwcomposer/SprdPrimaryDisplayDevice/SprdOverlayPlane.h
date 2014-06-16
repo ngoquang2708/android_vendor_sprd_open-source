@@ -95,6 +95,8 @@ public:
 
     SprdHWLayer *getOverlayLayer();
 
+    enum PlaneFormat getPlaneFormat();
+
 private:
     FrameBufferInfo *mFBInfo;
 #ifdef BORROW_PRIMARYPLANE_BUFFER
@@ -122,8 +124,6 @@ private:
      *  reset the displayplane context.
      * */
     void InvalidatePlaneContext();
-
-    enum PlaneFormat getPlaneFormat();
 
     int checkHWLayer(SprdHWLayer *l);
 

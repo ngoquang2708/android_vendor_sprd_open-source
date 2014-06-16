@@ -207,6 +207,7 @@ int SprdPrimaryDisplayDevice:: AcceleratorAdapt(int DisplayDeviceAccelerator)
 {
     int value = ACCELERATOR_NON;
 
+#ifdef FORCE_ADJUST_ACCELERATOR
     if (DisplayDeviceAccelerator & ACCELERATOR_GSP_IOMMU)
     {
         if (mAcceleratorMode & ACCELERATOR_GSP_IOMMU)
@@ -236,8 +237,11 @@ int SprdPrimaryDisplayDevice:: AcceleratorAdapt(int DisplayDeviceAccelerator)
             value |= ACCELERATOR_OVERLAYCOMPOSER;
         }
     }
+#else
+    value |= mAcceleratorMode;
+#endif
 
-    ALOGI_IF(mDebugFlag, "SprdPrimaryDisplayDevice:: AcceleratorAdapt accelerator: %x", value);
+    ALOGI_IF(mDebugFlag, "SprdPrimaryDisplayDevice:: AcceleratorAdapt accelerator: 0x%x", value);
     return value;
 }
 
@@ -515,11 +519,10 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             DisplayOverlayComposerGSP = true;
             break;
         default:
-            ALOGI("Do not support display type: %d", (mHWCDisplayFlag & ~HWC_DISPLAY_MASK));
+            ALOGI_IF(mDebugFlag, "Display type: %d, use FBTarget", (mHWCDisplayFlag & ~HWC_DISPLAY_MASK));
             DisplayFBTarget = true;
             break;
     }
-
 
     /*
      *  This is temporary methods for displaying Framebuffer target layer, has some bug in FB HAL.
@@ -615,14 +618,17 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
     {
         mPrimaryPlane->dequeueBuffer();
 
-        buffer2 = mPrimaryPlane->getPlaneBuffer();
-
         DirectDisplayFlag = mPrimaryPlane->GetDirectDisplay();
+        if (DirectDisplayFlag == false)
+        {
+            buffer2 = mPrimaryPlane->getPlaneBuffer();
+        }
     }
     else
     {
        mPrimaryPlane->disable();
     }
+
 
     if (DisplayOverlayPlane ||
         (DisplayPrimaryPlane && DirectDisplayFlag == false))
@@ -647,19 +653,29 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 #ifdef PROCESS_VIDEO_USE_GSP
         if (OverlayLayer)
         {
-#ifdef VIDEO_LAYER_USE_RGB
-             mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
-#else
-#ifdef GSP_OUTPUT_USE_YUV420
-            mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV420_2P);
-#else
-            mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV422_2P);
-#endif
-#endif
+            if (mOverlayPlane->getPlaneFormat() == PLANE_FORMAT_RGB888)
+            {
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+            }
+            else if (mOverlayPlane->getPlaneFormat() == PLANE_FORMAT_YUV422)
+            {
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV422_2P);
+            }
+            else if (mOverlayPlane->getPlaneFormat() == PLANE_FORMAT_YUV420)
+            {
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_YUV420_2P);
+            }
         }
         else if (OverlayLayer == NULL && PrimaryLayer != NULL)
         {
-            mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+            if (mPrimaryPlane->getPlaneFormat() == PLANE_FORMAT_RGB888)
+            {
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+            }
+            else if (mPrimaryPlane->getPlaneFormat() == PLANE_FORMAT_RGB565)
+            {
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB565);
+            }
         }
 
         if(mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2))

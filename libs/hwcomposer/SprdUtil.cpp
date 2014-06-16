@@ -1114,9 +1114,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
                 gsp_cfg_info.layer0_info.layer_en,
                 gsp_cfg_info.layer0_info.img_format);
         }
-		gsp_cfg_info.misc_info.split_pages = 0;//no mater copying or not, must set split_pages as zero.
 #endif
-
 		ALOGI_IF(mDebugFlag,"GSP_Proccess L%d,L1 yaddr:%08x {p%d,s%d,f%d}[x%d,y%d,w%d,h%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  gsp_cfg_info.layer0_info.src_addr.addr_y,
 				 gsp_cfg_info.layer0_info.pitch,

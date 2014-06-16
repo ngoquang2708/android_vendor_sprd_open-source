@@ -60,6 +60,7 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 DEVICE_WITH_GSP := true
 DEVICE_OVERLAYPLANE_BORROW_PRIMARYPLANE_BUFFER := true
 DEVICE_USE_FB_HW_VSYNC := true
+DEVICE_DIRECT_DISPLAY_SINGLE_OSD_LAYER := true
 endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 DEVICE_WITH_GSP := true
@@ -83,10 +84,13 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	LOCAL_CFLAGS += -DGSP_ENDIAN_IMPROVEMENT
 
 	# LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
-	#
-	# DIRECT_DISPLAY_SINGLE_OSD_LAYER need contiguous physcial address.
-	# At present, this condition cannot be satisfied.
-        #LOCAL_CFLAGS += -DDIRECT_DISPLAY_SINGLE_OSD_LAYER
+
+#
+# if GSP has not IOMMU, DIRECT_DISPLAY_SINGLE_OSD_LAYER need contiguous physcial address;
+# if GSP has IOMMU, we can open DIRECT_DISPLAY_SINGLE_OSD_LAYER.
+ifeq ($(strip $(DEVICE_DIRECT_DISPLAY_SINGLE_OSD_LAYER)),true)
+        LOCAL_CFLAGS += -DDIRECT_DISPLAY_SINGLE_OSD_LAYER
+endif
 
 	LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
@@ -94,6 +98,7 @@ ifneq ($(strip $(DEVICE_GSP_NOT_SCALING_UP_TWICE)),true) # when on tshark, if cp
 	LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE
 endif
 	#LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA_1080P
+	#LOCAL_CFLAGS += -DGSP_BLEND_2_LAYERS # Blending 2 layers by GSP
 	endif
 
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
@@ -119,8 +124,12 @@ endif
 
 # For Virtual Display
 # HWC need do the Hardware copy and format convertion
+# FORCE_ADJUST_ACCELERATOR: for a better performance of Virtual Display,
+# we forcibly make sure the GSP/GPP device to be used by Virtual Display.
+# and disable the GSP/GPP on Primary Display.
 ifeq ($(TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS),true)
 	LOCAL_CFLAGS += -DFORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
+	#LOCAL_CFLAGS += -DFORCE_ADJUST_ACCELERATOR
 endif
 
 # OVERLAY_COMPOSER_GPU_CONFIG: Enable or disable OVERLAY_COMPOSER_GPU

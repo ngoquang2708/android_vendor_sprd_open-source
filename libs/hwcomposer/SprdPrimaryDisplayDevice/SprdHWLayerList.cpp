@@ -39,9 +39,6 @@
 #include "SprdFrameBufferHAL.h"
 #include "SprdHWLayerList.h"
 #include "dump.h"
-#ifdef PROCESS_VIDEO_USE_GSP
-#include "gsp_types_shark.h"
-#endif
 
 
 using namespace android;
@@ -127,6 +124,7 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list, int acceler
     mVideoLayerCount = 0;
     mRGBLayerFullScreenFlag = false;
     mSkipLayerFlag = false;
+    mAcceleratorMode = ACCELERATOR_NON;
     mAcceleratorMode |= accelerator;
 
     if (list == NULL)
@@ -244,6 +242,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     bool postProcessVideoCond = false;
     bool singleRGBLayerCond = false;
     int LayerCount = mLayerCount;
+    bool accelerateByGSP = false;
+    bool accelerateByOverlayComposer = false;
 
     if (mDisableHWCFlag)
     {
@@ -281,6 +281,9 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
 
         YUVLayer = mVideoLayerList[i];
         YUVIndex = YUVLayer->getLayerIndex();
+
+        accelerateByGSP = ((YUVLayer->getAccelerator() == ACCELERATOR_GSP) ||
+                           (YUVLayer->getAccelerator() == ACCELERATOR_GSP_IOMMU));
     }
 
     /*
@@ -302,6 +305,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
             continue;
         }
 
+	accelerateByOverlayComposer = (RGBLayer->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER) ? true : false;
+
 #ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
         /*
          *  if the RGB layer is bottom layer and there is no other layer,
@@ -311,6 +316,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         if (singleRGBLayerCond)
         {
             ALOGI_IF(mDebugFlag, "Force single OSD layer go to Overlay");
+            RGBLayer = mOSDLayerList[i];
             break;
         }
 #endif
@@ -334,6 +340,10 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         if ((mOSDLayerCount > 0)  && ((mFBLayerCount > 0) || (supportYUVLayerCond == false)))
         {
             resetOverlayFlag(mOSDLayerList[i]);
+            if (mOSDLayerList[i])
+            {
+                mOSDLayerList[i]->resetAccelerator();
+            }
             mFBLayerCount++;
             RGBLayer = NULL;
             RGBIndex = 0;
@@ -379,12 +389,17 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     }
 #endif
 
-    bool accelerateByGSP = (YUVLayer && (YUVLayer->getAccelerator() == ACCELERATOR_GSP ||
-                            YUVLayer->getAccelerator() == ACCELERATOR_GSP_IOMMU));
+#ifdef GSP_BLEND_2_LAYERS
+    if ((accelerateByOverlayComposer != true) && accelerateByGSP)
+    {
+        accelerateByGSP = false;
+        ALOGI_IF(mDebugFlag, "Blending By GSP should make sure OSD layer exist");
+    }
+#endif
 
     if (accelerateByGSP
 #ifdef GSP_BLEND_2_LAYERS
-        && (mRGBLayerCount > 1) // 3 layers compose with GPU
+        && (mRGBLayerCount >= 1) // 3 layers compose with GPU
 #else
         && (mRGBLayerCount > 0) // 2 layers compose with GPU
 #endif
@@ -392,15 +407,23 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     {
         postProcessVideoCond = true;
         YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry change video accelerator type to GPU");
     }
     else if ((YUVLayer != NULL) && (accelerateByGSP == false))
     {
         postProcessVideoCond = true;
         YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry change video accelerator type to GPU");
     }
-    else
+    else if (singleRGBLayerCond && (accelerateByOverlayComposer == true))
     {
-
+        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry no accelerator found, disable single OSD Overlay");
+        if (RGBLayer)
+        {
+            RGBLayer->resetAccelerator();
+            resetOverlayFlag(RGBLayer);
+            mFBLayerCount++;
+        }
     }
 
     if (postProcessVideoCond)
@@ -484,7 +507,7 @@ void SprdHWLayerList:: resetOverlayFlag(SprdHWLayer *l)
 {
     if (l == NULL)
     {
-        ALOGE("SprdHWLayer is NULL");
+        ALOGI_IF(mDebugFlag, "SprdHWLayer is NULL");
         return;
     }
 
@@ -564,19 +587,19 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             }
             else
             {
-                ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GPU to accelerate");
+                ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GPU to accelerate L:%d", __LINE__);
             }
         } 
         else
         {
             l->setLayerAccelerator(ACCELERATOR_GSP);
-            ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSP to accelerate");
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSP to accelerate L:%d", __LINE__);
         }
     }
     else if (mAcceleratorMode & ACCELERATOR_GSP_IOMMU)
     {
         l->setLayerAccelerator(ACCELERATOR_GSP_IOMMU);
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSPIOMMU to accelerate");
+        ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSPIOMMU to accelerate L:%d", __LINE__);
     }
     else if ((l->getAccelerator() == ACCELERATOR_NON))
     {
@@ -584,7 +607,6 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             !(l->checkContiguousPhysicalAddress(privateH)))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d, no accelerator, not PHY, need transform", __LINE__);
-            l->resetAccelerator();
             return 0;
         }
     }
@@ -724,6 +746,11 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
             l->setLayerAccelerator(ACCELERATOR_GSP);
             ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, Use GSP to accelerate", __LINE__);
        }
+    }
+    else if (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER)
+    {
+        l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, Use GPU to accelerate", __LINE__);
     }
 
     if(l->checkNotSupportOverlay(privateH))

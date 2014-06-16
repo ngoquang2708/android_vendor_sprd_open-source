@@ -119,8 +119,7 @@ int SprdVirtualPlane:: queueBuffer()
 
     if (HWCBufferSyncReleaseForVirtualDisplay(mAndroidLayerList) < 0)
     {
-        ALOGE("SprdVirtualPlane::dequeueBuffer BufferSyncRelease failed");
-	return -1;
+        ALOGE("SprdVirtualPlane:: queueBuffer HWCBufferSyncReleaseForVirtualDisplay failed");
     }
 
     queryDumpFlag(&mDumpFlag);
