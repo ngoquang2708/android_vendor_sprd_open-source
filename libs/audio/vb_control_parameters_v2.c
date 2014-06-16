@@ -1071,7 +1071,7 @@ static void GetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
     pga_gain_nv->voice_hp_pa_config  =
         (mode_gain_paras->reserved[1] | (mode_gain_paras->reserved[2]<<16));
 
-    ret = SetVoice_gain_by_devices(adev,&pga_gain_nv);
+    ret = SetVoice_gain_by_devices(adev,pga_gain_nv);
     if(ret < 0){
         return;
     }
