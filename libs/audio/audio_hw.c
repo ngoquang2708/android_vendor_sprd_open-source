@@ -3639,7 +3639,7 @@ static int adev_init_check(const struct audio_hw_device *dev)
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
-    if(adev->mode == AUDIO_MODE_IN_CALL || adev->call_start ){
+    if(1){//(adev->mode == AUDIO_MODE_IN_CALL || adev->call_start ){
         BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
         adev->voice_volume = volume;
         /*Send at command to cp side*/
