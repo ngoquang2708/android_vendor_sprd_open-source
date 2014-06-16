@@ -1,5 +1,46 @@
 #!/bin/bash
 
+#将file末尾的一些回车符删掉
+function clear_file()
+{
+	declare -i end
+	declare -i n
+	file=$1
+	cd $2
+	n=0
+	end=0
+	file_t="$file""_bak"
+	file_n="$file""_bak_b"    #避免屏幕输出
+	file_m="$file""_bak_bak"  #computer lines
+	sed 's/.$//' $file >$file_m  #删除每行的最后一个字符,可能是"\",引起计算行错误
+
+	cat $file_m | while read  line
+	do
+		n=n+1
+		#echo $line
+		#echo ${#line}
+		#echo "n="$n
+		if [ ${#line} -gt 0 ];then
+			end=n
+			echo $end >$file_t
+		fi
+	done
+	end=0
+	if [[ -f $file_t ]];then
+		while read line
+		do
+	    end=$line
+		done < $file_t
+		rm $file_t -rf
+	fi
+	if [[ -f $file_m ]];then
+		rm $file_m -rf
+	fi
+	echo "end="$end
+	head -$end $file >$file_n
+	mv $file_n $file
+}
+
 function add_to_file()
 {
 	echo "add_to_file"
@@ -66,10 +107,9 @@ function add_to_file()
 				replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 				line=${line//$substring_b/$replacement_b}
 				if [ $is_substring_2 -gt 0 ];then
-					echo "$line" | grep "$substring_2" >$file_n
+					echo "$line" | grep -i "$substring_2" >$file_n
 					if [ $? -eq 0 ];then
 						line=${line//$substring_2/$replacement_2}
-					else
 						substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring_2"`
 						replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement_2"`
 						line=${line//$substring_b/$replacement_b}
@@ -209,11 +249,23 @@ function add_to_file_e()
 	var2=$5
 	var1=$6
 	have_second_end_string=0
+	only_add_one_line=0
 
 	if [ $# -ge 7 ];then
-		echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,以它结束为准
-		second_end_string=$7
-		have_second_end_string=1
+		if [ $7 -gt 0 ];then
+			echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,以它结束为准
+			second_end_string=$7
+			have_second_end_string=1
+		fi
+	fi
+	is_substring_2=0  #is_substring_2用于是否需要替换第二种字符串
+	substring_2=0
+	if [ $# -ge 9 ];then
+		#仅增加单行替换第二种字符串
+		#echo "$8 $9"
+		substring_2=$8
+		replacement_2=$9
+		is_substring_2=1
 	fi
 
 	declare -i n
@@ -228,6 +280,7 @@ function add_to_file_e()
 	file_m="$file""_bak_bak"  #computer lines
 	file_n="$file""_bak_b"    #避免屏幕输出
 	file_s="$file""_bak_s"    #找到第二结束字符串
+	file_o="$file""_bak_o"    #是否只增加一行
 	is_one_line='skip_one_line'
 
 	sed 's/.$//' $file >$file_m  #删除每行的最后一个字符,可能是"\",引起计算行错误
@@ -268,9 +321,12 @@ function add_to_file_e()
 			echo "find"" begin=""$begin"
 			echo "$var1" | grep "$is_one_line" >$file_n
 			if [ $? -eq 0 ];then
-				echo "only add one line"
-				echo "maybe have error!!!!!!"
-				exit 0
+				echo "xxx only add one line"
+				end=$n
+				echo $end >$file_t
+				only_add_one_line=1
+				echo $only_add_one_line >$file_o
+				break
 			fi
 		fi
 	done
@@ -293,6 +349,13 @@ function add_to_file_e()
 		if [ $have_second_end_string -eq 2 ];then
 			var1=$second_end_string  #以第二结束字符串为准
 		fi
+	fi
+	if [[ -f $file_o ]];then
+		while read line
+		do
+	    only_add_one_line=$line
+		done < $file_o
+		rm $file_o -rf
 	fi
 
 	if [[ -f $file_m ]];then
@@ -335,13 +398,29 @@ function add_to_file_e()
 			elif [ $m -eq 0 ];then
 				n=n+1
 				begin=$n
-				echo "$line" | grep "$substring" >$file_n
+				echo "$line" | grep -i "$substring" >$file_n
 				if [ $? -eq 0 ];then
 					line=${line//$substring/$replacement}
-				else
 					substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring"`
 					replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 					line=${line//$substring_b/$replacement_b}
+				fi
+				if [ $only_add_one_line = 1 ];then
+					#only add one line
+					echo xxzzz
+					if [ $is_substring_2 -gt 0 ];then
+						echo "$line" | grep -i "$substring_2" >$file_n
+						if [ $? -eq 0 ];then
+							line=${line//$substring_2/$replacement_2}
+							substring_b=`tr '[a-z]' '[A-Z]' <<<"$substring_2"`
+							replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement_2"`
+							line=${line//$substring_b/$replacement_b}
+						fi
+					fi
+					sed -e "$end""a\\$line"  $file >$file_t
+					cp $file_t $file
+					rm $file_t -rf
+					break
 				fi
 				line_s="\n$line"
 			else
@@ -368,6 +447,7 @@ function board_for_kernel()
 		fi
 	fi
 	USE_INPUT_BOARD_MACRO=0
+	have_dt_board=0
 
 	echo -e "\n\nconfigure kernel begin......"
 	#---------产生*native_defconfig文件 begin-------
@@ -420,6 +500,8 @@ function board_for_kernel()
 				fi
 				echo -e "please input again"
 			else
+				TEMP1="CONFIG_MACH_""$TEMP1""=y"
+				TEMP2="CONFIG_MACH_""$TEMP2""=y"
 				sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 				USE_INPUT_BOARD_MACRO=1
 				echo -e "find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
@@ -429,9 +511,57 @@ function board_for_kernel()
 		done
 	else
 		#echo "find $TEMP1"
+		TEMP1="CONFIG_MACH_""$TEMP1""=y"
+		TEMP2="CONFIG_MACH_""$TEMP2""=y"
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	fi
+
+	#clone dt_defconfig
+	TEMP_=$BOARD_NAME_R"-dt_defconfig"
+	#echo "xxx"$TEMP_
+	TEMP_1=$BOARD_NAME_N"-dt_defconfig"
+	if [  -f $TEMP_ ];then
+		cp $TEMP_ $TEMP_1
+		have_dt_board=1
+		file=$TEMP_1
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 	#---------产生*native_defconfig文件 end-------
+	
+	#---------产生*dts文件 begin-------
+	cd $workdir
+	cd "kernel/arch/arm/boot/dts"
+	file="sprd-""$PLATFORM""_""$BOARD_NAME_R"".dts"
+	#echo $file
+	if [  -f $file ];then
+		TEMP_1="sprd-""$PLATFORM""_""$BOARD_NAME_N"".dts"
+		cp $file $TEMP_1
+	fi
+	#---------产生*dts文件 end-------
+	
+	#---------修改kernel/arch/arm/boot/dts/Makefile begin-------
+	#echo $have_dt_board
+	if [ $have_dt_board = 1 ];then
+		echo "modify kernel/arch/arm/boot/dts/Makefile"
+		cd $workdir
+		file=Makefile
+		replacement=$BOARD_NAME_N
+		path="kernel/arch/arm/boot/dts"
+		end_string='skip_one_line'
+		if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
+			#kconfig中的board宏因为不规范,使用重新输入的串
+			#echo "kernel/arch/arm/boot/dts/Makefile do not modify ok,please modify it after"
+			substring=$BOARD_MACRO_IN_KERNLE
+			begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+			add_to_file_e  $file $path $substring $replacement $begin_string $end_string 0 $BOARD_NAME_R $replacement
+		else
+			substring=$BOARD_NAME_R
+			begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+			add_to_file_e $file $path $substring $replacement $begin_string $end_string
+		fi
+	fi
+	#---------修改kernel/arch/arm/boot/dts/Makefile end-------
+
 
 	#---------修改kernel\arch\arm\mach-sc\Makefile文件 begin-------
 	cd $workdir
@@ -795,21 +925,36 @@ function board_for_device()
 	cd $PATH_N
 
 	if  [ $BOARD_TYPE = 1 ];then
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""base.mk"
-		if [ ! -f $TEMP ];then
-			echo "$TEMP"" not exist,maybe something error!\nplease check!"
-			exit 0
-		fi
 		TEMP1="xxx122222"
 		mkdir $TEMP1
-		TEMP2=$PLATFORM"_""$BOARD_NAME_N""base.mk"
-		cp $TEMP $TEMP1/$TEMP2
-
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus.mk"
-		TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
-
+		TEMP=$PLATFORM"_""$BOARD_NAME_R""base.mk"
+		find=0
 		if [  -f $TEMP ];then
+			TEMP2=$PLATFORM"_""$BOARD_NAME_N""base.mk"
 			cp $TEMP $TEMP1/$TEMP2
+			find=1
+		fi
+		TEMP=$PLATFORM"_""$BOARD_NAME_R""base_dt.mk"
+		if [  -f $TEMP ];then
+			TEMP2=$PLATFORM"_""$BOARD_NAME_N""base_dt.mk"
+			cp $TEMP $TEMP1/$TEMP2
+			find=1
+		fi
+		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus.mk"
+		if [  -f $TEMP ];then
+			TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
+			cp $TEMP $TEMP1/$TEMP2
+			find=1
+		fi
+		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus_dt.mk"
+		if [  -f $TEMP ];then
+			TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus_dt.mk"
+			cp $TEMP $TEMP1/$TEMP2
+			find=1
+		fi
+		if  [ $find = 0 ];then
+			echo "no base or plus or base_dt or plus_dt mk file,maybe something error!\nplease check!"
+			exit 0
 		fi
 	elif [ $BOARD_TYPE = 2 ];then
 		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus.mk"
@@ -849,49 +994,65 @@ function board_for_device()
 	if [ $BOARD_TYPE = 1 ];then
 		TEMP=asgii77jusua778
 		TEMP1=$PLATFORM"_""$BOARD_NAME_N""base-"
+		TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt-"
+		#赋个随意不重复的字符串
+		TEMP_=ad899mmkkk
 	fi
 	TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus-"
 	TEMP3=kjjs8j8jjshh7
 
+	TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt-"
+	TEMP_3=iujk9990iuk
+
 	if [ $BOARD_TYPE = 1 ];then
 		sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
+		sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
 	fi
 	sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
+	sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
 
 	sed -i -e /$BOARD_NAME_N/d $file
 
 	if [ $BOARD_TYPE = 1 ];then
 		sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
+		sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
 	fi
 	sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
+	sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
 
 	file=AndroidProducts.mk
 	if [ $BOARD_TYPE = 1 ];then
-		TEMP=asgii77jusua778
+		#TEMP=asgii77jusua778
 		TEMP1=$PLATFORM"_""$BOARD_NAME_N""base.mk"
+		TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt.mk"
 	fi
 	TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
-	TEMP3=kjjs8j8jjshh7
+	TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt.mk"
+	#TEMP3=kjjs8j8jjshh7
 
 	if [ $BOARD_TYPE = 1 ];then
 		sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
+		sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
 	fi
 	sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
+	sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
 
-	#删除包含BOARD_NAME_N*.mk的行
+	#删除包含BOARD_NAME_N*.mk的行,需要留下的board都已替换字符串
 	sed -i -e /"$BOARD_NAME_N".*".mk"\/d $file
 
-
+	#把留下的board改回去,还原
 	if [ $BOARD_TYPE = 1 ];then
 		sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
+		sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
 	fi
 	sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
-
+	sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
 	#---------删除vendorsetup.sh AndroidProducts中其他衍生的board-------
 
 
 
 	#---------删除AndroidProducts最后的\字符-------
+	clear_file $file .
 	TEMP=`tail -1 $file`
 	TEMP1='\'
 	TEMP2=${#TEMP}-1
@@ -1050,8 +1211,8 @@ then
 		echo "please input reference board name,for example:sp7715ea or sp7715ga or sp8815ga or 6815ea"
 		TEMP="please input new board name,for example:sp7715ed or sp7715gc or sp8815gd or sp6815ef"
 	else
-		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga or sc9620openphone"
-		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb or sc9620openphone_zt"
+		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga or sc9620openphone or sp7731gea"
+		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb or sc9620openphone_zt or sp7731gec"
 	fi
 	read BOARD_NAME_R
 	if [ $BOARD_TYPE = 2 ];then
