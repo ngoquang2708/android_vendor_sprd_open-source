@@ -146,7 +146,7 @@ int32_t audio_mux_ctrl_send(uint8_t * data, uint32_t  bytes)
     }
     audio_mux_ctrl_lock();
     maxfd = audio_ctrl_fd + 1;
-    timeout.tv_sec = 5;;
+    timeout.tv_sec = 3;
     timeout.tv_usec = 0;
     bytes = sizeof(struct cmd_common);
     ALOGW(" :saudio_wait_common_cmd timeout %d",timeout.tv_sec);
@@ -202,6 +202,12 @@ muxerror:
 	struct cmd_common cmd_common_buffer={0};
 	struct cmd_common *common_ret = &cmd_common_buffer;
 	uint32_t cmd_ret=cmd<<16;
+    fd_set fds_read;
+    struct timeval timeout = {3,0};
+    int maxfd = 0;
+    int offset = 0;
+    int bytes = 0;
+    int bytes_read = 0;
 
 	ALOGE(":  saudio_send_common_cmd  E");
 	ALOGE("cmd %x, subcmd %x\n",  cmd, subcmd);
@@ -220,8 +226,34 @@ muxerror:
 	}
 	ALOGE(":  saudio_send_common_cmd  Wirte out");
 
+    maxfd = audio_ctrl_fd + 1;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+    bytes = sizeof(struct cmd_common);
+    ALOGW(" :saudio_send_common_cmd timeout %d",timeout.tv_sec);
 
-	result=read(audio_ctrl_fd,common_ret,sizeof(struct cmd_common));
+    while(bytes){
+        FD_ZERO(&fds_read);
+        FD_SET(audio_ctrl_fd , &fds_read);
+        result = select(maxfd,&fds_read,NULL,NULL,&timeout);
+        if(result < 0) {
+            ALOGE(" :saudio_send_common_cmd :select error %d",errno);
+            goto muxerror;
+        }
+        else if(!result) {
+            ALOGE(" :saudio_send_common_cmd select timeout");
+            result = -1;
+            goto muxerror;
+        }
+        if(FD_ISSET(audio_ctrl_fd ,&fds_read) <= 0) {
+            ALOGE(" :saudio_send_common_cmd select ok but no fd is set");
+            result = -1;
+            goto muxerror;
+        }
+        offset = sizeof(struct cmd_common) - bytes;
+        bytes_read = read(audio_ctrl_fd , (void*)common_ret + offset , bytes);
+        bytes -= bytes_read;
+    }
 
 	ALOGE(":common->command is %x ,sub cmd %x,\n", common_ret->command, common_ret->sub_cmd);
 
@@ -232,8 +264,7 @@ muxerror:
 	{
 		result = -1;
 	}
-
-
+muxerror:
 	audio_mux_ctrl_unlock();
 	ALOGE(":  saudio_send_common_cmd  X");
 	return result;
