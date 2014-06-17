@@ -8309,6 +8309,7 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 	uint32_t                   offset = 0;
 	uint32_t                   frm_id = 0;
 	uint32_t                   no_need = 0;
+	uint32_t                   orig_height;
 	struct jpeg_enc_next_param enc_nxt_param;
 	int                        ret = CAMERA_SUCCESS;
 	int                        is_jpeg_encode = 0;
@@ -8328,7 +8329,7 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 			&g_cxt->isp_cxt.cur_dst);
 
 #endif
-
+	orig_height = g_cxt->cap_orig_size.height;
 	process->slice_height_out += isp_out->output_height;
 	is_jpeg_encode = camera_is_jpeg_encode_direct_process();
 
@@ -8383,7 +8384,7 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 		}
 	}
 
-	if (process->slice_height_out == g_cxt->cap_orig_size.height) {
+	if (process->slice_height_out == orig_height) {
 		return CAMERA_SUCCESS;
 	} else if (process->slice_height_out + process->slice_height_in <
 		g_cxt->cap_orig_size.height) {
