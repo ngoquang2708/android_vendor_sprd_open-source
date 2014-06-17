@@ -167,8 +167,7 @@ typedef enum
 
     //interoperability IFD
     IFD_INTEROPERABILITYINDEX           = 0x0001,
-    IFD_INTEROPERABILITYVERSION         = 0x0002,
-    IFD_APP3_ISP_INFO                   = 0XCFFF
+    IFD_INTEROPERABILITYVERSION         = 0x0002
 }EXIF_IFD_TAG; 
 
 //IFD info

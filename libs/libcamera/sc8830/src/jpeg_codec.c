@@ -734,14 +734,6 @@ static int _jpeg_enc_wexif(struct jpeg_enc_exif_param *param_ptr,struct jpeg_wex
 	input_param.thumbnail_buf_size = param_ptr->thumbnail_size;
 	input_param.target_buf_ptr = (uint8_t*)param_ptr->target_addr_virt;
 	input_param.target_buf_size = param_ptr->target_size;
-	input_param.exif_isp_info = param_ptr->exif_isp_info;
-	if (PNULL != input_param.exif_isp_info) {
-		input_param.temp_exif_isp_buf_size = 4 * 1024;
-		input_param.temp_exif_isp_buf_ptr = (uint8_t*)malloc(input_param.temp_exif_isp_buf_size);
-	} else {
-		input_param.temp_exif_isp_buf_size = 0;
-		input_param.temp_exif_isp_buf_ptr = PNULL;
-	}
 	input_param.temp_buf_size = param_ptr->thumbnail_size+21*1024;
 	input_param.temp_buf_ptr = (uint8_t*)malloc(input_param.temp_buf_size);
 	if (PNULL == input_param.temp_buf_ptr) {
@@ -750,23 +742,15 @@ static int _jpeg_enc_wexif(struct jpeg_enc_exif_param *param_ptr,struct jpeg_wex
 	}
 	input_param.wrtie_file_func = NULL;
 
-	CMR_LOGD("src jpeg addr 0x%x, size %d. thumbnail addr 0x%x, size %d. target addr 0x%x,size %d. temp_exif_isp_buf_size %d",
+	CMR_LOGD("src jpeg addr 0x%x, size %d. thumbnail addr 0x%x, size %d. target addr 0x%x,size %d.",
 			(uint32_t)input_param.src_jpeg_buf_ptr,input_param.src_jpeg_size,
 			(uint32_t)input_param.thumbnail_buf_ptr,input_param.thumbnail_buf_size,
-			(uint32_t)input_param.target_buf_ptr,input_param.target_buf_size, input_param.temp_exif_isp_buf_size );
+			(uint32_t)input_param.target_buf_ptr,input_param.target_buf_size);
 
 	ret = IMGJPEG_WriteExif(&input_param,&output_param);
 
 	out_ptr->output_buf_virt_addr = (uint32_t)output_param.output_buf_ptr;
 	out_ptr->output_buf_size = output_param.output_size;
-	if (PNULL != input_param.temp_exif_isp_buf_ptr) {
-		free(input_param.temp_exif_isp_buf_ptr);
-		input_param.temp_exif_isp_buf_ptr = PNULL;
-	}
-	if(PNULL != input_param.exif_isp_info) {
-		free(input_param.exif_isp_info);
-		input_param.exif_isp_info = PNULL;
-	}
 	free(input_param.temp_buf_ptr);
 	input_param.temp_buf_ptr = PNULL;
 	CMR_LOGD("wexif output: addr 0x%x,size %d.",out_ptr->output_buf_virt_addr,out_ptr->output_buf_size);

@@ -486,7 +486,6 @@ int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoomRatio, float
 struct camera_context *camera_get_cxt(void);
 int camera_set_pos_type(camera_position_type *position);
 JINF_EXIF_INFO_T* camera_get_exif(struct camera_context *p_cxt);
-EXIT_ISP_INFO_T *camera_get_isp_exif(void);
 int camera_sync_var_init(struct camera_context *p_cxt);
 int camera_sync_var_deinit(struct camera_context *p_cxt);
 int camera_wait_start(struct camera_context *p_cxt);

@@ -20,8 +20,7 @@
 #include "sci_types.h"
 #include "jpeg_exif_header.h"
 #include "jpeg_fw_def.h"
-#include "isp_exif.h"
-#define JPEG_HEADER_BYTE	2
+
 #ifdef __cplusplus
     extern   "C"
     {
@@ -45,9 +44,6 @@ typedef struct
 typedef struct
 {
     JINF_EXIF_INFO_T        *exif_info_ptr;
-    EXIT_ISP_INFO_T         *exif_isp_info;
-    uint8                   *temp_exif_isp_buf_ptr;
-    uint32                  temp_exif_isp_buf_size;
     uint8                   *src_jpeg_buf_ptr;
     uint32                  src_jpeg_size;
     uint8                   *thumbnail_buf_ptr;
