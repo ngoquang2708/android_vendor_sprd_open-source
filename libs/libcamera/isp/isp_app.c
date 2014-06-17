@@ -83,6 +83,7 @@ struct isp_app_context{
 	uint32_t ae_stab;
 	uint32_t af_flag;
 	uint32_t lum_measure_flag;
+	uint32_t stop_handle_flag;
 	struct isp_af_win af_info;
 	enum isp_ae_weight lum_measure_mode;
 
@@ -345,8 +346,10 @@ uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* pa
 
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
 		if (ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode)) {
+			if (1 != isp_context_ptr->stop_handle_flag) {
 			rtn = _isp_AppAfDenoiseRecover(handler_id);
 			rtn = _isp_AppSetLumMeasureCond(handler_id);
+			}
 		}
 		if (ISP_AE_CHG_CALLBACK == (ISP_EVT_MASK&mode)) {
 			rtn = _isp_AppLumMeasureRecover(handler_id);
@@ -375,6 +378,7 @@ uint32_t _isp_AppStopVideoHandler(uint32_t handler_id)
 		af_notice.valid_win=0x00;
 		isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
 		isp_context_ptr->af_flag = ISP_APP_UEB;
+		isp_context_ptr->stop_handle_flag = 1;
 	}
 
 	return rtn;
@@ -607,10 +611,12 @@ static int32_t _isp_set_app_video_param(uint32_t handler_id, struct isp_video_st
 static int _isp_app_video_start(uint32_t handler_id, struct isp_video_start* ptr)
 {
 	int rtn = ISP_APP_SUCCESS;
+	struct isp_app_context* isp_context_ptr=ispAppGetContext(handler_id);
 
 	rtn = _isp_set_app_video_param(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("set app video param error"));
 
+	isp_context_ptr->stop_handle_flag = 0;
 	rtn = isp_ctrl_video_start(handler_id, ptr);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app video start error"));
 
