@@ -36,6 +36,7 @@ extern "C"
 #define ISP_AWB_SKIP_FOREVER 0xFFFFFFFF
 #define ISP_AWB_TRIM_CONTER 0x0C
 #define ISP_AWB_WINDOW_CONTER 0x03
+#define ISP_AWB_SETTING_NUM 	0x04
 /*------------------------------------------------------------------------------*
 *				Data Structures					*
 *-------------------------------------------------------------------------------*/
@@ -120,11 +121,14 @@ struct isp_awb_param
 	struct isp_awb_rgb gain_convert[8];
 	uint32_t gain_div;
 	//uint32_t cur_color_temperature;
+	uint16_t T_weight[2];
 	uint32_t cur_T;
 	uint32_t target_T;
 	uint32_t set_eb;
 	uint32_t quick_mode;
 	uint32_t smart;
+	uint32_t cur_setting_index;
+	uint32_t stab_for_chng_setting;
 	struct isp_awb_map scanline_map;
 	struct isp_awb_wp_count_range wp_count_range;
 	struct isp_awb_g_estimate_param g_estimate;
@@ -133,7 +137,9 @@ struct isp_awb_param
 	uint32_t alg_handle;
 	uint32_t debug_level;
 	uint32_t white_point_thres;
-	struct isp_awb_alg1_init_param alg1_init_param;
+	struct isp_awb_gain gain_factor[ISP_AWB_SETTING_NUM];
+	struct isp_awb_gain gain_offset[ISP_AWB_SETTING_NUM];
+	struct isp_awb_alg1_init_param alg1_init_param[ISP_AWB_SETTING_NUM];
 	struct isp_awb_alg1_frame_param alg1_frame_param;
 	struct isp_awb_alg1_result alg1_result;
 	uint32_t(*continue_focus_stat) (uint32_t handler_id, uint32_t param);
@@ -144,7 +150,7 @@ struct isp_awb_param
 	int32_t(*set_hue_offset) (uint32_t handler_id, uint8_t offset);
 	int32_t(*get_ev_lux) (uint32_t handler_id);
 	uint32_t (*GetDefaultGain)(uint32_t handler_id);
-	int (*change_param)(uint32_t handler_id, uint32_t cmd);
+	int (*change_param)(uint32_t handler_id, uint32_t cmd, void *param);
 };
 
 /*------------------------------------------------------------------------------*

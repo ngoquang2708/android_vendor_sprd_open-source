@@ -175,9 +175,38 @@ struct sensor_ae_param{
 	uint8_t gamma_start;
 	uint8_t gamma_num;
 	uint8_t gamma_zone;
-	uint8_t gamma_thr[5];
+	uint8_t gamma_thr[4];
+	uint8_t gamma_lum_thr;
 	uint16_t lux_500_index;
-	uint32_t reserved[33];
+
+	uint8_t smart_denoise_mid_index;
+	uint8_t denoise_start_index;
+	uint8_t denoise_lum_thr;
+
+	uint8_t smart_pref_y_min;
+	uint8_t smart_pref_y_max;
+	uint8_t smart_pref_uv_min;
+	uint8_t smart_pref_uv_max;
+	uint8_t smart_denoise_diswei_outdoor_index;
+	uint8_t smart_denoise_diswei_min_index;
+	uint8_t smart_denoise_diswei_mid_index;
+	uint8_t smart_denoise_diswei_max_index;
+	uint8_t smart_denoise_ranwei_outdoor_index;
+	uint8_t smart_denoise_ranwei_min_index;
+	uint8_t smart_denoise_ranwei_mid_index;
+	uint8_t smart_denoise_ranwei_max_index;
+	uint8_t denoise_start_zone;
+
+	uint8_t smart_denoise_soft_y_outdoor_index;
+	uint8_t smart_denoise_soft_y_min_index;
+	uint8_t smart_denoise_soft_y_mid_index;
+	uint8_t smart_denoise_soft_y_max_index;
+	uint8_t smart_denoise_soft_uv_outdoor_index;
+	uint8_t smart_denoise_soft_uv_min_index;
+	uint8_t smart_denoise_soft_uv_mid_index;
+	uint8_t smart_denoise_soft_uv_max_index;
+
+	uint32_t reserved[27];
 };
 
 struct sensor_ae_tab{

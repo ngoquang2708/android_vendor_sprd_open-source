@@ -23,6 +23,7 @@
 #include "isp_ae_alg_v00.h"
 //#include "isp_com.h"
 #include "isp_drv.h"
+#include "isp_smart_denoise.h"
 /**---------------------------------------------------------------------------*
 **				Compiler Flag				*
 **---------------------------------------------------------------------------*/
@@ -150,6 +151,8 @@ struct isp_ae_param
 	enum isp_ae_mode mode;
 	struct isp_size monitor;
 	uint32_t cur_denoise_level;
+	uint32_t cur_denoise_diswei_level;
+	uint32_t cur_denoise_ranwei_level;
 	uint32_t skip_frame;
 	uint32_t cur_skip_num;
 	uint8_t video_fps;
@@ -186,12 +189,34 @@ struct isp_ae_param
 	uint16_t smart_wave_max;
 	uint16_t smart_pref_min;
 	uint16_t smart_pref_max;
-
+	uint16_t smart_pref_y_min;
+	uint16_t smart_pref_y_max;
+	uint16_t smart_pref_uv_min;
+	uint16_t smart_pref_uv_max;
 	uint8_t smart_denoise_min_index;
 	uint8_t smart_denoise_mid_index;
 	uint8_t smart_denoise_max_index;
+	uint8_t smart_denoise_diswei_outdoor_index;
+	uint8_t smart_denoise_diswei_min_index;
+	uint8_t smart_denoise_diswei_mid_index;
+	uint8_t smart_denoise_diswei_max_index;
+	uint8_t smart_denoise_ranwei_outdoor_index;
+	uint8_t smart_denoise_ranwei_min_index;
+	uint8_t smart_denoise_ranwei_mid_index;
+	uint8_t smart_denoise_ranwei_max_index;
+
+	uint8_t smart_denoise_soft_y_outdoor_index;
+	uint8_t smart_denoise_soft_y_min_index;
+	uint8_t smart_denoise_soft_y_mid_index;
+	uint8_t smart_denoise_soft_y_max_index;
+	uint8_t smart_denoise_soft_uv_outdoor_index;
+	uint8_t smart_denoise_soft_uv_min_index;
+	uint8_t smart_denoise_soft_uv_mid_index;
+	uint8_t smart_denoise_soft_uv_max_index;
+
 	uint8_t denoise_lum_thr;
 	uint8_t denoise_start_index;
+	uint8_t denoise_start_zone;
 	uint8_t smart_edge_max_index;
 	uint8_t smart_edge_min_index;
 	uint8_t reserved1;
@@ -215,6 +240,9 @@ struct isp_ae_param
 	struct isp_ae_tab tab[ISP_AE_TAB_NUM];
 	struct isp_ae_tab cur_tab;
 	uint32_t ae_set_eb;
+
+	struct isp_smart_denoise_out noise_info;
+	struct isp_smart_denoise_out prv_noise_info;
 
 	// ae frame infor for calc
 	uint32_t* stat_r_ptr;
@@ -284,6 +312,10 @@ uint32_t isp_ae_set_flash_exposure_gain(uint32_t handler_id);
 uint32_t isp_ae_set_denoise(uint32_t handler_id, uint32_t level);
 int32_t isp_ae_set_denosie_level(uint32_t handler_id, uint32_t level);
 int32_t isp_ae_get_denosie_level(uint32_t handler_id, uint32_t* level);
+int32_t isp_ae_set_denosie_diswei_level(uint32_t handler_id, uint32_t level);
+int32_t isp_ae_get_denosie_diswei_level(uint32_t handler_id, uint32_t* level);
+int32_t isp_ae_set_denosie_ranwei_level(uint32_t handler_id, uint32_t level);
+int32_t isp_ae_get_denosie_ranwei_level(uint32_t handler_id, uint32_t *level);
 int32_t isp_ae_save_iso(uint32_t handler_id, uint32_t iso);
 uint32_t isp_ae_get_save_iso(uint32_t handler_id);
 int32_t isp_ae_set_iso(uint32_t handler_id, uint32_t iso);
@@ -296,6 +328,7 @@ int32_t isp_ae_ctrl_set(uint32_t handler_id, void* param_ptr);
 int32_t isp_ae_ctrl_get(uint32_t handler_id, void* param_ptr);
 int32_t isp_ae_get_ev_lum(uint32_t handler_id);
 int32_t isp_ae_stop_callback_handler(uint32_t handler_id);
+int32_t isp_ae_get_denosie_info(uint32_t handler_id, uint32_t* param_ptr);
 int32_t _isp_ae_set_frame_info(uint32_t handler_id);
 uint32_t _isp_ae_set_exposure_gain(uint32_t handler_id);
 uint32_t _ispGetLineTime(struct isp_resolution_info* resolution_info_ptr, uint32_t param_index);

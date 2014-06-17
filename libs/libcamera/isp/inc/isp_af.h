@@ -54,6 +54,53 @@ struct isp_awbm_param{
 	struct isp_size win_size;
 };
 
+struct camera_ctn_af_cal_param{
+	uint32_t data_type;
+	uint32_t *data;
+};
+
+enum camera_ctn_af_cal_type {
+	CAMERA_CTN_AF_DATA_AE,
+	CAMERA_CTN_AF_DATA_AWB,
+	CAMERA_CTN_AF_DATA_AF,
+	CAMERA_CTN_AF_DATA_MAX
+
+};
+
+
+struct camera_ctn_af_cal_cfg{
+	uint32_t *awb_r_base;
+	uint32_t *awb_g_base;
+	uint32_t *awb_b_base;
+	uint32_t *awb_r_diff;
+	uint32_t *awb_g_diff;
+	uint32_t *awb_b_diff;
+	uint32_t *af_base;
+	uint32_t *af_pre;
+	uint32_t *af_diff;
+	uint32_t *af_diff2;
+	uint32_t awb_cal_count;
+	uint32_t af_cal_count;
+	uint32_t awb_stab_cal_count;
+	uint32_t af_stab_cal_count;
+	uint32_t awb_cal_value_threshold;
+	uint32_t awb_cal_num_threshold;
+	uint32_t awb_cal_value_stab_threshold;
+	uint32_t awb_cal_num_stab_threshold;
+	uint32_t awb_cal_cnt_stab_threshold;
+	uint32_t af_cal_threshold;
+	uint32_t af_cal_stab_threshold;
+	uint32_t af_cal_cnt_stab_threshold;
+	uint32_t awb_cal_skip_cnt;
+	uint32_t af_cal_skip_cnt;
+	uint32_t cal_state;
+	uint32_t awb_is_stab;
+	uint32_t af_is_stab;
+	uint32_t af_cal_need_af;
+};
+
+
+
 struct isp_af_param{
 	uint32_t bypass;
 	uint32_t back_bypass;
@@ -100,7 +147,7 @@ struct isp_af_param{
 	uint32_t noise_thr;
 	uint32_t end_handler_flag;
 	struct af_contex_struct_v03 alg_v03_context;
-
+	struct camera_ctn_af_cal_cfg ctn_af_cal_cfg;
 };
 
 
