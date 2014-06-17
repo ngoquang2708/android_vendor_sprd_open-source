@@ -262,7 +262,7 @@ int camera_set_ae_metering_area(uint32_t *win_ptr)
 	struct camera_context    *cxt = camera_get_cxt();
 	int                      ret = CAMERA_SUCCESS;
 	uint32_t                 zone_cnt = *win_ptr;
-	struct isp_trim_size     trim_size;
+	struct isp_pos_rect      trim;
 
 	CMR_LOGI("zone_cnt %d, x y w h, %d %d %d %d", zone_cnt, win_ptr[1], win_ptr[2], win_ptr[3], win_ptr[4]);
 
@@ -272,11 +272,11 @@ int camera_set_ae_metering_area(uint32_t *win_ptr)
 	}
 
 	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
-		trim_size.x = win_ptr[1];
-		trim_size.y = win_ptr[2];
-		trim_size.w = win_ptr[3];
-		trim_size.h = win_ptr[4];
-		ret = isp_ioctl(ISP_CTRL_AE_TOUCH, (void *)&trim_size);
+		trim.start_x = win_ptr[1];
+		trim.start_y = win_ptr[2];
+		trim.end_x = trim.start_x + win_ptr[3] - 1;
+		trim.end_y = trim.start_y+ win_ptr[4] - 1;
+		ret = isp_ioctl(ISP_CTRL_AE_TOUCH, (void *)&trim);
 	} else {
 		CMR_LOGW ("camera_set_ae_metering_area: sensor not support\n");
 		ret = CAMERA_NOT_SUPPORTED;
@@ -1558,9 +1558,18 @@ int camera_set_ctrl(camera_parm_type id,
 		break;
 
 	case CAMERA_PARM_EXPOSURE_METERING:
-		ret = camera_set_ae_metering_area((uint32_t*)parm);
+	{
+		uint32_t *win_ptr = (uint32_t*)parm;
+		if (0 != *win_ptr) {
+			ret = camera_set_ae_metering_area((uint32_t*)parm);
+			cxt->cmr_set.auto_exposure_mode = 2;
+		} else {
+		    parm = 1;
+			ret = camera_set_ae_measure_lum(parm, &skip_mode, &skip_number);
+			cxt->cmr_set.auto_exposure_mode = parm;
+		}
+	}
 		break;
-
 	default:
 		break;
 	}
