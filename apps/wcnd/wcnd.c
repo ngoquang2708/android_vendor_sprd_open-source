@@ -1278,7 +1278,7 @@ select_retry:
 	char buffer[32];
 	memset(buffer, 0, sizeof(buffer));
 	do {
-		len = read(loop_fd, buffer, sizeof(buffer));
+		len = read(loop_fd, buffer, sizeof(buffer)-1);
 	} while(len < 0 && errno == EINTR);
 
 	if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
