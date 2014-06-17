@@ -3864,10 +3864,10 @@ void camera_v4l2_evt_cb(int evt, void* data)
 	if ((V4L2_IDLE == g_cxt->v4l2_cxt.v4l2_state) || (1 == info->free)) {
 		if (CMR_V4L2_TX_DONE == evt) {
 			if (CHN_1 == info->channel_id && 0 == g_cxt->pre_frm_cnt) {
-				memset(&cb_info, 0, sizeof(camera_cb_info));
-				cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
-				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
-				camera_callback_start(&cb_info);
+				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+						camera_get_client_data(),
+						CAMERA_FUNC_START_PREVIEW,
+						0);
 			}
 			CMR_LOGW("Wrong status, %d free frame %d 0x%x",
 				g_cxt->v4l2_cxt.v4l2_state,
@@ -3913,10 +3913,10 @@ void camera_v4l2_evt_cb(int evt, void* data)
 				log_level = 1;
 			/*callback and notify HAL preview OK*/
 			if (0 == g_cxt->pre_frm_cnt) {
-				memset(&cb_info, 0, sizeof(camera_cb_info));
-				cb_info.cb_type = CAMERA_RSP_CB_SUCCESS;
-				cb_info.cb_func = CAMERA_FUNC_START_PREVIEW;
-				camera_callback_start(&cb_info);
+				camera_direct_call_cb(CAMERA_RSP_CB_SUCCESS,
+						camera_get_client_data(),
+						CAMERA_FUNC_START_PREVIEW,
+						0);
 			}
 		} else if ((CHN_BUSY == g_cxt->chn_2_status) &&
 			(CHN_2 == info->channel_id)) {
