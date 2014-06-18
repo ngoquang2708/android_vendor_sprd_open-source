@@ -12,6 +12,7 @@ PRODUCT_PACKAGES += \
 	CellBroadcastReceiver \
 	SprdQuickSearchBox \
         Carddav-Sync \
+	SystemUpdate \
         Caldav-Sync.apk\
         libsprd_agps_agent
 #	libsprddm \
