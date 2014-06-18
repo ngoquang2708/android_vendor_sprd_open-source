@@ -744,7 +744,7 @@ int32_t GSP_Proccess(GSP_CONFIG_INFO_T *pgsp_cfg_info)
         ALOGE("%s:%d,cfg gsp failed \n", __func__, __LINE__);
         goto exit;
     }
-    ret = gsp_hal_trigger(gsp_fd);
+/*    ret = gsp_hal_trigger(gsp_fd);
     if(0 != ret) {
         ALOGE("%s:%d,trigger gsp failed \n", __func__, __LINE__);
         goto exit;
@@ -756,7 +756,7 @@ int32_t GSP_Proccess(GSP_CONFIG_INFO_T *pgsp_cfg_info)
         goto exit;
     }
 
-
+*/
 exit:
     //ret = gsp_hal_close(gsp_fd);
     gsp_hal_close(gsp_fd);
