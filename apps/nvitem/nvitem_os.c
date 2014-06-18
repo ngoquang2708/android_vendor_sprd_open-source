@@ -17,12 +17,16 @@ void initEvent(void)
 
 void waiteEvent(void)
 {
-	pthread_cond_wait(&communicate.notify, 0);
+	pthread_mutex_lock(&communicate.mutex);
+	pthread_cond_wait(&communicate.notify, &communicate.mutex);
+	pthread_mutex_unlock(&communicate.mutex);
 }
 
 void giveEvent(void)
 {
+	pthread_mutex_lock(&communicate.mutex);
 	pthread_cond_signal(&communicate.notify);
+	pthread_mutex_unlock(&communicate.mutex);
 }
 
 void getMutex(void)
