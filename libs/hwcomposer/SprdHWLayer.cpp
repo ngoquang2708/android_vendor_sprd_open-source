@@ -26,69 +26,69 @@
  **                                   SurfaceFligner composition. It will     *
  **                                   improve system performance.             *
  ******************************************************************************
- ** File: SprdVirtualDisplayDevice.h  DESCRIPTION                             *
- **                                   Manager Virtual Display device.         *
+ ** File: SprdHWLayer.cpp             DESCRIPTION                             *
+ **                                   Mainly responsible for filtering HWLayer*
+ **                                   list, find layers that meet OverlayPlane*
+ **                                   and PrimaryPlane specifications and then*
+ **                                   mark them as HWC_OVERLAY.               *
  ******************************************************************************
  ******************************************************************************
  ** Author:         zhongjun.chen@spreadtrum.com                              *
  *****************************************************************************/
 
-#ifndef _SPRD_VIRTUAL_DISPLAY_DEVICE_H_
-#define _SPRD_VIRTUAL_DISPLAY_DEVICE_H_
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <hardware/hardware.h>
-#include <hardware/gralloc.h>
-#include <hardware/hwcomposer.h>
-
-#include <cutils/log.h>
-
-#include "../SprdHWLayer.h"
-#include "SprdVDLayerList.h"
-#include "SprdVirtualPlane.h"
-#include "../SprdDisplayDevice.h"
-#include "SprdWIDIBlit.h"
-#include "../AndroidFence.h"
-#include "../dump.h"
+#include "SprdHWLayer.h"
 
 using namespace android;
 
-class SprdVirtualDisplayDevice
+bool SprdHWLayer:: checkRGBLayerFormat()
 {
-public:
-    SprdVirtualDisplayDevice();
-    ~SprdVirtualDisplayDevice();
+    hwc_layer_1_t *layer = mAndroidLayer;
+    if (layer == NULL)
+    {
+        return false;
+    }
 
-    /*
-     *  Display configure attribution.
-     * */
-    int getDisplayAttributes(DisplayAttributes *dpyAttributes);
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
-    /*
-     *  Traversal Virtual Display layer list.
-     *  Find which layers comply with Virtual Display standards.
-     * */
-    int prepare(hwc_display_contents_1_t *list, unsigned int accelerator);
+    if (pNativeHandle == NULL || privateH == NULL)
+    {
+        return false;
+    }
 
-    /*
-     *  Post found layers to Virtual Display Device.
-     * */
-    int commit(hwc_display_contents_1_t *list);
+    if ((privateH->format != HAL_PIXEL_FORMAT_RGBA_8888) &&
+        (privateH->format != HAL_PIXEL_FORMAT_RGBX_8888) &&
+        (privateH->format != HAL_PIXEL_FORMAT_RGB_565))
+    {
+        return false;
+    }
 
-    /*
-     *  Init Virtual Display.
-     * */
-    int Init();
+    return true;
+}
 
-private:
-    SprdVDLayerList *mLayerList;
-    SprdVirtualPlane *mDisplayPlane;
-    sp<SprdWIDIBlit> mBlit;
-    int mDebugFlag;
-    int mDumpFlag;
+bool SprdHWLayer:: checkYUVLayerFormat()
+{
+    hwc_layer_1_t *layer = mAndroidLayer;
+    if (layer == NULL)
+    {
+        return false;
+    }
 
-};
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
-#endif
+    if (pNativeHandle == NULL || privateH == NULL)
+    {
+        return false;
+    }
+
+    if ((privateH->format != HAL_PIXEL_FORMAT_YCbCr_420_SP) &&
+        (privateH->format != HAL_PIXEL_FORMAT_YCrCb_420_SP) &&
+        (privateH->format != HAL_PIXEL_FORMAT_YV12))
+    {
+        return false;
+    }
+
+    return true;
+}
+

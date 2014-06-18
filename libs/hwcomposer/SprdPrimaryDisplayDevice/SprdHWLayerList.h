@@ -48,9 +48,10 @@
 #include "gralloc_priv.h"
 #include "sc8825/dcam_hal.h"
 
-#include "SprdHWLayer.h"
+#include "../SprdHWLayer.h"
 #include "SprdFrameBufferHAL.h"
 #include "SprdPrimaryDisplayDevice.h"
+#include "../SprdUtil.h"
 
 
 using namespace android;
@@ -68,9 +69,6 @@ public:
     SprdHWLayerList(FrameBufferInfo* fbInfo)
         : mFBInfo(fbInfo),
           mLayerList(0),
-#ifdef PROCESS_VIDEO_USE_GSP
-          mGSPAddrType(0),
-#endif
           mOSDLayerList(0),
           mVideoLayerList(0),
           mFBTargetLayer(0),
@@ -80,40 +78,19 @@ public:
           mFBLayerCount(0),
           mRGBLayerFullScreenFlag(false),
           mList(NULL),
+          mAcceleratorMode(ACCELERATOR_NON),
           mDisableHWCFlag(false),
           mSkipLayerFlag(false),
-          mForceOverlayComposer(false),
           mDebugFlag(0), mDumpFlag(0)
     {
     }
-#ifdef PROCESS_VIDEO_USE_GSP
-	SprdHWLayerList(FrameBufferInfo* fbInfo,int GspAddrType)
-        : mFBInfo(fbInfo),
-          mLayerList(0),
-          mGSPAddrType(GspAddrType),
-          mOSDLayerList(0),
-          mVideoLayerList(0),
-          mFBTargetLayer(0),
-          mLayerCount(0),
-          mRGBLayerCount(0), mYUVLayerCount(0),
-          mOSDLayerCount(0), mVideoLayerCount(0),
-          mFBLayerCount(0),
-          mRGBLayerFullScreenFlag(false),
-          mList(NULL),
-          mDisableHWCFlag(false),
-          mSkipLayerFlag(false),
-          mForceOverlayComposer(false),
-          mDebugFlag(0), mDumpFlag(0)
-    {
-    }
-#endif
-    ~SprdHWLayerList();
+    SprdHWLayerList();
 
     /*
      *  traversal HWLayer list
      *  and change some geometry.
      * */
-    int updateGeometry(hwc_display_contents_1_t *list);
+    int updateGeometry(hwc_display_contents_1_t *list, int accelerator);
 
     /*
      *  traversal HWLayer list again,
@@ -183,14 +160,11 @@ private:
     int mFBLayerCount;
     bool mRGBLayerFullScreenFlag;
     hwc_display_contents_1_t *mList;
+    int mAcceleratorMode;
     bool mDisableHWCFlag;
     bool mSkipLayerFlag;
-    bool mForceOverlayComposer;
     int mDebugFlag;
     int mDumpFlag;
-#ifdef PROCESS_VIDEO_USE_GSP
-    int mGSPAddrType;
-#endif
 
     /*
      *  Filter OSD layer

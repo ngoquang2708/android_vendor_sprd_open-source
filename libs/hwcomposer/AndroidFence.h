@@ -60,10 +60,12 @@ extern int waitAcquireFence(hwc_display_contents_1_t *list);
 
 extern void closeAcquireFDs(hwc_display_contents_1_t *list);
 
-extern void createRetiredFence(hwc_display_contents_1_t *list);
+extern int HWCBufferSyncBuild(hwc_display_contents_1_t *list, int display);
 
 extern int FenceWaitForever(const String8& name, int fenceFd);
 
-extern int syncReleaseFence(hwc_display_contents_1_t *list, int display);
+extern int HWCBufferSyncBuildForVirtualDisplay(hwc_display_contents_1_t *list);
+
+extern int HWCBufferSyncReleaseForVirtualDisplay(hwc_display_contents_1_t *list);
 
 #endif

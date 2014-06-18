@@ -118,7 +118,7 @@ bool SprdHWLayerList::IsHWCLayer(hwc_layer_1_t *AndroidLayer)
     return true;
 }
 
-int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
+int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list, int accelerator)
 {
     mLayerCount = 0;
     mRGBLayerCount = 0;
@@ -126,7 +126,8 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list)
     mOSDLayerCount = 0;
     mVideoLayerCount = 0;
     mRGBLayerFullScreenFlag = false;
-    mForceOverlayComposer = false;
+    mSkipLayerFlag = false;
+    mAcceleratorMode |= accelerator;
 
     if (list == NULL)
     {
@@ -242,7 +243,6 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     int i = -1;
     bool postProcessVideoCond = false;
     bool singleRGBLayerCond = false;
-    mSkipLayerFlag = false;
     int LayerCount = mLayerCount;
 
     if (mDisableHWCFlag)
@@ -272,7 +272,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
          *  Our Display Controller cannot handle 2 or more than 2 video layers
          *  at the same time.
          * */
-        if (mVideoLayerCount > 1)
+        if (VideoLayerCount > 1)
         {
             resetOverlayFlag(mVideoLayerList[i]);
             mFBLayerCount++;
@@ -379,17 +379,29 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     }
 #endif
 
-#ifdef OVERLAY_COMPOSER_GPU
-#ifdef GSP_BLEND_2_LAYERS
-    postProcessVideoCond = (YUVLayer && ((mRGBLayerCount > 1) || mForceOverlayComposer));// 3 layers compose with GPU
-#else
-    postProcessVideoCond = (YUVLayer && ((mRGBLayerCount > 0) || mForceOverlayComposer));// 2 layers compose with GPU
-#endif
-    //postProcessVideoCond = 0; // force gsp process
+    bool accelerateByGSP = (YUVLayer && (YUVLayer->getAccelerator() == ACCELERATOR_GSP ||
+                            YUVLayer->getAccelerator() == ACCELERATOR_GSP_IOMMU));
 
+    if (accelerateByGSP
+#ifdef GSP_BLEND_2_LAYERS
+        && (mRGBLayerCount > 1) // 3 layers compose with GPU
 #else
-    postProcessVideoCond = (YUVLayer && ((mFBLayerCount > 0) || mForceOverlayComposer));
+        && (mRGBLayerCount > 0) // 2 layers compose with GPU
 #endif
+       )
+    {
+        postProcessVideoCond = true;
+        YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+    }
+    else if ((YUVLayer != NULL) && (accelerateByGSP == false))
+    {
+        postProcessVideoCond = true;
+        YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+    }
+    else
+    {
+
+    }
 
     if (postProcessVideoCond)
     {
@@ -405,16 +417,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         revisitOverlayComposerLayer(YUVLayer, RGBLayer, LayerCount, &mFBLayerCount, DisplayFlag);
 #endif
     }
-    else if (YUVLayer)
-    {
-        if (mFBLayerCount > 0)
-        {
-            resetOverlayFlag(YUVLayer);
-            mFBLayerCount++;
-        }
-    }
 
-    ALOGI_IF(mDebugFlag, "Total layer count: %d, Framebuffer layer count: %d, OSD layer count:%d, video layer count:%d", 
+    ALOGI_IF(mDebugFlag, "Total layer: %d, FB layer: %d, OSD layer: %d, video layer: %d",
             (mLayerCount - 1), mFBLayerCount, mOSDLayerCount, mVideoLayerCount);
 
     YUVLayer = NULL;
@@ -541,30 +545,55 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     mRGBLayerCount++;
 
     l->setLayerFormat(privateH->format);
+    l->resetAccelerator();
 
-#ifdef PROCESS_VIDEO_USE_GSP
-#ifndef OVERLAY_COMPOSER_GPU
-    if((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
+    if (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER)
     {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
-        return 0;
+        l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
     }
-#endif
-#else
-#ifndef OVERLAY_COMPOSER_GPU
-    if ((layer->transform != 0) ||
-        !(l->checkContiguousPhysicalAddress(privateH)))
+
+    if ((mAcceleratorMode & ACCELERATOR_GSP) && (!(mAcceleratorMode & ACCELERATOR_GSP_IOMMU)))
     {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d", __LINE__);
-        return 0;
+        if (!(l->checkContiguousPhysicalAddress(privateH)))
+        {
+            if ((l->getAccelerator() == ACCELERATOR_NON))
+            {
+                ALOGI_IF(mDebugFlag, "prepareOSDLayer find virtual address Line:%d", __LINE__);
+                l->resetAccelerator();
+                return 0;
+            }
+            else
+            {
+                ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GPU to accelerate");
+            }
+        } 
+        else
+        {
+            l->setLayerAccelerator(ACCELERATOR_GSP);
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSP to accelerate");
+        }
     }
-#endif
-#endif
+    else if (mAcceleratorMode & ACCELERATOR_GSP_IOMMU)
+    {
+        l->setLayerAccelerator(ACCELERATOR_GSP_IOMMU);
+        ALOGI_IF(mDebugFlag, "prepareOSDLayer Use GSPIOMMU to accelerate");
+    }
+    else if ((l->getAccelerator() == ACCELERATOR_NON))
+    {
+        if ((layer->transform != 0) ||
+            !(l->checkContiguousPhysicalAddress(privateH)))
+        {
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d, no accelerator, not PHY, need transform", __LINE__);
+            l->resetAccelerator();
+            return 0;
+        }
+    }
 
     if ((layer->transform != 0) &&
         ((layer->transform & HAL_TRANSFORM_ROT_90) != HAL_TRANSFORM_ROT_90))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer not support the kind of rotation L%d", __LINE__);
+        l->resetAccelerator();
         return 0;
     }
     else if (layer->transform == 0)
@@ -573,32 +602,9 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             || ((unsigned int)privateH->height != mFBHeight))
         {
             ALOGI_IF(mDebugFlag, "prepareOSDLayer Not full-screen");
+            l->resetAccelerator();
             return 0;
         }
-
-#ifndef _DMA_COPY_OSD_LAYER
-#ifndef OVERLAY_COMPOSER_GPU
-#ifdef PROCESS_VIDEO_USE_GSP
-        if((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
-        {
-            ALOGI_IF(mDebugFlag, "prepareOSDLayer Not physical address %d", __LINE__);
-            return 0;
-        }
-#endif
-#endif
-#endif
-    }
-    else if (((unsigned int)privateH->width != mFBHeight)
-             || ((unsigned int)privateH->height != mFBWidth)
-#ifndef OVERLAY_COMPOSER_GPU
-#ifdef PROCESS_VIDEO_USE_GSP
-             || ((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
-#endif
-#endif
-    )
-    {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer, ret 0, L%d", __LINE__);
-        return 0;
     }
 
     srcRect->x = MAX(sourceLeft, 0);
@@ -629,22 +635,25 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         (FBRect->x != 0) || (FBRect->y != 0))
     {
         ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now,ret 0, L%d", __LINE__);
+        l->resetAccelerator();
         return 0;
     }
 
     mRGBLayerFullScreenFlag = true;
 
-#ifdef OVERLAY_COMPOSER_GPU
-    int ret = prepareOverlayComposerLayer(l);
-    if (ret != 0)
+    if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
     {
-        ALOGI_IF(mDebugFlag, "prepareOverlayComposerLayer find irregular layer, give up OverlayComposerGPU,ret 0, L%d", __LINE__);
-        return 0;
+        int ret = prepareOverlayComposerLayer(l);
+        if (ret != 0)
+        {
+            ALOGI_IF(mDebugFlag, "prepareOverlayComposerLayer find irregular layer, give up OverlayComposerGPU,ret 0, L%d", __LINE__);
+            l->resetAccelerator();
+            return 0;
+        }
     }
-#endif
 
     l->setLayerType(LAYER_OSD);
-    ALOGI_IF(mDebugFlag, "prepareOSDLayer[L%d],set type OSD", __LINE__);
+    ALOGI_IF(mDebugFlag, "prepareOSDLayer[L%d],set type OSD, accelerator: 0x%x", __LINE__, l->getAccelerator());
 
     mFBLayerCount--;
 
@@ -688,33 +697,47 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     mYUVLayerCount++;
 
-#ifdef PROCESS_VIDEO_USE_GSP
-    if(((mGSPAddrType == GSP_ADDR_TYPE_PHYSICAL) && !(l->checkContiguousPhysicalAddress(privateH)))
-        || l->checkNotSupportOverlay(privateH))
+    l->resetAccelerator();
+
+    if (mAcceleratorMode & ACCELERATOR_GSP_IOMMU)
     {
-#ifdef OVERLAY_COMPOSER_GPU
-        if (privateH->usage & GRALLOC_USAGE_PROTECTED)
-        {
-            ALOGI_IF(mDebugFlag, "prepareOverlayLayer Find Protected video layer, goto OverlayComposer");
-            mForceOverlayComposer = true;
-            goto ForceVideoOverlay;
-        }
-        else
-        {
-            ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x, usage: %x, ret 0 \n", __LINE__, privateH->flags, privateH->usage);
-            return 0;
-        }
-#else
-        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,flags:0x%08x ,ret 0 \n", __LINE__, privateH->flags);
-        return 0;
-#endif
+        l->setLayerAccelerator(ACCELERATOR_GSP_IOMMU);
+        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, Use GSP_IOMMU to accelerate", __LINE__);
     }
-#endif
+    else if (mAcceleratorMode & ACCELERATOR_GSP)
+    {
+        if (!(l->checkContiguousPhysicalAddress(privateH)))
+        {
+            if (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER)
+            {
+                l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+                ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, Use GPU to accelerate", __LINE__);
+            }
+            else
+            {
+                ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d,no accelerator, flags: 0x%x, ret 0 \n", __LINE__, privateH->flags);
+                return 0;
+            }
+        }
+       else
+       {
+            l->setLayerAccelerator(ACCELERATOR_GSP);
+            ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, Use GSP to accelerate", __LINE__);
+       }
+    }
+
+    if(l->checkNotSupportOverlay(privateH))
+    {
+        ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, not support Ovelray, flags: 0x%x, ret 0 \n", __LINE__, privateH->flags);
+        l->resetAccelerator();
+        return 0;
+    }
 
 
     if(layer->blending != HWC_BLENDING_NONE)
     {
        ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,blend:0x%08x,ret 0", __LINE__, layer->blending);
+        l->resetAccelerator();
         return 0;
     }
 
@@ -752,52 +775,60 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         srcHeight = srcRect->h;
     }
 
-#ifdef PROCESS_VIDEO_USE_GSP
-    if(srcRect->w < 4
-       || srcRect->h < 4
-       || FBRect->w < 4
-       || FBRect->h < 4
-       || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
-       || FBRect->h > mFBHeight) {
-       ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp,return 0, L%d",__LINE__);
-        return 0;
-    }
+    if ((l->getAccelerator() == ACCELERATOR_GSP_IOMMU) ||
+        (l->getAccelerator() == ACCELERATOR_GSP))
+    {
+        if(srcRect->w < 4
+           || srcRect->h < 4
+           || FBRect->w < 4
+           || FBRect->h < 4
+           || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
+           || FBRect->h > mFBHeight) {
+           ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp,return 0, L%d",__LINE__);
+            l->resetAccelerator();
+            return 0;
+        }
 
 #ifdef GSP_SCALING_UP_TWICE
-    gsp_scaling_up_limit = 16;
+        gsp_scaling_up_limit = 16;
 #endif
 
-    if(gsp_scaling_up_limit * srcWidth < destWidth || srcWidth > 16 * destWidth ||
-    gsp_scaling_up_limit * srcHeight < destHeight || srcHeight > 16 * destHeight)
-    { //gsp support [1/16-gsp_scaling_up_limit] scaling
-        ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP only support 1/16-%d scaling! ret 0",__LINE__,gsp_scaling_up_limit);
-        return 0;
+        if(gsp_scaling_up_limit * srcWidth < destWidth || srcWidth > 16 * destWidth ||
+        gsp_scaling_up_limit * srcHeight < destHeight || srcHeight > 16 * destHeight)
+        { //gsp support [1/16-gsp_scaling_up_limit] scaling
+            ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP only support 1/16-%d scaling! ret 0",__LINE__,gsp_scaling_up_limit);
+            l->resetAccelerator();
+            return 0;
+        }
+
+        //added for Bug 181381
+        if(((srcWidth < destWidth) && (srcHeight > destHeight))
+        || ((srcWidth > destWidth) && (srcHeight < destHeight)))
+        {
+            ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
+            l->resetAccelerator();
+            return 0;
+        }
+    }
+    else if (l->getAccelerator() != ACCELERATOR_OVERLAYCOMPOSER)
+    {
+        if(layer->transform == HAL_TRANSFORM_FLIP_V)
+        {
+           ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
+            l->resetAccelerator();
+            return 0;
+        }
+
+        if((layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_H)) || (layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_V)))
+        {
+            ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
+            l->resetAccelerator();
+            return 0;
+        }
     }
 
-    //added for Bug 181381
-    if(((srcWidth < destWidth) && (srcHeight > destHeight))
-    || ((srcWidth > destWidth) && (srcHeight < destHeight)))
-    {
-        ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
-        return 0;
-    }
-#else
-    if(layer->transform == HAL_TRANSFORM_FLIP_V)
-    {
-       ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
-        return 0;
-    }
-
-    if((layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_H)) || (layer->transform == (HAL_TRANSFORM_ROT_90 | HAL_TRANSFORM_FLIP_V)))
-    {
-        ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,transform:0x%08x,ret 0", __LINE__, layer->transform);
-        return 0;
-    }
-#endif
-
-ForceVideoOverlay:
     l->setLayerType(LAYER_OVERLAY);
-    ALOGI_IF(mDebugFlag, "prepareVideoLayer[L%d],set type Video", __LINE__);
+    ALOGI_IF(mDebugFlag, "prepareVideoLayer[L%d],set type Video, accelerator: 0x%x", __LINE__, l->getAccelerator());
 
     mFBLayerCount--;
 

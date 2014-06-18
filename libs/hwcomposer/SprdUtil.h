@@ -46,7 +46,7 @@
 #include <binder/MemoryHeapIon.h>
 #include <ui/Rect.h>
 
-#include "SprdPrimaryDisplayDevice/SprdHWLayerList.h"
+#include "SprdHWLayer.h"
 #include "gralloc_priv.h"
 #include "SprdPrimaryDisplayDevice/SprdFrameBufferHAL.h"
 
@@ -63,6 +63,15 @@
 #endif
 
 using namespace android;
+
+/*
+ *  Accelerator mode
+ * */
+#define ACCELERATOR_NON              (0x00000000)
+#define ACCELERATOR_GSP              (0x00000001)
+#define ACCELERATOR_GSP_IOMMU        (0x00000010)
+#define ACCELERATOR_OVERLAYCOMPOSER  (0x00000100)
+#define ACCELERATOR_DCAM             (0x00001000)
 
 
 #ifdef TRANSFORM_USE_DCAM
@@ -127,6 +136,7 @@ public:
           outBufferSize(0),
           mGSPAddrType(0),
 #endif
+          mOutputFormat(GSP_DST_FMT_YUV420_2P),
           mInitFlag(0),
           mDebugFlag(0)
     {
@@ -139,6 +149,24 @@ public:
 
 #ifdef PROCESS_VIDEO_USE_GSP
     int composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t* buffer1, private_handle_t* buffer2);
+    /*
+     *  Some device just want to use the specified address type
+     * */
+    inline void forceUpdateAddrType(int addrType)
+    {
+        mGSPAddrType = addrType;
+    }
+
+    inline void UpdateFBInfo(FrameBufferInfo *FBInfo)
+    {
+        mFBInfo = FBInfo;
+    }
+
+    inline void UpdateOutputFormat(GSP_LAYER_DST_DATA_FMT_E format)
+    {
+        mOutputFormat = format;
+    }
+
     int getGSPAddrType(void);
     int gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info);
 #endif
@@ -156,6 +184,7 @@ private:
     int outBufferPhy;
     int outBufferSize;
     int mGSPAddrType;
+    GSP_LAYER_DST_DATA_FMT_E mOutputFormat;
 #endif
     int mInitFlag;
     int mDebugFlag;

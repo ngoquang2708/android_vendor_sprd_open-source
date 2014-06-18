@@ -301,7 +301,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
         hnd = new private_handle_t( private_handle_t::PRIV_FLAGS_USES_ION, usage, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED );
         if ( NULL != hnd )
         {
-            if(ion_heap_mask == ION_HEAP_CARVEOUT_MASK)
+            if(ion_heap_mask == ION_HEAP_CARVEOUT_MASK || ion_heap_mask == ION_HEAP_ID_MASK_OVERLAY)
             {
                 hnd->flags=(private_handle_t::PRIV_FLAGS_USES_ION)|(private_handle_t::PRIV_FLAGS_USES_PHY);
             }
@@ -505,13 +505,15 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 
 	size_t size;
 	size_t stride;
-	if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12 )
+	if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12 ||
+            format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED)
 	{
 		switch (format)
 		{
 		case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 		case HAL_PIXEL_FORMAT_YCrCb_420_SP:
 		case HAL_PIXEL_FORMAT_YV12:
+		case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
 			stride = GRALLOC_ALIGN(w, 16);
 			size = h * (stride + GRALLOC_ALIGN(stride/2,16));
 

@@ -27,13 +27,16 @@ LOCAL_SRC_FILES := SprdHWComposer.cpp \
 		   SprdPrimaryDisplayDevice/SprdFrameBufferHAL.cpp \
 		   AndroidFence.cpp \
 		   SprdDisplayPlane.cpp \
+		   SprdHWLayer.cpp \
 		   SprdPrimaryDisplayDevice/SprdPrimaryDisplayDevice.cpp \
 		   SprdPrimaryDisplayDevice/SprdVsyncEvent.cpp \
 		   SprdPrimaryDisplayDevice/SprdHWLayerList.cpp \
-		   SprdPrimaryDisplayDevice/SprdHWLayer.cpp \
 		   SprdPrimaryDisplayDevice/SprdOverlayPlane.cpp \
 		   SprdPrimaryDisplayDevice/SprdPrimaryPlane.cpp \
 		   SprdVirtualDisplayDevice/SprdVirtualDisplayDevice.cpp \
+		   SprdVirtualDisplayDevice/SprdVDLayerList.cpp \
+		   SprdVirtualDisplayDevice/SprdVirtualPlane.cpp \
+		   SprdVirtualDisplayDevice/SprdWIDIBlit.cpp \
 		   SprdExternalDisplayDevice/SprdExternalDisplayDevice.cpp \
 		   SprdUtil.cpp \
                    dump.cpp
@@ -111,6 +114,12 @@ endif
 
 ifeq ($(strip $(DEVICE_DYNAMIC_RELEASE_PLANEBUFFER)), true)
 	LOCAL_CFLAGS += -DDYNAMIC_RELEASE_PLANEBUFFER
+endif
+
+# For Virtual Display
+# HWC need do the Hardware copy and format convertion
+ifeq ($(TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS),true)
+	LOCAL_CFLAGS += -DFORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
 endif
 
 # OVERLAY_COMPOSER_GPU_CONFIG: Enable or disable OVERLAY_COMPOSER_GPU
