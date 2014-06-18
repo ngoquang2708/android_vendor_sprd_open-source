@@ -62,7 +62,13 @@ SENSOR_INFO_T g_GC2155_yuv_info;
 SENSOR_INFO_T g_GC0311_yuv_info;
 #endif
 extern SENSOR_INFO_T g_s5k4ec_yuv_info;
+extern SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info;
+extern SENSOR_INFO_T g_autotest_ov5640_mipi_yuv_info;
+extern SENSOR_INFO_T g_at_ov5640_ccir_yuv_info;
+extern SENSOR_INFO_T g_autotest_yuv_info;
 extern SENSOR_INFO_T g_sr352_yuv_info;
+
+#define AUTO_TEST_CAMERA 1
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -90,10 +96,6 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	&g_GT2005_yuv_info,
 	&g_s5k4ec_yuv_info,
 	&g_sr352_yuv_info,
-	//&g_OV7675_yuv_info,
-	//&g_OV2655_yuv_info,
-	//&g_OV7675_yuv_info,
-	//&g_OV2640_yuv_info,
 	#if defined(CONFIG_CAMERA_X3542)
 	&g_GC2035_yuv_info,
 	&g_GC2155_yuv_info,
@@ -105,12 +107,10 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 {
 #ifdef CONFIG_FRONT_CAMERA_CCIR
+	&g_OV7675_yuv_info,
 	&g_GC0308_yuv_info,
 	&g_GC2035_yuv_info,
 	&g_HI702_yuv_info,
-	&g_OV7675_yuv_info,
-	//&g_GC0309_yuv_info,
-	//g_OV7690_yuv_info,
 	#if defined(CONFIG_CAMERA_X3542)
 	&g_GC0311_yuv_info,
 	#endif
@@ -125,10 +125,74 @@ const SENSOR_INFO_T* atv_infor_tab[]=
 	PNULL
 };
 
+/*
+*add for auto test for main and sub camera (raw yuv)
+* 2014-02-07 freed wang  begin
+*/
+const SENSOR_INFO_T* at_main_sensor_infor_tab[]=
+{
+#ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_autotest_ov8825_mipi_raw_info,
+	&g_autotest_ov5640_mipi_yuv_info,
+#endif
+#ifdef CONFIG_BACK_CAMERA_CCIR
+	&g_at_ov5640_ccir_yuv_info,
+	&g_hi253_yuv_info,
+	//&g_GT2005_yuv_info,
+	//&g_s5k4ec_yuv_info,
+	&g_autotest_yuv_info,
+#endif
+PNULL
+
+};
+
+const SENSOR_INFO_T* at_sub_sensor_infor_tab[]=
+{
+#ifdef CONFIG_FRONT_CAMERA_CCIR
+	&g_GC0308_yuv_info,
+	&g_GC2035_yuv_info,
+	//&g_HI702_yuv_info,
+	&g_OV7675_yuv_info,
+	//&g_autotest_yuv_info,
+#endif
+PNULL
+
+};
+
+const SENSOR_INFO_T* at_atv_infor_tab[]=
+{
+	//&g_nmi600_yuv_info, //&g_tlg1120_yuv_info,  bonnie
+	PNULL
+};
+/*
+* add for auto test for main and sub camera (raw yuv)
+* 2014-02-07 freed wang end
+*/
 SENSOR_INFO_T ** Sensor_GetInforTab(SENSOR_ID_E sensor_id)
 {
 	SENSOR_INFO_T * sensor_infor_tab_ptr=NULL;
 
+	int at_flag=Sensor_GetAutoTest();
+	CMR_LOGE("%s autotest_camera_flag= %d  line=  %d ",__func__,at_flag,__LINE__);
+
+	if (AUTO_TEST_CAMERA == at_flag) {
+		switch ( sensor_id) {
+			case SENSOR_MAIN:
+					sensor_infor_tab_ptr=(SENSOR_INFO_T*)&at_main_sensor_infor_tab;
+					break;
+			case SENSOR_SUB:
+					sensor_infor_tab_ptr=(SENSOR_INFO_T*)&at_sub_sensor_infor_tab;
+					break;
+			case SENSOR_ATV:
+					sensor_infor_tab_ptr=(SENSOR_INFO_T*)&at_atv_infor_tab;
+					break;
+			default:
+				break;
+				CMR_LOGE("%s s_autotest_flag= %d  line= %d ",__func__,at_flag,__LINE__);
+		}
+		return (SENSOR_INFO_T **)sensor_infor_tab_ptr;
+
+	}
 	switch (sensor_id) {
 		case SENSOR_MAIN:
 			sensor_infor_tab_ptr=(SENSOR_INFO_T*)&main_sensor_infor_tab;

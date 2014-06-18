@@ -116,7 +116,8 @@ extern "C" {
         int connect_type;     /*usb:CONNECT_USB ; uart:CONNECT_UART*/
         int nativeflag;         /*0: vlx, CP directly communicates with PC tool
                                  *1: native, AP directly communicates with PC tool  */
-    };
+	 int normal_cali;
+	};
 
     typedef  pthread_t                 eng_thread_t;
 

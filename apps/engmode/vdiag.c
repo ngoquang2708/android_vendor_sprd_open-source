@@ -228,6 +228,7 @@ void *eng_vdiag_wthread(void *x)
     int ret=0;
     eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
 
+    ENG_LOG("%s: dev_diag=%s\n",__FUNCTION__,dev_info->host_int.dev_diag);
     /*open usb/usart*/
     ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_RDONLY);
     if(ser_fd < 0){
@@ -304,6 +305,8 @@ void *eng_vdiag_wthread(void *x)
         }
 
         has_processed = 0; // reset the process flag
+
+		ENG_LOG("%s: g_diag_status=%d\n", __FUNCTION__,g_diag_status);
         switch(g_diag_status) {
             case ENG_DIAG_RECV_TO_CP:
                 memcpy(backup_data_buf,log_data,r_cnt);

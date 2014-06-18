@@ -5471,6 +5471,14 @@ int camera_capture_init_raw(void)
 	CMR_LOGI("capture_mode=%d, w=%d, h=%d",
 		g_cxt->sn_cxt.capture_mode, sensor_mode->width, sensor_mode->height);
 
+	int at_flag_raw = Sensor_GetAutoTest();
+	if (at_flag_raw) {
+			CMR_LOGE("0 sensor_mode->image_format =%d \n",sensor_mode->image_format);
+			CMR_LOGE("inorde to out yuv raw data ,so force set yuv to SENSOR_IMAGE_FORMAT_RAW \n");
+			sensor_mode->image_format=SENSOR_IMAGE_FORMAT_RAW;/*wangtao force setting to raw*/
+			CMR_LOGE("1 sensor_mode->image_format =%d \n",sensor_mode->image_format);
+	}
+
 	ret = cmr_v4l2_if_cfg(&g_cxt->sn_cxt.sn_if);
 	if (ret) {
 		CMR_LOGE("the sensor interface is unsupported by V4L2");
