@@ -117,6 +117,7 @@ public:
         return mDirectDisplayFlag;
     }
 
+    enum PlaneFormat getPlaneFormat();
 
 private:
     FrameBufferInfo *mFBInfo;
@@ -141,9 +142,6 @@ private:
     virtual private_handle_t* flush();
 
     void InvalidatePlaneContext();
-
-    enum PlaneFormat getPlaneFormat();
-
 
     int checkHWLayer(SprdHWLayer *l);
 

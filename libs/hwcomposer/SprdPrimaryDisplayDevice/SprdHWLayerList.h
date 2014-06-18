@@ -84,7 +84,7 @@ public:
           mDebugFlag(0), mDumpFlag(0)
     {
     }
-    SprdHWLayerList();
+    ~SprdHWLayerList();
 
     /*
      *  traversal HWLayer list
