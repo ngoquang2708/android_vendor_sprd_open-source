@@ -76,6 +76,8 @@ static void parse_config()
 		if(!stat(default_config_file,&tmp)) {
 			sprintf(cmd,"cp %s %s",default_config_file,config_file);
 			system(cmd);
+                        sprintf(cmd,"chown system:system %s",config_file);
+                        system(cmd);
 		} else {
 			ALOGE("Cant find config file %s\n",default_config_file);
 			exit(0);
