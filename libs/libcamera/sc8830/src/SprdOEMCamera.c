@@ -6485,6 +6485,7 @@ int camera_capture_err_handle(uint32_t evt_type)
 		ret = Sensor_Init(g_cxt->sn_cxt.cur_id, &sensor_num, 0);
 		if (ret) {
 			CMR_LOGE("Failed to init sensor");
+			pthread_mutex_unlock(&g_cxt->recover_mutex);
 			return -CAMERA_FAILED;
 		}
 		camera_recover_start_set();

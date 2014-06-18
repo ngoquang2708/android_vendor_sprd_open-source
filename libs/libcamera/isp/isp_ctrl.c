@@ -6433,8 +6433,12 @@ static int _isp_create_ctrl_thread(void)
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->thread_common_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 
@@ -6648,8 +6652,12 @@ static int _isp_create_proc_thread(void)
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_proc_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to proc thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to proc thread error"));
+    if (rtn) {
+		ISP_LOG("send msg to proc thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->thread_common_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 
@@ -6671,8 +6679,12 @@ static int _isp_destory_proc_thread(void)
 	isp_msg.msg_type = ISP_PROC_EVT_STOP;
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_proc_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to proc thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to proc thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to proc thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn=pthread_cond_wait(&isp_system_ptr->thread_common_cond,&isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	rtn=_isp_msg_queue_destroy(isp_system_ptr->proc_queue);
@@ -6821,8 +6833,12 @@ int isp_ctrl_init(uint32_t handler_id, struct isp_init_param* ptr)
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->init_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 
@@ -6870,8 +6886,12 @@ int isp_ctrl_deinit(uint32_t handler_id)
 	// close hw isp
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->deinit_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
@@ -6981,8 +7001,12 @@ int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->ioctrl_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
@@ -7047,8 +7071,12 @@ int isp_ctrl_video_start(uint32_t handler_id, struct isp_video_start* param_ptr)
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->continue_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
@@ -7085,8 +7113,12 @@ int isp_ctrl_video_stop(uint32_t handler_id)
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
-	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
-
+//	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
+	if (rtn) {
+		ISP_LOG("send msg to ctrl thread error");
+		pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+		return rtn;
+	}
 	rtn = pthread_cond_wait(&isp_system_ptr->continue_stop_cond, &isp_system_ptr->cond_mutex);
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
