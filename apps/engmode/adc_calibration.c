@@ -168,7 +168,6 @@ static int get_battery_voltage(void)
     int fd = -1;
     int read_len = 0;
     char buffer[16]={0};
-    char *endptr;
     int value =0;
 
     fd = open(BATTERY_VOL_PATH,O_RDONLY);
@@ -176,7 +175,7 @@ static int get_battery_voltage(void)
     if(fd >= 0){
         read_len = read(fd,buffer,sizeof(buffer));
         if(read_len > 0)
-            value = strtol(buffer,&endptr,0);
+            value = atoi(buffer);
         close(fd);
     }
     return value;
@@ -434,7 +433,7 @@ static int ap_adc_load(MSG_AP_ADC_CNF *pMsgADC)
 
     return ret;
 }
-static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
+static int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
 {
     int	voltage = 0;
     int  	*para=NULL;
@@ -590,7 +589,6 @@ static int get_other_ch_adc_value(int channel, int scale)
    int adc_result = 0;
    int i = 0, len = 0, fd = -1;
    char data_buf[16] = {0};
-   char *endptr;
    char ch[8] = {0};
 
    fd = open(ADC_CHANNEL_PATH, O_WRONLY);
@@ -637,7 +635,7 @@ static int get_other_ch_adc_value(int channel, int scale)
            return -1;
        }
 
-       adc_value = strtol(data_buf, &endptr, 0);
+       adc_value = atoi(data_buf);
        adc_result += adc_value;
        close(fd);
    }

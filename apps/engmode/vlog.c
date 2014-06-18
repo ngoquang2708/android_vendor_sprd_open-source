@@ -170,6 +170,7 @@ void *eng_vlog_thread(void *x)
                         retry_num ++;
                         if(retry_num > MAX_OPEN_TIMES) {
                             ENG_LOG("eng_vlog: vlog thread stop for gser error !\n");
+                            sem_post(&g_armlog_sem);
                             return 0;
                         }
                     }
@@ -270,8 +271,8 @@ void *eng_vdiag_rthread(void *x)
                             return 0;
                         }
                     }
+                   s_ser_diag_fd = ser_fd;
                 }
-                s_ser_diag_fd = ser_fd;
             } else {
                 r_cnt -= w_cnt;
                 offset += w_cnt;

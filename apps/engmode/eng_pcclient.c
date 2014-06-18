@@ -153,7 +153,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
 
     fd = open("/proc/cmdline", O_RDONLY);
     if (fd >= 0) {
-        if (read(fd, cmdline, sizeof(cmdline)) > 0){
+        if (read(fd, cmdline, sizeof(cmdline)-1) > 0){
             ALOGD("eng_pcclient: cmdline %s\n",cmdline);
             /*calibration*/
             str = strstr(cmdline, "calibration");

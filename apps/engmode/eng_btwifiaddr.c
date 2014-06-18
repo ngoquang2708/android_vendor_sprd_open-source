@@ -72,6 +72,7 @@ static void mac_rand(char *btmac, char *wifimac)
     off_t pos;
     char buf[80];
     char *ptr;
+    int ret = 0;
     unsigned int randseed;
     // realtek_add_start
     int rc;
@@ -87,23 +88,27 @@ static void mac_rand(char *btmac, char *wifimac)
         ALOGD("%s: %s exists",__FUNCTION__, MAC_RAND_FILE);
         fd = open(MAC_RAND_FILE, O_RDWR);
         if(fd>=0) {
-            read(fd, buf, sizeof(buf));
-            ALOGD("%s: read %s %s",__FUNCTION__, MAC_RAND_FILE, buf);
-            ptr = strchr(buf, ';');
-            if(ptr != NULL) {
+	    ret = read(fd, buf, sizeof(buf)-1);
+	    if(ret > 0){
+		ALOGD("%s: read %s %s",__FUNCTION__, MAC_RAND_FILE, buf);
+		ptr = strchr(buf, ';');
+		if(ptr != NULL) {
 
-                if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!=NULL)||(strlen(wifimac)==0))
-                    strcpy(wifimac, ptr+1);
+		    if((strstr(wifimac, MAC_ERROR)!=NULL)||(strstr(wifimac, MAC_ERROR_EX)!=NULL)||(strlen(wifimac)==0))
+			strcpy(wifimac, ptr+1);
 
-                *ptr = '\0';
+		    *ptr = '\0';
 
-                if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!=NULL)||(strlen(btmac)==0))
-                    strcpy(btmac, buf);
+		    if((strstr(btmac, MAC_ERROR)!=NULL)||(strstr(btmac, MAC_ERROR_EX)!=NULL)||(strlen(btmac)==0))
+			strcpy(btmac, buf);
 
-                ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
-                close(fd);
-                return;
-            }
+		    ALOGD("%s: read btmac=%s, wifimac=%s",__FUNCTION__, btmac, wifimac);
+		    close(fd);
+		    return;
+		}
+	    }else{
+		ALOGD("%s: read failed",__FUNCTION__);
+	    }
             // realtek_add_start
             close(fd);
             // realtek_add_end
@@ -161,7 +166,8 @@ static int write_mac2file(char *wifimac, char *btmac)
     fd = open(WIFI_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
     ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, wifimac, WIFI_MAC_FILE, fd);
     if(fd >= 0) {
-        chmod(WIFI_MAC_FILE, 0666);
+        if(-1 == chmod(WIFI_MAC_FILE, 0666))
+	    ALOGD("%s chmod failed",__FUNCTION__);
         ret = write(fd, wifimac, strlen(wifimac));
         close(fd);
     }else{
@@ -172,7 +178,8 @@ static int write_mac2file(char *wifimac, char *btmac)
     fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
     ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, btmac, BT_MAC_FILE, fd);
     if(fd >= 0) {
-        chmod(BT_MAC_FILE, 0666);
+        if(-1 == chmod(BT_MAC_FILE, 0666))
+	    ALOGD("%s chmod failed",__FUNCTION__);
         ret = write(fd, btmac, strlen(btmac));
         close(fd);
     }else{
@@ -236,7 +243,7 @@ int eng_btwifimac_read(char* mac, MacType type)
     }
 
     if(fd >= 0) {
-        rcount = read(fd, mac, 32);
+        rcount = read(fd, mac, 31);
         if(rcount <= 0)
         {
             ret = -1;
