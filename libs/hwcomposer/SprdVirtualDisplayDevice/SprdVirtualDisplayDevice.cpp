@@ -34,6 +34,7 @@
  *****************************************************************************/
 
 #include "SprdVirtualDisplayDevice.h"
+#include "../SprdTrace.h"
 
 
 using namespace android;
@@ -53,13 +54,13 @@ SprdVirtualDisplayDevice:: ~SprdVirtualDisplayDevice()
     if (mDisplayPlane)
     {
         delete mDisplayPlane;
-	mDisplayPlane = NULL;
+        mDisplayPlane = NULL;
     }
 
     if (mLayerList)
     {
         delete mLayerList;
-	mLayerList = NULL;
+        mLayerList = NULL;
     }
 }
 
@@ -75,14 +76,14 @@ int SprdVirtualDisplayDevice:: Init()
     if (mDisplayPlane == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: Init allocate SprdVirtualPlane failed");
-	return -1;
+        return -1;
     }
 
     mBlit = new SprdWIDIBlit(mDisplayPlane);
     if (mBlit == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: Init allocate SprdWIDIBlit failed");
-	return -1;
+        return -1;
     }
 
     return 0;
@@ -107,13 +108,13 @@ int SprdVirtualDisplayDevice:: prepare(hwc_display_contents_1_t *list, unsigned 
     if (mLayerList->updateGeometry(list) != 0)
     {
         ALOGE("SprdVirtualDisplayDevice:: prepare updateGeometry failed");
-	return -1;
+        return -1;
     }
 
     if (mLayerList->revistGeometry(list) != 0)
     {
         ALOGE("SprdVirtualDisplayDevice:: prepare revistGeometry failed");
-	return -1;
+        return -1;
     }
 
     return 0;
@@ -121,6 +122,8 @@ int SprdVirtualDisplayDevice:: prepare(hwc_display_contents_1_t *list, unsigned 
 
 int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
 {
+    HWC_TRACE_CALL;
+
     int releaseFenceFd = -1;
     SprdHWLayer *SprdFBTLayer = NULL;
     hwc_layer_1_t *FBTargetLayer = NULL;
@@ -139,17 +142,17 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
     if (SprdFBTLayer == NULL)
     {
         ALOGE("SprdVirtualDisplayDevice:: commit cannot get SprdFBTLayer");
-	return -1;
+        return -1;
     }
 
-    mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
-
-    FBTargetLayer = SprdFBTLayer->getAndroidLayer();
+    FBTargetLayer = &(list->hwLayers[list->numHwLayers - 1]);
     if (FBTargetLayer == NULL)
     {
         ALOGE("VirtualDisplay FBTLayer is NULL");
         return -1;
     }
+    SprdFBTLayer->updateAndroidLayer(FBTargetLayer);
+    mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
 
     const native_handle_t *pNativeHandle = FBTargetLayer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
@@ -184,13 +187,13 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
     {
         String8 name("HWCFBTVirtual::outbuf");
 
-	FenceWaitForever(name, list->outbufAcquireFenceFd);
+        FenceWaitForever(name, list->outbufAcquireFenceFd);
 
-	if (list->outbufAcquireFenceFd >= 0)
-	{
-	    close(list->outbufAcquireFenceFd);
-	    list->outbufAcquireFenceFd = -1;
-	}
+        if (list->outbufAcquireFenceFd >= 0)
+        {
+            close(list->outbufAcquireFenceFd);
+            list->outbufAcquireFenceFd = -1;
+        }
     }
 
     HWCBufferSyncBuildForVirtualDisplay(list);
@@ -199,6 +202,8 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
      *  Blit buffer for Virtual Display
      * */
     mBlit->onStart();
+
+    mBlit->onDisplay();
 #endif
 
     return 0;

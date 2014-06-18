@@ -42,6 +42,8 @@
 
 #include "SprdFrameBufferHAL.h"
 #include "../SprdDisplayDevice.h"
+#include "../SprdTrace.h"
+
 
 namespace android
 {
@@ -85,6 +87,7 @@ void SprdVsyncEvent::onFirstRef() {
     run("SprdVSyncThread", PRIORITY_URGENT_DISPLAY + PRIORITY_MORE_FAVORABLE);
 }
 void SprdVsyncEvent::setEnabled(bool enabled) {
+    HWC_TRACE_CALL;
     Mutex::Autolock _l(mLock);
     mEnabled = enabled;
     mCondition.signal();
@@ -173,6 +176,8 @@ bool SprdVsyncEvent::threadLoop() {
     }
     //may open when driver ready
 #else
+    HWC_TRACE_BEGIN_VSYNC;
+
     if (ioctl(mFbFd, FBIO_WAITFORVSYNC, NULL) == -1)
     {
         ALOGE("fail to wait vsync , mFbFd:%d" , mFbFd);
@@ -187,6 +192,8 @@ bool SprdVsyncEvent::threadLoop() {
         }
         mProcs->vsync(mProcs, 0, systemTime(CLOCK_MONOTONIC));
     }
+
+    HWC_TRACE_END;
 #endif
 #endif
 

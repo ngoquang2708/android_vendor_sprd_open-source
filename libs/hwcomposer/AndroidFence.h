@@ -50,6 +50,7 @@
 #include <sync/sync.h>
 #include <utils/String8.h>
 
+
 using namespace android;
 
 extern int openSprdFence();

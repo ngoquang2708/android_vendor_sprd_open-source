@@ -19,77 +19,47 @@
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          Module              DESCRIPTION                             *
- ** 16/06/2014    Hardware Composer   Responsible for processing some         *
+ ** 03/06/2014    Hardware Composer   Responsible for processing some         *
  **                                   Hardware layers. These layers comply    *
- **                                   with Virtual Display specification,     *
+ **                                   with display controller specification,  *
  **                                   can be displayed directly, bypass       *
  **                                   SurfaceFligner composition. It will     *
  **                                   improve system performance.             *
  ******************************************************************************
- ** File:SprdWIDIBlit.h               DESCRIPTION                             *
- **                                   WIDIBLIT: Wireless Display Blit         *
- **                                   Responsible for blit image data to      *
- **                                   Virtual Display.                        *
+ ** File: SprdTrace.h                 DESCRIPTION                             *
+ **                                   Add Android Framework trace info        *
+                                      for debugging                           *
  ******************************************************************************
  ******************************************************************************
  ** Author:         zhongjun.chen@spreadtrum.com                              *
  *****************************************************************************/
 
 
-#ifndef _SPRD_WIDI_BLIT_H_
-#define _SPRD_WIDI_BLIT_H_
-
-#include <semaphore.h>
-#include <utils/RefBase.h>
-#include <hardware/hardware.h>
-#include <hardware/gralloc.h>
-#include <hardware/hwcomposer.h>
-#include <cutils/log.h>
-#include "SprdVirtualPlane.h"
-#include "../SprdUtil.h"
-#include <arm_neon.h>
-#include "../dump.h"
-
-namespace android
-{
-
-class SprdWIDIBlit: public Thread
-{
-public:
-    SprdWIDIBlit(SprdVirtualPlane *plane);
-    virtual ~SprdWIDIBlit();
-
-    /*
-     *  Start Blit command 
-     * */
-    void onStart();
-
-    void onDisplay();
-
-    /*
-     *  Query Blit status
-     * */
-    int queryBlit();
+#ifndef _SPRD_TRACE_H_
+#define _SPRD_TRACE_H_
 
 
-private:
-    SprdVirtualPlane *mDisplayPlane;
-    SprdUtil         *mAccelerator;
-    FrameBufferInfo  *mFBInfo;
-    int              mDebugFlag;
-    sem_t            startSem;
-    sem_t            doneSem;
+#include <utils/Trace.h>
+#include <cutils/trace.h>
 
-    virtual status_t readyToRun();
-    virtual void onFirstRef();
-    virtual bool threadLoop();
 
-    /*
-     *  Blit with NEON from RGBA8888 to YUV420SP.
-     * */
-    int NEONBlit(uint8_t *inrgb, uint8_t *outy, uint8_t *outuv, int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst);
-};
+#ifdef HWC_DEBUG_TRACE
 
-}
+#define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
+
+#define HWC_TRACE_CALL                                            ATRACE_CALL()
+#define HWC_TRACE_BEGIN_VSYNC        atrace_begin(ATRACE_TAG, "SprdVsyncEvent")
+#define HWC_TRACE_BEGIN_WIDIBLIT   atrace_begin(ATRACE_TAG, "SprdWIDIBLITWork")
+#define HWC_TRACE_END                                     atrace_end(ATRACE_TAG)
+
+#else
+
+#define HWC_TRACE_CALL
+#define HWC_TRACE_BEGIN_VSYNC
+#define HWC_TRACE_BEGIN_WIDIBLIT
+#define HWC_TRACE_END
+
+#endif
+
 
 #endif

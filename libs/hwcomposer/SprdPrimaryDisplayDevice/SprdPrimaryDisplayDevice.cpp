@@ -36,6 +36,7 @@
 
 #include "SprdPrimaryDisplayDevice.h"
 #include <utils/String8.h>
+#include "../SprdTrace.h"
 
 using namespace android;
 
@@ -457,6 +458,7 @@ int SprdPrimaryDisplayDevice:: prepare(hwc_display_contents_1_t *list, unsigned 
 
 int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 {
+    HWC_TRACE_CALL;
     int ret = -1;
     bool DisplayFBTarget = false;
     bool DisplayPrimaryPlane = false;

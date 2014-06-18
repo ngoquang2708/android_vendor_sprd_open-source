@@ -43,6 +43,7 @@
 #include "AndroidFence.h"
 #include <cutils/log.h>
 #include "SprdDisplayDevice.h"
+#include "SprdTrace.h"
 
 using namespace android;
 
@@ -61,6 +62,7 @@ struct HWC_fence_data {
 
 int sprd_fence_build(enum SPRD_DEVICE_SYNC_TYPE type, struct HWC_fence_data *HWCData)
 {
+    HWC_TRACE_CALL;
     if (ion_device_fd < 0)
     {
         ALOGE("get ion device failed");
@@ -94,7 +96,7 @@ int sprd_fence_build(enum SPRD_DEVICE_SYNC_TYPE type, struct HWC_fence_data *HWC
     if (data.release_fence_fd < 0 || data.retired_fence_fd < 0)
     {
         ALOGE("sprd_fence_build return data error");
-	return -1;
+        return -1;
     }
 
     HWCData->release_fence_fd = data.release_fence_fd;
@@ -105,6 +107,7 @@ int sprd_fence_build(enum SPRD_DEVICE_SYNC_TYPE type, struct HWC_fence_data *HWC
 
 int sprd_fence_signal(enum SPRD_DEVICE_SYNC_TYPE type)
 {
+    HWC_TRACE_CALL;
     if (ion_device_fd < 0)
     {
         ALOGE("get ion device failed");
@@ -175,26 +178,29 @@ void closeAcquireFDs(hwc_display_contents_1_t *list)
 
 int FenceWaitForever(const String8& name, int fenceFd)
 {
-   if (fenceFd < 0)
-   {
-       return 0;
-   }
+    HWC_TRACE_CALL;
+    if (fenceFd < 0)
+    {
+        return 0;
+    }
 
-   unsigned int warningTimeout = 3000;
+    unsigned int warningTimeout = 3000;
 
-   int err = sync_wait(fenceFd, warningTimeout);
-   if (err < 0)
-   {
-       ALOGE("Fence: %s FD: %d didn't signal in %u ms", name.string(), fenceFd, warningTimeout);
+    int err = sync_wait(fenceFd, warningTimeout);
+    if (err < 0)
+    {
+        ALOGE("Fence: %s FD: %d didn't signal in %u ms", name.string(), fenceFd, warningTimeout);
 
-       err = sync_wait(fenceFd, TIMEOUT_NEVER);
-   }
+        err = sync_wait(fenceFd, TIMEOUT_NEVER);
+    }
 
-   return err;
+    return err;
 }
 
 int waitAcquireFence(hwc_display_contents_1_t *list)
 {
+    HWC_TRACE_CALL;
+
     int ret = -1;
 
     if (list)
@@ -224,6 +230,8 @@ int waitAcquireFence(hwc_display_contents_1_t *list)
 
 int HWCBufferSyncBuild(hwc_display_contents_1_t *list, int display)
 {
+    HWC_TRACE_CALL;
+
     static int releaseFenceFd = -1;
     enum SPRD_DEVICE_SYNC_TYPE device_type;
     struct HWC_fence_data fenceData;
@@ -305,6 +313,8 @@ int HWCBufferSyncBuild(hwc_display_contents_1_t *list, int display)
 static int releaseFenceFdForVirtualDisplay = -1;
 int HWCBufferSyncBuildForVirtualDisplay(hwc_display_contents_1_t *list)
 {
+    HWC_TRACE_CALL;
+
     enum SPRD_DEVICE_SYNC_TYPE device_type;
     struct HWC_fence_data fenceData;
 
@@ -351,6 +361,8 @@ int HWCBufferSyncBuildForVirtualDisplay(hwc_display_contents_1_t *list)
 
 int HWCBufferSyncReleaseForVirtualDisplay(hwc_display_contents_1_t *list)
 {
+    HWC_TRACE_CALL;
+
     int ret = -1;
     enum SPRD_DEVICE_SYNC_TYPE device_type = SPRD_DEVICE_VIRTUAL_SYNC;
 
