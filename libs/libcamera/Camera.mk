@@ -297,7 +297,12 @@ LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
 LOCAL_SHARED_LIBRARIES := libandroidfw libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
+LOCAL_SHARED_LIBRARIES += libface_finder
 endif
+endif
+
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -317,6 +322,13 @@ include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := arithmetic/sc8830/libmorpho_easy_hdr.so
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_MULTI_PREBUILT)
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := arithmetic/sc8830/libface_finder.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+endif
 
 endif
 
