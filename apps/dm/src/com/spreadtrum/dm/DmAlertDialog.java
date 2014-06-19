@@ -283,8 +283,12 @@ public class DmAlertDialog extends Activity {
 		smsSoundSP = getSharedPreferences(SMS_SOUND, MODE_PRIVATE);
 
 		String smsSoundString = smsSoundSP.getString("smssound_dm", "Default");
-		Log.i(TAG, "getSMSSoundUri smsSoundString : " + smsSoundString);		
-
+		Log.i(TAG, "getSMSSoundUri smsSoundString : " + smsSoundString);
+		//Bug:324837 Fix crash when the sound is default@{
+		if((null != smsSoundString)&&(! smsSoundString.contains("media"))){			
+			return null;
+		}
+		//@}
 		if("Default".equals(smsSoundString)){			
 			return null;
 		}else{			
