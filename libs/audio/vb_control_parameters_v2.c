@@ -1642,6 +1642,8 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
     uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_BACK_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET,AUDIO_DEVICE_OUT_WIRED_HEADSET,SPRD_AUDIO_IN_DUALMIC_VOICE};
     int i = 0;
     int call_reset = 0;
+    int val = 0;
+    uint32_t gain=0;
     ALOGW("voice:vbc_call_end_process in");
     pthread_mutex_lock(&adev->lock);
     ALOGW("voice:vbc_call_end_process, got lock");
@@ -1674,6 +1676,12 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
             adev->pcm_fm_dl= NULL;
         }
     }
+	
+    val = adev->fm_volume;
+    gain |=fm_volume_tbl[val-1];
+    gain |=fm_volume_tbl[val-1]<<16;
+    SetAudio_gain_fmradio(adev,gain);
+	
     pthread_mutex_unlock(&adev->lock);
     ALOGW("voice:vbc_call_end_process out");
     return 0;
