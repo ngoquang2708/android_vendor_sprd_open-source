@@ -154,12 +154,13 @@ static int eng_gsensortest_open(void)
     fd = open(SPRD_GSENSOR_DEV, O_RDWR);
     ENG_LOG("Open %s fd:%d", SPRD_GSENSOR_DEV, fd);
 
-    if (ioctl(fd, GSENSOR_IOCTL_SET_ENABLE, &enable)) {
+    if(fd >= 0){
+       if (ioctl(fd, GSENSOR_IOCTL_SET_ENABLE, &enable)) {
         ENG_LOG("Set G-sensor enable in: %s", __FUNCTION__);
         close(fd);
         return -1;
+       }
     }
-
     return fd;
 }
 

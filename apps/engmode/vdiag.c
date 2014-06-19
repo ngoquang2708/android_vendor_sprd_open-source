@@ -221,8 +221,8 @@ static void set_raw_data_speed(int fd, int speed)
 
 void *eng_vdiag_wthread(void *x)
 {
-    int modem_fd;
-    int ser_fd;
+    int modem_fd = -1;
+    int ser_fd = -1;
     int r_cnt, w_cnt, offset;
     int has_processed = 0;
     int audio_fd;
