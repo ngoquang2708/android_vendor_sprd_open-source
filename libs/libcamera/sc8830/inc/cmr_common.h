@@ -165,7 +165,7 @@ struct ccir_if {
 	uint8_t                             v_sync_pol;
 	uint8_t                             h_sync_pol;
 	uint8_t                             pclk_pol;
-	uint8_t                             res1;
+	uint8_t                             pclk_src;
 };
 
 struct mipi_if {
