@@ -156,82 +156,295 @@ static int get_modem_state(char *buffer,size_t size)
         return numRead;
 }
 
-static void *modemd_listenaccept_thread(void *par)
+#define IPC_EVT_TYPE_LISTEN     0x1
+#define IPC_EVT_TYPE_CLIENT     0x2
+#define IPC_EVT_MAX_WATCH       (MAX_CLIENT_NUM + 1)
+
+
+typedef struct modem_ctrl_ipc_evt_tag {
+        int fd;
+        unsigned char type;
+        unsigned char valid;
+        void *param;
+} modem_ctrl_ipc_evt_t;
+
+static pthread_mutex_t clientMutex;
+#define MUTEX_ACQUIRE() pthread_mutex_lock(&clientMutex)
+#define MUTEX_RELEASE() pthread_mutex_unlock(&clientMutex)
+#define MUTEX_INIT() pthread_mutex_init(&clientMutex, NULL)
+#define MUTEX_DESTROY() pthread_mutex_destroy(&clientMutex)
+
+
+modem_ctrl_ipc_evt_t s_ipc_evt_watch_table[IPC_EVT_MAX_WATCH];
+static int s_maxfd = 0;
+static fd_set s_rdyFds;
+
+static void modem_ctrl_ipc_init()
 {
-        int sfd, n, i;
-        char buffer[64] = {0};
-        unsigned short *data = (unsigned short *)buffer;
+        int i;
+
+        //init
+        MUTEX_INIT();
 
         for(i=0; i<MAX_CLIENT_NUM; i++)
                 client_fd[i]=-1;
 
-        sfd = socket_local_server(MODEM_SOCKET_NAME,
+        FD_ZERO(&s_rdyFds);
+        memset(s_ipc_evt_watch_table, 0, sizeof(s_ipc_evt_watch_table));
+}
+
+static int
+ipc_blocking_write(int fd, const void *buffer, size_t len) {
+    size_t writeOffset = 0;
+    const uint8_t *toWrite;
+
+    toWrite = (const uint8_t *)buffer;
+
+    while (writeOffset < len) {
+        ssize_t written;
+        do {
+            MODEM_LOGD("write: fd:%d toWrite:0x%x writeOffset:%d len:%d\n", fd, toWrite, writeOffset, len);
+            written = write (fd, toWrite + writeOffset,
+                                len - writeOffset);
+            MODEM_LOGD("write returned: written:%d errno:%d\n", written, errno);
+        } while (written < 0 && ((errno == EINTR) || (errno == EAGAIN)));
+
+        if (written >= 0) {
+            writeOffset += written;
+        } else {   // written < 0
+            MODEM_LOGE("ipc_blocking_write: unexpected error on write errno:%d", errno);
+            return -1;
+        }
+    }
+
+    return len;
+}
+
+
+// Add event to watch list
+static void ipc_watch_fd_add(int fd, unsigned char type)
+{
+        int i;
+
+        MODEM_LOGD("ipc_event_add start\n");
+
+        //first, change fd to non-block mode
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+
+        for (i = 0; i < IPC_EVT_MAX_WATCH; i++) {
+                if (s_ipc_evt_watch_table[i].valid == 0) {
+
+                        s_ipc_evt_watch_table[i].fd = fd;
+                        s_ipc_evt_watch_table[i].type = type;
+                        s_ipc_evt_watch_table[i].valid = 1;
+
+                        FD_SET(fd, &s_rdyFds);
+
+                        if (fd >= s_maxfd) {
+                                s_maxfd = fd + 1;
+                                MODEM_LOGD("ipc_watch_fd_add change s_maxfd: %d\n", s_maxfd);
+                        }
+                        break;
+                }
+        }
+
+        if(i == IPC_EVT_MAX_WATCH) {
+
+                close(fd);
+                MODEM_LOGE("ipc_event_add failed\n");
+                return;
+        }
+
+        //client fds should be filled to client_fd[]
+        if(type != IPC_EVT_TYPE_CLIENT) {
+
+                return;
+        }
+
+        MUTEX_ACQUIRE();
+
+        for(i=0; i<MAX_CLIENT_NUM; i++) {
+                if(client_fd[i] == -1) {
+                        client_fd[i] = fd;
+                        MODEM_LOGE("modemctrl_listenaccept_thread: fill %d to client[%d]\n", fd, i);
+                        break;
+                }
+        }
+
+        if(i == MAX_CLIENT_NUM) {
+
+                MODEM_LOGE("fd:%d fill to client_fd failed\n", fd);
+        }
+        MUTEX_RELEASE();
+}
+
+static void ipc_watch_fd_remove(int fd)
+{
+    int i;
+
+    MODEM_LOGD("ipc_watch_fd_remove fd: %d\n", fd);
+    for (i = 0; i < IPC_EVT_MAX_WATCH; i++) {
+        if (s_ipc_evt_watch_table[i].valid == 1 &&
+            s_ipc_evt_watch_table[i].fd == fd) {
+
+                FD_CLR(fd, &s_rdyFds);
+
+                s_ipc_evt_watch_table[i].valid = 0;
+                s_ipc_evt_watch_table[i].fd = -1;
+                s_ipc_evt_watch_table[i].type = 0;
+
+                break;
+        }
+    }
+
+    if(i == IPC_EVT_MAX_WATCH) {
+
+        MODEM_LOGE("ipc_watch_fd_remove failed\n");
+        return;
+    }
+
+    if ((fd + 1) == s_maxfd) {
+        int n = 0;
+
+        for (i = 0; i < IPC_EVT_MAX_WATCH; i++) {
+
+            if (s_ipc_evt_watch_table[i].valid &&
+                (s_ipc_evt_watch_table[i].fd > n)) {
+                n = s_ipc_evt_watch_table[i].fd;
+            }
+        }
+        s_maxfd = n + 1;
+
+        MODEM_LOGD("ipc_watch_fd_remove change s_maxfd: %d\n", s_maxfd);
+    }
+}
+
+static void ipc_client_fd_close(int fd)
+{
+        int i;
+
+        MUTEX_ACQUIRE();
+        //remove from watch table
+        ipc_watch_fd_remove(fd);
+        //remove from clients
+        for(i=0; i<MAX_CLIENT_NUM; i++) {
+                if(client_fd[i] == fd) {
+                        client_fd[i] = -1;
+
+                        MODEM_LOGE("process_read error close client_fd: %d to client[%d]\n", fd, i);
+                        break;
+                }
+        }
+        //close it!
+        close(fd);
+        MUTEX_RELEASE();
+}
+
+
+static void process_listen(int fd)
+{
+        int n;
+
+        n = accept(fd, NULL, NULL);
+        if (n < 0 ) {
+                MODEM_LOGE("Error on accept() errno:[%d] %s\n", errno, strerror(errno));
+                sleep(1);
+                return;
+        }
+
+        ipc_watch_fd_add(n, IPC_EVT_TYPE_CLIENT);
+        MODEM_LOGE("process_listen: fill fd = %d \n", n);
+}
+
+static void process_read(int fd)
+{
+        int ret;
+        char prop[256]= {0};
+
+        ret = read(fd, prop, 256);
+        if(ret > 0) {
+                MODEM_LOGD("read %d bytes to client socket [%d] \n", ret, fd);
+        } else {
+                MODEM_LOGE("%s error: %s\n",__func__,strerror(errno));
+
+                ipc_client_fd_close(fd);
+                return;
+        }
+
+        MODEM_LOGD("read %d bytes to client socket [%d] to  , prop = %s \n", ret, fd, prop);
+        if(!strncmp(prop, LTE_RELOAD_SVLTE_STR, strlen(LTE_RELOAD_SVLTE_STR)) ) {
+                set_modem_capabilities(1);
+                set_modem_state("8");
+        } else if (!strncmp(prop, LTE_RELOAD_CSFB_STR, strlen(LTE_RELOAD_CSFB_STR)) ) {
+                set_modem_capabilities(2);
+                set_modem_state("8");
+        }
+}
+
+
+
+static void *modem_ctrl_ipc_thread(void *par)
+{
+        int listen_fd, n, i;
+        fd_set rfds;
+        char buffer[64] = {0};
+        unsigned short *data = (unsigned short *)buffer;
+
+        //start listen
+        listen_fd = socket_local_server(MODEM_SOCKET_NAME,
                                   0,/*ANDROID_SOCKET_NAMESPACE_RESERVED,*/ SOCK_STREAM);
-        if (sfd < 0) {
+        if (listen_fd < 0) {
                 MODEM_LOGE("modemctrl_listenaccept_thread: cannot create local socket server\n");
                 exit(-1);
         }
 
-        for(; ;) {
-                MODEM_LOGD("modemctrl_listenaccept_thread: Waiting for new connect ...\n");
-                //accept the client connection
-                do {
-                        n = accept(sfd, NULL, NULL);
-                        MODEM_LOGD("%s got %d from accept", MODEM_SOCKET_NAME, n);
-                } while (n < 0 && errno == EINTR);
+        ipc_watch_fd_add(listen_fd, IPC_EVT_TYPE_LISTEN);
 
-                if (n < 0)
-                {
-                        MODEM_LOGD("socket %s accept failed (%s)", MODEM_SOCKET_NAME, strerror(errno));
-                        sleep(1);
-                        continue;
-                }
+        //loop
+        for (;;) {
 
-                MODEM_LOGD("modemctrl_listenaccept_thread: accept client n=%d\n",n);
-                for(i=0; i<MAX_CLIENT_NUM; i++) {
-                        if(client_fd[i]==-1) {
-                                client_fd[i]=n;
-                                MODEM_LOGE("modemctrl_listenaccept_thread: fill %d to client[%d]\n", n, i);
-                                break;
+                // make local copy of read fd_set
+                memcpy(&rfds, &s_rdyFds, sizeof(fd_set));
+
+                n = select(s_maxfd, &rfds, NULL, NULL, NULL);
+
+                //fail conditions
+                if (n < 0) {
+                        if (errno == EINTR) {
+                                continue;
                         }
-                }
-        }
-}
 
-static void *modemd_listen_reloader_thread(void *par)
-{
-        int i,ret;
-        fd_set rfds;
-        char prop[256]= {0};
-        while(1) {
-                for(i=0; i<MAX_CLIENT_NUM; i++) {
-                        if(client_fd[i] > 0) {
-                                MODEM_LOGD("client_fd[%d]=%d\n",i, client_fd[i]);
-                                FD_ZERO(&rfds);
-                                FD_SET(client_fd[i], &rfds);
-                                select(client_fd[i] + 1, &rfds, NULL, NULL, NULL);
-                                if (FD_ISSET(client_fd[i], &rfds)) {
-                                        ret = read(client_fd[i], prop, 256);
-                                        if(ret > 0)
-                                                MODEM_LOGD("read %d bytes to client socket [%d] \n", ret, client_fd[i]);
-                                        else {
-                                                MODEM_LOGE("%s error: %s\n",__func__,strerror(errno));
-                                                close(client_fd[i]);
-                                                client_fd[i] = -1;
-                                        }
-                                        MODEM_LOGD("read %d bytes to client socket [%d] to  , prop = %s \n", ret, client_fd[i], prop);
-                                        if(!strncmp(prop, LTE_RELOAD_SVLTE_STR, strlen(LTE_RELOAD_SVLTE_STR)) ) {
-                                                set_modem_capabilities(1);
-                                                set_modem_state("8");
-                                        } else if (!strncmp(prop, LTE_RELOAD_CSFB_STR, strlen(LTE_RELOAD_CSFB_STR)) ) {
-                                                set_modem_capabilities(2);
-                                                set_modem_state("8");
-                                        }
+                        MODEM_LOGE("ipc_event: select error (%s)\n", strerror(errno));
+                        if(errno == EWOULDBLOCK ||
+                           errno == ECONNABORTED ||
+                           errno == EPROTO) {
+
+                                sleep(1);
+                                continue;
+                        }
+
+                        MODEM_LOGE("ipc_event: select error (%d), fatal error retrun\n", errno);
+                        // bail?
+                        return 0;
+                }
+
+                //process selected fds
+                for (i = 0; (i < IPC_EVT_MAX_WATCH) && (n > 0); i++) {
+                        int proc_ret = 0;
+                        if (s_ipc_evt_watch_table[i].valid &&
+                            FD_ISSET(s_ipc_evt_watch_table[i].fd, &rfds)) {
+
+                                if(s_ipc_evt_watch_table[i].type == IPC_EVT_TYPE_LISTEN) {
+                                        process_listen(s_ipc_evt_watch_table[i].fd);
+                                } else {
+                                        process_read(s_ipc_evt_watch_table[i].fd);
                                 }
+                                n--;
                         }
                 }
+
         }
-        return 0;
+
 }
 static int get_modem_assert_information(char *assert_info,int size)
 {
@@ -292,14 +505,13 @@ void broadcast_modem_state(char *message,int size)
         for(i=0; i<MAX_CLIENT_NUM; i++) {
                 if(client_fd[i] > 0) {
                         MODEM_LOGD("client_fd[%d]=%d\n",i, client_fd[i]);
-                        ret = write(client_fd[i], message, size);
-                        if(ret > 0) {
+                        ret = ipc_blocking_write(client_fd[i], message, size);
+                        if(ret >= 0) {
                                 MODEM_LOGD("write %d bytes to client socket [%d] to inform modemd\n", ret, client_fd[i]);
                                 MODEM_LOGD("inform string:[%s]\n", message);
                         } else {
                                 MODEM_LOGE("%s error: %s\n",__func__,strerror(errno));
-                                close(client_fd[i]);
-                                client_fd[i] = -1;
+                                ipc_client_fd_close(client_fd[i]);
                         }
                 }
         }
@@ -507,12 +719,9 @@ int main(int argc, char *argv[])
                 print_modem_image_info();
         }
 
-        if(0 != pthread_create(&t1, NULL, (void*)modemd_listenaccept_thread, NULL)) {
-                MODEM_LOGE(" modem_listenaccept_thread create error!\n");
-        }
-
-        if(0 != pthread_create(&t2, NULL, (void*)modemd_listen_reloader_thread, NULL)) {
-                MODEM_LOGE(" modemd_listen_reloader_thread create error!\n");
+        modem_ctrl_ipc_init();
+        if(0 != pthread_create(&t1, NULL, (void*)modem_ctrl_ipc_thread, NULL)) {
+                MODEM_LOGE(" modem_ctrl_ipc_thread create error!\n");
         }
 
         modem_state = MODEM_STA_INIT;
