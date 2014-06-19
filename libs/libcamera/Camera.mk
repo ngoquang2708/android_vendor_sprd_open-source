@@ -21,6 +21,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/sc8830/isp_calibration/inc \
 	$(LOCAL_PATH)/sensor_drv_u/inc \
 	$(LOCAL_PATH)/isp/inc \
+	$(LOCAL_PATH)/isp/uv_denoise \
 	$(LOCAL_PATH)/isp/uv_denoise/inc \
 	external/skia/include/images \
 	external/skia/include/core\
@@ -264,6 +265,22 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_MIPI)),phyab)
 LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_MIPI_PHYAB
+endif
+
+ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_CCIR_PCLK)),source0)
+LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_CCIR_PCLK_SOURCE0
+endif
+
+ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_CCIR_PCLK)),source1)
+LOCAL_CFLAGS += -DCONFIG_FRONT_CAMERA_CCIR_PCLK_SOURCE1
+endif
+
+ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_CCIR_PCLK)),source0)
+LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_CCIR_PCLK_SOURCE0
+endif
+
+ifeq ($(strip $(TARGET_BOARD_BACK_CAMERA_CCIR_PCLK)),source1)
+LOCAL_CFLAGS += -DCONFIG_BACK_CAMERA_CCIR_PCLK_SOURCE1
 endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_DENOISE)),true)

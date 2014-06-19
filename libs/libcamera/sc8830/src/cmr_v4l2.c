@@ -230,6 +230,7 @@ int cmr_v4l2_if_cfg(struct sensor_if *sn_if)
 		timing_param[4] = sn_if->if_spec.ccir.v_sync_pol;
 		timing_param[5] = sn_if->if_spec.ccir.h_sync_pol;
 		timing_param[6] = sn_if->if_spec.ccir.pclk_pol;
+		timing_param[7] = sn_if->if_spec.ccir.pclk_src;
 	} else {
 		/* MIPI interface */
 		timing_param[4] = sn_if->if_spec.mipi.use_href;

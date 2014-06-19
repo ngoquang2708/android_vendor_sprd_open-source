@@ -861,6 +861,7 @@ void camera_sensor_inf(struct sensor_context *sensor_cxt)
 		sensor_cxt->sn_if.if_spec.ccir.v_sync_pol = sensor_cxt->sensor_info->vsync_polarity;
 		sensor_cxt->sn_if.if_spec.ccir.h_sync_pol = sensor_cxt->sensor_info->hsync_polarity;
 		sensor_cxt->sn_if.if_spec.ccir.pclk_pol = sensor_cxt->sensor_info->pclk_polarity;
+		sensor_cxt->sn_if.if_spec.ccir.pclk_src = Sensor_Get_Ccir_Pclk_Src(sensor_cxt->cur_id);
 	}
 	sensor_cxt->sn_if.frm_deci = sensor_cxt->sensor_info->preview_deci_num;
 	sensor_cxt->sn_if.img_ptn = sensor_cxt->sensor_info->image_pattern;

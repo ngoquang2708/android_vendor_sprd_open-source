@@ -758,6 +758,7 @@ int Sensor_set_calibration(uint32_t value);
 int Sensor_RegisterFlashCB(cmr_set_flash set_flash_cb);
 int Sensor_StreamCtrl(uint32_t on_off);
 int Sensor_CheckSensorMode(SENSOR_MODE_INFO_T *mode_info);
+uint32_t Sensor_Get_Ccir_Pclk_Src(SENSOR_ID_E sensor_id);
 #ifdef	 __cplusplus
 }
 #endif

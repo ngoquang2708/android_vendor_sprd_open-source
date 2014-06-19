@@ -3528,3 +3528,24 @@ int Sensor_CheckSensorMode(SENSOR_MODE_INFO_T *mode_info)
 out:
 	return ret;
 }
+
+uint32_t Sensor_Get_Ccir_Pclk_Src(SENSOR_ID_E sensor_id)
+{
+	uint32_t ccir_pclk_src = 0;/*0: CCIR_PCLK_SOURCE0; 1: CCIR_PCLK_SOURCE1 */
+
+	if (SENSOR_MAIN == sensor_id) {
+#if defined(CONFIG_BACK_CAMERA_CCIR_PCLK_SOURCE0)
+		ccir_pclk_src = 0x00;
+#elif defined(CONFIG_BACK_CAMERA_CCIR_PCLK_SOURCE1)
+		ccir_pclk_src = 0x01;
+#endif
+	} else {
+#if defined(CONFIG_FRONT_CAMERA_CCIR_PCLK_SOURCE0)
+		ccir_pclk_src = 0x00;
+#elif defined(CONFIG_FRONT_CAMERA_CCIR_PCLK_SOURCE1)
+		ccir_pclk_src = 0x01;
+#endif
+	}
+
+	return ccir_pclk_src;
+}
