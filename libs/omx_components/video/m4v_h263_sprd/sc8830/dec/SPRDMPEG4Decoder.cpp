@@ -278,7 +278,7 @@ void SPRDMPEG4Decoder::set_ddr_freq(const char* freq_in_khz)
 void SPRDMPEG4Decoder::change_ddr_freq()
 {
     if(!mDecoderSwFlag)
-	{
+    {
         uint32_t frame_size = mWidth * mHeight;
         char* ddr_freq;
 
@@ -948,7 +948,8 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 
             video_format.frame_width = 0;
             video_format.frame_height = 0;
-            video_format.uv_interleaved = 1;
+            //video_format.uv_interleaved = 1;
+            video_format.yuv_format = YUV420SP_NV21;
 
             MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
 

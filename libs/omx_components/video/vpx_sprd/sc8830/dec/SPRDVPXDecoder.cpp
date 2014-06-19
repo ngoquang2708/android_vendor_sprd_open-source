@@ -255,6 +255,7 @@ status_t SPRDVPXDecoder::initDecoder() {
 
     MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
+    MMDecVideoFormat VideoFormat;
     int32 phy_addr = 0;
     int32 size = 0, size_stream;
 
@@ -321,7 +322,9 @@ status_t SPRDVPXDecoder::initDecoder() {
     ExtraMemBfr.common_buffer_ptr_phy = (uint32)mPbuf_extra_p;
     ExtraMemBfr.size = size_extra;
 
-    if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr) != MMDEC_OK) {
+    VideoFormat.yuv_format = YUV420SP_NV21;
+
+    if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr, &VideoFormat) != MMDEC_OK) {
         ALOGE("Failed to init VPXDEC");
         return OMX_ErrorUndefined;
     }
