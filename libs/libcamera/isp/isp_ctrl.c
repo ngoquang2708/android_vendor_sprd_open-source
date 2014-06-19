@@ -265,16 +265,16 @@ static uint16_t cce_matrix[][12]=
 static struct isp_param* s_isp_param_ptr=NULL;
 static pthread_mutex_t s_ctrl_mutex={0x00};
 
-static uint32_t ctn_af_awb_r_base_tbl[2][1024]= {0};
-static uint32_t ctn_af_awb_g_base_tbl[2][1024]= {0};
-static uint32_t ctn_af_awb_b_base_tbl[2][1024]= {0};
-static uint32_t ctn_af_awb_r_diff_tbl[2][1024]= {0};
-static uint32_t ctn_af_awb_g_diff_tbl[2][1024]= {0};
-static uint32_t ctn_af_awb_b_diff_tbl[2][1024]= {0};
-static uint32_t ctn_af_af_base_tbl[2][9]= {0};
-static uint32_t ctn_af_af_pre_tbl[2][9]= {0};
-static uint32_t ctn_af_af_diff_tbl[2][9]= {0};
-static uint32_t ctn_af_af_diff2_tbl[2][9]= {0};
+static uint32_t ctn_af_awb_r_base_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_awb_g_base_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_awb_b_base_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_awb_r_diff_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_awb_g_diff_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_awb_b_diff_tbl[2][1024]= {{0}};
+static uint32_t ctn_af_af_base_tbl[2][9]= {{0}};
+static uint32_t ctn_af_af_pre_tbl[2][9]= {{0}};
+static uint32_t ctn_af_af_diff_tbl[2][9]= {{0}};
+static uint32_t ctn_af_af_diff2_tbl[2][9]= {{0}};
 
 static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
 {
