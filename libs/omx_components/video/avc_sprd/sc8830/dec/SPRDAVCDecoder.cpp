@@ -877,6 +877,8 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             return;
         }
 
+        mDecoderSwFlag = true;
+
         if(initDecoder() != OK) {
             ALOGE("onQueueFilled, init sw decoder failed.");
             notify(OMX_EventError, OMX_ErrorDynamicResourcesUnavailable, 0, NULL);
@@ -1116,12 +1118,11 @@ bool SPRDAVCDecoder::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
 //    ALOGI("%s, %d, mWidth: %d, mHeight: %d,  info->picWidth: %d,info->picHeight:%d, mPictureSize:%d ",
 //                __FUNCTION__, __LINE__,mWidth, mHeight,  info->picWidth, info->picHeight, mPictureSize);
 
-#if 0
+#if 1
     if(!mDecoderSwFlag) {
         ALOGI("%s, %d, picWidth: %d, picHeight: %d, numRef: %d, profile: 0x%x",
               __FUNCTION__, __LINE__,info->picWidth, info->picHeight, info->numRefFrames, info->profile);
-        if ((!((info->picWidth <= 720 && info->picHeight <= 576) || (info->picWidth <= 576 && info->picHeight <= 720))) || (info->profile == 0x64) || (info->profile == 0x4d)) {
-            mDecoderSwFlag = true;
+        if (((info->picWidth <= 176 && info->picHeight <= 144) || (info->picWidth <= 144 && info->picHeight <= 176)) && (info->profile == 0x42)) {
             mChangeToSwDec = true;
         }
     }
