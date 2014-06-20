@@ -679,16 +679,16 @@ SENSOR_REG_T GC2155_MIPI_YUV_COMMON[]=
 	{0x11, 0x1e},
 	{0x12, 0x80},
 	{0x13, 0x0c},
-	{0x15, 0x12},
+	{0x15, 0x10},
 	{0x17, 0xf0},
 
-	{0x21, 0x10},//01
-	{0x22, 0x05},//02
-	{0x23, 0x30},//01
-	{0x24, 0x02},//10
-	{0x29, 0x06},//07
-	{0x2a, 0x0a},//03
-	{0xfe, 0x00},//00
+	{0x21, 0x01},
+	{0x22, 0x02},
+	{0x23, 0x01},
+	{0x24, 0x10},
+	{0x29, 0x07},
+	{0x2a, 0x03},
+	{0xfe, 0x00},
 };
 
 SENSOR_REG_T GC2155_MIPI_YUV_800x600[]=
@@ -754,8 +754,13 @@ SENSOR_REG_T GC2155_MIPI_YUV_800x600[]=
 	{0xfe , 0x03},
 	{0x12 , 0x40},
 	{0x13 , 0x06},
+#ifdef GC2155_MIPI_2Lane
+	{0x04 , 0x90},
+	{0x05 , 0x01},
+#else
 	{0x04 , 0x01},
 	{0x05 , 0x00},
+#endif
 	{0xfe , 0x00},
 };
 
@@ -900,7 +905,7 @@ SENSOR_REG_T GC2155_MIPI_YUV_1600x1200[]=
 static SENSOR_REG_TAB_INFO_T s_GC2155_MIPI_resolution_Tab_YUV[]=
 {
 	// COMMON INIT
-	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_COMMON), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_COMMON), 0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
 
 	// YUV422 PREVIEW 1
 	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
@@ -1070,7 +1075,10 @@ SENSOR_INFO_T g_GC2155_MIPI_yuv_info =
 
 static void GC2155_MIPI_WriteReg( uint8_t  subaddr, uint8_t data )
 {
+
 	Sensor_WriteReg_8bits(subaddr, data);
+
+
 }
 
 static uint8_t GC2155_MIPI_ReadReg( uint8_t  subaddr)
@@ -1262,13 +1270,38 @@ static uint32_t set_GC2155_MIPI_anti_flicker(uint32_t param )
 	return 0;
 }
 
+static const SENSOR_REG_T gc2155_video_mode_tab[][4]=
+{
+	/* preview mode:highest 20 fps*/
+	{
+		{0xfe, 0x01},
+		{0x3c, 0x40},
+		{0xfe, 0x00},
+		{0xff, 0xff}
+	},
+	/* video mode: if use 20 fps*/
+	{
+		{0xfe, 0x01},
+		{0x3c, 0x00},
+		{0xfe, 0x00},
+		{0xff, 0xff}
+	}
+};
+
 static uint32_t set_GC2155_MIPI_video_mode(uint32_t mode)
 {
+	SENSOR_REG_T_PTR sensor_reg_ptr = (SENSOR_REG_T_PTR)gc2155_video_mode_tab[mode];
 	uint16_t i;
-	SENSOR_REG_T* sensor_reg_ptr = PNULL;
-	uint8_t tempregval = 0;
 
-	SENSOR_TRACE("SENSOR: set_video_mode: mode = %d\n", mode);
+	SENSOR_PRINT("0x%02x", mode);
+
+	if (mode>1)
+		return 0;
+
+	for (i = 0x00; (0xff != sensor_reg_ptr[i].reg_addr) || (0xff != sensor_reg_ptr[i].reg_value); i++) {
+		Sensor_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+	}
+
 	return 0;
 }
 
