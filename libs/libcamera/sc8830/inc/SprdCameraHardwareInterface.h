@@ -58,6 +58,8 @@ typedef struct sprd_camera_memory {
 
 
 #define MAX_SUB_RAWHEAP_NUM 10
+#define MAX_LOOP_COLOR_COUNT 3
+#define MAX_Y_UV_COUNT 2
 
 class SprdCameraHardware : public virtual RefBase {
 public:
@@ -149,7 +151,24 @@ private:
 		sp<MemoryBase> *mBuffers;
 		const char *mName;
 	};
+	struct OneFrameMem {
+		sp<MemoryHeapIon> input_y_pmem_hp;
+		uint32_t input_y_pmemory_size;
+		int input_y_physical_addr ;
+		unsigned char* input_y_virtual_addr;
+		uint32_t width;
+		uint32_t height;
 
+	};
+	enum shake_test_state {
+		NOT_SHAKE_TEST,
+		SHAKE_TEST,
+	};
+	struct ShakeTest {
+		int diff_yuv_color[MAX_LOOP_COLOR_COUNT][MAX_Y_UV_COUNT];
+		uint32_t                       mShakeTestColorCount;
+		shake_test_state          mShakeTestState;
+	};
 	struct AshmemPool : public MemPool {
 		AshmemPool(int buffer_size, int num_buffers, int frame_size,
 						int frame_offset, const char *name);
@@ -303,6 +322,14 @@ private:
 	status_t                        checkFlashParameter(SprdCameraParameters& params);
 	status_t                        checkEffectParameter(SprdCameraParameters& params);
 	void                            setCameraPrivateData(void);
+	void                            overwritePreviewFrame(camera_frame_type *frame);
+	int                               overwritePreviewFrameMemInit(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
+	void                            shakeTestInit(ShakeTest *tmpShakeTest);
+	void                            setShakeTestState(shake_test_state state);
+	shake_test_state          getShakeTestState();
+	int                               IommuIsEnabled(void);
+	int                               allocOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
+	int                               relaseOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
 
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
@@ -413,7 +440,7 @@ private:
 	uint32_t                        mSwitchMonitorInited;
 	sem_t                           mSwitchMonitorSyncSem;
 	bool                            mIsPerformanceTestable;
-
+	ShakeTest                   mShakeTest;
 };
 
 }; // namespace android

@@ -240,6 +240,27 @@ int SprdCameraHardware::getCameraInfo(int cameraId, struct camera_info *cameraIn
 	return 0;
 }
 
+void SprdCameraHardware::shakeTestInit(ShakeTest *tmpShakeTest)
+{
+	char is_performance_camera_test[100];
+	int tmp_diff_yuv_color[MAX_LOOP_COLOR_COUNT][MAX_Y_UV_COUNT]={
+		{0x28,0xef},
+		{0x51,0x5a},
+		{0x90,0x36}
+	};
+	memcpy(&tmpShakeTest->diff_yuv_color, &tmp_diff_yuv_color, sizeof(tmp_diff_yuv_color));
+	tmpShakeTest->mShakeTestColorCount = 0;
+	property_get("persist.sys.performance_camera",is_performance_camera_test, "0");
+	if((0 == strcmp("1", is_performance_camera_test)) && mIsPerformanceTestable) {
+		LOGI("SHAKE_TEST come in");
+		setShakeTestState(SHAKE_TEST);
+       } else {
+	       LOGI("SHAKE_TEST not come in");
+		setShakeTestState(NOT_SHAKE_TEST);
+	}
+
+}
+
 SprdCameraHardware::SprdCameraHardware(int cameraId)
 	:
 	mPreviewHeapSize(0),
@@ -305,7 +326,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	} else {
 		LOGI("openCameraHardware: E cameraId: %d.", cameraId);
 	}
-
+	shakeTestInit(&mShakeTest);
 #if defined(CONFIG_BACK_CAMERA_ROTATION)
 	if (0 == cameraId) {
 		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
@@ -4603,6 +4624,119 @@ void SprdCameraHardware::cameraBakMemCheckAndFree()
 	}
 }
 
+SprdCameraHardware::shake_test_state SprdCameraHardware::getShakeTestState()
+{
+	return mShakeTest.mShakeTestState;
+}
+
+void SprdCameraHardware::setShakeTestState(shake_test_state state)
+{
+	mShakeTest.mShakeTestState = state;
+}
+
+int SprdCameraHardware::IommuIsEnabled(void)
+{
+	return MemoryHeapIon::Mm_iommu_is_enabled();
+}
+
+int SprdCameraHardware::allocOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr)
+{
+	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
+	int s_mem_method = IommuIsEnabled();
+
+	/* alloc input y buffer */
+	LOGI("allocOneFrameMem %d  %d  %d\n",s_mem_method,tmp_one_frame_mem_ptr->width,tmp_one_frame_mem_ptr->height);
+	if (0 == s_mem_method) {
+		tmp_one_frame_mem_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+											tmp_one_frame_mem_ptr->width * tmp_one_frame_mem_ptr->height,
+											MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+	} else {
+		tmp_one_frame_mem_ptr->input_y_pmem_hp = new MemoryHeapIon("/dev/ion",
+										tmp_one_frame_mem_ptr->width * tmp_one_frame_mem_ptr->height,
+										MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+	}
+	if (tmp_one_frame_mem_ptr->input_y_pmem_hp->getHeapID() < 0) {
+		LOGE("failed to alloc input_y pmem buffer.\n");
+		return -1;
+	}
+
+	if (0 == s_mem_method) {
+		tmp_one_frame_mem_ptr->input_y_pmem_hp->get_phy_addr_from_ion((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
+		(int *)(&tmp_one_frame_mem_ptr->input_y_pmemory_size));
+	} else {
+		tmp_one_frame_mem_ptr->input_y_pmem_hp->get_mm_iova((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
+		(int *)(&tmp_one_frame_mem_ptr->input_y_pmemory_size));
+	}
+	tmp_one_frame_mem_ptr->input_y_virtual_addr = (unsigned char*)tmp_one_frame_mem_ptr->input_y_pmem_hp->base();
+	if (!tmp_one_frame_mem_ptr->input_y_physical_addr) {
+		LOGE("failed to alloc input_y pmem buffer:addr is null.\n");
+		return -1;
+	}
+
+	return 0;
+
+}
+
+int SprdCameraHardware::relaseOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr)
+{
+	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
+	int s_mem_method = IommuIsEnabled();
+
+	LOGI("relaseOneFrameMem %d\n",s_mem_method);
+	if (tmp_one_frame_mem_ptr->input_y_physical_addr) {
+		if (0 == s_mem_method) {
+			tmp_one_frame_mem_ptr->input_y_pmem_hp.clear();
+		} else {
+			tmp_one_frame_mem_ptr->input_y_pmem_hp->free_mm_iova(tmp_one_frame_mem_ptr->input_y_physical_addr,tmp_one_frame_mem_ptr->input_y_pmemory_size);
+		}
+	}
+	return 0;
+}
+
+int SprdCameraHardware::overwritePreviewFrameMemInit(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr)
+{
+	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
+	uint32_t overwrite_offset = tmp_one_frame_mem_ptr->width*tmp_one_frame_mem_ptr->height *2 /3;
+	uint32_t addr_offset = overwrite_offset;
+	LOGI("overwritePreviewFrameMemInit 0 %d %d 0x%x",overwrite_offset,addr_offset,mShakeTest.diff_yuv_color[mShakeTest.mShakeTestColorCount][0]);
+	memset(tmp_one_frame_mem_ptr->input_y_virtual_addr, mShakeTest.diff_yuv_color[mShakeTest.mShakeTestColorCount][0], overwrite_offset);
+	overwrite_offset = tmp_one_frame_mem_ptr->width*tmp_one_frame_mem_ptr->height /3;
+	LOGI("overwritePreviewFrameMemInit 1 %d %d 0x%x",overwrite_offset,addr_offset,mShakeTest.diff_yuv_color[mShakeTest.mShakeTestColorCount][1]);
+	memset((tmp_one_frame_mem_ptr->input_y_virtual_addr + addr_offset), mShakeTest.diff_yuv_color[mShakeTest.mShakeTestColorCount][1], overwrite_offset);
+	if ((MAX_LOOP_COLOR_COUNT-1) == mShakeTest.mShakeTestColorCount) {
+		mShakeTest.mShakeTestColorCount = 0;
+	} else {
+		mShakeTest.mShakeTestColorCount++;
+	}
+	return 0;
+}
+
+void SprdCameraHardware::overwritePreviewFrame(camera_frame_type *frame)
+{
+	uint32_t overwrite_offset = 0;
+
+	static struct SprdCameraHardware::OneFrameMem overwrite_preview_frame;
+	static struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr = &overwrite_preview_frame;
+	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
+	tmp_one_frame_mem_ptr->width = frame->dx;
+	tmp_one_frame_mem_ptr->height = frame->dy *3 /2;
+
+	if (mIsPerformanceTestable) {
+		sprd_perfInfo("performance autotest of camera shake test E. color=%d",mShakeTest.mShakeTestColorCount);
+	} else {
+		LOGI("SHAKE_TEST overwritePreviewFrame   .E.\n");
+	}
+	allocOneFrameMem(&overwrite_preview_frame);
+	overwritePreviewFrameMemInit(&overwrite_preview_frame);
+	memcpy((void *)(frame->buf_Virt_Addr + overwrite_offset), (void *)tmp_one_frame_mem_ptr->input_y_virtual_addr, (tmp_one_frame_mem_ptr->width*tmp_one_frame_mem_ptr->height));
+	relaseOneFrameMem(&overwrite_preview_frame);
+	if (mIsPerformanceTestable) {
+	} else {
+		LOGI("SHAKE_TEST overwritePreviewFrame   X.\n");
+	}
+}
+
+
 void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
 	if (mIsPerformanceTestable) {
@@ -4629,6 +4763,10 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		LOGI("receivePreviewFrame E: width=%d, height=%d offset=0x%x\n",width, height, offset);
 	else
 		LOGV("receivePreviewFrame E: width=%d, height=%d offset=0x%x\n",width, height, offset);
+
+	if(SHAKE_TEST == getShakeTestState()) {
+		overwritePreviewFrame(frame);
+	}
 
 	if (miSPreviewFirstFrame) {
 		GET_END_TIME;
