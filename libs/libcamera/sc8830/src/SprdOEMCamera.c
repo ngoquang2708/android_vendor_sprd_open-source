@@ -6422,7 +6422,7 @@ int camera_preview_err_handle(uint32_t evt_type)
 	case CMR_SENSOR_ERROR:
 	case CMR_V4L2_TIME_OUT:
 		rs_mode = RESTART_HEAVY;
-		g_cxt->preview_status = RESTART;
+		g_cxt->recover_status = RESTART;
 		CMR_LOGD("Sensor error, restart preview");
 		break;
 
