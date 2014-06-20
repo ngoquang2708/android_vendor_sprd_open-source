@@ -165,9 +165,8 @@ reconnect:
                   strstr(buf, WTD_MODEM_RESET_STR) ||
                   strstr(buf, GEN_MODEM_RESET_STR)) {
            MODEMD_LOGD("modem reset happen, reload modem...");
-           if (!is_test_mode_changed()) {
-               loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
-           }
+           MODEMD_LOGD("Info modem reset to all clients.");
+           loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
 
            ext_modem_ops.stop_modem_service();
            if (ext_modem_ops.load_modem_image() < 0) {
