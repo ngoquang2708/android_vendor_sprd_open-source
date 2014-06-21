@@ -2869,6 +2869,212 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
 
 /*****************************************************************************
 **	Name :
+**	Description:	write the exif information of APP3
+**	Author:			Shan.he
+**  Parameters:
+**                  exif_info_ptr:    exif info
+**                  begin_offset:     writing position
+**                  ifh_offset:       IFH position
+**                  end_offset_ptr:   pointer of end position when writing done,
+**                                    output parameter
+**	Note:           return JPEG_SUCESS if successful
+*****************************************************************************/
+LOCAL JPEG_RET_E Jpeg_Write_APP3_ExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
+                                    EXIT_ISP_INFO_T *exif_isp_info,
+                                    BOOLEAN is_next_ifd_exist,
+                                    uint32 ifh_offset,
+                                    uint32 begin_offset,
+                                    uint32 *end_offset_ptr)
+{
+	uint16      entries             = 0;
+	uint32      ifd_offset          = 0;
+	uint32      ifd_value_offset    = 0;
+	IFD_INFO_T  ifd_info;//            = {0};
+	uint32      entries_offset      = 0;
+	JPEG_RET_E  ret                 = JPEG_SUCCESS;
+
+	EXIF_LONG_T offset = 0;
+
+	if (PNULL == exif_isp_info) {
+		JPEG_PRINT_LOW("PNULL == exif_isp_info, return failed!\n");
+		return JPEG_FAILED;
+	}
+
+	memset(&ifd_info, 0, sizeof(IFD_INFO_T));
+
+	//write the max number of the entries temporarily and memorize the location
+	entries = 2;
+	Jpeg_SetWritePos(context_ptr, begin_offset);
+	JPEG_WRITE_DATA(Jpeg_WriteW, context_ptr, entries, return JPEG_FAILED);
+	entries_offset = begin_offset;
+
+	ifd_offset = Jpeg_GetWritePos(context_ptr);
+	ifd_value_offset = ifd_offset + entries * IFD_HEAD_LENGTH + 4;
+	ifd_value_offset = JPEG_ALIGN_4(ifd_value_offset);
+	exif_isp_info->is_exif_validate = entries;
+	entries = 0;
+	/***********************************************************************/
+	//write IFD
+	/***********************************************************************/
+	exif_isp_info->exif_check.app_head = EXIF_APP3;
+	exif_isp_info->exif_check.status = APP3_STATUS;
+
+	if (PNULL != exif_isp_info) {
+		ifd_info.tag = IFD_APP3_ISP_INFO;
+		ifd_info.type = EXIF_BYTE;
+		ifd_info.count = sizeof(EXIT_ISP_INFO_T);
+		ifd_info.value_offset.long_value = ifd_value_offset - ifh_offset;
+		ifd_info.value_bytes = ifd_info.count;
+		ifd_info.value_ptr = exif_isp_info;
+		JPEG_PRINT_LOW("Jpeg_Write_APP3_ExifIFD: count = 0x%x!!!\n", ifd_info.value_bytes );
+		if (!Jpeg_WriteByteIFD(context_ptr, &ifd_info, &ifd_offset, &ifd_value_offset)) {
+			return JPEG_FAILED;
+		}
+		entries++;
+	}
+
+	/*write next IFD pointer*/
+	Jpeg_SetWritePos(context_ptr, ifd_offset);
+	if (is_next_ifd_exist) {
+		JPEG_WRITE_DATA(Jpeg_WriteL, context_ptr, ifd_value_offset - ifh_offset, return JPEG_FAILED);
+	} else {
+		JPEG_WRITE_DATA(Jpeg_WriteL, context_ptr, 0, return JPEG_FAILED);
+	}
+
+	//rewrite the number of entries actually write in
+	Jpeg_SetWritePos(context_ptr, begin_offset);
+	JPEG_WRITE_DATA(Jpeg_WriteW, context_ptr, entries, return JPEG_FAILED);
+
+	*end_offset_ptr = ifd_value_offset;
+	JPEG_PRINT_LOW("end.");
+	return JPEG_SUCCESS;
+}
+
+
+
+/*****************************************************************************
+**	Name :
+**	Description:	write the the APP3 marker
+**	Author:			Shan.he
+**  Parameters:
+**                  context_ptr:      pointer of context structure
+**                  begin_offset:     writing position
+**                  end_offset_ptr:   pointer of end position when writing done,
+**                                    output parameter
+**                  app3_length:      length of the whole app3 exclued the APP3 marker
+**	Note:           return JPEG_SUCESS if successful
+*****************************************************************************/
+LOCAL JPEG_RET_E Jpeg_WriteAPP3Header(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr, uint32 begin_offset,
+                                            uint32 *end_offset_ptr, uint16 app3_length)
+{
+	uint32  i           = 0;
+	uint8   exif_id[6]  = "APP3";
+	JPEG_PRINT_LOW("Jpeg_WriteAPP3Header :E!!!begin_offset = %d, app3_length = %d\n", begin_offset, app3_length);
+
+	Jpeg_SetWritePos(context_ptr, begin_offset);
+	JPEG_WRITE_DATA(Jpeg_WriteC, context_ptr, M_MARKER, return JPEG_FAILED);
+	JPEG_WRITE_DATA(Jpeg_WriteC, context_ptr, M_APP3, return JPEG_FAILED);
+	JPEG_WRITE_DATA(Jpeg_WriteW, context_ptr, app3_length, return JPEG_FAILED);
+
+	for (i=0; i<6; i++) {
+		JPEG_WRITE_DATA(Jpeg_WriteC, context_ptr, exif_id[i], return JPEG_FAILED);
+	}
+
+	*end_offset_ptr = Jpeg_GetWritePos(context_ptr);
+	JPEG_PRINT_LOW("Jpeg_WriteAPP3Header :X!!!\n");
+	return JPEG_SUCCESS;
+}
+
+/*****************************************************************************
+**	Name :
+**	Description:	write the the APP3
+**	Author:			Shan.he
+**  Parameters:
+**                  target_buf:       pointer of exif structure
+**                  target_buf_size:  pointer of target buffer
+**                  write_buf_size:   size of target buffer
+**                  thumbnail_buf_ptr:thumbnail buffer pointer
+**                  thumbnail_size:   thumbnail size
+**                  app3_size_ptr:    pointer of APP3 size. output structure
+**	Note:           return JPEG_SUCESS if successful
+*****************************************************************************/
+PUBLIC JPEG_RET_E Jpeg_WriteAPP3(uint8 *target_buf,
+                                 uint32 target_buf_size,
+                                     EXIT_ISP_INFO_T *exif_isp_info,
+                                 uint32 *app3_size_ptr)
+{
+	JPEG_WRITE_STREAM_CONTEXT_T context;//        = {0};
+	JPEG_RET_E              ret             = JPEG_SUCCESS;
+	uint32                  begin_offset    = 0;
+	uint32                  end_offset      = 0;
+	uint32                  ifh_offset      = 0;
+	uint16                  app3_length     = 0;
+	BOOLEAN                 is_ifd1_exist   = FALSE;
+
+#ifdef EXIF_DEBUG
+	JPEG_PRINT_LOW("[WriteAPP3] start 1, %x, %x, %x,  \n", (uint32)target_buf,
+	target_buf_size, (uint32)exif_isp_info );
+#endif
+	if (PNULL == exif_isp_info) {
+		JPEG_PRINT_LOW("[WriteAPP3] exif_info_ptr is NULL \n");
+		return JPEGE_INVALID_ARGUMENT;
+	}
+
+	if (NULL == target_buf || target_buf_size < 10) {
+		JPEG_PRINT_LOW("[WriteAPP3] target buffer is not enough 0x%x, %d",
+							(uint32)target_buf, target_buf_size);
+		return JPEG_MEMORY_NOT_ENOUGH;
+	}
+
+	memset(&context, 0, sizeof(JPEG_WRITE_STREAM_CONTEXT_T));
+	context.write_buf = target_buf;
+	context.write_buf_size = target_buf_size;
+	context.write_ptr = context.write_buf;
+
+	begin_offset = 10;  //reserve 10 bytes for APP3 marker, size and ID
+	ret = Jpeg_WriteIFH(&context, begin_offset, &end_offset);
+	if (JPEG_SUCCESS != ret) {
+		JPEG_PRINT_LOW("[WriteAPP3] Jpeg_WriteIFH failed");
+		return ret;
+	}
+
+	ifh_offset = begin_offset;
+	begin_offset = end_offset;
+
+	ret = Jpeg_Write_APP3_ExifIFD(&context, exif_isp_info, is_ifd1_exist,ifh_offset, begin_offset, &end_offset);
+	if (JPEG_SUCCESS != ret) {
+		JPEG_PRINT_LOW("[WriteAPP3] write IFD0 failed");
+		return ret;
+	}
+
+	if (is_ifd1_exist) {
+		BOOLEAN is_next_ifd_exist = FALSE;
+		begin_offset = end_offset;
+		ret = Jpeg_Write_APP3_ExifIFD(&context, exif_isp_info, is_next_ifd_exist,ifh_offset, begin_offset, &end_offset);
+		if (JPEG_SUCCESS != ret) {
+			JPEG_PRINT_LOW("[WriteAPP3] write IFD1 failed");
+			return ret;
+		}
+	}
+
+	app3_length = (uint16)end_offset ;   //without app3 marker
+	*app3_size_ptr = app3_length ;
+	if (app3_length > 2) {
+		app3_length -= 2;//APP3 length do not include app3 header   FF E3
+	} else {
+		app3_length = 0;
+	}
+	begin_offset = 0;
+	ret = Jpeg_WriteAPP3Header(&context, begin_offset, &end_offset, app3_length);
+	if (JPEG_SUCCESS != ret) {
+		JPEG_PRINT_LOW("[WriteAPP3] Jpeg_WriteAPP3Header failed");
+		return ret;
+	}
+
+	return JPEG_SUCCESS;
+	}
+/*****************************************************************************
+**	Name :
 **	Description:	and the EXIF info and write the output jpeg to the memory
 **	Author:			Shan.he
 **  Parameters:
@@ -2886,22 +3092,26 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     uint32  free_buf_size   = 0;
     JPEG_RET_E  ret         = JPEG_SUCCESS;
 	uint32_t i = 0;
+    uint8   *app3_buf_ptr           = NULL;
+    uint32  app3_buf_size           = 0;
+    uint32  app3_size               = 0;
+    app3_buf_ptr = in_param_ptr->temp_exif_isp_buf_ptr;
+    app3_buf_size = in_param_ptr->temp_exif_isp_buf_size;
 
     app1_buf_ptr = in_param_ptr->temp_buf_ptr;
     app1_buf_size = in_param_ptr->temp_buf_size;
 
     //write APP1 to temp buffer
     ret = Jpeg_WriteAPP1(app1_buf_ptr,
-                         app1_buf_size,
-                         in_param_ptr->exif_info_ptr,
-                         in_param_ptr->thumbnail_buf_ptr,
-                         in_param_ptr->thumbnail_buf_size,
-                         &app1_size);
+							app1_buf_size,
+							in_param_ptr->exif_info_ptr,
+							in_param_ptr->thumbnail_buf_ptr,
+							in_param_ptr->thumbnail_buf_size,
+							&app1_size);
 #ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("Jpeg_WriteAPP1 end.ret = %d.",ret);
 #endif
-    if (JPEG_SUCCESS != ret)
-    {
+    if (JPEG_SUCCESS != ret) {
     	JPEG_PRINT_LOW("[JPEG_AddExifToMemory] Jpeg_WriteAPP1 failed");
         return ret;
     }
@@ -2909,31 +3119,47 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
     free_buf_size = (uint32)in_param_ptr->src_jpeg_buf_ptr
                         - (uint32)in_param_ptr->target_buf_ptr;
 
-    if (free_buf_size < app1_size)
-    {
+    if (free_buf_size < app1_size) {
     	JPEG_PRINT_LOW("[JPEG_AddExifToMemory] free buffer size is not enought \
-							free buffer = %d, app1_size = %d",
-							free_buf_size, app1_size);
+							free buffer = %d, app1_size = %d",free_buf_size, app1_size);
         return JPEG_MEMORY_NOT_ENOUGH;
     }
+	if (NULL != in_param_ptr->exif_isp_info && NULL != app3_buf_ptr && app3_buf_size > 0) {
+	    ret = Jpeg_WriteAPP3(app3_buf_ptr,
+								app3_buf_size,
+								in_param_ptr->exif_isp_info,
+								&app3_size);
+	    JPEG_PRINT_LOW("[JPEG_AddExifToMemory] :after Jpeg_WriteAPP3, ret = %d,\
+							app3_size = %d\n", ret, app3_size);
+		if (JPEG_SUCCESS == ret) {
+		    free_buf_size = (uint32)in_param_ptr->src_jpeg_buf_ptr
+		                        - (uint32)in_param_ptr->target_buf_ptr - app1_size;
 
-    target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size;
+		    JPEG_PRINT_LOW("free_buf_size = %d, app1_size = %d,  app3_size = %d\n",
+								free_buf_size, app1_size, app3_size);
+		    if (free_buf_size < app3_size) {
+				app3_size = 0;
+			} 
+		} else {
+			app3_size = 0;
+	    }
+	} else {
+		app3_size = 0;
+	}
+    target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size - app3_size;
 
     out_param_ptr->output_buf_ptr = target_buf_ptr;
-    out_param_ptr->output_size = app1_size + in_param_ptr->src_jpeg_size;
+    out_param_ptr->output_size = app1_size + app3_size + in_param_ptr->src_jpeg_size;
 
     //write SOI marker
     *target_buf_ptr++ = M_MARKER;
     *target_buf_ptr++ = M_SOI;
-#ifdef EXIF_DEBUG
-    JPEG_PRINT_LOW("target buf:0x%x,app1_buf_ptr 0x%x ,app1_size %d.",
-		(uint32_t)target_buf_ptr,(uint32_t)app1_buf_ptr,app1_size);
-#endif
-    memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
-/*   for(i=0;i<app1_size;i++) {
-		*target_buf_ptr++ = *app1_buf_ptr++;
-   }*/
 
+    memcpy(target_buf_ptr, app1_buf_ptr, app1_size);
+	if(app3_size > 0) {
+	    target_buf_ptr = target_buf_ptr + app1_size;
+	    memcpy(target_buf_ptr, app3_buf_ptr, app3_size);
+	}
 	JPEG_PRINT_LOW("end.");
 
     return JPEG_SUCCESS;
@@ -2959,20 +3185,24 @@ LOCAL JPEG_RET_E JPEG_AddExifToFile(JINF_WEXIF_IN_PARAM_T *in_param_ptr)
     uint32  actual_write_size       = 0;
     uint8   *write_ptr              = NULL;
     JPEG_RET_E  ret                 = JPEG_SUCCESS;
+    uint8   *app3_buf_ptr           = NULL;
+    uint32  app3_buf_size           = 0;
+    uint32  app3_size               = 0;
+    app3_buf_ptr = in_param_ptr->temp_exif_isp_buf_ptr;
+    app3_buf_size = in_param_ptr->temp_exif_isp_buf_size;
 
     app1_buf_ptr = in_param_ptr->temp_buf_ptr;
     app1_buf_size = in_param_ptr->temp_buf_size;
 
     //write APP1 to temp buffer
-    ret = Jpeg_WriteAPP1(   app1_buf_ptr,
-                            app1_buf_size,
-                            in_param_ptr->exif_info_ptr,
-                            in_param_ptr->thumbnail_buf_ptr,
-                            in_param_ptr->thumbnail_buf_size,
-                            &app1_size);
+    ret = Jpeg_WriteAPP1(app1_buf_ptr,
+							app1_buf_size,
+							in_param_ptr->exif_info_ptr,
+							in_param_ptr->thumbnail_buf_ptr,
+							in_param_ptr->thumbnail_buf_size,
+							&app1_size);
 
-    if (JPEG_SUCCESS != ret)
-    {
+    if (JPEG_SUCCESS != ret) {
     	JPEG_PRINT_LOW("[JPEG_AddExifToFile] Jpeg_WriteAPP1 failed");
         return ret;
     }
@@ -2983,9 +3213,8 @@ LOCAL JPEG_RET_E JPEG_AddExifToFile(JINF_WEXIF_IN_PARAM_T *in_param_ptr)
     write_ptr = soi_marker;
     if (!in_param_ptr->wrtie_file_func(write_ptr, write_offset, write_size,
                                         &actual_write_size)
-        || write_size != actual_write_size)
-    {
-    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] soi marker failed, write_size= %d, \
+        || write_size != actual_write_size) {
+    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] soi marker failed, write_size= %d,\
 							actual_write_size = %d", write_size, actual_write_size);
         return JPEG_FAILED;
     }
@@ -2997,23 +3226,40 @@ LOCAL JPEG_RET_E JPEG_AddExifToFile(JINF_WEXIF_IN_PARAM_T *in_param_ptr)
     write_ptr = app1_buf_ptr;
     if (!in_param_ptr->wrtie_file_func(write_ptr, write_offset, write_size,
                                         &actual_write_size)
-        || write_size != actual_write_size)
-    {
-    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] write app1 failed, write_size= %d, \
+        || write_size != actual_write_size) {
+    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] write app1 failed, write_size= %d,\
 							actual_write_size = %d", write_size, actual_write_size);
         return JPEG_FAILED;
     }
-
+    ret = Jpeg_WriteAPP3(app3_buf_ptr,
+							app3_buf_size,
+							in_param_ptr->exif_isp_info,
+							&app3_size);
+    if (JPEG_SUCCESS == ret) {
+		if (app3_size > 0) {
+			write_offset += actual_write_size;
+			write_size = app3_size;
+			write_ptr = app3_buf_ptr;
+			if (!in_param_ptr->wrtie_file_func(write_ptr, write_offset, write_size,
+												&actual_write_size)
+				|| write_size != actual_write_size) {
+		    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] write src jpeg failed, write_size= %d,\
+								actual_write_size = %d", write_size, actual_write_size);
+        		return JPEG_FAILED;
+    		}
+		}
+    } else {
+		JPEG_PRINT_LOW("[JPEG_AddExifToFile] Jpeg_WriteAPP3 failed");
+	}
     //wrtie the main JPEG
     write_offset += actual_write_size;
 
-    write_size = in_param_ptr->src_jpeg_size - 2;
-    write_ptr = in_param_ptr->src_jpeg_buf_ptr + 2;   //exclude SOI marker
+    write_size = in_param_ptr->src_jpeg_size - JPEG_HEADER_BYTE;
+    write_ptr = in_param_ptr->src_jpeg_buf_ptr + JPEG_HEADER_BYTE;   //exclude SOI marker
     if (!in_param_ptr->wrtie_file_func(write_ptr, write_offset, write_size,
                                         &actual_write_size)
-        || write_size != actual_write_size)
-    {
-    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] write src jpeg failed, write_size= %d, \
+        || write_size != actual_write_size) {
+    	JPEG_PRINT_LOW("[JPEG_AddExifToFile] write src jpeg failed, write_size= %d,\
 							actual_write_size = %d", write_size, actual_write_size);
         return JPEG_FAILED;
     }

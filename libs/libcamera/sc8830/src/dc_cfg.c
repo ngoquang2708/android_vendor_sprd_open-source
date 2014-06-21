@@ -28,6 +28,8 @@ EXIF_SPECIFIC_INFO_T s_dc_specific_info;
 JINF_EXIF_INFO_T s_dc_exif_info;
 EXIF_SPEC_OTHER_T s_dc_spec_other;
 const JINF_EXIF_INFO_T* s_dc_exif_info_ptr=&s_dc_exif_info;
+EXIT_ISP_INFO_T s_dc_exif_isp_info;
+EXIT_ISP_INFO_T* s_dc_exif_isp_info_ptr = &s_dc_exif_isp_info;
 
 static EXIF_PRI_DATA_STRUCT_T exif_prim_data = {
 	{1, 0}, /*just Orientation valid*/
@@ -221,3 +223,7 @@ DC_PRODUCT_CFG_T_PTR DC_GeProductCfgPtr(void)
 	return dc_productcfgptr;
 }
 
+EXIT_ISP_INFO_T *DC_GetExifIspParameterPtr(void)
+{
+	return (EXIT_ISP_INFO_T* )s_dc_exif_isp_info_ptr;
+}

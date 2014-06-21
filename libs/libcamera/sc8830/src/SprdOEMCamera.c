@@ -28,6 +28,7 @@
 #include "isp_video.h"
 #include <androidfw/SprdIlog.h>
 #include "isp/uv_denoise/inc/denoise_app.h"
+#include "dc_cfg.h"
 
 static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
@@ -7066,6 +7067,20 @@ int camera_jpeg_decode_next(struct frm_info *data)
 	return ret;
 }
 
+EXIT_ISP_INFO_T *camera_get_isp_exif(void)
+{
+	EXIT_ISP_INFO_T *p_isp_exif_info = PNULL;
+	int ret = 0;
+	struct camera_context    *cxt = camera_get_cxt();
+	if (V4L2_SENSOR_FORMAT_RAWRGB == cxt->sn_cxt.sn_if.img_fmt) {
+		p_isp_exif_info = DC_GetExifIspParameterPtr();
+		memset(p_isp_exif_info,0,sizeof(EXIT_ISP_INFO_T));
+		ret = isp_ioctl(ISP_CTRL_GET_EXIF_INFO, (void*)p_isp_exif_info);
+	} else {
+		return PNULL;
+	}
+	return p_isp_exif_info;
+}
 int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 {
 	CMR_MSG_INIT(message);
@@ -7073,6 +7088,7 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	camera_encode_mem_type   encoder_type;
 	struct img_frm           *jpg_frm;
 	JINF_EXIF_INFO_T         *exif_ptr;
+	EXIT_ISP_INFO_T          *exif_isp_ptr;
 	struct jpeg_enc_exif_param      wexif_param;
 	struct jpeg_wexif_cb_param    wexif_output;
 	int                      frm_num = -1;
@@ -7102,6 +7118,8 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 	encoder_param.outPtr = &encoder_type;
 	encoder_param.status = JPEGENC_IMG_DONE;
 
+	exif_isp_ptr = camera_get_isp_exif();
+	wexif_param.exif_isp_info = exif_isp_ptr;
 	wexif_param.exif_ptr = exif_ptr;
 	wexif_param.src_jpeg_addr_virt = (uint32_t)encoder_type.buffer;
 	wexif_param.src_jpeg_size = encoder_param.size;

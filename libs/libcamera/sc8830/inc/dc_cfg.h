@@ -26,8 +26,10 @@
 
 #include <linux/types.h>
 #include "jpeg_exif_header.h"
+#include "isp_exif.h"
 JINF_EXIF_INFO_T *DC_InitExifParameter(JINF_EXIF_INFO_T * exif_info_ptr,
 				       uint32_t size);
 JINF_EXIF_INFO_T *DC_GetExifParameter(void);
 void DC_GetExifParameter_Post(void);
+EXIT_ISP_INFO_T *DC_GetExifIspParameterPtr(void);
 #endif
