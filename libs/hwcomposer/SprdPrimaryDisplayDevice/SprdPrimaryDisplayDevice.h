@@ -150,6 +150,10 @@ private:
     int AcceleratorProbe(int GSPAddrType);
 
     int AcceleratorAdapt(int DisplayDeviceAccelerator);
+
+#ifdef HWC_DUMP_CAMERA_SHAKE_TEST
+    void dumpCameraShakeTest(hwc_display_contents_1_t* list);
+#endif
 };
 
 #endif

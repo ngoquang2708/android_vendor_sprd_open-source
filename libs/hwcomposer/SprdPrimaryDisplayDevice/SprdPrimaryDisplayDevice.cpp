@@ -245,6 +245,78 @@ int SprdPrimaryDisplayDevice:: AcceleratorAdapt(int DisplayDeviceAccelerator)
     return value;
 }
 
+#ifdef HWC_DUMP_CAMERA_SHAKE_TEST
+void SprdPrimaryDisplayDevice:: dumpCameraShakeTest(hwc_display_contents_1_t* list)
+{
+    char value[PROPERTY_VALUE_MAX];
+    if ((0 != property_get("persist.sys.performance_camera", value, "0")) &&
+         (atoi(value) == 1))
+    {
+        for(unsigned int i = 0; i < list->numHwLayers; i++)
+        {
+            hwc_layer_1_t *l = &(list->hwLayers[i]);
+
+            if (l && ((l->flags & HWC_DEBUG_CAMERA_SHAKE_TEST) == HWC_DEBUG_CAMERA_SHAKE_TEST))
+            {
+                struct private_handle_t *privateH = (struct private_handle_t *)(l->handle);
+                if (privateH == NULL)
+                {
+                    continue;
+                }
+
+                void *cpuAddr = NULL;
+                int offset = 0;
+                int format = -1;
+                int width = privateH->width;
+                int height = privateH->stride;
+                cpuAddr = (void *)(privateH->base);
+                format = privateH->format;
+                if (format == HAL_PIXEL_FORMAT_RGBA_8888)
+                {
+                    int r = -1;
+                    int g = -1;
+                    int b = -1;
+                    int r2 = -1;
+                    int g2 = -1;
+                    int b2 = -1;
+                    int colorNumber = -1;
+
+                    /*
+                     *  read the pixel in the 1/4 of the layer
+                     * */
+                    offset = ((width>>1) * (height>>1))<<2;
+                    uint8_t *inrgb = (uint8_t *)((int *)cpuAddr + offset);
+
+                    r = *(inrgb++); // for r;
+                    g = *(inrgb++); // for g;
+                    b = *(inrgb++);
+                    inrgb++; // for a;
+                    r2 = *(inrgb++); // for r;
+                    g2 = *(inrgb++); // for g;
+                    b2 = *(inrgb++);
+
+                    if ((r == 205) && (g == 0) && (b == 252))
+                    {
+                        colorNumber = 0;
+                    }
+                    else if ((r == 15) && (g == 121) && (b == 0))
+                    {
+                        colorNumber = 1;
+                    }
+                    else if ((r == 31) && (g == 238) && (b == 0))
+                    {
+                        colorNumber = 2;
+                    }
+
+                    ALOGD("[HWComposer] will post camera shake test color:%d to LCD, 1st pixel in the middle of screen [r=%d, g=%d, b=%d], 2st pixel[r=%d, g=%d, b=%d]",
+                           colorNumber, r, g, b, r2, g2, b2);
+                }
+            }
+        }
+    }
+}
+#endif
+
 int SprdPrimaryDisplayDevice:: getDisplayAttributes(DisplayAttributes *dpyAttributes)
 {
     float refreshRate = 60.0;
@@ -524,6 +596,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             break;
     }
 
+
     /*
      *  This is temporary methods for displaying Framebuffer target layer, has some bug in FB HAL.
      *  ====     start   ================
@@ -553,6 +626,10 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
                 FBTargetLayer->acquireFenceFd = -1;
             }
         }
+
+#ifdef HWC_DUMP_CAMERA_SHAKE_TEST
+        dumpCameraShakeTest(list);
+#endif
 
 #ifdef SPRD_DITHER_ENABLE
         if(!((mLayerList->getVideoLayerCount() != 0) || (mLayerList->getYuvLayerCount() != 0))) {
@@ -685,6 +762,10 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         else
         {
             ALOGI_IF(mDebugFlag, "%s[%d],composerLayers success",__func__,__LINE__);
+
+#ifdef HWC_DUMP_CAMERA_SHAKE_TEST
+            dumpCameraShakeTest(list);
+#endif
         }
         /*
          *  Use GSP to do 2 layer blending, so if PrimaryLayer is not NULL,

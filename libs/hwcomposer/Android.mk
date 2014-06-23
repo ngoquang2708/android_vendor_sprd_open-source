@@ -192,6 +192,10 @@ ifeq ($(strip $(SPRD_HWC_DEBUG_TRACE)), true)
 	LOCAL_CFLAGS += -DHWC_DEBUG_TRACE
 endif
 
+ifeq ($(strip $(TARGET_DEBUG_CAMERA_SHAKE_TEST)), true)
+	LOCAL_CFLAGS += -DHWC_DUMP_CAMERA_SHAKE_TEST
+endif
+
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
