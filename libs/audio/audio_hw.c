@@ -1827,7 +1827,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
+	if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
                   || (AUDIO_MODE_IN_CALL == adev->mode)
                   ||adev->voip_start) {
             adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
@@ -1835,6 +1835,14 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             out->devices = val;
             ALOGW("out_set_parameters want to set devices:0x%x old_mode:%d new_mode:%d call_start:%d ",adev->out_devices,cur_mode,adev->mode,adev->call_start);
 
+            if ((val & AUDIO_DEVICE_OUT_ALL_FM)
+                    && (adev->call_start || AUDIO_MODE_IN_CALL == adev->mode || adev->voip_start)) {
+                ALOGW("[out_set_parameters], devices:0x%x mode:%d call_start:%d voip_start:%d",
+                        val,adev->mode,adev->call_start,adev->voip_start);
+                pthread_mutex_unlock(&out->lock);
+                pthread_mutex_unlock(&adev->lock);
+                return 0;
+            }
             if(1 == adev->call_start) {
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
@@ -3448,6 +3456,10 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     if(adev->mode == AUDIO_MODE_IN_CALL || adev->call_start ){
+        ALOGW("[adev_set_voice_volume], devices:0x%x ",adev->out_devices);
+        if (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM) {
+            return 0;
+        }
         BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
         adev->voice_volume = volume;
         /*Send at command to cp side*/
