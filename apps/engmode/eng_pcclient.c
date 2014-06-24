@@ -18,6 +18,7 @@
 #include "eng_uevent.h"
 
 #define VLOG_PRI  -20
+#define USB_CONFIG_VSER  "vser"
 #define SYS_CLASS_ANDUSB_ENABLE "/sys/class/android_usb/android0/enable"
 #define SYS_CLASS_ANDUSB_STATE "/sys/class/android_usb/f_gser/device/state"
 
@@ -31,7 +32,8 @@ static struct eng_param cmdparam = {
     .engtest = 0,
     .cp_type = ENG_RUN_TYPE_TD,
     .connect_type = CONNECT_USB,
-    .nativeflag = 0
+    .nativeflag = 0,
+    .normal_cali = 0
 };
 
 static void set_vlog_priority(void)
@@ -74,7 +76,7 @@ static int cali_parse_one_para(char * buf, char gap, int* value)
     return len;
 }
 
-void eng_check_factorymode(int final)
+void eng_check_factorymode(int normal_cali)
 {
     int ret;
     int fd;
@@ -86,6 +88,7 @@ void eng_check_factorymode(int final)
     char build_type[PROPERTY_VALUE_MAX];
     int usb_diag_set = 0;
     int i;
+    int property_get_count=0;
 #ifdef USE_BOOT_AT_DIAG
     fd=open(ENG_FACOTRYMODE_FILE, O_RDWR|O_CREAT|O_TRUNC, 0660);
 
@@ -109,7 +112,9 @@ void eng_check_factorymode(int final)
             }
         }
 
-        if(usb_diag_set && !final && 0 == strcmp(build_type, "userdebug")){
+	ENG_LOG("%s: normal_cali: %d\n", __FUNCTION__, normal_cali);
+
+	if((usb_diag_set && (0 == strcmp(build_type, "userdebug"))) || normal_cali){
             do{
                 property_get("sys.usb.config",usb_config_value,"not_find");
                 if(strcmp(usb_config_value,"not_find") == 0){
@@ -117,8 +122,23 @@ void eng_check_factorymode(int final)
                     ENG_LOG("%s: can not find sys.usb.config\n",__FUNCTION__);
                     continue;
                 }else{
-                    property_set("persist.sys.modem.diag", gser_config);
-                    ENG_LOG("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+		    if(normal_cali){
+                        property_set("sys.usb.config", USB_CONFIG_VSER);
+                        property_get("sys.usb.config",usb_config_value,"not_find");
+                        ENG_LOG("%s: get sys.usb.config: %s\n",__FUNCTION__,usb_config_value);
+                        property_set("persist.sys.usb.config", USB_CONFIG_VSER);
+                        do{
+                            usleep(100*1000);
+                            property_get("persist.sys.usb.config",usb_config_value,"not_find");
+                            property_get_count++;
+                        }while(0 != strcmp(usb_config_value, USB_CONFIG_VSER));
+                        ENG_LOG("%s: get persist.sys.usb.config: %s,%d\n",__FUNCTION__,usb_config_value,property_get_count);
+                        ret=remove("/data/property/persist.sys.usb.config");
+                        ENG_LOG("%s: remove persist.sys.usb.config: ret=%d\n",__FUNCTION__,ret);
+                    }else{
+                        property_set("persist.sys.modem.diag", gser_config);
+                        ENG_LOG("%s: set usb property mass_storage,adb,vser,gser\n",__FUNCTION__);
+                    }
                     break;
                 }
             }while(1);
@@ -217,6 +237,33 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                 /*if not in calibration mode, use default */
                 cmdvalue->cp_type = ENG_RUN_TYPE_TD;
                 cmdvalue->connect_type = CONNECT_USB;
+            }
+	    str = strstr(cmdline, "androidboot.mode");
+            ENG_LOG("%s: str: %s", __FUNCTION__, str);
+            if(str != NULL){
+                str = strchr(str, '=');
+                ENG_LOG("%s: str: %s", __FUNCTION__, str);
+                if(str != NULL){
+                    str ++;
+                    ENG_LOG("%s: str: %s", __FUNCTION__, str);
+                    if(0 == strncmp(str, "engtest", 7)){
+                        str = strstr(cmdline, "autotest");
+                        ENG_LOG("%s: str: %s", __FUNCTION__, str);
+                        if(str != NULL){
+                            str = strchr(str, '=');
+                            ENG_LOG("%s: str: %s", __FUNCTION__, str);
+                            if(str != NULL){
+                                str ++;
+                                ENG_LOG("%s: str: %s", __FUNCTION__, str);
+                                cali_parse_one_para(str, ' ', &(cmdvalue->normal_cali));
+                                ENG_LOG("%s: cmdvalue->normal_cali: %d\n", __FUNCTION__, cmdvalue->normal_cali);
+                                if(cmdvalue->normal_cali==1){//disable vbus charger in autotest mode
+                                    disconnect_vbus_charger();
+                                }
+                            }
+                        }
+                    }
+                }
             }
             /*engtest*/
             if(strstr(cmdline,"engtest") != NULL)
@@ -378,8 +425,14 @@ int main (int argc, char** argv)
             eng_sqlite_create();
         }
         if(cmdparam.califlag != 1){
+	if(cmdparam.normal_cali){
+          	  //Change gser port
+		  memcpy(dev_info.host_int.dev_diag, "/dev/vser", sizeof("/dev/vser"));
+            }
             // Check factory mode and switch device mode.
-            eng_check_factorymode(0);
+            eng_check_factorymode(cmdparam.normal_cali);
+	    if(cmdparam.normal_cali)
+                eng_autotestStart();
         }else{
             // Initialize file for ADC
             initialize_ctrl_file();

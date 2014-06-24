@@ -35,6 +35,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
 	sc8830/src/SprdCameraParameters.cpp \
+	sc8830/src/SprdCameraHardware_autest_Interface.cpp  \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
 	sc8830/src/cmr_mem.c \
@@ -50,12 +51,16 @@ LOCAL_SRC_FILES:= \
 	sc8830/src/cmr_arith.c \
 	sensor_drv_u/src/sensor_drv_u.c \
 	sensor/sensor_ov8825_mipi_raw.c \
+	sensor/sensor_autotest_ov8825_mipi_raw.c \
 	sensor/sensor_ov13850_mipi_raw.c \
 	sensor/sensor_ov5648_mipi_raw.c \
 	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_imx219_mipi_raw.c \
 	sensor/sensor_ov5640_mipi.c \
+	sensor/sensor_autotest_ov5640_mipi_yuv.c \
 	sensor/sensor_ov5640.c \
+	sensor/sensor_autotest_ov5640_ccir_yuv.c \
+	sensor/sensor_autotest_ccir_yuv.c \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_gc2155.c \
 	sensor/sensor_gc2155_mipi.c \

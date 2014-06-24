@@ -12,6 +12,7 @@
 #include "engopt.h"
 #include "eng_attok.h"
 #include "eng_pcclient.h"
+#include "eng_autotest.h" //-- for autotest 20130220
 #include "eng_diag.h"
 #include "eng_sqlite.h"
 #include "vlog.h"
@@ -53,7 +54,7 @@ int g_assert_cmd = 0;
 extern int g_run_mode;
 extern int g_ap_cali_flag;
 extern AUDIO_TOTAL_T *audio_total;
-extern void eng_check_factorymode(int final);
+extern void eng_check_factorymode(int normal_cali);
 extern int parse_vb_effect_params(void *audio_params_ptr, unsigned int params_size);
 extern int SetAudio_pga_parameter_eng(AUDIO_TOTAL_T *aud_params_ptr, unsigned int params_size, uint32_t vol_level);
 extern int eng_battery_calibration(char *data,unsigned int count,char *out_msg,int out_len);
@@ -124,7 +125,58 @@ static int at_sadm_cmd_to_handle[] = {7,8,9,10,11,12,-1};
 //static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 static int at_spenha_cmd_to_handle[] = {0,1,2,3,4,-1};
 
+static int eng_autotest_dummy(char *req, char *rsp);
+static int eng_autotest_keypad(char *req, char *rsp);
+static int eng_autotest_lcd_parallel(char *req, char *rsp);
+static int eng_autotest_lcd_spi(char *req, char *rsp);
+static int eng_autotest_camera_iic(char *req, char *rsp);
+static int eng_autotest_camera_parallel(char *req, char *rsp);
+static int eng_autotest_camera_spi(char *req, char *rsp);
+static int eng_autotest_gpio(char *req, char *rsp);
+static int eng_autotest_tf(char *req, char *rsp);
+static int eng_autotest_sim(char *req, char *rsp);
+static int eng_autotest_mic(char *req, char *rsp);
+static int eng_autotest_speak(char *req, char *rsp);
+static int eng_autotest_misc(char *req, char *rsp);
+static int eng_autotest_fm(char *req, char *rsp);
+static int eng_autotest_atv(char *req, char *rsp);
+static int eng_autotest_bt(char *req, char *rsp);
+static int eng_autotest_wifi(char *req, char *rsp);
+static int eng_autotest_iic_dev(char *req, char *rsp);
+static int eng_autotest_charge(char *req, char *rsp);
+//-- [[ 2013-01-22
+static int eng_autotest_reserve(char *req, char *rsp);
+static int eng_autotest_sensor(char *req, char *rsp);
+//-- ]]
+static int eng_autotest_gps(char *req, char *rsp);
 
+static struct eng_autotestcmd_str eng_autotestcmd[] = {
+    {CMD_AUTOTEST_DUMMY,           eng_autotest_dummy},
+    {CMD_AUTOTEST_KEYPAD,          eng_autotest_keypad},
+    {CMD_AUTOTEST_LCD_PARALLEL,    eng_autotest_lcd_parallel},
+    {CMD_AUTOTEST_LCD_SPI,         eng_autotest_lcd_spi},
+    {CMD_AUTOTEST_CAMERA_IIC,      eng_autotest_camera_iic},
+    {CMD_AUTOTEST_CAMERA_PARALLEL, eng_autotest_camera_parallel},
+    {CMD_AUTOTEST_CAMERA_SPI,      eng_autotest_camera_spi},
+    {CMD_AUTOTEST_GPIO,            eng_autotest_gpio},
+    {CMD_AUTOTEST_TF,              eng_autotest_tf},
+    {CMD_AUTOTEST_SIM,             eng_autotest_sim},
+    {CMD_AUTOTEST_MIC,             eng_autotest_mic},
+    {CMD_AUTOTEST_SPEAK,           eng_autotest_speak},
+    {CMD_AUTOTEST_MISC,            eng_autotest_misc},
+    {CMD_AUTOTEST_FM,              eng_autotest_fm},
+    {CMD_AUTOTEST_ATV,             eng_autotest_atv},
+    {CMD_AUTOTEST_BT,              eng_autotest_bt},
+    {CMD_AUTOTEST_WIFI,            eng_autotest_wifi},
+    {CMD_AUTOTEST_IIC_DEV,         eng_autotest_iic_dev},
+    {CMD_AUTOTEST_CHARGE,          eng_autotest_charge},
+	//-- [[ 2013-01-22
+	{CMD_AUTOTEST_RSV01,           eng_autotest_reserve},
+	{CMD_AUTOTEST_RSV02,           eng_autotest_reserve},
+	{CMD_AUTOTEST_SENSOR,          eng_autotest_sensor},
+	//-- ]]
+    {CMD_AUTOTEST_GPS,             eng_autotest_gps},
+};
 
 struct eut_cmd eut_cmds[]={
     {EUT_REQ_INDEX,ENG_EUT_REQ},
@@ -262,6 +314,14 @@ int eng_diag_parse(char *buf,int len)
         case DIAG_CMD_APCALI:
             ret = eng_diag_ap_req(buf, len);
             break;
+	case DIAG_CMD_AUTOTEST:
+	    ENG_LOG("%s: Handle DIAG_CMD_AUTOTEST , eng_autotestIsConnect = %d \n",__FUNCTION__,  eng_autotestIsConnect());
+	    if(head_ptr->subtype == 0x1c) {
+		ret = CMD_USER_AUTOTEST_PATH_CONFIRM;
+	    } else {
+		ret = CMD_USER_AUTOTEST;
+	    }
+	    break;
         case DIAG_CMD_VER:
             ENG_LOG("%s: Handle DIAG_CMD_VER",__FUNCTION__);
             if(head_ptr->subtype==0x2) {
@@ -305,6 +365,60 @@ int eng_diag_parse(char *buf,int len)
     return ret;
 }
 
+static void eng_attest_build_rsphead(char *buf, MSG_HEAD_T *head, int rlen)
+{
+    int i = 0;
+    char *ptr = NULL;
+    memcpy((char*)head, buf+1, sizeof(MSG_HEAD_T));
+    if (rlen >= 0) {
+        head->len = sizeof(MSG_HEAD_T) + rlen;
+        head->subtype = 0;
+    } else {
+        head->len = sizeof(MSG_HEAD_T);
+        head->subtype = 1;
+    }
+
+    ptr = (char *)head;
+    for(i = 0; i < sizeof(MSG_HEAD_T); i ++) {
+        ENG_LOG("%s [%d]: 0x%x",__FUNCTION__, i, ptr[i]);
+    }
+}
+
+static int eng_diag_attest(char *data,int count,char *out_msg)
+{
+   uint8   sub_type;
+   int rlen;
+   MSG_HEAD_T head,*head_ptr=NULL;
+   char rsp[512];
+   char rsp_buf[1024];
+   memset(rsp, 0, sizeof(rsp));
+   memset(rsp_buf, 0, sizeof(rsp_buf));
+   head_ptr = (MSG_HEAD_T *)(data+1);
+   sub_type =  head_ptr->subtype;
+	if (sub_type >= (int)NUM_ELEMS(eng_autotestcmd)) {
+                ENG_LOG("%s: no handler for CMD_USER_AUTOTEST sub_type = %d",__FUNCTION__, sub_type);
+                return -1;
+       }
+	//-- [[ for autotest 20120220
+	if( eng_autotestIsConnect() >= 0 ) {
+		rlen = eng_autotestDoTest((const uchar *)data+1, count-1, (uchar *)rsp, ENG_BUFFER_SIZE);
+	} else {
+		rlen = -1;//eng_autotestcmd[sub_type].cmd_hdlr(data, rsp);
+	}
+	//-- ]]
+	ENG_LOG("%s: rlen=%d\n",__FUNCTION__, rlen);
+	// Send response
+	eng_attest_build_rsphead(data, &head, rlen);
+	if (rlen > 0) {
+		head.len = sizeof(MSG_HEAD_T) + rlen;
+		memcpy(rsp_buf, &head, sizeof(MSG_HEAD_T));
+		memcpy(rsp_buf+sizeof(MSG_HEAD_T), rsp, rlen);
+	} else {
+		memcpy(rsp_buf, &head, sizeof(MSG_HEAD_T));
+	}
+	return translate_packet(out_msg, rsp_buf, head.len);
+}
+
 int eng_diag_user_handle(int type, char *buf,int len)
 {
     int rlen = 0,i;
@@ -338,6 +452,24 @@ int eng_diag_user_handle(int type, char *buf,int len)
         case CMD_USER_ADC:
             rlen=eng_diag_adc(buf, adc_rsp);
             break;
+	case CMD_USER_AUTOTEST:
+	    memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
+	    rlen=eng_diag_attest(buf, len, eng_diag_buf);
+	    eng_diag_len = rlen;
+	    for(i=0;i<eng_diag_len;i++)
+	    {
+		ENG_LOG("%s: eng_diag_buf[%d]=%x\n",__FUNCTION__, i,eng_diag_buf[i]);
+	    }
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+	    return 0;
+	    break;
+	case CMD_USER_AUTOTEST_PATH_CONFIRM:
+	    /*eng_attest_build_rsphead(buf, &head, 0);
+	    memcpy(eng_diag_buf, &head, sizeof(MSG_HEAD_T));
+	    rlen = eng_hex2ascii(eng_diag_buf, eng_atdiag_buf, head.len);
+	    ENG_LOG("%s: after hex rlen=%d\n",__FUNCTION__, rlen);
+	    rlen = eng_atdiag_rsp(eng_get_csclient_fd(), eng_atdiag_buf, rlen);*/
+	    break;
         case CMD_USER_AUDIO:
             memset(eng_audio_diag_buf,0,sizeof(eng_audio_diag_buf));
             rlen=eng_diag_audio(buf, len, eng_audio_diag_buf);
@@ -654,6 +786,162 @@ int get_cmd_index(char *buf)
     return index;
 }
 
+int eng_autotest_dummy(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_keypad(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_lcd_parallel(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_lcd_spi(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_camera_iic(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_camera_parallel(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_camera_spi(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_gpio(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_tf(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_sim(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_mic(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_speak(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_misc(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_fm(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_atv(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_bt(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_wifi(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_iic_dev(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_charge(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+//-- [[ 2013-01-22
+int eng_autotest_reserve(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+
+int eng_autotest_sensor(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+    return ret;
+}
+//-- ]]
+
+int eng_autotest_gps(char *req, char *rsp)
+{
+    int ret = 0;
+    ENG_LOG("%s Enter",__FUNCTION__);
+	return ret;
+}
+
 int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp)
 {
     int i,rlen=0;
@@ -703,7 +991,7 @@ int eng_diag(char *buf,int len)
 
     if (type != CMD_COMMON){
         ret_val = eng_diag_user_handle(type, buf, len);
-        ENG_LOG("%s:user handle\n",__FUNCTION__);
+	ENG_LOG("%s:ret_val=%d\n",__FUNCTION__,ret_val);
 
         if (ret_val) {
             eng_diag_buf[0] =0x7e;
@@ -1097,7 +1385,7 @@ int eng_diag_factorymode(char *buf,int len, char *rsp)
             ENG_LOG("%s: should close the vser,gser when next reboot\n",__FUNCTION__);
         case 0x01:
             eng_sql_string2int_set(ENG_TESTMODE, *pdata);
-            eng_check_factorymode(1);
+            eng_check_factorymode(0);
             head_ptr->subtype = 0x00;
             break;
         default:

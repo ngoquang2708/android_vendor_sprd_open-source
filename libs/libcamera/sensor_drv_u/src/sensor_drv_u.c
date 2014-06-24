@@ -1611,6 +1611,20 @@ int Sensor_set_calibration(uint32_t value)
 	return SENSOR_SUCCESS;
 }
 
+static int autotest_camera_flag=0;
+
+int Sensor_SetAutoTest(int is_auotest)
+{
+	CMR_LOGE("s_autotest_flag =%d line=%d ",is_auotest,__LINE__);
+	return autotest_camera_flag=is_auotest;
+
+}
+int Sensor_GetAutoTest(void)
+{
+	 CMR_LOGE("autotest_camera_flag =%d line=%d ",autotest_camera_flag,__LINE__);
+	return autotest_camera_flag;
+}
+
 static void _sensor_calil_lnc_param_recover(SENSOR_INFO_T *sensor_info_ptr)
 {
 	uint32_t i = 0;
