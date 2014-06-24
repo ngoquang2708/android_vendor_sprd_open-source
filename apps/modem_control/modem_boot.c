@@ -1077,6 +1077,7 @@ reboot_modem:
     }
     if(!try_to_connect_fdl(uart_fd)) {
 		close(uart_fd);
+                hard_reset = 0;
 		goto reboot_modem;
 	}
 	fsync(uart_fd);
