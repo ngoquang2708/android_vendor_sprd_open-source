@@ -205,6 +205,7 @@ void *eng_vdiag_rthread(void *x)
 
     /*open usb/uart*/
     ENG_LOG("eng_vdiag_r open serial...\n");
+    ENG_LOG("eng_vdiag_r s_dev_info->host_int.dev_diag=%s\n",s_dev_info->host_int.dev_diag);
     ser_fd = eng_open_dev(s_dev_info->host_int.dev_diag, O_WRONLY);
     if(ser_fd < 0) {
         ENG_LOG("eng_vdiag_r open serial failed, error: %s\n", strerror(errno));

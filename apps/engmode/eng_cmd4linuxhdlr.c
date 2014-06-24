@@ -35,7 +35,7 @@
 extern int g_reset;
 extern int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp);
 extern int eng_atdiag_euthdlr(char *buf,int len,char* rsp,int module_index);
-extern void eng_check_factorymode(int final);
+extern void eng_check_factorymode(int normal_cali);
 extern int turnoff_lcd_backlight(void);
 static unsigned char g_buffer[ENG_BUFFER_SIZE];
 static int eng_linuxcmd_rpoweron(char *req, char *rsp);
@@ -789,7 +789,7 @@ int eng_linuxcmd_infactorymode(char *req, char *rsp)
             ENG_LOG("%s: status=%d\n",__FUNCTION__, status);
             if(status==0||status==1) {
                 eng_sql_string2int_set(ENG_TESTMODE, status);
-                eng_check_factorymode(1);
+                eng_check_factorymode(0);
                 sprintf(rsp, "%s\r\n", SPRDENG_OK);
             } else {
                 sprintf(rsp, "%s\r\n", SPRDENG_ERROR);
