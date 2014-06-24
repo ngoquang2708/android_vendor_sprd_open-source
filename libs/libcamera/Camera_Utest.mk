@@ -294,6 +294,10 @@ LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
 LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
+LOCAL_SHARED_LIBRARIES += libface_finder
+endif
 endif
 
 include $(BUILD_EXECUTABLE)

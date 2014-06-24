@@ -27,6 +27,7 @@
 #include "cmr_common.h"
 #include "cmr_msg.h"
 #include "cmr_oem.h"
+#include "../../arithmetic/sc8830/inc/FaceFinder.h"
 
 #define ARITHMETIC_EVT_FD_START          (1 << 16)
 #define ARITHMETIC_EVT_FD_EXIT           (1 << 17)
@@ -80,23 +81,50 @@ static int arithmetic_fd_call_init(const struct img_size * fd_size);
 
 int FaceSolid_Init(int width, int height)
 {
-	/*dummy function*/
+#if defined(CONFIG_CAMERA_FACE_DETECT)
+	int ret = ARITH_SUCCESS;
+	ret = FaceFinder_Init( width,  height);
+	if (ret) {
+		CMR_LOGE("fail. ret=%d",ret);
+	}
+	return ret;
+#else
+		/*dummy function*/
 	CMR_LOGW("dummy function! should not be here!");
 	return ARITH_SUCCESS;
+#endif
 }
 
 int FaceSolid_Function(unsigned char *src, ACCESS_FaceRect ** ppDstFaces, int *pDstFaceNum ,int skip)
 {
+#if defined(CONFIG_CAMERA_FACE_DETECT)
+	int ret = ARITH_SUCCESS;
+	ret = FaceFinder_Function(src, (FaceFinder_Data**) ppDstFaces, pDstFaceNum ,skip);
+	if (ret) {
+		CMR_LOGE("fail. ret=%d",ret);
+	}
+	return ret;
+#else
 	/*dummy function*/
 	CMR_LOGW("dummy function! should not be here!");
 	return ARITH_SUCCESS;
+#endif
 }
 
 int FaceSolid_Finalize()
 {
-	/*dummy function*/
+#if defined(CONFIG_CAMERA_FACE_DETECT)
+	int ret = ARITH_SUCCESS;
+	ret = FaceFinder_Finalize();
+	if (ret) {
+		CMR_LOGE("fail. ret=%d",ret);
+	}
+	return ret;
+#else
+		/*dummy function*/
 	CMR_LOGW("dummy function! should not be here!");
 	return ARITH_SUCCESS;
+#endif
 }
 
 uint32_t arithmetic_fd_is_init(void)
