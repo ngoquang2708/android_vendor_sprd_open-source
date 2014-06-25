@@ -4738,6 +4738,11 @@ void SprdCameraHardware::overwritePreviewFrame(camera_frame_type *frame)
 	memcpy((void *)(frame->buf_Virt_Addr + overwrite_offset), (void *)tmp_one_frame_mem_ptr->input_y_virtual_addr, (tmp_one_frame_mem_ptr->width*tmp_one_frame_mem_ptr->height));
 	relaseOneFrameMem(&overwrite_preview_frame);
 	if (mIsPerformanceTestable) {
+		if (mShakeTest.mShakeTestColorCount) {
+			sprd_perfInfo("performance autotest of camera shake test X color=%d",(mShakeTest.mShakeTestColorCount - 1));
+		} else {
+			sprd_perfInfo("performance autotest of camera shake test X color=%d",(MAX_LOOP_COLOR_COUNT-1));
+		}
 	} else {
 		LOGI("SHAKE_TEST overwritePreviewFrame   X.\n");
 	}
