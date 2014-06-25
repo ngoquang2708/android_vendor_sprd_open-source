@@ -9,7 +9,7 @@ typedef enum
 typedef struct profile_info
 {
     profilecmd cmd;
-    int profiletime;
+    unsigned long profiletime;
 }profileinfo;
 
 #ifdef __cplusplus
