@@ -70,7 +70,7 @@ void dump_yuv( uint8 * pBuffer,uint32 aInBufSize)
  * FIXME: If width_org is not 16 aligned also, this would be much complicate
  *
  */
-inline static void ConvertYUV420PlanarToYUV420SemiPlanar(
+inline static void ConvertYUV420PlanarToYVU420SemiPlanar(
     uint8_t *inyuv, uint8_t* outyuv,
     int32_t width_org, int32_t height_org,
     int32_t width_dst, int32_t height_dst) {
@@ -126,7 +126,7 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mVideoHeight(144),
       mVideoFrameRate(30),
       mVideoBitRate(192000),
-      mVideoColorFormat(OMX_COLOR_FormatYUV420SemiPlanar),
+      mVideoColorFormat(OMX_SPRD_COLOR_FormatYVU420SemiPlanar),
       mIDRFrameRefreshIntervalInSec(1),
       mNumInputFrames(-1),
       mStarted(false),
@@ -321,9 +321,11 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     mEncInfo.is_h263 = mIsH263;
     mEncInfo.frame_width = mVideoWidth;
     mEncInfo.frame_height = mVideoHeight;
-    //mEncInfo.uv_interleaved = 1;
-    mEncInfo.yuv_format = MMENC_YUV420SP_NV21;//1;
-	//ALOGE("yuv_format, cathy");
+    if (mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+        mEncInfo.yuv_format = MMENC_YUV420SP_NV12;
+    } else {
+        mEncInfo.yuv_format = MMENC_YUV420SP_NV21;
+    }
     mEncInfo.time_scale = 1000;
 #ifdef ANTI_SHAKE
     mEncInfo.b_anti_shake = 1;
@@ -460,7 +462,7 @@ void SPRDMPEG4Encoder::initPorts() {
 
     def.format.video.cMIMEType = const_cast<char *>("video/raw");
     def.format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
-    def.format.video.eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+    def.format.video.eColorFormat = OMX_SPRD_COLOR_FormatYVU420SemiPlanar;
     def.format.video.xFramerate = (mVideoFrameRate << 16);  // Q16 format
     def.format.video.nBitrate = mVideoBitRate;
     def.format.video.nFrameWidth = mVideoWidth;
@@ -533,7 +535,7 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalGetParameter(
             return OMX_ErrorUndefined;
         }
 
-        if (formatParams->nIndex > 1) {
+        if (formatParams->nIndex > 2) {
             return OMX_ErrorNoMore;
         }
 
@@ -541,8 +543,10 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalGetParameter(
             formatParams->eCompressionFormat = OMX_VIDEO_CodingUnused;
             if (formatParams->nIndex == 0) {
                 formatParams->eColorFormat = OMX_COLOR_FormatYUV420Planar;
-            } else {
+            } else if (formatParams->nIndex == 1) {
                 formatParams->eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+            } else {
+                formatParams->eColorFormat = OMX_SPRD_COLOR_FormatYVU420SemiPlanar;
             }
         } else {
             formatParams->eCompressionFormat =
@@ -670,7 +674,8 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
         if (def->nPortIndex == 0) {
             if (def->format.video.eCompressionFormat != OMX_VIDEO_CodingUnused ||
                     (def->format.video.eColorFormat != OMX_COLOR_FormatYUV420Planar &&
-                     def->format.video.eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar)) {
+                     def->format.video.eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar &&
+                     def->format.video.eColorFormat != OMX_SPRD_COLOR_FormatYVU420SemiPlanar)) {
                 return OMX_ErrorUndefined;
             }
         } else {
@@ -732,7 +737,7 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
             return OMX_ErrorUndefined;
         }
 
-        if (formatParams->nIndex > 1) {
+        if (formatParams->nIndex > 2) {
             return OMX_ErrorNoMore;
         }
 
@@ -741,7 +746,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
                     ((formatParams->nIndex == 0 &&
                       formatParams->eColorFormat != OMX_COLOR_FormatYUV420Planar) ||
                      (formatParams->nIndex == 1 &&
-                      formatParams->eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar))) {
+                      formatParams->eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) ||
+                      (formatParams->nIndex == 2 &&
+                      formatParams->eColorFormat != OMX_SPRD_COLOR_FormatYVU420SemiPlanar))) {
                 return OMX_ErrorUndefined;
             }
             mVideoColorFormat = formatParams->eColorFormat;
@@ -961,8 +968,8 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                         return;
                     }
 
-                    if (mVideoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) {
-                        ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
+                    if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
+                        ConvertYUV420PlanarToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
                                                              (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else {
                         memcpy(py, vaddr, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
@@ -1006,8 +1013,8 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
                 py = mPbuf_yuv_v;
                 py_phy = (uint8_t*)mPbuf_yuv_p;
 
-                if (mVideoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) {
-                    ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
+                if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
+                    ConvertYUV420PlanarToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
                                                          (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else {
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);

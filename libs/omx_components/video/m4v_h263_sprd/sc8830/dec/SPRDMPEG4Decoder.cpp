@@ -88,7 +88,7 @@ void dump_bs( uint8 * pBuffer,uint32 aInBufSize) {
 }
 
 void dump_yuv( uint8 * pBuffer,uint32 aInBufSize) {
-    FILE *fp = fopen("/data/video_omx.yuv","ab");
+    FILE *fp = fopen("/data/dump/video_out.yuv","ab");
     fwrite(pBuffer,1,aInBufSize,fp);
     fclose(fp);
 }
@@ -125,6 +125,8 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
       mPbuf_stream_v(NULL),
       mPbuf_stream_p(0),
       mPbuf_stream_size(0),
+      mPVolHeader(NULL),
+      mPVolHeaderSize(0),
       mLibHandle(NULL),
       mDecoderSwFlag(true),
       mChangeToHwDec(false),
@@ -173,6 +175,9 @@ SPRDMPEG4Decoder::SPRDMPEG4Decoder(
         }
     }
 
+    mPVolHeader = (uint8_t *)malloc(MPEG4_VOL_HEADER_SIZE);
+    CHECK(mPVolHeader);
+
     initPorts();
     iUseAndroidNativeBuffer[OMX_DirInput] = OMX_FALSE;
     iUseAndroidNativeBuffer[OMX_DirOutput] = OMX_FALSE;
@@ -187,6 +192,11 @@ SPRDMPEG4Decoder::~SPRDMPEG4Decoder() {
     {
         set_ddr_freq("0");
         mSetFreqCount--;
+    }
+
+    if (mPVolHeader != NULL) {
+        free(mPVolHeader);
+        mPVolHeader = NULL;
     }
 
     delete mHandle;
@@ -903,8 +913,9 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         }
         while(pBufCtrl->iRefCount > 0);
 
-//        ALOGI("%s, %d, mBuffer=0x%x, outHeader=0x%x, iRefCount=%d", __FUNCTION__, __LINE__, *itBuffer, outHeader, pBufCtrl->iRefCount);
-        ALOGI("%s, %d, outHeader:0x%x, inHeader: 0x%x, len: %d, time: %lld, EOS: %d", __FUNCTION__, __LINE__,outHeader, inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS);
+        ALOGI("%s, %d, outHeader:0x%x, inHeader: 0x%x, len: %d, time: %lld, EOS: %d, cfg:%d", __FUNCTION__, __LINE__,outHeader,
+            inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS,inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG);
+
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
             mEOSStatus = INPUT_EOS_SEEN; //the last frame size may be not zero, it need to be decoded.
         }
@@ -920,6 +931,13 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
             if (inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
                 vol_data[0] = bitstream;
                 vol_size = inHeader->nFilledLen;
+                if (vol_size <= MPEG4_VOL_HEADER_SIZE && mPVolHeaderSize == 0) {
+                    memcpy(mPVolHeader, bitstream, vol_size);
+                    mPVolHeaderSize = vol_size;
+                }
+            } else if (mPVolHeaderSize > 0) {
+                vol_data[0] = mPVolHeader;
+                vol_size = mPVolHeaderSize;
             }
 
             MP4DecodingMode mode =
@@ -948,8 +966,7 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
 
             video_format.frame_width = 0;
             video_format.frame_height = 0;
-            //video_format.uv_interleaved = 1;
-            video_format.yuv_format = YUV420SP_NV21;
+            video_format.yuv_format = YUV420SP_NV12;
 
             MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
 

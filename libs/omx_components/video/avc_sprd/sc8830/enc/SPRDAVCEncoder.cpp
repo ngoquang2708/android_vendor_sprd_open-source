@@ -123,7 +123,7 @@ static status_t ConvertAvcSpecLevelToOmxAvcLevel(
  * FIXME: If width_org is not 16 aligned also, this would be much complicate
  *
  */
-inline static void ConvertYUV420PlanarToYUV420SemiPlanar(uint8_t *inyuv, uint8_t* outyuv,
+inline static void ConvertYUV420PlanarToYVU420SemiPlanar(uint8_t *inyuv, uint8_t* outyuv,
         int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 
     int32_t inYsize = width_org * height_org;
@@ -182,7 +182,7 @@ inline static void inittable()
         RGB_b_cr[i] = ((18 * i) >> 8);
     }
 }
-inline static void ConvertARGB888ToYUV420SemiPlanar(uint8_t *inrgb, uint8_t* outyuv,
+inline static void ConvertARGB888ToYVU420SemiPlanar(uint8_t *inrgb, uint8_t* outyuv,
         int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 #define RGB2Y(_r, _g, _b)    (  *(RGB_r_y +_r)      +   *(RGB_g_y+_g)   +    *(RGB_b_y+_b))
 #define RGB2CB(_r, _g, _b)   ( -*(RGB_r_cb +_r)     -   *(RGB_g_cb+_g)  +    *(RGB_r_cr_b_cb+_b))
@@ -261,7 +261,7 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mVideoHeight(144),
       mVideoFrameRate(30),
       mVideoBitRate(192000),
-      mVideoColorFormat(OMX_COLOR_FormatYUV420SemiPlanar),
+      mVideoColorFormat(OMX_SPRD_COLOR_FormatYVU420SemiPlanar),
       mIDRFrameRefreshIntervalInSec(1),
       mAVCEncProfile(AVC_BASELINE),
       mAVCEncLevel(AVC_LEVEL2),
@@ -333,7 +333,7 @@ SPRDAVCEncoder::SPRDAVCEncoder(
           mCapability.profile, mCapability.level, mCapability.max_width, mCapability.max_height);
 
 #ifdef SPRD_DUMP_YUV
-    mFile_yuv = fopen("/data/video.yuv", "wb");
+    mFile_yuv = fopen("/data/dump/video_in.yuv", "ab");
 #endif
 
 #ifdef SPRD_DUMP_BS
@@ -504,8 +504,11 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncInfo.is_h263 = 0;
     mEncInfo.frame_width = mVideoWidth;
     mEncInfo.frame_height = mVideoHeight;
-//    mEncInfo.uv_interleaved = 1;
-    mEncInfo.yuv_format = MMENC_YUV420SP_NV21;
+    if (mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+        mEncInfo.yuv_format = MMENC_YUV420SP_NV12;
+    } else {
+        mEncInfo.yuv_format = MMENC_YUV420SP_NV21;
+    }
     mEncInfo.time_scale = 1000;
 #ifdef ANTI_SHAKE
     mEncInfo.b_anti_shake = 1;
@@ -670,7 +673,7 @@ void SPRDAVCEncoder::initPorts() {
 
     def.format.video.cMIMEType = const_cast<char *>("video/raw");
     def.format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
-    def.format.video.eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+    def.format.video.eColorFormat = OMX_SPRD_COLOR_FormatYVU420SemiPlanar;
     def.format.video.xFramerate = (mVideoFrameRate << 16);  // Q16 format
     def.format.video.nBitrate = mVideoBitRate;
     def.format.video.nFrameWidth = mVideoWidth;
@@ -735,7 +738,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalGetParameter(
             return OMX_ErrorUndefined;
         }
 
-        if (formatParams->nIndex > 2) {
+        if (formatParams->nIndex > 3) {
             return OMX_ErrorNoMore;
         }
 
@@ -745,6 +748,8 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalGetParameter(
                 formatParams->eColorFormat = OMX_COLOR_FormatYUV420Planar;
             } else if (formatParams->nIndex == 1) {
                 formatParams->eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+            } else if (formatParams->nIndex == 2) {
+                formatParams->eColorFormat = OMX_SPRD_COLOR_FormatYVU420SemiPlanar;
             } else {
                 formatParams->eColorFormat = OMX_COLOR_FormatAndroidOpaque;
             }
@@ -870,6 +875,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
             if (def->format.video.eCompressionFormat != OMX_VIDEO_CodingUnused ||
                     (def->format.video.eColorFormat != OMX_COLOR_FormatYUV420Planar &&
                      def->format.video.eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar &&
+                     def->format.video.eColorFormat != OMX_SPRD_COLOR_FormatYVU420SemiPlanar &&
                      def->format.video.eColorFormat != OMX_COLOR_FormatAndroidOpaque)) {
                 return OMX_ErrorUndefined;
             }
@@ -929,7 +935,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
             return OMX_ErrorUndefined;
         }
 
-        if (formatParams->nIndex > 2) {
+        if (formatParams->nIndex > 3) {
             return OMX_ErrorNoMore;
         }
 
@@ -940,6 +946,8 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
                      (formatParams->nIndex == 1 &&
                       formatParams->eColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) ||
                      (formatParams->nIndex == 2 &&
+                      formatParams->eColorFormat != OMX_SPRD_COLOR_FormatYVU420SemiPlanar) ||
+                     (formatParams->nIndex == 3 &&
                       formatParams->eColorFormat != OMX_COLOR_FormatAndroidOpaque) )) {
                 return OMX_ErrorUndefined;
             }
@@ -1183,10 +1191,10 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     }
 
                     if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
-                        ConvertYUV420PlanarToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
+                        ConvertYUV420PlanarToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
                                                               (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-                        ConvertARGB888ToYUV420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                        ConvertARGB888ToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     } else {
                         memcpy(py, vaddr, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                     }
@@ -1229,10 +1237,10 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                 py_phy = (uint8_t*)mPbuf_yuv_p;
 
                 if (mVideoColorFormat == OMX_COLOR_FormatYUV420Planar) {
-                    ConvertYUV420PlanarToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
+                    ConvertYUV420PlanarToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
                                                           (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-                    ConvertARGB888ToYUV420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                    ConvertARGB888ToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                 } else {
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                 }

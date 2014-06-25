@@ -386,7 +386,7 @@ status_t SPRDAVCDecoder::initDecoder() {
     video_format.p_extra_phy = 0;
     video_format.i_extra = 0;
     //video_format.uv_interleaved = 1;
-    video_format.yuv_format = YUV420SP_NV21;
+    video_format.yuv_format = YUV420SP_NV12;
 
     if ((*mH264DecInit)(mHandle, &codec_buf,&video_format) != MMDEC_OK) {
         ALOGE("Failed to init AVCDEC");
@@ -847,7 +847,7 @@ void dump_bs( uint8* pBuffer,int32 aInBufSize) {
 }
 
 void dump_yuv( uint8* pBuffer,int32 aInBufSize) {
-    FILE *fp = fopen("/data/video.yuv","ab");
+    FILE *fp = fopen("/data/dump/video_out.yuv","ab");
     fwrite(pBuffer,1,aInBufSize,fp);
     fclose(fp);
 }
@@ -1108,6 +1108,7 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
                 dec_out.frameEffective) {
             ALOGI("%s, %d, dec_out.pBufferHeader: %0x, dec_out.mPicId: %d", __FUNCTION__, __LINE__, dec_out.pBufferHeader, dec_out.mPicId);
             int32_t picId = dec_out.mPicId;//decodedPicture.picId;
+            //dump_yuv(dec_out.pOutFrameY, mPictureSize);
             drainOneOutputBuffer(picId, dec_out.pBufferHeader);
             dec_out.frameEffective = false;
         }

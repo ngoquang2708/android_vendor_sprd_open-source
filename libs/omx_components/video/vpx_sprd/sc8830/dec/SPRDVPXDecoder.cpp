@@ -322,7 +322,7 @@ status_t SPRDVPXDecoder::initDecoder() {
     ExtraMemBfr.common_buffer_ptr_phy = (uint32)mPbuf_extra_p;
     ExtraMemBfr.size = size_extra;
 
-    VideoFormat.yuv_format = YUV420SP_NV21;
+    VideoFormat.yuv_format = YUV420SP_NV12;
 
     if((*mVPXDecInit)( mHandle, &InterMemBfr, &ExtraMemBfr, &VideoFormat) != MMDEC_OK) {
         ALOGE("Failed to init VPXDEC");
