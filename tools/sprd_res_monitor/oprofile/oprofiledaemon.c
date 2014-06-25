@@ -117,7 +117,7 @@ void* oprofile_daemon(void* param)
         switch(pinfo.cmd)
         {
         case OPROFILE_START:
-             ALOGD("do_oprofile time is:%d" , pinfo.profiletime);
+             ALOGD("do_oprofile time is:%lu" , pinfo.profiletime);
              do_oprofile(pinfo.profiletime);
              break;
         default:
