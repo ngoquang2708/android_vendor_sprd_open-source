@@ -230,8 +230,8 @@ string ATProcesser::showbinfile(string binfilepath)
     result.append("\n");
     result.append("SN2:");
     result.append("\n");
-    result.append("\n");
     result.append(getSn2(content));
+    result.append("\n");
     result.append("\n");
     //cout<<getSn1(content)<<endl;
     //cout<<getSn2(content)<<endl;
