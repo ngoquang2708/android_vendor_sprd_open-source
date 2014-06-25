@@ -720,15 +720,11 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             switch(private_h1->format) {
             case HAL_PIXEL_FORMAT_YCbCr_420_SP:
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_2P;
-#ifdef GSP_ENDIAN_IMPROVEMENT
                 gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
-#else
-                gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_1;
-#endif
                 break;
             case HAL_PIXEL_FORMAT_YCrCb_420_SP:
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_2P;//?
-                gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;//?
+                gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_2;//?
                 break;
             case HAL_PIXEL_FORMAT_YV12:
                 gsp_cfg_info.layer0_info.img_format = GSP_SRC_FMT_YUV420_3P;//?
@@ -1003,12 +999,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
         if (l1 != NULL)
         {
             gsp_cfg_info.layer_des_info.img_format = mOutputFormat;
-#ifndef GSP_ENDIAN_IMPROVEMENT
-            gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
-            gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
-#endif
             gsp_cfg_info.layer_des_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
-            //gsp_cfg_info.layer_des_info.img_format = GSP_DST_FMT_YUV422_2P;
         }
         else if (l2 != NULL)
         {

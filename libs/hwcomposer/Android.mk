@@ -81,7 +81,6 @@ ifeq ($(strip $(DEVICE_WITH_GSP)),true)
 	# PROCESS_VIDEO_USE_GSP : protecting sc8830 code
 	LOCAL_CFLAGS += -DPROCESS_VIDEO_USE_GSP
 	LOCAL_CFLAGS += -DGSP_OUTPUT_USE_YUV420
-	LOCAL_CFLAGS += -DGSP_ENDIAN_IMPROVEMENT
 
 	# LOCAL_CFLAGS += -D_DMA_COPY_OSD_LAYER
 
@@ -105,7 +104,6 @@ endif
 
 	#LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE # dolphin GSP+IOMMU black-line workaround, cpy to pa then other process
 	#LOCAL_CFLAGS += -DGSP_BLEND_2_LAYERS # dolphin GSP+IOMMU black-line workaround, cpy to pa then other process
-	#LOCAL_CFLAGS += -DGSP_ENDIAN_IMPROVEMENT
 	LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA_720P
 	endif
 endif

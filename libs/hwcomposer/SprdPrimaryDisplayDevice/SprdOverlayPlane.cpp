@@ -245,11 +245,7 @@ private_handle_t* SprdOverlayPlane::flush()
         BaseContext->data_type = SPRD_DATA_FORMAT_RGB888;
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
-#ifdef GSP_ENDIAN_IMPROVEMENT
         BaseContext->rb_switch = 1;
-#else
-        BaseContext->rb_switch = 0;
-#endif
     }
     else if (format == PLANE_FORMAT_YUV422)
     {
@@ -263,13 +259,8 @@ private_handle_t* SprdOverlayPlane::flush()
     {
         BaseContext->data_type = SPRD_DATA_FORMAT_YUV420;
         BaseContext->y_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
-#ifdef GSP_ENDIAN_IMPROVEMENT
         BaseContext->rb_switch = 0;
         BaseContext->uv_endian = SPRD_DATA_ENDIAN_B3B2B1B0;
-#else
-        BaseContext->rb_switch = 0;
-        BaseContext->uv_endian = SPRD_DATA_ENDIAN_B0B1B2B3;
-#endif
     }
 
     BaseContext->rect.x = 0;
