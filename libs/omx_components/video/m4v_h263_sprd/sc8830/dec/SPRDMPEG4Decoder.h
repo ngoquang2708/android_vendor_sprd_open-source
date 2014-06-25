@@ -25,6 +25,7 @@
 
 #define MP4DEC_INTERNAL_BUFFER_SIZE  (0x200000)
 #define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
+#define MPEG4_VOL_HEADER_SIZE (1024)
 
 struct tagMP4Handle;
 
@@ -120,6 +121,9 @@ private:
     unsigned char*  mPbuf_extra_v;
     int32  mPbuf_extra_p;
     int32  mPbuf_extra_size;
+
+    uint8_t *mPVolHeader;
+    int32_t  mPVolHeaderSize;
 
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
