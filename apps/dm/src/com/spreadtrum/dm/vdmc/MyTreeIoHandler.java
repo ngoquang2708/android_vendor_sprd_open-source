@@ -1274,7 +1274,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
     private String readStreamingParam(int type) {
         String str = null;
         //final Uri CONTENT_URI = Uri.parse("content://com.android.camera/movieview");
-		final Uri CONTENT_URI = Uri.parse("content://com.android.gallery3d/movieview");
+		final Uri CONTENT_URI = Uri.parse("content://com.sprd.gallery3d/movieview");//Bug326289
 
 		
         final String[] CONTENT_PROJECTION = new String[] {
@@ -1750,7 +1750,7 @@ public class MyTreeIoHandler/* implements NodeIoHandler */{
     private void writeStreamingParam(int type, String str) {
         int extraType = 0;
         String strtype = "";
-	final Uri CONTENT_URI = Uri.parse("content://com.android.gallery3d/movieview");
+	final Uri CONTENT_URI = Uri.parse("content://com.sprd.gallery3d/movieview");//Bug326289
 		
         switch (type) {
             case STREAMING_CONNPROFILE_IO_HANDLER:

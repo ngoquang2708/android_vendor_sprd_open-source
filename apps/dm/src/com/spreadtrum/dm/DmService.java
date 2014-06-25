@@ -338,7 +338,7 @@ public class DmService extends Service {
                         if (getIsCmccCard(phoneId)) {
 	                    curPhoneId = phoneId;	                    
                             Log.d(TAG, "onServiceStateChanged: is cmcc card! curPhoneId = " + curPhoneId);
-
+                            initCMCCConfig();//SPRD:326895
                             // send self registe message
                             if(mPhoneCnt > 1 /*TelephonyManager.isMultiSim()*/){
                                 int otherPhoneId = phoneId == 0 ? 1 : 0;
