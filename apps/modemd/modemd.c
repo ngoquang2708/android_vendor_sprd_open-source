@@ -341,13 +341,12 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
 {
     int ret = -1;
     int count = 0, length = 0;
-    unsigned char buffer[50] = {0};
-    unsigned char *p_buf = buffer;
+    char buffer[256] = {0};
+    fd_set rfds;
+    struct timeval timeout;
 
     MODEMD_LOGD("write %s to %s", at_str, path);
 
-    memset(buffer, 0, sizeof(buffer));
-    p_buf = buffer;
     length = strlen(at_str);
     ret = write(stty_fd, at_str, length);
     if (ret != length) {
@@ -355,35 +354,45 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
         close(stty_fd);
         exit(-1);
     }
-    while(1) {
-        ret = read(stty_fd, p_buf, sizeof(buffer) - (p_buf - buffer));
-        MODEMD_LOGD("ret = %d, buffer = %s", ret, buffer);
-        if(ret > 0) {
-            p_buf += ret;
-            if (findInBuf(buffer, sizeof(buffer), "OK")) {
-                MODEMD_LOGD("read OK from %s", path);
+
+    for (;;) {
+        timeout.tv_sec=5;
+        timeout.tv_usec=0;
+        FD_ZERO(&rfds);
+        FD_SET(stty_fd, &rfds);
+
+        ret = select(stty_fd + 1, &rfds, NULL, NULL, &timeout);
+        if (ret < 0) {
+            MODEMD_LOGE("select error: %s", strerror(errno));
+            if (errno == EINTR || errno == EAGAIN)
+                continue;
+            else {
+                close(stty_fd);
+                exit(-1);
+			}
+        } else if (ret == 0) {
+            MODEMD_LOGE("select timeout");
+            ret = -1;
+            break;
+        } else {
+            memset(buffer, 0, sizeof(buffer));
+            count = read(stty_fd, buffer, sizeof(buffer));
+            if (count <= 0) {
+                MODEMD_LOGE("read %d return %d, error: %s", stty_fd, count, strerror(errno));
+                continue;
+            }
+            MODEMD_LOGD("read response %s", buffer);
+            if (strstr(buffer, "OK")) {
                 ret = 1;
                 break;
-            } else if (findInBuf(buffer, sizeof(buffer), "ERROR")) {
+            } else if (strstr(buffer, "ERROR")) {
                 MODEMD_LOGD("wrong modem state, exit!");
                 close(stty_fd);
                 exit(-1);
             }
-        } else {
-            ret = write(stty_fd, at_str, length);
-            if (ret != length) {
-                MODEMD_LOGE("rewrite error length = %d  ret = %d\n", length, ret);
-                close(stty_fd);
-                exit(-1);
-            }
-            count++;
-        }
-        if(count > 5) {
-            MODEMD_LOGE("write 5 times, modem no response, exit!");
-            close(stty_fd);
-            exit(-1);
         }
     }
+
     return ret;
 }
 
@@ -460,10 +469,10 @@ int open_modem_dev(char *path)
     int  fd = -1;
 
 retry:
-    fd = open(path, O_RDWR);
+    fd = open(path, O_RDWR | O_NONBLOCK);
     if (fd < 0) {
         MODEMD_LOGE("Failed to open %s error: %s!\n", path, strerror(errno));
-        if (errno == EAGAIN)
+        if (errno == EINTR || errno == EAGAIN)
             goto retry;
         else
             return -1;
