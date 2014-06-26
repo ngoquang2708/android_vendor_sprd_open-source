@@ -90,6 +90,13 @@ int main()
 
 	//64M
 	char* data_list_level5[] = {
+		"com.android.wallpaper.holospiral",
+		"com.android.galaxy4",
+		"com.android.magicsmoke",
+		"com.android.noisefield",
+		"com.android.musicvis",
+		"com.android.wallpaper",
+		"com.android.phasebeam"
 	};
 	size_t app_num_level5 = sizeof(data_list_level5)/sizeof(data_list_level5[0]);
 
