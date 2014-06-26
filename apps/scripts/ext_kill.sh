@@ -11,6 +11,7 @@ if [ "$1" = "-t" ]; then
 		if [ "$ssda_mode" = "svlte" ]; then
 			setprop ril.l.sim.power 0
 			setprop ril.service.l.enable -1
+			setprop ril.lte.cereg.state -1
 		fi
 	elif [ "$phone_count" = "2" ]; then
 		setprop ril.t.sim.power 0
