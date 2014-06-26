@@ -17,6 +17,7 @@
 #include <signal.h>
 
 #include "wcnd.h"
+#include "wcnd_sm.h"
 
 #define CP2_RESET_READY
 
@@ -181,25 +182,10 @@ void generate_bt_mac()
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 
-#ifndef TEMP_FAILURE_RETRY
-/* Used to retry syscalls that can return EINTR. */
-#define TEMP_FAILURE_RETRY(exp) ({         \
-    typeof (exp) _rc;                      \
-    do {                                   \
-        _rc = (exp);                       \
-    } while (_rc == -1 && errno == EINTR); \
-    _rc; })
-#endif
-
 /**
 * pre-define static API.
 */
 static int send_back_cmd_result(int client_fd, char *str, int isOK);
-
-static int wcn_runcommand(int client_fd, int argc, char* argv[]);
-
-static int do_cp2_reset_process(WcndManager *pWcndManger);
-
 
 /**
 * static variables
@@ -213,7 +199,7 @@ static WcndManager default_wcn_manager;
 */
 static const WcnCmdExecuter wcn_cmdexecuter = {
 	.name = "wcn",
-	.runcommand = wcn_runcommand,
+	.runcommand = wcnd_runcommand,
 };
 
 /**
@@ -269,6 +255,12 @@ int wcnd_send_back_cmd_result(int client_fd, char *str, int isOK)
 	return send_back_cmd_result(client_fd, str, isOK);
 }
 
+int wcnd_send_selfcmd(WcndManager *pWcndManger, char *cmd)
+{
+        return TEMP_FAILURE_RETRY(write(pWcndManger->selfcmd_sockets[0], cmd, strlen(cmd)));
+}
+
+
 /**
 * static API
 */
@@ -298,142 +290,6 @@ static int send_back_cmd_result(int client_fd, char *str, int isOK)
 		WCND_LOGE("write %s to client_fd:%d fail (error:%s)", buffer, client_fd, strerror(errno));
 		return -1;
 	}
-
-	return 0;
-}
-
-/**
-* client_fd: the fd to send back the comand response
-* return < 0 for fail
-*/
-static int wcn_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
-{
-	int len = 0;
-	int atcmd_fd = -1;
-	char buffer[255] ;
-
-	if( !atcmd_str || !pWcndManger)
-		return -1;
-
-	int atcmd_len = strlen(atcmd_str);
-
-	WCND_LOGD("%s: Receive AT CMD: %s, len = %d", __func__, atcmd_str, atcmd_len);
-
-	memset(buffer, 0, sizeof(buffer));
-
-	snprintf(buffer, 255, "%s", atcmd_str);
-
-	//at cmd shoud end with '\r'
-	if((atcmd_len < 254) && (buffer[atcmd_len - 1] != '\r'))
-	{
-		buffer[atcmd_len] = '\r';
-		atcmd_len++;
-	}
-
-	atcmd_fd = open( pWcndManger->wcn_atcmd_iface_name, O_RDWR|O_NONBLOCK);
-	WCND_LOGD("%s: open at cmd interface: %s, fd = %d", __func__, pWcndManger->wcn_atcmd_iface_name, atcmd_fd);
-	if (atcmd_fd < 0)
-	{
-		WCND_LOGE("open %s failed, error: %s", pWcndManger->wcn_atcmd_iface_name, strerror(errno));
-		return -1;
-	}
-
-	len = write(atcmd_fd, buffer, atcmd_len);
-	if(len < 0)
-	{
-		WCND_LOGE("%s: write %s failed, error:%s", __func__, pWcndManger->wcn_atcmd_iface_name, strerror(errno));
-		close(atcmd_fd);
-		return -1;
-	}
-
-	//wait
-	usleep(100*1000);
-
-	WCND_LOGD("%s: Wait ATcmd to return", __func__);
-
-	//Get AT Cmd Response
-	int try_counts = 0;
-
-	memset(buffer, 0, sizeof(buffer));
-try_again:
-	if(try_counts++ > 5)
-	{
-		WCND_LOGE("%s: wait for response fail!!!!!", __func__);
-		snprintf(buffer, 255, "Fail: No data available");
-	}
-	else
-	{
-		do {
-			len = read(atcmd_fd, buffer, sizeof(buffer)-1);
-		} while(len < 0 && errno == EINTR);
-
-		if ((len <= 0))
-		{
-			WCND_LOGE("%s: read fd(%d) return len(%d), errno = %s", __func__, atcmd_fd , len, strerror(errno));
-			usleep(300*1000);
-			goto try_again;
-		}
-
-	}
-
-	WCND_LOGD("%s: ATcmd to %s return: '%s'", __func__, pWcndManger->wcn_atcmd_iface_name, buffer);
-
-	close(atcmd_fd);
-
-	if(client_fd <= 0)
-	{
-		WCND_LOGE("Write '%s' to Invalid client_fd", buffer);
-		return -1;
-	}
-	//send back the response
-	int ret = write(client_fd, buffer, strlen(buffer)+1);
-	if(ret < 0)
-	{
-		WCND_LOGE("write %s to client_fd:%d fail (error:%s)", buffer, client_fd, strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
-static int wcn_runcommand(int client_fd, int argc, char* argv[])
-{
-	WcndManager *pWcndManger = wcnd_get_default_manager();
-
-	if(argc < 1)
-	{
-		send_back_cmd_result(client_fd, "Missing argument", 0);
-		return 0;
-	}
-
-#if 1
-	int k = 0;
-	for (k = 0; k < argc; k++)
-	{
-		WCND_LOGD("%s: arg[%d] = '%s'", __FUNCTION__, k, argv[k]);
-	}
-#endif
-
-	if (!strcmp(argv[0], "reset"))
-	{
-		//tell the client the reset cmd is executed
-		send_back_cmd_result(client_fd, NULL, 1);
-
-		do_cp2_reset_process(pWcndManger);
-	}
-	else if(!strcmp(argv[0], "test"))
-	{
-		WCND_LOGD("%s: do nothing for test cmd", __FUNCTION__);
-		send_back_cmd_result(client_fd, NULL, 1);
-	}
-	else if(strstr(argv[0], "at+"))
-	{
-		WCND_LOGD("%s: AT cmd(%s)(len=%d)", __FUNCTION__, argv[0], strlen(argv[0]));
-		wcn_process_atcmd(client_fd, argv[0], pWcndManger);
-	}
-	else
-		send_back_cmd_result(client_fd, "Not support cmd", 0);
-
 
 	return 0;
 }
@@ -794,7 +650,10 @@ static int process_active_client_fd(WcndManager *pWcndManger, int fd)
 		return RDWR_FD_FAIL;
 	}
 	else if (!len)
+	{
+		WCND_LOGD("read() failed, the peer of fd(%d) is shutdown", fd);
 		return RDWR_FD_FAIL;
+	}
 
 	dispatch_command(pWcndManger, fd, buffer, len+1);//len+1 make sure string end with null character.
 
@@ -832,11 +691,15 @@ static void *client_listen_thread(void *arg)
 		max = pWcndManger->listen_fd;
 		FD_SET(pWcndManger->listen_fd, &read_fds);
 
+		FD_SET(pWcndManger->selfcmd_sockets[1], &read_fds);
+		if (pWcndManger->selfcmd_sockets[1] > max)
+			max = pWcndManger->selfcmd_sockets[1];
+
 		//if need to deal with the cmd sent from client, here add them to read_fds
-		pthread_mutex_lock(&pWcndManger->client_fds_lock);
+		pthread_mutex_lock(&pWcndManger->clients_lock);
 		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
 		{
-			int fd = pWcndManger->client_fds[i];
+			int fd = pWcndManger->clients[i].sockfd;
 			if(fd != -1) //valid fd
 			{
 				FD_SET(fd, &read_fds);
@@ -844,7 +707,7 @@ static void *client_listen_thread(void *arg)
 					max = fd;
 			}
 		}
-		pthread_mutex_unlock(&pWcndManger->client_fds_lock);
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
 
 		WCND_LOGD("listen_fd = %d, max=%d", pWcndManger->listen_fd, max);
 		if ((rc = select(max + 1, &read_fds, NULL, NULL, NULL)) < 0)
@@ -879,25 +742,52 @@ static void *client_listen_thread(void *arg)
 				continue;
 			}
 
-			pthread_mutex_lock(&pWcndManger->client_fds_lock);
-			store_client_fd(pWcndManger->client_fds, c);
-			pthread_mutex_unlock(&pWcndManger->client_fds_lock);
+			//save client
+			pthread_mutex_lock(&pWcndManger->clients_lock);
+			for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
+			{
+				if(pWcndManger->clients[i].sockfd == -1) //invalid fd
+				{
+					pWcndManger->clients[i].sockfd = c;
+					pWcndManger->clients[i].type = WCND_CLIENT_TYPE_NOTIFY;
+					break;
+
+				}
+				else if(pWcndManger->clients[i].sockfd == c)
+				{
+					WCND_LOGD("%s: Somethine error happens. restore the same fd:%d", __FUNCTION__, c);
+					break;
+				}
+			}
+
+			//if full, ignore the last one, and save the new one
+			if(i == WCND_MAX_CLIENT_NUM)
+			{
+				WCND_LOGD("ERRORR::%s: clients is FULL", __FUNCTION__);
+				close(c);
+			}
+			pthread_mutex_unlock(&pWcndManger->clients_lock);
 		}
 
 		/* TODO:   */
 
 		/* Add all active clients to the pending list first */
 		memset(pending_fds, -1, sizeof(pending_fds));
-		pthread_mutex_lock(&pWcndManger->client_fds_lock);
+		pthread_mutex_lock(&pWcndManger->clients_lock);
 		for (i = 0; i<WCND_MAX_CLIENT_NUM; i++)
 		{
-			int fd = pWcndManger->client_fds[i];
+			int fd = pWcndManger->clients[i].sockfd;
 			if ((fd!= -1) && FD_ISSET(fd, &read_fds))
 			{
 				store_client_fd(pending_fds, fd);
 			}
 		}
-		pthread_mutex_unlock(&pWcndManger->client_fds_lock);
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
+
+		if (FD_ISSET(pWcndManger->selfcmd_sockets[1], &read_fds))
+			store_client_fd(pending_fds, pWcndManger->selfcmd_sockets[1]);
+
 
 		/* Process the pending list, since it is owned by the thread, there is no need to lock it */
 		for (i = 0; i<WCND_MAX_CLIENT_NUM; i++)
@@ -914,16 +804,17 @@ static void *client_listen_thread(void *arg)
 
 				/* Remove the client from our array */
 				WCND_LOGD("going to zap %d for %s", fd, WCND_SOCKET_NAME);
-				pthread_mutex_lock(&pWcndManger->client_fds_lock);
+				pthread_mutex_lock(&pWcndManger->clients_lock);
 				for (j = 0; j<WCND_MAX_CLIENT_NUM; j++)
 				{
-					if (pWcndManger->client_fds[j] == fd) {
+					if (pWcndManger->clients[j].sockfd == fd) {
 						close(fd); //close the socket
-						pWcndManger->client_fds[j] = -1;
+						pWcndManger->clients[j].sockfd = -1;
+						pWcndManger->clients[j].type = WCND_CLIENT_TYPE_NOTIFY;
 						break;
 					}
 				}
-				pthread_mutex_unlock(&pWcndManger->client_fds_lock);
+				pthread_mutex_unlock(&pWcndManger->clients_lock);
 			}
 		}
 
@@ -969,35 +860,48 @@ static int send_msg(WcndManager *pWcndManger, int client_fd, char *msg_str)
 * Note: message send from wcnd must end with null character
 *             use null character to identify a completed message.
 */
-static int send_notify_to_client(WcndManager *pWcndManger, char *info_str)
+int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int notify_type)
 {
 	int i, ret;
 
 	if(!pWcndManger || !info_str) return -1;
 
-	WCND_LOGD("send_notify_to_client");
+	WCND_LOGD("send_notify_to_client (type:%d)", notify_type);
 
-	pthread_mutex_lock(&pWcndManger->client_fds_lock);
+	if(notify_type == WCND_CLIENT_TYPE_NOTIFY && !pWcndManger->notify_enabled)
+	{
+		WCND_LOGD("do not need to send_notify_to_client, just return!!");
+		return 0;
+	}
+
+	pthread_mutex_lock(&pWcndManger->clients_lock);
 
 	/* info socket clients that WCN with str info */
 	for(i = 0; i < WCND_MAX_CLIENT_NUM; i++)
 	{
-		int fd = pWcndManger->client_fds[i];
-		WCND_LOGD("client_fds[%d]=%d\n",i, fd);
+		int fd = pWcndManger->clients[i].sockfd;
+		int type = pWcndManger->clients[i].type;
+		WCND_LOGD("clients[%d].sockfd = %d, type = %d\n",i, fd, type);
 
-		if(fd >= 0)
+		if(fd >= 0 && type == notify_type)
 		{
 			ret = send_msg(pWcndManger, fd, info_str);
 			if(RDWR_FD_FAIL == ret)
 			{
-				WCND_LOGD("reset client_fds[%d]=-1",i);
+				WCND_LOGD("reset clients[%d].sockfd = -1",i);
 				close(fd);
-				pWcndManger->client_fds[i] = -1;
+				pWcndManger->clients[i].sockfd = -1;
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_NOTIFY;
 			}
+			else if(notify_type == WCND_CLIENT_TYPE_CMD || notify_type == WCND_CLIENT_TYPE_CMD_PENDING)
+			{
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_SLEEP;
+			}
+
 		}
 	}
 
-	pthread_mutex_unlock(&pWcndManger->client_fds_lock);
+	pthread_mutex_unlock(&pWcndManger->clients_lock);
 
 	return 0;
 }
@@ -1062,9 +966,9 @@ static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, 
 }
 
 #define LOOP_TEST_CHAR "hi"
-#define WATI_FOR_CP2_READY_TIME_MSECS (1000)
-#define MAX_LOOP_TEST_COUNT (2)
-#define LOOP_TEST_INTERVAL_MSECS (1000)
+#define WATI_FOR_CP2_READY_TIME_MSECS (100)
+#define MAX_LOOP_TEST_COUNT (50)
+#define LOOP_TEST_INTERVAL_MSECS (100)
 #define RESET_FAIL_RETRY_COUNT (3)
 #define RESET_RETRY_INTERVAL_MSECS (2000)
 
@@ -1196,15 +1100,22 @@ static inline int download_image_to_cp2(WcndManager *pWcndManger)
 
 /*
 * polling /dev/spipe_wcn0, do write and read testing.
+* is_loopcheck: if true use select.
+*     if false use NONBLOCK mode, because after downloading image and starting CP2, the cp2 may not receive the string
+*     that wrote to the /dev/spipe_wcn0, for it is not inited completely.
 * Note: return 0 for OK; return -1 for fail
 */
-static int is_cp2_alive_ok(WcndManager *pWcndManger)
+static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 {
 	int len = 0;
 	int loop_fd = -1;
 
 	//block mode for using select
-	loop_fd = open( pWcndManger->wcn_loop_iface_name, O_RDWR/*|O_NONBLOCK*/);
+	if(is_loopcheck)
+	    loop_fd = open( pWcndManger->wcn_loop_iface_name, O_RDWR/*|O_NONBLOCK*/);
+	else
+            loop_fd = open( pWcndManger->wcn_loop_iface_name, O_RDWR|O_NONBLOCK);
+
 	WCND_LOGD("%s: open polling interface: %s, fd = %d", __func__, pWcndManger->wcn_loop_iface_name, loop_fd);
 	if (loop_fd < 0)
 	{
@@ -1220,74 +1131,78 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger)
 		return -1;
 	}
 
-#if 0 //use select instead
-	//wait
-	usleep(100*1000);
-
-	char buffer[32];
-	memset(buffer, 0, sizeof(buffer));
-	do {
-		len = read(loop_fd, buffer, sizeof(buffer));
-	} while(len < 0 && errno == EINTR);
-
-	if ((len <= 0) || strcmp(buffer,LOOP_TEST_CHAR))
+       //if it is not loop check, use select instead
+	if(!is_loopcheck)
 	{
-		WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
-		close(loop_fd);
-		return -1;
+		//wait
+		usleep(100*1000);
+
+		char buffer[32];
+		memset(buffer, 0, sizeof(buffer));
+		do {
+			len = read(loop_fd, buffer, sizeof(buffer));
+		} while(len < 0 && errno == EINTR);
+
+		if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
+		{
+			WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
+			close(loop_fd);
+			return -1;
+		}
 	}
-#else
-	fd_set read_fds;
-	int rc = 0;
-	int max = -1;
-	struct timeval timeout;
-
-	FD_ZERO(&read_fds);
-
-	max = loop_fd;
-	FD_SET(loop_fd, &read_fds);
-
-	//time out 2.5 seconds
-	timeout.tv_sec = 2;
-	timeout.tv_usec = 500000;
-
-select_retry:
-	if ((rc = select(max + 1, &read_fds, NULL, NULL, &timeout)) < 0)
+	else
 	{
-		if (errno == EINTR)
-			goto select_retry;
+		fd_set read_fds;
+		int rc = 0;
+		int max = -1;
+		struct timeval timeout;
 
-		WCND_LOGD("select loop_fd(%d) failed: %s", loop_fd, strerror(errno));
-		close(loop_fd);
-		return -1;
-	}
-	else if (!rc)
-	{
-		WCND_LOGD("select loop_fd(%d) TimeOut", loop_fd);
-		close(loop_fd);
-		return -1;
-	}
+		FD_ZERO(&read_fds);
 
-	if (!(FD_ISSET(loop_fd, &read_fds)))
-	{
-		WCND_LOGD("select loop_fd(%d) return > 0, but loop_fd is not set!", loop_fd);
-		close(loop_fd);
-		return -1;
-	}
+		max = loop_fd;
+		FD_SET(loop_fd, &read_fds);
 
-	char buffer[32];
-	memset(buffer, 0, sizeof(buffer));
-	do {
-		len = read(loop_fd, buffer, sizeof(buffer)-1);
-	} while(len < 0 && errno == EINTR);
+		//time out 2.5 seconds
+		timeout.tv_sec = 2;
+		timeout.tv_usec = 500000;
 
-	if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
-	{
-		WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
-		close(loop_fd);
-		return -1;
+	select_retry:
+		if ((rc = select(max + 1, &read_fds, NULL, NULL, &timeout)) < 0)
+		{
+			if (errno == EINTR)
+				goto select_retry;
+
+			WCND_LOGD("select loop_fd(%d) failed: %s", loop_fd, strerror(errno));
+			close(loop_fd);
+			return -1;
+		}
+		else if (!rc)
+		{
+			WCND_LOGD("select loop_fd(%d) TimeOut", loop_fd);
+			close(loop_fd);
+			return -1;
+		}
+
+		if (!(FD_ISSET(loop_fd, &read_fds)))
+		{
+			WCND_LOGD("select loop_fd(%d) return > 0, but loop_fd is not set!", loop_fd);
+			close(loop_fd);
+			return -1;
+		}
+
+		char buffer[32];
+		memset(buffer, 0, sizeof(buffer));
+		do {
+			len = read(loop_fd, buffer, sizeof(buffer));
+		} while(len < 0 && errno == EINTR);
+
+		if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
+		{
+			WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
+			close(loop_fd);
+			return -1;
+		}
 	}
-#endif
 
 	WCND_LOGD("%s: loop: %s is OK", __func__, pWcndManger->wcn_loop_iface_name);
 
@@ -1313,7 +1228,7 @@ static int reset_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
-	usleep(100*1000);
+	//usleep(100*1000);
 
 	if(download_image_to_cp2(pWcndManger) < 0)
 	{
@@ -1321,7 +1236,7 @@ static int reset_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
-	usleep(100*1000);
+	//usleep(100*1000);
 
 	if(start_cp2(pWcndManger) < 0)
 	{
@@ -1330,7 +1245,7 @@ static int reset_cp2(WcndManager *pWcndManger)
 	}
 
 	//wait for a moment
-	usleep(WATI_FOR_CP2_READY_TIME_MSECS*1000);
+	//usleep(WATI_FOR_CP2_READY_TIME_MSECS*1000);
 
 	int loop_test_count = 0;
 
@@ -1342,10 +1257,10 @@ polling_test:
 		return -1;
 	}
 
-	if(is_cp2_alive_ok(pWcndManger)<0)
+	if(is_cp2_alive_ok(pWcndManger, 0)<0)
 	{
 		//wait a moment, and go on.
-		usleep(LOOP_TEST_INTERVAL_MSECS*1000);
+		//usleep(LOOP_TEST_INTERVAL_MSECS*1000);
 		goto polling_test;
 
 	}
@@ -1358,8 +1273,10 @@ polling_test:
 * 2. reset cp2
 * 3. notify connected clients "cp2 reset end"
 */
-static int do_cp2_reset_process(WcndManager *pWcndManger)
+int wcnd_do_cp2_reset_process(WcndManager *pWcndManger)
 {
+	WcndMessage message;
+
 	if(!pWcndManger)
 	{
 		WCND_LOGE("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
@@ -1393,11 +1310,13 @@ do_cp2reset:
 		WCND_LOGE("%s Reset CP2 for %d times, still failed return!!!!!", __func__, RESET_FAIL_RETRY_COUNT);
 		//clear doing_reset flag
 		pWcndManger->doing_reset = 0;
-		return  0;
+		//return  0;
+		is_alive_ok = 0;
+		goto out;
 	}
 
 	//Notify client reset start
-	send_notify_to_client(pWcndManger, WCND_CP2_RESET_START_STRING);
+	wcnd_send_notify_to_client(pWcndManger, WCND_CP2_RESET_START_STRING, WCND_CLIENT_TYPE_NOTIFY);
 
 #ifdef CP2_RESET_READY
 	//begin reseting CP2
@@ -1409,11 +1328,11 @@ do_cp2reset:
 #endif
 
 	//Notify client reset completed.
-	send_notify_to_client(pWcndManger, WCND_CP2_RESET_END_STRING);
+	wcnd_send_notify_to_client(pWcndManger, WCND_CP2_RESET_END_STRING, WCND_CLIENT_TYPE_NOTIFY);
 
 	//Notify CP2 alive again
 	if(is_alive_ok)
-		send_notify_to_client(pWcndManger, WCND_CP2_ALIVE_STRING);
+		wcnd_send_notify_to_client(pWcndManger, WCND_CP2_ALIVE_STRING, WCND_CLIENT_TYPE_NOTIFY);
 	else
 	{
 		usleep(RESET_RETRY_INTERVAL_MSECS*1000);
@@ -1424,12 +1343,125 @@ do_cp2reset:
 	//clear doing_reset flag
 	pWcndManger->doing_reset = 0;
 
+out:
 	//clear the cp2 error flag.
 	if(is_alive_ok)
+	{
+		message.event = WCND_EVENT_CP2_OK;
+		message.replyto_fd = -1;
 		pWcndManger->is_cp2_error = 0;
+	}
+	else
+	{
+		message.event = WCND_EVENT_CP2_DOWN;
+		message.replyto_fd = -1;
+	}
+
+	wcnd_sm_step(pWcndManger, &message);
 
 	return 0;
 }
+
+
+/**
+* open cp2 processure:
+* 1. reset cp2
+*/
+int wcnd_open_cp2(WcndManager *pWcndManger)
+{
+	WcndMessage message;
+
+	if(!pWcndManger)
+	{
+		WCND_LOGE("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
+		return -1;
+	}
+
+	int is_alive_ok = 1;
+
+	//set doing_reset flag
+	pWcndManger->doing_reset = 1;
+
+	int reset_count = 0;
+
+do_cp2reset:
+
+	if(reset_count++ > RESET_FAIL_RETRY_COUNT)
+	{
+		WCND_LOGE("%s Reset CP2 for %d times, still failed return!!!!!", __func__, RESET_FAIL_RETRY_COUNT);
+		//clear doing_reset flag
+		pWcndManger->doing_reset = 0;
+		is_alive_ok = 0;
+		goto out;
+	}
+
+
+#ifdef CP2_RESET_READY
+	//begin reseting CP2
+	if(reset_cp2(pWcndManger) < 0)
+	{
+		WCND_LOGD("%s: reset Fail !", __FUNCTION__);
+		is_alive_ok = 0;
+	}
+#endif
+
+
+	//Notify CP2 alive again
+	if(!is_alive_ok)
+	{
+		usleep(RESET_RETRY_INTERVAL_MSECS*1000);
+		is_alive_ok = 1;
+		goto do_cp2reset;
+	}
+
+	//clear doing_reset flag
+	pWcndManger->doing_reset = 0;
+
+out:
+	//clear the cp2 error flag.
+	if(is_alive_ok)
+	{
+		message.event = WCND_EVENT_CP2_OK;
+		message.replyto_fd = -1;
+		pWcndManger->is_cp2_error = 0;
+	}
+	else
+	{
+		message.event = WCND_EVENT_CP2_DOWN;
+		message.replyto_fd = -1;
+	}
+
+	wcnd_sm_step(pWcndManger, &message);
+
+	return 0;
+}
+
+/**
+* close cp2 processure:
+*/
+int wcnd_close_cp2(WcndManager *pWcndManger)
+{
+	WcndMessage message;
+
+	if(!pWcndManger)
+	{
+		WCND_LOGE("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
+		return -1;
+	}
+
+	if(stop_cp2(pWcndManger) < 0)
+	{
+		WCND_LOGE("%s: Stop CP2 failed!!", __FUNCTION__);
+		//return -1;
+	}
+
+	message.event = WCND_EVENT_CP2_DOWN;
+	message.replyto_fd = -1;
+	wcnd_sm_step(pWcndManger, &message);
+
+	return 0;
+}
+
 
 /**
 * handle the cp2 assert
@@ -1470,12 +1502,13 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 
 	pre_send_cp2_exception_notify();
 
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_EVENT_CP2_ASSERT);
+
 	//notify exception
 	snprintf(buffer, 255, "%s %s", WCND_CP2_EXCEPTION_STRING, rdbuffer);
-	send_notify_to_client(pWcndManger, buffer);
+	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
-	//do_cp2_reset_process(pWcndManger);
 
 	WCND_LOGD("handle_cp2_assert end!\n");
 
@@ -1522,12 +1555,13 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 
 	pre_send_cp2_exception_notify();
 
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_EVENT_CP2_ASSERT);
+
 	//notify exception
 	snprintf(buffer, 255, "%s %s", WCND_CP2_EXCEPTION_STRING, rdbuffer);
-	send_notify_to_client(pWcndManger, buffer);
+	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
-	//do_cp2_reset_process(pWcndManger);
 
 	WCND_LOGD("handle_cp2_watchdog_exception end\n");
 
@@ -1548,21 +1582,27 @@ static void *cp2_listen_thread(void *arg)
 	int assert_fd = -1;
 	int watchdog_fd = -1;
 
+get_assertfd:
 	assert_fd = open( pWcndManger->wcn_assert_iface_name, O_RDWR);
 	WCND_LOGD("%s: open assert dev: %s, fd = %d", __func__, pWcndManger->wcn_assert_iface_name, assert_fd);
 	if (assert_fd < 0)
 	{
 		WCND_LOGD("open %s failed, error: %s", pWcndManger->wcn_assert_iface_name, strerror(errno));
-		return NULL;
+		sleep(2);
+		goto get_assertfd;
+		//return NULL;
 	}
 
+get_watchdogfd:
 	watchdog_fd = open( pWcndManger->wcn_watchdog_iface_name, O_RDWR);
 	WCND_LOGD("%s: open watchdog dev: %s, fd = %d", __func__, pWcndManger->wcn_watchdog_iface_name, watchdog_fd);
 	if (watchdog_fd < 0)
 	{
 		WCND_LOGD("open %s failed, error: %s", pWcndManger->wcn_watchdog_iface_name, strerror(errno));
-		close(assert_fd);
-		return NULL;
+		//close(assert_fd);
+		//return NULL;
+		sleep(2);
+		goto get_watchdogfd;
 	}
 
 	while(1)
@@ -1655,7 +1695,6 @@ static int start_cp2_listener(WcndManager *pWcndManger)
 	return 0;
 }
 
-
 /**
 * Initial the wcnd manager struct.
 * return -1 for fail;
@@ -1668,11 +1707,11 @@ static int init(WcndManager *pWcndManger)
 
 	int i = 0;
 
-	pthread_mutex_init(&pWcndManger->client_fds_lock, NULL);
+	pthread_mutex_init(&pWcndManger->clients_lock, NULL);
 	pthread_mutex_init(&pWcndManger->cmdexecuter_list_lock, NULL);
 
 	for(i=0; i<WCND_MAX_CLIENT_NUM; i++)
-		pWcndManger->client_fds[i] = -1;
+		pWcndManger->clients[i].sockfd = -1;
 
 	pWcndManger->listen_fd = socket_local_server(WCND_SOCKET_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	if (pWcndManger->listen_fd < 0) {
@@ -1705,6 +1744,14 @@ static int init(WcndManager *pWcndManger)
 	{
 		property_set(WCND_RESET_PROP_KEY, "1");
 	}
+
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, pWcndManger->selfcmd_sockets) == -1) {
+
+		WCND_LOGE("%s: cannot create socketpair for self cmd socket", __FUNCTION__);
+		return -1;
+	}
+
+	wcnd_sm_init(pWcndManger);
 
 	pWcndManger->inited = 1;
 
@@ -1740,12 +1787,13 @@ static void handle_cp2_loop_check_fail(WcndManager *pWcndManger)
 
 	pre_send_cp2_exception_notify();
 
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_EVENT_CP2_ASSERT);
+
 	//notify exception
 	snprintf(buffer, 255, "%s %s", WCND_CP2_EXCEPTION_STRING, rdbuffer);
-	send_notify_to_client(pWcndManger, buffer);
+	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
-	//do_cp2_reset_process(pWcndManger);
 
 	WCND_LOGD("handle_cp2_loop_check_fail end!\n");
 
@@ -1762,6 +1810,9 @@ static void *cp2_loop_check_thread(void *arg)
 {
 	WcndManager *pWcndManger = (WcndManager *)arg;
 
+	int count = 0;
+	int is_loopcheck_fail = 0;
+
 	if(!pWcndManger)
 	{
 		WCND_LOGD("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
@@ -1772,20 +1823,47 @@ static void *cp2_loop_check_thread(void *arg)
 	{
 		usleep(LOOP_CHECK_INTERVAL_MSECS*1000);
 
+		if(!pWcndManger->notify_enabled) continue;
+
 		//cp2 exception happens just continue for next poll
 		if(pWcndManger->is_cp2_error)
 		{
 			WCND_LOGD("%s: CP2 exception happened and not reset success!!", __FUNCTION__);
+
+			//wait for another 20 seconds for cp2 to be reset success
+			//sleep(20);
+
 			continue;
 		}
 
-		if(is_cp2_alive_ok(pWcndManger) < 0)
+		count = 2;
+		while(count-- > 0)
+		{
+			if(is_cp2_alive_ok(pWcndManger, 1) < 0)
+			{
+				if(pWcndManger->is_cp2_error)//during loop checking, cp2 exception happens just continue
+				{
+					is_loopcheck_fail = 0;
+					break;
+				}
+
+				is_loopcheck_fail = 1;
+			}
+			else
+			{
+				is_loopcheck_fail = 0;
+				break;
+			}
+		}
+
+		if(is_loopcheck_fail)
 		{
 			WCND_LOGD("%s: loop check fail, going to reset cp2!!", __FUNCTION__);
 			handle_cp2_loop_check_fail(pWcndManger);
 			//wait 20 seconds for reset
 			sleep(20);
 		}
+
 	}
 }
 
@@ -1850,13 +1928,14 @@ static int check_disable_cp2_log(WcndManager *pWcndManger)
 
 	if(strstr(value, USER_DEBUG_VERSION_STR))
 	{
+		if(pWcndManger)	pWcndManger->is_in_userdebug = 1;
 		WCND_LOGD("userdebug version: %s, do not need to disable cp2 log!!!", value);
 		return 0;
 	}
 
 	WCND_LOGD("in user version: %s, need to disable cp2 log!!!", value);
 
-	return wcn_process_atcmd(-1, DISABLE_CP2_LOG_CMD, pWcndManger);
+	return wcnd_process_atcmd(-1, DISABLE_CP2_LOG_CMD, pWcndManger);
 }
 
 #ifndef FOR_UNIT_TEST
@@ -2051,7 +2130,7 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 
-			if(is_cp2_alive_ok(pWcndManger)<0)
+			if(is_cp2_alive_ok(pWcndManger, 1)<0)
 			{
 				//wait a moment, and go on.
 				usleep(LOOP_TEST_INTERVAL_MSECS*1000);
