@@ -403,16 +403,18 @@ bool Layer::prepareDrawData()
     right  = (GLfloat)(mRV->right & 0xFFFFFFFE);
     bottom = (GLfloat)((mRV->bottom)& 0xFFFFFFFE);
 
+    //The horizontal axis turning image
     if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_H) {
-        GLfloat temp = left;
-        left = right;
-        right = temp;
-    }
-
-    if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_V) {
         GLfloat temp = top;
         top = bottom;
         bottom = temp;
+    }
+
+    //The vertical axis turning image
+    if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_V) {
+        GLfloat temp = left;
+        left = right;
+        right = temp;
     }
 
     if (mTransform & NATIVE_WINDOW_TRANSFORM_ROT_90) {
