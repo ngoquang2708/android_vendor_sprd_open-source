@@ -48,12 +48,16 @@
 
 #define GPU_MAX_FREQ			460800
 #define GPU_MIN_FREQ			64000
+
+#define GPU_150M_FREQ_INDEX 	5
 #else
 /*shark 40nm*/
 #define DFS_FREQ_NUM			6
 
 #define GPU_MAX_FREQ			312000
 #define GPU_MIN_FREQ			64000
+
+#define GPU_150M_FREQ_INDEX 	3
 #endif
 
 struct gpu_clock_source {
@@ -182,13 +186,21 @@ static struct gpu_dfs_context gpu_dfs_ctx=
 /*tshark 28nm*/
 	.dfs_freq_list=
 	{
+		/*index:  0 freq:460800 freq_select:  6  div_select:  1*/
 		&dfs_freq_full_list[0],
+		/*index:  1 freq:384000 freq_select:  5  div_select:  1*/
 		&dfs_freq_full_list[4],
+		/*index:  2 freq:312000 freq_select:  4  div_select:  1*/
 		&dfs_freq_full_list[8],
+		/*index:  3 freq:256000 freq_select:  2  div_select:  1*/
 		&dfs_freq_full_list[12],
+		/*index:  4 freq:208000 freq_select:  1  div_select:  1*/
 		&dfs_freq_full_list[16],
+		/*index:  5 freq:153600 freq_select:  0  div_select:  1*/
 		&dfs_freq_full_list[20],
+		/*index:  6 freq:104000 freq_select:  1  div_select:  2*/
 		&dfs_freq_full_list[17],
+		/*index:  7 freq:64000  freq_select:  2  div_select:  4*/
 		&dfs_freq_full_list[15],
 	},
 #else
@@ -840,6 +852,7 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			}
 			gpu_level=1;
 			break;
+
 		case 9:
 			max_freq_index=freq_search(gpu_dfs_ctx.dfs_freq_list,gpu_dfs_ctx.freq_list_len,gpufreq_max_limit);
 			if(max_freq_index<0)
@@ -854,6 +867,22 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			}
 			gpu_level=1;
 			break;
+
+		case 7:
+			max_freq_index=freq_search(gpu_dfs_ctx.dfs_freq_list,gpu_dfs_ctx.freq_list_len,gpufreq_max_limit);
+			if(max_freq_index<0)
+			{
+				gpu_dfs_ctx.dfs_max_freq_p=gpu_dfs_ctx.dfs_freq_list[GPU_150M_FREQ_INDEX];
+				gpu_dfs_ctx.dfs_min_freq_p=gpu_dfs_ctx.dfs_freq_list[GPU_150M_FREQ_INDEX];
+			}
+			else
+			{
+				gpu_dfs_ctx.dfs_max_freq_p=gpu_dfs_ctx.dfs_freq_list[max_freq_index];
+				gpu_dfs_ctx.dfs_min_freq_p=gpu_dfs_ctx.dfs_freq_list[max_freq_index];
+			}
+			gpu_level=1;
+			break;
+
 		case 5:
 			max_freq_index=freq_search(gpu_dfs_ctx.dfs_freq_list,gpu_dfs_ctx.freq_list_len,gpufreq_max_limit);
 			if(max_freq_index<0)
@@ -868,6 +897,7 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 			}
 			gpu_level=1;
 			break;
+
 		case 1:
 		case 0:
 		default:

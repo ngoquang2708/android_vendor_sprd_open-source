@@ -46,6 +46,7 @@ int main()
 	int i=0;
 	char cipher_key[]="mali";
 
+	//312M
 	char* data_list_level10[] = {
 		"com.glbenchmark.glbenchmark",
 		"com.rightware.tdmm2v10jnifree",
@@ -70,6 +71,7 @@ int main()
 	};
 	size_t app_num_level10 = sizeof(data_list_level10)/sizeof(data_list_level10[0]);
 
+	//256M
 	char* data_list_level9[] = {
 		"com.android.launcher",
 		"com.android.sprdlauncher2",
@@ -81,6 +83,12 @@ int main()
 	};
 	size_t app_num_level9 = sizeof(data_list_level9)/sizeof(data_list_level9[0]);
 
+	//default:150M and you can set
+	char* data_list_level7[] = {
+	};
+	size_t app_num_level7 = sizeof(data_list_level7)/sizeof(data_list_level7[0]);
+
+	//64M
 	char* data_list_level5[] = {
 	};
 	size_t app_num_level5 = sizeof(data_list_level5)/sizeof(data_list_level5[0]);
@@ -97,6 +105,12 @@ int main()
 	for(i=0;i<app_num_level9;i++)
 	{
 		generate_cipher_data(fp,data_list_level9[i],strlen(data_list_level9[i]),cipher_key,strlen(cipher_key));
+	}
+	fputs("\n",fp);
+
+	for(i=0;i<app_num_level7;i++)
+	{
+		generate_cipher_data(fp,data_list_level7[i],strlen(data_list_level7[i]),cipher_key,strlen(cipher_key));
 	}
 	fputs("\n",fp);
 
