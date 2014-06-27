@@ -2048,8 +2048,8 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		}
 	}
 #if defined(CONFIG_CAMERA_FACE_DETECT)
-	if (0 == mParameters.getInt("max-num-detected-faces-hw")) {
-		LOGE("sendCommand: not support the CAMERA_CMD_START_FACE_DETECTION.");
+	if (0 == mParameters.getInt("max-num-detected-faces-hw")
+		|| 1 == mParameters.getRecordingHint()) {
 		camera_set_facedetect_support(0);
 	} else {
 		camera_set_facedetect_support(1);
