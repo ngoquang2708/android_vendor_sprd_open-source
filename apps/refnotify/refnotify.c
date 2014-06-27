@@ -17,6 +17,7 @@
 #include <time.h>
 #include <sys/reboot.h>
 #include <linux/rtc.h>
+#include <cutils/properties.h>
 
 #define REF_DEBUG
 
@@ -39,6 +40,8 @@
 
 #define IQ_DEV "/sys/module/sprd_iq/parameters/iq_base"
 #define IQ_BASE_LENGTH 32
+
+#define freq_fb_dev "/sys/class/graphics/fb0/dynamic_pclk"
 
 enum {
 	REF_PSFREQ_CMD,
@@ -75,6 +78,11 @@ struct iq_info {
 struct refnotify_cmd {
 	int cmd_type;
 	uint32_t length;
+};
+
+struct ref_lcdfreq {
+	uint32_t clk;
+	uint32_t divisor;
 };
 
 static void usage(void)
@@ -287,11 +295,42 @@ static void RefNotify_DoGetIqInfo(int fd, struct refnotify_cmd *cmd)
 	free(pcmd);
 }
 
+static void RefNotify_DoFreqCmd(struct refnotify_cmd *pcmd)
+{
+	struct ref_lcdfreq *p_freq = (struct ref_lcdfreq *)(pcmd + 1);
+	REF_LOGD("%s: %d, %d\n",__func__, p_freq->clk, p_freq->divisor);
+	int fd, wr;
+	char freq_str[32] = {"0,0"};//default value 0, if suspended
+#if 0
+	char freq_fb_dev[64];
+	if(property_get("ro.refnotify.freqdev",freq_fb_dev,NULL)>0){
+		REF_LOGE("ro.refnotify.freqdev: %s", freq_fb_dev);
+	}else{
+		REF_LOGE("get ro.refnotify.freqdev failed");
+		return;
+	}
+#endif
+	fd = open(freq_fb_dev, O_RDWR, 0);
+	if(fd < 0) {
+		REF_LOGE("open %s failed, error: %s", freq_fb_dev, strerror(errno));
+		return;
+	}
+	if(p_freq->clk){
+		sprintf(freq_str, "%d,%d", p_freq->clk, p_freq->divisor);
+	}
+	wr = write(fd, freq_str, strlen(freq_str));
+	if(wr < 0) {
+		REF_LOGE("write %s failed, error: %s", freq_fb_dev, strerror(errno));
+	}
+	close(fd);
+}
+
 void RefNotify_DoCmd(int fd, struct refnotify_cmd *pcmd)
 {
 	REF_LOGD("%s, %d \n", __func__, pcmd->cmd_type);
 	switch(pcmd->cmd_type) {
 		case REF_PSFREQ_CMD:
+			RefNotify_DoFreqCmd(pcmd);
 			break;
 		case REF_SETTIME_CMD:
 			(void)RefNotify_DoSetTime(pcmd);
