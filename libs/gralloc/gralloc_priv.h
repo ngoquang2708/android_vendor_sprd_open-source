@@ -67,12 +67,6 @@ struct fb_dmabuf_export
 
 #endif
 
-#ifdef USE_3_FRAMEBUFFER
-#define NUM_FB_BUFFERS 3
-#else
-#define NUM_FB_BUFFERS 2
-#endif
-
 #if GRALLOC_ARM_UMP_MODULE
 #include <ump/ump.h>
 #endif
@@ -182,7 +176,9 @@ struct private_handle_t
 #endif
 
 	// Following members is for framebuffer only
+#if !SPRD_ION
 	int     fd;
+#endif
 	int     offset;
 
 	int     phyaddr;
@@ -198,9 +194,8 @@ struct private_handle_t
 #define SPRD_ION_NUM_INTS 1
 #endif
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	int     ion_client;
 	struct ion_handle *ion_hnd;
-#define GRALLOC_ARM_DMA_BUF_NUM_INTS 3 
+#define GRALLOC_ARM_DMA_BUF_NUM_INTS 1
 #else
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 0
 #endif
@@ -245,8 +240,7 @@ struct private_handle_t
 		fd(fd),
 		offset(offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,ion_client(-1),
-		ion_hnd(NULL)
+		,ion_hnd(NULL)
 #endif
 
 	{
@@ -278,7 +272,6 @@ struct private_handle_t
 #endif
 		fd(0),
 		offset(0),
-		ion_client(-1),
 		ion_hnd(NULL)
 
 	{
@@ -313,8 +306,7 @@ struct private_handle_t
 		fd(fb_file),
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,ion_client(-1),
-		ion_hnd(NULL)
+		,ion_hnd(NULL)
 #endif
 
 	{

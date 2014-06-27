@@ -53,7 +53,6 @@
 #endif
 
 // numbers of buffers for page flipping
-#define NUM_BUFFERS NUM_FB_BUFFERS
 //#define DEBUG_FB_POST
 #define DEBUG_FB_POST_1SECOND
 
@@ -724,7 +723,6 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	/*
 	 * Request NUM_BUFFERS screens (at lest 2 for page flipping)
 	 */
-	info.yres_virtual = info.yres * NUM_BUFFERS;
 
 	uint32_t flags = PAGE_FLIP;
 

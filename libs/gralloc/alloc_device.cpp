@@ -308,9 +308,8 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             ALOGD("the flag 0x%x and the vadress is 0x%x and the size is 0x%x",hnd->flags,(int)cpu_ptr,size);
             hnd->share_fd = shared_fd;
             hnd->ion_hnd = ion_hnd;
-            hnd->ion_client = m->ion_client;
             *pHandle = hnd;
-            ion_invalidate_fd(hnd->ion_client,hnd->share_fd);
+            ion_invalidate_fd(m->ion_client,hnd->share_fd);
             return 0;
         }
         else

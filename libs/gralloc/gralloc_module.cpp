@@ -324,22 +324,8 @@ static int gralloc_lock(gralloc_module_t const *module, buffer_handle_t handle, 
 	{
 		*vaddr = (void *)hnd->base;
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		hw_module_t *pmodule = NULL;
-		private_module_t *m = NULL;
+		private_module_t *m = (private_module_t*)module;
 
-#if 1
-		m = (private_module_t*)module;
-#else
-		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
-		{
-			m = reinterpret_cast<private_module_t *>(pmodule);
-		}
-		else
-		{
-			AERR("lock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
-			return -EINVAL;
-		}
-#endif
 		ion_invalidate_fd(m->ion_client, hnd->share_fd);
 #endif
 	}
@@ -418,21 +404,8 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 	} else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		hw_module_t *pmodule = NULL;
-		private_module_t *m = NULL;
-#if 1
-		m = (private_module_t*)module;
-#else
-		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
-		{
-			m = reinterpret_cast<private_module_t *>(pmodule);
-		}
-		else
-		{
-			AERR("Unlock couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
-			return -EINVAL;
-		}
-#endif
+		private_module_t *m = (private_module_t*)module;
+
 		ion_sync_fd(m->ion_client, hnd->share_fd);
 #endif
 	}

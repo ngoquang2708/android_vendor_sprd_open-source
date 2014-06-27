@@ -62,10 +62,6 @@ endif
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../frameworks/base/libs/hwui/
 
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-	LOCAL_CFLAGS += -DUSE_3_FRAMEBUFFER
-endif
-
 ifeq ($(strip $(USE_RGB_VIDEO_LAYER)) , true)
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
         LOCAL_CFLAGS += -DDRM_SPECIAL_PROCESS
