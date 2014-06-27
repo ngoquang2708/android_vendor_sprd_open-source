@@ -1676,12 +1676,12 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
             adev->pcm_fm_dl= NULL;
         }
     }
-	
+
     val = adev->fm_volume;
     gain |=fm_volume_tbl[val-1];
     gain |=fm_volume_tbl[val-1]<<16;
     SetAudio_gain_fmradio(adev,gain);
-	
+
     pthread_mutex_unlock(&adev->lock);
     ALOGW("voice:vbc_call_end_process out");
     return 0;
@@ -1704,6 +1704,7 @@ void *vbc_ctrl_voip_thread_routine(void *arg)
     pthread_attr_t attr;
     struct sched_param m_param;
     int newprio=39;
+    struct mixer_ctl *air_adcr = NULL;
 
     pthread_attr_init(&attr);
     pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
@@ -1712,6 +1713,9 @@ void *vbc_ctrl_voip_thread_routine(void *arg)
     m_param.sched_priority=newprio;
     pthread_attr_setschedparam(&attr,&m_param);
 
+
+
+
     para->cp_type = res->cp_type;
     para->vbchannel_id = res->channel_id;
     para->adev = res->adev;
@@ -1719,205 +1723,264 @@ void *vbc_ctrl_voip_thread_routine(void *arg)
 
     memcpy(para->vbpipe, res->pipe_name,strlen(res->pipe_name)+1);
 
-    adev = (struct tiny_audio_device *)(para->adev);
-
     memset(&read_common_head, 0, sizeof(parameters_head_t));
     memset(&write_common_head, 0, sizeof(parameters_head_t));
+
+    adev = (struct tiny_audio_device *)(para->adev);
 
     memcpy(&write_common_head.tag[0], VBC_CMD_TAG, 3);
     write_common_head.cmd_type = VBC_CMD_NONE;
     write_common_head.paras_size = 0;
-    MY_TRACE("voip1:vbc_ctrl_thread_routine in pipe_name:%s.", para->vbpipe);
+    MY_TRACE("voip:vbc_ctrl_thread_routine in pipe_name:%s.", para->vbpipe);
 
 RESTART:
     /* open vbpipe to build connection.*/
     if (para->vbpipe_fd == -1) {
         para->vbpipe_fd = open(para->vbpipe, O_RDWR);//open("/dev/vbpipe6", O_RDWR);
         if (para->vbpipe_fd < 0) {
-            MY_TRACE("VBC_CMD_HAL_RESTART release vbc_lock, pipe_name:%s.", para->vbpipe);
+            MY_TRACE("voip:VBC_CMD_HAL_RESTART try vbc_lock, pipe_name:%s.", para->vbpipe);
             sleep(1);
             goto RESTART;
         } else {
-            ALOGD("voip1:vbpipe_name(%s) vbpipe_fd(%d) open successfully.", para->vbpipe, para->vbpipe_fd);
+            para->vbpipe_pre_fd = para->vbpipe_fd;
+            ALOGW("voip:vbpipe_name(%s) vbpipe_fd(%d) open successfully.", para->vbpipe, para->vbpipe_fd);
         }
+    } else {
+        ALOGW("voip:vbpipe_name(%s) warning: vbpipe_fd(%d) NOT closed.", para->vbpipe, para->vbpipe_fd);
     }
 
     maxfd = para->vbpipe_fd + 1;
     if((fcntl(para->vbpipe_fd,F_SETFL,O_NONBLOCK))<0)
     {
-        ALOGD("voip1:vbpipe_name(%s) vbpipe_fd(%d) fcntl error.", para->vbpipe, para->vbpipe_fd);
+        ALOGD("voip:vbpipe_name(%s) vbpipe_fd(%d) fcntl error.", para->vbpipe, para->vbpipe_fd);
     }
 
     /* loop to read parameters from vbpipe.*/
     while(1)
     {
-        int result = 0;
+        int result;
         timeout.tv_sec = 5;;
-        timeout.tv_usec = 0;;
-        ALOGW("voip1:%s, looping now...cur_timeout %x,timeout %d", para->vbpipe,cur_timeout,cur_timeout?cur_timeout->tv_sec:0);
+        timeout.tv_usec = 0;
+        ALOGW("voip:%s, looping now...cur_timeout %x,timeout %d", para->vbpipe,cur_timeout,cur_timeout?cur_timeout->tv_sec:0);
 
         FD_ZERO(&fds_read);
         FD_SET(para->vbpipe_fd,&fds_read);
-
         result = select(maxfd,&fds_read,NULL,NULL,cur_timeout);
         if(result < 0) {
-            ALOGE("voip: select error %d",errno);
-            vbc_call_end_process(adev,true);
-            vbc_empty_pipe(para->vbpipe_fd);
-            cur_timeout = NULL;
+            ALOGE("voip:select error %d",errno);
             continue;
         }
         else if(!result) {
-            ALOGE("voip1: select timeout");
+            ALOGE("voip:select timeout");
             vbc_call_end_process(adev,true);
             vbc_empty_pipe(para->vbpipe_fd);
             cur_timeout = NULL;
             continue;
         }
         if(FD_ISSET(para->vbpipe_fd,&fds_read) <= 0) {
-            ALOGE("voip1: select ok but no fd is set");
+            ALOGE("voip:select ok but no fd is set");
             continue;
         }
         /* read parameters common head of the packet.*/
         ret = ReadParas_Head(para->vbpipe_fd, &read_common_head);
+        MY_TRACE("voip:VBC_CMD_HAL_get_cmd try vbc_lock, pipe_name:%s, ret:%d.", para->vbpipe, ret);
         if(ret < 0) {
-            ALOGE("voip1:Error, %s read head failed(%s), need to read again ",__func__,strerror(errno));
-            cur_timeout = NULL;
+            ALOGE("voip:Error, %s read head failed(%s), pipe_name:%s, need to read again ",__func__,strerror(errno),para->vbpipe);
             vbc_call_end_process(adev,true);
             vbc_empty_pipe(para->vbpipe_fd);
             cur_timeout = NULL;
             continue;
         }
-
-        ALOGD("voip1: get cmd ok");
+        ALOGW("voip:%s In Call, Get CMD(%d) from cp(pipe:%s, pipe_fd:%d), paras_size:%d devices:0x%x mode:%d",
+                adev->call_start ? "":"NOT", read_common_head.cmd_type,
+                para->vbpipe, para->vbpipe_fd,
+                read_common_head.paras_size,adev->out_devices,adev->mode);
 
         if (memcmp(&read_common_head.tag[0], VBC_CMD_TAG, 3)) {
-            ALOGE("voip1:error read_common_head.tag is %d",read_common_head.tag[0]);
+            ALOGE("voip:Error, (0x%x)NOT match VBC_CMD_TAG, wrong packet.", *((int*)read_common_head.tag));
             vbc_call_end_process(adev,true);
             vbc_empty_pipe(para->vbpipe_fd);
             cur_timeout = NULL;
             continue;
         }
-
-        ALOGD("voip1: Get CMD(%d) from cp(pipe:%s, pipe_fd:%d,paras_size:%d devices:0x%x mode:%d",
-                read_common_head.cmd_type, para->vbpipe, para->vbpipe_fd, read_common_head.paras_size,adev->out_devices,adev->mode);
 
         switch (read_common_head.cmd_type)
         {
             case VBC_CMD_HAL_OPEN:
                 {
+                    uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0)
+
+                            |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
+
+                    uint32_t gain=0;
+                    gain |= DEFAULT_VBCST_DG;
+                    gain |= DEFAULT_VBCST_DG<<16;
+                    SetAudio_gain_fmradio(adev,gain);
+
                     cur_timeout = &timeout;
-                    MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
-                    SetParas_OpenHal_Incall(adev,para->vbpipe_fd);
-                    ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_OPEN);
-                    if(ret < 0){
-                        ALOGE("voip1:VBC_CMD_HAL_OPEN: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
+                    MY_TRACE("voip:VBC_CMD_HAL_OPEN IN.");
+
+                    clean_all_devices(adev);
+                    SetParas_OpenHal_Incall(adev,para->vbpipe_fd);   //get sim card number
+
+                    adev->cp_type = para->cp_type;
+                    if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
+                        if(adev->cp_type == CP_TG)
+                            i2s_pin_mux_sel(adev,1);
+                        else if(adev->cp_type == CP_W)
+                            i2s_pin_mux_sel(adev,0);
                     }
-                    MY_TRACE("voip1:VBC_CMD_HAL_OPEN OUT,vbpipe_name:%s.",para->vbpipe);
+
+                    ALOGD("voip:i2s_ctl is %x",i2s_ctl);
+                    parameters_head_t write_common_head = {0};
+                    write_common_head.cmd_type = VBC_CMD_RSP_OPEN;
+                    write_common_head.paras_size = i2s_ctl ;
+                    ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
+                    if(ret < 0) {
+                        MY_TRACE("voip:VBC_CMD_HAL_OPEN writeparas_head error %d",ret);
+                    }
+
+                    MY_TRACE("voip:VBC_CMD_HAL_OPEN OUT, vbpipe_name:%s.", para->vbpipe);
                 }
                 break;
             case VBC_CMD_HAL_CLOSE:
                 {
+                    int i = 0;
+                    unsigned short switch_table[7] = {0};
+                    uint32_t switch_device[] = {AUDIO_DEVICE_OUT_EARPIECE,AUDIO_DEVICE_OUT_SPEAKER,AUDIO_DEVICE_IN_BUILTIN_MIC,AUDIO_DEVICE_IN_BACK_MIC,AUDIO_DEVICE_IN_WIRED_HEADSET,AUDIO_DEVICE_OUT_WIRED_HEADSET,SPRD_AUDIO_IN_DUALMIC_VOICE};
+                    MY_TRACE("voip:VBC_CMD_HAL_CLOSE IN.");
                     cur_timeout = &timeout;
-
-                    MY_TRACE("voip1:VBC_CMD_HAL_CLOSE IN.");
-                    write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;
-                    ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
-                    if(ret < 0){
-                        ALOGE("voip1:VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
+                    for( i=0; i<(sizeof(switch_table)/sizeof(unsigned short));i++)
+                    {
+                        set_call_route(adev,switch_device[i],0);
                     }
-                    mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
-                    MY_TRACE("voip1:VBC_CMD_HAL_CLOSE OUT.");
+                    //vbc_call_end_process(adev,false);
+                    ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
+                    if(ret < 0){
+                        ALOGE("voip:VBC_CMD_HAL_CLOSE: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
+                    }
+                    MY_TRACE("voip:VBC_CMD_HAL_CLOSE OUT.");
                 }
                 break;
             case VBC_CMD_RSP_CLOSE:
                 {
-                    MY_TRACE("voip1:VBC_CMD_RSP_CLOSE IN.");
                     cur_timeout = NULL;
+                    MY_TRACE("voip:VBC_CMD_RSP_CLOSE IN.");
                     ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_CLOSE);
                     if(ret < 0){
-                        ALOGE("voip1:VBC_CMD_RSP_CLOSE: write2 cmd VBC_CMD_RSP_CLOSE error(%d).",ret);
+                        ALOGE("voip:VBC_CMD_RSP_CLOSE: write2 cmd VBC_CMD_RSP_CLOSE error(%d).",ret);
                     }
-                    MY_TRACE("voip1:VBC_CMD_RSP_CLOSE OUT.");
+
+                    MY_TRACE("voip:VBC_CMD_RSP_CLOSE OUT.");
+                }
+                break;
+            case VBC_CMD_GET_HP_POLE_TYPE:
+                {
+                    MY_TRACE("voip:VBC_CMD_GET_HP_POLE_TYPE IN.");
+                    ret = Write_HP_PoleType_Rsp2cp(para->vbpipe_fd, VBC_CMD_GET_HP_POLE_TYPE);
+                    if(ret < 0){
+                        ALOGE("voip:VBC_CMD_GET_HP_POLE_TYPE : write2 cmd VBC_CMD_RSP_HP_POLE_TYPE error(%d).",ret);
+                    }
+                    MY_TRACE("voip:VBC_CMD_GET_HP_POLE_TYPE OUT.");
                 }
                 break;
             case VBC_CMD_SET_MODE:
                 {
-                    MY_TRACE("voip1:VBC_CMD_SET_MODE IN.");
-                    cur_timeout = &timeout;
+                    MY_TRACE("voip:VBC_CMD_SET_MODE IN.");
+
+                    if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
+                        if(adev->cp_type == CP_TG)
+                            i2s_pin_mux_sel(adev,1);
+                        else if(adev->cp_type == CP_W)
+                            i2s_pin_mux_sel(adev,0);
+                    }
 
                     ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
+                    //configure line routine again for low power
+                    set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
+                    if(adev->out_devices == AUDIO_DEVICE_OUT_EARPIECE){
+                        air_adcr = mixer_get_ctl_by_name(adev->mixer, "ADCR Mixer AIRADCR Switch");
+                        if (!air_adcr) {
+                            ALOGE("voip:%s Unknown control '%s'\n", __func__,"ADCR Mixer AIRADCR Switch");
+                        } else {
+                            ALOGE("voip:%s:handhold mode close ADCR Mixer AIRADCR Switch",__func__);
+                            mixer_ctl_set_value(air_adcr, 0, 0);
+                        }
+                    }
+
                     if(ret < 0){
-                        MY_TRACE("voip1:VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s",
+                        MY_TRACE("voip:VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s",
                                 para->vbpipe);
                     }
                     ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SET_MODE);
                     if(ret < 0){
-                        ALOGE("voip1:Error,SET_MODE Write_Rsp2cp1 failed(%d).",ret);
+                        ALOGE("voip Error,SET_MODE Write_Rsp2cp1 failed(%d).",ret);
                     }
-                    MY_TRACE("voip1:VBC_CMD_SET_MODE OUT.");
+                    MY_TRACE("voip:VBC_CMD_SET_MODE OUT.");
                 }
                 break;
-            case VBC_CMD_SET_GAIN:
-                {
-                    MY_TRACE("voip1:VBC_CMD_SET_GAIN IN.");
-                    ret = SetParas_Volume_Incall(para->vbpipe_fd,adev);
-                    if(ret < 0){
-                        MY_TRACE("VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s",
-                                para->vbpipe);
-                    }
-                    ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SET_GAIN);
-                    if(ret < 0){
-                        ALOGE("Error, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
-                    }
-                    MY_TRACE("voip1:VBC_CMD_SET_GAIN OUT.");
-                }
-                break;
-            case VBC_CMD_SWITCH_CTRL:
+            case VBC_CMD_LINEIN_CTRL:
                 {
                     cur_timeout = NULL;
-                    MY_TRACE("voip1:VBC_CMD_SWITCH_CTRL IN.");
-                    ret = SetParas_Switch_Incall(para->vbpipe_fd,para->vbchannel_id,adev);
+                    MY_TRACE("voip:VBC_CMD_LINEIN_CTRL IN.");
+                    ret = SetParas_Linein_Incall(para->vbpipe_fd,adev);
                     if(ret < 0){
-                        MY_TRACE("voip:VBC_CMD_SWITCH_CTRL SetParas_Switch_Incall error. ");
+                        MY_TRACE("voip:VBC_CMD_LINEIN_CTRL SetParas_Linein_Incall error.");
                     }
-                    ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_DEVICE_CTRL);
+                    ret = Write_Rsp2cp(para->vbpipe_fd, VBC_CMD_LINEIN_CTRL);
                     if(ret < 0){
-                        ALOGE("voip1:Error, DEVICE_CTRL Write_Rsp2cp1 failed(%d).",ret);
+                        ALOGE("voip:Error,VBC_CMD_LINEIN_CTRL: Write_Rsp2cp1 failed(%d).",ret);
                     }
-                    MY_TRACE("voip1:VBC_CMD_SWITCH_CTRL OUT.");
+                    MY_TRACE("voip:VBC_CMD_LINEIN_CTRL OUT.");
                 }
                 break;
             case VBC_CMD_SET_MUTE:
                 {
-                    MY_TRACE("voip1:VBC_CMD_SET_MUTE IN.");
+                    MY_TRACE("voip:VBC_CMD_SET_MUTE IN.");
 
-                    MY_TRACE("voip1:VBC_CMD_SET_MUTE OUT.");
+                    MY_TRACE("voip:VBC_CMD_SET_MUTE OUT.");
+                }
+                break;
+            case VBC_CMD_SET_GAIN:
+                {
+                    MY_TRACE("voip:VBC_CMD_SET_GAIN IN.");
+
+                    ret = SetParas_Volume_Incall(para->vbpipe_fd,adev);
+                    if(ret < 0){
+                        MY_TRACE("voip:VBC_CMD_SET_GAIN SetParas_Route_Incall error. pipe:%s",
+                                para->vbpipe);
+                    }
+                    ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SET_GAIN);
+                    if(ret < 0){
+                        ALOGE("voip, %s Write_Rsp2cp1 failed(%d).",__func__,ret);
+                    }
+
+                    MY_TRACE("voip:VBC_CMD_SET_GAIN OUT.");
                 }
                 break;
             case VBC_CMD_DEVICE_CTRL:
                 {
-                    MY_TRACE("voip1:VBC_CMD_DEVICE_CTRL IN.");
+                    MY_TRACE("voip:VBC_CMD_DEVICE_CTRL IN.");
                     ret = SetParas_DeviceCtrl_Incall(para->vbpipe_fd,adev);
                     if(ret < 0){
-                        MY_TRACE("voip1:VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error.");
+                        MY_TRACE("voice:VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error. ");
                     }
                     ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_DEVICE_CTRL);
                     if(ret < 0){
-                        ALOGE("voip1:Error, DEVICE_CTRL Write_Rsp2cp1 failed(%d).",ret);
+                        ALOGE("voip:Error, DEVICE_CTRL Write_Rsp2cp1 failed(%d).",ret);
                     }
-                    MY_TRACE("voip1:VBC_CMD_DEVICE_CTRL OUT.");
+                    MY_TRACE("voip:VBC_CMD_DEVICE_CTRL OUT.");
                 }
                 break;
             default:
-                ALOGE("voip1:Error: %s wrong cmd_type(%d)",__func__,read_common_head.cmd_type);
+                ALOGE("voip:Error: %s wrong cmd_type(%d)",__func__,read_common_head.cmd_type);
                 break;
         }
-        MY_TRACE("voip1:VBC_CMD_HAL_get_cmd release vbc_lock.");
+        MY_TRACE("voip:VBC_CMD_HAL_get_cmd release vbc_lock.");
     }
 
-VOIP_EXIT:
-    ALOGE("voip1:vbc_ctrl_thread exit, pipe:%s!!!", para->vbpipe);
+EXIT:
+    ALOGW("voip:vbc_ctrl_thread exit, pipe:%s!!!", para->vbpipe);
     return 0;
 }
 //the timeout function to do that set adev->realCall to false for voip
@@ -1993,7 +2056,6 @@ void *vbc_ctrl_thread_linein_routine(void *arg)
     struct sched_param m_param;
     int newprio=39;
     struct mixer_ctl *air_adcr = NULL;
-
     pthread_attr_init(&attr);
     pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
     pthread_attr_setschedpolicy(&attr,SCHED_FIFO);
