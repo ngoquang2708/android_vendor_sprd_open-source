@@ -26,7 +26,6 @@ endif
 ifeq ($(TARGET_LOWCOST_SUPPORT),true)
     ifneq ($(MULTILANGUAGE_SUPPORT),true)
         PRODUCT_PACKAGES += PinyinIME
-		PRODUCT_PACKAGES += OpenWnn
     endif
 else
     PRODUCT_PACKAGES += PinyinIME
