@@ -39,6 +39,8 @@
 					ARITHMETIC_EVT_MEM)
 #define CAMERA_FD_MSG_QUEUE_SIZE 5
 #define IMAGE_FORMAT "YVU420_SEMIPLANAR"
+#define ARITHMETIC_DISABLE_CPU_HOTPLU "1"
+#define ARITHMETIC_ENABLE_CPU_HOTPLUG "0"
 
 enum arithmetic_ret {
 	ARITH_SUCCESS = 0,
@@ -78,6 +80,31 @@ static struct arithmetic_hdr_conext s_hdr_cntext;
 static struct arithmetic_hdr_conext *s_hdr_cxt = &s_hdr_cntext;
 static uint32_t check_size_data_invalid(struct img_size * fd_size);
 static int arithmetic_fd_call_init(const struct img_size * fd_size);
+
+int arithmetic_cpu_hotplug_disable(uint8_t is_disable)
+{
+	const char* const hotplug_disable = "/sys/devices/system/cpu/cpufreq/sprdemand/cpu_hotplug_disable";
+	const char* cmd_str  = ARITHMETIC_DISABLE_CPU_HOTPLU;
+
+	FILE* fp = fopen(hotplug_disable, "w");
+
+	if (!fp) {
+		CMR_LOGE("Failed to open: cpu_hotplug_disable");
+		return -1;
+	}
+
+	if (1 == is_disable) {
+		cmd_str = ARITHMETIC_DISABLE_CPU_HOTPLU;
+	} else {
+		cmd_str = ARITHMETIC_ENABLE_CPU_HOTPLUG;
+	}
+
+	fprintf(fp, "%s", cmd_str);
+
+	fclose(fp);
+
+	return 0;
+}
 
 int FaceSolid_Init(int width, int height)
 {
@@ -620,11 +647,13 @@ int arithmetic_hdr(struct img_addr *dst_addr,uint32_t width,uint32_t height)
 	/*save_input_data(width,height);*/
 
 	if ((NULL != temp_addr0) && (NULL != temp_addr1) && (NULL != temp_addr2)) {
+		arithmetic_cpu_hotplug_disable(1);
 		if (0 != HDR_Function(temp_addr0,temp_addr1,temp_addr2,	temp_addr0,
 			height,width,p_format)) {
 			CMR_LOGE("hdr error!");
 			ret = ARITH_FAIL;
 		}
+		arithmetic_cpu_hotplug_disable(0);
 	} else {
 			CMR_LOGE("can't handle hdr.");
 			ret = ARITH_FAIL;
