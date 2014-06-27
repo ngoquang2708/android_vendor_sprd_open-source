@@ -112,7 +112,7 @@ static void parse_config()
 static void notify_config_file()
 {
 	struct inotify_event *event;
-	int notify_fd,wd,result,size,len;
+	int notify_fd,wd,result,size;
 	fd_set readset;
 	struct timeval timeout;
 	struct stat tmp;
@@ -130,7 +130,7 @@ static void notify_config_file()
 	}
 
         while(1) {
-		int index = 0;
+		long unsigned int index = 0;
 		FD_ZERO(&readset);
 		FD_SET(notify_fd, &readset);
 		timeout.tv_sec = 3;
@@ -145,8 +145,9 @@ static void notify_config_file()
 			ALOGD("read inotify fd failed, %d.\n", (int)size);
 			continue;
 		}
+
 		while(index < size) {
-			event = (struct inotify_event *)(buffer + index);
+			event = (struct inotify_event *)((char *)buffer + index);
                         ALOGD("notify event: wd: %d, mask 0x%x, index %d, len %d, file %s\n",
                                         event->wd, event->mask, index, event->len, event->name);
 			if(event->mask & IN_MODIFY)
