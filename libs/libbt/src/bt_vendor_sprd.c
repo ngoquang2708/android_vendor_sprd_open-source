@@ -31,6 +31,12 @@
 #include <ctype.h>
 #include "bt_vendor_sprd.h"
 #include "userial_vendor.h"
+
+#include <sys/socket.h>
+#include <unistd.h>
+#include <poll.h>
+#include <sys/time.h>
+#include <cutils/sockets.h>
 /******************************************************************************
 **  Externs
 ******************************************************************************/
@@ -54,6 +60,11 @@ void hw_epilog_process(void);
 /******************************************************************************
 **  Local type definitions
 ******************************************************************************/
+// definations use for start & stop cp2
+#define WCND_SOCKET_NAME    "wcnd"
+#define WCND_BT_CMD_STR_START_CP2  "wcn BT-OPEN"
+#define WCND_BT_CMD_STR_STOP_CP2  "wcn BT-CLOSE"
+#define WCND_RESP_STR_BT_OK   "BTWIFI-CMD OK"
 
 
 /******************************************************************************
@@ -90,6 +101,115 @@ static int init(const bt_vendor_callbacks_t* p_cb, unsigned char *local_bdaddr)
     return 0;
 }
 
+static int connect_wcnd(void)
+{
+    int client_fd = -1;
+    int retry_count = 20;
+    struct timeval rcv_timeout;
+
+    client_fd = socket_local_client( WCND_SOCKET_NAME,
+    ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+
+    while(client_fd < 0 && retry_count > 0)
+    {
+        retry_count--;
+        ALOGD("bt-vendor : %s: Unable bind server %s, waiting...\n",__func__, WCND_SOCKET_NAME);
+        usleep(100*1000);
+        client_fd = socket_local_client( WCND_SOCKET_NAME,
+            ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    }
+
+    if(client_fd > 0)
+    {
+        rcv_timeout.tv_sec = 10;
+        rcv_timeout.tv_usec = 0;
+        if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcv_timeout, sizeof(rcv_timeout)) < 0)
+        {
+            ALOGE("bt-vendor : %s: set receive timeout fail\n",__func__);
+        }
+    }
+
+    ALOGD("bt-vendor : %s: connect to server status:%d\n",__func__, client_fd);
+
+    return client_fd;
+}
+
+static int start_cp2(void)
+{
+    char buffer[128];
+    int len = 0;
+    int ret = -1;
+    int wcnd_socket = connect_wcnd();
+
+    if (wcnd_socket <= 0) {
+        ALOGD("bt-vendor : %s: connect to server failed", __func__);
+        return  -1;
+    }
+
+    len = strlen(WCND_BT_CMD_STR_START_CP2) +1;
+
+    ALOGD("bt-vendor : %s: send start cp2 message to wcnd %s\n",__func__, WCND_BT_CMD_STR_START_CP2);
+
+    ret = TEMP_FAILURE_RETRY(write(wcnd_socket, WCND_BT_CMD_STR_START_CP2, len));
+
+    if (ret <= 0)
+    {
+        ALOGD("bt-vendor : %s: write to wcnd fail.", __func__);
+        close(wcnd_socket);
+        return ret;
+    }
+
+    memset(buffer, 0, 128);
+
+    ALOGD("bt-vendor : %s: waiting for server %s\n",__func__, WCND_SOCKET_NAME);
+    ret = read(wcnd_socket, buffer, 128);
+
+    ALOGD("bt-vendor : %s: get %d bytes %s\n", __func__, ret, buffer);
+
+    if(!strstr(buffer, WCND_RESP_STR_BT_OK)) ret = -1;
+
+    close(wcnd_socket);
+    return ret;
+}
+
+static int stop_cp2(void)
+{
+    char buffer[128];
+    int len = 0;
+    int ret = -1;
+    int wcnd_socket = connect_wcnd();
+
+    if (wcnd_socket <= 0) {
+        ALOGD("bt-vendor : %s: connect to server failed", __func__);
+        return  -1;
+    }
+
+    len = strlen(WCND_BT_CMD_STR_START_CP2) + 1;
+
+    ALOGD("bt-vendor : %s: send stop cp2 message to wcnd %s\n", __func__, WCND_BT_CMD_STR_STOP_CP2);
+
+    ret = TEMP_FAILURE_RETRY(write(wcnd_socket, WCND_BT_CMD_STR_STOP_CP2, len));
+
+     if (ret <= 0)
+    {
+        ALOGD("bt-vendor : %s: write to wcnd fail.", __func__);
+        close(wcnd_socket);
+        return ret;
+    }
+
+    memset(buffer, 0, 128);
+
+    ALOGD("bt-vendor : %s: waiting for server %s\n",__func__, WCND_SOCKET_NAME);
+    ret = read(wcnd_socket, buffer, 128);
+
+    ALOGD("bt-vendor : %s: get %d bytes %s\n", __func__, ret, buffer);
+
+    if(!strstr(buffer, WCND_RESP_STR_BT_OK)) ret = -1;
+
+    close(wcnd_socket);
+    return ret;
+
+}
 
 /** Requested operations */
 static int op(bt_vendor_opcode_t opcode, void *param)
@@ -104,9 +224,14 @@ static int op(bt_vendor_opcode_t opcode, void *param)
     {
         case BT_VND_OP_POWER_CTRL:
             {
+		 nState = *(int *) param;
 
+		 ALOGI("bt-vendor : BT_VND_OP_POWER_CTRL, state: %d ", nState);
+		 if (nState == BT_VND_PWR_ON)
+		     start_cp2();
+		 else if (nState == BT_VND_PWR_OFF)
+		     stop_cp2();
 
-		 ALOGI("bt-vendor : BT_VND_OP_POWER_CTRL");		
 		  #if 0
 		  nState = *(int *) param;
                 retval = hw_config(nState);
