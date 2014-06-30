@@ -4650,6 +4650,7 @@ int SprdCameraHardware::allocOneFrameMem(struct SprdCameraHardware::OneFrameMem 
 {
 	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
 	int s_mem_method = IommuIsEnabled();
+	int ret = 0;
 
 	/* alloc input y buffer */
 	LOGI("allocOneFrameMem %d  %d  %d\n",s_mem_method,tmp_one_frame_mem_ptr->width,tmp_one_frame_mem_ptr->height);
@@ -4668,11 +4669,19 @@ int SprdCameraHardware::allocOneFrameMem(struct SprdCameraHardware::OneFrameMem 
 	}
 
 	if (0 == s_mem_method) {
-		tmp_one_frame_mem_ptr->input_y_pmem_hp->get_phy_addr_from_ion((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
+		ret = tmp_one_frame_mem_ptr->input_y_pmem_hp->get_phy_addr_from_ion((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
 		(int *)(&tmp_one_frame_mem_ptr->input_y_pmemory_size));
+		if (ret) {
+			LOGE("failed to get_phy_addr_from_ion.\n");
+			return -1;
+		}
 	} else {
-		tmp_one_frame_mem_ptr->input_y_pmem_hp->get_mm_iova((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
+		ret = tmp_one_frame_mem_ptr->input_y_pmem_hp->get_mm_iova((int *)(&tmp_one_frame_mem_ptr->input_y_physical_addr),
 		(int *)(&tmp_one_frame_mem_ptr->input_y_pmemory_size));
+		if (ret) {
+			LOGE("failed to get_mm_iova.\n");
+			return -1;
+		}
 	}
 	tmp_one_frame_mem_ptr->input_y_virtual_addr = (unsigned char*)tmp_one_frame_mem_ptr->input_y_pmem_hp->base();
 	if (!tmp_one_frame_mem_ptr->input_y_physical_addr) {

@@ -8502,9 +8502,7 @@ int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint3
 	read_param.reg_param = (uint32_t)reg_config;
 	read_param.counts = len;
 
-	_isp_read((uint32_t *)&read_param);
-
-	return ret;
+	return _isp_read((uint32_t *)&read_param);
 }
 
 /**----------------------------------------------------------------------------*

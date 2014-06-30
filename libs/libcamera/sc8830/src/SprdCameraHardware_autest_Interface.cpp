@@ -194,6 +194,7 @@ static void auto_test_dcam_preview_mem_release(void)
 static int auto_test_callback_cap_mem_alloc(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
 {
 	auto_test_cmr_context* camera = g_auto_test_cmr_cxt_ptr;
+	int ret = 0;
 	if (camera == NULL) {
 		return -1;
 	}
@@ -218,9 +219,21 @@ static int auto_test_callback_cap_mem_alloc(void* handle, unsigned int size, uns
 		return -1;
 	}
 	if (g_mem_method == USE_PHYSICAL_ADD) {
-		pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_phy_addr_from_ion((int*)addr_phy, (int*)&size);
+		if(ret) {
+			ERR("failed to get_phy_addr_from_ion. line =%d\n",__LINE__);
+			return -1;
+		}
+
+
 	} else {
-		pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
+		ret = pHeapIon->get_mm_iova((int*)addr_phy, (int*)&size);
+		if(ret) {
+			ERR("failed to get_mm_iova. line =%d\n",__LINE__);
+			return -1;
+		}
+
+
 	}
 	*addr_vir = (int)(pHeapIon->base());
 	camera->misc_heap_array[camera->misc_heap_num++] = pHeapIon;
@@ -239,6 +252,7 @@ static int auto_test_dcam_preview_mem_alloc(void)
 {
 	uint32_t i =0;
 	uint32_t buf_size =0;
+	int ret = 0;
 	INFO("debug %s g_mem_method =%d %d E \n",__func__,g_mem_method,__LINE__);
 
 	struct auto_test_cmr_context *cmr_cxt_ptr = g_auto_test_cmr_cxt_ptr;
@@ -258,11 +272,21 @@ static int auto_test_dcam_preview_mem_alloc(void)
 		}
 
 		if (g_mem_method == USE_PHYSICAL_ADD) {
-			cmr_cxt_ptr->preview_pmem_hp[i]->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->preview_physical_addr[i]),
+			ret = cmr_cxt_ptr->preview_pmem_hp[i]->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->preview_physical_addr[i]),
 				(int *)(&cmr_cxt_ptr->preview_pmemory_size[i]));
+			if(ret) {
+				ERR("failed to get_phy_addr_from_ion. line =%d\n",__LINE__);
+				return -1;
+			}
+
 		} else {
-			cmr_cxt_ptr->preview_pmem_hp[i]->get_mm_iova((int *)(&cmr_cxt_ptr->preview_physical_addr[i]),
+			ret = cmr_cxt_ptr->preview_pmem_hp[i]->get_mm_iova((int *)(&cmr_cxt_ptr->preview_physical_addr[i]),
 				(int *)(&cmr_cxt_ptr->preview_pmemory_size[i]));
+			if(ret) {
+				ERR("failed to get_mm_iova. line =%d\n",__LINE__);
+				return -1;
+			}
+
 		}
 
 		cmr_cxt_ptr->preview_virtual_addr[i] = (unsigned char*)cmr_cxt_ptr->preview_pmem_hp[i]->base();
@@ -307,6 +331,8 @@ static int auto_test_dcam_cap_memory_alloc(void)
 	uint32_t local_width, local_height;
 	uint32_t mem_size;
 	uint32_t buffer_size = 0;
+	int      ret = 0;
+
 	struct auto_test_cmr_context *cmr_cxt_ptr = g_auto_test_cmr_cxt_ptr;
 
 	if (camera_capture_max_img_size(&local_width, &local_height))
@@ -329,11 +355,20 @@ static int auto_test_dcam_cap_memory_alloc(void)
 	}
 
 	if (g_mem_method == USE_PHYSICAL_ADD) {
-		cmr_cxt_ptr->cap_pmem_hp->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->cap_physical_addr),
+		ret = cmr_cxt_ptr->cap_pmem_hp->get_phy_addr_from_ion((int *)(&cmr_cxt_ptr->cap_physical_addr),
 			(int *)(&cmr_cxt_ptr->cap_pmemory_size));
+		if(ret) {
+			ERR("failed to get_phy_addr_from_ion. line =%d\n",__LINE__);
+			return -1;
+		}
 	} else {
-		cmr_cxt_ptr->cap_pmem_hp->get_mm_iova((int *)(&cmr_cxt_ptr->cap_physical_addr),
+		ret = cmr_cxt_ptr->cap_pmem_hp->get_mm_iova((int *)(&cmr_cxt_ptr->cap_physical_addr),
 			(int *)(&cmr_cxt_ptr->cap_pmemory_size));
+		if(ret) {
+			ERR("failed to get_mm_iova. line =%d\n",__LINE__);
+			return -1;
+		}
+
 	}
 
 	cmr_cxt_ptr->cap_virtual_addr = (unsigned char*)cmr_cxt_ptr->cap_pmem_hp->base();
@@ -1036,7 +1071,6 @@ static int32_t auto_test_dcam_preview_flash_eb(void)
 	INFO("debug %s cmr_cxt_ptr->cmd =%d line=%d E \n",__func__,cmr_cxt_ptr->cmd,__LINE__);
 	if (AUTO_TEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
 		SENSOR_FLASH_LEVEL_T flash_level;
-		struct camera_context *cxt = camera_get_cxt();
 		struct isp_alg flash_param;
 		if (Sensor_GetFlashLevel(&flash_level))
 			return -1;
@@ -1270,7 +1304,8 @@ int read_data_from_sensor()
 	int32_t rtn = 0;
 	struct auto_test_cmr_context *cmr_cxt_ptr = g_auto_test_cmr_cxt_ptr;
 	INFO("debug %s %d . \n",__func__,__LINE__);
-	camera_set_dimensions(cmr_cxt_ptr->capture_width,
+
+	rtn =camera_set_dimensions(cmr_cxt_ptr->capture_width,
 				cmr_cxt_ptr->capture_height,
 				AUTO_TEST_PREVIEW_WIDTH,/*cmr_cxt_ptr->capture_width,*/
 				AUTO_TEST_PREVIEW_HEIGHT,/*cmr_cxt_ptr->capture_height,*/
@@ -1278,6 +1313,9 @@ int read_data_from_sensor()
 				NULL,
 				0);
 	INFO("debug %s %d . ..\n",__func__,__LINE__);
+
+	if(rtn)
+		goto exit;
 
 	if ((g_sensor_opened==0)&&(CAMERA_SUCCESS != camera_init(cmr_cxt_ptr->sensor_id))) {
 			INFO("debug %s %d . \n",__func__,__LINE__);

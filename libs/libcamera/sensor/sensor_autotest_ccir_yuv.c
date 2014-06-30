@@ -198,21 +198,6 @@ LOCAL uint32_t autotst_PowerOn(uint32_t power_on)
 
 LOCAL uint32_t autotst_Identify(uint32_t param)
 {
-	uint8_t pid = 0;
-	uint8_t ver = 0;
-	uint32_t ret = SENSOR_FAIL;
-
-	pid = Sensor_ReadReg(SENSOR_PID_ADDR);
-	//ver = Sensor_ReadReg(SENSOR_VER_ADDR);
-	return 0;
-
-	SENSOR_PRINT("[autotst_Identify: pid = 0x%x]\n", pid);
-
-	if( SENSOR_PID_VALUE == pid)
-	{
-		SENSOR_PRINT("That is autotst sensor !");
-		ret = SENSOR_SUCCESS;
-	}
 	return 0;
 }
 
