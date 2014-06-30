@@ -800,7 +800,8 @@ int download_image(int channel_fd,struct image_info *info)
 				buffer += read_len;
 			  } else {
 				  if(!strcmp(info->image_path, "/proc/cmdline")) {//append lte mode
-				  	  offset = append_test_mode(buffer);
+                                          buffer[0] = '\0';
+                                          offset = append_test_mode(buffer);
 					  append_lte_mode(buffer+offset);
 				  }
 				  break;
@@ -1003,7 +1004,7 @@ static void *modemd_listen_uart_thread(void *par)
 	ssize_t numRead;
 	char buffer[256];
 	char temp[20];
-	int size =256;
+	int size = 256;
        do{
 		modem_uart_fd = open(uart_dev, O_RDONLY);
 		MODEM_LOGD("modem_uart_fd = %d\n",modem_uart_fd);
@@ -1011,7 +1012,7 @@ static void *modemd_listen_uart_thread(void *par)
 
 	while(1){
 		memset(buffer, 0, size);
-		numRead = read(modem_uart_fd,buffer,size);
+		numRead = read(modem_uart_fd,buffer,size - 1);
 		//set_modem_assert_information(buffer, strlen(buffer));
 		broadcast_modem_state(buffer,strlen(buffer));
 		MODEM_LOGD("modemd_listenaccept_uart_thread buffer = %s\n",buffer);
