@@ -2758,7 +2758,7 @@ LOCAL uint32_t _ov8825_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		usleep(20*1000);
 		//step 0 power up DOVDD, the AVDD
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
 		Sensor_SetIovddVoltage(iovdd_val);
 		usleep(2000);
 		Sensor_SetAvddVoltage(avdd_val);
