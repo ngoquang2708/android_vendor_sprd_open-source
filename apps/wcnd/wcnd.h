@@ -16,6 +16,16 @@
 #define WCND_LOGE(x...) do {} while(0)
 #endif
 
+#ifndef TEMP_FAILURE_RETRY
+/* Used to retry syscalls that can return EINTR. */
+#define TEMP_FAILURE_RETRY(exp) ({         \
+    typeof (exp) _rc;                      \
+    do {                                   \
+        _rc = (exp);                       \
+    } while (_rc == -1 && errno == EINTR); \
+    _rc; })
+#endif
+
 //the CP2(WIFI/BT/FM) device node
 #define WCN_DEV				"/dev/cpwcn"
 
@@ -76,6 +86,16 @@
 #define WCND_CP2_RESET_END_STRING "WCN-CP2-RESET-END"
 #define WCND_CP2_ALIVE_STRING "WCN-CP2-ALIVE"
 
+typedef struct structWcndMessage{
+	int event;
+	int replyto_fd; //fd to replay message
+}WcndMessage;
+
+typedef struct structWcndClient{
+	int sockfd;
+	int type;//to identify if it is a socket for sending cmds or just for listening event
+}WcndClient;
+
 typedef int (*cmd_handler)(int client_fd, int argc, char* argv[]);
 
 typedef struct structWcnCmdExecuter{
@@ -94,10 +114,10 @@ typedef struct structWcndManager
 	//identify if the struct is initialized or not.
 	int inited;
 
-	pthread_mutex_t client_fds_lock;
+	pthread_mutex_t clients_lock;
 
 	//to store the sockets that connect from the clients
-	int client_fds[WCND_MAX_CLIENT_NUM];
+	WcndClient clients[WCND_MAX_CLIENT_NUM];
 
 	//the server socket to listen for client to connect
 	int listen_fd;
@@ -134,12 +154,41 @@ typedef struct structWcndManager
 	int doing_reset;
 	//to identify if CP2 exception happened
 	int is_cp2_error;
+	//to identify if in the userdebug version
+	int is_in_userdebug;
+
+	//wcnd state
+	int state;
+
+	//bt/wifi state
+	int btwifi_state;
+
+	//saved bt/wifi state when assert happens
+	int saved_btwifi_state;
+
+	//pending events that will be handled in next state
+	int pending_events;
+
+	//self cmd socket pair to send cmd to self
+	int selfcmd_sockets[2];
+
+	//identify if enable to send notify
+	int notify_enabled;
+
+
 }WcndManager;
 
 //export API
 WcndManager* wcnd_get_default_manager(void);
 int wcnd_register_cmdexecuter(WcndManager *pWcndManger, const WcnCmdExecuter *pCmdExecuter);
 int wcnd_send_back_cmd_result(int client_fd, char *str, int isOK);
+int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int notify_type);
+int wcnd_do_cp2_reset_process(WcndManager *pWcndManger);
+int wcnd_runcommand(int client_fd, int argc, char* argv[]);
+int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger);
+int wcnd_send_selfcmd(WcndManager *pWcndManger, char *cmd);
+int wcnd_open_cp2(WcndManager *pWcndManger);
+int wcnd_close_cp2(WcndManager *pWcndManger);
 
 
 
