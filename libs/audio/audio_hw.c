@@ -169,7 +169,7 @@
 /* sampling rate when using VX port for wide band */
 #define VX_WB_SAMPLING_RATE 16000
 
-#define RECORD_POP_MIN_TIME    150   // ms
+#define RECORD_POP_MIN_TIME    400   // ms
 
 #define BT_SCO_UPLINK_IS_STARTED        (1 << 0)
 #define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
