@@ -114,6 +114,15 @@ static void add_timestamp(struct slog_info *info)
 	return;
 }
 
+static void add_flag_when_lost(struct slog_info *info)
+{
+	char buffer[MAX_NAME_LEN];
+	sprintf(buffer, "\n## APMessageLost, retry ##\n");
+	fwrite(buffer, strlen(buffer), 1, info->fp_out);
+
+	return;
+}
+
 static void filterPriToStr (int pri, char *PriTag)
 {
 	switch (pri) {
@@ -276,11 +285,14 @@ void *stream_log_handler(void *arg)
 				}
 				buf_kmsg[ret] = '\0';
 				strinst(wbuf_kmsg, buf_kmsg);
+retry1:
 				ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
 				if ( ret != 1 ) {
 					fclose(info->fp_out);
 					sleep(1);
 					info->fp_out = gen_outfd(info);
+					add_flag_when_lost(info);
+					goto retry1;
 				} else {
 					info->outbytecount += strlen(wbuf_kmsg);
 					log_size_handler(info);
@@ -330,11 +342,14 @@ void *stream_log_handler(void *arg)
 							info = info->next;
 							continue;
 					}
+retry2:
 					ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
 					if ( ret != 1 ) {
 						fclose(info->fp_out);
 						sleep(1);
 						info->fp_out = gen_outfd(info);
+						add_flag_when_lost(info);
+						goto retry2;
 					} else {
 						info->outbytecount += totalLen;
 						log_size_handler(info);
