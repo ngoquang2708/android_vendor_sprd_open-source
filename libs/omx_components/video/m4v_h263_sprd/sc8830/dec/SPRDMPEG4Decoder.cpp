@@ -1363,6 +1363,13 @@ void SPRDMPEG4Decoder::onPortFlushPrepare(OMX_U32 portIndex) {
     }
 }
 
+void SPRDMPEG4Decoder::onReset() {
+    mSignalledError = false;
+    mInitialized = false;
+    //avoid process error after stop codec and restart codec when port settings changing.
+    mOutputPortSettingsChange = NONE;
+}
+
 void SPRDMPEG4Decoder::updatePortDefinitions() {
     OMX_PARAM_PORTDEFINITIONTYPE *def = &editPortInfo(0)->mDef;
     def->format.video.nFrameWidth = mWidth;

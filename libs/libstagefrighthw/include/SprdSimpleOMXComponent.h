@@ -100,6 +100,7 @@ protected:
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortEnableCompleted(OMX_U32 portIndex, bool enabled);
     virtual void onPortFlushPrepare(OMX_U32 portIndex);
+    virtual void onReset();
 
     PortInfo *editPortInfo(OMX_U32 portIndex);
 
