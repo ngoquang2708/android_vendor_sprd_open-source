@@ -368,9 +368,10 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 {
 	int reqNum = 0;
 	camera_metadata_t *curReq = NULL;
-	camera_metadata_t *tmpReq = NULL;
 	int ret;
 	bool isFreeReq = true;
+	bool isRecReleaseBuf = false;
+	bool isReqFull = false;
 	camera_metadata_entry_t entry;
 	Mutex::Autolock lock(m_requestMutex);
 
@@ -378,78 +379,99 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 		HAL_LOGE("queue ops NULL.ignoring request");
 		return 0;
 	}
-	reqNum = m_ReqQueue.size();
-
-	if (m_reqIsProcess == true) {
-		reqNum++;
-	}
-	if (reqNum >= MAX_REQUEST_NUM) {
-		HAL_LOGD("queue is full(%d). ignoring request", reqNum);
-		/*must deq all request, but not process*/
-		m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-		if (!curReq) {
-			HAL_LOGD("req is NULL");
-			return 0;
-		}
-		/*for cts testImmediateZoom*/
-		ret = find_camera_metadata_entry(curReq, ANDROID_CONTROL_CAPTURE_INTENT, &entry);
-		if (ret == NAME_NOT_FOUND) {
-			HAL_LOGE("%s not found!",__FUNCTION__);
-		} else if (ret == OK) {
-			if ((capture_intent)entry.data.u8[0] == CAPTURE_INTENT_STILL_CAPTURE) {
-				m_ReqQueue.push_back(curReq);
-				isFreeReq = false;
-				HAL_LOGD("%s force process %p",__FUNCTION__, curReq);
-			}
-		}
-		if (isFreeReq) {
-			ret = m_requestQueueOps->free_request(m_requestQueueOps, curReq);
-			if (ret < 0)
-				HAL_LOGE("ERR: free_request ret = %d", ret);
-		}
-
-		m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-		while (curReq) {
-			ret = m_requestQueueOps->free_request(m_requestQueueOps, curReq);
-			if (ret < 0)
-				HAL_LOGE("ERR: free_request ret = %d", ret);
-
-			m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-		}
-		if (!isFreeReq) {
-			HAL_LOGD("srv clear flag processing=%d",m_reqIsProcess);
-			if (!m_reqIsProcess) {
-				m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY);
-			}
-		}
+	m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
+	if (!curReq) {
+		HAL_LOGD("req is NULL");
 		return 0;
-	} else {
-		m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-		if (!curReq) {
-			HAL_LOGD("req is NULL");
-			return 0;
+	}
+	reqNum++;
+	HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
+	ret = find_camera_metadata_entry(curReq, ANDROID_SPRD_REC_BUF_INFO, &entry);
+	if (ret == NAME_NOT_FOUND) {
+		HAL_LOGE("%s not found!",__FUNCTION__);
+	} else if (ret == OK) {
+		if (entry.data.i32[0] != -1) {
+			isRecReleaseBuf = true;
+			DirectProcessRecReleaseBuf(entry.data.i32[0], curReq);
+			goto deq_over;
 		}
-		reqNum++;
-		HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
-		m_ReqQueue.push_back(curReq);
-		while (curReq) {
+	}
+	if (!isRecReleaseBuf) {
+		reqNum += m_ReqQueue.size();
+		if (m_reqIsProcess == true) {
+			reqNum++;
+		}
+		if (reqNum >= MAX_REQUEST_NUM) {
+			HAL_LOGD("queue is full(%d)", reqNum);
+			/*must deq all request, but not process*/
 			m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
-			if (curReq) {
-				if (reqNum >= MAX_REQUEST_NUM) {
-					HAL_LOGD("request queue is full,discard this request.");
-				} else {
-					reqNum++;
+			if (!curReq) {
+				HAL_LOGD("req is NULL");
+				return 0;
+			}
+			reqNum++;
+			isReqFull = true;
+			/*for cts testImmediateZoom*/
+			ret = find_camera_metadata_entry(curReq, ANDROID_CONTROL_CAPTURE_INTENT, &entry);
+			if (ret == NAME_NOT_FOUND) {
+				HAL_LOGE("%s not found!",__FUNCTION__);
+			} else if (ret == OK) {
+				if ((capture_intent)entry.data.u8[0] == CAPTURE_INTENT_STILL_CAPTURE) {
 					m_ReqQueue.push_back(curReq);
+					isFreeReq = false;
+					HAL_LOGD("%s force process %p",__FUNCTION__, curReq);
 				}
 			}
-			HAL_LOGD("%s Srv req %p",__FUNCTION__,curReq);
+			if (isFreeReq) {
+				HAL_LOGD("queue is full. ignoring request");
+				ret = m_requestQueueOps->free_request(m_requestQueueOps, curReq);
+				if (ret < 0)
+					HAL_LOGE("ERR: free_request ret = %d", ret);
+			}
+			goto deq_over;
+		} else {
+			m_ReqQueue.push_back(curReq);
+			goto deq_over;
 		}
-		HAL_LOGD("srv clear flag processing=%d",m_reqIsProcess);
+	}
+deq_over:
+	while (curReq) {
+		m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
+		if (curReq) {
+			if (reqNum >= MAX_REQUEST_NUM) {
+				HAL_LOGD("request queue is full,discard this request.");
+				ret = m_requestQueueOps->free_request(m_requestQueueOps, curReq);
+				if (ret < 0)
+					HAL_LOGE("ERR: free_request ret = %d", ret);
+			} else {
+				/*release rec buf req insert capture req back just right*/
+				ret = find_camera_metadata_entry(curReq, ANDROID_SPRD_REC_BUF_INFO, &entry);
+				if (ret == NAME_NOT_FOUND) {
+					HAL_LOGE("%s not found!",__FUNCTION__);
+				} else if (ret == OK) {
+					if (entry.data.i32[0] != -1) {
+						isRecReleaseBuf = true;
+						DirectProcessRecReleaseBuf(entry.data.i32[0], curReq);
+					}
+				}
+				if (!isRecReleaseBuf) {
+					reqNum++;
+					m_ReqQueue.push_back(curReq);
+				} else {
+					isRecReleaseBuf = false;
+				}
+			}
+		}
+		HAL_LOGD("%s Srv req %p",__FUNCTION__,curReq);
+	}
+	HAL_LOGD("srv clear flag processing=%d,recbuf=%d,reqful=%d,capreq=%d",
+				m_reqIsProcess, isRecReleaseBuf, isReqFull, isFreeReq);
+	if (!isRecReleaseBuf && (!isReqFull || (isReqFull && !isFreeReq))) {
 		if (!m_reqIsProcess) {
 			m_RequestQueueThread->SetSignal(SIGNAL_REQ_THREAD_REQ_Q_NOT_EMPTY);
 		}
-		return 0;
 	}
+	return 0;
 }
 
 int SprdCameraHWInterface2::setFrameQueueDstOps(const camera2_frame_queue_dst_ops_t *frame_dst_ops)
@@ -841,6 +863,9 @@ status_t SprdCameraHWInterface2::CamconstructDefaultRequest(
 
 	static const uint8_t burstCapCnt = 0;
 	ADD_OR_SIZE(ANDROID_SPRD_BURST_CAP_CNT, &burstCapCnt, 1);
+
+	static const int bufID = -1;
+	ADD_OR_SIZE(ANDROID_SPRD_REC_BUF_INFO, &bufID, 1);
 
 	if (sizeRequest) {
 		HAL_LOGV("Allocating %d entries, %d extra bytes for "
@@ -1975,7 +2000,6 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 		for (Index = 0; Index < targetStreamParms->numSvcBuffers ; Index++) {
 			if (*buf == targetStreamParms->svcBufHandle[Index]) {
 				found = true;
-				targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 				HAL_LOGD("Index=%d",Index);
 				break;
 			}
@@ -1984,6 +2008,13 @@ void SprdCameraHWInterface2::DisplayPictureImg(camera_frame_type *frame)
 			HAL_LOGE("error cannot found buf");
 			goto cancel_buf;
 		}
+	}
+	if (targetStreamParms->svcBufStatus[Index] != ON_SERVICE
+			&&	targetStreamParms->svcBufStatus[Index] != ON_HAL_INIT) {
+		HAL_LOGE("Error buf stat=%d", targetStreamParms->svcBufStatus[Index]);
+		goto cancel_buf;
+	} else {
+		targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 	}
 	if (m_grallocHal->lock(m_grallocHal, *buf, targetStreamParms->usage, 0, 0,
 			targetStreamParms->width, targetStreamParms->height, &VirtBuf) != 0) {
@@ -2334,7 +2365,7 @@ bool SprdCameraHWInterface2::getPreviewBuffer(bool isPrvAftCap)
 	}
 	/*check buf state*/
 	if (DynamicIndex != targetStreamParms->numSvcBuffers) {
-		HAL_LOGD("buf num is error dymic=%d", DynamicIndex);
+		HAL_LOGD("Error buf stat dymic=%d", DynamicIndex);
 		return false;
 	}
 
@@ -2385,6 +2416,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 			targetStreamParms->phyAdd[i] = phyaddr;
 			targetStreamParms->svcBufHandle[i] = registeringBuffers[i];//important
 			targetStreamParms->svcBufStatus[i] = ON_HAL_INIT;
+			targetStreamParms->bufIsRecRelease[i] = true;
 			HAL_LOGD("index=%d Preview phyadd=0x%x,virtadd=0x%x,srv_add=0x%x,size %d",
 					i, (uint32_t)phyaddr,priv_handle->base,(uint32_t)targetStreamParms->svcBufHandle[i],size);
 		}
@@ -3162,7 +3194,8 @@ void SprdCameraHWInterface2::SetCameraZoomRect(cropZoom *crop)
 {
 	uint16_t wid = 0, height = 0;
 	cropZoom zoom1 = {0,0,0,0};
-	if (CAMERA_ZSL_MODE == GetCameraPictureMode() || CAMERA_ANDROID_ZSL_MODE == GetCameraPictureMode()) {
+
+	if (CAMERA_ANDROID_ZSL_MODE == GetCameraPictureMode()) {
 		camera_get_sensor_mode_trim(2, &zoom1, &wid, &height);
 	} else {
 		camera_get_sensor_mode_trim(0, &zoom1, &wid, &height);
@@ -3247,10 +3280,7 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 		if (res) {
 			HAL_LOGE("ERR: drv not support zoom");
 		}
-		zoom.crop_x = srcreq->cropRegion0;
-		zoom.crop_y = srcreq->cropRegion1;
-		zoom.crop_w = srcreq->cropRegion2;
-		zoom.crop_h = srcreq->cropRegion3;
+		zoom = srcreq->cropRegion;
 	}
 	if (m_Stream[STREAM_ID_PREVIEW] != NULL) {
 		targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW]->m_parameters);
@@ -3411,6 +3441,9 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 								mIsChangePicSize = true;
 							}
 							#endif
+							if (GetCameraPictureMode() == CAMERA_ZSL_MODE) {
+								SET_PARM(CAMERA_PARM_DCDV_MODE, 1);
+							}
 						}
 						if (srcreq->isCropSet) {
 							SetCameraZoomRect(&zoom);
@@ -3447,10 +3480,7 @@ int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSet
 		if (res) {
 			HAL_LOGE("ERR: drv not support zoom");
 		}
-		zoom.crop_x = srcreq->cropRegion0;
-		zoom.crop_y = srcreq->cropRegion1;
-		zoom.crop_w = srcreq->cropRegion2;
-		zoom.crop_h = srcreq->cropRegion3;
+		zoom = srcreq->cropRegion;
 	}
 
 	targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW]->m_parameters);
@@ -3565,7 +3595,6 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 	int32_t th_q = 0, jpeg_q = 0;
 	int32_t tmpMask = 0;
 	stream_parameters_t 	*targetStreamParms = NULL;
-	Mutex::Autolock lock(m_requestMutex);
 
 	if(!srcreq) {
 		HAL_LOGD("Err para is NULL!");
@@ -3583,10 +3612,7 @@ void SprdCameraHWInterface2::Camera2ProcessReq( camera_req_info *srcreq)
 		if (res) {
 			HAL_LOGE("ERR: drv not support zoom");
 		}
-		zoom.crop_x = srcreq->cropRegion0;
-		zoom.crop_y = srcreq->cropRegion1;
-		zoom.crop_w = srcreq->cropRegion2;
-		zoom.crop_h = srcreq->cropRegion3;
+		zoom = srcreq->cropRegion;
 		if (mCameraState.preview_state == SPRD_PREVIEW_IN_PROGRESS
 			&& tmpIntent != CAPTURE_INTENT_STILL_CAPTURE) {
 			if (!((tmpIntent == CAPTURE_INTENT_VIDEO_RECORD
@@ -3626,7 +3652,43 @@ freeReq:
 	SetDcDircToDvSnap(false);
 }
 
-void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq)
+void SprdCameraHWInterface2::DirectProcessRecReleaseBuf(int bufID, camera_metadata_t *req)
+{
+	int bufIDs = -1;
+	status_t res = 0;
+	int32_t outStreamMask = 0;
+	stream_parameters_t *targetStreamParms = &(m_Stream[STREAM_ID_PREVIEW]->m_parameters);
+	Mutex::Autolock lock(m_prvBufMutex);
+
+	bufIDs = bufID;
+	HAL_LOGD("rec buf id=0x%x", bufIDs);
+	if (bufIDs >> 16) {
+		//HAL_LOGD("rec over id=0x%x", bufIDs);
+		outStreamMask = GetOutputStreamMask();
+		if (outStreamMask & STREAM_MASK_RECORD)
+			SetOutputStreamMask(outStreamMask & ~STREAM_MASK_RECORD);
+	}
+	targetStreamParms->bufIsRecRelease[(bufIDs >> 8) & 0xff] = true;
+	bufIDs &= 0xff;
+	if (bufIDs  == 0xff || !(bufIDs >= 0 && bufIDs < targetStreamParms->numSvcBuffers)) {
+		goto free_req;
+	}
+	HAL_LOGV("release=%d,stat=%d", targetStreamParms->bufIsRecRelease[bufIDs],
+			targetStreamParms->svcBufStatus[mPreviewBufIndex_dynamic[bufIDs]]);
+	if (targetStreamParms->bufIsRecRelease[bufIDs]
+		&& targetStreamParms->svcBufStatus[mPreviewBufIndex_dynamic[bufIDs]] != ON_HAL_DRIVER) {
+		res = camera_release_frame(bufIDs);
+		targetStreamParms->svcBufStatus[mPreviewBufIndex_dynamic[bufIDs]] = ON_HAL_DRIVER;
+	} else {
+		HAL_LOGD("Error buf stat");
+	}
+free_req:
+	res = m_requestQueueOps->free_request(m_requestQueueOps, req);
+	if (res < 0)
+		HAL_LOGE("ERR: free_request res = %d", res);
+}
+
+void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq, bool *isDirectProc)
 {
 	status_t res = 0;
 	camera_metadata_entry_t entry;
@@ -3639,6 +3701,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 	uint16_t wid = 0, height = 0;
 	size_t i = 0;
 	bool IsCapIntChange = false;
+	bool isRecord = false;
 	char value[PROPERTY_VALUE_MAX];
 	int32_t frameRate = 0;
 	int32_t th_q = 0, jpeg_q = 0;
@@ -3660,8 +3723,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 										}\
 									}
 	m_reqIsProcess = true;
+	*isDirectProc = false;
 	srcreq->ori_req = orireq;
-    reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
+	reqCount = (uint32_t)get_camera_metadata_entry_count(srcreq->ori_req);
 	if (!(GetContinuPicCount() > 0 && GetContinuPicCount() < m_staticReqInfo.capMode
 			&& m_staticReqInfo.capMode > 1))
 		camera_cfg_rot_cap_param_reset();
@@ -3790,12 +3854,9 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 				zoom0.crop_y = entry.data.i32[1] & ALIGN_ZOOM_CROP_BITS;
 				zoom0.crop_w = entry.data.i32[2] & ALIGN_ZOOM_CROP_BITS;
 				zoom0.crop_h = entry.data.i32[3] & ALIGN_ZOOM_CROP_BITS;
-				if (zoom0.crop_x != srcreq->cropRegion0 || zoom0.crop_y != srcreq->cropRegion1\
-					  || zoom0.crop_w != srcreq->cropRegion2 || zoom0.crop_h != srcreq->cropRegion3) {
-				    srcreq->cropRegion0 = zoom0.crop_x;
-					srcreq->cropRegion1 = zoom0.crop_y;
-					srcreq->cropRegion2 = zoom0.crop_w;
-					srcreq->cropRegion3 = zoom0.crop_h;
+				if (zoom0.crop_x != srcreq->cropRegion.crop_x || zoom0.crop_y != srcreq->cropRegion.crop_y\
+					  || zoom0.crop_w != srcreq->cropRegion.crop_w || zoom0.crop_h != srcreq->cropRegion.crop_h) {
+				    srcreq->cropRegion = zoom0;
 					srcreq->isCropSet = true;
 				}
 
@@ -4011,6 +4072,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 		#ifndef CONFIG_CAMERA_SMALL_PREVSIZE
 		picMode = CAMERA_ZSL_MODE;
 		#endif
+		isRecord = true;
 		if (srcreq->prvFrmRate != frameRate) {
 			srcreq->prvFrmRate = frameRate;
 		}
@@ -4019,6 +4081,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
 			picMode = CAMERA_HDR_MODE;
 		}
 	}
+	SET_PARM(CAMERA_PARM_DCDV_MODE, isRecord);
 	if (capMode > 1 && capMode < 256) {
 		if (picMode == CAMERA_NORMAL_MODE) {
 			picMode = CAMERA_NORMAL_CONTINUE_SHOT_MODE;
@@ -4044,10 +4107,7 @@ void SprdCameraHWInterface2::Camera2GetSrvReqInfo( camera_req_info *srcreq, came
     if (((mCameraState.preview_state == SPRD_IDLE && srcreq->captureIntent == CAPTURE_INTENT_VIDEO_RECORD) || \
 		(srcreq->captureIntent == CAPTURE_INTENT_STILL_CAPTURE) || IsCapIntChange \
 		|| (GetStartPreviewAftPic() && CAMERA_ANDROID_ZSL_MODE == m_camCtlInfo.pictureMode)) && srcreq->isCropSet == false){
-		srcreq->cropRegion0 = zoom0.crop_x;
-		srcreq->cropRegion1 = zoom0.crop_y;
-		srcreq->cropRegion2 = zoom0.crop_w;
-		srcreq->cropRegion3 = zoom0.crop_h;
+		srcreq->cropRegion = zoom0;
 		srcreq->isCropSet = true;
     }
 }
@@ -4301,9 +4361,6 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
 		HAL_LOGE("ERR: haven't stream ops");
 		return 0;
-	}
-	if (subStream == STREAM_ID_RECORD) {
-		m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, ANDROID_SPRD_NOTIFY_FLAG_REC_SYNC, 0, m_callbackClient);
 	}
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
 	if (ret != NO_ERROR || buf == NULL) {
@@ -4654,6 +4711,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	int OemIndex = 0;
 	int TrueID = 0;
 	sp<Stream> StreamSP = NULL;
+	int32_t streamOutMask = 0;
 	void *vaddr = NULL;
 	int phyaddr = 0;
 	int size = 0;
@@ -4680,6 +4738,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 	targetStreamParms->bufIndex = frame->buf_id;
 	targetStreamParms->m_timestamp = frame->timestamp;
 	TrueID = mPreviewBufIndex_dynamic[targetStreamParms->bufIndex];
+	streamOutMask = GetOutputStreamMask();
 	{
 		Mutex::Autolock lock(m_halCBMutex);
 		m_staticReqInfo.sensorTimeStamp = targetStreamParms->m_timestamp;
@@ -4693,8 +4752,8 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		}
 		****************************************************************************************/
 	}
-	HAL_LOGD("@@@ Index=%d trueID=%d status=%d StreamMask=0x%x",targetStreamParms->bufIndex,
-		TrueID,targetStreamParms->svcBufStatus[TrueID], GetOutputStreamMask());
+	HAL_LOGD("@@@ Index=%d trueID=%d status=%d StreamMask=0x%x time=%lld",targetStreamParms->bufIndex,
+		TrueID,targetStreamParms->svcBufStatus[TrueID], streamOutMask, targetStreamParms->m_timestamp);
 	if (GetStartPreviewAftPic()) {
 		SetStartPreviewAftPic(false);
 		if (StreamSP->m_IsFirstFrm) {
@@ -4715,7 +4774,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		&& targetStreamParms->svcBufStatus[TrueID] != ON_HAL_INIT
 		&& targetStreamParms->svcBufStatus[TrueID] != ON_SERVICE
 		) {
-		HAL_LOGE("BufStatus error(%d)",
+		HAL_LOGE("Error buf stat=(%d)",
 		targetStreamParms->svcBufStatus[TrueID]);
 		if (!StreamSP->m_IsFirstFrm) {
 			StreamSP->m_IsFirstFrm = true;
@@ -4752,7 +4811,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		return;
 	}
 
-	if (GetOutputStreamMask() & STREAM_MASK_PRVCB) {
+	if (streamOutMask & STREAM_MASK_PRVCB) {
 		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_PRVCB];
 
 		if (SUBSTREAM_TYPE_PRVCB == subParameters->type &&
@@ -4762,16 +4821,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 		}
 	}
 
-	if (GetOutputStreamMask() & STREAM_MASK_RECORD && !GetRecStopMsg()) {
-		substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_RECORD];
-
-		if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
-			displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[TrueID]),\
-						targetStreamParms->m_timestamp,STREAM_ID_RECORD);
-		}
-	}
-
-	if (GetOutputStreamMask() & STREAM_MASK_PREVIEW) {
+	if (streamOutMask & STREAM_MASK_PREVIEW) {
 		buf = &(targetStreamParms->svcBufHandle[TrueID]);
 		priv_handle = reinterpret_cast<const private_handle_t *>(*buf);
 		phyaddr = targetStreamParms->phyAdd[TrueID];
@@ -4805,6 +4855,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				if (targetStreamParms->bufIsCancel[Index]) {
 					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 					targetStreamParms->bufIsCancel[Index] = false;
+					OemIndex = 0xff;
 					goto enq_buf;
 				} else if (targetStreamParms->svcBufStatus[Index] == ON_SERVICE) {
 
@@ -4834,16 +4885,18 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				}
 				goto proc_req_over;
 			}
-			res = camera_release_frame(OemIndex);
-			if (res) {
-				HAL_LOGD("error release buf deq from graphic");
-				if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
-					HAL_LOGE("Error cancelbuf!");
+			if (!(streamOutMask & STREAM_MASK_RECORD && !GetRecStopMsg())) {
+				res = camera_release_frame(OemIndex);
+				if (res) {
+					HAL_LOGD("error release buf deq from graphic");
+					if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
+						HAL_LOGE("Error cancelbuf!");
+					} else {
+						targetStreamParms->svcBufStatus[Index] = ON_HAL_INIT;
+					}
 				} else {
-					targetStreamParms->svcBufStatus[Index] = ON_HAL_INIT;
+					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 				}
-			} else {
-				targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 			}
 			enq_buf:
 			res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
@@ -4856,7 +4909,30 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				}
 				goto proc_req_over;
 			} else {
-				targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
+				if (streamOutMask & STREAM_MASK_RECORD && !GetRecStopMsg()) {
+					substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_RECORD];
+
+					if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
+						int bufInfo[6];
+						{
+							int *tmp = NULL;
+							Mutex::Autolock lock(m_prvBufMutex);
+
+							memset(bufInfo, 0 ,sizeof(bufInfo));
+							tmp = &(bufInfo[0]);
+							*tmp++ = (int)targetStreamParms->svcBufHandle[TrueID];
+							*((int64_t *)tmp) = targetStreamParms->m_timestamp;
+							*(tmp + 2) = OemIndex | (targetStreamParms->bufIndex << 8);/*to release buf id to oem*/
+							targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
+							targetStreamParms->bufIsRecRelease[targetStreamParms->bufIndex] = false;/*oem index*/
+						}
+						m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, ANDROID_SPRD_NOTIFY_FLAG_REC_SYNC, (int)bufInfo, m_callbackClient);
+					} else {
+						targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
+					}
+				} else {
+					targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
+				}
 			}
 			if (!StreamSP->m_IsFirstFrm) {
 				StreamSP->m_IsFirstFrm = true;
@@ -4864,7 +4940,7 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 			}
 			if(CAMERA_ANDROID_ZSL_MODE == GetCameraPictureMode()){
 				if (FILT_FRM_NUM(m_PrvFrmCnt, ZSLPRVFRMINTERVAL)) {
-					if(GetOutputStreamMask() & STREAM_MASK_ZSL && (0 == GetReprocessingFlag())){
+					if(streamOutMask & STREAM_MASK_ZSL && (0 == GetReprocessingFlag())){
 						{
 							Mutex::Autolock lock(m_afTrigLock);
 							m_camCtlInfo.aeStatus = AE_STATE_CONVERGED;
@@ -4888,10 +4964,10 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				HAL_LOGD("not equal srv bufq, index=%d",TrueID);
 				res = camera_release_frame(targetStreamParms->bufIndex);
 				if (res) {
-					HAL_LOGD("ERR release buf deq from graphic");
+					HAL_LOGD("error release buf to oem");
 				}
 			} else {
-				HAL_LOGE("buf sta error!");
+				HAL_LOGE("Error buf stat=%d", targetStreamParms->svcBufStatus[TrueID]);
 			}
 		}
     } else {
@@ -5109,6 +5185,7 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 	uint32_t currentSignal = self->GetProcessingSignal();
 	RequestQueueThread *  selfThread      = ((RequestQueueThread*)self);
 	int ret;
+	bool isDirectProc = false;
 
     HAL_LOGD("RequestQueueThread (%x)", currentSignal);
 
@@ -5130,8 +5207,9 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 	        else
 			{
 			    HAL_LOGD("bef curreq=0x%x", (uint32_t)curReq);
-			    Camera2GetSrvReqInfo(&m_staticReqInfo, curReq);
-				Camera2ProcessReq(&m_staticReqInfo);
+			    Camera2GetSrvReqInfo(&m_staticReqInfo, curReq, &isDirectProc);
+				if (!isDirectProc)
+					Camera2ProcessReq(&m_staticReqInfo);
 	            HAL_LOGD("aft");
 	        }
 		}
@@ -5588,7 +5666,7 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             sizeof(exposureCompensationRange)/sizeof(int32_t));
 
     static const int32_t availableTargetFpsRangesBack[] = {
-            10, 20, 10, 25, 10, 30, 10, 31 /*4, 25, 5, 30*/
+            10, 20, 10, 25, 10, 30 /*4, 25, 5, 30*/
     };
 
     static const int32_t availableTargetFpsRangesFront[] = {
