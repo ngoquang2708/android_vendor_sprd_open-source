@@ -456,11 +456,13 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	    memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
 	    rlen=eng_diag_attest(buf, len, eng_diag_buf);
 	    eng_diag_len = rlen;
-	    for(i=0;i<eng_diag_len;i++)
-	    {
-		ENG_LOG("%s: eng_diag_buf[%d]=%x\n",__FUNCTION__, i,eng_diag_buf[i]);
-	    }
-	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+		if(eng_diag_len > 0) {
+			for(i=0;i<eng_diag_len;i++)
+		    {
+				ENG_LOG("%s: eng_diag_buf[%d]=%x\n",__FUNCTION__, i,eng_diag_buf[i]);
+		    }
+		    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+		}
 	    return 0;
 	    break;
 	case CMD_USER_AUTOTEST_PATH_CONFIRM:
