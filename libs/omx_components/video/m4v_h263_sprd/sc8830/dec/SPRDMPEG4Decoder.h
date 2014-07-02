@@ -70,6 +70,7 @@ protected:
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortEnableCompleted(OMX_U32 portIndex, bool enabled);
     virtual void onPortFlushPrepare(OMX_U32 portIndex);
+    virtual void onReset();
 
     virtual OMX_ERRORTYPE getExtensionIndex(
         const char *name, OMX_INDEXTYPE *index);

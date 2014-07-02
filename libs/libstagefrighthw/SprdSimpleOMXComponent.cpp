@@ -536,6 +536,10 @@ void SprdSimpleOMXComponent::onChangeState(OMX_STATETYPE state) {
     checkTransitions();
 }
 
+void SprdSimpleOMXComponent::onReset() {
+    // no-op
+}
+
 void SprdSimpleOMXComponent::onPortEnable(OMX_U32 portIndex, bool enable) {
     CHECK_LT(portIndex, mPorts.size());
 
@@ -677,6 +681,10 @@ void SprdSimpleOMXComponent::checkTransitions() {
 
         if (transitionComplete) {
             mState = mTargetState;
+
+            if (mState == OMX_StateLoaded) {
+                onReset();
+            }
 
             notify(OMX_EventCmdComplete, OMX_CommandStateSet, mState, NULL);
         }
