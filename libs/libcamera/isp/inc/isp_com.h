@@ -24,6 +24,7 @@
 #include "isp_drv.h"
 #include "sensor_raw.h"
 #include "isp_awb.h"
+#include "isp_raw.h"
 #include "isp_ae.h"
 #include "isp_af.h"
 #include "isp_alg.h"

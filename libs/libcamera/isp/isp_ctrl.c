@@ -82,6 +82,9 @@
 
 #define ISP_THREAD_QUEUE_NUM 50
 #define ISP_ID_INVALID 0xff
+#define _ISP_VERSION_00000000_ID 0x00000000
+#define _ISP_VERSION_00010000_ID 0x00010000
+#define _ISP_VERSION_00010001_ID 0x00010001
 /**---------------------------------------------------------------------------*
 **				Data Structures 					*
 **---------------------------------------------------------------------------*/
@@ -92,6 +95,8 @@
 static int32_t _ispAemEb(uint32_t handler_id);
 static int32_t _ispAwbCorrect(uint32_t handler_id);
 static int _isp_proc_msg_post(struct isp_msg *message);
+static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr); 
+static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr);
 
 /**---------------------------------------------------------------------------*
 **				Local Variables 					*
@@ -3013,6 +3018,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	//SENSOR_TRIM_T* resolution_trim_ptr = NULL;
 	uint32_t i = 0x00;
 	uint32_t j = 0x00;
+	uint32_t *version_id = 0;
 	uint32_t max_param_index = 0x00;
 
 	isp_context_ptr->src.w=param_ptr->data.input_size.w;
@@ -3037,178 +3043,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 
 	ISP_LOG("param_index, 0x%x",isp_context_ptr->param_index);
 
-	// isp tune param
-	isp_context_ptr->blc.bypass=raw_tune_ptr->blc_bypass;
-	isp_context_ptr->nlc.bypass=raw_tune_ptr->nlc_bypass;
-	isp_context_ptr->lnc.bypass=raw_tune_ptr->lnc_bypass;
-	isp_context_ptr->awbm.bypass=ISP_EB;
-	isp_context_ptr->awbc.bypass=raw_tune_ptr->awb_bypass;
-	isp_context_ptr->awb.bypass=raw_tune_ptr->awb_bypass;
-	isp_context_ptr->awb.back_bypass=raw_tune_ptr->awb_bypass;
-	isp_context_ptr->ae.bypass=raw_tune_ptr->ae_bypass;
-	isp_context_ptr->ae.back_bypass=raw_tune_ptr->ae_bypass;
-	isp_context_ptr->bpc.bypass=raw_tune_ptr->bpc_bypass;
-	isp_context_ptr->denoise.bypass=raw_tune_ptr->denoise_bypass;
-	isp_context_ptr->grgb.bypass=raw_tune_ptr->grgb_bypass;
-	isp_context_ptr->cmc.bypass=raw_tune_ptr->cmc_bypass;
-	isp_context_ptr->gamma.bypass=raw_tune_ptr->gamma_bypass;
-	isp_context_ptr->uv_div.bypass=raw_tune_ptr->uvdiv_bypass;
-	isp_context_ptr->pref.bypass=raw_tune_ptr->pref_bypass;
-	isp_context_ptr->bright.bypass=raw_tune_ptr->bright_bypass;
-	isp_context_ptr->contrast.bypass=raw_tune_ptr->contrast_bypass;
-	isp_context_ptr->hist.bypass=raw_tune_ptr->hist_bypass;
-	isp_context_ptr->auto_contrast.bypass=raw_tune_ptr->auto_contrast_bypass;
-	isp_context_ptr->saturation.bypass=raw_tune_ptr->saturation_bypass;
-	isp_context_ptr->af.bypass=raw_tune_ptr->af_bypass;
-	isp_context_ptr->af.back_bypass=raw_tune_ptr->af_bypass;
-	isp_context_ptr->af.monitor_bypass=ISP_EB;
-	isp_context_ptr->edge.bypass=raw_tune_ptr->edge_bypass;
-	isp_context_ptr->emboss.bypass=ISP_EB;
-	isp_context_ptr->fcs.bypass=raw_tune_ptr->fcs_bypass;
-	isp_context_ptr->css.bypass=raw_tune_ptr->css_bypass;
-	isp_context_ptr->css.bypass_bakup = raw_tune_ptr->css_bypass;
-	isp_context_ptr->hdr.bypass=ISP_EB;
-	isp_context_ptr->global.bypass=raw_tune_ptr->glb_gain_bypass;
-	isp_context_ptr->chn.bypass=raw_tune_ptr->chn_gain_bypass;
-
-	//blc
-	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
-	isp_context_ptr->blc.r=raw_tune_ptr->blc.offset[0].r;
-	isp_context_ptr->blc.gr=raw_tune_ptr->blc.offset[0].gr;
-	isp_context_ptr->blc.gb=raw_tune_ptr->blc.offset[0].gb;
-	isp_context_ptr->blc.b=raw_tune_ptr->blc.offset[0].b;
-
-	for(i=0x00; i<8; i++) {
-		isp_context_ptr->blc_offset[i].r=raw_tune_ptr->blc.offset[i].r;
-		isp_context_ptr->blc_offset[i].gr=raw_tune_ptr->blc.offset[i].gr;
-		isp_context_ptr->blc_offset[i].gb=raw_tune_ptr->blc.offset[i].gb;
-		isp_context_ptr->blc_offset[i].b=raw_tune_ptr->blc.offset[i].b;
-	}
-
-	//nlc
-	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.r_node, (void*)raw_tune_ptr->nlc.r_node_ptr, sizeof(uint16_t)*29);
-	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.g_node, (void*)raw_tune_ptr->nlc.g_node_ptr, sizeof(uint16_t)*29);
-	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.b_node, (void*)raw_tune_ptr->nlc.b_node_ptr, sizeof(uint16_t)*29);
-	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.l_node, (void*)raw_tune_ptr->nlc.l_node_ptr, sizeof(uint16_t)*29);
-	isp_context_ptr->nlc.r_node[0]=raw_tune_ptr->nlc.r_node[0];
-	isp_context_ptr->nlc.r_node[1]=raw_tune_ptr->nlc.r_node[1];
-	isp_context_ptr->nlc.r_node[2]=raw_tune_ptr->nlc.r_node[2];
-	isp_context_ptr->nlc.r_node[3]=raw_tune_ptr->nlc.r_node[3];
-	isp_context_ptr->nlc.r_node[4]=raw_tune_ptr->nlc.r_node[4];
-	isp_context_ptr->nlc.r_node[5]=raw_tune_ptr->nlc.r_node[5];
-	isp_context_ptr->nlc.r_node[6]=raw_tune_ptr->nlc.r_node[6];
-	isp_context_ptr->nlc.r_node[7]=raw_tune_ptr->nlc.r_node[7];
-	isp_context_ptr->nlc.r_node[8]=raw_tune_ptr->nlc.r_node[8];
-	isp_context_ptr->nlc.r_node[9]=raw_tune_ptr->nlc.r_node[9];
-	isp_context_ptr->nlc.r_node[10]=raw_tune_ptr->nlc.r_node[10];
-	isp_context_ptr->nlc.r_node[11]=raw_tune_ptr->nlc.r_node[11];
-	isp_context_ptr->nlc.r_node[12]=raw_tune_ptr->nlc.r_node[12];
-	isp_context_ptr->nlc.r_node[13]=raw_tune_ptr->nlc.r_node[13];
-	isp_context_ptr->nlc.r_node[14]=raw_tune_ptr->nlc.r_node[14];
-	isp_context_ptr->nlc.r_node[15]=raw_tune_ptr->nlc.r_node[15];
-	isp_context_ptr->nlc.r_node[16]=raw_tune_ptr->nlc.r_node[16];
-	isp_context_ptr->nlc.r_node[17]=raw_tune_ptr->nlc.r_node[17];
-	isp_context_ptr->nlc.r_node[18]=raw_tune_ptr->nlc.r_node[18];
-	isp_context_ptr->nlc.r_node[19]=raw_tune_ptr->nlc.r_node[19];
-	isp_context_ptr->nlc.r_node[20]=raw_tune_ptr->nlc.r_node[20];
-	isp_context_ptr->nlc.r_node[21]=raw_tune_ptr->nlc.r_node[21];
-	isp_context_ptr->nlc.r_node[22]=raw_tune_ptr->nlc.r_node[22];
-	isp_context_ptr->nlc.r_node[23]=raw_tune_ptr->nlc.r_node[23];
-	isp_context_ptr->nlc.r_node[24]=raw_tune_ptr->nlc.r_node[24];
-	isp_context_ptr->nlc.r_node[25]=raw_tune_ptr->nlc.r_node[25];
-	isp_context_ptr->nlc.r_node[26]=raw_tune_ptr->nlc.r_node[26];
-	isp_context_ptr->nlc.r_node[27]=raw_tune_ptr->nlc.r_node[27];
-	isp_context_ptr->nlc.r_node[28]=raw_tune_ptr->nlc.r_node[28];
-
-	isp_context_ptr->nlc.g_node[0]=raw_tune_ptr->nlc.g_node[0];
-	isp_context_ptr->nlc.g_node[1]=raw_tune_ptr->nlc.g_node[1];
-	isp_context_ptr->nlc.g_node[2]=raw_tune_ptr->nlc.g_node[2];
-	isp_context_ptr->nlc.g_node[3]=raw_tune_ptr->nlc.g_node[3];
-	isp_context_ptr->nlc.g_node[4]=raw_tune_ptr->nlc.g_node[4];
-	isp_context_ptr->nlc.g_node[5]=raw_tune_ptr->nlc.g_node[5];
-	isp_context_ptr->nlc.g_node[6]=raw_tune_ptr->nlc.g_node[6];
-	isp_context_ptr->nlc.g_node[7]=raw_tune_ptr->nlc.g_node[7];
-	isp_context_ptr->nlc.g_node[8]=raw_tune_ptr->nlc.g_node[8];
-	isp_context_ptr->nlc.g_node[9]=raw_tune_ptr->nlc.g_node[9];
-	isp_context_ptr->nlc.g_node[10]=raw_tune_ptr->nlc.g_node[10];
-	isp_context_ptr->nlc.g_node[11]=raw_tune_ptr->nlc.g_node[11];
-	isp_context_ptr->nlc.g_node[12]=raw_tune_ptr->nlc.g_node[12];
-	isp_context_ptr->nlc.g_node[13]=raw_tune_ptr->nlc.g_node[13];
-	isp_context_ptr->nlc.g_node[14]=raw_tune_ptr->nlc.g_node[14];
-	isp_context_ptr->nlc.g_node[15]=raw_tune_ptr->nlc.g_node[15];
-	isp_context_ptr->nlc.g_node[16]=raw_tune_ptr->nlc.g_node[16];
-	isp_context_ptr->nlc.g_node[17]=raw_tune_ptr->nlc.g_node[17];
-	isp_context_ptr->nlc.g_node[18]=raw_tune_ptr->nlc.g_node[18];
-	isp_context_ptr->nlc.g_node[19]=raw_tune_ptr->nlc.g_node[19];
-	isp_context_ptr->nlc.g_node[20]=raw_tune_ptr->nlc.g_node[20];
-	isp_context_ptr->nlc.g_node[21]=raw_tune_ptr->nlc.g_node[21];
-	isp_context_ptr->nlc.g_node[22]=raw_tune_ptr->nlc.g_node[22];
-	isp_context_ptr->nlc.g_node[23]=raw_tune_ptr->nlc.g_node[23];
-	isp_context_ptr->nlc.g_node[24]=raw_tune_ptr->nlc.g_node[24];
-	isp_context_ptr->nlc.g_node[25]=raw_tune_ptr->nlc.g_node[25];
-	isp_context_ptr->nlc.g_node[26]=raw_tune_ptr->nlc.g_node[26];
-	isp_context_ptr->nlc.g_node[27]=raw_tune_ptr->nlc.g_node[27];
-	isp_context_ptr->nlc.g_node[28]=raw_tune_ptr->nlc.g_node[28];
-
-	isp_context_ptr->nlc.b_node[0]=raw_tune_ptr->nlc.b_node[0];
-	isp_context_ptr->nlc.b_node[1]=raw_tune_ptr->nlc.b_node[1];
-	isp_context_ptr->nlc.b_node[2]=raw_tune_ptr->nlc.b_node[2];
-	isp_context_ptr->nlc.b_node[3]=raw_tune_ptr->nlc.b_node[3];
-	isp_context_ptr->nlc.b_node[4]=raw_tune_ptr->nlc.b_node[4];
-	isp_context_ptr->nlc.b_node[5]=raw_tune_ptr->nlc.b_node[5];
-	isp_context_ptr->nlc.b_node[6]=raw_tune_ptr->nlc.b_node[6];
-	isp_context_ptr->nlc.b_node[7]=raw_tune_ptr->nlc.b_node[7];
-	isp_context_ptr->nlc.b_node[8]=raw_tune_ptr->nlc.b_node[8];
-	isp_context_ptr->nlc.b_node[9]=raw_tune_ptr->nlc.b_node[9];
-	isp_context_ptr->nlc.b_node[10]=raw_tune_ptr->nlc.b_node[10];
-	isp_context_ptr->nlc.b_node[11]=raw_tune_ptr->nlc.b_node[11];
-	isp_context_ptr->nlc.b_node[12]=raw_tune_ptr->nlc.b_node[12];
-	isp_context_ptr->nlc.b_node[13]=raw_tune_ptr->nlc.b_node[13];
-	isp_context_ptr->nlc.b_node[14]=raw_tune_ptr->nlc.b_node[14];
-	isp_context_ptr->nlc.b_node[15]=raw_tune_ptr->nlc.b_node[15];
-	isp_context_ptr->nlc.b_node[16]=raw_tune_ptr->nlc.b_node[16];
-	isp_context_ptr->nlc.b_node[17]=raw_tune_ptr->nlc.b_node[17];
-	isp_context_ptr->nlc.b_node[18]=raw_tune_ptr->nlc.b_node[18];
-	isp_context_ptr->nlc.b_node[19]=raw_tune_ptr->nlc.b_node[19];
-	isp_context_ptr->nlc.b_node[20]=raw_tune_ptr->nlc.b_node[20];
-	isp_context_ptr->nlc.b_node[21]=raw_tune_ptr->nlc.b_node[21];
-	isp_context_ptr->nlc.b_node[22]=raw_tune_ptr->nlc.b_node[22];
-	isp_context_ptr->nlc.b_node[23]=raw_tune_ptr->nlc.b_node[23];
-	isp_context_ptr->nlc.b_node[24]=raw_tune_ptr->nlc.b_node[24];
-	isp_context_ptr->nlc.b_node[25]=raw_tune_ptr->nlc.b_node[25];
-	isp_context_ptr->nlc.b_node[26]=raw_tune_ptr->nlc.b_node[26];
-	isp_context_ptr->nlc.b_node[27]=raw_tune_ptr->nlc.b_node[27];
-	isp_context_ptr->nlc.b_node[28]=raw_tune_ptr->nlc.b_node[28];
-
-	isp_context_ptr->nlc.l_node[0]=raw_tune_ptr->nlc.l_node[0];
-	isp_context_ptr->nlc.l_node[1]=raw_tune_ptr->nlc.l_node[1];
-	isp_context_ptr->nlc.l_node[2]=raw_tune_ptr->nlc.l_node[2];
-	isp_context_ptr->nlc.l_node[3]=raw_tune_ptr->nlc.l_node[3];
-	isp_context_ptr->nlc.l_node[4]=raw_tune_ptr->nlc.l_node[4];
-	isp_context_ptr->nlc.l_node[5]=raw_tune_ptr->nlc.l_node[5];
-	isp_context_ptr->nlc.l_node[6]=raw_tune_ptr->nlc.l_node[6];
-	isp_context_ptr->nlc.l_node[7]=raw_tune_ptr->nlc.l_node[7];
-	isp_context_ptr->nlc.l_node[8]=raw_tune_ptr->nlc.l_node[8];
-	isp_context_ptr->nlc.l_node[9]=raw_tune_ptr->nlc.l_node[9];
-	isp_context_ptr->nlc.l_node[10]=raw_tune_ptr->nlc.l_node[10];
-	isp_context_ptr->nlc.l_node[11]=raw_tune_ptr->nlc.l_node[11];
-	isp_context_ptr->nlc.l_node[12]=raw_tune_ptr->nlc.l_node[12];
-	isp_context_ptr->nlc.l_node[13]=raw_tune_ptr->nlc.l_node[13];
-	isp_context_ptr->nlc.l_node[14]=raw_tune_ptr->nlc.l_node[14];
-	isp_context_ptr->nlc.l_node[15]=raw_tune_ptr->nlc.l_node[15];
-	isp_context_ptr->nlc.l_node[16]=raw_tune_ptr->nlc.l_node[16];
-	isp_context_ptr->nlc.l_node[17]=raw_tune_ptr->nlc.l_node[17];
-	isp_context_ptr->nlc.l_node[18]=raw_tune_ptr->nlc.l_node[18];
-	isp_context_ptr->nlc.l_node[19]=raw_tune_ptr->nlc.l_node[19];
-	isp_context_ptr->nlc.l_node[20]=raw_tune_ptr->nlc.l_node[20];
-	isp_context_ptr->nlc.l_node[21]=raw_tune_ptr->nlc.l_node[21];
-	isp_context_ptr->nlc.l_node[22]=raw_tune_ptr->nlc.l_node[22];
-	isp_context_ptr->nlc.l_node[23]=raw_tune_ptr->nlc.l_node[23];
-	isp_context_ptr->nlc.l_node[24]=raw_tune_ptr->nlc.l_node[24];
-	isp_context_ptr->nlc.l_node[25]=raw_tune_ptr->nlc.l_node[25];
-	isp_context_ptr->nlc.l_node[26]=raw_tune_ptr->nlc.l_node[26];
-	isp_context_ptr->nlc.l_node[27]=raw_tune_ptr->nlc.l_node[27];
-	isp_context_ptr->nlc.l_node[28]=raw_tune_ptr->nlc.l_node[28];
+	version_id = (uint32_t *)raw_tune_ptr;
+	ISP_LOG("param version_id :0x%08x", version_id[0]);
 
 	/*lnc*/
 	/*isp_context_ptr->lnc.param_addr[0]=(uint32_t)raw_fix_ptr->lnc.map[isp_context_ptr->param_index][0].param_addr;*/
@@ -3538,6 +3374,210 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	max_param_index=_ispGetIspParamMaxIndex(handler_id, raw_info_ptr);
 	isp_context_ptr->isp_lnc_addr=ispAlloc(handler_id, raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len);
 
+	
+	switch (version_id[0]) {
+	case _ISP_VERSION_00000000_ID:
+	case _ISP_VERSION_00010000_ID:
+		_ispSetV0001Param(handler_id,param_ptr);
+		break;
+	case _ISP_VERSION_00010001_ID:
+		_ispSetV00010001Param(handler_id,param_ptr);
+		break;
+	default:
+		break;
+	}
+	return rtn;
+}
+
+/* _ispSetV00010001Param --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+	struct sensor_raw_info* raw_info_ptr = (struct sensor_raw_info*)param_ptr->sensor_info_ptr;
+	struct isp_raw_tune_info *raw_tune_ptr = (struct isp_raw_tune_info *)raw_info_ptr->tune_ptr;
+	struct sensor_raw_fix_info* raw_fix_ptr = (struct sensor_raw_fix_info*)raw_info_ptr->fix_ptr;
+	struct sensor_raw_cali_info* cali_ptr = (struct sensor_raw_cali_info*)raw_info_ptr->cali_ptr;
+	uint32_t i = 0x00;
+	uint32_t j = 0x00;
+	// isp tune param
+	ISP_LOG("_ispSetV00010001Param V00010001");
+	isp_context_ptr->blc.bypass=raw_tune_ptr->blc.blc_bypass;
+	isp_context_ptr->nlc.bypass=raw_tune_ptr->nlc.nlc_bypass;
+	isp_context_ptr->lnc.bypass=raw_tune_ptr->lnc.lnc_bypass;
+	isp_context_ptr->awbm.bypass=ISP_EB;
+	isp_context_ptr->awbc.bypass=raw_tune_ptr->awb.awb_bypass;
+	isp_context_ptr->awb.bypass=raw_tune_ptr->awb.awb_bypass;
+	isp_context_ptr->awb.back_bypass=raw_tune_ptr->awb.awb_bypass;
+	isp_context_ptr->ae.bypass=raw_tune_ptr->ae.ae_bypass;
+	isp_context_ptr->ae.back_bypass=raw_tune_ptr->ae.ae_bypass;
+	isp_context_ptr->bpc.bypass=raw_tune_ptr->bpc.bpc_bypass;
+	isp_context_ptr->denoise.bypass=raw_tune_ptr->denoise.denoise_bypass;
+	isp_context_ptr->grgb.bypass=raw_tune_ptr->grgb.grgb_bypass;
+	isp_context_ptr->cmc.bypass=raw_tune_ptr->cmc.cmc_bypass;
+	isp_context_ptr->gamma.bypass=raw_tune_ptr->gamma.gamma_bypass;
+	isp_context_ptr->uv_div.bypass=raw_tune_ptr->uv_div.uvdiv_bypass;
+	isp_context_ptr->pref.bypass=raw_tune_ptr->pref.pref_bypass;
+	isp_context_ptr->bright.bypass=raw_tune_ptr->bright.bright_bypass;
+	isp_context_ptr->contrast.bypass=raw_tune_ptr->contrast.contrast_bypass;
+	isp_context_ptr->hist.bypass=raw_tune_ptr->hist.hist_bypass;
+	isp_context_ptr->auto_contrast.bypass=raw_tune_ptr->auto_contrast.auto_contrast_bypass;
+	isp_context_ptr->saturation.bypass=raw_tune_ptr->saturation.saturation_bypass;
+	isp_context_ptr->af.bypass=raw_tune_ptr->af.af_bypass;
+	isp_context_ptr->af.back_bypass=raw_tune_ptr->af.af_bypass;
+	isp_context_ptr->af.monitor_bypass=ISP_EB;
+	isp_context_ptr->edge.bypass=raw_tune_ptr->edge.edge_bypass;
+	isp_context_ptr->emboss.bypass=ISP_EB;
+	isp_context_ptr->fcs.bypass=raw_tune_ptr->fcs.fcs_bypass;
+	isp_context_ptr->css.bypass=raw_tune_ptr->css.css_bypass;
+	isp_context_ptr->css.bypass_bakup = raw_tune_ptr->css.css_bypass;
+	isp_context_ptr->hdr.bypass=ISP_EB;
+	isp_context_ptr->global.bypass=raw_tune_ptr->global.glb_gain_bypass;
+	isp_context_ptr->chn.bypass=raw_tune_ptr->chn.chn_gain_bypass;
+
+	//blc
+	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
+	isp_context_ptr->blc.r=raw_tune_ptr->blc.offset[0].r;
+	isp_context_ptr->blc.gr=raw_tune_ptr->blc.offset[0].gr;
+	isp_context_ptr->blc.gb=raw_tune_ptr->blc.offset[0].gb;
+	isp_context_ptr->blc.b=raw_tune_ptr->blc.offset[0].b;
+
+	for (i=0x00; i<8; i++) {
+		isp_context_ptr->blc_offset[i].r=raw_tune_ptr->blc.offset[i].r;
+		isp_context_ptr->blc_offset[i].gr=raw_tune_ptr->blc.offset[i].gr;
+		isp_context_ptr->blc_offset[i].gb=raw_tune_ptr->blc.offset[i].gb;
+		isp_context_ptr->blc_offset[i].b=raw_tune_ptr->blc.offset[i].b;
+	}
+
+	//nlc
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.r_node, (void*)raw_tune_ptr->nlc.r_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.g_node, (void*)raw_tune_ptr->nlc.g_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.b_node, (void*)raw_tune_ptr->nlc.b_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.l_node, (void*)raw_tune_ptr->nlc.l_node_ptr, sizeof(uint16_t)*29);
+	isp_context_ptr->nlc.r_node[0]=raw_tune_ptr->nlc.r_node[0];
+	isp_context_ptr->nlc.r_node[1]=raw_tune_ptr->nlc.r_node[1];
+	isp_context_ptr->nlc.r_node[2]=raw_tune_ptr->nlc.r_node[2];
+	isp_context_ptr->nlc.r_node[3]=raw_tune_ptr->nlc.r_node[3];
+	isp_context_ptr->nlc.r_node[4]=raw_tune_ptr->nlc.r_node[4];
+	isp_context_ptr->nlc.r_node[5]=raw_tune_ptr->nlc.r_node[5];
+	isp_context_ptr->nlc.r_node[6]=raw_tune_ptr->nlc.r_node[6];
+	isp_context_ptr->nlc.r_node[7]=raw_tune_ptr->nlc.r_node[7];
+	isp_context_ptr->nlc.r_node[8]=raw_tune_ptr->nlc.r_node[8];
+	isp_context_ptr->nlc.r_node[9]=raw_tune_ptr->nlc.r_node[9];
+	isp_context_ptr->nlc.r_node[10]=raw_tune_ptr->nlc.r_node[10];
+	isp_context_ptr->nlc.r_node[11]=raw_tune_ptr->nlc.r_node[11];
+	isp_context_ptr->nlc.r_node[12]=raw_tune_ptr->nlc.r_node[12];
+	isp_context_ptr->nlc.r_node[13]=raw_tune_ptr->nlc.r_node[13];
+	isp_context_ptr->nlc.r_node[14]=raw_tune_ptr->nlc.r_node[14];
+	isp_context_ptr->nlc.r_node[15]=raw_tune_ptr->nlc.r_node[15];
+	isp_context_ptr->nlc.r_node[16]=raw_tune_ptr->nlc.r_node[16];
+	isp_context_ptr->nlc.r_node[17]=raw_tune_ptr->nlc.r_node[17];
+	isp_context_ptr->nlc.r_node[18]=raw_tune_ptr->nlc.r_node[18];
+	isp_context_ptr->nlc.r_node[19]=raw_tune_ptr->nlc.r_node[19];
+	isp_context_ptr->nlc.r_node[20]=raw_tune_ptr->nlc.r_node[20];
+	isp_context_ptr->nlc.r_node[21]=raw_tune_ptr->nlc.r_node[21];
+	isp_context_ptr->nlc.r_node[22]=raw_tune_ptr->nlc.r_node[22];
+	isp_context_ptr->nlc.r_node[23]=raw_tune_ptr->nlc.r_node[23];
+	isp_context_ptr->nlc.r_node[24]=raw_tune_ptr->nlc.r_node[24];
+	isp_context_ptr->nlc.r_node[25]=raw_tune_ptr->nlc.r_node[25];
+	isp_context_ptr->nlc.r_node[26]=raw_tune_ptr->nlc.r_node[26];
+	isp_context_ptr->nlc.r_node[27]=raw_tune_ptr->nlc.r_node[27];
+	isp_context_ptr->nlc.r_node[28]=raw_tune_ptr->nlc.r_node[28];
+
+	isp_context_ptr->nlc.g_node[0]=raw_tune_ptr->nlc.g_node[0];
+	isp_context_ptr->nlc.g_node[1]=raw_tune_ptr->nlc.g_node[1];
+	isp_context_ptr->nlc.g_node[2]=raw_tune_ptr->nlc.g_node[2];
+	isp_context_ptr->nlc.g_node[3]=raw_tune_ptr->nlc.g_node[3];
+	isp_context_ptr->nlc.g_node[4]=raw_tune_ptr->nlc.g_node[4];
+	isp_context_ptr->nlc.g_node[5]=raw_tune_ptr->nlc.g_node[5];
+	isp_context_ptr->nlc.g_node[6]=raw_tune_ptr->nlc.g_node[6];
+	isp_context_ptr->nlc.g_node[7]=raw_tune_ptr->nlc.g_node[7];
+	isp_context_ptr->nlc.g_node[8]=raw_tune_ptr->nlc.g_node[8];
+	isp_context_ptr->nlc.g_node[9]=raw_tune_ptr->nlc.g_node[9];
+	isp_context_ptr->nlc.g_node[10]=raw_tune_ptr->nlc.g_node[10];
+	isp_context_ptr->nlc.g_node[11]=raw_tune_ptr->nlc.g_node[11];
+	isp_context_ptr->nlc.g_node[12]=raw_tune_ptr->nlc.g_node[12];
+	isp_context_ptr->nlc.g_node[13]=raw_tune_ptr->nlc.g_node[13];
+	isp_context_ptr->nlc.g_node[14]=raw_tune_ptr->nlc.g_node[14];
+	isp_context_ptr->nlc.g_node[15]=raw_tune_ptr->nlc.g_node[15];
+	isp_context_ptr->nlc.g_node[16]=raw_tune_ptr->nlc.g_node[16];
+	isp_context_ptr->nlc.g_node[17]=raw_tune_ptr->nlc.g_node[17];
+	isp_context_ptr->nlc.g_node[18]=raw_tune_ptr->nlc.g_node[18];
+	isp_context_ptr->nlc.g_node[19]=raw_tune_ptr->nlc.g_node[19];
+	isp_context_ptr->nlc.g_node[20]=raw_tune_ptr->nlc.g_node[20];
+	isp_context_ptr->nlc.g_node[21]=raw_tune_ptr->nlc.g_node[21];
+	isp_context_ptr->nlc.g_node[22]=raw_tune_ptr->nlc.g_node[22];
+	isp_context_ptr->nlc.g_node[23]=raw_tune_ptr->nlc.g_node[23];
+	isp_context_ptr->nlc.g_node[24]=raw_tune_ptr->nlc.g_node[24];
+	isp_context_ptr->nlc.g_node[25]=raw_tune_ptr->nlc.g_node[25];
+	isp_context_ptr->nlc.g_node[26]=raw_tune_ptr->nlc.g_node[26];
+	isp_context_ptr->nlc.g_node[27]=raw_tune_ptr->nlc.g_node[27];
+	isp_context_ptr->nlc.g_node[28]=raw_tune_ptr->nlc.g_node[28];
+
+	isp_context_ptr->nlc.b_node[0]=raw_tune_ptr->nlc.b_node[0];
+	isp_context_ptr->nlc.b_node[1]=raw_tune_ptr->nlc.b_node[1];
+	isp_context_ptr->nlc.b_node[2]=raw_tune_ptr->nlc.b_node[2];
+	isp_context_ptr->nlc.b_node[3]=raw_tune_ptr->nlc.b_node[3];
+	isp_context_ptr->nlc.b_node[4]=raw_tune_ptr->nlc.b_node[4];
+	isp_context_ptr->nlc.b_node[5]=raw_tune_ptr->nlc.b_node[5];
+	isp_context_ptr->nlc.b_node[6]=raw_tune_ptr->nlc.b_node[6];
+	isp_context_ptr->nlc.b_node[7]=raw_tune_ptr->nlc.b_node[7];
+	isp_context_ptr->nlc.b_node[8]=raw_tune_ptr->nlc.b_node[8];
+	isp_context_ptr->nlc.b_node[9]=raw_tune_ptr->nlc.b_node[9];
+	isp_context_ptr->nlc.b_node[10]=raw_tune_ptr->nlc.b_node[10];
+	isp_context_ptr->nlc.b_node[11]=raw_tune_ptr->nlc.b_node[11];
+	isp_context_ptr->nlc.b_node[12]=raw_tune_ptr->nlc.b_node[12];
+	isp_context_ptr->nlc.b_node[13]=raw_tune_ptr->nlc.b_node[13];
+	isp_context_ptr->nlc.b_node[14]=raw_tune_ptr->nlc.b_node[14];
+	isp_context_ptr->nlc.b_node[15]=raw_tune_ptr->nlc.b_node[15];
+	isp_context_ptr->nlc.b_node[16]=raw_tune_ptr->nlc.b_node[16];
+	isp_context_ptr->nlc.b_node[17]=raw_tune_ptr->nlc.b_node[17];
+	isp_context_ptr->nlc.b_node[18]=raw_tune_ptr->nlc.b_node[18];
+	isp_context_ptr->nlc.b_node[19]=raw_tune_ptr->nlc.b_node[19];
+	isp_context_ptr->nlc.b_node[20]=raw_tune_ptr->nlc.b_node[20];
+	isp_context_ptr->nlc.b_node[21]=raw_tune_ptr->nlc.b_node[21];
+	isp_context_ptr->nlc.b_node[22]=raw_tune_ptr->nlc.b_node[22];
+	isp_context_ptr->nlc.b_node[23]=raw_tune_ptr->nlc.b_node[23];
+	isp_context_ptr->nlc.b_node[24]=raw_tune_ptr->nlc.b_node[24];
+	isp_context_ptr->nlc.b_node[25]=raw_tune_ptr->nlc.b_node[25];
+	isp_context_ptr->nlc.b_node[26]=raw_tune_ptr->nlc.b_node[26];
+	isp_context_ptr->nlc.b_node[27]=raw_tune_ptr->nlc.b_node[27];
+	isp_context_ptr->nlc.b_node[28]=raw_tune_ptr->nlc.b_node[28];
+
+	isp_context_ptr->nlc.l_node[0]=raw_tune_ptr->nlc.l_node[0];
+	isp_context_ptr->nlc.l_node[1]=raw_tune_ptr->nlc.l_node[1];
+	isp_context_ptr->nlc.l_node[2]=raw_tune_ptr->nlc.l_node[2];
+	isp_context_ptr->nlc.l_node[3]=raw_tune_ptr->nlc.l_node[3];
+	isp_context_ptr->nlc.l_node[4]=raw_tune_ptr->nlc.l_node[4];
+	isp_context_ptr->nlc.l_node[5]=raw_tune_ptr->nlc.l_node[5];
+	isp_context_ptr->nlc.l_node[6]=raw_tune_ptr->nlc.l_node[6];
+	isp_context_ptr->nlc.l_node[7]=raw_tune_ptr->nlc.l_node[7];
+	isp_context_ptr->nlc.l_node[8]=raw_tune_ptr->nlc.l_node[8];
+	isp_context_ptr->nlc.l_node[9]=raw_tune_ptr->nlc.l_node[9];
+	isp_context_ptr->nlc.l_node[10]=raw_tune_ptr->nlc.l_node[10];
+	isp_context_ptr->nlc.l_node[11]=raw_tune_ptr->nlc.l_node[11];
+	isp_context_ptr->nlc.l_node[12]=raw_tune_ptr->nlc.l_node[12];
+	isp_context_ptr->nlc.l_node[13]=raw_tune_ptr->nlc.l_node[13];
+	isp_context_ptr->nlc.l_node[14]=raw_tune_ptr->nlc.l_node[14];
+	isp_context_ptr->nlc.l_node[15]=raw_tune_ptr->nlc.l_node[15];
+	isp_context_ptr->nlc.l_node[16]=raw_tune_ptr->nlc.l_node[16];
+	isp_context_ptr->nlc.l_node[17]=raw_tune_ptr->nlc.l_node[17];
+	isp_context_ptr->nlc.l_node[18]=raw_tune_ptr->nlc.l_node[18];
+	isp_context_ptr->nlc.l_node[19]=raw_tune_ptr->nlc.l_node[19];
+	isp_context_ptr->nlc.l_node[20]=raw_tune_ptr->nlc.l_node[20];
+	isp_context_ptr->nlc.l_node[21]=raw_tune_ptr->nlc.l_node[21];
+	isp_context_ptr->nlc.l_node[22]=raw_tune_ptr->nlc.l_node[22];
+	isp_context_ptr->nlc.l_node[23]=raw_tune_ptr->nlc.l_node[23];
+	isp_context_ptr->nlc.l_node[24]=raw_tune_ptr->nlc.l_node[24];
+	isp_context_ptr->nlc.l_node[25]=raw_tune_ptr->nlc.l_node[25];
+	isp_context_ptr->nlc.l_node[26]=raw_tune_ptr->nlc.l_node[26];
+	isp_context_ptr->nlc.l_node[27]=raw_tune_ptr->nlc.l_node[27];
+	isp_context_ptr->nlc.l_node[28]=raw_tune_ptr->nlc.l_node[28];
+
 	/*ae*/
 	/*isp_context_ptr->ae.frame_mode=raw_tune_ptr->ae.frame_mode;
 	isp_context_ptr->ae.tab_type=raw_tune_ptr->ae.tab_type;
@@ -3558,6 +3598,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->ae.target_lum=raw_tune_ptr->ae.target_lum;
 	isp_context_ptr->ae.target_zone=raw_tune_ptr->ae.target_zone;
 	isp_context_ptr->ae.quick_mode=raw_tune_ptr->ae.quick_mode;
+	
 	if (ISP_ZERO == raw_tune_ptr->ae.min_exposure) {
 		isp_context_ptr->ae.min_exposure=ISP_ONE;
 	} else {
@@ -3762,7 +3803,906 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->awb_g_gain[8]=raw_tune_ptr->awb.g_gain[8];
 	isp_context_ptr->awb_b_gain[8]=raw_tune_ptr->awb.b_gain[8];
 
+	for (i=0x00; i<8; i++) {
+		isp_context_ptr->awb.gain_convert[i].r=raw_tune_ptr->awb.gain_convert[i].r;
+		isp_context_ptr->awb.gain_convert[i].g=raw_tune_ptr->awb.gain_convert[i].g;
+		isp_context_ptr->awb.gain_convert[i].b=raw_tune_ptr->awb.gain_convert[i].b;
+	}
+	/*isp_context_ptr->awb.mode=raw_tune_ptr->awb.mode;
+	isp_context_ptr->awb.weight=raw_tune_ptr->awb.weight;*/
+	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->awb.weight_ptr[2]=NULL;
+	
+	for (i=0x00; i<20; i++) {
+		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win_x[i];
+		isp_context_ptr->awb.win[i].yb=raw_tune_ptr->awb.win_yb[i];
+		isp_context_ptr->awb.win[i].yt=raw_tune_ptr->awb.win_yt[i];
+	}
+
+	isp_context_ptr->awb.cali_info.b_sum = cali_ptr->awb.cali_info.b_sum;
+	isp_context_ptr->awb.cali_info.r_sum = cali_ptr->awb.cali_info.r_sum;
+	isp_context_ptr->awb.cali_info.gr_sum = cali_ptr->awb.cali_info.gr_sum;
+	isp_context_ptr->awb.cali_info.gb_sum = cali_ptr->awb.cali_info.gb_sum;
+
+	isp_context_ptr->awb.golden_info.b_sum= cali_ptr->awb.golden_cali_info.b_sum;
+	isp_context_ptr->awb.golden_info.r_sum = cali_ptr->awb.golden_cali_info.r_sum;
+	isp_context_ptr->awb.golden_info.gr_sum = cali_ptr->awb.golden_cali_info.gr_sum;
+	isp_context_ptr->awb.golden_info.gb_sum = cali_ptr->awb.golden_cali_info.gb_sum;
+
+	isp_context_ptr->awb.alg_id=raw_tune_ptr->awb.alg_id;
+	isp_context_ptr->awb.scanline_map.addr=raw_fix_ptr->awb.addr;
+	isp_context_ptr->awb.scanline_map.len=raw_fix_ptr->awb.len;
+	isp_context_ptr->awb.gain_index=raw_tune_ptr->awb.gain_index;
+	isp_context_ptr->awb.target_zone=raw_tune_ptr->awb.target_zone;
+	isp_context_ptr->awb.quick_mode=raw_tune_ptr->awb.quick_mode;
+	isp_context_ptr->awb.smart=raw_tune_ptr->awb.smart;
+	isp_context_ptr->awb.cur_index=raw_tune_ptr->awb.smart_index;
+	isp_context_ptr->awb.prv_index=isp_context_ptr->awb.cur_index;
+	isp_context_ptr->awb.cur_gain.r=isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
+	isp_context_ptr->awb.cur_gain.g=isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
+	isp_context_ptr->awb.cur_gain.b=isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
+	isp_context_ptr->awb.cur_T = 4800;
+	isp_context_ptr->awb.matrix_index=ISP_ZERO;
+	isp_context_ptr->cmc_index=ISP_ZERO;
+	//isp_context_ptr->awb.cur_color_temperature=0x00;
+	isp_context_ptr->awb.set_eb=ISP_EB;
+	isp_context_ptr->awb.continue_focus_stat=_isp_ContinueFocusInforCallback;
+	isp_context_ptr->awb.set_saturation_offset = _ispCfgSaturationoffset;
+	isp_context_ptr->awb.set_hue_offset = _ispCfgHueoffset;
+	isp_context_ptr->awb.get_ev_lux= _ispGetEvLum;
+	isp_context_ptr->awb.GetDefaultGain = ispGetAwbDefaultGain;
+	isp_context_ptr->awb.change_param = isp_change_param;
+
+	isp_context_ptr->awbc.r_gain=isp_context_ptr->awb.cur_gain.r;
+	isp_context_ptr->awbc.g_gain=isp_context_ptr->awb.cur_gain.g;
+	isp_context_ptr->awbc.b_gain=isp_context_ptr->awb.cur_gain.b;
+
+	isp_context_ptr->awb.target_gain.r=isp_context_ptr->awb.cur_gain.r;
+	isp_context_ptr->awb.target_gain.g=isp_context_ptr->awb.cur_gain.g;
+	isp_context_ptr->awb.target_gain.b=isp_context_ptr->awb.cur_gain.b;
+#if 0
+	isp_context_ptr->awb.g_estimate.num=raw_tune_ptr->awb.g_estimate.num;
+	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++)
+	{
+		isp_context_ptr->awb.g_estimate.t_thr[i] = raw_tune_ptr->awb.g_estimate.t_thr[i];
+		isp_context_ptr->awb.g_estimate.g_thr[i][0] = raw_tune_ptr->awb.g_estimate.g_thr[i][0];
+		isp_context_ptr->awb.g_estimate.g_thr[i][1] = raw_tune_ptr->awb.g_estimate.g_thr[i][1];
+		isp_context_ptr->awb.g_estimate.w_thr[i][0] = raw_tune_ptr->awb.g_estimate.w_thr[i][0];
+		isp_context_ptr->awb.g_estimate.w_thr[i][1] = raw_tune_ptr->awb.g_estimate.w_thr[i][1];
+	}
+#endif
+	isp_context_ptr->awb.gain_adjust.num=raw_tune_ptr->awb.gain_adjust.num;
+
+	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++) {
+		isp_context_ptr->awb.gain_adjust.t_thr[i] = raw_tune_ptr->awb.gain_adjust.t_thr[i];
+		isp_context_ptr->awb.gain_adjust.w_thr[i] = raw_tune_ptr->awb.gain_adjust.w_thr[i];
+	}
+	isp_context_ptr->awb.t_func.a=raw_tune_ptr->awb.t_func.a;
+	isp_context_ptr->awb.t_func.b=raw_tune_ptr->awb.t_func.b;
+	isp_context_ptr->awb.t_func.shift=raw_tune_ptr->awb.t_func.shift;
+	isp_context_ptr->awb.wp_count_range.max_proportion=raw_tune_ptr->awb.wp_count_range.max_proportion;
+	isp_context_ptr->awb.wp_count_range.min_proportion=raw_tune_ptr->awb.wp_count_range.min_proportion;
+	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
+
+	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
+	
+	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
+		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
+		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
+	}
+
+	isp_context_ptr->awb.steady_speed = raw_tune_ptr->awb.steady_speed;
+	isp_context_ptr->awb.mointor_info=_ispAwbGetMonitorInfo;
+	isp_context_ptr->awb.set_monitor_win=_ispAwbSetMonitorWin;
+	isp_context_ptr->awb.recover_monitor_wn=_ispAwbSetMonitorWinRecover;
+
+	/*bpc*/
+	isp_context_ptr->bpc.mode=ISP_ZERO;
+	isp_context_ptr->bpc.flat_thr=raw_tune_ptr->bpc.flat_thr;
+	isp_context_ptr->bpc.std_thr=raw_tune_ptr->bpc.std_thr;
+	isp_context_ptr->bpc.texture_thr=raw_tune_ptr->bpc.texture_thr;
+
+	/*denoise*/
+	isp_context_ptr->denoise.write_back=raw_tune_ptr->denoise.write_back;
+	memcpy((void*)isp_context_ptr->denoise_tab[0].diswei, (void*)raw_tune_ptr->denoise.tab[0].diswei, 19);
+	memcpy((void*)isp_context_ptr->denoise_tab[0].ranwei, (void*)raw_tune_ptr->denoise.tab[0].ranwei, 31);
+	memcpy((void*)isp_context_ptr->denoise_tab[1].diswei, (void*)raw_tune_ptr->denoise.tab[1].diswei, 19);
+	memcpy((void*)isp_context_ptr->denoise_tab[1].ranwei, (void*)raw_tune_ptr->denoise.tab[1].ranwei, 31);
+	isp_context_ptr->denoise.r_thr=raw_tune_ptr->denoise.r_thr;
+	isp_context_ptr->denoise.g_thr=raw_tune_ptr->denoise.g_thr;
+	isp_context_ptr->denoise.b_thr=raw_tune_ptr->denoise.b_thr;
+	memcpy((void*)&isp_context_ptr->denoise.diswei, (void*)&raw_tune_ptr->denoise.tab[0].diswei, 19);
+	memcpy((void*)&isp_context_ptr->denoise.ranwei, (void*)&raw_tune_ptr->denoise.tab[0].ranwei, 31);
+	memcpy((void*)&isp_context_ptr->denoise_bak,(void*)&isp_context_ptr->denoise,sizeof(isp_context_ptr->denoise));
+	isp_ae_set_denosie_level(handler_id, 0);
+
+	/*grgb*/
+	isp_context_ptr->grgb.edge_thr=raw_tune_ptr->grgb.edge_thr;
+	isp_context_ptr->grgb.diff_thr=raw_tune_ptr->grgb.diff_thr;
+
+	/*cfa*/
+	isp_context_ptr->cfa.edge_thr=raw_tune_ptr->cfa.edge_thr;
+	isp_context_ptr->cfa.diff_thr=raw_tune_ptr->cfa.diff_thr;
+
+	/*cmc*/
+	/*SCI_MEMCPY((void*)&isp_context_ptr->cmc.matrix, (void*)&cmc->matrix, 18);*/
+	isp_context_ptr->cmc.matrix[0]=raw_tune_ptr->cmc.matrix[0][0];
+	isp_context_ptr->cmc.matrix[1]=raw_tune_ptr->cmc.matrix[0][1];
+	isp_context_ptr->cmc.matrix[2]=raw_tune_ptr->cmc.matrix[0][2];
+	isp_context_ptr->cmc.matrix[3]=raw_tune_ptr->cmc.matrix[0][3];
+	isp_context_ptr->cmc.matrix[4]=raw_tune_ptr->cmc.matrix[0][4];
+	isp_context_ptr->cmc.matrix[5]=raw_tune_ptr->cmc.matrix[0][5];
+	isp_context_ptr->cmc.matrix[6]=raw_tune_ptr->cmc.matrix[0][6];
+	isp_context_ptr->cmc.matrix[7]=raw_tune_ptr->cmc.matrix[0][7];
+	isp_context_ptr->cmc.matrix[8]=raw_tune_ptr->cmc.matrix[0][8];
+
+	isp_context_ptr->cmc_awb[0]=raw_tune_ptr->cmc.matrix[0][0];
+	isp_context_ptr->cmc_awb[1]=raw_tune_ptr->cmc.matrix[0][1];
+	isp_context_ptr->cmc_awb[2]=raw_tune_ptr->cmc.matrix[0][2];
+	isp_context_ptr->cmc_awb[3]=raw_tune_ptr->cmc.matrix[0][3];
+	isp_context_ptr->cmc_awb[4]=raw_tune_ptr->cmc.matrix[0][4];
+	isp_context_ptr->cmc_awb[5]=raw_tune_ptr->cmc.matrix[0][5];
+	isp_context_ptr->cmc_awb[6]=raw_tune_ptr->cmc.matrix[0][6];
+	isp_context_ptr->cmc_awb[7]=raw_tune_ptr->cmc.matrix[0][7];
+	isp_context_ptr->cmc_awb[8]=raw_tune_ptr->cmc.matrix[0][8];
+	isp_context_ptr->cmc_percent = 255;
+
+	isp_context_ptr->cmc_tab[0][0]=raw_tune_ptr->cmc.matrix[0][0];
+	isp_context_ptr->cmc_tab[0][1]=raw_tune_ptr->cmc.matrix[0][1];
+	isp_context_ptr->cmc_tab[0][2]=raw_tune_ptr->cmc.matrix[0][2];
+	isp_context_ptr->cmc_tab[0][3]=raw_tune_ptr->cmc.matrix[0][3];
+	isp_context_ptr->cmc_tab[0][4]=raw_tune_ptr->cmc.matrix[0][4];
+	isp_context_ptr->cmc_tab[0][5]=raw_tune_ptr->cmc.matrix[0][5];
+	isp_context_ptr->cmc_tab[0][6]=raw_tune_ptr->cmc.matrix[0][6];
+	isp_context_ptr->cmc_tab[0][7]=raw_tune_ptr->cmc.matrix[0][7];
+	isp_context_ptr->cmc_tab[0][8]=raw_tune_ptr->cmc.matrix[0][8];
+
+	isp_context_ptr->cmc_tab[1][0]=raw_tune_ptr->cmc.matrix[1][0];
+	isp_context_ptr->cmc_tab[1][1]=raw_tune_ptr->cmc.matrix[1][1];
+	isp_context_ptr->cmc_tab[1][2]=raw_tune_ptr->cmc.matrix[1][2];
+	isp_context_ptr->cmc_tab[1][3]=raw_tune_ptr->cmc.matrix[1][3];
+	isp_context_ptr->cmc_tab[1][4]=raw_tune_ptr->cmc.matrix[1][4];
+	isp_context_ptr->cmc_tab[1][5]=raw_tune_ptr->cmc.matrix[1][5];
+	isp_context_ptr->cmc_tab[1][6]=raw_tune_ptr->cmc.matrix[1][6];
+	isp_context_ptr->cmc_tab[1][7]=raw_tune_ptr->cmc.matrix[1][7];
+	isp_context_ptr->cmc_tab[1][8]=raw_tune_ptr->cmc.matrix[1][8];
+
+	isp_context_ptr->cmc_tab[2][0]=raw_tune_ptr->cmc.matrix[2][0];
+	isp_context_ptr->cmc_tab[2][1]=raw_tune_ptr->cmc.matrix[2][1];
+	isp_context_ptr->cmc_tab[2][2]=raw_tune_ptr->cmc.matrix[2][2];
+	isp_context_ptr->cmc_tab[2][3]=raw_tune_ptr->cmc.matrix[2][3];
+	isp_context_ptr->cmc_tab[2][4]=raw_tune_ptr->cmc.matrix[2][4];
+	isp_context_ptr->cmc_tab[2][5]=raw_tune_ptr->cmc.matrix[2][5];
+	isp_context_ptr->cmc_tab[2][6]=raw_tune_ptr->cmc.matrix[2][6];
+	isp_context_ptr->cmc_tab[2][7]=raw_tune_ptr->cmc.matrix[2][7];
+	isp_context_ptr->cmc_tab[2][8]=raw_tune_ptr->cmc.matrix[2][8];
+
+	isp_context_ptr->cmc_tab[3][0]=raw_tune_ptr->cmc.matrix[3][0];
+	isp_context_ptr->cmc_tab[3][1]=raw_tune_ptr->cmc.matrix[3][1];
+	isp_context_ptr->cmc_tab[3][2]=raw_tune_ptr->cmc.matrix[3][2];
+	isp_context_ptr->cmc_tab[3][3]=raw_tune_ptr->cmc.matrix[3][3];
+	isp_context_ptr->cmc_tab[3][4]=raw_tune_ptr->cmc.matrix[3][4];
+	isp_context_ptr->cmc_tab[3][5]=raw_tune_ptr->cmc.matrix[3][5];
+	isp_context_ptr->cmc_tab[3][6]=raw_tune_ptr->cmc.matrix[3][6];
+	isp_context_ptr->cmc_tab[3][7]=raw_tune_ptr->cmc.matrix[3][7];
+	isp_context_ptr->cmc_tab[3][8]=raw_tune_ptr->cmc.matrix[3][8];
+
+	isp_context_ptr->cmc_tab[4][0]=raw_tune_ptr->cmc.matrix[4][0];
+	isp_context_ptr->cmc_tab[4][1]=raw_tune_ptr->cmc.matrix[4][1];
+	isp_context_ptr->cmc_tab[4][2]=raw_tune_ptr->cmc.matrix[4][2];
+	isp_context_ptr->cmc_tab[4][3]=raw_tune_ptr->cmc.matrix[4][3];
+	isp_context_ptr->cmc_tab[4][4]=raw_tune_ptr->cmc.matrix[4][4];
+	isp_context_ptr->cmc_tab[4][5]=raw_tune_ptr->cmc.matrix[4][5];
+	isp_context_ptr->cmc_tab[4][6]=raw_tune_ptr->cmc.matrix[4][6];
+	isp_context_ptr->cmc_tab[4][7]=raw_tune_ptr->cmc.matrix[4][7];
+	isp_context_ptr->cmc_tab[4][8]=raw_tune_ptr->cmc.matrix[4][8];
+
+	isp_context_ptr->cmc_tab[5][0]=raw_tune_ptr->cmc.matrix[5][0];
+	isp_context_ptr->cmc_tab[5][1]=raw_tune_ptr->cmc.matrix[5][1];
+	isp_context_ptr->cmc_tab[5][2]=raw_tune_ptr->cmc.matrix[5][2];
+	isp_context_ptr->cmc_tab[5][3]=raw_tune_ptr->cmc.matrix[5][3];
+	isp_context_ptr->cmc_tab[5][4]=raw_tune_ptr->cmc.matrix[5][4];
+	isp_context_ptr->cmc_tab[5][5]=raw_tune_ptr->cmc.matrix[5][5];
+	isp_context_ptr->cmc_tab[5][6]=raw_tune_ptr->cmc.matrix[5][6];
+	isp_context_ptr->cmc_tab[5][7]=raw_tune_ptr->cmc.matrix[5][7];
+	isp_context_ptr->cmc_tab[5][8]=raw_tune_ptr->cmc.matrix[5][8];
+
+	isp_context_ptr->cmc_tab[6][0]=raw_tune_ptr->cmc.matrix[6][0];
+	isp_context_ptr->cmc_tab[6][1]=raw_tune_ptr->cmc.matrix[6][1];
+	isp_context_ptr->cmc_tab[6][2]=raw_tune_ptr->cmc.matrix[6][2];
+	isp_context_ptr->cmc_tab[6][3]=raw_tune_ptr->cmc.matrix[6][3];
+	isp_context_ptr->cmc_tab[6][4]=raw_tune_ptr->cmc.matrix[6][4];
+	isp_context_ptr->cmc_tab[6][5]=raw_tune_ptr->cmc.matrix[6][5];
+	isp_context_ptr->cmc_tab[6][6]=raw_tune_ptr->cmc.matrix[6][6];
+	isp_context_ptr->cmc_tab[6][7]=raw_tune_ptr->cmc.matrix[6][7];
+	isp_context_ptr->cmc_tab[6][8]=raw_tune_ptr->cmc.matrix[6][8];
+
+	isp_context_ptr->cmc_tab[7][0]=raw_tune_ptr->cmc.matrix[7][0];
+	isp_context_ptr->cmc_tab[7][1]=raw_tune_ptr->cmc.matrix[7][1];
+	isp_context_ptr->cmc_tab[7][2]=raw_tune_ptr->cmc.matrix[7][2];
+	isp_context_ptr->cmc_tab[7][3]=raw_tune_ptr->cmc.matrix[7][3];
+	isp_context_ptr->cmc_tab[7][4]=raw_tune_ptr->cmc.matrix[7][4];
+	isp_context_ptr->cmc_tab[7][5]=raw_tune_ptr->cmc.matrix[7][5];
+	isp_context_ptr->cmc_tab[7][6]=raw_tune_ptr->cmc.matrix[7][6];
+	isp_context_ptr->cmc_tab[7][7]=raw_tune_ptr->cmc.matrix[7][7];
+	isp_context_ptr->cmc_tab[7][8]=raw_tune_ptr->cmc.matrix[7][8];
+
+	isp_context_ptr->cmc_tab[8][0]=raw_tune_ptr->cmc.matrix[8][0];
+	isp_context_ptr->cmc_tab[8][1]=raw_tune_ptr->cmc.matrix[8][1];
+	isp_context_ptr->cmc_tab[8][2]=raw_tune_ptr->cmc.matrix[8][2];
+	isp_context_ptr->cmc_tab[8][3]=raw_tune_ptr->cmc.matrix[8][3];
+	isp_context_ptr->cmc_tab[8][4]=raw_tune_ptr->cmc.matrix[8][4];
+	isp_context_ptr->cmc_tab[8][5]=raw_tune_ptr->cmc.matrix[8][5];
+	isp_context_ptr->cmc_tab[8][6]=raw_tune_ptr->cmc.matrix[8][6];
+	isp_context_ptr->cmc_tab[8][7]=raw_tune_ptr->cmc.matrix[8][7];
+	isp_context_ptr->cmc_tab[8][8]=raw_tune_ptr->cmc.matrix[8][8];
+
+	/*yiq*/
+	isp_context_ptr->ygamma.bypass = ISP_ONE;
+
+	/*gamma*/
+	/*SCI_MEMCPY((void*)&isp_context_ptr->gamma.axis, (void*)&raw_tune_ptr->gamma.axis, 104);*/
+	for(i=0; i<26; i++) {
+		isp_context_ptr->gamma_tab[0].axis[0][i]=raw_tune_ptr->gamma.tab[0].axis[0][i];
+		isp_context_ptr->gamma_tab[0].axis[1][i]=raw_tune_ptr->gamma.tab[0].axis[1][i];
+		isp_context_ptr->gamma_tab[1].axis[0][i]=raw_tune_ptr->gamma.tab[1].axis[0][i];
+		isp_context_ptr->gamma_tab[1].axis[1][i]=raw_tune_ptr->gamma.tab[1].axis[1][i];
+		isp_context_ptr->gamma_tab[2].axis[0][i]=raw_tune_ptr->gamma.tab[2].axis[0][i];
+		isp_context_ptr->gamma_tab[2].axis[1][i]=raw_tune_ptr->gamma.tab[2].axis[1][i];
+		isp_context_ptr->gamma_tab[3].axis[0][i]=raw_tune_ptr->gamma.tab[3].axis[0][i];
+		isp_context_ptr->gamma_tab[3].axis[1][i]=raw_tune_ptr->gamma.tab[3].axis[1][i];
+		isp_context_ptr->gamma_tab[4].axis[0][i]=raw_tune_ptr->gamma.tab[4].axis[0][i];
+		isp_context_ptr->gamma_tab[4].axis[1][i]=raw_tune_ptr->gamma.tab[4].axis[1][i];
+		isp_context_ptr->gamma_tab[5].axis[0][i]=raw_tune_ptr->gamma.tab[5].axis[0][i];
+		isp_context_ptr->gamma_tab[5].axis[1][i]=raw_tune_ptr->gamma.tab[5].axis[1][i];
+		
+	}
+
+	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
+
+	/*cce matrix*/
+	if (ISP_ZERO!=raw_tune_ptr->special_effect[0].matrix[0]) {
+		for (i=0; i<16; i++) {
+			isp_context_ptr->cce_tab[i].matrix[0]=raw_tune_ptr->special_effect[i].matrix[0];
+			isp_context_ptr->cce_tab[i].matrix[1]=raw_tune_ptr->special_effect[i].matrix[1];
+			isp_context_ptr->cce_tab[i].matrix[2]=raw_tune_ptr->special_effect[i].matrix[2];
+			isp_context_ptr->cce_tab[i].matrix[3]=raw_tune_ptr->special_effect[i].matrix[3];
+			isp_context_ptr->cce_tab[i].matrix[4]=raw_tune_ptr->special_effect[i].matrix[4];
+			isp_context_ptr->cce_tab[i].matrix[5]=raw_tune_ptr->special_effect[i].matrix[5];
+			isp_context_ptr->cce_tab[i].matrix[6]=raw_tune_ptr->special_effect[i].matrix[6];
+			isp_context_ptr->cce_tab[i].matrix[7]=raw_tune_ptr->special_effect[i].matrix[7];
+			isp_context_ptr->cce_tab[i].matrix[8]=raw_tune_ptr->special_effect[i].matrix[8];
+			isp_context_ptr->cce_tab[i].y_shift=raw_tune_ptr->special_effect[i].y_shift;
+			isp_context_ptr->cce_tab[i].u_shift=raw_tune_ptr->special_effect[i].u_shift;
+			isp_context_ptr->cce_tab[i].v_shift=raw_tune_ptr->special_effect[i].v_shift;
+		}
+	} else {
+		for (i=0; i<8; i++) {
+			isp_context_ptr->cce_tab[i].matrix[0]=cce_matrix[i][0];
+			isp_context_ptr->cce_tab[i].matrix[1]=cce_matrix[i][1];
+			isp_context_ptr->cce_tab[i].matrix[2]=cce_matrix[i][2];
+			isp_context_ptr->cce_tab[i].matrix[3]=cce_matrix[i][3];
+			isp_context_ptr->cce_tab[i].matrix[4]=cce_matrix[i][4];
+			isp_context_ptr->cce_tab[i].matrix[5]=cce_matrix[i][5];
+			isp_context_ptr->cce_tab[i].matrix[6]=cce_matrix[i][6];
+			isp_context_ptr->cce_tab[i].matrix[7]=cce_matrix[i][7];
+			isp_context_ptr->cce_tab[i].matrix[8]=cce_matrix[i][8];
+			isp_context_ptr->cce_tab[i].y_shift=cce_matrix[i][9];
+			isp_context_ptr->cce_tab[i].u_shift=cce_matrix[i][10];
+			isp_context_ptr->cce_tab[i].v_shift=cce_matrix[i][11];
+		}
+	}
+	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[0]);
+
+	/*uv div*/
+	/*SCI_MEMCPY((void*)&isp_context_ptr->uv_div.thrd, (void*)&raw_info_ptr->uv_div.thrd, 7);*/
+	isp_context_ptr->uv_div.thrd[0]=raw_tune_ptr->uv_div.thrd[0];
+	isp_context_ptr->uv_div.thrd[1]=raw_tune_ptr->uv_div.thrd[1];
+	isp_context_ptr->uv_div.thrd[2]=raw_tune_ptr->uv_div.thrd[2];
+	isp_context_ptr->uv_div.thrd[3]=raw_tune_ptr->uv_div.thrd[3];
+	isp_context_ptr->uv_div.thrd[4]=raw_tune_ptr->uv_div.thrd[4];
+	isp_context_ptr->uv_div.thrd[5]=raw_tune_ptr->uv_div.thrd[5];
+	isp_context_ptr->uv_div.thrd[6]=raw_tune_ptr->uv_div.thrd[6];
+	isp_context_ptr->uv_div.t[0]=raw_tune_ptr->uv_div.t[0];
+	isp_context_ptr->uv_div.t[1]=raw_tune_ptr->uv_div.t[1];
+	isp_context_ptr->uv_div.m[0]=raw_tune_ptr->uv_div.m[0];
+	isp_context_ptr->uv_div.m[1]=raw_tune_ptr->uv_div.m[1];
+	isp_context_ptr->uv_div.m[2]=raw_tune_ptr->uv_div.m[2];
+
+
+	/*pref*/
+	isp_context_ptr->pref.write_back=raw_tune_ptr->pref.write_back;
+	isp_context_ptr->pref.y_thr=raw_tune_ptr->pref.y_thr;
+	isp_context_ptr->pref.u_thr=raw_tune_ptr->pref.u_thr;
+	isp_context_ptr->pref.v_thr=raw_tune_ptr->pref.v_thr;
+
+	memcpy((void*)&isp_context_ptr->pref_bak,(void*)&isp_context_ptr->pref,sizeof(isp_context_ptr->pref));
+
+	/*bright*/
+	isp_context_ptr->bright.factor=raw_tune_ptr->bright.factor[3];
+	isp_context_ptr->bright_tab[0]=raw_tune_ptr->bright.factor[0];
+	isp_context_ptr->bright_tab[1]=raw_tune_ptr->bright.factor[1];
+	isp_context_ptr->bright_tab[2]=raw_tune_ptr->bright.factor[2];
+	isp_context_ptr->bright_tab[3]=raw_tune_ptr->bright.factor[3];
+	isp_context_ptr->bright_tab[4]=raw_tune_ptr->bright.factor[4];
+	isp_context_ptr->bright_tab[5]=raw_tune_ptr->bright.factor[5];
+	isp_context_ptr->bright_tab[6]=raw_tune_ptr->bright.factor[6];
+	isp_context_ptr->bright_tab[7]=raw_tune_ptr->bright.factor[7];
+	isp_context_ptr->bright_tab[8]=raw_tune_ptr->bright.factor[8];
+	isp_context_ptr->bright_tab[9]=raw_tune_ptr->bright.factor[9];
+	isp_context_ptr->bright_tab[10]=raw_tune_ptr->bright.factor[10];
+	isp_context_ptr->bright_tab[11]=raw_tune_ptr->bright.factor[11];
+	isp_context_ptr->bright_tab[12]=raw_tune_ptr->bright.factor[12];
+	isp_context_ptr->bright_tab[13]=raw_tune_ptr->bright.factor[13];
+	isp_context_ptr->bright_tab[14]=raw_tune_ptr->bright.factor[14];
+	isp_context_ptr->bright_tab[15]=raw_tune_ptr->bright.factor[15];
+	/*contrast*/
+	isp_context_ptr->contrast.factor=raw_tune_ptr->contrast.factor[3];
+	isp_context_ptr->contrast_tab[0]=raw_tune_ptr->contrast.factor[0];
+	isp_context_ptr->contrast_tab[1]=raw_tune_ptr->contrast.factor[1];
+	isp_context_ptr->contrast_tab[2]=raw_tune_ptr->contrast.factor[2];
+	isp_context_ptr->contrast_tab[3]=raw_tune_ptr->contrast.factor[3];
+	isp_context_ptr->contrast_tab[4]=raw_tune_ptr->contrast.factor[4];
+	isp_context_ptr->contrast_tab[5]=raw_tune_ptr->contrast.factor[5];
+	isp_context_ptr->contrast_tab[6]=raw_tune_ptr->contrast.factor[6];
+	isp_context_ptr->contrast_tab[7]=raw_tune_ptr->contrast.factor[7];
+	isp_context_ptr->contrast_tab[8]=raw_tune_ptr->contrast.factor[8];
+	isp_context_ptr->contrast_tab[9]=raw_tune_ptr->contrast.factor[9];
+	isp_context_ptr->contrast_tab[10]=raw_tune_ptr->contrast.factor[10];
+	isp_context_ptr->contrast_tab[11]=raw_tune_ptr->contrast.factor[11];
+	isp_context_ptr->contrast_tab[12]=raw_tune_ptr->contrast.factor[12];
+	isp_context_ptr->contrast_tab[13]=raw_tune_ptr->contrast.factor[13];
+	isp_context_ptr->contrast_tab[14]=raw_tune_ptr->contrast.factor[14];
+	isp_context_ptr->contrast_tab[15]=raw_tune_ptr->contrast.factor[15];
+	/*hist*/
+	isp_context_ptr->hist.mode=raw_tune_ptr->hist.mode;
+	isp_context_ptr->hist.low_ratio=(raw_tune_ptr->hist.low_ratio*isp_context_ptr->src.w*isp_context_ptr->src.h)>>0x10;
+	isp_context_ptr->hist.high_ratio=(raw_tune_ptr->hist.high_ratio*isp_context_ptr->src.w*isp_context_ptr->src.h)>>0x10;
+
+	isp_context_ptr->hist.in_min=0x01;
+	isp_context_ptr->hist.in_max=0xff;
+	isp_context_ptr->hist.out_min=0x01;
+	isp_context_ptr->hist.out_max=0xff;
+
+	/*auto contrast*/
+	isp_context_ptr->auto_contrast.mode=raw_tune_ptr->auto_contrast.mode;
+	isp_context_ptr->auto_contrast.in_min=0x01;
+	isp_context_ptr->auto_contrast.in_max=0xff;
+	isp_context_ptr->auto_contrast.out_min=0x01;
+	isp_context_ptr->auto_contrast.out_max=0xff;
+
+	/*saturation*/
+	isp_context_ptr->saturation.offset = ISP_ZERO;
+	isp_context_ptr->saturation.factor=raw_tune_ptr->saturation.factor[3];
+	isp_context_ptr->saturation_tab[0]=raw_tune_ptr->saturation.factor[0];
+	isp_context_ptr->saturation_tab[1]=raw_tune_ptr->saturation.factor[1];
+	isp_context_ptr->saturation_tab[2]=raw_tune_ptr->saturation.factor[2];
+	isp_context_ptr->saturation_tab[3]=raw_tune_ptr->saturation.factor[3];
+	isp_context_ptr->saturation_tab[4]=raw_tune_ptr->saturation.factor[4];
+	isp_context_ptr->saturation_tab[5]=raw_tune_ptr->saturation.factor[5];
+	isp_context_ptr->saturation_tab[6]=raw_tune_ptr->saturation.factor[6];
+	isp_context_ptr->saturation_tab[7]=raw_tune_ptr->saturation.factor[7];
+	isp_context_ptr->saturation_tab[8]=raw_tune_ptr->saturation.factor[8];
+	isp_context_ptr->saturation_tab[9]=raw_tune_ptr->saturation.factor[9];
+	isp_context_ptr->saturation_tab[10]=raw_tune_ptr->saturation.factor[10];
+	isp_context_ptr->saturation_tab[11]=raw_tune_ptr->saturation.factor[11];
+	isp_context_ptr->saturation_tab[12]=raw_tune_ptr->saturation.factor[12];
+	isp_context_ptr->saturation_tab[13]=raw_tune_ptr->saturation.factor[13];
+	isp_context_ptr->saturation_tab[14]=raw_tune_ptr->saturation.factor[14];
+	isp_context_ptr->saturation_tab[15]=raw_tune_ptr->saturation.factor[15];
+	memcpy((void*)&isp_context_ptr->saturation_bak,(void*)&isp_context_ptr->saturation,sizeof(isp_context_ptr->saturation));
+
+	/*hue*/
+	isp_context_ptr->hue.offset = ISP_ZERO;
+	isp_context_ptr->hue.factor = ISP_ZERO;
+	isp_context_ptr->hue.factor = 3;
+	memcpy((void*)&isp_context_ptr->hue_bak,(void*)&isp_context_ptr->hue,sizeof(isp_context_ptr->hue));
+
+	/*af*/
+	isp_context_ptr->af.continue_status=ISP_END_FLAG;
+	isp_context_ptr->af.status = ISP_AF_STOP;
+	isp_context_ptr->af.have_success_record = ISP_UEB;
+	isp_context_ptr->af.continue_focus_stat =_isp_ContinueFocusInforCallback;
+	isp_context_ptr->af.max_step=raw_tune_ptr->af.max_step;
+	isp_context_ptr->af.min_step=raw_tune_ptr->af.min_step;
+	isp_context_ptr->af.stab_period=raw_tune_ptr->af.stab_period;
+	isp_context_ptr->af.alg_id=raw_tune_ptr->af.alg_id;
+	isp_context_ptr->af.max_tune_step=raw_tune_ptr->af.max_tune_step;
+	isp_context_ptr->af.rough_count=raw_tune_ptr->af.rough_count;
+	isp_context_ptr->af.fine_count=raw_tune_ptr->af.fine_count;
+	
+	for (i=0;i<32;i++) {
+		isp_context_ptr->af.af_rough_step[i]=raw_tune_ptr->af.af_rough_step[i];
+		isp_context_ptr->af.af_fine_step[i]=raw_tune_ptr->af.af_fine_step[i];
+	}
+	isp_context_ptr->af.default_rough_step_len = raw_tune_ptr->af.default_step_len;
+	isp_context_ptr->af.peak_thr_0 = raw_tune_ptr->af.peak_thr_0;
+	isp_context_ptr->af.peak_thr_1 = raw_tune_ptr->af.peak_thr_1;
+	isp_context_ptr->af.peak_thr_2 = raw_tune_ptr->af.peak_thr_2;
+	isp_context_ptr->af.detect_thr = raw_tune_ptr->af.detect_thr;
+	isp_context_ptr->af.detect_step_mum = raw_tune_ptr->af.detect_step_mum;
+	isp_context_ptr->af.start_area_range = raw_tune_ptr->af.start_area_range;
+	isp_context_ptr->af.end_area_range = raw_tune_ptr->af.end_area_range;
+	isp_context_ptr->af.noise_thr = raw_tune_ptr->af.noise_thr;
+	isp_context_ptr->af.AfmEb = ispAfmEb;
+	isp_context_ptr->af.AwbmEb_immediately = ispAwbmEb_immediately;
+	isp_context_ptr->af.CfgAwbm = ispCfgAwbm;
+	memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg, (void*)&ctn_af_cal_cfg[handler_id], sizeof(ctn_af_cal_cfg[handler_id]));
+
+	/*emboss*/
+	isp_context_ptr->emboss.step=raw_tune_ptr->emboss.step;
+
+	/*edge*/
+	isp_context_ptr->edge.detail_thr=raw_tune_ptr->edge.info[0].detail_thr;
+	isp_context_ptr->edge.smooth_thr=raw_tune_ptr->edge.info[0].smooth_thr;
+	isp_context_ptr->edge.strength=raw_tune_ptr->edge.info[0].strength;
+
+	for (i=0x00; i<16; i++) {
+		isp_context_ptr->edge_tab[i].detail_thr=raw_tune_ptr->edge.info[i].detail_thr;
+		isp_context_ptr->edge_tab[i].smooth_thr=raw_tune_ptr->edge.info[i].smooth_thr;
+		isp_context_ptr->edge_tab[i].strength=raw_tune_ptr->edge.info[i].strength;
+	}
+
+	/*css*/
+	//SCI_MEMCPY((void*)&isp_context_ptr->css.low_thr, (void*)&raw_tune_ptr->css.low_thr, 7);
+	//SCI_MEMCPY((void*)&isp_context_ptr->css.low_sum_thr, (void*)&raw_tune_ptr->css.low_sum_thr, 7);
+	isp_context_ptr->css.low_thr[0]=raw_tune_ptr->css.low_thr[0];
+	isp_context_ptr->css.low_thr[1]=raw_tune_ptr->css.low_thr[1];
+	isp_context_ptr->css.low_thr[2]=raw_tune_ptr->css.low_thr[2];
+	isp_context_ptr->css.low_thr[3]=raw_tune_ptr->css.low_thr[3];
+	isp_context_ptr->css.low_thr[4]=raw_tune_ptr->css.low_thr[4];
+	isp_context_ptr->css.low_thr[5]=raw_tune_ptr->css.low_thr[5];
+	isp_context_ptr->css.low_thr[6]=raw_tune_ptr->css.low_thr[6];
+	isp_context_ptr->css.lum_thr=raw_tune_ptr->css.lum_thr;
+	isp_context_ptr->css.low_sum_thr[0]=raw_tune_ptr->css.low_sum_thr[0];
+	isp_context_ptr->css.low_sum_thr[1]=raw_tune_ptr->css.low_sum_thr[1];
+	isp_context_ptr->css.low_sum_thr[2]=raw_tune_ptr->css.low_sum_thr[2];
+	isp_context_ptr->css.low_sum_thr[3]=raw_tune_ptr->css.low_sum_thr[3];
+	isp_context_ptr->css.low_sum_thr[4]=raw_tune_ptr->css.low_sum_thr[4];
+	isp_context_ptr->css.low_sum_thr[5]=raw_tune_ptr->css.low_sum_thr[5];
+	isp_context_ptr->css.low_sum_thr[6]=raw_tune_ptr->css.low_sum_thr[6];
+	isp_context_ptr->css.chr_thr=raw_tune_ptr->css.chr_thr;
+
+	/*hdr*/
+	isp_context_ptr->hdr_index.r_index=0x4d;
+	isp_context_ptr->hdr_index.g_index=0x96;
+	isp_context_ptr->hdr_index.b_index=0x1d;
+	isp_context_ptr->hdr_index.com_ptr=(uint8_t*)com_ptr;
+	isp_context_ptr->hdr_index.p2e_ptr=(uint8_t*)p2e_ptr;
+	isp_context_ptr->hdr_index.e2p_ptr=(uint8_t*)e2p_ptr;
+
+	/*global gain*/
+	isp_context_ptr->global.gain=raw_tune_ptr->global.gain;
+
+	/*chn gain*/
+	isp_context_ptr->chn.r_gain=raw_tune_ptr->chn.r_gain;
+	isp_context_ptr->chn.g_gain=raw_tune_ptr->chn.g_gain;
+	isp_context_ptr->chn.b_gain=raw_tune_ptr->chn.b_gain;
+	isp_context_ptr->chn.r_offset=raw_tune_ptr->chn.r_offset;
+	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
+	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
+	
+	return rtn;
+	
+}
+
+
+/* _ispSetV0001Param --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+	struct sensor_raw_info* raw_info_ptr = (struct sensor_raw_info*)param_ptr->sensor_info_ptr;
+	struct sensor_raw_tune_info* raw_tune_ptr = (struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
+	struct sensor_raw_fix_info* raw_fix_ptr = (struct sensor_raw_fix_info*)raw_info_ptr->fix_ptr;
+	struct sensor_raw_cali_info* cali_ptr = (struct sensor_raw_cali_info*)raw_info_ptr->cali_ptr;
+	uint32_t i = 0x00;
+	uint32_t j = 0x00;
+	// isp tune param
+	ISP_LOG("_ispSetV0001Param V0001");
+	isp_context_ptr->blc.bypass=raw_tune_ptr->blc_bypass;
+	isp_context_ptr->nlc.bypass=raw_tune_ptr->nlc_bypass;
+	isp_context_ptr->lnc.bypass=raw_tune_ptr->lnc_bypass;
+	isp_context_ptr->awbm.bypass=ISP_EB;
+	isp_context_ptr->awbc.bypass=raw_tune_ptr->awb_bypass;
+	isp_context_ptr->awb.bypass=raw_tune_ptr->awb_bypass;
+	isp_context_ptr->awb.back_bypass=raw_tune_ptr->awb_bypass;
+	isp_context_ptr->ae.bypass=raw_tune_ptr->ae_bypass;
+	isp_context_ptr->ae.back_bypass=raw_tune_ptr->ae_bypass;
+	isp_context_ptr->bpc.bypass=raw_tune_ptr->bpc_bypass;
+	isp_context_ptr->denoise.bypass=raw_tune_ptr->denoise_bypass;
+	isp_context_ptr->grgb.bypass=raw_tune_ptr->grgb_bypass;
+	isp_context_ptr->cmc.bypass=raw_tune_ptr->cmc_bypass;
+	isp_context_ptr->gamma.bypass=raw_tune_ptr->gamma_bypass;
+	isp_context_ptr->uv_div.bypass=raw_tune_ptr->uvdiv_bypass;
+	isp_context_ptr->pref.bypass=raw_tune_ptr->pref_bypass;
+	isp_context_ptr->bright.bypass=raw_tune_ptr->bright_bypass;
+	isp_context_ptr->contrast.bypass=raw_tune_ptr->contrast_bypass;
+	isp_context_ptr->hist.bypass=raw_tune_ptr->hist_bypass;
+	isp_context_ptr->auto_contrast.bypass=raw_tune_ptr->auto_contrast_bypass;
+	isp_context_ptr->saturation.bypass=raw_tune_ptr->saturation_bypass;
+	isp_context_ptr->af.bypass=raw_tune_ptr->af_bypass;
+	isp_context_ptr->af.back_bypass=raw_tune_ptr->af_bypass;
+	isp_context_ptr->af.monitor_bypass=ISP_EB;
+	isp_context_ptr->edge.bypass=raw_tune_ptr->edge_bypass;
+	isp_context_ptr->emboss.bypass=ISP_EB;
+	isp_context_ptr->fcs.bypass=raw_tune_ptr->fcs_bypass;
+	isp_context_ptr->css.bypass=raw_tune_ptr->css_bypass;
+	isp_context_ptr->css.bypass_bakup = raw_tune_ptr->css_bypass;
+	isp_context_ptr->hdr.bypass=ISP_EB;
+	isp_context_ptr->global.bypass=raw_tune_ptr->glb_gain_bypass;
+	isp_context_ptr->chn.bypass=raw_tune_ptr->chn_gain_bypass;
+
+	//blc
+	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
+	isp_context_ptr->blc.r=raw_tune_ptr->blc.offset[0].r;
+	isp_context_ptr->blc.gr=raw_tune_ptr->blc.offset[0].gr;
+	isp_context_ptr->blc.gb=raw_tune_ptr->blc.offset[0].gb;
+	isp_context_ptr->blc.b=raw_tune_ptr->blc.offset[0].b;
+
 	for(i=0x00; i<8; i++) {
+		isp_context_ptr->blc_offset[i].r=raw_tune_ptr->blc.offset[i].r;
+		isp_context_ptr->blc_offset[i].gr=raw_tune_ptr->blc.offset[i].gr;
+		isp_context_ptr->blc_offset[i].gb=raw_tune_ptr->blc.offset[i].gb;
+		isp_context_ptr->blc_offset[i].b=raw_tune_ptr->blc.offset[i].b;
+	}
+
+	//nlc
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.r_node, (void*)raw_tune_ptr->nlc.r_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.g_node, (void*)raw_tune_ptr->nlc.g_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.b_node, (void*)raw_tune_ptr->nlc.b_node_ptr, sizeof(uint16_t)*29);
+	//SCI_MEMCPY((void*)&isp_context_ptr->nlc.l_node, (void*)raw_tune_ptr->nlc.l_node_ptr, sizeof(uint16_t)*29);
+	isp_context_ptr->nlc.r_node[0]=raw_tune_ptr->nlc.r_node[0];
+	isp_context_ptr->nlc.r_node[1]=raw_tune_ptr->nlc.r_node[1];
+	isp_context_ptr->nlc.r_node[2]=raw_tune_ptr->nlc.r_node[2];
+	isp_context_ptr->nlc.r_node[3]=raw_tune_ptr->nlc.r_node[3];
+	isp_context_ptr->nlc.r_node[4]=raw_tune_ptr->nlc.r_node[4];
+	isp_context_ptr->nlc.r_node[5]=raw_tune_ptr->nlc.r_node[5];
+	isp_context_ptr->nlc.r_node[6]=raw_tune_ptr->nlc.r_node[6];
+	isp_context_ptr->nlc.r_node[7]=raw_tune_ptr->nlc.r_node[7];
+	isp_context_ptr->nlc.r_node[8]=raw_tune_ptr->nlc.r_node[8];
+	isp_context_ptr->nlc.r_node[9]=raw_tune_ptr->nlc.r_node[9];
+	isp_context_ptr->nlc.r_node[10]=raw_tune_ptr->nlc.r_node[10];
+	isp_context_ptr->nlc.r_node[11]=raw_tune_ptr->nlc.r_node[11];
+	isp_context_ptr->nlc.r_node[12]=raw_tune_ptr->nlc.r_node[12];
+	isp_context_ptr->nlc.r_node[13]=raw_tune_ptr->nlc.r_node[13];
+	isp_context_ptr->nlc.r_node[14]=raw_tune_ptr->nlc.r_node[14];
+	isp_context_ptr->nlc.r_node[15]=raw_tune_ptr->nlc.r_node[15];
+	isp_context_ptr->nlc.r_node[16]=raw_tune_ptr->nlc.r_node[16];
+	isp_context_ptr->nlc.r_node[17]=raw_tune_ptr->nlc.r_node[17];
+	isp_context_ptr->nlc.r_node[18]=raw_tune_ptr->nlc.r_node[18];
+	isp_context_ptr->nlc.r_node[19]=raw_tune_ptr->nlc.r_node[19];
+	isp_context_ptr->nlc.r_node[20]=raw_tune_ptr->nlc.r_node[20];
+	isp_context_ptr->nlc.r_node[21]=raw_tune_ptr->nlc.r_node[21];
+	isp_context_ptr->nlc.r_node[22]=raw_tune_ptr->nlc.r_node[22];
+	isp_context_ptr->nlc.r_node[23]=raw_tune_ptr->nlc.r_node[23];
+	isp_context_ptr->nlc.r_node[24]=raw_tune_ptr->nlc.r_node[24];
+	isp_context_ptr->nlc.r_node[25]=raw_tune_ptr->nlc.r_node[25];
+	isp_context_ptr->nlc.r_node[26]=raw_tune_ptr->nlc.r_node[26];
+	isp_context_ptr->nlc.r_node[27]=raw_tune_ptr->nlc.r_node[27];
+	isp_context_ptr->nlc.r_node[28]=raw_tune_ptr->nlc.r_node[28];
+
+	isp_context_ptr->nlc.g_node[0]=raw_tune_ptr->nlc.g_node[0];
+	isp_context_ptr->nlc.g_node[1]=raw_tune_ptr->nlc.g_node[1];
+	isp_context_ptr->nlc.g_node[2]=raw_tune_ptr->nlc.g_node[2];
+	isp_context_ptr->nlc.g_node[3]=raw_tune_ptr->nlc.g_node[3];
+	isp_context_ptr->nlc.g_node[4]=raw_tune_ptr->nlc.g_node[4];
+	isp_context_ptr->nlc.g_node[5]=raw_tune_ptr->nlc.g_node[5];
+	isp_context_ptr->nlc.g_node[6]=raw_tune_ptr->nlc.g_node[6];
+	isp_context_ptr->nlc.g_node[7]=raw_tune_ptr->nlc.g_node[7];
+	isp_context_ptr->nlc.g_node[8]=raw_tune_ptr->nlc.g_node[8];
+	isp_context_ptr->nlc.g_node[9]=raw_tune_ptr->nlc.g_node[9];
+	isp_context_ptr->nlc.g_node[10]=raw_tune_ptr->nlc.g_node[10];
+	isp_context_ptr->nlc.g_node[11]=raw_tune_ptr->nlc.g_node[11];
+	isp_context_ptr->nlc.g_node[12]=raw_tune_ptr->nlc.g_node[12];
+	isp_context_ptr->nlc.g_node[13]=raw_tune_ptr->nlc.g_node[13];
+	isp_context_ptr->nlc.g_node[14]=raw_tune_ptr->nlc.g_node[14];
+	isp_context_ptr->nlc.g_node[15]=raw_tune_ptr->nlc.g_node[15];
+	isp_context_ptr->nlc.g_node[16]=raw_tune_ptr->nlc.g_node[16];
+	isp_context_ptr->nlc.g_node[17]=raw_tune_ptr->nlc.g_node[17];
+	isp_context_ptr->nlc.g_node[18]=raw_tune_ptr->nlc.g_node[18];
+	isp_context_ptr->nlc.g_node[19]=raw_tune_ptr->nlc.g_node[19];
+	isp_context_ptr->nlc.g_node[20]=raw_tune_ptr->nlc.g_node[20];
+	isp_context_ptr->nlc.g_node[21]=raw_tune_ptr->nlc.g_node[21];
+	isp_context_ptr->nlc.g_node[22]=raw_tune_ptr->nlc.g_node[22];
+	isp_context_ptr->nlc.g_node[23]=raw_tune_ptr->nlc.g_node[23];
+	isp_context_ptr->nlc.g_node[24]=raw_tune_ptr->nlc.g_node[24];
+	isp_context_ptr->nlc.g_node[25]=raw_tune_ptr->nlc.g_node[25];
+	isp_context_ptr->nlc.g_node[26]=raw_tune_ptr->nlc.g_node[26];
+	isp_context_ptr->nlc.g_node[27]=raw_tune_ptr->nlc.g_node[27];
+	isp_context_ptr->nlc.g_node[28]=raw_tune_ptr->nlc.g_node[28];
+
+	isp_context_ptr->nlc.b_node[0]=raw_tune_ptr->nlc.b_node[0];
+	isp_context_ptr->nlc.b_node[1]=raw_tune_ptr->nlc.b_node[1];
+	isp_context_ptr->nlc.b_node[2]=raw_tune_ptr->nlc.b_node[2];
+	isp_context_ptr->nlc.b_node[3]=raw_tune_ptr->nlc.b_node[3];
+	isp_context_ptr->nlc.b_node[4]=raw_tune_ptr->nlc.b_node[4];
+	isp_context_ptr->nlc.b_node[5]=raw_tune_ptr->nlc.b_node[5];
+	isp_context_ptr->nlc.b_node[6]=raw_tune_ptr->nlc.b_node[6];
+	isp_context_ptr->nlc.b_node[7]=raw_tune_ptr->nlc.b_node[7];
+	isp_context_ptr->nlc.b_node[8]=raw_tune_ptr->nlc.b_node[8];
+	isp_context_ptr->nlc.b_node[9]=raw_tune_ptr->nlc.b_node[9];
+	isp_context_ptr->nlc.b_node[10]=raw_tune_ptr->nlc.b_node[10];
+	isp_context_ptr->nlc.b_node[11]=raw_tune_ptr->nlc.b_node[11];
+	isp_context_ptr->nlc.b_node[12]=raw_tune_ptr->nlc.b_node[12];
+	isp_context_ptr->nlc.b_node[13]=raw_tune_ptr->nlc.b_node[13];
+	isp_context_ptr->nlc.b_node[14]=raw_tune_ptr->nlc.b_node[14];
+	isp_context_ptr->nlc.b_node[15]=raw_tune_ptr->nlc.b_node[15];
+	isp_context_ptr->nlc.b_node[16]=raw_tune_ptr->nlc.b_node[16];
+	isp_context_ptr->nlc.b_node[17]=raw_tune_ptr->nlc.b_node[17];
+	isp_context_ptr->nlc.b_node[18]=raw_tune_ptr->nlc.b_node[18];
+	isp_context_ptr->nlc.b_node[19]=raw_tune_ptr->nlc.b_node[19];
+	isp_context_ptr->nlc.b_node[20]=raw_tune_ptr->nlc.b_node[20];
+	isp_context_ptr->nlc.b_node[21]=raw_tune_ptr->nlc.b_node[21];
+	isp_context_ptr->nlc.b_node[22]=raw_tune_ptr->nlc.b_node[22];
+	isp_context_ptr->nlc.b_node[23]=raw_tune_ptr->nlc.b_node[23];
+	isp_context_ptr->nlc.b_node[24]=raw_tune_ptr->nlc.b_node[24];
+	isp_context_ptr->nlc.b_node[25]=raw_tune_ptr->nlc.b_node[25];
+	isp_context_ptr->nlc.b_node[26]=raw_tune_ptr->nlc.b_node[26];
+	isp_context_ptr->nlc.b_node[27]=raw_tune_ptr->nlc.b_node[27];
+	isp_context_ptr->nlc.b_node[28]=raw_tune_ptr->nlc.b_node[28];
+
+	isp_context_ptr->nlc.l_node[0]=raw_tune_ptr->nlc.l_node[0];
+	isp_context_ptr->nlc.l_node[1]=raw_tune_ptr->nlc.l_node[1];
+	isp_context_ptr->nlc.l_node[2]=raw_tune_ptr->nlc.l_node[2];
+	isp_context_ptr->nlc.l_node[3]=raw_tune_ptr->nlc.l_node[3];
+	isp_context_ptr->nlc.l_node[4]=raw_tune_ptr->nlc.l_node[4];
+	isp_context_ptr->nlc.l_node[5]=raw_tune_ptr->nlc.l_node[5];
+	isp_context_ptr->nlc.l_node[6]=raw_tune_ptr->nlc.l_node[6];
+	isp_context_ptr->nlc.l_node[7]=raw_tune_ptr->nlc.l_node[7];
+	isp_context_ptr->nlc.l_node[8]=raw_tune_ptr->nlc.l_node[8];
+	isp_context_ptr->nlc.l_node[9]=raw_tune_ptr->nlc.l_node[9];
+	isp_context_ptr->nlc.l_node[10]=raw_tune_ptr->nlc.l_node[10];
+	isp_context_ptr->nlc.l_node[11]=raw_tune_ptr->nlc.l_node[11];
+	isp_context_ptr->nlc.l_node[12]=raw_tune_ptr->nlc.l_node[12];
+	isp_context_ptr->nlc.l_node[13]=raw_tune_ptr->nlc.l_node[13];
+	isp_context_ptr->nlc.l_node[14]=raw_tune_ptr->nlc.l_node[14];
+	isp_context_ptr->nlc.l_node[15]=raw_tune_ptr->nlc.l_node[15];
+	isp_context_ptr->nlc.l_node[16]=raw_tune_ptr->nlc.l_node[16];
+	isp_context_ptr->nlc.l_node[17]=raw_tune_ptr->nlc.l_node[17];
+	isp_context_ptr->nlc.l_node[18]=raw_tune_ptr->nlc.l_node[18];
+	isp_context_ptr->nlc.l_node[19]=raw_tune_ptr->nlc.l_node[19];
+	isp_context_ptr->nlc.l_node[20]=raw_tune_ptr->nlc.l_node[20];
+	isp_context_ptr->nlc.l_node[21]=raw_tune_ptr->nlc.l_node[21];
+	isp_context_ptr->nlc.l_node[22]=raw_tune_ptr->nlc.l_node[22];
+	isp_context_ptr->nlc.l_node[23]=raw_tune_ptr->nlc.l_node[23];
+	isp_context_ptr->nlc.l_node[24]=raw_tune_ptr->nlc.l_node[24];
+	isp_context_ptr->nlc.l_node[25]=raw_tune_ptr->nlc.l_node[25];
+	isp_context_ptr->nlc.l_node[26]=raw_tune_ptr->nlc.l_node[26];
+	isp_context_ptr->nlc.l_node[27]=raw_tune_ptr->nlc.l_node[27];
+	isp_context_ptr->nlc.l_node[28]=raw_tune_ptr->nlc.l_node[28];
+
+	/*ae*/
+	/*isp_context_ptr->ae.frame_mode=raw_tune_ptr->ae.frame_mode;
+	isp_context_ptr->ae.tab_type=raw_tune_ptr->ae.tab_type;
+	isp_context_ptr->ae.weight=raw_tune_ptr->ae.weight;*/
+	isp_context_ptr->ae.tab_type=ISP_NORMAL_50HZ;
+	isp_context_ptr->ae.frame_mode=ISP_AE_AUTO;
+	isp_context_ptr->ae.iso=ISP_ISO_100;
+	isp_context_ptr->ae.cur_iso=ISP_ISO_100;
+	isp_context_ptr->ae.back_iso=ISP_ISO_100;
+	isp_context_ptr->ae.real_iso=ISP_ISO_100;
+	isp_context_ptr->ae.skip_frame=raw_tune_ptr->ae.skip_frame;
+	isp_context_ptr->ae.fix_fps=raw_tune_ptr->ae.normal_fix_fps;
+	isp_context_ptr->ae.normal_fps=raw_tune_ptr->ae.normal_fix_fps;
+	isp_context_ptr->ae.night_fps=raw_tune_ptr->ae.night_fix_fps;
+	isp_context_ptr->ae.sport_fps=raw_tune_ptr->ae.video_fps;
+	isp_context_ptr->ae.line_time=_ispGetLineTime((struct isp_resolution_info*)&isp_context_ptr->input_size_trim, isp_context_ptr->param_index);
+	isp_context_ptr->ae.frame_line=_ispGetFrameLine(handler_id, isp_context_ptr->ae.line_time, isp_context_ptr->ae.fix_fps);
+	isp_context_ptr->ae.target_lum=raw_tune_ptr->ae.target_lum;
+	isp_context_ptr->ae.target_zone=raw_tune_ptr->ae.target_zone;
+	isp_context_ptr->ae.quick_mode=raw_tune_ptr->ae.quick_mode;
+	
+	if (ISP_ZERO == raw_tune_ptr->ae.min_exposure) {
+		isp_context_ptr->ae.min_exposure=ISP_ONE;
+	} else {
+		isp_context_ptr->ae.min_exposure=raw_tune_ptr->ae.min_exposure;
+	}
+
+	isp_context_ptr->ae.monitor.w=raw_tune_ptr->awb.win_size.w;
+	isp_context_ptr->ae.monitor.h=raw_tune_ptr->awb.win_size.h;
+
+	isp_context_ptr->ae.smart=raw_tune_ptr->ae.smart;
+	isp_context_ptr->ae.smart_mode=raw_tune_ptr->ae.smart_mode;
+	isp_context_ptr->ae.smart_rotio=raw_tune_ptr->ae.smart_rotio;
+	isp_context_ptr->ae.smart_base_gain=raw_tune_ptr->ae.smart_base_gain;
+	isp_context_ptr->ae.smart_wave_min=raw_tune_ptr->ae.smart_wave_min;
+	isp_context_ptr->ae.smart_wave_max=raw_tune_ptr->ae.smart_wave_max;
+	isp_context_ptr->ae.smart_pref_min=raw_tune_ptr->ae.smart_pref_min;
+	isp_context_ptr->ae.smart_pref_max=raw_tune_ptr->ae.smart_pref_max;
+	isp_context_ptr->ae.smart_denoise_min_index=raw_tune_ptr->ae.smart_denoise_min_index;
+	isp_context_ptr->ae.smart_denoise_mid_index = raw_tune_ptr->ae.smart_denoise_mid_index;
+	isp_context_ptr->ae.smart_denoise_max_index=raw_tune_ptr->ae.smart_denoise_max_index;
+	isp_context_ptr->ae.denoise_start_index=raw_tune_ptr->ae.denoise_start_index;
+	isp_context_ptr->ae.denoise_start_zone=raw_tune_ptr->ae.denoise_start_zone;
+	isp_context_ptr->ae.denoise_lum_thr=raw_tune_ptr->ae.denoise_lum_thr;
+
+	isp_context_ptr->ae.smart_edge_min_index=raw_tune_ptr->ae.smart_edge_min_index;
+	isp_context_ptr->ae.smart_edge_max_index=raw_tune_ptr->ae.smart_edge_max_index;
+	isp_context_ptr->ae.smart_sta_low_thr=raw_tune_ptr->ae.smart_sta_low_thr;
+	isp_context_ptr->ae.smart_sta_ratio1=raw_tune_ptr->ae.smart_sta_ratio1;
+	isp_context_ptr->ae.smart_sta_ratio=raw_tune_ptr->ae.smart_sta_ratio;
+	isp_context_ptr->ae.smart_sta_start_index=raw_tune_ptr->ae.smart_sta_start_index;
+	isp_context_ptr->ae.again_skip=raw_tune_ptr->ae.again_skip;
+	isp_context_ptr->ae.dgain_skip=raw_tune_ptr->ae.dgain_skip;
+	isp_context_ptr->ae.lux_500_index=raw_tune_ptr->ae.lux_500_index;
+
+	isp_context_ptr->ae.smart_pref_y_min=raw_tune_ptr->ae.smart_pref_y_min;
+	isp_context_ptr->ae.smart_pref_y_max=raw_tune_ptr->ae.smart_pref_y_max;
+	isp_context_ptr->ae.smart_pref_uv_min=raw_tune_ptr->ae.smart_pref_uv_min;
+	isp_context_ptr->ae.smart_pref_uv_max=raw_tune_ptr->ae.smart_pref_uv_max;
+	isp_context_ptr->ae.smart_denoise_diswei_outdoor_index=raw_tune_ptr->ae.smart_denoise_diswei_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_diswei_min_index=raw_tune_ptr->ae.smart_denoise_diswei_min_index;
+	isp_context_ptr->ae.smart_denoise_diswei_mid_index=raw_tune_ptr->ae.smart_denoise_diswei_mid_index;
+	isp_context_ptr->ae.smart_denoise_diswei_max_index=raw_tune_ptr->ae.smart_denoise_diswei_max_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_outdoor_index=raw_tune_ptr->ae.smart_denoise_ranwei_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_min_index=raw_tune_ptr->ae.smart_denoise_ranwei_min_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_mid_index=raw_tune_ptr->ae.smart_denoise_ranwei_mid_index;
+	isp_context_ptr->ae.smart_denoise_ranwei_max_index=raw_tune_ptr->ae.smart_denoise_ranwei_max_index;
+
+	isp_context_ptr->ae.smart_denoise_soft_y_outdoor_index=raw_tune_ptr->ae.smart_denoise_soft_y_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_min_index=raw_tune_ptr->ae.smart_denoise_soft_y_min_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_mid_index=raw_tune_ptr->ae.smart_denoise_soft_y_mid_index;
+	isp_context_ptr->ae.smart_denoise_soft_y_max_index=raw_tune_ptr->ae.smart_denoise_soft_y_max_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_outdoor_index=raw_tune_ptr->ae.smart_denoise_soft_uv_outdoor_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_min_index=raw_tune_ptr->ae.smart_denoise_soft_uv_min_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_mid_index=raw_tune_ptr->ae.smart_denoise_soft_uv_mid_index;
+	isp_context_ptr->ae.smart_denoise_soft_uv_max_index=raw_tune_ptr->ae.smart_denoise_soft_uv_max_index;
+	isp_context_ptr->ae.prv_noise_info.y_level = raw_tune_ptr->ae.smart_denoise_soft_y_outdoor_index;
+	isp_context_ptr->ae.prv_noise_info.uv_level = raw_tune_ptr->ae.smart_denoise_soft_uv_outdoor_index;
+
+	isp_context_ptr->gamma_index=raw_tune_ptr->ae.gamma_start;
+	isp_context_ptr->ae.gamma_num=raw_tune_ptr->ae.gamma_num;
+	isp_context_ptr->ae.gamma_zone=raw_tune_ptr->ae.gamma_zone;
+	isp_context_ptr->ae.gamma_thr[0]=raw_tune_ptr->ae.gamma_thr[0];
+	isp_context_ptr->ae.gamma_thr[1]=raw_tune_ptr->ae.gamma_thr[1];
+	isp_context_ptr->ae.gamma_thr[2]=raw_tune_ptr->ae.gamma_thr[2];
+	isp_context_ptr->ae.gamma_thr[3]=raw_tune_ptr->ae.gamma_thr[3];
+	isp_context_ptr->ae.gamma_lum_thr = raw_tune_ptr->ae.gamma_lum_thr;
+
+	isp_context_ptr->ae.ev=raw_tune_ptr->ae.ev[3];
+	isp_ae_set_ev(handler_id, raw_tune_ptr->ae.ev[3]);
+	isp_context_ptr->ev_tab[0]=raw_tune_ptr->ae.ev[0];
+	isp_context_ptr->ev_tab[1]=raw_tune_ptr->ae.ev[1];
+	isp_context_ptr->ev_tab[2]=raw_tune_ptr->ae.ev[2];
+	isp_context_ptr->ev_tab[3]=raw_tune_ptr->ae.ev[3];
+	isp_context_ptr->ev_tab[4]=raw_tune_ptr->ae.ev[4];
+	isp_context_ptr->ev_tab[5]=raw_tune_ptr->ae.ev[5];
+	isp_context_ptr->ev_tab[6]=raw_tune_ptr->ae.ev[6];
+	isp_context_ptr->ev_tab[7]=raw_tune_ptr->ae.ev[7];
+	isp_context_ptr->ev_tab[8]=raw_tune_ptr->ae.ev[8];
+	isp_context_ptr->ev_tab[9]=raw_tune_ptr->ae.ev[9];
+	isp_context_ptr->ev_tab[10]=raw_tune_ptr->ae.ev[10];
+	isp_context_ptr->ev_tab[11]=raw_tune_ptr->ae.ev[11];
+	isp_context_ptr->ev_tab[12]=raw_tune_ptr->ae.ev[12];
+	isp_context_ptr->ev_tab[13]=raw_tune_ptr->ae.ev[13];
+	isp_context_ptr->ev_tab[14]=raw_tune_ptr->ae.ev[14];
+	isp_context_ptr->ev_tab[15]=raw_tune_ptr->ae.ev[15];
+
+	isp_context_ptr->ae.stat_r_ptr=(uint32_t*)&isp_context_ptr->awb_stat.r_info;
+	isp_context_ptr->ae.stat_g_ptr=(uint32_t*)&isp_context_ptr->awb_stat.g_info;
+	isp_context_ptr->ae.stat_b_ptr=(uint32_t*)&isp_context_ptr->awb_stat.b_info;
+	isp_context_ptr->ae.stat_y_ptr=(uint32_t*)&isp_context_ptr->ae_stat.y;
+
+	isp_context_ptr->ae.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->ae.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->ae.weight_ptr[2]=raw_fix_ptr->ae.weight_tab;
+	isp_context_ptr->ae.weight_id=ISP_ONE;
+	_ispAeMeasureLumSet(handler_id, ISP_AE_WEIGHT_AVG);
+
+	isp_context_ptr->ae.tab[0].e_ptr=raw_fix_ptr->ae.tab[0].e_ptr;
+	isp_context_ptr->ae.tab[0].g_ptr=raw_fix_ptr->ae.tab[0].g_ptr;
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_AUTO, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_100, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_200, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_400, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_800, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_50HZ, ISP_ISO_1600, raw_tune_ptr->ae.normal_fix_fps);
+
+	isp_context_ptr->ae.tab[1].e_ptr=raw_fix_ptr->ae.tab[1].e_ptr;
+	isp_context_ptr->ae.tab[1].g_ptr=raw_fix_ptr->ae.tab[1].g_ptr;
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_AUTO, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_100, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_200, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_400, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_800, raw_tune_ptr->ae.normal_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NORMAL_60HZ, ISP_ISO_1600, raw_tune_ptr->ae.normal_fix_fps);
+
+	isp_context_ptr->ae.tab[2].e_ptr=raw_fix_ptr->ae.tab[2].e_ptr;
+	isp_context_ptr->ae.tab[2].g_ptr=raw_fix_ptr->ae.tab[2].g_ptr;
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_AUTO, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_100, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_200, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_400, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_800, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_50HZ, ISP_ISO_1600, raw_tune_ptr->ae.night_fix_fps);
+
+	isp_context_ptr->ae.tab[3].e_ptr=raw_fix_ptr->ae.tab[3].e_ptr;
+	isp_context_ptr->ae.tab[3].g_ptr=raw_fix_ptr->ae.tab[3].g_ptr;
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_AUTO, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_100, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_200, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_400, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_800, raw_tune_ptr->ae.night_fix_fps);
+	_ispSetAeTabMaxIndex(handler_id, ISP_NIGHT_60HZ, ISP_ISO_1600, raw_tune_ptr->ae.night_fix_fps);
+
+	isp_context_ptr->ae.cur_index=raw_fix_ptr->ae.tab[0].index[0].start;
+	isp_context_ptr->ae.max_index=raw_fix_ptr->ae.tab[0].index[0].max;
+
+	isp_context_ptr->ae.speed_bright_to_dark = cali_ptr->ae.speed_bright_to_dark;
+	isp_context_ptr->ae.step_bright_to_dark = cali_ptr->ae.step_bright_to_dark;
+	isp_context_ptr->ae.speed_dark_to_bright = cali_ptr->ae.speed_dark_to_bright;
+	isp_context_ptr->ae.step_dark_to_bright = cali_ptr->ae.step_dark_to_bright;
+	isp_context_ptr->ae.histogram_segment = cali_ptr->ae.histogram_segment;
+
+	isp_context_ptr->ae.histogram_segment_num = cali_ptr->ae.histogram_segment_num;
+	isp_context_ptr->ae.flash_cali.gldn_cali.r_sum = cali_ptr->flashlight.golden_cali_info.r_sum;
+	isp_context_ptr->ae.flash_cali.gldn_cali.b_sum = cali_ptr->flashlight.golden_cali_info.b_sum;
+	isp_context_ptr->ae.flash_cali.gldn_cali.gr_sum = cali_ptr->flashlight.golden_cali_info.gr_sum;
+	isp_context_ptr->ae.flash_cali.gldn_cali.gb_sum = cali_ptr->flashlight.golden_cali_info.gb_sum;
+	isp_context_ptr->ae.flash_cali.rdm_cali.r_sum = cali_ptr->flashlight.cali_info.r_sum;
+	isp_context_ptr->ae.flash_cali.rdm_cali.b_sum = cali_ptr->flashlight.cali_info.b_sum;
+	isp_context_ptr->ae.flash_cali.rdm_cali.gr_sum = cali_ptr->flashlight.cali_info.gr_sum;
+	isp_context_ptr->ae.flash_cali.rdm_cali.gb_sum = cali_ptr->flashlight.cali_info.gb_sum;
+
+	isp_context_ptr->ae.callback = param_ptr->callback;
+	isp_context_ptr->ae.self_callback = param_ptr->self_callback;
+	isp_context_ptr->ae.awbm_skip = ispAwbmSkip;
+	isp_context_ptr->ae.awbm_bypass = ispAwbcBypass;
+	isp_context_ptr->ae.set_gamma= isp_set_gamma;
+	isp_context_ptr->ae.ae_set_eb=ISP_UEB;
+
+	/*flash*/
+	isp_context_ptr->flash.lum_ratio=raw_tune_ptr->flash.lum_ratio;
+	isp_context_ptr->flash.r_ratio=raw_tune_ptr->flash.r_ratio;
+	isp_context_ptr->flash.g_ratio=raw_tune_ptr->flash.g_ratio;
+	isp_context_ptr->flash.b_ratio=raw_tune_ptr->flash.b_ratio;
+
+	/*awb*/
+	isp_context_ptr->awbm.win_start.x=raw_tune_ptr->awb.win_start.x;
+	isp_context_ptr->awbm.win_start.y=raw_tune_ptr->awb.win_start.y;
+	isp_context_ptr->awbm.win_size.w=raw_tune_ptr->awb.win_size.w;
+	isp_context_ptr->awbm.win_size.h=raw_tune_ptr->awb.win_size.h;
+
+	isp_context_ptr->awb.back_monitor_pos.x=raw_tune_ptr->awb.win_start.x;
+	isp_context_ptr->awb.back_monitor_pos.y=raw_tune_ptr->awb.win_start.y;
+	isp_context_ptr->awb.back_monitor_size.w=raw_tune_ptr->awb.win_size.w;
+	isp_context_ptr->awb.back_monitor_size.h=raw_tune_ptr->awb.win_size.h;
+
+	isp_context_ptr->awb_r_gain[0]=raw_tune_ptr->awb.r_gain[0];
+	isp_context_ptr->awb_g_gain[0]=raw_tune_ptr->awb.g_gain[0];
+	isp_context_ptr->awb_b_gain[0]=raw_tune_ptr->awb.b_gain[0];
+	isp_context_ptr->awb_r_gain[1]=raw_tune_ptr->awb.r_gain[1];
+	isp_context_ptr->awb_g_gain[1]=raw_tune_ptr->awb.g_gain[1];
+	isp_context_ptr->awb_b_gain[1]=raw_tune_ptr->awb.b_gain[1];
+	isp_context_ptr->awb_r_gain[2]=raw_tune_ptr->awb.r_gain[2];
+	isp_context_ptr->awb_g_gain[2]=raw_tune_ptr->awb.g_gain[2];
+	isp_context_ptr->awb_b_gain[2]=raw_tune_ptr->awb.b_gain[2];
+	isp_context_ptr->awb_r_gain[3]=raw_tune_ptr->awb.r_gain[3];
+	isp_context_ptr->awb_g_gain[3]=raw_tune_ptr->awb.g_gain[3];
+	isp_context_ptr->awb_b_gain[3]=raw_tune_ptr->awb.b_gain[3];
+	isp_context_ptr->awb_r_gain[4]=raw_tune_ptr->awb.r_gain[4];
+	isp_context_ptr->awb_g_gain[4]=raw_tune_ptr->awb.g_gain[4];
+	isp_context_ptr->awb_b_gain[4]=raw_tune_ptr->awb.b_gain[4];
+	isp_context_ptr->awb_r_gain[5]=raw_tune_ptr->awb.r_gain[5];
+	isp_context_ptr->awb_g_gain[5]=raw_tune_ptr->awb.g_gain[5];
+	isp_context_ptr->awb_b_gain[5]=raw_tune_ptr->awb.b_gain[5];
+	isp_context_ptr->awb_r_gain[6]=raw_tune_ptr->awb.r_gain[6];
+	isp_context_ptr->awb_g_gain[6]=raw_tune_ptr->awb.g_gain[6];
+	isp_context_ptr->awb_b_gain[6]=raw_tune_ptr->awb.b_gain[6];
+	isp_context_ptr->awb_r_gain[7]=raw_tune_ptr->awb.r_gain[7];
+	isp_context_ptr->awb_g_gain[7]=raw_tune_ptr->awb.g_gain[7];
+	isp_context_ptr->awb_b_gain[7]=raw_tune_ptr->awb.b_gain[7];
+	isp_context_ptr->awb_r_gain[8]=raw_tune_ptr->awb.r_gain[8];
+	isp_context_ptr->awb_g_gain[8]=raw_tune_ptr->awb.g_gain[8];
+	isp_context_ptr->awb_b_gain[8]=raw_tune_ptr->awb.b_gain[8];
+
+	for (i=0x00; i<8; i++) {
 		isp_context_ptr->awb.gain_convert[i].r=raw_tune_ptr->awb.gain_convert[i].r;
 		isp_context_ptr->awb.gain_convert[i].g=raw_tune_ptr->awb.gain_convert[i].g;
 		isp_context_ptr->awb.gain_convert[i].b=raw_tune_ptr->awb.gain_convert[i].b;
@@ -3773,7 +4713,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
 	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
 	isp_context_ptr->awb.weight_ptr[2]=NULL;
-	for(i=0x00; i<20; i++) {
+	
+	for (i=0x00; i<20; i++) {
 		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win[i].x;
 		isp_context_ptr->awb.win[i].yb=raw_tune_ptr->awb.win[i].yb;
 		isp_context_ptr->awb.win[i].yt=raw_tune_ptr->awb.win[i].yt;
@@ -3822,8 +4763,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->awb.target_gain.b=isp_context_ptr->awb.cur_gain.b;
 
 	isp_context_ptr->awb.g_estimate.num=raw_tune_ptr->awb.g_estimate.num;
-	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++)
-	{
+	
+	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++) {
 		isp_context_ptr->awb.g_estimate.t_thr[i] = raw_tune_ptr->awb.g_estimate.t_thr[i];
 		isp_context_ptr->awb.g_estimate.g_thr[i][0] = raw_tune_ptr->awb.g_estimate.g_thr[i][0];
 		isp_context_ptr->awb.g_estimate.g_thr[i][1] = raw_tune_ptr->awb.g_estimate.g_thr[i][1];
@@ -3831,8 +4772,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 		isp_context_ptr->awb.g_estimate.w_thr[i][1] = raw_tune_ptr->awb.g_estimate.w_thr[i][1];
 	}
 	isp_context_ptr->awb.gain_adjust.num=raw_tune_ptr->awb.gain_adjust.num;
-	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++)
-	{
+	
+	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++) {
 		isp_context_ptr->awb.gain_adjust.t_thr[i] = raw_tune_ptr->awb.gain_adjust.t_thr[i];
 		isp_context_ptr->awb.gain_adjust.w_thr[i] = raw_tune_ptr->awb.gain_adjust.w_thr[i];
 	}
@@ -3844,8 +4785,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
 
 	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
-	for (i=0; i<isp_context_ptr->awb.light.num; i++)
-	{
+	
+	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
 		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
 		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
 	}
@@ -4001,7 +4942,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 
 	/*gamma*/
 	/*SCI_MEMCPY((void*)&isp_context_ptr->gamma.axis, (void*)&raw_tune_ptr->gamma.axis, 104);*/
-	for(i=0; i<26; i++) {
+	for (i=0; i<26; i++) {
 		isp_context_ptr->gamma_tab[0].axis[0][i]=raw_tune_ptr->gamma.axis[0][i];
 		isp_context_ptr->gamma_tab[0].axis[1][i]=raw_tune_ptr->gamma.axis[1][i];
 		isp_context_ptr->gamma_tab[1].axis[0][i]=raw_tune_ptr->gamma.tab[0].axis[0][i];
@@ -4019,9 +4960,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
 
 	/*cce matrix*/
-	if(ISP_ZERO!=raw_tune_ptr->special_effect[0].matrix[0])
-	{
-		for(i=0; i<16; i++) {
+	if (ISP_ZERO!=raw_tune_ptr->special_effect[0].matrix[0]) {
+		for (i=0; i<16; i++) {
 			isp_context_ptr->cce_tab[i].matrix[0]=raw_tune_ptr->special_effect[i].matrix[0];
 			isp_context_ptr->cce_tab[i].matrix[1]=raw_tune_ptr->special_effect[i].matrix[1];
 			isp_context_ptr->cce_tab[i].matrix[2]=raw_tune_ptr->special_effect[i].matrix[2];
@@ -4036,7 +4976,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 			isp_context_ptr->cce_tab[i].v_shift=raw_tune_ptr->special_effect[i].v_shift;
 		}
 	} else {
-		for(i=0; i<8; i++) {
+		for (i=0; i<8; i++) {
 			isp_context_ptr->cce_tab[i].matrix[0]=cce_matrix[i][0];
 			isp_context_ptr->cce_tab[i].matrix[1]=cce_matrix[i][1];
 			isp_context_ptr->cce_tab[i].matrix[2]=cce_matrix[i][2];
@@ -4169,7 +5109,8 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->af.max_tune_step=raw_tune_ptr->af.max_tune_step;
 	isp_context_ptr->af.rough_count=raw_tune_ptr->af.rough_count;
 	isp_context_ptr->af.fine_count=raw_tune_ptr->af.fine_count;
-	for(i=0;i<32;i++){
+	
+	for (i=0;i<32;i++) {
 		isp_context_ptr->af.af_rough_step[i]=raw_tune_ptr->af.af_rough_step[i];
 		isp_context_ptr->af.af_fine_step[i]=raw_tune_ptr->af.af_fine_step[i];
 	}
@@ -4195,7 +5136,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->edge.smooth_thr=raw_tune_ptr->edge.info[0].smooth_thr;
 	isp_context_ptr->edge.strength=raw_tune_ptr->edge.info[0].strength;
 
-	for(i=0x00; i<16; i++) {
+	for (i=0x00; i<16; i++) {
 		isp_context_ptr->edge_tab[i].detail_thr=raw_tune_ptr->edge.info[i].detail_thr;
 		isp_context_ptr->edge_tab[i].smooth_thr=raw_tune_ptr->edge.info[i].smooth_thr;
 		isp_context_ptr->edge_tab[i].strength=raw_tune_ptr->edge.info[i].strength;
@@ -4239,8 +5180,9 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->chn.r_offset=raw_tune_ptr->chn.r_offset;
 	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
-
+	
 	return rtn;
+	
 }
 
 /* _ispUpdateParam --
@@ -5452,12 +6394,12 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 	version_info_ptr=(struct sensor_version_info*)raw_info_ptr->version_info;
 	raw_tune_ptr=(struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
 
-	if(version_info_ptr->version_id!=param_ptr->isp_id){
+	if((version_info_ptr->version_id & 0xffff0000)!=(param_ptr->isp_id & 0xffff0000)){
 		rtn=ISP_PARAM_ERROR;
 		ISP_RETURN_IF_FAIL(rtn, ("check isp id chip_id:0x%08x, isp_id:0x%08x  error", param_ptr->isp_id, version_info_ptr->version_id));
 	}
 
-	if(raw_tune_ptr->version_id!=param_ptr->isp_id){
+	if((raw_tune_ptr->version_id & 0xffff0000)!=(param_ptr->isp_id & 0xffff0000)){
 		rtn=ISP_PARAM_ERROR;
 		ISP_RETURN_IF_FAIL(rtn, ("check isp param id chip_id:0x%08x, param_id:0x%08x error", param_ptr->isp_id, raw_tune_ptr->version_id));
 	}

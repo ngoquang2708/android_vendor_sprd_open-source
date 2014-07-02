@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
+#include "isp_raw.h"
 
 /**---------------------------------------------------------------------------*
  **				Compiler Flag					*
@@ -43,6 +44,7 @@ typedef int32_t (*isp_fun)(void* param_ptr);
 #define ISP_END_ID 0xffff
 #define ISP_VERSION_0000_ID 0x00000000
 #define ISP_VERSION_0001_ID 0x00010000
+#define ISP_VERSION_00010001_ID 0x00010001
 
 #define ISP_PACKET_VERIFY_ID 0x71717567
 #define ISP_PACKET_END_ID 0x69656e64

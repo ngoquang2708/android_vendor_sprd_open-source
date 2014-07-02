@@ -103,6 +103,7 @@ static int32_t _ispParserDownParam(void* in_param_ptr)
 			break;
 		}
 		case ISP_VERSION_0001_ID:
+		case ISP_VERSION_00010001_ID:
 		{
 			fun_ptr=ispGetDownParamFunV0001(module_id);
 			break;
@@ -255,6 +256,7 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 		}
 
 		case ISP_VERSION_0001_ID:
+		case ISP_VERSION_00010001_ID:
 		{
 			rtn = ispGetUpParamV0001(NULL, rtn_param_ptr);
 			break;

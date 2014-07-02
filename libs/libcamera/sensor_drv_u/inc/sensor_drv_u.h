@@ -26,6 +26,7 @@
 #include "cmr_common.h"
 #include <sys/types.h>
 #include "sensor_raw.h"
+#include "isp_raw.h"
 #include "sensor_drv_k.h"
 
 #ifdef	 __cplusplus

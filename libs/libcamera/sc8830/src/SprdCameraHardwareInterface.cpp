@@ -4812,7 +4812,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	}
 
 #ifdef CONFIG_CAMERA_ISP
-	send_img_data(2, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
+	send_img_data(ISP_TOOL_YVU420_2FRAME, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
 #endif
 
 	if(mData_cb != NULL)
