@@ -36,7 +36,6 @@ LOCAL uint32_t _at_ov5640_Identify(uint32_t param);
 LOCAL uint32_t _at_ov5640_StreamOn(uint32_t param);
 LOCAL uint32_t _at_ov5640_StreamOff(uint32_t param);
 
-
 LOCAL const SENSOR_REG_T at_ov5640_common_init[] = {
 	{0x3103, 0x11},		/* sysclk from pad*/
 	{0x3008, 0x82},		/*software reset*/
@@ -349,7 +348,7 @@ LOCAL const SENSOR_REG_T at_ov5640_common_init[] = {
 };
 
 LOCAL const SENSOR_REG_T at_ov5640_640x480_setting[] = {
-     /*@@YUV_1280*960_15fps*/
+	/*@@YUV_1280*960_15fps*/
 	{0x3800, 0x00},
 	{0x3801, 0x00},
 	{0x3802, 0x00},
@@ -407,13 +406,13 @@ LOCAL const SENSOR_REG_T at_ov5640_640x480_setting[] = {
 	{0x3108, 0x01},
 
 	 	 //yuv
-     {0x3002,0x1c},
-     {0x3006,0xc3},
-     {0x3821,0x06},
-     {0x501f,0x00},
-     {0x460c,0x22},
-     {0x3824,0x02},
-     {0x460b,0x37},
+	{0x3002,0x1c},
+	{0x3006,0xc3},
+	{0x3821,0x06},
+	{0x501f,0x00},
+	{0x460c,0x22},
+	{0x3824,0x02},
+	{0x460b,0x37},
 
 #ifdef CONFIG_ARCH_SC8825
 	{0x3503,0x00},	// AEC/AGC on
@@ -421,8 +420,6 @@ LOCAL const SENSOR_REG_T at_ov5640_640x480_setting[] = {
 	{0x503d,0x80},/*color bar*/
 
 };
-
-
 
 LOCAL SENSOR_REG_TAB_INFO_T s_at_ov5640_resolution_Tab_YUV[] = {
 	{ADDR_AND_LEN_OF_ARRAY(at_ov5640_common_init), 640, 480, 24,SENSOR_IMAGE_FORMAT_YUV422},
@@ -437,8 +434,6 @@ LOCAL SENSOR_TRIM_T s_at_ov5640_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0,{0, 0, 0, 0}},
 
 };
-
-
 
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_at_ov5640_ioctl_func_tab = {
 	PNULL,
@@ -491,7 +486,6 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_at_ov5640_ioctl_func_tab = {
 	PNULL,
 };
 
-
 SENSOR_INFO_T g_autotest_ov5640_mipi_yuv_info = {
 	ov5640_I2C_ADDR_W,	// salve i2c write address
 	ov5640_I2C_ADDR_R,	// salve i2c read address
@@ -509,12 +503,12 @@ SENSOR_INFO_T g_autotest_ov5640_mipi_yuv_info = {
 
 	// image effect
 	SENSOR_IMAGE_EFFECT_NORMAL |
-	    SENSOR_IMAGE_EFFECT_BLACKWHITE |
-	    SENSOR_IMAGE_EFFECT_RED |
-	    SENSOR_IMAGE_EFFECT_GREEN |
-	    SENSOR_IMAGE_EFFECT_BLUE |
-	    SENSOR_IMAGE_EFFECT_YELLOW |
-	    SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
+	SENSOR_IMAGE_EFFECT_BLACKWHITE |
+	SENSOR_IMAGE_EFFECT_RED |
+	SENSOR_IMAGE_EFFECT_GREEN |
+	SENSOR_IMAGE_EFFECT_BLUE |
+	SENSOR_IMAGE_EFFECT_YELLOW |
+	SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
 
 	// while balance mode
 	0,
@@ -529,7 +523,7 @@ SENSOR_INFO_T g_autotest_ov5640_mipi_yuv_info = {
 
 	1,			// count of identify code
 	{{0x0A, 0x56},		// supply two code to identify sensor.
-	 {0x0B, 0x40}},		// for Example: index = 0-> Device id, index = 1 -> version id
+	{0x0B, 0x40}},		// for Example: index = 0-> Device id, index = 1 -> version id
 
 	SENSOR_AVDD_2800MV,	// voltage of avdd
 
@@ -567,6 +561,7 @@ LOCAL uint32_t _at_ov5640_GetResolutionTrimTab(uint32_t param)
 {
 	return (uint32_t) s_at_ov5640_Resolution_Trim_Tab;
 }
+
 LOCAL uint32_t _at_ov5640_PowerOn(uint32_t power_on)
 {
 	SENSOR_AVDD_VAL_E dvdd_val = g_autotest_ov5640_mipi_yuv_info.dvdd_val;
@@ -652,4 +647,3 @@ LOCAL uint32_t _at_ov5640_StreamOff(uint32_t param)
 
 	return 0;
 }
-

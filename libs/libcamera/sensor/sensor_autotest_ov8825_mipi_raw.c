@@ -22,10 +22,8 @@
 
 #define ov8825_I2C_ADDR_W        0x36
 #define ov8825_I2C_ADDR_R         0x36
-
 #define OV8825_MIN_FRAME_LEN_PRV  0x5e8
 #define OV8825_4_LANES
-
 
 LOCAL uint32_t _at_ov8825_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _at_ov8825_PowerOn(uint32_t power_on);
@@ -38,7 +36,7 @@ LOCAL const struct raw_param_info_tab s_at_ov8825_raw_param_tab[]={
 	{RAW_INFO_END_ID, PNULL, PNULL, PNULL}
 };
 
-struct sensor_raw_info* s_at_ov8825_mipi_raw_info_ptr=NULL;
+struct sensor_raw_info* s_at_ov8825_mipi_raw_info_ptr = NULL;
 static uint32_t g_ov8825_module_id = 0;
 
 LOCAL const SENSOR_REG_T ov8825_common_init[] = {
@@ -684,7 +682,7 @@ LOCAL const SENSOR_REG_T ov8825_640x480_setting[] = {
 	{0x5068, 0x59},
 	{0x506a, 0x5a},
 	{0x4837, 0x1e},
-    {0x5e00, 0x80},//color bar normal
+	{0x5e00, 0x80},//color bar normal
 #endif
 };
 
@@ -695,9 +693,9 @@ LOCAL SENSOR_REG_TAB_INFO_T s_at_ov8825_resolution_Tab_RAW[] = {
 };
 
 LOCAL SENSOR_TRIM_T s_at_ov8825_Resolution_Trim_Tab[] = {
-	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 640, 480, 175, 528, 1902},
-	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 640, 480, 175, 528, 1902, {0, 0, 640, 480}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 };
 
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_at_ov8825_ioctl_func_tab = {
@@ -754,7 +752,6 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_at_ov8825_ioctl_func_tab = {
 	PNULL, //_at_ov8825_cfg_otp
 };
 
-
 SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info = {
 	ov8825_I2C_ADDR_W,	// salve i2c write address
 	ov8825_I2C_ADDR_R,	// salve i2c read address
@@ -772,12 +769,12 @@ SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info = {
 
 	// image effect
 	SENSOR_IMAGE_EFFECT_NORMAL |
-	    SENSOR_IMAGE_EFFECT_BLACKWHITE |
-	    SENSOR_IMAGE_EFFECT_RED |
-	    SENSOR_IMAGE_EFFECT_GREEN |
-	    SENSOR_IMAGE_EFFECT_BLUE |
-	    SENSOR_IMAGE_EFFECT_YELLOW |
-	    SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
+	SENSOR_IMAGE_EFFECT_BLACKWHITE |
+	SENSOR_IMAGE_EFFECT_RED |
+	SENSOR_IMAGE_EFFECT_GREEN |
+	SENSOR_IMAGE_EFFECT_BLUE |
+	SENSOR_IMAGE_EFFECT_YELLOW |
+	SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
 
 	// while balance mode
 	0,
@@ -792,7 +789,7 @@ SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info = {
 
 	1,			// count of identify code
 	{{0x30A, 0x88},		// supply two code to identify sensor.
-	 {0x30B, 0x25}},		// for Example: index = 0-> Device id, index = 1 -> version id
+	{0x30B, 0x25}},		// for Example: index = 0-> Device id, index = 1 -> version id
 
 	SENSOR_AVDD_2800MV,	// voltage of avdd
 
@@ -848,12 +845,12 @@ LOCAL uint32_t Sensor_at_ov8825_InitRawTuneInfo(void)
 	return rtn;
 }
 
-
 LOCAL uint32_t _at_ov8825_GetResolutionTrimTab(uint32_t param)
 {
 	SENSOR_PRINT("0x%x",  (uint32_t)s_at_ov8825_Resolution_Trim_Tab);
 	return (uint32_t) s_at_ov8825_Resolution_Trim_Tab;
 }
+
 LOCAL uint32_t _at_ov8825_PowerOn(uint32_t power_on)
 {
 	SENSOR_AVDD_VAL_E dvdd_val = g_autotest_ov8825_mipi_raw_info.dvdd_val;
@@ -935,8 +932,7 @@ LOCAL uint32_t _at_ov8825_GetRawInof(void)
 			}
 			SENSOR_PRINT("SENSOR_at_OV8825: _at_ov8825_GetRawInof end");
 			break;
-		}
-		else if (PNULL!=tab_ptr[i].identify_otp) {
+		} else if (PNULL!=tab_ptr[i].identify_otp) {
 			if (SENSOR_SUCCESS==tab_ptr[i].identify_otp(0)) {
 				s_at_ov8825_mipi_raw_info_ptr = tab_ptr[i].info_ptr;
 				SENSOR_PRINT("SENSOR_at_OV8825: _at_ov8825_GetRawInof id:0x%x success", g_ov8825_module_id);
@@ -945,14 +941,13 @@ LOCAL uint32_t _at_ov8825_GetRawInof(void)
 		}
 	}
 
-	if(1 != (stream_value & 0x01)) {
+	if (1 != (stream_value & 0x01)) {
 		Sensor_WriteReg(0x0100, stream_value);
 		usleep(5 * 1000);
 	}
 
 	return rtn;
 }
-
 
 LOCAL uint32_t _at_ov8825_Identify(uint32_t param)
 {
@@ -973,7 +968,7 @@ LOCAL uint32_t _at_ov8825_Identify(uint32_t param)
 		if (ov8825_VER_VALUE == ver_value) {
 			SENSOR_PRINT("SENSOR_at_ov8825: this is _at_ov8825 sensor !");
 			ret_value=_at_ov8825_GetRawInof();
-			if(SENSOR_SUCCESS != ret_value)
+			if (SENSOR_SUCCESS != ret_value)
 			{
 				SENSOR_PRINT("SENSOR_at_ov8825: the module is unknow error !");
 			}

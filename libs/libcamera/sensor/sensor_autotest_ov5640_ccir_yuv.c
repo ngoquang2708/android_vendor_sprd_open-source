@@ -47,8 +47,6 @@ LOCAL uint32_t _at_ov5640_ccir_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _at_ov5640_ccir_PowerOn(uint32_t power_on);
 LOCAL uint32_t _at_ov5640_ccir_Identify(uint32_t param);
 
-
-
 LOCAL const SENSOR_REG_T _at_ov5640_ccir_common_init[] = {
 	{0x4202, 0x0f},/*kenxu add 20120207 for stream off*/
 	{SENSOR_WRITE_DELAY, 0x10},
@@ -375,9 +373,6 @@ LOCAL SENSOR_TRIM_T s_at_ov5640_ccir_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0,{0, 0, 0, 0}}
 };
 
-
-
-
 LOCAL SENSOR_IOCTL_FUNC_TAB_T s_at_ov5640_ccir_ioctl_func_tab = {
 	PNULL,
 	_at_ov5640_ccir_PowerOn,
@@ -449,12 +444,12 @@ SENSOR_INFO_T g_at_ov5640_ccir_yuv_info = {
 
 	// image effect
 	SENSOR_IMAGE_EFFECT_NORMAL |
-	    SENSOR_IMAGE_EFFECT_BLACKWHITE |
-	    SENSOR_IMAGE_EFFECT_RED |
-	    SENSOR_IMAGE_EFFECT_GREEN |
-	    SENSOR_IMAGE_EFFECT_BLUE |
-	    SENSOR_IMAGE_EFFECT_YELLOW |
-	    SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
+	SENSOR_IMAGE_EFFECT_BLACKWHITE |
+	SENSOR_IMAGE_EFFECT_RED |
+	SENSOR_IMAGE_EFFECT_GREEN |
+	SENSOR_IMAGE_EFFECT_BLUE |
+	SENSOR_IMAGE_EFFECT_YELLOW |
+	SENSOR_IMAGE_EFFECT_NEGATIVE | SENSOR_IMAGE_EFFECT_CANVAS,
 
 	// while balance mode
 	0,
@@ -469,7 +464,7 @@ SENSOR_INFO_T g_at_ov5640_ccir_yuv_info = {
 
 	1,			// count of identify code
 	{{0x0A, 0x56},		// supply two code to identify sensor.
-	 {0x0B, 0x40}},		// for Example: index = 0-> Device id, index = 1 -> version id
+	{0x0B, 0x40}},		// for Example: index = 0-> Device id, index = 1 -> version id
 
 	SENSOR_AVDD_2800MV,	// voltage of avdd
 
@@ -503,13 +498,11 @@ SENSOR_INFO_T g_at_ov5640_ccir_yuv_info = {
 	1,			// skip frame num while change setting
 };
 
-
-
-
 LOCAL uint32_t _at_ov5640_ccir_GetResolutionTrimTab(uint32_t param)
 {
 		return (uint32_t) s_at_ov5640_ccir_Resolution_Trim_Tab;
 }
+
 LOCAL uint32_t _at_ov5640_ccir_PowerOn(uint32_t power_on)
 {
 	SENSOR_AVDD_VAL_E dvdd_val = g_at_ov5640_ccir_yuv_info.dvdd_val;
