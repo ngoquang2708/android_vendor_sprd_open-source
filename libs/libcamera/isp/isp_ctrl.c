@@ -355,6 +355,7 @@ static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
 **---------------------------------------------------------------------------*/
 
 static int32_t _ispCfgAfWin(uint32_t handler_id, struct isp_af_param* af, struct isp_af_win* src_af);
+static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr);
 
 
 /* ispGetSystem --
@@ -594,7 +595,10 @@ static int32_t _isp_ContinueFocusTrigeAF(uint32_t handler_id)
 		isp_context_ptr->awb.monitor_bypass=ISP_EB;
 		isp_context_ptr->ae.cur_skip_num = ISP_AE_SKIP_FOREVER;
 		isp_context_ptr->af.monitor_bypass=ISP_UEB;
-		isp_context_ptr->tune.af=ISP_EB;
+		_ispCfgAf(handler_id, &isp_context_ptr->af);
+		isp_context_ptr->af.status=ISP_AF_START;
+		isp_context_ptr->af.suc_win=ISP_ZERO;
+		//isp_context_ptr->tune.af=ISP_EB;
 
 		af_notice.mode=ISP_FOCUS_MOVE_START;
 		af_notice.valid_win=0x00;
@@ -1300,6 +1304,8 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 	int32_t rtn=ISP_SUCCESS;
 
 	ISP_LOG("_isp3AInit \n");
+
+	isp_GetChipVersion();
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
@@ -2696,56 +2702,13 @@ static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr)
 	uint32_t x_start,y_start,x_end,y_end;
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	uint32_t temp;
-
-	if((3 == param_ptr->alg_id) && (isp_context_ptr->af.init)){
-		ispAwbmBypass(handler_id, ISP_EB);
-		ispAFMbypass(handler_id, ISP_EB);
-		x_start = param_ptr->win[0][0];
-		y_start = param_ptr->win[0][1];
-		x_end = param_ptr->win[0][2];
-		y_end = param_ptr->win[0][3];
-		awbm_param.win_start.x = x_start;
-		awbm_param.win_start.y = y_start;
-		awbm_param.win_size.w = (x_end + 31 - x_start)>>5;
-		awbm_param.win_size.h = (y_end + 31 - y_start)>>5;
-		if(awbm_param.win_size.w%2){
-			awbm_param.win_size.w++;
-		}
-		if(awbm_param.win_size.h%2){
-			awbm_param.win_size.h++;
-		}
-		temp = ((awbm_param.win_size.w<<5) - (x_end - x_start))>>1;
-		awbm_param.win_start.x = awbm_param.win_start.x>temp?awbm_param.win_start.x-temp:0;
-		temp = ((awbm_param.win_size.h<<5) - (y_end - y_start))>>1;
-		awbm_param.win_start.y = awbm_param.win_start.y>temp?awbm_param.win_start.y-temp:0;
-
-		if(awbm_param.win_start.x + awbm_param.win_size.w*32 > isp_context_ptr->src.w){
-			awbm_param.win_start.x = isp_context_ptr->src.w - (awbm_param.win_size.w<<5);
-		}
-		if(awbm_param.win_start.y + awbm_param.win_size.h*32 > isp_context_ptr->src.h){
-			awbm_param.win_start.y =isp_context_ptr->src.h - (awbm_param.win_size.h<<5);
-		}
-
-		awbm_param.bypass = ISP_UEB;
-		isp_context_ptr->ae.monitor_conter = 1;
-		_ispCfgAwbm(handler_id, &awbm_param);
-		isp_context_ptr->af.awbm_win_w = awbm_param.win_size.w;
-		isp_context_ptr->af.awbm_win_h = awbm_param.win_size.h;
-		ispSetAFMShift(handler_id, 0x00);
-		ispSetAFMWindow(handler_id, param_ptr->win);
-		ispAFMMode(handler_id, 0);
-		ispAFMSkipNum(handler_id, 0);
-		ispAFMSkipClear(handler_id, 0);
-		ispAFMbypass(handler_id, ISP_UEB);
-		//ISP_LOG("P_w:%d  P_h:%d  x:%d  y:%d  w:%d  h:%d  ",isp_context_ptr->src.w,isp_context_ptr->src.h,awbm_param.win_start.x,awbm_param.win_start.y,awbm_param.win_size.w,awbm_param.win_size.h);
-	}else{
-		ispSetAFMShift(handler_id, 0x00);
-		ispSetAFMWindow(handler_id, param_ptr->win);
-		ispAFMMode(handler_id, 0);
-		ispAFMSkipNum(handler_id, 0);
-		ispAFMSkipClear(handler_id, 0);
-		ispAFMbypass(handler_id, param_ptr->monitor_bypass);
-	}
+	
+	ispSetAFMShift(handler_id, 0x00);
+	ispSetAFMWindow(handler_id, param_ptr->win);
+	ispAFMMode(handler_id, 0);
+	ispAFMSkipNum(handler_id, 0);
+	ispAFMSkipClear(handler_id, 0);
+	ispAFMbypass(handler_id, param_ptr->monitor_bypass);
 	param_ptr->monitor_bypass = ISP_EB;
 
 	return rtn;
@@ -6049,8 +6012,16 @@ int32_t _ispAfIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
 	struct isp_af_win* af_ptr = (struct isp_af_win*)param_ptr;
 
-	ISP_LOG("--IOCtrl--AF--win_num:0x%x, mode:0x%x bypass:%d",
-			af_ptr->valid_win, af_ptr->mode,isp_context_ptr->af.bypass);
+	ISP_LOG("--IOCtrl--AF--win_num:0x%x, mode:0x%x", af_ptr->valid_win, af_ptr->mode);
+
+	if(ISP_FOCUS_BYPASS==af_ptr->mode)
+	{
+		_ispCfgAfWin(handler_id, &isp_context_ptr->af, af_ptr);
+		ispSetAFMWindow(handler_id, isp_context_ptr->af.win);
+		isp_context_ptr->af.bypass = ISP_EB;
+	} else {
+		isp_context_ptr->af.bypass = isp_context_ptr->af.back_bypass;
+	}
 
 	isp_context_ptr->af.monitor_bypass=ISP_EB;
 	if((ISP_UEB == isp_context_ptr->af.bypass)
@@ -6077,7 +6048,10 @@ int32_t _ispAfIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 			isp_context_ptr->awb.monitor_bypass=ISP_EB;
 			isp_context_ptr->ae.cur_skip_num = ISP_AE_SKIP_FOREVER;
 			isp_context_ptr->af.monitor_bypass=ISP_UEB;
-			isp_context_ptr->tune.af=ISP_EB;
+			_ispCfgAf(handler_id, &isp_context_ptr->af);
+			isp_context_ptr->af.status=ISP_AF_START;
+			isp_context_ptr->af.suc_win=ISP_ZERO;
+			//isp_context_ptr->tune.af=ISP_EB;
 		}
 	}
 
@@ -7301,25 +7275,14 @@ static void *_isp_ctrl_routine(void *client_data)
 			case ISP_CTRL_EVT_AWB:
 			//	ISP_LOG("ae _isp_ctrl_routine awb");
 				rtn=_ispCfgAwbmInfo(handler_id, &isp_context_ptr->awb_stat);
-				if(isp_context_ptr->af.init && \
-					(3==isp_context_ptr->af.alg_id) &&\
-					((ISP_AF_START == isp_context_ptr->af.status) || (ISP_AF_CONTINUE== isp_context_ptr->af.status))){
-			//		ISP_LOG("ae _isp_ctrl_routine awb -- af");
-					isp_context_ptr->af.awbm_flag = ISP_EB;
-					isp_proc_msg.handler_id = handler_id;
-					isp_proc_msg.msg_type = ISP_PROC_EVT_AF;
-					rtn = _isp_proc_msg_post(&isp_proc_msg);
-				}else{
-					isp_proc_msg.handler_id = handler_id;
-					isp_proc_msg.msg_type = ISP_PROC_EVT_AWB;
-					rtn = _isp_proc_msg_post(&isp_proc_msg);
-				}
+				isp_proc_msg.handler_id = handler_id;
+				isp_proc_msg.msg_type = ISP_PROC_EVT_AWB;
+				rtn = _isp_proc_msg_post(&isp_proc_msg);
 				break;
 
 			case ISP_CTRL_EVT_AF:
 		//		ISP_LOG("af _isp_ctrl_routine af");
 				rtn = _ispGetAfInof(handler_id, &isp_context_ptr->af_stat);
-				isp_context_ptr->af.afm_flag = ISP_EB;
 				isp_proc_msg.handler_id = handler_id;
 				isp_proc_msg.msg_type = ISP_PROC_EVT_AF;
 				rtn = _isp_proc_msg_post(&isp_proc_msg);

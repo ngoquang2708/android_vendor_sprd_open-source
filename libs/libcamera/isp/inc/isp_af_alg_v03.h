@@ -139,6 +139,7 @@ struct af_contex_struct_v03{
 	struct isp_af_config_v03 af_cfg;
 	struct af_para_struct_v03 af_para;
 	uint32_t (*af_go_position)(uint32_t handler_id, uint32_t pos);
+	int32_t (*Af_Eb)(uint32_t handler_id);
 
 };
 

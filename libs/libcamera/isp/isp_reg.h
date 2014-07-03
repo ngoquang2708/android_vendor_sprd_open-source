@@ -1435,8 +1435,8 @@ union _isp_cfa_param_tag {
     struct _isp_cfa_param_map {
         volatile unsigned int reserved0      :1;
         volatile unsigned int edge_thr       :6;
-        volatile unsigned int diff_thr       :10;
-        volatile unsigned int reserved1      :15;
+        volatile unsigned int diff_thr       :2;
+        volatile unsigned int reserved1      :23;
     }mBits ;
     volatile unsigned int dwValue ;
 };
