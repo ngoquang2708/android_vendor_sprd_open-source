@@ -565,10 +565,11 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!gpu_dfs_ctx.gpu_power_on)
 		{
 			gpu_dfs_ctx.gpu_power_on=1;
+			gpu_dfs_ctx.gpu_clock_on=1;
+			gpu_dfs_ctx.cur_freq_p=gpu_dfs_ctx.dfs_max_freq_p;
 			gpu_cur_freq = gpu_dfs_ctx.cur_freq_p->freq;
 			sci_glb_clr(REG_PMU_APB_PD_GPU_TOP_CFG, BIT_PD_GPU_TOP_FORCE_SHUTDOWN);
 			udelay(100);
-			gpu_dfs_ctx.gpu_clock_on=1;
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_dfs_ctx.gpu_clock_i);
 #else
@@ -576,6 +577,9 @@ void mali_platform_power_mode_change(int power_mode)
 #endif
 
 			udelay(100);
+#ifdef CONFIG_COMMON_CLK
+			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_clk_src[1].clk_src);
+#endif
 			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_dfs_ctx.dfs_max_freq_p->clk_src);
 
 #ifdef CONFIG_COMMON_CLK
