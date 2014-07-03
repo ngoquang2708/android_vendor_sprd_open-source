@@ -523,7 +523,9 @@ int start_service(int modem, int is_vlx, int restart)
             if (stty_fd < 0) return -1;
             /* Send IMEI */
             send_imei(stty_fd, path);
+            MODEMD_LOGD("close stty dev, start");
             close(stty_fd);
+            MODEMD_LOGD("close stty dev, end");
 
             start_phser(modem);
             start_rild(modem);
