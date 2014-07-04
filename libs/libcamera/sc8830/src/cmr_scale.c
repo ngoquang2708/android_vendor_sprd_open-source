@@ -91,12 +91,12 @@ static void* cmr_scale_thread_proc(void* data)
 	CMR_MSG_INIT(message);
 	struct scale_file *file = (struct scale_file *)data;
 
-	sem_post(&file->thread_sync_sem);
-
 	if (!file) {
 		CMR_LOGE("scale erro: file is null");
 		return NULL;
 	}
+
+	sem_post(&file->thread_sync_sem);
 
 	if (-1 == file->fd) {
 		CMR_LOGE("scale error: fd is invalid");
