@@ -20,11 +20,18 @@
 #define WCND_EVENT_CP2_ASSERT		0x0020
 #define WCND_EVENT_CP2_DOWN			0x0040
 #define WCND_EVENT_PENGING_EVENT		0x0080
+#define WCND_EVENT_CP2POWERON_REQ	0x0100
+#define WCND_EVENT_CP2POWEROFF_REQ	0x0200
 
 
 //WCND BT/WIFI STATE
 #define WCND_BTWIFI_STATE_BT_ON		0x01
 #define WCND_BTWIFI_STATE_WIFI_ON	0x02
+
+
+/**
+* NOTE: the commnad send to wcn, will prefix with "wcn ", such as "wcn BT-CLOSE"
+*/
 
 
 //BT/WIFI CMD STRING
@@ -33,6 +40,12 @@
 #define WCND_CMD_WIFI_CLOSE_STRING	"WIFI-CLOSE"
 #define WCND_CMD_WIFI_OPEN_STRING	"WIFI-OPEN"
 
+#define WCND_CMD_CP2_POWER_ON		"poweron"
+#define WCND_CMD_CP2_POWER_OFF		"poweroff"
+
+
+
+//Below cmd used internal
 #define WCND_SELF_CMD_START_CP2		"startcp2"
 #define WCND_SELF_CMD_STOP_CP2		"stopcp2"
 #define WCND_SELF_CMD_PENDINGEVENT	"pendingevent"
@@ -40,7 +53,7 @@
 #define WCND_SELF_EVENT_CP2_ASSERT	"cp2assert"
 
 
-#define WCND_RESPONSE_BTWIFI_STRING	"BTWIFI-CMD"
+#define WCND_CMD_RESPONSE_STRING		"WCNBTWIFI-CMD"
 
 
 //WCND CLIENT TYPE

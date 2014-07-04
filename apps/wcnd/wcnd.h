@@ -86,6 +86,9 @@
 #define WCND_CP2_RESET_END_STRING "WCN-CP2-RESET-END"
 #define WCND_CP2_ALIVE_STRING "WCN-CP2-ALIVE"
 
+
+#define WCND_CP2_DEFAULT_CP2_VERSION_INFO "Fail: UNKNOW VERSION"
+
 typedef struct structWcndMessage{
 	int event;
 	int replyto_fd; //fd to replay message
@@ -175,6 +178,8 @@ typedef struct structWcndManager
 	//identify if enable to send notify
 	int notify_enabled;
 
+	//save the cp2 version info
+	char cp2_version_info[256];
 
 }WcndManager;
 

@@ -62,6 +62,16 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 
 	memset(buffer, 0, sizeof(buffer));
 
+
+	//IF CP2 not started, use the saved VERSION info.
+	if(pWcndManger->state != WCND_STATE_CP2_STARTED)
+	{
+		snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
+		WCND_LOGD("%s: Save version info: '%s'", __func__, buffer);
+
+		goto out;
+	}
+
 	snprintf(buffer, 255, "%s", atcmd_str);
 
 	//at cmd shoud end with '\r'
@@ -95,15 +105,16 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 	//Get AT Cmd Response
 	int try_counts = 0;
 
-	memset(buffer, 0, sizeof(buffer));
 try_again:
 	if(try_counts++ > 5)
 	{
 		WCND_LOGE("%s: wait for response fail!!!!!", __func__);
-		snprintf(buffer, 255, "Fail: No data available");
+		snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
 	}
 	else
 	{
+		memset(buffer, 0, sizeof(buffer));
+
 		do {
 			len = read(atcmd_fd, buffer, sizeof(buffer)-1);
 		} while(len < 0 && errno == EINTR);
@@ -114,13 +125,18 @@ try_again:
 			usleep(300*1000);
 			goto try_again;
 		}
-
+		else
+		{
+			//save the CP2 version info
+			memcpy(pWcndManger->cp2_version_info, buffer, sizeof(buffer));
+		}
 	}
 
 	WCND_LOGD("%s: ATcmd to %s return: '%s'", __func__, pWcndManger->wcn_atcmd_iface_name, buffer);
 
 	close(atcmd_fd);
 
+out:
 	if(client_fd <= 0)
 	{
 		WCND_LOGE("Write '%s' to Invalid client_fd", buffer);
@@ -179,7 +195,7 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		pthread_mutex_lock(&pWcndManger->clients_lock);
 		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
 		{
-			if(pWcndManger->clients[i].sockfd == client_fd) //invalid fd
+			if(pWcndManger->clients[i].sockfd == client_fd)
 			{
 				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_CMD;
 				break;
@@ -214,6 +230,48 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 
 		message.event = WCND_EVENT_CP2_ASSERT;
 		message.replyto_fd = -1;
+		wcnd_sm_step(pWcndManger, &message);
+	}
+	else if(!strcmp(argv[0], WCND_CMD_CP2_POWER_ON))
+	{
+		WcndMessage message;
+		int i = 0;
+
+		//to set the type to be cmd
+		pthread_mutex_lock(&pWcndManger->clients_lock);
+		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
+		{
+			if(pWcndManger->clients[i].sockfd == client_fd)
+			{
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_CMD;
+				break;
+			}
+		}
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
+		message.event = WCND_EVENT_CP2POWERON_REQ;
+		message.replyto_fd = client_fd;
+		wcnd_sm_step(pWcndManger, &message);
+	}
+	else if(!strcmp(argv[0], WCND_CMD_CP2_POWER_OFF))
+	{
+		WcndMessage message;
+		int i = 0;
+
+		//to set the type to be cmd
+		pthread_mutex_lock(&pWcndManger->clients_lock);
+		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
+		{
+			if(pWcndManger->clients[i].sockfd == client_fd)
+			{
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_CMD;
+				break;
+			}
+		}
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
+		message.event = WCND_EVENT_CP2POWEROFF_REQ;
+		message.replyto_fd = client_fd;
 		wcnd_sm_step(pWcndManger, &message);
 	}
 	else

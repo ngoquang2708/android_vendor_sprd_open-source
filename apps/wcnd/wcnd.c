@@ -1753,6 +1753,8 @@ static int init(WcndManager *pWcndManger)
 
 	wcnd_sm_init(pWcndManger);
 
+	memcpy(pWcndManger->cp2_version_info, WCND_CP2_DEFAULT_CP2_VERSION_INFO, sizeof(WCND_CP2_DEFAULT_CP2_VERSION_INFO));
+
 	pWcndManger->inited = 1;
 
 	return 0;
@@ -1823,7 +1825,8 @@ static void *cp2_loop_check_thread(void *arg)
 	{
 		usleep(LOOP_CHECK_INTERVAL_MSECS*1000);
 
-		if(!pWcndManger->notify_enabled) continue;
+		if(!pWcndManger->notify_enabled || (pWcndManger->state != WCND_STATE_CP2_STARTED))
+			continue;
 
 		//cp2 exception happens just continue for next poll
 		if(pWcndManger->is_cp2_error)
@@ -1841,7 +1844,8 @@ static void *cp2_loop_check_thread(void *arg)
 		{
 			if(is_cp2_alive_ok(pWcndManger, 1) < 0)
 			{
-				if(pWcndManger->is_cp2_error)//during loop checking, cp2 exception happens just continue
+				if(pWcndManger->is_cp2_error ||
+					(pWcndManger->state != WCND_STATE_CP2_STARTED))//during loop checking, cp2 exception happens just continue
 				{
 					is_loopcheck_fail = 0;
 					break;
@@ -1938,6 +1942,44 @@ static int check_disable_cp2_log(WcndManager *pWcndManger)
 	return wcnd_process_atcmd(-1, DISABLE_CP2_LOG_CMD, pWcndManger);
 }
 
+
+
+#define GET_CP2_VERSION_INFO_ATCMD "at+spatgetcp2info\r"
+
+/**
+* Store the CP2 Version info, used when startup
+*/
+static int store_cp2_version_info(WcndManager *pWcndManger)
+{
+	if(!pWcndManger) return -1;
+
+	int count = 100;
+
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
+
+	//wait CP2 started, wait 10s at most
+	while(count-- > 0)
+	{
+		if(pWcndManger->state == WCND_STATE_CP2_STARTED)
+			break;
+
+		usleep(100*1000);
+	}
+
+	if(pWcndManger->state != WCND_STATE_CP2_STARTED)
+	{
+		WCND_LOGE("%s: CP2 does not start successs, just return!!", __func__);
+		return -1;
+	}
+
+	wcnd_process_atcmd(-1, GET_CP2_VERSION_INFO_ATCMD, pWcndManger);
+
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_STOP_CP2);
+
+	return 0;
+}
+
+
 #ifndef FOR_UNIT_TEST
 
 #ifdef WIFI_ENGINEER_ENABLE
@@ -1999,6 +2041,10 @@ int main(int argc, char *argv[])
 
 	// Disable the CP2 log, if it is a user version
 	check_disable_cp2_log(pWcndManger);
+
+
+	//get CP2 version and save it
+	store_cp2_version_info(pWcndManger);
 
 	//do nothing, just sleep
 	do {

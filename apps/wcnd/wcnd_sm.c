@@ -36,7 +36,7 @@ static void wcn_state_cp2_stopped(WcndManager *pWcndManger, WcndMessage *pMessag
 
 		if(pMessage->event == WCND_EVENT_BT_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_BT_ON;
-		else
+		else if(pMessage->event == WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
 
 
@@ -51,7 +51,8 @@ static void wcn_state_cp2_stopped(WcndManager *pWcndManger, WcndMessage *pMessag
 
 	case WCND_EVENT_BT_CLOSE:
 	case WCND_EVENT_WIFI_CLOSE:
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+	case WCND_EVENT_CP2POWEROFF_REQ:
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 		break;
 
 	case WCND_EVENT_PENGING_EVENT:
@@ -62,8 +63,34 @@ static void wcn_state_cp2_stopped(WcndManager *pWcndManger, WcndMessage *pMessag
 		if(pWcndManger->pending_events & WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
 
-		if(pWcndManger->btwifi_state)		
+		if(pWcndManger->btwifi_state || (pWcndManger->pending_events & WCND_EVENT_CP2POWERON_REQ))
+		{
+			//transact to next state
+			pWcndManger->state = WCND_STATE_CP2_STARTING;
+
+			WCND_LOGD("Enter WCND_STATE_CP2_STARTING from WCND_STATE_CP2_STOPPED for PENDING CP2 POWER ON EVENT");
 			wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
+		}
+		break;
+
+	case WCND_EVENT_CP2POWERON_REQ:
+		//transact to next state
+		pWcndManger->state = WCND_STATE_CP2_STARTING;
+
+		WCND_LOGD("Enter WCND_STATE_CP2_STARTING from WCND_STATE_CP2_STOPPED for WCND_EVENT_CP2POWERON_REQ");
+
+		wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
+		break;
+
+
+	//this case is happened only at startup
+	case WCND_EVENT_CP2_OK:
+		//transact to next state
+		pWcndManger->state = WCND_STATE_CP2_STARTED;
+
+		//CP2 is OK, notify is enabled
+		pWcndManger->notify_enabled = 1;
+		WCND_LOGD("Warning: Enter WCND_STATE_CP2_STARTED from WCND_STATE_CP2_STOPPED");
 		break;
 
 	default:
@@ -88,7 +115,7 @@ static void wcn_state_cp2_starting(WcndManager *pWcndManger, WcndMessage *pMessa
 	case WCND_EVENT_WIFI_CLOSE:
 
 		WCND_LOGE("WARNING: receive BT/WIFI CLOSE EVENT during CP2 Starting!");
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
 		break;
 
@@ -96,7 +123,7 @@ static void wcn_state_cp2_starting(WcndManager *pWcndManger, WcndMessage *pMessa
 	case WCND_EVENT_WIFI_OPEN:
 		if(pMessage->event == WCND_EVENT_BT_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_BT_ON;
-		else
+		else if(pMessage->event == WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
 		break;
 
@@ -104,8 +131,8 @@ static void wcn_state_cp2_starting(WcndManager *pWcndManger, WcndMessage *pMessa
 		//transact to next state
 		pWcndManger->state = WCND_STATE_CP2_STARTED;
 
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD_PENDING);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD_PENDING);
 
 		//CP2 is OK, notify is enabled
 		pWcndManger->notify_enabled = 1;
@@ -117,10 +144,17 @@ static void wcn_state_cp2_starting(WcndManager *pWcndManger, WcndMessage *pMessa
 
 		//transact to next state
 		pWcndManger->state = WCND_STATE_CP2_STOPPED;
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" FAIL", WCND_CLIENT_TYPE_CMD);				
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" FAIL", WCND_CLIENT_TYPE_CMD_PENDING);
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" FAIL", WCND_CLIENT_TYPE_CMD);
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" FAIL", WCND_CLIENT_TYPE_CMD_PENDING);
 
 		WCND_LOGD("Enter WCND_STATE_CP2_STOPPED from WCND_STATE_CP2_STARTING");
+
+		break;
+
+	case WCND_EVENT_CP2POWEROFF_REQ:
+		WCND_LOGD("Warning: Receive WCND_EVENT_CP2POWEROFF_REQ at WCND_STATE_CP2_STARTING, btwifi_state: 0x%x", pWcndManger->btwifi_state);
+
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
 		break;
 
@@ -142,22 +176,23 @@ static void wcn_state_cp2_started(WcndManager *pWcndManger, WcndMessage *pMessag
 	{
 	case WCND_EVENT_BT_CLOSE:
 	case WCND_EVENT_WIFI_CLOSE:
+	case WCND_EVENT_CP2POWEROFF_REQ:
 
 		if(pWcndManger->saved_btwifi_state)
 		{
 			if(pMessage->event == WCND_EVENT_BT_CLOSE)
 				pWcndManger->saved_btwifi_state &= (~WCND_BTWIFI_STATE_BT_ON);
-			else
+			else if(pMessage->event == WCND_EVENT_WIFI_CLOSE)
 				pWcndManger->saved_btwifi_state &= (~WCND_BTWIFI_STATE_WIFI_ON);
 
-			wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+			wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
 		}
 		else
 		{
 			if(pMessage->event == WCND_EVENT_BT_CLOSE)
 				pWcndManger->btwifi_state &= (~WCND_BTWIFI_STATE_BT_ON);
-			else
+			else if(pMessage->event == WCND_EVENT_WIFI_CLOSE)
 				pWcndManger->btwifi_state &= (~WCND_BTWIFI_STATE_WIFI_ON);
 
 			if(!pWcndManger->btwifi_state)
@@ -175,7 +210,7 @@ static void wcn_state_cp2_started(WcndManager *pWcndManger, WcndMessage *pMessag
 			else
 			{
 				WCND_LOGD("one of BT/WIFI is still opened(0x%x), do not shutdow CP2", pWcndManger->btwifi_state);
-				wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+				wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 			}
 		}
 
@@ -183,12 +218,13 @@ static void wcn_state_cp2_started(WcndManager *pWcndManger, WcndMessage *pMessag
 
 	case WCND_EVENT_BT_OPEN:
 	case WCND_EVENT_WIFI_OPEN:
+	case WCND_EVENT_CP2POWERON_REQ:
 		if(pMessage->event == WCND_EVENT_BT_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_BT_ON;
-		else
+		else if(pMessage->event == WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
 
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 		break;
 
 	case WCND_EVENT_CP2_ASSERT:
@@ -201,6 +237,15 @@ static void wcn_state_cp2_started(WcndManager *pWcndManger, WcndMessage *pMessag
 		pWcndManger->state = WCND_STATE_CP2_ASSERT;
 
       		WCND_LOGD("Enter WCND_STATE_CP2_ASSERT from WCND_STATE_CP2_STARTED");
+
+		break;
+
+
+	case WCND_EVENT_CP2_DOWN:
+		//transact to next state
+		pWcndManger->state = WCND_STATE_CP2_STOPPED;
+
+		WCND_LOGD("Warning: Enter WCND_STATE_CP2_STOPPED from WCND_STATE_CP2_STOPPING");
 
 		break;
 
@@ -228,11 +273,11 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 		{
 			if(pMessage->event == WCND_EVENT_BT_CLOSE)
 				pWcndManger->saved_btwifi_state &= (~WCND_BTWIFI_STATE_BT_ON);
-			else
+			else if(pMessage->event == WCND_EVENT_WIFI_CLOSE)
 				pWcndManger->saved_btwifi_state &= (~WCND_BTWIFI_STATE_WIFI_ON);
 		}
 
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 		break;
 
 	case WCND_EVENT_BT_OPEN:
@@ -241,7 +286,7 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 	
 		if(pMessage->event == WCND_EVENT_BT_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_BT_ON;
-		else
+		else if(pMessage->event == WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
 
 		break;
@@ -250,7 +295,7 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 
 		//transact to next state
 		pWcndManger->state = WCND_STATE_CP2_STARTED;
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
       		WCND_LOGD("Enter WCND_STATE_CP2_STARTED from WCND_STATE_CP2_ASSERT");
 
@@ -261,9 +306,15 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 
 		//transact to next state
 		pWcndManger->state = WCND_STATE_CP2_STOPPED;
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" FAIL", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" FAIL", WCND_CLIENT_TYPE_CMD);
 
       		WCND_LOGD("Enter WCND_STATE_CP2_STOPPED from WCND_STATE_CP2_ASSERT");
+
+		break;
+
+	case WCND_EVENT_CP2POWERON_REQ:
+	case WCND_EVENT_CP2POWEROFF_REQ:
+		WCND_LOGE("WARNING: Receive WCND POWER ON/OFF EVENT at WCND_STATE_CP2_ASSERT, btwifi_state: 0x%x", pWcndManger->btwifi_state);
 
 		break;
 
@@ -287,12 +338,16 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 	{
 	case WCND_EVENT_BT_CLOSE:
 	case WCND_EVENT_WIFI_CLOSE:
+	case WCND_EVENT_CP2POWEROFF_REQ:
 		WCND_LOGD("CP2 is stopping!!");
 		break;
 
 	case WCND_EVENT_BT_OPEN:
 	case WCND_EVENT_WIFI_OPEN:
+	case WCND_EVENT_CP2POWERON_REQ:
 		WCND_LOGD("Pending BT/WIFI Open event during CP2 is stopping!!");
+
+		pthread_mutex_lock(&pWcndManger->clients_lock);
 
 		//save the pending message
 		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
@@ -303,6 +358,7 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 				break;
 			}
 		}
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
 
 		pWcndManger->pending_events |= pMessage->event ;
 
@@ -312,7 +368,7 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 		//transact to next state
 		pWcndManger->state = WCND_STATE_CP2_STOPPED;
 
-		wcnd_send_notify_to_client(pWcndManger, WCND_RESPONSE_BTWIFI_STRING" OK", WCND_CLIENT_TYPE_CMD);				
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 		//has pending event for stopped state
 		if(pWcndManger->pending_events)
 			wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_PENDINGEVENT);
