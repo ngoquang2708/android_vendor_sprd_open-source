@@ -3847,6 +3847,9 @@ status_t SprdCameraHardware::cancelPictureInternal()
 		}
 
 		result = WaitForCaptureDone();
+		if (!iSZslMode()) {
+			deinitCapture();
+		}
 		camera_set_capture_trace(0);
 		break;
 

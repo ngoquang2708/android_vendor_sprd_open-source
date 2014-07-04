@@ -2691,6 +2691,7 @@ LOCAL uint32_t sensor_tflash_debug(char* filename)
 	file_len = ftell(file);
 	if (0 > ((int)file_len)) {
 		SENSOR_PRINT("ftell file length negative %d", (int)file_len);
+		fclose(file);
 		return file_len;
 	}
        fseek(file, 0, HEAD);
