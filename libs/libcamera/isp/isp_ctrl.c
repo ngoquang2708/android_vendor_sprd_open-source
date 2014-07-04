@@ -5220,6 +5220,49 @@ static int32_t _ispUncfg(uint32_t handler_id)
 	return rtn;
 }
 
+/* _ispChangeProcBLC --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispChangeProcBLC(uint32_t handler_id)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+	struct isp_blc_param* blc_ptr = (struct isp_blc_param*)&isp_context_ptr->blc;
+	uint32_t param_index = isp_context_ptr->param_index-ISP_ONE;
+
+	blc_ptr->r=isp_context_ptr->blc_offset[param_index].r;
+	blc_ptr->gr=isp_context_ptr->blc_offset[param_index].gr;
+	blc_ptr->gb=isp_context_ptr->blc_offset[param_index].gb;
+	blc_ptr->b=isp_context_ptr->blc_offset[param_index].b;
+
+	return rtn;
+}
+
+/* _ispChangeProcAwbGain --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispChangeProcAwbGain(uint32_t handler_id)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+	struct isp_awbc_param* awbc_ptr=(struct isp_awbc_param*)&isp_context_ptr->awbc;
+	struct isp_awb_param* awb_ptr=(struct isp_awb_param*)&isp_context_ptr->awb;
+	uint32_t param_index=isp_context_ptr->param_index-ISP_ONE;
+
+	/*flash on need modify awb gan*/
+	isp_awb_set_flash_gain();
+
+	awbc_ptr->r_gain=(awbc_ptr->r_gain*awb_ptr->gain_convert[param_index].r)>>0x08;
+	awbc_ptr->g_gain=(awbc_ptr->g_gain*awb_ptr->gain_convert[param_index].g)>>0x08;
+	awbc_ptr->b_gain=(awbc_ptr->b_gain*awb_ptr->gain_convert[param_index].b)>>0x08;
+
+	return rtn;
+}
+
 /* _ispChangeVideoCfg --
 *@
 *@
@@ -5257,55 +5300,8 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 
 	/* change lnc param*/
 	ispSetLncParam(handler_id, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].param_addr, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].len);
-
-	return rtn;
-}
-
-/* _ispChangeProcBLC --
-*@
-*@
-*@ return:
-*/
-static int32_t _ispChangeProcBLC(uint32_t handler_id)
-{
-	int32_t rtn = ISP_SUCCESS;
-	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
-	struct isp_blc_param* blc_ptr = (struct isp_blc_param*)&isp_context_ptr->blc;
-	uint32_t param_index = isp_context_ptr->proc_param_index-ISP_ONE;
-
-	if(isp_context_ptr->video_param_index!=isp_context_ptr->proc_param_index)
-	{
-		blc_ptr->r=isp_context_ptr->blc_offset[param_index].r;
-		blc_ptr->gr=isp_context_ptr->blc_offset[param_index].gr;
-		blc_ptr->gb=isp_context_ptr->blc_offset[param_index].gb;
-		blc_ptr->b=isp_context_ptr->blc_offset[param_index].b;
-	}
-
-	return rtn;
-}
-
-/* _ispChangeProcAwbGain --
-*@
-*@
-*@ return:
-*/
-static int32_t _ispChangeProcAwbGain(uint32_t handler_id)
-{
-	int32_t rtn = ISP_SUCCESS;
-	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
-	struct isp_awbc_param* awbc_ptr=(struct isp_awbc_param*)&isp_context_ptr->awbc;
-	struct isp_awb_param* awb_ptr=(struct isp_awb_param*)&isp_context_ptr->awb;
-	uint32_t param_index=isp_context_ptr->proc_param_index-ISP_ONE;
-
-	/*flash on need modify awb gan*/
-	isp_awb_set_flash_gain();
-
-	if(isp_context_ptr->video_param_index!=isp_context_ptr->proc_param_index)
-	{
-		awbc_ptr->r_gain=(awbc_ptr->r_gain*awb_ptr->gain_convert[param_index].r)>>0x08;
-		awbc_ptr->g_gain=(awbc_ptr->g_gain*awb_ptr->gain_convert[param_index].g)>>0x08;
-		awbc_ptr->b_gain=(awbc_ptr->b_gain*awb_ptr->gain_convert[param_index].b)>>0x08;
-	}
+	_ispChangeProcBLC(handler_id);
+	_ispChangeProcAwbGain(handler_id);
 
 	return rtn;
 }
