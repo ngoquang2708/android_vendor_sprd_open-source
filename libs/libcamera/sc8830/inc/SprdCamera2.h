@@ -62,6 +62,10 @@ const int32_t jpegResolutionSensorBack[] = {/*must order from bigger to smaller*
 };
 
 const int32_t jpegResolutionSensorFront[] = {
+#ifdef CONFIG_FRONT_CAMERA_SUPPORT_3M
+    1600, 1200,
+    1280,  960,
+#endif
      720,  480,
      640,  480,
      320,  240,
@@ -169,6 +173,7 @@ static tags_info_t android_add_parameters[VENDOR_SECTION_END - VENDOR_SECTION_ST
     { "brightness",                          TYPE_BYTE   },
     { "capture-mode",                        TYPE_BYTE   },
     { "burstcap-cnt",                        TYPE_BYTE   },
+    { "recreleaseprvbuf",                    TYPE_INT32   },
 };
 
 tags_info_t *cam_tag_info[ANDROID_VENDOR_SECTION_COUNT] = {

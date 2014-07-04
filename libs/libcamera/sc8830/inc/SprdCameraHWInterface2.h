@@ -107,6 +107,7 @@ typedef struct stream_parameters {
 	int                           phySize[NUM_MAX_CAMERA_BUFFERS];
 	int                           phyAdd[NUM_MAX_CAMERA_BUFFERS];/*for s_mem_method = 1*/
 	bool                          bufIsCancel[NUM_MAX_CAMERA_BUFFERS];
+	bool                          bufIsRecRelease[NUM_MAX_CAMERA_BUFFERS];
 	int                           bufIndex;
 	int                           minUndequedBuffer;
 	int64_t                       m_timestamp;
@@ -293,10 +294,7 @@ private:
 		int32_t            aeCompensation;
 		int32_t            outputStreamMask;
 		int32_t            prvFrmRate;
-		uint32_t           cropRegion0;
-		uint32_t           cropRegion1;
-		uint32_t           cropRegion2;
-		uint32_t           cropRegion3;
+		cropZoom           cropRegion;
 		double             gpsLat;
 		double             gpsLon;
 		double             gpsAlt;
@@ -471,9 +469,10 @@ private:
 	void                 ContinuPicCountReduce();
 	bool                 GetStartPreviewAftPic();
 	void                 SetStartPreviewAftPic(bool IsPicPreview);
+	void                 DirectProcessRecReleaseBuf(int bufID, camera_metadata_t *req);
 	bool                 GetIsOutputStream();/*for panoramic*/
 	void                 SetIsOutputStream(bool OutputStrm);
-	void                 Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq);
+	void                 Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq, bool *isDirectProc);
 	void                 Camera2ProcessReq( camera_req_info *srcreq);
 	int                  CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
 	status_t             Camera2RefreshSrvReq(camera_req_info *srcreq, camera_metadata_t *dstreq);
@@ -602,6 +601,7 @@ private:
 	Mutex                             m_requestMutex;
 	Mutex                             m_halCBMutex;//for vary
 	Mutex                             m_capBufMutex;
+	Mutex                             m_prvBufMutex;
 	Mutex                             m_stopPrvFrmCBMutex;//mutex for stop preview and receivepreviewframe
 	Mutex                             m_metaDataMutex;
 	Mutex                             mStateLock;
