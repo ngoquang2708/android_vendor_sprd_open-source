@@ -386,6 +386,7 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 	}
 	reqNum++;
 	HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
+	#if 0
 	ret = find_camera_metadata_entry(curReq, ANDROID_SPRD_REC_BUF_INFO, &entry);
 	if (ret == NAME_NOT_FOUND) {
 		HAL_LOGE("%s not found!",__FUNCTION__);
@@ -396,6 +397,7 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 			goto deq_over;
 		}
 	}
+	#endif
 	if (!isRecReleaseBuf) {
 		reqNum += m_ReqQueue.size();
 		if (m_reqIsProcess == true) {
@@ -444,6 +446,7 @@ deq_over:
 				if (ret < 0)
 					HAL_LOGE("ERR: free_request ret = %d", ret);
 			} else {
+				#if 0
 				/*release rec buf req insert capture req back just right*/
 				ret = find_camera_metadata_entry(curReq, ANDROID_SPRD_REC_BUF_INFO, &entry);
 				if (ret == NAME_NOT_FOUND) {
@@ -454,6 +457,7 @@ deq_over:
 						DirectProcessRecReleaseBuf(entry.data.i32[0], curReq);
 					}
 				}
+				#endif
 				if (!isRecReleaseBuf) {
 					reqNum++;
 					m_ReqQueue.push_back(curReq);
@@ -1873,7 +1877,6 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 					HAL_LOGD("reProcMask STREAM_MASK_JPEG");
 					{
 						Mutex::Autolock lock(m_halCBMutex);
-						m_camCtlInfo.reProcMask = 0;
 
 						if(m_reprocessBuf.reprocessAcqBuf != NULL) {
 							if (m_grallocHal) {
@@ -4855,7 +4858,6 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				if (targetStreamParms->bufIsCancel[Index]) {
 					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 					targetStreamParms->bufIsCancel[Index] = false;
-					OemIndex = 0xff;
 					goto enq_buf;
 				} else if (targetStreamParms->svcBufStatus[Index] == ON_SERVICE) {
 
@@ -4885,18 +4887,16 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				}
 				goto proc_req_over;
 			}
-			if (!(streamOutMask & STREAM_MASK_RECORD && !GetRecStopMsg())) {
-				res = camera_release_frame(OemIndex);
-				if (res) {
-					HAL_LOGD("error release buf deq from graphic");
-					if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
-						HAL_LOGE("Error cancelbuf!");
-					} else {
-						targetStreamParms->svcBufStatus[Index] = ON_HAL_INIT;
-					}
+			res = camera_release_frame(OemIndex);
+			if (res) {
+				HAL_LOGD("error release buf deq from graphic");
+				if (targetStreamParms->streamOps->cancel_buffer(targetStreamParms->streamOps, buf)) {
+					HAL_LOGE("Error cancelbuf!");
 				} else {
-					targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
+					targetStreamParms->svcBufStatus[Index] = ON_HAL_INIT;
 				}
+			} else {
+				targetStreamParms->svcBufStatus[Index] = ON_HAL_DRIVER;
 			}
 			enq_buf:
 			res = targetStreamParms->streamOps->enqueue_buffer(targetStreamParms->streamOps,
@@ -4909,29 +4909,14 @@ void SprdCameraHWInterface2::receivePreviewFrame(camera_frame_type *frame)
 				}
 				goto proc_req_over;
 			} else {
+				targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
 				if (streamOutMask & STREAM_MASK_RECORD && !GetRecStopMsg()) {
 					substream_parameters_t *subParameters = &m_subStreams[STREAM_ID_RECORD];
 
 					if (SUBSTREAM_TYPE_RECORD == subParameters->type) {
-						int bufInfo[6];
-						{
-							int *tmp = NULL;
-							Mutex::Autolock lock(m_prvBufMutex);
-
-							memset(bufInfo, 0 ,sizeof(bufInfo));
-							tmp = &(bufInfo[0]);
-							*tmp++ = (int)targetStreamParms->svcBufHandle[TrueID];
-							*((int64_t *)tmp) = targetStreamParms->m_timestamp;
-							*(tmp + 2) = OemIndex | (targetStreamParms->bufIndex << 8);/*to release buf id to oem*/
-							targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
-							targetStreamParms->bufIsRecRelease[targetStreamParms->bufIndex] = false;/*oem index*/
-						}
-						m_notifyCb(CAMERA2_MSG_ERROR, CAMERA2_MSG_ERROR_FRAME, ANDROID_SPRD_NOTIFY_FLAG_REC_SYNC, (int)bufInfo, m_callbackClient);
-					} else {
-						targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
+						displaySubStream(StreamSP, (int32_t *)(mPreviewHeapArray_vir[TrueID]),\
+								targetStreamParms->m_timestamp,STREAM_ID_RECORD);
 					}
-				} else {
-					targetStreamParms->svcBufStatus[TrueID] = ON_SERVICE;
 				}
 			}
 			if (!StreamSP->m_IsFirstFrm) {
@@ -5217,13 +5202,23 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 
     if (currentSignal & SIGNAL_REQ_THREAD_REQ_DONE) {
 		bool IsProcessing = false;
-        IsProcessing = GetReqProcessStatus();
+		bool IsNotifyFramework = false;
+		int32_t OutStreamMask = GetZslStreamMask();
+
+		IsProcessing = GetReqProcessStatus();
 		if (!IsProcessing) {
-           HAL_LOGE("ERR status should processing");
+			HAL_LOGE("ERR status should processing");
 		}
-		ret = Camera2RefreshSrvReq(&m_staticReqInfo,m_halRefreshReq);
-		if (ret) {
-           HAL_LOGE("ERR refresh req");
+		if (GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_VIDEO_SNAPSHOT
+			|| GetCameraCaptureIntent(&m_staticReqInfo) == CAPTURE_INTENT_STILL_CAPTURE
+			|| OutStreamMask & STREAM_MASK_JPEG) {
+			IsNotifyFramework = true;
+			if (OutStreamMask & STREAM_MASK_JPEG)
+				SetZslStreamMask(0);
+			ret = Camera2RefreshSrvReq(&m_staticReqInfo,m_halRefreshReq);
+			if (ret) {
+				HAL_LOGE("ERR refresh req");
+			}
 		}
 		HAL_LOGD("processing SIGNAL_REQ_THREAD_REQ_DONE,free add=0x%x",
 				(uint32_t)m_staticReqInfo.ori_req);
@@ -5238,6 +5233,7 @@ void SprdCameraHWInterface2::RequestQueueThreadFunc(SprdBaseThread * self)
 		if (GetBurstCapSync()) {
 			SetBurstCapSync(false);
 		} else {
+			if (IsNotifyFramework)
 			enqeueMetaDataBufFrmHalToFramework(m_halRefreshReq);
 		}
 		if (GetReqQueueSize() > 0)
