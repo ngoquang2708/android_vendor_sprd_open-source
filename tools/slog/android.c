@@ -159,7 +159,7 @@ static void filterPriToStr (int pri, char *PriTag)
 void *stream_log_handler(void *arg)
 {
 	struct slog_info *info;
-	int max = 0, ret, result;
+	int max = 0, ret, result, retry;
 	fd_set readset_tmp, readset;
 	char buf[LOGGER_ENTRY_MAX_LEN+1], buf_kmsg[LOGGER_ENTRY_MAX_LEN], wbuf_kmsg[LOGGER_ENTRY_MAX_LEN *2];
 	struct logger_entry *entry;
@@ -285,14 +285,16 @@ void *stream_log_handler(void *arg)
 				}
 				buf_kmsg[ret] = '\0';
 				strinst(wbuf_kmsg, buf_kmsg);
+				retry = 0;
 retry1:
 				ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
 				if ( ret != 1 ) {
 					fclose(info->fp_out);
 					sleep(1);
-					info->fp_out = gen_outfd(info);
 					add_flag_when_lost(info);
-					goto retry1;
+					info->fp_out = gen_outfd(info);
+					if(retry++ < 5)
+						goto retry1;
 				} else {
 					info->outbytecount += strlen(wbuf_kmsg);
 					log_size_handler(info);
@@ -342,14 +344,16 @@ retry1:
 							info = info->next;
 							continue;
 					}
+					retry = 0;
 retry2:
 					ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
 					if ( ret != 1 ) {
 						fclose(info->fp_out);
 						sleep(1);
-						info->fp_out = gen_outfd(info);
 						add_flag_when_lost(info);
-						goto retry2;
+						info->fp_out = gen_outfd(info);
+						if(retry++ < 5)
+							goto retry2;
 					} else {
 						info->outbytecount += totalLen;
 						log_size_handler(info);
