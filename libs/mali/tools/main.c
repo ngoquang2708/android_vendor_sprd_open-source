@@ -2,6 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#define DATA_LIST_MAX_NUM 	32
+#define APP_NAME_MAX_LEN 	64 
+
+struct boost_full_list {
+	int 	level;
+	char* 	data_list[DATA_LIST_MAX_NUM];
+};
 
 void xor_cipher(char* src,int src_len,char* key,int key_len)
 {
@@ -43,89 +50,118 @@ void generate_cipher_data(FILE* fp,char* src,int src_len,char* key,int key_len)
 
 int main()
 {
-	int i=0;
+	int i=0, j=0;
 	char cipher_key[]="mali";
 
-	//312M
-	char* data_list_level10[] = {
-		"com.glbenchmark.glbenchmark",
-		"com.rightware.tdmm2v10jnifree",
-		"com.rightware.BasemarkX_Free",
-		"com.antutu.ABenchMark",
-		"com.raytracing.wizapply",
-		"com.aurorasoftworks.quadrant",
-		"com.qualcomm.qx.neocore",
-		"com.Vancete.GPUT",
-		"com.rightware.BasemarkX_Free",
-		"com.futuremark.dmandroid",
-		"com.tactel.electopia",
-		"com.epicgames.EpicCitadel",
-		"se.nena.nenamark",
-		"com.passmark",
-		"com.threed.jpct",
-		"com.smartbench",
-		"fishnoodle.benchmark",
-		"it.JBench.bench",
-		"com.re3.benchmark",
-		"com.qb"
-	};
-	size_t app_num_level10 = sizeof(data_list_level10)/sizeof(data_list_level10[0]);
+	struct boost_full_list full_list[] =
+	{
+		//312M
+		{
+			.level = 10,
+			.data_list =
+			{
+				"com.glbenchmark.glbenchmark",
+				"com.rightware.tdmm2v10jnifree",
+				"com.rightware.BasemarkX_Free",
+				"com.antutu.ABenchMark",
+				"com.raytracing.wizapply",
+				"com.aurorasoftworks.quadrant",
+				"com.qualcomm.qx.neocore",
+				"com.Vancete.GPUT",
+				"com.rightware.BasemarkX_Free",
+				"com.futuremark.dmandroid",
+				"com.tactel.electopia",
+				"com.epicgames.EpicCitadel",
+				"se.nena.nenamark",
+				"com.passmark",
+				"com.threed.jpct",
+				"com.smartbench",
+				"fishnoodle.benchmark",
+				"it.JBench.bench",
+				"com.re3.benchmark",
+				"com.qb"
+			}
+		},
 
-	//256M
-	char* data_list_level9[] = {
-		"com.android.launcher",
-		"com.android.sprdlauncher2",
-		"com.android.cts",
-		"eu.chainfire.cfbench",
-		"com.unstableapps.cpubenchmark",
-		"com.greenecomputing.linpack",
-		"org.broadley.membench"
-	};
-	size_t app_num_level9 = sizeof(data_list_level9)/sizeof(data_list_level9[0]);
+		//256M
+		{
+			.level = 9,
+			.data_list =
+			{
+				"com.android.launcher",
+				"com.android.sprdlauncher2",
+				"com.android.cts",
+				"eu.chainfire.cfbench",
+				"com.unstableapps.cpubenchmark",
+				"com.greenecomputing.linpack",
+				"org.broadley.membench"
+			}
+		},
 
-	//default:150M and you can set
-	char* data_list_level7[] = {
-	};
-	size_t app_num_level7 = sizeof(data_list_level7)/sizeof(data_list_level7[0]);
+		//150M
+		{
+			.level = 7,
+			.data_list =
+			{
+			}
+		},
 
-	//64M
-	char* data_list_level5[] = {
-		"com.android.wallpaper.holospiral",
-		"com.android.galaxy4",
-		"com.android.magicsmoke",
-		"com.android.noisefield",
-		"com.android.musicvis",
-		"com.android.wallpaper",
-		"com.android.phasebeam"
+		//64M
+		{
+			.level = 5,
+			.data_list =
+			{
+				"com.android.wallpaper.holospiral",
+				"com.android.galaxy4",
+				"com.android.magicsmoke",
+				"com.android.noisefield",
+				"com.android.musicvis",
+				"com.android.wallpaper",
+				"com.android.phasebeam"
+			}
+		},
 	};
-	size_t app_num_level5 = sizeof(data_list_level5)/sizeof(data_list_level5[0]);
+	int list_num = sizeof(full_list)/sizeof(full_list[0]);
 
 	FILE* fp=NULL;
 	fp=fopen("./libboost.so","wb");
 
-	for(i=0;i<app_num_level10;i++)
-	{
-		generate_cipher_data(fp,data_list_level10[i],strlen(data_list_level10[i]),cipher_key,strlen(cipher_key));
-	}
-	fputs("\n",fp);
+	//list num
+	char str_list_num[5] = {0};
+	snprintf(str_list_num, 5, "%d", list_num);
+	generate_cipher_data(fp,str_list_num,strlen(str_list_num),cipher_key,strlen(cipher_key));
 
-	for(i=0;i<app_num_level9;i++)
-	{
-		generate_cipher_data(fp,data_list_level9[i],strlen(data_list_level9[i]),cipher_key,strlen(cipher_key));
-	}
-	fputs("\n",fp);
+	//data list max num
+	char data_list_max_num[5] = {0};
+	snprintf(data_list_max_num, 5, "%d", DATA_LIST_MAX_NUM);
+	generate_cipher_data(fp,data_list_max_num,strlen(data_list_max_num),cipher_key,strlen(cipher_key));
 
-	for(i=0;i<app_num_level7;i++)
-	{
-		generate_cipher_data(fp,data_list_level7[i],strlen(data_list_level7[i]),cipher_key,strlen(cipher_key));
-	}
-	fputs("\n",fp);
+	//app name max len
+	char app_name_max_len[5] = {0};
+	snprintf(app_name_max_len, 5, "%d", APP_NAME_MAX_LEN);
+	generate_cipher_data(fp,app_name_max_len,strlen(app_name_max_len),cipher_key,strlen(cipher_key));
 
-	for(i=0;i<app_num_level5;i++)
+	for (i=0; i<list_num; i++)
 	{
-		generate_cipher_data(fp,data_list_level5[i],strlen(data_list_level5[i]),cipher_key,strlen(cipher_key));
+		//level
+		char str_level[5] = {0};
+		snprintf(str_level, 5, "%d", full_list[i].level);
+		generate_cipher_data(fp,str_level,strlen(str_level),cipher_key,strlen(cipher_key));
+
+		//app list
+		for (j=0; j<DATA_LIST_MAX_NUM; j++)
+		{
+			if (NULL != full_list[i].data_list[j])
+			{
+				generate_cipher_data(fp,full_list[i].data_list[j],strlen(full_list[i].data_list[j]),cipher_key,strlen(cipher_key));
+			}
+			else
+			{
+				break;
+			}
+		}
+		fputs("\n",fp);
 	}
-	fputs("\n",fp);
 
 	fclose(fp);
 
