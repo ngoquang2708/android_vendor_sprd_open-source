@@ -95,7 +95,7 @@
 static int32_t _ispAemEb(uint32_t handler_id);
 static int32_t _ispAwbCorrect(uint32_t handler_id);
 static int _isp_proc_msg_post(struct isp_msg *message);
-static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr); 
+static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr);
 static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr);
 
 /**---------------------------------------------------------------------------*
@@ -2700,9 +2700,9 @@ static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr)
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_awbm_param awbm_param;
 	uint32_t x_start,y_start,x_end,y_end;
-	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+/*	struct isp_context* isp_context_ptr = ispGetContext(handler_id);*/
 	uint32_t temp;
-	
+
 	ispSetAFMShift(handler_id, 0x00);
 	ispSetAFMWindow(handler_id, param_ptr->win);
 	ispAFMMode(handler_id, 0);
@@ -3337,7 +3337,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	max_param_index=_ispGetIspParamMaxIndex(handler_id, raw_info_ptr);
 	isp_context_ptr->isp_lnc_addr=ispAlloc(handler_id, raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len);
 
-	
+
 	switch (version_id[0]) {
 	case _ISP_VERSION_00000000_ID:
 	case _ISP_VERSION_00010000_ID:
@@ -3561,7 +3561,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->ae.target_lum=raw_tune_ptr->ae.target_lum;
 	isp_context_ptr->ae.target_zone=raw_tune_ptr->ae.target_zone;
 	isp_context_ptr->ae.quick_mode=raw_tune_ptr->ae.quick_mode;
-	
+
 	if (ISP_ZERO == raw_tune_ptr->ae.min_exposure) {
 		isp_context_ptr->ae.min_exposure=ISP_ONE;
 	} else {
@@ -3776,7 +3776,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
 	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
 	isp_context_ptr->awb.weight_ptr[2]=NULL;
-	
+
 	for (i=0x00; i<20; i++) {
 		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win_x[i];
 		isp_context_ptr->awb.win[i].yb=raw_tune_ptr->awb.win_yb[i];
@@ -3849,7 +3849,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
 
 	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
-	
+
 	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
 		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
 		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
@@ -4019,7 +4019,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 		isp_context_ptr->gamma_tab[4].axis[1][i]=raw_tune_ptr->gamma.tab[4].axis[1][i];
 		isp_context_ptr->gamma_tab[5].axis[0][i]=raw_tune_ptr->gamma.tab[5].axis[0][i];
 		isp_context_ptr->gamma_tab[5].axis[1][i]=raw_tune_ptr->gamma.tab[5].axis[1][i];
-		
+
 	}
 
 	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
@@ -4174,7 +4174,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->af.max_tune_step=raw_tune_ptr->af.max_tune_step;
 	isp_context_ptr->af.rough_count=raw_tune_ptr->af.rough_count;
 	isp_context_ptr->af.fine_count=raw_tune_ptr->af.fine_count;
-	
+
 	for (i=0;i<32;i++) {
 		isp_context_ptr->af.af_rough_step[i]=raw_tune_ptr->af.af_rough_step[i];
 		isp_context_ptr->af.af_fine_step[i]=raw_tune_ptr->af.af_fine_step[i];
@@ -4245,9 +4245,9 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->chn.r_offset=raw_tune_ptr->chn.r_offset;
 	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
-	
+
 	return rtn;
-	
+
 }
 
 
@@ -4460,7 +4460,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.target_lum=raw_tune_ptr->ae.target_lum;
 	isp_context_ptr->ae.target_zone=raw_tune_ptr->ae.target_zone;
 	isp_context_ptr->ae.quick_mode=raw_tune_ptr->ae.quick_mode;
-	
+
 	if (ISP_ZERO == raw_tune_ptr->ae.min_exposure) {
 		isp_context_ptr->ae.min_exposure=ISP_ONE;
 	} else {
@@ -4676,7 +4676,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
 	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
 	isp_context_ptr->awb.weight_ptr[2]=NULL;
-	
+
 	for (i=0x00; i<20; i++) {
 		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win[i].x;
 		isp_context_ptr->awb.win[i].yb=raw_tune_ptr->awb.win[i].yb;
@@ -4726,7 +4726,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.target_gain.b=isp_context_ptr->awb.cur_gain.b;
 
 	isp_context_ptr->awb.g_estimate.num=raw_tune_ptr->awb.g_estimate.num;
-	
+
 	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++) {
 		isp_context_ptr->awb.g_estimate.t_thr[i] = raw_tune_ptr->awb.g_estimate.t_thr[i];
 		isp_context_ptr->awb.g_estimate.g_thr[i][0] = raw_tune_ptr->awb.g_estimate.g_thr[i][0];
@@ -4735,7 +4735,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		isp_context_ptr->awb.g_estimate.w_thr[i][1] = raw_tune_ptr->awb.g_estimate.w_thr[i][1];
 	}
 	isp_context_ptr->awb.gain_adjust.num=raw_tune_ptr->awb.gain_adjust.num;
-	
+
 	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++) {
 		isp_context_ptr->awb.gain_adjust.t_thr[i] = raw_tune_ptr->awb.gain_adjust.t_thr[i];
 		isp_context_ptr->awb.gain_adjust.w_thr[i] = raw_tune_ptr->awb.gain_adjust.w_thr[i];
@@ -4748,7 +4748,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
 
 	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
-	
+
 	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
 		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
 		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
@@ -5072,7 +5072,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->af.max_tune_step=raw_tune_ptr->af.max_tune_step;
 	isp_context_ptr->af.rough_count=raw_tune_ptr->af.rough_count;
 	isp_context_ptr->af.fine_count=raw_tune_ptr->af.fine_count;
-	
+
 	for (i=0;i<32;i++) {
 		isp_context_ptr->af.af_rough_step[i]=raw_tune_ptr->af.af_rough_step[i];
 		isp_context_ptr->af.af_fine_step[i]=raw_tune_ptr->af.af_fine_step[i];
@@ -5143,9 +5143,9 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->chn.r_offset=raw_tune_ptr->chn.r_offset;
 	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
-	
+
 	return rtn;
-	
+
 }
 
 /* _ispUpdateParam --
