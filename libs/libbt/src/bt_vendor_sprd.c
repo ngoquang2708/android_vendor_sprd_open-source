@@ -507,6 +507,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
 
     while (1) 
     {
+#if 1
         r = read(fd, resp, 1);
         if (r <= 0)
         return -1;
@@ -515,6 +516,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
             ALOGI("read pskey response ok \n");
             break;
         }
+#endif
     }
 
     ALOGI("sprd_config_init ok \n");
