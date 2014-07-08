@@ -791,7 +791,8 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 
     destWidth = FBRect->w;
     destHeight = FBRect->h;
-    if ((layer->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
+    if (((layer->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
+        || ((layer->transform&HAL_TRANSFORM_ROT_270) == HAL_TRANSFORM_ROT_270))
     {
         srcWidth = srcRect->h;
         srcHeight = srcRect->w;
@@ -828,9 +829,12 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
             return 0;
         }
 
-        //added for Bug 181381
+        /*
+         *  GSP do not support scaling up and down at the same time.
+         *  so disable GSP here.
+         * */
         if(((srcWidth < destWidth) && (srcHeight > destHeight))
-        || ((srcWidth > destWidth) && (srcHeight < destHeight)))
+           || ((srcWidth > destWidth) && (srcHeight < destHeight)))
         {
             ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
             l->resetAccelerator();

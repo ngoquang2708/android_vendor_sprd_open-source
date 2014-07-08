@@ -745,8 +745,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1, SprdHWLayer *l2, private_handle_t*
             gsp_cfg_info.layer0_info.clip_rect.st_x = srcRect1->x;
             gsp_cfg_info.layer0_info.clip_rect.st_y = srcRect1->y;
             gsp_cfg_info.layer0_info.clip_rect.rect_w = srcRect1->w;
-            /*Overlay play video maybe loss some accuracy,Bug313521*/
-            gsp_cfg_info.layer0_info.clip_rect.rect_h = srcRect1->h-1;
+            gsp_cfg_info.layer0_info.clip_rect.rect_h = srcRect1->h;
 
             gsp_cfg_info.layer0_info.des_rect.st_x = FBRect1->x;
             gsp_cfg_info.layer0_info.des_rect.st_y = FBRect1->y;

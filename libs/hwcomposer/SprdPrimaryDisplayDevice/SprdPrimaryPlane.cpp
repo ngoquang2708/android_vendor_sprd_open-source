@@ -410,7 +410,8 @@ private_handle_t* SprdPrimaryPlane::flush()
              BaseContext->rect.h,
              (unsigned int)BaseContext->buffer);
 
-    if (HWCOMPOSER_DUMP_OSD_OVERLAY_FLAG & mDumpFlag)
+    if ((HWCOMPOSER_DUMP_OSD_OVERLAY_FLAG & mDumpFlag)
+        && (flushingBuffer != NULL))
     {
         const char *name = "OverlayOSD";
 
