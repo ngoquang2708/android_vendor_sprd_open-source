@@ -119,15 +119,16 @@ static int connect_wcnd(void)
             ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
     }
 
-    if(client_fd > 0)
+    if(client_fd < 0)
+        return client_fd;
+
+    rcv_timeout.tv_sec = 10;
+    rcv_timeout.tv_usec = 0;
+    if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcv_timeout, sizeof(rcv_timeout)) < 0)
     {
-        rcv_timeout.tv_sec = 10;
-        rcv_timeout.tv_usec = 0;
-        if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcv_timeout, sizeof(rcv_timeout)) < 0)
-        {
-            ALOGE("bt-vendor : %s: set receive timeout fail\n",__func__);
-        }
+        ALOGE("bt-vendor : %s: set receive timeout fail\n",__func__);
     }
+
 
     ALOGD("bt-vendor : %s: connect to server status:%d\n",__func__, client_fd);
 
@@ -141,7 +142,7 @@ static int start_cp2(void)
     int ret = -1;
     int wcnd_socket = connect_wcnd();
 
-    if (wcnd_socket <= 0) {
+    if (wcnd_socket < 0) {
         ALOGD("bt-vendor : %s: connect to server failed", __func__);
         return  -1;
     }
@@ -179,7 +180,7 @@ static int stop_cp2(void)
     int ret = -1;
     int wcnd_socket = connect_wcnd();
 
-    if (wcnd_socket <= 0) {
+    if (wcnd_socket < 0) {
         ALOGD("bt-vendor : %s: connect to server failed", __func__);
         return  -1;
     }
@@ -632,6 +633,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
 
     while (1) 
     {
+#if 1
         r = read(fd, resp, 1);
         if (r <= 0)
         return -1;
@@ -640,6 +642,7 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
             ALOGI("read pskey response ok \n");
             break;
         }
+#endif
     }
 
     ALOGI("sprd_config_init ok \n");
