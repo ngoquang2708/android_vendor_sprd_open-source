@@ -219,7 +219,7 @@ void *arithmetic_fd_thread_proc(void *data)
 		case ARITHMETIC_EVT_FD_INIT:
 			CMR_PRINT_TIME;
 			if (check_size_data_invalid((struct img_size *)(message.data))) {
-				FaceSolid_Finalize();
+				/*FaceSolid_Finalize();*/
 
 				if ( 0 != FaceSolid_Init(((struct img_size *)(message.data))->width,
 				((struct img_size *)(message.data))->height)) {
