@@ -357,6 +357,38 @@ static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
 static int32_t _ispCfgAfWin(uint32_t handler_id, struct isp_af_param* af, struct isp_af_win* src_af);
 static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr);
 
+int isp_savelog(void)
+{
+	uint32_t handler_id=0x00;
+	int                      ret = 0;
+	char                     file_name[40];
+	FILE                     *fp = NULL;
+	uint32_t file_len=0x00;
+
+
+	bzero(file_name, 40);
+	strcpy(file_name, "/data/log.txt");
+	fp = fopen(file_name, "wb");
+	ISP_LOG("ISP_TOOL: open0 file: %s \n", file_name);
+
+	if (NULL == fp) {
+		ISP_LOG("ISP_TOOL:can not open file: %s \n", file_name);
+		return 0;
+	}
+	ISP_LOG("ISP_TOOL: open1 file: %s \n", file_name);
+#if 0
+	fprintf(fp, "\n\n\nsensor_fps:%d\n", s_cur_lux);
+	fprintf(fp, "\n\n\nsensor_fps:%d\n", s_sensor_fps);
+	fprintf(fp, "sensor_conter:%d\n", s_sensor_conter);
+	fprintf(fp, "af_frame_conter:%d\n", s_af_conter);
+	fprintf(fp, "af_time:%d ms\n", s_af_time);
+	fprintf(fp, "af_calc_time:%d ms\n", s_af_calc_time);
+#endif
+	fclose(fp);
+
+	return 0;
+}
+
 
 /* ispGetSystem --
 *@
@@ -1302,6 +1334,7 @@ static uint32_t _ispAeInfo(uint32_t handler_id, struct isp_ae_info*param_ptr)
 static uint32_t _isp3AInit(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
 
 	ISP_LOG("_isp3AInit \n");
 
@@ -1319,6 +1352,10 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 
 		rtn = isp_af_init(handler_id);
 		ISP_TRACE_IF_FAIL(rtn, ("isp_af_init error"));
+
+		rtn = auto_adjust_init(handler_id, (void*)&isp_context_ptr->auto_adjust, NULL);
+		ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_init error"));
+
 	}
 
 	return rtn;
@@ -1341,6 +1378,10 @@ static uint32_t _isp3ADeInit(uint32_t handler_id)
 
 	rtn = isp_af_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_af_deinit error"));
+
+	rtn = auto_adjust_deinit(handler_id, NULL, NULL);
+	ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_deinit error"));
+
 	return rtn;
 }
 
@@ -3337,6 +3378,21 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	max_param_index=_ispGetIspParamMaxIndex(handler_id, raw_info_ptr);
 	isp_context_ptr->isp_lnc_addr=ispAlloc(handler_id, raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len);
 
+	memcpy((void*)&isp_context_ptr->auto_adjust.bil_denoise, (void*)&raw_tune_ptr->auto_adjust.bil_denoise, sizeof(struct auto_adjust));
+	memcpy((void*)&isp_context_ptr->auto_adjust.y_denoise, (void*)&raw_tune_ptr->auto_adjust.y_denoise, sizeof(struct auto_adjust));
+	memcpy((void*)&isp_context_ptr->auto_adjust.uv_denoise, (void*)&raw_tune_ptr->auto_adjust.uv_denoise, sizeof(struct auto_adjust));
+	memcpy((void*)&isp_context_ptr->auto_adjust.cmc, (void*)&raw_tune_ptr->auto_adjust.cmc, sizeof(struct auto_adjust));
+	memcpy((void*)&isp_context_ptr->auto_adjust.gamma, (void*)&raw_tune_ptr->auto_adjust.gamma, sizeof(struct auto_adjust));
+	memcpy((void*)&isp_context_ptr->auto_adjust.edge, (void*)&raw_tune_ptr->auto_adjust.edge, sizeof(struct auto_adjust));
+
+	isp_context_ptr->auto_adjust.bil_fun;
+	isp_context_ptr->auto_adjust.y_denoise_fun;
+	isp_context_ptr->auto_adjust.uv_denoise_fun;
+	isp_context_ptr->auto_adjust.gamma_fun;
+	isp_context_ptr->auto_adjust.cmc_fun;
+	isp_context_ptr->auto_adjust.edge_fun;
+
+	memcpy((void*)isp_context_ptr->reserved, (void*)raw_tune_ptr->reserved, 4*256);
 
 	switch (version_id[0]) {
 	case _ISP_VERSION_00000000_ID:
@@ -3594,7 +3650,8 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->ae.smart_sta_start_index=raw_tune_ptr->ae.smart_sta_start_index;
 	isp_context_ptr->ae.again_skip=raw_tune_ptr->ae.again_skip;
 	isp_context_ptr->ae.dgain_skip=raw_tune_ptr->ae.dgain_skip;
-	isp_context_ptr->ae.lux_500_index=raw_tune_ptr->ae.lux_500_index;
+	isp_context_ptr->ae.lum_cali_index=raw_tune_ptr->ae.lum_cali_index;
+	isp_context_ptr->ae.lum_cali_lux=raw_tune_ptr->ae.lum_cali_lux;
 
 	isp_context_ptr->ae.smart_pref_y_min=raw_tune_ptr->ae.smart_pref_y_min;
 	isp_context_ptr->ae.smart_pref_y_max=raw_tune_ptr->ae.smart_pref_y_max;
@@ -4076,9 +4133,9 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 
 	/*pref*/
 	isp_context_ptr->pref.write_back=raw_tune_ptr->pref.write_back;
-	isp_context_ptr->pref.y_thr=raw_tune_ptr->pref.y_thr;
-	isp_context_ptr->pref.u_thr=raw_tune_ptr->pref.u_thr;
-	isp_context_ptr->pref.v_thr=raw_tune_ptr->pref.v_thr;
+	isp_context_ptr->pref.y_thr=raw_tune_ptr->pref.y_thr[0];
+	isp_context_ptr->pref.u_thr=raw_tune_ptr->pref.u_thr[0];
+	isp_context_ptr->pref.v_thr=raw_tune_ptr->pref.v_thr[0];
 
 	memcpy((void*)&isp_context_ptr->pref_bak,(void*)&isp_context_ptr->pref,sizeof(isp_context_ptr->pref));
 
@@ -4246,10 +4303,17 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
 
+	/* auto adjust */
+	memcpy((void*)isp_context_ptr->auto_adjust.bil_param, (void*)isp_context_ptr->denoise_tab, sizeof(struct isp_denoise_param_tab)*14);
+	//memcpy((void*)&isp_context_ptr->auto_adjust.y_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
+	//memcpy((void*)&isp_context_ptr->auto_adjust.uv_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
+	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*14*2);
+	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*14);
+	memcpy((void*)isp_context_ptr->auto_adjust.edge_param, (void*)isp_context_ptr->edge_tab, sizeof(struct isp_edge_param)*14);
+
 	return rtn;
 
 }
-
 
 /* _ispSetV0001Param --
 *@
@@ -4493,7 +4557,8 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.smart_sta_start_index=raw_tune_ptr->ae.smart_sta_start_index;
 	isp_context_ptr->ae.again_skip=raw_tune_ptr->ae.again_skip;
 	isp_context_ptr->ae.dgain_skip=raw_tune_ptr->ae.dgain_skip;
-	isp_context_ptr->ae.lux_500_index=raw_tune_ptr->ae.lux_500_index;
+	isp_context_ptr->ae.lum_cali_index=raw_tune_ptr->ae.lum_cali_index;
+	isp_context_ptr->ae.lum_cali_lux=raw_tune_ptr->ae.lum_cali_lux;
 
 	isp_context_ptr->ae.smart_pref_y_min=raw_tune_ptr->ae.smart_pref_y_min;
 	isp_context_ptr->ae.smart_pref_y_max=raw_tune_ptr->ae.smart_pref_y_max;
@@ -5143,6 +5208,14 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->chn.r_offset=raw_tune_ptr->chn.r_offset;
 	isp_context_ptr->chn.g_offset=raw_tune_ptr->chn.g_offset;
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
+
+	/* auto adjust */
+	memcpy((void*)isp_context_ptr->auto_adjust.bil_param, (void*)isp_context_ptr->denoise_tab, sizeof(struct isp_denoise_param_tab)*2);
+	//memcpy((void*)isp_context_ptr->auto_adjust.y_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*2);
+	//memcpy((void*)isp_context_ptr->auto_adjust.uv_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*2);
+	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*9*2);
+	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*7);
+	memcpy((void*)isp_context_ptr->auto_adjust.edge_param, (void*)isp_context_ptr->edge_tab, sizeof(struct isp_edge_param)*14);
 
 	return rtn;
 

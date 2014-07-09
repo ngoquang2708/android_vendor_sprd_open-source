@@ -347,7 +347,7 @@ uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* pa
 	if (ISP_APP_ZERO != (ISP_CALLBACK_EVT&mode)) {
 		if (ISP_AF_NOTICE_CALLBACK == (ISP_EVT_MASK&mode)) {
 			if (1 != isp_context_ptr->stop_handle_flag) {
-			rtn = _isp_AppAfDenoiseRecover(handler_id);
+			//rtn = _isp_AppAfDenoiseRecover(handler_id);
 			rtn = _isp_AppSetLumMeasureCond(handler_id);
 			}
 		}
@@ -492,7 +492,7 @@ static int32_t _isp_AppIoCtrlHandler(uint32_t handler_id, enum isp_ctrl_cmd io_c
 		case ISP_CTRL_AF:
 		{
 			uint32_t denoise_level=0xfe;
-			rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
+			//rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
 			rtn = _isp_AppAfIoCtrlHandler(handler_id, param_ptr);
 			break ;
 		}

@@ -28,6 +28,7 @@
 #include "isp_ae.h"
 #include "isp_af.h"
 #include "isp_alg.h"
+#include "aaa_auto_adjust.h"
 /**---------------------------------------------------------------------------*
  **				 Compiler Flag					*
  **---------------------------------------------------------------------------*/
@@ -254,9 +255,9 @@ struct isp_bpc_param{
 
 struct isp_denoise_param_tab {
 	uint8_t diswei[19];
-	uint8_t ranwei[31];
 	uint8_t reserved2;
-	uint8_t reserved3;
+	uint8_t ranwei[31];
+	uint8_t reserved1;
 };
 
 struct isp_denoise_param
@@ -552,6 +553,8 @@ struct isp_context{
 	struct isp_size src;
 	struct isp_slice_param slice;
 	struct isp_tune_block tune;
+	struct auto_adjust_init_info auto_adjust;
+	uint32_t reserved[256];
 
 	struct isp_blc_offset blc_offset[8];
 	struct isp_edge_param edge_tab[16];

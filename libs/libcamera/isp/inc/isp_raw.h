@@ -27,6 +27,8 @@
 #define _ISP_CONTRAST_LEVEL 15
 #define _ISP_HUE_LEVEL 15
 
+#define ISP_AUTO_LEVEL 14
+
 /*
 //normal: conversion/emboss/gamma
 //grey: color conversion;
@@ -335,7 +337,8 @@ struct isp_ae{
 	uint8_t gamma_zone;
 	uint8_t gamma_thr[4];
 	uint8_t gamma_lum_thr;
-	uint16_t lux_500_index;
+	uint16_t lum_cali_index;
+	uint32_t lum_cali_lux;
 
 	uint8_t smart_denoise_mid_index;
 	uint8_t denoise_start_index;
@@ -413,7 +416,7 @@ struct isp_denoise{
 	uint16_t g_thr;
 	uint16_t b_thr;
 	uint16_t reserved;
-	struct _isp_denoise_tab tab[2];
+	struct _isp_denoise_tab tab[ISP_AUTO_LEVEL];
 };
 
 struct isp_grgb{
@@ -436,7 +439,7 @@ struct isp_cmc{
 
 struct isp_gamma{
 	uint32_t gamma_bypass;
-	struct _isp_gamma_tab tab[6];
+	struct _isp_gamma_tab tab[ISP_AUTO_LEVEL];
 };
 
 struct isp_uvdiv{
@@ -449,9 +452,9 @@ struct isp_uvdiv{
 struct isp_pref{
 	uint32_t pref_bypass;
 	uint8_t write_back;
-	uint8_t y_thr;
-	uint8_t u_thr;
-	uint8_t v_thr;
+	uint8_t y_thr[ISP_AUTO_LEVEL];
+	uint8_t u_thr[ISP_AUTO_LEVEL];
+	uint8_t v_thr[ISP_AUTO_LEVEL];
 };
 
 struct isp_bright{
@@ -577,6 +580,41 @@ struct isp_hdr{
 	uint32_t hdr_bypass;
 };
 
+
+struct isp_auto_adjust{
+	uint32_t enable;
+	uint32_t start_level;
+	uint32_t dependon_index;
+	uint32_t dependon_gain;
+	uint32_t dependon_lum;
+
+	uint32_t level_mode;
+	uint32_t index_zone;
+	uint32_t lum_zone;
+	uint32_t target_lum_thr;
+
+	uint32_t index_thr_num;
+	uint32_t lum_low_thr_num;
+	uint16_t index_thr[10];
+	uint16_t index_start_level[10];
+	uint16_t index_end_level[10];
+	uint16_t bais_gain[10];
+
+	uint16_t lum_low_thr[4];
+	uint16_t lum_start_level[4];
+	uint16_t lum_end_level[4];
+};
+
+struct isp_auto_adjust_info {
+	struct isp_auto_adjust bil_denoise;
+	struct isp_auto_adjust y_denoise;
+	struct isp_auto_adjust uv_denoise;
+	struct isp_auto_adjust cmc;
+	struct isp_auto_adjust gamma;
+	struct isp_auto_adjust edge;
+};
+
+
 struct isp_raw_tune_info{
 	uint32_t version_id;
 	uint32_t total_len;
@@ -611,6 +649,7 @@ struct isp_raw_tune_info{
 	struct module_info hue_info;
 	struct module_info hdr_info;
 	struct module_info ext_info;
+	struct module_info auto_adjust_info;
 
 	struct isp_blc blc;
 	struct isp_nlc nlc;
@@ -641,6 +680,7 @@ struct isp_raw_tune_info{
 	struct isp_fcs fcs;
 	struct isp_hue hue;
 	struct isp_hdr hdr;
+	struct isp_auto_adjust_info auto_adjust;
 	uint32_t ext[256];
 };
 

@@ -1632,7 +1632,7 @@ SENSOR_INFO_T g_ov8825_mipi_raw_info = {
 	3,			// skip frame num while change setting
 };
 
-LOCAL struct sensor_raw_info* Sensor_GetContext(void)
+LOCAL struct sensor_raw_info* Sensor_ov8825_GetContext(void)
 {
 	return s_ov8825_mipi_raw_info_ptr;
 }
@@ -1640,9 +1640,92 @@ LOCAL struct sensor_raw_info* Sensor_GetContext(void)
 LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 {
 	uint32_t rtn=0x00;
-	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
+	struct sensor_raw_info* raw_sensor_ptr=Sensor_ov8825_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
+
+
+	sensor_ptr->ae.lum_cali_index=144;
+	sensor_ptr->ae.lum_cali_lux=260;
+#if 0
+	sensor_ptr->auto_adjust.bil_denoise.enable=0x00;
+	sensor_ptr->auto_adjust.y_denoise.enable=0x00;
+	sensor_ptr->auto_adjust.uv_denoise.enable=0x00;
+	sensor_ptr->auto_adjust.cmc.enable=0x00;
+	sensor_ptr->auto_adjust.gamma.enable=0x00;
+	sensor_ptr->auto_adjust.edge.enable=0x00;
+
+	sensor_ptr->auto_adjust.gamma.start_level=0x00;;
+	sensor_ptr->auto_adjust.gamma.dependon_index=0x00;
+	sensor_ptr->auto_adjust.gamma.dependon_gain=0x00;
+	sensor_ptr->auto_adjust.gamma.dependon_lum=0x00;
+
+	sensor_ptr->auto_adjust.gamma.level_mode=0x00;
+	sensor_ptr->auto_adjust.gamma.index_zone=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_zone=0x00;
+	sensor_ptr->auto_adjust.gamma.target_lum_thr=0x00;
+
+	sensor_ptr->auto_adjust.gamma.index_thr_num=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_low_thr_num=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[3]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[5]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[6]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[7]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[8]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_thr[9]=0x00;
+
+	sensor_ptr->auto_adjust.gamma.index_start_level[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[3]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[5]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[6]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[7]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[8]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_start_level[9]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[3]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[5]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[6]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[7]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[8]=0x00;
+	sensor_ptr->auto_adjust.gamma.index_end_level[9]=0x00;
+
+	sensor_ptr->auto_adjust.gamma.bais_gain[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[3]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[5]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[6]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[7]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[8]=0x00;
+	sensor_ptr->auto_adjust.gamma.bais_gain[9]=0x00;
+
+	sensor_ptr->auto_adjust.gamma.lum_low_thr[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_low_thr[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_low_thr[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_low_thr[3]=0x00;
+
+	sensor_ptr->auto_adjust.gamma.lum_start_level[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_start_level[1]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_start_level[2]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_start_level[3]=0x00;
+
+	sensor_ptr->auto_adjust.gamma.lum_end_level[0]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_end_level[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_end_level[4]=0x00;
+	sensor_ptr->auto_adjust.gamma.lum_end_level[4]=0x00;
+#endif
+
 #if 0
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);

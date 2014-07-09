@@ -177,7 +177,8 @@ struct sensor_ae_param{
 	uint8_t gamma_zone;
 	uint8_t gamma_thr[4];
 	uint8_t gamma_lum_thr;
-	uint16_t lux_500_index;
+	uint16_t lum_cali_index;
+	uint32_t lum_cali_lux;
 
 	uint8_t smart_denoise_mid_index;
 	uint8_t denoise_start_index;
@@ -206,7 +207,7 @@ struct sensor_ae_param{
 	uint8_t smart_denoise_soft_uv_mid_index;
 	uint8_t smart_denoise_soft_uv_max_index;
 
-	uint32_t reserved[27];
+	uint32_t reserved[26];
 };
 
 struct sensor_ae_tab{
@@ -476,6 +477,39 @@ struct sensor_css_param{
 	uint32_t reserved[70];
 };
 
+struct sensor_auto_adjust{
+	uint32_t enable;
+	uint32_t start_level;
+	uint32_t dependon_index;
+	uint32_t dependon_gain;
+	uint32_t dependon_lum;
+
+	uint32_t level_mode;
+	uint32_t index_zone;
+	uint32_t lum_zone;
+	uint32_t target_lum_thr;
+
+	uint32_t index_thr_num;
+	uint32_t lum_low_thr_num;
+	uint16_t index_thr[10];
+	uint16_t index_start_level[10];
+	uint16_t index_end_level[10];
+	uint16_t bais_gain[10];
+
+	uint16_t lum_low_thr[4];
+	uint16_t lum_start_level[4];
+	uint16_t lum_end_level[4];
+};
+
+struct sensor_auto_adjust_info {
+	struct sensor_auto_adjust bil_denoise;
+	struct sensor_auto_adjust y_denoise;
+	struct sensor_auto_adjust uv_denoise;
+	struct sensor_auto_adjust cmc;
+	struct sensor_auto_adjust gamma;
+	struct sensor_auto_adjust edge;
+};
+
 struct sensor_version_info{
 	uint32_t version_id;
 	uint32_t srtuct_size;
@@ -545,6 +579,7 @@ struct sensor_raw_tune_info{
 	struct sensor_chn_gain_param chn;
 	struct sensor_flash_cali_param flash;
 	struct sensor_cce_parm special_effect[16];
+	struct sensor_auto_adjust_info auto_adjust;
 	uint32_t reserved[256];
 };
 

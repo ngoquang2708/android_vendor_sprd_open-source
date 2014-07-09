@@ -222,7 +222,8 @@ struct isp_ae_param
 	uint8_t reserved1;
 	uint16_t smart_sta_precent;
 	uint16_t smart_sta_start_index;
-	uint16_t lux_500_index;
+	uint16_t lum_cali_index;
+	uint32_t lum_cali_lux;
 	uint8_t smart_sta_low_thr;
 	uint8_t smart_sta_ratio1;
 	uint8_t smart_sta_ratio;
