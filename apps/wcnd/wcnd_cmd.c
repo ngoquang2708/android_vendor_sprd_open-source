@@ -52,6 +52,7 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 	int len = 0;
 	int atcmd_fd = -1;
 	char buffer[255] ;
+	int to_get_cp2_version = 0;
 
 	if( !atcmd_str || !pWcndManger)
 		return -1;
@@ -62,12 +63,23 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 
 	memset(buffer, 0, sizeof(buffer));
 
+	//check if it is going to get cp2 version
+	if(strstr(atcmd_str, "spatgetcp2info") || strstr(atcmd_str, "SPATGETCP2INFO"))
+	{
+		WCND_LOGD("%s: To get cp2 version", __func__);
+		to_get_cp2_version = 1;
+	}
 
-	//IF CP2 not started, use the saved VERSION info.
+	//special case for getting cp2 version, IF CP2 not started, use the saved VERSION info.
 	if(pWcndManger->state != WCND_STATE_CP2_STARTED)
 	{
-		snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
-		WCND_LOGD("%s: Save version info: '%s'", __func__, buffer);
+		if(to_get_cp2_version)
+		{
+			snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
+			WCND_LOGD("%s: Save version info: '%s'", __func__, buffer);
+		}
+		else
+			snprintf(buffer, 254, "Fail: No data available");
 
 		goto out;
 	}
@@ -109,7 +121,11 @@ try_again:
 	if(try_counts++ > 5)
 	{
 		WCND_LOGE("%s: wait for response fail!!!!!", __func__);
-		snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
+		if(to_get_cp2_version)
+			snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
+		else
+			snprintf(buffer, 254, "Fail: No data available");
+
 	}
 	else
 	{
@@ -128,7 +144,8 @@ try_again:
 		else
 		{
 			//save the CP2 version info
-			memcpy(pWcndManger->cp2_version_info, buffer, sizeof(buffer));
+			if(to_get_cp2_version)
+				memcpy(pWcndManger->cp2_version_info, buffer, sizeof(buffer));
 		}
 	}
 
