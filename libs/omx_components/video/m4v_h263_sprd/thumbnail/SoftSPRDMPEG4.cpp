@@ -24,7 +24,10 @@
 #include <media/stagefright/MediaDefs.h>
 #include <media/stagefright/MediaErrors.h>
 #include <media/IOMX.h>
+#include <media/hardware/HardwareAPI.h>
+#include <ui/GraphicBufferMapper.h>
 
+#include "gralloc_priv.h"
 #include "m4v_h263_dec_api.h"
 #include <dlfcn.h>
 
@@ -111,6 +114,8 @@ SoftSPRDMPEG4::SoftSPRDMPEG4(
       mStopDecode(false),
       mLibHandle(NULL),
       mNeedIVOP(true),
+      mEOSStatus(INPUT_DATA_AVAILABLE),
+      mHeadersDecoded(false),
       mCodecInterBuffer(NULL),
       mCodecExtraBuffer(NULL),
       mMP4DecSetCurRecPic(NULL),
@@ -120,7 +125,8 @@ SoftSPRDMPEG4::SoftSPRDMPEG4(
       mMP4DecDecode(NULL),
       mMP4DecRelease(NULL),
       mMp4GetVideoDimensions(NULL),
-      mMp4GetBufferDimensions(NULL) {
+      mMp4GetBufferDimensions(NULL)
+      /*mMP4DecSetparam(NULL)*/ {
     if (!strcmp(name, "OMX.sprd.soft.h263.decoder")) {
         mMode = MODE_H263;
     } else {
@@ -129,6 +135,10 @@ SoftSPRDMPEG4::SoftSPRDMPEG4(
 
     CHECK_EQ(openDecoder("libomx_m4vh263dec_sw_sprd.so"), true);
     initPorts();
+
+    iUseAndroidNativeBuffer[OMX_DirInput] = OMX_FALSE;
+    iUseAndroidNativeBuffer[OMX_DirOutput] = OMX_FALSE;
+
     CHECK_EQ(initDecoder(), (status_t)OK);
 }
 
@@ -210,8 +220,8 @@ status_t SoftSPRDMPEG4::initDecoder() {
 
     mHandle->userdata = (void *)this;
     mHandle->VSP_extMemCb = extMemoryAllocWrapper;
-    mHandle->VSP_bindCb = NULL;
-    mHandle->VSP_unbindCb = NULL;
+    mHandle->VSP_bindCb = BindFrameWrapper;
+    mHandle->VSP_unbindCb = UnbindFrameWrapper;
 
     int32 size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
     mCodecInterBuffer = (uint8 *)malloc(size_inter);
@@ -285,8 +295,10 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalGetParameter(
         } else {
             CHECK_EQ(formatParams->nPortIndex, 1u);
 
+            PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
+            ALOGI("internalGetParameter, OMX_IndexParamVideoPortFormat, eColorFormat: 0x%x",pOutPort->mDef.format.video.eColorFormat);
             formatParams->eCompressionFormat = OMX_VIDEO_CodingUnused;
-            formatParams->eColorFormat = OMX_COLOR_FormatYUV420Planar;
+            formatParams->eColorFormat = pOutPort->mDef.format.video.eColorFormat;
             formatParams->xFramerate = 0;
         }
 
@@ -323,6 +335,24 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalGetParameter(
             profileLevel->eProfile = kM4VProfileLevels[index].mProfile;
             profileLevel->eLevel = kM4VProfileLevels[index].mLevel;
         }
+        return OMX_ErrorNone;
+    }
+
+    case OMX_IndexParamEnableAndroidBuffers:
+    {
+        EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)params;
+        peanbp->enable = iUseAndroidNativeBuffer[OMX_DirOutput];
+        ALOGI("internalGetParameter, OMX_IndexParamEnableAndroidBuffers %d",peanbp->enable);
+        return OMX_ErrorNone;
+    }
+
+    case OMX_IndexParamGetAndroidNativeBuffer:
+    {
+        GetAndroidNativeBufferUsageParams *pganbp;
+
+        pganbp = (GetAndroidNativeBufferUsageParams *)params;
+        pganbp->nUsage = GRALLOC_USAGE_SW_READ_OFTEN |GRALLOC_USAGE_SW_WRITE_OFTEN;
+        ALOGI("internalGetParameter, OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);
         return OMX_ErrorNone;
     }
 
@@ -372,6 +402,29 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalSetParameter(
         return OMX_ErrorNone;
     }
 
+    case OMX_IndexParamEnableAndroidBuffers:
+    {
+        EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)params;
+        PortInfo *pInPort = editPortInfo(OMX_DirInput);
+        PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
+        if (peanbp->enable == OMX_FALSE) {
+            ALOGI("internalSetParameter, disable AndroidNativeBuffer");
+            iUseAndroidNativeBuffer[OMX_DirOutput] = OMX_FALSE;
+
+            pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+        } else {
+            //MMDecVideoFormat video_format;
+            ALOGI("internalSetParameter, enable AndroidNativeBuffer");
+            iUseAndroidNativeBuffer[OMX_DirOutput] = OMX_TRUE;
+            pInPort->mDef.nBufferCountActual = 8;
+            pOutPort->mDef.nBufferCountActual = 5;
+            pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+            //video_format.yuv_format = YUV420SP_NV12;
+            //(*mMP4DecSetparam)(mHandle, &video_format);
+        }
+        return OMX_ErrorNone;
+    }
+
     case OMX_IndexParamPortDefinition:
     {
         OMX_PARAM_PORTDEFINITIONTYPE *defParams =
@@ -410,12 +463,81 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalSetParameter(
             port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
         }
 
+        if (!((mWidth < 1280 && mHeight < 720) || (mWidth < 720 && mHeight < 1280))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 384*1024)
+                port->mDef.nBufferSize = 384*1024;
+        } else if (!((mWidth < 720 && mHeight < 480) || (mWidth < 480 && mHeight < 720))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 256*1024)
+                port->mDef.nBufferSize = 256*1024;
+        }
+
         return OMX_ErrorNone;
     }
 
     default:
         return SprdSimpleOMXComponent::internalSetParameter(index, params);
     }
+}
+
+OMX_ERRORTYPE SoftSPRDMPEG4::internalUseBuffer(
+    OMX_BUFFERHEADERTYPE **header,
+    OMX_U32 portIndex,
+    OMX_PTR appPrivate,
+    OMX_U32 size,
+    OMX_U8 *ptr,
+    BufferPrivateStruct* bufferPrivate) {
+
+    *header = new OMX_BUFFERHEADERTYPE;
+    (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
+    (*header)->nVersion.s.nVersionMajor = 1;
+    (*header)->nVersion.s.nVersionMinor = 0;
+    (*header)->nVersion.s.nRevision = 0;
+    (*header)->nVersion.s.nStep = 0;
+    (*header)->pBuffer = ptr;
+    (*header)->nAllocLen = size;
+    (*header)->nFilledLen = 0;
+    (*header)->nOffset = 0;
+    (*header)->pAppPrivate = appPrivate;
+    (*header)->pPlatformPrivate = NULL;
+    (*header)->pInputPortPrivate = NULL;
+    (*header)->pOutputPortPrivate = NULL;
+    (*header)->hMarkTargetComponent = NULL;
+    (*header)->pMarkData = NULL;
+    (*header)->nTickCount = 0;
+    (*header)->nTimeStamp = 0;
+    (*header)->nFlags = 0;
+    (*header)->nOutputPortIndex = portIndex;
+    (*header)->nInputPortIndex = portIndex;
+
+    if(portIndex == OMX_DirOutput) {
+        (*header)->pOutputPortPrivate = new BufferCtrlStruct;
+        CHECK((*header)->pOutputPortPrivate != NULL);
+        BufferCtrlStruct* pBufCtrl= (BufferCtrlStruct*)((*header)->pOutputPortPrivate);
+        pBufCtrl->iRefCount = 1; //init by1
+        pBufCtrl->pMem = NULL;
+        pBufCtrl->bufferFd = 0;
+        pBufCtrl->phyAddr = 0;
+        pBufCtrl->bufferSize = 0;
+    }
+
+    PortInfo *port = editPortInfo(portIndex);
+
+    port->mBuffers.push();
+
+    BufferInfo *buffer =
+        &port->mBuffers.editItemAt(port->mBuffers.size() - 1);
+    ALOGI("internalUseBuffer, header=%p, pBuffer=%p, size=%d",*header, ptr, size);
+    buffer->mHeader = *header;
+    buffer->mOwnedByUs = false;
+
+    if (port->mBuffers.size() == port->mDef.nBufferCountActual) {
+        port->mDef.bPopulated = OMX_TRUE;
+        checkTransitions();
+    }
+
+    return OMX_ErrorNone;
 }
 
 OMX_ERRORTYPE SoftSPRDMPEG4::getConfig(
@@ -447,41 +569,57 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
         return;
     }
 
+    if (mEOSStatus == OUTPUT_FRAMES_FLUSHED) {
+        return;
+    }
+
     List<BufferInfo *> &inQueue = getPortQueue(0);
     List<BufferInfo *> &outQueue = getPortQueue(1);
 
-    while (!mStopDecode && (!inQueue.empty()) && (outQueue.size() != 0)) {
-        BufferInfo *inInfo = *inQueue.begin();
-        OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
+    while (!mStopDecode && (mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
+            && outQueue.size() != 0) {
 
-        if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
-            inQueue.erase(inQueue.begin());
-            inInfo->mOwnedByUs = false;
-            notifyEmptyBufferDone(inHeader);
-
-            PortInfo *port = editPortInfo(1);
-
-            OMX_BUFFERHEADERTYPE *outHeader =
-                port->mBuffers.editItemAt(mNumSamplesOutput & 1).mHeader;
-
-            List<BufferInfo *>::iterator it = outQueue.begin();
-            while ((*it)->mHeader != outHeader) {
-                ++it;
-            }
-
-            BufferInfo *outInfo = *it;
-            outInfo->mOwnedByUs = false;
-            outQueue.erase(it);
-            outInfo = NULL;
-
-            notifyFillBufferDone(outHeader);
-            outHeader = NULL;
+        if (mEOSStatus == INPUT_EOS_SEEN) {
+            drainAllOutputBuffers();
             return;
         }
 
-        uint8_t *bitstream = inHeader->pBuffer + inHeader->nOffset;
+        BufferInfo *inInfo = *inQueue.begin();
+        OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
 
-//        ALOGI("%s, %d, %0x, %0x, %0x, %0x, %0x, %0x, %d", __FUNCTION__, __LINE__, bitstream[0],bitstream[1],bitstream[2],bitstream[3],bitstream[4],bitstream[5],inHeader->nFilledLen);
+//        PortInfo *port = editPortInfo(1);
+        List<BufferInfo *>::iterator itBuffer = outQueue.begin();
+        OMX_BUFFERHEADERTYPE *outHeader = NULL;
+        BufferCtrlStruct *pBufCtrl = NULL;
+        uint32 count = 0;
+        do {
+            if(count >= outQueue.size()) {
+                ALOGI("onQueueFilled, get outQueue buffer, return, count=%d, queue_size=%d",count, outQueue.size());
+                return;
+            }
+
+            outHeader = (*itBuffer)->mHeader;
+            pBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
+            if(pBufCtrl == NULL) {
+                ALOGE("onQueueFilled, pBufCtrl == NULL, fail");
+                notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+                mSignalledError = true;
+                return;
+            }
+
+            itBuffer++;
+            count++;
+        }
+        while(pBufCtrl->iRefCount > 0);
+
+        ALOGI("%s, %d, outHeader:0x%x, inHeader: 0x%x, len: %d, time: %lld, EOS: %d, cfg:%d", __FUNCTION__, __LINE__,outHeader,
+            inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS,inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG);
+
+        if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
+            mEOSStatus = INPUT_EOS_SEEN; //the last frame size may be not zero, it need to be decoded.
+        }
+
+        uint8_t *bitstream = inHeader->pBuffer + inHeader->nOffset;
 
         if (!mInitialized) {
             uint8_t *vol_data[1];
@@ -493,6 +631,9 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
                 vol_data[0] = bitstream;
                 vol_size = inHeader->nFilledLen;
             }
+
+            MP4DecodingMode mode =
+                (mMode == MODE_MPEG4) ? MPEG4_MODE : H263_MODE;
 
             MMDecVideoFormat video_format;
 
@@ -506,30 +647,27 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
             } else {
                 video_format.p_extra = NULL;
             }
-            video_format.p_extra_phy = 0;
 
-            if(mMode == MODE_H263)
-            {
+            if(mode == H263_MODE) {
                 video_format.video_std = ITU_H263;
-            } else if(mMode == MODE_MPEG4)
-            {
+            } else if(mode == MPEG4_MODE) {
                 video_format.video_std = MPEG4;
-            } else if(mMode == MODE_FLV)
-            {
+            } else {
                 video_format.video_std = FLV_V1;
-            } else
-            {
-                video_format.video_std = MPEG4;
             }
 
             video_format.frame_width = 0;
             video_format.frame_height = 0;
-            video_format.uv_interleaved = 0;
+            if (iUseAndroidNativeBuffer[OMX_DirOutput]) {
+                video_format.yuv_format = YUV420SP_NV12;
+            } else {
+                 video_format.yuv_format = YUV420P_YU12;
+            }
 
             MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
 
-            ALOGI("%s, %d, MP4DecVolHeader, ret: %d, width: %d, height: %d", __FUNCTION__, __LINE__,
-                  ret, video_format.frame_width, video_format.frame_height);
+            ALOGI("%s, %d, MP4DecVolHeader, ret: %d, width: %d, height: %d, yuv_format: %d", __FUNCTION__, __LINE__,
+                ret, video_format.frame_width, video_format.frame_height, video_format.yuv_format);
 
             if (ret != MMDEC_OK) {
                 ALOGW("MP4DecVolHeader failed. Unsupported content?");
@@ -537,6 +675,24 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
                 notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
                 mSignalledError = true;
                 return;
+            }
+
+            mInitialized = true;
+
+            if (mode == MPEG4_MODE) {
+                int32_t buf_width, buf_height;
+
+                (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
+                if (!((buf_width <= 1920&& buf_height <= 1088) || (buf_width <= 1088 && buf_height <= 1920))) {
+                    ALOGE("[%d,%d] is out of range [1920, 1088], failed to support this format.",buf_width, buf_height);
+                    notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
+                    mSignalledError = true;
+                    return;
+                }
+
+                if (portSettingsChanged()) {
+                    return;
+                }
             }
 
             if (inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
@@ -547,23 +703,6 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
                 inHeader = NULL;
             }
 
-            mInitialized = true;
-
-            if (mMode == MODE_MPEG4) {
-                int32_t buf_width, buf_height;
-
-                (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
-                if (!((buf_width <= 1920&& buf_height <= 1088) || (buf_width <= 1088 && buf_height <= 1920))) {
-                    ALOGE("[%d,%d] is out of range [1920, 1088], failed to support this format.",buf_width, buf_height);
-                    notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
-                    mSignalledError = true;
-                    return;
-                }
-            }
-            // Deleted for bug#168365
-            //if (mMode == MODE_MPEG4&& portSettingsChanged()) {
-            //   return;
-            //}
             continue;
         }
 
@@ -577,30 +716,35 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
             continue;
         }
 
-        BufferInfo *outInfo = *outQueue.begin();
-        OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
         outHeader->nTimeStamp = inHeader->nTimeStamp;
-        outHeader->nFlags = inHeader->nFlags;
-        outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
-        if (!mFramesConfigured) {
-            (*mMP4DecSetReferenceYUV)(mHandle, outHeader->pBuffer);
-            mFramesConfigured = true;
-        }
-
-        // decoder deals in ms, OMX in us.
-//        uint32_t useExtTimestamp = (inHeader->nOffset == 0);
-//        uint32_t timestamp =
-//            useExtTimestamp ? (inHeader->nTimeStamp + 500) / 1000 : 0xFFFFFFFF;
-//        outHeader->nTimeStamp = timestamp * 1000;
 
         int32_t bufferSize = inHeader->nFilledLen;
 
         MMDecInput dec_in;
         MMDecOutput dec_out;
 
-        (*mMP4DecSetCurRecPic)( mHandle, outHeader->pBuffer, NULL, (void *)(outHeader));
+        GraphicBufferMapper &mapper = GraphicBufferMapper::get();
+        if(iUseAndroidNativeBuffer[OMX_DirOutput]) {
+            OMX_PARAM_PORTDEFINITIONTYPE *def = &editPortInfo(OMX_DirOutput)->mDef;
+            int width = def->format.video.nStride;
+            int height = def->format.video.nSliceHeight;
+            Rect bounds(width, height);
+            void *vaddr;
+            int usage;
 
-        dec_in.pStream = (uint8 *) bitstream;
+            usage = GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+
+            if(mapper.lock((const native_handle_t*)outHeader->pBuffer, usage, bounds, &vaddr)) {
+                ALOGE("onQueueFilled, mapper.lock fail %x",outHeader->pBuffer);
+                return ;
+            }
+            ALOGV("%s, %d, pBuffer: 0x%x, vaddr: 0x%x", __FUNCTION__, __LINE__, outHeader->pBuffer,vaddr);
+            (*mMP4DecSetCurRecPic)(mHandle,(uint8*)(vaddr), NULL, (void *)(outHeader));
+        } else {
+            (*mMP4DecSetCurRecPic)(mHandle,outHeader->pBuffer, NULL, (void *)(outHeader));
+        }
+
+        dec_in.pStream= bitstream;
         dec_in.pStream_phy= 0;
         dec_in.dataLen = bufferSize;
         dec_in.beLastFrm = 0;
@@ -618,11 +762,16 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
         int64_t start_decode = systemTime();
         MMDecRet decRet =	(*mMP4DecDecode)( mHandle, &dec_in,&dec_out);
         int64_t end_decode = systemTime();
-        ALOGI("%s, %d, decRet: %d, %dms, frameEffective: %d, pOutFrameY: %0x, pBufferHeader: %0x, needIVOP: %d",
-              __FUNCTION__, __LINE__, decRet, (unsigned int)((end_decode-start_decode) / 1000000L),dec_out.frameEffective, dec_out.pOutFrameY, dec_out.pBufferHeader,mNeedIVOP);
+        ALOGI("%s, %d, decRet: %d, %dms, frameEffective: %d, pOutFrameY: %0x, pBufferHeader: %0x, needIVOP: %d, error_flag: %0x",
+              __FUNCTION__, __LINE__, decRet, (unsigned int)((end_decode-start_decode) / 1000000L),dec_out.frameEffective, dec_out.pOutFrameY, dec_out.pBufferHeader,mNeedIVOP, mHandle->g_mpeg4_dec_err_flag);
 
-        if (decRet == MMDEC_OK || decRet == MMDEC_MEMORY_ALLOCED )
-        {
+        if(iUseAndroidNativeBuffer[OMX_DirOutput]) {
+            if(mapper.unlock((const native_handle_t*)outHeader->pBuffer)) {
+                ALOGE("onQueueFilled, mapper.unlock fail %x",outHeader->pBuffer);
+            }
+        }
+
+        if (decRet == MMDEC_OK || decRet == MMDEC_MEMORY_ALLOCED) {
             int32_t buf_width, buf_height;
 
             (*mMp4GetBufferDimensions)(mHandle, &buf_width, &buf_height);
@@ -635,14 +784,11 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
 
             if (portSettingsChanged()) {
                 return;
-            } else if( decRet == MMDEC_MEMORY_ALLOCED)
-            {
-                mFramesConfigured =  false;
+            } else if(decRet == MMDEC_MEMORY_ALLOCED) {
                 continue;
             }
             mNeedIVOP = false;
-        } else if (decRet == MMDEC_FRAME_SEEK_IVOP)
-        {
+        } else if (decRet == MMDEC_FRAME_SEEK_IVOP) {
             inInfo->mOwnedByUs = false;
             inQueue.erase(inQueue.begin());
             inInfo = NULL;
@@ -650,15 +796,24 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
             inHeader = NULL;
 
             continue;
-        } else
-        {
-            ALOGE("failed to decode video frame.");
-
-            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+        } else if (decRet == MMDEC_MEMORY_ERROR) {
+            ALOGE("failed to allocate memory.");
+            notify(OMX_EventError, OMX_ErrorInsufficientResources, 0, NULL);
             mSignalledError = true;
             return;
+        } else if (decRet == MMDEC_STREAM_ERROR) {
+            ALOGE("failed to decode video frame, stream error");
+        } else if (decRet == MMDEC_HW_ERROR)
+        {
+            ALOGE("failed to decode video frame, hardware error");
+        } else if (decRet == MMDEC_NOT_SUPPORTED)
+        {
+            ALOGE("failed to decode video frame, unsupported");
+            notify(OMX_EventError, OMX_ErrorUnsupportedSetting, 0, NULL);
+        } else
+        {
+            ALOGE("now, we don't take care of the decoder return: %d", decRet);
         }
-
 
         CHECK_LE(bufferSize, inHeader->nFilledLen);
         inHeader->nOffset += inHeader->nFilledLen - bufferSize;
@@ -670,8 +825,6 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
             inInfo = NULL;
             notifyEmptyBufferDone(inHeader);
             inHeader = NULL;
-
-            ALOGI("%s, %d", __FUNCTION__, __LINE__);
         }
 
         if (dec_out.frameEffective) {
@@ -679,37 +832,76 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
             outHeader->nOffset = 0;
             outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
             outHeader->nFlags = 0;
-            mStopDecode = true;
-
-            ALOGI("%s, %d, outHeader->nFilledLen: %d", __FUNCTION__, __LINE__, outHeader->nFilledLen);
-#if 0
-            dump_yuv(outHeader->pBuffer, outHeader->nFilledLen);
-#endif
+            if(!iUseAndroidNativeBuffer[OMX_DirOutput]) {
+                mStopDecode = true;
+            }
+//            ALOGI("%s, %d, outHeader->nFilledLen: %d", __FUNCTION__, __LINE__, outHeader->nFilledLen);
+//           dump_yuv(dec_out.pOutFrameY, outHeader->nFilledLen);
         } else {
-#if 0
-            ALOGE("%s, %d, frameEffective=0, return error.", __FUNCTION__, __LINE__);
-            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
-            mSignalledError = true;
-            return;
-#else
             continue;
-#endif
         }
+
 
         List<BufferInfo *>::iterator it = outQueue.begin();
-        while ((*it)->mHeader != outHeader) {
+//        ALOGI("%s, %d,mHeader=0x%x, outHeader=0x%x", __FUNCTION__, __LINE__,(*it)->mHeader,outHeader );
+        while ((*it)->mHeader != outHeader && it != outQueue.end()) {
             ++it;
         }
+        CHECK((*it)->mHeader == outHeader);
 
+        BufferInfo *outInfo = *it;
         outInfo->mOwnedByUs = false;
         outQueue.erase(it);
         outInfo = NULL;
+
+        BufferCtrlStruct* pOutBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
+        pOutBufCtrl->iRefCount++;
 
         notifyFillBufferDone(outHeader);
         outHeader = NULL;
 
         ++mNumSamplesOutput;
     }
+}
+
+bool SoftSPRDMPEG4::drainAllOutputBuffers() {
+    ALOGI("%s, %d", __FUNCTION__, __LINE__);
+
+    List<BufferInfo *> &outQueue = getPortQueue(1);
+    BufferInfo *outInfo;
+    OMX_BUFFERHEADERTYPE *outHeader;
+    void *pBufferHeader;
+
+    while (!outQueue.empty() && mEOSStatus != OUTPUT_FRAMES_FLUSHED) {
+        if (mHeadersDecoded &&(*mMP4DecGetLastDspFrm)(mHandle, &pBufferHeader) ) {
+            ALOGI("%s, %d, MP4DecGetLastDspFrm, pBufferHeader: 0x%x", __FUNCTION__, __LINE__, pBufferHeader);
+            List<BufferInfo *>::iterator it = outQueue.begin();
+            while ((*it)->mHeader != (OMX_BUFFERHEADERTYPE*)pBufferHeader && it != outQueue.end()) {
+                ++it;
+            }
+            CHECK((*it)->mHeader == (OMX_BUFFERHEADERTYPE*)pBufferHeader);
+            outInfo = *it;
+            outQueue.erase(it);
+            outHeader = outInfo->mHeader;
+            outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
+        } else {
+            ALOGI("%s, %d, output EOS", __FUNCTION__, __LINE__);
+            outInfo = *outQueue.begin();
+            outQueue.erase(outQueue.begin());
+            outHeader = outInfo->mHeader;
+            outHeader->nTimeStamp = 0;
+            outHeader->nFilledLen = 0;
+            outHeader->nFlags = OMX_BUFFERFLAG_EOS;
+            mEOSStatus = OUTPUT_FRAMES_FLUSHED;
+        }
+
+        outInfo->mOwnedByUs = false;
+        BufferCtrlStruct* pOutBufCtrl= (BufferCtrlStruct*)(outHeader->pOutputPortPrivate);
+        pOutBufCtrl->iRefCount++;
+        notifyFillBufferDone(outHeader);
+    }
+
+    return true;
 }
 
 bool SoftSPRDMPEG4::portSettingsChanged() {
@@ -725,6 +917,10 @@ bool SoftSPRDMPEG4::portSettingsChanged() {
           disp_width, disp_height, buf_width, buf_height);
 
     if(disp_width <= 0 || disp_height <= 0 || buf_width <= 0 || buf_height <= 0) {
+        return false;
+    }
+
+    if (!((disp_width <= 1920 && disp_height <= 1088) || (disp_width <= 1088 && disp_height <= 1920))) {
         return false;
     }
 
@@ -752,6 +948,8 @@ bool SoftSPRDMPEG4::portSettingsChanged() {
 
         updatePortDefinitions();
 
+        (*mMP4DecReleaseRefBuffers)(mHandle);
+
         mFramesConfigured = false;
 
         notify(OMX_EventPortSettingsChanged, 1, 0, NULL);
@@ -764,6 +962,7 @@ bool SoftSPRDMPEG4::portSettingsChanged() {
 
 void SoftSPRDMPEG4::onPortFlushCompleted(OMX_U32 portIndex) {
     if (portIndex == 0 && mInitialized) {
+        mEOSStatus = INPUT_DATA_AVAILABLE;
         mNeedIVOP = true;
     }
 }
@@ -794,6 +993,12 @@ void SoftSPRDMPEG4::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
     }
 }
 
+void SoftSPRDMPEG4::onPortFlushPrepare(OMX_U32 portIndex) {
+    if(portIndex == OMX_DirOutput) {
+        (*mMP4DecReleaseRefBuffers)(mHandle);
+    }
+}
+
 void SoftSPRDMPEG4::updatePortDefinitions() {
     OMX_PARAM_PORTDEFINITIONTYPE *def = &editPortInfo(0)->mDef;
     def->format.video.nFrameWidth = mWidth;
@@ -818,6 +1023,16 @@ int32_t SoftSPRDMPEG4::extMemoryAllocWrapper(
     return static_cast<SoftSPRDMPEG4 *>(aUserData)->extMemoryAlloc(extra_mem_size);
 }
 
+int32_t SoftSPRDMPEG4::BindFrameWrapper(
+    void *aUserData, void *pHeader, int flag) {
+    return static_cast<SoftSPRDMPEG4 *>(aUserData)->VSP_bind_cb(pHeader, flag);
+}
+
+int32_t SoftSPRDMPEG4::UnbindFrameWrapper(
+    void *aUserData, void *pHeader, int flag) {
+    return static_cast<SoftSPRDMPEG4 *>(aUserData)->VSP_unbind_cb(pHeader, flag);
+}
+
 int SoftSPRDMPEG4::extMemoryAlloc(unsigned int extra_mem_size) {
     if (mCodecExtraBuffer != NULL)
     {
@@ -835,7 +1050,51 @@ int SoftSPRDMPEG4::extMemoryAlloc(unsigned int extra_mem_size) {
 
     (*mMP4DecMemInit)( ((SoftSPRDMPEG4 *)this)->mHandle, extra_mem);
 
+    mHeadersDecoded = true;
+
     return 1;
+}
+
+int SoftSPRDMPEG4::VSP_bind_cb(void *pHeader,int flag) {
+    BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+    ALOGI("VSP_bind_cb, ref frame: 0x%x, 0x%x; iRefCount=%d",
+          ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
+    pBufCtrl->iRefCount++;
+    return 0;
+}
+
+int SoftSPRDMPEG4::VSP_unbind_cb(void *pHeader,int flag) {
+    BufferCtrlStruct *pBufCtrl = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+
+    ALOGI("VSP_unbind_cb, ref frame: 0x%x, 0x%x; iRefCount=%d",
+          ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,pBufCtrl->iRefCount);
+
+    if (pBufCtrl->iRefCount  > 0) {
+        pBufCtrl->iRefCount--;
+    }
+
+    return 0;
+}
+
+OMX_ERRORTYPE SoftSPRDMPEG4::getExtensionIndex(
+    const char *name, OMX_INDEXTYPE *index) {
+
+    ALOGI("getExtensionIndex, name: %s",name);
+    if(strcmp(name, SPRD_INDEX_PARAM_ENABLE_ANB) == 0) {
+        ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_ENABLE_ANB);
+        *index = (OMX_INDEXTYPE) OMX_IndexParamEnableAndroidBuffers;
+        return OMX_ErrorNone;
+    } else if (strcmp(name, SPRD_INDEX_PARAM_GET_ANB) == 0) {
+        ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_GET_ANB);
+        *index = (OMX_INDEXTYPE) OMX_IndexParamGetAndroidNativeBuffer;
+        return OMX_ErrorNone;
+    }	else if (strcmp(name, SPRD_INDEX_PARAM_USE_ANB) == 0) {
+        ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_USE_ANB);
+        *index = OMX_IndexParamUseAndroidNativeBuffer2;
+        return OMX_ErrorNone;
+    }
+
+    return OMX_ErrorNotImplemented;
 }
 
 bool SoftSPRDMPEG4::openDecoder(const char* libName)
@@ -933,6 +1192,22 @@ bool SoftSPRDMPEG4::openDecoder(const char* libName)
         return false;
     }
 
+    mMP4DecGetLastDspFrm = (FT_MP4DecGetLastDspFrm)dlsym(mLibHandle, "MP4DecGetLastDspFrm");
+    if(mMP4DecGetLastDspFrm == NULL) {
+        ALOGE("Can't find MP4DecGetLastDspFrm in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+#if 0
+    mMP4DecSetparam = (FT_MP4DecSetparam)dlsym(mLibHandle, "MP4DecSetParameter");
+    if(mMP4DecSetparam == NULL) {
+        ALOGE("Can't find MP4DecSetParameter in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+#endif
     return true;
 }
 
