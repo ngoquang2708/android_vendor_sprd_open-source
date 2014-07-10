@@ -32,6 +32,9 @@
 #include "font_10x18.h"
 #include "minui.h"
 
+#include <utils/Log.h>
+#include <cutils/properties.h>
+
 typedef struct {
 	GGLSurface texture;
 	unsigned cwidth;
@@ -154,15 +157,74 @@ void gr_flip(void)
 	/* swap front and back buffers */
 	gr_active_fb = (gr_active_fb + 1) & 1;
 
+	int i, j;
+
+	char property[PROPERTY_VALUE_MAX] = { 0 };
 	/* copy data from the in-memory surface to the buffer we're about
 	 * to make active. */
+	printf("entry %s:bpp=%d\n", __func__, vi.bits_per_pixel);
+	i = vi.xres * vi.yres;
+
+	property_get("ro.sf.hwrotation", property, NULL);
+	printf("entry %s:ro.sf.hwrotation=%s\n", __func__, property);
 
 	if (vi.bits_per_pixel == 16) {
-		memcpy(gr_framebuffer[gr_active_fb].data, gr_mem_surface.data,
-		       vi.xres * vi.yres * 2);
+		unsigned short *dst, *src;
+
+		dst = (unsigned short *)gr_framebuffer[gr_active_fb].data;
+		src = (unsigned short *)gr_mem_surface.data;
+
+		if (180 == atoi(property)) {
+			for (j = 0; j < i; j++) {
+				dst[j] = src[i - j - 1];
+			}
+		} else if (90 == atoi(property)) {
+			for (i = 0; i < vi.xres; i++) {
+				for (j = 0; j < vi.yres; j++) {
+					dst[i * vi.yres + j] =
+					    src[vi.xres - i + j * vi.xres];
+				}
+			}
+		} else if (270 == atoi(property)) {
+			for (i = 0; i < vi.xres; i++) {
+				for (j = 0; j < vi.yres; j++) {
+					dst[i * vi.yres + j] =
+					    src[i + (vi.yres - j) * vi.xres];
+				}
+			}
+		} else {
+			memcpy(gr_framebuffer[gr_active_fb].data,
+			       gr_mem_surface.data, vi.xres * vi.yres * 2);
+		}
+
 	} else {
-		memcpy(gr_framebuffer[gr_active_fb].data, gr_mem_surface.data,
-		       vi.xres * vi.yres * 4);
+		unsigned int *dst, *src;
+
+		dst = (unsigned int *)gr_framebuffer[gr_active_fb].data;
+		src = (unsigned int *)gr_mem_surface.data;
+
+		if (180 == atoi(property)) {
+			for (j = 0; j < i; j++) {
+				dst[j] = src[i - j - 1];
+			}
+		} else if (90 == atoi(property)) {
+			for (i = 0; i < vi.xres; i++) {
+				for (j = 0; j < vi.yres; j++) {
+					dst[i * vi.yres + j] =
+					    src[vi.xres - i + j * vi.xres];
+				}
+			}
+		} else if (270 == atoi(property)) {
+			for (i = 0; i < vi.xres; i++) {
+				for (j = 0; j < vi.yres; j++) {
+					dst[i * vi.yres + j] =
+					    src[i + (vi.yres - j) * vi.xres];
+				}
+			}
+		} else {
+			memcpy(gr_framebuffer[gr_active_fb].data,
+			       gr_mem_surface.data, vi.xres * vi.yres * 4);
+		}
 	}
 	/* inform the display driver */
 	set_active_framebuffer(gr_active_fb);
