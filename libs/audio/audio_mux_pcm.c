@@ -183,6 +183,7 @@ static int audio_mux_ctrl_unlock(pthread_mutex_t *lock)
         FD_ZERO(&fds_read);
         FD_SET(fd  , &fds_read);
         result = select(maxfd,&fds_read,NULL,NULL,&timeout);
+	//result = select(maxfd,&fds_read,NULL,NULL,NULL);
         if(result < 0) {
             ALOGE(" :saudio_wait_common_cmd :select error %d",errno);
             break;
@@ -216,6 +217,18 @@ static int audio_mux_ctrl_unlock(pthread_mutex_t *lock)
 
 
 
+static void mux_pipe_clear(int fd)
+{
+	ALOGW("mux_pipe_clear in!!!");
+	uint8_t  tmp_buffer[1024] = {0};
+	int ret = 0;
+	do{
+		ALOGW("mux_pipe_clear in!");
+		ret = mux_read(  fd,tmp_buffer, 1024, 0);
+		ALOGW("mux_pipe_clear loop.");
+	}while(!ret );
+}
+
 
  int32_t saudio_wait_common_cmd( struct mux_pcm *pcm, uint32_t cmd, uint32_t subcmd)
 {
@@ -225,7 +238,7 @@ static int audio_mux_ctrl_unlock(pthread_mutex_t *lock)
 
     int bytes = 0;
     int bytes_read = 0;
-    ALOGE(": function is saudio_wait_common_cmd in");
+   // ALOGE(": function is saudio_wait_common_cmd in");
 
     bytes = sizeof(struct cmd_common);
 
@@ -267,15 +280,15 @@ muxerror:
 	struct cmd_common *common_ret = &cmd_common_buffer;
 	uint32_t cmd_ret=cmd<<16;
 
-	ALOGE(":  saudio_send_common_cmd  E");
-	ALOGE("cmd %x, subcmd %x\n",  cmd, subcmd);
+	ALOGE(":  saudio_send_common_cmd cmd %x, subcmd %x\n  E",cmd, subcmd);
+	
 	common.command=cmd;
 	common.sub_cmd=subcmd;
 	if(pcm->card->ctl_fd <0){
 		return -1;
 	}
 	audio_mux_ctrl_lock(&pcm->card->lock);
-	ALOGE(":  saudio_send_common_cmd  Wirte In");
+	//ALOGE(":  saudio_send_common_cmd  Wirte In");
 	result=write(pcm->card->ctl_fd,&common,sizeof(struct cmd_common));
 	if(result <0)
 	{
@@ -283,7 +296,7 @@ muxerror:
 		ALOGE(":  saudio_send_common_cmd  Wirte error");
 		return result;
 	}
-	ALOGE(":  saudio_send_common_cmd  Wirte out");
+	//ALOGE(":  saudio_send_common_cmd  Wirte out");
 
 
 	result=mux_read(pcm->card->ctl_fd,common_ret,sizeof(struct cmd_common),5);
@@ -292,7 +305,7 @@ muxerror:
 		return -1;
 	}
 
-	ALOGE(":common->command is %x ,sub cmd %x,\n", common_ret->command, common_ret->sub_cmd);
+	//ALOGE(":common->command is %x ,sub cmd %x,\n", common_ret->command, common_ret->sub_cmd);
 
 	if (common_ret->command == cmd_ret)
 	{
@@ -400,6 +413,9 @@ struct pcm * mux_pcm_open(unsigned int card, unsigned int device,
      if(pcm->mux_fd<= 0){
        goto error;
     }
+    else {
+	mux_pipe_clear(pcm->mux_fd);
+    }
 
     ret =saudio_send_common_cmd(pcm,SAUDIO_CMD_OPEN,sub_cmd);
     if(ret){
@@ -426,15 +442,26 @@ static  int mux_write_wait_response(struct mux_pcm *pcm, unsigned int  bytes_to_
 {
 	int ret = 0;
 	unsigned int  bytes_total = bytes_to_wait;
+	ALOGE("peter:mux_write_wait_response  start bytes_to_wait is %d,bytes_total %d",bytes_to_wait,bytes_total);
 	while(bytes_to_wait){
+	     //ALOGE("peter: 	mux_write_wait_response in bytes_to_wait is %d,bytes_total %d",bytes_to_wait,bytes_total);
             ret = saudio_wait_common_cmd(pcm,SAUDIO_CMD_RECEIVE<<16 ,pcm->stream_type);
-            if(ret < 0)
+	     //ALOGE("peter: 	mux_write_wait_response out %d",ret);
+	    if(ret < 0)
             {
                 ALOGE(": function is mux_pcm_write retrun:%d",ret);
-                break;;
+                break;
             }
-            bytes_to_wait -= ret;
+	    if(bytes_to_wait >= ret) {
+            	bytes_to_wait -= ret;
+	    	//ALOGE("peter: mux_write_wait_response bytes_to_wait is %d,ret %d",bytes_to_wait,ret);
+	    }
+	    else {
+	    	ALOGE("peter: mux_write_wait_response error ret is %d,bytes_to_wait %d",ret,bytes_to_wait);
+	    	ret = -1;
+	    }
         }
+	
 	*bytes_received = bytes_total - bytes_to_wait;
 	return (ret<0 )? ret: 0;
 }
@@ -463,6 +490,7 @@ int mux_pcm_write(struct pcm *pcm_in, void *data, unsigned int count)
                 pthread_mutex_unlock(&pcm->lock);
                 return 0;
             }
+            mux_pipe_clear(pcm->mux_fd);
         }
         pthread_mutex_unlock(&pcm->lock);
 
@@ -479,7 +507,7 @@ int mux_pcm_write(struct pcm *pcm_in, void *data, unsigned int count)
 			data = (char * ) data + bytes;
 			if(pcm->bytes_written >= AUDIO_PLAYBACK_BUFFER) {
 				ret = mux_write_wait_response(pcm, pcm->bytes_written,&bytes_received);
-				pcm->bytes_written = 0;
+				pcm->bytes_written -= bytes_received;
 				if(ret ) {
 					ALOGE("mux_pcm_write:mux_write_wait_response error bytes %d, bytes_received %d",bytes,bytes_received);
 					break;
