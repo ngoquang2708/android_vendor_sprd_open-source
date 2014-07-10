@@ -43,11 +43,21 @@ protected:
     virtual OMX_ERRORTYPE internalSetParameter(
         OMX_INDEXTYPE index, const OMX_PTR params);
 
+    virtual OMX_ERRORTYPE internalUseBuffer(
+            OMX_BUFFERHEADERTYPE **buffer,
+            OMX_U32 portIndex,
+            OMX_PTR appPrivate,
+            OMX_U32 size,
+            OMX_U8 *ptr,
+            BufferPrivateStruct* bufferPrivate=NULL);
+
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortEnableCompleted(OMX_U32 portIndex, bool enabled);
+    virtual void onPortFlushPrepare(OMX_U32 portIndex);
+    virtual OMX_ERRORTYPE getExtensionIndex(const char *name, OMX_INDEXTYPE *index);
 
 private:
     enum {
@@ -75,6 +85,8 @@ private:
     uint32_t mCropLeft, mCropTop;
     uint32_t mCropWidth, mCropHeight;
 
+    OMX_BOOL iUseAndroidNativeBuffer[2];
+
     void* mLibHandle;
     FT_H264DecGetNALType mH264DecGetNALType;
     FT_H264DecGetInfo mH264DecGetInfo;
@@ -85,6 +97,7 @@ private:
     FT_H264Dec_GetLastDspFrm  mH264Dec_GetLastDspFrm;
     FT_H264Dec_ReleaseRefBuffers  mH264Dec_ReleaseRefBuffers;
     FT_H264DecMemInit mH264DecMemInit;
+    FT_H264DecSetparam mH264DecSetparam;
 
     int32_t mPicId;  // Which output picture is for which input buffer?
 
@@ -114,7 +127,12 @@ private:
     bool handlePortSettingChangeEvent(const H264SwDecInfo *info);
 
     static int32_t ExtMemAllocWrapper(void *aUserData, unsigned int size_extra) ;
+    static int32_t BindFrameWrapper(void *aUserData, void *pHeader);
+    static int32_t UnbindFrameWrapper(void *aUserData, void *pHeader);
+
     int VSP_malloc_cb(unsigned int size_extra);
+    int VSP_bind_cb(void *pHeader);
+    int VSP_unbind_cb(void *pHeader);
 
     DISALLOW_EVIL_CONSTRUCTORS(SoftSPRDAVC);
 };

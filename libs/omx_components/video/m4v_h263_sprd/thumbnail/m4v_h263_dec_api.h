@@ -72,6 +72,14 @@ typedef enum
     MMDEC_MEMORY_ALLOCED = -10
 } MMDecRet;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
 // decoder video format structure
 typedef struct
 {
@@ -81,7 +89,7 @@ typedef struct
     int32	i_extra;
     uint8 *p_extra;
     uint32 p_extra_phy;
-    int32	uv_interleaved;
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
@@ -186,6 +194,7 @@ void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY);
 
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
+//MMDecRet Mp4DecSetParameter(MP4Handle *mp4Handle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Init mpeg4 decoder
@@ -235,6 +244,7 @@ typedef MMDecRet (*FT_MP4DecVolHeader)(MP4Handle *mp4Handle, MMDecVideoFormat *v
 typedef MMDecRet (*FT_MP4DecMemInit)(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer);
 typedef MMDecRet (*FT_MP4DecDecode)(MP4Handle *mp4Handle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_MP4DecRelease)(MP4Handle *mp4Handle);
+//typedef MMDecRet (*FT_MP4DecSetparam)(MP4Handle *mp4Handle, MMDecVideoFormat * pVideoFormat);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

@@ -41,11 +41,21 @@ protected:
     virtual OMX_ERRORTYPE internalSetParameter(
         OMX_INDEXTYPE index, const OMX_PTR params);
 
+    virtual OMX_ERRORTYPE internalUseBuffer(
+            OMX_BUFFERHEADERTYPE **buffer,
+            OMX_U32 portIndex,
+            OMX_PTR appPrivate,
+            OMX_U32 size,
+            OMX_U8 *ptr,
+            BufferPrivateStruct* bufferPrivate=NULL);
+
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
     virtual void onPortEnableCompleted(OMX_U32 portIndex, bool enabled);
+    virtual void onPortFlushPrepare(OMX_U32 portIndex);
+    virtual OMX_ERRORTYPE getExtensionIndex(const char *name, OMX_INDEXTYPE *index);
 
 private:
     enum {
@@ -59,6 +69,12 @@ private:
         MODE_FLV,
 
     } mMode;
+
+    enum EOSStatus {
+        INPUT_DATA_AVAILABLE,
+        INPUT_EOS_SEEN,
+        OUTPUT_FRAMES_FLUSHED,
+    };
 
     tagMP4Handle *mHandle;
 
@@ -77,8 +93,12 @@ private:
     uint8_t *mCodecInterBuffer;
     uint8_t *mCodecExtraBuffer;
 
+    OMX_BOOL iUseAndroidNativeBuffer[2];
+
     void* mLibHandle;
     bool mNeedIVOP;
+    EOSStatus mEOSStatus;
+    bool mHeadersDecoded;
     FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
     FT_MP4DecMemCacheInit mMP4DecMemCacheInit;
     FT_MP4DecInit mMP4DecInit;
@@ -90,9 +110,16 @@ private:
     FT_Mp4GetBufferDimensions mMp4GetBufferDimensions;
     FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
     FT_MP4DecSetReferenceYUV mMP4DecSetReferenceYUV;
+    FT_MP4DecGetLastDspFrm mMP4DecGetLastDspFrm;
+    //FT_MP4DecSetparam mMP4DecSetparam;
 
     static int32_t extMemoryAllocWrapper(void *userData, unsigned int extra_mem_size);
-    int extMemoryAlloc(unsigned int extra_mem_size);
+    static int32_t BindFrameWrapper(void *aUserData, void *pHeader, int flag);
+    static int32_t UnbindFrameWrapper(void *aUserData, void *pHeader, int flag);
+
+    int extMemoryAlloc(unsigned int extra_mem_size) ;
+    int VSP_bind_cb(void *pHeader,int flag);
+    int VSP_unbind_cb(void *pHeader,int flag);
 
     enum {
         NONE,
@@ -104,6 +131,7 @@ private:
     status_t initDecoder();
     void releaseDecoder();
     void updatePortDefinitions();
+    bool drainAllOutputBuffers();
     bool portSettingsChanged();
     bool openDecoder(const char* libName);
 

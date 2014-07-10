@@ -1334,6 +1334,15 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
         extra_mem[SW_CACHABLE].size = size_extra;
     } else {
 
+        if (mPbuf_extra_v != NULL) {
+            if (mIOMMUEnabled) {
+                mPmem_extra->free_mm_iova(mPbuf_extra_p, mPbuf_extra_size);
+            }
+            mPmem_extra.clear();
+            mPbuf_extra_v = NULL;
+            mPbuf_extra_p = 0;
+            mPbuf_extra_size = 0;
+        }
 
         if (mIOMMUEnabled) {
             mPmem_extra = new MemoryHeapIon(SPRD_ION_DEV, size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);

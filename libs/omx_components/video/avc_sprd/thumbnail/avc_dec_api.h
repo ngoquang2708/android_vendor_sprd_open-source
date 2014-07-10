@@ -63,6 +63,14 @@ typedef enum {
     RV9
 } VIDEO_STANDARD_E;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
 // decoder video format structure
 typedef struct
 {
@@ -72,7 +80,7 @@ typedef struct
     int32	i_extra;
     void 	*p_extra;
     uint32 p_extra_phy;
-    int32	uv_interleaved;
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
@@ -198,7 +206,7 @@ typedef struct tagAVCHandle
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
-
+MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder
@@ -246,6 +254,7 @@ typedef MMDecRet (*FT_H264DecRelease)(AVCHandle *avcHandle);
 typedef void (* FT_H264Dec_SetCurRecPic)(AVCHandle *avcHandle, uint8 *pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 typedef MMDecRet (* FT_H264Dec_GetLastDspFrm)(AVCHandle *avcHandle, void **pOutput, int32 *picId);
 typedef void (* FT_H264Dec_ReleaseRefBuffers)(AVCHandle *avcHandle);
+typedef MMDecRet (*FT_H264DecSetparam)(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
