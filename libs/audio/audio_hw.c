@@ -1243,7 +1243,11 @@ ret);
     } else {
         adev->cache_mute = adev->master_mute;
         /* mute codec PA */
-        set_codec_mute(adev);
+        if(adev->master_mute && adev->pcm_fm_dl != NULL){
+            ALOGD("%s,fm is open so do not mute codec",__func__);
+        }else{
+            set_codec_mute(adev);
+        }
     }
     if (adev->prev_out_devices == adev->out_devices
             && adev->prev_in_devices == adev->in_devices) {
@@ -3828,7 +3832,7 @@ static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
     adev->master_mute = mute;
     if(mute && adev->pcm_fm_dl != NULL){
         pthread_mutex_unlock(&adev->lock);
-        ALOGV("FM is open so wo can not set master mute");
+        ALOGD("FM is open so wo can not set master mute");
         return 0;
     }
     select_devices_signal(adev);
