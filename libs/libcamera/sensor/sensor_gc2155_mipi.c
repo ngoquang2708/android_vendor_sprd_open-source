@@ -671,11 +671,6 @@ SENSOR_REG_T GC2155_MIPI_YUV_COMMON[]=
 	{0x04, 0x01},
 	{0x05, 0x00},
 	{0x06, 0x88},
-#ifdef GC2155_MIPI_2Lane
-	{0x10, 0x95},
-#else
-	{0x10, 0x94},
-#endif
 	{0x11, 0x1e},
 	{0x12, 0x80},
 	{0x13, 0x0c},
@@ -693,7 +688,12 @@ SENSOR_REG_T GC2155_MIPI_YUV_COMMON[]=
 
 SENSOR_REG_T GC2155_MIPI_YUV_800x600[]=
 {
-	//{0xfe, 0x03},
+	{0xfe, 0x03},
+#ifdef GC2155_MIPI_2Lane
+	{0x10, 0x85},
+#else
+	{0x10, 0x84},
+#endif
 	{0xfe, 0x00},
 	{0xf7, 0x35},
 	{0xfd, 0x01},
@@ -757,17 +757,23 @@ SENSOR_REG_T GC2155_MIPI_YUV_800x600[]=
 #ifdef GC2155_MIPI_2Lane
 	{0x04 , 0x90},
 	{0x05 , 0x01},
+	{0x10 , 0x95}, // output enable
 #else
 	{0x04 , 0x01},
 	{0x05 , 0x00},
+	{0x10 , 0x94},
 #endif
 	{0xfe , 0x00},
 };
 
 SENSOR_REG_T GC2155_MIPI_YUV_1280x960[]=
 {
-	//{0xfe, 0x03},
-	//{0x10, 0x85}, // output disable
+	{0xfe, 0x03},
+#ifdef GC2155_MIPI_2Lane
+	{0x10, 0x85},// output disable
+#else
+	{0x10, 0x84},
+#endif
 	{0xfe, 0x00},
 	{0xf7, 0x1d},
 	{0xfd, 0x00},
@@ -829,14 +835,22 @@ SENSOR_REG_T GC2155_MIPI_YUV_1280x960[]=
 	{0x13 , 0x0a},
 	{0x04 , 0x40},
 	{0x05 , 0x01},
-	//{0x10 , 0x95}, // output enable
+#ifdef GC2155_MIPI_2Lane
+	{0x10 , 0x95}, // output enable
+#else
+	{0x10 , 0x94},
+#endif
 	{0xfe , 0x00},
 };
 
 SENSOR_REG_T GC2155_MIPI_YUV_1600x1200[]=
 {
-	//{0xfe, 0x03},
-	//{0x10, 0x85}, // output disable
+	{0xfe, 0x03},
+#ifdef GC2155_MIPI_2Lane
+	{0x10, 0x85},// output disable
+#else
+	{0x10, 0x84},
+#endif
 	{0xfe, 0x00},
 	{0xf7, 0x1d},
 	{0xfd, 0x00},
@@ -898,7 +912,11 @@ SENSOR_REG_T GC2155_MIPI_YUV_1600x1200[]=
 	{0x13 , 0x0c},
 	{0x04 , 0x01},
 	{0x05 , 0x00},
-	//{0x10 , 0x95}, // output enable
+#ifdef GC2155_MIPI_2Lane
+	{0x10 , 0x95}, // output enable
+#else
+	{0x10 , 0x94},
+#endif
 	{0xfe , 0x00},
 };
 
@@ -910,7 +928,7 @@ static SENSOR_REG_TAB_INFO_T s_GC2155_MIPI_resolution_Tab_YUV[]=
 	// YUV422 PREVIEW 1
 	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_800x600), 800, 600, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_1280x960), 1280, 960, 24, SENSOR_IMAGE_FORMAT_YUV422},
-	 {ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_1600x1200), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_YUV422},
+	{ADDR_AND_LEN_OF_ARRAY(GC2155_MIPI_YUV_1600x1200), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{PNULL, 0, 0, 0, 0, 0},
 
 	// YUV422 PREVIEW 2
@@ -1596,5 +1614,6 @@ static uint32_t GC2155_MIPI_StreamOff(uint32_t param)
 	GC2155_MIPI_WriteReg(0x10, 0x84);
 	GC2155_MIPI_WriteReg(0xfe, 0x00);
 #endif
+	usleep(20*1000);
 	return 0;
 }
