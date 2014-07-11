@@ -444,7 +444,9 @@ struct camera_context {
 	struct img_size          thum_size;
 	struct img_size          thum_size_backup;
 	struct cmr_cap_mem       cap_mem[CAMERA_CAP_FRM_CNT];
+	struct cmr_cap_mem       cap_mem_bak[CAMERA_CAP_FRM_CNT];
 	struct cmr_cap_2_frm     cap_2_mems;
+	struct img_frm           graphic_target_jpeg;
 	pthread_mutex_t          cancel_mutex;
 	uint32_t                 cap_canceled;
 	takepicture_mode         cap_mode;
@@ -477,6 +479,7 @@ struct camera_context {
 	uint32_t		    which_cpu;
 
 	uint32_t                 ispvideo_format;
+	uint32_t                  hal_mode;
 };
 
 uint32_t camera_get_rot_angle(uint32_t degree);

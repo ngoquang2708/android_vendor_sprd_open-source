@@ -1116,7 +1116,8 @@ int camera_set_ctrl(camera_parm_type id,
 		&& (CAMERA_PARM_SHARPNESS != id)
 		&& (CAMERA_PARAM_ROTATION_CAPTURE != id)
 		&& (CAMERA_PARM_PREVIEW_ENV != id)
-		&& (CAMERA_PARM_ZOOM_RECT != id)) {
+		&& (CAMERA_PARM_ZOOM_RECT != id)
+		&& (CAMERA_PARM_HAL_MODE != id)) {
 		return ret;
 	}
 
@@ -1568,6 +1569,9 @@ int camera_set_ctrl(camera_parm_type id,
 			cxt->cmr_set.auto_exposure_mode = parm;
 		}
 	}
+		break;
+	case CAMERA_PARM_HAL_MODE:
+		cxt->hal_mode = parm;
 		break;
 	default:
 		break;

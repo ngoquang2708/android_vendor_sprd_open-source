@@ -92,7 +92,8 @@ namespace android {
 #define FILT_FRM_NUM(num, base) (!((num) % (base)))
 #define ZSLCAPFRMINTERVAL		3
 #define ZSLPRVFRMINTERVAL		2
-
+#define HAL_JPEG_EXIF_SIZE		(64*1024)
+#define HAL_JPEG_SMALL_IMAGE_SIZE	(720*480)
 
 typedef struct stream_parameters {
 	uint32_t                      width;
@@ -472,6 +473,7 @@ private:
 	void                 DirectProcessRecReleaseBuf(int bufID, camera_metadata_t *req);
 	bool                 GetIsOutputStream();/*for panoramic*/
 	void                 SetIsOutputStream(bool OutputStrm);
+	int                  GetJpegOrZslGraphicBuf(uint16_t subStream);
 	void                 Camera2GetSrvReqInfo( camera_req_info *srcreq, camera_metadata_t *orireq, bool *isDirectProc);
 	void                 Camera2ProcessReq( camera_req_info *srcreq);
 	int                  CameraConvertCropRegion(uint32_t sensorWidth, uint32_t sensorHeight, cropZoom *cropRegion);
@@ -481,6 +483,7 @@ private:
 	void                 DisplayPictureImg(camera_frame_type *frame);
 	bool                 isSupportedResolution(SprdCamera2Info *camHal, int width, int height);
 	int                  displaySubStream(sp<Stream> stream, int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream);
+	int                  EnqJpgOrZslGraphicBuf(int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream);
 	void                 receivePreviewFrame(camera_frame_type *frame);
 	void                 receivePrevFrmWithCacheMem(camera_frame_type *frame);
 	void                 HandleStartPreview(camera_cb_type cb, int32_t parm4);
@@ -562,6 +565,7 @@ private:
 	sprd_camera_memory_t              *mRawHeap;
 	uint32_t                          mRawHeapSize;
 	uint32_t                          mPreviewHeapNum;
+	int32_t                           mUsingJpegBufId;
 	cam_size                          m_zslValidDataSize;
 	bool                              m_IsNeedHalAllocPrvBuf;
 	bool                              m_reqIsProcess;
@@ -574,6 +578,7 @@ private:
 	bool                              mIsOutPutStream;
 	bool                              mIsChangePicSize;/*for cts testVideoSnapshot*/
 	bool                              mIsFrameworkReadyOk;
+	bool                              mIsSnapshotFirst;
 	camera_metadata_t                 *m_halRefreshReq;
 	vendor_tag_query_ops_t            *mVendorTagOps;
 	static gralloc_module_t const*    m_grallocHal;

@@ -51,6 +51,9 @@ typedef struct tags_info {
 
 
 const int32_t jpegResolutionSensorBack[] = {/*must order from bigger to smaller*/
+#ifdef CONFIG_CAMERA_SUPPORT_8M
+    3264, 2448,
+#endif
     2592, 1944,
     2048, 1536,
     1920, 1088,
