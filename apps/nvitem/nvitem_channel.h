@@ -6,9 +6,9 @@
 
 void channel_open(void);
 
-BOOLEAN channel_read(uint8* buf, uint32 size, uint32* hasRead);
+BOOLEAN channel_read(uint8* buf, int32 size, int32* hasRead);
 
-BOOLEAN channel_write(uint8* buf, uint32 size, uint32* hasWrite);
+BOOLEAN channel_write(uint8* buf, uint32 size, int32* hasWrite);
 
 void channel_close(void);
 

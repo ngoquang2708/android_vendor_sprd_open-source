@@ -15,6 +15,8 @@ LOCAL_SRC_FILES:= \
 	nvitem_sync.c \
 	nvitem_channe_spipe.c
 
+LOCAL_CFLAGS += -Wall
+
 LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     libc \
