@@ -57,6 +57,10 @@ extern SENSOR_INFO_T g_HI702_yuv_info;
 extern SENSOR_INFO_T g_ov5640_yuv_info;
 extern SENSOR_INFO_T g_OV7675_yuv_info;
 extern SENSOR_INFO_T g_hi253_yuv_info;
+#if defined(CONFIG_CAMERA_X3542)
+SENSOR_INFO_T g_GC2155_yuv_info;
+SENSOR_INFO_T g_GC0311_yuv_info;
+#endif
 extern SENSOR_INFO_T g_s5k4ec_yuv_info;
 extern SENSOR_INFO_T g_sr352_yuv_info;
 /**---------------------------------------------------------------------------*
@@ -90,6 +94,10 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	//&g_OV2655_yuv_info,
 	//&g_OV7675_yuv_info,
 	//&g_OV2640_yuv_info,
+	#if defined(CONFIG_CAMERA_X3542)
+	&g_GC2035_yuv_info,
+	&g_GC2155_yuv_info,
+	#endif
 #endif
 	PNULL
 };
@@ -103,6 +111,9 @@ const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 	&g_OV7675_yuv_info,
 	//&g_GC0309_yuv_info,
 	//g_OV7690_yuv_info,
+	#if defined(CONFIG_CAMERA_X3542)
+	&g_GC0311_yuv_info,
+	#endif
 #endif
 	PNULL
 };

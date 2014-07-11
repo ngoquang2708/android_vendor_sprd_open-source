@@ -55,6 +55,8 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov5640.c \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_ov8865_mipi_raw.c \
+	sensor/sensor_gc2155.c \
+	sensor/sensor_gc0311.c \
 	sensor/sensor_gt2005.c \
 	sensor/sensor_gc0308.c \
 	sensor/sensor_hi702_ccir.c \
@@ -220,6 +222,10 @@ endif
 ifeq ($(strip $(TARGET_BOARD_CAMERA_NO_FLASH_DEV)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_FLASH_NOT_SUPPORT
 LOCAL_CFLAGS += -DCONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_X3542)),true)
+LOCAL_CFLAGS += -DCONFIG_CAMERA_X3542
 endif
 
 LOCAL_MODULE := utest_camera_$(TARGET_BOARD_PLATFORM)
