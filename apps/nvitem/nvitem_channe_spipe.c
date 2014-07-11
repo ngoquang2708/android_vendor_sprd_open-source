@@ -12,10 +12,6 @@ char channel_path[95];
 
 void channel_open(void)
 {
-	int fd = -1;
-	char cmd[64];
-	int timeout=0;
-
 	do
 	{
 		channel_fd = open( channel_path, O_RDWR);
@@ -31,20 +27,23 @@ void channel_open(void)
 	}while(1);
 
 }
-BOOLEAN channel_read(uint8* buf, uint32 size, uint32* hasRead)
+BOOLEAN channel_read(uint8* buf, int32 size, int32* hasRead)
 {
+	* hasRead = read(channel_fd,buf,size);
 
-	*hasRead = read(channel_fd,buf,size);
+	NVITEM_PRINT("channel_read hasread %d size %d\n",*hasRead,size);
 	if(*hasRead < size)
 	{
+		NVITEM_PRINT("channel_read fail\n");
 		return 0;
 	}
+	NVITEM_PRINT("channel_read success\n");
 	return 1;
 }
 
-BOOLEAN channel_write(uint8* buf, uint32 size, uint32* hasWrite)
+BOOLEAN channel_write(uint8* buf, uint32 size, int32* hasWrite)
 {
-	write(channel_fd,buf,size);
+	* hasWrite = write(channel_fd,buf,size);
 	return 1;
 }
 

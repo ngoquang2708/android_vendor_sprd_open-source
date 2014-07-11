@@ -34,12 +34,14 @@ static uint8*			_packetRspBody;
 
 static uint32 __makeEcc(uint8* buf, uint32 len)
 {
+	buf = buf;//dummy just for warning clean
+	len = len;
 	return 0;
 }
 
 void __sendPacketRsp(PACKET_HEAD* header, uint8 rsp)
 {
-	uint32 hasWrite;
+	int32 hasWrite;
 //---for test
 #if 0
 	static uint32 cnt = 0;
@@ -62,6 +64,10 @@ void __sendPacketRsp(PACKET_HEAD* header, uint8 rsp)
 
 static BOOLEAN __chkEcc(uint8* buf, uint32 len, uint32 ecc)
 {
+
+	buf = buf;//dummy just for warning clean
+	len = len;
+	ecc = ecc;
 	return 1;
 }
 
@@ -81,16 +87,16 @@ void _initPacket(void)
 /*PASS*/
 uint32 _getPacket(uint8** buf, uint32* size)
 {
-	uint32 hasRead;
+	int32 hasRead;
 	NVITEM_PRINT("_getPacket\n");
 //------------------------------------------------------------
-	if(!channel_read(packeBuf, sizeof(PACKET_HEAD)+PACKETSIZE, &hasRead))
+	if(!channel_read(packeBuf, (int32)(sizeof(PACKET_HEAD)+PACKETSIZE), &hasRead))
 //------------------------------------------------------------
 	{
 		NVITEM_PRINT("fail channel_read\n");
 		return _PACKET_FAIL;
 	}
-	if(hasRead < sizeof(PACKET_HEAD))
+	if(hasRead < (int32)sizeof(PACKET_HEAD))
 	{
 		NVITEM_PRINT("fail PACKET_HEAD\n");
 		return _PACKET_SKIP;
@@ -103,7 +109,7 @@ uint32 _getPacket(uint8** buf, uint32* size)
 		NVITEM_PRINT("fail ECC\n");
 		return _PACKET_SKIP;
 	}
-	if(hasRead < (sizeof(PACKET_HEAD)+_packetHead->sizeOfPacket))
+	if(hasRead < (int32)(sizeof(PACKET_HEAD)+_packetHead->sizeOfPacket))
 	{
 		NVITEM_PRINT("fail SIZE\n");
 		return _PACKET_SKIP;

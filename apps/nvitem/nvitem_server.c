@@ -10,6 +10,7 @@
 
 static void *pSaveTask(void* ptr)
 {
+	ptr = ptr;// warning clean
 	do
 	{
 		waiteEvent();
