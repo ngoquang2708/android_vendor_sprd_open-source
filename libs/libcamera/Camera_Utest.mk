@@ -26,7 +26,6 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/images \
 	external/skia/include/core\
 	external/jhead \
-	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -300,7 +299,7 @@ LOCAL_MODULE := utest_camera_$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw libexif libutils libbinder libcamera_client libskia libcutils libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
 LOCAL_SHARED_LIBRARIES += libface_finder

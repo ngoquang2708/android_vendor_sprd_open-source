@@ -26,7 +26,6 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/images \
 	external/skia/include/core\
 	external/jhead \
-	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -54,6 +53,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_autotest_ov8825_mipi_raw.c \
 	sensor/sensor_ov13850_mipi_raw.c \
 	sensor/sensor_ov5648_mipi_raw.c \
+	sensor/sensor_ov2680_mipi_raw.c \
 	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_imx219_mipi_raw.c \
 	sensor/sensor_ov5640_mipi.c \
@@ -61,6 +61,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov5640.c \
 	sensor/sensor_autotest_ov5640_ccir_yuv.c \
 	sensor/sensor_autotest_ccir_yuv.c \
+	sensor/sensor_JX205_mipi_raw.c \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_gc2155.c \
 	sensor/sensor_gc2155_mipi.c \
@@ -298,7 +299,7 @@ LOCAL_MODULE := utest_jpeg_$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libhardware libisp libcamera_metadata
 endif
 
 include $(BUILD_EXECUTABLE)

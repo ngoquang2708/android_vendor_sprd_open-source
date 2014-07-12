@@ -222,7 +222,7 @@ bool getApctCamInitSupport()
 		fseek(f, 0, 0);
 		ret = fread(str, 5, 1, f);
 		fclose(f);
-		if(ret){
+		if (ret) {
 			long apct_config = atol(str);
 			gIsApctCamInitTimeShow = (apct_config & 0x8010) == 0x8010 ? true : false;
 		}
@@ -243,19 +243,18 @@ int SprdCameraHardware::getCameraInfo(int cameraId, struct camera_info *cameraIn
 void SprdCameraHardware::shakeTestInit(ShakeTest *tmpShakeTest)
 {
 	char is_performance_camera_test[100];
-	int tmp_diff_yuv_color[MAX_LOOP_COLOR_COUNT][MAX_Y_UV_COUNT]={
+	int tmp_diff_yuv_color[MAX_LOOP_COLOR_COUNT][MAX_Y_UV_COUNT] = {
 		{0x28,0xef},
 		{0x51,0x5a},
 		{0x90,0x36}
 	};
+
 	memcpy(&tmpShakeTest->diff_yuv_color, &tmp_diff_yuv_color, sizeof(tmp_diff_yuv_color));
 	tmpShakeTest->mShakeTestColorCount = 0;
-	property_get("persist.sys.performance_camera",is_performance_camera_test, "0");
-	if((0 == strcmp("1", is_performance_camera_test)) && mIsPerformanceTestable) {
-		LOGI("SHAKE_TEST come in");
+	property_get("persist.sys.performance_camera", is_performance_camera_test, "0");
+	if ((0 == strcmp("1", is_performance_camera_test)) && mIsPerformanceTestable) {
 		setShakeTestState(SHAKE_TEST);
        } else {
-	       LOGI("SHAKE_TEST not come in");
 		setShakeTestState(NOT_SHAKE_TEST);
 	}
 
@@ -322,7 +321,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 {
 	mIsPerformanceTestable = sprd_isPerformanceTestable();
 	if (mIsPerformanceTestable) {
-        sprd_startPerfTracking("openCameraHardware: E cameraId: %d.",cameraId );
+		sprd_startPerfTracking("openCameraHardware: E cameraId: %d.",cameraId );
 	} else {
 		LOGI("openCameraHardware: E cameraId: %d.", cameraId);
 	}
@@ -370,25 +369,26 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	switch_monitor_thread_init((void *)this);
 
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("openCameraHardware: X cameraId: %d.", cameraId);
+		sprd_stopPerfTracking("openCameraHardware: X cameraId: %d.", cameraId);
 	} else {
 		LOGI("openCameraHardware: X cameraId: %d.", cameraId);
 	}
-
 }
 
 SprdCameraHardware::~SprdCameraHardware()
 {
 	if (mIsPerformanceTestable) {
-			sprd_startPerfTracking("closeCameraHardware: E cameraId: %d.", mCameraId);
-		} else {
+		sprd_startPerfTracking("closeCameraHardware: E cameraId: %d.", mCameraId);
+	} else {
 		LOGI("closeCameraHardware: E cameraId: %d.", mCameraId);
-		}
+	}
+
 	if (!mReleaseFLag) {
 		release();
 	}
+
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("closeCameraHardware: X cameraId: %d.", mCameraId);
+		sprd_stopPerfTracking("closeCameraHardware: X cameraId: %d.", mCameraId);
 	} else {
 		LOGI("closeCameraHardware: X cameraId: %d.", mCameraId);
 	}
@@ -401,6 +401,7 @@ void SprdCameraHardware::release()
 	} else {
 		LOGI("release E .\n");
 	}
+
 	Mutex::Autolock l(&mLock);
 
 	// Either preview was ongoing, or we are in the middle or taking a
@@ -489,7 +490,7 @@ void SprdCameraHardware::release()
 	mReleaseFLag = true;
 
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("release X.\n");
+		sprd_stopPerfTracking("release X.\n");
 	} else {
 		LOGI("release X.\n");
 	}
@@ -503,7 +504,7 @@ int SprdCameraHardware::getCameraId() const
 status_t SprdCameraHardware::startPreview()
 {
 	if (mIsPerformanceTestable) {
-        sprd_startPerfTracking("startPreview: E");
+		sprd_startPerfTracking("startPreview: E");
 	} else {
 		LOGI("startPreview: E");
 	}
@@ -519,10 +520,11 @@ status_t SprdCameraHardware::startPreview()
 	ret = startPreviewInternal(isRecordingMode);
 
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("startPreview: X");
+		sprd_stopPerfTracking("startPreview: X");
 	} else {
 		LOGI("startPreview: X");
 	}
+
 	return ret;
 }
 
@@ -533,6 +535,7 @@ void SprdCameraHardware::stopPreview()
 	} else {
 		LOGI("stopPreview: E");
 	}
+
 	Mutex::Autolock l(&mLock);
 
 	waitSetParamsOK();
@@ -545,8 +548,9 @@ void SprdCameraHardware::stopPreview()
 	}
 
 	stopPreviewInternal();
+
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("startPreview: X");
+		sprd_stopPerfTracking("startPreview: X");
 	} else {
 		LOGI("stopPreview: X");
 	}
@@ -697,7 +701,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	}
 
 	if (mIsPerformanceTestable) {
-        sprd_stopPerfTracking("setPreviewWindow X:");
+		sprd_stopPerfTracking("setPreviewWindow X:");
 	} else {
 		LOGI("setPreviewWindow X:");
 	}
@@ -780,6 +784,7 @@ status_t SprdCameraHardware::takePicture()
 	bool result = WaitForCaptureStart();
 
 	print_time();
+
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("takePicture: X");
 	} else {
@@ -808,6 +813,7 @@ status_t SprdCameraHardware::waitSetParamsOK()
 {
 	status_t ret = NO_ERROR;
 	uint32_t i_count = 0;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("waitSetParamsOK E.\n");
 	} else {
@@ -830,6 +836,7 @@ status_t SprdCameraHardware::waitSetParamsOK()
 	} else {
 		LOGI("waitSetParamsOK X.\n");
 	}
+
 	return ret;
 }
 
@@ -1869,6 +1876,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	uint32_t isZoomChange = 0;
 	char * isZslSupport = (char *)"false";
 	int    oriZsl = 0;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("setParametersInternal: E params = %p", &params);
 	} else {
@@ -2063,7 +2071,7 @@ setParamEnd:
 	if (isZoomChange) {
 		mParamWait.signal();
 	}
-	LOGI("setParametersInternal X.\n");
+
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("setParametersInternal X.\n");
 	} else {
@@ -2290,13 +2298,12 @@ void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner own
 {
 	Sprd_camera_state   org_state   = SPRD_IDLE;
 	volatile Sprd_camera_state      * state_owner = NULL;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("setCameraState:state: E");
-	} else {
-		LOGI("setCameraState:state: E");
 	}
 	Mutex::Autolock stateLock(&mStateLock);
-	LOGI("setCameraState:state: %s, owner: %d", getCameraStateStr(state), owner);
+	LOGI("setCameraState: E state: %s, owner: %d", getCameraStateStr(state), owner);
 	switch (owner) {
 		case STATE_CAMERA:
 			org_state = mCameraState.camera_state;
@@ -2382,16 +2389,15 @@ void SprdCameraHardware::setCameraState(Sprd_camera_state state, state_owner own
 	if (org_state != state)
 		mStateWait.signal();              /*if state changed should broadcasting*/
 
-	LOGI("setCameraState: X camera state = %s, preview state = %s, capture state = %s focus state = %s set param state = %s",
+	if (mIsPerformanceTestable) {
+		sprd_stopPerfTracking("setCameraState:state: X.\n");
+	} else {
+		LOGI("setCameraState: X camera state = %s, preview state = %s, capture state = %s focus state = %s set param state = %s",
 				getCameraStateStr(mCameraState.camera_state),
 				getCameraStateStr(mCameraState.preview_state),
 				getCameraStateStr(mCameraState.capture_state),
 				getCameraStateStr(mCameraState.focus_state),
 				getCameraStateStr(mCameraState.setParam_state));
-	if (mIsPerformanceTestable) {
-		sprd_stopPerfTracking("setCameraState:state: X.\n");
-	} else {
-		LOGI("setCameraState:state: X.\n");
 	}
 }
 
@@ -2501,8 +2507,6 @@ bool SprdCameraHardware::WaitForCameraStart()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("WaitForCameraStart E.\n");
-	} else {
-		LOGI("WaitForCameraStart E.\n");
 	}
 	Mutex::Autolock stateLock(&mStateLock);
 
@@ -2515,8 +2519,6 @@ bool SprdCameraHardware::WaitForCameraStart()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("WaitForCameraStart X.\n");
-	} else {
-		LOGI("WaitForCameraStart X.\n");
 	}
 	return SPRD_IDLE == mCameraState.camera_state;
 }
@@ -2525,8 +2527,6 @@ bool SprdCameraHardware::WaitForCameraStop()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("WaitForCameraStop E.\n");
-	} else {
-		LOGI("WaitForCameraStop E.\n");
 	}
 	Mutex::Autolock stateLock(&mStateLock);
 
@@ -2540,8 +2540,6 @@ bool SprdCameraHardware::WaitForCameraStop()
 	}
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("WaitForCameraStop X.\n");
-	} else {
-		LOGI("WaitForCameraStop X.\n");
 	}
 
 	return SPRD_INIT == mCameraState.camera_state;
@@ -2551,8 +2549,6 @@ bool SprdCameraHardware::WaitForPreviewStart()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("WaitForPreviewStart E.\n");
-	} else {
-		LOGI("WaitForPreviewStart E.\n");
 	}
 	Mutex::Autolock stateLock(&mStateLock);
 
@@ -2568,8 +2564,6 @@ bool SprdCameraHardware::WaitForPreviewStart()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("WaitForPreviewStart X.\n");
-	} else {
-		LOGI("WaitForPreviewStart X.\n");
 	}
 
 	return SPRD_PREVIEW_IN_PROGRESS == mCameraState.preview_state;
@@ -2593,8 +2587,6 @@ bool SprdCameraHardware::WaitForCaptureStart()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking(" WaitForCaptureStart E.\n");
-	} else {
-		CMR_LOGD(" WaitForCaptureStart E.\n");
 	}
 	Mutex::Autolock stateLock(&mStateLock);
 
@@ -2614,8 +2606,6 @@ bool SprdCameraHardware::WaitForCaptureStart()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("WaitForCaptureStart X.\n");
-	} else {
-		CMR_LOGD(" WaitForCaptureStart X.\n");
 	}
 	return (SPRD_WAITING_RAW == mCameraState.capture_state
 		|| SPRD_WAITING_JPEG == mCameraState.capture_state
@@ -2627,11 +2617,11 @@ bool SprdCameraHardware::WaitForCaptureDone()
 	Mutex::Autolock stateLock(&mStateLock);
 	while (SPRD_IDLE != mCameraState.capture_state
 		&& SPRD_ERROR != mCameraState.capture_state) {
-	if (mIsPerformanceTestable) {
-		sprd_startPerfTracking("WaitForCaptureDone: waiting for SPRD_IDLE");
-	} else {
-		LOGI("WaitForCaptureDone: waiting for SPRD_IDLE");
-	}
+		if (mIsPerformanceTestable) {
+			sprd_startPerfTracking("WaitForCaptureDone: waiting for SPRD_IDLE");
+		} else {
+			LOGI("WaitForCaptureDone: waiting for SPRD_IDLE");
+		}
 		if (camera_capture_is_idle()) {
 			LOGI("WaitForCaptureDone: for OEM cap is IDLE, set capture state to %s",
 				getCameraStateStr(mCameraState.capture_state));
@@ -2672,8 +2662,6 @@ bool SprdCameraHardware::startCameraIfNecessary()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("startCameraIfNecessary E.\n");
-	} else {
-		LOGI("startCameraIfNecessary E.\n");
 	}
 	if (!isCameraInit()) {
 		LOGI("waiting for camera_init to initialize.startCameraIfNecessary");
@@ -2706,8 +2694,6 @@ bool SprdCameraHardware::startCameraIfNecessary()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("startCameraIfNecessary X.\n");
-	} else {
-		LOGI("startCameraIfNecessary X.\n");
 	}
 
 	return true;
@@ -2788,8 +2774,6 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_b
 
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("allocCameraMem E.\n");
-	} else {
-		LOGI("allocCameraMem E.\n");
 	}
 
 	if (NULL == memory) {
@@ -2893,9 +2877,8 @@ getpmem_end:
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" allocCameraMem X.\n");
-	} else {
-		LOGI(" allocCameraMem X.\n");
 	}
+
 	return memory;
 }
 
@@ -3033,8 +3016,6 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("allocatePreviewMemByGraphics E.\n");
-	} else {
-		LOGI(" allocatePreviewMemByGraphics E.\n");
 	}
 	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
 		int i = 0, usage = 0, stride = 0, miniUndequeued = 0;
@@ -3112,8 +3093,6 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 	}
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" allocatePreviewMemByGraphics X.\n");
-	} else {
-		LOGI(" allocatePreviewMemByGraphics X.\n");
 	}
 	return 0;
 }
@@ -3122,8 +3101,6 @@ bool SprdCameraHardware::allocatePreviewMem()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("allocatePreviewMem E.\n");
-	} else {
-		LOGI(" allocatePreviewMem E.\n");
 	}
 	uint32_t i = 0, j = 0, buffer_start_id = 0, buffer_end_id = 0;
 	uint32_t buffer_size = camera_get_size_align_page(mPreviewHeapSize);
@@ -3195,8 +3172,6 @@ bool SprdCameraHardware::allocatePreviewMem()
 	}
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" allocatePreviewMem X.\n");
-	} else {
-		LOGI("allocatePreviewMem X.\n");
 	}
 	return true;
 }
@@ -3293,8 +3268,6 @@ bool SprdCameraHardware::initPreview()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("initPreview E.\n");
-	} else {
-		LOGI("initPreview E.\n");
 	}
 	uint32_t page_size, buffer_size;
 	uint32_t preview_buff_cnt = kPreviewBufferCount;
@@ -3344,9 +3317,8 @@ bool SprdCameraHardware::initPreview()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" initPreview X.\n");
-	} else {
-		LOGI(" initPreview X.\n");
 	}
+
 	return true;
 }
 
@@ -3393,8 +3365,6 @@ void SprdCameraHardware::deinitPreview()
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking(" deinitPreview E.\n");
-	} else {
-		LOGI(" deinitPreview E.\n");
 	}
 
 	freePreviewMem();
@@ -3402,8 +3372,6 @@ void SprdCameraHardware::deinitPreview()
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" deinitPreview X.\n");
-	} else {
-		LOGI(" deinitPreview X.\n");
 	}
 }
 
@@ -3495,10 +3463,9 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("initCapture E.\n");
 	} else {
-		LOGI(" initCapture E.\n");
+		LOGI("initCapture E, %d", initJpegHeap);
 	}
 
-	LOGI("initCapture E, %d", initJpegHeap);
 	if (!startCameraIfNecessary())
 		return false;
 
@@ -3718,6 +3685,7 @@ void SprdCameraHardware::stopPreviewInternal()
 	nsecs_t start_timestamp = systemTime();
 	nsecs_t end_timestamp;
 	char * isZslSupport = (char *)"false";
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("stopPreviewInternal E");
 	} else {
@@ -3827,6 +3795,7 @@ bool SprdCameraHardware::iSZslMode()
 status_t SprdCameraHardware::cancelPictureInternal()
 {
 	bool result = true;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("cancelPictureInternal: E, state = %s", getCameraStateStr(getCaptureState()));
 	} else {
@@ -3883,6 +3852,7 @@ status_t SprdCameraHardware::initDefaultParameters()
 {
 	uint32_t lcd_w = 0, lcd_h = 0;
 	status_t ret = NO_ERROR;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("initDefaultParameters E");
 	} else {
@@ -4323,9 +4293,8 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 	LOGI("%s: size = %dx%d, addr = %d", __func__, width, height, phy_addr);
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("displayOneFrameForCapture E.\n");
-	} else {
-		LOGI(" displayOneFrameForCapture E.\n");
 	}
+
 	Mutex::Autolock cbLock(&mPreviewCbLock);
 
 	buffer_handle_t *buf_handle = NULL;
@@ -4383,8 +4352,6 @@ bool SprdCameraHardware::displayOneFrameForCapture(uint32_t width, uint32_t heig
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" displayOneFrameForCapture X.\n");
-	} else {
-		LOGI(" displayOneFrameForCapture X.\n");
 	}
 
 	return true;
@@ -4765,9 +4732,8 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("receivePreviewFrame E.\n");
-	} else {
-		LOGI(" receivePreviewFrame E.\n");
 	}
+
 	Mutex::Autolock cbLock(&mPreviewCbLock);
 	bool is_preview = isPreviewing();
 	if (NULL == frame) {
@@ -4788,7 +4754,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	else
 		LOGV("receivePreviewFrame E: width=%d, height=%d offset=0x%x\n",width, height, offset);
 
-	if(SHAKE_TEST == getShakeTestState()) {
+	if (SHAKE_TEST == getShakeTestState()) {
 		overwritePreviewFrame(frame);
 	}
 
@@ -4818,8 +4784,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	send_img_data(ISP_TOOL_YVU420_2FRAME, mPreviewWidth, mPreviewHeight, (char *)frame->buf_Virt_Addr, frame->dx * frame->dy * 3 /2);
 #endif
 
-	if(mData_cb != NULL)
-	{
+	if (mData_cb != NULL) {
 		LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
@@ -4925,10 +4890,9 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		LOGI("receivePreviewFrame X");
 	else
 		LOGV("receivePreviewFrame X");
+
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" receivePreviewFrame X.\n");
-	} else {
-		LOGI(" receivePreviewFrame X.\n");
 	}
 }
 
@@ -5171,14 +5135,14 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 {
 	GET_END_TIME;
 	GET_USE_TIME;
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("receiveJpegPicture E.\n");
 	} else {
-		LOGI("receiveJpegPicture E.\n");
+		LOGI("receiveJpegPicture: E image (%d bytes) Time %d(ms)",
+				mJpegSize, s_use_time);
 	}
 	camera_encode_mem_type *enc = (camera_encode_mem_type *)encInfo->outPtr;
-	LOGI("receiveJpegPicture: E image (%d bytes) Time %d(ms)",
-		mJpegSize, s_use_time);
 	print_time();
 	Mutex::Autolock cbLock(&mCaptureCbLock);
 
@@ -5445,8 +5409,6 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("HandleTakePicture E.\n");
-	} else {
-		LOGI("HandleTakePicture E.\n");
 	}
 	LOGI("HandleTakePicture E: cb = %d, parm4 = 0x%x, state = %s",
 		cb, parm4, getCameraStateStr(getCaptureState()));
@@ -5539,8 +5501,6 @@ void SprdCameraHardware::HandleTakePicture(camera_cb_type cb,
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("HandleTakePicture X.\n");
-	} else {
-		LOGI(" HandleTakePicture X.\n");
 	}
 	LOGI("HandleTakePicture X, state = %s", getCameraStateStr(getCaptureState()));
 }
@@ -5562,8 +5522,6 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("HandleEncode E.\n");
-	} else {
-		LOGI("HandleEncode E.\n");
 	}
 	LOGI("HandleEncode E: cb = %d, parm4 = 0x%x, state = %s",
 		cb, parm4, getCameraStateStr(getCaptureState()));
@@ -5626,11 +5584,9 @@ void SprdCameraHardware::HandleEncode(camera_cb_type cb,
 		break;
 	}
 	camera_set_capture_trace(0);
-	LOGV("HandleEncode X, state = %s", getCameraStateStr(getCaptureState()));
+	LOGI("HandleEncode X, state = %s", getCameraStateStr(getCaptureState()));
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" HandleEncode X.\n");
-	} else {
-		LOGI(" HandleEncode X.\n");
 	}
 }
 
@@ -5639,17 +5595,16 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 {
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("HandleFocus E.\n");
-	} else {
-		LOGI("HandleFocus E.\n");
 	}
-	LOGI("HandleFocus E: cb = %d, parm4 = 0x%x, state = %s",
-		cb, parm4, getCameraStateStr(getPreviewState()));
 
 	if (NULL == mNotify_cb) {
 		LOGE("HandleFocus: mNotify_cb is NULL");
 		setCameraState(SPRD_IDLE, STATE_FOCUS);
 		return;
 	}
+
+	LOGI("HandleFocus E: cb = %d, parm4 = 0x%x, state = %s",
+		cb, parm4, getCameraStateStr(getPreviewState()));
 
 	setCameraState(SPRD_IDLE, STATE_FOCUS);
 
@@ -5690,11 +5645,9 @@ void SprdCameraHardware::HandleFocus(camera_cb_type cb,
 		break;
 	}
 
-	LOGI("HandleFocus out, state = %s", getCameraStateStr(getFocusState()));
+	LOGI("HandleFocus X, state = %s", getCameraStateStr(getFocusState()));
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" HandleFocus X.\n");
-	} else {
-		LOGI(" HandleFocus X.\n");
 	}
 }
 

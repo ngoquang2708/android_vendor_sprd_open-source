@@ -26,7 +26,6 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/images \
 	external/skia/include/core\
 	external/jhead \
-	external/sqlite/dist \
 	system/media/camera/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/video \
 	$(TOP)/vendor/sprd/open-source/libs/gralloc \
@@ -34,7 +33,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SRC_FILES:= \
 	sc8830/src/SprdOEMCamera.c \
-	sc8830/src/SprdCameraHardware_autest_Interface.cpp  \
+	sc8830/src/SprdCameraHardware_autest_Interface.cpp \
 	sc8830/src/cmr_oem.c \
 	sc8830/src/cmr_set.c \
 	sc8830/src/cmr_mem.c \
@@ -125,7 +124,7 @@ LOCAL_SRC_FILES+= \
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M  -DANDROID_4100
+LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_ -DJPEG_ENC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DCONFIG_CAMERA_2M -DANDROID_4100
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_SMALL_PREVSIZE
@@ -304,7 +303,7 @@ endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw  libexif libutils libbinder libcamera_client libskia libcutils libsqlite libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw libexif libutils libbinder libcamera_client libskia libcutils libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
 LOCAL_SHARED_LIBRARIES += libface_finder
