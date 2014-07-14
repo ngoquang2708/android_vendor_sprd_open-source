@@ -381,6 +381,7 @@ struct camera_context {
 	uint32_t                 cap_sub2_inited;
 	uint32_t                 cap_sub2_msg_queue_handle;
 	sem_t                    cap_sub2_sync_sem;
+	uint32_t                 is_cap_trace;
 
 	/*for preview*/
 	struct img_size          display_size;

@@ -108,6 +108,7 @@ typedef struct stream_parameters {
 	int                           phyAdd[NUM_MAX_CAMERA_BUFFERS];/*for s_mem_method = 1*/
 	int                           bufIndex;
 	int                           minUndequedBuffer;
+	int                           cancelBufNum;
 	int64_t                       m_timestamp;
 } stream_parameters_t;
 
@@ -516,8 +517,8 @@ private:
 	void                  HandleTakePicture(camera_cb_type cb,int32_t parm4);
 	void                  HandleEncode(camera_cb_type cb,int32_t parm4);
 	void                  HandleFocus(camera_cb_type cb, int32_t parm4);
-	bool                  getPreviewBuffer(void);
-	status_t              set_ddr_freq(uint32_t mhzVal);
+	void                  getPreviewBuffer(void);
+	int                   flush_preview_buffers();
 
 	sp<RequestQueueThread>   m_RequestQueueThread;
 	substream_parameters_t   m_subStreams[STREAM_ID_LAST+1];
@@ -544,7 +545,6 @@ private:
 	bool                              m_degenerated_normal_cap;/*zsl degenerated to normal picture*/
 	bool                              m_dcDircToDvSnap;/*for cts testVideoSnapshot*/
 	bool                              mIsOutPutStream;
-	bool                              mIsChangePicSize;/*for cts testVideoSnapshot*/
 	camera_metadata_t                 *m_halRefreshReq;
 	static gralloc_module_t const*    m_grallocHal;
 	uint32_t                          mPreviewFrmRefreshIndex;
@@ -556,8 +556,6 @@ private:
 	uint32_t                          mMiscHeapNum;
 	uint32_t                          m_CapFrmCnt; /*for zsl*/
 	uint32_t                          m_PrvFrmCnt;/*for zsl*/
-	uint32_t                          mSetDDRFreq;
-	int                               mSetDDRFreqCount;
 	int                               m_CameraId;
 	int                               m_reprocessStreamId;
 	const camera2_stream_in_ops_t     *m_reprocessOps;

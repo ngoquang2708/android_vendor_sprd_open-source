@@ -1140,6 +1140,9 @@ int jpeg_enc_start(struct jpeg_enc_in_param *in_parm_ptr, struct jpeg_enc_out_pa
 		return JPEG_CODEC_PARAM_ERR;
 	}
 
+	jcontext.active_handle = (uint32_t)(handle_ptr);
+	handle_ptr->handle = (uint32_t)enc_cxt_ptr;
+	handle_ptr->type = 0;
 	message.msg_type = JPEG_EVT_ENC_START;
 	message.data = enc_cxt_ptr;
 	message.alloc_flag = 0;
@@ -1148,11 +1151,10 @@ int jpeg_enc_start(struct jpeg_enc_in_param *in_parm_ptr, struct jpeg_enc_out_pa
 	if (CMR_MSG_SUCCESS != ret) {
 		free(handle_ptr);
 		free(enc_cxt_ptr);
+		jcontext.active_handle = 0;
 		return JPEG_CODEC_ERROR;
 	}
-	jcontext.active_handle = (uint32_t)(handle_ptr);
-	handle_ptr->handle = (uint32_t)enc_cxt_ptr;
-	handle_ptr->type = 0;
+
 	out_parm_ptr->handle = (uint32_t)(handle_ptr);
 	CMR_LOGI("handle 0x%x.",(uint32_t)handle_ptr);
 	return JPEG_CODEC_SUCCESS;

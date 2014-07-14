@@ -552,6 +552,8 @@ inline uint32_t camera_get_prev_stat();
 int camera_capture_is_idle(void);
 int camera_set_cancel_capture(int set_val); /*for hal can invoke*/
 void camera_config_exif_info(camera_sensor_exif_info * exif_info);
+void camera_set_preview_trace(uint32_t is_trace);
+void camera_set_capture_trace(uint32_t is_trace);
 
 /*following functions are for HAL2.0*/
 int camera_zsl_substream_process(struct frm_info *data,uint32_t *srcPhy,uint32_t *srcVirt,uint32_t width,uint32_t height);

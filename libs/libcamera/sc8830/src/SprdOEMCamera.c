@@ -29,7 +29,7 @@ static int camera_capture_need_exit(void);
 struct camera_context        cmr_cxt;
 struct camera_context        *g_cxt = &cmr_cxt;
 #define IS_PREVIEW           (CMR_PREVIEW == g_cxt->preview_status)
-#define IS_PREVIEW_TRACE     (PREV_TRACE_CNT > g_cxt->pre_frm_cnt || (!IS_PREVIEW))
+#define IS_PREVIEW_TRACE     (PREV_TRACE_CNT >= g_cxt->pre_frm_cnt || (!IS_PREVIEW))
 #define IS_CAPTURE           (CMR_CAPTURE == g_cxt->capture_status || CMR_CAPTURE_SLICE == g_cxt->capture_status)
 #define IS_PREV_FRM(id)      ((id & CAMERA_PREV_ID_BASE) == CAMERA_PREV_ID_BASE)
 #define IS_CAP0_FRM(id)      ((id & CAMERA_CAP0_ID_BASE) == CAMERA_CAP0_ID_BASE)
@@ -58,13 +58,16 @@ struct camera_context        *g_cxt = &cmr_cxt;
 
 #define bzero(b, len)            memset((b), '\0', (len))
 #define WAIT_CAPTURE_PATH_TIME   100
-#define PREV_TRACE_CNT           5
+#define PREV_TRACE_CNT           8
+#define IS_POINTER_INVALID(p)    ((p) <= 0x800 || (p) == 0xFFFFFFFF)
 
 /*camera_takepic_step timestamp*/
 enum CAMERA_TAKEPIC_STEP {
 		CMR_STEP_TAKE_PIC = 0,
 		CMR_STEP_CAP_S,
 		CMR_STEP_CAP_E,
+		CMR_STEP_ROT_S,
+		CMR_STEP_ROT_E,
 		CMR_STEP_ISP_PP_S,
 		CMR_STEP_ISP_PP_E,
 		CMR_STEP_JPG_DEC_S,
@@ -88,22 +91,24 @@ struct CAMERA_TAKEPIC_STAT {
 };
 
 struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
-		{"takepicture",           0, 0},
-		{"capture start",        0, 0},
-		{"capture end",          0, 0},
-		{"isp pp start",           0, 0},
-		{"isp pp end",             0, 0},
-		{"jpeg dec start",        0, 0},
-		{"jpeg dec end",         0, 0},
-		{"scaling start",          0, 0},
-		{"scaling end",           0,  0},
-		{"jpeg enc start",       0,  0},
-		{"jpeg enc end",         0,  0},
-		{"thumb enc start",     0,  0},
-		{"thumb enc end",       0,  0},
-		{"write exif start",       0,  0},
-		{"write exif end",         0,  0},
-		{"call back",               0,  0},
+		{"takepicture",      0, 0},
+		{"capture start",    0, 0},
+		{"capture end",      0, 0},
+		{"rotate start",     0, 0},
+		{"rotate end",       0, 0},
+		{"isp pp start",     0, 0},
+		{"isp pp end",       0, 0},
+		{"jpeg dec start",   0, 0},
+		{"jpeg dec end",     0, 0},
+		{"scaling start",    0, 0},
+		{"scaling end",      0, 0},
+		{"jpeg enc start",   0, 0},
+		{"jpeg enc end",     0, 0},
+		{"thumb enc start",  0, 0},
+		{"thumb enc end",    0, 0},
+		{"write exif start", 0, 0},
+		{"write exif end",   0, 0},
+		{"call back",        0, 0},
 };
 #define TAKE_PICTURE_STEP(a) do { \
 		cap_stp[a].timestamp = systemTime(CLOCK_MONOTONIC); \
@@ -367,7 +372,10 @@ static void camera_pre_init(void)
 void camera_config_exif_info(camera_sensor_exif_info * exif_info)
 {
 	EXIF_SPEC_PIC_TAKING_COND_T* img_sensor_exif_ptr = Sensor_GetSensorExifInfo();
-
+	if (IS_POINTER_INVALID((uint32_t)img_sensor_exif_ptr)) {
+		CMR_LOGE("get sensor exif failed!");
+		return;
+	}
 	img_sensor_exif_ptr->valid.Flash = exif_info->flash;
 }
 
@@ -1867,6 +1875,7 @@ void *camera_cap_subthread_proc(void *data)
 			CMR_PRINT_TIME;
 			break;
 
+		case CMR_JPEG_DEC_DONE:
 		case CMR_JPEG_ENC_DONE:
 			CMR_PRINT_TIME;
 			ret = camera_jpeg_codec_handle(message.msg_type,
@@ -2998,6 +3007,7 @@ int camera_take_picture_internal(takepicture_mode cap_mode)
 	}
 
 	CMR_PRINT_TIME;
+	TAKE_PICTURE_STEP(CMR_STEP_CAP_S);
 	ret = cmr_v4l2_cap_start(skip_number);
 	if (ret) {
 		CMR_LOGE("Fail to start V4L2 Capture");
@@ -3458,6 +3468,17 @@ int camera_caf_move_stop_handle(void *data)
 	return ret ;
 }
 
+void camera_set_preview_trace(uint32_t is_trace)
+{
+	cmr_v4l2_set_trace_flag(PREV_TRACE, is_trace);
+}
+
+void camera_set_capture_trace(uint32_t is_trace)
+{
+	g_cxt->is_cap_trace = is_trace;
+	cmr_v4l2_set_trace_flag(CAP_TRACE, is_trace);
+}
+
 int camera_set_frame_type(camera_frame_type *frame_type, struct frm_info* info)
 {
 	uint32_t                 frm_id;
@@ -3773,10 +3794,11 @@ void camera_v4l2_evt_cb(int evt, void* data)
 		if ((CHN_BUSY != g_cxt->chn_2_status
 			|| camera_check_cap_time(data))
 			&& CHN_2 == info->channel_id) {
-			CMR_LOGW("discard, %d, free frame %d 0x%x",
-				g_cxt->chn_2_status,
-				info->channel_id,
-				info->frame_id);
+			if (g_cxt->is_cap_trace)
+				CMR_LOGW("discard, %d, free frame %d 0x%x",
+					g_cxt->chn_2_status,
+					info->channel_id,
+					info->frame_id);
 			ret = cmr_v4l2_free_frame(info->channel_id, info->frame_id);
 			return;
 		}
@@ -3925,7 +3947,7 @@ void camera_jpeg_evt_cb(int evt, void* data)
 	message.msg_type = evt;
 	CMR_LOGI("evt 0x%x", evt);
 
-	if (CHN_2 == info->channel_id) {
+	if (CHN_2 == info->channel_id || CHN_0 == info->channel_id) {
 		ret = cmr_msg_post(g_cxt->cap_sub_msg_que_handle, &message, 1);
 	} else {
 		ret = cmr_msg_post(g_cxt->msg_queue_handle, &message, 1);
@@ -4654,6 +4676,8 @@ int camera_rotation_handle(uint32_t evt_type, uint32_t sub_type, struct img_frm 
 			tmp = g_cxt->cap_orig_size.width;
 			g_cxt->cap_orig_size.width = g_cxt->cap_orig_size.height;
 			g_cxt->cap_orig_size.height = tmp;
+			info->height = g_cxt->cap_orig_size.height;
+		} else {
 			info->height = g_cxt->cap_orig_size.height;
 		}
 
@@ -6293,7 +6317,7 @@ int camera_preview_err_handle(uint32_t evt_type)
 	case CMR_SENSOR_ERROR:
 	case CMR_V4L2_TIME_OUT:
 		rs_mode = RESTART_HEAVY;
-		/*g_cxt->preview_status = RESTART;*/
+		g_cxt->recover_status = RESTART;
 		CMR_LOGD("Sensor error, restart preview");
 		break;
 
@@ -7702,6 +7726,7 @@ int camera_start_rotate(struct frm_info *data)
 				&g_cxt->cap_mem[0].cap_yuv_rot.addr_vir);
 		}
 #endif
+		TAKE_PICTURE_STEP(CMR_STEP_ROT_S);
 		ret = cmr_rot(&rot_param);
 		if (ret) {
 			g_cxt->rot_cxt.rot_state = IMG_CVT_ROT_DONE;
@@ -7711,6 +7736,7 @@ int camera_start_rotate(struct frm_info *data)
 			g_cxt->rot_cxt.frm_data.reserved = (void*)data->frame_id;
 			camera_post_rot_evt(CMR_IMG_CVT_ROT_DONE,&g_cxt->rot_cxt.frm_data);
 		}
+		TAKE_PICTURE_STEP(CMR_STEP_ROT_E);
 	}
 
 

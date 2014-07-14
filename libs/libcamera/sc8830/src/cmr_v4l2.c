@@ -81,6 +81,8 @@ static cmr_evt_cb         v4l2_evt_cb = NULL;
 static pthread_mutex_t    cb_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t    status_mutex = PTHREAD_MUTEX_INITIALIZER;
 static uint32_t           is_on = 0;
+static uint32_t           is_prev_trace = 0;
+static uint32_t           is_cap_trace = 0;
 static pthread_t          v4l2_thread;
 static uint32_t           chn_status[CHN_MAX];
 static int                chn_frm_num[CHN_MAX];
@@ -120,6 +122,8 @@ int cmr_v4l2_init(void)
 	ret = cmr_v4l2_create_thread();
 	v4l2_evt_cb = NULL;
 	stream_on_cb = NULL;
+	is_prev_trace = 0;
+	is_cap_trace = 0;
 	memset(chn_status, 0, sizeof(chn_status));
 	return ret;
 }
@@ -148,6 +152,8 @@ int cmr_v4l2_deinit(void)
 	CMR_LOGD("thread kill done.");
 	pthread_mutex_lock(&cb_mutex);
 	v4l2_evt_cb = NULL;
+	is_prev_trace = 0;
+	is_cap_trace = 0;
 	pthread_mutex_unlock(&cb_mutex);
 	pthread_mutex_destroy(&cb_mutex);
 	pthread_mutex_destroy(&status_mutex);
@@ -486,6 +492,17 @@ exit:
 	return ret;
 }
 
+void cmr_v4l2_set_trace_flag(uint32_t trace_owner, uint32_t val)
+{
+	if (PREV_TRACE == trace_owner) {
+		is_prev_trace = val;
+	} else if (CAP_TRACE == trace_owner) {
+		is_cap_trace = val;
+	} else {
+		CMR_LOGE("unknown trace owner!");
+	}
+}
+
 /*
 parameters for v4l2_ext_controls
  ctrl_class,     should be reserved by V4L2, can be V4L2_CTRL_CLASS_USER or
@@ -732,7 +749,22 @@ static void* cmr_v4l2_thread_proc(void* data)
 					chn_frm_num[CHN_0] = frm_num;
 				}
 
-				CMR_LOGV("TX got one frame! buf_type 0x%x, id 0x%x, evt_id 0x%x", buf.type, buf.index, evt_id);
+				if ((is_prev_trace && CHN_1 == frame.channel_id)
+					|| (is_cap_trace && CHN_1 != frame.channel_id))
+					CMR_LOGI("got one frame! type 0x%x, id 0x%x, evt_id 0x%x sec %u usec %u",
+						buf.type,
+						buf.index,
+						evt_id,
+						(uint32_t)buf.timestamp.tv_sec,
+						(uint32_t)buf.timestamp.tv_usec);
+				else
+					CMR_LOGV("got one frame! type 0x%x, id 0x%x, evt_id 0x%x sec %u usec %u",
+						buf.type,
+						buf.index,
+						evt_id,
+						(uint32_t)buf.timestamp.tv_sec,
+						(uint32_t)buf.timestamp.tv_usec);
+
 				frame.height   = buf.reserved;
 				frame.frame_id = buf.index;
 				frame.sec      = buf.timestamp.tv_sec;
