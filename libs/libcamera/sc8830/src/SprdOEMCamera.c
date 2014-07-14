@@ -6262,6 +6262,26 @@ int camera_set_capture_mem(uint32_t cap_index,
 	return ret;
 }
 
+int camera_set_capture_jpeg_mem(uint32_t cap_index,
+						uint32_t phy_addr,
+						uint32_t vir_addr,
+						uint32_t mem_size)
+{
+	struct img_size          max_size;
+	int                      ret = CAMERA_SUCCESS;
+
+	if (0 == phy_addr || 0 == vir_addr || 0 == mem_size) {
+		CMR_LOGE("Invalid parameter 0x%x 0x%x 0x%x", phy_addr, vir_addr, mem_size);
+		return -CAMERA_NO_MEMORY;
+	}
+
+	(void)mem_size;
+	g_cxt->graphic_target_jpeg.addr_phy.addr_y = phy_addr;
+	g_cxt->graphic_target_jpeg.addr_vir.addr_y = vir_addr;
+
+	return ret;
+}
+
 /*search available rotation buffer, success return CAMERA_SUCCESS, fail return CAMERA_FAILED*/
 int camera_search_rot_buffer(void)
 {
@@ -7191,6 +7211,9 @@ int camera_jpeg_encode_done(uint32_t thumb_stream_size)
 		 *        to judge if go HAL1.0 OR 2.0 Path
 		 */
 		/*HAL2.0 ZSL need resume path2 after capture done*/
+		if ((uint32_t)HAL_MODE_STREAM == g_cxt->hal_mode) {
+			g_cxt->cap_mem[g_cxt->jpeg_cxt.index].target_jpeg = g_cxt->cap_mem_bak[g_cxt->jpeg_cxt.index].target_jpeg;
+	        }
 		if (IS_CHN_IDLE(CHN_2)) {
 			CMR_LOGE("abnormal! path is idle yet! resume it");
 
@@ -7272,6 +7295,12 @@ int camera_start_jpeg_encode(struct frm_info *data)
 		}
 		src_frm = &g_cxt->cap_mem[frm_id].target_yuv;
 		target_frm = &g_cxt->cap_mem[frm_id].target_jpeg;
+		CMR_LOGD("hal mode=%d", g_cxt->hal_mode);
+		if ((uint32_t)HAL_MODE_STREAM == g_cxt->hal_mode) {
+			g_cxt->cap_mem_bak[frm_id].target_jpeg = g_cxt->cap_mem[frm_id].target_jpeg;
+			g_cxt->cap_mem[frm_id].target_jpeg.addr_phy.addr_y = g_cxt->graphic_target_jpeg.addr_phy.addr_y + JPEG_EXIF_SIZE;
+			g_cxt->cap_mem[frm_id].target_jpeg.addr_vir.addr_y = g_cxt->graphic_target_jpeg.addr_vir.addr_y + JPEG_EXIF_SIZE;
+		}
 	} else {
 		frm_id = data->frame_id - CAMERA_CAP1_ID_BASE;
 		if (frm_id >= CAMERA_CAP_FRM_CNT) {

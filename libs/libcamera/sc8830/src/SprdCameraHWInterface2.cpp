@@ -136,6 +136,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	mRawHeap(NULL),
 	mRawHeapSize(0),
 	mPreviewHeapNum(0),
+	mUsingJpegBufId(-1),
 	m_IsNeedHalAllocPrvBuf(false),
 	m_reqIsProcess(false),
 	m_IsPrvAftPic(false),
@@ -147,6 +148,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 	mIsOutPutStream(true),
 	mIsChangePicSize(false),
 	mIsFrameworkReadyOk(false),
+	mIsSnapshotFirst(true),
 	m_halRefreshReq(NULL),
 	mVendorTagOps(NULL),
 	mPreviewFrmRefreshIndex(0),
@@ -227,6 +229,7 @@ SprdCameraHWInterface2::SprdCameraHWInterface2(int cameraId, camera2_device_t *d
 		*openInvalid = 1;
 		return ;
 	}
+	SET_PARM(CAMERA_PARM_HAL_MODE,(uint32_t)HAL_MODE_STREAM);
 	for (int i = 0 ; i < STREAM_ID_LAST+1 ; i++) {
 		m_subStreams[i].type =  SUBSTREAM_TYPE_NONE;
 	}
@@ -385,7 +388,6 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 		return 0;
 	}
 	reqNum++;
-	HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
 	#if 0
 	ret = find_camera_metadata_entry(curReq, ANDROID_SPRD_REC_BUF_INFO, &entry);
 	if (ret == NAME_NOT_FOUND) {
@@ -403,8 +405,10 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 		if (m_reqIsProcess == true) {
 			reqNum++;
 		}
+		HAL_LOGD("currep=%p reqnum=%d",curReq,reqNum);
 		if (reqNum >= MAX_REQUEST_NUM) {
-			HAL_LOGD("queue is full(%d)", reqNum);
+			HAL_LOGD("queue is full");
+			#if 0
 			/*must deq all request, but not process*/
 			m_requestQueueOps->dequeue_request(m_requestQueueOps, &curReq);
 			if (!curReq) {
@@ -412,6 +416,7 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 				return 0;
 			}
 			reqNum++;
+			#endif
 			isReqFull = true;
 			/*for cts testImmediateZoom*/
 			ret = find_camera_metadata_entry(curReq, ANDROID_CONTROL_CAPTURE_INTENT, &entry);
@@ -429,6 +434,8 @@ int SprdCameraHWInterface2::notifyRequestQueueNotEmpty()
 				ret = m_requestQueueOps->free_request(m_requestQueueOps, curReq);
 				if (ret < 0)
 					HAL_LOGE("ERR: free_request ret = %d", ret);
+
+				reqNum--;
 			}
 			goto deq_over;
 		} else {
@@ -1514,7 +1521,7 @@ int SprdCameraHWInterface2::allocateJpegStream(uint32_t width,
 	m_Stream[STREAM_ID_CAPTURE]->m_numRegisteredStream = 1;
 	*format_actual = HAL_PIXEL_FORMAT_BLOB;
 	if(s_mem_method == 0) {
-		*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN;/* | GRALLOC_USAGE_CAMERA_BUFFER;*/
+		*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_CAMERA_BUFFER;
 	} else {
 		*usage  = GRALLOC_USAGE_SW_WRITE_OFTEN;
 	}
@@ -1898,7 +1905,7 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, int32_t parm4)
 					displaySubStream(StreamSP, (int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),timeStamp,(uint16_t)STREAM_ID_JPEG);
 				}else{
 					if(GetOutputStreamMask() & STREAM_MASK_JPEG){
-						displaySubStream(StreamSP, (int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),timeStamp,(uint16_t)STREAM_ID_JPEG);
+						EnqJpgOrZslGraphicBuf((int32_t *)(((camera_encode_mem_type *)(tmpCBpara->outPtr))->buffer),timeStamp,(uint16_t)STREAM_ID_JPEG);
 					}
 					if (tmpCBpara->need_free) {
 						if(GetCameraPictureMode() == CAMERA_NORMAL_MODE || GetCameraPictureMode() == CAMERA_NORMAL_CONTINUE_SHOT_MODE
@@ -2437,6 +2444,7 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 					if (targetParms->usage & GRALLOC_USAGE_CAMERA_BUFFER) {
 						MemoryHeapIon::Get_phy_addr_from_ion(priv_handle->share_fd,&phyaddr,&size);
 						targetParms->subStreamGraphicFd[i] = phyaddr;
+						targetParms->phySize[i] = size;
 					}
 				} else {
 					MemoryHeapIon::Get_mm_iova(priv_handle->share_fd,&phyaddr,&size);/*page aligned*/
@@ -2447,10 +2455,12 @@ int SprdCameraHWInterface2::registerStreamBuffers(uint32_t stream_id,
 				targetParms->svcBufHandle[i]       = registeringBuffers[i];
 				targetParms->svcBufStatus[i] = ON_HAL_INIT;
 				targetParms->numSvcBufsInHal++;
-				HAL_LOGD("registering substream(%d) size[%d] phyAdd0x%x vAdd(%x) hand=%p",
-						i, size,phyaddr, (uint32_t)(priv_handle->base), registeringBuffers[i]);
+				HAL_LOGD("registering substream(%d) size[%d] phyAdd0x%x vAdd(%x) hand=0x%x",
+						i, size,phyaddr, (uint32_t)(priv_handle->base), (uint32_t)registeringBuffers[i]);
 			}
 		}
+		if (stream_id == STREAM_ID_JPEG)
+			mIsSnapshotFirst = false;
 		return 0;
 	} else {
 		HAL_LOGE("unregistered stream id (%d)", stream_id);
@@ -2545,6 +2555,12 @@ int SprdCameraHWInterface2::releaseStream(uint32_t stream_id)
 		}
 		#endif
 		FREE_MM_IOVA
+		for (;i < subParms->numSvcBuffers;i++) {
+			ret = subParms->streamOps->cancel_buffer(subParms->streamOps, &(subParms->svcBufHandle[i]));
+			if (ret) {
+				HAL_LOGE("cancelbuf res=%d",ret);
+			}
+		}
 		usleep(1000 * 10);/*make sure graphic free this graphic buf*/
 		freeCaptureMem();
 		memset(&m_subStreams[stream_id], 0, sizeof(substream_parameters_t));
@@ -3323,6 +3339,13 @@ int SprdCameraHWInterface2::CameraPreviewReq(camera_req_info *srcreq,bool *IsSet
 							ret = 3;
 							goto preview_req_exit;
 						}
+						if (!mIsSnapshotFirst) {
+							mIsSnapshotFirst = true;
+							if(GetJpegOrZslGraphicBuf(STREAM_ID_JPEG)) {
+								ret = 3;
+								goto preview_req_exit;
+							}
+						}
 					}
 				}
 				if (srcreq->isCropSet) {
@@ -3465,6 +3488,65 @@ preview_req_exit:
 	return ret;
 }
 
+int SprdCameraHWInterface2::GetJpegOrZslGraphicBuf(uint16_t subStream)
+{
+	substream_parameters_t  *subParms    = &m_subStreams[subStream];
+	bool found = false;
+	int Index = 0;
+	int ret = 0;
+	buffer_handle_t *buf = NULL;
+	void *VirtBuf = NULL;
+
+	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
+	if (ret != NO_ERROR || buf == NULL) {
+		HAL_LOGD("jpg stream dequeue_buffer fail res(%d)", ret);
+		return ret;
+	}
+	//lock
+	ret = m_grallocHal->lock(m_grallocHal, *buf, subParms->usage, 0, 0,
+                   subParms->width, subParms->height, &VirtBuf);
+	if (ret != 0) {
+		HAL_LOGE("ERR could not obtain gralloc buffer ret=%d",ret);
+		ret = 1;
+		goto cancel_buf;
+	}
+	for (; Index < subParms->numSvcBuffers ; Index++) {
+		if (*buf == subParms->svcBufHandle[Index]) {
+			found = true;
+			HAL_LOGD("Index=%d handle=0x%x",Index, (uint32_t)(*buf));
+			break;
+		}
+	}
+	if (!found) {
+		ret = 2;
+		HAL_LOGE("error cannot found buf=0x%x", (uint32_t)(*buf));
+		goto cancel_buf;
+	}
+	switch (subStream) {
+	case STREAM_ID_JPEG:
+		if (camera_set_capture_jpeg_mem(0,
+							(uint32_t)subParms->subStreamGraphicFd[Index],
+							(uint32_t)subParms->subStreamAddVirt[Index],
+							(uint32_t)subParms->phySize[Index])) {
+			HAL_LOGE("camera_set_capture_mem fail");
+			ret = 3;
+			goto cancel_buf;
+		}
+		break;
+	case STREAM_ID_ZSL:
+		break;
+	}
+	if (!ret) {
+		mUsingJpegBufId = Index;
+		return 0;
+	}
+cancel_buf:
+	if (subParms->streamOps->cancel_buffer(subParms->streamOps, buf)) {
+		HAL_LOGE("Error cancelbuf!");
+	}
+	return ret;
+}
+
 int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSetPara)
 {
 	int ret = 0;
@@ -3567,12 +3649,19 @@ int SprdCameraHWInterface2::CameraCaptureReq(camera_req_info *srcreq,bool *IsSet
 			srcreq->isCropSet = false;
 		}
 		set_ddr_freq(HIGH_FREQ_REQ);
+		if (!mIsSnapshotFirst) {
+			mIsSnapshotFirst = true;
+			if(GetJpegOrZslGraphicBuf(STREAM_ID_JPEG)) {
+				ret = 3;
+				goto capture_req_exit;
+			}
+		}
 		setCameraState(SPRD_INTERNAL_RAW_REQUESTED, STATE_CAPTURE);
 		if (CAMERA_SUCCESS != camera_take_picture(camera_cb, this, GetCameraPictureMode())) {
 			setCameraState(SPRD_ERROR, STATE_CAPTURE);
 			freeCaptureMem();
 			HAL_LOGE("takePicture: fail to camera_take_picture.");
-			ret = 3;
+			ret = 4;
 			goto capture_req_exit;
 		}
 
@@ -3666,7 +3755,6 @@ void SprdCameraHWInterface2::DirectProcessRecReleaseBuf(int bufID, camera_metada
 	bufIDs = bufID;
 	HAL_LOGD("rec buf id=0x%x", bufIDs);
 	if (bufIDs >> 16) {
-		//HAL_LOGD("rec over id=0x%x", bufIDs);
 		outStreamMask = GetOutputStreamMask();
 		if (outStreamMask & STREAM_MASK_RECORD)
 			SetOutputStreamMask(outStreamMask & ~STREAM_MASK_RECORD);
@@ -4276,6 +4364,12 @@ status_t SprdCameraHWInterface2::startPreviewInternal(bool isChangPrvSize)
 			if (initCapMem()) {
 				return SPRD_ERROR;
 			}
+			if (!mIsSnapshotFirst) {
+				mIsSnapshotFirst = true;
+				if(GetJpegOrZslGraphicBuf(STREAM_ID_JPEG)) {
+					return SPRD_ERROR;
+				}
+			}
 	}
 	SetDDRFreqBefStartPrv();
 	setCameraState(SPRD_INTERNAL_PREVIEW_REQUESTED, STATE_PREVIEW);
@@ -4363,7 +4457,7 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 
 	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
 		HAL_LOGE("ERR: haven't stream ops");
-		return 0;
+		return 1;
 	}
 	ret = subParms->streamOps->dequeue_buffer(subParms->streamOps, &buf);
 	if (ret != NO_ERROR || buf == NULL) {
@@ -4428,24 +4522,24 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
 				if (virtAdd == subParms->subStreamAddVirt[Index]) {
 					found = true;
 					subParms->zslCapFrmInfo[Index] = ((camera_cap_frm_info *)srcBufVirt)->cap_info;
-					ALOGD("Index=%d,add=0x%x", Index,virtAdd);
+					HAL_LOGD("Index=%d,add=0x%x", Index,virtAdd);
 					break;
 				}
 			}
 			if (!found) {
-				ALOGE("ERR cannot found buf=0x%x", virtAdd);
+				HAL_LOGE("ERR cannot found buf=0x%x", virtAdd);
 				return 1;
 			}
 
 			{
 				Mutex::Autolock lock(m_halCBMutex);
 				if(subParms->svcBufStatus[Index] != ON_SERVICE && subParms->svcBufStatus[Index] != ON_HAL_INIT) {
-					ALOGE("ERR Stat=%d", subParms->svcBufStatus[Index]);
+					HAL_LOGE("ERR Stat=%d", subParms->svcBufStatus[Index]);
 					subParms->svcBufStatus[Index] = ON_HAL_BUFERR;
 					return 1;
 				}
 				if(((jpgWid * jpgHeight * 3)/2) > (uint32_t)(priv_handle->size)){
-					ALOGE("zsl buf not enough(%d)", priv_handle->size);
+					HAL_LOGE("zsl buf not enough(%d)", priv_handle->size);
 					return 1;
 				}
 				subParms->svcBufStatus[Index] = ON_SERVICE;//have new frm_info
@@ -4499,6 +4593,136 @@ int SprdCameraHWInterface2::displaySubStream(sp<Stream> stream, int32_t *srcBufV
     return ret;
 }
 
+int SprdCameraHWInterface2::EnqJpgOrZslGraphicBuf(int32_t *srcBufVirt, int64_t frameTimeStamp, uint16_t subStream)
+{
+	substream_parameters_t  *subParms    = &m_subStreams[subStream];
+	uint32_t                    VirtBuf = 0;
+	int                     ret = 0;
+	int                     Index = 0;
+	buffer_handle_t         *buf = NULL;
+	const private_handle_t  *priv_handle = NULL;
+	int                     phyaddr = 0;
+	int                     size =0;
+	bool                    found = false;
+
+	if ((NULL == subParms->streamOps) || (NULL == subParms->streamOps->dequeue_buffer)) {
+		HAL_LOGE("ERR: haven't stream ops");
+		return 1;
+	}
+	VirtBuf = (uint32_t)srcBufVirt;
+	if (!(mUsingJpegBufId >= 0 && mUsingJpegBufId < subParms->numSvcBuffers)) {
+		HAL_LOGE("error jpeg buf id=%d", mUsingJpegBufId);
+		return 1;
+	}
+	if (!(subParms->subStreamAddVirt[mUsingJpegBufId] == VirtBuf ||
+		(subParms->subStreamAddVirt[mUsingJpegBufId] < VirtBuf && (subParms->subStreamAddVirt[mUsingJpegBufId] + HAL_JPEG_EXIF_SIZE) > VirtBuf))) {
+		HAL_LOGE("error return jpeg buf add=0x%x", VirtBuf);
+		return 1;
+	}
+	Index = mUsingJpegBufId;
+	priv_handle = reinterpret_cast<const private_handle_t *>(subParms->svcBufHandle[Index]);
+	HAL_LOGD("subStream=%d para buf size=%d id=%d add=0x%x",subStream, priv_handle->size, Index, VirtBuf);
+	switch(subStream) {
+	case STREAM_ID_ZSL:
+		#if 0
+		if (subParms->format == HAL_PIXEL_FORMAT_YCrCb_420_SP) {
+			bool found = false;
+			uint32_t jpgWid = m_subStreams[STREAM_ID_ZSL].width;
+			uint32_t jpgHeight = m_subStreams[STREAM_ID_ZSL].height;
+			uint32_t cap_width, cap_height = 0;
+			uint32_t virtAdd = (uint32_t)priv_handle->base;
+			for (Index = 0; Index < subParms->numSvcBuffers ; Index++) {
+				if (virtAdd == subParms->subStreamAddVirt[Index]) {
+					found = true;
+					subParms->zslCapFrmInfo[Index] = ((camera_cap_frm_info *)srcBufVirt)->cap_info;
+					ALOGD("Index=%d,add=0x%x", Index,virtAdd);
+					break;
+				}
+			}
+			if (!found) {
+				ALOGE("ERR cannot found buf=0x%x", virtAdd);
+				return 1;
+			}
+
+			{
+				Mutex::Autolock lock(m_halCBMutex);
+				if(subParms->svcBufStatus[Index] != ON_SERVICE && subParms->svcBufStatus[Index] != ON_HAL_INIT) {
+					ALOGE("ERR Stat=%d", subParms->svcBufStatus[Index]);
+					subParms->svcBufStatus[Index] = ON_HAL_BUFERR;
+					return 1;
+				}
+				if(((jpgWid * jpgHeight * 3)/2) > (uint32_t)(priv_handle->size)){
+					ALOGE("zsl buf not enough(%d)", priv_handle->size);
+					return 1;
+				}
+				subParms->svcBufStatus[Index] = ON_SERVICE;//have new frm_info
+			}
+
+			m_zslValidDataSize.width = cap_width  = ((camera_cap_frm_info *)srcBufVirt)->width;
+			m_zslValidDataSize.height = cap_height = ((camera_cap_frm_info *)srcBufVirt)->height;
+
+			HAL_LOGV("cap w/h %d %d, buf_Virt_Addr %p, zsl sub w/h %d %d, jpeg sub w/h %d %d",
+			cap_width, cap_height, (((camera_cap_frm_info *)srcBufVirt)->buf_Virt_Addr), jpgWid, jpgHeight,
+			m_subStreams[STREAM_ID_JPEG].width, m_subStreams[STREAM_ID_JPEG].height);
+
+			if(cap_width*cap_height <= jpgWid*jpgHeight) {
+				memcpy((char *)virtAdd, (char *)(((camera_cap_frm_info *)srcBufVirt)->buf_Virt_Addr), cap_width * cap_height);
+				memcpy((char *)virtAdd + cap_width * cap_height, (char *)(((camera_cap_frm_info *)srcBufVirt)->buf_Virt_Uaddr), (cap_width * cap_height) >> 1);
+			} else {
+				HAL_LOGV("cap frm size is too large!");
+			}
+		}
+		#endif
+		break;
+
+	case STREAM_ID_JPEG:
+		{
+			camera2_jpeg_blob * jpegBlob = NULL;
+
+			HAL_LOGD("jpeg size=%d",subParms->dataSize);
+			if ((subParms->dataSize + (int)sizeof(camera2_jpeg_blob)) > priv_handle->size){
+				HAL_LOGE("jpg buf is smaller");
+				ret = 1;
+				goto cancel_buf;
+			}
+			if ((subParms->width * subParms->height) <= HAL_JPEG_SMALL_IMAGE_SIZE && subParms->subStreamAddVirt[mUsingJpegBufId] != VirtBuf) {
+				char *dst = (char *)(subParms->subStreamAddVirt[mUsingJpegBufId]);
+				char *src = (char *)srcBufVirt;
+				int i = 0;
+				if (!dst || !src) {
+					HAL_LOGE("error copy dst=0x%x, src=0x%x", (uint32_t)dst, (uint32_t)src);
+					ret = 2;
+					goto cancel_buf;
+				}
+				for (; i < subParms->dataSize; i++) {
+					*dst++ = *src++;
+				}
+				HAL_LOGD("small size copy");
+			}
+			jpegBlob = (camera2_jpeg_blob*)((char *)(subParms->subStreamAddVirt[mUsingJpegBufId]) + (priv_handle->size - sizeof(camera2_jpeg_blob)));
+			jpegBlob->jpeg_size = subParms->dataSize;
+			jpegBlob->jpeg_blob_id = CAMERA2_JPEG_BLOB_ID;
+		}
+		break;
+	}
+	m_grallocHal->unlock(m_grallocHal, subParms->svcBufHandle[Index]);
+	if (subParms->streamOps->enqueue_buffer(subParms->streamOps,
+                                               frameTimeStamp,
+                                               &subParms->svcBufHandle[Index])) {
+		HAL_LOGE("ERR cannot enq buf");
+		ret = 2;
+		goto cancel_buf;
+	}
+	GetJpegOrZslGraphicBuf(subStream);
+	if (!ret) {
+		return ret;
+	}
+	cancel_buf:
+	if (subParms->streamOps->cancel_buffer(subParms->streamOps, &subParms->svcBufHandle[Index])) {
+		HAL_LOGE("Error cancelbuf!");
+	}
+    return ret;
+}
 
 //transite from 'from' state to 'to' state and signal the waitting thread. if the current state is not 'from', transite to SPRD_ERROR state
 //should be called from the callback
@@ -5597,10 +5821,17 @@ static status_t ConstructStaticInfo(SprdCamera2Info *camerahal, camera_metadata_
             jpegThumbnailSizes, sizeof(jpegThumbnailSizes)/sizeof(int32_t));
 
     int32_t jpegMaxSize = 0;
-	if (cameraId == 0)
-        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorBack[0]) * SIZE_ALIGN(jpegResolutionSensorBack[1]) + 1024;//save camera2_jpeg_blob
-    else
-        jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorFront[0]) * SIZE_ALIGN(jpegResolutionSensorFront[1]) + 1024;
+	if (cameraId == 0) {
+		if ((jpegResolutionSensorBack[0] * jpegResolutionSensorBack[1]) > HAL_JPEG_SMALL_IMAGE_SIZE)
+			jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorBack[0]) * SIZE_ALIGN(jpegResolutionSensorBack[1]);
+		else
+			jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorBack[0]) * SIZE_ALIGN(jpegResolutionSensorBack[1]) + HAL_JPEG_EXIF_SIZE;//save camera2_jpeg_blob
+	} else {
+		if ((jpegResolutionSensorFront[0] * jpegResolutionSensorFront[1]) > HAL_JPEG_SMALL_IMAGE_SIZE)
+			jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorFront[0]) * SIZE_ALIGN(jpegResolutionSensorFront[1]);
+		else
+			jpegMaxSize = SIZE_ALIGN(jpegResolutionSensorFront[0]) * SIZE_ALIGN(jpegResolutionSensorFront[1]) + HAL_JPEG_EXIF_SIZE;
+	}
     ADD_OR_SIZE(ANDROID_JPEG_MAX_SIZE, &jpegMaxSize, 1);
 
     // android.stats

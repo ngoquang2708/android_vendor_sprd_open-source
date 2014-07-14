@@ -404,6 +404,7 @@ typedef enum {
 	CAMERA_PARAM_ROTATION_CAPTURE,
 	CAMERA_PARM_PREVIEW_ENV,
 	CAMERA_PARM_ZOOM_RECT,//for hal2.0
+	CAMERA_PARM_HAL_MODE, /*normal, stream, channel*/
 	CAMERA_PARM_MAX
 } camera_parm_type;
 
@@ -428,6 +429,12 @@ typedef struct _cropZoom{
 		uint32_t crop_w;
 		uint32_t crop_h;
 } cropZoom;
+
+typedef enum
+{
+	HAL_MODE_NORMAL = 0,
+	HAL_MODE_STREAM
+} hal_mode;
 
 void camera_zsl_pic_cb_done();
 
@@ -510,6 +517,10 @@ int camera_set_capture_mem(uint32_t     cap_index,
 						uint32_t free_mem,
 						uint32_t handle);
 
+int camera_set_capture_jpeg_mem(uint32_t cap_index,
+						uint32_t phy_addr,
+						uint32_t vir_addr,
+						uint32_t mem_size);
 int camera_get_data_redisplay(int output_addr,
 					int output_width,
 					int output_height,

@@ -20,6 +20,7 @@
 #include "exif_writer.h"
 #include "jpeg_stream.h"
 #include "sc8830_video_header.h"
+#include "cmr_mem.h"
 
 #define DEBUG_STR     "%s(L %d), %s: "
 #define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__
@@ -3146,11 +3147,15 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
 	} else {
 		app3_size = 0;
 	}
-    target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size - app3_size;
-
-    out_param_ptr->output_buf_ptr = target_buf_ptr;
-    out_param_ptr->output_size = app1_size + app3_size + in_param_ptr->src_jpeg_size;
-
+	if ((in_param_ptr->exif_info_ptr->spec_ptr->basic.PixelXDimension * in_param_ptr->exif_info_ptr->spec_ptr->basic.PixelYDimension) > JPEG_SMALL_IMAGE_SIZE) {
+		target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - JPEG_EXIF_SIZE;
+		out_param_ptr->output_buf_ptr = target_buf_ptr;
+		out_param_ptr->output_size = JPEG_EXIF_SIZE + in_param_ptr->src_jpeg_size;
+	} else {
+		target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size - app3_size;
+		out_param_ptr->output_buf_ptr = target_buf_ptr;
+		out_param_ptr->output_size = app1_size + app3_size + in_param_ptr->src_jpeg_size;
+	}
     //write SOI marker
     *target_buf_ptr++ = M_MARKER;
     *target_buf_ptr++ = M_SOI;
@@ -3159,6 +3164,19 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
 	if(app3_size > 0) {
 	    target_buf_ptr = target_buf_ptr + app1_size;
 	    memcpy(target_buf_ptr, app3_buf_ptr, app3_size);
+	} else {
+		target_buf_ptr += app1_size;
+	}
+	if ((in_param_ptr->exif_info_ptr->spec_ptr->basic.PixelXDimension * in_param_ptr->exif_info_ptr->spec_ptr->basic.PixelYDimension) > JPEG_SMALL_IMAGE_SIZE) {
+		uint16 app4_size = JPEG_EXIF_SIZE - app1_size - app3_size - 2;
+		target_buf_ptr += app3_size;
+		target_buf_ptr[0] = M_MARKER;
+		target_buf_ptr[1] = M_APP4;
+		*((uint16 *)target_buf_ptr + 1) = ((app4_size & 0xff) << 8) | (app4_size >> 8);
+		target_buf_ptr[app4_size + 1] = 0;
+		target_buf_ptr[app4_size] = 0;
+		JPEG_PRINT_LOW("app4 %d %d add=0x%x size=0x%x,app4Add=0x%x\n",in_param_ptr->src_jpeg_buf_ptr[0], in_param_ptr->src_jpeg_buf_ptr[1],(uint32_t)in_param_ptr->src_jpeg_buf_ptr,
+			app4_size, (uint32_t)target_buf_ptr);
 	}
 	JPEG_PRINT_LOW("end.");
 
