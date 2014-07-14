@@ -114,6 +114,7 @@ class PartitionUpdater(object):
   script_ext = None
   recovery_script = None
   permission_script = None
+  properties = None
 
   # used for free space check
   need_cache_space = 0
@@ -126,6 +127,15 @@ class PartitionUpdater(object):
     cls.options = options
     if(cls.script.info == None):
       cls.script.info = options.info_dict
+
+  @classmethod
+  def GetBuildProp(cls, key):
+    if (cls.properties == None):
+      cls.properties = cls.script.info.get("build.prop", {})
+    try:
+      return cls.properties[key]
+    except KeyError:
+      raise common.ExternalError("couldn't find %s in build.prop" % (key,))
 
   @classmethod
   def IfNeedImageFile(cls, mount_point):
@@ -149,7 +159,7 @@ class PartitionUpdater(object):
     if cls.need_sdcard_space > 0:
       cls.script_ext.SdcardFreeSpaceCheck("/sdcard", cls.need_sdcard_space)
 
-  def __init__(self, mount_point, file_name=None, target_ver_dir=None, source_ver_dir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None):
+  def __init__(self, mount_point, file_name=None, target_ver_dir=None, source_ver_dir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None, nv_merge=None, spl_merge=False):
     self.script = PartitionUpdater.script
     self.options = PartitionUpdater.options
 
@@ -157,17 +167,21 @@ class PartitionUpdater(object):
     self.file_name = file_name
     self.extract = extract
     self.verbatim = verbatim
+    self.nv_merge = nv_merge
+    self.spl_merge = spl_merge
     self.update_flag = False
     self.inc_flag = False
     self.mount_point2 = mount_point2
     self.mount_point3 = mount_point3
     self.need_extract = None
+    if nv_merge or spl_merge:
+      self.extract = True
+      self.verbatim = True
+      self.need_extract = OPTIONS.cache_path
     fstab = self.options.info_dict["fstab"]
     if fstab is None:
       raise common.ExternalError("no fstab")
     self.partition = fstab.get(mount_point, None)
-    if mount_point == "/spl" or mount_point == "/fixnv" or mount_point == "/wfixnv" or mount_point == "/tdfixnv" or mount_point == "/ltefixnv" or mount_point == "/wcnfixnv":
-      self.need_extract = OPTIONS.cache_path
     if self.partition is None and mount_point2 is not None:
       self.partition = fstab.get(mount_point2, None)
     if self.partition is None:
@@ -191,6 +205,14 @@ class PartitionUpdater(object):
 
   def Update(self, **kwargs):
     pass
+
+  def GetFixNvSize(self):
+    if self.nv_merge == None:
+      raise common.ExternalError("internal error: no nv_merge given in GetFixNvSize()")
+    if self.nv_merge == "" or self.nv_merge == "wcn":
+      return "0x00"
+    prop_key="ro.modem.%s.fixnv_size" % (self.nv_merge)
+    return PartitionUpdater.GetBuildProp(prop_key)
 
   def Formated(self):
     if self.partition.fs_type in ("yaffs2", "mtd", "ubifs", "ext4"):
@@ -260,18 +282,18 @@ class PartitionUpdater(object):
     else:
       self.script.WriteRawImage(mount_point, self.target.file_name)
 
-    if (self.file_name == "nvitem.bin") or (self.file_name == "wnvitem.bin") or (self.file_name == "tdnvitem.bin") or (self.file_name == "ltenvitem.bin") or (self.file_name == "wcnnvitem.bin"):
+    if self.nv_merge:
       nvmerge_exe = os.path.join(OPTIONS.cache_path, "nvmerge")
       nvmerge_cfg = os.path.join(OPTIONS.cache_path, "nvmerge.cfg")
       new_nv = os.path.join(OPTIONS.cache_path, self.target.file_name)
       merged_nv = os.path.join(OPTIONS.cache_path, "merged_" + self.target.file_name)
-      self.script_ext.Run_program(nvmerge_exe, nvmerge_cfg, self.GetRealDevicePath(p, pt_dev), new_nv, merged_nv)
+      self.script_ext.Run_program(nvmerge_exe, nvmerge_cfg, self.GetRealDevicePath(p, pt_dev), new_nv, merged_nv, self.GetFixNvSize())
       self.script_ext.WritePartitionImage(p, merged_nv, pt_dev)
       if p1 is not None:
         self.script_ext.WritePartitionImage(p1, merged_nv, pt_dev1)
       self.script.DeleteFiles([new_nv, merged_nv])
 
-    if self.file_name == "u-boot-spl-16k.bin":
+    if self.spl_merge:
       new_spl =os.path.join(OPTIONS.cache_path, self.target.file_name)
       self.script_ext.MergeSpl(p, new_spl, pt_dev)
       self.script.DeleteFiles([new_spl])
@@ -340,9 +362,9 @@ class PartitionUpdater(object):
 
 class PartitionFullUpdater(PartitionUpdater):
   """Class for recovery full update"""
-  def __init__(self, mount_point, file_name=None, input_dir=None, bootable=False, subdir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None):
+  def __init__(self, mount_point, file_name=None, input_dir=None, bootable=False, subdir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None, nv_merge=None, spl_merge=False):
     print "PartitionFullUpdater %s, %s" % (mount_point, file_name)
-    PartitionUpdater.__init__(self, mount_point, file_name, input_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3)
+    PartitionUpdater.__init__(self, mount_point, file_name, input_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3,nv_merge=nv_merge,spl_merge=spl_merge)
     self.input = PartitionFile(mount_point, file_name, input_dir, bootable, subdir);
     self.target = self.input
     self.update_flag = True
@@ -364,9 +386,9 @@ class PartitionFullUpdater(PartitionUpdater):
 
 class PartitionIncrementalUpdater(PartitionUpdater):
   """Class for recovery incremental update"""
-  def __init__(self, mount_point, file_name=None, target_ver_dir=None, source_ver_dir=None, bootable=False, subdir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None):
+  def __init__(self, mount_point, file_name=None, target_ver_dir=None, source_ver_dir=None, bootable=False, subdir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None, nv_merge=None, spl_merge=False):
     print "PartitionIncrementalUpdater %s, %s" % (mount_point, file_name)
-    PartitionUpdater.__init__(self, mount_point, file_name, target_ver_dir, source_ver_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3)
+    PartitionUpdater.__init__(self, mount_point, file_name, target_ver_dir, source_ver_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3,nv_merge=nv_merge,spl_merge=spl_merge)
 
     self.source = PartitionFile(mount_point, file_name, source_ver_dir, bootable, subdir);
     self.target = PartitionFile(mount_point, file_name, target_ver_dir, bootable, subdir);
@@ -448,13 +470,14 @@ def FullOTA_InstallBegin(info):
 
   if OPTIONS.uboot_update:
     #spl.bin
-    partion_spl = PartitionFullUpdater("/spl", "u-boot-spl-16k.bin", radio_dir, verbatim=True, extract=True)
+    partion_spl = PartitionFullUpdater("/spl", "u-boot-spl-16k.bin", radio_dir, spl_merge=True)
     partion_spl.AddToOutputZip(output_zip)
     #uboot.bin
     partion_uboot = PartitionFullUpdater("/uboot", "u-boot.bin", radio_dir)
     partion_uboot.AddToOutputZip(output_zip)
 
   if OPTIONS.modem_update:
+    ######## GSM ########
     #dsp.bin
     partion_dsp = PartitionFullUpdater("/dsp", "dsp.bin", radio_dir)
     partion_dsp.AddToOutputZip(output_zip)
@@ -465,41 +488,74 @@ def FullOTA_InstallBegin(info):
     partion_vmjaluna = PartitionFullUpdater("/vmjaluna", "vmjaluna.bin", radio_dir)
     partion_vmjaluna.AddToOutputZip(output_zip)
     #nvitem.bin
-    partion_nvitem = PartitionFullUpdater("/fixnv", "nvitem.bin", radio_dir, extract=True, mount_point2="/fixnv1", mount_point3="/fixnv2")
+    partion_nvitem = PartitionFullUpdater("/fixnv", "nvitem.bin", radio_dir, mount_point2="/fixnv1", mount_point3="/fixnv2", nv_merge="")
     partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(w)
-    w_partion_dsp = PartitionFullUpdater("/wdsp", "wdsp.bin", radio_dir)
-    w_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(w)
-    w_partion_modem = PartitionFullUpdater("/wmodem", "wmodem.bin", radio_dir)
-    w_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(w)
-    w_partion_nvitem = PartitionFullUpdater("/wfixnv", "wnvitem.bin", radio_dir, extract=True, mount_point2="/wfixnv1", mount_point3="/wfixnv2")
-    w_partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(td)
-    td_partion_dsp = PartitionFullUpdater("/tddsp", "tddsp.bin", radio_dir)
-    td_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(td)
-    td_partion_modem = PartitionFullUpdater("/tdmodem", "tdmodem.bin", radio_dir)
-    td_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(td)
-    td_partion_nvitem = PartitionFullUpdater("/tdfixnv", "tdnvitem.bin", radio_dir, extract=True, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2")
-    td_partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(lte)
-    lte_partion_dsp = PartitionFullUpdater("/ltedsp", "ltedsp.bin", radio_dir)
-    lte_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(lte)
-    lte_partion_modem = PartitionFullUpdater("/ltemodem", "ltemodem.bin", radio_dir)
-    lte_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(lte)
-    lte_partion_nvitem = PartitionFullUpdater("/ltefixnv", "ltenvitem.bin", radio_dir, extract=True, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2")
-    lte_partion_nvitem.AddToOutputZip(output_zip)
-    #modem.bin(wcn)
-    wcn_partion_modem = PartitionFullUpdater("/wcnmodem", "wcnmodem.bin", radio_dir)
-    wcn_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(wcn)
-    wcn_partion_nvitem = PartitionFullUpdater("/wcnfixnv", "wcnnvitem.bin", radio_dir, extract=True, mount_point2="/wcnfixnv1", mount_point3="/wcnfixnv2")
-    wcn_partion_nvitem.AddToOutputZip(output_zip)
+    ######## WCDMA ########
+    #wdsp.bin
+    partion_w_dsp = PartitionFullUpdater("/wdsp", "wdsp.bin", radio_dir)
+    partion_w_dsp.AddToOutputZip(output_zip)
+    #wmodem.bin
+    partion_w_modem = PartitionFullUpdater("/wmodem", "wmodem.bin", radio_dir)
+    partion_w_modem.AddToOutputZip(output_zip)
+    #wnvitem.bin
+    partion_w_nvitem = PartitionFullUpdater("/wfixnv", "wnvitem.bin", radio_dir, mount_point2="/wfixnv1", mount_point3="/wfixnv2", nv_merge="w")
+    partion_w_nvitem.AddToOutputZip(output_zip)
+    ######## TDSCDMA ########
+    #tddsp.bin
+    partion_td_dsp = PartitionFullUpdater("/tddsp", "tddsp.bin", radio_dir)
+    partion_td_dsp.AddToOutputZip(output_zip)
+    #tdmodem.bin
+    partion_td_modem = PartitionFullUpdater("/tdmodem", "tdmodem.bin", radio_dir)
+    partion_td_modem.AddToOutputZip(output_zip)
+    #tdnvitem.bin
+    partion_td_nvitem = PartitionFullUpdater("/tdfixnv", "tdnvitem.bin", radio_dir, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2", nv_merge="t")
+    partion_td_nvitem.AddToOutputZip(output_zip)
+    ######## LTE ########
+    #ltedsp.bin
+    partion_lte_dsp = PartitionFullUpdater("/ltedsp", "ltedsp.bin", radio_dir)
+    partion_lte_dsp.AddToOutputZip(output_zip)
+    #ltemodem.bin
+    partion_lte_modem = PartitionFullUpdater("/ltemodem", "ltemodem.bin", radio_dir)
+    partion_lte_modem.AddToOutputZip(output_zip)
+    #ltenvitem.bin
+    partion_lte_nvitem = PartitionFullUpdater("/ltefixnv", "ltenvitem.bin", radio_dir, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2", nv_merge="l")
+    partion_lte_nvitem.AddToOutputZip(output_zip)
+    ######## LTEFDD ########
+    #lfwarm.bin
+    partion_lf_warm = PartitionFullUpdater("/lfwarm", "lfwarm.bin", radio_dir)
+    partion_lf_warm.AddToOutputZip(output_zip)
+    #lfgdsp.bin
+    partion_lf_gdsp = PartitionFullUpdater("/lfgdsp", "lfgdsp.bin", radio_dir)
+    partion_lf_gdsp.AddToOutputZip(output_zip)
+    #lfldsp.bin
+    partion_lf_ldsp = PartitionFullUpdater("/lfldsp", "lfldsp.bin", radio_dir)
+    partion_lf_ldsp.AddToOutputZip(output_zip)
+    #lfmodem.bin
+    partion_lf_modem = PartitionFullUpdater("/lfmodem", "lfmodem.bin", radio_dir)
+    partion_lf_modem.AddToOutputZip(output_zip)
+    #lfnvitem.bin
+    partion_lf_nvitem = PartitionFullUpdater("/lffixnv", "lfnvitem.bin", radio_dir, mount_point2="/lffixnv1", mount_point3="/lffixnv2", nv_merge="l")
+    partion_lf_nvitem.AddToOutputZip(output_zip)
+    ######## TDDLTE ########
+    #tltdsp.bin
+    partion_tl_tdsp = PartitionFullUpdater("/tltdsp", "tltdsp.bin", radio_dir)
+    partion_tl_tdsp.AddToOutputZip(output_zip)
+    #tlldsp.bin
+    partion_tl_ldsp = PartitionFullUpdater("/tlldsp", "tlldsp.bin", radio_dir)
+    partion_tl_ldsp.AddToOutputZip(output_zip)
+    #tlmodem.bin
+    partion_tl_modem = PartitionFullUpdater("/tlmodem", "tlmodem.bin", radio_dir)
+    partion_tl_modem.AddToOutputZip(output_zip)
+    #tlnvitem.bin
+    partion_tl_nvitem = PartitionFullUpdater("/tlfixnv", "tlnvitem.bin", radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnvv2", nv_merge="l")
+    partion_tl_nvitem.AddToOutputZip(output_zip)
+    ######## WCN ########
+    #wcnmodem.bin
+    partion_wcn_modem = PartitionFullUpdater("/wcnmodem", "wcnmodem.bin", radio_dir)
+    partion_wcn_modem.AddToOutputZip(output_zip)
+    #wcnnvitem.bin
+    partion_wcn_nvitem = PartitionFullUpdater("/wcnfixnv", "wcnnvitem.bin", radio_dir, mount_point2="/wcnfixnv1", mount_point3="/wcnfixnv2", nv_merge="wcn")
+    partion_wcn_nvitem.AddToOutputZip(output_zip)
 
   PartitionUpdater.FreeSpaceCheck()
   #script.ShowProgress(0.6, 0)
@@ -511,6 +567,7 @@ def FullOTA_InstallBegin(info):
     partion_uboot.Update()
 
   if OPTIONS.modem_update:
+    ######## GSM ########
     #dsp
     partion_dsp.Update()
     #modem
@@ -520,31 +577,57 @@ def FullOTA_InstallBegin(info):
     #nvitem.bin
     partion_nvitem.Update()
 
-    #dsp(w)
-    w_partion_dsp.Update()
-    #modem(w)
-    w_partion_modem.Update()
-    #nvitem.bin(w)
-    w_partion_nvitem.Update()
+    ######## WCDMA ########
+    #wdsp
+    partion_w_dsp.Update()
+    #wmodem
+    partion_w_modem.Update()
+    #wnvitem.bin
+    partion_w_nvitem.Update()
 
-    #dsp(td)
-    td_partion_dsp.Update()
-    #modem(td)
-    td_partion_modem.Update()
-    #nvitem.bin(td)
-    td_partion_nvitem.Update()
+    ######## TDSCDMA ########
+    #tddsp
+    partion_td_dsp.Update()
+    #tdmodem
+    partion_td_modem.Update()
+    #tdnvitem.bin
+    partion_td_nvitem.Update()
 
-    #dsp(lte)
-    lte_partion_dsp.Update()
-    #modem(lte)
-    lte_partion_modem.Update()
-    #nvitem.bin(lte)
-    lte_partion_nvitem.Update()
+    ######## LTE ########
+    #ltedsp
+    partion_lte_dsp.Update()
+    #ltemodem
+    partion_lte_modem.Update()
+    #ltenvitem.bin
+    partion_lte_nvitem.Update()
 
-    #modem(wcn)
-    wcn_partion_modem.Update()
-    #nvitem.bin(wcn)
-    wcn_partion_nvitem.Update()
+    ######## LTEFDD ########
+    #lfwarm.bin
+    partion_lf_warm.Update()
+    #lfgdsp.bin
+    partion_lf_gdsp.Update()
+    #lfldsp.bin
+    partion_lf_ldsp.Update()
+    #lfmodem.bin
+    partion_lf_modem.Update()
+    #lfnvitem.bin
+    partion_lf_nvitem.Update()
+
+    ######## TDDLTE ########
+    #tltdsp.bin
+    partion_tl_tdsp.Update()
+    #tlldsp.bin
+    partion_tl_ldsp.Update()
+    #tlmodem.bin
+    partion_tl_modem.Update()
+    #tlnvitem.bin
+    partion_tl_nvitem.Update()
+
+    ######## WCN ########
+    #wcnmodem
+    partion_wcn_modem.Update()
+    #wcnnvitem.bin
+    partion_wcn_nvitem.Update()
 
   if OPTIONS.wipe_product_info:
     partion_productinfo = PartitionUpdater("/productinfo")
@@ -583,13 +666,14 @@ def IncrementalOTA_InstallBegin(info):
 
   if OPTIONS.uboot_update:
     #spl.bin
-    partion_spl = PartitionIncrementalUpdater("/spl", "u-boot-spl-16k.bin", target_radio_dir, source_radio_dir, verbatim=True, extract=True)
+    partion_spl = PartitionIncrementalUpdater("/spl", "u-boot-spl-16k.bin", target_radio_dir, source_radio_dir, spl_merge=False)
     partion_spl.AddToOutputZip(output_zip)
     #uboot.bin
     partion_uboot = PartitionIncrementalUpdater("/uboot", "u-boot.bin", target_radio_dir, source_radio_dir, verbatim=True)
     partion_uboot.AddToOutputZip(output_zip)
 
   if OPTIONS.modem_update:
+    ######## GSM ########
     #dsp.bin
     partion_dsp = PartitionIncrementalUpdater("/dsp", "dsp.bin", target_radio_dir, source_radio_dir)
     partion_dsp.AddToOutputZip(output_zip)
@@ -600,41 +684,74 @@ def IncrementalOTA_InstallBegin(info):
     partion_vmjaluna = PartitionIncrementalUpdater("/vmjaluna", "vmjaluna.bin", target_radio_dir, source_radio_dir)
     partion_vmjaluna.AddToOutputZip(output_zip)
     #nvitem.bin
-    partion_nvitem = PartitionIncrementalUpdater("/fixnv", "nvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/fixnv1", mount_point3="/fixnv2")
+    partion_nvitem = PartitionIncrementalUpdater("/fixnv", "nvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/fixnv1", mount_point3="/fixnv2", nv_merge="")
     partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(w)
-    w_partion_dsp = PartitionIncrementalUpdater("/wdsp", "wdsp.bin", target_radio_dir, source_radio_dir)
-    w_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(w)
-    w_partion_modem = PartitionIncrementalUpdater("/wmodem", "wmodem.bin", target_radio_dir, source_radio_dir)
-    w_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(w)
-    w_partion_nvitem = PartitionIncrementalUpdater("/wfixnv", "wnvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/wfixnv1", mount_point3="/wfixnv2")
-    w_partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(td)
-    td_partion_dsp = PartitionIncrementalUpdater("/tddsp", "tddsp.bin", target_radio_dir, source_radio_dir)
-    td_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(td)
-    td_partion_modem = PartitionIncrementalUpdater("/tdmodem", "tdmodem.bin", target_radio_dir, source_radio_dir)
-    td_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(td)
-    td_partion_nvitem = PartitionIncrementalUpdater("/tdfixnv", "tdnvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2")
-    td_partion_nvitem.AddToOutputZip(output_zip)
-    #dsp.bin(lte)
-    lte_partion_dsp = PartitionIncrementalUpdater("/ltedsp", "ltedsp.bin", target_radio_dir, source_radio_dir)
-    lte_partion_dsp.AddToOutputZip(output_zip)
-    #modem.bin(lte)
-    lte_partion_modem = PartitionIncrementalUpdater("/ltemodem", "ltemodem.bin", target_radio_dir, source_radio_dir)
-    lte_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(lte)
-    lte_partion_nvitem = PartitionIncrementalUpdater("/ltefixnv", "ltenvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2")
-    lte_partion_nvitem.AddToOutputZip(output_zip)
-    #modem.bin(wcn)
-    wcn_partion_modem = PartitionIncrementalUpdater("/wcnmodem", "wcnmodem.bin", target_radio_dir, source_radio_dir)
-    wcn_partion_modem.AddToOutputZip(output_zip)
-    #nvitem.bin(wcn)
-    wcn_partion_nvitem = PartitionIncrementalUpdater("/wcnfixnv", "wcnnvitem.bin", target_radio_dir, source_radio_dir, extract=True, verbatim=True, mount_point2="/wcnfixnv1", mount_point3="/wcnfixnv2")
-    wcn_partion_nvitem.AddToOutputZip(output_zip)
+    ######## WCDMA ########
+    #wdsp.bin
+    partion_w_dsp = PartitionIncrementalUpdater("/wdsp", "wdsp.bin", target_radio_dir, source_radio_dir)
+    partion_w_dsp.AddToOutputZip(output_zip)
+    #wmodem.bin
+    partion_w_modem = PartitionIncrementalUpdater("/wmodem", "wmodem.bin", target_radio_dir, source_radio_dir)
+    partion_w_modem.AddToOutputZip(output_zip)
+    #wnvitem.bin
+    partion_w_nvitem = PartitionIncrementalUpdater("/wfixnv", "wnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/wfixnv1", mount_point3="/wfixnv2", nv_merge="w")
+    partion_w_nvitem.AddToOutputZip(output_zip)
+    ######## TDSCDMA ########
+    #tddsp.bin
+    partion_td_dsp = PartitionIncrementalUpdater("/tddsp", "tddsp.bin", target_radio_dir, source_radio_dir)
+    partion_td_dsp.AddToOutputZip(output_zip)
+    #tdmodem.bin
+    partion_td_modem = PartitionIncrementalUpdater("/tdmodem", "tdmodem.bin", target_radio_dir, source_radio_dir)
+    partion_td_modem.AddToOutputZip(output_zip)
+    #tdnvitem.bin
+    partion_td_nvitem = PartitionIncrementalUpdater("/tdfixnv", "tdnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/tdfixnv1", mount_point3="/tdfixnv2", nv_merge="t")
+    partion_td_nvitem.AddToOutputZip(output_zip)
+    ######## LTE ########
+    #ltedsp.bin
+    partion_lte_dsp = PartitionIncrementalUpdater("/ltedsp", "ltedsp.bin", target_radio_dir, source_radio_dir)
+    partion_lte_dsp.AddToOutputZip(output_zip)
+    #ltemodem.bin
+    partion_lte_modem = PartitionIncrementalUpdater("/ltemodem", "ltemodem.bin", target_radio_dir, source_radio_dir)
+    partion_lte_modem.AddToOutputZip(output_zip)
+    #ltenvitem.bin
+    partion_lte_nvitem = PartitionIncrementalUpdater("/ltefixnv", "ltenvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/ltefixnv1", mount_point3="/ltefixnv2", nv_merge="l")
+    partion_lte_nvitem.AddToOutputZip(output_zip)
+    ######## LTEFDD ########
+    #lfwarm.bin
+    partion_lf_warm = PartitionIncrementalUpdater("/lfwarm", "lfwarm.bin", target_radio_dir, source_radio_dir)
+    partion_lf_warm.AddToOutputZip(output_zip)
+    #lfgdsp.bin
+    partion_lf_gdsp = PartitionIncrementalUpdater("/lfgdsp", "lfgdsp.bin", target_radio_dir, source_radio_dir)
+    partion_lf_gdsp.AddToOutputZip(output_zip)
+    #lfldsp.bin
+    partion_lf_ldsp = PartitionIncrementalUpdater("/lfldsp", "lfldsp.bin", target_radio_dir, source_radio_dir)
+    partion_lf_ldsp.AddToOutputZip(output_zip)
+    #lfmodem.bin
+    partion_lf_modem = PartitionIncrementalUpdater("/lfmodem", "lfmodem.bin", target_radio_dir, source_radio_dir)
+    partion_lf_modem.AddToOutputZip(output_zip)
+    #lfnvitem.bin
+    partion_lf_nvitem = PartitionIncrementalUpdater("/lffixnv", "lfnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/lffixnv1", mount_point3="/lffixnv2", nv_merge="l")
+    partion_lf_nvitem.AddToOutputZip(output_zip)
+    ######## TDDLTE ########
+    #tltdsp.bin
+    partion_tl_tdsp = PartitionIncrementalUpdater("/tltdsp", "tltdsp.bin", target_radio_dir, source_radio_dir)
+    partion_tl_tdsp.AddToOutputZip(output_zip)
+    #tlldsp.bin
+    partion_tl_ldsp = PartitionIncrementalUpdater("/tlldsp", "tlldsp.bin", target_radio_dir, source_radio_dir)
+    partion_tl_ldsp.AddToOutputZip(output_zip)
+    #tlmodem.bin
+    partion_tl_modem = PartitionIncrementalUpdater("/tlmodem", "tlmodem.bin", target_radio_dir, source_radio_dir)
+    partion_tl_modem.AddToOutputZip(output_zip)
+    #tlnvitem.bin
+    partion_tl_nvitem = PartitionIncrementalUpdater("/tlfixnv", "tlnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnvv2", nv_merge="l")
+    partion_tl_nvitem.AddToOutputZip(output_zip)
+    ######## WCN ########
+    #wcnmodem.bin
+    partion_wcn_modem = PartitionIncrementalUpdater("/wcnmodem", "wcnmodem.bin", target_radio_dir, source_radio_dir)
+    partion_wcn_modem.AddToOutputZip(output_zip)
+    #wcnnvitem.bin
+    partion_wcn_nvitem = PartitionIncrementalUpdater("/wcnfixnv", "wcnnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/wcnfixnv1", mount_point3="/wcnfixnv2", nv_merge="wcn")
+    partion_wcn_nvitem.AddToOutputZip(output_zip)
 
   script.Print("Verifying current system...")
   #script.ShowProgress(0.2, 0)
@@ -647,6 +764,7 @@ def IncrementalOTA_InstallBegin(info):
     partion_uboot.Check()
 
   if OPTIONS.modem_update:
+    ######## GSM ########
     #dsp.bin
     partion_dsp.Check()
     #modem.bin
@@ -656,31 +774,57 @@ def IncrementalOTA_InstallBegin(info):
     #nvitem.bin
     partion_nvitem.Check()
 
-    #dsp.bin(w)
-    w_partion_dsp.Check()
-    #modem.bin(w)
-    w_partion_modem.Check()
-    #nvitem.bin(w)
-    w_partion_nvitem.Check()
+    ######## WCDMA ########
+    #wdsp.bin
+    partion_w_dsp.Check()
+    #wmodem.bin
+    partion_w_modem.Check()
+    #wnvitem.bin
+    partion_w_nvitem.Check()
 
-    #dsp.bin(td)
-    td_partion_dsp.Check()
-    #modem.bin(td)
-    td_partion_modem.Check()
-    #nvitem.bin(td)
-    td_partion_nvitem.Check()
+    ######## TDSCDMA ########
+    #tddsp.bin
+    partion_td_dsp.Check()
+    #tdmodem.bin
+    partion_td_modem.Check()
+    #tdnvitem.bin
+    partion_td_nvitem.Check()
 
-    #dsp.bin(lte)
-    lte_partion_dsp.Check()
-    #modem.bin(lte)
-    lte_partion_modem.Check()
-    #nvitem.bin(lte)
-    lte_partion_nvitem.Check()
+    ######## LTE ########
+    #ltedsp.bin
+    partion_lte_dsp.Check()
+    #ltemodem.bin
+    partion_lte_modem.Check()
+    #ltenvitem.bin
+    partion_lte_nvitem.Check()
 
-    #modem.bin(wcn)
-    wcn_partion_modem.Check()
-    #nvitem.bin(wcn)
-    wcn_partion_nvitem.Check()
+    ######## LTEFDD ########
+    #lfwarm.bin
+    partion_lf_warm.Check()
+    #lfgdsp.bin
+    partion_lf_gdsp.Check()
+    #lfldsp.bin
+    partion_lf_ldsp.Check()
+    #lfmodem.bin
+    partion_lf_modem.Check()
+    #lfnvitem.bin
+    partion_lf_nvitem.Check()
+
+    ######## TDDLTE ########
+    #tltdsp.bin
+    partion_tl_tdsp.Check()
+    #tlldsp.bin
+    partion_tl_ldsp.Check()
+    #tlmodem.bin
+    partion_tl_modem.Check()
+    #tlnvitem.bin
+    partion_tl_nvitem.Check()
+
+    ######## WCN ########
+    #wcnmodem.bin
+    partion_wcn_modem.Check()
+    #wcnnvitem.bin
+    partion_wcn_nvitem.Check()
 
   script.Print("Patching current system...")
   #script.ShowProgress(0.6, 0)
@@ -692,6 +836,7 @@ def IncrementalOTA_InstallBegin(info):
     partion_uboot.Update()
 
   if OPTIONS.modem_update:
+    ######## GSM ########
     #dsp
     partion_dsp.Update()
     #modem
@@ -701,31 +846,57 @@ def IncrementalOTA_InstallBegin(info):
     #nvitem.bin
     partion_nvitem.Update()
 
-    #dsp(w)
-    w_partion_dsp.Update()
-    #modem(w)
-    w_partion_modem.Update()
-    #nvitem.bin(w)
-    w_partion_nvitem.Update()
+    ######## WCDMA ########
+    #wdsp
+    partion_w_dsp.Update()
+    #wmodem
+    partion_w_modem.Update()
+    #wnvitem.bin
+    partion_w_nvitem.Update()
 
-    #dsp(td)
-    td_partion_dsp.Update()
-    #modem(td)
-    td_partion_modem.Update()
-    #nvitem.bin(td)
-    td_partion_nvitem.Update()
+    ######## TDSCDMA ########
+    #tddsp
+    partion_td_dsp.Update()
+    #tdmodem
+    partion_td_modem.Update()
+    #tdnvitem.bin
+    partion_td_nvitem.Update()
 
-    #dsp(lte)
-    lte_partion_dsp.Update()
-    #modem(lte)
-    lte_partion_modem.Update()
-    #nvitem.bin(lte)
-    lte_partion_nvitem.Update()
+    ######## LTE ########
+    #ltedsp
+    partion_lte_dsp.Update()
+    #ltemodem
+    partion_lte_modem.Update()
+    #ltenvitem.bin
+    partion_lte_nvitem.Update()
 
-    #modem(wcn)
-    wcn_partion_modem.Update()
-    #nvitem.bin(wcn)
-    wcn_partion_nvitem.Update()
+    ######## LTEFDD ########
+    #lfwarm.bin
+    partion_lf_warm.Update()
+    #lfgdsp.bin
+    partion_lf_gdsp.Update()
+    #lfldsp.bin
+    partion_lf_ldsp.Update()
+    #lfmodem.bin
+    partion_lf_modem.Update()
+    #lfnvitem.bin
+    partion_lf_nvitem.Update()
+
+    ######## TDDLTE ########
+    #tltdsp.bin
+    partion_tl_tdsp.Update()
+    #tlldsp.bin
+    partion_tl_ldsp.Update()
+    #tlmodem.bin
+    partion_tl_modem.Update()
+    #tlnvitem.bin
+    partion_tl_nvitem.Update()
+
+    ######## WCN ########
+    #wcnmodem
+    partion_wcn_modem.Update()
+    #wcnnvitem.bin
+    partion_wcn_nvitem.Update()
 
   if OPTIONS.wipe_product_info:
     partion_productinfo = PartitionUpdater("/productinfo")
