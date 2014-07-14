@@ -309,7 +309,11 @@ _mali_osk_errcode_t mali_mem_os_get_table_page(u32 *phys, mali_io_address *mappi
 	spin_unlock(&mali_mem_page_table_page_pool.lock);
 
 	if (_MALI_OSK_ERR_OK != ret) {
+#ifdef CONFIG_64BIT
+		*mapping = dma_alloc_coherent(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, phys, GFP_KERNEL);
+#else
 		*mapping = dma_alloc_writecombine(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, phys, GFP_KERNEL);
+#endif
 		if (NULL != *mapping) {
 			ret = _MALI_OSK_ERR_OK;
 		}
@@ -332,7 +336,11 @@ void mali_mem_os_release_table_page(u32 phys, void *virt)
 	} else {
 		spin_unlock(&mali_mem_page_table_page_pool.lock);
 
+#ifdef CONFIG_64BIT
+		dma_free_coherent(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, virt, phys);
+#else
 		dma_free_writecombine(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, virt, phys);
+#endif
 	}
 }
 
@@ -377,7 +385,11 @@ static void mali_mem_os_page_table_pool_free(size_t nr_to_free)
 
 	/* After releasing the spinlock: free the pages we removed from the pool. */
 	for (i = 0; i < nr_to_free; i++) {
+#ifdef CONFIG_64BIT
+		dma_free_coherent(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, virt_arr[i], phys_arr[i]);
+#else
 		dma_free_writecombine(&mali_platform_device->dev, _MALI_OSK_MALI_PAGE_SIZE, virt_arr[i], phys_arr[i]);
+#endif
 	}
 }
 
