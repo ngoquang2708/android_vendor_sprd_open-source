@@ -24,7 +24,7 @@
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
 #define ISP_CHIP_ID 0x0000
-#define ISP_SOFT_ID 0x20140611
+#define ISP_SOFT_ID 0x20140714
 
 #define ISP_CTRL_EVT_START                (1 << 0)
 #define ISP_CTRL_EVT_STOP                  (1 << 1)
@@ -682,8 +682,8 @@ static int32_t _ispCfgSaturationoffset(uint32_t handler_id, uint8_t offset)
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
 
-	isp_context_ptr->hue.offset = offset;
-	isp_context_ptr->tune.hue = ISP_EB;
+	isp_context_ptr->saturation.offset = offset;
+	isp_context_ptr->tune.saturation = ISP_EB;
 
 	return rtn;
 }
@@ -693,13 +693,13 @@ static int32_t _ispCfgSaturationoffset(uint32_t handler_id, uint8_t offset)
 *@
 *@ return:
 */
-static int32_t _ispCfgHueoffset(uint32_t handler_id, uint8_t offset)
+static int32_t _ispCfgHueoffset(uint32_t handler_id, int16_t offset)
 {
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
 
-	isp_context_ptr->saturation.offset = offset;
-	isp_context_ptr->tune.saturation = ISP_EB;
+	isp_context_ptr->hue.offset = offset;
+	isp_context_ptr->tune.hue = ISP_EB;
 
 	return rtn;
 }
@@ -1342,7 +1342,7 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
-		rtn = isp_awb_init(handler_id);
+		rtn = isp_awb_ctrl_init(handler_id);
 		ISP_TRACE_IF_FAIL(rtn, ("isp_awb_init error"));
 		_ispAwbCorrect(handler_id);
 
@@ -1373,7 +1373,7 @@ static uint32_t _isp3ADeInit(uint32_t handler_id)
 	rtn = isp_ae_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_ae_deinit error"));
 
-	rtn = isp_awb_deinit(handler_id);
+	rtn = isp_awb_ctrl_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_awb_deinit error"));
 
 	rtn = isp_af_deinit(handler_id);
@@ -1408,7 +1408,7 @@ static uint32_t _ispAwbCalculation(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	rtn = isp_awb_calculation();
+	rtn = isp_awb_ctrl_calculation(handler_id);
 
 	return rtn;
 }
@@ -1424,7 +1424,7 @@ static uint32_t _ispAeAwbCorrect(uint32_t handler_id)
 
 	rtn = isp_ae_calculation(handler_id);
 
-	rtn = isp_awb_calculation();
+	rtn = isp_awb_ctrl_calculation(handler_id);
 
 	return rtn;
 }
@@ -3851,18 +3851,18 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->awb.golden_info.gb_sum = cali_ptr->awb.golden_cali_info.gb_sum;
 
 	isp_context_ptr->awb.alg_id=raw_tune_ptr->awb.alg_id;
-	isp_context_ptr->awb.scanline_map.addr=raw_fix_ptr->awb.addr;
-	isp_context_ptr->awb.scanline_map.len=raw_fix_ptr->awb.len;
+
 	isp_context_ptr->awb.gain_index=raw_tune_ptr->awb.gain_index;
 	isp_context_ptr->awb.target_zone=raw_tune_ptr->awb.target_zone;
 	isp_context_ptr->awb.quick_mode=raw_tune_ptr->awb.quick_mode;
 	isp_context_ptr->awb.smart=raw_tune_ptr->awb.smart;
-	isp_context_ptr->awb.cur_index=raw_tune_ptr->awb.smart_index;
+	//isp_context_ptr->awb.cur_index=raw_tune_ptr->awb.smart_index;
+	isp_context_ptr->awb.cur_index = raw_tune_ptr->lnc.start_index;
 	isp_context_ptr->awb.prv_index=isp_context_ptr->awb.cur_index;
 	isp_context_ptr->awb.cur_gain.r=isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
 	isp_context_ptr->awb.cur_gain.g=isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
 	isp_context_ptr->awb.cur_gain.b=isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
-	isp_context_ptr->awb.cur_T = 4800;
+
 	isp_context_ptr->awb.matrix_index=ISP_ZERO;
 	isp_context_ptr->cmc_index=ISP_ZERO;
 	//isp_context_ptr->awb.cur_color_temperature=0x00;
@@ -3881,41 +3881,10 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->awb.target_gain.r=isp_context_ptr->awb.cur_gain.r;
 	isp_context_ptr->awb.target_gain.g=isp_context_ptr->awb.cur_gain.g;
 	isp_context_ptr->awb.target_gain.b=isp_context_ptr->awb.cur_gain.b;
-#if 0
-	isp_context_ptr->awb.g_estimate.num=raw_tune_ptr->awb.g_estimate.num;
-	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++)
-	{
-		isp_context_ptr->awb.g_estimate.t_thr[i] = raw_tune_ptr->awb.g_estimate.t_thr[i];
-		isp_context_ptr->awb.g_estimate.g_thr[i][0] = raw_tune_ptr->awb.g_estimate.g_thr[i][0];
-		isp_context_ptr->awb.g_estimate.g_thr[i][1] = raw_tune_ptr->awb.g_estimate.g_thr[i][1];
-		isp_context_ptr->awb.g_estimate.w_thr[i][0] = raw_tune_ptr->awb.g_estimate.w_thr[i][0];
-		isp_context_ptr->awb.g_estimate.w_thr[i][1] = raw_tune_ptr->awb.g_estimate.w_thr[i][1];
-	}
-#endif
-	isp_context_ptr->awb.gain_adjust.num=raw_tune_ptr->awb.gain_adjust.num;
 
-	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++) {
-		isp_context_ptr->awb.gain_adjust.t_thr[i] = raw_tune_ptr->awb.gain_adjust.t_thr[i];
-		isp_context_ptr->awb.gain_adjust.w_thr[i] = raw_tune_ptr->awb.gain_adjust.w_thr[i];
-	}
-	isp_context_ptr->awb.t_func.a=raw_tune_ptr->awb.t_func.a;
-	isp_context_ptr->awb.t_func.b=raw_tune_ptr->awb.t_func.b;
-	isp_context_ptr->awb.t_func.shift=raw_tune_ptr->awb.t_func.shift;
-	isp_context_ptr->awb.wp_count_range.max_proportion=raw_tune_ptr->awb.wp_count_range.max_proportion;
-	isp_context_ptr->awb.wp_count_range.min_proportion=raw_tune_ptr->awb.wp_count_range.min_proportion;
-	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
-
-	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
-
-	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
-		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
-		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
-	}
-
-	isp_context_ptr->awb.steady_speed = raw_tune_ptr->awb.steady_speed;
-	isp_context_ptr->awb.mointor_info=_ispAwbGetMonitorInfo;
-	isp_context_ptr->awb.set_monitor_win=_ispAwbSetMonitorWin;
-	isp_context_ptr->awb.recover_monitor_wn=_ispAwbSetMonitorWinRecover;
+	isp_context_ptr->awb.stat_img_size.w = 32;
+	isp_context_ptr->awb.stat_img_size.h = 32;
+	isp_context_ptr->awb.base_gain = 1024;
 
 	/*bpc*/
 	isp_context_ptr->bpc.mode=ISP_ZERO;
@@ -4759,21 +4728,28 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.golden_info.gb_sum = cali_ptr->awb.golden_cali_info.gb_sum;
 
 	isp_context_ptr->awb.alg_id=raw_tune_ptr->awb.alg_id;
-	isp_context_ptr->awb.scanline_map.addr=raw_fix_ptr->awb.addr;
-	isp_context_ptr->awb.scanline_map.len=raw_fix_ptr->awb.len;
+	isp_context_ptr->awb.map_data.addr=raw_fix_ptr->awb.addr;
+	isp_context_ptr->awb.map_data.len=raw_fix_ptr->awb.len;
 	isp_context_ptr->awb.gain_index=raw_tune_ptr->awb.gain_index;
 	isp_context_ptr->awb.target_zone=raw_tune_ptr->awb.target_zone;
 	isp_context_ptr->awb.quick_mode=raw_tune_ptr->awb.quick_mode;
 	isp_context_ptr->awb.smart=raw_tune_ptr->awb.smart;
-	isp_context_ptr->awb.cur_index=raw_tune_ptr->awb.smart_index;
+	isp_context_ptr->awb.cur_index = raw_tune_ptr->lnc.start_index;
 	isp_context_ptr->awb.prv_index=isp_context_ptr->awb.cur_index;
-	isp_context_ptr->awb.cur_gain.r=isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
-	isp_context_ptr->awb.cur_gain.g=isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
-	isp_context_ptr->awb.cur_gain.b=isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
-	isp_context_ptr->awb.cur_T = 4800;
+
+	if (0 == raw_tune_ptr->awb.alg_id) {
+		isp_context_ptr->awb.cur_gain.r=isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
+		isp_context_ptr->awb.cur_gain.g=isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
+		isp_context_ptr->awb.cur_gain.b=isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
+	} else {
+		isp_context_ptr->awb.cur_gain.r=raw_tune_ptr->awb.init_gain.r;
+		isp_context_ptr->awb.cur_gain.g=raw_tune_ptr->awb.init_gain.g;
+		isp_context_ptr->awb.cur_gain.b=raw_tune_ptr->awb.init_gain.b;
+		isp_context_ptr->awb.cur_ct = raw_tune_ptr->awb.init_ct;
+	}
+
 	isp_context_ptr->awb.matrix_index=ISP_ZERO;
 	isp_context_ptr->cmc_index=ISP_ZERO;
-	//isp_context_ptr->awb.cur_color_temperature=0x00;
 	isp_context_ptr->awb.set_eb=ISP_EB;
 	isp_context_ptr->awb.continue_focus_stat=_isp_ContinueFocusInforCallback;
 	isp_context_ptr->awb.set_saturation_offset = _ispCfgSaturationoffset;
@@ -4790,39 +4766,52 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.target_gain.g=isp_context_ptr->awb.cur_gain.g;
 	isp_context_ptr->awb.target_gain.b=isp_context_ptr->awb.cur_gain.b;
 
-	isp_context_ptr->awb.g_estimate.num=raw_tune_ptr->awb.g_estimate.num;
+	for (i=0; i<ISP_AWB_CT_INFO_NUM; i++)
+		isp_context_ptr->awb.ct_info.data[i] = raw_tune_ptr->awb.ct_info.data[i];
 
-	for (i=0; i<isp_context_ptr->awb.g_estimate.num; i++) {
-		isp_context_ptr->awb.g_estimate.t_thr[i] = raw_tune_ptr->awb.g_estimate.t_thr[i];
-		isp_context_ptr->awb.g_estimate.g_thr[i][0] = raw_tune_ptr->awb.g_estimate.g_thr[i][0];
-		isp_context_ptr->awb.g_estimate.g_thr[i][1] = raw_tune_ptr->awb.g_estimate.g_thr[i][1];
-		isp_context_ptr->awb.g_estimate.w_thr[i][0] = raw_tune_ptr->awb.g_estimate.w_thr[i][0];
-		isp_context_ptr->awb.g_estimate.w_thr[i][1] = raw_tune_ptr->awb.g_estimate.w_thr[i][1];
-	}
-	isp_context_ptr->awb.gain_adjust.num=raw_tune_ptr->awb.gain_adjust.num;
-
-	for (i=0; i<isp_context_ptr->awb.gain_adjust.num; i++) {
-		isp_context_ptr->awb.gain_adjust.t_thr[i] = raw_tune_ptr->awb.gain_adjust.t_thr[i];
-		isp_context_ptr->awb.gain_adjust.w_thr[i] = raw_tune_ptr->awb.gain_adjust.w_thr[i];
-	}
-	isp_context_ptr->awb.t_func.a=raw_tune_ptr->awb.t_func.a;
-	isp_context_ptr->awb.t_func.b=raw_tune_ptr->awb.t_func.b;
-	isp_context_ptr->awb.t_func.shift=raw_tune_ptr->awb.t_func.shift;
-	isp_context_ptr->awb.wp_count_range.max_proportion=raw_tune_ptr->awb.wp_count_range.max_proportion;
-	isp_context_ptr->awb.wp_count_range.min_proportion=raw_tune_ptr->awb.wp_count_range.min_proportion;
-	isp_context_ptr->awb.debug_level=raw_tune_ptr->awb.debug_level;
-
-	isp_context_ptr->awb.light.num = raw_tune_ptr->awb.light.num;
-
-	for (i=0; i<isp_context_ptr->awb.light.num; i++) {
-		isp_context_ptr->awb.light.t_thr[i] = raw_tune_ptr->awb.light.t_thr[i];
-		isp_context_ptr->awb.light.w_thr[i] = raw_tune_ptr->awb.light.w_thr[i];
-	}
-
+	isp_context_ptr->awb.debug_level = raw_tune_ptr->awb.debug_level;
 	isp_context_ptr->awb.steady_speed = raw_tune_ptr->awb.steady_speed;
-	isp_context_ptr->awb.mointor_info=_ispAwbGetMonitorInfo;
-	isp_context_ptr->awb.set_monitor_win=_ispAwbSetMonitorWin;
-	isp_context_ptr->awb.recover_monitor_wn=_ispAwbSetMonitorWinRecover;
+
+	/*weight of count function*/
+	{
+		struct isp_awb_weight_of_count_func *dst_func = &isp_context_ptr->awb.weight_of_count_func;
+		struct sensor_awb_weight_of_count_func *src_func = &raw_tune_ptr->awb.weight_of_count_func;
+
+		dst_func->weight_func.num = src_func->weight_func.num;
+		for (i=0; i<ISP_AWB_PIECEWISE_SAMPLE_NUM; i++) {
+			dst_func->weight_func.samples[i].x = src_func->weight_func.samples[i].x;
+			dst_func->weight_func.samples[i].y = src_func->weight_func.samples[i].y;
+		}
+	}
+
+	/*weight of ct function*/
+	{
+		struct isp_awb_weight_of_ct_func *dst_func = &isp_context_ptr->awb.weight_of_ct_func;
+		struct sensor_awb_weight_of_ct_func *src_func = &raw_tune_ptr->awb.weight_of_ct_func;
+
+		dst_func->weight_func.num = src_func->weight_func.num;
+		for (i=0; i<ISP_AWB_PIECEWISE_SAMPLE_NUM; i++) {
+			dst_func->weight_func.samples[i].x = src_func->weight_func.samples[i].x;
+			dst_func->weight_func.samples[i].y = src_func->weight_func.samples[i].y;
+		}
+	}
+
+	/*value range*/
+	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+		isp_context_ptr->awb.value_range[i].min = raw_tune_ptr->awb.value_range[i].min;
+		isp_context_ptr->awb.value_range[i].max = raw_tune_ptr->awb.value_range[i].max;
+	}
+
+	/*init value*/
+	isp_context_ptr->awb.init_gain.r = raw_tune_ptr->awb.init_gain.r;
+	isp_context_ptr->awb.init_gain.g = raw_tune_ptr->awb.init_gain.g;
+	isp_context_ptr->awb.init_gain.b = raw_tune_ptr->awb.init_gain.b;
+	isp_context_ptr->awb.init_ct = raw_tune_ptr->awb.init_ct;
+
+	//chip related parameters, should get from chip driver
+	isp_context_ptr->awb.base_gain = 1024;		//for shark
+	isp_context_ptr->awb.stat_img_size.w = 32;
+	isp_context_ptr->awb.stat_img_size.h = 32;
 
 	/*bpc*/
 	isp_context_ptr->bpc.mode=ISP_ZERO;
@@ -5216,6 +5205,151 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*9*2);
 	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*7);
 	memcpy((void*)isp_context_ptr->auto_adjust.edge_param, (void*)isp_context_ptr->edge_tab, sizeof(struct isp_edge_param)*14);
+
+	/*smart light parameters*/
+	{
+		struct smart_light_init_param *dst_param = &isp_context_ptr->smart_light.init_param;
+		struct smart_light_piecewise_func *dst_func = NULL;
+		struct sensor_smart_light_param *src_param = &raw_tune_ptr->smart_light;
+		struct sensor_piecewise_func *src_func = NULL;
+		uint32_t smart = 0;
+
+		if (0 == raw_tune_ptr->smart_light.enable) {
+			smart = 0;
+		} else {
+
+			if (0 != raw_tune_ptr->smart_light.envi.enable)
+				smart |= SMART_ENVI;
+
+			/*cmc use the same parameter as lsc*/
+			if (0 != raw_tune_ptr->smart_light.lsc.enable)
+				smart |= SMART_CMC;
+
+			if (0 != raw_tune_ptr->smart_light.lsc.enable)
+				smart |= SMART_LNC;
+
+			if (0 != raw_tune_ptr->smart_light.gain.enable)
+				smart |= SMART_GAIN;
+
+			if (0 != raw_tune_ptr->smart_light.saturation.enable)
+				smart |= SMART_SATURATION;
+
+			if (0 != raw_tune_ptr->smart_light.hue.enable)
+				smart |= SMART_HUE;
+		}
+
+		isp_context_ptr->smart_light.smart = smart;
+
+		/*environment parameters*/
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			dst_param->envi.bv_range[i].min = src_param->envi.bv_range[i].min;
+			dst_param->envi.bv_range[i].max = src_param->envi.bv_range[i].max;
+		}
+
+		/*lsc parameters*/
+		/*set the special parameters*/
+		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_COMMON];
+		src_func->num = 1;
+		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_OUTDOOR];
+		src_func->num = 1;
+		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_LOW_LIGHT];
+		src_func->num = 1;
+
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			uint32_t j = 0;
+
+			src_func = &src_param->lsc.adjust_func[i];
+			dst_func = &dst_param->lsc.adjust_func[i];
+
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+		}
+
+		/*cmc parameters, same as the lsc parameters*/
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			uint32_t j = 0;
+			struct smart_light_piecewise_func *lsc_func;
+
+			lsc_func = &dst_param->lsc.adjust_func[i];
+			dst_func = &dst_param->cmc.adjust_func[i];
+
+			dst_func->num = lsc_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = lsc_func->samples[j].x;
+				dst_func->samples[j].y = lsc_func->samples[j].y;
+			}
+		}
+
+		/*saturation parameters*/
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			uint32_t j = 0;
+
+			src_func = &src_param->saturation.adjust_func[i];
+			dst_func = &dst_param->saturation.adjust_func[i];
+
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+		}
+
+		/*hue parameters*/
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			uint32_t j = 0;
+
+			src_func = &src_param->hue.adjust_func[i];
+			dst_func = &dst_param->hue.adjust_func[i];
+
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+		}
+
+		/*gain parameters*/
+		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
+
+			uint32_t j = 0;
+
+			src_func = &src_param->gain.r_gain_func[i];
+			dst_func = &dst_param->gain.r_gain_func[i];
+			src_func->num = 1;
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+
+			src_func = &src_param->gain.g_gain_func[i];
+			dst_func = &dst_param->gain.g_gain_func[i];
+			src_func->num = 1;
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+
+			src_func = &src_param->gain.b_gain_func[i];
+			dst_func = &dst_param->gain.b_gain_func[i];
+			src_func->num = 1;
+			dst_func->num = src_func->num;
+			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
+			}
+		}
+
+	}
 
 	return rtn;
 
