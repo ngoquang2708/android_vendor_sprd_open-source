@@ -22,8 +22,8 @@
 #include "sc8830_video_header.h"
 #include "cmr_mem.h"
 
-#define DEBUG_STR     "%s(L %d), %s: "
-#define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__
+/*#define DEBUG_STR     "%s(L %d), %s: "
+#define DEBUG_ARGS    __FILE__,__LINE__,__FUNCTION__*/
 
 #undef JPEG_PRINT_LOW
 #define JPEG_PRINT_LOW(format,...) ALOGE(DEBUG_STR format, DEBUG_ARGS, ##__VA_ARGS__)
