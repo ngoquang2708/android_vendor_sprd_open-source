@@ -384,8 +384,8 @@ bool Layer::prepareDrawData()
     GLfloat bottom = GLfloat((mRect->bottom-1) & 0xFFFFFFFE) / GLfloat(mPrivH->height);
 
     texCoord[0].u = texCoord[1].u = left;
-    texCoord[0].v = texCoord[3].v = bottom;
-    texCoord[1].v = texCoord[2].v = top;
+    texCoord[0].v = texCoord[3].v = top;
+    texCoord[1].v = texCoord[2].v = bottom;
     texCoord[2].u = texCoord[3].u = right;
 
     /*
@@ -403,30 +403,54 @@ bool Layer::prepareDrawData()
     right  = (GLfloat)(mRV->right & 0xFFFFFFFE);
     bottom = (GLfloat)((mRV->bottom)& 0xFFFFFFFE);
 
-    //The horizontal axis turning image
     if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_H) {
-        GLfloat temp = top;
-        top = bottom;
-        bottom = temp;
-    }
-
-    //The vertical axis turning image
-    if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_V) {
         GLfloat temp = left;
         left = right;
         right = temp;
     }
 
+    if (mTransform & NATIVE_WINDOW_TRANSFORM_FLIP_V) {
+        GLfloat temp = top;
+        top = bottom;
+        bottom = temp;
+    }
+
+    vertices[0].u = vertices[1].u = left;
+    vertices[0].v = vertices[3].v = top;
+    vertices[1].v = vertices[2].v = bottom;
+    vertices[2].u = vertices[3].u = right;
+
+    /*
+     * Rotate 90 degrees clockwise
+     * */
     if (mTransform & NATIVE_WINDOW_TRANSFORM_ROT_90) {
-        vertices[0].u = vertices[3].u = left;
-        vertices[0].v = vertices[1].v = top;
-        vertices[1].u = vertices[2].u = right;
-        vertices[2].v = vertices[3].v = bottom;
-    } else {
-        vertices[0].u = vertices[1].u = left;
-        vertices[0].v = vertices[3].v = bottom;
-        vertices[1].v = vertices[2].v = top;
-        vertices[2].u = vertices[3].u = right;
+        int left_top = 0, left_bottom = 0, right_top = 0, right_bottom = 0;
+        struct TexCoords    center,temp;
+
+        center.u = (left + right)/2;
+        center.v = (top + bottom)/2;
+
+        for (int i = 0; i < 4; i++) {
+            if (vertices[i].u > center.u ) {
+                if (vertices[i].v > center.v) {
+                    right_bottom = i;
+                } else {
+                    right_top = i;
+                }
+            } else {
+                if (vertices[i].v > center.v) {
+                    left_bottom = i;
+                } else {
+                    left_top = i;
+                }
+            }
+        }
+
+        temp                   = vertices[left_top];
+        vertices[left_top]     = vertices[right_top];
+        vertices[right_top]    = vertices[right_bottom];
+        vertices[right_bottom] = vertices[left_bottom];
+        vertices[left_bottom]  = temp;
     }
 
     unsigned int fb_height = mComposer->getDisplayPlane()->getHeight();
