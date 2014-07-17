@@ -105,6 +105,7 @@ LOCAL_SRC_FILES:= \
 	isp/isp_msg.c \
 	isp/isp_drv.c \
 	isp/isp_ctrl.c \
+	isp/isp_awb_ctrl.c \
 	isp/isp_app_msg.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \

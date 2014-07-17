@@ -472,6 +472,11 @@ struct ipn_in_param{
 	struct isp_addr dst_addr_phy;
 };
 
+struct isp_chg_lnc_param {
+	uint16_t index[2];
+	uint16_t weight[2];
+};
+
 
 int isp_init(struct isp_init_param* ptr);
 int isp_deinit(void);

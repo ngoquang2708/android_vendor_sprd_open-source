@@ -49,11 +49,21 @@
 #define SENSOR_AWB_G_ESTIMATE_NUM 0x6
 #define SENSOR_AWB_GAIN_ADJUST_NUM 0x9
 #define SENSOR_AWB_LIGHT_NUM 0x10
+#define SENSOR_ENVI_NUM 0x8
+#define SENSOR_PIECEWISE_SAMPLE_NUM 0x10
+#define SENSOR_CT_INFO_NUM 0x8
 
 #define RAW_INFO_END_ID 0x71717567
 
 #define SENSOR_RAW_VERSION_ID 0x00000000 /* tiger-0000xxxx, soft-xxxx0000*/
 #define SENSOR_RAW_V0001_VERSION_ID 0x00010000 /* tiger-0000xxxx, soft-xxxx0000*/
+
+enum sensor_environment_id {
+	SENSOR_ENVI_COMMON = 0,
+	SENSOR_ENVI_LOW_LIGHT = 1,
+	SENSOR_ENVI_INDOOR = 2,
+	SENSOR_ENVI_OUTDOOR = 3
+};
 
 struct sensor_pos{
 	uint16_t x;
@@ -234,39 +244,37 @@ struct sensor_cali_info {
 	uint32_t b_sum;
 };
 
-struct sensor_awb_g_estimate_param
-{
-	uint16_t t_thr[SENSOR_AWB_G_ESTIMATE_NUM];
-	uint16_t g_thr[SENSOR_AWB_G_ESTIMATE_NUM][2];
-	uint16_t w_thr[SENSOR_AWB_G_ESTIMATE_NUM][2];
+struct sensor_sample {
+	int16_t		x;
+	int16_t		y;
+};
+
+struct sensor_piecewise_func {
 	uint32_t num;
+	struct sensor_sample samples[SENSOR_PIECEWISE_SAMPLE_NUM];
 };
 
-struct sensor_awb_linear_func
-{
-	int32_t a;
-	int32_t b;
-	uint32_t shift;
+struct sensor_range {
+	int16_t min;
+	int16_t max;
 };
 
-struct sensor_awb_wp_count_range
-{
-	uint16_t min_proportion;//min_proportion / 256
-	uint16_t max_proportion;//max_proportion / 256
+struct sensor_range_l {
+	int32_t min;
+	int32_t max;
 };
 
-struct sensor_awb_gain_adjust
-{
-	uint16_t t_thr[SENSOR_AWB_GAIN_ADJUST_NUM];
-	uint16_t w_thr[SENSOR_AWB_GAIN_ADJUST_NUM];
-	uint32_t num;
+struct sensor_awb_weight_of_ct_func {
+	struct sensor_piecewise_func weight_func;
 };
 
-struct sensor_awb_light_weight
-{
-	uint16_t t_thr[SENSOR_AWB_LIGHT_NUM];
-	uint16_t w_thr[SENSOR_AWB_LIGHT_NUM];
-	uint16_t num;
+struct sensor_awb_ct_info {
+	int32_t data[SENSOR_CT_INFO_NUM];
+};
+
+struct sensor_awb_weight_of_count_func {
+	struct sensor_piecewise_func weight_func;
+	uint32_t base;
 };
 
 struct sensor_awb_param{
@@ -274,25 +282,84 @@ struct sensor_awb_param{
 	struct sensor_size win_size;
 	struct sensor_rgb gain_convert[8];
 	struct sensor_awb_coord win[SENSOR_AWB_NUM];
-	struct sensor_awb_light_weight light;
+	struct sensor_awb_weight_of_ct_func weight_of_ct_func;
 	uint32_t steady_speed;
 	uint16_t r_gain[SENSOR_AWB_NUM];
 	uint16_t g_gain[SENSOR_AWB_NUM];
 	uint16_t b_gain[SENSOR_AWB_NUM];
 	uint8_t gain_index;
 	uint8_t alg_id;
+	uint8_t reserved2[2];
 	uint32_t target_zone;
 	uint32_t smart;
 	uint32_t quick_mode;
-	struct sensor_awb_wp_count_range wp_count_range;
-	struct sensor_awb_g_estimate_param g_estimate;
-	struct sensor_awb_linear_func t_func;
-	struct sensor_awb_gain_adjust gain_adjust;
+	struct sensor_awb_weight_of_count_func weight_of_count_func;
+	struct sensor_awb_ct_info ct_info;
+	struct sensor_rgb init_gain;
+	uint16_t init_ct;
+	uint32_t reserved1[2];
 	uint8_t debug_level;
 	uint8_t smart_index;
 	uint8_t skip_num;
-	uint8_t reserved0;
-	uint32_t reserved[9];
+	uint8_t reserved3;
+	struct sensor_range value_range[SENSOR_ENVI_NUM];
+	uint32_t reserved;
+};
+
+struct sensor_smart_light_envi_param {
+	uint32_t enable;
+	struct sensor_range_l bv_range[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_hue_param
+{
+	uint32_t enable;
+	/*adjust function for each enviroment, x=ct, y=hue*/
+	struct sensor_piecewise_func adjust_func[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_saturation_param
+{
+	uint32_t enable;
+	/*adjust function for each enviroment, x=ct, y=saturation value*/
+	struct sensor_piecewise_func adjust_func[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_lsc_param {
+	uint32_t enable;
+	/*adjust function for each enviroment, x=ct, y=index*/
+	struct sensor_piecewise_func adjust_func[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_cmc_param {
+	uint32_t enable;
+	/*adjust function for each enviroment, x=ct, y=index*/
+	struct sensor_piecewise_func adjust_func[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_gain_param {
+	uint32_t enable;
+	/*adjust function for each enviroment, x=ct, y=gain factor*/
+	struct sensor_piecewise_func r_gain_func[SENSOR_ENVI_NUM];
+	struct sensor_piecewise_func g_gain_func[SENSOR_ENVI_NUM];
+	struct sensor_piecewise_func b_gain_func[SENSOR_ENVI_NUM];
+	uint32_t reserved[32];
+};
+
+struct sensor_smart_light_param {
+	uint32_t enable;
+	struct sensor_smart_light_envi_param envi;
+	struct sensor_smart_light_lsc_param lsc;
+	struct sensor_smart_light_cmc_param cmc;
+	struct sensor_smart_light_hue_param hue;
+	struct sensor_smart_light_saturation_param saturation;
+	struct sensor_smart_light_gain_param gain;
+	uint32_t reserved[256];
 };
 
 struct sensor_bpc_param{
@@ -508,12 +575,18 @@ struct sensor_auto_adjust_info {
 	struct sensor_auto_adjust cmc;
 	struct sensor_auto_adjust gamma;
 	struct sensor_auto_adjust edge;
+	uint32_t reserved[128];
 };
 
 struct sensor_version_info{
 	uint32_t version_id;
 	uint32_t srtuct_size;
 	uint32_t reserve;
+};
+
+struct sensor_lnc_param{
+	uint32_t start_index;
+	uint32_t reserved[32];
 };
 
 struct sensor_raw_tune_info{
@@ -579,7 +652,9 @@ struct sensor_raw_tune_info{
 	struct sensor_chn_gain_param chn;
 	struct sensor_flash_cali_param flash;
 	struct sensor_cce_parm special_effect[16];
+	struct sensor_lnc_param lnc;
 	struct sensor_auto_adjust_info auto_adjust;
+	struct sensor_smart_light_param smart_light;
 	uint32_t reserved[256];
 };
 

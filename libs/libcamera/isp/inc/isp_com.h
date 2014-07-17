@@ -23,6 +23,7 @@
 #include "isp_app.h"
 #include "isp_drv.h"
 #include "sensor_raw.h"
+#include "isp_awb_ctrl.h"
 #include "isp_awb.h"
 #include "isp_raw.h"
 #include "isp_ae.h"
@@ -380,7 +381,7 @@ struct isp_flicker_param{
 struct isp_hue_param{
 	uint32_t bypass;
 	uint8_t factor;
-	uint8_t offset;
+	int16_t offset;
 };
 
 struct isp_af_statistic_info{
@@ -553,6 +554,7 @@ struct isp_context{
 	struct isp_size src;
 	struct isp_slice_param slice;
 	struct isp_tune_block tune;
+	struct isp_smart_light_param smart_light;
 	struct auto_adjust_init_info auto_adjust;
 	uint32_t reserved[256];
 
