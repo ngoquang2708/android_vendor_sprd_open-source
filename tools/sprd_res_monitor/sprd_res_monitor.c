@@ -114,7 +114,6 @@ static void notify_config_file()
 	struct inotify_event *event;
 	int notify_fd,wd,result,size;
 	fd_set readset;
-	struct timeval timeout;
 	struct stat tmp;
 	char buffer[64];
 
@@ -133,9 +132,7 @@ static void notify_config_file()
 		long unsigned int index = 0;
 		FD_ZERO(&readset);
 		FD_SET(notify_fd, &readset);
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
-		result = select(notify_fd + 1, &readset, NULL, NULL, &timeout);
+		result = select(notify_fd + 1, &readset, NULL, NULL, NULL);
 
 		if(result <= 0)
 			continue;
