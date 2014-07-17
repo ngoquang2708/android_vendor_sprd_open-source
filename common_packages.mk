@@ -37,3 +37,7 @@ DEVICE_PACKAGE_OVERLAYS += vendor/sprd/operator/operator_res/operatorname_overla
 APN_VERSION := $(shell cat frameworks/base/core/res/res/xml/apns.xml|grep "<apns version"|cut -d \" -f 2)
 PRODUCT_COPY_FILES += vendor/sprd/operator/operator_res/apn/apns-conf_$(APN_VERSION).xml:system/etc/apns-conf.xml
 endif
+
+ifeq ($(strip $(GMS_SUPPORT)), true)
+$(call inherit-product-if-exists, vendor/sprd/partner/google/products/gms.mk)
+endif
