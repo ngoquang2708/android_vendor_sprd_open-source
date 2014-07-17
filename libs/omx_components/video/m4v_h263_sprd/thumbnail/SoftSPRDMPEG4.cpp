@@ -471,6 +471,10 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalSetParameter(
             PortInfo *port = editPortInfo(0);
             if(port->mDef.nBufferSize < 256*1024)
                 port->mDef.nBufferSize = 256*1024;
+        } else if (!((mWidth < 320 && mHeight < 240) || (mWidth < 240 && mHeight < 320))) {
+            PortInfo *port = editPortInfo(0);
+            if(port->mDef.nBufferSize < 160*1024)
+                port->mDef.nBufferSize = 160*1024;
         }
 
         return OMX_ErrorNone;
