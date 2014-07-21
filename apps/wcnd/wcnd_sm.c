@@ -387,6 +387,13 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 //state machine handle message
 int wcnd_sm_step(WcndManager *pWcndManger, WcndMessage *pMessage)
 {
+
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	return 0;
+
+#endif
+
 	if(!pWcndManger || !pMessage) return -1;
 
 	WCND_LOGD("Current State: %d, receive event: 0x%x!!", pWcndManger->state, pMessage->event);
@@ -428,10 +435,21 @@ int wcnd_sm_init(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	pWcndManger->state = WCND_STATE_CP2_STARTED;
+	pWcndManger->notify_enabled = 1;
+
+	pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
+
+#else
+
 	pWcndManger->state = WCND_STATE_CP2_STOPPED;
 	pWcndManger->notify_enabled = 0;
 
 	//pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
+
+#endif
 
 	return 0;
 }

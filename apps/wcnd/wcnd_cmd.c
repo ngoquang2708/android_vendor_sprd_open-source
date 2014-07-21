@@ -26,6 +26,14 @@ static int wcn_process_btwificmd(int client_fd, char* cmd_str, WcndManager *pWcn
 {
 	if(!pWcndManger || !cmd_str) return -1;
 
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+	return 0;
+
+#endif
+
 	WcndMessage message;
 
 	message.event = 0;
@@ -53,6 +61,8 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 	int atcmd_fd = -1;
 	char buffer[255] ;
 	int to_get_cp2_version = 0;
+	int ret_value = -1;
+	int to_tell_cp2_sleep = 0;
 
 	if( !atcmd_str || !pWcndManger)
 		return -1;
@@ -69,6 +79,11 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 		WCND_LOGD("%s: To get cp2 version", __func__);
 		to_get_cp2_version = 1;
 	}
+	else if(!strcmp(atcmd_str, WCND_ATCMD_CP2_SLEEP))
+	{
+		WCND_LOGD("%s: To tell cp2 to sleep ", __func__);
+		to_tell_cp2_sleep = 1;
+	}
 
 	//special case for getting cp2 version, IF CP2 not started, use the saved VERSION info.
 	if(pWcndManger->state != WCND_STATE_CP2_STARTED)
@@ -77,6 +92,7 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 		{
 			snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
 			WCND_LOGD("%s: Save version info: '%s'", __func__, buffer);
+			ret_value = 0;
 		}
 		else
 			snprintf(buffer, 254, "Fail: No data available");
@@ -122,7 +138,10 @@ try_again:
 	{
 		WCND_LOGE("%s: wait for response fail!!!!!", __func__);
 		if(to_get_cp2_version)
+		{
 			snprintf(buffer, 254, "%s", pWcndManger->cp2_version_info);
+			ret_value = 0;
+		}
 		else
 			snprintf(buffer, 254, "Fail: No data available");
 
@@ -146,6 +165,14 @@ try_again:
 			//save the CP2 version info
 			if(to_get_cp2_version)
 				memcpy(pWcndManger->cp2_version_info, buffer, sizeof(buffer));
+
+			if(to_tell_cp2_sleep && strstr(buffer, "FAIL"))
+			{
+				ret_value = -1;
+			}
+			else
+				ret_value = 0;
+
 		}
 	}
 
@@ -157,7 +184,7 @@ out:
 	if(client_fd <= 0)
 	{
 		WCND_LOGE("Write '%s' to Invalid client_fd", buffer);
-		return -1;
+		return ret_value;
 	}
 	//send back the response
 	int ret = write(client_fd, buffer, strlen(buffer)+1);
@@ -167,7 +194,7 @@ out:
 		return -1;
 	}
 
-	return 0;
+	return ret_value;
 }
 
 int wcnd_runcommand(int client_fd, int argc, char* argv[])
@@ -266,6 +293,15 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		}
 		pthread_mutex_unlock(&pWcndManger->clients_lock);
 
+
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+		return 0;
+
+#endif
+
 		message.event = WCND_EVENT_CP2POWERON_REQ;
 		message.replyto_fd = client_fd;
 		wcnd_sm_step(pWcndManger, &message);
@@ -286,6 +322,14 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 			}
 		}
 		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+	return 0;
+
+#endif
 
 		message.event = WCND_EVENT_CP2POWEROFF_REQ;
 		message.replyto_fd = client_fd;

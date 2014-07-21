@@ -1449,12 +1449,20 @@ int wcnd_close_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
+	//Tell CP2 to Sleep
+	if(wcnd_process_atcmd(-1, WCND_ATCMD_CP2_SLEEP, pWcndManger) < 0)
+	{
+		WCND_LOGE("%s: CP2 SLEEP failed!! Before stop it!!", __FUNCTION__);
+		goto out;
+	}
+
 	if(stop_cp2(pWcndManger) < 0)
 	{
 		WCND_LOGE("%s: Stop CP2 failed!!", __FUNCTION__);
 		//return -1;
 	}
 
+out:
 	message.event = WCND_EVENT_CP2_DOWN;
 	message.replyto_fd = -1;
 	wcnd_sm_step(pWcndManger, &message);
@@ -1955,6 +1963,12 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 
 	int count = 100;
 
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	return 0;
+
+#endif
+
 	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
 
 	//wait CP2 started, wait 10s at most
@@ -1971,6 +1985,12 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 		WCND_LOGE("%s: CP2 does not start successs, just return!!", __func__);
 		return -1;
 	}
+
+//#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+//	return 0;
+
+//#endif
 
 	wcnd_process_atcmd(-1, GET_CP2_VERSION_INFO_ATCMD, pWcndManger);
 

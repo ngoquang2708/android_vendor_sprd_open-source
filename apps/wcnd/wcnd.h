@@ -76,7 +76,7 @@
 //the image file
 #define WCN_IMAGE_NAME	"wcnmodem"
 
-#define WCN_IMAGE_SIZE	(10*1024*1024)
+#define WCN_IMAGE_SIZE	(1*1024*1024)	//max size is 1M
 
 #define WCND_SOCKET_NAME	"wcnd"
 
@@ -182,6 +182,12 @@ typedef struct structWcndManager
 	char cp2_version_info[256];
 
 }WcndManager;
+
+
+//CP2 AT Cmds
+#define WCND_ATCMD_CP2_SLEEP "at+cp2sleep\r"
+
+
 
 //export API
 WcndManager* wcnd_get_default_manager(void);

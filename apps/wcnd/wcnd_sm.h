@@ -3,6 +3,9 @@
 
 #include "wcnd.h"
 
+//Macro to disable CP2 power on/off
+#define WCND_CP2_POWER_ONOFF_DISABLED
+
 //WCND STATE
 #define WCND_STATE_CP2_STARTED		0
 #define WCND_STATE_CP2_STARTING		1
