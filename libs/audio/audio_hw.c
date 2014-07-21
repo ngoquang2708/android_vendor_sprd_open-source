@@ -3104,15 +3104,6 @@ static int do_input_standby(struct tiny_stream_in *in)
             ALOGE("bt sco : %s after", __func__);
         }
         adev->active_input = 0;
-        if ((adev->mode != AUDIO_MODE_IN_CALL)
-#ifdef VOIP_DSP_PROCESS
-            &&(adev->voip_start ==0)
-#endif
-        )
-        //{
-            //adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
-            //select_devices_signal(adev);
-        //}
 
         if(in->resampler){
             in_deinit_resampler( in);

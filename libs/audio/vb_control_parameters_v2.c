@@ -1160,19 +1160,19 @@ static void SetCall_ModePara(struct tiny_audio_device *adev,paras_mode_gain_t *m
         if(switch_table[i]){
             if(switch_device[i] == AUDIO_DEVICE_OUT_EARPIECE && adev->pcm_fm_dl == NULL){
                 ALOGE("%s:open FM device",__func__);
-                pthread_mutex_lock(&adev->lock);
                 //force_all_standby(adev);
-                adev->pcm_fm_dl= pcm_open(s_tinycard, 4, PCM_OUT, &pcm_config_loopvbc);
-                if (!pcm_is_ready(adev->pcm_fm_dl)) {
-                    ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
-                    pcm_close(adev->pcm_fm_dl);
-                    adev->pcm_fm_dl= NULL;
-                } else {
-                    if( 0 != pcm_start(adev->pcm_fm_dl)){
-                        ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
-                    }
+                if(!adev->pcm_fm_dl) {
+	                adev->pcm_fm_dl= pcm_open(s_tinycard, 4, PCM_OUT, &pcm_config_loopvbc);
+	                if (!pcm_is_ready(adev->pcm_fm_dl)) {
+	                    ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+	                    pcm_close(adev->pcm_fm_dl);
+	                    adev->pcm_fm_dl= NULL;
+	                } else {
+	                    if( 0 != pcm_start(adev->pcm_fm_dl)){
+	                        ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+	                    }
+	                }
                 }
-                pthread_mutex_unlock(&adev->lock);
             }
             set_call_route(adev,switch_device[i],1);
        }
@@ -2239,8 +2239,9 @@ RESTART:
                         else if(adev->cp_type == CP_W)
                             i2s_pin_mux_sel(adev,0);
                     }
-
+		     pthread_mutex_lock(&adev->lock);
                     ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
+                    pthread_mutex_unlock(&adev->lock);
                     //configure line routine again for low power
                     set_call_route(adev, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, 1);
                     if(adev->out_devices == AUDIO_DEVICE_OUT_EARPIECE){
@@ -2309,7 +2310,9 @@ RESTART:
             case VBC_CMD_DEVICE_CTRL:
                 {
                     MY_TRACE("voice:VBC_CMD_DEVICE_CTRL IN.");
+                    pthread_mutex_lock(&adev->lock);
                     ret = SetParas_DeviceCtrl_Incall(para->vbpipe_fd,adev);
+                    pthread_mutex_unlock(&adev->lock);
                     if(ret < 0){
                         MY_TRACE("voice:VBC_CMD_DEVICE_CTRL SetParas_DeviceCtrl_Incall error. ");
                     }
