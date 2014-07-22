@@ -2,22 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <dirent.h> 
+#include <dirent.h>
 #include <signal.h>
 #include <sys/stat.h>
-#include <errno.h>  
-#include <cutils/properties.h> 
+#include <errno.h>
+#include <cutils/properties.h>
 #include <pthread.h>
 #include <utils/Log.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/un.h> 
-#include <cutils/sockets.h> 
+#include <sys/un.h>
+#include <cutils/sockets.h>
 
-
-#define CMD_SERVICE "cmd_skt" 
+#define CMD_SERVICE "cmd_skt"
 #define MAX_BUF_LEN 4096
-
 
 void *root_cmd_parser(void *arg)
 {
@@ -35,7 +33,6 @@ void *root_cmd_parser(void *arg)
 	if ((connect_fd = accept(service_fd, (struct sockaddr *)&client_address, &client_len)) < 0)
 	{
 		ALOGD("accept socket failed!");
-		sleep(1000);
 	}
 
 	ALOGD("rootcmd_parser service is waitting!\n");
@@ -49,6 +46,8 @@ void *root_cmd_parser(void *arg)
 		}
 
 		strcat(recv_buf," 2>&1");
+
+		//ALOGD("recvbuf is %s \n",recv_buf);
 		FILE *file = popen(recv_buf, "r");
 		if(file == NULL)
 		{
@@ -64,13 +63,15 @@ void *root_cmd_parser(void *arg)
 
 			fread(send_buf, sizeof(char), sizeof(send_buf), file);
 
+			strcat(send_buf,"Result\n");
 			if(write(connect_fd, send_buf, strlen(send_buf)) <= 0)
 			{
 				ALOGD("send cmd echo failed!\n");
 			}
+
+			//ALOGD("sendbuf is %.*s \n",strlen(send_buf), send_buf);
 		}
 		pclose(file);
-		write(connect_fd, "PLL\n", sizeof("PLL\n"));
 	}
 
 	return NULL;
