@@ -234,9 +234,7 @@ static void gpu_change_freq_div(void);
 static void gpufreq_limit_init(void);
 static void gpufreq_limit_uninit(void);
 static inline void mali_set_div(int clock_div);
-#if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 static void gpufreq_table_show(char* buf);
-#endif
 
 static int freq_search(struct gpu_freq_info* freq_list[],int len,int key)
 {
@@ -975,7 +973,6 @@ void mali_platform_utilization(struct mali_gpu_utilization_data *data)
 	}
 }
 
-#if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 static void gpufreq_table_show(char* buf)
 {
 	int i=0,len=0;
@@ -986,20 +983,15 @@ static void gpufreq_table_show(char* buf)
 		buf += len;
 	}
 }
-#endif
 
 static void gpufreq_limit_init(void)
 {
-#if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 	gpufreq_table=(char*)kzalloc(256*sizeof(char), GFP_KERNEL);
 	gpufreq_table_show(gpufreq_table);
-#endif
 }
 static void gpufreq_limit_uninit(void)
 {
-#if MALI_ENABLE_GPU_CONTROL_IN_PARAM
 	kfree(gpufreq_table);
-#endif
 	return;
 }
 
