@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ #define LOG_TAG "isp_awb_ctrl"
+
 #include "isp_com.h"
 #include "isp_log.h"
 #include "isp_awb.h"
@@ -24,10 +26,6 @@
 /*------------------------------------------------------------------------------*
 *					Micro Define				*
 *-------------------------------------------------------------------------------*/
-#define ISP_ZERO	0
-#define ISP_UEB		0
-#define ISP_EB		1
-
 #define ISP_LOGI
 
 #if 0
@@ -111,11 +109,9 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 		awb_param->prv_index = awb_param->cur_index;
 	}
 
-	if (0 != smart_result->saturation.update)
-		awb_param->set_saturation_offset(handler_id, smart_result->saturation.value);
-
-	if (0 != smart_result->hue.update)
-		awb_param->set_hue_offset(handler_id, smart_result->hue.value);
+	if (0 != smart_result->hue_saturation.update) {
+		/*set gain to cce module*/
+	}
 
 	if (0 != smart_result->gain.update) {
 		awb_param->cur_gain.r = smart_result->gain.gain.r;
@@ -138,8 +134,10 @@ int32_t _smart_light_calc(uint32_t handler_id, struct isp_smart_light_param *sma
 		return SMART_LIGHT_ERROR;
 	}
 
-	if (0 == smart_light_param->smart)
-		return SMART_LIGHT_SUCCESS;
+	if (0 == smart_light_param->smart) {
+		ISP_LOGI("smart disable!");
+		return SMART_LIGHT_ERROR;
+	}
 
 	calc_param->bv = bright_value < 0 ? 0 : bright_value;
 	calc_param->smart = smart_light_param->smart;
@@ -173,6 +171,9 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 	init_param->weight_of_pos_lut = awb_param->weight_of_pos_lut;
 
 	init_param->weight_of_ct_func.weight_func.num = 0;
+
+	init_param->scene_adjust_intensity[ISP_AWB_SCENE_GREEN] = awb_param->green_adjust_intensity;
+	init_param->scene_adjust_intensity[ISP_AWB_SCENE_SKIN] = awb_param->skin_adjust_intensity;
 
 	memcpy(init_param->value_range, awb_param->value_range,
 			sizeof(struct isp_awb_range) * ISP_AWB_ENVI_NUM);
@@ -214,6 +215,35 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 		ISP_LOGI("[%d] = (%d, %d)", i, init_param->value_range[i].min,
 				init_param->value_range[i].max);
 	}
+
+	ISP_LOGI("scene adjust intensity: green = %d, skin=%d", init_param->scene_adjust_intensity[ISP_AWB_SCENE_GREEN],
+							init_param->scene_adjust_intensity[ISP_AWB_SCENE_SKIN]);
+}
+
+enum isp_awb_envi_id _envi_id_convert(enum smart_light_envi_id envi_id)
+{
+	switch (envi_id) {
+	case SMART_ENVI_COMMON:
+		return ISP_AWB_ENVI_COMMON;
+
+	case SMART_ENVI_INDOOR_NORMAL:
+		return ISP_AWB_ENVI_INDOOR;
+
+	case SMART_ENVI_LOW_LIGHT:
+		return ISP_AWB_ENVI_LOW_LIGHT;
+
+	case SMART_ENVI_OUTDOOR_HIGH:
+		return ISP_AWB_ENVI_OUTDOOR_HIGH;
+
+	case SMART_ENVI_OUTDOOR_MIDDLE:
+		return ISP_AWB_ENVI_OUTDOOR_MIDDLE;
+
+	case SMART_ENVI_OUTDOOR_NORMAL:
+		return ISP_AWB_ENVI_OUTDOOR_LOW;
+
+	default:
+		return ISP_AWB_ENVI_COMMON;
+	}
 }
 
 /* isp_awb_init --
@@ -242,16 +272,15 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id)
 	awb_param->gain_div=0x100;
 	awb_param->win_size = isp_cxt->awbm.win_size;
 
+	/*temp use*/
+	awb_param->green_adjust_intensity = 42;
+	awb_param->skin_adjust_intensity = 42;
+
 	ISP_LOGI("smart = 0x%d, envi=%d", smart_light_param->smart, awb_param->envi_id);
 
 	/*disable weight of ct function*/
 	memset(&awb_param->weight_of_ct_func, 0, sizeof(awb_param->weight_of_ct_func));
 
-	/*disable outdoor normal and outdoor high*/
-	smart_light_param->init_param.envi.bv_range[SMART_ENVI_OUTDOOR_MIDDLE].min = 0;
-	smart_light_param->init_param.envi.bv_range[SMART_ENVI_OUTDOOR_MIDDLE].max = 0;
-	smart_light_param->init_param.envi.bv_range[SMART_ENVI_OUTDOOR_HIGH].min = 0;
-	smart_light_param->init_param.envi.bv_range[SMART_ENVI_OUTDOOR_HIGH].max = 0;
 	rtn = smart_light_init(handler_id, (void *)&smart_light_param->init_param, NULL);
 	if (ISP_SUCCESS == rtn)
 		smart_light_param->init = ISP_EB;
@@ -292,6 +321,10 @@ uint32_t isp_awb_ctrl_deinit(uint32_t handler_id)
 		smart_light_deinit(handler_id, NULL, NULL);
 		smart_light_param->init = ISP_UEB;
 	}
+
+	/*to avoid gain different after snapshot*/
+	awb_param->init_ct = awb_param->cur_ct;
+	awb_param->init_gain = awb_param->cur_gain;
 
 	ISP_LOGI("deinit awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
@@ -337,35 +370,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	}
 
 	calc_param->awb_stat = &isp_cxt->awb_stat;
-
-	switch (awb_param->envi_id) {
-	case SMART_ENVI_COMMON:
-		calc_param->envi_id = ISP_AWB_ENVI_COMMON;
-		break;
-
-	case SMART_ENVI_INDOOR_NORMAL:
-		calc_param->envi_id = ISP_AWB_ENVI_INDOOR;
-		break;
-
-	case SMART_ENVI_LOW_LIGHT:
-		calc_param->envi_id = ISP_AWB_ENVI_LOW_LIGHT;
-		break;
-
-	case SMART_ENVI_OUTDOOR_HIGH:
-		calc_param->envi_id = ISP_AWB_ENVI_OUTDOOR_HIGH;
-		break;
-
-	case SMART_ENVI_OUTDOOR_MIDDLE:
-		calc_param->envi_id = ISP_AWB_ENVI_OUTDOOR_MIDDLE;
-		break;
-
-	case SMART_ENVI_OUTDOOR_NORMAL:
-		calc_param->envi_id = ISP_AWB_ENVI_OUTDOOR_LOW;
-		break;
-
-	default:
-		break;
-	}
+	calc_param->envi_id = _envi_id_convert(awb_param->envi_id);
 
 	rtn = isp_awb_calculation(handler_id, calc_param, calc_result);
 	gain = calc_result->gain;

@@ -40,11 +40,6 @@ extern "C"
 #define ISP_AWB_WINDOW_CONTER 0x03
 #define ISP_AWB_SETTING_NUM 	0x04
 
-#define AWB_SETTING_COMM			0
-#define AWB_SETTING_OUTDOOR			1
-#define AWB_SETTING_LOW_LIGHT 		2
-#define AWB_SETTING_MAX 			2
-
 #define AWB_SMART_NONE 		0x00	//none
 #define AWB_SMART_LNC 		(1<<0)	//bit0: smart lsc
 #define AWB_SMART_CMC 		(1<<1)	//bit1: smart cmc
@@ -54,6 +49,7 @@ extern "C"
 #define AWB_SMART_SATURATION (1 << 5) //bit 5: smart saturation
 
 #define ISP_AWB_ENVI_NUM 0x8
+#define ISP_AWB_SCENE_NUM 0x2
 #define ISP_AWB_PIECEWISE_SAMPLE_NUM 0x10
 #define ISP_AWB_CT_INFO_NUM 0x8
 /*------------------------------------------------------------------------------*
@@ -125,6 +121,17 @@ enum isp_awb_envi_id {
 	ISP_AWB_ENVI_OUTDOOR_HIGH = 5
 };
 
+enum isp_awb_scene_id {
+	ISP_AWB_SCENE_GREEN = 1,
+	ISP_AWB_SCENE_SKIN = 2
+};
+
+enum isp_awb_cmd {
+	ISP_AWB_CMD_SET_BASE 			= 0x1000,
+	ISP_AWB_CMD_GET_BASE			= 0x2000,
+	ISP_AWB_CMD_GET_CALC_DETAIL		= (ISP_AWB_CMD_GET_BASE + 1)
+};
+
 struct isp_awb_init_param {
 	/*common parameters*/
 	/*awb alg id*/
@@ -153,6 +160,7 @@ struct isp_awb_init_param {
 	uint32_t steady_speed;
 	uint32_t debug_level;
 	struct isp_awb_weight_lut weight_of_pos_lut;
+	uint32_t scene_adjust_intensity[ISP_AWB_SCENE_NUM];
 };
 
 struct isp_awb_calc_param {

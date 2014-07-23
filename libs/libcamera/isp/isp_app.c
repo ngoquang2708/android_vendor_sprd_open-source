@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "isp_app"
+
 #include <sys/types.h>
 #include "isp_log.h"
 #include "isp_ctrl.h"

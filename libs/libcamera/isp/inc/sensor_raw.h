@@ -62,7 +62,9 @@ enum sensor_environment_id {
 	SENSOR_ENVI_COMMON = 0,
 	SENSOR_ENVI_LOW_LIGHT = 1,
 	SENSOR_ENVI_INDOOR = 2,
-	SENSOR_ENVI_OUTDOOR = 3
+	SENSOR_ENVI_OUTDOOR = 3,
+	SENSOR_ENVI_HIGH_LIGHT_L0 = 4,
+	SENSOR_ENVI_HIGH_LIGHT_L1 = 5
 };
 
 struct sensor_pos{
@@ -546,7 +548,10 @@ struct sensor_css_param{
 
 struct sensor_auto_adjust{
 	uint32_t enable;
-	uint32_t start_level;
+
+	uint32_t index_sensitive;
+	uint32_t lum_sensitive;
+
 	uint32_t dependon_index;
 	uint32_t dependon_gain;
 	uint32_t dependon_lum;
@@ -554,7 +559,7 @@ struct sensor_auto_adjust{
 	uint32_t level_mode;
 	uint32_t index_zone;
 	uint32_t lum_zone;
-	uint32_t target_lum_thr;
+	uint32_t target_lum_zone;
 
 	uint32_t index_thr_num;
 	uint32_t lum_low_thr_num;
@@ -575,7 +580,7 @@ struct sensor_auto_adjust_info {
 	struct sensor_auto_adjust cmc;
 	struct sensor_auto_adjust gamma;
 	struct sensor_auto_adjust edge;
-	uint32_t reserved[128];
+	uint32_t reserved[122];
 };
 
 struct sensor_version_info{

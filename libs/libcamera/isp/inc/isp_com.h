@@ -82,6 +82,7 @@ enum isp_status{
 enum isp_change_cmd{
 	ISP_CHANGE_LNC,
 	ISP_CHANGE_CMC,
+	ISP_CHANGE_CCE,
 	ISP_CHANGE_MAX
 };
 
@@ -577,6 +578,8 @@ struct isp_context{
 	uint32_t awb_g_gain[9];
 	uint32_t awb_b_gain[9];
 
+	uint32_t lnc_index;
+	uint32_t cce_index;
 	uint32_t gamma_index;
 	uint32_t cmc_index;
 	uint32_t param_index;
