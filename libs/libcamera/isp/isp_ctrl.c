@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "isp_ctrl"
+
 #include <sys/types.h>
 #include "isp_app.h"
 #include "isp_com.h"
@@ -3378,6 +3380,18 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	max_param_index=_ispGetIspParamMaxIndex(handler_id, raw_info_ptr);
 	isp_context_ptr->isp_lnc_addr=ispAlloc(handler_id, raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len);
 
+	if (raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len > isp_context_ptr->lnc.lnc_len) {
+		if (NULL != isp_context_ptr->lnc.lnc_ptr) {
+			free(isp_context_ptr->lnc.lnc_ptr);
+		}
+		isp_context_ptr->lnc.lnc_ptr = (uint32_t*)malloc(raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len);
+
+		if (NULL == isp_context_ptr->lnc.lnc_ptr) {
+			ISP_TRACE_IF_FAIL(rtn, ("alloc lnc buffer error"));
+		}
+		isp_context_ptr->lnc.lnc_len = raw_fix_ptr->lnc.map[max_param_index-ISP_ONE][0].len;
+	}
+
 	memcpy((void*)&isp_context_ptr->auto_adjust.bil_denoise, (void*)&raw_tune_ptr->auto_adjust.bil_denoise, sizeof(struct auto_adjust));
 	memcpy((void*)&isp_context_ptr->auto_adjust.y_denoise, (void*)&raw_tune_ptr->auto_adjust.y_denoise, sizeof(struct auto_adjust));
 	memcpy((void*)&isp_context_ptr->auto_adjust.uv_denoise, (void*)&raw_tune_ptr->auto_adjust.uv_denoise, sizeof(struct auto_adjust));
@@ -4051,20 +4065,21 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
 
 	/*cce matrix*/
-	if (ISP_ZERO!=raw_tune_ptr->special_effect[0].matrix[0]) {
+	isp_context_ptr->cce_index = raw_tune_ptr->cce.index;
+	if (ISP_ZERO!=raw_tune_ptr->cce.tab[0].matrix[0]) {
 		for (i=0; i<16; i++) {
-			isp_context_ptr->cce_tab[i].matrix[0]=raw_tune_ptr->special_effect[i].matrix[0];
-			isp_context_ptr->cce_tab[i].matrix[1]=raw_tune_ptr->special_effect[i].matrix[1];
-			isp_context_ptr->cce_tab[i].matrix[2]=raw_tune_ptr->special_effect[i].matrix[2];
-			isp_context_ptr->cce_tab[i].matrix[3]=raw_tune_ptr->special_effect[i].matrix[3];
-			isp_context_ptr->cce_tab[i].matrix[4]=raw_tune_ptr->special_effect[i].matrix[4];
-			isp_context_ptr->cce_tab[i].matrix[5]=raw_tune_ptr->special_effect[i].matrix[5];
-			isp_context_ptr->cce_tab[i].matrix[6]=raw_tune_ptr->special_effect[i].matrix[6];
-			isp_context_ptr->cce_tab[i].matrix[7]=raw_tune_ptr->special_effect[i].matrix[7];
-			isp_context_ptr->cce_tab[i].matrix[8]=raw_tune_ptr->special_effect[i].matrix[8];
-			isp_context_ptr->cce_tab[i].y_shift=raw_tune_ptr->special_effect[i].y_shift;
-			isp_context_ptr->cce_tab[i].u_shift=raw_tune_ptr->special_effect[i].u_shift;
-			isp_context_ptr->cce_tab[i].v_shift=raw_tune_ptr->special_effect[i].v_shift;
+			isp_context_ptr->cce_tab[i].matrix[0]=raw_tune_ptr->cce.tab[i].matrix[0];
+			isp_context_ptr->cce_tab[i].matrix[1]=raw_tune_ptr->cce.tab[i].matrix[1];
+			isp_context_ptr->cce_tab[i].matrix[2]=raw_tune_ptr->cce.tab[i].matrix[2];
+			isp_context_ptr->cce_tab[i].matrix[3]=raw_tune_ptr->cce.tab[i].matrix[3];
+			isp_context_ptr->cce_tab[i].matrix[4]=raw_tune_ptr->cce.tab[i].matrix[4];
+			isp_context_ptr->cce_tab[i].matrix[5]=raw_tune_ptr->cce.tab[i].matrix[5];
+			isp_context_ptr->cce_tab[i].matrix[6]=raw_tune_ptr->cce.tab[i].matrix[6];
+			isp_context_ptr->cce_tab[i].matrix[7]=raw_tune_ptr->cce.tab[i].matrix[7];
+			isp_context_ptr->cce_tab[i].matrix[8]=raw_tune_ptr->cce.tab[i].matrix[8];
+			isp_context_ptr->cce_tab[i].y_shift=raw_tune_ptr->cce.tab[i].y_shift;
+			isp_context_ptr->cce_tab[i].u_shift=raw_tune_ptr->cce.tab[i].u_shift;
+			isp_context_ptr->cce_tab[i].v_shift=raw_tune_ptr->cce.tab[i].v_shift;
 		}
 	} else {
 		for (i=0; i<8; i++) {
@@ -4082,7 +4097,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 			isp_context_ptr->cce_tab[i].v_shift=cce_matrix[i][11];
 		}
 	}
-	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[0]);
+	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
 
 	/*uv div*/
 	/*SCI_MEMCPY((void*)&isp_context_ptr->uv_div.thrd, (void*)&raw_info_ptr->uv_div.thrd, 7);*/
@@ -4977,6 +4992,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
 
 	/*cce matrix*/
+	isp_context_ptr->cce_index = 0;
 	if (ISP_ZERO!=raw_tune_ptr->special_effect[0].matrix[0]) {
 		for (i=0; i<16; i++) {
 			isp_context_ptr->cce_tab[i].matrix[0]=raw_tune_ptr->special_effect[i].matrix[0];
@@ -5008,7 +5024,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 			isp_context_ptr->cce_tab[i].v_shift=cce_matrix[i][11];
 		}
 	}
-	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[0]);
+	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
 
 	/*uv div*/
 	/*SCI_MEMCPY((void*)&isp_context_ptr->uv_div.thrd, (void*)&raw_info_ptr->uv_div.thrd, 7);*/
@@ -5248,14 +5264,6 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		}
 
 		/*lsc parameters*/
-		/*set the special parameters*/
-		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_COMMON];
-		src_func->num = 1;
-		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_OUTDOOR];
-		src_func->num = 1;
-		src_func = &src_param->lsc.adjust_func[SENSOR_ENVI_LOW_LIGHT];
-		src_func->num = 1;
-
 		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
 
 			uint32_t j = 0;
@@ -5274,15 +5282,13 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		for (i=0; i<SMART_ENVI_SIMPLE_MAX_NUM; i++) {
 
 			uint32_t j = 0;
-			struct smart_light_piecewise_func *lsc_func;
-
-			lsc_func = &dst_param->lsc.adjust_func[i];
+			src_func = &src_param->cmc.adjust_func[i];
 			dst_func = &dst_param->cmc.adjust_func[i];
 
-			dst_func->num = lsc_func->num;
+			dst_func->num = src_func->num;
 			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
-				dst_func->samples[j].x = lsc_func->samples[j].x;
-				dst_func->samples[j].y = lsc_func->samples[j].y;
+				dst_func->samples[j].x = src_func->samples[j].x;
+				dst_func->samples[j].y = src_func->samples[j].y;
 			}
 		}
 
@@ -5323,7 +5329,6 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 			src_func = &src_param->gain.r_gain_func[i];
 			dst_func = &dst_param->gain.r_gain_func[i];
-			src_func->num = 1;
 			dst_func->num = src_func->num;
 			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
 				dst_func->samples[j].x = src_func->samples[j].x;
@@ -5332,7 +5337,6 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 			src_func = &src_param->gain.g_gain_func[i];
 			dst_func = &dst_param->gain.g_gain_func[i];
-			src_func->num = 1;
 			dst_func->num = src_func->num;
 			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
 				dst_func->samples[j].x = src_func->samples[j].x;
@@ -5341,7 +5345,6 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 			src_func = &src_param->gain.b_gain_func[i];
 			dst_func = &dst_param->gain.b_gain_func[i];
-			src_func->num = 1;
 			dst_func->num = src_func->num;
 			for (j=0; j<SMART_PIECEWISE_MAX_NUM; j++) {
 				dst_func->samples[j].x = src_func->samples[j].x;
@@ -5483,6 +5486,8 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	struct isp_ae_param* ae_param_ptr = &isp_context_ptr->ae;
 	struct isp_af_param* af_param_ptr = &isp_context_ptr->af;
 	uint32_t awb_index = isp_context_ptr->awb.cur_index;
+	uint32_t lnc_addr = 0;
+	uint32_t lnc_len = ISP_ZERO;
 
 	if(ISP_VIDEO_MODE_SINGLE==_ispGetVideoMode(handler_id))
 	{/*capture use video mode need bypass ae awb*/
@@ -5506,7 +5511,10 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	isp_context_ptr->ae.line_time=_ispGetLineTime((struct isp_resolution_info*)&isp_context_ptr->input_size_trim, isp_context_ptr->param_index);
 
 	/* change lnc param*/
-	ispSetLncParam(handler_id, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].param_addr, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].len);
+	lnc_addr = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].param_addr;
+	lnc_len = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].len;
+	_ispGetLncCurrectParam((void*)lnc_addr, NULL, lnc_len, ISP_ZERO, (void*)isp_context_ptr->lnc.lnc_ptr);
+	ispSetLncParam(handler_id, (uint32_t)isp_context_ptr->lnc.lnc_ptr, lnc_len);
 	_ispChangeProcBLC(handler_id);
 	_ispChangeProcAwbGain(handler_id);
 
@@ -5523,13 +5531,18 @@ static int32_t _ispChangeProcCfg(uint32_t handler_id)
 	int32_t rtn = ISP_SUCCESS;
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	uint32_t awb_index=isp_context_ptr->awb.cur_index;
+	uint32_t lnc_addr = 0;
+	uint32_t lnc_len = ISP_ZERO;
 
 	/* isp param index */
 	isp_context_ptr->proc_param_index=_ispGetIspParamIndex(handler_id, &isp_context_ptr->src);
 	isp_context_ptr->param_index=isp_context_ptr->proc_param_index;
 	ISP_LOG("proc param index :0x%x", isp_context_ptr->param_index);
 	/* change lnc param*/
-	ispSetLncParam(handler_id, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].param_addr, isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].len);
+	lnc_addr = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].param_addr;
+	lnc_len = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][awb_index].len;
+	_ispGetLncCurrectParam((void*)lnc_addr, NULL, lnc_len, ISP_ZERO, (void*)isp_context_ptr->lnc.lnc_ptr);
+	ispSetLncParam(handler_id, (uint32_t)isp_context_ptr->lnc.lnc_ptr, lnc_len);
 
 	_ispChangeProcBLC(handler_id);
 	_ispChangeProcAwbGain(handler_id);
@@ -6192,13 +6205,18 @@ int32_t _ispSpecialEffectIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_
 	uint32_t cce_matrix_mode = *(uint32_t*)param_ptr;
 
 	ISP_LOG("--IOCtrl--SPECIAL_EFFECT--:0x%x", cce_matrix_mode);
+	isp_context_ptr->cce_index = cce_matrix_mode;
 	if(ISP_EFFECT_EMBOSS==(*(uint32_t*)param_ptr)) {
 		cce_matrix_mode=ISP_EFFECT_NORMAL;
 		isp_context_ptr->emboss.bypass=ISP_UEB;
 	} else {
 		isp_context_ptr->emboss.bypass=ISP_EB;
 	}
-	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[cce_matrix_mode]);
+	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
+	if(ISP_EFFECT_NORMAL == (*(uint32_t*)param_ptr)) {
+		//change_cce_param(uint32_t handler_id, &isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
+		//shan need add alg function
+	}
 	isp_context_ptr->tune.special_effect=ISP_EB;
 
 	return rtn;
@@ -8343,17 +8361,36 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
 	uint32_t param_index=isp_context_ptr->param_index-ISP_ONE;
 	uint32_t awb_index=isp_context_ptr->awb.cur_index;
+	uint32_t lnc_addr0 = 0;
+	uint32_t lnc_addr1 = 0;
+	uint32_t lnc_alpha = ISP_ZERO;
+	uint32_t lnc_len = ISP_ZERO;
 
 	switch(cmd)
 	{
 		case ISP_CHANGE_LNC:
 		{
 			ISP_LOG("--isp_change_param--p%d, a:%d", param_index, awb_index);
-			rtn=ispSetLncParam(handler_id, isp_context_ptr->lnc_map_tab[param_index][awb_index].param_addr, isp_context_ptr->lnc_map_tab[param_index][awb_index].len);
-			rtn=_ispSetLncParam(&isp_context_ptr->lnc, isp_context_ptr);
-			rtn=_ispLncParamSet(handler_id, &isp_context_ptr->lnc);
-			rtn=_ispLncParamLoad(handler_id, &isp_context_ptr->lnc);
-			isp_context_ptr->tune.lnc_load=ISP_EB;
+			struct isp_awb_adjust* lnc_adjust_ptr = (struct isp_awb_adjust*)param;
+
+			if (NULL != lnc_adjust_ptr) {
+				lnc_addr0 = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][lnc_adjust_ptr->index0].param_addr;
+				lnc_addr1 = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][lnc_adjust_ptr->index1].param_addr;
+				lnc_len = isp_context_ptr->lnc_map_tab[isp_context_ptr->param_index-ISP_ONE][lnc_adjust_ptr->index0].len;
+				lnc_alpha = lnc_adjust_ptr->alpha;
+				_ispGetLncCurrectParam((void*)lnc_addr0, (void*)lnc_addr1, lnc_len, lnc_alpha, (void*)isp_context_ptr->lnc.lnc_ptr);
+				rtn=ispSetLncParam(handler_id, (uint32_t)isp_context_ptr->lnc.lnc_ptr, lnc_len);
+				rtn=_ispSetLncParam(&isp_context_ptr->lnc, isp_context_ptr);
+				rtn=_ispLncParamSet(handler_id, &isp_context_ptr->lnc);
+				rtn=_ispLncParamLoad(handler_id, &isp_context_ptr->lnc);
+				isp_context_ptr->tune.lnc_load=ISP_EB;
+			}
+			break ;
+		}
+		case ISP_CHANGE_CCE:
+		{
+			ISP_LOG("--isp_change_cce--");
+			_ispSpecialEffectIOCtrl(handler_id, (void*)&isp_context_ptr->cce_index, NULL);
 			break ;
 		}
 		case ISP_CHANGE_CMC:
@@ -8394,7 +8431,7 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 					cmc_tab[1] = 	isp_context_ptr->cmc_tab[awb_index];
 				}
 
-				isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t**)cmc_tab, weight);//thomaszhang	isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t*)cmc_tab, weight);
+				isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t**)cmc_tab, weight);
 			}
 
 			isp_SetCMC_By_Reduce(handler_id, (uint16_t*)(isp_context_ptr->cmc.matrix),\

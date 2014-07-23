@@ -416,6 +416,7 @@ struct isp_denoise{
 	uint16_t g_thr;
 	uint16_t b_thr;
 	uint16_t reserved;
+	uint32_t index;
 	struct _isp_denoise_tab tab[ISP_AUTO_LEVEL];
 };
 
@@ -433,12 +434,14 @@ struct isp_cfa{
 
 struct isp_cmc{
 	uint32_t cmc_bypass;
+	uint32_t index;
 	uint16_t matrix[_ISP_AWB_CALI_NUM][9];
 	uint16_t reserved;
 };
 
 struct isp_gamma{
 	uint32_t gamma_bypass;
+	uint32_t index;
 	struct _isp_gamma_tab tab[ISP_AUTO_LEVEL];
 };
 
@@ -451,6 +454,8 @@ struct isp_uvdiv{
 
 struct isp_pref{
 	uint32_t pref_bypass;
+	uint32_t y_index;
+	uint32_t uv_index;
 	uint8_t write_back;
 	uint8_t y_thr[ISP_AUTO_LEVEL];
 	uint8_t u_thr[ISP_AUTO_LEVEL];
@@ -460,6 +465,10 @@ struct isp_pref{
 struct isp_bright{
 	uint32_t bright_bypass;
 	uint8_t factor[16];
+};
+
+struct isp_ev{
+	int8_t factor[16];
 };
 
 struct isp_contrast{
@@ -524,6 +533,7 @@ struct isp_af{
 
 struct isp_edge_info{
 	uint32_t edge_bypass;
+	uint32_t index;
 	struct _isp_edge_param info[16];
 };
 
@@ -560,11 +570,16 @@ struct isp_flash_cali{
 	uint16_t b_ratio;
 };
 
-struct isp_cce{
+struct isp_cce_praam{
 	uint16_t matrix[9];
 	uint16_t y_shift;
 	uint16_t u_shift;
 	uint16_t v_shift;
+};
+
+struct isp_cce{
+	uint32_t index;
+	struct isp_cce_praam tab[16];
 };
 
 struct isp_fcs{
@@ -583,7 +598,10 @@ struct isp_hdr{
 
 struct isp_auto_adjust{
 	uint32_t enable;
-	uint32_t start_level;
+
+	uint32_t index_sensitive;
+	uint32_t lum_sensitive;
+
 	uint32_t dependon_index;
 	uint32_t dependon_gain;
 	uint32_t dependon_lum;
@@ -591,7 +609,7 @@ struct isp_auto_adjust{
 	uint32_t level_mode;
 	uint32_t index_zone;
 	uint32_t lum_zone;
-	uint32_t target_lum_thr;
+	uint32_t target_lum_zone;
 
 	uint32_t index_thr_num;
 	uint32_t lum_low_thr_num;
@@ -676,7 +694,7 @@ struct isp_raw_tune_info{
 	struct isp_global_gain global;
 	struct isp_chanel_gain chn;
 	struct isp_flash_cali flash;
-	struct isp_cce special_effect[16];
+	struct isp_cce cce;
 	struct isp_fcs fcs;
 	struct isp_hue hue;
 	struct isp_hdr hdr;

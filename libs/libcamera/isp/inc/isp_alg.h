@@ -123,6 +123,8 @@ struct isp_lnc_param{
 	uint32_t cur_use_buf;
 	uint32_t load_buf;
 	struct isp_lnc_map map;
+	uint32_t* lnc_ptr;
+	uint32_t lnc_len;
 };
 
 struct isp_fetch_param{
@@ -153,6 +155,7 @@ int32_t _ispGetSliceSize(enum isp_process_type proc_type, struct isp_size* src_s
 int32_t _ispGetSliceEdgeInfo(struct isp_slice_param* slice_ptr);
 uint16_t _ispGetLensGridPitch(uint16_t src_width, uint8_t len_grid);
 int32_t _ispGetLncAddr(struct isp_lnc_param* param_ptr,struct isp_slice_param* isp_ptr, uint16_t src_width);
+int32_t _ispGetLncCurrectParam(void* lnc0_ptr,void* lnc1_ptr, uint32_t lnc_len, uint32_t alpha, void* dst_lnc_ptr);
 int32_t _ispGetFetchAddr(uint32_t handler_id, struct isp_fetch_param* fetch_ptr);
 int32_t _ispGetFetchPitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);
 int32_t _ispGetStorePitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);

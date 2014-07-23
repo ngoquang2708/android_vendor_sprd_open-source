@@ -132,6 +132,13 @@ struct smart_light_saturation_result {
 	uint32_t update;
 };
 
+struct smart_light_hue_saturation_result {
+	uint16_t r_gain;
+	uint16_t g_gain;
+	uint16_t b_gain;
+	uint32_t update;
+};
+
 struct smart_light_lsc_result {
 	uint16_t index[SMART_WEIGHT_NUM];
 	uint16_t weight[SMART_WEIGHT_NUM];
@@ -146,6 +153,7 @@ struct smart_light_cmc_result {
 
 struct smart_light_gain_result {
 	struct smart_light_gain gain;
+	struct smart_light_gain factor;
 	uint32_t update;
 };
 
@@ -205,6 +213,7 @@ struct smart_light_calc_result {
 	struct smart_light_gain_result gain;
 	struct smart_light_hue_result hue;
 	struct smart_light_saturation_result saturation;
+	struct smart_light_hue_saturation_result hue_saturation;
 };
 /*------------------------------------------------------------------------------*
 *				Data Prototype					*
