@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "sensor_cfg"
+
 #include "sensor_drv_u.h"
 #include "sensor_cfg.h"
 

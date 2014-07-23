@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "dc_cfg"
+
 #include <utils/Log.h>
 #include <stdlib.h>
 #include <fcntl.h>
