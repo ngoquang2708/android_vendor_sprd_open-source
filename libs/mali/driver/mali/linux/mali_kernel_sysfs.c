@@ -1214,9 +1214,9 @@ static const struct file_operations version_fops = {
 
 #if MALI_ENABLE_GPU_CONTROL_IN_PARAM==0
 extern struct kobject *power_kobj;
-extern struct gpu_freq_table_data freq_table_data;
 extern int gpufreq_min_limit;
 extern int gpufreq_max_limit;
+extern char* gpufreq_table;
 
 static ssize_t gpufreq_min_limit_show(struct device *dev, struct device_attribute *attr,char *buf)
 {
@@ -1232,56 +1232,34 @@ static ssize_t gpufreq_max_limit_show(struct device *dev, struct device_attribut
 
 static ssize_t gpufreq_min_limit_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count)
 {
-	int value=0,i=0;
+	int value=0;
 
 	if (kstrtos32(buf, 0, &value))
 		return -EINVAL;
 
-	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
-	{
-		if(value==freq_table_data.freq_tbl[i].frequency)
-		{
-			gpufreq_min_limit = value;
-			MALI_DEBUG_PRINT(3, ("set gpufreq_min_limit:%d\n",gpufreq_min_limit));
-			break;
-		}
-	}
+	gpufreq_min_limit = value;
+	MALI_DEBUG_PRINT(3, ("set gpufreq_min_limit:%d\n",gpufreq_min_limit));
 	return count;
 }
 
 static ssize_t gpufreq_max_limit_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count)
 {
-	int value=0,i=0;
+	int value=0;
 
 	if (kstrtos32(buf, 0, &value))
 		return -EINVAL;
 
-	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
-	{
-		if(value==freq_table_data.freq_tbl[i].frequency)
-		{
-			gpufreq_max_limit = value;
-			MALI_DEBUG_PRINT(3, ("set gpufreq_max_limit:%d\n",gpufreq_max_limit));
-			break;
-		}
-	}
+	gpufreq_max_limit = value;
+	MALI_DEBUG_PRINT(3, ("set gpufreq_max_limit:%d\n",gpufreq_max_limit));
 	return count;
 }
 
 static ssize_t gpufreq_table_show(struct device *dev, struct device_attribute *attr,char *buf)
 {
-	int i=0,len=0,size=0;
+	int len=0;
 
-	for(i=0;i<GPU_FREQ_TABLE_SIZE;i++)
-	{
-		if(0!=freq_table_data.freq_tbl[i].frequency)
-		{
-			len=sprintf(buf,"%2d  %d\n", freq_table_data.freq_tbl[i].index, freq_table_data.freq_tbl[i].frequency);
-			buf += len;
-			size += len;
-		}
-	}
-	return size;
+	len=sprintf(buf,"%s",gpufreq_table);
+	return len;
 }
 
 static DEVICE_ATTR(gpufreq_min_limit, S_IWUGO | S_IRUGO, gpufreq_min_limit_show, gpufreq_min_limit_store);
