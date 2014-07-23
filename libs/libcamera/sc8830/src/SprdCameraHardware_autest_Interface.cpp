@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_TAG "SprdCameraHardware_Autest"
+
 #include <utils/Log.h>
 #include <utils/String16.h>
 #include <sys/types.h>
