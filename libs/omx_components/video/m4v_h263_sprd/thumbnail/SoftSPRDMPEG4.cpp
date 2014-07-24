@@ -721,6 +721,12 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
         }
 
         outHeader->nTimeStamp = inHeader->nTimeStamp;
+        if (!iUseAndroidNativeBuffer[OMX_DirOutput]) {
+            if (!mFramesConfigured) {
+                (*mMP4DecSetReferenceYUV)(mHandle, outHeader->pBuffer);
+                mFramesConfigured = true;
+            }
+        }
 
         int32_t bufferSize = inHeader->nFilledLen;
 
