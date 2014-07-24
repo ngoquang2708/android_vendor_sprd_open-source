@@ -709,7 +709,7 @@
 <spnOverride numeric="65507" spn="Cell C"/>
 <spnOverride numeric="65510" spn="MTN-SA"/>
 <spnOverride numeric="70267" spn="BTL"/>
-<spnOverride numeric="70401" spn="ClaroGTM"/>
+<spnOverride numeric="70401" spn="Claro GT"/>
 <spnOverride numeric="70402" spn="COMCEL"/>
 <spnOverride numeric="70403" spn="movistar"/>
 <spnOverride numeric="70601" spn="CLARO SLV"/>
