@@ -22,6 +22,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 
+/**
+* Note:
+* For the connection that will only be used to send a commond, when handle the command from this
+* connection, its client type will be set to WCND_CLIENT_TYPE_CMD. With this type, after the command
+* result is send back, its client type will be set to WCND_CLIENT_TYPE_SLEEP, then when there is an event
+* to notify, these connections will be ignored.
+*/
+
 static int wcn_process_btwificmd(int client_fd, char* cmd_str, WcndManager *pWcndManger)
 {
 	if(!pWcndManger || !cmd_str) return -1;
@@ -86,7 +94,7 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 	}
 
 	//special case for getting cp2 version, IF CP2 not started, use the saved VERSION info.
-	if(pWcndManger->state != WCND_STATE_CP2_STARTED)
+	if((pWcndManger->state != WCND_STATE_CP2_STARTED) && !to_tell_cp2_sleep)
 	{
 		if(to_get_cp2_version)
 		{
@@ -166,7 +174,7 @@ try_again:
 			if(to_get_cp2_version)
 				memcpy(pWcndManger->cp2_version_info, buffer, sizeof(buffer));
 
-			if(to_tell_cp2_sleep && strstr(buffer, "FAIL"))
+			if(to_tell_cp2_sleep && (strstr(buffer, "fail") || strstr(buffer, "FAIL")))
 			{
 				ret_value = -1;
 			}
@@ -183,7 +191,7 @@ try_again:
 out:
 	if(client_fd <= 0)
 	{
-		WCND_LOGE("Write '%s' to Invalid client_fd", buffer);
+		WCND_LOGE("Write '%s' to Invalid client_fd, ret_value: %d", buffer, ret_value);
 		return ret_value;
 	}
 	//send back the response
@@ -325,9 +333,9 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 
 #ifdef WCND_CP2_POWER_ONOFF_DISABLED
 
-	wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
-	return 0;
+		return 0;
 
 #endif
 

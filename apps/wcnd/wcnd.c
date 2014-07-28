@@ -460,6 +460,34 @@ overflow:
 }
 
 /**
+* if it is a engineer mode command, dispatch it to engineer worker thread
+*/
+static int worker_dispatch(WcndManager *pWcndManger, int client_fd, char *data)
+{
+	if(!pWcndManger || !data)
+	{
+		send_back_cmd_result(client_fd, "Null pointer!!", 0);
+		return -1;
+	}
+
+	//for engineer mode command, dispatch it to engineer worker thread
+	if(strstr(data, "eng"))
+	{
+		if(wcnd_worker_dispatch(pWcndManger, wcnd_woker_handle, data, client_fd, 0) < 0)
+		{
+			send_back_cmd_result(client_fd, "eng cmd dispatch error!!", 0);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	dispatch_command2(pWcndManger, client_fd, data) ;
+
+	return 0;
+}
+
+/**
 * the data string may contain multi cmds, each cmds end with null character.
 */
 static void dispatch_command(WcndManager *pWcndManger, int client_fd, char *data, int data_len)
@@ -480,7 +508,7 @@ static void dispatch_command(WcndManager *pWcndManger, int client_fd, char *data
 		{
 			if(start < count)
 			{
-				dispatch_command2(pWcndManger, client_fd, buffer+start) ;
+				worker_dispatch(pWcndManger, client_fd, buffer+start) ;
 			}
 			start = count + 1;
 		}
@@ -494,11 +522,35 @@ static void dispatch_command(WcndManager *pWcndManger, int client_fd, char *data
 	}
 	else if(start < count)
 	{
-		dispatch_command2(pWcndManger, client_fd, buffer+start) ;
+		worker_dispatch(pWcndManger, client_fd, buffer+start) ;
 	}
 
 	return;
 }
+
+
+/**
+* To handle the worker. That is to handle the command.
+*/
+int wcnd_woker_handle(void *worker)
+{
+	if(!worker) return -1;
+	WcndWorker *pWorker = (WcndWorker*)worker;
+	WcndManager *pWcndManger = (WcndManager *)(pWorker->ctx);
+	int client_fd = pWorker->replyto_fd;
+	char *data = pWorker->data;
+
+	if(!pWcndManger || !data)
+	{
+		send_back_cmd_result(client_fd, "Null pointer!!", 0);
+		return -1;
+	}
+
+	dispatch_command2(pWcndManger, client_fd, data) ;
+
+	return 0;
+}
+
 
 
 /**
@@ -1762,6 +1814,10 @@ static int init(WcndManager *pWcndManger)
 	wcnd_sm_init(pWcndManger);
 
 	memcpy(pWcndManger->cp2_version_info, WCND_CP2_DEFAULT_CP2_VERSION_INFO, sizeof(WCND_CP2_DEFAULT_CP2_VERSION_INFO));
+
+
+	//start engineer worker thread
+	wcnd_worker_init(pWcndManger);
 
 	pWcndManger->inited = 1;
 

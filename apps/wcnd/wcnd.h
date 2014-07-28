@@ -89,6 +89,15 @@
 
 #define WCND_CP2_DEFAULT_CP2_VERSION_INFO "Fail: UNKNOW VERSION"
 
+typedef struct structWcndWorker {
+	int (*handler)(void *ctx);
+	void *ctx;
+	void *data;
+	int replyto_fd; //fd to replay message
+	struct structWcndWorker *next;
+} WcndWorker;
+
+
 typedef struct structWcndMessage{
 	int event;
 	int replyto_fd; //fd to replay message
@@ -181,6 +190,13 @@ typedef struct structWcndManager
 	//save the cp2 version info
 	char cp2_version_info[256];
 
+
+	pthread_mutex_t worker_lock;
+	pthread_cond_t worker_cond;
+
+	//engineer mode cmds queue
+	WcndWorker *eng_cmd_queue;
+
 }WcndManager;
 
 
@@ -200,6 +216,11 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 int wcnd_send_selfcmd(WcndManager *pWcndManger, char *cmd);
 int wcnd_open_cp2(WcndManager *pWcndManger);
 int wcnd_close_cp2(WcndManager *pWcndManger);
+
+
+int wcnd_worker_init(WcndManager *pWcndManger);
+int wcnd_worker_dispatch(WcndManager *pWcndManger, int (*handler)(void *), char *data, int fd, int type);
+int wcnd_woker_handle(void *worker);
 
 
 
