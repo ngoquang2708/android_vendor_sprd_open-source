@@ -4288,12 +4288,31 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
 
 	/* auto adjust */
-	memcpy((void*)isp_context_ptr->auto_adjust.bil_param, (void*)isp_context_ptr->denoise_tab, sizeof(struct isp_denoise_param_tab)*14);
 	//memcpy((void*)&isp_context_ptr->auto_adjust.y_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
 	//memcpy((void*)&isp_context_ptr->auto_adjust.uv_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
-	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*14*2);
-	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*14);
+	/*
+	memcpy((void*)isp_context_ptr->auto_adjust.bil_param, (void*)isp_context_ptr->denoise_tab, sizeof(struct isp_denoise_param_tab)*2);
+	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*9*2);
+	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*7);
 	memcpy((void*)isp_context_ptr->auto_adjust.edge_param, (void*)isp_context_ptr->edge_tab, sizeof(struct isp_edge_param)*14);
+*/
+	for (i = 0; i < 2; ++i) {
+		memcpy((void*)&isp_context_ptr->auto_adjust.bil_param[i].diswei[0], (void*)&isp_context_ptr->denoise_tab[i].diswei[0], sizeof(uint8_t) * 19);
+		memcpy((void*)&isp_context_ptr->auto_adjust.bil_param[i].ranwei[0], (void*)&isp_context_ptr->denoise_tab[i].ranwei[0], sizeof(uint8_t) * 31);
+	}
+	for (i = 0; i < 9; ++i) {
+		for (j = 0; j < 9; ++j) {
+			isp_context_ptr->auto_adjust.cmc_param[i].matrix[j] = isp_context_ptr->cmc_tab[i][j];
+		}
+	}
+	for (i = 0; i < 7; ++i) {
+		memcpy((void*)&isp_context_ptr->auto_adjust.gamma_param[i].axis[0][0], (void*)&isp_context_ptr->gamma_tab[i].axis[0][0], sizeof(uint16_t) * 2 * 26);
+	}
+	for (i = 0; i < 14; ++i) {
+		isp_context_ptr->auto_adjust.edge_param[i].detail_thr = isp_context_ptr->edge_tab[i].detail_thr;
+		isp_context_ptr->auto_adjust.edge_param[i].smooth_thr = isp_context_ptr->edge_tab[i].smooth_thr;
+		isp_context_ptr->auto_adjust.edge_param[i].strength = isp_context_ptr->edge_tab[i].strength;
+	}
 
 	return rtn;
 
@@ -5215,12 +5234,31 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->chn.b_offset=raw_tune_ptr->chn.b_offset;
 
 	/* auto adjust */
+	//memcpy((void*)&isp_context_ptr->auto_adjust.y_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
+	//memcpy((void*)&isp_context_ptr->auto_adjust.uv_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*14);
+	/*
 	memcpy((void*)isp_context_ptr->auto_adjust.bil_param, (void*)isp_context_ptr->denoise_tab, sizeof(struct isp_denoise_param_tab)*2);
-	//memcpy((void*)isp_context_ptr->auto_adjust.y_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*2);
-	//memcpy((void*)isp_context_ptr->auto_adjust.uv_denoise_param[0], (void*)isp_context_ptr->denoise_tab, (struct isp_denoise_param_tab)*2);
 	memcpy((void*)isp_context_ptr->auto_adjust.cmc_param, (void*)isp_context_ptr->cmc_tab, 9*9*2);
 	memcpy((void*)isp_context_ptr->auto_adjust.gamma_param, (void*)isp_context_ptr->gamma_tab, sizeof(struct isp_gamma_tab)*7);
 	memcpy((void*)isp_context_ptr->auto_adjust.edge_param, (void*)isp_context_ptr->edge_tab, sizeof(struct isp_edge_param)*14);
+*/
+	for (i = 0; i < 2; ++i) {
+		memcpy((void*)&isp_context_ptr->auto_adjust.bil_param[i].diswei[0], (void*)&isp_context_ptr->denoise_tab[i].diswei[0], sizeof(uint8_t) * 19);
+		memcpy((void*)&isp_context_ptr->auto_adjust.bil_param[i].ranwei[0], (void*)&isp_context_ptr->denoise_tab[i].ranwei[0], sizeof(uint8_t) * 31);
+	}
+	for (i = 0; i < 9; ++i) {
+		for (j = 0; j < 9; ++j) {
+			isp_context_ptr->auto_adjust.cmc_param[i].matrix[j] = isp_context_ptr->cmc_tab[i][j];
+		}
+	}
+	for (i = 0; i < 7; ++i) {
+		memcpy((void*)&isp_context_ptr->auto_adjust.gamma_param[i].axis[0][0], (void*)&isp_context_ptr->gamma_tab[i].axis[0][0], sizeof(uint16_t) * 2 * 26);
+	}
+	for (i = 0; i < 14; ++i) {
+		isp_context_ptr->auto_adjust.edge_param[i].detail_thr = isp_context_ptr->edge_tab[i].detail_thr;
+		isp_context_ptr->auto_adjust.edge_param[i].smooth_thr = isp_context_ptr->edge_tab[i].smooth_thr;
+		isp_context_ptr->auto_adjust.edge_param[i].strength = isp_context_ptr->edge_tab[i].strength;
+	}
 
 	/*smart light parameters*/
 	{
