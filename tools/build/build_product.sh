@@ -79,7 +79,7 @@ if [ -n "$MOD" ]; then
   fi
 fi
 
-find . -name "*.img" -o -name "*.bin" -o -name "installed-files.txt" -o -name "$MOD.apk" -maxdepth 1| xargs tar -zcf $PAK 2
+find . -maxdepth 1 -name "*.img" -o -name "*.bin" -o -name "installed-files.txt" -o -name "$MOD.apk" | xargs tar -zcf $PAK 
 cd -
 
 
