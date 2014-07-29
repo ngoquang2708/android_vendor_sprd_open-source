@@ -154,7 +154,8 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mMP4EncGetConf(NULL),
       mMP4EncStrmEncode(NULL),
       mMP4EncGenHeader(NULL),
-      mMP4EncRelease(NULL) {
+      mMP4EncRelease(NULL),
+      mKeyFrameRequested(false) {
 
     ALOGI("Construct SPRDMPEG4Encoder, this: %0x", (void *)this);
 
@@ -824,6 +825,26 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
     }
 }
 
+OMX_ERRORTYPE SPRDMPEG4Encoder::setConfig(
+    OMX_INDEXTYPE index, const OMX_PTR params) {
+    switch (index) {
+        case OMX_IndexConfigVideoIntraVOPRefresh:
+        {
+            OMX_CONFIG_INTRAREFRESHVOPTYPE *pConfigIntraRefreshVOP =
+                (OMX_CONFIG_INTRAREFRESHVOPTYPE *)params;
+
+            if (pConfigIntraRefreshVOP->nPortIndex != kOutputPortIndex) {
+                return OMX_ErrorBadPortIndex;
+            }
+
+            mKeyFrameRequested = pConfigIntraRefreshVOP->IntraRefreshVOP;
+            return OMX_ErrorNone;
+        }
+
+        default:
+            return SprdSimpleOMXComponent::setConfig(index, params);
+    }
+}
 
 OMX_ERRORTYPE SPRDMPEG4Encoder::getExtensionIndex(
     const char *name, OMX_INDEXTYPE *index)
@@ -1023,7 +1044,16 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
 
             vid_in.time_stamp = (inHeader->nTimeStamp + 500) / 1000;  // in ms;
             vid_in.channel_quality = 1;
-            vid_in.vopType = (mNumInputFrames % mVideoFrameRate) ? 1 : 0;
+
+            if (mKeyFrameRequested) {
+                vid_in.vopType = 0;    // I frame
+                ALOGI("Request an IDR frame");
+                mKeyFrameRequested = false;
+            }
+            else {
+                vid_in.vopType = (mNumInputFrames % mVideoFrameRate) ? 1 : 0;
+            }
+
             vid_in.p_src_y = py;
             vid_in.p_src_v = 0;
             vid_in.p_src_y_phy = py_phy;

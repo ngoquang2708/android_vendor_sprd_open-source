@@ -42,6 +42,9 @@ struct SPRDMPEG4Encoder : public SprdSimpleOMXComponent {
     virtual OMX_ERRORTYPE internalSetParameter(
         OMX_INDEXTYPE index, const OMX_PTR params);
 
+    virtual OMX_ERRORTYPE setConfig(
+        OMX_INDEXTYPE index, const OMX_PTR params);
+
     virtual void onQueueFilled(OMX_U32 portIndex);
 
     virtual OMX_ERRORTYPE getExtensionIndex(
@@ -54,6 +57,11 @@ private:
     enum {
         kNumBuffers = 2,
     };
+
+    // OMX port indexes that refer to input and
+    // output ports respectively
+    static const uint32_t kInputPortIndex = 0;
+    static const uint32_t kOutputPortIndex = 1;
 
     // OMX input buffer's timestamp and flags
     typedef struct {
@@ -121,6 +129,8 @@ private:
 #ifdef SPRD_DUMP_BS
     FILE* mFile_bs;
 #endif
+
+    bool mKeyFrameRequested;
 
     void initPorts();
     OMX_ERRORTYPE initEncParams();
