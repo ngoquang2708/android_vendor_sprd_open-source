@@ -38,6 +38,7 @@ elif [ "$1" = "-d" ]; then
 
 	ethdown=`getprop ril.gsps.eth.down`
 	if [ "$ethdown" = "1" ]; then
+                iptables -X
 		setprop ril.gsps.eth.down 0
 		setprop sys.gsps.eth.ifname ""
 		setprop sys.gsps.eth.localip ""
