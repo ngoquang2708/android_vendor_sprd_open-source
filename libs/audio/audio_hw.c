@@ -1335,8 +1335,11 @@ ret);
         {
             ALOGE("%s:close FM device",__func__);
             pthread_mutex_lock(&adev->lock);
-            pcm_close(adev->pcm_fm_dl);
-            adev->pcm_fm_dl= NULL;
+            if(adev->pcm_fm_dl != NULL){/*recheck is to avoid pcm_fm_dl has been
+            freed in setting mode in vbc_ctrl_thread_linein_routine*/
+                pcm_close(adev->pcm_fm_dl);
+                adev->pcm_fm_dl= NULL;
+            }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
                 set_codec_mute_forFM(adev,true);
