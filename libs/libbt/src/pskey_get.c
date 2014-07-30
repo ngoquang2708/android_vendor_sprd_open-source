@@ -357,6 +357,7 @@ int bt_getPskeyFromFile(void *pData)
     unsigned char *pBuf = NULL;
     int len;
     int board_type=0;
+    char ssp_property[16] = {0};
 
 #ifdef HW_ADC_ADAPT_SUPPORT
     char *CFG_2351_PATH[] = {
@@ -432,6 +433,15 @@ int bt_getPskeyFromFile(void *pData)
         free(pBuf);
         return -1;
     }
+
+    ALOGI("SSP setting from pskey: 0x%x", ((BT_PSKEY_CONFIG_T *)pData)->feature_set[6]);
+
+    ret = property_get("persist.sys.bt.non.ssp", ssp_property, "close");
+    if(ret >= 0 && !strcmp(ssp_property, "open")) {
+        ALOGI("### disable BT SSP function due to property setting ###");
+        ((BT_PSKEY_CONFIG_T *)pData)->feature_set[6] &= 0xF7;
+    }
+
     ALOGI("begin to dumpPskey");
     bt_dumpPskey((BT_PSKEY_CONFIG_T *)pData);
     free(pBuf);
