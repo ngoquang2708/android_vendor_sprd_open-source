@@ -3467,18 +3467,14 @@ static int adev_init_check(const struct audio_hw_device *dev)
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
-    if(adev->mode == AUDIO_MODE_IN_CALL || adev->call_start ){
-        ALOGW("[adev_set_voice_volume], devices:0x%x ",adev->out_devices);
-        if (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM) {
-            return 0;
-        }
-        BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
-        adev->voice_volume = volume;
-        /*Send at command to cp side*/
-        at_cmd_volume(volume,adev->mode);
-    }else{
-        BLUE_TRACE("%s in, not MODE_IN_CALL (%d), return ",__func__,adev->mode);
+    ALOGW("[adev_set_voice_volume], devices:0x%x ",adev->out_devices);
+    if (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM) {
+        return 0;
     }
+    BLUE_TRACE("adev_set_voice_volume in...volume:%f mode:%d call_start:%d ",volume,adev->mode,adev->call_start);
+    adev->voice_volume = volume;
+    /*Send at command to cp side*/
+    at_cmd_volume(volume,adev->mode);
     return 0;
 }
 
