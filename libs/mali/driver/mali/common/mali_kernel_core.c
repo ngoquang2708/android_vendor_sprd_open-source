@@ -1126,6 +1126,65 @@ _mali_osk_errcode_t _mali_ukk_get_api_version( _mali_uk_get_api_version_s *args 
 	MALI_SUCCESS;
 }
 
+#if MALI_ENABLE_SYSTRACE
+_mali_osk_errcode_t _mali_ukk_wait_for_systrace_notification( _mali_uk_wait_for_systrace_notification_s *args,_mali_osk_notification_queue_t *queue)
+{
+	_mali_osk_errcode_t err;
+	_mali_osk_notification_t * notification;
+
+	/* check input */
+	MALI_DEBUG_ASSERT_POINTER(args);
+	MALI_CHECK_NON_NULL(args->ctx, _MALI_OSK_ERR_INVALID_ARGS);
+
+	/* if the queue does not exist we're currently shutting down */
+	if (NULL == queue) {
+		MALI_DEBUG_PRINT(1, ("No notification queue registered with the session. Asking userspace to stop querying\n"));
+		args->type = _MALI_NOTIFICATION_CORE_SHUTDOWN_IN_PROGRESS;
+		MALI_SUCCESS;
+	}
+
+	/* receive a notification, might sleep */
+	err = _mali_osk_notification_queue_receive(queue, &notification);
+	if (_MALI_OSK_ERR_OK != err) {
+		MALI_ERROR(err); /* errcode returned, pass on to caller */
+	}
+
+	/* copy the buffer to the user */
+	args->type = (_mali_uk_notification_type)notification->notification_type;
+	_mali_osk_memcpy(&args->data, notification->result_buffer, notification->result_buffer_size);
+
+	/* finished with the notification */
+	_mali_osk_notification_delete( notification );
+
+	MALI_SUCCESS; /* all ok */
+}
+
+_mali_osk_errcode_t _mali_ukk_post_systrace_notification( _mali_uk_post_systrace_notification_s *args,_mali_osk_notification_queue_t *queue )
+{
+	_mali_osk_notification_t * notification;
+
+	/* check input */
+	MALI_DEBUG_ASSERT_POINTER(args);
+	MALI_CHECK_NON_NULL(args->ctx, _MALI_OSK_ERR_INVALID_ARGS);
+
+	/* if the queue does not exist we're currently shutting down */
+	if (NULL == queue) {
+		MALI_DEBUG_PRINT(1, ("No notification queue registered with the session. Asking userspace to stop querying\n"));
+		MALI_SUCCESS;
+	}
+
+	notification = _mali_osk_notification_create(args->type, 0);
+	if (NULL == notification) {
+		MALI_PRINT_ERROR( ("Failed to create notification object\n"));
+		return _MALI_OSK_ERR_NOMEM;
+	}
+
+	_mali_osk_notification_queue_send(queue, notification);
+
+	MALI_SUCCESS; /* all ok */
+}
+#endif
+
 _mali_osk_errcode_t _mali_ukk_wait_for_notification( _mali_uk_wait_for_notification_s *args )
 {
 	_mali_osk_errcode_t err;
@@ -1219,6 +1278,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 
 	/* create a response queue for this session */
 	session->ioctl_queue = _mali_osk_notification_queue_init();
+#if MALI_ENABLE_SYSTRACE
+	session->systrace_gp_queue = _mali_osk_notification_queue_init();
+	session->systrace_pp_queue = _mali_osk_notification_queue_init();
+#endif
 	if (NULL == session->ioctl_queue) {
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
@@ -1227,6 +1290,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 	session->page_directory = mali_mmu_pagedir_alloc();
 	if (NULL == session->page_directory) {
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
@@ -1234,6 +1301,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 	if (_MALI_OSK_ERR_OK != mali_mmu_pagedir_map(session->page_directory, MALI_DLBU_VIRT_ADDR, _MALI_OSK_MALI_PAGE_SIZE)) {
 		MALI_PRINT_ERROR(("Failed to map DLBU page into session\n"));
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
@@ -1246,6 +1317,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 	if (_MALI_OSK_ERR_OK != mali_memory_session_begin(session)) {
 		mali_mmu_pagedir_free(session->page_directory);
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
@@ -1256,6 +1331,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 		mali_memory_session_end(session);
 		mali_mmu_pagedir_free(session->page_directory);
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
@@ -1267,6 +1346,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 		mali_memory_session_end(session);
 		mali_mmu_pagedir_free(session->page_directory);
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		MALI_ERROR(_MALI_OSK_ERR_NOMEM);
 	}
@@ -1279,6 +1362,10 @@ _mali_osk_errcode_t _mali_ukk_open(void **context)
 		mali_memory_session_end(session);
 		mali_mmu_pagedir_free(session->page_directory);
 		_mali_osk_notification_queue_term(session->ioctl_queue);
+#if MALI_ENABLE_SYSTRACE
+		_mali_osk_notification_queue_term(session->systrace_gp_queue);
+		_mali_osk_notification_queue_term(session->systrace_pp_queue);
+#endif
 		_mali_osk_free(session);
 		return _MALI_OSK_ERR_FAULT;
 	}

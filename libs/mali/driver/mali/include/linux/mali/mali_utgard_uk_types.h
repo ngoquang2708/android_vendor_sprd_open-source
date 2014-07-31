@@ -82,7 +82,15 @@ typedef enum {
 	_MALI_UK_TIMELINE_CREATE_SYNC_FENCE,  /**< _mali_ukk_timeline_create_sync_fence() */
 	_MALI_UK_SOFT_JOB_START,              /**< _mali_ukk_soft_job_start() */
 	_MALI_UK_SOFT_JOB_SIGNAL,             /**< _mali_ukk_soft_job_signal() */
-	_MALI_UK_SET_GPU_LEVEL,           /*set gpu level to control frequency */
+	_MALI_UK_SET_GPU_LEVEL,               /*set gpu level to control frequency */
+#if MALI_ENABLE_SYSTRACE
+	_MALI_UK_WAIT_FOR_SYSTRACE_NOTIFICATION,     /**< _mali_ukk_wait_for_systrace_notification() */
+	_MALI_UK_POST_SYSTRACE_NOTIFICATION,         /**< _mali_ukk_post_systrace_notification() */
+	_MALI_UK_WAIT_FOR_SYSTRACE_GP_NOTIFICATION,     /**< _mali_ukk_wait_for_systrace_notification() */
+	_MALI_UK_POST_SYSTRACE_GP_NOTIFICATION,         /**< _mali_ukk_post_systrace_notification() */
+	_MALI_UK_WAIT_FOR_SYSTRACE_PP_NOTIFICATION,     /**< _mali_ukk_wait_for_systrace_notification() */
+	_MALI_UK_POST_SYSTRACE_PP_NOTIFICATION,         /**< _mali_ukk_post_systrace_notification() */
+#endif
 
 	/** Memory functions */
 
@@ -501,6 +509,7 @@ typedef struct {
 
 /** @} */ /* end group _mali_uk_ppstartjob_s */
 
+
 typedef struct {
 	u32 user_job_ptr;                          /**< [out] identifier for the job in user space */
 	_mali_uk_job_status status;                /**< [out] status of finished job */
@@ -587,11 +596,19 @@ typedef enum {
 
 	_MALI_NOTIFICATION_PP_FINISHED =                (_MALI_UK_PP_SUBSYSTEM << 16) | 0x10,
 	_MALI_NOTIFICATION_PP_NUM_CORE_CHANGE =         (_MALI_UK_PP_SUBSYSTEM << 16) | 0x20,
+#if MALI_ENABLE_SYSTRACE
+	_MALI_NOTIFICATION_PP_START =                   (_MALI_UK_PP_SUBSYSTEM << 16) | 0x40,
+	_MALI_NOTIFICATION_PP_END =                     (_MALI_UK_PP_SUBSYSTEM << 16) | 0x80,
+#endif
 
 	/** Vertex Processor notifications */
 
 	_MALI_NOTIFICATION_GP_FINISHED =                (_MALI_UK_GP_SUBSYSTEM << 16) | 0x10,
 	_MALI_NOTIFICATION_GP_STALLED =                 (_MALI_UK_GP_SUBSYSTEM << 16) | 0x20,
+#if MALI_ENABLE_SYSTRACE
+	_MALI_NOTIFICATION_GP_START =                   (_MALI_UK_GP_SUBSYSTEM << 16) | 0x40,
+	_MALI_NOTIFICATION_GP_END =                     (_MALI_UK_GP_SUBSYSTEM << 16) | 0x80,
+#endif
 
 } _mali_uk_notification_type;
 
@@ -699,6 +716,27 @@ typedef struct {
 		_mali_uk_soft_job_activated_s soft_job_activated; /**< [out] Notification data for _MALI_NOTIFICATION_SOFT_ACTIVATED notification type */
 	} data;
 } _mali_uk_wait_for_notification_s;
+
+#if MALI_ENABLE_SYSTRACE
+typedef struct {
+	u32 user_job_ptr;               /**< [out] identifier for the job in user space */
+	u32 job_id;
+	u32 flush_id;
+} _mali_uk_job_event_s;
+
+typedef struct {
+	void *ctx;                       /**< [in,out] user-kernel context (trashed on output) */
+	_mali_uk_notification_type type; /**< [out] Type of notification available */
+	union {
+		_mali_uk_job_event_s     job_event;
+	}data;
+}_mali_uk_wait_for_systrace_notification_s;
+
+typedef struct {
+	void *ctx;                       /**< [in,out] user-kernel context (trashed on output) */
+	_mali_uk_notification_type type; /**< [in] Type of notification to post */
+} _mali_uk_post_systrace_notification_s;
+#endif
 
 /** @brief Arguments for _mali_ukk_post_notification()
  *

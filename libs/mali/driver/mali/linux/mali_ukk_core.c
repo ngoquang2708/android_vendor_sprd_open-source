@@ -57,6 +57,50 @@ int wait_for_notification_wrapper(struct mali_session_data *session_data, _mali_
 	return 0;
 }
 
+#if MALI_ENABLE_SYSTRACE
+int wait_for_systrace_notification_wrapper(struct mali_session_data *session_data, _mali_osk_notification_queue_t *queue, _mali_uk_wait_for_systrace_notification_s __user *uargs)
+{
+	_mali_uk_wait_for_systrace_notification_s kargs;
+	_mali_osk_errcode_t err;
+
+	MALI_CHECK_NON_NULL(uargs, -EINVAL);
+
+	kargs.ctx = session_data;
+	err = _mali_ukk_wait_for_systrace_notification(&kargs,queue);
+	if (_MALI_OSK_ERR_OK != err) return map_errcode(err);
+
+	if(_MALI_NOTIFICATION_CORE_SHUTDOWN_IN_PROGRESS != kargs.type) {
+		kargs.ctx = NULL; /* prevent kernel address to be returned to user space */
+		if (0 != copy_to_user(uargs, &kargs, sizeof(_mali_uk_wait_for_systrace_notification_s))) return -EFAULT;
+	} else {
+		if (0 != put_user(kargs.type, &uargs->type)) return -EFAULT;
+	}
+
+	return 0;
+}
+
+int post_systrace_notification_wrapper(struct mali_session_data *session_data, _mali_osk_notification_queue_t *queue, _mali_uk_post_systrace_notification_s __user *uargs)
+{
+	_mali_uk_post_systrace_notification_s kargs;
+	_mali_osk_errcode_t err;
+
+	MALI_CHECK_NON_NULL(uargs, -EINVAL);
+
+	kargs.ctx = session_data;
+
+	if (0 != get_user(kargs.type, &uargs->type)) {
+		return -EFAULT;
+	}
+
+	err = _mali_ukk_post_systrace_notification(&kargs,queue);
+	if (_MALI_OSK_ERR_OK != err) {
+		return map_errcode(err);
+	}
+
+	return 0;
+}
+#endif
+
 int post_notification_wrapper(struct mali_session_data *session_data, _mali_uk_post_notification_s __user *uargs)
 {
 	_mali_uk_post_notification_s kargs;

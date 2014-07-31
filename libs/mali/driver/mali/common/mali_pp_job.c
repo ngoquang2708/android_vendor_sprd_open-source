@@ -52,6 +52,14 @@ struct mali_pp_job *mali_pp_job_create(struct mali_session_data *session, _mali_
 			goto fail;
 		}
 
+#if MALI_ENABLE_SYSTRACE
+		job->start_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_PP_START, sizeof(_mali_uk_job_event_s));
+		if (NULL == job->start_notification) goto fail;
+
+		job->end_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_PP_END, sizeof(_mali_uk_job_event_s));
+		if (NULL == job->end_notification) goto fail;
+#endif
+
 		if (!mali_pp_job_use_no_notification(job)) {
 			job->finished_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_PP_FINISHED, sizeof(_mali_uk_pp_job_finished_s));
 			if (NULL == job->finished_notification) goto fail;
@@ -156,6 +164,14 @@ fail:
 void mali_pp_job_delete(struct mali_pp_job *job)
 {
 	mali_dma_put_cmd_buf(&job->dma_cmd_buf);
+#if MALI_ENABLE_SYSTRACE
+	if (NULL != job->start_notification) {
+		_mali_osk_notification_delete(job->start_notification);
+	}
+	if (NULL != job->end_notification) {
+		_mali_osk_notification_delete(job->end_notification);
+	}
+#endif
 	if (NULL != job->finished_notification) {
 		_mali_osk_notification_delete(job->finished_notification);
 	}

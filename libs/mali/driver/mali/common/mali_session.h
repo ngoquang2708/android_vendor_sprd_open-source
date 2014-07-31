@@ -26,6 +26,10 @@ struct mali_soft_system;
 struct mali_session_data {
 	_mali_osk_notification_queue_t * ioctl_queue;
 
+#if MALI_ENABLE_SYSTRACE
+	_mali_osk_notification_queue_t * systrace_gp_queue;
+	_mali_osk_notification_queue_t * systrace_pp_queue;
+#endif
 	_mali_osk_mutex_t *memory_lock; /**< Lock protecting the vm manipulation */
 	mali_descriptor_mapping * descriptor_mapping; /**< Mapping between userspace descriptors and our pointers */
 	_mali_osk_list_t memory_head; /**< Track all the memory allocated in this session, for freeing on abnormal termination */
