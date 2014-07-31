@@ -23,6 +23,19 @@ struct mali_gp_job *mali_gp_job_create(struct mali_session_data *session, _mali_
 
 	job = _mali_osk_malloc(sizeof(struct mali_gp_job));
 	if (NULL != job) {
+#if MALI_ENABLE_SYSTRACE
+		job->start_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_GP_START, sizeof(_mali_uk_job_event_s));
+		if (NULL == job->start_notification) {
+			_mali_osk_free(job);
+			return NULL;
+		}
+		job->end_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_GP_END, sizeof(_mali_uk_job_event_s));
+		if (NULL == job->end_notification) {
+			_mali_osk_free(job);
+			return NULL;
+		}
+#endif
+
 		job->finished_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_GP_FINISHED, sizeof(_mali_uk_gp_job_finished_s));
 		if (NULL == job->finished_notification) {
 			_mali_osk_free(job);
@@ -30,13 +43,22 @@ struct mali_gp_job *mali_gp_job_create(struct mali_session_data *session, _mali_
 		}
 
 		job->oom_notification = _mali_osk_notification_create(_MALI_NOTIFICATION_GP_STALLED, sizeof(_mali_uk_gp_job_suspended_s));
+
 		if (NULL == job->oom_notification) {
+#if MALI_ENABLE_SYSTRACE
+			_mali_osk_notification_delete(job->start_notification);
+			_mali_osk_notification_delete(job->end_notification);
+#endif
 			_mali_osk_notification_delete(job->finished_notification);
 			_mali_osk_free(job);
 			return NULL;
 		}
 
 		if (0 != _mali_osk_copy_from_user(&job->uargs, uargs, sizeof(_mali_uk_gp_start_job_s))) {
+#if MALI_ENABLE_SYSTRACE
+			_mali_osk_notification_delete(job->start_notification);
+			_mali_osk_notification_delete(job->end_notification);
+#endif
 			_mali_osk_notification_delete(job->finished_notification);
 			_mali_osk_notification_delete(job->oom_notification);
 			_mali_osk_free(job);
@@ -88,6 +110,16 @@ void mali_gp_job_delete(struct mali_gp_job *job)
 		_mali_osk_notification_delete(job->oom_notification);
 		job->oom_notification = NULL;
 	}
+#if MALI_ENABLE_SYSTRACE
+	if (NULL != job->start_notification) {
+		_mali_osk_notification_delete(job->start_notification);
+		job->start_notification = NULL;
+	}
+	if (NULL != job->end_notification) {
+		_mali_osk_notification_delete(job->end_notification);
+		job->end_notification = NULL;
+	}
+#endif
 	if (NULL != job->finished_notification) {
 		_mali_osk_notification_delete(job->finished_notification);
 		job->finished_notification = NULL;

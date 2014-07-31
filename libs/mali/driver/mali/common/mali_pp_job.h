@@ -47,6 +47,10 @@ struct mali_pp_job {
 	u32 sub_job_errors;                                /**< Bitfield with errors (errors for each single sub-job is or'ed together) */
 	u32 pid;                                           /**< Process ID of submitting process */
 	u32 tid;                                           /**< Thread ID of submitting thread */
+#if MALI_ENABLE_SYSTRACE
+	_mali_osk_notification_t *start_notification;      /**< Notification sent back to userspace on job start */
+	_mali_osk_notification_t *end_notification;        /**< Notification sent back to userspace on job end */
+#endif
 	_mali_osk_notification_t *finished_notification;   /**< Notification sent back to userspace on job complete */
 	u32 num_memory_cookies;                            /**< Number of memory cookies attached to job */
 	u32 *memory_cookies;                               /**< Memory cookies attached to job */

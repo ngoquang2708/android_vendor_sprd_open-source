@@ -216,6 +216,18 @@ _mali_osk_errcode_t _mali_ukk_close( void **context );
  * - wait for the result of jobs started on a core
  *
  * @{ */
+#if MALI_ENABLE_SYSTRACE
+/** @brief Waits for a job notification used for systrace.
+ *
+ * Sleeps until notified or a timeout occurs. Returns information about the notification.
+ *
+ * @param args see _mali_uk_wait_for_systrace_event_s in "mali_utgard_uk_types.h"
+ * @return _MALI_OSK_ERR_OK on success, otherwise a suitable _mali_osk_errcode_t on failure.
+ */
+_mali_osk_errcode_t _mali_ukk_wait_for_systrace_notification( _mali_uk_wait_for_systrace_notification_s *args, _mali_osk_notification_queue_t *queue);
+
+_mali_osk_errcode_t _mali_ukk_post_systrace_notification( _mali_uk_post_systrace_notification_s *args, _mali_osk_notification_queue_t *queue);
+#endif
 
 /** @brief Waits for a job notification.
  *

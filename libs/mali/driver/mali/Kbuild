@@ -25,6 +25,7 @@ MALI_ENABLE_CPU_CYCLES ?= 0
 MALI_ENABLE_GPU_CONTROL_IN_PARAM ?= 1
 DFS_MAX_FREQ ?= 256000
 DFS_MIN_FREQ ?= 64000
+MALI_ENABLE_SYSTRACE ?= 0
 
 # For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
 # The ARM proprietary product will only include the license/proprietary directory
@@ -158,6 +159,7 @@ ccflags-y += -DMALI_ENABLE_CPU_CYCLES=$(MALI_ENABLE_CPU_CYCLES)
 ccflags-y += -DMALI_ENABLE_GPU_CONTROL_IN_PARAM=$(MALI_ENABLE_GPU_CONTROL_IN_PARAM)
 ccflags-y += -DDFS_MAX_FREQ=$(DFS_MAX_FREQ)
 ccflags-y += -DDFS_MIN_FREQ=$(DFS_MIN_FREQ)
+ccflags-y += -DMALI_ENABLE_SYSTRACE=$(MALI_ENABLE_SYSTRACE)
 
 ifeq ($(MALI_UPPER_HALF_SCHEDULING),1)
 	ccflags-y += -DMALI_UPPER_HALF_SCHEDULING

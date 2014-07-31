@@ -66,6 +66,56 @@ static void mali_group_mmu_page_fault_and_unlock(struct mali_group *group);
 static void mali_group_post_process_job_pp(struct mali_group *group);
 static void mali_group_post_process_job_gp(struct mali_group *group, mali_bool suspend);
 
+#if MALI_ENABLE_SYSTRACE
+static void mali_trace_gp_start_job(struct mali_gp_job *job)
+{
+		_mali_uk_job_event_s *jobres = job->start_notification->result_buffer;
+		_mali_osk_memset(jobres, 0, sizeof(_mali_uk_job_event_s)); /* @@@@ can be removed once we initialize all members in this struct */
+		jobres->user_job_ptr = mali_gp_job_get_user_id(job);
+		jobres->job_id = mali_gp_job_get_id(job);
+		jobres->flush_id = mali_gp_job_get_flush_id(job);
+
+		_mali_osk_notification_queue_send(mali_gp_job_get_session(job)->systrace_gp_queue, job->start_notification);
+		job->start_notification = NULL;
+}
+
+static void mali_trace_gp_end_job(struct mali_gp_job *job)
+{
+		_mali_uk_job_event_s *jobres = job->end_notification->result_buffer;
+		_mali_osk_memset(jobres, 0, sizeof(_mali_uk_job_event_s)); /* @@@@ can be removed once we initialize all members in this struct */
+		jobres->user_job_ptr = mali_gp_job_get_user_id(job);
+		jobres->job_id = mali_gp_job_get_id(job);
+		jobres->flush_id = mali_gp_job_get_flush_id(job);
+
+		_mali_osk_notification_queue_send(mali_gp_job_get_session(job)->systrace_gp_queue, job->end_notification);
+		job->end_notification = NULL;
+}
+
+static void mali_trace_pp_start_job(struct mali_pp_job *job)
+{
+		_mali_uk_job_event_s *jobres = job->start_notification->result_buffer;
+		_mali_osk_memset(jobres, 0, sizeof(_mali_uk_job_event_s)); /* @@@@ can be removed once we initialize all members in this struct */
+		jobres->user_job_ptr = mali_pp_job_get_user_id(job);
+		jobres->job_id = mali_pp_job_get_id(job);
+		jobres->flush_id = mali_pp_job_get_flush_id(job);
+
+		_mali_osk_notification_queue_send(mali_pp_job_get_session(job)->systrace_pp_queue, job->start_notification);
+		job->start_notification = NULL;
+}
+
+static void mali_trace_pp_end_job(struct mali_pp_job *job)
+{
+		_mali_uk_job_event_s *jobres = job->end_notification->result_buffer;
+		_mali_osk_memset(jobres, 0, sizeof(_mali_uk_job_event_s)); /* @@@@ can be removed once we initialize all members in this struct */
+		jobres->user_job_ptr = mali_pp_job_get_user_id(job);
+		jobres->job_id = mali_pp_job_get_id(job);
+		jobres->flush_id = mali_pp_job_get_flush_id(job);
+
+		_mali_osk_notification_queue_send(mali_pp_job_get_session(job)->systrace_pp_queue, job->end_notification);
+		job->end_notification = NULL;
+}
+#endif
+
 void mali_group_lock(struct mali_group *group)
 {
 #ifdef MALI_UPPER_HALF_SCHEDULING
@@ -566,6 +616,9 @@ void mali_group_start_gp_job(struct mali_group *group, struct mali_gp_job *job)
 	trace_gpu_sched_switch(mali_gp_get_hw_core_desc(group->gp_core), sched_clock(),
 	                       mali_gp_job_get_pid(job), 0, mali_gp_job_get_id(job));
 #endif
+#if MALI_ENABLE_SYSTRACE
+	mali_trace_gp_start_job(job);
+#endif
 
 	group->gp_running_job = job;
 	group->state = MALI_GROUP_STATE_WORKING;
@@ -669,6 +722,13 @@ void mali_group_start_pp_job(struct mali_group *group, struct mali_pp_job *job, 
 #if defined(CONFIG_GPU_TRACEPOINTS) && defined(CONFIG_TRACEPOINTS)
 	trace_gpu_sched_switch(mali_pp_get_hw_core_desc(group->pp_core), sched_clock(), mali_pp_job_get_tid(job), 0, mali_pp_job_get_id(job));
 #endif
+#if MALI_ENABLE_SYSTRACE
+	if(0==sub_job)
+	{
+		mali_trace_pp_start_job(job);
+	}
+#endif
+
 	group->pp_running_job = job;
 	group->pp_running_sub_job = sub_job;
 	group->state = MALI_GROUP_STATE_WORKING;
@@ -768,6 +828,7 @@ static void mali_group_complete_pp_and_unlock(struct mali_group *group, mali_boo
 		mali_pp_reset_async(group->pp_core);
 	}
 
+
 	pp_job_to_return = group->pp_running_job;
 	pp_sub_job_to_return = group->pp_running_sub_job;
 	group->state = MALI_GROUP_STATE_IDLE;
@@ -781,6 +842,12 @@ static void mali_group_complete_pp_and_unlock(struct mali_group *group, mali_boo
 		mali_group_recovery_reset(group);
 	}
 
+#if MALI_ENABLE_SYSTRACE
+	if(0==pp_job_to_return->sub_jobs_completed)
+	{
+		mali_trace_pp_end_job(pp_job_to_return);
+	}
+#endif
 	/* Return job to user, schedule and unlock group. */
 	mali_pp_scheduler_job_done(group, pp_job_to_return, pp_sub_job_to_return, success, in_upper_half);
 }
@@ -807,6 +874,7 @@ static void mali_group_complete_gp_and_unlock(struct mali_group *group, mali_boo
 	group->state = MALI_GROUP_STATE_IDLE;
 	group->gp_running_job = NULL;
 
+
 	if (!success) {
 		MALI_DEBUG_PRINT(2, ("Mali group: Executing recovery reset due to job failure\n"));
 		mali_group_recovery_reset(group);
@@ -815,6 +883,9 @@ static void mali_group_complete_gp_and_unlock(struct mali_group *group, mali_boo
 		mali_group_recovery_reset(group);
 	}
 
+#if MALI_ENABLE_SYSTRACE
+	mali_trace_gp_end_job(gp_job_to_return);
+#endif
 	/* Return job to user, schedule and unlock group. */
 	mali_gp_scheduler_job_done(group, gp_job_to_return, success);
 }

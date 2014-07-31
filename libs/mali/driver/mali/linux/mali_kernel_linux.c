@@ -668,6 +668,24 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 		err = wait_for_notification_wrapper(session_data, (_mali_uk_wait_for_notification_s __user *)arg);
 		break;
 
+#if MALI_ENABLE_SYSTRACE
+	case MALI_IOC_WAIT_FOR_SYSTRACE_GP_NOTIFICATION:
+		err = wait_for_systrace_notification_wrapper(session_data,session_data->systrace_gp_queue, (_mali_uk_wait_for_systrace_notification_s __user *)arg);
+		break;
+
+	case MALI_IOC_POST_SYSTRACE_GP_NOTIFICATION:
+		err = post_systrace_notification_wrapper(session_data,session_data->systrace_gp_queue, (_mali_uk_post_systrace_notification_s __user *)arg);
+		break;
+
+	case MALI_IOC_WAIT_FOR_SYSTRACE_PP_NOTIFICATION:
+		err = wait_for_systrace_notification_wrapper(session_data,session_data->systrace_pp_queue, (_mali_uk_wait_for_systrace_notification_s __user *)arg);
+		break;
+
+	case MALI_IOC_POST_SYSTRACE_PP_NOTIFICATION:
+		err = post_systrace_notification_wrapper(session_data,session_data->systrace_pp_queue, (_mali_uk_post_systrace_notification_s __user *)arg);
+		break;
+#endif
+
 	case MALI_IOC_GET_API_VERSION:
 		err = get_api_version_wrapper(session_data, (_mali_uk_get_api_version_s __user *)arg);
 		break;

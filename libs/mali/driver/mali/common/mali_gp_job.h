@@ -34,6 +34,10 @@ struct mali_gp_job {
 	u32 perf_counter_value1;                           /**< Value of performance counter 1 (to be returned to user space) */
 	u32 pid;                                           /**< Process ID of submitting process */
 	u32 tid;                                           /**< Thread ID of submitting thread */
+#if MALI_ENABLE_SYSTRACE
+	_mali_osk_notification_t *start_notification;      /**< Notification sent back to userspace on job start */
+	_mali_osk_notification_t *end_notification;        /**< Notification sent back to userspace on job end */
+#endif
 	_mali_osk_notification_t *finished_notification;   /**< Notification sent back to userspace on job complete */
 	_mali_osk_notification_t *oom_notification;        /**< Notification sent back to userspace on OOM */
 	struct mali_timeline_tracker tracker;              /**< Timeline tracker for this job */
