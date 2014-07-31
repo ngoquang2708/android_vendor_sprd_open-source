@@ -26,10 +26,12 @@
 
 #define DW9714_VCM_SLAVE_ADDR 	(0x18>>1)  //0x0c
 #define DW9806_VCM_SLAVE_ADDR 	(0x18>>1)  //0x0c
+#define DW9804_VCM_SLAVE_ADDR 	(0x18>>1)  //0x0c
 
 #define hi544_MIN_FRAME_LEN_PRV  0x5e8
-#define hi544_4_LANES
-//#define AF_DRIVER_DW9806 1
+//#define AF_DRIVER_DW9806  1
+//#define AF_DRIVER_DW9714  1
+#define AF_DRIVER_DW9804	1
 static int s_hi544_gain = 0;
 static int s_capture_shutter = 0;
 static int s_capture_VTS = 0;
@@ -57,6 +59,7 @@ LOCAL uint32_t _hi544_cfg_otp(uint32_t  param);
 LOCAL uint32_t _hi544_com_Identify_otp(void* param_ptr);
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode);
 LOCAL uint32_t _dw9806_SRCInit(uint32_t mode);
+LOCAL uint32_t _dw9804_SRCInit(uint32_t mode);
 
 
 LOCAL const struct raw_param_info_tab s_hi544_raw_param_tab[]={
@@ -2032,7 +2035,7 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-#if 0
+
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
@@ -2062,6 +2065,8 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x01;
+
+	#if 0
 
 	//blc
 	sensor_ptr->blc.mode=0x00;
@@ -3146,10 +3151,14 @@ LOCAL uint32_t _hi544_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		usleep(20*1000);
 		//step 0 power up DOVDD, the AVDD
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_3300MV);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
+		#if AF_DRIVER_DW9804
+			_dw9804_SRCInit(2);
+		#endif
 		#if AF_DRIVER_DW9806
 			_dw9806_SRCInit(2);
-		#else
+		#endif
+		#if AF_DRIVER_DW9714
 			_dw9174_SRCInit(2);
 		#endif
 		Sensor_SetIovddVoltage(iovdd_val);
@@ -3157,7 +3166,7 @@ LOCAL uint32_t _hi544_PowerOn(uint32_t power_on)
 		Sensor_SetAvddVoltage(avdd_val);
 		usleep(2000);
 		//step 1 power up DVDD
-		Sensor_SetDvddVoltage(dvdd_val);
+		//Sensor_SetDvddVoltage(dvdd_val);
 		usleep(2000);
 		//step 2 power down pin high
 		Sensor_PowerDown(!power_down);
@@ -3176,7 +3185,7 @@ LOCAL uint32_t _hi544_PowerOn(uint32_t power_on)
 		usleep(2000);
 		Sensor_PowerDown(power_down);
 		usleep(2000);
-		Sensor_SetDvddVoltage(SENSOR_AVDD_CLOSED);
+		//Sensor_SetDvddVoltage(SENSOR_AVDD_CLOSED);
 		usleep(2000);
 		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
 		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
@@ -3302,7 +3311,7 @@ LOCAL uint32_t _hi544_Identify(uint32_t param)
 		Sensor_hi544_InitRawTuneInfo();
 	} else {
             SENSOR_PRINT("SENSOR_HI544: identify fail,pid_value=%d", pid_value);
-            SENSOR_PRINT("SENSOR_HI544: slave id :0x%x(7bit)\n", Sensor_ReadReg(0x0f14));
+            SENSOR_PRINT("SENSOR_HI544: slave id :0x%x(7bit)\n", Sensor_ReadReg(0x0f17)); //0x0f14
 	}
 
 	return ret_value;
@@ -3374,6 +3383,30 @@ LOCAL uint32_t _hi544_write_gain(uint32_t param)
 
 LOCAL uint32_t _hi544_write_af(uint32_t param)
 {
+#if AF_DRIVER_DW9804
+		uint32_t ret_value = SENSOR_SUCCESS;
+		uint8_t cmd_val[2] = {0x00};
+		uint16_t  slave_addr = 0;
+		uint16_t cmd_len = 0;
+		uint32_t time_out = 0;
+
+		SENSOR_PRINT("SENSOR_hi544: _write_af %d", param);
+
+		slave_addr = DW9804_VCM_SLAVE_ADDR;
+
+		cmd_len = 2;
+		cmd_val[0] = 0x03;
+		cmd_val[1] = (param&0x300)>>8;
+		ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+		cmd_val[0] = 0x04;
+		cmd_val[1] = (param&0xff);
+		ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+
+		SENSOR_PRINT("SENSOR_hi544: _write_af, ret =  %d, MSL:%x, LSL:%x\n", ret_value, cmd_val[0], cmd_val[1]);
+
+		return ret_value;
+#endif
+
 #if AF_DRIVER_DW9806
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint8_t cmd_val[2] = {0x00};
@@ -3403,7 +3436,8 @@ LOCAL uint32_t _hi544_write_af(uint32_t param)
 	SENSOR_PRINT("SENSOR_hi544: _write_af, ret =  %d, MSL:%x, LSL:%x\n", ret_value, cmd_val[0], cmd_val[1]);
 
 	return ret_value;
-#else
+#endif
+#if AF_DRIVER_DW9714
 	uint32_t ret_value = SENSOR_SUCCESS;
 	uint8_t cmd_val[2] = {0x00};
 	uint16_t  slave_addr = 0;
@@ -3636,6 +3670,54 @@ LOCAL uint32_t _hi544_ReadGain(uint32_t param)
 	return gain;
 }
 
+#if AF_DRIVER_DW9804
+LOCAL uint32_t _dw9804_SRCInit(uint32_t mode)
+{
+	uint8_t cmd_val[6] = {0x00};
+	uint16_t  slave_addr = 0;
+	uint16_t cmd_len = 0;
+	uint32_t ret_value = SENSOR_SUCCESS;
+
+	slave_addr = DW9804_VCM_SLAVE_ADDR;
+
+	usleep(1000);
+
+	switch (mode) {
+		case 1:
+		break;
+
+		case 2:
+		{
+			cmd_len = 2;
+			cmd_val[0] = 0x02;
+			cmd_val[1] = 0x01;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			usleep(1000);
+			cmd_val[0] = 0x02;
+			cmd_val[1] = 0x02;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			usleep(1000);
+			cmd_val[0] = 0x06;
+			cmd_val[1] = 0x40;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			usleep(1000);
+			cmd_val[0] = 0x07;
+			cmd_val[1] = 0x78;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			usleep(1000);
+		}
+		break;
+
+		case 3:
+		break;
+
+	}
+
+	return ret_value;
+}
+#endif
+
+
 #if AF_DRIVER_DW9806
 LOCAL uint32_t _dw9806_SRCInit(uint32_t mode)
 {
@@ -3683,7 +3765,9 @@ LOCAL uint32_t _dw9806_SRCInit(uint32_t mode)
 
 	return ret_value;
 }
-#else
+#endif
+
+#if AF_DRIVER_DW9714
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 {
 	uint8_t cmd_val[6] = {0x00};

@@ -72,7 +72,7 @@ extern SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info;
 extern SENSOR_INFO_T g_autotest_ov5640_mipi_yuv_info;
 extern SENSOR_INFO_T g_at_ov5640_ccir_yuv_info;
 extern SENSOR_INFO_T g_autotest_yuv_info;
-
+extern SENSOR_INFO_T g_hi544_mipi_raw_info;
 
 #define AUTO_TEST_CAMERA 1
 
@@ -82,6 +82,7 @@ extern SENSOR_INFO_T g_autotest_yuv_info;
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_hi544_mipi_raw_info,
 	&g_sr352_mipi_yuv_info,
 	&g_imx219_mipi_raw_info,
 	&g_s5k4ec_mipi_yuv_info,

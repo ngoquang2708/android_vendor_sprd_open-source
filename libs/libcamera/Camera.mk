@@ -56,6 +56,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_ov2680_mipi_raw.c \
 	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_imx219_mipi_raw.c \
+	sensor/sensor_hi544_mipi_raw.c \
 	sensor/sensor_ov5640_mipi.c \
 	sensor/sensor_autotest_ov5640_mipi_yuv.c \
 	sensor/sensor_ov5640.c \
