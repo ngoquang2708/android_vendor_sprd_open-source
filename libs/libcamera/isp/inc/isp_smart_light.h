@@ -59,6 +59,8 @@ extern "C"
 #define SMART_PIECEWISE_MAX_NUM		16
 #define SMART_ENVI_SIMPLE_MAX_NUM	6
 
+#define SMART_HUE_SAT_GAIN_UNIT		1024
+
 #define SMART_MAX_BV			0x7fff
 /*------------------------------------------------------------------------------*
 *				Data Structures					*
@@ -221,7 +223,6 @@ struct smart_light_calc_result {
 int32_t smart_light_init(uint32_t handler_id, void *in_param, void *out_param);
 int32_t smart_light_calculation(uint32_t handler_id, void *in_param, void *out_param);
 int32_t smart_light_deinit(uint32_t handler_id, void *in_param, void *out_param);
-
 /*------------------------------------------------------------------------------*
 *				Compiler Flag					*
 *-------------------------------------------------------------------------------*/

@@ -209,9 +209,10 @@ int32_t _ispAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispHueIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t isp_GetChipVersion(void);
-int32_t isp_InterplateCMC(uint32_t handler_id, uint16_t *out, uint16_t *src[2], uint16_t weight[2]);
+int32_t isp_InterplateCMC(uint32_t handler_id, uint16_t *out, uint16_t *src[2], uint16_t alpha);
 int32_t isp_SetCMC_By_Reduce(uint32_t handler_id, uint16_t *cmc_out, uint16_t *cmc_in, int32_t percent, uint8_t *is_update);
 void isp_interpolate_lsc(uint16_t *out, uint16_t *src[2], uint16_t weight[2], uint32_t size);
+int32_t isp_InterplateCCE(uint32_t handler_id, uint16_t dst[9], uint16_t src[9], uint16_t coef[3], uint16_t base_gain);
 
 /**----------------------------------------------------------------------------*
 **					Compiler Flag				**

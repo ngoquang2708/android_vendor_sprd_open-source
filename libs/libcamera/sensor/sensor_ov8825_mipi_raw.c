@@ -1648,7 +1648,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	uint32_t pref_y = 6;
 
 	sensor_ptr->awb.alg_id = 0;
-	sensor_ptr->smart_light.enable = 0;
+	//sensor_ptr->smart_light.enable = 0;
 
 	/*param from jiawei*/
 	sensor_ptr->af.min_step=200;

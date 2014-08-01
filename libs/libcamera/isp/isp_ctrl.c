@@ -4772,15 +4772,24 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->awb.prv_index=isp_context_ptr->awb.cur_index;
 
 	if (0 == raw_tune_ptr->awb.alg_id) {
-		isp_context_ptr->awb.cur_gain.r=isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
-		isp_context_ptr->awb.cur_gain.g=isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
-		isp_context_ptr->awb.cur_gain.b=isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
+
+		/*init value*/
+		isp_context_ptr->awb.init_gain.r = isp_context_ptr->awb_r_gain[isp_context_ptr->awb.gain_index];
+		isp_context_ptr->awb.init_gain.g = isp_context_ptr->awb_g_gain[isp_context_ptr->awb.gain_index];
+		isp_context_ptr->awb.init_gain.b = isp_context_ptr->awb_b_gain[isp_context_ptr->awb.gain_index];
+		isp_context_ptr->awb.init_ct = raw_tune_ptr->awb.init_ct;
 	} else {
-		isp_context_ptr->awb.cur_gain.r=raw_tune_ptr->awb.init_gain.r;
-		isp_context_ptr->awb.cur_gain.g=raw_tune_ptr->awb.init_gain.g;
-		isp_context_ptr->awb.cur_gain.b=raw_tune_ptr->awb.init_gain.b;
-		isp_context_ptr->awb.cur_ct = raw_tune_ptr->awb.init_ct;
+		/*init value*/
+		isp_context_ptr->awb.init_gain.r = raw_tune_ptr->awb.init_gain.r;
+		isp_context_ptr->awb.init_gain.g = raw_tune_ptr->awb.init_gain.g;
+		isp_context_ptr->awb.init_gain.b = raw_tune_ptr->awb.init_gain.b;
+		isp_context_ptr->awb.init_ct = raw_tune_ptr->awb.init_ct;
 	}
+
+	isp_context_ptr->awb.cur_gain.r = isp_context_ptr->awb.init_gain.r;
+	isp_context_ptr->awb.cur_gain.g = isp_context_ptr->awb.init_gain.g;
+	isp_context_ptr->awb.cur_gain.b = isp_context_ptr->awb.init_gain.b;
+	isp_context_ptr->awb.cur_ct = isp_context_ptr->awb.init_ct;
 
 	isp_context_ptr->awb.matrix_index=ISP_ZERO;
 	isp_context_ptr->cmc_index=ISP_ZERO;
@@ -4836,16 +4845,17 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		isp_context_ptr->awb.value_range[i].max = raw_tune_ptr->awb.value_range[i].max;
 	}
 
-	/*init value*/
-	isp_context_ptr->awb.init_gain.r = raw_tune_ptr->awb.init_gain.r;
-	isp_context_ptr->awb.init_gain.g = raw_tune_ptr->awb.init_gain.g;
-	isp_context_ptr->awb.init_gain.b = raw_tune_ptr->awb.init_gain.b;
-	isp_context_ptr->awb.init_ct = raw_tune_ptr->awb.init_ct;
+	isp_context_ptr->awb.weight_of_pos_lut.weight = raw_fix_ptr->awb_weight.addr;
+	isp_context_ptr->awb.weight_of_pos_lut.w = raw_fix_ptr->awb_weight.width;
+	isp_context_ptr->awb.weight_of_pos_lut.h = raw_fix_ptr->awb_weight.height;
 
 	//chip related parameters, should get from chip driver
 	isp_context_ptr->awb.base_gain = 1024;		//for shark
 	isp_context_ptr->awb.stat_img_size.w = 32;
 	isp_context_ptr->awb.stat_img_size.h = 32;
+
+	isp_context_ptr->awb.green_factor = raw_tune_ptr->awb.green_factor;
+	isp_context_ptr->awb.skin_factor = raw_tune_ptr->awb.skin_factor;
 
 	/*bpc*/
 	isp_context_ptr->bpc.mode=ISP_ZERO;
@@ -8388,6 +8398,44 @@ int isp_ctrl_proc_next(uint32_t handler_id, struct ipn_in_param* in_ptr, struct 
 	return rtn;
 }
 
+/* _ispSpecialEffectIOCtrl --
+*@
+*@
+*@ return:
+*/
+int32_t _ispAdjustCCE(uint32_t handler_id, void* param_ptr1, void* param_ptr2)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	uint32_t cce_matrix_mode = *(uint32_t*)param_ptr1;
+
+	ISP_LOG("--_ispAdjustCCE--:0x%x", cce_matrix_mode);
+
+	if(ISP_EFFECT_NORMAL == cce_matrix_mode) {
+		uint16_t *src = NULL;
+		uint16_t *dst = NULL;
+		uint16_t coef[3] = {0x00};
+		struct isp_awb_gain *gain_ptr = (struct isp_awb_gain*)param_ptr2;
+
+		src = (uint16_t*)&isp_context_ptr->cce_tab[cce_matrix_mode].matrix[0];
+		dst = (uint16_t*)&isp_context_ptr->cce_matrix.matrix[0];
+
+		coef[0] = gain_ptr->r;
+		coef[1] = gain_ptr->g;
+		coef[2] = gain_ptr->b;
+
+		rtn = isp_InterplateCCE(handler_id, dst, src, coef, SMART_HUE_SAT_GAIN_UNIT);
+		if (ISP_SUCCESS != rtn) {
+			ISP_LOG("--_ispAdjustCCE--:ret:0x%x", rtn);
+			return ISP_ERROR;
+		}
+
+		isp_context_ptr->tune.special_effect=ISP_EB;
+	}
+
+	return rtn;
+}
+
 /* isp_change_param --
 *@
 *@
@@ -8428,55 +8476,32 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 		case ISP_CHANGE_CCE:
 		{
 			ISP_LOG("--isp_change_cce--");
-			_ispSpecialEffectIOCtrl(handler_id, (void*)&isp_context_ptr->cce_index, NULL);
+			//int32_t _ispSpecialEffectIOCtrl(handler_id, (void*)&isp_context_ptr->cce_index, PNULL);
+			_ispAdjustCCE(handler_id, (void*)&isp_context_ptr->cce_index, param);
 			break ;
 		}
 		case ISP_CHANGE_CMC:
 		{
 			uint16_t *cmc_tab[2] = {NULL, NULL};
-			uint16_t *weight = (uint16_t *)param;
+			struct isp_awb_adjust* adjust_param = (struct isp_awb_adjust*)param;
 			uint8_t is_update_cmc = ISP_UEB;
 
-			ISP_LOG("--cmc--p%d, a:%d", param_index, awb_index);
+			if (NULL != adjust_param) {
 
-			if (NULL == weight)
-			{
-				uint32_t i = 0;
+				if (adjust_param->index0 < ISP_CMC_NUM && adjust_param->index1 < ISP_CMC_NUM) {
 
-				awb_index = (awb_index > 8) ? 8 : awb_index;
+					is_update_cmc = ISP_EB;
+					cmc_tab[0] = isp_context_ptr->cmc_tab[adjust_param->index0];
+					cmc_tab[1] = isp_context_ptr->cmc_tab[adjust_param->index1];
 
-				for (i=0; i<9; i++)
-				{
-					isp_context_ptr->cmc_awb[i] = isp_context_ptr->cmc_tab[awb_index][i];
+					isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb,
+								(uint16_t**)cmc_tab, adjust_param->alpha);
+					isp_SetCMC_By_Reduce(handler_id, (uint16_t*)(isp_context_ptr->cmc.matrix),\
+								(uint16_t*)isp_context_ptr->cmc_awb, isp_context_ptr->cmc_percent,
+								(uint8_t*)&is_update_cmc);
+					isp_context_ptr->tune.cmc=is_update_cmc;
 				}
-				is_update_cmc = ISP_EB;
 			}
-			else
-			{
-				if (0 == awb_index)
-				{
-					cmc_tab[0] = 	isp_context_ptr->cmc_tab[0];
-					cmc_tab[1] = 	isp_context_ptr->cmc_tab[0];
-				}
-				else if (awb_index >= 8)
-				{
-					cmc_tab[0] = 	isp_context_ptr->cmc_tab[8];
-					cmc_tab[1] = 	isp_context_ptr->cmc_tab[8];
-				}
-				else
-				{
-					cmc_tab[0] = 	isp_context_ptr->cmc_tab[awb_index - 1];
-					cmc_tab[1] = 	isp_context_ptr->cmc_tab[awb_index];
-				}
-
-				isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb, (uint16_t**)cmc_tab, weight);
-			}
-
-			isp_SetCMC_By_Reduce(handler_id, (uint16_t*)(isp_context_ptr->cmc.matrix),\
-									(uint16_t*)isp_context_ptr->cmc_awb, isp_context_ptr->cmc_percent,
-									(uint8_t*)&is_update_cmc);
-			isp_context_ptr->tune.cmc=is_update_cmc;
-
 			break;
 		}
 		default:
