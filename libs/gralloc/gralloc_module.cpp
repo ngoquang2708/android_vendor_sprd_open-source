@@ -198,7 +198,7 @@ static int gralloc_register_buffer(gralloc_module_t const *module, buffer_handle
 				goto cleanup;
 			}
 		}
-
+                  ALOGI("gralloc_register_buffer, handle:%p, size:0x%x, fd:%d", hnd, hnd->size, hnd->share_fd);
 		mappedAddress = (unsigned char *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0);
 
 		if (MAP_FAILED == mappedAddress)
@@ -259,7 +259,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const *module, buffer_hand
 #if GRALLOC_ARM_DMA_BUF_MODULE
 			void *base = (void *)hnd->base;
 			size_t size = hnd->size;
-
+                           ALOGI("gralloc_unregister_buffer, handle:%p, size:0x%x, fd:%d", hnd, hnd->size, hnd->share_fd);
 			if (munmap(base, size) < 0)
 			{
 				AERR("Could not munmap base:0x%x size:%d '%s'", (unsigned int)base, size, strerror(errno));
