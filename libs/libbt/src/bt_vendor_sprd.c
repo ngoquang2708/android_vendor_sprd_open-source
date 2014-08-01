@@ -549,6 +549,7 @@ uint8 ConvertHexToBin(
 int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
 {
     int i,psk_fd,fd_btaddr,ret = 0,r,size=0,read_btmac=0;
+    int write_cnt;
     unsigned char resp[30];
     BT_PSKEY_CONFIG_T bt_para_tmp;
     char bt_mac[30] = {0};
@@ -623,26 +624,35 @@ int sprd_config_init(int fd, char *bdaddr, struct termios *ti)
             memcpy(bt_para_tmp.device_addr, bt_mac_bin, sizeof(bt_para_tmp.device_addr));
         }
 
-	if (write(fd, (char *)&bt_para_tmp, sizeof(BT_PSKEY_CONFIG_T)) != sizeof(BT_PSKEY_CONFIG_T))
-        {
-            ALOGI("Failed to write pskey command from pskey file, erro:%s\n", strerror(errno));
+        ALOGI("start to write pskey");
+        write_cnt = write(fd, (char *)&bt_para_tmp, sizeof(BT_PSKEY_CONFIG_T));
+        if(write_cnt < 0){
+            ALOGI("Failed to write pskey, return %d(%s)", write_cnt,strerror(errno));
             return -1;
         }
+        if(write_cnt != sizeof(BT_PSKEY_CONFIG_T)){
+            ALOGI("write pskey size error, writed %d, expect %d", write_cnt,sizeof(BT_PSKEY_CONFIG_T));
+            return -1;
+        }
+        ALOGI("pskey(%d bytes) has been send to controller\n", write_cnt);
     }
-    ALOGI("sprd_config_init write pskey command ok \n");
+    ALOGI("sprd_config_init write pskey ok\n");
 
     while (1) 
     {
-#if 1
+        ALOGI("reading ACK from controller...\n");
         r = read(fd, resp, 1);
-        if (r <= 0)
-        return -1;
-        if (resp[0] == 0x05)
-        {
-            ALOGI("read pskey response ok \n");
-            break;
+        if (r <= 0){
+            ALOGI("Failed to read ack, return %d(%s)", r ,strerror(errno));
+            return -1;
         }
-#endif
+        ALOGI("read %d bytes from controller\n",r);
+        if (resp[0] == 0x05){
+            ALOGI("read pskey ACK(0x05) ok \n");
+            break;
+        }else{
+            ALOGI("read ACK(0x%x)is not expect,retry\n,",resp[0]);
+        }
     }
 
     ALOGI("sprd_config_init ok \n");
