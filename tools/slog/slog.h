@@ -6,10 +6,7 @@
 #ifndef _SLOG_H
 #define _SLOG_H
 
-#ifdef	LOG_TAG
-#undef	LOG_TAG
-#define LOG_TAG "slog"
-#endif
+#define LOG_TAG "SLOG"
 
 #include <errno.h>
 #include <pthread.h>

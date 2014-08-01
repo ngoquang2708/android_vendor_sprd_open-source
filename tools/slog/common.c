@@ -130,6 +130,36 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
 	free(mts);
 }
 
+#define MODEM_VERSION "gsm.version.baseband"
+
+void write_modem_version(struct slog_info *info)
+{
+	char buffer[MAX_NAME_LEN];
+	char modem_property[MAX_NAME_LEN];
+	FILE *fp;
+	int ret;
+
+	if (strncmp(info->name, "cp", 2)) {
+		return;
+	}
+	memset(modem_property, '0', MAX_NAME_LEN);
+	property_get(MODEM_VERSION, modem_property, "not_find");
+	if(!strncmp(modem_property, "not_find", 8)) {
+		err_log("%s not find.", MODEM_VERSION);
+		return;
+	}
+
+	sprintf(buffer, "%s/%s/%s/%s.version", current_log_path, top_logdir, info->log_path, info->log_basename);
+	fp = fopen(buffer, "w+");
+	if(fp == NULL) {
+		err_log("open file %s failed!", buffer);
+		return;
+	}
+	fwrite(modem_property, strlen(modem_property), 1, fp);
+	fclose(fp);
+
+}
+
 void gen_logpath(char *filename, struct slog_info *info)
 {
 	int ret;
@@ -286,6 +316,7 @@ FILE *gen_outfd(struct slog_info *info)
 	char buffer[MAX_NAME_LEN];
 
 	gen_logfile(buffer, info);
+	write_modem_version(info);
 	write_modem_timestamp(info, buffer);
 	fp = fopen(buffer, "a+b");
 	if(fp == NULL){
