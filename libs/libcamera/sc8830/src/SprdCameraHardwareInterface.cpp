@@ -2571,6 +2571,9 @@ bool SprdCameraHardware::WaitForPreviewStart()
 			break;
 		}
 		LOGI("WaitForPreviewStart: woke up");
+		if (SPRD_ERROR == mCameraState.preview_state) {
+			freePreviewMem();
+		}
 	}
 
 	if (mIsPerformanceTestable) {

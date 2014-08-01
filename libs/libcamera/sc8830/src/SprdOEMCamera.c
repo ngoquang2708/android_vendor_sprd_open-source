@@ -6402,6 +6402,11 @@ int camera_preview_err_handle(uint32_t evt_type)
 
 	if (RESTART == g_cxt->recover_status) {
 		CMR_LOGE("No way to recover");
+		ret = cmr_v4l2_cap_stop();
+		g_cxt->v4l2_cxt.v4l2_state = V4L2_IDLE;
+		if (ret) {
+		    CMR_LOGE("Failed to stop V4L2 capture, %d", ret);
+		}
 		return CAMERA_FAILED;
 	}
 	pthread_mutex_lock(&g_cxt->recover_mutex);
