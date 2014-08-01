@@ -340,7 +340,7 @@ void *eng_gps_log_thread(void *x)
             }while(r_cnt > 0);
         }else{
             ENG_LOG("%s: get nmea data error : %d\n", __FUNCTION__, r_cnt);
-            break;
+            sleep(1);
         }
     } while(1);
 
