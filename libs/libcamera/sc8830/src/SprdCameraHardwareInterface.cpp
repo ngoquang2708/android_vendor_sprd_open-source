@@ -284,6 +284,10 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPictureFormat(1),
 	mPreviewStartFlag(0),
 	mIsDvPreview(0),
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+	mIsYuv420p(0),
+	mYV12Buf(NULL),
+#endif
 	mRecordingMode(0),
 	mBakParamFlag(0),
 	mRecordingFirstFrameTime(0),
@@ -643,6 +647,15 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
 	const char *str_preview_format = mParameters.getPreviewFormat();
 	int usage;
+
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+	if(strcmp(mParameters.getPreviewFormat(), "yuv420p") == 0){
+		hal_pixel_format = HAL_PIXEL_FORMAT_YV12;
+		mIsYuv420p = 1;
+	} else {
+		mIsYuv420p = 0;
+	}
+#endif
 
 	LOGI("%s: preview format %s", __func__, str_preview_format);
 
@@ -3295,6 +3308,16 @@ bool SprdCameraHardware::initPreview()
 			mPreviewHeapSize = SIZE_ALIGN(mPreviewWidth) * SIZE_ALIGN(mPreviewHeight) * 3 / 2;
 		} else {
 			mPreviewHeapSize = mPreviewWidth * mPreviewHeight * 3 / 2;
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+			if (mIsYuv420p) {
+				if (mPreviewWidth % 32) {
+					mPreviewHeapSize = (mPreviewWidth + SIZE_ALIGN(mPreviewWidth/2))* mPreviewHeight; /*yuv420p*/
+				}
+				if (mYV12Buf == NULL) {
+					mYV12Buf = (void *) malloc(mPreviewWidth * mPreviewHeight/2);
+				}
+			}
+#endif
 		}
 		break;
 
@@ -3367,6 +3390,12 @@ void SprdCameraHardware::deinitPreview()
 
 	freePreviewMem();
 	camera_set_preview_mem(0, 0, 0, 0);
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+	if (mYV12Buf) {
+		free(mYV12Buf);
+		mYV12Buf = NULL;
+	}
+#endif
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" deinitPreview X.\n");
@@ -4770,6 +4799,20 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 	}
 
 	if (isPreviewing()) {
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+		if (mIsYuv420p) {
+			if (mYV12Buf){
+				char * addr0 = (char *)frame->buf_Virt_Addr + width * height;
+				char * addr1 = addr0 + width * height/4;
+				char * addr2 = (char *)mYV12Buf;
+				memcpy((void *)mYV12Buf, (void *)addr0, width * height/2);
+				for (int i = 0; i < width * height/4; i++) {
+					*addr0++ = *addr2++; // U
+					*addr1++ = *addr2++; // V
+				}
+			}
+		}
+#endif
 		if (!displayOneFrame(width, height, frame->buffer_phy_addr, (char *)frame->buf_Virt_Addr, frame->buf_id)) {
 			LOGE("%s: displayOneFrame not successful!", __func__);
 		}

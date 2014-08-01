@@ -399,7 +399,10 @@ private:
 	int                             mPictureFormat;//0:YUV422;1:YUV420;2:RGB;3:JPEG
 	int                             mPreviewStartFlag;
 	uint32_t                        mIsDvPreview;
-
+#if defined(CONFIG_CAMERA_PREVIEW_YV12)
+	uint32_t                        mIsYuv420p;
+	void                            *mYV12Buf;
+#endif
 	bool                            mRecordingMode;
 	bool                            mBakParamFlag;
 
