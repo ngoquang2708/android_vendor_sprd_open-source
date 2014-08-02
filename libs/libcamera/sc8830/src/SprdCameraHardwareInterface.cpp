@@ -856,11 +856,17 @@ status_t SprdCameraHardware::startRecording()
 	status_t ret = NO_ERROR;
 	char * isZslSupport = (char *)mParameters.get("zsl-supported");
 
+	if (NULL == mMetadataHeap) {
+		LOGE("startRecording failed, mMetadataHeap is null");
+		return INVALID_OPERATION;
+	}
+
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("startRecording E.\n");
 	} else {
 		LOGI("startRecording E.\n");
 	}
+
 	Mutex::Autolock l(&mLock);
 	mRecordingFirstFrameTime = 0;
 
