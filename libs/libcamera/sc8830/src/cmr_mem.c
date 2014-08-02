@@ -230,6 +230,86 @@ static const cmr_get_size get_size[BUF_TYPE_NUM] = {
 
 };
 
+int camera_pre_capture_buf_id(uint32_t camera_id)
+{
+	int buffer_id = 0;
+
+	if (BACK_CAMERA_ID == camera_id) {
+#if defined(CONFIG_CAMERA_SUPPORT_8M)
+		buffer_id = IMG_8P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_7M)
+		buffer_id = IMG_7P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_6M)
+		buffer_id = IMG_6P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_5M)
+		buffer_id = IMG_5P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_4M)
+		buffer_id = IMG_4P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_3M)
+		buffer_id = IMG_3P0_MEGA;
+#elif defined(CONFIG_CAMERA_SUPPORT_2M)
+		buffer_id = IMG_2P0_MEGA;
+#else
+		buffer_id = IMG_8P0_MEGA;
+#endif
+	} else {
+#if defined(CONFIG_FRONT_CAMERA_SUPPORT_8M)
+		buffer_id = IMG_8P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_7M)
+		buffer_id = IMG_7P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_6M)
+		buffer_id = IMG_6P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_5M)
+		buffer_id = IMG_5P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_4M)
+		buffer_id = IMG_4P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_3M)
+		buffer_id = IMG_3P0_MEGA;
+#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_2M)
+		buffer_id = IMG_2P0_MEGA;
+#else
+		buffer_id = IMG_8P0_MEGA;
+#endif
+	}
+
+	CMR_LOGI("buffer id = %d", buffer_id);
+
+	return buffer_id;
+}
+
+int camera_pre_capture_buf_size(uint32_t camera_id,
+					int32_t mem_size_id,
+					uint32_t *mem_size)
+{
+	struct cap_size_to_mem *mem_tab_ptr = NULL;
+
+	if (mem_size_id < IMG_1P3_MEGA
+		|| mem_size_id > IMG_SIZE_NUM
+		|| NULL == mem_size) {
+		CMR_LOGE("no matched size for this image: id=%d, 0x%x",
+				mem_size_id,
+				(uint32_t)mem_size);
+		return -1;
+	}
+
+	if (BACK_CAMERA_ID == camera_id) {
+		mem_tab_ptr = (struct cap_size_to_mem*)&back_cam_raw_mem_size_tab[0];
+	} else if (FRONT_CAMERA_ID == camera_id) {
+		mem_tab_ptr = (struct cap_size_to_mem*)&front_cam_raw_mem_size_tab[0];
+	} else {
+		mem_tab_ptr = (struct cap_size_to_mem*)&mem_size_tab[0];
+	}
+
+	*mem_size = mem_tab_ptr[mem_size_id].mem_size;
+
+
+	CMR_LOGI("image size num, %d, mem size 0x%x",
+		mem_size_id,
+		mem_tab_ptr[mem_size_id].mem_size);
+
+	return 0;
+}
+
 int camera_capture_buf_size(uint32_t camera_id,
 					uint32_t sn_fmt,
 					struct img_size *image_size,

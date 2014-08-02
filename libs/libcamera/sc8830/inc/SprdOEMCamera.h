@@ -492,11 +492,18 @@ int camera_start_autofocus(camera_focus_e_type focus,
 			void *client_data);
 
 int camera_capture_max_img_size(uint32_t *max_width, uint32_t *max_height);
+
 int camera_get_sensor_mode_trim(uint32_t mode, cropZoom *sensor_trim, uint16_t *width, uint16_t *height);
 
 int camerea_set_preview_format(uint32_t pre_format);
 
 int camera_set_preview_mem(uint32_t phy_addr, uint32_t vir_addr, uint32_t mem_size, uint32_t mem_num);
+
+int camera_pre_capture_get_buffer_id(uint32_t camera_id);
+
+int camera_pre_capture_get_buffer_size(uint32_t camera_id,
+						int32_t mem_size_id,
+						uint32_t *mem_size);
 
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,

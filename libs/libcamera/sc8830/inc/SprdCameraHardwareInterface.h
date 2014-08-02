@@ -56,8 +56,6 @@ typedef struct sprd_camera_memory {
 	bool busy_flag;
 }sprd_camera_memory_t;
 
-
-#define MAX_SUB_RAWHEAP_NUM 10
 #define MAX_LOOP_COLOR_COUNT 3
 #define MAX_Y_UV_COUNT 2
 
@@ -106,8 +104,8 @@ public:
 		CAMERA_FLUSH_MAX
 	};
 
-	int 						 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
-	sprd_camera_memory_t* 		 allocCameraMem(int buf_size, int num_bufs, uint32_t is_cache);
+	int 				 flush_buffer(camera_flush_mem_type_e  type, int index, void *v_addr, void *p_addr, int size);
+	sprd_camera_memory_t* 		 allocCameraMem(int buf_size, uint32_t is_cache);
 
 public:
 	static int                   getPropertyAtv();
@@ -118,8 +116,12 @@ public:
 	static int                   switch_monitor_thread_init(void *p_data);
 	static int                   switch_monitor_thread_deinit(void *p_data);
 	static void*                 switch_monitor_thread_proc(void *p_data);
+	static int                   pre_alloc_cap_mem_thread_init(void *p_data);
+	static int                   pre_alloc_cap_mem_thread_deinit(void *p_data);
+	static void*                 pre_alloc_cap_mem_thread_proc(void *p_data);
 	inline bool                  isCameraInit();
 	status_t                     waitSetParamsOK();
+	uint32_t                     isPreAllocCapMem();
 
 private:
 	inline void                  print_time();
@@ -174,9 +176,6 @@ private:
 						int frame_offset, const char *name);
 	};
 
-	static int Callback_AllocCaptureMem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir);
-	static int Callback_FreeCaptureMem(void* handle);
-
 	void                  freeCameraMem(sprd_camera_memory_t* camera_memory);
 	void                  clearCameraMem(sprd_camera_memory_t* camera_memory);
 	uint32_t              getPreviewBufferID(buffer_handle_t *buffer_handle);
@@ -185,7 +184,8 @@ private:
 	bool                  allocatePreviewMemByGraphics();
 	bool                  allocatePreviewMem();
 	void                  freePreviewMem();
-	bool                  allocateCaptureMem(bool initJpegHeap);
+	bool                  allocateCapMem(uint32_t mem_size);
+	bool                  allocateCaptureMem(bool isPreAllocCapMem, uint32_t mem_size);
 	void                  freeCaptureMem();
 	uint32_t              getRedisplayMem();
 	void                  FreeReDisplayMem();
@@ -196,7 +196,6 @@ private:
 					int32_t parm4);
 	void                  notifyShutter();
 	void                  receiveJpegPictureFragment(JPEGENC_CBrtnType *encInfo);
-	void                  receiveJpegPosPicture(void);
 	void                  receivePostLpmRawPicture(camera_frame_type *frame);
 	void                  receiveRawPicture(camera_frame_type *frame);
 	void                  receiveJpegPicture(JPEGENC_CBrtnType *encInfo);
@@ -284,8 +283,8 @@ private:
 	virtual status_t                setParametersInternal(const SprdCameraParameters& params);
 	bool                            initPreview();
 	void                            deinitPreview();
-	bool                            initCapture(bool initJpegHeap);
-	void                            deinitCapture();
+	bool                            initCapture();
+	void                            deinitCapture(bool isPreAllocCapMem);
 	status_t                        initDefaultParameters();
 	status_t                        setCameraParameters();
 	status_t                        checkSetParametersEnvironment();
@@ -337,7 +336,6 @@ private:
 	*/
 	static const int                kPreviewBufferCount    = 8;
 	static const int                kPreviewRotBufferCount = 4;
-	static const int                kRawBufferCount        = 1;
 	static const int                kJpegBufferCount       = 1;
 	static const int                kRawFrameHeaderSize    = 0x0;
 	Mutex                           mLock; // API lock -- all public methods
@@ -376,9 +374,6 @@ private:
 
 	sprd_camera_memory_t            *mRawHeap;
 	uint32_t                        mRawHeapSize;
-
-	sprd_camera_memory_t            *mSubRawHeapArray[MAX_SUB_RAWHEAP_NUM];
-	uint32_t                        mSubRawHeapNum;
 
 	uint32_t                        mFDAddr;
 	camera_memory_t                 *mMetadataHeap;
@@ -442,6 +437,11 @@ private:
 	uint32_t                        mSwitchMonitorMsgQueHandle;
 	uint32_t                        mSwitchMonitorInited;
 	sem_t                           mSwitchMonitorSyncSem;
+	uint32_t                        mIsPreAllocCapMem;
+	pthread_t                       mPreAllocCapMemThread;
+	uint32_t                        mPreAllocCapMemInited;
+	uint32_t                        mIsPreAllocCapMemDone;
+	sem_t                           mPreAllocCapMemSemDone;
 	bool                            mIsPerformanceTestable;
 	ShakeTest                   mShakeTest;
 };

@@ -49,6 +49,12 @@ struct cmr_cap_mem {
 	struct img_frm  isp_tmp;
 };
 
+int camera_pre_capture_buf_id(uint32_t camera_id);
+
+int camera_pre_capture_buf_size(uint32_t camera_id,
+					int32_t mem_size_id,
+					uint32_t *mem_size);
+
 int camera_capture_buf_size(uint32_t     camera_id,
 					uint32_t        sn_fmt,
 					struct img_size *image_size,

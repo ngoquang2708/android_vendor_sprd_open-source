@@ -108,6 +108,7 @@ LOCAL_SRC_FILES:= \
 	isp/isp_msg.c \
 	isp/isp_drv.c \
 	isp/isp_ctrl.c \
+	isp/isp_awb_ctrl.c \
 	isp/isp_app_msg.c \
 	isp/isp_video.c \
 	isp/isp_param_tune_com.c \
@@ -167,6 +168,8 @@ endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISP
 endif
+
+LOCAL_CFLAGS += -DCONFIG_CAMERA_PREVIEW_YV12
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_CAPTURE_MODE)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ZSL_CAPTURE
@@ -251,6 +254,10 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_ADAPTER_IMAGE)),180)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_IMAGE_180
+endif
+
+ifeq ($(strip $(TARGET_BOARD_CAMERA_PRE_ALLOC_CAPTURE_MEM)),true)
+LOCAL_CFLAGS += -DCONFIG_PRE_ALLOC_CAPTURE_MEM
 endif
 
 ifeq ($(strip $(TARGET_BOARD_FRONT_CAMERA_MIPI)),phya)
