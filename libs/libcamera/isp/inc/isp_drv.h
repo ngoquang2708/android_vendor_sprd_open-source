@@ -43,6 +43,8 @@ extern   "C"
 
 #define ISP_ZERO 0x00
 #define ISP_ONE 0x01
+#define ISP_ALPHA_ONE	1024
+#define ISP_ALPHA_ZERO	0
 #define ISP_TWO 0x02
 
 #define ISP_MAX_HANDLE_NUM 0x02

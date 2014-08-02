@@ -40,18 +40,12 @@ extern "C"
 #define ISP_AWB_WINDOW_CONTER 0x03
 #define ISP_AWB_SETTING_NUM 	0x04
 
-#define AWB_SMART_NONE 		0x00	//none
-#define AWB_SMART_LNC 		(1<<0)	//bit0: smart lsc
-#define AWB_SMART_CMC 		(1<<1)	//bit1: smart cmc
-#define AWB_SMART_WIN 		(1<<2)	//bit2: multi white windows
-#define AWB_SMART_GAIN 		(1<<3)	//bit3: adjust gain
-#define AWB_SMART_HUE 		(1 << 4) //bit4: smart hue
-#define AWB_SMART_SATURATION (1 << 5) //bit 5: smart saturation
-
 #define ISP_AWB_ENVI_NUM 0x8
 #define ISP_AWB_SCENE_NUM 0x2
 #define ISP_AWB_PIECEWISE_SAMPLE_NUM 0x10
 #define ISP_AWB_CT_INFO_NUM 0x8
+
+#define ISP_AWB_GAIN_UNIT	256
 /*------------------------------------------------------------------------------*
 *				Data Structures					*
 *-------------------------------------------------------------------------------*/
@@ -118,7 +112,15 @@ enum isp_awb_envi_id {
 	ISP_AWB_ENVI_INDOOR = 2,
 	ISP_AWB_ENVI_OUTDOOR_LOW = 3,
 	ISP_AWB_ENVI_OUTDOOR_MIDDLE = 4,
-	ISP_AWB_ENVI_OUTDOOR_HIGH = 5
+	ISP_AWB_ENVI_OUTDOOR_HIGH = 5,
+	/*mixed low light and normal indoor*/
+	ISP_AWB_ENVI_MIX_LOW_LIGHT_INDOOR = 6,
+	/*mixed indoor and normal outdoor*/
+	ISP_AWB_ENVI_MIX_INDOOR_OUTDOOR = 7,
+	/*mixed noram outdoor and outdoor middle light*/
+	ISP_AWB_ENVI_MIX_OUTDOOR_NORMAL_MIDDLE = 8,
+	/*mixed out door middle light and outdoor high light*/
+	ISP_AWB_ENVI_MIX_OUTDOOR_MIDDLE_HIGH = 9
 };
 
 enum isp_awb_scene_id {
@@ -130,6 +132,11 @@ enum isp_awb_cmd {
 	ISP_AWB_CMD_SET_BASE 			= 0x1000,
 	ISP_AWB_CMD_GET_BASE			= 0x2000,
 	ISP_AWB_CMD_GET_CALC_DETAIL		= (ISP_AWB_CMD_GET_BASE + 1)
+};
+
+struct isp_awb_scene_info {
+	uint32_t ratio;
+	struct isp_awb_gain gain;
 };
 
 struct isp_awb_init_param {
@@ -144,6 +151,8 @@ struct isp_awb_init_param {
 
 	struct isp_awb_gain init_gain;
 	uint32_t init_ct;
+
+	uint32_t quick_mode;
 
 	/*parameters for alg 0*/
 	/*white window*/
@@ -160,7 +169,7 @@ struct isp_awb_init_param {
 	uint32_t steady_speed;
 	uint32_t debug_level;
 	struct isp_awb_weight_lut weight_of_pos_lut;
-	uint32_t scene_adjust_intensity[ISP_AWB_SCENE_NUM];
+	uint32_t scene_factor[ISP_AWB_SCENE_NUM];
 };
 
 struct isp_awb_calc_param {
@@ -171,6 +180,7 @@ struct isp_awb_calc_param {
 struct isp_awb_calc_result {
 	struct isp_awb_gain gain;
 	uint32_t ct;
+	struct isp_awb_scene_info scene_info[ISP_AWB_SCENE_NUM];
 };
 
 struct isp_awb_result {

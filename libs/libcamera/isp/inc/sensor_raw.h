@@ -134,6 +134,12 @@ struct sensor_awb_map{
 	uint32_t len;		//by bytes
 };
 
+struct sensor_awb_weight{
+	uint8_t *addr;
+	uint16_t width;
+	uint16_t height;
+};
+
 struct sensor_ae_index{
 	uint16_t start;
 	uint16_t max;
@@ -299,7 +305,8 @@ struct sensor_awb_param{
 	struct sensor_awb_ct_info ct_info;
 	struct sensor_rgb init_gain;
 	uint16_t init_ct;
-	uint32_t reserved1[2];
+	uint32_t green_factor;
+	uint32_t skin_factor;
 	uint8_t debug_level;
 	uint8_t smart_index;
 	uint8_t skip_num;
@@ -667,6 +674,7 @@ struct sensor_raw_fix_info{
 	struct sensor_ae_tab ae;
 	struct sensor_lnc_map lnc;
 	struct sensor_awb_map awb;
+	struct sensor_awb_weight awb_weight;
 };
 
 struct sensor_raw_awb_cali{

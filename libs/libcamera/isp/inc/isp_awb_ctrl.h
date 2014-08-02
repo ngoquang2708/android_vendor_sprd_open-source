@@ -62,7 +62,7 @@ struct isp_awb_estable{
 	struct isp_awb_rgb invalid_rgb[1024];
 };
 
-struct isp_awb_adjust{// shan.he modify the name
+struct isp_awb_adjust {
 	uint32_t index0;
 	uint32_t index1;
 	uint32_t alpha; // index1 alpha----1024->1X
@@ -123,9 +123,8 @@ struct isp_awb_param{
 	struct isp_awb_calc_result calc_result;
 	uint32_t bright_value;
 	enum  smart_light_envi_id envi_id;
-	uint32_t green_adjust_intensity;
-	uint32_t skin_adjust_intensity;
-	uint32_t sky_adjust_intensity;
+	uint32_t green_factor;
+	uint32_t skin_factor;
 	uint32_t debug_file;
 	uint32_t(*continue_focus_stat) (uint32_t handler_id, uint32_t param);
 	uint32_t(*mointor_info) (uint32_t handler_id, void* param_ptr);
