@@ -33,6 +33,7 @@ void *root_cmd_parser(void *arg)
      if ((connect_fd = accept(service_fd, (struct sockaddr *)&client_address, &client_len)) < 0)
      {
           ALOGD("accept socket failed!");
+          close(service_fd);
           return NULL;
      }
 
@@ -54,7 +55,6 @@ void *root_cmd_parser(void *arg)
           {
                ALOGD("cannot creat Result file!\n");
                write(connect_fd,"Result\n",strlen("Result\n"));
-               pclose(file);
                break;
           }
 
@@ -82,9 +82,10 @@ void *root_cmd_parser(void *arg)
                ALOGD("send cmd echo failed!\n");
           }
 
-		//ALOGD("sendbuf is %.*s \n",strlen(send_buf), send_buf);
+          //ALOGD("sendbuf is %.*s \n",strlen(send_buf), send_buf);
      }
 
+     close(service_fd);
      return NULL;
 }
 
