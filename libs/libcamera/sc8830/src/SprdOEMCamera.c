@@ -6182,6 +6182,19 @@ int camera_capture_max_img_size(uint32_t *max_width, uint32_t *max_height)
 	return 0;
 }
 
+int camera_pre_capture_get_buffer_size(uint32_t camera_id,
+						int32_t mem_size_id,
+						uint32_t *mem_size)
+{
+	int                      ret = CAMERA_SUCCESS;
+
+	ret = camera_pre_capture_buf_size(camera_id,
+					mem_size_id,
+					mem_size);
+
+	return ret;
+}
+
 int camera_capture_get_buffer_size(uint32_t camera_id,
 						uint32_t width,
 						uint32_t height,
@@ -9597,4 +9610,13 @@ static int isp_overwrite_cap_mem(void)
 
 	return CAMERA_SUCCESS;
 
+}
+
+int camera_pre_capture_get_buffer_id(uint32_t camera_id)
+{
+	int buffer_id = 0;
+
+	buffer_id = camera_pre_capture_buf_id(camera_id);
+
+	return buffer_id;
 }

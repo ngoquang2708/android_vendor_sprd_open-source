@@ -266,7 +266,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPreviewHeapArray(NULL),
 	mRawHeap(NULL),
 	mRawHeapSize(0),
-	mSubRawHeapNum(0),
 	mFDAddr(0),
 	mMetadataHeap(NULL),
 	mParameters(),
@@ -319,6 +318,13 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mSetDDRFreq(NO_FREQ_REQ),
 	mSwitchMonitorMsgQueHandle(0),
 	mSwitchMonitorInited(0),
+#if defined(CONFIG_PRE_ALLOC_CAPTURE_MEM)
+	mIsPreAllocCapMem(1),
+#else
+	mIsPreAllocCapMem(0),
+#endif
+	mPreAllocCapMemInited(0),
+	mIsPreAllocCapMemDone(0),
 	mIsPerformanceTestable(false)
 {
 	mIsPerformanceTestable = sprd_isPerformanceTestable();
@@ -344,7 +350,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
 	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
-	memset(mSubRawHeapArray, 0, sizeof(mSubRawHeapArray));
 	memset(mPreviewBufferHandle, 0, kPreviewBufferCount * sizeof(void*));
 	memset(mPreviewCancelBufHandle, 0, kPreviewBufferCount * sizeof(void*));
 	memset(mGraphBufferCount, 0, kPreviewBufferCount * sizeof(uint32_t));
@@ -464,7 +469,10 @@ void SprdCameraHardware::release()
 			mMetadataHeap = NULL;
 		}
 	}
-	deinitCapture();
+
+	pre_alloc_cap_mem_thread_deinit((void *)this);
+
+	deinitCapture(0);
 
 	mCbPrevDataBusyLock.lock();
 	/*preview bak heap check and free*/
@@ -736,7 +744,7 @@ status_t SprdCameraHardware::takePicture()
 
 	if (SPRD_ERROR == mCameraState.capture_state) {
 		LOGE("takePicture in error status, deinit capture at first ");
-		deinitCapture();
+		deinitCapture(mIsPreAllocCapMem);
 	} else if (SPRD_IDLE != mCameraState.capture_state) {
 		LOGE("take picture: action alread exist, direct return!");
 		return ALREADY_EXISTS;
@@ -771,8 +779,8 @@ status_t SprdCameraHardware::takePicture()
 			LOGE("takePicture: stop preview error!, preview state = %d", getPreviewState());
 			return UNKNOWN_ERROR;
 		}
-		if (!initCapture(mData_cb != NULL)) {
-			deinitCapture();
+		if (!initCapture()) {
+			deinitCapture(mIsPreAllocCapMem);
 			LOGE("takePicture initCapture failed. Not taking picture.");
 			return UNKNOWN_ERROR;
 		}
@@ -2719,75 +2727,7 @@ bool SprdCameraHardware::startCameraIfNecessary()
 	return true;
 }
 
-int SprdCameraHardware::Callback_AllocCaptureMem(void* handle, unsigned int size, unsigned int *addr_phy, unsigned int *addr_vir)
-{
-	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
-	sprd_camera_memory_t *memory = NULL;
-	*addr_phy = 0;
-	*addr_vir = 0;
-
-	LOGI("Callback_AllocCaptureMem: size = %d", size);
-
-	if (NULL == camera) {
-		LOGE("Callback_AllocCaptureMem : error camera is null.");
-		return -1;
-	}
-
-	if (camera->mSubRawHeapNum >= MAX_SUB_RAWHEAP_NUM) {
-		LOGE("Callback_AllocCaptureMem: error mSubRawHeapNum=%d", camera->mSubRawHeapNum);
-		return -1;
-	}
-
-	memory = camera->allocCameraMem(size, 1, true);
-
-	if (NULL == memory) {
-		LOGE("Callback_AllocCaptureMem: error memory is null.");
-		goto mem_fail;
-	}
-
-	camera->mSubRawHeapArray[camera->mSubRawHeapNum] = memory;
-	camera->mSubRawHeapNum ++;
-
-	if (NULL == memory->handle) {
-		LOGE("Callback_AllocCaptureMem: error memory->handle is null.");
-		goto mem_fail;
-	}
-
-	*addr_phy = (unsigned int)memory->phys_addr;
-	*addr_vir = (unsigned int)memory->data;
-
-	return 0;
-
-mem_fail:
-	Callback_FreeCaptureMem(handle);
-
-	return -1;
-}
-
-int SprdCameraHardware::Callback_FreeCaptureMem(void* handle)
-{
-	uint32_t i;
-	SprdCameraHardware* camera = (SprdCameraHardware*)handle;
-
-	if (camera == NULL) {
-		LOGE("Callback_FreeCaptureMem: error camera is null.");
-		return -1;
-	}
-
-	LOGI("Callback_FreeCaptureMem: mSubRawHeapNum = %d", camera->mSubRawHeapNum);
-
-	for (i = 0; i < camera->mSubRawHeapNum; i++) {
-		if (NULL != camera->mSubRawHeapArray[i]) {
-			camera->freeCameraMem(camera->mSubRawHeapArray[i]);
-		}
-		camera->mSubRawHeapArray[i] = NULL;
-	}
-	camera->mSubRawHeapNum = 0;
-
-	return 0;
-}
-
-sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_bufs, uint32_t is_cache)
+sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t is_cache)
 {
 	sprd_camera_memory_t *memory = (sprd_camera_memory_t *)malloc(sizeof(*memory));
 	MemoryHeapIon *pHeapIon = NULL;
@@ -2808,22 +2748,21 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_b
 
 	camera_memory_t *camera_memory = NULL;
 	int paddr = 0, psize = 0;
-	int  mem_size = buf_size * num_bufs ;
 	void *base = NULL;
 	int result = 0;
-	LOGI("allocCameraMem E: size 0x%x", mem_size);
+	LOGI("allocCameraMem E: size 0x%x", buf_size);
 
 	if (0 == s_mem_method) {
 		if (is_cache) {
-			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
+			pHeapIon = new MemoryHeapIon("/dev/ion", buf_size ,0 , (1<<31) | ION_HEAP_ID_MASK_MM);
 		} else {
-			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+			pHeapIon = new MemoryHeapIon("/dev/ion", buf_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
 		}
 	} else {
 		if (is_cache) {
-			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);
+			pHeapIon = new MemoryHeapIon("/dev/ion", buf_size ,0 , (1<<31) | ION_HEAP_ID_MASK_SYSTEM);
 		} else {
-			pHeapIon = new MemoryHeapIon("/dev/ion", mem_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+			pHeapIon = new MemoryHeapIon("/dev/ion", buf_size , MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
 		}
 	}
 
@@ -2838,7 +2777,11 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, int num_b
 		goto getpmem_end;
 	}
 
-	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), buf_size, num_bufs, NULL);
+	if (NULL == mGetMemory_cb) {
+		LOGE("allocCameraMem: error mGetMemory_cb is null.");
+		goto getpmem_end;
+	}
+	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), buf_size, 1, NULL);
 
 	if(NULL == camera_memory) {
 		LOGE("allocCameraMem: error camera_memory is null.");
@@ -3165,7 +3108,7 @@ bool SprdCameraHardware::allocatePreviewMem()
 		}
 
 		for (i = buffer_start_id; i < buffer_end_id; i++) {
-			sprd_camera_memory_t* PreviewHeap = allocCameraMem(buffer_size, 1, true);
+			sprd_camera_memory_t* PreviewHeap = allocCameraMem(buffer_size, true);
 			if (NULL == PreviewHeap) {
 				LOGE("allocatePreviewMem: error PreviewHeap is null, index=%d", i);
 				return false;
@@ -3204,7 +3147,7 @@ uint32_t SprdCameraHardware::getRedisplayMem()
 		buffer_size <<= 1 ;
 	}
 
-	mReDisplayHeap = allocCameraMem(buffer_size, 1, false);
+	mReDisplayHeap = allocCameraMem(buffer_size, false);
 
 	if (NULL == mReDisplayHeap)
 		return 0;
@@ -3411,17 +3354,17 @@ void SprdCameraHardware::deinitPreview()
 	}
 }
 
-bool SprdCameraHardware::allocateCaptureMem(bool initJpegHeap)
+bool SprdCameraHardware::allocateCapMem(uint32_t mem_size)
 {
 	uint32_t buffer_size = 0;
 
-	LOGI("allocateCaptureMem,mRawHeapSize = %d", mRawHeapSize);
+	LOGI("allocateCaptureMem,mRawHeapSize = %x", mem_size);
 
-	buffer_size = camera_get_size_align_page(mRawHeapSize);
-	LOGI("allocateCaptureMem:mRawHeap align size = %d . count %d ",buffer_size, kRawBufferCount);
+	buffer_size = camera_get_size_align_page(mem_size);
+	LOGI("allocateCaptureMem:mRawHeap align size = %x",buffer_size);
 	{
 		Mutex::Autolock cbufl(&mCapBufLock);
-		mRawHeap = allocCameraMem(buffer_size, kRawBufferCount, true);
+		mRawHeap = allocCameraMem(buffer_size, true);
 		if (NULL == mRawHeap) {
 			LOGE("allocateCaptureMem: error mRawHeap is null.");
 			goto allocate_capture_mem_failed;
@@ -3442,6 +3385,23 @@ allocate_capture_mem_failed:
 	freeCaptureMem();
 
 	return false;
+}
+
+bool SprdCameraHardware::allocateCaptureMem(bool isPreAllocCapMem, uint32_t mem_size)
+{
+	bool rtn = true;
+
+	if (0 == isPreAllocCapMem) {
+		rtn = allocateCapMem(mem_size);
+	} else {
+		LOGI("allocateCaptureMem: is pre alloc done:%d", mIsPreAllocCapMemDone);
+		sem_wait(&mPreAllocCapMemSemDone);
+		sem_post(&mPreAllocCapMemSemDone);
+		if (0 == mIsPreAllocCapMemDone) {
+			rtn = allocateCapMem(mem_size);
+		}
+	}
+	return rtn;
 }
 
 void SprdCameraHardware::freeCaptureMem()
@@ -3484,7 +3444,6 @@ void SprdCameraHardware::freeCaptureMem()
 
 	LOGI("free mSubRawHeap!");
 
-	Callback_FreeCaptureMem((void *)this);
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("freeCaptureMem X!");
 	} else {
@@ -3492,14 +3451,14 @@ void SprdCameraHardware::freeCaptureMem()
 	}
 }
 
-bool SprdCameraHardware::initCapture(bool initJpegHeap)
+bool SprdCameraHardware::initCapture()
 {
 	uint32_t local_width = 0, local_height = 0;
 	uint32_t mem_size = 0;
 	if (mIsPerformanceTestable) {
 		sprd_startPerfTracking("initCapture E.\n");
 	} else {
-		LOGI("initCapture E, %d", initJpegHeap);
+		LOGI("initCapture E");
 	}
 
 	if (!startCameraIfNecessary())
@@ -3523,7 +3482,7 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 
 	mRawHeapSize = mem_size;
 
-	if (!allocateCaptureMem(initJpegHeap)) {
+	if (!allocateCaptureMem(mIsPreAllocCapMem, mRawHeapSize)) {
 		return false;
 	}
 
@@ -3531,8 +3490,8 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 		(uint32_t)mRawHeap->phys_addr,
 		(uint32_t)mRawHeap->data,
 		(uint32_t)mRawHeap->phys_size,
-		(uint32_t)Callback_AllocCaptureMem,
-		(uint32_t)Callback_FreeCaptureMem,
+		0,
+		0,
 		(uint32_t)this))
 		return false;
 
@@ -3544,9 +3503,13 @@ bool SprdCameraHardware::initCapture(bool initJpegHeap)
 	return true;
 }
 
-void SprdCameraHardware::deinitCapture()
+void SprdCameraHardware::deinitCapture(bool isPreAllocCapMem)
 {
-	freeCaptureMem();
+	if (0 == isPreAllocCapMem) {
+		freeCaptureMem();
+	} else {
+		LOGI("deinitCapture: pre_allocate mode.");
+	}
 }
 
 status_t SprdCameraHardware::set_ddr_freq(uint32_t mhzVal)
@@ -3683,9 +3646,9 @@ status_t SprdCameraHardware::startPreviewInternal(bool isRecording)
 	}
 	if (1 == mParameters.getInt("zsl")) {
 		set_ddr_freq(HIGH_FREQ_REQ);
-		deinitCapture();
-		if (!initCapture(mData_cb != NULL)) {
-			deinitCapture();
+		deinitCapture(mIsPreAllocCapMem);
+		if (!initCapture()) {
+			deinitCapture(mIsPreAllocCapMem);
 			set_ddr_freq(BASE_FREQ_REQ);
 			LOGE("startPreviewInternal X initCapture failed. Not taking picture.");
 			return UNKNOWN_ERROR;
@@ -3759,7 +3722,7 @@ void SprdCameraHardware::stopPreviewInternal()
 	deinitPreview();
 
 	if (iSZslMode()) {
-		deinitCapture();
+		deinitCapture(mIsPreAllocCapMem);
 	}
 
 	if (1 == mParameters.getRecordingHint()) {
@@ -3853,7 +3816,7 @@ status_t SprdCameraHardware::cancelPictureInternal()
 
 		result = WaitForCaptureDone();
 		if (!iSZslMode()) {
-			deinitCapture();
+			deinitCapture(mIsPreAllocCapMem);
 		}
 		camera_set_capture_trace(0);
 		break;
@@ -5138,49 +5101,6 @@ void SprdCameraHardware::receiveJpegPictureFragment( JPEGENC_CBrtnType *encInfo)
 	}
 }
 
-void SprdCameraHardware::receiveJpegPosPicture(void)
-{
-	if (mIsPerformanceTestable) {
-		sprd_startPerfTracking("receiveJpegPosPicture: E");
-	} else {
-		LOGI("receiveJpegPosPicture: E");
-	}
-	print_time();
-
-	Mutex::Autolock cbLock(&mCaptureCbLock);
-
-	if (mData_cb!= NULL) {
-		bool encode_location = true;
-		camera_position_type pt = {0, 0, 0, 0, NULL};
-
-		encode_location = getCameraLocation(&pt);
-		if (encode_location) {
-			if (camera_set_position(&pt, NULL, NULL) != CAMERA_SUCCESS) {
-				LOGE("%s: camera_set_position: error", __func__);
-			}
-		} else {
-			LOGV("%s: not setting image location", __func__);
-		}
-
-		mJpegSize = 0;
-	} else {
-		LOGV("%s: JPEG callback was cancelled--not encoding image.", __func__);
-		// We need to keep the raw heap around until the JPEG is fully
-		// encoded, because the JPEG encode uses the raw image contained in
-		// that heap.
-		if (!iSZslMode()) {
-			deinitCapture();
-		}
-	}
-
-	print_time();
-	if (mIsPerformanceTestable) {
-		sprd_stopPerfTracking("%s: receiveJpegPosPicture X: free mCallbackLock!", __func__);
-	} else {
-		LOGI("%s: receiveJpegPosPicture X: free mCallbackLock!", __func__);
-	}
-}
-
 void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 {
 	GET_END_TIME;
@@ -5228,7 +5148,7 @@ void SprdCameraHardware::receiveJpegPicture(JPEGENC_CBrtnType *encInfo)
 
 	if (!iSZslMode()) {
 		if (encInfo->need_free) {
-			deinitCapture();
+			deinitCapture(mIsPreAllocCapMem);
 
 			set_ddr_freq(BASE_FREQ_REQ);
 		}
@@ -5907,6 +5827,101 @@ void * SprdCameraHardware::switch_monitor_thread_proc(void *p_data)
 	return NULL;
 }
 
+uint32_t SprdCameraHardware::isPreAllocCapMem()
+{
+	if (0 == mIsPreAllocCapMem) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+int SprdCameraHardware::pre_alloc_cap_mem_thread_init(void *p_data)
+{
+	int ret = NO_ERROR;
+	pthread_attr_t attr;
+
+	SprdCameraHardware *obj = (SprdCameraHardware *)p_data;
+
+	if (!obj) {
+		LOGE("pre_alloc_cap_mem_thread_init: obj null  error");
+		return -1;
+	}
+
+	LOGI("pre_alloc_cap_mem_thread_init: inited=%d", obj->mPreAllocCapMemInited);
+
+	if (!obj->mPreAllocCapMemInited) {
+		obj->mPreAllocCapMemInited = 1;
+		obj->mIsPreAllocCapMemDone = 0;
+		sem_init(&obj->mPreAllocCapMemSemDone, 0, 0);
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		ret = pthread_create(&obj->mPreAllocCapMemThread,
+							&attr,
+							pre_alloc_cap_mem_thread_proc,
+							(void *)obj);
+		if (ret) {
+			obj->mPreAllocCapMemInited = 0;
+			sem_destroy(&obj->mPreAllocCapMemSemDone);
+			LOGE("pre_alloc_cap_mem_thread_init: fail to send init msg");
+		}
+	}
+
+	return ret;
+}
+
+int SprdCameraHardware::pre_alloc_cap_mem_thread_deinit(void *p_data)
+{
+	int ret = NO_ERROR;
+	SprdCameraHardware * obj = (SprdCameraHardware *)p_data;
+
+	if (!obj) {
+		LOGE("pre_alloc_cap_mem_thread_deinit: obj null  error");
+		return -1;
+	}
+
+	LOGI("pre_alloc_cap_mem_thread_deinit: inited=%d", obj->mPreAllocCapMemInited);
+
+	if (obj->mPreAllocCapMemInited) {
+		sem_wait(&obj->mPreAllocCapMemSemDone);
+		sem_destroy(&obj->mPreAllocCapMemSemDone);
+		obj->mPreAllocCapMemInited = 0;
+		obj->mIsPreAllocCapMemDone = 0;
+	}
+	return ret ;
+}
+
+void * SprdCameraHardware::pre_alloc_cap_mem_thread_proc(void *p_data)
+{
+	uint32_t mem_size = 0;
+	int32_t buffer_id = 0;
+	SprdCameraHardware * obj = (SprdCameraHardware *)p_data;
+
+	if (!obj) {
+		LOGE("pre_alloc_cap_mem_thread_proc: obj null  error");
+		return NULL;
+	}
+
+	buffer_id = camera_pre_capture_get_buffer_id(obj->mCameraId);
+
+	if (camera_pre_capture_get_buffer_size(obj->mCameraId,
+		buffer_id, &mem_size)) {
+		obj->mIsPreAllocCapMem = 0;
+		LOGE("pre_alloc_cap_mem_thread_proc: buffer size error, using normal alloc cap buffer mode");
+	} else {
+		if (obj->allocateCaptureMem(0, mem_size)) {
+			obj->mIsPreAllocCapMemDone = 1;
+		} else {
+			obj->mIsPreAllocCapMem = 0;
+			LOGE("pre_alloc_cap_mem_thread_proc: buffer alloc error, using normal alloc cap buffer mode");
+		}
+	}
+
+	sem_post(&obj->mPreAllocCapMemSemDone);
+
+	return NULL;
+}
+
 SprdCameraHardware::MemPool::MemPool(int buffer_size, int num_buffers,
 		int frame_size,
 		int frame_offset,
@@ -6104,6 +6119,10 @@ static void HAL_camera_device_set_callbacks(struct camera_device *dev,
 	obj(dev)->setCallbacks(notify_cb, data_cb, data_cb_timestamp,
 			get_memory,
 			user);
+
+	if (1 == obj(dev)->isPreAllocCapMem()) {
+		obj(dev)->pre_alloc_cap_mem_thread_init(obj(dev));
+	}
 }
 
 /*
