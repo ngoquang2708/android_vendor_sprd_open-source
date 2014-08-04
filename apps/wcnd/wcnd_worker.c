@@ -128,6 +128,11 @@ int wcnd_worker_dispatch(WcndManager *pWcndManger, int (*handler)(void *), char 
 	if(!pNewWorker)
 	{
 		WCND_LOGE("wcnd_worker_dispatch Malloc failed!");
+
+		if (pthread_mutex_unlock(&(pWcndManger->worker_lock)) != 0) {
+			WCND_LOGE("Mutex unlock failed!");
+		}
+
 		return -1;
 	}
 
