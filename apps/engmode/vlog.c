@@ -329,6 +329,7 @@ void *eng_gps_log_thread(void *x)
                             retry_num ++;
                             if(retry_num > MAX_OPEN_TIMES){
                                 ENG_LOG("eng_gps_log: thread stop for open ser error!\n");
+                                sem_post(&g_gps_sem);
                                 return 0;
                             }
                         }
