@@ -305,7 +305,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             {
                 hnd->flags=(private_handle_t::PRIV_FLAGS_USES_ION)|(private_handle_t::PRIV_FLAGS_USES_PHY);
             }
-            ALOGD("the flag 0x%x and the vadress is 0x%x and the size is 0x%x",hnd->flags,(int)cpu_ptr,size);
+            ALOGD("the flag 0x%x and the vadress is 0x%x and the size is 0x%x, handle:%p, fd:%d",hnd->flags,(int)cpu_ptr,size,hnd,shared_fd);
             hnd->share_fd = shared_fd;
             hnd->ion_hnd = ion_hnd;
             *pHandle = hnd;
@@ -668,7 +668,7 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 	}
 
 	private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(handle);
-	ALOGD("%s buffer_handle_t:0x%x flags:0x%x  start",__FUNCTION__,(unsigned int)handle,hnd->flags);
+	ALOGD("%s buffer_handle_t:0x%x flags:0x%x , fd:%d, start",__FUNCTION__,(unsigned int)handle,hnd->flags,hnd->share_fd);
 		//LOGD("unmapping from %p, size=%d", base, size);
 
 				// we can't deallocate the memory in case of UNMAP failure
