@@ -51,7 +51,10 @@ int recv_socket(int sockfd, void* buffer, int size)
         return received;
 }
 
-#define FD_TIME "/sys/kernel/debug/power/sprd_timestamp"
+#define W_TIME "/data/w_timesyncfifo"
+#define TD_TIME "/data/td_timesyncfifo"
+#define L_TIME "/data/l_timesyncfifo"
+
 int get_timezone()
 {
 	time_t time_utc;
@@ -89,19 +92,32 @@ int get_timezone()
 
 void write_modem_timestamp(struct slog_info *info, char *buffer)
 {
-	int fd, ret;
+	int fd, ret, retry_count = 0;
 	FILE *fp;
 	int time_zone;
 	struct modem_timestamp *mts;
+        char cp_time[MAX_NAME_LEN];
 
-	if (strncmp(info->name, "cp", 2)) {
-		return;
-	}
+        memset(cp_time, '0', MAX_NAME_LEN);
+        if (!strncmp(info->name, "cp0", 3)) {
+                strcpy(cp_time, W_TIME);
+        } else if (!strncmp(info->name, "cp1", 3)) {
+                strcpy(cp_time, TD_TIME);
+        } else if (!strncmp(info->name, "cp3", 3)) {
+                strcpy(cp_time, L_TIME);
+        } else
+                return;
 
 	mts = calloc(1, sizeof(struct modem_timestamp));
-	fd = open(FD_TIME, O_RDWR);
+retry_get_cp_time:
+	fd = open(cp_time, O_RDWR);
 	if( fd < 0 ){
-		err_log("Unable to open time stamp device '%s'", FD_TIME);
+		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
+			retry_count ++;
+			sleep(1);
+			goto retry_get_cp_time;
+		}
+		err_log("Unable to open time stamp device '%s'", cp_time);
 		free(mts);
 		return;
 	}
