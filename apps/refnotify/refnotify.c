@@ -12,9 +12,11 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <sys/sysinfo.h>
 #include <string.h>
 #include <mtd/mtd-user.h>
 #include <time.h>
+#include <sys/time.h>
 #include <sys/reboot.h>
 #include <linux/rtc.h>
 #include <cutils/properties.h>
@@ -31,6 +33,12 @@
 
 #define TD_NOTIFY_DEV "/dev/spipe_td8"
 #define W_NOTIFY_DEV "/dev/spipe_w8"
+//#define TD_NOTIFY_DEV "/dev/spimux18"
+//#define L_NOTIFY_DEV "/dev/sdiomux18"
+
+#define TD_FIFO_PATH "/data/td_timesyncfifo"
+#define W_FIFO_PATH "/data/w_timesyncfifo"
+#define L_FIFO_PATH "/data/l_timesyncfifo"
 
 #define RTC_DEV "/dev/rtc0"
 
@@ -54,6 +62,7 @@ enum {
 	REF_WAKE_CMD,
 	REF_RESET_CMD,
 	REF_IQ_CMD,
+	REF_CPTIME_CMD,
 	REF_CMD_MAX
 };
 
@@ -84,6 +93,20 @@ struct ref_lcdfreq {
 	uint32_t clk;
 	uint32_t divisor;
 };
+
+struct time_sync
+{
+	struct timeval tv;
+	unsigned int sys_cnt;
+	long uptime;
+	char *path;
+};
+
+static struct time_sync time_info;
+
+static char *g_fifopath = NULL;
+
+static pthread_t g_timetid = -1;
 
 static void usage(void)
 {
@@ -135,7 +158,6 @@ int RefNotify_rtc_writetm(struct tm *ptm)
 	close(fd);
 	return 0;
 }
-
 
 void RefNotify_DoGetTime(int fd, struct refnotify_cmd *cmd)
 {
@@ -192,6 +214,7 @@ void RefNotify_DoGetDate(int fd, struct refnotify_cmd *cmd)
 	free(pcmd);
 }
 
+
 static int RefNotify_DoSetTime(struct refnotify_cmd *pcmd)
 {
 	int ret;
@@ -222,7 +245,6 @@ static int RefNotify_DoSetTime(struct refnotify_cmd *pcmd)
 	}
 	return 0;
 }
-
 
 static int RefNotify_DoSetDate(struct refnotify_cmd *pcmd)
 {
@@ -295,6 +317,63 @@ static void RefNotify_DoGetIqInfo(int fd, struct refnotify_cmd *cmd)
 	free(pcmd);
 }
 
+static void* timesync_task(void *arg)
+{
+	int fd;
+	int num;
+	struct time_sync ntime;
+	struct timezone tz;
+	struct sysinfo sinfo;
+	int length = sizeof(struct timeval) + sizeof(unsigned int);
+	struct time_sync *ptime = (struct time_sync*)arg;
+	REF_LOGD("Enter timesync_task \n");
+	while(1) {
+		if(!ptime->path) {
+			REF_LOGE("no timefifo to open \n");
+			break;
+		}
+		fd = open(ptime->path, O_WRONLY);
+		if(fd < 0) {
+				REF_LOGE("open %s failed, error: %s", ptime->path, strerror(errno));
+				if (errno == EINTR || errno == EAGAIN) {
+					sleep(1);
+					continue;
+				} else
+					break;
+			}
+			gettimeofday(&(ntime.tv), &tz);
+			sysinfo(&sinfo);
+			ntime.uptime = sinfo.uptime;
+			ntime.sys_cnt = ptime->sys_cnt + (ntime.uptime - ptime->uptime)*1000;
+			num = write(fd, (void*)&ntime.tv, length);
+		if(num != length) {
+			REF_LOGE("write fifo error...\n");
+		}
+		sleep(10);
+		close(fd);
+	}
+	return NULL;
+}
+
+
+static void RefNotify_DoTimesync(char * path, struct refnotify_cmd *pcmd)
+{
+	struct timezone tz;
+	struct sysinfo info;
+	if(sysinfo(&info)) {
+		REF_LOGE("get sysinfo failed \n");
+	}
+	gettimeofday(&(time_info.tv), &tz);
+	time_info.sys_cnt = *(unsigned int*)(pcmd+1);
+	time_info.uptime = info.uptime;
+	time_info.path = path;
+	REF_LOGD("refnotify ap time is :%lu seconds. cp sys_cnt is: %u\n", time_info.tv.tv_sec, time_info.sys_cnt);
+	if(g_timetid == -1) {
+		REF_LOGD("create timesync_task \n");
+		pthread_create(&g_timetid, NULL,timesync_task, (void *)&time_info);
+	}
+}
+
 static void RefNotify_DoFreqCmd(struct refnotify_cmd *pcmd)
 {
 	struct ref_lcdfreq *p_freq = (struct ref_lcdfreq *)(pcmd + 1);
@@ -352,6 +431,10 @@ void RefNotify_DoCmd(int fd, struct refnotify_cmd *pcmd)
 			break;
 		case REF_IQ_CMD:
 			RefNotify_DoGetIqInfo(fd, pcmd);
+			break;
+		case REF_CPTIME_CMD:
+			RefNotify_DoTimesync(g_fifopath, pcmd);
+			break;
 		default:
 			break;
 	}
@@ -403,18 +486,20 @@ void* sleep_monitor(void *arg)
 
 	return NULL;
 }
-
 int main(int argc, char *argv[])
 {
 	char buf[128];
-	char *pbuf;
+	char *pbuf = NULL;
 	int opt;
 	int type;
-	int td_flag = 1 , fd, num;
+	//int td_flag = 0 , fd, num;
+	int flag = 0 , fd, num;
 	uint32_t numRead;
-	char *path;
-	struct refnotify_cmd *pcmd;
+	char path[PROPERTY_VALUE_MAX+2] = {0};
+	const char *pathnumber = "18";
+	struct refnotify_cmd *pcmd = NULL;
 	pthread_t tid;
+	int mk_ret = 0;
 	REF_LOGD("Enter RefNotify main \n");
 	if (argc == 1 || (strcmp(argv[1], "-t") && strcmp(argv[1], "-h"))) {
 		usage();
@@ -425,9 +510,11 @@ int main(int argc, char *argv[])
 			case 't':
 				type = atoi(optarg);
 				if (type == 0){
-					td_flag = 1;
-				} else {
-					td_flag = 0;
+					flag = 0;
+				} else if(type == 1){
+					flag = 1;
+				} else{
+					flag = 2;
 				}
 				break;
 			case 'h':
@@ -438,17 +525,58 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	REF_LOGD("Enter RefNotify main td_flag %d \n", td_flag);
-	if(td_flag == 1) {
-		path = TD_NOTIFY_DEV;
-	} else {
-		path = W_NOTIFY_DEV;
+	REF_LOGD("Enter RefNotify main flag %d \n", flag);
+	if(flag == 0) {
+		property_get("ro.modem.t.tty",path,"not_find");
+		if(0 == strcmp(path, "/dev/spimux")){
+			strcat(path, pathnumber);
+			if( -1 == access(TD_FIFO_PATH, F_OK)){
+				mk_ret = mkfifo(TD_FIFO_PATH, 0666);
+				if(mk_ret == 0) {
+					REF_LOGE("create tdfifo success");
+				} else {
+					REF_LOGE("create tdfifo failed, error: %s",strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+			}
+			g_fifopath = TD_FIFO_PATH;
+		} else{
+			strcpy(path, "/dev/spipe_td8");
+		}
+		REF_LOGD("get TD_NOTIFY_DEV property path is: %s \n", path);
+	} else if(flag == 1){
+		strcpy(path, "/dev/spipe_w8");
+		/*if( -1 == access(W_FIFO_PATH, F_OK)){
+			mk_ret = mkfifo(W_FIFO_PATH, 0666);
+			if(mk_ret == 0) {
+				REF_LOGE("create wfifo success");
+			} else {
+				REF_LOGE("create wfifo failed, error: %s",strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+		}
+		g_fifopath = W_FIFO_PATH;*/
+	} else if(flag == 2){
+		property_get("ro.modem.l.tty",path,"not_find");
+		strcat(path, pathnumber);
+		REF_LOGD("get L_NOTIFY_DEV property path is: %s \n", path);
+		if( -1 == access(L_FIFO_PATH, F_OK)){
+			mk_ret = mkfifo(L_FIFO_PATH, 0666);
+			if(mk_ret == 0) {
+				REF_LOGE("create lfifo success");
+			} else {
+				REF_LOGE("create lfifo failed, error: %s",strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+		}
+		g_fifopath = L_FIFO_PATH;
 	}
 	fd = open(path/*TD_NOTIFY_DEV*/, O_RDWR);
 	if (fd < 0) {
 		REF_LOGE("RefNotify open %s failed, error: %s", path, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+	REF_LOGE("RefNotify open %s success", path);
 	/*start a service to notify cp of sleep/wake state*/
 	pthread_create(&tid, NULL,sleep_monitor, (void *)fd);
 
@@ -474,7 +602,6 @@ readheader:
 			goto readheader;
 		}
 		pcmd = (struct refnotify_cmd*)buf;
-
 		if(numRead < pcmd->length) {
 readcontent:
 			num = read(fd, pbuf + numRead, pcmd->length - numRead);
@@ -496,5 +623,3 @@ readcontent:
 	}
 	return 0;
 }
-
-
