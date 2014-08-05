@@ -100,6 +100,9 @@
 #define PRIVATE_VBC_EQ_PROFILE            "eq profile"
 #define PRIVATE_INTERNAL_PA              "internal PA"
 #define PRIVATE_INTERNAL_HP_PA              "internal HP PA"
+
+#define PRIVATE_INTERNAL_HP_PA_DELAY		"internal HP PA Delay"
+
 #define FM_DIGITAL_SUPPORT_PROPERTY  "ro.digital.fm.support"
 
 #define PRIVATE_VBC_DA_EQ_SWITCH            "da eq switch"
@@ -365,6 +368,7 @@ struct tiny_private_ctl {
     struct mixer_ctl *headphone_mute;
     struct mixer_ctl *fm_loop_vbc;
     struct mixer_ctl *ad1_fm_loop_vbc;
+    struct mixer_ctl *internal_hp_pa_delay;
 };
 
 struct stream_routing_manager {
@@ -413,6 +417,7 @@ typedef struct {
     uint32_t        fm_pa_config;
     uint32_t        voice_pa_config;
     uint32_t        hp_pa_config;
+    uint32_t        hp_pa_delay_config;
     uint32_t        fm_hp_pa_config;
     uint32_t        voice_hp_pa_config;
     uint32_t        fm_pga_gain_l;
@@ -1775,6 +1780,7 @@ error:
     }
     return -1;
 }
+
 
 
 /* must be called with hw device and output stream mutexes locked */
@@ -4115,13 +4121,15 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.internal_pa =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.internal_pa);
-        }
-        else if (strcmp(s->private_name, PRIVATE_INTERNAL_HP_PA) == 0) {
+        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_HP_PA) == 0) {
             s->adev->private_ctl.internal_hp_pa =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.internal_hp_pa);
-        }
-        else if (strcmp(s->private_name, PRIVATE_VBC_DA_EQ_SWITCH) == 0) {
+        } else if (strcmp(s->private_name, PRIVATE_INTERNAL_HP_PA_DELAY) == 0){
+            s->adev->private_ctl.internal_hp_pa_delay =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.internal_hp_pa_delay);
+        } else if (strcmp(s->private_name, PRIVATE_VBC_DA_EQ_SWITCH) == 0) {
             s->adev->private_ctl.vbc_da_eq_switch =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.vbc_da_eq_switch);
