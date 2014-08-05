@@ -5977,6 +5977,11 @@ static struct sensor_raw_fix_info s_ov8825_fix_info=
 		(uint16_t*)s_ov8825_awb_map,
 		sizeof(s_ov8825_awb_map),
 	},
+	{
+		NULL,
+		0,
+		0
+	}
 };
 
 static struct sensor_raw_resolution_info_tab s_ov8825_trim_info=

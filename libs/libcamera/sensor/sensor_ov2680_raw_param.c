@@ -2162,8 +2162,13 @@ static struct sensor_raw_fix_info s_ov2680_fix_info=
 	},
 	{
 		(uint16_t*)s_ov2680_awb_map,
-		0x00,
+		sizeof(s_ov2680_awb_map),
 	},
+	{
+		NULL,
+		0,
+		0
+	}
 };
 
 static struct sensor_raw_resolution_info_tab s_ov2680_trim_info=

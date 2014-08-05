@@ -7968,8 +7968,13 @@ static struct sensor_raw_fix_info s_imx219_fix_info=
 	},
 	{
 		(uint16_t*)s_imx219_awb_map,
-		0x00,
+		sizeof(s_imx219_awb_map),
 	},
+	{
+		NULL,
+		0,
+		0
+	}
 };
 
 static struct sensor_raw_resolution_info_tab s_imx219_trim_info=

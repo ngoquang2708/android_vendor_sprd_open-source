@@ -9375,8 +9375,13 @@ static struct sensor_raw_fix_info s_ov13850_fix_info=
 	},
 	{
 		(uint16_t*)s_ov13850_awb_map,
-		0x00,
+		sizeof(s_ov13850_awb_map)
 	},
+	{
+		NULL,
+		0,
+		0
+	}
 };
 
 static struct sensor_raw_resolution_info_tab s_ov13850_trim_info=

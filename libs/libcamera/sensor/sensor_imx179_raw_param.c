@@ -2154,10 +2154,15 @@ static struct sensor_raw_fix_info s_imx179_fix_info={
 		},
 	},
 },
-{
-	PNULL,
-	0,
-}
+	{
+		PNULL,
+		0,
+	},
+	{
+		NULL,
+		0,
+		0
+	}
 };
 
 static struct sensor_raw_resolution_info_tab s_imx179_trim_info=

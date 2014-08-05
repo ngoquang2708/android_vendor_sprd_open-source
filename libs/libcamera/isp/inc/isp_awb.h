@@ -41,7 +41,7 @@ extern "C"
 #define ISP_AWB_SETTING_NUM 	0x04
 
 #define ISP_AWB_ENVI_NUM 0x8
-#define ISP_AWB_SCENE_NUM 0x2
+#define ISP_AWB_SCENE_NUM 0x4
 #define ISP_AWB_PIECEWISE_SAMPLE_NUM 0x10
 #define ISP_AWB_CT_INFO_NUM 0x8
 
