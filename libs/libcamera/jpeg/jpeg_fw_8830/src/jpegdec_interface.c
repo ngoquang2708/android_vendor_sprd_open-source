@@ -35,6 +35,7 @@
 PUBLIC void JPEGFW_configure_vld_reg_jpegDec (void);
 PUBLIC void JPEGFW_build_hufftab_jpegDec(void);
 PUBLIC void JPEGFW_InitHuffTbl(void);
+
 PUBLIC JPEG_RET_E  JPEG_FWParseHead(JPEG_DEC_INPUT_PARA_T  *jpeg_dec_input)
 {
 	uint32 i;
@@ -84,6 +85,7 @@ PUBLIC JPEG_RET_E  JPEG_FWParseHead(JPEG_DEC_INPUT_PARA_T  *jpeg_dec_input)
 	
 	if(ret != JPEG_SUCCESS)
 	{
+		SCI_TRACE_LOW("failed to ParseHead");
 		return ret;
 	}
 
