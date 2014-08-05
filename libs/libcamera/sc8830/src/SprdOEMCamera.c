@@ -67,6 +67,7 @@ uint32_t isptool_saved_file_count = 0;
 #define WAIT_CAPTURE_PATH_TIME   100
 #define PREV_TRACE_CNT           8
 #define IS_POINTER_INVALID(p)    ((p) <= 0x800 || (p) == 0xFFFFFFFF)
+#define CMR_1080P_HEIGHT    1088
 
 /*camera_takepic_step timestamp*/
 enum CAMERA_TAKEPIC_STEP {
@@ -5733,6 +5734,28 @@ int camera_get_sensor_preview_mode(struct img_size* target_size, uint32_t *work_
 					break;
 				} else {
 					last_one = i;
+				}
+			}
+		}
+	}
+
+	if (search_height != height
+		&& search_height >= CMR_1080P_HEIGHT
+		&& height >= search_height * 1.5) {
+		CMR_LOGI("second_search_height = %d", search_height);
+		for (i = SENSOR_MODE_PREVIEW_ONE; i < SENSOR_MODE_MAX; i++) {
+			if (SENSOR_MODE_MAX != sn_info->sensor_mode_info[i].mode) {
+				height = sn_info->sensor_mode_info[i].trim_height;
+				height = height * 1.2;
+				CMR_LOGI("second_height = %d", height);
+				if (SENSOR_IMAGE_FORMAT_JPEG != sn_info->sensor_mode_info[i].image_format) {
+					if (search_height <= height) {
+						target_mode = i;
+						ret = CAMERA_SUCCESS;
+						break;
+					} else {
+						last_one = i;
+					}
 				}
 			}
 		}
