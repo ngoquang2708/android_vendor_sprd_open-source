@@ -734,7 +734,7 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
         return -1;
     }
     ptArmModeStruct = (AUDIO_NV_ARM_MODE_STRUCT_T *)(&(aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct));
-    if(adev->call_start == 1)
+    if((adev->call_start == 1) || (adev->voip_state) )  
     {
         dac_index = AUDIO_NV_LINEIN_APP_CONFIG_INFO;//1
     } else {
@@ -789,7 +789,7 @@ static int  GetAudio_inpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud
         ALOGE("%s aud_params_ptr or pga_gain_nv is NULL",__func__);
         return -1;
     }
-    if(adev->call_start == 1)
+    if((adev->call_start== 1) || (adev->voip_state))
     {
         adc_index = AUDIO_NV_LINEIN_GAIN_INDEX;    //46
      } else {
@@ -832,7 +832,7 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     int32_t outmode = 0, inmode=0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
-    if(adev->call_start == 1){
+    if((adev->call_start == 1) || (adev->voip_state)){
         outmode = GetAudio_mode_number_from_device(adev);
         inmode = outmode;
     } else {
@@ -2442,7 +2442,7 @@ reconnect:
             cur_out_devices_l = adev->out_devices;
             cur_out_devices_l &= ~AUDIO_DEVICE_OUT_ALL;
             pthread_mutex_lock(&adev->lock);
-            if(adev->call_start){
+            if((adev->call_start) || (adev->voip_state)){
                 do_select_devices_l(adev,cur_out_devices_l);
             }
             pthread_mutex_unlock(&adev->lock);
