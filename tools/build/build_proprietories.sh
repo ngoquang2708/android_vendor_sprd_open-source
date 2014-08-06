@@ -20,9 +20,28 @@ OUTDIR=`readlink -f $3`
 
 cd $TOPDIR/out/target/product
 mkdir -p $PLATFORM
+cpio_dir="$(readlink -f $PLATFORM)"
 
+# For sources
+cd $TOPDIR
+source_release_list=
+for i in $(sed '/^system\//d' $TOPDIR/vendor/sprd/proprietories/$PLATFORM/prop.list); do
+	if [ -d ${i} ]; then
+		source_release_list="$(find ${i} | sed 1d)$(printf "\n${source_release_list}")"
+	elif [ -f ${i} ]; then
+		source_release_list="${source_release_list}$(printf "\n${i}")"
+	fi
+done
+[ "${source_release_list}" ] && {
+	mkdir ${cpio_dir}/sources
+	echo "${source_release_list}" | cpio -pdum ${cpio_dir}/sources/
+}
+cd - >/dev/null
+
+# For binaries
 cd $BOARD
-cat $TOPDIR/vendor/sprd/proprietories/$PLATFORM/prop.list | cpio -pdum ../$PLATFORM
+# cat $TOPDIR/vendor/sprd/proprietories/$PLATFORM/prop.list | cpio -pdum ../$PLATFORM
+sed '/^system\//!d' $TOPDIR/vendor/sprd/proprietories/$PLATFORM/prop.list | cpio -pdum ${cpio_dir}
 
 cd ..
 tar zcf $OUTDIR/proprietories-$PLATFORM.tar.gz $PLATFORM
