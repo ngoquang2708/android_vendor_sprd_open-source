@@ -216,6 +216,30 @@ PUBLIC JPEG_RET_E JPEG_HWWriteTail(void)
 	return JPEG_SUCCESS;
 }
 
+static int  save_jpgenc_file2debug()
+{
+	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
+	uint8*				bitstream_ptr = jpeg_fw_codec->g_stream_buf_ptr;
+	uint32    				bitstream_len = jpeg_fw_codec->encoded_stream_len;
+	FILE* jpg = fopen("/data/misc/media/enc_failed.jpg","wb");
+
+	if(NULL == jpg)
+	{
+		SCI_TRACE_LOW("failed to open file /data/misc/media/enc_failed.jpg \n");
+		return 0;
+	}
+
+	if(NULL == bitstream_ptr || bitstream_len == 0)
+	{
+		SCI_TRACE_LOW("null enc bitstream \n");
+		fclose(jpg);
+		return 0;
+	}
+
+	fwrite(bitstream_ptr,1,bitstream_len,jpg );
+	fclose(jpg);
+	return 0;
+}
 PUBLIC uint32  JPEG_HWGetSize(void)
 {
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
@@ -272,6 +296,7 @@ PUBLIC uint32  JPEG_HWGetSize(void)
 		jpeg_fw_codec->encoded_stream_len += 4*1024*1024;
 	if(!(0xff == buf[jpeg_fw_codec->encoded_stream_len-2]&&0xd9==buf[jpeg_fw_codec->encoded_stream_len-1]))
 	{
+		save_jpgenc_file2debug();
 		jpeg_fw_codec->encoded_stream_len = -1;
 		SCI_TRACE_LOW("invalid jpg file");
 	}

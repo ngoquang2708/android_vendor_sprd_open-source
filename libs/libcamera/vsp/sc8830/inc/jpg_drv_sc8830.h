@@ -151,7 +151,7 @@ PUBLIC __inline int32 jpg_read_reg_poll(uint32 reg_addr, uint32 msk,uint32 exp_v
 }
 
 #define JPG_WRITE_REG(reg_addr, value, pstring) do{jpg_write_register(reg_addr, (value));\
-	if((uint32)(value) !=jpg_read_register(reg_addr))SCI_TRACE_LOW("WRITE_REG %s,%d %x",__FUNCTION__,__LINE__,jpg_read_register(reg_addr));\
+	if((uint32)(value) !=jpg_read_register(reg_addr))SCI_TRACE_LOW("WRITE_REG %s,%d 0x%x : 0x%x",__FUNCTION__,__LINE__,(value),jpg_read_register(reg_addr));\
 	else {\
 		}\
 		}while(0)
