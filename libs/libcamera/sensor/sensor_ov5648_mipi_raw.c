@@ -30,7 +30,11 @@
 static uint32_t g_module_id = 0;
 
 static uint32_t g_flash_mode_en = 0;
-static uint32_t s_ov5648_gain = 0;
+static int s_ov5648_gain = 0;
+static int s_ov5648_gain_bak = 0;
+static int s_ov5648_shutter_bak = 0;
+static int s_ov5648_capture_shutter = 0;
+static int s_ov5648_capture_VTS = 0;
 
 #define OV5648_RAW_PARAM_Truly     0x02
 #define OV5648_RAW_PARAM_Sunny    0x01
@@ -62,10 +66,11 @@ LOCAL uint32_t _ov5648_StreamOff(uint32_t param);
 LOCAL uint32_t _ov5648_write_exposure(uint32_t param);
 LOCAL uint32_t _ov5648_write_gain(uint32_t param);
 LOCAL uint32_t _ov5648_write_af(uint32_t param);
-LOCAL uint32_t _ov5648_ReadGain(uint32_t*  gain_ptr);
+LOCAL uint32_t _ov5648_ReadGain(void);
 LOCAL uint32_t _ov5648_SetEV(uint32_t param);
 LOCAL uint32_t _ov5648_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode);
+LOCAL uint32_t _dw9174_SRCDeinit(void);
 LOCAL uint32_t _ov5648_flash(uint32_t param);
 LOCAL uint32_t _ov5648_com_Identify_otp(void* param_ptr);
 LOCAL uint32_t _ov5648_cfg_otp(uint32_t  param);
@@ -1680,9 +1685,7 @@ LOCAL uint32_t _ov5648_PowerOn(uint32_t power_on)
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
 		// Open power
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
 		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(20*1000);
 		_dw9174_SRCInit(2);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		usleep(10*1000);
@@ -1695,7 +1698,7 @@ LOCAL uint32_t _ov5648_PowerOn(uint32_t power_on)
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
+		_dw9174_SRCDeinit();
 	}
 	SENSOR_PRINT("SENSOR_OV5648: _ov5648_Power_On(1:on, 0:off): %d", power_on);
 	return SENSOR_SUCCESS;
@@ -2282,10 +2285,9 @@ LOCAL uint32_t _ov5648_write_af(uint32_t param)
 	return ret_value;
 }
 
-LOCAL uint32_t _ov5648_ReadGain(uint32_t*  gain_ptr)
+LOCAL uint32_t _ov5648_ReadGain(void)
 {
-	uint32_t rtn = SENSOR_SUCCESS;
-	uint16_t value=0x00;
+	uint32_t value=0x00;
 	uint32_t gain = 0;
 
 	value = Sensor_ReadReg(0x350b);/*0-7*/
@@ -2293,33 +2295,142 @@ LOCAL uint32_t _ov5648_ReadGain(uint32_t*  gain_ptr)
 	value = Sensor_ReadReg(0x350a);/*8*/
 	gain |= (value<<0x08)&0x300;
 
-	s_ov5648_gain=gain;
-	if (gain_ptr) {
-		*gain_ptr = gain;
-	}
 
-	SENSOR_PRINT("SENSOR: _ov5648_ReadGain gain: 0x%x", s_ov5648_gain);
+	SENSOR_PRINT("SENSOR: _ov5648_ReadGain gain: 0x%x", gain);
 
-	return rtn;
+	return gain;
+}
+
+int _ov5648_get_shutter(void)
+{
+	// read shutter, in number of line period
+	int shutter;
+
+	shutter = (Sensor_ReadReg(0x03500) & 0x0f);
+	shutter = (shutter<<8) + Sensor_ReadReg(0x3501);
+	shutter = (shutter<<4) + (Sensor_ReadReg(0x3502)>>4);
+
+	return shutter;
+}
+
+int _ov5648_set_shutter(int shutter)
+{
+	// write shutter, in number of line period
+	int temp;
+
+	shutter = shutter & 0xffff;
+
+	temp = shutter & 0xf;
+	temp = temp<<4;
+	Sensor_WriteReg(0x3502, temp);
+
+	temp = shutter & 0xfff;
+	temp = temp>>4;
+	Sensor_WriteReg(0x3501, temp);
+
+	temp = (shutter >> 12) & 0x0f;
+	Sensor_WriteReg(0x3500, temp);
+
+	return 0;
+}
+
+int _ov5648_set_gain16(int gain16)
+{
+	// write gain, 16 = 1x
+	int temp;
+	gain16 = gain16 & 0x3ff;
+
+	temp = gain16 & 0xff;
+	Sensor_WriteReg(0x350b, temp);
+
+	temp = (gain16 >> 8) & 0x03;
+	Sensor_WriteReg(0x350a, temp);
+
+	return 0;
+}
+
+LOCAL int _ov5648_get_VTS(void)
+{
+	// read VTS from register settings
+	int VTS;
+
+	VTS = Sensor_ReadReg(0x380e);//total vertical size[15:8] high byte
+
+	VTS = (VTS<<8) + Sensor_ReadReg(0x380f);
+
+	return VTS;
+}
+
+LOCAL int _ov5648_set_VTS(uint16_t VTS)
+{
+	// set VTS from register settings
+
+	Sensor_WriteReg(0x380e, ((VTS >> 8) & 0xff));//total vertical size[15:8] high byte
+
+	Sensor_WriteReg(0x380f, (VTS & 0xff));
+
+	return 0;
+}
+
+
+static void _ov5648_calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
+{
+	// write capture gain
+	_ov5648_set_gain16(capture_gain16);
+	_ov5648_set_shutter(capture_shutter);
 }
 
 LOCAL uint32_t _ov5648_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
-	uint16_t value=0x00;
-	uint32_t gain = s_ov5648_gain;
+	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
 	uint32_t ev = ext_ptr->param;
 
-	SENSOR_PRINT("SENSOR: _ov5648_SetEV param: 0x%x", ev);
+	SENSOR_PRINT("SENSOR_ov5648: _ov5648_SetEV param: 0x%x", ext_ptr->param);
 
-	gain=(gain*ext_ptr->param)>>0x06;
+	switch(ev) {
+		case SENSOR_HDR_EV_LEVE_0:
+			_ov5648_calculate_hdr_exposure(s_ov5648_gain/2, s_ov5648_capture_VTS, s_ov5648_capture_shutter);
+			break;
 
-	value = gain&0xff;
-	Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (gain>>0x08)&0x03;
-	Sensor_WriteReg(0x350a, value);/*8*/
+		case SENSOR_HDR_EV_LEVE_1:
+			_ov5648_calculate_hdr_exposure(s_ov5648_gain, s_ov5648_capture_VTS, s_ov5648_capture_shutter);
+			break;
 
+		case SENSOR_HDR_EV_LEVE_2:
+			_ov5648_calculate_hdr_exposure(s_ov5648_gain * 2, s_ov5648_capture_VTS, s_ov5648_capture_shutter * 2);
+			break;
+
+		default:
+			break;
+	}
+	return rtn;
+}
+
+LOCAL uint32_t _ov5648_saveLoad_exposure(uint32_t param)
+{
+	uint32_t rtn = SENSOR_SUCCESS;
+	uint8_t  ret_h, ret_m, ret_l;
+	uint32_t dummy = 0;
+	SENSOR_EXT_FUN_PARAM_T_PTR sl_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR)param;
+
+	uint32_t sl_param = sl_ptr->param;
+	if (sl_param) {
+		/*load exposure params to sensor*/
+		SENSOR_PRINT_HIGH("_ov5648_saveLoad_exposure load shutter 0x%x gain 0x%x",
+							s_ov5648_shutter_bak,
+							s_ov5648_gain_bak);
+
+		_ov5648_set_gain16(s_ov5648_gain_bak);
+		_ov5648_set_shutter(s_ov5648_shutter_bak);
+	} else {
+		/*save exposure params from sensor*/
+		s_ov5648_shutter_bak = _ov5648_get_shutter();
+		s_ov5648_gain_bak = _ov5648_ReadGain();
+		SENSOR_PRINT_HIGH("_ov5648_saveLoad_exposure save shutter 0x%x gain 0x%x",
+							s_ov5648_shutter_bak,
+							s_ov5648_gain_bak);
+	}
 	return rtn;
 }
 
@@ -2329,10 +2440,14 @@ LOCAL uint32_t _ov5648_ExtFunc(uint32_t ctl_param)
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
 
 	switch (ext_ptr->cmd) {
-		//case SENSOR_EXT_EV:
-		case 10:
-			rtn = _ov5648_SetEV(ctl_param);
-			break;
+	case SENSOR_EXT_EV:
+		rtn = _ov5648_SetEV(ctl_param);
+		break;
+
+	case SENSOR_EXT_EXPOSURE_SL:
+		rtn = _ov5648_saveLoad_exposure(ctl_param);
+		break;
+
 		default:
 			break;
 	}
@@ -2340,103 +2455,70 @@ LOCAL uint32_t _ov5648_ExtFunc(uint32_t ctl_param)
 	return rtn;
 }
 
-LOCAL uint32_t _ov5648_PreBeforeSnapshot(uint32_t param)
+LOCAL uint32_t _ov5648_BeforeSnapshot(uint32_t param)
 {
-	uint8_t ret_l, ret_m, ret_h;
 	uint32_t capture_exposure, preview_maxline;
 	uint32_t capture_maxline, preview_exposure;
-	uint32_t gain = 0, value = 0;
-	uint32_t prv_linetime=s_ov5648_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
-	uint32_t cap_linetime = s_ov5648_Resolution_Trim_Tab[param].line_time;
+	uint32_t gain = 0;
+	uint32_t capture_mode = param & 0xffff;
+	uint32_t preview_mode = (param >> 0x10 ) & 0xffff;
+	uint32_t prv_linetime=s_ov5648_Resolution_Trim_Tab[preview_mode].line_time;
+	uint32_t cap_linetime = s_ov5648_Resolution_Trim_Tab[capture_mode].line_time;
 
-	SENSOR_PRINT("SENSOR_OV5648: BeforeSnapshot moe: %d, prv_linetime:%d, cap_linetime:%d",param, prv_linetime, cap_linetime);
+	SENSOR_PRINT("SENSOR_OV5648: BeforeSnapshot mode: 0x%x, prv_linetime:%d, cap_linetime:%d",param, prv_linetime, cap_linetime);
 
-	if (SENSOR_MODE_PREVIEW_ONE >= param){
-		_ov5648_ReadGain(0x00);
-		SENSOR_PRINT("SENSOR_OV5648: prvmode equal to capmode");
-		return SENSOR_SUCCESS;
+	if (preview_mode == capture_mode) {
+		SENSOR_PRINT("SENSOR_OV5648: prv mode equal to cap mode");
+		goto CFG_INFO;
 	}
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x3500);
-	ret_m = (uint8_t) Sensor_ReadReg(0x3501);
-	ret_l = (uint8_t) Sensor_ReadReg(0x3502);
-	preview_exposure = ((ret_h&0x0f) << 12) + (ret_m << 4) + ((ret_l >> 4)&0x0f);
+	preview_exposure = _ov5648_get_shutter();
+	preview_maxline = _ov5648_get_VTS();
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
-	preview_maxline = (ret_h << 8) + ret_l;
+	gain = _ov5648_ReadGain();
 
-	_ov5648_ReadGain(&gain);
-	Sensor_SetMode(param);
+	Sensor_SetMode(capture_mode);
 	Sensor_SetMode_WaitDone();
 
 	if (prv_linetime == cap_linetime) {
 		SENSOR_PRINT("SENSOR_OV5648: prvline equal to capline");
-		return SENSOR_SUCCESS;
+		goto CFG_INFO;
 	}
 
-	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
-	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
-	capture_maxline = (ret_h << 8) + ret_l;
-	if (prv_linetime == cap_linetime) {
-		SENSOR_PRINT("SENSOR_ov5648: prvline equal to capline");
-		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
-	}
-
+	capture_maxline = _ov5648_get_VTS();
 	capture_exposure = preview_exposure *prv_linetime  / cap_linetime ;
 
 	if (0 == capture_exposure) {
 		capture_exposure = 1;
 	}
-	SENSOR_PRINT("SENSOR_OV5648: BeforeSnapshot gain: 0x%x,  capture_exposure = %d, capture_maxline = %d", gain, capture_exposure, capture_maxline);
 
 	while(gain >= 0x20){
-		SENSOR_PRINT("SENSOR_OV5648:  gain = %d ", gain);
 		if(capture_exposure*2  > capture_maxline)
 			break;
+
 		capture_exposure =capture_exposure*2;
 		gain=gain / 2;
 	}
 
-	SENSOR_PRINT("SENSOR_OV5648:yanwei BeforeSnapshot gain: 0x%x,  capture_exposure = %d, capture_maxline = %d", gain, capture_exposure, capture_maxline);
+
+	SENSOR_PRINT("SENSOR_OV5648: BeforeSnapshot,  capture_exposure = %d, capture_maxline = %d", capture_exposure, capture_maxline);
+
 	if(capture_exposure > (capture_maxline - 4)){
 		capture_maxline = capture_exposure + 4;
-		ret_l = (unsigned char)(capture_maxline&0x0ff);
-		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
-		Sensor_WriteReg(0x380e, ret_h);
-		Sensor_WriteReg(0x380f, ret_l);
+		capture_maxline = (capture_maxline+1)>>1<<1;
+		_ov5648_set_VTS(capture_maxline);
 	}
 
-	ret_l = (unsigned char)((capture_exposure&0x0f) << 4);
-	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4);
-	ret_h = (unsigned char)(capture_exposure >> 12)&0x0f;
+	_ov5648_set_shutter(capture_exposure);
+	_ov5648_set_gain16(gain);
 
-	Sensor_WriteReg(0x3502, ret_l);
-	Sensor_WriteReg(0x3501, ret_m);
-	Sensor_WriteReg(0x3500, ret_h);
-
-	value = gain&0xff;
-	Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (gain>>0x08)&0x03;
-	Sensor_WriteReg(0x350a, value);/*8-9*/
-	s_ov5648_gain = gain;
-	//usleep(200*1000);
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
+CFG_INFO:
+	s_ov5648_capture_shutter = _ov5648_get_shutter();
+	s_ov5648_capture_VTS = _ov5648_get_VTS();
+	s_ov5648_gain =_ov5648_ReadGain();
+	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, s_ov5648_capture_shutter);
 
 	return SENSOR_SUCCESS;
-}
-
-LOCAL uint32_t _ov5648_BeforeSnapshot(uint32_t param)
-{
-	uint32_t cap_mode = (param>>CAP_MODE_BITS);
-	uint32_t rtn = SENSOR_SUCCESS;
-
-	param = param & 0xffff;
-	SENSOR_PRINT("%d,%d.",cap_mode,param);
-
-	rtn = _ov5648_PreBeforeSnapshot(param);
-
-	return rtn;
 }
 
 LOCAL uint32_t _ov5648_after_snapshot(uint32_t param)
@@ -2474,6 +2556,9 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 
 	slave_addr = DW9714_VCM_SLAVE_ADDR;
 
+	Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
+	usleep(10*1000);
+
 	switch (mode) {
 		case 1:
 		break;
@@ -2497,4 +2582,11 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 	}
 
 	return ret_value;
+}
+
+LOCAL uint32_t _dw9174_SRCDeinit(void)
+{
+	Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
+
+	return 0;
 }
