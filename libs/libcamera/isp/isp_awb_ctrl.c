@@ -33,14 +33,14 @@
 #define ISP_LOGD
 #define ISP_LOGV
 #else
-#define ISP_DEBUG_STR     "ISP_AWB: %d, %s: "
-#define ISP_DEBUG_ARGS    __LINE__,__FUNCTION__
+#define ISP_AWB_DEBUG_STR     "ISP_AWB: %d, %s: "
+#define ISP_AWB_DEBUG_ARGS    __LINE__,__FUNCTION__
 
-#define ISP_LOGE(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-#define ISP_LOGW(format,...) ALOGW(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-#define ISP_LOGI(format,...) ALOGI(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-#define ISP_LOGD(format,...) ALOGD(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
-#define ISP_LOGV(format,...) ALOGV(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGE(format,...) ALOGE(ISP_AWB_DEBUG_STR format, ISP_AWB_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGW(format,...) ALOGW(ISP_AWB_DEBUG_STR format, ISP_AWB_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGI(format,...) ALOGI(ISP_AWB_DEBUG_STR format, ISP_AWB_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGD(format,...) ALOGD(ISP_AWB_DEBUG_STR format, ISP_AWB_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGV(format,...) ALOGV(ISP_AWB_DEBUG_STR format, ISP_AWB_DEBUG_ARGS, ##__VA_ARGS__)
 #endif
 
 /*------------------------------------------------------------------------------*
