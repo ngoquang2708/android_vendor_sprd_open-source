@@ -23,6 +23,7 @@ import android.content.Intent; //import com.android.dm.vdmc.VdmcFumoHandler;
 //import com.android.dm.vdmc.MyConfirmation;
 import android.app.AlertDialog;
 import android.content.DialogInterface; //import com.redbend.vdm.*;
+import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -131,7 +132,9 @@ public class DmAlertDialog extends Activity {
         super.onCreate(savedInstanceState);
         // setContentView(R.layout.main);
         // getWindow().setBackgroundDrawable(null);
-        mContext = this;
+		// Bug 340714
+		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+		mContext = this;
         mInstance = this;
         mNotificationMgr = (NotificationManager) mContext
                 .getSystemService(Context.NOTIFICATION_SERVICE);
