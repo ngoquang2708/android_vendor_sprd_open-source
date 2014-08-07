@@ -3542,6 +3542,68 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 	sensor_ptr->special_effect[7].u_shift=0xffe2;
 	sensor_ptr->special_effect[7].v_shift=0x0028;
 #endif
+	sensor_ptr->af.denoise_lv = 40;
+	sensor_ptr->af.alg_id = 4;
+
+	sensor_ptr->caf.enable = 1;
+	sensor_ptr->caf.cfg[0].awb_cal_value_thr = 130;
+	sensor_ptr->caf.cfg[0].awb_cal_num_thr = 300;
+	sensor_ptr->caf.cfg[0].awb_cal_value_stab_thr = 90;
+	sensor_ptr->caf.cfg[0].awb_cal_num_stab_thr = 100;
+	sensor_ptr->caf.cfg[0].awb_cal_cnt_stab_thr = 1;
+	sensor_ptr->caf.cfg[0].afm_cal_thr = 0xc0;
+	sensor_ptr->caf.cfg[0].afm_cal_stab_thr = 0x70;
+	sensor_ptr->caf.cfg[0].afm_cal_cnt_stab_thr = 3;
+	sensor_ptr->caf.cfg[0].awb_cal_skip_cnt = 1;
+	sensor_ptr->caf.cfg[0].afm_cal_skip_cnt = 9;
+	sensor_ptr->caf.cfg[0].caf_work_lum_thr = 30;  //percent of ae target
+
+	sensor_ptr->caf.cfg[1].awb_cal_value_thr = 130;
+	sensor_ptr->caf.cfg[1].awb_cal_num_thr = 300;
+	sensor_ptr->caf.cfg[1].awb_cal_value_stab_thr = 90;
+	sensor_ptr->caf.cfg[1].awb_cal_num_stab_thr = 100;
+	sensor_ptr->caf.cfg[1].awb_cal_cnt_stab_thr = 1;
+	sensor_ptr->caf.cfg[1].afm_cal_thr = 0xc0;
+	sensor_ptr->caf.cfg[1].afm_cal_stab_thr = 0x70;
+	sensor_ptr->caf.cfg[1].afm_cal_cnt_stab_thr = 3;
+	sensor_ptr->caf.cfg[1].awb_cal_skip_cnt = 1;
+	sensor_ptr->caf.cfg[1].afm_cal_skip_cnt = 9;
+	sensor_ptr->caf.cfg[1].caf_work_lum_thr = 50;  //percent of ae target
+
+	sensor_ptr->af_multi_win.enable = 1;
+	sensor_ptr->af_multi_win.win_used_cnt = 6;
+	sensor_ptr->af_multi_win.win_sel_mode = 0;
+	sensor_ptr->af_multi_win.win_priority[0] = 4;
+	sensor_ptr->af_multi_win.win_priority[1] = 1;
+	sensor_ptr->af_multi_win.win_priority[2] = 2;
+	sensor_ptr->af_multi_win.win_priority[3] = 3;
+	sensor_ptr->af_multi_win.win_priority[4] = 3;
+	sensor_ptr->af_multi_win.win_priority[5] = 5;
+
+	{
+		uint32_t af_win_pos_setting[6][4]={
+			{375,625,625,875},
+			{425,400,575,600},
+			{375,375,625,625},
+			{125,375,375,625},
+			{625,375,875,625},
+			{375,125,625,375},
+		};
+		uint32_t image_width = 2592;
+		uint32_t image_height = 1944;
+		uint32_t i;
+
+		for (i=0;i<sensor_ptr->af_multi_win.win_used_cnt;i++) {
+			sensor_ptr->af_multi_win.win_pos[i].start_x =(image_width - 1)*af_win_pos_setting[i][0]/1000;
+			sensor_ptr->af_multi_win.win_pos[i].start_y =(image_height - 1)*af_win_pos_setting[i][1]/1000;
+			sensor_ptr->af_multi_win.win_pos[i].end_x =(image_width - 1)*af_win_pos_setting[i][2]/1000;
+			sensor_ptr->af_multi_win.win_pos[i].end_y =(image_height - 1)*af_win_pos_setting[i][3]/1000;
+		}
+		
+		
+	}
+
+
 	return rtn;
 }
 

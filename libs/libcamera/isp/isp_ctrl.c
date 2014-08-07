@@ -75,12 +75,24 @@
 #define ISP_MONITOR_EVT_STORE	ISP_INT_STORE_ERR
 #define ISP_MONITOR_EVT_AWB	ISP_INT_AWB
 #define ISP_MONITOR_EVT_AF	ISP_INT_AF
+#define ISP_MONITOR_EVT_AFM0	ISP_INT_AFM_WIN0
+#define ISP_MONITOR_EVT_AFM1	ISP_INT_AFM_WIN1
+#define ISP_MONITOR_EVT_AFM2	ISP_INT_AFM_WIN2
+#define ISP_MONITOR_EVT_AFM3	ISP_INT_AFM_WIN3
+#define ISP_MONITOR_EVT_AFM4	ISP_INT_AFM_WIN4
+#define ISP_MONITOR_EVT_AFM5	ISP_INT_AFM_WIN5
+#define ISP_MONITOR_EVT_AFM6	ISP_INT_AFM_WIN6
+#define ISP_MONITOR_EVT_AFM7	ISP_INT_AFM_WIN7
+#define ISP_MONITOR_EVT_AFM8	ISP_INT_AFM_WIN8
 #define ISP_MONITOR_EVT_AE	ISP_INT_AE
 #define ISP_MONITOR_EVT_TX	ISP_INT_STORE
 
 #define ISP_MONITOR_EVT_MASK	(uint32_t)(ISP_MONITOR_EVT_START | ISP_MONITOR_EVT_STOP | ISP_MONITOR_EVT_SOF \
 					| ISP_MONITOR_EVT_EOF | ISP_MONITOR_EVT_AWB | ISP_MONITOR_EVT_AF \
-					| ISP_MONITOR_EVT_AE | ISP_MONITOR_EVT_TX)
+					| ISP_MONITOR_EVT_AE | ISP_MONITOR_EVT_TX | ISP_MONITOR_EVT_AFM0 \
+					| ISP_MONITOR_EVT_AFM1 | ISP_MONITOR_EVT_AFM2 | ISP_MONITOR_EVT_AFM3 \
+					| ISP_MONITOR_EVT_AFM4 | ISP_MONITOR_EVT_AFM5 | ISP_MONITOR_EVT_AFM6 \
+					| ISP_MONITOR_EVT_AFM7 | ISP_MONITOR_EVT_AFM8)
 
 #define ISP_THREAD_QUEUE_NUM 50
 #define ISP_ID_INVALID 0xff
@@ -272,78 +284,63 @@ static uint16_t cce_matrix[][12]=
 static struct isp_param* s_isp_param_ptr=NULL;
 static pthread_mutex_t s_ctrl_mutex={0x00};
 
-static uint32_t ctn_af_awb_r_base_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_awb_g_base_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_awb_b_base_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_awb_r_diff_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_awb_g_diff_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_awb_b_diff_tbl[2][1024]= {{0}};
-static uint32_t ctn_af_af_base_tbl[2][9]= {{0}};
-static uint32_t ctn_af_af_pre_tbl[2][9]= {{0}};
-static uint32_t ctn_af_af_diff_tbl[2][9]= {{0}};
-static uint32_t ctn_af_af_diff2_tbl[2][9]= {{0}};
-
-static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
+static struct isp_caf_cal_cfg ctn_af_cal_cfg[2][2] =
 {
-	{
-		.awb_r_base = ctn_af_awb_r_base_tbl[0],
-		.awb_g_base = ctn_af_awb_g_base_tbl[0],
-		.awb_b_base = ctn_af_awb_b_base_tbl[0],
-		.awb_r_diff = ctn_af_awb_r_diff_tbl[0],
-		.awb_g_diff = ctn_af_awb_g_diff_tbl[0],
-		.awb_b_diff = ctn_af_awb_b_diff_tbl[0],
-		.af_base = ctn_af_af_base_tbl[0],
-		.af_pre = ctn_af_af_pre_tbl[0],
-		.af_diff = ctn_af_af_diff_tbl[0],
-		.af_diff2 = ctn_af_af_diff2_tbl[0],
-		.awb_cal_count = 0,
-		.af_cal_count = 0,
-		.awb_stab_cal_count = 0,
-		.af_stab_cal_count = 0,
-		.awb_cal_value_threshold = 130,
-		.awb_cal_num_threshold = 300,
-		.awb_cal_value_stab_threshold = 90,
-		.awb_cal_num_stab_threshold = 100,
-		.awb_cal_cnt_stab_threshold = 1,
-		.af_cal_threshold = 0xC0,
-		.af_cal_stab_threshold = 0x70,
-		.af_cal_cnt_stab_threshold = 3,
-		.awb_cal_skip_cnt = 1,
-		.af_cal_skip_cnt = 9,
-		.cal_state = 0,
-		.awb_is_stab = 0,
-		.af_is_stab = 0,
-		.af_cal_need_af = 0,
+	{//Preview CAF
+		{
+			.awb_cal_value_threshold = 130,
+			.awb_cal_num_threshold = 300,
+			.awb_cal_value_stab_threshold = 90,
+			.awb_cal_num_stab_threshold = 100,
+			.awb_cal_cnt_stab_threshold = 1,
+			.af_cal_threshold = 0xC0,
+			.af_cal_stab_threshold = 0x70,
+			.af_cal_cnt_stab_threshold = 3,
+			.awb_cal_skip_cnt = 1,
+			.af_cal_skip_cnt = 9,
+			.caf_work_lum_thr = 30,
+		},
+		{
+			.awb_cal_value_threshold = 130,
+			.awb_cal_num_threshold = 300,
+			.awb_cal_value_stab_threshold = 90,
+			.awb_cal_num_stab_threshold = 100,
+			.awb_cal_cnt_stab_threshold = 1,
+			.af_cal_threshold = 0xC0,
+			.af_cal_stab_threshold = 0x70,
+			.af_cal_cnt_stab_threshold = 3,
+			.awb_cal_skip_cnt = 1,
+			.af_cal_skip_cnt = 9,
+			.caf_work_lum_thr = 30,
+		}
 	},
-	{
-		.awb_r_base = ctn_af_awb_r_base_tbl[1],
-		.awb_g_base = ctn_af_awb_g_base_tbl[1],
-		.awb_b_base = ctn_af_awb_b_base_tbl[1],
-		.awb_r_diff = ctn_af_awb_r_diff_tbl[1],
-		.awb_g_diff = ctn_af_awb_g_diff_tbl[1],
-		.awb_b_diff = ctn_af_awb_b_diff_tbl[1],
-		.af_base = ctn_af_af_base_tbl[1],
-		.af_pre = ctn_af_af_pre_tbl[1],
-		.af_diff = ctn_af_af_diff_tbl[1],
-		.af_diff2 = ctn_af_af_diff2_tbl[1],
-		.awb_cal_count = 0,
-		.af_cal_count = 0,
-		.awb_stab_cal_count = 0,
-		.af_stab_cal_count = 0,
-		.awb_cal_value_threshold = 130,
-		.awb_cal_num_threshold = 300,
-		.awb_cal_value_stab_threshold = 90,
-		.awb_cal_num_stab_threshold = 100,
-		.awb_cal_cnt_stab_threshold = 1,
-		.af_cal_threshold = 0xC0,
-		.af_cal_stab_threshold = 0x70,
-		.af_cal_cnt_stab_threshold = 3,
-		.awb_cal_skip_cnt = 1,
-		.af_cal_skip_cnt = 9,
-		.cal_state = 0,
-		.awb_is_stab = 0,
-		.af_is_stab = 0,
-		.af_cal_need_af = 0,
+	{//Video CAF
+		{
+			.awb_cal_value_threshold = 130,
+			.awb_cal_num_threshold = 300,
+			.awb_cal_value_stab_threshold = 90,
+			.awb_cal_num_stab_threshold = 100,
+			.awb_cal_cnt_stab_threshold = 1,
+			.af_cal_threshold = 0xC0,
+			.af_cal_stab_threshold = 0x70,
+			.af_cal_cnt_stab_threshold = 3,
+			.awb_cal_skip_cnt = 1,
+			.af_cal_skip_cnt = 9,
+			.caf_work_lum_thr = 50,
+		},
+		{
+			.awb_cal_value_threshold = 130,
+			.awb_cal_num_threshold = 300,
+			.awb_cal_value_stab_threshold = 90,
+			.awb_cal_num_stab_threshold = 100,
+			.awb_cal_cnt_stab_threshold = 1,
+			.af_cal_threshold = 0xC0,
+			.af_cal_stab_threshold = 0x70,
+			.af_cal_cnt_stab_threshold = 3,
+			.awb_cal_skip_cnt = 1,
+			.af_cal_skip_cnt = 9,
+			.caf_work_lum_thr = 50,
+		}
 	}
 };
 
@@ -358,6 +355,8 @@ static struct camera_ctn_af_cal_cfg ctn_af_cal_cfg[2] =
 
 static int32_t _ispCfgAfWin(uint32_t handler_id, struct isp_af_param* af, struct isp_af_win* src_af);
 static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr);
+static int32_t _ispAfTrigerStart(uint32_t handler_id);
+static int32_t _ispCfgDenoise(uint32_t handler_id, struct isp_denoise_param* param_ptr);
 
 int isp_savelog(void)
 {
@@ -615,24 +614,13 @@ static int32_t _isp_ContinueFocusTrigeAF(uint32_t handler_id)
 	isp_context_ptr->af.monitor_bypass=ISP_EB;
 	if((ISP_UEB == isp_context_ptr->af.bypass)
 		&&(ISP_AF_CONTINUE != isp_context_ptr->af.status)
-		&&(ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode)){
+		&&((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode))){
 
 		af_win.mode = isp_context_ptr->af.mode;
 		af_win.valid_win = 0;
 		_ispCfgAfWin(handler_id, &isp_context_ptr->af, &af_win);
-		ISP_LOG("ae.bypass %d",isp_context_ptr->ae.bypass);
-		isp_context_ptr->af.ae_status = isp_context_ptr->ae.bypass;
-		isp_context_ptr->af.awb_status = isp_context_ptr->awb.bypass;
-		isp_context_ptr->ae.bypass=ISP_EB;
-		isp_context_ptr->awb.bypass=ISP_EB;
-		isp_context_ptr->ae.monitor_bypass=ISP_EB;
-		isp_context_ptr->awb.monitor_bypass=ISP_EB;
-		isp_context_ptr->ae.cur_skip_num = ISP_AE_SKIP_FOREVER;
-		isp_context_ptr->af.monitor_bypass=ISP_UEB;
-		_ispCfgAf(handler_id, &isp_context_ptr->af);
-		isp_context_ptr->af.status=ISP_AF_START;
-		isp_context_ptr->af.suc_win=ISP_ZERO;
-		//isp_context_ptr->tune.af=ISP_EB;
+
+		_ispAfTrigerStart(handler_id);
 
 		af_notice.mode=ISP_FOCUS_MOVE_START;
 		af_notice.valid_win=0x00;
@@ -923,16 +911,7 @@ static void _ispCtrlAWB(uint32_t handler_id)
 
 	isp_context_ptr->ae.bypass=af_param_ptr->ae_status;
 	if (ISP_UEB == isp_context_ptr->ae.bypass) {
-		if (3 == af_param_ptr->alg_id) {
-			struct isp_awbm_param temp;
-			memcpy(&temp,&isp_context_ptr->awbm,sizeof(isp_context_ptr->awbm));
-			temp.bypass = ISP_EB;
-			ae_param_ptr->monitor_conter=ae_param_ptr->skip_frame+2;
-			af_param_ptr->CfgAwbm(handler_id, &temp);
-
-		} else {
-			ae_param_ptr->monitor_conter=ae_param_ptr->skip_frame;
-		}
+		ae_param_ptr->monitor_conter=ae_param_ptr->skip_frame;
 		isp_context_ptr->ae.monitor_bypass = ISP_UEB;
 	} else {
 		isp_context_ptr->ae.monitor_bypass = ISP_EB;
@@ -1730,40 +1709,200 @@ static uint8_t _ispGetLensGridMode(uint8_t grid)
 	return mode;
 }
 
+/* _ispAfDenoiseRecover --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispAfDenoiseRecover(uint32_t handler_id)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+
+	_ispCfgDenoise(handler_id, &isp_context_ptr->denoise);
+	isp_context_ptr->af.control_denoise = ISP_UEB;
+	return rtn;
+}
+
+
+/* _ispAfTrigerStart --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispAfTrigerStart(uint32_t handler_id)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	struct isp_denoise_param param;
+	uint8_t *diswei;
+	uint8_t *ranwei;
+
+	if (isp_context_ptr->af.denoise_lv > 0) {
+		isp_context_ptr->af.control_denoise = ISP_EB;
+		memcpy((void*)&param, (void*)&isp_context_ptr->denoise, sizeof(param));
+		isp_get_denoise_tab(isp_context_ptr->af.denoise_lv,&diswei,&ranwei);
+		memcpy((void*)&param.diswei, (void*)diswei, 19);
+		memcpy((void*)&param.ranwei, (void*)ranwei, 31);
+		param.bypass = ISP_UEB;
+		_ispCfgDenoise(handler_id, &param);
+	}
+	
+	if (ISP_EB == isp_context_ptr->af.end_handler_flag) {
+		isp_context_ptr->af.ae_status=isp_context_ptr->ae.bypass;
+		isp_context_ptr->af.awb_status=isp_context_ptr->awb.bypass;
+		ISP_LOG("backup ae bypass %d",isp_context_ptr->af.ae_status);
+	}
+	isp_context_ptr->ae.bypass=ISP_EB;
+	isp_context_ptr->awb.bypass=ISP_EB;
+	isp_context_ptr->ae.monitor_bypass=ISP_EB;
+	isp_context_ptr->awb.monitor_bypass=ISP_EB;
+	isp_context_ptr->ae.cur_skip_num = ISP_AE_SKIP_FOREVER;
+	isp_context_ptr->af.monitor_bypass=ISP_UEB;
+	_ispCfgAf(handler_id, &isp_context_ptr->af);
+	isp_context_ptr->af.status=ISP_AF_START;
+	isp_context_ptr->af.suc_win=ISP_ZERO;
+
+
+	return rtn;
+}
+
+
+
+
 /* _ispCfgAfWin --
 *@
 *@
 *@ return:
 */
+
+static int32_t _ispAfWinPosReloc(uint32_t handler_id, uint16_t *start_x, uint16_t *start_y, uint16_t *end_x, uint16_t *end_y)
+{
+	int32_t rtn = ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
+	uint32_t win_w;
+	uint32_t win_h;
+	uint32_t opt_win_w;
+	uint32_t opt_win_h;
+	uint32_t centre_x;
+	uint32_t centre_y;
+	uint32_t src_w = isp_context_ptr->src.w;
+	uint32_t src_h = isp_context_ptr->src.h;
+
+	win_w = *end_x - *start_x;
+	win_h = *end_y - *start_y;
+	opt_win_w = (src_w/10)<<1;
+	opt_win_h = (src_h/10)<<1;
+	
+	if ((win_w < opt_win_w) || (win_h < opt_win_h)) {
+		centre_x = (*start_x + *end_x) >> 1;
+		centre_y = (*start_y + *end_y) >> 1;
+
+		if (centre_x < (opt_win_w >> 1)) {
+			*start_x = 0;
+			*end_x = opt_win_w;
+		} else if (centre_x > (src_w - (opt_win_w >> 1) - 1)) {
+			*start_x = src_w - opt_win_w  - 1;
+			*end_x = src_w - 1;
+
+		} else {
+			*start_x = centre_x - (opt_win_w >> 1);
+			*end_x = centre_x + (opt_win_w >> 1);
+		}
+
+		if (centre_y < (opt_win_h >> 1)) {
+			*start_y = 0;
+			*end_y = opt_win_h;
+		} else if (centre_y > (src_h - (opt_win_h >> 1) - 1)) {
+			*start_y = src_h - opt_win_h - 1;
+			*end_y = src_h - 1;
+
+		} else {
+			*start_y = centre_y - (opt_win_h >> 1);
+			*end_y = centre_y + (opt_win_h >> 1);
+		}
+	}
+	
+	return rtn;
+
+}
+
+
 static int32_t _ispCfgAfWin(uint32_t handler_id, struct isp_af_param* af, struct isp_af_win* src_af)
 {
 	int32_t rtn = ISP_SUCCESS;
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	uint32_t max_win_num = ispGetAfMaxNum(handler_id);
+	uint32_t bottom_win;
+	uint32_t max_y_end;
 	uint8_t i = ISP_ZERO;
 
-	if((ISP_ZERO == src_af->valid_win) || (ISP_FOCUS_CONTINUE == src_af->mode)) {
-		af->valid_win = 1;
-		af->win[i][0]=((((isp_context_ptr->src.w>>ISP_ONE)-(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
-		af->win[i][1]=((((isp_context_ptr->src.h>>ISP_ONE)-(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
-		af->win[i][2]=((((isp_context_ptr->src.w>>ISP_ONE)+(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
-		af->win[i][3]=((((isp_context_ptr->src.h>>ISP_ONE)+(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+
+	if((ISP_ZERO == src_af->valid_win) || (ISP_FOCUS_CONTINUE == src_af->mode) || (ISP_FOCUS_VIDEO == src_af->mode)) {
+		if (af->multi_win_enable) {
+			af->valid_win = af->multi_win_cnt;
+			for(i = 0x00; i < 9; i++) {
+				af->win[i][0] = af->multi_win_pos[0][0];
+				af->win[i][1] = af->multi_win_pos[0][1];
+				af->win[i][2] = af->multi_win_pos[0][2];
+				af->win[i][3] = af->multi_win_pos[0][3];
+			}
+			for(i = 0x00; i < af->valid_win; i++) {
+				af->win[i][0] = af->multi_win_pos[i][0];
+				af->win[i][1] = af->multi_win_pos[i][1];
+				af->win[i][2] = af->multi_win_pos[i][2];
+				af->win[i][3] = af->multi_win_pos[i][3];
+				af->win_priority[i] = af->multi_win_priority[i];
+				ISP_LOG("AF Win %d: S_x:%d  S_y:%d E_x:%d  E_y:%d \n",i,af->win[i][0],af->win[i][1],af->win[i][2],af->win[i][3]);
+			}
+
+		} else {
+			af->valid_win = 1;
+			for(i = 0x00; i < 9; i++){
+				af->win[i][0]=((((isp_context_ptr->src.w>>ISP_ONE)-(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][1]=((((isp_context_ptr->src.h>>ISP_ONE)-(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][2]=((((isp_context_ptr->src.w>>ISP_ONE)+(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][3]=((((isp_context_ptr->src.h>>ISP_ONE)+(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+			}
+		}
+		
 	} else {
+
 		if((ISP_ZERO!=src_af->valid_win)
 			&&(max_win_num>=src_af->valid_win)) {
 			af->valid_win = src_af->valid_win;
+			for(i = 0x00; i < 9; i++) {
+				af->win[i][0]=src_af->win[0].start_x;
+				af->win[i][1]=src_af->win[0].start_y;
+				af->win[i][2]=src_af->win[0].end_x;
+				af->win[i][3]=src_af->win[0].end_y;
+			}
+
+			max_y_end = src_af->win[0].end_y;
+			bottom_win = 0;
 			for(i = 0x00; i < src_af->valid_win; i++) {
-				af->win[i][0]=src_af->win[i].start_x;
-				af->win[i][1]=src_af->win[i].start_y;
-				af->win[i][2]=src_af->win[i].end_x;
-				af->win[i][3]=src_af->win[i].end_y;
+				if (src_af->win[i].end_y > max_y_end) {
+					max_y_end = src_af->win[i].end_y;
+					bottom_win = i;
+				}
+			}
+
+			for(i = 0x00; i < src_af->valid_win; i++) {
+				af->win_priority[i] = 1;
+				af->win[i][0]=src_af->win[(i + bottom_win) % src_af->valid_win].start_x;
+				af->win[i][1]=src_af->win[(i + bottom_win) % src_af->valid_win].start_y;
+				af->win[i][2]=src_af->win[(i + bottom_win) % src_af->valid_win].end_x;
+				af->win[i][3]=src_af->win[(i + bottom_win) % src_af->valid_win].end_y;
+				_ispAfWinPosReloc(handler_id,&af->win[i][0],&af->win[i][1],&af->win[i][2],&af->win[i][3]);
 			}
 		} else {
 			af->valid_win = 1;
-			af->win[i][0]=((((isp_context_ptr->src.w>>ISP_ONE)-(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
-			af->win[i][1]=((((isp_context_ptr->src.h>>ISP_ONE)-(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
-			af->win[i][2]=((((isp_context_ptr->src.w>>ISP_ONE)+(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
-			af->win[i][3]=((((isp_context_ptr->src.h>>ISP_ONE)+(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+			for(i = 0x00; i < 9; i++){
+				af->win[i][0]=((((isp_context_ptr->src.w>>ISP_ONE)-(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][1]=((((isp_context_ptr->src.h>>ISP_ONE)-(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][2]=((((isp_context_ptr->src.w>>ISP_ONE)+(isp_context_ptr->src.w/10))>>ISP_ONE)<<ISP_ONE);
+				af->win[i][3]=((((isp_context_ptr->src.h>>ISP_ONE)+(isp_context_ptr->src.h/10))>>ISP_ONE)<<ISP_ONE);
+			}
 		}
 	}
 
@@ -2743,14 +2882,21 @@ static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr)
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_awbm_param awbm_param;
 	uint32_t x_start,y_start,x_end,y_end;
-/*	struct isp_context* isp_context_ptr = ispGetContext(handler_id);*/
+	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	uint32_t temp;
-
+	struct timespec          ts;
+	
+	if (clock_gettime(CLOCK_MONOTONIC, &ts)) {
+		ISP_LOG("giet time fail!!!");
+	} else {
+		param_ptr->start_time = ts.tv_sec*1000 + ts.tv_nsec/1000000;
+	}
+	
 	ispSetAFMShift(handler_id, 0x00);
 	ispSetAFMWindow(handler_id, param_ptr->win);
-	ispAFMMode(handler_id, 0);
+	ispAFMMode(handler_id, 1);
 	ispAFMSkipNum(handler_id, 0);
-	ispAFMSkipClear(handler_id, 0);
+	ispAFMSkipClear(handler_id, 1);
 	ispAFMbypass(handler_id, param_ptr->monitor_bypass);
 	param_ptr->monitor_bypass = ISP_EB;
 
@@ -4229,10 +4375,52 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->af.start_area_range = raw_tune_ptr->af.start_area_range;
 	isp_context_ptr->af.end_area_range = raw_tune_ptr->af.end_area_range;
 	isp_context_ptr->af.noise_thr = raw_tune_ptr->af.noise_thr;
+	isp_context_ptr->af.video_max_tune_step= raw_tune_ptr->af.video_max_tune_step;
+	isp_context_ptr->af.video_speed_ratio= raw_tune_ptr->af.video_speed_ratio;
+	isp_context_ptr->af.anti_crash_pos = raw_tune_ptr->af.anti_crash_pos;
+	isp_context_ptr->af.cur_step = 0;
 	isp_context_ptr->af.AfmEb = ispAfmEb;
 	isp_context_ptr->af.AwbmEb_immediately = ispAwbmEb_immediately;
 	isp_context_ptr->af.CfgAwbm = ispCfgAwbm;
-	memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg, (void*)&ctn_af_cal_cfg[handler_id], sizeof(ctn_af_cal_cfg[handler_id]));
+	isp_context_ptr->af.debug = raw_tune_ptr->af.debug;
+	isp_context_ptr->af.control_denoise = ISP_UEB;
+	isp_context_ptr->af.denoise_lv = raw_tune_ptr->af.denoise_lv;
+	isp_context_ptr->af.start_time = 0;
+	isp_context_ptr->af.end_time = 0;
+	isp_context_ptr->af.step_cnt = 0;
+
+	isp_context_ptr->af.multi_win_enable =  raw_tune_ptr->af_multi_win.enable;
+	isp_context_ptr->af.win_sel_mode = raw_tune_ptr->af_multi_win.win_sel_mode;
+	isp_context_ptr->af.multi_win_cnt = raw_tune_ptr->af_multi_win.win_used_cnt;
+	for(i=0;i<9;i++){
+		isp_context_ptr->af.win_priority[i] = 1;
+		isp_context_ptr->af.multi_win_priority[i] = raw_tune_ptr->af_multi_win.win_priority[i];
+		isp_context_ptr->af.multi_win_pos[i][0] = raw_tune_ptr->af_multi_win.win_pos[i].start_x;
+		isp_context_ptr->af.multi_win_pos[i][1] = raw_tune_ptr->af_multi_win.win_pos[i].start_y;
+		isp_context_ptr->af.multi_win_pos[i][2] = raw_tune_ptr->af_multi_win.win_pos[i].end_x;
+		isp_context_ptr->af.multi_win_pos[i][3] = raw_tune_ptr->af_multi_win.win_pos[i].end_y;
+	}
+	
+	if (raw_tune_ptr->caf.enable) {
+		for(i=0;i<2;i++){
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_value_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_value_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_num_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_num_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_value_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_value_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_num_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_num_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_cnt_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_cnt_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_stab_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_cnt_stab_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_cnt_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_skip_cnt = raw_tune_ptr->caf.cfg[i].awb_cal_skip_cnt;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_skip_cnt = raw_tune_ptr->caf.cfg[i].afm_cal_skip_cnt;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].caf_work_lum_thr = raw_tune_ptr->caf.cfg[i].caf_work_lum_thr;
+
+		}
+	} else {
+		memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg[0], (void*)&ctn_af_cal_cfg[handler_id][0], sizeof(ctn_af_cal_cfg[handler_id][0]));
+		memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg[1], (void*)&ctn_af_cal_cfg[handler_id][1], sizeof(ctn_af_cal_cfg[handler_id][1]));
+	}
+
 
 	/*emboss*/
 	isp_context_ptr->emboss.step=raw_tune_ptr->emboss.step;
@@ -5185,10 +5373,52 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->af.start_area_range = raw_tune_ptr->af.start_area_range;
 	isp_context_ptr->af.end_area_range = raw_tune_ptr->af.end_area_range;
 	isp_context_ptr->af.noise_thr = raw_tune_ptr->af.noise_thr;
+	isp_context_ptr->af.video_max_tune_step= raw_tune_ptr->af.video_max_tune_step;
+	isp_context_ptr->af.video_speed_ratio= raw_tune_ptr->af.video_speed_ratio;
+	isp_context_ptr->af.anti_crash_pos = raw_tune_ptr->af.anti_crash_pos;
+	isp_context_ptr->af.cur_step = 0;
 	isp_context_ptr->af.AfmEb = ispAfmEb;
 	isp_context_ptr->af.AwbmEb_immediately = ispAwbmEb_immediately;
 	isp_context_ptr->af.CfgAwbm = ispCfgAwbm;
-	memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg, (void*)&ctn_af_cal_cfg[handler_id], sizeof(ctn_af_cal_cfg[handler_id]));
+	isp_context_ptr->af.debug = raw_tune_ptr->af.debug;
+	isp_context_ptr->af.control_denoise = ISP_UEB;
+	isp_context_ptr->af.denoise_lv = raw_tune_ptr->af.denoise_lv;
+	isp_context_ptr->af.start_time = 0;
+	isp_context_ptr->af.end_time = 0;
+	isp_context_ptr->af.step_cnt = 0;
+
+	isp_context_ptr->af.multi_win_enable =  raw_tune_ptr->af_multi_win.enable;
+	isp_context_ptr->af.win_sel_mode = raw_tune_ptr->af_multi_win.win_sel_mode;
+	isp_context_ptr->af.multi_win_cnt = raw_tune_ptr->af_multi_win.win_used_cnt;
+	for(i=0;i<9;i++){
+		isp_context_ptr->af.win_priority[i] = 1;
+		isp_context_ptr->af.multi_win_priority[i] = raw_tune_ptr->af_multi_win.win_priority[i];
+		isp_context_ptr->af.multi_win_pos[i][0] = raw_tune_ptr->af_multi_win.win_pos[i].start_x;
+		isp_context_ptr->af.multi_win_pos[i][1] = raw_tune_ptr->af_multi_win.win_pos[i].start_y;
+		isp_context_ptr->af.multi_win_pos[i][2] = raw_tune_ptr->af_multi_win.win_pos[i].end_x;
+		isp_context_ptr->af.multi_win_pos[i][3] = raw_tune_ptr->af_multi_win.win_pos[i].end_y;
+	}
+	
+	if (raw_tune_ptr->caf.enable) {
+		for(i=0;i<2;i++){
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_value_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_value_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_num_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_num_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_value_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_value_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_num_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_num_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_cnt_stab_threshold = raw_tune_ptr->caf.cfg[i].awb_cal_cnt_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_stab_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_cnt_stab_threshold = raw_tune_ptr->caf.cfg[i].afm_cal_cnt_stab_thr;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].awb_cal_skip_cnt = raw_tune_ptr->caf.cfg[i].awb_cal_skip_cnt;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].af_cal_skip_cnt = raw_tune_ptr->caf.cfg[i].afm_cal_skip_cnt;
+			isp_context_ptr->af.ctn_af_cal_cfg[i].caf_work_lum_thr = raw_tune_ptr->caf.cfg[i].caf_work_lum_thr;
+
+		}
+	} else {
+		memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg[0], (void*)&ctn_af_cal_cfg[handler_id][0], sizeof(ctn_af_cal_cfg[handler_id][0]));
+		memcpy((void*)&isp_context_ptr->af.ctn_af_cal_cfg[1], (void*)&ctn_af_cal_cfg[handler_id][1], sizeof(ctn_af_cal_cfg[handler_id][1]));
+	}
+
 
 	/*emboss*/
 	isp_context_ptr->emboss.step=raw_tune_ptr->emboss.step;
@@ -5609,7 +5839,7 @@ static int32_t _ispCfgInt(uint32_t handler_id)
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
-		rtn=ispRegIRQ(handler_id, ISP_MONITOR_EVT_AWB|ISP_MONITOR_EVT_AF|ISP_MONITOR_EVT_SOF);
+		rtn=ispRegIRQ(handler_id, ISP_MONITOR_EVT_AWB|ISP_MONITOR_EVT_AFM0|ISP_MONITOR_EVT_SOF);
 		ISP_RETURN_IF_FAIL(rtn, ("reg irq error"));
 
 		rtn=ispCfgDcamIRQ(handler_id, ISP_UEB);
@@ -5893,9 +6123,14 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		isp_context_ptr->tune.chn_gain=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.denoise) {
-		_ispCfgPref(handler_id, &isp_context_ptr->pref);
-		_ispCfgDenoise(handler_id, &isp_context_ptr->denoise);
+		if (ISP_UEB == isp_context_ptr->af.control_denoise) {
+			_ispCfgDenoise(handler_id, &isp_context_ptr->denoise);
+		}
 		isp_context_ptr->tune.denoise=ISP_UEB;
+	}
+	if(ISP_EB==isp_context_ptr->tune.pref) {
+		_ispCfgPref(handler_id, &isp_context_ptr->pref);
+		isp_context_ptr->tune.pref=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.edge) {
 		_ispCfgEdge(handler_id, &isp_context_ptr->edge);
@@ -6306,21 +6541,8 @@ int32_t _ispAfIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 		}
 		else
 		{
-			if (ISP_EB == isp_context_ptr->af.end_handler_flag) {
-				isp_context_ptr->af.ae_status=isp_context_ptr->ae.bypass;
-				isp_context_ptr->af.awb_status=isp_context_ptr->awb.bypass;
-				ISP_LOG("backup ae bypass %d",isp_context_ptr->af.ae_status);
-			}
-			isp_context_ptr->ae.bypass=ISP_EB;
-			isp_context_ptr->awb.bypass=ISP_EB;
-			isp_context_ptr->ae.monitor_bypass=ISP_EB;
-			isp_context_ptr->awb.monitor_bypass=ISP_EB;
-			isp_context_ptr->ae.cur_skip_num = ISP_AE_SKIP_FOREVER;
-			isp_context_ptr->af.monitor_bypass=ISP_UEB;
-			_ispCfgAf(handler_id, &isp_context_ptr->af);
-			isp_context_ptr->af.status=ISP_AF_START;
-			isp_context_ptr->af.suc_win=ISP_ZERO;
-			//isp_context_ptr->tune.af=ISP_EB;
+			isp_af_pos_reset(handler_id,isp_context_ptr->af.mode);
+			_ispAfTrigerStart(handler_id);
 		}
 	}
 
@@ -6401,16 +6623,17 @@ int32_t _ispAfModeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)()
 
 	ISP_LOG("--IOCtrl--AF_MODE--:0x%x", *(uint32_t*)param_ptr);
 
-	if((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode)&&(ISP_FOCUS_CONTINUE != *(uint32_t*)param_ptr)){
+	if(((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode))
+			&&((ISP_FOCUS_CONTINUE != *(uint32_t*)param_ptr)&&(ISP_FOCUS_VIDEO != *(uint32_t*)param_ptr))){
 		isp_context_ptr->af.continue_status=ISP_END_FLAG;
 		if(ISP_AF_STOP != isp_context_ptr->af.status){
 			_ispAfStopIOCtrl(handler_id, NULL, NULL);
 		}
 	}
 
-	isp_context_ptr->af.mode = *(uint32_t*)param_ptr;
-
-	if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode){
+	isp_af_set_mode(handler_id,*(uint32_t *)param_ptr);
+	
+	if ((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode)){
 		_isp_ContinueFocusStartInternal(handler_id);
 	}
 
@@ -7262,7 +7485,7 @@ static void *_isp_monitor_routine(void *client_data)
 				rtn = _isp_ctrl_msg_post(&isp_ctrl_msg);
 				break;
 			}
-			if(ISP_ZERO != (evt.irq_val & ISP_MONITOR_EVT_AF))
+			if((ISP_ZERO != (evt.irq_val & ISP_MONITOR_EVT_AF)) || (ISP_ZERO != (evt.irq_val & ISP_MONITOR_EVT_AFM0)))
 			{
 //				ISP_LOG("af isp monitor routine af");
 				isp_ctrl_msg.handler_id = handler_id;
@@ -7702,7 +7925,7 @@ static void *_isp_proc_routine(void *client_data)
 				//rtn=_ispAwbCalculation(handler_id);
 				rtn=_ispAeAwbCorrect(handler_id);
 				ISP_TRACE_IF_FAIL(rtn, ("_ispAwbCalculation error"));
-				if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) {
+				if ((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode)) {
 					rtn=_isp_ContinueFocusHandler(handler_id);
 					if(ISP_SUCCESS==rtn)
 					{
@@ -7718,7 +7941,7 @@ static void *_isp_proc_routine(void *client_data)
 					//ISP_LOG("callback ISP_AF_STAT_CALLBACK");
 					isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_STAT_CALLBACK, (void*)&isp_context_ptr->af_stat.info, sizeof(struct isp_af_statistic_info));
 					isp_context_ptr->af.monitor_bypass=ISP_UEB;
-					isp_context_ptr->af.AfmEb(handler_id);
+					isp_context_ptr->af.AfmEb(handler_id,0);
 				} else if (ISP_ZERO==isp_context_ptr->af_get_stat) {
 					uint32_t af_stat_end=0x00;
 					//ISP_LOG("callback ISP_AF_STAT_END_CALLBACK");
@@ -7731,8 +7954,8 @@ static void *_isp_proc_routine(void *client_data)
 					&&(ISP_AF_STOP == isp_context_ptr->af.status)) {
 					isp_context_ptr->af.continue_focus_stat(handler_id, ISP_AF_STAT_FLAG);
 					isp_context_ptr->af.monitor_bypass=ISP_UEB;
-					isp_context_ptr->af.AfmEb(handler_id);
-					if(ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode){
+					isp_context_ptr->af.AfmEb(handler_id,0);
+					if ((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode)) {
 						rtn=_isp_ContinueFocusHandler(handler_id);
 						if( ISP_SUCCESS==rtn) {
 							isp_proc_self_msg.handler_id = handler_id;
@@ -7743,6 +7966,8 @@ static void *_isp_proc_routine(void *client_data)
 				} else {
 					rtn=isp_af_calculation(handler_id);
 					if (ISP_SUCCESS!=(rtn&ISP_AF_END_FLAG)) {
+						_ispAfDenoiseRecover(handler_id);
+						ispAfmUeb(handler_id);
 						isp_af_end(handler_id, ISP_ZERO);
 						if (ISP_ZERO==isp_context_ptr->isp_callback_bypass) {
 							struct isp_af_notice af_notice={0x00};
@@ -7752,14 +7977,17 @@ static void *_isp_proc_routine(void *client_data)
 							isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
 						}
 
-						if (ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) {
+						if ((ISP_FOCUS_CONTINUE == isp_context_ptr->af.mode) || (ISP_FOCUS_VIDEO == isp_context_ptr->af.mode)) {
 							_isp_ContinueFocusStartInternal(handler_id);
 						}
 					}
 				}
 				break;
+
 			case ISP_PROC_EVT_AF_STOP:
 				ISP_LOG("--ISP_PROC_EVT_AF_STOP--");
+				_ispAfDenoiseRecover(handler_id);
+				ispAfmUeb(handler_id);
 				isp_af_end(handler_id, ISP_ONE);
 				ISP_LOG("--ISP_PROC_EVT_AF_STOP--end");
 				break;
@@ -8607,11 +8835,23 @@ int32_t isp_set_gamma(struct isp_gamma_param* gamma, struct isp_gamma_tab* tab_p
 }
 
 
-int32_t ispAfmEb(uint32_t handler_id)
+int32_t ispAfmEb(uint32_t handler_id, uint32_t skip_num)
 {
-
+	ispAFMSkipNum(handler_id, skip_num);
 	return _ispAfmEb(handler_id);
 }
+
+
+int32_t ispAfmUeb(uint32_t handler_id)
+{
+	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
+	ispAFMMode(handler_id, 0);
+	ispAFMSkipNum(handler_id, 0);
+	ispAFMSkipClear(handler_id, 1);
+	isp_context_ptr->af.monitor_bypass = ISP_EB;
+	return ispAFMbypass(handler_id, isp_context_ptr->af.monitor_bypass);
+}
+
 
 int32_t ispCfgAwbm(uint32_t handler_id, struct isp_awbm_param* param_ptr)
 {

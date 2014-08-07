@@ -473,6 +473,7 @@ struct isp_tune_block{
 	uint8_t wb_trim;
 	uint8_t alg;
 	uint8_t denoise;
+	uint8_t pref;
 	uint8_t edge;
 	uint8_t cmc;
 	uint8_t lnc;
@@ -637,7 +638,8 @@ uint32_t ISP_Algin(uint32_t pLen , uint16_t algin_blk, uint16_t algin_bits);
 uint32_t IspGetId(void);
 int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param);
 int32_t isp_set_gamma(struct isp_gamma_param* gamma, struct isp_gamma_tab* tab_ptr);
-int32_t ispAfmEb(uint32_t handler_id);
+int32_t ispAfmEb(uint32_t handler_id, uint32_t skip_num);
+int32_t ispAfmUeb(uint32_t handler_id);
 int32_t ispCfgAwbm(uint32_t handler_id,struct isp_awbm_param* param_ptr);
 int32_t ispAwbmEb_immediately(uint32_t handler_id);
 struct isp_context* ispGetAlgContext(uint32_t handler_id);
