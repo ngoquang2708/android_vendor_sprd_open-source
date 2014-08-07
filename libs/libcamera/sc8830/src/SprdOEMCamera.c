@@ -7368,12 +7368,14 @@ int camera_start_jpeg_encode(struct frm_info *data)
 		in_parm.temp_buf_size);
 
 #ifdef CONFIG_CAPTURE_DENOISE
+	uint32_t uv_denoise_alg = 0;
 	struct isp_denoise_input uvdenoise_input;
 	uvdenoise_input.InputHeight = in_parm.size.height;
 	uvdenoise_input.InputWidth = in_parm.size.width;
 	uvdenoise_input.InputAddr = in_parm.src_addr_vir.addr_u;
 	struct isp_denoise_input *denoise_in = &uvdenoise_input;
-	isp_uv_denoise(denoise_in);
+	isp_uv_denoise(denoise_in,uv_denoise_alg);
+	ALOGE("[uv_denoise] alg_num = %d\n",uv_denoise_alg);
 #endif
 
 	g_cxt->jpeg_cxt.proc_status.frame_info = *data;
