@@ -528,8 +528,49 @@ struct isp_af{
 	uint8_t start_area_range;
 	uint8_t end_area_range;
 	uint8_t noise_thr;
-	uint16_t reserved0;
+	uint16_t video_max_tune_step;
+	uint16_t video_speed_ratio;
+	uint16_t anti_crash_pos;
+	uint8_t denoise_lv;
+	uint8_t reserved0[3];
 };
+
+struct isp_caf_param{
+	uint32_t awb_cal_value_thr;
+	uint32_t awb_cal_num_thr;
+	uint32_t awb_cal_value_stab_thr;
+	uint32_t awb_cal_num_stab_thr;
+	uint32_t awb_cal_cnt_stab_thr;
+	uint32_t afm_cal_thr;
+	uint32_t afm_cal_stab_thr;
+	uint32_t afm_cal_cnt_stab_thr;
+	uint32_t awb_cal_skip_cnt;
+	uint32_t afm_cal_skip_cnt;
+	uint32_t caf_work_lum_thr;  //percent of ae target
+};
+
+struct isp_caf_info{
+	uint32_t enable;
+	struct sensor_caf_param cfg[2];
+};
+
+struct isp_af_win_rect{
+	uint16_t start_x;
+	uint16_t start_y;
+	uint16_t end_x;
+	uint16_t end_y;
+};
+
+
+struct isp_af_multi_win_param{
+	uint32_t enable;
+	uint32_t win_used_cnt;
+	uint32_t win_sel_mode;
+	uint8_t win_priority[32];
+	struct sensor_af_win_rect win_pos[32];
+};
+
+
 
 struct isp_edge_info{
 	uint32_t edge_bypass;
@@ -668,6 +709,8 @@ struct isp_raw_tune_info{
 	struct module_info hdr_info;
 	struct module_info ext_info;
 	struct module_info auto_adjust_info;
+	struct module_info caf_info;
+	struct module_info af_multi_win_info;
 
 	struct isp_blc blc;
 	struct isp_nlc nlc;
@@ -699,6 +742,8 @@ struct isp_raw_tune_info{
 	struct isp_hue hue;
 	struct isp_hdr hdr;
 	struct isp_auto_adjust_info auto_adjust;
+	struct isp_caf_info caf;
+	struct isp_af_multi_win_param af_multi_win;
 	uint32_t ext[256];
 };
 
