@@ -496,6 +496,9 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
         (ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG1_INDEX]
         |  ((ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG2_INDEX]<<16) & 0xffff0000));   //51-52
 
+    pga_gain_nv->cg_pga_gain_l = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_L_INDEX];
+    pga_gain_nv->cg_pga_gain_r = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_R_INDEX];
+
     pga_gain_nv->out_devices = adev->out_devices;
     pga_gain_nv->in_devices = adev->in_devices;
 
@@ -625,6 +628,8 @@ static int SetVoice_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         if((pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)){
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"voice-headphone-l");
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"voice-headphone-r");
+            audio_pga_apply(adev->pga,pga_gain_nv->cg_pga_gain_l,"cg-pga-gain-l");
+            audio_pga_apply(adev->pga,pga_gain_nv->cg_pga_gain_r,"cg-pga-gain-r");
         }
     }
     if((pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
@@ -690,6 +695,8 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         if((pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)){
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_l,"headphone-l");
             audio_pga_apply(adev->pga,pga_gain_nv->dac_pga_gain_r,"headphone-r");
+            audio_pga_apply(adev->pga,pga_gain_nv->cg_pga_gain_l,"cg-pga-gain-l");
+            audio_pga_apply(adev->pga,pga_gain_nv->cg_pga_gain_r,"cg-pga-gain-r");
         }
     }
     if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM_HEADSET){
@@ -772,7 +779,9 @@ static void GetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
         (mode_gain_paras->pa_setting | (mode_gain_paras->reserved[0]<<16));
     pga_gain_nv->voice_hp_pa_config  =
         (mode_gain_paras->reserved[1] | (mode_gain_paras->reserved[2]<<16));
-
+    pga_gain_nv->cg_pga_gain_l = mode_gain_paras->reserved[3];
+    pga_gain_nv->cg_pga_gain_r = mode_gain_paras->reserved[4];
+    
     ret = SetVoice_gain_by_devices(adev,pga_gain_nv);
     if(ret < 0){
         return;

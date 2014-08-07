@@ -424,6 +424,8 @@ typedef struct {
     uint32_t        fm_pga_gain_r;
     uint32_t        dac_pga_gain_l;
     uint32_t        dac_pga_gain_r;
+    uint32_t        cg_pga_gain_l;
+    uint32_t        cg_pga_gain_r;
     uint32_t        out_devices;
     uint32_t        in_devices;
     uint32_t        mode;
