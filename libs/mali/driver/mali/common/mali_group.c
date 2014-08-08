@@ -843,7 +843,7 @@ static void mali_group_complete_pp_and_unlock(struct mali_group *group, mali_boo
 	}
 
 #if MALI_ENABLE_SYSTRACE
-	if(0==pp_job_to_return->sub_jobs_completed)
+	if(0==pp_sub_job_to_return)
 	{
 		mali_trace_pp_end_job(pp_job_to_return);
 	}
