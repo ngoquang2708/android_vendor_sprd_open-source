@@ -615,6 +615,10 @@ public class DmService extends Service {
     }
     //Fix 204720 on 20130822:the alert sound should be same to sms sound start
     public void setSMSSoundUri(String newSmsSoundString){
+		if (mContext == null) {
+			Log.d(TAG, " The mContext is null,so return ");
+			return;
+		}
     	SharedPreferences smsSoundSP;        
         smsSoundSP = getSharedPreferences(SMS_SOUND,MODE);
         String smsSoundString = smsSoundSP.getString("smssound_dm", "Default");
