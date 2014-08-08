@@ -137,7 +137,8 @@ reconnect:
            ext_modem_ops.start_modem_service();
 
            MODEMD_LOGD("Info modem alive to all clients.");
-           loop_info_sockclients("Modem Alive", strlen("Modem Alive"));
+           //loop_info_sockclients("Modem Alive", strlen("Modem Alive"));
+           loop_info_sockclients(buf, numRead);
        } else if (strstr(buf, TD_MODEM_ASSERT_STR) ||
                   strstr(buf, LTE_MODEM_ASSERT_STR) ||
                   strstr(buf, GEN_MODEM_ASSERT_STR)) {
@@ -166,7 +167,8 @@ reconnect:
                   strstr(buf, GEN_MODEM_RESET_STR)) {
            MODEMD_LOGD("modem reset happen, reload modem...");
            MODEMD_LOGD("Info modem reset to all clients.");
-           loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
+           //loop_info_sockclients("Modem Reset", strlen("Modem Reset"));
+           loop_info_sockclients(buf, numRead);
 
            ext_modem_ops.stop_modem_service();
            if (ext_modem_ops.load_modem_image() < 0) {
