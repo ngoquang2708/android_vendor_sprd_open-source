@@ -3542,6 +3542,53 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 	sensor_ptr->special_effect[7].u_shift=0xffe2;
 	sensor_ptr->special_effect[7].v_shift=0x0028;
 #endif
+
+	sensor_ptr->grgb.edge_thr = 0x3f;
+	sensor_ptr->grgb.diff_thr = 0x3ff;
+
+	sensor_ptr->ae.gamma_start = 0;
+	sensor_ptr->ae.gamma_num = 1;
+	sensor_ptr->ae.gamma_zone = 5;
+	sensor_ptr->ae.gamma_thr[0] = 96;
+	sensor_ptr->ae.gamma_lum_thr = 60;
+	sensor_ptr->ae.smart_edge_min_index = 0;
+	sensor_ptr->ae.smart_edge_max_index = 5;
+
+	sensor_ptr->ae.smart_pref_y_min = 0x2;
+	sensor_ptr->ae.smart_pref_y_max = 8;
+	sensor_ptr->ae.smart_pref_uv_min = 16;
+	sensor_ptr->ae.smart_pref_uv_max = 80;
+
+	sensor_ptr->ae.smart_denoise_diswei_outdoor_index = 0;
+	sensor_ptr->ae.smart_denoise_diswei_min_index = 2;
+	sensor_ptr->ae.smart_denoise_diswei_mid_index = 6;
+	sensor_ptr->ae.smart_denoise_diswei_max_index = 24;
+
+	sensor_ptr->ae.smart_denoise_ranwei_outdoor_index = 0;
+	sensor_ptr->ae.smart_denoise_ranwei_min_index = 8;
+	sensor_ptr->ae.smart_denoise_ranwei_mid_index = 20;
+	sensor_ptr->ae.smart_denoise_ranwei_max_index = 48;
+
+	sensor_ptr->ae.denoise_start_index = 91;
+	sensor_ptr->ae.denoise_start_zone = 5;
+	sensor_ptr->ae.denoise_lum_thr = 50;
+	sensor_ptr->ae.smart_base_gain = 0x30;
+
+//	sensor_ptr->ae.smart_denoise_soft_y_outdoor_index = 4;
+//	sensor_ptr->ae.smart_denoise_soft_y_min_index = 4;
+//	sensor_ptr->ae.smart_denoise_soft_y_mid_index = 5;
+//	sensor_ptr->ae.smart_denoise_soft_y_max_index = 7;
+
+//	sensor_ptr->ae.smart_denoise_soft_uv_outdoor_index = 0;
+//	sensor_ptr->ae.smart_denoise_soft_uv_min_index = 0;
+//	sensor_ptr->ae.smart_denoise_soft_uv_mid_index = 0;
+//	sensor_ptr->ae.smart_denoise_soft_uv_max_index = 0;
+
+	sensor_ptr->ae.smart_sta_start_index= 0;
+	sensor_ptr->ae.smart_sta_low_thr = 0;
+	sensor_ptr->ae.smart_sta_ratio1= 0;
+	sensor_ptr->ae.smart_sta_ratio= 0;
+
 	sensor_ptr->af.denoise_lv = 40;
 	sensor_ptr->af.alg_id = 4;
 
@@ -3602,7 +3649,6 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 		
 		
 	}
-
 
 	return rtn;
 }
