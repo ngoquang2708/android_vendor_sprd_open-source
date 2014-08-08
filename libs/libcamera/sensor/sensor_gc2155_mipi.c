@@ -760,11 +760,9 @@ SENSOR_REG_T GC2155_MIPI_YUV_800x600[]=
 #ifdef GC2155_MIPI_2Lane
 	{0x04 , 0x90},
 	{0x05 , 0x01},
-	{0x10 , 0x95}, // output enable
 #else
 	{0x04 , 0x01},
 	{0x05 , 0x00},
-	{0x10 , 0x94},
 #endif
 	{0xfe , 0x00},
 };
@@ -838,11 +836,6 @@ SENSOR_REG_T GC2155_MIPI_YUV_1280x960[]=
 	{0x13 , 0x0a},
 	{0x04 , 0x40},
 	{0x05 , 0x01},
-#ifdef GC2155_MIPI_2Lane
-	{0x10 , 0x95}, // output enable
-#else
-	{0x10 , 0x94},
-#endif
 	{0xfe , 0x00},
 };
 
@@ -915,11 +908,7 @@ SENSOR_REG_T GC2155_MIPI_YUV_1600x1200[]=
 	{0x13 , 0x0c},
 	{0x04 , 0x01},
 	{0x05 , 0x00},
-#ifdef GC2155_MIPI_2Lane
-	{0x10 , 0x95}, // output enable
-#else
-	{0x10 , 0x94},
-#endif
+
 	{0xfe , 0x00},
 };
 
@@ -944,7 +933,7 @@ static SENSOR_REG_TAB_INFO_T s_GC2155_MIPI_resolution_Tab_YUV[]=
 
 static SENSOR_TRIM_T s_Gc2155_Resolution_Trim_Tab[] = {
 	{0, 0, 800, 600, 0, 0,0, {0, 0, 800, 600}},
-	{0, 0, 800, 600, 68, 600, 0x03b8, {0, 0, 800, 600}},
+	{0, 0, 800, 600, 68, 500, 0x03b8, {0, 0, 800, 600}},
 	{0, 0, 1280, 960, 68, 600, 0x03b8, {0, 0, 1280, 960}},
 	 {0, 0, 1600, 1200, 68, 600, 0x03b8, {0, 0, 1600, 1200}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -1075,8 +1064,8 @@ SENSOR_INFO_T g_GC2155_MIPI_yuv_info =
 	PNULL,						// extend information about sensor
 	SENSOR_AVDD_1800MV,				// iovdd
 	SENSOR_AVDD_1800MV,				// dvdd
-	3,						// skip frame num before preview
-	3,						// skip frame num before capture
+	1,						// skip frame num before preview
+	1,						// skip frame num before capture
 	0,
 	0,
 
@@ -1091,7 +1080,7 @@ SENSOR_INFO_T g_GC2155_MIPI_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
 #endif
 	PNULL,
-	3,						// skip frame num while change setting
+	1,						// skip frame num while change setting
 };
 
 static void GC2155_MIPI_WriteReg( uint8_t  subaddr, uint8_t data )
@@ -1120,15 +1109,24 @@ static uint32_t GC2155_MIPI_PowerOn(uint32_t power_on)
 	BOOLEAN reset_level = g_GC2155_MIPI_yuv_info.reset_pulse_level;
 
 	if (SENSOR_TRUE == power_on) {
+		Sensor_SetResetLevel(reset_level);
 		Sensor_PowerDown(power_down);
 		// Open power
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(10*1000);
+		Sensor_SetDvddVoltage(dvdd_val);
+		usleep(5000);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(5000);
+		Sensor_SetAvddVoltage(avdd_val);
+		usleep(5000);
+		//step 1 power up DVDD
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
+		usleep(5000);
 		Sensor_PowerDown(!power_down);
 		// Reset sensor
-		Sensor_Reset(reset_level);
+		usleep(5000);
+		Sensor_SetResetLevel(!reset_level);
+		usleep(5000);
+		CMR_LOGE("eric GC2155_MIPI\n");
 	} else {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
@@ -1617,6 +1615,6 @@ static uint32_t GC2155_MIPI_StreamOff(uint32_t param)
 	GC2155_MIPI_WriteReg(0x10, 0x84);
 	GC2155_MIPI_WriteReg(0xfe, 0x00);
 #endif
-	usleep(20*1000);
+	usleep(80*1000);
 	return 0;
 }
