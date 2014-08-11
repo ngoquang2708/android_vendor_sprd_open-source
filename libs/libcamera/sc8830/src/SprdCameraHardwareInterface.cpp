@@ -641,7 +641,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	}
 	mPreviewWindow = w;
 
-	mPreviewWindowLock.unlock();
+//	mPreviewWindowLock.unlock();
 
 	int preview_width;
 	int preview_height;
@@ -676,6 +676,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	}
 	if (!switch_ret) {
 		ret = INVALID_OPERATION;
+		mPreviewWindowLock.unlock();
 		LOGE("setPreviewWindow X buffer switch error");
 		return ret;
 	}
@@ -692,6 +693,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 
 	if (w->set_usage(w, usage )) {
 		LOGE("%s: could not set usage on gralloc buffer X", __func__);
+		mPreviewWindowLock.unlock();
 		return INVALID_OPERATION;
 	}
 
@@ -702,6 +704,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 			hal_pixel_format)) {
 			LOGE("%s: could not set buffers geometry to %s X",
 				__func__, str_preview_format);
+			mPreviewWindowLock.unlock();
 			return INVALID_OPERATION;
 		}
 	} else {
@@ -711,6 +714,7 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 			hal_pixel_format)) {
 			LOGE("%s: could not set buffers geometry to %s X",
 				__func__, str_preview_format);
+			mPreviewWindowLock.unlock();
 			return INVALID_OPERATION;
 		}
 	}
@@ -718,9 +722,10 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	if (w->set_crop(w, 0, 0, preview_width-1, preview_height-1)) {
 		LOGE("%s: could not set crop to %s X",
 			__func__, str_preview_format);
+		mPreviewWindowLock.unlock();
 		return INVALID_OPERATION;
 	}
-
+	mPreviewWindowLock.unlock();
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("setPreviewWindow X:");
 	} else {
