@@ -25,6 +25,7 @@
 extern   "C"
 {
 #endif
+
 typedef unsigned char		BOOLEAN;
 //typedef unsigned char		Bool;
 typedef unsigned char		uint8;
@@ -36,6 +37,56 @@ typedef signed char			int8;
 typedef signed short		int16;
 typedef signed int			int32;
 
+/**
+This enumeration is for profiles. The value follows the profile_idc  in sequence
+parameter set rbsp. See Annex A.
+@publishedAll
+*/
+typedef enum
+{
+    AVC_BASELINE = 66,
+    AVC_MAIN = 77,
+    AVC_EXTENDED = 88,
+    AVC_HIGH = 100,
+    AVC_HIGH10 = 110,
+    AVC_HIGH422 = 122,
+    AVC_HIGH444 = 144
+} AVCProfile;
+
+/**
+This enumeration is for levels. The value follows the level_idc in sequence
+parameter set rbsp. See Annex A.
+@published All
+*/
+typedef enum
+{
+    AVC_LEVEL_AUTO = 0,
+    AVC_LEVEL1_B = 9,
+    AVC_LEVEL1 = 10,
+    AVC_LEVEL1_1 = 11,
+    AVC_LEVEL1_2 = 12,
+    AVC_LEVEL1_3 = 13,
+    AVC_LEVEL2 = 20,
+    AVC_LEVEL2_1 = 21,
+    AVC_LEVEL2_2 = 22,
+    AVC_LEVEL3 = 30,
+    AVC_LEVEL3_1 = 31,
+    AVC_LEVEL3_2 = 32,
+    AVC_LEVEL4 = 40,
+    AVC_LEVEL4_1 = 41,
+    AVC_LEVEL4_2 = 42,
+    AVC_LEVEL5 = 50,
+    AVC_LEVEL5_1 = 51
+} AVCLevel;
+
+// Decoder video capability structure
+typedef struct
+{
+    AVCProfile profile;
+    AVCLevel   level;
+    int32 max_width;
+    int32 max_height;
+} MMDecCapability;
 
 typedef enum
 {
@@ -206,6 +257,7 @@ typedef struct tagAVCHandle
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability);
 MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
@@ -217,7 +269,7 @@ MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoForm
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * pBuffer,MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
-//  Description: Init mpeg4 decoder	memory
+//  Description: Init h264 decoder	memory
 //	Global resource dependence:
 //  Author:
 //	Note:
@@ -233,7 +285,7 @@ MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer);
 MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 
 /*****************************************************************************/
-//  Description: Close mpeg4 decoder
+//  Description: Close h264 decoder
 //	Global resource dependence:
 //  Author:
 //	Note:
@@ -248,6 +300,7 @@ typedef MMDecRet (*FT_H264DecGetNALType)(AVCHandle *avcHandle, uint8 *bitstream,
 typedef void (*FT_H264GetBufferDimensions)(AVCHandle *avcHandle, int32 *aligned_width, int32 *aligned_height) ;
 typedef MMDecRet (*FT_H264DecInit)(AVCHandle *avcHandle, MMCodecBuffer * pBuffer,MMDecVideoFormat * pVideoFormat);
 typedef MMDecRet (*FT_H264DecGetInfo)(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
+typedef MMDecRet (*FT_H264GetCodecCapability)(AVCHandle *avcHandle, MMDecCapability *Capability);
 typedef MMDecRet (*FT_H264DecMemInit)(AVCHandle *avcHandle, MMCodecBuffer *pBuffer);
 typedef MMDecRet (*FT_H264DecDecode)(AVCHandle *avcHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_H264DecRelease)(AVCHandle *avcHandle);

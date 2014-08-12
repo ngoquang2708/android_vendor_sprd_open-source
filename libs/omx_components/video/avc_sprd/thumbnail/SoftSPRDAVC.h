@@ -44,12 +44,12 @@ protected:
         OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual OMX_ERRORTYPE internalUseBuffer(
-            OMX_BUFFERHEADERTYPE **buffer,
-            OMX_U32 portIndex,
-            OMX_PTR appPrivate,
-            OMX_U32 size,
-            OMX_U8 *ptr,
-            BufferPrivateStruct* bufferPrivate=NULL);
+        OMX_BUFFERHEADERTYPE **buffer,
+        OMX_U32 portIndex,
+        OMX_PTR appPrivate,
+        OMX_U32 size,
+        OMX_U8 *ptr,
+        BufferPrivateStruct* bufferPrivate=NULL);
 
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
 
@@ -85,11 +85,14 @@ private:
     uint32_t mCropLeft, mCropTop;
     uint32_t mCropWidth, mCropHeight;
 
+    MMDecCapability mCapability;
+
     OMX_BOOL iUseAndroidNativeBuffer[2];
 
     void* mLibHandle;
     FT_H264DecGetNALType mH264DecGetNALType;
     FT_H264DecGetInfo mH264DecGetInfo;
+    FT_H264GetCodecCapability mH264GetCodecCapability;
     FT_H264DecInit mH264DecInit;
     FT_H264DecDecode mH264DecDecode;
     FT_H264DecRelease mH264DecRelease;
