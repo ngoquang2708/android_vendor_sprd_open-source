@@ -100,6 +100,34 @@ static void InitOMXParams(T *params) {
     params->nVersion.s.nStep = 0;
 }
 
+typedef struct LevelConversion {
+    OMX_U32 omxLevel;
+    AVCLevel avcLevel;
+} LevelConcersion;
+
+static LevelConversion ConversionTable[] = {
+    { OMX_VIDEO_AVCLevel1,  AVC_LEVEL1_B },
+    { OMX_VIDEO_AVCLevel1b, AVC_LEVEL1   },
+    { OMX_VIDEO_AVCLevel11, AVC_LEVEL1_1 },
+    { OMX_VIDEO_AVCLevel12, AVC_LEVEL1_2 },
+    { OMX_VIDEO_AVCLevel13, AVC_LEVEL1_3 },
+    { OMX_VIDEO_AVCLevel2,  AVC_LEVEL2 },
+#if 1
+    // encoding speed is very poor if video
+    // resolution is higher than CIF
+    { OMX_VIDEO_AVCLevel21, AVC_LEVEL2_1 },
+    { OMX_VIDEO_AVCLevel22, AVC_LEVEL2_2 },
+    { OMX_VIDEO_AVCLevel3,  AVC_LEVEL3   },
+    { OMX_VIDEO_AVCLevel31, AVC_LEVEL3_1 },
+    { OMX_VIDEO_AVCLevel32, AVC_LEVEL3_2 },
+    { OMX_VIDEO_AVCLevel4,  AVC_LEVEL4   },
+    { OMX_VIDEO_AVCLevel41, AVC_LEVEL4_1 },
+    { OMX_VIDEO_AVCLevel42, AVC_LEVEL4_2 },
+    { OMX_VIDEO_AVCLevel5,  AVC_LEVEL5   },
+    { OMX_VIDEO_AVCLevel51, AVC_LEVEL5_1 },
+#endif
+};
+
 SPRDAVCDecoder::SPRDAVCDecoder(
     const char *name,
     const OMX_CALLBACKTYPE *callbacks,
@@ -115,8 +143,6 @@ SPRDAVCDecoder::SPRDAVCDecoder(
       mCropTop(0),
       mCropWidth(mWidth),
       mCropHeight(mHeight),
-      mMaxWidth(352),
-      mMaxHeight(288),
       mPicId(0),
       mSetFreqCount(0),
       mHeadersDecoded(false),
@@ -394,9 +420,12 @@ status_t SPRDAVCDecoder::initDecoder() {
     }
 
     //int32 codec_capabilty;
-    if ((*mH264GetCodecCapability)(mHandle, &mMaxWidth, &mMaxHeight) != MMDEC_OK) {
+    if ((*mH264GetCodecCapability)(mHandle, &mCapability) != MMDEC_OK) {
         ALOGE("Failed to mH264GetCodecCapability");
     }
+
+    ALOGI("initDecoder, Capability: profile %d, level %d, max wh=%d %d",
+          mCapability.profile, mCapability.level, mCapability.max_width, mCapability.max_height);
 
     return OMX_ErrorNone;
 }
@@ -496,6 +525,33 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalGetParameter(
 
         profileLevel->eProfile = kProfileLevels[index].mProfile;
         profileLevel->eLevel = kProfileLevels[index].mLevel;
+
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileHigh) {
+            if (mCapability.profile < AVC_HIGH) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileMain;
+            }
+        }
+
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileMain) {
+            if (mCapability.profile < AVC_MAIN) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+            }
+        }
+
+        const size_t size =
+            sizeof(ConversionTable) / sizeof(ConversionTable[0]);
+
+        for (index = 0; index < size; index++) {
+            if (ConversionTable[index].avcLevel > mCapability.level) {
+                index--;
+                break;
+            }
+        }
+
+        if (profileLevel->eLevel > ConversionTable[index].omxLevel) {
+            profileLevel->eLevel = ConversionTable[index].omxLevel;
+        }
+
         return OMX_ErrorNone;
     }
 
@@ -1060,10 +1116,10 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         MMDecRet ret;
         ret = (*mH264DecGetInfo)(mHandle, &decoderInfo);
         if(ret == MMDEC_OK) {
-            if (!((decoderInfo.picWidth<= mMaxWidth&& decoderInfo.picHeight<= mMaxHeight)
-                    || (decoderInfo.picWidth <= mMaxHeight && decoderInfo.picHeight <= mMaxWidth))) {
+            if (!((decoderInfo.picWidth<= mCapability.max_width&& decoderInfo.picHeight<= mCapability.max_height)
+                    || (decoderInfo.picWidth <= mCapability.max_height && decoderInfo.picHeight <= mCapability.max_width))) {
                 ALOGE("[%d,%d] is out of range [%d, %d], failed to support this format.",
-                      decoderInfo.picWidth, decoderInfo.picHeight, mMaxWidth, mMaxHeight);
+                      decoderInfo.picWidth, decoderInfo.picHeight, mCapability.max_width, mCapability.max_height);
                 notify(OMX_EventError, OMX_ErrorFormatNotDetected, 0, NULL);
                 mSignalledError = true;
                 return;
