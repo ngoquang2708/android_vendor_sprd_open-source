@@ -2134,6 +2134,7 @@ int Sensor_Init(uint32_t sensor_id, uint32_t *sensor_num_ptr, uint32_t is_first)
 		memset((void*)s_p_sensor_cxt, 0, sizeof(struct sensor_drv_context));
 		s_p_sensor_cxt->fd_sensor = -1;
 		s_p_sensor_cxt->i2c_addr = 0xff;
+		s_p_sensor_cxt->stream_on = 0;
 	}
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 	{
@@ -2300,10 +2301,6 @@ int _Sensor_SetMode(uint32_t mode)
 		return SENSOR_OP_STATUS_ERR;
 	}
 
-	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
-		_Sensor_StreamOff();/*stream off first for MIPI sensor switch*/
-		_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
-	}
 
 	if (s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()] == mode) {
 		CMR_LOGI("SENSOR: The sensor mode as before");
@@ -2325,11 +2322,9 @@ int _Sensor_SetMode(uint32_t mode)
 			CMR_LOGI("SENSOR: Sensor_SetResolution -> No this resolution information !!!");
 		}
 	}
-
 	if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
-		_Sensor_Device_MIPI_init(_Sensor_Get_Mipi_Phy_Id(),
-					s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
-					s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
+		_Sensor_StreamOff();/*stream off first for MIPI sensor switch*/
+		_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
 	}
 
 	return SENSOR_SUCCESS;
@@ -2395,16 +2390,21 @@ int _Sensor_StreamOn(void)
 		CMR_LOGE("No sensor info!");
 		return -1;
 	}
+	CMR_LOGI("stream on s_p_sensor_cxt->stream_on = %d",s_p_sensor_cxt->stream_on);
+	if (s_p_sensor_cxt->stream_on != 1) {
+		stream_on_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_on;
 
-	stream_on_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_on;
+		if (PNULL != stream_on_func) {
+			err = stream_on_func(param);
+		}
 
-	if (PNULL != stream_on_func) {
-		err = stream_on_func(param);
+		if (0 == err) {
+			s_p_sensor_cxt->stream_on = 1;
+		}
+	} else {
+		CMR_LOGI("sensor has stream on !");
 	}
 
-	if (0 == err) {
-		s_p_sensor_cxt->stream_on = 1;
-	}
 	return err;
 }
 
@@ -2416,16 +2416,17 @@ int Sensor_StreamCtrl(uint32_t on_off)
 	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
 
 	if (on_off) {
+		if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
+			mode = s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()];
+			_Sensor_Device_MIPI_init(_Sensor_Get_Mipi_Phy_Id(),
+						s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
+						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
+		}
 		ret = _Sensor_StreamOn();
 	} else {
 		ret = _Sensor_StreamOff();
 		if (SENSOR_INTERFACE_TYPE_CSI2 == s_p_sensor_cxt->sensor_info_ptr->sensor_interface.type) {
 			_Sensor_Device_MIPI_deinit(_Sensor_Get_Mipi_Phy_Id());
-			mode = s_p_sensor_cxt->sensor_mode[Sensor_GetCurId()];
-			_Sensor_Device_MIPI_init(_Sensor_Get_Mipi_Phy_Id(),
-						s_p_sensor_cxt->sensor_exp_info.sensor_interface.bus_width,
-						s_p_sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk);
-
 		}
 
 	}
@@ -2465,13 +2466,18 @@ int _Sensor_StreamOff(void)
 		CMR_LOGE("No sensor info!");
 		return -1;
 	}
+	CMR_LOGI("stream off s_p_sensor_cxt->stream_on = %d",s_p_sensor_cxt->stream_on);
+	if (s_p_sensor_cxt->stream_on != 0) {
+		stream_off_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_off;
 
-	stream_off_func = s_p_sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_off;
-
-	if (PNULL != stream_off_func) {
-		err = stream_off_func(param);
+		if (PNULL != stream_off_func) {
+			err = stream_off_func(param);
+		}
+		s_p_sensor_cxt->stream_on = 0;
+	} else {
+		CMR_LOGE("sensor has stream off !");
 	}
-	s_p_sensor_cxt->stream_on = 0;
+
 	return err;
 }
 
