@@ -309,6 +309,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             hnd->share_fd = shared_fd;
             hnd->ion_hnd = ion_hnd;
             *pHandle = hnd;
+            memset(cpu_ptr, 0, size);
             ion_invalidate_fd(m->ion_client,hnd->share_fd);
             return 0;
         }
