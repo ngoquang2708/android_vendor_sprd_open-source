@@ -1,15 +1,14 @@
 
 package com.spreadtrum.dm;
 
+import android.app.AppGlobals;
 import android.app.Service;
 import android.app.Notification;
 import android.app.NotificationManager;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
-
 import android.content.SharedPreferences;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
@@ -28,21 +27,27 @@ import java.nio.ByteBuffer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.RemoteException;
 import android.net.Uri;
+
 import com.android.internal.telephony.TelephonyIntents;
+
+
 
 //import com.redbend.vdm.NIAMsgHandler.UIMode;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.content.ContentValues;
 import android.database.Cursor;
+
 import com.android.internal.telephony.TelephonyProperties;
 import com.spreadtrum.dm.transaction.DMTransaction;
 import com.spreadtrum.dm.vdmc.MyTreeIoHandler;
 import com.spreadtrum.dm.vdmc.Vdmc;
+
+
 //import com.android.internal.telephony.PhoneFactory;
 import android.app.PendingIntent;
 import android.app.Activity;
@@ -1703,8 +1708,7 @@ public class DmService extends Service {
                     }                                                                          
                     editor.commit(); 
                 }
-                
-                startSmsSelfDialog(30);                
+                handleStartSmsSelfDialog(30);
             }
         }else {//there are 2 sim insert
             Log.d(TAG, "showDialog4SendDMSms mCurrentCMCCSimNum is 2 curPhoneId = " + curPhoneId);
@@ -1738,12 +1742,31 @@ public class DmService extends Service {
                         }
                     }
 
-                    startSmsSelfDialog(30);
-            }                                                                       
-        }                
+                    handleStartSmsSelfDialog(30);
+            }
+        }
     }
     
-    private void startSmsSelfDialog(int timeout){
+    private void handleStartSmsSelfDialog(final int timeout){
+        boolean isFirstBoot = false;
+        try {
+            isFirstBoot = AppGlobals.getPackageManager().isFirstBoot();
+        } catch(RemoteException e){}
+        if(isFirstBoot) {
+            mHandler.postDelayed(new Runnable() {
+
+                @Override
+                public void run() {
+                    startSmsSelfDialog(timeout);
+                }
+
+            }, 10000);
+        } else {
+            startSmsSelfDialog(timeout);
+        }
+    }
+    
+    private void startSmsSelfDialog(int timeout) {
         Intent intent = new Intent(mContext, DmAlertDialog.class);
         int intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP;
 
