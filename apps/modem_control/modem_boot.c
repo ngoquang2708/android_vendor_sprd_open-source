@@ -1114,6 +1114,7 @@ reboot_modem:
     MODEM_LOGD("MODEM boot finished ......\n");
     close(modem_interface_fd);
     if(ret == DL_FAILURE){
+        reset_modem(MODEM_SOFT_RESET);
 	sleep(2);
 	goto reboot_modem;
     }
