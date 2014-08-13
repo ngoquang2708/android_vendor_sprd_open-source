@@ -669,8 +669,13 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
 	{"max-num-metering-areas", "0"},
 #endif
+#ifndef CONFIG_EXPOSURE_METERING_NOT_SUPPORT
 	{"auto-exposure","frame-average"},
 	{"auto-exposure-values", "frame-average,center-weighted,spot-metering"},
+#else
+	{"auto-exposure","0"},
+	{"auto-exposure-supported", "0"},
+#endif
 	{"preview-env","0"},
 #if  defined(CONFIG_CAMERA_ZSL_CAPTURE)
 	{"video-snapshot-supported","true"}
