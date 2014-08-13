@@ -7,25 +7,6 @@
 <item>Installare immediatamente il pacchetto di aggiornamento</item>
 </string-array>
 <string name="debug_menu">Menu DM di debug</string>
-<string-array name="debug_list">
-<item>Modalità debug</item>
-<item>Cancella il flag autoregistrato</item>
-<item>Invia msg autoregistrato</item>
-<item>Passa al server</item>
-<item>Fabbricazione</item>
-<item>"Modello"</item>
-<item>Versione software</item>
-<item>"IMEI"</item>
-<item>"APN"</item>
-<item>"Indirizzo server"</item>
-<item>Indirizzo gateway sms</item>
-<item>Porta Gateway sms</item>
-<item>Avvia il servizio</item>
-<item>Stato Dm</item>
-<item>Passa all\'autoregistrazione</item>
-<item>"Modalità simulatore"</item>
-<item>"Cancellare la bandiera di controllo del dialogo"</item>
-</string-array>
 <string name="menu_save">"Salva"</string>
 <string name="menu_cancel">"Annulla"</string>
 <string name="notify_msg">servizio di post-vendita aumentato</string>
@@ -35,4 +16,25 @@
 <string name="menu_no">"No"</string>
 <string name="sms_prompt">""</string>
 <string name="network_connect_prompt">""</string>
+  <string-array name="debug_list">
+    <item>"Modalità debug"</item>
+    <item>"Cancella il flag autoregistrato"</item>
+    <item>"Invia msg autoregistrato"</item>
+    <item>"Passa al server"</item>
+    <item>"Fabbricazione"</item>
+    <item>"Modello"</item>
+    <item>"Versione software"</item>
+    <item>"IMEI"</item>
+    <item>"APN"</item>
+    <item>"Indirizzo server"</item>
+    <item>"Indirizzo gateway sms"</item>
+    <item>"Porta Gateway sms"</item>
+    <item>"Avvia il servizio"</item>
+    <item>"Stato Dm"</item>
+    <item>"Passa all\'autoregistrazione"</item>
+    <item>"Modalità simulatore"</item>
+    <item>"Cancellare la bandiera di controllo del dialogo"</item>
+    <item>"AGPS Apn"</item>
+  </string-array>
+
 </resources>

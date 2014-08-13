@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"CU மேம்படுத்தப்பட்ட சேவை"</string>
+<string-array name="app_list">
+<item>தற்போதைய மென்பொருள் தகவல்</item>
+<item>மென்பொருள் புதுப்பித்தல்</item>
+<item>புதிய பேக்கேஜ் உடனடியாக நிறுவவும்</item>
+</string-array>
+<string name="debug_menu">DM டீபக் மெனு</string>
+<string-array name="debug_list">
+<item>டீபக் மோட்</item>
+<item>சுயப்பதிவு கொடி சுத்தம்</item>
+<item>சுயப்பதிவு செய்தி அனுப்புக</item>
+<item>சர்வரை மாற்றிக்கொள்க</item>
+<item>தயாரிப்பு</item>
+<item>மாடல்</item>
+<item>மென்பொருள் பதிப்பு</item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>சேவை முகவரி</item>
+<item>எஸ் எம் எஸ் கேட்வே முகவரி</item>
+<item>குறுஞ்செய்தி கேட்வே நுழைபுலம்</item>
+<item>சேவை துவக்கவும்</item>
+<item>DM நிலை</item>
+<item>சுய பதிவுசெய்யும் சுவிட்ச்</item>
+</string-array>
+<string name="menu_save">சேமி</string>
+<string name="menu_cancel">OK</string>
+<string name="notify_msg">மேம்படுத்தப்பட்ட விற்பனைக்கு பிந்தைய சேவை</string>
+<string name="notify_confirm_msg">மேம்படுத்தப்பட்ட விற்பனைக்கு பிந்தைய சேவை ஏற்கவா?</string>
+<string name="menu_ok">OK</string>
+<string name="menu_yes">ஆம்</string>
+<string name="menu_no">இல்லை</string>
+</resources>

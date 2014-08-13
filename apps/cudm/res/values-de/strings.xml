@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"erweiteter CU-Service"</string>
+<string-array name="app_list">
+<item>Aktuelle Software infomation</item>
+<item>Software-Update</item>
+<item>Frequenzband eingeben</item>
+</string-array>
+<string name="debug_menu">DM Debug Menü</string>
+<string-array name="debug_list">
+<item>Debugmodus</item>
+<item>Löschen einer eingetragenen Marke</item>
+<item>msg-Selbstanmeldung</item>
+<item>Server wechseln</item>
+<item>Hersteller</item>
+<item>Antik</item>
+<item>Softwareversion</item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>"Serveradresse"</item>
+<item>SMS Gateway-Adresse</item>
+<item>SMS Gateway-Port</item>
+<item>Service beginnt</item>
+<item>DM Status</item>
+<item>Schalter zur Selbstanmeldung</item>
+</string-array>
+<string name="menu_save">"Diese Aufnahme verwenden"</string>
+<string name="menu_cancel">"Abbrechen"</string>
+<string name="notify_msg">Verbesserter Kundendienst</string>
+<string name="notify_confirm_msg">Verbesserte Dienstleistungen nach dem Verkauf akzeptieren?</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"Ja"</string>
+<string name="menu_no">"Nein"</string>
+</resources>

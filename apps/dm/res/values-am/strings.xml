@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM </string>
+<string-array name="app_list">
+<item>"ወቅታዊ የሶፍትዌር መረጃ "</item>
+<item>ሶፍትዌር በማዘማን ላይ</item>
+<item>የማዘመኛ ጥቅልን በአቸኳይ ጫን </item>
+</string-array>
+<string name="debug_menu">DM  አራሚ ምናሌ </string>
+<string-array name="debug_list">
+<item>የአራሚ ሁኔታ</item>
+<item>selfregiste ባንዲራን አስወግድ</item>
+<item>በራስ ተመዝገብ መልክቶችን ላክ</item>
+<item>አገልጋይ ቀያይር</item>
+<item>አምራች</item>
+<item>ሞዴል</item>
+<item>ሶፍትዌር ስሪት</item>
+<item>"IMEI"</item>
+<item>APN</item>
+<item>የአገልጋይ አድራሻ </item>
+<item>የ SMS ጌትዌይ አድራሻ</item>
+<item>የSMS ጌትዌይ ፖርት</item>
+<item>አገልግሎት ጀምር</item>
+<item>የDM  ሁኔታ </item>
+<item>በራስ ተመዝጋቢ ለውጥ</item>
+<item>የማስመሰያ መሳርያ አገናኝ  </item>
+<item>" የንጹህ ምልልስ መቆጣጠርያ ባንዴራ"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">አስቀምጥ</string>
+<string name="menu_cancel">ሰርዝ</string>
+<string name="notify_msg">የተሻሻለ የድህረ- ሽያጭ  አገልግሎት</string>
+<string name="notify_confirm_msg">የተሻሻለ ድኅረ -ሽያጭ አገልግሎትን  ይቀበል?</string>
+<string name="menu_ok">ጥሩ</string>
+<string name="menu_yes">አዎን</string>
+<string name="menu_no">አይ</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

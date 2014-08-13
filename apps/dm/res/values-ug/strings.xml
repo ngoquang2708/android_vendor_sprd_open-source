@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"نۆۋەتتىكى يۇمشاق دېتال ئۇچۇرى"</item>
+<item>دىتالنى يېڭىلاش</item>
+<item>يېڭىلاش بولىقىنى قاچىلاش</item>
+</string-array>
+<string name="debug_menu">DM تەڭشەپ سىناش تېزىملىكى</string>
+<string-array name="debug_list">
+<item>تەڭشەپ سىناش شەكلى</item>
+<item>ئۆزىلگىدىن ساقلانغاننى تازلاش</item>
+<item>selfregiste msg نى ئەۋەتىش</item>
+<item>مۇلازىمىتىر ۋىكلىيۇچاتىلى</item>
+<item>ئىشلەپچىقىرىش (مەھسۇلات)</item>
+<item>مودىل</item>
+<item>دىتال نەشىرى</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>مۇلازىمىتىر ئادىرىسى</item>
+<item>قىسقا ئۇچۇر تور ئۆتكىلى ئادىرىسى</item>
+<item>ئۇچۇر تور ئۆتكىلى ئېغىزى</item>
+<item>مۇلازىمەت قوزغىتىش</item>
+<item>DM ھالەت</item>
+<item>ئاپتۇماتىك ساقلىغۇچ ۋىكلىيۇچاتىلى</item>
+<item>تەقلىدلىگۈچكە ئۈلاندى</item>
+<item>"دېئالوگ كونتىرول بەلگىسىنى تازىلاش"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">ساقلاش</string>
+<string name="menu_cancel">"بىكار قىلىش"</string>
+<string name="notify_msg">سىتىشتىن كىيىنكى مۇلازىمەتنى كۈچەيتىش(ياخشىلاش)</string>
+<string name="notify_confirm_msg">سېتىلغاندىن كىيىنكى مۇلازىمەتنى ياخشىلارنى قوبۇل قىلامسىز؟</string>
+<string name="menu_ok">بولدى</string>
+<string name="menu_yes">ھەئە</string>
+<string name="menu_no">ياق</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

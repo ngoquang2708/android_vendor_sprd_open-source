@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"বর্তমান সফটওয়্যার তথ্য"</item>
+<item>সফ্টওয়্যার আপডেট</item>
+<item>প্যাকেজ অবিলম্বে আপডেট ইনস্টল করুন</item>
+</string-array>
+<string name="debug_menu">DM ডিবাগ মেনু</string>
+<string-array name="debug_list">
+<item>মোড ত্রুটিহীন</item>
+<item>পরিচ্ছন্ন স্ব খাতা পতাকা</item>
+<item>স্ব খাতা  msg পাঠান</item>
+<item>সার্ভার পরিবর্তন করুন</item>
+<item>তৈয়ার</item>
+<item>মডেল</item>
+<item>সফ্টওয়্যার সংস্করণ</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>সার্ভারের ঠিকানা</item>
+<item>Sms গেটওয়ে ঠিকানা</item>
+<item>Sms গেটওয়ে পোর্ট</item>
+<item>পরিসেবাটি আরম্ভ</item>
+<item>Dm রাষ্ট্র</item>
+<item>স্বয়ং রেজিস্টার সুইচ</item>
+<item>"সিমুলেটর কানেক্ট" </item>
+<item>"ডায়লগ কন্ট্রোল ফ্ল্যাগ পরিষ্কার করুন"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">রক্ষা</string>
+<string name="menu_cancel">বাতিল</string>
+<string name="notify_msg">উন্নত পোস্ট-বিক্রয় সার্ভিস</string>
+<string name="notify_confirm_msg">উন্নত পোস্ট-বিক্রয় সার্ভিস গ্রহণ?</string>
+<string name="menu_ok">ঠিক আছে</string>
+<string name="menu_yes">হ্যাঁ</string>
+<string name="menu_no">নয়</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

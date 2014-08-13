@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"ពត៍មាននៃកម្មវិធីដែលប្រើពេលថ្មីៗ"</item>
+<item>"ការធ្វើបច្ចុប្បន្នកាលកម្មផ្នែកទន់"</item>
+<item>"តម្លើងកញ្ចប់ធ្វើបច្ចុប្បន្នកាលកម្មភ្លាមៗ"</item>
+</string-array>
+<string name="debug_menu">"បញ្ជីកែតម្រូវDM"</string>
+<string-array name="debug_list">
+<item>"ម៉ូដអាចកែតម្រូវបាន"</item>
+<item>"លុបសម្អាតការចំណាំការចុះឈ្មោះខ្លួនឯងចោល"</item>
+<item>"បញ្ជូនសារដែលចុះឈ្មោះដោយខ្លួនឯង"</item>
+<item>"ផ្លាស់ប្តូរភាគីផ្តល់សេវា"</item>
+<item>"ផលិតករ"</item>
+<item>ម៉ូដែលឬគំរូ</item>
+<item>"កំណែផ្នែកទន់"</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>អាស័យដ្ឋានម៉ាស៊ីនបម្រើ</item>
+<item>"អាសយដ្ឋានច្រកចេញSms"</item>
+<item>"ផតច្រកចេញSms "</item>
+<item>"ចាប់ផ្តើមសេវាកម្ម"</item>
+<item>"ស្ថានភាពរបស់DM"</item>
+<item>"កុងតាក់ចុះឈ្មោះដោយខ្លួនឯង"</item>
+<item>តភ្ជាប់កម្មវិធីក្លែងធ្វើ</item>
+<item>"លុបចោលទង់ចំណាំនៃការសន្ទនាគ្រប់គ្រងទាំងអស់"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"រក្សាទុក"</string>
+<string name="menu_cancel">លុបចោល</string>
+<string name="notify_msg">"បង្កើនគុណភាពសេវាកម្មក្រោយការលក់"</string>
+<string name="notify_confirm_msg">ទទួលយកសេវាកម្មលក់ដែលធ្វើឲ្យប្រសើរឡើង?</string>
+<string name="menu_ok">យល់ព្រម</string>
+<string name="menu_yes">"បាទ"</string>
+<string name="menu_no">"ទេ"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

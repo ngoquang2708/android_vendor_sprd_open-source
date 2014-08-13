@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">ڈی ایم</string>
+<string-array name="app_list">
+<item>"موجودہ سافٹ ویئر کی معلومات"</item>
+<item>سافٹ ویئراَپ ڈیٹ</item>
+<item>فوری طور پر اَپ ڈیٹ پیکج انسٹال کریں</item>
+</string-array>
+<string name="debug_menu">ڈیبگ مینو DM</string>
+<string-array name="debug_list">
+<item>ڈیبگ موڈ</item>
+<item>کلین خود رجسٹرڈ فلیگ</item>
+<item>سیلف رجسٹر پیغام ارسال کریں</item>
+<item>سوئچ سرور</item>
+<item>تعمیر</item>
+<item>ماڈل</item>
+<item>سافٹ ویئر ورژن</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>سرور ایڈریس</item>
+<item>ایس ایم ایس گیٹ وے ایڈریس</item>
+<item>ایس ایم ایس گیٹ وے پورٹ</item>
+<item>خدمت شروع کریں</item>
+<item>ڈی ایم استیت</item>
+<item>خود رجسٹر سوئچ</item>
+<item>سمولیٹر کنیکٹ</item>
+<item>"ڈائیلاگ کنٹرول فلیگ صاف کریں "</item>
+<item>"۔AGPS اے پی این"</item>
+</string-array>
+<string name="menu_save">محفوظ</string>
+<string name="menu_cancel">اوکے</string>
+<string name="notify_msg">بہتر فروخت کے بعد کی سروس </string>
+<string name="notify_confirm_msg">بہتر فروخت کے بعد کی سروس قبول کرتے ہیں؟</string>
+<string name="menu_ok">اوکے</string>
+<string name="menu_yes">جی ہاں</string>
+<string name="menu_no">نہیں</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

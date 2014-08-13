@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"Aktuel softwareinformation"</item>
+<item>Software opdatering</item>
+<item>Installer opdatering pakke straks</item>
+</string-array>
+<string name="debug_menu">DM debug menu</string>
+<string-array name="debug_list">
+<item>Fejlretningstilstand</item>
+<item>Ren selv registeret flag</item>
+<item>Sende selv registeret msg</item>
+<item>Skift server</item>
+<item>Fremstilling</item>
+<item>Model</item>
+<item>Software version</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>Serveradresse</item>
+<item>Sms gateway adresse</item>
+<item>Sms gateway porten</item>
+<item>Start tjeneste</item>
+<item>Dm tilstand</item>
+<item>Selvstændige register switch</item>
+<item>"Simulator forbind"</item>
+<item>"Ryd dialog kontrolmærke"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"Gem"</string>
+<string name="menu_cancel">"Annuller"</string>
+<string name="notify_msg">Forbedret post-salg service</string>
+<string name="notify_confirm_msg">Accepter Forbedret post-salg service?</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"Ja"</string>
+<string name="menu_no">"Nej"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

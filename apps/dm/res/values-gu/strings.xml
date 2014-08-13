@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"DM"</string>
+<string-array name="app_list">
+<item>"પ્રવર્તમાન સોફ્ટવેર માહિતી"</item>
+<item>"સોફ્ટવેર અદ્યતન"</item>
+<item>"અદ્યતન પેકેજ તુરંત સ્થાપિત કરો"</item>
+</string-array>
+<string name="debug_menu">"DM ડિબગ મેનુ"</string>
+<string-array name="debug_list">
+<item>"ડિબગ મોડ"</item>
+<item>"સેલ્ડરજીસ્ટ ફ્લેગ સાફ કરો"</item>
+<item>"સ્વનોંધ સંદેશ મોકલો"</item>
+<item>"સર્વર બદલો"</item>
+<item>"ઉત્પાદક"</item>
+<item>મોડેલ</item>
+<item>"સૉફ્ટવેર સંસ્કરણ"</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>સર્વર સરનામું</item>
+<item>"SMS ગેટવે સરનામું"</item>
+<item>"SMS ગેટવે પોર્ટ"</item>
+<item>"સેવા શરૂ કરો"</item>
+<item>"DM સ્થિતિ"</item>
+<item>સ્વ નોંધણી બદલી</item>
+<item>"સિમ્યુલેટર જોડાણ"</item>
+<item>"ડાયલોગ કંટ્રોલ ફ્લેગને ક્લિન કરો"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">સંગ્રહ કરો</string>
+<string name="menu_cancel">"રદ્દ"</string>
+<string name="notify_msg">"સઘન વેચાણ-બાદ સેવા"</string>
+<string name="notify_confirm_msg">"આધુનિક વેચાણ-બાદની સેવા સ્વીકારવી છે?"</string>
+<string name="menu_ok">"ઓકે"</string>
+<string name="menu_yes">"હા"</string>
+<string name="menu_no">ના</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>
