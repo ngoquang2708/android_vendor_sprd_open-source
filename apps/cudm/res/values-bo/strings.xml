@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"བཙོངས་རྗེས་ཀྱི་ཞབས་ལེགས་སུ་གཏོང་།"</string>
+<string-array name="app_list">
+<item>"ད་སྐབས་ཀྱི་མཉེན་ཆས་ཞབས་ཞུ།"</item>
+<item>"མཉེན་ཆས་ཞབས་ཞུ།"</item>
+<item>"འཕྲལ་མར་གསར་སྒྱུར་ཐུམ་སྒྲིག་འཇུག་བྱེད།"</item>
+</string-array>
+<string name="debug_menu">DM ཚོད་སྒྲིག་འདམ་བྱང་།</string>
+<string-array name="debug_list">
+<item>"སྙོམ་སྒྲིག་རྣམ་པ།"</item>
+<item>"རང་གི་ཐོ་འགོད་ཟིན་ཐོ་གཙང་སེལ་བྱེད།"</item>
+<item>"རང་གི་ཐོ་འགོད་ཆ་འཕྲིན་སྐུར།"</item>
+<item>"ཞབས་ཞུ་ཆས་བརྗེས་སྤོར་བྱེད།"</item>
+<item>"བཟོ་གྲྭ།"</item>
+<item>བཟོ་རྟགས།</item>
+<item>མཉེན་ཆས་པར་གཞི། </item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>ཞབས་ཞུ་ཆས་ཀྱི་ས་གནས།</item>
+<item>"འཕྲིན་ཐུང་དྲ་སྒོའི་གནས་ས།"</item>
+<item>"འཕྲིན་ཐུང་དྲ་སྒོའི་སྣེ་གནས།"</item>
+<item>"ཞབས་ཞུའི་མགོ་རྩོམ།"</item>
+<item>DMརྣམ་པ།</item>
+<item>"རང་གི་ཐོར་འཇུག་བསད་སྦར།"</item>
+</string-array>
+<string name="menu_save">ཉར་ཚགས།</string>
+<string name="menu_cancel">སྐྱུར་བ།</string>
+<string name="notify_msg">འཚོང་གཞུག་གི་ཞབས་ཞུ་ཇེ་ལེགས་སུ་གཏོང་། </string>
+<string name="notify_confirm_msg">འཚོང་གཞུག་གི་ཞབས་ཞུ་ཇེ་ལེགས་སུ་གཏོང་བ་དང་ལེན་བྱེད་དམ། </string>
+<string name="menu_ok">རྒྱུས་ལོན་པ།</string>
+<string name="menu_yes">རེད།</string>
+<string name="menu_no">མིན།</string>
+</resources>

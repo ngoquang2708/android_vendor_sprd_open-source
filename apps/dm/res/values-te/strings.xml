@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"ప్రస్తుత సాఫ్ట్ వేర్ సమాచారం"</item>
+<item>సాఫ్ట్వేర్ అప్డేట్</item>
+<item>వెంటనే అప్డేట్ ప్యాకేజిను ఇన్స్టాల్ చేయుము</item>
+</string-array>
+<string name="debug_menu">DM డీబగ్ మెను</string>
+<string-array name="debug_list">
+<item>డీబగ్ మోడ్</item>
+<item>పరిశుద్ధ సెల్ఫ్ రిజిస్ట్ జెండా</item>
+<item>సెల్ఫ్ రిజిస్టర్ మెసేజ్ పంపుము</item>
+<item>సర్వర్ మారండి</item>
+<item>తయారీ</item>
+<item>నమూనా</item>
+<item>సాఫ్ట్వేర్ వెర్షన్</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>సర్వర్ అడ్రస్</item>
+<item>Sms గేట్వే అడ్రస్</item>
+<item>Sms గేట్వే పోర్ట్</item>
+<item>సేవ ప్రారంభించండి</item>
+<item>Dm స్థితి</item>
+<item>నేనే రిజిస్టర్ స్విచ్</item>
+<item>సిమ్యులేటరు అనుసంధానం</item>
+<item>""డైలాగ్ నియంత్రణ జెండా శుభ్రం" "</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"సేవ్"</string>
+<string name="menu_cancel">"రద్దు"</string>
+<string name="notify_msg">మెరుగుపరచబడిన పోస్ట్-సేల్ సేవలు</string>
+<string name="notify_confirm_msg">మెరుగుపరచబడిన పోస్ట్-సేల్ సేవలను అంగీకరించవలెనా?</string>
+<string name="menu_ok">ఓకే</string>
+<string name="menu_yes">అవును</string>
+<string name="menu_no">"వద్దు"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

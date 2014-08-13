@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"CUの充実したサービス"</string>
+<string-array name="app_list">
+<item>"現在のソフトウェア情報"</item>
+<item>"ソフトウェアのアップデート"</item>
+<item>"アップデートパッケージをすぐにインストールする"</item>
+</string-array>
+<string name="debug_menu">"DMデバッグメニュー"</string>
+<string-array name="debug_list">
+<item>"デバッグモード"</item>
+<item>"一括フラグで消去"</item>
+<item>"一括メッセージ送信"</item>
+<item>サーバーの切り替え</item>
+<item>製造商</item>
+<item>"モデル"</item>
+<item>ソフトウェアのバージョン</item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>"サーバーアドレス"</item>
+<item>"SMSゲートウェイのアドレス"</item>
+<item>"SMSゲートウェイポート"</item>
+<item>"起動"</item>
+<item>"DM状態"</item>
+<item>"自動登録切替"</item>
+</string-array>
+<string name="menu_save">"保存"</string>
+<string name="menu_cancel">"キャンセル"</string>
+<string name="notify_msg">"充実したアフターサービス"</string>
+<string name="notify_confirm_msg">"充実したアフターサービスを受けますか？"</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"はい"</string>
+<string name="menu_no">"いいえ"</string>
+</resources>

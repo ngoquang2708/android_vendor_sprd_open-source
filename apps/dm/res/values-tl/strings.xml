@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"Kasalukuyang impormasyon sa software"</item>
+<item>Update ng software</item>
+<item>I-install kaaagad pakete ng pag-update</item>
+</string-array>
+<string name="debug_menu">Debug menu ng DM</string>
+<string-array name="debug_list">
+<item>Debug mode</item>
+<item>I-clean  selfregiste flag</item>
+<item>Ipadala ang selfregiste msg</item>
+<item>Lumipat ng server</item>
+<item>Manufacture</item>
+<item>"Modelo"</item>
+<item>Bersiyon ng software</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>"Address ng server"</item>
+<item>Address ng SMS gateway</item>
+<item>Port ng SMS gateway</item>
+<item>Simulan ang serbisyo</item>
+<item>Dm state</item>
+<item>Self register switch</item>
+<item>Ikonekta ang Simulator</item>
+<item>"Linisin ang dyalogo sa kontrol na hudyat"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"I-save"</string>
+<string name="menu_cancel">"Kanselahin"</string>
+<string name="notify_msg">Enhanced Post-sale Service</string>
+<string name="notify_confirm_msg">Accept Enhanced Post-sale Service?</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"Oo"</string>
+<string name="menu_no">"Hindi"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

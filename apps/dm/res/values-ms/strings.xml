@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"Maklumat perisian semasa"</item>
+<item>Kemas kini perisian</item>
+<item>Pasang pakej kemas kini dengan segera</item>
+</string-array>
+<string name="debug_menu">Menu nyahpepijat DM</string>
+<string-array name="debug_list">
+<item>Mod nyahpepijat</item>
+<item>Bersihkan bendera daftar sendiri</item>
+<item>Hantar mesej daftar sendiri</item>
+<item>Tukar pelayan</item>
+<item>Membuat</item>
+<item>"Model"</item>
+<item>Versi perisian</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>"Alamat pelayan"</item>
+<item>Alamat get laluan SMS</item>
+<item>Port get laluan SMS</item>
+<item>Mulakan Perkhidmatan</item>
+<item>Keadaan DM</item>
+<item>Suis daftar sendiri</item>
+<item>Sambung Simulator</item>
+<item>"Bersihkan dialog kawalan bendera"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"Simpan"</string>
+<string name="menu_cancel">"BATAL"</string>
+<string name="notify_msg">Perkhidmatan Pasca Jualan Dipertingkatkan</string>
+<string name="notify_confirm_msg">Terima Perkhidmatan Pasca Jualan Dipertingkatkan?</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"Ya"</string>
+<string name="menu_no">"Tidak"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

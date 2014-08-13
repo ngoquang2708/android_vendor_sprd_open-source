@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"Podatki o trenutni programski opremi"</item>
+<item>Posodobitev programske opreme</item>
+<item>Takoj namesti nadgrajevalni paket</item>
+</string-array>
+<string name="debug_menu">DM razhroščevalni meni</string>
+<string-array name="debug_list">
+<item>"Način za odpravljanje težav</item>
+<item>Počisti samoregistrirano oznako</item>
+<item>Pošlji samoprijavno sporočilo</item>
+<item>Preklop strežnika</item>
+<item>Izdelovalec</item>
+<item>Model</item>
+<item>Različica programske opreme</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>Naslov strežnika</item>
+<item>SMS naslov prehoda</item>
+<item>SMS vrata prehoda</item>
+<item>Aktiviraj storitev</item>
+<item>DM stanje</item>
+<item>Stikalo samoprijave</item>
+<item>"Simulator povezan"</item>
+<item>"Počisti nadzorno zastavico sporočil"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"Shrani"</string>
+<string name="menu_cancel">"Prekliči"</string>
+<string name="notify_msg">Izboljšana poprodajna storitev</string>
+<string name="notify_confirm_msg">Sprejem izboljšane poprodajne storitve?</string>
+<string name="menu_ok">"V redu"</string>
+<string name="menu_yes">"Da"</string>
+<string name="menu_no">"Ne"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>

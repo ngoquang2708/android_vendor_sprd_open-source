@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"Informação de software corrente"</item>
+<item>Atualizção de Software</item>
+<item>Instalar o pacote atualizado imediatamente</item>
+</string-array>
+<string name="debug_menu">Menu de depuração do DM</string>
+<string-array name="debug_list">
+<item>Modo de depuração</item>
+<item>Limpar a bandeira autoregistrada</item>
+<item>Enviar msg selfregiste</item>
+<item>Switch servidor</item>
+<item>Fabrico</item>
+<item>"Modelo"</item>
+<item>Versão de software</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>"Endereço do servidor"</item>
+<item>Endereço de gateway de SMS</item>
+<item>Porta do gateway SMS</item>
+<item>Iniciar o serviço</item>
+<item>Estado de DM</item>
+<item>Registo de auto interruptor</item>
+<item>"Simulador Ligar"</item>
+<item>"Limpar flag de controle de diálogo"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">"Salvar"</string>
+<string name="menu_cancel">"Cancelar"</string>
+<string name="notify_msg">Serviço de pós-venda reforçado</string>
+<string name="notify_confirm_msg">Aceitar serviço avançado de pós-venda?</string>
+<string name="menu_ok">"OK"</string>
+<string name="menu_yes">"Sim"</string>
+<string name="menu_no">"Não"</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">"中国移动提示：中国移动增强售后服务申请访问和配置您的设备设置信息并使用您蜂窝移动数据网络，设置信息不涉及您的隐私，数据流量免费您是否接受？"</string>
+</resources>

@@ -7,25 +7,6 @@
 <item>Instalar pacote de actualização de imediato</item>
 </string-array>
 <string name="debug_menu">Menu de depuração DM</string>
-<string-array name="debug_list">
-<item>Modo de depuração</item>
-<item>Limpar bandeira de auto registo</item>
-<item>Enviar mensagem de auto registo</item>
-<item>Mudar servidor</item>
-<item>Manufactura</item>
-<item>"Modelo"</item>
-<item>Versão de software</item>
-<item>"IMEI"</item>
-<item>"APN"</item>
-<item>"Endereço do servidor"</item>
-<item>Endereço de sms de gateway</item>
-<item>Porta de sms de gateway</item>
-<item>Iniciar serviço</item>
-<item>Estado de Dm</item>
-<item>Interruptor de auto registo</item>
-<item>"Simulador Ligar"</item>
-<item>"Apagar diálogo controar bandeira"</item>
-</string-array>
 <string name="menu_save">"Salvar"</string>
 <string name="menu_cancel">"Cancelar"</string>
 <string name="notify_msg">Serviço Melhorado de Pós-venda</string>
@@ -35,4 +16,25 @@
 <string name="menu_no">"Não"</string>
 <string name="sms_prompt">""</string>
 <string name="network_connect_prompt">""</string>
+  <string-array name="debug_list">
+    <item>"Modo de depuração"</item>
+    <item>"Limpar bandeira de auto registo"</item>
+    <item>"Enviar mensagem de auto registo"</item>
+    <item>"Mudar servidor"</item>
+    <item>"Manufactura"</item>
+    <item>"Modelo"</item>
+    <item>"Versão de software"</item>
+    <item>"IMEI"</item>
+    <item>"APN"</item>
+    <item>"Endereço do servidor"</item>
+    <item>"Endereço de sms de gateway"</item>
+    <item>"Porta de sms de gateway"</item>
+    <item>"Iniciar serviço"</item>
+    <item>"Estado de Dm"</item>
+    <item>"Interruptor de auto registo"</item>
+    <item>"Simulador Ligar"</item>
+    <item>"Apagar diálogo controar bandeira"</item>
+    <item>"AGPS Apn"</item>
+  </string-array>
+
 </resources>

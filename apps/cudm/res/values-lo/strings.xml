@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ເພີ່ມ​ຄວາມ​ແຂງ​ແກ່ງ​ໃນ​ການ​ບໍ​ລິ​ການ​ຫລັງ​ການ​ຂາຍ"</string>
+<string-array name="app_list">
+<item>ຂໍ້ມູນຊ໋ອບແວໃນປັດຈຸບັນ</item>
+<item>ປັບປຸງ ຊອບແວ</item>
+<item>ຕິດຕັ້ງແພກເກັດປັບປຸງໂປຣແກມທັນທີ</item>
+</string-array>
+<string name="debug_menu">ຍົກເລີກ</string>
+<string-array name="debug_list">
+<item>ໂໝດແກ້ໄຂບັນຫາ</item>
+<item>ລົບເຄື່ອງໝາຍການລົງທະບຽນດ້ວຍຕົວເອງ</item>
+<item>ສົ່ງຂໍ້ຄວາມຈາກການລົງທະບຽນ</item>
+<item>ສັບປ່ຽນເຊີເວີ້</item>
+<item>ຜູ້ຂາຍ</item>
+<item>ລຸ້ນ</item>
+<item>ລຸ້ນຂອງຊອບແວ</item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>ທີ່ຢູ່ເຊີເວີ້</item>
+<item>ປິດທີ່ຢູ່ເຄື່ອຄ່າຍຂໍ້ຄວາມ</item>
+<item>ປິດເຄື່ອຄ່າຍພອດຂໍ້ຄວາມ</item>
+<item>ເປີດໃຊ້ບໍລິການ</item>
+<item>ສະຖານະ DM</item>
+<item>ສະວິກລົງທະບຽນດ້ວຍຕົນເອງ</item>
+</string-array>
+<string name="menu_save">ຈັດເກັບ</string>
+<string name="menu_cancel">ຍົກເລີກ</string>
+<string name="notify_msg">ເພີ່ມທະວີການບໍລິການຫຼັງການຂາຍ</string>
+<string name="notify_confirm_msg">ຈະຍອມຮັບການບໍລິການຫຼັງການຂາຍມີ່ເພີ່ມຂຶ້ນຫຼືບໍ່?</string>
+<string name="menu_ok">"ການເຂົ້າໃຈ"</string>
+<string name="menu_yes">ຕົກລົງ</string>
+<string name="menu_no">ບໍ່</string>
+</resources>
