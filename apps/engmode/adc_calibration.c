@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include "engopt.h"
 #include "cutils/properties.h"
 #include "private/android_filesystem_config.h"
@@ -45,10 +46,16 @@ void	initialize_ctrl_file(void)
     int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
     if(fd < 0){
-        fd = open(CALI_CTRL_FILE_PATH,O_RDWR|O_CREAT, 0666);
+        fd = open(CALI_CTRL_FILE_PATH,O_RDWR|O_CREAT, 0664);
     }
     if(fd < 0){
         ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+        return;
+    }
+    ret = chmod(CALI_CTRL_FILE_PATH,S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    if (-1 == ret) {
+        ENG_LOG("chmod /productinfo/adc.bin failed.");
+        close(fd);
         return;
     }
     ret = read(fd,&cali_info,sizeof(cali_info));
