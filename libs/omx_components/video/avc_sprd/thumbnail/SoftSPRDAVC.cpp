@@ -96,6 +96,34 @@ static void InitOMXParams(T *params) {
     params->nVersion.s.nStep = 0;
 }
 
+typedef struct LevelConversion {
+    OMX_U32 omxLevel;
+    AVCLevel avcLevel;
+} LevelConcersion;
+
+static LevelConversion ConversionTable[] = {
+    { OMX_VIDEO_AVCLevel1,  AVC_LEVEL1_B },
+    { OMX_VIDEO_AVCLevel1b, AVC_LEVEL1   },
+    { OMX_VIDEO_AVCLevel11, AVC_LEVEL1_1 },
+    { OMX_VIDEO_AVCLevel12, AVC_LEVEL1_2 },
+    { OMX_VIDEO_AVCLevel13, AVC_LEVEL1_3 },
+    { OMX_VIDEO_AVCLevel2,  AVC_LEVEL2 },
+#if 1
+    // encoding speed is very poor if video
+    // resolution is higher than CIF
+    { OMX_VIDEO_AVCLevel21, AVC_LEVEL2_1 },
+    { OMX_VIDEO_AVCLevel22, AVC_LEVEL2_2 },
+    { OMX_VIDEO_AVCLevel3,  AVC_LEVEL3   },
+    { OMX_VIDEO_AVCLevel31, AVC_LEVEL3_1 },
+    { OMX_VIDEO_AVCLevel32, AVC_LEVEL3_2 },
+    { OMX_VIDEO_AVCLevel4,  AVC_LEVEL4   },
+    { OMX_VIDEO_AVCLevel41, AVC_LEVEL4_1 },
+    { OMX_VIDEO_AVCLevel42, AVC_LEVEL4_2 },
+    { OMX_VIDEO_AVCLevel5,  AVC_LEVEL5   },
+    { OMX_VIDEO_AVCLevel51, AVC_LEVEL5_1 },
+#endif
+};
+
 SoftSPRDAVC::SoftSPRDAVC(
     const char *name,
     const OMX_CALLBACKTYPE *callbacks,
@@ -247,6 +275,14 @@ status_t SoftSPRDAVC::initDecoder() {
         return OMX_ErrorUndefined;
     }
 
+    //int32 codec_capabilty;
+    if ((*mH264GetCodecCapability)(mHandle, &mCapability) != MMDEC_OK) {
+        ALOGE("Failed to mH264GetCodecCapability");
+    }
+
+    ALOGI("initDecoder, Capability: profile %d, level %d, max wh=%d %d",
+          mCapability.profile, mCapability.level, mCapability.max_width, mCapability.max_height);
+
     return OMX_ErrorNone;
 }
 
@@ -331,6 +367,33 @@ OMX_ERRORTYPE SoftSPRDAVC::internalGetParameter(
 
         profileLevel->eProfile = kProfileLevels[index].mProfile;
         profileLevel->eLevel = kProfileLevels[index].mLevel;
+
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileHigh) {
+            if (mCapability.profile < AVC_HIGH) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileMain;
+            }
+        }
+
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileMain) {
+            if (mCapability.profile < AVC_MAIN) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+            }
+        }
+
+        const size_t size =
+            sizeof(ConversionTable) / sizeof(ConversionTable[0]);
+
+        for (index = 0; index < size; index++) {
+            if (ConversionTable[index].avcLevel > mCapability.level) {
+                index--;
+                break;
+            }
+        }
+
+        if (profileLevel->eLevel > ConversionTable[index].omxLevel) {
+            profileLevel->eLevel = ConversionTable[index].omxLevel;
+        }
+
         return OMX_ErrorNone;
     }
 
@@ -654,7 +717,7 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
         } else {
             int32 add_startcode_len = 0;
 
-    //       if (!memcmp((uint8 *)(inHeader->pBuffer + inHeader->nOffset), "\x00\x00\x00\x01", 4))
+            //       if (!memcmp((uint8 *)(inHeader->pBuffer + inHeader->nOffset), "\x00\x00\x00\x01", 4))
             uint8 *p = (uint8 *)(inHeader->pBuffer + inHeader->nOffset);
 
             if((p[0] != 0x0) || (p[1] != 0x0) || (p[2] != 0x0) || (p[3] != 0x1))
@@ -1069,6 +1132,14 @@ bool SoftSPRDAVC::openDecoder(const char* libName)
     mH264DecGetNALType = (FT_H264DecGetNALType)dlsym(mLibHandle, "H264DecGetNALType");
     if(mH264DecGetNALType == NULL) {
         ALOGE("Can't find H264DecGetNALType in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
+    mH264GetCodecCapability = (FT_H264GetCodecCapability)dlsym(mLibHandle, "H264GetCodecCapability");
+    if(mH264GetCodecCapability == NULL) {
+        ALOGE("Can't find H264GetCodecCapability in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
         return false;
