@@ -50,6 +50,14 @@
 #define GPU_MIN_FREQ			64000
 
 #define GPU_150M_FREQ_INDEX 	5
+#elif defined (CONFIG_ARCH_SCX35L)
+/*sharkl 28nm*/
+#define DFS_FREQ_NUM			8
+
+#define GPU_MAX_FREQ			512000
+#define GPU_MIN_FREQ			64000
+
+#define GPU_150M_FREQ_INDEX 	5
 #else
 /*shark 40nm*/
 #define DFS_FREQ_NUM			6
@@ -146,6 +154,47 @@ static struct gpu_clock_source  gpu_clk_src[]=
 		.clk_src=NULL,
 	},
 };
+#elif defined (CONFIG_ARCH_SCX35L)
+/*sharkl 28nm*/
+static struct gpu_clock_source  gpu_clk_src[]=
+{
+	{
+		.name="clk_512m",
+		.freq=512000,
+		.freq_select=5,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_384m",
+		.freq=384000,
+		.freq_select=4,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_307m2",
+		.freq=307200,
+		.freq_select=3,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_256m",
+		.freq=256000,
+		.freq_select=2,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_192m",
+		.freq=192000,
+		.freq_select=1,
+		.clk_src=NULL,
+	},
+	{
+		.name="clk_153m6",
+		.freq=153600,
+		.freq_select=0,
+		.clk_src=NULL,
+	},
+};
 #else
 /*shark 40nm*/
 static struct gpu_clock_source  gpu_clk_src[]=
@@ -200,6 +249,27 @@ static struct gpu_dfs_context gpu_dfs_ctx=
 		&dfs_freq_full_list[20],
 		/*index:  6 freq:104000 freq_select:  1  div_select:  2*/
 		&dfs_freq_full_list[17],
+		/*index:  7 freq:64000  freq_select:  2  div_select:  4*/
+		&dfs_freq_full_list[15],
+	},
+#elif defined (CONFIG_ARCH_SCX35L)
+/*sharkl 28nm*/
+	.dfs_freq_list=
+	{
+		/*index:  0 freq:512000 freq_select:  5  div_select:  1*/
+		&dfs_freq_full_list[0],
+		/*index:  1 freq:384000 freq_select:  4  div_select:  1*/
+		&dfs_freq_full_list[4],
+		/*index:  2 freq:307200 freq_select:  3  div_select:  1*/
+		&dfs_freq_full_list[8],
+		/*index:  3 freq:256000 freq_select:  2  div_select:  1*/
+		&dfs_freq_full_list[12],
+		/*index:  4 freq:192000 freq_select:  1  div_select:  1*/
+		&dfs_freq_full_list[16],
+		/*index:  5 freq:153600 freq_select:  0  div_select:  1*/
+		&dfs_freq_full_list[20],
+		/*index:  6 freq:102400 freq_select:  3  div_select:  3*/
+		&dfs_freq_full_list[10],
 		/*index:  7 freq:64000  freq_select:  2  div_select:  4*/
 		&dfs_freq_full_list[15],
 	},
@@ -468,6 +538,14 @@ int  mali_power_initialize(struct platform_device *pdev)
 	gpu_clk_src[3].clk_src = of_clk_get(np, 4);
 	gpu_clk_src[4].clk_src = of_clk_get(np, 3);
 	gpu_clk_src[5].clk_src = of_clk_get(np, 2);
+#elif defined (CONFIG_ARCH_SCX35L)
+/*sharkl 28nm*/
+	gpu_clk_src[0].clk_src = of_clk_get(np, 7);
+	gpu_clk_src[1].clk_src = of_clk_get(np, 6);
+	gpu_clk_src[2].clk_src = of_clk_get(np, 5);
+	gpu_clk_src[3].clk_src = of_clk_get(np, 4);
+	gpu_clk_src[4].clk_src = of_clk_get(np, 3);
+	gpu_clk_src[5].clk_src = of_clk_get(np, 2);
 #else
 /*shark 40nm*/
 	gpu_clk_src[0].clk_src = of_clk_get(np, 4);
@@ -707,6 +785,9 @@ void mali_platform_power_mode_change(int power_mode)
 #ifdef CONFIG_COMMON_CLK
 	#ifdef CONFIG_ARCH_SCX30G
 	/*tshark 28nm*/
+			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_clk_src[3].clk_src);
+	#elif defined (CONFIG_ARCH_SCX35L)
+	/*sharkl 28nm*/
 			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_clk_src[3].clk_src);
 	#else
 	/*shark 40nm*/
