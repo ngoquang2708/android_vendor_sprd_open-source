@@ -539,6 +539,8 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 {
     unsigned int srcWidth;
     unsigned int srcHeight;
+    unsigned int destWidth;
+    unsigned int destHeight;
     hwc_layer_1_t *layer = l->getAndroidLayer();
     const native_handle_t *pNativeHandle = layer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
@@ -639,7 +641,8 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth);
     FBRect->h = MIN(layer->displayFrame.bottom - layer->sourceCrop.top, mFBHeight);
 
-    if ((layer->transform & HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
+    if (((layer->transform & HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
+        || ((layer->transform & HAL_TRANSFORM_ROT_270) == HAL_TRANSFORM_ROT_270))
     {
         srcWidth = srcRect->h;
         srcHeight = srcRect->w;
@@ -649,6 +652,9 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         srcWidth = srcRect->w;
         srcHeight = srcRect->h;
     }
+
+    destWidth = FBRect->w;
+    destHeight = FBRect->h;
 
     /*
      * Only support full screen now
@@ -663,7 +669,17 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
     mRGBLayerFullScreenFlag = true;
 
-    if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
+    if (l->getAccelerator() == ACCELERATOR_GSP
+        || l->getAccelerator() == ACCELERATOR_GSP_IOMMU)
+    {
+        if ((srcWidth != destWidth) || (srcHeight != destHeight))
+        {
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer GSP do not support RGB layer scaling now, L%d", __LINE__);
+            l->resetAccelerator();
+            return 0;
+        }
+    }
+    else if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
     {
         int ret = prepareOverlayComposerLayer(l);
         if (ret != 0)
@@ -709,7 +725,12 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         return -1;
     }
 
-    if (!(l->checkYUVLayerFormat()))
+    /*
+     *  Some RGB DRM video should also be considered as video layer
+     *  which must be processed by HWC.
+     * */
+    if ((!(l->checkYUVLayerFormat()))
+        && ((privateH->usage & GRALLOC_USAGE_PROTECTED) != GRALLOC_USAGE_PROTECTED))
     {
         ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,color format:0x%08x,ret 0", __LINE__, privateH->format);
         return 0;
@@ -947,7 +968,7 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             ALOGI_IF(mDebugFlag, "mRGBLayerFullScreenFlag: %d", mRGBLayerFullScreenFlag);
              mSkipLayerFlag = true;
         }
-        else if (privateH->usage & GRALLOC_USAGE_PROTECTED)
+        else if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == GRALLOC_USAGE_PROTECTED)
         {
             ALOGI_IF(mDebugFlag, "Find Protected Video layer, force Overlay");
             mSkipLayerFlag = false;
