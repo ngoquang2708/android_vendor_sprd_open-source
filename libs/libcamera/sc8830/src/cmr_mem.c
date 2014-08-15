@@ -284,7 +284,7 @@ int camera_pre_capture_buf_size(uint32_t camera_id,
 	struct cap_size_to_mem *mem_tab_ptr = NULL;
 
 	if (mem_size_id < IMG_1P3_MEGA
-		|| mem_size_id > IMG_SIZE_NUM
+		|| mem_size_id >= IMG_SIZE_NUM
 		|| NULL == mem_size) {
 		CMR_LOGE("no matched size for this image: id=%d, 0x%x",
 				mem_size_id,

@@ -372,7 +372,6 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 		mCameraId = cameraId;
 	}
 
-	//mCameraId = 1;
 
 	initDefaultParameters();
 	switch_monitor_thread_init((void *)this);
@@ -3449,7 +3448,6 @@ void SprdCameraHardware::freeCaptureMem()
 }
 	mRawHeapSize = 0;
 
-	LOGI("free mSubRawHeap!");
 
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("freeCaptureMem X!");
