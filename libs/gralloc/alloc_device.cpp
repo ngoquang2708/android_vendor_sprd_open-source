@@ -112,7 +112,7 @@ int open_ion_device(private_module_t* m)
 	pthread_mutex_lock(&m->fd_lock);
 	if(m->mIonFd < 0)
 	{
-		m->mIonFd = open(ION_DEVICE, O_RDONLY|O_SYNC);
+		m->mIonFd = open(ION_DEVICE, O_RDONLY);
 	}
 	if(m->mIonFd >= 0)
 	{
@@ -309,8 +309,6 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
             hnd->share_fd = shared_fd;
             hnd->ion_hnd = ion_hnd;
             *pHandle = hnd;
-            memset(cpu_ptr, 0, size);
-            ion_invalidate_fd(m->ion_client,hnd->share_fd);
             return 0;
         }
         else
