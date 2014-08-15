@@ -83,15 +83,16 @@ extern SENSOR_INFO_T g_hi255_yuv_info;
 const SENSOR_INFO_T* main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_ov8825_mipi_raw_info,
+	&g_ov5648_mipi_raw_info,
+	&g_ov8865_mipi_raw_info,
+	&g_ov5640_mipi_yuv_info,
 	&g_hi544_mipi_raw_info,
 	&g_sr352_mipi_yuv_info,
 	&g_imx219_mipi_raw_info,
 	&g_s5k4ec_mipi_yuv_info,
-	&g_ov8825_mipi_raw_info,
 	//&g_ov8830_mipi_raw_info,
-	&g_ov5640_mipi_yuv_info,
 	&g_imx179_mipi_raw_info,
-	&g_ov8865_mipi_raw_info,
 	&g_ov13850_mipi_raw_info,
 	//&g_ov5640_mipi_raw_info,
 	//&g_s5k5ccgx_yuv_info_mipi,
@@ -99,7 +100,6 @@ const SENSOR_INFO_T* main_sensor_infor_tab[]=
 	//&g_hi351_mipi_yuv_info,
 	//&g_ov5640_mipi_raw_info,
 	//&g_ov5647_mipi_raw_info,
-	&g_ov5648_mipi_raw_info,
 	&g_SP2529_MIPI_yuv_info,
 #endif
 #ifdef CONFIG_BACK_CAMERA_CCIR
