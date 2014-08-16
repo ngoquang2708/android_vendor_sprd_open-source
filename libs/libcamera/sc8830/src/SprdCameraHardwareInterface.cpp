@@ -4807,7 +4807,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 				uint32_t tmpIndex = frame->order_buf_id;
-				if (mPreviewWindow && isPreviewing()) {
+				if (isPreviewing()) {
 					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
 							tmpIndex,
 							0, NULL, mUser, 1);
@@ -4819,7 +4819,7 @@ void SprdCameraHardware::receivePreviewFrame(camera_frame_type *frame)
 				}
 			} else {
 				uint32_t dataSize = frame->dx * frame->dy * 3 / 2;
-				if (mPreviewWindow && isPreviewing()) {
+				if (isPreviewing()) {
 					memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
 						frame->buf_Virt_Addr, dataSize);
 					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
