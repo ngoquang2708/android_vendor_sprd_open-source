@@ -159,9 +159,7 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr);
 void *vbc_ctrl_thread_routine(void *args);
 void *vbc_ctrl_voip_thread_routine(void *arg);
 
-extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
-
-extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
+extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type,bool local);
 
 extern int headset_no_mic();
 
@@ -350,25 +348,25 @@ unsigned short GetAudio_vbcpipe_count(void)
 }
 
 /* Headset is 0, Handsfree is 3 */
-static int32_t GetAudio_InMode_number_from_device(struct tiny_audio_device *adev)
+static int32_t GetAudio_InMode_number_from_device(int in_dev)
 {
     int ret = 3;
 
-    if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BUILTIN_MIC)
-        ||((adev->in_devices & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BACK_MIC))
+    if (((in_dev & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BUILTIN_MIC)
+        ||((in_dev & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BACK_MIC))
         ret = 3;//handsfree
-    else if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_WIRED_HEADSET)
-        ||((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+    else if (((in_dev & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_WIRED_HEADSET)
+        ||((in_dev & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
         ret = 0;//headset
 
     return ret;
 }
 
-static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
+static int32_t GetAudio_mode_number_from_device(int outdev,int indev)
 {
     int32_t lmode;
-    if(((adev->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) && (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER))
-            || ((adev->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) && (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER))){
+    if(((outdev & AUDIO_DEVICE_OUT_WIRED_HEADSET) && (outdev & AUDIO_DEVICE_OUT_SPEAKER))
+            || ((outdev & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) && (outdev & AUDIO_DEVICE_OUT_SPEAKER))){
 #if 0
 		if(adev->input_source == AUDIO_SOURCE_CAMCORDER)
 		{
@@ -378,15 +376,15 @@ static int32_t GetAudio_mode_number_from_device(struct tiny_audio_device *adev)
 #endif
 		    lmode = 1;  //headfree
 
-    }else if(adev->out_devices & AUDIO_DEVICE_OUT_EARPIECE){
+    }else if(outdev & AUDIO_DEVICE_OUT_EARPIECE){
         lmode = 2;  //handset
-    }else if((adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) || (adev->out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER)){
+    }else if((outdev & AUDIO_DEVICE_OUT_SPEAKER) || (outdev & AUDIO_DEVICE_OUT_FM_SPEAKER)){
         lmode = 3;  //handsfree
-    }else if((adev->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (adev->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
-            || (adev->out_devices & AUDIO_DEVICE_OUT_FM_HEADSET) || (adev->in_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
+    }else if((outdev & AUDIO_DEVICE_OUT_WIRED_HEADSET) || (outdev & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+            || (outdev & AUDIO_DEVICE_OUT_FM_HEADSET) || (indev & AUDIO_DEVICE_IN_WIRED_HEADSET)){
         lmode = 0;  //headset
     }else{
-        ALOGW("%s device(0x%x) is not support, set default:handsfree \n",__func__,adev->out_devices);
+        ALOGW("%s device(0x%x) is not support, set default:handsfree \n",__func__,outdev);
         lmode = 3;
     }
     return lmode;
@@ -446,9 +444,6 @@ static int  GetAudio_PaConfig_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *
         |  ((ptArmModeStruct->reserve[AUDIO_NV_FM_INTHPPA_CONFIG2_INDEX]<<16) & 0xffff0000));   //51-52
 	pga_gain_nv->hp_pa_delay_config = ptArmModeStruct->reserve[AUDIO_NV_INTHPPA_CONFIG_DELAY_INDEX];         //63
 
-    pga_gain_nv->out_devices = adev->out_devices;
-    pga_gain_nv->in_devices = adev->in_devices;
-
     ALOGW("vb_control_parameters.c hp_pa_delay_config 0x%x pa_config:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x),  hpPaConfig:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x)",
 			pga_gain_nv->hp_pa_delay_config,
 			pga_gain_nv->pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
@@ -499,9 +494,6 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
     pga_gain_nv->cg_pga_gain_l = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_L_INDEX];
     pga_gain_nv->cg_pga_gain_r = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_R_INDEX];
 
-    pga_gain_nv->out_devices = adev->out_devices;
-    pga_gain_nv->in_devices = adev->in_devices;
-
     ALOGW("vb_control_parameters.c pa_config:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x),  hpPaConfig:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x)",
             pga_gain_nv->pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
             ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN2_INDEX],
@@ -533,19 +525,22 @@ static int  GetAudio_inpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud
     return 0;
 }
 
-static int GetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv)
+static int GetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv,int out_dev,int in_dev)
 {
     int ret = 0;
     int32_t lmode = 0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
-    lmode = GetAudio_mode_number_from_device(adev);
+    lmode = GetAudio_mode_number_from_device(out_dev,in_dev);
 
     aud_params_ptr = adev->audio_para;//(AUDIO_TOTAL_T *)mmap(0, 4*sizeof(AUDIO_TOTAL_T),PROT_READ,MAP_SHARED,fd,0);
     if ( NULL == aud_params_ptr ) {
         ALOGE("%s, mmap failed %s",__func__,strerror(errno));
         return -1;
     }
+    pga_gain_nv->out_devices = out_dev;
+    pga_gain_nv->in_devices = in_dev;
+
     //get music gain from nv
     ret = GetAudio_PaConfig_nv(adev, &aud_params_ptr[lmode], pga_gain_nv);
     if(ret < 0){
@@ -554,14 +549,14 @@ static int GetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain
     return 0;
 }
 
-static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level)
+static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_t *pga_gain_nv, uint32_t vol_level,int out_dev,int in_dev)
 {
     int ret = 0;
     int32_t outmode = 0, inmode=0;
     AUDIO_TOTAL_T * aud_params_ptr = NULL;
     char * dev_name = NULL;
-    outmode = GetAudio_mode_number_from_device(adev);
-    inmode = GetAudio_InMode_number_from_device(adev);
+    outmode = GetAudio_mode_number_from_device(out_dev,in_dev);
+    inmode = GetAudio_InMode_number_from_device(in_dev);
 
     ALOGW("%s, outmode:%d inmode:%d,indev:0x%x, outdev:0x%x",
         __func__,outmode, inmode, adev->in_devices, adev->out_devices);
@@ -571,6 +566,9 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         ALOGE("%s, mmap failed %s",__func__,strerror(errno));
         return -1;
     }
+    pga_gain_nv->out_devices = out_dev;
+    pga_gain_nv->in_devices = in_dev;
+
     //get music gain from nv
     ret = GetAudio_outpga_nv(adev, &aud_params_ptr[outmode], pga_gain_nv, vol_level);
     if(ret < 0){
@@ -713,11 +711,11 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     return 0;
 }
 
-static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_level)
+static void SetAudio_gain_route(struct tiny_audio_device *adev, uint32_t vol_level,int out_dev,int in_dev)
 {
     int ret = 0;
     memset(adev->pga_gain_nv,0,sizeof(pga_gain_nv_t));
-    ret = GetAudio_gain_by_devices(adev,adev->pga_gain_nv,vol_level);
+    ret = GetAudio_gain_by_devices(adev,adev->pga_gain_nv,vol_level,out_dev,in_dev);
     if(ret < 0){
         return;
     }
@@ -781,7 +779,7 @@ static void GetCall_VolumePara(struct tiny_audio_device *adev,paras_mode_gain_t 
         (mode_gain_paras->reserved[1] | (mode_gain_paras->reserved[2]<<16));
     pga_gain_nv->cg_pga_gain_l = mode_gain_paras->reserved[3];
     pga_gain_nv->cg_pga_gain_r = mode_gain_paras->reserved[4];
-    
+
     ret = SetVoice_gain_by_devices(adev,pga_gain_nv);
     if(ret < 0){
         return;
@@ -1269,7 +1267,7 @@ int vbc_ctrl_close()
     free(st_vbc_ctrl_thread_para);
 
     /* terminate thread.*/
-    //pthread_cancel (s_vbc_ctrl_thread);    
+    //pthread_cancel (s_vbc_ctrl_thread);
     return (0);
 }
 
@@ -1292,7 +1290,7 @@ int vbc_ctrl_voip_open(struct voip_res *res)
     }
 
     return 0;
-} 
+}
 
 static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
 {
@@ -1312,7 +1310,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
         }
         adev->call_start = 0;
         adev->call_connected = 0;
-        i2s_pin_mux_sel(adev,2);
+        i2s_pin_mux_sel(adev,2,true);
     }
     if(is_timeout) {
 		mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
@@ -1344,7 +1342,7 @@ void *vbc_ctrl_voip_thread_routine(void *arg)
     pthread_attr_t attr;
     struct sched_param m_param;
     int newprio=39;
-    
+
     pthread_attr_init(&attr);
     pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
     pthread_attr_setschedpolicy(&attr,SCHED_FIFO);
@@ -1357,18 +1355,18 @@ void *vbc_ctrl_voip_thread_routine(void *arg)
     para->adev = res->adev;
     para->vbpipe_fd = -1;
 
-    memcpy(para->vbpipe, res->pipe_name,strlen(res->pipe_name)+1); 
+    memcpy(para->vbpipe, res->pipe_name,strlen(res->pipe_name)+1);
 
     adev = (struct tiny_audio_device *)(para->adev);
 
     memset(&read_common_head, 0, sizeof(parameters_head_t));
     memset(&write_common_head, 0, sizeof(parameters_head_t));
-    
+
     memcpy(&write_common_head.tag[0], VBC_CMD_TAG, 3);
     write_common_head.cmd_type = VBC_CMD_NONE;
     write_common_head.paras_size = 0;
     MY_TRACE("voip1:vbc_ctrl_thread_routine in pipe_name:%s.", para->vbpipe);
-    
+
 RESTART:
     /* open vbpipe to build connection.*/
     if (para->vbpipe_fd == -1) {
@@ -1391,7 +1389,7 @@ RESTART:
     /* loop to read parameters from vbpipe.*/
     while(1)
     {
-        int result = 0; 
+        int result = 0;
         timeout.tv_sec = 5;;
         timeout.tv_usec = 0;;
         ALOGW("voip1:%s, looping now...cur_timeout %x,timeout %d", para->vbpipe,cur_timeout,cur_timeout?cur_timeout->tv_sec:0);
@@ -1447,8 +1445,8 @@ RESTART:
             case VBC_CMD_HAL_OPEN:
             {
                 cur_timeout = &timeout;
-                        MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
-                SetParas_OpenHal_Incall(adev,para->vbpipe_fd); 
+                MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
+                SetParas_OpenHal_Incall(adev,para->vbpipe_fd);
                 ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_OPEN);
                 if(ret < 0){
                     ALOGE("voip1:VBC_CMD_HAL_OPEN: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
@@ -1459,7 +1457,7 @@ RESTART:
             case VBC_CMD_HAL_CLOSE:
             {
                cur_timeout = &timeout;
-                
+
                 MY_TRACE("voip1:VBC_CMD_HAL_CLOSE IN.");
                 write_common_head.cmd_type = VBC_CMD_RSP_CLOSE;
                 ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
@@ -1484,7 +1482,7 @@ RESTART:
             case VBC_CMD_SET_MODE:
             {
                 MY_TRACE("voip1:VBC_CMD_SET_MODE IN.");
-                   
+
                    ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
                    if(ret < 0){
                    MY_TRACE("voip1:VBC_CMD_SET_MODE SetParas_Route_Incall error. pipe:%s",
@@ -1677,7 +1675,7 @@ RESTART:
     /* loop to read parameters from vbpipe.*/
     while(1)
     {
-        int result; 
+        int result;
 	timeout.tv_sec = 5;;
 	timeout.tv_usec = 0;
         ALOGW("voice:%s, looping now...cur_timeout %x,timeout %d", para->vbpipe,cur_timeout,cur_timeout?cur_timeout->tv_sec:0);
@@ -1728,12 +1726,13 @@ RESTART:
 	{
 	case VBC_CMD_HAL_OPEN:
 	    {
-		uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0) 
+		uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0)
 
         |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
 		cur_timeout = &timeout;
 		MY_TRACE("vocie:VBC_CMD_HAL_OPEN IN.");
 		ALOGW("vocie:VBC_CMD_HAL_OPEN, try lock");
+        pthread_mutex_lock(&adev->device_lock);
 		pthread_mutex_lock(&adev->lock);
 		ALOGW("voice:VBC_CMD_HAL_OPEN, got lock");
 
@@ -1754,30 +1753,29 @@ RESTART:
 		}
 		if( 0 != pcm_start(adev->pcm_modem_dl))
 		{
-		    ALOGE("pcm dl start unsucessfully");		    
+		    ALOGE("pcm dl start unsucessfully");
 		}
 		if( 0 != pcm_start(adev->pcm_modem_ul))
 		{
-		    ALOGE("pcm ul start unsucessfully");		   
+		    ALOGE("pcm ul start unsucessfully");
 		}
 
-		
-		ALOGW("voice:START CALL,open pcm device...");
 
-        pthread_mutex_lock(&adev->device_lock);
-		adev->call_start = 1;
-        pthread_mutex_unlock(&adev->device_lock);
+		ALOGW("voice:START CALL,open pcm device...");
 
 		SetParas_OpenHal_Incall(adev,para->vbpipe_fd);   //get sim card number
 
 		adev->cp_type = para->cp_type;
 		if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
-			i2s_pin_mux_sel(adev,1);
+			i2s_pin_mux_sel(adev,1,true);
 		    else if(adev->cp_type == CP_W)
-			i2s_pin_mux_sel(adev,0);
+			i2s_pin_mux_sel(adev,0,true);
 		}
+		voip_forbid(adev, true);
+		adev->call_start = 1;
 		pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&adev->device_lock);
 
 		ALOGD("i2s_ctl is %x",i2s_ctl);
 		parameters_head_t write_common_head = {0};
@@ -1787,9 +1785,7 @@ RESTART:
 		if(ret < 0) {
 		    MY_TRACE("VBC_CMD_HAL_OPEN writeparas_head error %d",ret);
 		}
-		pthread_mutex_lock(&adev->lock);
-		voip_forbid(adev, true);
-		pthread_mutex_unlock(&adev->lock);
+
 		MY_TRACE("voice:VBC_CMD_HAL_OPEN OUT, vbpipe_name:%s.", para->vbpipe);
 	    }
 	    break;
@@ -1828,11 +1824,11 @@ RESTART:
 	    {
 		MY_TRACE("voice:VBC_CMD_SET_MODE IN.");
 
-		if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
+		if(adev->routeDev & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
-			i2s_pin_mux_sel(adev,1);
+			i2s_pin_mux_sel(adev,1,false);
 		    else if(adev->cp_type == CP_W)
-			i2s_pin_mux_sel(adev,0);
+			i2s_pin_mux_sel(adev,0,false);
 		}
 
 		ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
@@ -1908,11 +1904,11 @@ RESTART:
 		MY_TRACE("voice:VBC_CMD_SET_SAMPLERATE IN.");
 		if( 0 != pcm_stop(adev->pcm_modem_dl))
 		{
-		    ALOGE("pcm dl start unsucessfully");		    
+		    ALOGE("pcm dl start unsucessfully");
 		}
 		if( 0 != pcm_stop(adev->pcm_modem_ul))
 		{
-		    ALOGE("pcm ul start unsucessfully");		   
+		    ALOGE("pcm ul start unsucessfully");
 		}
 		ret = SetParas_Samplerate_Incall(para->vbpipe_fd,adev);
 		if(ret < 0){
@@ -1920,11 +1916,11 @@ RESTART:
 		}
 		if( 0 != pcm_start(adev->pcm_modem_dl))
 		{
-		    ALOGE("pcm dl start unsucessfully");		    
+		    ALOGE("pcm dl start unsucessfully");
 		}
 		if( 0 != pcm_start(adev->pcm_modem_ul))
 		{
-		    ALOGE("pcm ul start unsucessfully");		   
+		    ALOGE("pcm ul start unsucessfully");
 		}
 		ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SET_SAMPLERATE);
 		if(ret < 0){
@@ -1971,7 +1967,7 @@ static void do_select_devices_l(struct tiny_audio_device *adev,int devices_out_l
 {
     unsigned int i;
     int ret = 0;
-    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv,devices_out_l,adev->in_devices);
     if(ret < 0){
         return;
     }
@@ -2001,7 +1997,7 @@ static void do_select_devices_l(struct tiny_audio_device *adev,int devices_out_l
     /* update EQ profile*/
     if(adev->eq_available)
         vb_effect_profile_apply();
-    SetAudio_gain_route(adev,1);
+    SetAudio_gain_route(adev,1,devices_out_l,adev->in_devices);
 }
 
 
@@ -2043,11 +2039,13 @@ reconnect:
             ALOGD("modem asserted1 %s",buf);
             cur_out_devices_l = adev->out_devices;
             cur_out_devices_l &= ~AUDIO_DEVICE_OUT_ALL;
+            pthread_mutex_lock(&adev->device_lock);
             pthread_mutex_lock(&adev->lock);
             if(adev->call_start){
                 do_select_devices_l(adev,cur_out_devices_l);
             }
             pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&adev->device_lock);
 
             ALOGD("modem_monitor assert:vbc_call_end_process");
             vbc_call_end_process(adev,true);
