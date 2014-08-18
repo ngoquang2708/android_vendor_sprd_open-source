@@ -89,6 +89,62 @@ static int get_task_pid(char *name)
     return -1;
 }
 
+static int stop_nvitemd(int modem)
+{
+    switch(modem) {
+    case W_MODEM:
+        MODEMD_LOGD("stop w nvitemd!");
+        property_set("ctl.stop", "nvitemd_w");
+        break;
+    case LTE_MODEM:
+        MODEMD_LOGD("stop lte nvitemd!");
+        property_set("ctl.stop", "nvitemd_l");
+        break;
+    case TL_MODEM:
+        MODEMD_LOGD("stop tl nvitemd!");
+        property_set("ctl.stop", "nvitemd_tl");
+        break;
+    case LF_MODEM:
+        MODEMD_LOGD("stop lf nvitemd!");
+        property_set("ctl.stop", "nvitemd_lf");
+        break;
+    case TD_MODEM:
+    default:
+        MODEMD_LOGD("stop td nvitemd!");
+        property_set("ctl.stop", "nvitemd_td");
+        break;
+    }
+    return 0;
+}
+
+static int start_nvitemd(int modem)
+{
+    switch(modem) {
+    case W_MODEM:
+        MODEMD_LOGD("start nvitemd!");
+        property_set("ctl.start", "nvitemd_w");
+        break;
+    case LTE_MODEM:
+        MODEMD_LOGD("start lte nvitemd!");
+        property_set("ctl.start", "nvitemd_l");
+        break;
+    case TL_MODEM:
+        MODEMD_LOGD("start tl nvitemd!");
+        property_set("ctl.start", "nvitemd_tl");
+        break;
+    case LF_MODEM:
+        MODEMD_LOGD("start lf nvitemd!");
+        property_set("ctl.start", "nvitemd_lf");
+        break;
+    case TD_MODEM:
+    default:
+        MODEMD_LOGD("start td nvitemd!");
+        property_set("ctl.start", "nvitemd_td");
+        break;
+    }
+    return 0;
+}
+
 static int stop_engservice(int modem)
 {
     MODEMD_LOGD("stop engservice!");
@@ -101,6 +157,12 @@ static int stop_engservice(int modem)
             break;
         case LTE_MODEM:
             property_set("ctl.stop", "engpcclientlte");
+            break;
+        case TL_MODEM:
+            property_set("ctl.stop", "engpcclienttl");
+            break;
+        case LF_MODEM:
+            property_set("ctl.stop", "engpcclientlf");
             break;
         default:
             property_set("ctl.stop", "engpcclientt");
@@ -130,6 +192,12 @@ static int start_engservice(int modem)
         case LTE_MODEM:
             property_set("ctl.start", "engpcclientlte");
             break;
+        case TL_MODEM:
+            property_set("ctl.start", "engpcclienttl");
+            break;
+        case LF_MODEM:
+            property_set("ctl.start", "engpcclientlf");
+            break;
         default:
             property_set("ctl.start", "engpcclientt");
             break;
@@ -147,6 +215,14 @@ static int stop_phser(int modem)
     case LTE_MODEM:
         MODEMD_LOGD("stop lte phoneserver!");
         property_set("ctl.stop", "phoneserver_l");
+        break;
+    case TL_MODEM:
+        MODEMD_LOGD("stop tl phoneserver!");
+        property_set("ctl.stop", "phoneserver_tl");
+        break;
+    case LF_MODEM:
+        MODEMD_LOGD("stop lf phoneserver!");
+        property_set("ctl.stop", "phoneserver_lf");
         break;
     case TD_MODEM:
     default:
@@ -167,6 +243,14 @@ static int start_phser(int modem)
     case LTE_MODEM:
         MODEMD_LOGD("start lte phoneserver!");
         property_set("ctl.start", "phoneserver_l");
+        break;
+    case TL_MODEM:
+        MODEMD_LOGD("start tl phoneserver!");
+        property_set("ctl.start", "phoneserver_tl");
+        break;
+    case LF_MODEM:
+        MODEMD_LOGD("start lf phoneserver!");
+        property_set("ctl.start", "phoneserver_lf");
         break;
     case TD_MODEM:
     default:
@@ -203,6 +287,12 @@ static int stop_rild(int modem)
     }else if(modem == LTE_MODEM) {
         MODEMD_LOGD("stop lte rild!");
         property_set("ctl.stop", "lril-daemon");
+    }else if(modem == TL_MODEM) {
+        MODEMD_LOGD("stop tl rild!");
+        property_set("ctl.stop", "tlril-daemon");
+    }else if(modem == LF_MODEM) {
+        MODEMD_LOGD("stop lf rild!");
+        property_set("ctl.stop", "lfril-daemon");
     }
 
     return 0;
@@ -252,6 +342,12 @@ static int start_rild(int modem)
         /* @} */
         MODEMD_LOGD("start lte rild!");
         property_set("ctl.start", "lril-daemon");
+    }else if(modem == TL_MODEM) {
+        MODEMD_LOGD("start tl rild!");
+        property_set("ctl.start", "tlril-daemon");
+    }else if(modem == LF_MODEM) {
+        MODEMD_LOGD("start lf rild!");
+        property_set("ctl.start", "lfril-daemon");
     }
 
     return 0;
@@ -317,6 +413,8 @@ int stop_service(int modem, int is_vlx)
 
     /* stop rild */
     stop_rild(modem);
+
+    stop_nvitemd(modem);
 
     stop_rilproxy(modem);
 
@@ -530,8 +628,17 @@ int start_service(int modem, int is_vlx, int restart)
             start_phser(modem);
             start_rild(modem);
             start_engservice(modem);
+            start_nvitemd(modem);
             return 0;
-        }
+        } else if(modem == TL_MODEM){
+            property_get(TL_TTY_DEV_PROP, modem_dev, "");
+            property_get(TL_SIM_NUM_PROP, phoneCount, "");
+         }
+         else if(modem == LF_MODEM){
+            property_get(LF_TTY_DEV_PROP, modem_dev, "");
+            property_get(LF_SIM_NUM_PROP, phoneCount, "");
+         }
+
         /* For TD & W modem              */
         /* Open modem dev to send at cmd */
         sprintf(path, "%s0", modem_dev);
@@ -576,6 +683,8 @@ int start_service(int modem, int is_vlx, int restart)
         MODEMD_LOGD("start rild!");
         start_rild(modem);
     }
+
+    start_nvitemd(modem);
 
     start_rilproxy(modem);
 
@@ -788,7 +897,7 @@ static void *modemd_engcontrol_thread(void *par)
 
 void start_modem(int *param)
 {
-    pthread_t tid1, tid2, tid3, tid4, tid5, tid6;
+    pthread_t tid1, tid2, tid3, tid4, tid5, tid6, tid7, tid8, tid9, tid10;
     int modem = -1;
     static int tdblk  = 0;
     static int lteblk = 0;
@@ -805,7 +914,11 @@ void start_modem(int *param)
         strcpy(prop, W_MODEM_ENABLE_PROP);
     } else if (modem == LTE_MODEM) {
         strcpy(prop, LTE_MODEM_ENABLE_PROP);
-    } else {
+    } else if (modem == LF_MODEM) {
+        strcpy(prop, LF_MODEM_ENABLE_PROP);
+    } else if (modem == TL_MODEM) {
+        strcpy(prop, TL_MODEM_ENABLE_PROP);
+    }else {
         MODEMD_LOGE("Invalid modem type");
         return;
     }
@@ -821,10 +934,16 @@ void start_modem(int *param)
         }else if(modem == LTE_MODEM) {
             MODEMD_LOGD("LTE modem is enabled");
             strcpy(prop, LTE_PROC_PROP);
+        }else if(modem == LF_MODEM) {
+            MODEMD_LOGD("LF modem is enabled");
+            strcpy(prop, LF_PROC_PROP);
+        }else if(modem == TL_MODEM) {
+            MODEMD_LOGD("TL modem is enabled");
+            strcpy(prop, TL_PROC_PROP);
         }
 
         property_get(prop, modem_dev, "");
-        if(!strcmp(modem_dev, DEFAULT_TD_PROC_DEV)) {
+        if(modem == TD_MODEM) {
             MODEMD_LOGD("It's td native version");
             start_service(modem, 0, 0);
             if (!is_external_modem()) { // internal modem start sipc detect.
@@ -840,13 +959,13 @@ void start_modem(int *param)
                     tdblk = 1;
                 }
             }
-        } else if(!strcmp(modem_dev, DEFAULT_W_PROC_DEV)) {
+        } else if(modem == W_MODEM) {
             /*  sipc w modem */
             MODEMD_LOGD("It's w native version");
             start_service(modem, 0, 0);
             pthread_create(&tid2, NULL, (void*)detect_sipc_modem, (void *)param);
             pthread_create(&tid4, NULL, (void*)detect_modem_blocked, (void *)param);
-        }  else if(!strcmp(modem_dev, DEFAULT_LTE_PROC_DEV)) {
+        }  else if(modem == LTE_MODEM) {
             start_service(modem, 0, 0);
             if (!is_external_modem()) { // internal modem start sipc detect.
                  /*  sipc LTE modem */
@@ -862,7 +981,31 @@ void start_modem(int *param)
                     lteblk = 1;
                 }
             }
-        } else {
+        } else if(modem == LF_MODEM) {
+            start_service(modem, 0, 0);
+            if (!is_external_modem()) { // internal modem start sipc detect.
+                 /*  sipc LF modem */
+                if (pthread_create(&tid7, NULL, (void*)detect_sipc_modem, (void *)param) < 0) {
+                    MODEMD_LOGE("Failed to create LF SIPC detected thread.");
+                }
+            }
+
+            if (pthread_create(&tid8, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
+                MODEMD_LOGE("Failed to create LF modem blocked thread.");
+            }
+        }else if(modem == TL_MODEM) {
+            start_service(modem, 0, 0);
+            if (!is_external_modem()) { // internal modem start sipc detect.
+                 /*  sipc TL modem */
+                if (pthread_create(&tid9, NULL, (void*)detect_sipc_modem, (void *)param) < 0) {
+                    MODEMD_LOGE("Failed to create TL SIPC detected thread.");
+                }
+            }
+
+            if (pthread_create(&tid10, NULL, (void*)detect_modem_blocked, (void *)param)< 0) {
+                MODEMD_LOGE("Failed to create TL modem blocked thread.");
+            }
+        }else {
             /*  vlx version, only one modem */
             MODEMD_LOGD("It's vlx version");
             vlx_reboot_init();
@@ -876,6 +1019,10 @@ void start_modem(int *param)
             MODEMD_LOGD("W modem is not enabled");
         else if(modem == LTE_MODEM)
             MODEMD_LOGD("LTE modem is not enabled");
+        else if(modem == LF_MODEM)
+            MODEMD_LOGD("LF modem is not enabled");
+        else if(modem == TL_MODEM)
+            MODEMD_LOGD("TL modem is not enabled");
     }
 }
 
@@ -886,6 +1033,9 @@ int main(int argc, char *argv[])
     int ret;
     int modem_td = TD_MODEM;
     int modem_w = W_MODEM;
+    int modem_l = LTE_MODEM;
+    int modem_lf = LF_MODEM;
+    int modem_tl = TL_MODEM;
 
     memset(&action, 0x00, sizeof(action));
     action.sa_handler = SIG_IGN;
@@ -912,6 +1062,15 @@ int main(int argc, char *argv[])
 
         /* start w modem*/
         start_modem(&modem_w);
+
+        /* start lte modem*/
+        start_modem(&modem_l);
+
+        /* start lf modem*/
+        start_modem(&modem_lf);
+
+        /* start tl modem*/
+        start_modem(&modem_tl);
     } else {
         /* start external  modem*/
         start_ext_modem();
