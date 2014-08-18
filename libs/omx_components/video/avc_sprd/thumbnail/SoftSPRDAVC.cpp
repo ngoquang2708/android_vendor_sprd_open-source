@@ -1125,7 +1125,7 @@ bool SoftSPRDAVC::openDecoder(const char* libName)
 
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
-        ALOGE("openDecoder, can't open lib: %s",libName);
+        ALOGE("openDecoder, can't open lib: %s, erro: %s", libName, dlerror());
         return false;
     }
 
