@@ -646,10 +646,17 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
         {"max-num-detected-faces-hw", "0"},
 #endif
+#ifdef CONFIG_CAMERA_ISO_NOT_SUPPORT
+	{"iso-supported", "false"},
+	{"max-iso", "1"},
+	{"iso-values", "auto"},
+	{"iso", "auto"},
+#else
 	{"iso-supported", "true"},
 	{"max-iso", "5"},
 	{"iso-values", "auto,100,200,400,800,1600"},
 	{"iso", "auto"},
+#endif
 	{"smile-snap-mode","0"},
 	{"hdr-supported","true"},
 	{"hdr","0"},

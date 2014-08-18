@@ -2837,7 +2837,11 @@ uint32_t Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_E cmd, uint32_t param)
 	case SENSOR_EXIF_CTRL_SPECTRALSENSITIVITY:
 		break;
 	case SENSOR_EXIF_CTRL_ISOSPEEDRATINGS:
-		sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
+#ifdef CONFIG_CAMERA_ISO_NOT_SUPPORT
+		sensor_exif_info_ptr->valid.ISOSpeedRatings = 0;
+#else
+                sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
+#endif
 		sensor_exif_info_ptr->ISOSpeedRatings.count = 1;
 		sensor_exif_info_ptr->ISOSpeedRatings.type  = EXIF_SHORT;
 		sensor_exif_info_ptr->ISOSpeedRatings.size  = 2;
