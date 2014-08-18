@@ -14,12 +14,18 @@
 #include <sys/timerfd.h>
 #include "modemd_ext.h"
 
+int tl_modem_state = MODEM_READY;
+int lf_modem_state = MODEM_READY;
 int td_modem_state = MODEM_READY;
 int lte_modem_state = MODEM_READY;
 static int w_modem_state = MODEM_READY;
+pthread_mutex_t tl_state_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lf_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t td_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lte_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t w_state_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t tl_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t lf_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t td_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t lte_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t w_cond = PTHREAD_COND_INITIALIZER;
@@ -113,13 +119,19 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 {
     char modem_partition[256] = {0};
     char dsp_partition[256] = {0};
-    char modem_bank[128] = {0};
-    char dsp_bank[128] = {0};
     int sipc_modem_size = 0;
     int sipc_dsp_size = 0;
     char alive_info[20]={0};
     int i, ret;
     char path[256];
+    char persist_prop[128];
+    char path_char[128];
+
+    char proc_prop[128];
+    char modem_bank[128];
+    char dsp_bank[128];
+    char modem_stop[128];
+    char modem_start[128];
 
     memset(path, 0, sizeof(path));
     if ( -1 == property_get("ro.product.partitionpath", path, "") )
@@ -128,30 +140,54 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         return -1;
     }
 
+   strcpy(persist_prop,PERSIST_MODEM_CHAR);
+
     if(modem == TD_MODEM) {
         sipc_modem_size = TD_MODEM_SIZE;
         sipc_dsp_size = TD_DSP_SIZE;
-        sprintf(modem_partition,"%s%s",path,"tdmodem");
-        sprintf(dsp_partition,"%s%s",path,"tddsp");
-        strcpy(modem_bank, TD_MODEM_BANK);
-        strcpy(dsp_bank, TD_DSP_BANK);
+        strcat(persist_prop, "t.nvp");
+        property_get(TD_PROC_PROP, proc_prop, "");
     } else if(modem == W_MODEM) {
         sipc_modem_size = W_MODEM_SIZE;
         sipc_dsp_size = W_DSP_SIZE;
-        sprintf(modem_partition,"%s%s",path,"wmodem");
-        sprintf(dsp_partition,"%s%s",path,"wdsp");
-        strcpy(modem_bank, W_MODEM_BANK);
-        strcpy(dsp_bank, W_DSP_BANK);
+        strcat(persist_prop, "w.nvp");
+        property_get(W_PROC_PROP, proc_prop, "");
+    } else if(modem == LF_MODEM) {
+        sipc_modem_size = LF_MODEM_SIZE;
+        sipc_dsp_size = LF_DSP_SIZE;
+        strcat(persist_prop, "lf.nvp");
+        property_get(LF_PROC_PROP, proc_prop, "");
+    } else if(modem == TL_MODEM) {
+        sipc_modem_size = TL_MODEM_SIZE;
+        sipc_dsp_size = TL_DSP_SIZE;
+        strcat(persist_prop, "tl.nvp");
+        property_get(TL_PROC_PROP, proc_prop, "");
     }
 
+    strcpy(modem_bank, proc_prop);
+    strcpy(dsp_bank, proc_prop);
+    strcpy(modem_stop, proc_prop);
+    strcpy(modem_start, proc_prop);
+
+    strcat(modem_bank, MODEM_BANK);
+    strcat(dsp_bank, DSP_BANK);
+    strcat(modem_stop, MODEM_STOP);
+    strcat(modem_start, MODEM_START);
+
     /* write 1 to stop*/
-    if(modem == TD_MODEM) {
-        MODEMD_LOGD("write 1 to %s", TD_MODEM_STOP);
-        write_proc_file(TD_MODEM_STOP, 0, "1");
-    } else if(modem == W_MODEM) {
-        MODEMD_LOGD("write 1 to %s", W_MODEM_STOP);
-        write_proc_file(W_MODEM_STOP, 0, "1");
-    }
+    write_proc_file(modem_stop, 0, "1");
+
+    property_get(persist_prop,path_char,"");
+    if(0 == strlen(path_char)){
+          MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
+          return 0;
+     }
+    MODEMD_LOGD("modem path_char %s \n",path_char); 
+    strcat(path,path_char);
+    strcpy(modem_partition,path);
+    strcpy(dsp_partition,path);
+    strcat(modem_partition,"modem");
+    strcat(dsp_partition,"dsp");
 
     /* load modem */
     MODEMD_LOGD("load modem image from %s to %s, len=%d",
@@ -167,14 +203,17 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     stop_service(modem, 0);
 
     /* write 1 to start*/
+    write_proc_file(modem_start, 0, "1");
+
+
     if(modem == TD_MODEM) {
-        MODEMD_LOGD("write 1 to %s", TD_MODEM_START);
-        write_proc_file(TD_MODEM_START, 0, "1");
         strcpy(alive_info, "TD Modem Alive");
     } else if(modem == W_MODEM) {
-        MODEMD_LOGD("write 1 to %s", W_MODEM_START);
-        write_proc_file(W_MODEM_START, 0, "1");
         strcpy(alive_info, "W Modem Alive");
+    } else if(modem == TL_MODEM) {
+        strcpy(alive_info, "TL Modem Alive");
+    } else if(modem == LF_MODEM) {
+        strcpy(alive_info, "LF Modem Alive");
     } else {
         MODEMD_LOGE("error unkown modem  alive_info");
     }
@@ -239,7 +278,17 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
             w_modem_state = MODEM_READY;
             pthread_cond_signal(&w_cond);
             pthread_mutex_unlock(&w_state_mutex);
-    }
+    } else if(modem == LF_MODEM) {
+            pthread_mutex_lock(&lf_state_mutex);
+            lf_modem_state = MODEM_READY;
+            pthread_cond_signal(&lf_cond);
+            pthread_mutex_unlock(&lf_state_mutex);
+    } else if(modem == TL_MODEM) {
+            pthread_mutex_lock(&tl_state_mutex);
+            tl_modem_state = MODEM_READY;
+            pthread_cond_signal(&tl_cond);
+            pthread_mutex_unlock(&tl_state_mutex);
+     }
 
     return 0;
 }
@@ -264,6 +313,10 @@ void *detect_modem_blocked(void *par)
         strcpy(socket_name, PHSW_SOCKET_NAME);
     } else if (modem == LTE_MODEM) {
         strcpy(socket_name, PHSLTE_SOCKET_NAME);
+    } else if(modem == TL_MODEM) {
+        strcpy(socket_name, PHSTL_SOCKET_NAME);
+    } else if (modem == LF_MODEM) {
+        strcpy(socket_name, PHSLF_SOCKET_NAME);
     } else {
         MODEMD_LOGE("%s: input wrong modem type!", __func__);
         return NULL;
@@ -313,6 +366,22 @@ reconnect:
                     MODEMD_LOGD("%s: LTE modem ready, wake up", __func__);
                 }
                 pthread_mutex_unlock(&lte_state_mutex);
+            } else if(modem == TL_MODEM) {
+                pthread_mutex_lock(&tl_state_mutex);
+                if(tl_modem_state != MODEM_READY) {
+                    MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+                    pthread_cond_wait(&tl_cond, &tl_state_mutex);
+                    MODEMD_LOGD("%s: modem ready, wake up", __func__);
+                }
+                pthread_mutex_unlock(&tl_state_mutex);
+            } else if(modem == LF_MODEM) {
+                pthread_mutex_lock(&lf_state_mutex);
+                if(lf_modem_state != MODEM_READY) {
+                    MODEMD_LOGD("%s: wait for modem ready ...", __func__);
+                    pthread_cond_wait(&lf_cond, &lf_state_mutex);
+                    MODEMD_LOGD("%s: modem ready, wake up", __func__);
+                }
+                pthread_mutex_unlock(&lf_state_mutex);
             }
             close(soc_fd);
             goto reconnect;
@@ -349,6 +418,28 @@ reconnect:
             if (is_external_modem()) {
                 goto raw_reset;
             }
+        } else if(strstr(buf, "TL Modem Blocked") != NULL) {
+            pthread_mutex_lock(&tl_state_mutex);
+            if(tl_modem_state != MODEM_READY) {
+                pthread_mutex_unlock(&tl_state_mutex);
+                continue;
+            }
+            tl_modem_state = MODEM_ASSERT;
+            pthread_mutex_unlock(&tl_state_mutex);
+            if (is_external_modem()) {
+                goto raw_reset;
+            }
+        }else if(strstr(buf, "LF Modem Blocked") != NULL) {
+            pthread_mutex_lock(&lf_state_mutex);
+            if(lf_modem_state != MODEM_READY) {
+                pthread_mutex_unlock(&lf_state_mutex);
+                continue;
+            }
+            lf_modem_state = MODEM_ASSERT;
+            pthread_mutex_unlock(&lf_state_mutex);
+            if (is_external_modem()) {
+                goto raw_reset;
+            }
         } else {
             MODEMD_LOGD("%s: read invalid string from socket %s", __func__, socket_name);
             continue;
@@ -360,6 +451,12 @@ reconnect:
             property_get(TD_LOOP_PROP, loop_dev, DEFAULT_TD_LOOP_DEV);
         } else if(modem == W_MODEM) {
             property_get(W_LOOP_PROP, loop_dev, DEFAULT_W_LOOP_DEV);
+        } else if(modem == TL_MODEM) {
+            property_get(TL_LOOP_PROP, loop_dev, DEFAULT_TL_LOOP_DEV);
+        } else if(modem == LF_MODEM) {
+            property_get(LF_LOOP_PROP, loop_dev, DEFAULT_LF_LOOP_DEV);
+        } else if(modem == LTE_MODEM) {
+            property_get(L_LOOP_PROP, loop_dev, DEFAULT_L_LOOP_DEV);
         } else {
             MODEMD_LOGE("%s: invalid modem type, exit", __func__);
             return NULL;
@@ -437,6 +534,15 @@ void* detect_sipc_modem(void *param)
     } else if(modem == W_MODEM) {
         property_get(W_ASSERT_PROP, assert_dev, DEFAULT_W_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", W_WATCHDOG_DEV);
+    } else if(modem == TL_MODEM) {
+        property_get(TL_ASSERT_PROP, assert_dev, DEFAULT_TL_ASSERT_DEV);
+        snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", TL_WATCHDOG_DEV);
+    } else if(modem == LF_MODEM) {
+        property_get(LF_ASSERT_PROP, assert_dev, DEFAULT_LF_ASSERT_DEV);
+        snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", LF_WATCHDOG_DEV);
+    } else if(modem == LTE_MODEM) {
+        property_get(L_ASSERT_PROP, assert_dev, DEFAULT_L_ASSERT_DEV);
+        snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", L_WATCHDOG_DEV);
     } else {
         MODEMD_LOGE("%s: input wrong modem type!", __func__);
                 return NULL;
@@ -498,6 +604,14 @@ void* detect_sipc_modem(void *param)
                     pthread_mutex_lock(&w_state_mutex);
                     w_modem_state = MODEM_RESET;
                     pthread_mutex_unlock(&w_state_mutex);
+                } else if(modem == TL_MODEM) {
+                    pthread_mutex_lock(&tl_state_mutex);
+                    tl_modem_state = MODEM_RESET;
+                    pthread_mutex_unlock(&tl_state_mutex);
+                } else if(modem == LF_MODEM) {
+                    pthread_mutex_lock(&lf_state_mutex);
+                    lf_modem_state = MODEM_RESET;
+                    pthread_mutex_unlock(&lf_state_mutex);
                 }
 
                 /* info socket clients that modem is reset */
@@ -515,6 +629,14 @@ void* detect_sipc_modem(void *param)
                     pthread_mutex_lock(&w_state_mutex);
                     w_modem_state = MODEM_ASSERT;
                     pthread_mutex_unlock(&w_state_mutex);
+                } else if(modem == TL_MODEM) {
+                    pthread_mutex_lock(&tl_state_mutex);
+                    tl_modem_state = MODEM_ASSERT;
+                    pthread_mutex_unlock(&tl_state_mutex);
+                } else if(modem == LF_MODEM) {
+                    pthread_mutex_lock(&lf_state_mutex);
+                    lf_modem_state = MODEM_ASSERT;
+                    pthread_mutex_unlock(&lf_state_mutex);
                 }
                 if(strstr(buf, "wdtirq")) {
                     if(modem == TD_MODEM) {
@@ -525,6 +647,14 @@ void* detect_sipc_modem(void *param)
                         MODEMD_LOGD("w modem hangup");
                         strcpy(buf, "W Modem Hang");
                         numRead = sizeof("W Modem Hang");
+                    } else if(modem == TL_MODEM) {
+                        MODEMD_LOGD("tl modem hangup");
+                        strcpy(buf, "TL Modem Hang");
+                        numRead = sizeof("TL Modem Hang");
+                    } else if(modem == LF_MODEM) {
+                        MODEMD_LOGD("lf modem hangup");
+                        strcpy(buf, "LF Modem Hang");
+                        numRead = sizeof("LF Modem Hang");
                     }
                 } else {
                     MODEMD_LOGD("modem assert happen");
