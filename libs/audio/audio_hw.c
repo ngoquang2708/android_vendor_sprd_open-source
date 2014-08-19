@@ -172,7 +172,7 @@
 /* sampling rate when using VX port for wide band */
 #define VX_WB_SAMPLING_RATE 16000
 
-#define RECORD_POP_MIN_TIME    400   // ms
+#define RECORD_POP_MIN_TIME    500   // ms
 
 #define BT_SCO_UPLINK_IS_STARTED        (1 << 0)
 #define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
@@ -557,8 +557,7 @@ struct tiny_stream_in {
     size_t ref_frames_in;
     int read_status;
     bool pop_mute;
-    int pop_mute_count;
-
+    int pop_mute_bytes;
     struct tiny_audio_device *dev;
     int active_rec_proc;
 };
@@ -1922,7 +1921,6 @@ static size_t get_input_buffer_size(uint32_t sample_rate, int format, int channe
        be a multiple of 16 frames */
     size = (pcm_config_mm_ul.period_size * sample_rate) / pcm_config_mm_ul.rate;
     size = ((size + 15) / 16) * 16;
-
     return size * channel_count * sizeof(short);
 }
 
@@ -3345,7 +3343,6 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         size_t bytes)
 {
     int ret = 0;
-    static int pop_count = 0;
     struct tiny_stream_in *in = (struct tiny_stream_in *)stream;
     struct tiny_audio_device *adev = in->dev;
     size_t frames_rq = bytes / audio_stream_frame_size((const struct audio_stream *)(&stream->common));
@@ -3442,8 +3439,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     if(in->pop_mute) {
         memset(buffer, 0, bytes);
         // mute 240ms for pop
-        if(++pop_count >= in->pop_mute_count) {
-            pop_count = 0;
+        ALOGE("set mute in_read bytes %d in->pop_mute_bytes %d",bytes,in->pop_mute_bytes);
+        if((in->pop_mute_bytes -= bytes) <= 0) {
             in->pop_mute = false;
         }
     }
@@ -3458,8 +3455,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     if (ret > 0)
         ret = 0;
 
-    if (ret == 0 && adev->mic_mute)
+    if (ret == 0 && adev->mic_mute){
         memset(buffer, 0, bytes);
+    }
     //BLUE_TRACE("in_read final OK, bytes=%d", bytes);
 
 exit:
@@ -3957,7 +3955,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 	}
     }
     if(in->requested_rate) {
-	in->pop_mute_count = RECORD_POP_MIN_TIME/((in->config.period_size*1000)/in->requested_rate);
+        in->pop_mute_bytes = RECORD_POP_MIN_TIME*in->requested_rate/1000*audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common));
     }
     in->dev = ladev;
     in->standby = 1;
