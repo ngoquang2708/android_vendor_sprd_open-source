@@ -37,14 +37,13 @@ extern   "C"
 *-------------------------------------------------------------------------------*/
 #define SC8825_ISP_ID 0x00000000
 #define SC8830_ISP_ID 0x00010000
+#define sharkL_ISP_ID 0x00020000
 
 #define ISP_EB 0x01
 #define ISP_UEB 0x00
 
 #define ISP_ZERO 0x00
 #define ISP_ONE 0x01
-#define ISP_ALPHA_ONE	1024
-#define ISP_ALPHA_ZERO	0
 #define ISP_TWO 0x02
 
 #define ISP_MAX_HANDLE_NUM 0x02
@@ -52,6 +51,7 @@ extern   "C"
 #define ISP_TRAC(_x_) ISP_LOG _x_
 #define ISP_RETURN_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning); return exp;}}while(0)
 #define ISP_TRACE_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning);}}while(0)
+#define ISP_EXIT_IF_FAIL(exp,warning) do{if(exp) {ISP_TRAC(warning); goto EXIT;}}while(0)
 
 //#define ISP_USER_DRV_DEBUG	0
 
@@ -116,6 +116,8 @@ int32_t ispSetLensGridMode(uint32_t handler_id, uint8_t mode);
 int32_t ispSetLensGridSize(uint32_t handler_id, uint16_t w, uint16_t h);
 int32_t ispSetLensBuf(uint32_t handler_id, uint8_t buf_sel);
 int32_t ispSetLensEndian(uint32_t handler_id, uint8_t endian);
+int32_t ispLensSliceSize(uint32_t handler_id, uint16_t w, uint16_t h);
+
 
 //AWBM
 int32_t ispGetAwbmStatus(uint32_t handler_id, uint32_t* status);
@@ -306,6 +308,7 @@ int32_t ispStoreFormat(uint32_t handler_id, uint32_t format);
 int32_t ispSetBurstSize(uint32_t handler_id, uint16_t burst_size);
 int32_t ispMemSwitch(uint32_t handler_id, uint8_t mem_switch);
 int32_t ispShadow(uint32_t handler_id, uint8_t shadow);
+int32_t ispShadowAll(uint32_t handler_id, uint8_t shadow);
 int32_t ispByerMode(uint32_t handler_id, uint32_t nlc_bayer, uint32_t awbc_bayer, uint32_t wave_bayer, uint32_t cfa_bayer, uint32_t gain_bayer);
 int32_t ispIntRegister(uint32_t handler_id, uint32_t int_num, void(*fun)());
 int32_t ispIntClear(uint32_t handler_id, uint32_t int_num);
@@ -363,7 +366,53 @@ int32_t ispAutoFlickerMode(uint32_t handler_id, uint8_t mode);
 //Hue
 int32_t ispGetHueStatus(uint32_t handler_id, uint32_t* status);
 int32_t ispHuebypass(uint32_t handler_id, uint8_t bypass);
+#ifdef sharkL_ISP
+int32_t ispSetHueFactor(uint32_t handler_id, uint16_t factor);
+#else
 int32_t ispSetHueFactor(uint32_t handler_id, uint8_t factor);
+#endif
+
+#ifdef sharkL_ISP
+int32_t ispGetPreWaveleteStatus(uint32_t handler_id, uint32_t* status);
+int32_t ispSetPreWaveleteBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispSetPreWaveleteDenoise(uint32_t handler_id, uint8_t denoise_thrs0, uint8_t denoise_thrs1);
+
+int32_t ispGetPreGlobalGainStatus(uint32_t handler_id, uint32_t* status);
+int32_t ispSetPreGlobalGainBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispSetPreGlobalGain(uint32_t handler_id, uint16_t gain);
+
+int32_t ispBpcDiffThrd(uint32_t handler_id, uint16_t diff_thrd);
+int32_t ispGetNEWBpcStatus(uint32_t handler_id, uint32_t* status);
+int32_t ispNEWBpcBypass(uint32_t handler_id, uint8_t bypass, uint8_t bypass_pvd);
+int32_t ispNEWBpcMode(uint32_t handler_id, uint8_t mode);
+int32_t ispNEWBpcMaskMode(uint32_t handler_id, uint8_t mask_mode);
+int32_t ispNEWBpckMin(uint32_t handler_id, uint8_t kmin);
+int32_t ispNEWBpckMax(uint32_t handler_id, uint8_t kmax);
+int32_t ispNEWBpcCntrSheshold(uint32_t handler_id, uint8_t cntr_theshold);
+int32_t ispNEWBpcBadMemHold(uint32_t handler_id, uint8_t hold_on);
+int32_t ispNEWBpcKtimes(uint32_t handler_id, uint8_t ktimes);
+int32_t ispNEWBpcMapClr(uint32_t handler_id, uint8_t map_fifo_clr);
+int32_t ispNEWBpcDelt34(uint32_t handler_id, uint8_t delt34);
+int32_t ispNEWBpcBadPixelNum(uint32_t handler_id, uint8_t pixel_num);
+int32_t ispNEWBpcFlatFactor(uint32_t handler_id, uint8_t flat_factor);
+int32_t ispNEWBpcSafeFactor(uint32_t handler_id, uint8_t safe_factor);
+int32_t ispNEWBpcSpikeCoeff(uint32_t handler_id, uint8_t spike_coeff);
+int32_t ispNEWBpcDeadCoeff(uint32_t handler_id, uint8_t dead_coeff);
+int32_t ispNEWBpcLutWord(uint32_t handler_id, uint16_t *intercept_ptr, uint16_t *slope_ptr, uint16_t *lut_level_ptr);
+int32_t ispNEWBpcSel(uint32_t handler_id, uint8_t sel);
+int32_t ispNEWBpcMapSel(uint32_t handler_id, uint8_t map_done);
+int32_t ispNEWBpcMapAddr(uint32_t handler_id, uint32_t addr);
+
+int32_t ispGetBinning4awbStatus(uint32_t handler_id, uint32_t* status);
+int32_t ispBinning4awbBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispBinning4awbEndian(uint32_t handler_id, uint8_t endian);
+int32_t ispBinning4awbClrMem(uint32_t handler_id, uint8_t mem_fifo_clr);
+int32_t ispBinning4awbScaling(uint32_t handler_id, uint8_t hx, uint8_t vx);
+int32_t ispBinning4awbBurst(uint32_t handler_id, uint8_t brust);
+int32_t ispBinning4awbMem(uint32_t handler_id, uint32_t addr);
+int32_t ispBinning4awbPitch(uint32_t handler_id, uint16_t binning_pitch);
+#endif
+
 
 int32_t ispGetSignalSize(uint32_t handler_id, uint16_t* width, uint16_t* height);
 int32_t ispGetContinueSize(uint32_t handler_id, uint16_t* width, uint16_t* height);
@@ -383,6 +432,7 @@ int32_t ispRegWrite(uint32_t handler_id, uint32_t num, void* param_ptr);
 int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr);
 
 int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint32_t len);
+int32_t ispBypassAll(uint32_t handler_id);
 
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*

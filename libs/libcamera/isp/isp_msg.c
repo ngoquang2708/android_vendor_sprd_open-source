@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#define LOG_TAG "isp_msg"
-
 #include <stdlib.h>
 //#include "cmr_common.h"
 #include "isp_msg.h"
@@ -33,7 +30,6 @@
 int isp_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 {
 	struct isp_msg_cxt       *msg_cxt;
-	uint32_t 		         handler_id = 0;
 
 	//CMR_LOGI("count 0x%x", count);
 
@@ -58,7 +54,7 @@ int isp_msg_queue_create(unsigned int count, unsigned int *queue_handle)
 	pthread_mutex_init(&msg_cxt->mutex, NULL);
 	sem_init(&msg_cxt->msg_sem, 0, 0);
 	*queue_handle = (unsigned int)msg_cxt;
-	ISP_LOG("queue_handle 0x%x", *queue_handle);
+	//CMR_LOGI("queue_handle 0x%x", *queue_handle);
 
 	return ISP_MSG_SUCCESS;
 }
@@ -177,12 +173,11 @@ int isp_msg_peak(uint32_t queue_handle, struct isp_msg *message)
 int isp_msg_queue_destroy(unsigned int queue_handle)
 {
 	struct isp_msg_cxt *msg_cxt = (struct isp_msg_cxt*)queue_handle;
-	uint32_t 		   handler_id = 0;
 
-	ISP_LOG("queue_handle 0x%x", queue_handle);
+	//CMR_LOGI("queue_handle 0x%x", queue_handle);
 
 	if (0 == queue_handle) {
-		ISP_LOG("zero queue_handle");
+		//CMR_LOGE("zero queue_handle");
 		return -ISP_MSG_PARAM_ERR;
 	}
 
@@ -196,7 +191,7 @@ int isp_msg_queue_destroy(unsigned int queue_handle)
 	pthread_mutex_destroy(&msg_cxt->mutex);
 	bzero(msg_cxt, sizeof(*msg_cxt));
 	free(msg_cxt);
-	ISP_LOG("end");
+
 	return ISP_MSG_SUCCESS;
 }
 

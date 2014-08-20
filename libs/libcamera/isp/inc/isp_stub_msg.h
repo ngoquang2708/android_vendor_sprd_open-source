@@ -22,6 +22,8 @@ extern "C"
 {
 #endif
 
+//#include "port.h"
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>

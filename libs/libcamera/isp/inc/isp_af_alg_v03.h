@@ -31,8 +31,6 @@ extern "C"
 
 #define AF3_MAX_ISP_ID 2
 #define AF3_MAX_FINE_STEP_NUM 9
-#define AF3_MAX_SCAN_STEP_CNT 100
-#define AF3_MAX_AF_WIN_NUM 9
 
 
 enum isp_af_status_v03{
@@ -51,15 +49,6 @@ enum isp_af_mode_v03{
 	ISP_AF3_VIDEO,
 	ISP_AF3_MODE_MAX,
 };
-
-enum isp_af_win_sel_mode_v03{
-	ISP_AF3_SEL_WEIGHT = 0,
-	ISP_AF3_SEL_MACRO,
-	ISP_AF3_SEL_INF,
-	ISP_AF3_SEL_MAX,
-};
-
-
 
 struct isp_af_config_v03{
 	uint32_t MAX_STEP;
@@ -82,8 +71,6 @@ struct isp_af_config_v03{
 	uint32_t START_AREA_RANGE;
 	uint32_t END_AREA_RANGE;
 	uint32_t NOISE_THR;
-	uint32_t DEBUG;
-	uint32_t ANTI_CRASH_POS;
 };
 
 struct af_para_struct_v03{
@@ -92,7 +79,6 @@ struct af_para_struct_v03{
 	uint32_t status;
 	uint32_t af_win_num;
 	uint32_t suc_win;
-	uint32_t master_win;
 	uint32_t af_mode;
 	uint32_t motor_dir;   //0:increase    1:decrease
 	uint32_t max_focus_pos;
@@ -104,21 +90,21 @@ struct af_para_struct_v03{
 	uint32_t coarse_step;
 	uint32_t coarse_start_step;
 	uint32_t g_peak_candidate[AF3_MAX_FINE_STEP_NUM][2];
-	uint32_t max_value[AF3_MAX_AF_WIN_NUM];
-	uint32_t max_pos[AF3_MAX_AF_WIN_NUM];
-	uint32_t max_step[AF3_MAX_AF_WIN_NUM];
-	uint32_t min_value[AF3_MAX_AF_WIN_NUM];
-	uint32_t min_pos[AF3_MAX_AF_WIN_NUM];
-	uint32_t min_step[AF3_MAX_AF_WIN_NUM];
+	uint32_t max_value[9];
+	uint32_t max_pos[9];
+	uint32_t max_step[9];
+	uint32_t min_value[9];
+	uint32_t min_pos[9];
+	uint32_t min_step[9];
 	uint32_t INIT_POS;
 	uint32_t END_POS;
 	uint32_t STEP_LENGTH;
 	uint32_t tune_period;
-	uint32_t af_value[AF3_MAX_AF_WIN_NUM][AF3_MAX_SCAN_STEP_CNT];
-	uint32_t af_pos[AF3_MAX_SCAN_STEP_CNT];
+	uint32_t af_value[9][100];
+	uint32_t af_pos[100];
 	uint32_t peak_af_win_num;
-	uint32_t peak_mark[AF3_MAX_AF_WIN_NUM];
-	uint32_t peak_fall_ratio[AF3_MAX_AF_WIN_NUM];
+	uint32_t peak_mark[9];
+	uint32_t peak_fall_ratio[9];
 	uint32_t MACRO_POS;
 	uint32_t fine_step;
 	uint32_t fine_start_step;
@@ -129,10 +115,10 @@ struct af_para_struct_v03{
 	uint32_t fine_min_pos;
 	uint32_t fine_min_value;
 	uint32_t af_in_macro_pos;
-	uint32_t awbm_af_value_r[AF3_MAX_SCAN_STEP_CNT];
-	uint32_t awbm_af_value_g[AF3_MAX_SCAN_STEP_CNT];
-	uint32_t awbm_af_value_b[AF3_MAX_SCAN_STEP_CNT];
-	uint32_t awbm_af_value[AF3_MAX_SCAN_STEP_CNT];
+	uint32_t awbm_af_value_r[100];
+	uint32_t awbm_af_value_g[100];
+	uint32_t awbm_af_value_b[100];
+	uint32_t awbm_af_value[100];
 	uint32_t awbm_af_max_value;
 	uint32_t awbm_af_max_pos;
 	uint32_t awbm_af_max_step;
@@ -153,6 +139,7 @@ struct af_contex_struct_v03{
 	struct isp_af_config_v03 af_cfg;
 	struct af_para_struct_v03 af_para;
 	uint32_t (*af_go_position)(uint32_t handler_id, uint32_t pos);
+	int32_t (*Af_Eb)(uint32_t handler_id);
 
 };
 
@@ -162,20 +149,7 @@ struct af_contex_struct_v03{
 *-------------------------------------------------------------------------------*/
 uint32_t isp_af_init_v03(uint32_t handler_id, struct af_contex_struct_v03 *input_para);
 uint32_t isp_af_deinit_v03(uint32_t handler_id);
-uint32_t isp_af3_calculation(
-	uint32_t handler_id,
-	uint32_t af_status, 
-	uint32_t *af_win_value, 
-	uint32_t af_win_num, 
-	uint16_t af_win_size[][4], 
-	uint32_t *awbm_value, 
-	uint32_t awbm_win_w, 
-	uint32_t awbm_win_h, 
-	uint8_t af_mode,
-	uint32_t af_win_priority[AF3_MAX_AF_WIN_NUM],
-	uint32_t af_win_sel_mode,
-	uint32_t *rtn_suc_win,
-	uint32_t cur_motor_pos);
+uint32_t isp_af3_calculation(uint32_t handler_id, uint32_t af_status, uint32_t *af_win_value, uint32_t af_win_num, uint16_t af_win_size[][4], uint32_t *awbm_value, uint32_t awbm_win_w, uint32_t awbm_win_h, uint8_t af_mode,uint32_t *rtn_suc_win);
 
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*
