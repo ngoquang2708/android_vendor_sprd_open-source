@@ -55,14 +55,16 @@
 #define LF_PROC_PROP                "ro.modem.lf.dev"
 #define TL_PROC_PROP                "ro.modem.tl.dev"
 
-#define DEFAULT_TD_PROC_DEV         "/proc/cpt"
-#define DEFAULT_W_PROC_DEV          "/proc/cpw"
-#define DEFAULT_LTE_PROC_DEV        "/proc/cpl"
-#define DEFAULT_LF_PROC_DEV         "/proc/cplf"
-#define DEFAULT_TL_PROC_DEV         "/proc/cptl"
+#define DEFAULT_TD_PROC_DEV         "/proc/cpt/"
+#define DEFAULT_W_PROC_DEV          "/proc/cpw/"
+#define DEFAULT_LTE_PROC_DEV        "/proc/cpl/"
+#define DEFAULT_LF_PROC_DEV         "/proc/cplf/"
+#define DEFAULT_TL_PROC_DEV         "/proc/cptl/"
 
 #define MODEM_BANK               "modem"
 #define DSP_BANK                 "dsp"
+#define TGDSP_BANK               "tgdsp"
+#define LDSP_BANK                "ldsp"
 #define MODEM_START              "start"
 #define MODEM_STOP               "stop"
 
@@ -83,9 +85,9 @@
 #define W_DSP_SIZE                  (5*1024*1024)
 #define LF_MODEM_SIZE                (10*1024*1024)
 #define LF_DSP_SIZE                  (5*1024*1024)
-#define TL_MODEM_SIZE                (10*1024*1024)
-#define TL_DSP_SIZE                  (5*1024*1024)
-
+#define TL_MODEM_SIZE                (8*1024*1024)
+#define TL_TGDSP_SIZE                  (0x3e0000)
+#define TL_LDSP_SIZE                  (0x1c0000)
 
 /* detect assert/hangup interface */
 #define TD_ASSERT_PROP               "ro.modem.t.assert"
@@ -93,7 +95,6 @@
 #define L_ASSERT_PROP                "ro.modem.l.assert"
 #define TD_LOOP_PROP                 "ro.modem.t.loop"
 #define W_LOOP_PROP                  "ro.modem.w.loop"
-
 #define TL_ASSERT_PROP               "ro.modem.tl.assert"
 #define LF_ASSERT_PROP              "ro.modem.lf.assert"
 #define TL_LOOP_PROP                 "ro.modem.tl.loop"
@@ -127,7 +128,7 @@
 #define TTY_DEV_PROP             "persist.ttydev"
 #define PHONE_APP_PROP             "sys.phone.app"
 #define MODEMRESET_PROPERTY          "persist.sys.sprd.modemreset"
-#define MODEM_RESET_PROP             MODEMRESET_PROPERTY 
+#define MODEM_RESET_PROP             MODEMRESET_PROPERTY
 #define LTE_MODEM_START_PROP         "ril.service.l.enable"
 #define SSDA_MODE_PROP               "persist.radio.ssda.mode"
 #define SSDA_TESTMODE_PROP           "persist.radio.ssda.testmode"
