@@ -36,15 +36,14 @@ echo "==== ====" >> $LOG
 # setenv & choose product
 . build/envsetup.sh >>$LOG 2>&1
 choosecombo 1 $PROD $VAR >>$LOG 2>&1
-# failure handle
-if [ $? -ne 0 ]; then
-	echo "==== ====" >> $LOG
-	date >> $LOG
-	echo "==== Build Failed ====" >> $LOG
+# failure handle gary.gong
+if [ "`cat $LOG|grep 'Not a valid product'`" ];then
+        echo "==== ====" >> $LOG
+        date >> $LOG
+        echo "==== Build Failed ====" >> $LOG
 
-	exit 1
+        exit 1
 fi
-
 # do clean
 uclean >>/dev/null 2>&1
 kclean >>/dev/null 2>&1
