@@ -541,7 +541,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #endif
 	{"picture-size", "640x480"},
 #if defined(CONFIG_CAMERA_SMALL_PREVSIZE)
+#if defined(CONFIG_CAMERA_X3542)
+	{"preview-size-values", "720x480,640x480,352x288,176x144"},
+#else
 	{"preview-size-values", "720x480,640x480,352x288,320x240,176x144"},
+#endif
 	{"preview-size", "640x480"},
 #else
 	{"preview-size-values", "1920x1088,1280x960,1280x720,960x540,720x540,720x480,640x480,352x288,320x240,176x144"},
@@ -622,7 +626,11 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"horizontal-view-angle", "54"},
 	{"vertical-view-angle", "54"},
 #ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
+#if defined(CONFIG_CAMERA_X3542)
+	{"flash-mode-values", "off,on,torch"},
+#else
 	{"flash-mode-values", "off,on,torch,auto"},
+#endif
 	{"flash-mode", "off"},
 	{"flash-mode-supported", "true"},
 #else
