@@ -12,6 +12,8 @@ PRODUCT_PACKAGES += \
 	CellBroadcastReceiver \
 	SprdQuickSearchBox \
         Carddav-Sync \
+        iwnpi \
+        libiwnpi \
 	SystemUpdate \
         Caldav-Sync.apk\
         libsprd_agps_agent
