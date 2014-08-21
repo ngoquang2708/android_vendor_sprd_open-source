@@ -116,6 +116,15 @@ struct isp_gamma_param{
 	uint32_t bypass;
 	uint16_t axis[2][26];
 	uint8_t index[28];
+	uint16_t r_index[16];
+	uint16_t r_knode[16];
+	uint16_t r_bnode[16];
+	uint16_t g_index[16];
+	uint16_t g_knode[16];
+	uint16_t g_bnode[16];
+	uint16_t b_index[16];
+	uint16_t b_knode[16];
+	uint16_t b_bnode[16];
 };
 
 struct isp_gamma_tab{
@@ -222,9 +231,11 @@ struct isp_ae_param
 	uint8_t reserved1;
 	uint16_t smart_sta_precent;
 	uint16_t smart_sta_start_index;
+	uint16_t lux_500_index;
 	uint16_t lum_cali_index;
 	uint32_t lum_cali_lux;
 	uint8_t smart_sta_low_thr;
+	uint8_t smart_sta_high_thr;
 	uint8_t smart_sta_ratio1;
 	uint8_t smart_sta_ratio;
 	uint8_t gamma_num;

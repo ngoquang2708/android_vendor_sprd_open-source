@@ -21,7 +21,6 @@
 #include <sys/types.h>
 #include "sensor_drv_u.h"
 #include "sensor_raw.h"
-#include "isp_raw.h"
 
 /**---------------------------------------------------------------------------*
  **				Compiler Flag					*

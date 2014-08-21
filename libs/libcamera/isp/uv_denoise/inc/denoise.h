@@ -58,10 +58,7 @@ struct uv_denoise_param0{
 
 
 
-int uv_proc_func_neon0(void* param_uv_in);
-int uv_proc_func_neon1(void* param_uv_in);
-int uv_proc_func_neon2(void* param_uv_in);
-int uv_proc_func_neon730(void* param_uv_in);
+int uv_proc_func_neon58(void* param_uv_in);
 //void uv_proc_cb(int evt, void* param);
 //int cpu_hotplug_disable(uint8_t is_disable);
 //void isp_uv_denoise(struct isp_denoise_input uv_denoise_in);

@@ -35,7 +35,8 @@ typedef int32_t ( *proc_callback)(uint32_t handler_id, int32_t mode, void* param
 //enum
 enum isp_id{
 	ISP_ID_SC8825=0x00000000,
-	ISP_ID_SC8830=0x00010000,
+	ISP_ID_SC8830=0x00010000,//0x00010000
+	ISP_ID_SC9630=0x00020000,
 	ISP_ID_MAX
 };
 
@@ -83,7 +84,6 @@ enum isp_focus_mode{
 	ISP_FOCUS_MACRO,
 	ISP_FOCUS_WIN,
 	ISP_FOCUS_CONTINUE,
-	ISP_FOCUS_VIDEO,
 	ISP_FOCUS_BYPASS,
 	ISP_FOCUS_MAX
 };
@@ -422,6 +422,7 @@ struct isp_smart_ae_param {
 	uint8_t smart_edge_max_index;
 	uint8_t smart_sta_start_index;
 	uint8_t smart_sta_low_thr;
+	uint8_t smart_sta_high_thr;
 	uint8_t smart_sta_ratio1;
 	uint8_t smart_sta_ratio;
 };
@@ -471,11 +472,6 @@ struct ipn_in_param{
 	struct isp_addr img_addr_phy;
 	struct isp_addr src_addr_phy;
 	struct isp_addr dst_addr_phy;
-};
-
-struct isp_chg_lnc_param {
-	uint16_t index[2];
-	uint16_t weight[2];
 };
 
 

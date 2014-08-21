@@ -122,9 +122,8 @@ struct isp_lnc_param{
 	uint32_t bypass;
 	uint32_t cur_use_buf;
 	uint32_t load_buf;
+	uint32_t grid_done_sel;
 	struct isp_lnc_map map;
-	uint32_t* lnc_ptr;
-	uint32_t lnc_len;
 };
 
 struct isp_fetch_param{
@@ -155,7 +154,6 @@ int32_t _ispGetSliceSize(enum isp_process_type proc_type, struct isp_size* src_s
 int32_t _ispGetSliceEdgeInfo(struct isp_slice_param* slice_ptr);
 uint16_t _ispGetLensGridPitch(uint16_t src_width, uint8_t len_grid);
 int32_t _ispGetLncAddr(struct isp_lnc_param* param_ptr,struct isp_slice_param* isp_ptr, uint16_t src_width);
-int32_t _ispGetLncCurrectParam(void* lnc0_ptr,void* lnc1_ptr, uint32_t lnc_len, uint32_t alpha, void* dst_lnc_ptr);
 int32_t _ispGetFetchAddr(uint32_t handler_id, struct isp_fetch_param* fetch_ptr);
 int32_t _ispGetFetchPitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);
 int32_t _ispGetStorePitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);
@@ -209,10 +207,8 @@ int32_t _ispAeIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t _ispHueIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)());
 int32_t isp_GetChipVersion(void);
-int32_t isp_InterplateCMC(uint32_t handler_id, uint16_t *out, uint16_t *src[2], uint16_t alpha);
+int32_t isp_InterplateCMC(uint32_t handler_id, uint16_t *out, uint16_t *src[2], uint16_t weight[2]);
 int32_t isp_SetCMC_By_Reduce(uint32_t handler_id, uint16_t *cmc_out, uint16_t *cmc_in, int32_t percent, uint8_t *is_update);
-void isp_interpolate_lsc(uint16_t *out, uint16_t *src[2], uint16_t weight[2], uint32_t size);
-int32_t isp_InterplateCCE(uint32_t handler_id, uint16_t dst[9], uint16_t src[9], uint16_t coef[3], uint16_t base_gain);
 
 /**----------------------------------------------------------------------------*
 **					Compiler Flag				**

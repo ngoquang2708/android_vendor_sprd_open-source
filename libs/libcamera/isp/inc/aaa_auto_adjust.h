@@ -32,9 +32,6 @@ extern	 "C"
 /**---------------------------------------------------------------------------*
 **				 Micro Define					*
 **----------------------------------------------------------------------------*/
-#define AUTO_INVALID 0xffffffff
-#define AUTO_ADJUST_EB 1
-
 #define DENOISE_INDEX_NUM 10
 #define DENOISE_LUM_NUM 4
 
@@ -46,9 +43,7 @@ enum auto_adjust_ioctrl_cmd {
 
 struct auto_adjust{
 	uint32_t enable;
-
-	uint32_t index_sensitive;
-	uint32_t lum_sensitive;
+	uint32_t start_level;
 
 	uint32_t dependon_index;
 	uint32_t dependon_gain;
@@ -57,7 +52,7 @@ struct auto_adjust{
 	uint32_t level_mode;
 	uint32_t index_zone;
 	uint32_t lum_zone;
-	uint32_t target_lum_zone;
+	uint32_t target_lum_thr;
 
 	uint32_t index_thr_num;
 	uint32_t lum_low_thr_num;
@@ -133,7 +128,6 @@ struct auto_adjust_calc_info {
 	uint32_t max_index;
 	uint32_t cur_gain;
 	uint32_t max_gain;
-	uint32_t target_lum_thr;
 };
 
 struct auto_adjust_out{
