@@ -91,20 +91,13 @@ ifeq ($(strip $(DEVICE_DIRECT_DISPLAY_SINGLE_OSD_LAYER)),true)
         LOCAL_CFLAGS += -DDIRECT_DISPLAY_SINGLE_OSD_LAYER
 endif
 
-	LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA
+
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 ifneq ($(strip $(DEVICE_GSP_NOT_SCALING_UP_TWICE)),true) # when on tshark, if cpy2_pa is exist, we dont support scaling-up-twice feature
-	LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE
 endif
-	#LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA_1080P
-	#LOCAL_CFLAGS += -DGSP_BLEND_2_LAYERS # Blending 2 layers by GSP
 	endif
 
 	ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
-
-	#LOCAL_CFLAGS += -DGSP_SCALING_UP_TWICE # dolphin GSP+IOMMU black-line workaround, cpy to pa then other process
-	#LOCAL_CFLAGS += -DGSP_BLEND_2_LAYERS # dolphin GSP+IOMMU black-line workaround, cpy to pa then other process
-	LOCAL_CFLAGS += -DGSP_BOUND_BYPASS_COPY2_PA_720P
 	endif
 endif
 

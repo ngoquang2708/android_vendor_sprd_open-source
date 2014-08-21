@@ -39,7 +39,7 @@
 #include "SprdFrameBufferHAL.h"
 #include "SprdHWLayerList.h"
 #include "dump.h"
-
+#include "SprdUtil.h"
 
 using namespace android;
 
@@ -152,6 +152,9 @@ int SprdHWLayerList:: updateGeometry(hwc_display_contents_1_t *list, int acceler
         mVideoLayerList = NULL;
     }
 
+
+    //SprdUtil::test_color_for_prepare(mList);
+
     queryDebugFlag(&mDebugFlag);
     queryDumpFlag(&mDumpFlag);
     if (HWCOMPOSER_DUMP_ORIGINAL_LAYERS & mDumpFlag)
@@ -238,12 +241,16 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     SprdHWLayer *RGBLayer = NULL;
     int YUVIndex = 0;
     int RGBIndex = 0;
-    int i = -1;
+    uint32_t i = 0;
     bool postProcessVideoCond = false;
     bool singleRGBLayerCond = false;
     int LayerCount = mLayerCount;
-    bool accelerateByGSP = false;
-    bool accelerateByOverlayComposer = false;
+    bool accelerateVideoByGSP = false;
+    bool accelerateOSDByOVC = false; // OVC: OverlayComposer
+    uint32_t GXPMaxComposeOSDLayerCount = 1;
+    uint32_t GXPMaxComposeWithVideoLayerCount = GXPMaxComposeOSDLayerCount;
+    uint32_t GXPMaxComposeVideoLayerCount = 0;
+    bool GXPSupportVideoAndOSDBlending = false;
 
     if (mDisableHWCFlag)
     {
@@ -256,10 +263,17 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         return -1;
     }
 
+#ifdef PROCESS_VIDEO_USE_GSP
+    GSP_CAPABILITY_T *pGXPPara = static_cast<GSP_CAPABILITY_T *>(mPData);
+    GXPMaxComposeOSDLayerCount = pGXPPara->max_layer_cnt;
+    GXPMaxComposeWithVideoLayerCount = pGXPPara->max_layer_cnt_with_video;
+    GXPMaxComposeVideoLayerCount = pGXPPara->max_videoLayer_cnt;
+    GXPSupportVideoAndOSDBlending = pGXPPara->blend_video_with_OSD;
+#endif
     /*
      *  revist Overlay layer geometry.
      * */
-    int VideoLayerCount = mVideoLayerCount;
+    uint32_t VideoLayerCount = mVideoLayerCount;
 
     for (i = 0; i < VideoLayerCount; i++)
     {
@@ -272,7 +286,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
          *  Our Display Controller cannot handle 2 or more than 2 video layers
          *  at the same time.
          * */
-        if (VideoLayerCount > 1)
+        if (VideoLayerCount > GXPMaxComposeVideoLayerCount)
         {
             resetOverlayFlag(mVideoLayerList[i]);
             mFBLayerCount++;
@@ -282,14 +296,24 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         YUVLayer = mVideoLayerList[i];
         YUVIndex = YUVLayer->getLayerIndex();
 
-        accelerateByGSP = ((YUVLayer->getAccelerator() == ACCELERATOR_GSP) ||
-                           (YUVLayer->getAccelerator() == ACCELERATOR_GSP_IOMMU));
+        if ((mOSDLayerCount == 0 && mFBLayerCount > 0)
+            || ((GXPSupportVideoAndOSDBlending == false) && (mOSDLayerCount > 0)))
+        {
+            accelerateVideoByGSP = false;
+	     YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+            ALOGI_IF(mDebugFlag, "GXP cannot handle video layer, revisitGeometry change video accelerator type to GPU");
+        }
+        else
+        {
+            accelerateVideoByGSP = ((YUVLayer->getAccelerator() == ACCELERATOR_GSP) ||
+                               (YUVLayer->getAccelerator() == ACCELERATOR_GSP_IOMMU));
+        }
     }
 
     /*
      *  revist OSD layer geometry.
      * */
-    int OSDLayerCount = mOSDLayerCount;
+    uint32_t OSDLayerCount = mOSDLayerCount;
 
     for (i = 0; i < OSDLayerCount; i++)
     {
@@ -305,7 +329,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
             continue;
         }
 
-	accelerateByOverlayComposer = (RGBLayer->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER) ? true : false;
+        accelerateOSDByOVC = (RGBLayer->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER) ? true : false;
 
 #ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
         /*
@@ -328,16 +352,21 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         bool supportYUVLayerCond = false;
         if (YUVLayer)
         {
-            supportYUVLayerCond = ((RGBLayer == NULL) ||
-                                   (RGBLayer && ((RGBIndex + 1) == LayerCount - 1) &&
-                                    (YUVIndex == RGBIndex -1)));
+            supportYUVLayerCond = (YUVLayer && ((RGBIndex + 1) == LayerCount - 1) &&
+                                   (YUVIndex <= RGBIndex -1));
         }
 
         /*
          *  At present, the HWComposer cannot handle 2 or more than 2 RGB layer.
          *  So, when found RGB layer count > 1, just switch back to SurfaceFlinger.
          * */
-        if ((mOSDLayerCount > 0)  && ((mFBLayerCount > 0) || (supportYUVLayerCond == false)))
+         bool resetOSDLayerCond =
+             (supportYUVLayerCond == true) ? ((uint32_t)(mOSDLayerCount + mVideoLayerCount) >
+                                               GXPMaxComposeWithVideoLayerCount)
+                                             : (((uint32_t)mOSDLayerCount >
+                                                 GXPMaxComposeOSDLayerCount)
+                                                || (mOSDLayerCount > 0 && mFBLayerCount > 0));
+        if (resetOSDLayerCond)
         {
             resetOverlayFlag(mOSDLayerList[i]);
             if (mOSDLayerList[i])
@@ -347,7 +376,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
             mFBLayerCount++;
             RGBLayer = NULL;
             RGBIndex = 0;
-            ALOGI_IF(mDebugFlag , "no video layer, abandon osd overlay");
+            ALOGI_IF(mDebugFlag , "not support video layer, abandon osd overlay");
             continue;
         }
 
@@ -389,35 +418,14 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
     }
 #endif
 
-#ifdef GSP_BLEND_2_LAYERS
-    if ((accelerateByOverlayComposer != true) && accelerateByGSP)
-    {
-        accelerateByGSP = false;
-        ALOGI_IF(mDebugFlag, "Blending By GSP should make sure OSD layer exist");
-    }
-#endif
 
-    if (accelerateByGSP
-#ifdef GSP_BLEND_2_LAYERS
-        && (mRGBLayerCount >= 1) // 3 layers compose with GPU
-#else
-        && (mRGBLayerCount > 0) // 2 layers compose with GPU
-#endif
-       )
+    if ((YUVLayer != NULL) && (accelerateVideoByGSP == false))
     {
         postProcessVideoCond = true;
-        YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
-        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry change video accelerator type to GPU");
     }
-    else if ((YUVLayer != NULL) && (accelerateByGSP == false))
+    else if (singleRGBLayerCond && (accelerateOSDByOVC == true))
     {
-        postProcessVideoCond = true;
-        YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
-        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry change video accelerator type to GPU");
-    }
-    else if (singleRGBLayerCond && (accelerateByOverlayComposer == true))
-    {
-        ALOGI_IF(mDebugFlag, "SprdHWLayerList:: revisitGeometry no accelerator found, disable single OSD Overlay");
+        ALOGI_IF(mDebugFlag, "revisitGeometry no accelerator found, disable single OSD Overlay");
         if (RGBLayer)
         {
             RGBLayer->resetAccelerator();
@@ -537,10 +545,6 @@ void SprdHWLayerList:: resetOverlayFlag(SprdHWLayer *l)
 
 int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 {
-    unsigned int srcWidth;
-    unsigned int srcHeight;
-    unsigned int destWidth;
-    unsigned int destHeight;
     hwc_layer_1_t *layer = l->getAndroidLayer();
     const native_handle_t *pNativeHandle = layer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
@@ -620,16 +624,6 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
         l->resetAccelerator();
         return 0;
     }
-    else if (layer->transform == 0)
-    {
-        if (((unsigned int)privateH->width != mFBWidth)
-            || ((unsigned int)privateH->height != mFBHeight))
-        {
-            ALOGI_IF(mDebugFlag, "prepareOSDLayer Not full-screen");
-            l->resetAccelerator();
-            return 0;
-        }
-    }
 
     srcRect->x = MAX(sourceLeft, 0);
     srcRect->y = MAX(sourceTop, 0);
@@ -639,47 +633,45 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
     FBRect->x = MAX(layer->displayFrame.left, 0);
     FBRect->y = MAX(layer->displayFrame.top, 0);
     FBRect->w = MIN(layer->displayFrame.right - layer->displayFrame.left, mFBWidth);
-    FBRect->h = MIN(layer->displayFrame.bottom - layer->sourceCrop.top, mFBHeight);
+	FBRect->h = MIN(layer->displayFrame.bottom - layer->displayFrame.top, mFBHeight);
 
-    if (((layer->transform & HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
-        || ((layer->transform & HAL_TRANSFORM_ROT_270) == HAL_TRANSFORM_ROT_270))
-    {
-        srcWidth = srcRect->h;
-        srcHeight = srcRect->w;
-    }
-    else
-    {
-        srcWidth = srcRect->w;
-        srcHeight = srcRect->h;
-    }
+    ALOGI_IF(mDebugFlag, "displayFrame[l%d,t%d,r%d,b%d] mFBWidth:%d mFBHeight:%d FBRect[x%d,y%d,w%d,h%d] ",
+        layer->displayFrame.left,layer->displayFrame.top,layer->displayFrame.right,layer->displayFrame.bottom,
+        mFBWidth,mFBHeight,
+        FBRect->x,FBRect->y,FBRect->w,FBRect->h);
 
-    destWidth = FBRect->w;
-    destHeight = FBRect->h;
 
     /*
-     * Only support full screen now
+     * Mark full screen layer flag.
      * */
     if ((FBRect->w != mFBWidth) || (FBRect->h != mFBHeight) ||
         (FBRect->x != 0) || (FBRect->y != 0))
     {
-        ALOGI_IF(mDebugFlag, "prepareOSDLayer only support full screen now,ret 0, L%d", __LINE__);
-        l->resetAccelerator();
-        return 0;
+        ALOGI_IF(mDebugFlag, "prepareOSDLayer find not full screen layer, L%d", __LINE__);
+    }
+    else
+    {
+        mRGBLayerFullScreenFlag = true;
     }
 
-    mRGBLayerFullScreenFlag = true;
 
-    if (l->getAccelerator() == ACCELERATOR_GSP
-        || l->getAccelerator() == ACCELERATOR_GSP_IOMMU)
+    if ((l->getAccelerator() == ACCELERATOR_GSP_IOMMU) ||
+        (l->getAccelerator() == ACCELERATOR_GSP))
     {
-        if ((srcWidth != destWidth) || (srcHeight != destHeight))
+        int retValue = prepareForGXP(l);
+        if ((retValue == 1) &&
+            (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER))
         {
-            ALOGI_IF(mDebugFlag, "prepareOSDLayer GSP do not support RGB layer scaling now, L%d", __LINE__);
-            l->resetAccelerator();
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d, cannot use GXP, switch to OVC", __LINE__);
+        }
+        else if (retValue != 0)
+        {
+            ALOGI_IF(mDebugFlag, "prepareOSDLayer L%d, NO matched Accelerator", __LINE__);
             return 0;
         }
     }
-    else if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
+
+    if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
     {
         int ret = prepareOverlayComposerLayer(l);
         if (ret != 0)
@@ -700,10 +692,6 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
 
 int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
 {
-    int srcWidth;
-    int srcHeight;
-    int destWidth;
-    int destHeight;
     hwc_layer_1_t *layer = l->getAndroidLayer();
     const native_handle_t *pNativeHandle = layer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
@@ -717,7 +705,6 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     int sourceTop    = (int)(layer->sourceCropf.top);
     int sourceRight  = (int)(layer->sourceCropf.right);
     int sourceBottom = (int)(layer->sourceCropf.bottom);
-    int gsp_scaling_up_limit = 4;
 
     if (privateH == NULL)
     {
@@ -810,55 +797,33 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     ALOGV("rects {%d,%d,%d,%d}, {%d,%d,%d,%d}", srcRect->x, srcRect->y, srcRect->w, srcRect->h,
           FBRect->x, FBRect->y, FBRect->w, FBRect->h);
 
-    destWidth = FBRect->w;
-    destHeight = FBRect->h;
-    if (((layer->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
-        || ((layer->transform&HAL_TRANSFORM_ROT_270) == HAL_TRANSFORM_ROT_270))
+    if (privateH->format == HAL_PIXEL_FORMAT_YV12
+		||privateH->yuv_info == MALI_YUV_BT709_NARROW)
     {
-        srcWidth = srcRect->h;
-        srcHeight = srcRect->w;
-    }
-    else
-    {
-        srcWidth = srcRect->w;
-        srcHeight = srcRect->h;
+         if (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER)
+         {
+                l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+                ALOGI_IF(mDebugFlag, "prepareOverlayLayer L%d, GSP do not support YV12 and BT709, Use GPU to accelerate", __LINE__);
+         }
+         else
+         {
+                ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d, NO matched Accelerator", __LINE__);
+                return 0;
+         }
     }
 
     if ((l->getAccelerator() == ACCELERATOR_GSP_IOMMU) ||
         (l->getAccelerator() == ACCELERATOR_GSP))
     {
-        if(srcRect->w < 4
-           || srcRect->h < 4
-           || FBRect->w < 4
-           || FBRect->h < 4
-           || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
-           || FBRect->h > mFBHeight) {
-           ALOGI_IF(mDebugFlag,"prepareVideoLayer, gsp,return 0, L%d",__LINE__);
-            l->resetAccelerator();
-            return 0;
-        }
-
-#ifdef GSP_SCALING_UP_TWICE
-        gsp_scaling_up_limit = 16;
-#endif
-
-        if(gsp_scaling_up_limit * srcWidth < destWidth || srcWidth > 16 * destWidth ||
-        gsp_scaling_up_limit * srcHeight < destHeight || srcHeight > 16 * destHeight)
+        int retValue = prepareForGXP(l);
+        if ((retValue == 1) &&
+            (mAcceleratorMode & ACCELERATOR_OVERLAYCOMPOSER))
         { //gsp support [1/16-gsp_scaling_up_limit] scaling
-            ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP only support 1/16-%d scaling! ret 0",__LINE__,gsp_scaling_up_limit);
-            l->resetAccelerator();
-            return 0;
+            ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d, cannot use GXP, switch to OVC", __LINE__);
         }
-
-        /*
-         *  GSP do not support scaling up and down at the same time.
-         *  so disable GSP here.
-         * */
-        if(((srcWidth < destWidth) && (srcHeight > destHeight))
-           || ((srcWidth > destWidth) && (srcHeight < destHeight)))
+        else if (retValue != 0)
         {
-            ALOGI_IF(mDebugFlag,"prepareVideoLayer[%d], GSP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
-            l->resetAccelerator();
+            ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d, NO matched Accelerator", __LINE__);
             return 0;
         }
     }
@@ -885,7 +850,158 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
     mFBLayerCount--;
 
     return 0;
+}
 
+int SprdHWLayerList::prepareForGXP(SprdHWLayer *l)
+{
+    uint32_t srcWidth;
+    uint32_t srcHeight;
+    uint32_t destWidth;
+    uint32_t destHeight;
+
+    if (l == NULL)
+    {
+        ALOGI_IF(mDebugFlag, "prepareForGXP input SprdHWLayer is NULL L:%d", __LINE__);
+        return -1;
+    }
+
+    hwc_layer_1_t *layer = l->getAndroidLayer();
+    if (layer == NULL)
+    {
+        ALOGI_IF(mDebugFlag, "prepareForGXP input AndroidLayer is NULL L:%d", __LINE__);
+        return -1;
+    }
+
+    const native_handle_t *pNativeHandle = layer->handle;
+    struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
+    if (privateH == NULL)
+    {
+        ALOGI_IF(mDebugFlag, "prepareForGXP input handle is NULL L:%d", __LINE__);
+        return -1;
+    }
+
+#ifdef PROCESS_VIDEO_USE_GSP
+    struct sprdRect *srcRect = l->getSprdSRCRect();
+    struct sprdRect *FBRect  = l->getSprdFBRect();
+
+    unsigned int mFBWidth  = mFBInfo->fb_width;
+    unsigned int mFBHeight = mFBInfo->fb_height;
+    int gxp_scaling_up_limit = 4;
+    int gxp_scaling_down_limit = 0;
+
+    destWidth = FBRect->w;
+    destHeight = FBRect->h;
+    if (((layer->transform&HAL_TRANSFORM_ROT_90) == HAL_TRANSFORM_ROT_90)
+        || ((layer->transform&HAL_TRANSFORM_ROT_270) == HAL_TRANSFORM_ROT_270))
+    {
+        srcWidth = srcRect->h;
+        srcHeight = srcRect->w;
+    }
+    else
+    {
+        srcWidth = srcRect->w;
+        srcHeight = srcRect->h;
+    }
+
+    if (mPData == NULL)
+    {
+        ALOGI_IF(mDebugFlag,"prepareForGXP, GXP not enable, L%d, switch to OVC", __LINE__);
+        l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        return 1;
+    }
+
+    GSP_CAPABILITY_T *pGXPPara = static_cast<GSP_CAPABILITY_T *>(mPData);
+
+    /*
+     *  If yuv_xywh_even == 0, GXP do not support odd source layer.
+     * */
+    if (pGXPPara->yuv_xywh_even == 0)
+    {
+        if ((srcRect->x % 2)
+            || (srcRect->y % 2)
+            || (srcRect->w % 2)
+            || (srcRect->h % 2))
+        {
+            ALOGI_IF(mDebugFlag, "prepareForGXP, GXP do not support odd source layer L%d, switch to OVC", __LINE__);
+            l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+            return 1;
+        }
+    }
+
+    if(srcWidth < (uint32_t)(pGXPPara->crop_min.w)
+       || srcHeight < (uint32_t)(pGXPPara->crop_min.h)
+       || srcWidth > (uint32_t)(pGXPPara->crop_max.w)
+       || srcHeight > (uint32_t)(pGXPPara->crop_max.h)
+       || FBRect->w < (uint32_t)(pGXPPara->out_min.w)
+       || FBRect->h < (uint32_t)(pGXPPara->out_min.h)
+       || FBRect->w > (uint32_t)(pGXPPara->out_max.w)
+       || FBRect->h > (uint32_t)(pGXPPara->out_max.h)
+       || FBRect->w > mFBWidth // when HWC do blending by GSP, the output can't larger than LCD width and height
+       || FBRect->h > mFBHeight) {
+       ALOGI_IF(mDebugFlag,"prepareForGXP, out of scailing limit, L%d, switch to OVC",__LINE__);
+        l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        return 1;
+    }
+
+    gxp_scaling_up_limit = pGXPPara->scale_range_up / 16;
+    gxp_scaling_down_limit = 16 * pGXPPara->scale_range_down;
+
+    if(gxp_scaling_up_limit * srcWidth < destWidth || srcWidth > gxp_scaling_down_limit * destWidth ||
+    gxp_scaling_up_limit * srcHeight < destHeight || srcHeight > gxp_scaling_down_limit * destHeight)
+    { //gsp support [1/16-gsp_scaling_up_limit] scaling
+        ALOGI_IF(mDebugFlag,"prepareForGXP[%d], GXP only support 1/16-%d scaling! switch to OVC",__LINE__,gxp_scaling_up_limit);
+        l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+        return 1;
+    }
+
+    /*
+     *  The GXP do not support scailing up and down at the same time.
+     * */
+    if (pGXPPara->scale_updown_sametime == 0)
+    {
+        if(((srcWidth < destWidth) && (srcHeight > destHeight))
+        || ((srcWidth > destWidth) && (srcHeight < destHeight)))
+        {
+            ALOGI_IF(mDebugFlag,"prepareForGXP[%d], GXP not support one direction scaling down while the other scaling up! ret 0",__LINE__);
+            l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+            return 1;
+        }
+    }
+
+    if ((pGXPPara->OSD_scaling == 0) &&
+        (l->checkRGBLayerFormat()))
+    {
+        if ((srcWidth != (uint32_t)destWidth)
+            || (srcHeight != (uint32_t)destHeight))
+        {
+            ALOGI_IF(mDebugFlag, "prepareForGXP[%d] GXP do not support RGB scailing now ", __LINE__);
+            l->resetAccelerator();
+            return -1;
+        }
+    }
+
+    if (l->checkYUVLayerFormat())
+    {
+        if ((pGXPPara->max_video_size == 0)
+	      && (srcWidth > 1920 && srcHeight > 1080))
+        {
+            ALOGI_IF(mDebugFlag,"prepareForGXP[%d], GXP not support > 1080P video",__LINE__);
+            l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+            return 1;
+        }
+	  else if ((pGXPPara->max_video_size == 1)
+             && (srcWidth > 1280 && srcHeight > 720))
+	  {
+	     ALOGI_IF(mDebugFlag,"prepareForGXP[%d], GXP not support > 720P video",__LINE__);
+            l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+            return 1;
+	  }
+    }
+
+    return 0;
+#else
+    return 1;
+#endif
 }
 
 #ifdef OVERLAY_COMPOSER_GPU

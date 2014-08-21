@@ -81,6 +81,7 @@ public:
           mAcceleratorMode(ACCELERATOR_NON),
           mDisableHWCFlag(false),
           mSkipLayerFlag(false),
+          mPData(NULL),
           mDebugFlag(0), mDumpFlag(0)
     {
     }
@@ -146,6 +147,12 @@ public:
         return mFBLayerCount;
     }
 
+#ifdef PROCESS_VIDEO_USE_GSP
+    inline void transforGXPCapParameters(GSP_CAPABILITY_T *GXPCap)
+    {
+        mPData = static_cast<void *>(GXPCap);
+    }
+#endif
 private:
     FrameBufferInfo* mFBInfo;
     SprdHWLayer *mLayerList;
@@ -163,6 +170,7 @@ private:
     int mAcceleratorMode;
     bool mDisableHWCFlag;
     bool mSkipLayerFlag;
+    void *mPData;
     int mDebugFlag;
     int mDumpFlag;
 
@@ -175,6 +183,15 @@ private:
      *  Filter video layer
      * */
     int prepareVideoLayer(SprdHWLayer *l);
+
+    /*
+     *  Prepare for GSP/GPP HW device.
+     *  return value:
+     *      0: use GSP/GPP to accelerate.
+     *      1: use OverlayComposer to accelerate.
+     *      -1: cannot find available accelerator.
+     * */
+    int prepareForGXP(SprdHWLayer *l);
 
 #ifdef OVERLAY_COMPOSER_GPU
     int prepareOverlayComposerLayer(SprdHWLayer *l);

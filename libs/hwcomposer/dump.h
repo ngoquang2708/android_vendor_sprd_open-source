@@ -83,14 +83,15 @@ typedef enum
     HWCOMPOSER_DUMP_VIDEO_OVERLAY_FLAG = 0x2,
     HWCOMPOSER_DUMP_OSD_OVERLAY_FLAG = 0x4,
     HWCOMPOSER_DUMP_FRAMEBUFFER_FLAG = 0x8,
-    HWCOMPOSER_DUMP_VD_OVERLAY_FLAG = 0x20
+    HWCOMPOSER_DUMP_VD_OVERLAY_FLAG = 0x20,
+    HWCOMPOSER_DUMP_MULTI_LAYER_FLAG = 0x40 // when GSP process multi-layer by multi-times GSP calling, dump the middle result
 } dump_type;
 
 
 extern void queryDebugFlag(int *debugFlag);
 
 extern void queryDumpFlag(int *dumpFlag);
-extern void queryIntFlag(char* strProperty,int *IntFlag);
+extern void queryIntFlag(const char* strProperty,int *IntFlag);
 
 
 extern int dumpImage(hwc_display_contents_1_t *list);
