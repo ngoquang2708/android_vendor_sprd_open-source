@@ -54,6 +54,9 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
      mPostFrameBuffer(true),
      mHWCDisplayFlag(HWC_DISPLAY_MASK),
      mAcceleratorMode(ACCELERATOR_NON),
+#ifdef PROCESS_VIDEO_USE_GSP
+     mGXPCap(NULL),
+#endif
      mDebugFlag(0),
      mDumpFlag(0)
     {
@@ -62,7 +65,8 @@ SprdPrimaryDisplayDevice:: SprdPrimaryDisplayDevice()
 
 bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
 {
-    int GSPAddrType = 0;
+    int GXPAddrType = 0;
+    void *pData = NULL;
 
     loadFrameBufferHAL(&mFBInfo);
     if (mFBInfo == NULL) {
@@ -76,12 +80,30 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         return false;
     }
 #ifdef PROCESS_VIDEO_USE_GSP
-    if(GSPAddrType == 0) {
-        GSPAddrType = mUtil->getGSPAddrType();
+    if(GXPAddrType == 0) {
+        //GXPAddrType = mUtil->getGSPAddrType();
     }
+    mGXPCap = (GSP_CAPABILITY_T *)malloc(sizeof(GSP_CAPABILITY_T));
+    if (mGXPCap == NULL)
+    {
+        ALOGE("SprdPrimaryDisplayDevice:: Init malloc GSP_CAPABILITY_T failed");
+        return false;
+    }
+    if (mUtil->getGSPCapability(mGXPCap))
+    {
+        ALOGE("get gsp capability failed");
+        return false;
+    }
+
+    if (mGXPCap->magic != CAPABILITY_MAGIC_NUMBER)
+    {
+        ALOGE("SprdPrimaryDisplayDevice:: Init GXP device init failed");
+	 return false;
+    }
+    pData = static_cast<void *>(mGXPCap);
 #endif
 
-    AcceleratorProbe(GSPAddrType);
+    AcceleratorProbe(pData);
 
     mLayerList = new SprdHWLayerList(mFBInfo);
     if (mLayerList == NULL)
@@ -89,6 +111,9 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
         ALOGE("new SprdHWLayerList failed");
         return false;
     }
+#ifdef PROCESS_VIDEO_USE_GSP
+    mLayerList->transforGXPCapParameters(mGXPCap);
+#endif
 
     mPrimaryPlane = new SprdPrimaryPlane(mFBInfo);
     if (mPrimaryPlane == NULL)
@@ -170,6 +195,13 @@ SprdPrimaryDisplayDevice:: ~SprdPrimaryDisplayDevice()
         delete mOverlayPlane;
         mOverlayPlane = NULL;
     }
+#ifdef PROCESS_VIDEO_USE_GSP
+    if (mGXPCap != NULL)
+    {
+        free(mGXPCap);
+        mGXPCap = NULL;
+    }
+#endif
 
     if (mLayerList)
     {
@@ -178,16 +210,22 @@ SprdPrimaryDisplayDevice:: ~SprdPrimaryDisplayDevice()
     }
 }
 
-int SprdPrimaryDisplayDevice:: AcceleratorProbe(int GSPAddrType)
+int SprdPrimaryDisplayDevice:: AcceleratorProbe(void *pData)
 {
     int accelerator = ACCELERATOR_NON;
 
 #ifdef PROCESS_VIDEO_USE_GSP
-    if (GSPAddrType == GSP_ADDR_TYPE_PHYSICAL)
+    if (pData == NULL)
+    {
+        ALOGD("SprdPrimaryDisplayDevice:: AcceleratorProbe GXP device error");
+	 return 0;
+    }
+    GSP_CAPABILITY_T *GXPCap = static_cast<GSP_CAPABILITY_T *>(pData);
+    if (GXPCap->buf_type_support == GSP_ADDR_TYPE_PHYSICAL)
     {
         accelerator |= ACCELERATOR_GSP;
     }
-    else if (GSPAddrType == GSP_ADDR_TYPE_IOVIRTUAL)
+    else if (GXPCap->buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL)
     {
         //accelerator &= ~ACCELERATOR_GSP;
         accelerator |= ACCELERATOR_GSP_IOMMU;
@@ -548,6 +586,13 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
 
     hwc_layer_1_t *FBTargetLayer = NULL;
 
+
+    int OSDLayerCount = mLayerList->getOSDLayerCount();
+    int VideoLayerCount = mLayerList->getVideoLayerCount();
+    SprdHWLayer **OSDLayerList = mLayerList->getSprdOSDLayerList();
+    SprdHWLayer **VideoLayerList = mLayerList->getSprdVideoLayerList();
+
+
     if (list == NULL)
     {
         /*
@@ -755,7 +800,8 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
             }
         }
 
-        if(mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2))
+        //if(mUtil->composerLayers(OverlayLayer, PrimaryLayer, buffer1, buffer2))
+        if(mUtil->composerLayerList(VideoLayerList, VideoLayerCount, OSDLayerList, OSDLayerCount, buffer1, buffer2))
         {
             ALOGE("%s[%d],composerLayers ret err!!",__func__,__LINE__);
         }

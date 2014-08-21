@@ -31,9 +31,6 @@
 
 
 
-
-
-
 /*
 func:gsp_hal_open
 desc:open GSP device
@@ -124,13 +121,11 @@ extern int32_t GSP_Proccess(GSP_CONFIG_INFO_T *pgsp_cfg_info);
 
 
 /*
-func:GSP_GetAddrType
-desc:get the address type of GSP can process, virtual addr, or physical
+func:GSP_GetCapability
+desc:get GSP capability, like buffer addr type, scaling range
 return:
 */
-extern int32_t GSP_GetAddrType(GSP_ADDR_TYPE_E* pType);
-
-
+extern int32_t GSP_GetCapability(GSP_CAPABILITY_T *pGsp_cap);
 
 /**
  * The id of this module
@@ -365,11 +360,11 @@ typedef struct gsp_device_t
     int32_t (*GSP_Proccess)(GSP_CONFIG_INFO_T *pgsp_cfg_info);//GSP_Proccess
 
     /*
-    func:GSP_GetAddrType
-    desc:get the address type of GSP can process, virtual addr, or physical
+    func:GSP_GetCapability
+    desc:get GSP capability, like buffer addr type, scaling range
     return:
     */
-    int32_t (*GSP_GetAddrType)(GSP_ADDR_TYPE_E* pType);
+    int32_t (*GSP_GetCapability)(GSP_CAPABILITY_T *pGsp_cap);
 
 } gsp_device_t;
 

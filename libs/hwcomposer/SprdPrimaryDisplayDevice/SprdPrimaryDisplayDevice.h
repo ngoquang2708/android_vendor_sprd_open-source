@@ -129,6 +129,9 @@ private:
     bool mPostFrameBuffer;
     int mHWCDisplayFlag;
     unsigned int mAcceleratorMode;
+#ifdef PROCESS_VIDEO_USE_GSP
+    GSP_CAPABILITY_T *mGXPCap;
+#endif
     int mDebugFlag;
     int mDumpFlag;
 
@@ -147,7 +150,7 @@ private:
      * */
     int attachToDisplayPlane(int DisplayFlag);
 
-    int AcceleratorProbe(int GSPAddrType);
+    int AcceleratorProbe(void *pData);
 
     int AcceleratorAdapt(int DisplayDeviceAccelerator);
 

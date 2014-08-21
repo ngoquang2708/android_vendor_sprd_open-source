@@ -73,6 +73,12 @@ struct sprdRect {
     uint32_t h;
 };
 
+
+struct sprdPoint {
+    uint32_t x;
+    uint32_t y;
+};
+
 enum layerType {
     LAYER_OSD = 1,
     LAYER_OVERLAY,

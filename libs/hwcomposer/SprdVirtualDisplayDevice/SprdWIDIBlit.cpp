@@ -113,7 +113,7 @@ status_t SprdWIDIBlit:: readyToRun()
         ALOGE("new SprdUtil failed");
         return -1;
     }
-    mAccelerator->getGSPAddrType();
+    mAccelerator->getGSPCapability(NULL);
     mAccelerator->forceUpdateAddrType(GSP_ADDR_TYPE_PHYSICAL);
 
     return NO_ERROR;
@@ -193,11 +193,11 @@ bool SprdWIDIBlit:: threadLoop()
 
         if (SprdHWSourceLayer->checkYUVLayerFormat())
         {
-            ret = mAccelerator->composerLayers(SprdHWSourceLayer, NULL, DisplayHandle, NULL);
+            ret = mAccelerator->composerLayers(SprdHWSourceLayer, NULL, NULL, DisplayHandle, GSP_DST_FMT_MAX_NUM);
         }
         else if (SprdHWSourceLayer->checkRGBLayerFormat())
         {
-            ret = mAccelerator->composerLayers(NULL, SprdHWSourceLayer, NULL, DisplayHandle);
+            ret = mAccelerator->composerLayers(NULL, SprdHWSourceLayer, NULL, DisplayHandle, GSP_DST_FMT_MAX_NUM);
         }
     }
     else
