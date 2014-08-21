@@ -516,6 +516,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
 #else
     mEncInfo.b_anti_shake = 0;
 #endif
+    mEncInfo.cabac_en = 0;
 
     if ((*mH264EncInit)(mHandle, &ExtraMemBfr,&StreamMemBfr, &mEncInfo)) {
         ALOGE("Failed to init mp4enc");

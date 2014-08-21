@@ -219,6 +219,8 @@ typedef struct
 //    int32	uv_interleaved;				//tmp add
     int32    yuv_format;
     int32    b_anti_shake;
+
+    int32 cabac_en;
 } MMEncVideoInfo;
 
 // Encoder config structure
