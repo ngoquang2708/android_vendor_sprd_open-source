@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "isp_app"
+
 #include <sys/types.h>
 #include "isp_log.h"
 #include "isp_ctrl.h"
@@ -738,7 +740,7 @@ static void *_isp_app_routine(void *client_data)
 	void* param_ptr = NULL;
 	uint32_t param_len = ISP_APP_ZERO;
 
-	ISP_LOG("enter isp _isp_app_routine.");
+	ISP_LOG("enter isp ctrl routine.");
 
 	while (1) {
 		rtn = _isp_app_msg_get(&isp_ctrl_msg);
@@ -757,7 +759,7 @@ static void *_isp_app_routine(void *client_data)
 
 		switch (evt) {
 			case ISP_APP_EVT_START:
-				ISP_LOG("ISP_APP_EVT_START");
+				//ISP_LOG("ISP_APP_EVT_START");
 				_isp_AppSetStatus(ISP_APP_IDLE);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->thread_common_cond);
@@ -765,7 +767,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_STOP:
-				ISP_LOG("ISP_APP_EVT_STOP");
+				//ISP_LOG("ISP_APP_EVT_STOP");
 				_isp_AppSetStatus(ISP_APP_CLOSE);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->thread_common_cond);
@@ -773,7 +775,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_INIT:
-				ISP_LOG("ISP_APP_EVT_INIT");
+				//ISP_LOG("ISP_APP_EVT_INIT");
 				rtn = _isp_app_init(handler_id, (struct isp_init_param*)param_ptr);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->init_cond);
@@ -781,7 +783,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_DEINIT:
-				ISP_LOG("ISP_APP_EVT_DEINIT");
+				//ISP_LOG("ISP_APP_EVT_DEINIT");
 				rtn = _isp_app_deinit(handler_id);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->deinit_cond);
@@ -789,7 +791,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_CONTINUE:
-				ISP_LOG("ISP_APP_EVT_CONTINUE");
+				//ISP_LOG("ISP_APP_EVT_CONTINUE");
 				rtn=_isp_app_video_start(handler_id, (struct isp_video_start*)param_ptr);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->continue_cond);
@@ -797,7 +799,7 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_CONTINUE_STOP:
-				ISP_LOG("ISP_APP_EVT_CONTINUE_STOP");
+				//ISP_LOG("ISP_APP_EVT_CONTINUE_STOP");
 				rtn = isp_ctrl_video_stop(handler_id);
 				rtn = _isp_AppStopVideoHandler(handler_id);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
@@ -806,30 +808,28 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_SIGNAL:
-				ISP_LOG("ISP_APP_EVT_SIGNAL");
+				//ISP_LOG("ISP_APP_EVT_SIGNAL");
 				rtn = isp_ctrl_proc_start(handler_id, (struct ips_in_param*)param_ptr, NULL);
 				break;
 
 			case ISP_APP_EVT_SIGNAL_NEXT:
-				ISP_LOG("ISP_APP_EVT_SIGNAL_NEXT");
+				//ISP_LOG("ISP_APP_EVT_SIGNAL_NEXT");
 				rtn=isp_ctrl_proc_next(handler_id, (struct ipn_in_param*)param_ptr, NULL);
 				break;
 
 			case ISP_APP_EVT_IOCTRL:
-				ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
+				//ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
 				rtn = _isp_AppIoCtrlHandler(handler_id, sub_type, param_ptr);
 				if (ISP_APP_SUCCESS == rtn) {
 					res_ptr->rtn = isp_ctrl_ioctl(handler_id, sub_type, param_ptr);
 				}
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
-				ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
 				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
-				ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
 				break;
 
 			case ISP_APP_EVT_CAPABILITY:
-				ISP_LOG("--isp_ctrl_capability--cmd:0x%x", sub_type);
+				//ISP_LOG("--isp_ctrl_capability--cmd:0x%x", sub_type);
 				res_ptr->rtn = isp_ctrl_capability(handler_id, sub_type, param_ptr);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->capability_cond);

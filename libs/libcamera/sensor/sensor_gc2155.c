@@ -1115,7 +1115,7 @@ static uint32_t GC2155_Identify(uint32_t param)
 		}
 	}
 
-	return SENSOR_FAIL;
+	return 0;
 }
 
 static void GC2155_set_shutter()
