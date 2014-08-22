@@ -122,6 +122,7 @@
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
 #define CARD_VAUDIO_W  "VIRTUAL AUDIO W"
+#define CARD_VAUDIO_LTE  "saudiolte"
 #define CARD_SCO    "saudiovoip"
 #define CARD_BT_SCO    "all-i2s"
 
@@ -655,6 +656,7 @@ static int s_tinycard = -1;
  */
 static int s_vaudio = -1;
 static int s_vaudio_w = -1;
+static int s_vaudio_lte = -1;
 
  /*
  * s_voip  is used to voip call in cp part when vbc is controlled by cp dsp.
@@ -1529,6 +1531,10 @@ static int start_vaudio_output_stream(struct tiny_stream_out *out)
     else if (cp_type == CP_W) {
 	    s_vaudio_w = get_snd_card_number(CARD_VAUDIO_W);
         card = s_vaudio_w;
+    }
+    else if (cp_type == CP_CSFB) {
+        s_vaudio_lte = get_snd_card_number(CARD_VAUDIO_LTE);
+        card = s_vaudio_lte;
     }
     BLUE_TRACE("start vaudio_output_stream cp_type is %d ,card is %d",cp_type, card);
 #ifdef AUDIO_MUX_PCM
@@ -5041,6 +5047,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             char prop_w[PROPERTY_VALUE_MAX] = {0};
             bool t_enable = false;
             bool w_enalbe = false;
+            bool csfb_enable = false;
 
             if(property_get(MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
             {
@@ -5051,6 +5058,11 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             {
                 MY_TRACE("%s:%s",__func__,MODEM_W_ENABLE_PROPERTY);
                 w_enalbe = true;
+            }
+            if(property_get(MODEM_TDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+            {
+                MY_TRACE("%s:%s",__func__,MODEM_TDDCSFB_ENABLE_PROPERTY);
+                csfb_enable = true;
             }
            /* Obtain the modem num */
 
@@ -5072,6 +5084,17 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
                         if(t_enable){
                             ALOGD("The voip run on modem  is '%s'", attr[1]);
                             modem->voip_res.cp_type = CP_TG;
+                            modem->voip_res.is_done = true;
+                        }
+                        else
+                            return;
+                    }
+                    else if(strcmp(attr[1], "csfb") == 0)
+                    {
+
+                        if(csfb_enable){
+                            ALOGD("The voip run on modem  is '%s'", attr[1]);
+                            modem->voip_res.cp_type = CP_CSFB;
                             modem->voip_res.is_done = true;
                         }
                         else
