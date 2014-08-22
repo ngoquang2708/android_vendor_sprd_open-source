@@ -13,6 +13,7 @@ enum {
      MAX_BIT = 8,
 };
 static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot handle many at commands once
+static int at_cmd_routeDev(struct tiny_audio_device *adev,char* route,T_AT_CMD* at);
 
 int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
 {
@@ -50,6 +51,7 @@ int do_cmd_dual(int modemId, int simId, struct tiny_audio_device *adev)
     for(indx=0;indx < dirty_count;indx++){
         cmd_bit = cmd_queue_pri[dirty_count-indx-1];
         ALOGD("do_cmd_dual Switch incall AT command [%d][%d][%s][%d] ", modemId,simId,&(process_at_cmd.at_cmd[cmd_bit]),cmd_bit);
+        adev->routeDev = at_cmd_routeDev(adev,&(process_at_cmd.at_cmd[cmd_bit]),&process_at_cmd);
         err_str = sendAt(modemId, simId, &(process_at_cmd.at_cmd[cmd_bit]));
         ALOGD("do_cmd_dual Switch incall AT command [%s][%s] ", &(process_at_cmd.at_cmd[cmd_bit]), err_str);
     }
@@ -96,6 +98,21 @@ static void push_voice_command(char *at_cmd,int bit){
     voice_command_signal(s_adev,at_cmd,bit);
     ALOGE("push_voice_command: X,at_cmd:%s,bit:%d,postcmd:%s",at_cmd,bit,&(s_adev->at_cmd_vectors->at_cmd[bit]));
 }
+
+static void push_route_command(char *at_cmd,int bit,int out){
+    ALOGE("push_route_command: E");
+    ALOGE("push_route_command: at_cmd:%s,bit:%d,precmd:%s,len:%d",at_cmd,bit,&(s_adev->at_cmd_vectors->at_cmd[bit]),sizeof(s_adev->at_cmd_vectors->at_cmd[bit]));
+    pthread_mutex_lock(&ATlock);
+    s_adev->at_cmd_vectors->at_cmd_dirty |= (0x01 << bit);
+    memset(&(s_adev->at_cmd_vectors->at_cmd[bit]),0x00,sizeof(s_adev->at_cmd_vectors->at_cmd[bit]));
+    strncpy(&(s_adev->at_cmd_vectors->at_cmd[bit]),at_cmd,strlen(at_cmd));
+    s_adev->at_cmd_vectors->routeDev  = out;
+    s_adev->at_cmd_vectors->at_cmd_priority[bit]  = process_priority(s_adev,bit);
+    ALOGE("%s: post:%s,priority:%d",__func__,&(s_adev->at_cmd_vectors->at_cmd[bit]) ,s_adev->at_cmd_vectors->at_cmd_priority[bit]);
+    pthread_mutex_unlock(&ATlock);
+    voice_command_signal(s_adev,at_cmd,bit);
+    ALOGE("push_route_command: X,at_cmd:%s,bit:%d,postcmd:%s",at_cmd,bit,&(s_adev->at_cmd_vectors->at_cmd[bit]));
+}
 // 0x80 stands for 8KHz(NB) sampling rate BT Headset.
 // 0x40 stands for 16KHz(WB) sampling rate BT Headset.
 static int config_bt_dev_type(int bt_headset_type, cp_type_t cp_type, int cp_sim_id,struct tiny_audio_device *adev)
@@ -110,6 +127,17 @@ static int config_bt_dev_type(int bt_headset_type, cp_type_t cp_type, int cp_sim
     push_voice_command(at_cmd,BTSAMPLE_BIT);
     usleep(10000);
     return 0;
+}
+static int at_cmd_routeDev(struct tiny_audio_device *adev,char* route,T_AT_CMD* at)
+{
+    char *prefix = "AT+SSAM=";
+    int len = strlen(prefix);
+    int dev = 0;
+    if(0 == strncmp(prefix,route,len)){
+        dev = at->routeDev;
+        ALOGW("%s %s routeDev:%x",__func__,route,dev);
+    }
+    return dev;
 }
 
 static int at_cmd_route(struct tiny_audio_device *adev)
@@ -139,7 +167,7 @@ static int at_cmd_route(struct tiny_audio_device *adev)
     } else {
         at_cmd = "AT+SSAM=0";
     }
-    push_voice_command(at_cmd,ROUTE_BIT);
+    push_route_command(at_cmd,ROUTE_BIT,adev->out_devices);
     return 0;
 }
 

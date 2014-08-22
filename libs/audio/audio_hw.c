@@ -435,6 +435,7 @@ typedef struct{
    char  at_cmd[MAX_AT_CMD_TYPE][MAX_AT_CMD_LENGTH];
    uint32_t   at_cmd_priority[MAX_AT_CMD_TYPE];
    uint32_t   at_cmd_dirty;
+   int    routeDev;
 }T_AT_CMD;
 
 struct tiny_audio_device {
@@ -447,6 +448,7 @@ struct tiny_audio_device {
     int in_devices;
     int prev_out_devices;
     int prev_in_devices;
+    int routeDev;
     volatile int cur_vbpipe_fd;  /*current vb pipe id, if all pipes is closed this is -1.*/
     cp_type_t  cp_type;
     struct pcm *pcm_modem_dl;
@@ -730,7 +732,7 @@ static long getCurrentTimeUs()
    return tv.tv_sec* 1000000 + tv.tv_usec;
 }
 
-int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
+int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type,bool local)
 {
     int count = 0;
     audio_modem_t  *modem;
@@ -738,8 +740,9 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
     uint8_t *ctl_off = "0";
     uint8_t cur_state[2] = {0};
     uint8_t *ctl_str = "1";
+    int devices = local?(adev->out_devices):(adev->routeDev);
 
-    ALOGW("i2s_pin_mux_sel in type is %d",type);
+    ALOGW("i2s_pin_mux_sel in type is %d,devices:%d",type,devices);
 
     modem = adev->cp;
 
@@ -806,7 +809,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
         modem->i2s_extspk.fd_sys_ap = open(modem->i2s_extspk.fd_sys_ap_path,O_RDWR | O_SYNC);
     }
     if(type == 0) {
-       if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+       if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp0 >= 0)){
                         count = write(modem->i2s_bt.fd_sys_cp0,ctl_on,1);
@@ -817,7 +820,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                         count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
                 }
-                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
 
@@ -840,7 +843,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
-                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
                 }
@@ -848,14 +851,14 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
             }
         }
 
-        if(adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        if(devices  & AUDIO_DEVICE_OUT_SPEAKER) {
             if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_cp0 >= 0))
                 count = write(modem->i2s_extspk.fd_sys_cp0,ctl_str,1);
         }
 
     }
     else if (type == 1){
-        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+        if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
             if(modem->i2s_bt.is_ext) {
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
                        count = write(modem->i2s_bt.fd_sys_cp1,ctl_on,1);
@@ -866,7 +869,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                 if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
                             count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
                 }
-                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
 
@@ -890,14 +893,14 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
                         count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
                     }
                 }
-                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
                     if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
                         count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
                 }
 #endif
             }
         }
-        if(adev->out_devices& AUDIO_DEVICE_OUT_SPEAKER) {
+        if(devices & AUDIO_DEVICE_OUT_SPEAKER) {
             if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_cp1 >= 0))
                 count = write(modem->i2s_extspk.fd_sys_cp1,ctl_str,1);
         }
@@ -931,7 +934,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 #endif
             }
         }
-        if(adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        if(devices & AUDIO_DEVICE_OUT_SPEAKER) {
             if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_ap >= 0))
                 count = write(modem->i2s_extspk.fd_sys_ap,ctl_off,1);
         }
@@ -1111,129 +1114,13 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 
 static void do_select_devices_static(struct tiny_audio_device *adev)
 {
-    ALOGE("do_select_devices_static IN");
-    unsigned int i;
-    struct tiny_stream_in *in;
-    if(adev->voip_state) {
-        int ret;
-        ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
-        ret = at_cmd_route(adev);  //send at command to cp
-        ALOGI("do_select_devices in %x,but voip is on so send at to cp out ret is %d",adev->out_devices,
-ret);
-        if (ret < 0) {
-            ALOGE("do_seletc devices at_cmd_route error(%d) ",ret);
-        }
-        return;
-    }
-
-    if (adev->prev_out_devices == adev->out_devices
-            && adev->prev_in_devices == adev->in_devices) {
-        ALOGI("Not to change devices: OUT=0x%08x, IN=0x%08x",
-                adev->prev_out_devices, adev->prev_in_devices);
-        return;
-    }
-    ALOGI("Changing out_devices: from (0x%08x) to (0x%08x)",
-            adev->prev_out_devices, adev->out_devices);
-    ALOGI("Changing in_devices: from (0x%08x) to (0x%08x)",
-            adev->prev_in_devices, adev->in_devices);
-    adev->prev_out_devices = adev->out_devices;
-    adev->prev_in_devices = adev->in_devices;
-    if(adev->eq_available)
-        vb_effect_sync_devices(adev->out_devices, adev->in_devices);
-
-    pthread_mutex_lock(&adev->device_lock);
-    if(adev->call_start == 1){
-        pthread_mutex_unlock(&adev->device_lock);
-        return ;
-    }
-
-    ALOGE("wdo_select_devices_static:middle");
-    /* Turn on new devices first so we don't glitch due to powerdown... */
-    for (i = 0; i < adev->num_dev_cfgs; i++) {
-    /* separate INPUT/OUTPUT case for some common bit used. */
-        if ((adev->out_devices & adev->dev_cfgs[i].mask)
-        && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
-            ALOGE("%s:open FM device",__func__);
-            //force_all_standby(adev);
-            adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
-            ALOGE("%s:open FM device2",__func__);
-            if (!pcm_is_ready(adev->pcm_fm_dl)) {
-                ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
-                pcm_close(adev->pcm_fm_dl);
-                adev->pcm_fm_dl= NULL;
-            } else {
-                if( 0 != pcm_start(adev->pcm_fm_dl)){
-                    ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
-                }
-                if(adev->master_mute){
-                    ALOGV("open FM and set codec unmute");
-                    set_codec_mute_forFM(adev,false);
-                }
-            }
-
-        }
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
-                    adev->dev_cfgs[i].on_len);
-    }
-    if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
-        && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-        /* force close main-mic ADCL when channel count is one for power issue */
-        if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( adev->in_devices & adev->dev_cfgs[i].mask))
-             && (adev->requested_channel_cnt == 1)) {
-            /* force close main-mic ADCL when channel count is one for power issue */
-            //close_adc_channel(adev->mixer, true, false, false);
-            struct mixer_ctl *ctl;
-            ctl = mixer_get_ctl_by_name(adev->mixer,"ADCR Mixer MainMICADCR Switch");
-            mixer_ctl_set_value(ctl, 0, 1);
-            ctl = mixer_get_ctl_by_name(adev->mixer,"Mic Function");
-            mixer_ctl_set_value(ctl, 0, 1);
-        } else {
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
-                    adev->dev_cfgs[i].on_len);
-        }
-
-        }
-    }
-    /* ...then disable old ones. */
-    for (i = 0; i < adev->num_dev_cfgs; i++) {
-        if (!(adev->out_devices & adev->dev_cfgs[i].mask)
-        && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
-                    adev->dev_cfgs[i].off_len);
-            if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
-            {
-                ALOGE("%s:close FM device",__func__);
-
-                pcm_close(adev->pcm_fm_dl);
-                adev->pcm_fm_dl= NULL;
-                ALOGE("%s:close FM device2",__func__);
-                if(adev->master_mute){
-                    ALOGV("close FM so we set codec to mute by master_mute");
-                    set_codec_mute_forFM(adev,true);
-                }
-
-            }
-        }
-     if (!((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
-        && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
-                    adev->dev_cfgs[i].off_len);
-        }
-    }
-    /* update EQ profile*/
-    if(adev->eq_available)
-        vb_effect_profile_apply();
-    SetAudio_gain_route(adev,1);
-    pthread_mutex_unlock(&adev->device_lock);
-    ALOGE("do_select_devices_static OUT1");
-}
-
-static void do_select_devices(struct tiny_audio_device *adev)
-{
     unsigned int i;
     int ret;
-
+    int cur_out = 0;
+    int cur_in = 0;
+    int pre_out = 0;
+    int pre_in = 0;
+    ALOGI("do_select_devices_static E");
     if(adev->voip_state) {
         ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
         ret = at_cmd_route(adev);  //send at command to cp
@@ -1255,38 +1142,195 @@ ret);
             set_codec_mute(adev);
         }
     }
-    if (adev->prev_out_devices == adev->out_devices
-            && adev->prev_in_devices == adev->in_devices) {
+    pthread_mutex_lock(&adev->device_lock);
+    if(adev->call_start == 1){
+       goto out;
+    }
+
+    cur_in = adev->in_devices;
+    cur_out = adev->out_devices;
+    pre_in = adev->prev_in_devices;
+    pre_out = adev->prev_out_devices;
+    adev->prev_out_devices = cur_out;
+    adev->prev_in_devices = cur_in;
+
+
+    if (pre_out == cur_out
+            &&  pre_in == cur_in) {
         ALOGI("Not to change devices: OUT=0x%08x, IN=0x%08x",
-                adev->prev_out_devices, adev->prev_in_devices);
-        return;
+                pre_out, pre_in);
+       goto out;
     }
     ALOGI("Changing out_devices: from (0x%08x) to (0x%08x)",
-            adev->prev_out_devices, adev->out_devices);
+            pre_out, cur_out);
     ALOGI("Changing in_devices: from (0x%08x) to (0x%08x)",
-            adev->prev_in_devices, adev->in_devices);
+            pre_in, cur_in);
 
-    adev->prev_out_devices = adev->out_devices;
-    adev->prev_in_devices = adev->in_devices;
-
-    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv,cur_out,cur_in);
     if(ret < 0){
-        return;
+       goto out;
     }
     SetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
 
     if(adev->eq_available)
-        vb_effect_sync_devices(adev->out_devices, adev->in_devices);
+        vb_effect_sync_devices(cur_out, cur_in);
 
-    pthread_mutex_lock(&adev->device_lock);
-    if(adev->call_start == 1){
-        pthread_mutex_unlock(&adev->device_lock);
-        return ;
-    }
     /* Turn on new devices first so we don't glitch due to powerdown... */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
 	/* separate INPUT/OUTPUT case for some common bit used. */
-        if ((adev->out_devices & adev->dev_cfgs[i].mask)
+        if ((cur_out & adev->dev_cfgs[i].mask)
+	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
+            ALOGE("%s:open FM device",__func__);
+
+            //force_all_standby(adev);
+            adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
+            if (!pcm_is_ready(adev->pcm_fm_dl)) {
+            ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+            pcm_close(adev->pcm_fm_dl);
+            adev->pcm_fm_dl= NULL;
+            } else {
+              if( 0 != pcm_start(adev->pcm_fm_dl)){
+                  ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+              }
+              if(adev->master_mute){
+                  ALOGV("open FM and set codec unmute");
+                  set_codec_mute_forFM(adev,false);
+              }
+            }
+
+        }
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+                    adev->dev_cfgs[i].on_len);
+    }
+
+    if (((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
+        && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+        /* force close main-mic ADCL when channel count is one for power issue */
+        if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( cur_in & adev->dev_cfgs[i].mask))
+             && (adev->requested_channel_cnt == 1)) {
+            /* force close main-mic ADCL when channel count is one for power issue */
+            //close_adc_channel(adev->mixer, true, false, false);
+            struct mixer_ctl *ctl;
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADCR Mixer MainMICADCR Switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+            ctl = mixer_get_ctl_by_name(adev->mixer,"Mic Function");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else {
+                set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
+                        adev->dev_cfgs[i].on_len);
+            }
+
+        }
+    }
+    /* ...then disable old ones. */
+    for (i = 0; i < adev->num_dev_cfgs; i++) {
+        if (!(cur_out & adev->dev_cfgs[i].mask)
+            && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
+                    adev->dev_cfgs[i].off_len);
+        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
+        {
+            ALOGE("%s:close FM device",__func__);
+
+            if(adev->pcm_fm_dl != NULL){/*recheck is to avoid pcm_fm_dl has been
+            freed in setting mode in vbc_ctrl_thread_linein_routine*/
+                pcm_close(adev->pcm_fm_dl);
+                adev->pcm_fm_dl= NULL;
+            }
+            if(adev->master_mute){
+                ALOGV("close FM so we set codec to mute by master_mute");
+                set_codec_mute_forFM(adev,true);
+            }
+
+        }
+        }
+
+        if (!((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
+	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
+                    adev->dev_cfgs[i].off_len);
+        }
+    }
+    /* update EQ profile*/
+    if(adev->eq_available)
+        vb_effect_profile_apply();
+    SetAudio_gain_route(adev,1,cur_out,cur_in);
+out:
+    pthread_mutex_unlock(&adev->device_lock);
+    ALOGI("do_select_devices_static X");
+}
+static void do_select_devices(struct tiny_audio_device *adev)
+{
+    unsigned int i;
+    int ret;
+    int cur_out = 0;
+    int cur_in = 0;
+    int pre_out = 0;
+    int pre_in = 0;
+    bool mute_ops = false;
+    bool voip_route_ops = false;
+    ALOGI("do_select_devices E");
+    pthread_mutex_lock(&adev->lock);
+    if(adev->voip_state) {
+        ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
+        voip_route_ops = true;
+    }
+    if (adev->cache_mute != adev->master_mute) {
+        adev->cache_mute = adev->master_mute;
+        /* mute codec PA */
+        if(!(adev->master_mute && adev->pcm_fm_dl != NULL)){
+            mute_ops = true;
+            ALOGD("%s,fm is open so do not mute codec",__func__);
+        }
+    }
+    pthread_mutex_unlock(&adev->lock);
+    if(voip_route_ops){
+      ret = at_cmd_route(adev);  //send at command to cp
+      return;
+    }
+    if(mute_ops){
+      set_codec_mute(adev);
+    }
+    pthread_mutex_lock(&adev->device_lock);
+    pthread_mutex_lock(&adev->lock);
+    if(adev->call_start == 1){
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&adev->device_lock);
+        return;
+    }
+    cur_in = adev->in_devices;
+    cur_out = adev->out_devices;
+    pre_in = adev->prev_in_devices;
+    pre_out = adev->prev_out_devices;
+    adev->prev_out_devices = cur_out;
+    adev->prev_in_devices = cur_in;
+    pthread_mutex_unlock(&adev->lock);
+
+    if (pre_out == cur_out
+            &&  pre_in == cur_in) {
+        ALOGI("Not to change devices: OUT=0x%08x, IN=0x%08x",
+                pre_out, pre_in);
+       goto out;
+    }
+    ALOGI("Changing out_devices: from (0x%08x) to (0x%08x)",
+            pre_out, cur_out);
+    ALOGI("Changing in_devices: from (0x%08x) to (0x%08x)",
+            pre_in, cur_in);
+
+    ret = GetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv,cur_out,cur_in);
+    if(ret < 0){
+       goto out;
+    }
+    SetAudio_PaConfig_by_devices(adev,adev->pga_gain_nv);
+
+    if(adev->eq_available)
+        vb_effect_sync_devices(cur_out, cur_in);
+
+    /* Turn on new devices first so we don't glitch due to powerdown... */
+    for (i = 0; i < adev->num_dev_cfgs; i++) {
+	/* separate INPUT/OUTPUT case for some common bit used. */
+        if ((cur_out & adev->dev_cfgs[i].mask)
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
         if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
@@ -1312,10 +1356,10 @@ ret);
                     adev->dev_cfgs[i].on_len);
     }
 
-    if (((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
+    if (((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
         && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
         /* force close main-mic ADCL when channel count is one for power issue */
-        if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( adev->in_devices & adev->dev_cfgs[i].mask))
+        if ((AUDIO_DEVICE_IN_BUILTIN_MIC == ( cur_in & adev->dev_cfgs[i].mask))
              && (adev->requested_channel_cnt == 1)) {
             /* force close main-mic ADCL when channel count is one for power issue */
             //close_adc_channel(adev->mixer, true, false, false);
@@ -1333,7 +1377,7 @@ ret);
     }
     /* ...then disable old ones. */
     for (i = 0; i < adev->num_dev_cfgs; i++) {
-        if (!(adev->out_devices & adev->dev_cfgs[i].mask)
+        if (!(cur_out & adev->dev_cfgs[i].mask)
             && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
@@ -1354,7 +1398,7 @@ ret);
         }
         }
 
-        if (!((adev->in_devices & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
+        if (!((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
 	    && (adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
@@ -1363,8 +1407,10 @@ ret);
     /* update EQ profile*/
     if(adev->eq_available)
         vb_effect_profile_apply();
-    SetAudio_gain_route(adev,1);
+    SetAudio_gain_route(adev,1,cur_out,cur_in);
+out:
     pthread_mutex_unlock(&adev->device_lock);
+    ALOGI("do_select_devices X");
 }
 
 static void select_devices_signal(struct tiny_audio_device *adev)
@@ -1801,7 +1847,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
         adev->out_devices |= out->devices;
         if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            i2s_pin_mux_sel(adev,2);
+            i2s_pin_mux_sel(adev,2,true);
         }
 	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
@@ -1812,6 +1858,7 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
         }
+
 	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
     }
@@ -2112,38 +2159,30 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if(1 == adev->call_start) {
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
-                        i2s_pin_mux_sel(adev,1);
+                        i2s_pin_mux_sel(adev,1,true);
                     else if(adev->cp_type == CP_W)
-                        i2s_pin_mux_sel(adev,0);
+                        i2s_pin_mux_sel(adev,0,true);
                 }
             }
             else {
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    i2s_pin_mux_sel(adev,2);
+                    i2s_pin_mux_sel(adev,2,true);
                 }
             }
-
             cur_mode = adev->mode;
             if((!adev->call_start)&&(!adev->voip_state))
                 select_devices_signal(adev);
+            if((AUDIO_MODE_IN_CALL == adev->mode) || adev->voip_start) {
+                ret = at_cmd_route(adev);  //send at command to cp
+            }
             pthread_mutex_unlock(&out->lock);
             pthread_mutex_unlock(&adev->lock);
-
-
-              if ((AUDIO_MODE_IN_CALL == adev->mode) || adev->voip_start) {
-                ret = at_cmd_route(adev);  //send at command to cp
-                if (ret < 0) {
-                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
-                    return ret;
-                }
-            }
-        }else{
-            pthread_mutex_unlock(&out->lock);
+          } else {
+              pthread_mutex_unlock(&out->lock);
             pthread_mutex_unlock(&adev->lock);
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->out_devices,val);
         }
     }
-
     ALOGW("out_set_parameters out...call_start:%d",adev->call_start);
     str_parms_destroy(parms);
     return ret;
@@ -2791,7 +2830,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->in_devices |= in->device;
         if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            i2s_pin_mux_sel(adev,2);
+            i2s_pin_mux_sel(adev,2,true);
         }
 	adev->prev_in_devices = ~adev->in_devices;
         select_devices_signal(adev);
@@ -3696,16 +3735,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
-                        i2s_pin_mux_sel(adev,1);
+                        i2s_pin_mux_sel(adev,1,true);
                     else if(adev->cp_type == CP_W)
-                        i2s_pin_mux_sel(adev,0);
+                        i2s_pin_mux_sel(adev,0,true);
                 }
-
-                pthread_mutex_unlock(&adev->lock);
                 ret = at_cmd_route(adev);  //send at command to cp
-                if (ret < 0) {
-                    ALOGE("out_set_parameters at_cmd_route error(%d) ",ret);
-                }
+                pthread_mutex_unlock(&adev->lock);
             }
             else {
                 pthread_mutex_unlock(&adev->lock);
@@ -3757,7 +3792,7 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     ALOGW("adev_set_master_volume in...devices:0x%x ,volume:%f ",adev->out_devices,volume);
-    SetAudio_gain_route(adev,1);
+    SetAudio_gain_route(adev,1,adev->out_devices,adev->in_devices);
     return -ENOSYS;
 }
 
@@ -5307,7 +5342,7 @@ static void *audiopara_tuning_thread_entry(void * param)
             }
             //2、mandatory to set PGA GAIN
             if(ENG_PGA_OPS & ops_bit) {
-                SetAudio_gain_route(adev,1);
+                SetAudio_gain_route(adev,1,adev->out_devices,adev->in_devices);
             }
             //3、mandatory to get Phone information,include hardware version,FM type,DSP-Process-Voip,VBC LoopBack
             if(ENG_PHONEINFO_OPS & ops_bit) {
