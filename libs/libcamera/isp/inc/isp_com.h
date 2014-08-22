@@ -23,6 +23,7 @@
 #include "isp_app.h"
 #include "isp_drv.h"
 #include "sensor_raw.h"
+#include "isp_awb_ctrl.h"
 #include "isp_awb.h"
 #include "isp_raw.h"
 #include "isp_ae.h"
@@ -81,6 +82,7 @@ enum isp_status{
 enum isp_change_cmd{
 	ISP_CHANGE_LNC,
 	ISP_CHANGE_CMC,
+	ISP_CHANGE_CCE,
 	ISP_CHANGE_MAX
 };
 
@@ -380,7 +382,7 @@ struct isp_flicker_param{
 struct isp_hue_param{
 	uint32_t bypass;
 	uint8_t factor;
-	uint8_t offset;
+	int16_t offset;
 };
 
 struct isp_af_statistic_info{
@@ -471,6 +473,7 @@ struct isp_tune_block{
 	uint8_t wb_trim;
 	uint8_t alg;
 	uint8_t denoise;
+	uint8_t pref;
 	uint8_t edge;
 	uint8_t cmc;
 	uint8_t lnc;
@@ -553,6 +556,7 @@ struct isp_context{
 	struct isp_size src;
 	struct isp_slice_param slice;
 	struct isp_tune_block tune;
+	struct isp_smart_light_param smart_light;
 	struct auto_adjust_init_info auto_adjust;
 	uint32_t reserved[256];
 
@@ -575,6 +579,8 @@ struct isp_context{
 	uint32_t awb_g_gain[9];
 	uint32_t awb_b_gain[9];
 
+	uint32_t lnc_index;
+	uint32_t cce_index;
 	uint32_t gamma_index;
 	uint32_t cmc_index;
 	uint32_t param_index;
@@ -632,7 +638,8 @@ uint32_t ISP_Algin(uint32_t pLen , uint16_t algin_blk, uint16_t algin_bits);
 uint32_t IspGetId(void);
 int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param);
 int32_t isp_set_gamma(struct isp_gamma_param* gamma, struct isp_gamma_tab* tab_ptr);
-int32_t ispAfmEb(uint32_t handler_id);
+int32_t ispAfmEb(uint32_t handler_id, uint32_t skip_num);
+int32_t ispAfmUeb(uint32_t handler_id);
 int32_t ispCfgAwbm(uint32_t handler_id,struct isp_awbm_param* param_ptr);
 int32_t ispAwbmEb_immediately(uint32_t handler_id);
 struct isp_context* ispGetAlgContext(uint32_t handler_id);

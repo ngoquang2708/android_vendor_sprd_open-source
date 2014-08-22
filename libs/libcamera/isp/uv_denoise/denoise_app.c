@@ -37,7 +37,7 @@ static sem_t denoise_sem_lock;
 #define PIXEL_STRIDE	2		//uv interleave
 
 
-void isp_uv_denoise(struct isp_denoise_input* uv_denoise_in)
+void isp_uv_denoise(struct isp_denoise_input* uv_denoise_in , uint32_t alg_num)
 {
 	int    ret = 0;
 	//struct img_addr den_out;
@@ -91,89 +91,267 @@ void isp_uv_denoise(struct isp_denoise_input* uv_denoise_in)
 	part1_h = part0_h;
 	part2_h = part0_h;
 	part3_h = uv_denoise_in->InputHeight - 3 * part0_h;
+	if (0 == alg_num)
+	{
 
-	SrcOffsetOne = 0;
-	DstOffsetOne = 0;
+		SrcOffsetOne = 0;
+		DstOffsetOne = 0;
 
-	SrcOffsetTwo = (part0_h / 2 - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
-	DstOffsetTwo = part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+		SrcOffsetTwo = (part0_h / 2 - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetTwo = part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
 
-	SrcOffsetThr = (part0_h - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
-	DstOffsetThr = part0_h * uv_denoise_in->InputWidth* sizeof(int8_t);
+		SrcOffsetThr = (part0_h - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetThr = part0_h * uv_denoise_in->InputWidth* sizeof(int8_t);
 
-	SrcOffsetFour = (3 * part0_h /2 - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
-	DstOffsetFour = 3 * part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+		SrcOffsetFour = (3 * part0_h /2 - 12) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetFour = 3 * part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
 
-		/* uv denoise level*/
-	uv_param1.dst_uv_image = cnr_out+DstOffsetOne;
-	uv_param1.src_uv_image = cnr_in+SrcOffsetOne;
-	uv_param1.in_width = uv_denoise_in->InputWidth;
-	uv_param1.in_height = part0_h+24;
-	uv_param1.out_width = 0;
-	uv_param1.out_height = 0;
-	uv_param1.max_6_delta = 3;
-	uv_param1.max_4_delta = 6;
-	uv_param1.max_2_delta = 9;
-	uv_param1.task_no = 1;
+			/* uv denoise level*/
+		uv_param1.dst_uv_image = cnr_out+DstOffsetOne;
+		uv_param1.src_uv_image = cnr_in+SrcOffsetOne;
+		uv_param1.in_width = uv_denoise_in->InputWidth;
+		uv_param1.in_height = part0_h+24;
+		uv_param1.out_width = 0;
+		uv_param1.out_height = 0;
+		uv_param1.max_6_delta = 9;
+		uv_param1.max_4_delta = 6;
+		uv_param1.max_2_delta = 3;
+		uv_param1.task_no = 1;
 
-	uv_param2.dst_uv_image = cnr_out+DstOffsetTwo;
-	uv_param2.src_uv_image = cnr_in+SrcOffsetTwo;
-	uv_param2.in_width = uv_denoise_in->InputWidth;
-	uv_param2.in_height = part1_h+48;
-	uv_param2.out_width = 0;
-	uv_param2.out_height = 0;
-	uv_param2.max_6_delta = 3;
-	uv_param2.max_4_delta = 6;
-	uv_param2.max_2_delta = 9;
-	uv_param2.task_no = 2;
+		uv_param2.dst_uv_image = cnr_out+DstOffsetTwo;
+		uv_param2.src_uv_image = cnr_in+SrcOffsetTwo;
+		uv_param2.in_width = uv_denoise_in->InputWidth;
+		uv_param2.in_height = part1_h+48;
+		uv_param2.out_width = 0;
+		uv_param2.out_height = 0;
+		uv_param2.max_6_delta = 9;
+		uv_param2.max_4_delta = 6;
+		uv_param2.max_2_delta = 3;
+		uv_param2.task_no = 2;
 
-	uv_param3.dst_uv_image = cnr_out+DstOffsetThr;
-	uv_param3.src_uv_image = cnr_in+SrcOffsetThr;
-	uv_param3.in_width = uv_denoise_in->InputWidth;
-	uv_param3.in_height = part2_h+48;
-	uv_param3.out_width = 0;
-	uv_param3.out_height = 0;
-	uv_param3.max_6_delta = 3;
-	uv_param3.max_4_delta = 6;
-	uv_param3.max_2_delta = 9;
-	uv_param3.task_no = 3;
+		uv_param3.dst_uv_image = cnr_out+DstOffsetThr;
+		uv_param3.src_uv_image = cnr_in+SrcOffsetThr;
+		uv_param3.in_width = uv_denoise_in->InputWidth;
+		uv_param3.in_height = part2_h+48;
+		uv_param3.out_width = 0;
+		uv_param3.out_height = 0;
+		uv_param3.max_6_delta = 9;
+		uv_param3.max_4_delta = 6;
+		uv_param3.max_2_delta = 3;
+		uv_param3.task_no = 3;
 
-	uv_param4.dst_uv_image = cnr_out+DstOffsetFour;
-	uv_param4.src_uv_image = cnr_in+SrcOffsetFour;
-	uv_param4.in_width = uv_denoise_in->InputWidth;
-	uv_param4.in_height = part3_h+24;
-	uv_param4.out_width = 0;
-	uv_param4.out_height = 0;
-	uv_param4.max_6_delta = 3;
-	uv_param4.max_4_delta = 6;
-	uv_param4.max_2_delta = 9;
-	uv_param4.task_no = 4;
-	sem_init(&denoise_sem_lock, 0, 0);
-		
- 	isp_stub_process(THREAD_0,
-					uv_proc_func_neon58,
-					uv_proc_cb,
-					0,
-					(void*)uv_param1_ptr);
+		uv_param4.dst_uv_image = cnr_out+DstOffsetFour;
+		uv_param4.src_uv_image = cnr_in+SrcOffsetFour;
+		uv_param4.in_width = uv_denoise_in->InputWidth;
+		uv_param4.in_height = part3_h+24;
+		uv_param4.out_width = 0;
+		uv_param4.out_height = 0;
+		uv_param4.max_6_delta = 9;
+		uv_param4.max_4_delta = 6;
+		uv_param4.max_2_delta = 3;
+		uv_param4.task_no = 4;
+		sem_init(&denoise_sem_lock, 0, 0);
+			
+	 	isp_stub_process(THREAD_0,
+						uv_proc_func_neon0,
+						uv_proc_cb,
+						0,
+						(void*)uv_param1_ptr);
 
-	isp_stub_process(THREAD_1,
-					uv_proc_func_neon58,
-					uv_proc_cb,
-					0,
-					(void*)uv_param2_ptr);
-				
-	isp_stub_process(THREAD_2,
-					uv_proc_func_neon58,
-					uv_proc_cb,
-					0,
-					(void*)uv_param3_ptr);
+		isp_stub_process(THREAD_1,
+						uv_proc_func_neon0,
+						uv_proc_cb,
+						0,
+						(void*)uv_param2_ptr);
+					
+		isp_stub_process(THREAD_2,
+						uv_proc_func_neon0,
+						uv_proc_cb,
+						0,
+						(void*)uv_param3_ptr);
 
-	isp_stub_process(THREAD_3,
-					uv_proc_func_neon58,
-					uv_proc_cb,
-					0,
-					(void*)uv_param4_ptr);
-		
+		isp_stub_process(THREAD_3,
+						uv_proc_func_neon0,
+						uv_proc_cb,
+						0,
+						(void*)uv_param4_ptr);
+
+	}
+	else if(1 == alg_num)
+	{
+
+
+		SrcOffsetOne = 0;
+		DstOffsetOne = 0;
+
+		SrcOffsetTwo = (part0_h / 2 - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetTwo = part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+		SrcOffsetThr = (part0_h - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetThr = part0_h * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+		SrcOffsetFour = (3 * part0_h /2 - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetFour = 3 * part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+			/* uv denoise level*/
+		uv_param1.dst_uv_image = cnr_out+DstOffsetOne;
+		uv_param1.src_uv_image = cnr_in+SrcOffsetOne;
+		uv_param1.in_width = uv_denoise_in->InputWidth;
+		uv_param1.in_height = part0_h+4;
+		uv_param1.out_width = 0;
+		uv_param1.out_height = 0;
+		uv_param1.max_6_delta = 9;
+		uv_param1.max_4_delta = 6;
+		uv_param1.max_2_delta = 3;
+		uv_param1.task_no = 1;
+
+		uv_param2.dst_uv_image = cnr_out+DstOffsetTwo;
+		uv_param2.src_uv_image = cnr_in+SrcOffsetTwo;
+		uv_param2.in_width = uv_denoise_in->InputWidth;
+		uv_param2.in_height = part1_h+8;
+		uv_param2.out_width = 0;
+		uv_param2.out_height = 0;
+		uv_param2.max_6_delta = 9;
+		uv_param2.max_4_delta = 6;
+		uv_param2.max_2_delta = 3;
+		uv_param2.task_no = 2;
+
+		uv_param3.dst_uv_image = cnr_out+DstOffsetThr;
+		uv_param3.src_uv_image = cnr_in+SrcOffsetThr;
+		uv_param3.in_width = uv_denoise_in->InputWidth;
+		uv_param3.in_height = part2_h+8;
+		uv_param3.out_width = 0;
+		uv_param3.out_height = 0;
+		uv_param3.max_6_delta = 9;
+		uv_param3.max_4_delta = 6;
+		uv_param3.max_2_delta = 3;
+		uv_param3.task_no = 3;
+
+		uv_param4.dst_uv_image = cnr_out+DstOffsetFour;
+		uv_param4.src_uv_image = cnr_in+SrcOffsetFour;
+		uv_param4.in_width = uv_denoise_in->InputWidth;
+		uv_param4.in_height = part3_h+4;
+		uv_param4.out_width = 0;
+		uv_param4.out_height = 0;
+		uv_param4.max_6_delta = 9;
+		uv_param4.max_4_delta = 6;
+		uv_param4.max_2_delta = 3;
+		uv_param4.task_no = 4;
+		sem_init(&denoise_sem_lock, 0, 0);
+			
+	 	isp_stub_process(THREAD_0,
+						uv_proc_func_neon1,
+						uv_proc_cb,
+						0,
+						(void*)uv_param1_ptr);
+
+		isp_stub_process(THREAD_1,
+						uv_proc_func_neon1,
+						uv_proc_cb,
+						0,
+						(void*)uv_param2_ptr);
+					
+		isp_stub_process(THREAD_2,
+						uv_proc_func_neon1,
+						uv_proc_cb,
+						0,
+						(void*)uv_param3_ptr);
+
+		isp_stub_process(THREAD_3,
+						uv_proc_func_neon1,
+						uv_proc_cb,
+						0,
+						(void*)uv_param4_ptr);
+
+	}
+	else if(2 == alg_num)
+	{
+
+		SrcOffsetOne = 0;
+		DstOffsetOne = 0;
+
+		SrcOffsetTwo = (part0_h / 2 - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetTwo = part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+		SrcOffsetThr = (part0_h - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetThr = part0_h * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+		SrcOffsetFour = (3 * part0_h /2 - 2) * uv_denoise_in->InputWidth* sizeof(int8_t);
+		DstOffsetFour = 3 * part0_h / 2 * uv_denoise_in->InputWidth* sizeof(int8_t);
+
+			/* uv denoise level*/
+		uv_param1.dst_uv_image = cnr_out+DstOffsetOne;
+		uv_param1.src_uv_image = cnr_in+SrcOffsetOne;
+		uv_param1.in_width = uv_denoise_in->InputWidth;
+		uv_param1.in_height = part0_h+4;
+		uv_param1.out_width = 0;
+		uv_param1.out_height = 0;
+		uv_param1.max_6_delta = 9;
+		uv_param1.max_4_delta = 6;
+		uv_param1.max_2_delta = 3;
+		uv_param1.task_no = 1;
+
+		uv_param2.dst_uv_image = cnr_out+DstOffsetTwo;
+		uv_param2.src_uv_image = cnr_in+SrcOffsetTwo;
+		uv_param2.in_width = uv_denoise_in->InputWidth;
+		uv_param2.in_height = part1_h+8;
+		uv_param2.out_width = 0;
+		uv_param2.out_height = 0;
+		uv_param2.max_6_delta = 9;
+		uv_param2.max_4_delta = 6;
+		uv_param2.max_2_delta = 3;
+		uv_param2.task_no = 2;
+
+		uv_param3.dst_uv_image = cnr_out+DstOffsetThr;
+		uv_param3.src_uv_image = cnr_in+SrcOffsetThr;
+		uv_param3.in_width = uv_denoise_in->InputWidth;
+		uv_param3.in_height = part2_h+8;
+		uv_param3.out_width = 0;
+		uv_param3.out_height = 0;
+		uv_param3.max_6_delta = 9;
+		uv_param3.max_4_delta = 6;
+		uv_param3.max_2_delta = 3;
+		uv_param3.task_no = 3;
+
+		uv_param4.dst_uv_image = cnr_out+DstOffsetFour;
+		uv_param4.src_uv_image = cnr_in+SrcOffsetFour;
+		uv_param4.in_width = uv_denoise_in->InputWidth;
+		uv_param4.in_height = part3_h+4;
+		uv_param4.out_width = 0;
+		uv_param4.out_height = 0;
+		uv_param4.max_6_delta = 9;
+		uv_param4.max_4_delta = 6;
+		uv_param4.max_2_delta = 3;
+		uv_param4.task_no = 4;
+		sem_init(&denoise_sem_lock, 0, 0);
+			
+	 	isp_stub_process(THREAD_0,
+						uv_proc_func_neon2,
+						uv_proc_cb,
+						0,
+						(void*)uv_param1_ptr);
+
+		isp_stub_process(THREAD_1,
+						uv_proc_func_neon2,
+						uv_proc_cb,
+						0,
+						(void*)uv_param2_ptr);
+					
+		isp_stub_process(THREAD_2,
+						uv_proc_func_neon2,
+						uv_proc_cb,
+						0,
+						(void*)uv_param3_ptr);
+
+		isp_stub_process(THREAD_3,
+						uv_proc_func_neon2,
+						uv_proc_cb,
+						0,
+						(void*)uv_param4_ptr);
+	}
+	else {
+		return;
+	}
 		
 	sem_wait(&denoise_sem_lock);
 	sem_wait(&denoise_sem_lock);
@@ -199,6 +377,7 @@ void isp_uv_denoise(struct isp_denoise_input* uv_denoise_in)
 	}	
 
 	cpu_hotplug_disable(0);
+	return 0;
 }
 
 void uv_proc_cb(int evt, void* param)

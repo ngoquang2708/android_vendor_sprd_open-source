@@ -1158,7 +1158,7 @@ static uint32_t GC2155_MIPI_Identify(uint32_t param)
 			return SENSOR_SUCCESS;
 		}
 	}
-	return SENSOR_FAIL;
+	return 0;
 }
 
 static uint32_t Gc2155_GetResolutionTrimTab(uint32_t param)
