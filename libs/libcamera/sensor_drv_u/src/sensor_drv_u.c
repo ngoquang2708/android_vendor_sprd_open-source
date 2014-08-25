@@ -469,6 +469,22 @@ LOCAL int _Sensor_Device_I2CWrite(SENSOR_I2C_T_PTR i2c_tab)
 	return ret;
 }
 
+LOCAL int _Sensor_Device_I2CRead(SENSOR_I2C_T_PTR i2c_tab)
+{
+	int ret = SENSOR_SUCCESS;
+	SENSOR_DRV_CHECK_ZERO(s_p_sensor_cxt);
+
+	ret = xioctl(s_p_sensor_cxt->fd_sensor, SENSOR_IO_I2C_READ_EXT, i2c_tab);
+	if (0 != ret)
+	{
+		CMR_LOGE("_Sensor_Device_I2CRead failed, slave_addr=0x%x, ptr=0x%x, count=%d\n",
+			i2c_tab->slave_addr, (uint32_t)i2c_tab->i2c_data, i2c_tab->i2c_count);
+		ret = -1;
+	}
+
+	return ret;
+}
+
 LOCAL int _Sensor_Device_GetFlashLevel(SENSOR_FLASH_LEVEL_T *level)
 {
 	int ret = SENSOR_SUCCESS;
@@ -594,6 +610,23 @@ int Sensor_WriteI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length)
 		i2c_tab.slave_addr, (uint32_t)i2c_tab.i2c_data, i2c_tab.i2c_count);
 
 	ret = _Sensor_Device_I2CWrite(&i2c_tab);
+
+	return ret;
+}
+
+int Sensor_ReadI2C(uint16_t slave_addr, uint8_t *cmd, uint16_t cmd_length)
+{
+	SENSOR_I2C_T i2c_tab;
+	int ret = SENSOR_SUCCESS;
+
+	i2c_tab.slave_addr 	= slave_addr;
+	i2c_tab.i2c_data	= cmd;
+	i2c_tab.i2c_count	= cmd_length;
+
+	CMR_LOGV("Sensor_ReadI2C, slave_addr=0x%x, ptr=0x%x, count=%d\n",
+		i2c_tab.slave_addr, (uint32_t)i2c_tab.i2c_data, i2c_tab.i2c_count);
+
+	ret = _Sensor_Device_I2CRead(&i2c_tab);
 
 	return ret;
 }
