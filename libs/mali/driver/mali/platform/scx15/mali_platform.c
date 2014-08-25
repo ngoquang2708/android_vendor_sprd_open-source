@@ -154,6 +154,45 @@ static void gpufreq_limit_uninit(void);
 static inline void mali_set_div(int clock_div);
 static void gpufreq_table_show(char* buf);
 
+static int sprd_gpu_domain_state(void)
+{
+	/* FIXME: rtc domain */
+	u32 power_state1, power_state2, power_state3;
+	unsigned long timeout = jiffies + msecs_to_jiffies(__SPRD_GPU_TIMEOUT);
+
+	do {
+		cpu_relax();
+		power_state1 = sci_glb_read(REG_PMU_APB_PWR_STATUS0_DBG,BITS_PD_GPU_TOP_STATE(-1));
+		power_state2 = sci_glb_read(REG_PMU_APB_PWR_STATUS0_DBG,BITS_PD_GPU_TOP_STATE(-1));
+		power_state3 = sci_glb_read(REG_PMU_APB_PWR_STATUS0_DBG,BITS_PD_GPU_TOP_STATE(-1));
+		if (time_after(jiffies, timeout)) {
+			pr_emerg("gpu domain not ready, state %08x %08x\n",
+				sci_glb_read(REG_PMU_APB_PWR_STATUS0_DBG,-1),sci_glb_read(REG_AON_APB_APB_EB0,-1));
+		}
+	} while (power_state1 != power_state2 || power_state2 != power_state3);
+
+	return (power_state1);
+}
+
+static void sprd_gpu_domain_wait_for_ready(void)
+{
+	int timeout_count=2000;
+
+	while(sprd_gpu_domain_state() != BITS_PD_GPU_TOP_STATE(0))
+	{
+		printk("frank wait \n");
+		if(0==timeout_count)
+		{
+			pr_emerg("gpu domain is not ready for too long time, state %08x %08x\n",
+				sci_glb_read(REG_PMU_APB_PWR_STATUS0_DBG,-1),sci_glb_read(REG_AON_APB_APB_EB0,-1));
+			return;
+		}
+		udelay(50);
+		timeout_count--;
+	}
+	return;
+}
+
 static int freq_search(struct gpu_freq_info* freq_list[],int len,int key)
 {
 	int low=0,high=len-1,mid=len/2;
@@ -352,7 +391,7 @@ int  mali_power_initialize(struct platform_device *pdev)
 	if (!gpu_dfs_ctx.gpu_clock_i) {
 		printk ("%s, cant get gpu_clock_i\n", __FUNCTION__);
 		return -1;
-		}
+	}
 	for(i=0;i<gpu_clk_num;i++)
 	{
 		if (!gpu_clk_src[i].clk_src) {
@@ -411,26 +450,9 @@ int  mali_power_initialize(struct platform_device *pdev)
 #else
 		clk_enable(gpu_dfs_ctx.gpu_clock_i);
 #endif
-		udelay(100);
+		sprd_gpu_domain_wait_for_ready();
 		clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_dfs_ctx.dfs_max_freq_p->clk_src);
 		mali_set_div(gpu_dfs_ctx.dfs_max_freq_p->div_select);
-
-#ifdef CONFIG_COMMON_CLK
-		clk_prepare_enable(gpu_dfs_ctx.gpu_clock);
-#else
-		clk_enable(gpu_dfs_ctx.gpu_clock);
-#endif
-		udelay(100);
-	}
-
-	if(!gpu_dfs_ctx.gpu_clock_on)
-	{
-		gpu_dfs_ctx.gpu_clock_on=1;
-#ifdef CONFIG_COMMON_CLK
-		clk_prepare_enable(gpu_dfs_ctx.gpu_clock_i);
-#else
-		clk_enable(gpu_dfs_ctx.gpu_clock_i);
-#endif
 
 #ifdef CONFIG_COMMON_CLK
 		clk_prepare_enable(gpu_dfs_ctx.gpu_clock);
@@ -574,11 +596,13 @@ void mali_platform_power_mode_change(int power_mode)
 			clk_enable(gpu_dfs_ctx.gpu_clock_i);
 #endif
 
-			udelay(100);
+			sprd_gpu_domain_wait_for_ready();
+
 #ifdef CONFIG_COMMON_CLK
 			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_clk_src[1].clk_src);
 #endif
 			clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_dfs_ctx.dfs_max_freq_p->clk_src);
+			mali_set_div(gpu_dfs_ctx.dfs_max_freq_p->div_select);
 
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_dfs_ctx.gpu_clock);
@@ -591,11 +615,14 @@ void mali_platform_power_mode_change(int power_mode)
 		if(!gpu_dfs_ctx.gpu_clock_on)
 		{
 			gpu_dfs_ctx.gpu_clock_on=1;
+			gpu_cur_freq = gpu_dfs_ctx.cur_freq_p->freq;
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_dfs_ctx.gpu_clock_i);
 #else
 			clk_enable(gpu_dfs_ctx.gpu_clock_i);
 #endif
+
+			sprd_gpu_domain_wait_for_ready();
 
 #ifdef CONFIG_COMMON_CLK
 			clk_prepare_enable(gpu_dfs_ctx.gpu_clock);
@@ -610,6 +637,7 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_dfs_ctx.gpu_clock_on)
 		{
 			gpu_dfs_ctx.gpu_clock_on = 0;
+			gpu_cur_freq = 0;
 #ifdef CONFIG_COMMON_CLK
 			clk_disable_unprepare(gpu_dfs_ctx.gpu_clock);
 			clk_disable_unprepare(gpu_dfs_ctx.gpu_clock_i);
@@ -624,6 +652,7 @@ void mali_platform_power_mode_change(int power_mode)
 		if(gpu_dfs_ctx.gpu_clock_on)
 		{
 			gpu_dfs_ctx.gpu_clock_on = 0;
+			gpu_cur_freq = 0;
 #ifdef CONFIG_COMMON_CLK
 			clk_disable_unprepare(gpu_dfs_ctx.gpu_clock);
 			clk_disable_unprepare(gpu_dfs_ctx.gpu_clock_i);
@@ -855,6 +884,8 @@ static void gpu_change_freq_div(void)
 #endif
 			if(gpu_dfs_ctx.next_freq_p->freq_select!=gpu_dfs_ctx.cur_freq_p->freq_select)
 			{
+				MALI_DEBUG_PRINT(3,("GPU_DFS set clk cur_freq %6d-> next_freq %6d next_freq clk_src 0x%p\n",
+					gpu_dfs_ctx.cur_freq_p->freq, gpu_dfs_ctx.next_freq_p->freq,gpu_dfs_ctx.next_freq_p->clk_src));
 				clk_set_parent(gpu_dfs_ctx.gpu_clock,gpu_dfs_ctx.next_freq_p->clk_src);
 			}
 			if(gpu_dfs_ctx.next_freq_p->div_select!=gpu_dfs_ctx.cur_freq_p->div_select)
