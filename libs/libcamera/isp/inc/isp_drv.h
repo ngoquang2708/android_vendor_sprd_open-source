@@ -37,6 +37,7 @@ extern   "C"
 *-------------------------------------------------------------------------------*/
 #define SC8825_ISP_ID 0x00000000
 #define SC8830_ISP_ID 0x00010000
+#define SC9630_ISP_ID 0x00020000
 
 #define ISP_EB 0x01
 #define ISP_UEB 0x00
@@ -116,6 +117,7 @@ int32_t ispSetLensGridMode(uint32_t handler_id, uint8_t mode);
 int32_t ispSetLensGridSize(uint32_t handler_id, uint16_t w, uint16_t h);
 int32_t ispSetLensBuf(uint32_t handler_id, uint8_t buf_sel);
 int32_t ispSetLensEndian(uint32_t handler_id, uint8_t endian);
+int32_t ispLensSliceSize(uint32_t handler_id, uint16_t w, uint16_t h);
 
 //AWBM
 int32_t ispGetAwbmStatus(uint32_t handler_id, uint32_t* status);
@@ -306,6 +308,7 @@ int32_t ispStoreFormat(uint32_t handler_id, uint32_t format);
 int32_t ispSetBurstSize(uint32_t handler_id, uint16_t burst_size);
 int32_t ispMemSwitch(uint32_t handler_id, uint8_t mem_switch);
 int32_t ispShadow(uint32_t handler_id, uint8_t shadow);
+int32_t ispShadowAll(uint32_t handler_id, uint8_t shadow);
 int32_t ispByerMode(uint32_t handler_id, uint32_t nlc_bayer, uint32_t awbc_bayer, uint32_t wave_bayer, uint32_t cfa_bayer, uint32_t gain_bayer);
 int32_t ispIntRegister(uint32_t handler_id, uint32_t int_num, void(*fun)());
 int32_t ispIntClear(uint32_t handler_id, uint32_t int_num);
@@ -383,6 +386,7 @@ int32_t ispRegWrite(uint32_t handler_id, uint32_t num, void* param_ptr);
 int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr);
 
 int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint32_t len);
+int32_t ispBypassAll(uint32_t handler_id);
 
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*

@@ -551,7 +551,7 @@ int camera_isp_init(void)
 	}
 
 	if (0 == ctrl->isp_inited) {
-		isp_param.isp_id = ISP_ID_SC8830;
+		isp_param.isp_id = ISP_ID_SC9630;
 		sensor_info_ptr = g_cxt->sn_cxt.sensor_info;
 		isp_param.setting_param_ptr = sensor_info_ptr->raw_info_ptr;
 		if (0 != sensor_info_ptr->sensor_mode_info[SENSOR_MODE_COMMON_INIT].width) {

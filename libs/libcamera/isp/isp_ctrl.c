@@ -1327,7 +1327,7 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 		ISP_TRACE_IF_FAIL(rtn, ("isp_awb_init error"));
 		_ispAwbCorrect(handler_id);
 
-		_ispAeInfoSet(handler_id);
+		/*_ispAeInfoSet(handler_id);eddy for sharkl isp bring up*/
 		rtn = isp_ae_init(handler_id);
 		ISP_TRACE_IF_FAIL(rtn, ("isp_ae_init error"));
 
@@ -1389,7 +1389,7 @@ static uint32_t _ispAwbCalculation(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	rtn = isp_awb_ctrl_calculation(handler_id);
+	/*rtn = isp_awb_ctrl_calculation(handler_id);eddy for SharkL isp bring up*/
 
 	return rtn;
 }
@@ -1405,7 +1405,7 @@ static uint32_t _ispAeAwbCorrect(uint32_t handler_id)
 
 	rtn = isp_ae_calculation(handler_id);
 
-	rtn = isp_awb_ctrl_calculation(handler_id);
+	/*rtn = isp_awb_ctrl_calculation(handler_id);eddy for SharkL isp bring up*/
 
 	return rtn;
 }
@@ -2321,7 +2321,7 @@ static int32_t _ispAwbmEb(uint32_t handler_id)
 	struct isp_awb_param* awb_param_ptr = &isp_context_ptr->awb;
 	uint32_t isp_id = IspGetId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		if((ISP_UEB == awb_param_ptr->bypass)&&(ISP_EB == awb_param_ptr->init))
 		{
@@ -2349,7 +2349,7 @@ static int32_t _ispAemEb(uint32_t handler_id)
 	uint32_t skip_frame = ae_param_ptr->skip_frame;
 	uint32_t isp_id=IspGetId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || (SC9630_ISP_ID==isp_id))
 	{
 		if(ISP_EB == ae_param_ptr->init)
 		{
@@ -2867,7 +2867,7 @@ static int32_t _ispCfgHue(uint32_t handler_id, struct isp_hue_param* param_ptr)
 	int32_t rtn=ISP_SUCCESS;
 
 	ispSetHueFactor(handler_id, param_ptr->factor + param_ptr->offset);
-	ispHuebypass(handler_id, param_ptr->bypass);
+	/*ispHuebypass(handler_id, param_ptr->bypass);eddy for SharkL isp bring up*/
 
 	return rtn;
 }
@@ -3022,7 +3022,7 @@ static int32_t _ispCfgHDRIndexTab(uint32_t handler_id, struct isp_hdr_index* par
 	int32_t rtn=ISP_SUCCESS;
 
 	ispSetHDRIndex(handler_id, param_ptr->r_index, param_ptr->g_index, param_ptr->b_index);
-	ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);
+	/*ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);eddy for SharkL isp bring up*/
 
 	return rtn;
 }
@@ -3585,6 +3585,7 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	uint32_t j = 0x00;
 	// isp tune param
 	ISP_LOG("_ispSetV00010001Param V00010001");
+#if 0	/*eddy for SharkL isp bring up*/
 	isp_context_ptr->blc.bypass=raw_tune_ptr->blc.blc_bypass;
 	isp_context_ptr->nlc.bypass=raw_tune_ptr->nlc.nlc_bypass;
 	isp_context_ptr->lnc.bypass=raw_tune_ptr->lnc.lnc_bypass;
@@ -3618,6 +3619,40 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->global.bypass=raw_tune_ptr->global.glb_gain_bypass;
 	isp_context_ptr->chn.bypass=raw_tune_ptr->chn.chn_gain_bypass;
 
+#else
+	isp_context_ptr->blc.bypass=ISP_EB;
+	isp_context_ptr->nlc.bypass=ISP_EB;
+	isp_context_ptr->lnc.bypass=ISP_EB;
+	isp_context_ptr->awbm.bypass=ISP_EB;
+	isp_context_ptr->awbc.bypass=ISP_EB;
+	isp_context_ptr->awb.bypass=ISP_EB;
+	isp_context_ptr->awb.back_bypass=ISP_EB;
+	isp_context_ptr->ae.bypass=ISP_EB;
+	isp_context_ptr->ae.back_bypass=ISP_EB;
+	isp_context_ptr->bpc.bypass=ISP_EB;
+	isp_context_ptr->denoise.bypass=ISP_EB;
+	isp_context_ptr->grgb.bypass=ISP_EB;
+	isp_context_ptr->cmc.bypass=ISP_EB;
+	isp_context_ptr->gamma.bypass=ISP_EB;
+	isp_context_ptr->uv_div.bypass=ISP_EB;
+	isp_context_ptr->pref.bypass=ISP_EB;
+	isp_context_ptr->bright.bypass=ISP_EB;
+	isp_context_ptr->contrast.bypass=ISP_EB;
+	isp_context_ptr->hist.bypass=ISP_EB;
+	isp_context_ptr->auto_contrast.bypass=ISP_EB;
+	isp_context_ptr->saturation.bypass=ISP_EB;
+	isp_context_ptr->af.bypass=ISP_EB;
+	isp_context_ptr->af.back_bypass=ISP_EB;
+	isp_context_ptr->af.monitor_bypass=ISP_EB;
+	isp_context_ptr->edge.bypass=ISP_EB;
+	isp_context_ptr->emboss.bypass=ISP_EB;
+	isp_context_ptr->fcs.bypass=ISP_EB;
+	isp_context_ptr->css.bypass=ISP_EB;
+	isp_context_ptr->css.bypass_bakup =ISP_EB;
+	isp_context_ptr->hdr.bypass=ISP_EB;
+	isp_context_ptr->global.bypass=ISP_EB;
+	isp_context_ptr->chn.bypass=ISP_EB;
+#endif
 	//blc
 	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
 	isp_context_ptr->blc.r=raw_tune_ptr->blc.offset[0].r;
@@ -4523,6 +4558,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	uint32_t j = 0x00;
 	// isp tune param
 	ISP_LOG("_ispSetV0001Param V0001");
+#if 0	/*eddy for SharkL isp bring up*/
 	isp_context_ptr->blc.bypass=raw_tune_ptr->blc_bypass;
 	isp_context_ptr->nlc.bypass=raw_tune_ptr->nlc_bypass;
 	isp_context_ptr->lnc.bypass=raw_tune_ptr->lnc_bypass;
@@ -4556,6 +4592,40 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->global.bypass=raw_tune_ptr->glb_gain_bypass;
 	isp_context_ptr->chn.bypass=raw_tune_ptr->chn_gain_bypass;
 
+#else
+	isp_context_ptr->blc.bypass=ISP_EB;
+	isp_context_ptr->nlc.bypass=ISP_EB;
+	isp_context_ptr->lnc.bypass=ISP_EB;
+	isp_context_ptr->awbm.bypass=ISP_EB;
+	isp_context_ptr->awbc.bypass=ISP_EB;
+	isp_context_ptr->awb.bypass=ISP_EB;
+	isp_context_ptr->awb.back_bypass=ISP_EB;
+	isp_context_ptr->ae.bypass=ISP_EB;
+	isp_context_ptr->ae.back_bypass=ISP_EB;
+	isp_context_ptr->bpc.bypass=ISP_EB;
+	isp_context_ptr->denoise.bypass=ISP_EB;
+	isp_context_ptr->grgb.bypass=ISP_EB;
+	isp_context_ptr->cmc.bypass=ISP_EB;
+	isp_context_ptr->gamma.bypass=ISP_EB;
+	isp_context_ptr->uv_div.bypass=ISP_EB;
+	isp_context_ptr->pref.bypass=ISP_EB;
+	isp_context_ptr->bright.bypass=ISP_EB;
+	isp_context_ptr->contrast.bypass=ISP_EB;
+	isp_context_ptr->hist.bypass=ISP_EB;
+	isp_context_ptr->auto_contrast.bypass=ISP_EB;
+	isp_context_ptr->saturation.bypass=ISP_EB;
+	isp_context_ptr->af.bypass=ISP_EB;
+	isp_context_ptr->af.back_bypass=ISP_EB;
+	isp_context_ptr->af.monitor_bypass=ISP_EB;
+	isp_context_ptr->edge.bypass=ISP_EB;
+	isp_context_ptr->emboss.bypass=ISP_EB;
+	isp_context_ptr->fcs.bypass=ISP_EB;
+	isp_context_ptr->css.bypass=ISP_EB;
+	isp_context_ptr->css.bypass_bakup = ISP_EB;
+	isp_context_ptr->hdr.bypass=ISP_EB;
+	isp_context_ptr->global.bypass=ISP_EB;
+	isp_context_ptr->chn.bypass=ISP_EB;
+#endif
 	//blc
 	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
 	isp_context_ptr->blc.r=raw_tune_ptr->blc.offset[0].r;
@@ -5742,7 +5812,7 @@ static int32_t _ispChangeProcAwbGain(uint32_t handler_id)
 	uint32_t param_index=isp_context_ptr->param_index-ISP_ONE;
 
 	/*flash on need modify awb gan*/
-	isp_awb_set_flash_gain();
+	/*isp_awb_set_flash_gain();eddy for SharkL isp bring up*/
 
 	awbc_ptr->r_gain=(awbc_ptr->r_gain*awb_ptr->gain_convert[param_index].r)>>0x08;
 	awbc_ptr->g_gain=(awbc_ptr->g_gain*awb_ptr->gain_convert[param_index].g)>>0x08;
@@ -5777,7 +5847,7 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	}
 
 	/*flash on need modify awb gan*/
-	isp_awb_set_flash_gain();
+	/*isp_awb_set_flash_gain();eddy for SharkL isp bring up*/
 
 	/* isp param index */
 	isp_context_ptr->video_param_index=_ispGetIspParamIndex(handler_id, &isp_context_ptr->src);
@@ -5914,6 +5984,7 @@ int32_t _ispSetSlice(uint32_t handler_id, struct isp_slice_param* slice_ptr)
 	ispSetBNLCSliceInfo(handler_id, slice_ptr->edge_info);
 	ispSetLensSliceStart(handler_id, slice_ptr->size[ISP_LENS].x, slice_ptr->size[ISP_LENS].y);
 	ispSetLensGridSize(handler_id, slice_ptr->size[ISP_LENS].w, slice_ptr->size[ISP_LENS].h);
+	ispLensSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
 	ispWDenoiseSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
 	ispWDenoiseSliceInfo(handler_id, slice_ptr->edge_info&(ISP_SLICE_LEFT|ISP_SLICE_UP));
 	ispCFASliceSize(handler_id, slice_ptr->size[ISP_CFA].w, slice_ptr->size[ISP_CFA].h);
@@ -5964,10 +6035,12 @@ static int32_t _ispStart(uint32_t handler_id)
 	rtn=_ispCfgFeeder(handler_id, &isp_context_ptr->feeder);
 	rtn=_ispCfgComData(handler_id, &isp_context_ptr->com);
 
-	rtn=ispShadow(handler_id, ISP_ONE);
-
 	rtn=_ispLncParamLoad(handler_id, &isp_context_ptr->lnc);
 	rtn=_ispLncParamValid(handler_id);
+
+	rtn=ispBypassAll(handler_id);
+
+	rtn=ispShadow(handler_id, ISP_ONE);
 
 	if(ISP_CAP_MODE!=isp_context_ptr->com.in_mode) {
 		rtn=isp_Start(handler_id, ISP_ONE);
@@ -6053,7 +6126,7 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		//_ispAfmEb();
 	}
 	if(ISP_EB==isp_context_ptr->tune.ae) {
-		_ispAeInfoSet(handler_id);
+		/*_ispAeInfoSet(handler_id);eddy for sharkl isp bring up*/
 		_ispAeCorrect(handler_id);
 		isp_context_ptr->tune.ae=ISP_UEB;
 	} else {
@@ -6154,6 +6227,8 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 	}
 
 	rtn=ispShadow(handler_id, ISP_ONE);
+
+	rtn=ispShadowAll(handler_id, ISP_ONE);/*eddy for SharkL isp bring up*/
 
 	//_isp_SofHandler(handler_id);
 
@@ -6416,7 +6491,7 @@ int32_t _ispAeMeasureLumIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_b
 	enum isp_ae_weight weight = *(uint32_t*)param_ptr;
 
 	ISP_LOG("--IOCtrl--AE_MEASURE_LUM--:0x%x",*(uint32_t*)param_ptr);
-	_ispAeMeasureLumSet(handler_id, weight);
+	/*_ispAeMeasureLumSet(handler_id, weight);eddy for SharkL isp bring up*/
 
 	return rtn;
 }
@@ -7516,7 +7591,7 @@ static void *_isp_monitor_routine(void *client_data)
 						rtn = _isp_ctrl_msg_post(&isp_ctrl_msg);
 					}
 				}
-				else if (SC8830_ISP_ID==isp_id)
+				else if (SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 				{
 					isp_ctrl_msg.handler_id = handler_id;
 					isp_ctrl_msg.msg_type = ISP_CTRL_EVT_AWB;
@@ -7526,7 +7601,7 @@ static void *_isp_monitor_routine(void *client_data)
 			if(ISP_ZERO != (evt.irq_val & ISP_MONITOR_EVT_AE))
 			{
 				isp_id=IspGetId();
-				if (SC8830_ISP_ID==isp_id)
+				if (SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 				{
 					if ( ISP_ONE == isp_context_ptr->ae.monitor_conter) {
 						//ISP_LOG("tim_ae isp monitor routine ae");
@@ -7698,7 +7773,7 @@ static void *_isp_ctrl_routine(void *client_data)
 			case ISP_CTRL_EVT_CONTINUE:
 				rtn = _isp_video_start(handler_id, (struct isp_video_start*)param_ptr);
 				ISP_TRACE_IF_FAIL(rtn, ("_isp_video_start error"));
-				rtn = _isp3AInit(handler_id);
+				/*rtn = _isp3AInit(handler_id);eddy for SharkL isp bring up*/
 				ISP_TRACE_IF_FAIL(rtn, ("_isp3AInit error"));
 
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
@@ -8867,7 +8942,7 @@ int32_t ispAwbmEb_immediately(uint32_t handler_id)
 
 	if(SC8825_ISP_ID==isp_id){
 		isp_context_ptr->ae.monitor_conter = 0;
-	}else if(SC8830_ISP_ID==isp_id){
+	}else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id){
 		ispAwbmBypass(handler_id, ISP_UEB);
 		ispAwbmSkip(handler_id, 0);
 	}

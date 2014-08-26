@@ -143,6 +143,8 @@ extern   "C"
 #define ISP_LENS_GRID_SIZE        (ISP_BASE_ADDR+0x0228)
 #define ISP_LENS_LOAD_BUF         (ISP_BASE_ADDR+0x022c)
 #define ISP_LENS_MISC             (ISP_BASE_ADDR+0x0230)
+#define ISP_LENS_SLICE_SIZE       (ISP_BASE_ADDR+0x0234)
+#define ISP_LENS_SLICE_INFO       (ISP_BASE_ADDR+0x0238)
 
 //AWB monitor
 #define ISP_AWBM_STATUS           (ISP_BASE_ADDR+0x0300)
@@ -405,6 +407,7 @@ extern   "C"
 #define ISP_COMMON_MEM_SWITCH_V0000    (ISP_BASE_ADDR+0x2020)// noly v0000
 #define ISP_COMMON_SHADOW              (ISP_BASE_ADDR+0x2024)
 #define ISP_COMMON_BAYER_MODE          (ISP_BASE_ADDR+0x2028)
+#define ISP_COMMON_SHADOW_ALL          (ISP_BASE_ADDR+0x202c)
 #define ISP_COMMON_PMU_RAM_MASK        (ISP_BASE_ADDR+0x2038)
 #define ISP_COMMON_HW_MASK             (ISP_BASE_ADDR+0x203c)
 #define ISP_COMMON_HW_ENABLE           (ISP_BASE_ADDR+0x2040)
@@ -1112,6 +1115,14 @@ union _isp_lens_misc_tag {
     struct _isp_lens_misc_map {
         volatile unsigned int lens_endian_type :2;
         volatile unsigned int reserved         :30;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_lens_slice_size_tag {
+    struct _isp_lens_slice_size_map {
+        volatile unsigned int slice_width     :16;
+        volatile unsigned int slice_height    :16;
     }mBits ;
     volatile unsigned int dwValue ;
 };

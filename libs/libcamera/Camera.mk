@@ -66,10 +66,11 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_gc2035.c \
 	sensor/sensor_gc2155.c \
 	sensor/sensor_gc2155_mipi.c \
+	sensor/sensor_gc0308.c \
+	sensor/sensor_gc0310_mipi.c \
 	sensor/sensor_hm2058.c \
 	sensor/sensor_ov8865_mipi_raw.c \
 	sensor/sensor_gt2005.c \
-	sensor/sensor_gc0308.c \
 	sensor/sensor_hi702_ccir.c \
 	sensor/sensor_pattern.c \
 	sensor/sensor_ov7675.c\
@@ -306,6 +307,7 @@ endif
 ifeq ($(strip $(TARGET_BOARD_CAMERA_NO_EXPOSURE_METERING)),true)
 LOCAL_CFLAGS += -DCONFIG_EXPOSURE_METERING_NOT_SUPPORT
 endif
+
 ifeq ($(strip $(TARGET_BOARD_CAMERA_ISO_NOT_SUPPORT)),true)
 LOCAL_CFLAGS += -DCONFIG_CAMERA_ISO_NOT_SUPPORT
 endif

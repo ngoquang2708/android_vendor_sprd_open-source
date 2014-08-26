@@ -36,6 +36,7 @@ typedef int32_t ( *proc_callback)(uint32_t handler_id, int32_t mode, void* param
 enum isp_id{
 	ISP_ID_SC8825=0x00000000,
 	ISP_ID_SC8830=0x00010000,
+	ISP_ID_SC9630=0x00020000,
 	ISP_ID_MAX
 };
 

@@ -141,8 +141,13 @@ LOCAL const SENSOR_REG_T ov2680_com_mipi_raw[] = {
 	{0x3814, 0x31},
 	{0x3815, 0x31},
 	{0x3819, 0x04},
+#ifdef CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0xc2},
+	{0x3821, 0x00},
+#else
 	{0x3820, 0xc6},
 	{0x3821, 0x04},
+#endif
 	{0x4000, 0x81},
 	{0x4001, 0x40},
 	{0x4008, 0x00},
@@ -154,7 +159,7 @@ LOCAL const SENSOR_REG_T ov2680_com_mipi_raw[] = {
 	{0x5002, 0x30},
 	{0x5080, 0x00},
 	{0x5081, 0x41},
-	{0x0100, 0x01},
+	//{0x0100, 0x01},
 
 };
 
@@ -195,8 +200,13 @@ LOCAL const SENSOR_REG_T ov2680_640X480_mipi_raw[] = {
 	{0x3813, 0x04},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
+#ifdef CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0xc2},
+	{0x3821, 0x00},
+#else
 	{0x3820, 0xc6},
 	{0x3821, 0x04},
+#endif
 	{0x4008, 0x00},
 	{0x4009, 0x03},
 	{0x4837, 0x30},
@@ -267,8 +277,13 @@ LOCAL const SENSOR_REG_T ov2680_800X600_mipi_raw[] = {
 	{0x3814, 0x31}, 
 	{0x3815, 0x31}, 
 	{0x3819, 0x04}, 
+#ifdef CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0xc2}, //bit[2] flip
+	{0x3821, 0x00}, //bit[2] mirror
+#else
 	{0x3820, 0xc6}, //bit[2] flip
 	{0x3821, 0x05}, //bit[2] mirror
+#endif
 	{0x4000, 0x81}, 
 	{0x4001, 0x40}, 
 	{0x4008, 0x00}, 
@@ -320,8 +335,13 @@ LOCAL const SENSOR_REG_T ov2680_1600X1200_mipi_raw[] = {
 	{0x3813, 0x08},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
+#ifdef CONFIG_CAMERA_IMAGE_180
+	{0x3820, 0xc0},
+	{0x3821, 0x00},
+#else
 	{0x3820, 0xc4},
 	{0x3821, 0x04},
+#endif
 	{0x4008, 0x02},
 	{0x4009, 0x09},
 	{0x4837, 0x18},
@@ -330,8 +350,9 @@ LOCAL const SENSOR_REG_T ov2680_1600X1200_mipi_raw[] = {
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov2680_resolution_Tab_RAW[] = {
 	{ADDR_AND_LEN_OF_ARRAY(ov2680_com_mipi_raw), 0, 0, 24, SENSOR_IMAGE_FORMAT_RAW},
-	{ADDR_AND_LEN_OF_ARRAY(ov2680_800X600_mipi_raw), 800, 600, 24, SENSOR_IMAGE_FORMAT_RAW},
+	//{ADDR_AND_LEN_OF_ARRAY(ov2680_800X600_mipi_raw), 800, 600, 24, SENSOR_IMAGE_FORMAT_RAW},
 	{ADDR_AND_LEN_OF_ARRAY(ov2680_1600X1200_mipi_raw), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_RAW},
+	{PNULL, 0, 0, 0, 0, 0},
 	//{PNULL, 0, 800, 600, 24, SENSOR_IMAGE_FORMAT_RAW},
 	//{ADDR_AND_LEN_OF_ARRAY(ov2680_640x480_mipi_raw), 640, 480, 24, SENSOR_IMAGE_FORMAT_RAW},
 	//{ADDR_AND_LEN_OF_ARRAY(ov2680_1600x1200_mipi_raw), 1600, 1200, 24, SENSOR_IMAGE_FORMAT_RAW},
@@ -345,15 +366,16 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov2680_resolution_Tab_RAW[] = {
 };
 
 LOCAL SENSOR_TRIM_T s_ov2680_Resolution_Trim_Tab[] = {
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 800, 600, 518, 330, 644,{0,0,800,600}},//sysclk*10
-	{0, 0, 1600, 1200, 258, 660, 1294,{0,0,1600,1200}},//sysclk*10
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}},
-	{0, 0, 0, 0, 0, 0, 0,{0,0,0,0}}
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	//{0, 0, 800, 600, 518, 330, 644, {0, 0, 800, 600}},
+	{0, 0, 1600, 1200, 258, 451, 1294, {0, 0, 1600, 1200}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}}
 };
 
 LOCAL const SENSOR_REG_T s_ov2680_640X480_video_tab[SENSOR_VIDEO_MODE_MAX][1] = {
@@ -395,7 +417,7 @@ LOCAL const SENSOR_REG_T s_ov2680_1600X1200_video_tab[SENSOR_VIDEO_MODE_MAX][1] 
 
 LOCAL SENSOR_VIDEO_INFO_T s_ov2680_video_info[] = {
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
-	{{{30, 30, 284, 90}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov2680_640X480_video_tab},
+	//{{{30, 30, 284, 90}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov2680_640X480_video_tab},
 	{{{25, 25, 258, 64}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},(SENSOR_REG_T**)s_ov2680_1600X1200_video_tab},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
 	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
@@ -574,36 +596,37 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-#if 0
-	raw_sensor_ptr->version_info->version_id=0x00010000;
+
+	raw_sensor_ptr->version_info->version_id=0x00020000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//bypass
-	sensor_ptr->version_id=0x00010000;
-	sensor_ptr->blc_bypass=0x00;
+	sensor_ptr->version_id=0x00020000;
+	sensor_ptr->blc_bypass=0x01;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
-	sensor_ptr->ae_bypass=0x00;
-	sensor_ptr->awb_bypass=0x00;
+	sensor_ptr->ae_bypass=0x01;
+	sensor_ptr->awb_bypass=0x01;
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
 	sensor_ptr->grgb_bypass=0x01;
 	sensor_ptr->cmc_bypass=0x00;
-	sensor_ptr->gamma_bypass=0x00;
+	sensor_ptr->gamma_bypass=0x01;
 	sensor_ptr->uvdiv_bypass=0x01;
 	sensor_ptr->pref_bypass=0x01;
-	sensor_ptr->bright_bypass=0x00;
-	sensor_ptr->contrast_bypass=0x00;
+	sensor_ptr->bright_bypass=0x01;
+	sensor_ptr->contrast_bypass=0x01;
 	sensor_ptr->hist_bypass=0x01;
 	sensor_ptr->auto_contrast_bypass=0x01;
-	sensor_ptr->af_bypass=0x00;
-	sensor_ptr->edge_bypass=0x00;
-	sensor_ptr->fcs_bypass=0x00;
-	sensor_ptr->css_bypass=0x00;
-	sensor_ptr->saturation_bypass=0x00;
+	sensor_ptr->af_bypass=0x01;
+	sensor_ptr->edge_bypass=0x01;
+	sensor_ptr->fcs_bypass=0x01;
+	sensor_ptr->css_bypass=0x01;
+	sensor_ptr->saturation_bypass=0x01;
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x01;
+#if 0
 
 	//blc
 	sensor_ptr->blc.mode=0x00;
@@ -2186,7 +2209,7 @@ LOCAL uint32_t _ov2680_Identify(uint32_t param)
 		SENSOR_PRINT("SENSOR_ov2680: identify fail,pid_value=%d", pid_value);
 	}
 
-	return SENSOR_SUCCESS;
+	return ret_value;
 }
 
 LOCAL uint32_t _ov2680_write_exposure(uint32_t param)
@@ -2462,6 +2485,7 @@ LOCAL uint32_t _ov2680_StreamOff(uint32_t param)
 	SENSOR_PRINT("SENSOR_ov2680: StreamOff");
 
 	Sensor_WriteReg(0x0100, 0x00);
+	usleep(100*1000);
 
 	return 0;
 }

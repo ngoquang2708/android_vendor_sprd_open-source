@@ -377,7 +377,6 @@ void isp_uv_denoise(struct isp_denoise_input* uv_denoise_in , uint32_t alg_num)
 	}	
 
 	cpu_hotplug_disable(0);
-	return 0;
 }
 
 void uv_proc_cb(int evt, void* param)
