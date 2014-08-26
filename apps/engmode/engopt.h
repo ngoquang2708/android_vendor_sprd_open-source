@@ -112,7 +112,7 @@ extern "C" {
     struct eng_param{
         int califlag;
         int engtest;
-        int cp_type;                /*td: CP_TD; wcdma:CP_WCDMA*/
+        char cp_type[32];                /*td: CP_TD; wcdma:CP_WCDMA*/
         int connect_type;     /*usb:CONNECT_USB ; uart:CONNECT_UART*/
         int nativeflag;         /*0: vlx, CP directly communicates with PC tool
                                  *1: native, AP directly communicates with PC tool  */

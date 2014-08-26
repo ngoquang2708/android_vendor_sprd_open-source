@@ -97,6 +97,7 @@ typedef enum
     CMD_USER_MMICIT_READ,
     CMD_USER_DEEP_SLEEP,
     CMD_USER_FILE_OPER,
+    CMD_USER_CFT_SWITCH,
     CMD_USER_SHUT_DOWN,
     CMD_USER_GPS_AUTO_TEST,
     CMD_USER_AUTOTEST,
@@ -232,6 +233,11 @@ typedef struct
     unsigned int data_len;// specifies the data length to read/write
     unsigned char data[MAX_DIAG_TRANSMIT_FILE_LEN];
 }__attribute__((packed))TOOLS_DIAG_AP_FILE_DATA_T;
+
+typedef struct
+{
+    unsigned short cp_no;
+}TOOLS_DIAG_AP_SWITCH_CP_T;
 
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);

@@ -114,6 +114,7 @@ int get_cmd_index(char *buf);
 int eng_diag_decode7d7e(char *buf,int len);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
+static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen);
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -524,6 +525,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
         case CMD_USER_SHUT_DOWN:
             ENG_LOG("%s: CMD_USER_SHUT_DOWN Req!\n", __FUNCTION__);
             reboot(LINUX_REBOOT_CMD_POWER_OFF);
+            break;
+        case CMD_USER_CFT_SWITCH:
+            ENG_LOG("%s: CMD_USER_CFT_SWITCHReq!\n", __FUNCTION__); 
+            eng_diag_cft_switch_hdlr(buf,len,eng_diag_buf,sizeof(eng_diag_buf));
             break;
         case CMD_USER_GPS_AUTO_TEST:
             ENG_LOG("%s: CMD_USER_GPS_AUTO_TEST Req!\n", __FUNCTION__);
@@ -2337,6 +2342,8 @@ static int eng_diag_ap_req(char *buf, int len)
 
     if(DIAG_AP_CMD_FILE_OPER == apcmd->cmd){
         ret = CMD_USER_FILE_OPER;
+    }else if(DIAG_AP_CMD_SWITCH_CP == apcmd->cmd){
+        ret = CMD_USER_CFT_SWITCH;
     }else{
         ret = CMD_USER_APCALI;
     }
@@ -2634,6 +2641,45 @@ static char MAKE1BYTE2BYTES(unsigned char high4bit, unsigned char low4bit)
     temp=(high4bit<<4)|low4bit;
     return temp;
 }
+static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen)
+{
+    char *rsp_ptr;
+    unsigned short type = 0;
+    MSG_HEAD_T* msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    if(NULL == buf){
+        ENG_LOG("%s,null pointer",__FUNCTION__);
+       return 0;
+    }
+    rsplen = sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(MSG_HEAD_T);
+    if(NULL != (rsp_ptr = (char*)malloc(rsplen))){
+	    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+	    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+	    ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x01;
+    }
+
+    TOOLS_DIAG_AP_CMD_T* reqcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    TOOLS_DIAG_AP_SWITCH_CP_T* cp_status = (TOOLS_DIAG_AP_SWITCH_CP_T*)(reqcmd + 1);
+
+    ENG_LOG("%s, come to success, err: %s\n", __FUNCTION__, strerror(errno));
+    type = cp_status->cp_no;
+    switch(type) {
+	case 0:
+	     property_set("sys.cfg.type", "0");
+	     ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
+	     break;
+	case 1:
+	     property_set("sys.cfg.type", "1");
+	     ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
+	     break;
+	 default:
+	    ENG_LOG("%s:ERROR type !!!",__FUNCTION__);
+    }
+   rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+   eng_diag_write2pc(rsp,rsplen);
+   free(rsp_ptr);
+   exit(1);
+}
+
 static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
 {
     int ret = 0;

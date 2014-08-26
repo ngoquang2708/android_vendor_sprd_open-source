@@ -30,7 +30,7 @@ extern void	disconnect_vbus_charger(void);
 static struct eng_param cmdparam = {
     .califlag = 0,
     .engtest = 0,
-    .cp_type = ENG_RUN_TYPE_TD,
+    .cp_type = "t",
     .connect_type = CONNECT_USB,
     .nativeflag = 0,
     .normal_cali = 0
@@ -199,17 +199,18 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         case 5:
                         case 7:
                         case 8:
-                            cmdvalue->cp_type = ENG_RUN_TYPE_TD;
+                            strcpy(cmdvalue->cp_type,"tl");
                             break;
                         case 11:
                         case 12:
+                            strcpy(cmdvalue->cp_type,"w");
                         case 14:
                         case 15:
-                            cmdvalue->cp_type = ENG_RUN_TYPE_WCDMA;
+                            strcpy(cmdvalue->cp_type,"tl"); /*tddcsfb gsm cali and cali-post */
                             break;
                         case 16:
                         case 17:
-                            cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
+                            strcpy(cmdvalue->cp_type,"tl");
                             break;
                         case 22:
                             g_ap_cali_flag = 1;
@@ -218,8 +219,9 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                             break;
                     }
                     property_get("persist.radio.ssda.mode", ssda_mode, "not_find");
-                    if(0 != strcmp(ssda_mode, "not_find") && 0 != strcmp(ssda_mode, "svlte")){
-                        cmdvalue->cp_type = ENG_RUN_TYPE_LTE;
+                    
+                    if(0 == strcmp(ssda_mode, "tdd-csfb")){
+                            strcpy(cmdvalue->cp_type,"tl");
                     }
 
                     /*Device[4:6] : device that AP uses;  0: UART 1:USB  2:SPIPE*/
@@ -230,12 +232,12 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                     else
                         cmdvalue->nativeflag = 0;
 
-                    ALOGD("eng_pcclient: cp_type=%d, connent_type(AP) =%d, is_native=%d, g_ap_cali_flag:%d\n",
+                    ENG_LOG("eng_pcclient: cp_type=%s, connent_type(AP) =%d, is_native=%d, g_ap_cali_flag:%d\n",
                             cmdvalue->cp_type, cmdvalue->connect_type, cmdvalue->nativeflag, g_ap_cali_flag);
                 }
             }else{
                 /*if not in calibration mode, use default */
-                cmdvalue->cp_type = ENG_RUN_TYPE_TD;
+                strcpy(cmdvalue->cp_type,"t");
                 cmdvalue->connect_type = CONNECT_USB;
             }
 	    str = strstr(cmdline, "androidboot.mode");
@@ -322,19 +324,18 @@ static int eng_usb_state(void)
     return ret;
 }
 
-static int eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev, char* log_dev)
+static void eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev, char* log_dev, char* type)
 {
     int opt  = -1;
-    int type = -1;
 
     do {
-        opt = getopt(argc, argv, "t:a:d:l:");
+        opt = getopt(argc, argv, "p:a:d:l:");
         if(-1 == opt)
             continue;
 
         switch(opt){
-            case 't':
-                type = atoi(optarg);
+            case 'p':
+                strcpy(type, optarg);
                 break;
             case 'a':
                 strcpy(at_dev, optarg);
@@ -353,33 +354,30 @@ static int eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev, 
     return type;
 }
 
-static void eng_get_modem_int(int type, char* at_chan, char* diag_chan, char* log_chan)
+static void eng_get_modem_int(char* type, char* at_chan, char* diag_chan, char* log_chan)
 {
-    switch(type){
-        case ENG_RUN_TYPE_WCDMA:
-            property_get("ro.modem.w.diag", diag_chan, "not_find");
-            property_get("ro.modem.w.tty", at_chan, "not_find");
-            property_get("ro.modem.w.log", log_chan, "not_find");
-            break;
-        case ENG_RUN_TYPE_TD:
-            property_get("ro.modem.t.diag", diag_chan, "not_find");
-            property_get("ro.modem.t.tty", at_chan, "not_find");
-            property_get("ro.modem.t.log", log_chan, "not_find");
-            break;
-        case ENG_RUN_TYPE_LTE:
-            property_get("ro.modem.l.diag", diag_chan, "not_find");
-            property_get("ro.modem.l.tty", at_chan, "not_find");
-            property_get("ro.modem.l.log", log_chan, "not_find");
-            break;
-        case ENG_RUN_TYPE_WCN:
-            property_get("ro.modem.wcn.diag", diag_chan, "not_find");
-            break;
-        default:
-            ENG_LOG("%s: Not find corresponding modem interface !\n", __FUNCTION__);
-            return;
-    }
+    char property_name[32] = {0};
+    char *property_ro = "ro.modem.";
+    char *property_diag = ".diag";
+    char *property_at = ".tty";
+    char *property_log =".log";
 
-    if(ENG_RUN_TYPE_WCN != type && 0 != strcmp(at_chan, "not_find")){
+    strcpy(property_name,property_ro);
+    strcat(property_name,type);
+    strcat(property_name,property_diag);
+    property_get(property_name, diag_chan, "not_find");
+
+    strcpy(property_name,property_ro);
+    strcat(property_name,type);
+    strcat(property_name,property_at);
+    property_get(property_name, at_chan, "not_find");
+
+    strcpy(property_name,property_ro);
+    strcat(property_name,type);
+    strcat(property_name,property_log);
+    property_get(property_name, log_chan, "not_find");
+
+    if(strcmp(type,"wcn") != 0 && 0 != strcmp(at_chan, "not_find")){
         strcat(at_chan, "31"); // channel31 is reserved for eng at
     }
 }
@@ -387,13 +385,14 @@ static void eng_get_modem_int(int type, char* at_chan, char* diag_chan, char* lo
 int main (int argc, char** argv)
 {
     char cmdline[ENG_CMDLINE_LEN];
-    int run_type = ENG_RUN_TYPE_TD;
+    char run_type[32] = {0};
+    run_type[0] = 't';
     eng_thread_t t0,t1,t2,t3;
     eng_dev_info_t dev_info = {{"/dev/ttyGS0", "/dev/vser", 0, 1}, {0, 0, 0}};
 
-    run_type = eng_get_usb_int(argc, argv, dev_info.host_int.dev_at,
-            dev_info.host_int.dev_diag, dev_info.host_int.dev_log);
-    ENG_LOG("engpcclient runtype:%d, atPath:%s, diagPath:%s, logPath:%s, type: %d\n", run_type,
+    eng_get_usb_int(argc, argv, dev_info.host_int.dev_at,
+            dev_info.host_int.dev_diag, dev_info.host_int.dev_log,run_type);
+    ENG_LOG("engpcclient runtype:%s, atPath:%s, diagPath:%s, logPath:%s, type: %d\n", run_type,
             dev_info.host_int.dev_at, dev_info.host_int.dev_diag,
             dev_info.host_int.dev_log, dev_info.host_int.dev_type);
 
@@ -401,7 +400,7 @@ int main (int argc, char** argv)
     eng_parse_cmdline(&cmdparam);
     // Correct diag path and run type by cmdline.
     if(1 == cmdparam.califlag){
-        run_type = cmdparam.cp_type;
+        strcpy(run_type,cmdparam.cp_type);
         dev_info.host_int.cali_flag = cmdparam.califlag;
         dev_info.host_int.dev_type = cmdparam.connect_type;
         if(CONNECT_UART == cmdparam.connect_type){
@@ -420,9 +419,10 @@ int main (int argc, char** argv)
 
     // Create the sqlite database for factory mode.
     // FIX ME:temporarily check by ENG_RUN_TYPE_WCN/LTE
-    if(ENG_RUN_TYPE_WCN != run_type){
-        if(ENG_RUN_TYPE_LTE != run_type){
-            eng_sqlite_create();
+    if(strcmp(run_type,"wcn") != 0){
+                if(strcmp(run_type,"l") != 0){
+                    if(strcmp(run_type,"tl") != 0)
+                        eng_sqlite_create();
         }
         if(cmdparam.califlag != 1){
 	if(cmdparam.normal_cali){
