@@ -667,10 +667,10 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 				gs_boot_state.alarm_state = BOOT_ALARM_SLEEP;
 				update_alarm_sec_list(alarm_item_bak,g_alarm_snooze_time);
 				int latest = get_latest_alarm_time(&fire_alarm);
+				int powertime = abstime_power - time(NULL);
 				LOGD("latest=%d,g_alarm_snooze_time =%d\n",latest,g_alarm_snooze_time);
-				if(latest > 0)
+				if(latest > 0 && latest < 40)
 				{
-					int powertime = abstime_power - time(NULL);
 					if(powertime > 0 && powertime < latest)
 					{
 						if(alarm_sleep(powertime) != 0)
@@ -685,6 +685,15 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 						//start system
 						break;
 					}
+				}else{
+					gs_boot_state.alarm_state = BOOT_ALARM_STOP;
+					update_ring_file();
+					gr_clean();
+					usleep(500000);
+					usleep(500000);
+					system_shutdown();
+					LOGE("shutdown system\n");
+					return 0;
 				}
 				gr_clean();
 				gs_boot_state.alarm_state = BOOT_ALARM_ALARMING;
