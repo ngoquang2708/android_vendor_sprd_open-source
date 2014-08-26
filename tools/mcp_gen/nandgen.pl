@@ -20,26 +20,47 @@ my $VersionAndChanglist = "2.0 support autodetect NAND ID and improvement\n";
 my @MemoryDeviceList;
 my $SPRD_NAND_PARAM_H = "sprd_nand_param.h";
 my $MEMORY_DEVICE_LIST_XLS = "vendor/sprd/component/mcp.xls";
+my $CONFIG_INI = "";
+
 #****************************************************************************
 # Main Thread Field
 #****************************************************************************
-if(@ARGV > 0)
+if(@ARGV > 1)
 {
-	$SPRD_NAND_PARAM_H=$ARGV[0];
-	if($DebugPrint eq "yes"){
-		print "ARGV = @ARGV\n";
-		print "nand_h is $SPRD_NAND_PARAM_H\n"
+	my $parameters="";
+	my $where;
+	my $value;
+	my $tag;
+	for($j = 0;$j<@ARGV;$j++)
+	{
+		$parameters.=$ARGV[$j];
+		$parameters.=" ";
+	}
+	print "$parameters\n";
+	$value = &get_parameter_str($parameters,"-h");
+	if(length($value) > 0)
+	{
+		$SPRD_NAND_PARAM_H = $value;
+		print "$SPRD_NAND_PARAM_H\n";
+	}
+	$value = &get_parameter_str($parameters,"-x");
+	if(length($value) > 0)
+	{
+		$MEMORY_DEVICE_LIST_XLS = $value;
+		print "$MEMORY_DEVICE_LIST_XLS\n";
+	}
+	$value = &get_parameter_str($parameters,"-i");
+	if(length($value) > 0)
+	{
+		$CONFIG_INI = $value;
+		print "$CONFIG_INI\n";
+		if(! -e $CONFIG_INI){
+			#die "$CONFIG_INI not exist\n"
+			$CONFIG_INI = "";
+		}
 	}
 }
 
-if(@ARGV > 1)
-{
-	$MEMORY_DEVICE_LIST_XLS=$ARGV[1];
-	if($DebugPrint eq "yes"){
-		print "ARGV = @ARGV\n";
-		print "xls is $MEMORY_DEVICE_LIST_XLS\n"
-	}
-}
     &ReadNANDExcelFile();
     &GenNANDHeaderFile();
     if($DebugPrint eq "yes"){
@@ -95,38 +116,84 @@ sub ReadNANDExcelFile
 sub GenNANDHeaderFile()
 {
 	my %InFileChip;
+	my %ChipParamters;
 	my $Longest_ID=0;
 	my $Chip_count=0;
 	my %maker_table_hash;
 	my %device_table_hash;
 	my $device_table_num=0;
 	my @device_table;
+	my @p_list;
+	my $SpareSize_B_2;
+	my $Type0;
+	my $Type1;
+	my $timing_ace_ns;
+	my $timing_rwl_ns;
+	my $timing_rwh_ns;
 
 	if(-e $SPRD_NAND_PARAM_H)
 	{
 		`chmod 777 $SPRD_NAND_PARAM_H`;
 	}
 
+	if(length($CONFIG_INI) > 0){
+		open(FD, "<$CONFIG_INI");
+		@p_list=<FD>;
+		close FD;
+	}
+
 	for($iter=0;$iter<@MemoryDeviceList;$iter++){
 		my $ID_length=0;
 		my $ID=$MemoryDeviceList[$iter]->{Nand_ID};
-		if(!exists($InFileChip{$ID})){
-			if(length($ID)%2){
+		if(!exists($ChipParamters{$ID})){
+			my $partnumber = $MemoryDeviceList[$iter]->{Part_Number};
+			if(!&partnumber_is_exist($partnumber,@p_list)){
+				print "The chip:$ID $partnumber not selected.\n";
+			}
+			elsif(length($ID)%2){
 				print "The chip:$ID have wrong number,",length($ID),".\n";
-			}else
-			{
+			}
+			else{
 				$ID_length=length($ID)/2-1;
 				if($ID_length > $Longest_ID){
 					$Longest_ID = $ID_length;
 				}
 				#print "\$Longest_ID=$Longest_ID\n";
 				$InFileChip{$iter}={'ID'=>$ID,'IDLength'=>$ID_length};
+				$ChipParamters{$ID}={'BlockSize_KB'=>$MemoryDeviceList[$iter]->{BlockSize_KB},'BlockNum'=>$MemoryDeviceList[$iter]->{BlockNum},
+					'PageSize_KB'=>$MemoryDeviceList[$iter]->{PageSize_KB},'SectSize_B'=>$MemoryDeviceList[$iter]->{SectSize_B},
+					'BusWidth'=>$MemoryDeviceList[$iter]->{BusWidth},
+					'Cycles'=>$MemoryDeviceList[$iter]->{Cycles},'spareSize_B'=>$MemoryDeviceList[$iter]->{spareSize_B},
+					'oob_nEccBits_b'=>$MemoryDeviceList[$iter]->{oob_nEccBits_b},'oob_nEccPos_B'=>$MemoryDeviceList[$iter]->{oob_nEccPos_B},
+					'oob_nEccSize_B'=>$MemoryDeviceList[$iter]->{oob_nEccSize_B},'oob_nInfoPos_B'=>$MemoryDeviceList[$iter]->{oob_nInfoPos_B},
+					'oob_nInfoSize_B'=>$MemoryDeviceList[$iter]->{oob_nInfoSize_B}};
 				$Chip_count++;
 			}
-		}else{
-			print "There more than 1 chip have the ID:$MemoryDeviceList[$iter]->{Nand_ID},you should modify the excel\n";
+		}#	if(!exists($ChipParamters{$ID}))
+		else{#if ID is same,check if parameters is same.
+			if($ChipParamters{$ID}->{BlockSize_KB} == $MemoryDeviceList[$iter]->{BlockSize_KB}
+			&& $ChipParamters{$ID}->{BlockNum} == $MemoryDeviceList[$iter]->{BlockNum}
+			&& $ChipParamters{$ID}->{PageSize_KB} == $MemoryDeviceList[$iter]->{PageSize_KB}
+			&& $ChipParamters{$ID}->{SectSize_B} == $MemoryDeviceList[$iter]->{SectSize_B}
+			&& $ChipParamters{$ID}->{BusWidth} eq $MemoryDeviceList[$iter]->{BusWidth}
+			&& $ChipParamters{$ID}->{spareSize_B} eq $MemoryDeviceList[$iter]->{spareSize_B}
+			&& $ChipParamters{$ID}->{oob_nEccBits_b} eq $MemoryDeviceList[$iter]->{oob_nEccBits_b}
+			&& $ChipParamters{$ID}->{oob_nEccPos_B} eq $MemoryDeviceList[$iter]->{oob_nEccPos_B}
+			&& $ChipParamters{$ID}->{oob_nEccSize_B} eq $MemoryDeviceList[$iter]->{oob_nEccSize_B}
+			&& $ChipParamters{$ID}->{oob_nInfoPos_B} eq $MemoryDeviceList[$iter]->{oob_nInfoPos_B}
+			&& $ChipParamters{$ID}->{oob_nInfoSize_B} eq $MemoryDeviceList[$iter]->{oob_nInfoSize_B}){
+				print "There more than 1 chip have the ID:$MemoryDeviceList[$iter]->{Nand_ID},bypass it\n";
+			}
+			else{
+				print "$ChipParamters{$ID}->{BlockSize_KB},$ChipParamters{$ID}->{BlockNum},$ChipParamters{$ID}->{PageSize_KB},$ChipParamters{$ID}->{SectSize_B},$ChipParamters{$ID}->{BusWidth}";
+				print ",$ChipParamters{$ID}->{spareSize_B},$ChipParamters{$ID}->{oob_nEccBits_b},$ChipParamters{$ID}->{oob_nEccPos_B},$ChipParamters{$ID}->{oob_nEccSize_B},$ChipParamters{$ID}->{oob_nInfoPos_B},$ChipParamters{$ID}->{oob_nInfoSize_B}\n";
+				print "$MemoryDeviceList[$iter]->{BlockSize_KB},$MemoryDeviceList[$iter]->{BlockNum},$MemoryDeviceList[$iter]->{PageSize_KB},$MemoryDeviceList[$iter]->{SectSize_B},$MemoryDeviceList[$iter]->{BusWidth}";
+				print ",$MemoryDeviceList[$iter]->{spareSize_B},$MemoryDeviceList[$iter]->{oob_nEccBits_b},$MemoryDeviceList[$iter]->{oob_nEccPos_B},$MemoryDeviceList[$iter]->{oob_nEccSize_B},$MemoryDeviceList[$iter]->{oob_nInfoPos_B},$MemoryDeviceList[$iter]->{oob_nInfoSize_B}\n";
+				die "There more than 1 chip have the ID:$MemoryDeviceList[$iter]->{Nand_ID},but paramters is not same,you should modify the excel!!!!\n";
+			}
 		}
 	}
+	print "Chip_count=$Chip_count\n";
 	open(FD, ">$SPRD_NAND_PARAM_H") or &error_handler("open $SPRD_NAND_PARAM_H fail\n", __FILE__, __LINE__);
 	print FD "\n#ifndef __SPRD_NAND_PARAM_H__\n#define __SPRD_NAND_PARAM_H__\n\n";
 	print FD &sprd_nand_param_h_head();
@@ -148,7 +215,7 @@ sub GenNANDHeaderFile()
 			}
 		}
 		$maker_table_hash{$ID_arry[0]}=$MemoryDeviceList[$it]->{Vendor};
-		$device_table_hash{$ID}={'ID_vendor'=>$ID_arry[0],'ID_type'=>$ID_arry[1],'Vendor'=>$MemoryDeviceList[$it]->{Vendor},'Part_Number'=>$MemoryDeviceList[$it]->{Part_Number},'Type0'=>$MemoryDeviceList[$it]->{Type0},'Type1'=>$MemoryDeviceList[$it]->{Type1},'Type2'=>$MemoryDeviceList[$it]->{Type2}};
+		$device_table_hash{$ID}={'ID_vendor'=>$ID_arry[0],'ID_type'=>$ID_arry[1],'Vendor'=>$MemoryDeviceList[$it]->{Vendor},'Part_Number'=>$MemoryDeviceList[$it]->{Part_Number},'BusWidth'=>$MemoryDeviceList[$it]->{BusWidth},'Type2'=>$MemoryDeviceList[$it]->{Type2},'BlockSize_KB'=>$MemoryDeviceList[$it]->{BlockSize_KB},'BlockNum'=>$MemoryDeviceList[$it]->{BlockNum}};
 	}
 	foreach $ID (keys(%device_table_hash)){
 		my $find=0;
@@ -172,7 +239,10 @@ sub GenNANDHeaderFile()
 		print FD "struct sprd_nand_device "."$l_maker"."_device_table[] = {\n";
 		foreach $ID (keys(%device_table_hash)){
 			if($device_table_hash{$ID}->{Vendor} eq $device_table[$i]){
-				print FD "\t{0x$device_table_hash{$ID}->{ID_type},\"$device_table_hash{$ID}->{Part_Number}\",\"$device_table_hash{$ID}->{Type0},$device_table_hash{$ID}->{Type1},$device_table_hash{$ID}->{Type2}\"},\n";
+				$Type0 = $device_table_hash{$ID}->{BlockSize_KB}*$device_table_hash{$ID}->{BlockNum}*8/(1024*1024);
+				$Type1 = substr($device_table_hash{$ID}->{BusWidth},3);
+				$Type1 = "x".$Type1;
+				print FD "\t{0x$device_table_hash{$ID}->{ID_type},\"$device_table_hash{$ID}->{Part_Number}\",\"$Type0"."Gb,$Type1,$device_table_hash{$ID}->{Type2}\"},\n";
 			}
 		}
 		print FD "\t{0x00,NULL,NULL}\n";
@@ -208,10 +278,14 @@ sub GenNANDHeaderFile()
 			print "ID=$arry_str\n";
 		}
 		#print string to file
+		$SpareSize_B_2 = $MemoryDeviceList[$it]->{PageSize_KB}*1024/$MemoryDeviceList[$it]->{SectSize_B}*$MemoryDeviceList[$it]->{spareSize_B};
+		$timing_ace_ns = ($MemoryDeviceList[$it]->{timing_T_clh} > $MemoryDeviceList[$it]->{timing_T_alh}) ? $MemoryDeviceList[$it]->{timing_T_clh}:$MemoryDeviceList[$it]->{timing_T_alh};
+		$timing_rwl_ns = $MemoryDeviceList[$it]->{timing_T_wp};
+		$timing_rwh_ns = $MemoryDeviceList[$it]->{timing_T_wh};
 		print FD "\t{//$MemoryDeviceList[$it]->{Vendor}\n\t\t$arry_str,0x$ID_arry[0],0x$ID_arry[1], ";
-		print FD "\n\t\tSZ_K_BLOCK($MemoryDeviceList[$it]->{BlockSize_KB}),NUM_BLOCK($MemoryDeviceList[$it]->{BlockNum}), SZ_K_PAGE($MemoryDeviceList[$it]->{PageSize_KB}),SZ_B_SECTOR($MemoryDeviceList[$it]->{SectSize_B}),SZ_B_SPARE($MemoryDeviceList[$it]->{SpareSize_B}),$MemoryDeviceList[$it]->{BusWidth},$MemoryDeviceList[$it]->{Cycles},";
-		print FD "\n\t\t{$MemoryDeviceList[$it]->{timing_ace_ns},$MemoryDeviceList[$it]->{timing_rwl_ns},$MemoryDeviceList[$it]->{timing_rwh_ns}},";
-		print FD "\n\t\t{SZ_B_OOB($MemoryDeviceList[$it]->{oob_nOOBSize_B}),ECC_BITS($MemoryDeviceList[$it]->{oob_nEccBits_b}),POS_ECC($MemoryDeviceList[$it]->{oob_nEccPos_B}),SZ_ECC($MemoryDeviceList[$it]->{oob_nEccSize_B}),POS_INFO($MemoryDeviceList[$it]->{oob_nInfoPos_B}),SZ_INFO($MemoryDeviceList[$it]->{oob_nInfoSize_B})}";
+		print FD "\n\t\tSZ_K_BLOCK($MemoryDeviceList[$it]->{BlockSize_KB}),NUM_BLOCK($MemoryDeviceList[$it]->{BlockNum}), SZ_K_PAGE($MemoryDeviceList[$it]->{PageSize_KB}),SZ_B_SECTOR($MemoryDeviceList[$it]->{SectSize_B}),SZ_B_SPARE($SpareSize_B_2),$MemoryDeviceList[$it]->{BusWidth},$MemoryDeviceList[$it]->{Cycles},";
+		print FD "\n\t\t{$timing_ace_ns,$timing_rwl_ns,$timing_rwh_ns},";
+		print FD "\n\t\t{SZ_B_OOB($MemoryDeviceList[$it]->{spareSize_B}),ECC_BITS($MemoryDeviceList[$it]->{oob_nEccBits_b}),POS_ECC($MemoryDeviceList[$it]->{oob_nEccPos_B}),SZ_ECC($MemoryDeviceList[$it]->{oob_nEccSize_B}),POS_INFO($MemoryDeviceList[$it]->{oob_nInfoPos_B}),SZ_INFO($MemoryDeviceList[$it]->{oob_nInfoSize_B})}";
 		print FD "\n\t},\n";
 	}
 
@@ -247,6 +321,51 @@ sub xls_cell_value()
         print "$Sheet: row=$row, col=$col undefined\n";
         return;
     }
+}
+
+sub partnumber_is_exist()
+{
+	my($partnumber, @p_list) = @_;
+	my $where;
+	#print "$partnumber\n";
+	if(@p_list < 1){
+		#no mcp_config.ini,so select all
+		return 1;
+	}
+	foreach $it (@p_list){
+		chomp($it);
+		$it =~ s/^\s+//g;
+		$where = index($it,"\#");
+		if($where == 0){
+			#print "bypass $it\n";
+		}
+		else{
+			if($partnumber eq $it){
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+sub get_parameter_str()
+{
+		my($parameters, $tag) = @_;
+		my $where;
+		my $ret;
+		$where=index($parameters,$tag);
+		if($where >= 0)
+		{
+			#bypass "-s ","-h ",and etc
+			$ret=substr($parameters,$where+3);
+			$where=index($ret," ");
+			if($where >= 0)
+			{
+				$ret=substr($ret,0,$where);
+			}
+			return $ret;
+		}
+		return "";
 }
 
 #****************************************************************************
