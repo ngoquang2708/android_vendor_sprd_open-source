@@ -171,8 +171,8 @@
 <spnOverride numeric="26601" spn="GIBTEL"/>
 <spnOverride numeric="26606" spn="CTS"/>
 <spnOverride numeric="26801" spn="vodafone P"/>
-<spnOverride numeric="26803" spn="P OPTIMUS"/>
-<spnOverride numeric="26806" spn="P TMN"/>
+<spnOverride numeric="26803" spn="NOS"/>
+<spnOverride numeric="26806" spn="MEO"/>
 <spnOverride numeric="27001" spn="L LUXGSM"/>
 <spnOverride numeric="27077" spn="L TANGO"/>
 <spnOverride numeric="27099" spn="VOXmobile"/>
