@@ -481,6 +481,7 @@ struct tiny_private_ctl private_ctl;
     bool eq_available;
 
     audio_modem_t *cp;
+    i2s_bt_t *i2s_btcall_info;
     AUDIO_TOTAL_T *audio_para;
     pthread_t        audiopara_tuning_thread;
 
@@ -734,218 +735,82 @@ static long getCurrentTimeUs()
    return tv.tv_sec* 1000000 + tv.tv_usec;
 }
 
-int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type,bool local)
+int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 {
     int count = 0;
     audio_modem_t  *modem;
+    i2s_bt_t *i2s_btcall_info;
     uint8_t *ctl_on = "1";
     uint8_t *ctl_off = "0";
     uint8_t cur_state[2] = {0};
     uint8_t *ctl_str = "1";
-    int devices = local?(adev->out_devices):(adev->routeDev);
-
-    ALOGW("i2s_pin_mux_sel in type is %d,devices:%d",type,devices);
+   char cp_name[CP_NAME_MAX_LEN];
+   
+    ALOGW("i2s_pin_mux_sel in type is %d",type);
 
     modem = adev->cp;
+    i2s_btcall_info = adev->i2s_btcall_info;
+   vbc_ctrl_pipe_para_t	*vbc_ctrl_pipe_info = modem->vbc_ctrl_pipe_info;
+   
+    i2s_ctl_t * i2s_ctl_info =  NULL;
 
-    if(modem->i2s_bt.fd_sys_cp0 < 0) {
-        modem->i2s_bt.fd_sys_cp0 = open(modem->i2s_bt.fd_sys_cp0_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_sys_cp1 < 0) {
-        modem->i2s_bt.fd_sys_cp1 = open(modem->i2s_bt.fd_sys_cp1_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_sys_cp2 < 0) {
-        modem->i2s_bt.fd_sys_cp2 = open(modem->i2s_bt.fd_sys_cp2_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_sys_ap < 0) {
-        modem->i2s_bt.fd_sys_ap = open(modem->i2s_bt.fd_sys_ap_path,O_RDWR | O_SYNC);
-    }
-    if(!modem->i2s_bt.is_ext) {
-        if(modem->i2s_bt.fd_bt_cp0 < 0) {
-            modem->i2s_bt.fd_bt_cp0 = open(modem->i2s_bt.fd_bt_cp0_path,O_RDWR | O_SYNC);
+   ctrl_node *p_ctlr_node = NULL; 
+
+
+
+  ALOGW("i2s_pin_mux_sel in type i-----------2 adev->cp =%lx num = %d  vbc_ctrl_pipe_info = %lx   cp_type = %d" ,adev->cp , modem->num , vbc_ctrl_pipe_info ,  vbc_ctrl_pipe_info->cp_type);				
+
+   if( type != AP_TYPE)
+   {
+	for( count = 0 ; count < modem->num ; count++)
+	{
+		  ALOGW("i2s_pin_mux_sel in type i--11-----%s----%d ----" , vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name ,vbc_ctrl_pipe_info->cp_type);	
+		if(  vbc_ctrl_pipe_info->cp_type == type )
+			break;
+			vbc_ctrl_pipe_info++ ;
+	}
+	 ALOGW("-----in  cpu_index count  is %d ", count);
+	if( count == modem->num)
+	   return -1;
+	//vbc_ctrl_pipe_info->cpu_index = 0;
+   }
+   else
+   {
+   	vbc_ctrl_pipe_info += AP_TYPE;
+   	vbc_ctrl_pipe_info->cpu_index = AP_TYPE;
+   }
+   
+	i2s_ctl_info =  i2s_btcall_info->i2s_ctl_info + vbc_ctrl_pipe_info->cpu_index;;
+    
+ ALOGW("-----in  cpu_index  is %d ", vbc_ctrl_pipe_info->cpu_index);
+   	p_ctlr_node = i2s_ctl_info->p_ctlr_node_head ; 
+			  ALOGW("i2s_pin_mux_sel in type i----------i2s_ctl_info->is_switch = %d " ,i2s_ctl_info->is_switch );	
+        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) 
+		{
+		if( i2s_ctl_info->is_switch  ){
+			  ALOGW("i2s_pin_mux_sel in type i-----------3");	
+			while( p_ctlr_node )
+			{
+				if( p_ctlr_node->ctrl_file_fd <= 0 )
+					p_ctlr_node->ctrl_file_fd = open( p_ctlr_node->ctrl_path,O_RDWR | O_SYNC);
+				//itoa(p_ctlr_node->ctrl_value, ctl_on ,10);
+				if( p_ctlr_node->ctrl_file_fd > 0 )
+				{
+				    ALOGW("-----in  i2s_pin_mux_sel in type is %s write  %s ",  p_ctlr_node->ctrl_path  ,p_ctlr_node->ctrl_value );
+   	                     		count = write(p_ctlr_node->ctrl_file_fd,p_ctlr_node->ctrl_value,1);
+				}
+				p_ctlr_node =   p_ctlr_node->next;
+
+			}	
+		}    
         }
-        if(modem->i2s_bt.fd_bt_cp1 < 0) {
-            modem->i2s_bt.fd_bt_cp1 = open(modem->i2s_bt.fd_bt_cp1_path,O_RDWR | O_SYNC);
-        }
-        if(modem->i2s_bt.fd_bt_cp2 < 0) {
-            modem->i2s_bt.fd_bt_cp2 = open(modem->i2s_bt.fd_bt_cp2_path,O_RDWR | O_SYNC);
-        }
-        if(modem->i2s_bt.fd_bt_ap < 0) {
-            modem->i2s_bt.fd_bt_ap = open(modem->i2s_bt.fd_bt_ap_path,O_RDWR | O_SYNC);
-        }
-    }
-#ifdef VB_CONTROL_PARAMETER_V2
-    if(modem->i2s_bt.fd_iis1_sys_cp0 < 0) {
-        modem->i2s_bt.fd_iis1_sys_cp0 = open(modem->i2s_bt.fd_iis1_sys_cp0_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis1_sys_cp1 < 0) {
-        modem->i2s_bt.fd_iis1_sys_cp1 = open(modem->i2s_bt.fd_iis1_sys_cp1_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis1_sys_cp2 < 0) {
-        modem->i2s_bt.fd_iis1_sys_cp2 = open(modem->i2s_bt.fd_iis1_sys_cp2_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis1_sys_ap < 0) {
-        modem->i2s_bt.fd_iis1_sys_ap = open(modem->i2s_bt.fd_iis1_sys_ap_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis01_loop< 0) {
-        modem->i2s_bt.fd_iis01_loop= open(modem->i2s_bt.fd_iis01_loop_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis12_loop< 0) {
-        modem->i2s_bt.fd_iis12_loop= open(modem->i2s_bt.fd_iis12_loop_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_bt.fd_iis13_loop< 0) {
-        modem->i2s_bt.fd_iis13_loop= open(modem->i2s_bt.fd_iis13_loop_path,O_RDWR | O_SYNC);
-    }
-#endif
-    if(modem->i2s_extspk.fd_sys_cp0 < 0) {
-        modem->i2s_extspk.fd_sys_cp0 = open(modem->i2s_extspk.fd_sys_cp0_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_extspk.fd_sys_cp1 < 0) {
-        modem->i2s_extspk.fd_sys_cp1 = open(modem->i2s_extspk.fd_sys_cp1_path,O_RDWR | O_SYNC);
-    }
-
-    if(modem->i2s_extspk.fd_sys_cp2 < 0) {
-        modem->i2s_extspk.fd_sys_cp2 = open(modem->i2s_extspk.fd_sys_cp2_path,O_RDWR | O_SYNC);
-    }
-    if(modem->i2s_extspk.fd_sys_ap < 0) {
-        modem->i2s_extspk.fd_sys_ap = open(modem->i2s_extspk.fd_sys_ap_path,O_RDWR | O_SYNC);
-    }
-    if(type == 0) {
-       if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            if(modem->i2s_bt.is_ext) {
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp0 >= 0)){
-                        count = write(modem->i2s_bt.fd_sys_cp0,ctl_on,1);
-                    }
-            }
-            else {
-#ifdef VB_CONTROL_PARAMETER_V2
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
-                        count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-                }
-                if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
-                        count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_cp2>= 0))
-                        count = write(modem->i2s_bt.fd_iis1_sys_cp2,ctl_on,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis01_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis01_loop,ctl_off,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis12_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis12_loop,ctl_off,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis13_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis13_loop,ctl_off,1);
-                }
-#else
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp0 >= 0)) {
-                    count = read(modem->i2s_bt.fd_sys_cp0,cur_state,1);
-                    if(strcmp(cur_state,"1") == 0) {
-                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
-                    }
-                }
-                if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp0 >= 0))
-                        count = write(modem->i2s_bt.fd_bt_cp0,ctl_on,1);
-                }
-#endif
-            }
-        }
-
-        if(devices  & AUDIO_DEVICE_OUT_SPEAKER) {
-            if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_cp0 >= 0))
-                count = write(modem->i2s_extspk.fd_sys_cp0,ctl_str,1);
-        }
-
-    }
-    else if (type == 1){
-        if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
-            if(modem->i2s_bt.is_ext) {
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
-                       count = write(modem->i2s_bt.fd_sys_cp1,ctl_on,1);
-                   }
-            }
-            else {
-#ifdef VB_CONTROL_PARAMETER_V2
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
-                            count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-                }
-                if(devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
-                        count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_cp2>= 0))
-                        count = write(modem->i2s_bt.fd_iis1_sys_cp2,ctl_on,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis01_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis01_loop,ctl_off,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis12_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis12_loop,ctl_off,1);
-
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis13_loop>= 0))
-                        count = write(modem->i2s_bt.fd_iis13_loop,ctl_off,1);
-                }
-#else
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp1 >= 0)) {
-                    count = read(modem->i2s_bt.fd_sys_cp1,cur_state,1);
-                    if(strcmp(cur_state,"1") == 0) {
-                       if( modem->i2s_bt.fd_sys_cp2 >= 0)
-                        count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
-                    }
-                }
-                if(devices  & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_cp1 >= 0))
-                        count = write(modem->i2s_bt.fd_bt_cp1,ctl_on,1);
-                }
-#endif
-            }
-        }
-        if(devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        /*if(adev->out_devices& AUDIO_DEVICE_OUT_SPEAKER) {
             if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_cp1 >= 0))
                 count = write(modem->i2s_extspk.fd_sys_cp1,ctl_str,1);
-        }
-    }
-    else if(type == 2) {
-        {
-            if(modem->i2s_bt.is_ext) {
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0))
-                    count = write(modem->i2s_bt.fd_sys_ap,ctl_on,1);
-            } else {
-#ifdef VB_CONTROL_PARAMETER_V2
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_cp2 >= 0))
-                    count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
+        }*/
 
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
-                    count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
-
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_iis1_sys_ap>= 0))
-                    count = write(modem->i2s_bt.fd_iis1_sys_ap,ctl_on,1);//iis1_sys reset to default value
-#else
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_sys_ap >= 0)) {
-                    count = read(modem->i2s_bt.fd_sys_ap,cur_state,1);
-                    if(strcmp(cur_state,"1") == 0) {
-                        if( modem->i2s_bt.fd_sys_cp2 >= 0)
-                            count = write(modem->i2s_bt.fd_sys_cp2,ctl_on,1);
-                    }
-                }
-                if(modem->i2s_bt.is_switch && (modem->i2s_bt.fd_bt_ap >= 0))
-                    count = write(modem->i2s_bt.fd_bt_ap,ctl_on,1);//bt iis select
-
-#endif
-            }
-        }
-        if(devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_ap >= 0))
-                count = write(modem->i2s_extspk.fd_sys_ap,ctl_off,1);
-        }
-    }
-    else {
-        return 0;
-    }
-
-    return (count==1);
+		
+    return true;
 }
 
 static cp_type_t get_cur_cp_type( struct tiny_audio_device *adev )
@@ -1846,15 +1711,15 @@ static int start_output_stream(struct tiny_stream_out *out)
     int ret=0;
 
     adev->active_output = out;
-    ALOGD("start output stream out->is_voip is %d, in",out->is_voip);
+    ALOGD("start output stream out->is_voip is %d, in adev->out_devices = %d",out->is_voip , adev->out_devices);
 
     if (!adev->call_start && adev->voip_state == 0) {
         /* FIXME: only works if only one output can be active at a time*/
         adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
         adev->out_devices |= out->devices;
-        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            i2s_pin_mux_sel(adev,2,true);
-        }
+        //if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+            i2s_pin_mux_sel(adev,AP_TYPE);
+        //}
 	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
     }
@@ -2165,14 +2030,16 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if(1 == adev->call_start) {
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
-                        i2s_pin_mux_sel(adev,1,true);
+                        i2s_pin_mux_sel(adev,1);
                     else if(adev->cp_type == CP_W)
-                        i2s_pin_mux_sel(adev,0,true);
+                        i2s_pin_mux_sel(adev,0);
+			else if( adev->cp_type ==  CP_CSFB) 					
+			   i2s_pin_mux_sel(adev,CP_CSFB);
                 }
             }
             else {
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    i2s_pin_mux_sel(adev,2,true);
+                    i2s_pin_mux_sel(adev,AP_TYPE);
                 }
             }
             cur_mode = adev->mode;
@@ -2836,7 +2703,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->in_devices |= in->device;
         if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            i2s_pin_mux_sel(adev,2,true);
+            i2s_pin_mux_sel(adev,AP_TYPE);
         }
 	adev->prev_in_devices = ~adev->in_devices;
         select_devices_signal(adev);
@@ -3741,9 +3608,11 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
-                        i2s_pin_mux_sel(adev,1,true);
+                        i2s_pin_mux_sel(adev,1);
                     else if(adev->cp_type == CP_W)
-                        i2s_pin_mux_sel(adev,0,true);
+                        i2s_pin_mux_sel(adev,0);
+		    else if( adev->cp_type == CP_CSFB)
+			i2s_pin_mux_sel(adev,CP_CSFB);					
                 }
                 ret = at_cmd_route(adev);  //send at command to cp
                 pthread_mutex_unlock(&adev->lock);
@@ -4716,6 +4585,39 @@ static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const cha
 }
 
 
+static  i2s_ctl_t *adev_I2S_create(i2s_bt_t  *i2s_btcall_info, const char *num)
+{
+//    vbc_ctrl_pipe_para_t *a;
+    if (!atoi((char *)num)) {
+        ALOGE("Unnormal modem num!");
+        return NULL;
+    }
+
+    i2s_btcall_info->num = atoi((char *)num);
+    /* check if we need to allocate  space for modem profile */
+    if(!i2s_btcall_info->i2s_ctl_info)
+    {
+        i2s_btcall_info->i2s_ctl_info = malloc(i2s_btcall_info->num *
+                sizeof(i2s_ctl_t));
+
+        if (i2s_btcall_info->i2s_ctl_info == NULL) {
+            ALOGE("Unable to allocate modem profiles");
+            return NULL;
+        }
+        else
+        {
+            /* initialise the new profile */
+            memset((void*)i2s_btcall_info->i2s_ctl_info,0x00,i2s_btcall_info->num *
+                    sizeof(i2s_ctl_t));
+        }
+    }
+
+	ALOGD("peter: modem num is %d",i2s_btcall_info->num);
+    /* return the profile just added */
+    return i2s_btcall_info->i2s_ctl_info;
+}
+
+
 static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         const XML_Char **attr)
 {
@@ -4727,6 +4629,9 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
     vbc_ctrl_pipe_para_t item;
     vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info = NULL;
 
+    i2s_bt_t  *i2s_btcall_info = state->i2s_btcall_info;	
+   ctrl_node *p_ctlr_node = NULL;
+   
     /* Look at tags */
     if (strcmp(tag_name, "audio") == 0) {
         if (strcmp(attr[0], "device") == 0) {
@@ -4759,7 +4664,13 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
                 ALOGE("'%s' No vbc filed!", attr[0]);
                 goto attr_err;
             }
-            ALOGD("cp name is '%s', pipe is '%s',vbc is '%s'", attr[1], attr[3],attr[5]);
+		if (strcmp(attr[6], "cpu_index") != 0) {
+                ALOGE("'%s' No cpu index filed!", attr[0]);
+                goto attr_err;
+            }
+			
+					
+            ALOGD("cp name is '%s', pipe is '%s',vbc is '%s',cpu index is '%s'", attr[1], attr[3],attr[5],attr[7]);
             if(strcmp(attr[1], "w") == 0)
             {
                 state->vbc_ctrl_pipe_info->cp_type = CP_W;
@@ -4774,203 +4685,120 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             }
             memcpy((void*)state->vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name,(void*)attr[3],strlen((char *)attr[3]));
             state->vbc_ctrl_pipe_info->channel_id = atoi((char *)attr[5]);
+            state->vbc_ctrl_pipe_info->cpu_index = atoi((char *)attr[7]);			
             state->vbc_ctrl_pipe_info++;
         } else {
             ALOGE("error profile!");
         }
     }
-    else if (strcmp(tag_name, "i2s_for_btcall") == 0)
+     else if (strcmp(tag_name, "i2s_for_btcall") == 0)     	
+	{
+        /* Obtain the modem num */
+           ALOGE("The i2s_for_btcall num is %s = '%s'", attr[0] ,attr[1]);
+        if (strcmp(attr[0], "cpu_num") == 0) {
+            ALOGE("The i2s_for_btcall num is '%s'", attr[1]);
+            state->i2s_ctl_info =   adev_I2S_create(i2s_btcall_info, attr[1]);
+        } else {
+            ALOGE("no i2s_for_btcall  num!");
+        }
+    }
+
+    else if (strcmp(tag_name, "btcal_I2S") == 0)
     {
-        if (strcmp(attr[0], "index") == 0) {
-            ALOGD("The iis_for_btcall index is '%s'", attr[1]);
-            modem->i2s_bt.index = atoi((char *)attr[1]);
+
+           ALOGE("The btcal_I2S num is %s = '%s--- %s = '%s  --- %s = '%s '", attr[0] ,attr[1] ,attr[12],attr[13],  attr[16],attr[17]);
+		   
+        if (strcmp(attr[0], "cpu_index") == 0) {
+            ALOGD("The iis_for_btcall cpu index is '%s'", attr[1]);
+            state->i2s_ctl_info->cpu_index = atoi((char *)attr[1]);
+        } else {
+            ALOGE("no iis_ctl index for bt call!");
+        }
+	
+	if (strcmp(attr[2], "i2s_index") == 0) {
+            ALOGD("The iis_for_btcall i2s index is '%s'", attr[3]);
+            state->i2s_ctl_info->i2s_index= atoi((char *)attr[3]);
         } else {
             ALOGE("no iis_ctl index for bt call!");
         }
 
-        if (strcmp(attr[2], "switch") == 0) {
-            ALOGD("The iis_for_btcall switch is '%s'", attr[3]);
-            if(strcmp(attr[3],"1") == 0)
-                modem->i2s_bt.is_switch = true;
-            else if(strcmp(attr[3],"0") == 0)
-                modem->i2s_bt.is_switch = false;
+
+        if (strcmp(attr[4], "switch") == 0) {
+            ALOGD("The iis_for_btcall switch is '%s'", attr[5]);
+            if(strcmp(attr[5],"1") == 0)
+                state->i2s_ctl_info->is_switch= true;
+            else if(strcmp(attr[5],"0") == 0)
+                state->i2s_ctl_info->is_switch = false;
         } else {
             ALOGE("no iis_ctl switch for bt call!");
         }
-        if (strcmp(attr[4], "dst") == 0) {
-            ALOGD("The iis_for_btcall dst  is '%s'", attr[5]);
-            if (strcmp(attr[5], "internal") == 0)
-                modem->i2s_bt.is_ext = 0;
-            else if (strcmp(attr[5], "external") == 0)
-                modem->i2s_bt.is_ext = 1;
+        if (strcmp(attr[6], "dst") == 0) {
+            ALOGD("The iis_for_btcall dst  is '%s'", attr[7]);
+            if (strcmp(attr[7], "internal") == 0)
+               state->i2s_ctl_info->is_ext= 0;
+            else if (strcmp(attr[7], "external") == 0)
+               state->i2s_ctl_info->is_ext = 1;
         } else {
             ALOGE("no dst path for bt call!");
         }
+ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) " , state->i2s_ctl_info->cpu_index , 
+	state->i2s_ctl_info->i2s_index , 
+	state->i2s_ctl_info->is_switch,
+	state->i2s_ctl_info->is_ext ,
+	sizeof(*attr)/sizeof( XML_Char *)
+);
 
-        if (strcmp(attr[6], "cp0_ctl_file") == 0) {
-            if((strlen(attr[7]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_sys_cp0_path , attr[7], strlen(attr[7])+1);
-                ALOGE(" cp0_ctl_file is %s",modem->i2s_bt.fd_sys_cp0_path);
-                modem->i2s_bt.fd_sys_cp0 = open(modem->i2s_bt.fd_sys_cp0_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_sys_cp0 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_cp0_ctl fd,errno is %d",errno);
-                }
-            }
-        }
-        if (strcmp(attr[8], "cp1_ctl_file") == 0) {
-            if((strlen(attr[9]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_sys_cp1_path , attr[9], strlen(attr[9])+1);
-                ALOGE(" cp1_ctl_file is %s",modem->i2s_bt.fd_sys_cp1_path);
-                modem->i2s_bt.fd_sys_cp1 = open(modem->i2s_bt.fd_sys_cp1_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_sys_cp1 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_cp1 ctl fd,errno is %d",errno);
-                }
-            }
-        }
 
-        if (strcmp(attr[10], "cp2_ctl_file") == 0) {
-            if((strlen(attr[11]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_sys_cp2_path , attr[11], strlen(attr[11])+1);
-                ALOGE(" cp1_ct2_file is %s",modem->i2s_bt.fd_sys_cp2_path);
-                modem->i2s_bt.fd_sys_cp2 = open(modem->i2s_bt.fd_sys_cp2_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_sys_cp2 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_cp2 ctl fd,errno is %d",errno);
-                }
-            }
-        }
 
-        if (strcmp(attr[12], "ap_ctl_file") == 0) {
-            if((strlen(attr[13]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_sys_ap_path , attr[13], strlen(attr[13])+1);
-                ALOGE(" ap_ctl_file is %s",modem->i2s_bt.fd_sys_ap_path);
-                modem->i2s_bt.fd_sys_ap = open(modem->i2s_bt.fd_sys_ap_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_sys_ap == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_ap ctl fd,errno is %d",errno);
-                }
-            }
-        }
+	state->i2s_ctl_info->p_ctlr_node_head = NULL;
+	p_ctlr_node = NULL;
+	i = 8;
+	while(( attr[i]  ) && ( (i - 8 )  /2  <MAX_CTRL_FILE))
+	{
+		
+	        if (strstr(attr[i], "ctl_file") > 0) 
+		{
+	            if((strlen(attr[i+1]) +1) <= I2S_CTL_PATH_MAX){
+					
+					if( state->i2s_ctl_info->p_ctlr_node_head== NULL )
+					{
+						p_ctlr_node = malloc(sizeof(ctrl_node));		
+						state->i2s_ctl_info->p_ctlr_node_head = p_ctlr_node;							
+					}
+					else
+					{
+						p_ctlr_node->next = malloc(sizeof(ctrl_node));
+						p_ctlr_node = p_ctlr_node->next;	
+						
+					}
+				
+					p_ctlr_node->next = NULL;
 
-        if(!modem->i2s_bt.is_ext) {
-            if (strcmp(attr[14], "cp0_bt_ctl_file") == 0) {
-                ALOGD("cp0_bt_ctl_file");
-                if((strlen(attr[15]) +1) <= I2S_CTL_PATH_MAX){
-                    memcpy(modem->i2s_bt.fd_bt_cp0_path , attr[15], strlen(attr[15])+1);
-                   ALOGE(" cp0_bt_ctl_file is %s",modem->i2s_bt.fd_bt_cp0_path);
-                    modem->i2s_bt.fd_bt_cp0 = open(modem->i2s_bt.fd_bt_cp0_path,O_RDWR | O_SYNC);
-                    if(modem->i2s_bt.fd_bt_cp0 == -1) {
-                        ALOGE(" audio_hw_primary: could not open i2s bt_cp0_ctl fd,errno is %d",errno);
-                    }
-                }
-            }
-            if (strcmp(attr[16], "cp1_bt_ctl_file") == 0) {
-                if((strlen(attr[17]) +1) <= I2S_CTL_PATH_MAX){
-                    memcpy(modem->i2s_bt.fd_bt_cp1_path , attr[17], strlen(attr[17])+1);
-                    ALOGE(" cp1_bt_ctl_file is %s",modem->i2s_bt.fd_bt_cp1_path);
-                    modem->i2s_bt.fd_bt_cp1 = open(modem->i2s_bt.fd_bt_cp1_path,O_RDWR | O_SYNC);
-                    if(modem->i2s_bt.fd_bt_cp1 == -1) {
-                        ALOGE(" audio_hw_primary: could not open i2s bt_cp1 ctl fd,errno is %d",errno);
-                    }
-                }
-            }
+	                memcpy(p_ctlr_node->ctrl_path , attr[i+1], strlen(attr[i+1])+1);
+	                ALOGE(" -11---ctl_file[%d] is %s",i,p_ctlr_node->ctrl_path);
+	                p_ctlr_node->ctrl_file_fd= open(p_ctlr_node->ctrl_path,O_RDWR | O_SYNC);
+	                if(p_ctlr_node->ctrl_file_fd <= 0 ) {
+	                    ALOGE(" open ctl_file[%d] ,errno is %d", i-8 , errno);
+	                }
+	            }
+	        }
+			if (strstr(attr[i+2], "value") > 0) {
+				if( (strlen(attr[i+3]) +1) <= I2S_CTL_VALUE_MAX )
+					memcpy(p_ctlr_node->ctrl_value , attr[i+3], strlen(attr[i+3])+1);
+			}
+			i += 4;
+	                ALOGE(" - ---------att[%d] is %s",   i ,attr[i]   );			
+			
+	}
 
-            if (strcmp(attr[18], "cp2_bt_ctl_file") == 0) {
-                if((strlen(attr[19]) +1) <= I2S_CTL_PATH_MAX){
-                    memcpy(modem->i2s_bt.fd_bt_cp2_path , attr[19], strlen(attr[19])+1);
-                    ALOGE(" cp2_bt_ctl_file is %s",modem->i2s_bt.fd_bt_cp2_path);
-                    modem->i2s_bt.fd_bt_cp2 = open(modem->i2s_bt.fd_bt_cp2_path,O_RDWR | O_SYNC);
-                    if(modem->i2s_bt.fd_bt_cp2 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s bt_cp2 ctl fd,errno is %d",errno);
-                    }
-                }
-            }
-            if (strcmp(attr[20], "ap_bt_ctl_file") == 0) {
-                if((strlen(attr[21]) +1) <= I2S_CTL_PATH_MAX){
-                    memcpy(modem->i2s_bt.fd_bt_ap_path , attr[21], strlen(attr[21])+1);
-                    ALOGE(" ap_bt_ctl_file is %s",modem->i2s_bt.fd_bt_ap_path);
-                    modem->i2s_bt.fd_bt_ap = open(modem->i2s_bt.fd_bt_ap_path,O_RDWR | O_SYNC);
-                    if(modem->i2s_bt.fd_bt_ap == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s bt_ap ctl fd,errno is %d",errno);
-                    }
-                }
-            }
-        }
-#ifdef VB_CONTROL_PARAMETER_V2
-            if (strcmp(attr[22], "cp0_iis1_ctl_file") == 0) {
-            if((strlen(attr[23]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis1_sys_cp0_path , attr[23], strlen(attr[23])+1);
-                ALOGE(" cp0_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_cp0_path);
-                modem->i2s_bt.fd_iis1_sys_cp0 = open(modem->i2s_bt.fd_iis1_sys_cp0_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis1_sys_cp0 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp0_ctl fd,errno is %d",errno);
-                }
-            }
-        }
-        if (strcmp(attr[24], "cp1_iis1_ctl_file") == 0) {
-            if((strlen(attr[25]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis1_sys_cp1_path , attr[25], strlen(attr[25])+1);
-                ALOGE(" cp1_iis1_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_cp1_path);
-                modem->i2s_bt.fd_iis1_sys_cp1 = open(modem->i2s_bt.fd_iis1_sys_cp1_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis1_sys_cp1 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp1 ctl fd,errno is %d",errno);
-                }
-            }
-        }
+	state->i2s_ctl_info++;
 
-        if (strcmp(attr[26], "cp2_iis1_ctl_file") == 0) {
-            if((strlen(attr[27]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis1_sys_cp2_path , attr[27], strlen(attr[27])+1);
-                ALOGE(" cp1_ct2_file is %s",modem->i2s_bt.fd_iis1_sys_cp2_path);
-                modem->i2s_bt.fd_iis1_sys_cp2 = open(modem->i2s_bt.fd_iis1_sys_cp2_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis1_sys_cp2 == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_cp2 ctl fd,errno is %d",errno);
-                }
-            }
-        }
 
-        if (strcmp(attr[28], "ap_iis1_ctl_file") == 0) {
-            if((strlen(attr[29]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis1_sys_ap_path , attr[29], strlen(attr[29])+1);
-                ALOGE(" ap_ctl_file is %s",modem->i2s_bt.fd_iis1_sys_ap_path);
-                modem->i2s_bt.fd_iis1_sys_ap = open(modem->i2s_bt.fd_iis1_sys_ap_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis1_sys_ap == -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s sys_iis1_ap ctl fd,errno is %d",errno);
-                }
-            }
-        }
 
-        if (strcmp(attr[30], "iis01_loop_file") == 0) {
-            if((strlen(attr[31]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis01_loop_path , attr[31], strlen(attr[31])+1);
-                ALOGE(" fd_iis01_loop_path is %s",modem->i2s_bt.fd_iis01_loop_path);
-                modem->i2s_bt.fd_iis01_loop= open(modem->i2s_bt.fd_iis01_loop_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis01_loop== -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s fd_iis01_loop_path ctl fd,errno is %d",errno);
-                }
-            }
-        }
-        if (strcmp(attr[32], "iis12_loop_file") == 0) {
-            if((strlen(attr[33]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis12_loop_path , attr[33], strlen(attr[33])+1);
-                ALOGE(" fd_iis12_loop_path is %s",modem->i2s_bt.fd_iis12_loop_path);
-                modem->i2s_bt.fd_iis12_loop= open(modem->i2s_bt.fd_iis12_loop_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis12_loop== -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s fd_iis12_loop_path ctl fd,errno is %d",errno);
-                }
-            }
-        }
-        if (strcmp(attr[34], "iis13_loop_file") == 0) {
-            if((strlen(attr[35]) +1) <= I2S_CTL_PATH_MAX){
-                memcpy(modem->i2s_bt.fd_iis13_loop_path , attr[35], strlen(attr[35])+1);
-                ALOGE(" fd_iis13_loop_path is %s",modem->i2s_bt.fd_iis13_loop_path);
-                modem->i2s_bt.fd_iis13_loop= open(modem->i2s_bt.fd_iis13_loop_path,O_RDWR | O_SYNC);
-                if(modem->i2s_bt.fd_iis13_loop== -1) {
-                    ALOGE(" audio_hw_primary: could not open i2s fd_iis01_loop_path ctl fd,errno is %d",errno);
-                }
-            }
-        }
-#endif
 }
-   else if (strcmp(tag_name, "i2s_for_extspeaker") == 0)
+
+     	
+   /*else if (strcmp(tag_name, "i2s_for_extspeaker") == 0)
     {
         if (strcmp(attr[0], "index") == 0) {
             ALOGD("The i2s_for_extspeaker index is '%s'", attr[1]);
@@ -5040,7 +4868,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
                 }
             }
         }
-    }
+    }*/
     else if ((strcmp(tag_name, "voip")&& !modem->voip_res.is_done) == 0) {
 
             char prop_t[PROPERTY_VALUE_MAX] = {0};
@@ -5210,6 +5038,24 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
     modem->num = 0;
     modem->vbc_ctrl_pipe_info = NULL;
 
+    		      ALOGE("----adev_modem_i2s_parse----000- ");
+		i2s_bt_t  *i2s_btcall_info;	 
+    i2s_btcall_info = calloc(1, sizeof(i2s_bt_t));
+    if (!i2s_btcall_info)
+    {
+        ALOGE("adev_modem_parse alloc fail, size:%d", sizeof(i2s_bt_t));
+        ret = -ENOMEM;
+        goto err_calloc;
+    }
+    else
+    {
+        memset(i2s_btcall_info, 0, sizeof(i2s_bt_t));
+    }
+
+    i2s_btcall_info->num = 0;
+    i2s_btcall_info->i2s_ctl_info = NULL;
+	
+	
     file = fopen(AUDIO_XML_PATH, "r");
     if (!file) {
         ALOGE("Failed to open %s", AUDIO_XML_PATH);
@@ -5226,6 +5072,7 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
 
     memset(&state, 0, sizeof(state));
     state.modem_info = modem;
+state.i2s_btcall_info = i2s_btcall_info;	
     XML_SetUserData(parser, &state);
     XML_SetElementHandler(parser, adev_modem_start_tag, adev_modem_end_tag);
 
@@ -5254,6 +5101,7 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
     }
 
     adev->cp = modem;
+	adev->i2s_btcall_info = i2s_btcall_info;
     XML_ParserFree(parser);
     fclose(file);
     return ret;

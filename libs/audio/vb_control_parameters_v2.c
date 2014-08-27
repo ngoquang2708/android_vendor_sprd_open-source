@@ -165,7 +165,7 @@ void *vbc_ctrl_thread_routine(void *args);
 void *vbc_ctrl_voip_thread_routine(void *arg);
 void *vbc_ctrl_thread_linein_routine(void *args);
 
-extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type,bool local);
+extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
 
 
 extern int headset_no_mic();
@@ -1659,7 +1659,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
         force_all_standby(adev);
         adev->call_start = 0;
         adev->call_connected = 0;
-        i2s_pin_mux_sel(adev,2,true);
+        i2s_pin_mux_sel(adev,AP_TYPE);
         call_reset = 1;
     }
     if(is_timeout) {
@@ -1816,9 +1816,9 @@ RESTART:
         {
             case VBC_CMD_HAL_OPEN:
                 {
-                    uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0)
+                    uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0));
 
-                            |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
+//                            |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
 
                     uint32_t gain=0;
                     gain |= DEFAULT_VBCST_DG;
@@ -1833,10 +1833,12 @@ RESTART:
 
                     adev->cp_type = para->cp_type;
                     if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
-                        if(adev->cp_type == CP_TG)
-                            i2s_pin_mux_sel(adev,1,true);
+			  if(adev->cp_type == CP_TG)
+                            i2s_pin_mux_sel(adev,1);
                         else if(adev->cp_type == CP_W)
-                            i2s_pin_mux_sel(adev,0,true);
+                            i2s_pin_mux_sel(adev,0);
+			    else if( adev->cp_type == CP_CSFB)
+				i2s_pin_mux_sel(adev,CP_CSFB);	
                     }
 
                     ALOGD("voip:i2s_ctl is %x",i2s_ctl);
@@ -1897,10 +1899,12 @@ RESTART:
                     MY_TRACE("voip:VBC_CMD_SET_MODE IN.");
 
                     if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
-                        if(adev->cp_type == CP_TG)
-                            i2s_pin_mux_sel(adev,1,false);
-                        else if(adev->cp_type == CP_W)
-                            i2s_pin_mux_sel(adev,0,false);
+                    if(adev->cp_type == CP_TG)
+                        i2s_pin_mux_sel(adev,1);
+                    else if(adev->cp_type == CP_W)
+                        i2s_pin_mux_sel(adev,0);
+					else if( adev->cp_type ==  CP_CSFB) 					
+			   			i2s_pin_mux_sel(adev,CP_CSFB);
                     }
 
                     ret = SetParas_Route_Incall(para->vbpipe_fd,adev);
@@ -2182,9 +2186,11 @@ RESTART:
                     adev->cp_type = para->cp_type;
                     if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                         if(adev->cp_type == CP_TG)
-                            i2s_pin_mux_sel(adev,1,true);
+                            i2s_pin_mux_sel(adev,1);
                         else if(adev->cp_type == CP_W)
-                            i2s_pin_mux_sel(adev,0,true);
+                            i2s_pin_mux_sel(adev,0);
+			    else if( adev->cp_type == CP_CSFB)
+				i2s_pin_mux_sel(adev,CP_CSFB);						
                     }
                     voip_forbid(adev, true);
                     adev->call_start = 1;
@@ -2244,9 +2250,11 @@ RESTART:
 
                     if(adev->routeDev & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                         if(adev->cp_type == CP_TG)
-                            i2s_pin_mux_sel(adev,1,false);
+                            i2s_pin_mux_sel(adev,1);
                         else if(adev->cp_type == CP_W)
-                            i2s_pin_mux_sel(adev,0,false);
+                            i2s_pin_mux_sel(adev,0);
+		    else if( adev->cp_type == CP_CSFB)
+				i2s_pin_mux_sel(adev,CP_CSFB);						
                     }
                     pthread_mutex_lock(&adev->lock);
                     ret = SetParas_Route_Incall(para->vbpipe_fd,adev);

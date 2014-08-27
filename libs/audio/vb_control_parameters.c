@@ -159,7 +159,8 @@ static int  ReadParas_Mute(int fd_pipe,  set_mute_t *paras_ptr);
 void *vbc_ctrl_thread_routine(void *args);
 void *vbc_ctrl_voip_thread_routine(void *arg);
 
-extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type,bool local);
+extern int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type);
+
 
 extern int headset_no_mic();
 
@@ -1318,7 +1319,7 @@ static int vbc_call_end_process(struct tiny_audio_device *adev,int is_timeout)
         }
         adev->call_start = 0;
         adev->call_connected = 0;
-        i2s_pin_mux_sel(adev,2,true);
+        i2s_pin_mux_sel(adev,AP_TYPE);
     }
     if(is_timeout) {
 		mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch vbc to arm
@@ -1734,9 +1735,9 @@ RESTART:
 	{
 	case VBC_CMD_HAL_OPEN:
 	    {
-		uint32_t i2s_ctl = ((adev->cp->i2s_bt.is_switch << 8) | (adev->cp->i2s_bt.index << 0)
-
-        |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
+		i2s_ctl_t * i2s_ctl_info = adev->i2s_btcall_info->i2s_ctl_info + adev->cp->vbc_ctrl_pipe_info->cpu_index;;
+		uint32_t i2s_ctl = ((i2s_ctl_info->is_switch << 8) | (i2s_ctl_info->i2s_index << 0) );
+//       |(adev->cp->i2s_extspk.is_switch << 9) | (adev->cp->i2s_extspk.index << 4));
 		cur_timeout = &timeout;
 		MY_TRACE("vocie:VBC_CMD_HAL_OPEN IN.");
 		ALOGW("vocie:VBC_CMD_HAL_OPEN, try lock");
@@ -1776,9 +1777,11 @@ RESTART:
 		adev->cp_type = para->cp_type;
 		if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
-			i2s_pin_mux_sel(adev,1,true);
+			i2s_pin_mux_sel(adev,1);
 		    else if(adev->cp_type == CP_W)
-			i2s_pin_mux_sel(adev,0,true);
+			i2s_pin_mux_sel(adev,0);
+		    else if( adev->cp_type == CP_CSFB)
+			i2s_pin_mux_sel(adev,CP_CSFB);
 		}
 		voip_forbid(adev, true);
 		adev->call_start = 1;
@@ -1834,9 +1837,11 @@ RESTART:
 
 		if(adev->routeDev & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
 		    if(adev->cp_type == CP_TG)
-			i2s_pin_mux_sel(adev,1,false);
+			i2s_pin_mux_sel(adev,1);
 		    else if(adev->cp_type == CP_W)
-			i2s_pin_mux_sel(adev,0,false);
+			i2s_pin_mux_sel(adev,0);
+    		    else if( adev->cp_type == CP_CSFB)
+			i2s_pin_mux_sel(adev,CP_CSFB);			
 		}
 
 		ret = SetParas_Route_Incall(para->vbpipe_fd,adev);

@@ -24,9 +24,12 @@
 
 #define VBC_PIPE_NAME_MAX_LEN 16
 #define VOIP_PIPE_NAME_MAX     VBC_PIPE_NAME_MAX_LEN
+#define CP_NAME_MAX_LEN 10
 
+#define MAX_CTRL_FILE 10
 
 #define I2S_CTL_PATH_MAX      100
+#define I2S_CTL_VALUE_MAX      4
 #define I2S_CTL_INDEX_MAX     3
 #define AUDIO_MODE_NAME_MAX_LEN 16
 
@@ -86,6 +89,7 @@ typedef enum {
     CP_W,
     CP_TG,
     CP_CSFB,
+    AP_TYPE = 3 , //the num of audio_hw.xml must be adjusted  at once
     CP_MAX
 }cp_type_t;
 
@@ -102,6 +106,8 @@ typedef struct
     char s_vbc_ctrl_pipe_name[VBC_PIPE_NAME_MAX_LEN];
     int channel_id;
     cp_type_t cp_type;
+   char cp_name[CP_NAME_MAX_LEN];
+    int cpu_index;
 }vbc_ctrl_pipe_para_t;
 
 
@@ -117,48 +123,30 @@ struct voip_res
 };
 
 
+  typedef struct ctrl_node
+  {
+       int8_t ctrl_path[I2S_CTL_PATH_MAX];
+	int ctrl_file_fd;
+	int8_t ctrl_value[4];
+	struct ctrl_node *next;
+  }ctrl_node;
+
+
 typedef struct
 {
-    int fd_sys_cp0;
-    int8_t fd_sys_cp0_path[I2S_CTL_PATH_MAX];
-    int fd_sys_cp1;
-    int8_t fd_sys_cp1_path[I2S_CTL_PATH_MAX];
-    int fd_sys_cp2;
-    int8_t fd_sys_cp2_path[I2S_CTL_PATH_MAX];
-    int fd_sys_ap;
-    int8_t fd_sys_ap_path[I2S_CTL_PATH_MAX];
-    int fd_bt_cp0;
-    int8_t fd_bt_cp0_path[I2S_CTL_PATH_MAX];
-    int fd_bt_cp1;
-    int8_t fd_bt_cp1_path[I2S_CTL_PATH_MAX];
-    int fd_bt_cp2;
-    int8_t fd_bt_cp2_path[I2S_CTL_PATH_MAX];
-    int fd_bt_ap;
-    int8_t fd_bt_ap_path[I2S_CTL_PATH_MAX];
-
-#ifdef VB_CONTROL_PARAMETER_V2
-    int fd_iis1_sys_cp0;
-    int8_t fd_iis1_sys_cp0_path[I2S_CTL_PATH_MAX];
-    int fd_iis1_sys_cp1;
-    int8_t fd_iis1_sys_cp1_path[I2S_CTL_PATH_MAX];
-    int fd_iis1_sys_cp2;
-    int8_t fd_iis1_sys_cp2_path[I2S_CTL_PATH_MAX];
-    int fd_iis1_sys_ap;
-    int8_t fd_iis1_sys_ap_path[I2S_CTL_PATH_MAX];
-
-    int fd_iis01_loop;
-    int8_t fd_iis01_loop_path[I2S_CTL_PATH_MAX];
-    int fd_iis12_loop;
-    int8_t fd_iis12_loop_path[I2S_CTL_PATH_MAX];
-    int fd_iis13_loop;
-    int8_t fd_iis13_loop_path[I2S_CTL_PATH_MAX];
-#endif
-
-    int8_t index;
+   ctrl_node *p_ctlr_node_head;
+    int8_t cpu_index;
+    int8_t i2s_index;
     int is_switch;
     int8_t is_ext;
 }i2s_ctl_t;
 
+
+typedef struct
+{
+    int num;
+    i2s_ctl_t *i2s_ctl_info;
+}i2s_bt_t;
 
 
 typedef struct debuginfo
@@ -172,7 +160,6 @@ typedef struct debuginfo
 typedef struct{
     int num;
     vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
-    i2s_ctl_t i2s_bt;
     i2s_ctl_t i2s_extspk;
     struct voip_res  voip_res;
     debuginfo debug_info;
@@ -197,6 +184,8 @@ struct modem_config_parse_state{
 	vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
 	aud_mode_t  *audio_mode_info;
 	audio_mode_item_t *audio_mode_item_info;
+	i2s_bt_t  *i2s_btcall_info;	
+       i2s_ctl_t *i2s_ctl_info;
 };
 
 #endif
