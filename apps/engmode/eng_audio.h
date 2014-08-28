@@ -30,6 +30,8 @@
 #define AUDIO_NV_FM_DGAIN_INDEX			19
 #define AUDIO_NV_CG_PGA_GAIN_L_INDEX    20
 #define AUDIO_NV_CG_PGA_GAIN_R_INDEX    21
+#define AUDIO_NV_FM_CG_PGA_GAIN_L_INDEX    22
+#define AUDIO_NV_FM_CG_PGA_GAIN_R_INDEX    23
 
 #define AUDIO_NV_CAPTURE_GAIN_INDEX		43
 #define AUDIO_NV_INTPA_SWITCH_INDEX  	44
@@ -49,6 +51,8 @@
 #define ENG_FLASH_OPS 0x10
 #define ENG_PGA_OPS 0x100
 #define ENG_PHONEINFO_OPS 0x1000
+#define AUDIO_CODEC_2713 0
+#define AUDIO_CODEC_2723 1
 #define AUDIO_AT_HARDWARE_NAME_LENGTH 32
 #define AUDIO_AT_ITEM_NAME_LENGTH 15
 #define AUDIO_AT_ITEM_VALUE_LENGTH 1
@@ -57,6 +61,7 @@
 #define AUDIO_AT_FM_LOOP_VBC_NAME "FM loop vbc"
 #define AUDIO_AT_VOIP_DSP_PROCESS_NAME "VOIP DSP Pro"
 #define AUDIO_AT_9620_MODEM "9620 modem"
+#define AUDIO_AT_CODEC_INFO "aud codec info"
 
 #define ENG_AUDIO_PARA  			"/etc/audio_para"
 #define ENG_AUDIO_PARA_DEBUG 			"/data/local/media/audio_para"

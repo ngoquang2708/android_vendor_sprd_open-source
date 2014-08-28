@@ -494,6 +494,8 @@ static int  GetAudio_outpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *au
 
     pga_gain_nv->cg_pga_gain_l = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_L_INDEX];
     pga_gain_nv->cg_pga_gain_r = ptArmModeStruct->reserve[AUDIO_NV_CG_PGA_GAIN_R_INDEX];
+    pga_gain_nv->fm_cg_pga_gain_l = ptArmModeStruct->reserve[AUDIO_NV_FM_CG_PGA_GAIN_L_INDEX];
+    pga_gain_nv->fm_cg_pga_gain_r = ptArmModeStruct->reserve[AUDIO_NV_FM_CG_PGA_GAIN_R_INDEX];
 
     ALOGW("vb_control_parameters.c pa_config:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x),  hpPaConfig:0x%x(0x%x, %x), 0x%x(fm)(0x%x, %x)",
             pga_gain_nv->pa_config,ptArmModeStruct->reserve[AUDIO_NV_INTPA_GAIN_INDEX],
@@ -701,6 +703,8 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
     if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM_HEADSET){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-hp-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-hp-r");
+        audio_pga_apply(adev->pga,pga_gain_nv->fm_cg_pga_gain_l,"cg-pga-gain-l");
+        audio_pga_apply(adev->pga,pga_gain_nv->fm_cg_pga_gain_r,"cg-pga-gain-r");
     }else if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM_SPEAKER){
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
         audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
