@@ -50,6 +50,7 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
 {
     mOSDLayerCount = 0;
     mVideoLayerCount = 0;
+    mLayerCount = 0;
 
     if (list == NULL)
     {
@@ -158,6 +159,38 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
 
 int SprdVDLayerList:: revistGeometry(hwc_display_contents_1_t *list)
 {
+    SprdHWLayer *l = &(mLayerList[0]);
+    hwc_layer_1_t *layer = l->getAndroidLayer();
+    if (layer == NULL)
+    {
+        return 0;
+    }
+
+    struct private_handle_t *privateH = (struct private_handle_t *)(layer->handle);
+    if (privateH == NULL)
+    {
+        ALOGI_IF(mDebugFlag, "SprdVDLayerList:: revistGeometry privateH is NULL");
+        return 0;
+    }
+
+    if ((privateH->format != HAL_PIXEL_FORMAT_YCbCr_420_SP)
+        && (privateH->format != HAL_PIXEL_FORMAT_RGBA_8888)
+        && (privateH->format != HAL_PIXEL_FORMAT_RGBX_8888)
+        && (privateH->format != HAL_PIXEL_FORMAT_BGRA_8888)
+        && (privateH->format != HAL_PIXEL_FORMAT_RGB_888)
+        && (privateH->format != HAL_PIXEL_FORMAT_RGB_565))
+    {
+        ALOGI_IF(mDebugFlag, "SprdVDLayerList:: revistGeometry not support format");
+        return 0;
+    }
+
+    if ((mLayerCount - 1 == 1)
+        && (layer->compositionType != HWC_FRAMEBUFFER_TARGET))
+    {
+        mLayerList[0].setLayerType(LAYER_OSD);
+        setOverlayFlag(&(mLayerList[0]), 0);
+        ALOGI_IF(mDebugFlag, "SprdVDLayerList:: revistGeometry find single layer, force goto Overlay");
+    }
 
     return 0;
 }
@@ -229,6 +262,8 @@ void SprdVDLayerList:: setOverlayFlag(SprdHWLayer *l, unsigned int index)
             ClearFrameBuffer(layer, index);
             break;
         default:
+            mOSDLayerList[index] = NULL;
+            mVideoLayerList[index] = NULL;
             break;
     }
 

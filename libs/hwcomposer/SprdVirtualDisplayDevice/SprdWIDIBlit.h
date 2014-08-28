@@ -50,6 +50,12 @@
 #include <arm_neon.h>
 #include "../dump.h"
 
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <ui/GraphicBuffer.h>
+
 namespace android
 {
 
@@ -88,6 +94,25 @@ private:
      *  Blit with NEON from RGBA8888 to YUV420SP.
      * */
     int NEONBlit(uint8_t *inrgb, uint8_t *outy, uint8_t *outuv, int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst);
+
+
+    /*
+     *  The following interfaces are implemented by GPU.
+     *  Use GPU to do the blit and format conversion.
+     * */
+    void printGLString(const char *name, GLenum s);
+    void printEGLConfiguration(EGLDisplay dpy, EGLConfig config);
+    void checkEglError(const char* op, EGLBoolean returnVal = EGL_TRUE);
+    void checkGlError(const char* op);
+
+    GLuint loadShader(GLenum shaderType, const char* pSource);
+    GLuint createProgram(const char* pVertexSource, const char* pFragmentSource);
+
+    sp<GraphicBuffer> wrapGraphicsBuffer(private_handle_t *handle);
+    int setupGraphics();
+    void destoryGraphics();
+    int setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handle_t *TragetHandle, sp<GraphicBuffer>& Source, sp<GraphicBuffer>& Target);
+    int renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Target);
 };
 
 }
