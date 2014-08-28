@@ -1246,7 +1246,12 @@ static uint32_t _ispAeMeasureLumSet(uint32_t handler_id, enum isp_ae_weight weig
 		weight_id=ISP_ZERO;
 	}
 
-	memcpy((void*)&ae_param_ptr->weight_tab[weight_id], (void*)ae_param_ptr->weight_ptr[weight], 1024);
+	if(ae_param_ptr->weight_ptr[weight] != PNULL) {
+		memcpy((void*)&ae_param_ptr->weight_tab[weight_id], (void*)ae_param_ptr->weight_ptr[weight], 1024);
+	} else {
+		ISP_LOG("_ispAeMeasureLumSet, hander %d, weight %d, NULL pionter error", handler_id, weight);
+
+	}
 
 	ae_param_ptr->weight_id=weight_id;
 	ae_param_ptr->cur_weight_ptr=ae_param_ptr->weight_tab[weight_id];
