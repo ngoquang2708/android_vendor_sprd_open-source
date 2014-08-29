@@ -118,6 +118,7 @@
 #define PRIVATE_HEADPHONE_MUTE           "hp mute"
 #define PRIVATE_AUD_LOOP_VBC  "Aud Loop in VBC Switch"
 #define PRIVATE_AUD1_LOOP_VBC  "Aud1 Loop in VBC Switch"
+#define PRIVATE_AUD_CODEC_INFO	"Aud Codec Info"
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -370,6 +371,7 @@ struct tiny_private_ctl {
     struct mixer_ctl *fm_loop_vbc;
     struct mixer_ctl *ad1_fm_loop_vbc;
     struct mixer_ctl *internal_hp_pa_delay;
+    struct mixer_ctl *aud_codec_info;
 };
 
 struct stream_routing_manager {
@@ -427,6 +429,8 @@ typedef struct {
     uint32_t        dac_pga_gain_r;
     uint32_t        cg_pga_gain_l;
     uint32_t        cg_pga_gain_r;
+    uint32_t        fm_cg_pga_gain_l;
+    uint32_t        fm_cg_pga_gain_r;
     uint32_t        out_devices;
     uint32_t        in_devices;
     uint32_t        mode;
@@ -4099,6 +4103,11 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.ad1_fm_loop_vbc);
         }
+        else if (strcmp(s->private_name, PRIVATE_AUD_CODEC_INFO) == 0) {
+            s->adev->private_ctl.aud_codec_info=
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.aud_codec_info);
+        }
     }
 }
 
@@ -5266,6 +5275,7 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
 {
     char value[PROPERTY_VALUE_MAX]={0};
     int result = true;
+    int codec_info = 0;
     char* currentPosition = (char*)pmsg;
     char* startPosition = (char*)pmsg;
     //1,get and fill product hareware info.
@@ -5282,7 +5292,6 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
     }
     ALOGE("%s ro.build.version.release:%s",__func__,value);
     memcpy(currentPosition,value,sizeof(value));
-
 
     //3,get and fill digital/linein fm flag.
     currentPosition = currentPosition + AUDIO_AT_HARDWARE_NAME_LENGTH;
@@ -5329,7 +5338,18 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
 #endif
     ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
 
-    //7,get and fill anthoer item.
+    //7,get and fill audio codec info.
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    strcpy(currentPosition,AUDIO_AT_CODEC_INFO);
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+    codec_info = mixer_ctl_get_value(s_adev->private_ctl.aud_codec_info, 0);
+    if (codec_info < 0) {
+        codec_info = AUDIO_CODEC_2713;
+    }
+    sprintf(currentPosition,"%d",codec_info);
+    ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
+
+    //8,get and fill anthoer item.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     result = currentPosition - startPosition;
     ALOGE("%s :result length:%d",__func__,result);
