@@ -765,6 +765,11 @@ int camera_preview_start_set(void)
 		CMR_RTN_IF_ERR(ret);
 	}
 
+	if (INVALID_SET_WORD != set->saturation) {
+		ret = camera_set_saturation(set->saturation, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
 	if (INVALID_SET_WORD != set->effect) {
 		ret = camera_set_effect(set->effect, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
@@ -845,6 +850,11 @@ int camera_recover_start_set(void)
 
 	if (INVALID_SET_WORD != set->contrast) {
 		ret = camera_set_contrast(set->contrast, &skip, &skip_num);
+		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (INVALID_SET_WORD != set->saturation) {
+		ret = camera_set_saturation(set->saturation, &skip, &skip_num);
 		CMR_RTN_IF_ERR(ret);
 	}
 
