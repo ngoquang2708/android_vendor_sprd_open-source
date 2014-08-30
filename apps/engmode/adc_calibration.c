@@ -54,10 +54,12 @@ void	initialize_ctrl_file(void)
     }
     ret = chmod(CALI_CTRL_FILE_PATH,S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     if (-1 == ret) {
-        ENG_LOG("chmod /productinfo/adc.bin failed.");
+        ENG_LOG("chmod /productinfo/adc.bin failed. errno:%d, strerror(errno):%s\n",errno,strerror(errno));
         close(fd);
         return;
     }
+    sync();
+
     ret = read(fd,&cali_info,sizeof(cali_info));
     if(ret < 0){
         ALOGE(" %s read failed...\n",__func__);
