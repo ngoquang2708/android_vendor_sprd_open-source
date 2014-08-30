@@ -286,13 +286,31 @@ static int stop_rild(int modem)
         }
     }else if(modem == LTE_MODEM) {
         MODEMD_LOGD("stop lte rild!");
-        property_set("ctl.stop", "lril-daemon");
+        property_get(LTE_SIM_NUM_PROP, phoneCount, "");
+        if(!strcmp(phoneCount, "2")) {
+            property_set("ctl.stop", "lril-daemon");
+            property_set("ctl.stop", "lril-daemon1");
+        } else{
+            property_set("ctl.stop", "lril-daemon");
+        }
     }else if(modem == TL_MODEM) {
         MODEMD_LOGD("stop tl rild!");
-        property_set("ctl.stop", "tlril-daemon");
+        property_get(TL_SIM_NUM_PROP, phoneCount, "");
+         if(!strcmp(phoneCount, "2")) {
+             property_set("ctl.stop", "tlril-daemon");
+             property_set("ctl.stop", "tlril-daemon1");
+         } else{
+             property_set("ctl.stop", "tlril-daemon");
+         }
     }else if(modem == LF_MODEM) {
         MODEMD_LOGD("stop lf rild!");
-        property_set("ctl.stop", "lfril-daemon");
+        property_get(LF_SIM_NUM_PROP, phoneCount, "");
+         if(!strcmp(phoneCount, "2")) {
+             property_set("ctl.stop", "lfril-daemon");
+             property_set("ctl.stop", "lfril-daemon1");
+         } else{
+             property_set("ctl.stop", "lfril-daemon");
+         }
     }
 
     return 0;
@@ -335,19 +353,47 @@ static int start_rild(int modem)
         } else {
             property_set("ctl.start", "wril-daemon");
         }
-    } else if(modem == LTE_MODEM) {
-        /* SPRD: Add for 316447 @{ */
-        MODEMD_LOGD("start lte rild: 1st,stop it");
-        property_set("ctl.stop", "lril-daemon");
-        /* @} */
-        MODEMD_LOGD("start lte rild!");
-        property_set("ctl.start", "lril-daemon");
+    } else if (modem == LTE_MODEM) {
+        property_get(LTE_SIM_NUM_PROP, phoneCount, "");
+        if (!strcmp(phoneCount, "2")) {
+            property_set("ctl.start", "lril-daemon");
+            property_set("ctl.start", "lril-daemon1");
+        } else {
+            /* SPRD: Add for 316447 @{ */
+            MODEMD_LOGD("start lte rild: 1st,stop it");
+            property_set("ctl.stop", "lril-daemon");
+            /* @} */
+            MODEMD_LOGD("start lte rild!");
+            property_set("ctl.start", "lril-daemon");
+        }
     }else if(modem == TL_MODEM) {
         MODEMD_LOGD("start tl rild!");
-        property_set("ctl.start", "tlril-daemon");
+        property_get(TL_SIM_NUM_PROP, phoneCount, "");
+        if (!strcmp(phoneCount, "2")) {
+            property_set("ctl.start", "tlril-daemon");
+            property_set("ctl.start", "tlril-daemon1");
+        } else {
+            /* SPRD: Add for 316447 @{ */
+            MODEMD_LOGD("start tl rild: 1st,stop it");
+            property_set("ctl.stop", "tlril-daemon");
+            /* @} */
+            MODEMD_LOGD("start tl rild!");
+            property_set("ctl.start", "tlril-daemon");
+        }
     }else if(modem == LF_MODEM) {
         MODEMD_LOGD("start lf rild!");
-        property_set("ctl.start", "lfril-daemon");
+        property_get(LF_SIM_NUM_PROP, phoneCount, "");
+        if(!strcmp(phoneCount, "2")) {
+            property_set("ctl.start", "lfril-daemon");
+            property_set("ctl.start", "lfril-daemon1");
+        } else {
+            /* SPRD: Add for 316447 @{ */
+            MODEMD_LOGD("start lf rild: 1st,stop it");
+            property_set("ctl.stop", "lfril-daemon");
+            /* @} */
+            MODEMD_LOGD("start lf rild!");
+            property_set("ctl.start", "lfril-daemon");
+        }
     }
 
     return 0;
@@ -615,21 +661,25 @@ int start_service(int modem, int is_vlx, int restart)
             property_get(W_SIM_NUM_PROP, phoneCount, "");
         } else if(modem == LTE_MODEM) {
             property_get(LTE_TTY_DEV_PROP, modem_dev, "");
-            sprintf(path, "%s0", modem_dev);
-            MODEMD_LOGD("open stty dev: %s", path);
-            stty_fd = open_modem_dev(path);
-            if (stty_fd < 0) return -1;
-            /* Send IMEI */
-            send_imei(stty_fd, path);
-            MODEMD_LOGD("close stty dev, start");
-            close(stty_fd);
-            MODEMD_LOGD("close stty dev, end");
+            property_get(LTE_SIM_NUM_PROP, phoneCount, "");
+            if (!strcmp(phoneCount, "1")) {
+                sprintf(path, "%s0", modem_dev);
+                MODEMD_LOGD("open stty dev: %s", path);
+                stty_fd = open_modem_dev(path);
+                if (stty_fd < 0)
+                    return -1;
+                /* Send IMEI */
+                send_imei(stty_fd, path);
+                MODEMD_LOGD("close stty dev, start");
+                close(stty_fd);
+                MODEMD_LOGD("close stty dev, end");
 
-            start_phser(modem);
-            start_rild(modem);
-            start_engservice(modem);
-            start_nvitemd(modem);
-            return 0;
+                start_phser(modem);
+                start_rild(modem);
+                start_engservice(modem);
+                start_nvitemd(modem);
+                return 0;
+            }
         } else if(modem == TL_MODEM){
             property_get(TL_TTY_DEV_PROP, modem_dev, "");
             property_get(TL_SIM_NUM_PROP, phoneCount, "");

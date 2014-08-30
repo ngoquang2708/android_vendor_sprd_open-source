@@ -40,7 +40,7 @@
 #define W_SIM_NUM_PROP                  "ro.modem.w.count"
 #define LF_SIM_NUM_PROP            "ro.modem.lf.count"
 #define TL_SIM_NUM_PROP             "ro.modem.tl.count"
-
+#define LTE_SIM_NUM_PROP             "ro.modem.l.count"
 
 /* stty interface property */
 #define TD_TTY_DEV_PROP             "ro.modem.t.tty"
