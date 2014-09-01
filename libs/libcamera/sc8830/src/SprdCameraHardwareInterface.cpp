@@ -2588,6 +2588,7 @@ bool SprdCameraHardware::WaitForPreviewStart()
 		LOGI("WaitForPreviewStart: waiting for SPRD_PREVIEW_IN_PROGRESS");
 		if (mStateWait.waitRelative(mStateLock, PREV_TIMEOUT)) {
 			LOGE("WaitForPreviewStart: timeout");
+			freePreviewMem();
 			break;
 		}
 		LOGI("WaitForPreviewStart: woke up");
