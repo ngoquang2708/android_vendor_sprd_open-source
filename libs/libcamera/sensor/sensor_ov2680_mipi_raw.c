@@ -605,8 +605,8 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->blc_bypass=0x01;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
-	sensor_ptr->ae_bypass=0x01;
-	sensor_ptr->awb_bypass=0x01;
+	sensor_ptr->ae_bypass=0x00;
+	sensor_ptr->awb_bypass=0x00;
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
 	sensor_ptr->grgb_bypass=0x01;

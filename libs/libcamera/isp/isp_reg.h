@@ -1155,10 +1155,10 @@ union _isp_awbm_offset_tag {
 
 union _isp_awbm_blk_size_tag {
     struct _isp_awbm_blk_size_map {
-        volatile unsigned int blk_width     :7;
-        volatile unsigned int blk_height    :7;
+        volatile unsigned int blk_width     :9;
+        volatile unsigned int blk_height    :9;
         volatile unsigned int awbm_avgshf   :5;
-        volatile unsigned int reserved      :13;
+        volatile unsigned int reserved      :9;
     }mBits ;
     volatile unsigned int dwValue ;
 };

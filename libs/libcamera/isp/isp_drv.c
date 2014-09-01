@@ -2152,7 +2152,7 @@ int32_t ispAwbmSkip(uint32_t handler_id, uint8_t num)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -2352,7 +2352,7 @@ int32_t ispSetAwbGain(uint32_t handler_id, uint16_t r_gain, uint16_t g_gain, uin
 		reg0_s_ptr->mBits.b_gain=b_gain;
 		reg1_s_ptr->mBits.g_gain=g_gain;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		union _isp_awbc_gain0_v0001_tag* reg0_s_ptr=(union _isp_awbc_gain0_v0001_tag*)&isp_reg_ptr->AWBC_GAIN0;
 		union _isp_awbc_gain1_v0001_tag* reg1_s_ptr=(union _isp_awbc_gain1_v0001_tag*)&isp_reg_ptr->AWBC_GAIN1;
@@ -2400,9 +2400,9 @@ int32_t ispSetAwbGainOffset(uint32_t handler_id, uint16_t r_offset, uint16_t g_o
 /*	reg0_ptr->dwValue=reg0_s_ptr->dwValue;
 	reg1_ptr->dwValue=reg1_s_ptr->dwValue;*/
 	reg_config[0].reg_addr = ISP_AWBC_OFFSET0_V0001 - ISP_BASE_ADDR;
-	reg_config[0].reg_value = isp_reg_ptr->AWBC_GAIN0;
+	reg_config[0].reg_value = isp_reg_ptr->AWBC_OFFSET0;
 	reg_config[1].reg_addr = ISP_AWBC_OFFSET1_V0001 - ISP_BASE_ADDR;
-	reg_config[1].reg_value = isp_reg_ptr->AWBC_GAIN1;
+	reg_config[1].reg_value = isp_reg_ptr->AWBC_OFFSET0;
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 2;
 
@@ -2482,6 +2482,7 @@ void ispGetAWBMStatistic(uint32_t handler_id, uint32_t* r_info, uint32_t* g_info
 			break ;
 		}
 		case SC8830_ISP_ID:
+		case SC9630_ISP_ID:
 		{
 			if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param))
 			{
