@@ -297,7 +297,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         YUVIndex = YUVLayer->getLayerIndex();
 
         if ((mOSDLayerCount == 0 && mFBLayerCount > 0)
-            || ((GXPSupportVideoAndOSDBlending == false) && (mOSDLayerCount > 0)))
+            || ((GXPSupportVideoAndOSDBlending == false) && (mOSDLayerCount > 0))
+            || (VideoLayerCount + mOSDLayerCount > GXPMaxComposeWithVideoLayerCount))
         {
             accelerateVideoByGSP = false;
 	     YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
