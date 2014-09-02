@@ -2402,7 +2402,7 @@ int32_t ispSetAwbGainOffset(uint32_t handler_id, uint16_t r_offset, uint16_t g_o
 	reg_config[0].reg_addr = ISP_AWBC_OFFSET0_V0001 - ISP_BASE_ADDR;
 	reg_config[0].reg_value = isp_reg_ptr->AWBC_OFFSET0;
 	reg_config[1].reg_addr = ISP_AWBC_OFFSET1_V0001 - ISP_BASE_ADDR;
-	reg_config[1].reg_value = isp_reg_ptr->AWBC_OFFSET0;
+	reg_config[1].reg_value = isp_reg_ptr->AWBC_OFFSET1;
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 2;
 
@@ -8590,7 +8590,7 @@ int32_t ispBypassAll(uint32_t handler_id)
 	reg_config[2].reg_addr = 0x0314;
 	reg_config[2].reg_value = 0x01;
 	reg_config[3].reg_addr = 0x0414;
-	reg_config[3].reg_value = 0x01;
+	reg_config[3].reg_value = 0x00;
 	reg_config[4].reg_addr = 0x0514;
 	reg_config[4].reg_value = 0x01;
 	reg_config[5].reg_addr = 0x0614;
