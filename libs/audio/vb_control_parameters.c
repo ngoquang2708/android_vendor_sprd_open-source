@@ -1142,25 +1142,46 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
     bool w_enalbe = false;
     int i=0;
     bool result=false;
+
     vbc_ctrl_thread_para_t* vbc_ctrl_index = NULL;
     if(property_get(MODEM_T_ENABLE_PROPERTY, prop_t, "") && 0 == strcmp(prop_t, "1") )
     {
         MY_TRACE("%s:%s", __func__, MODEM_T_ENABLE_PROPERTY);
         t_enable = true;
-        s_vbc_pipe_count++;
     }
     if(property_get(MODEM_W_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
     {
         MY_TRACE("%s:%s", __func__, MODEM_W_ENABLE_PROPERTY);
         w_enalbe = true;
-        s_vbc_pipe_count++;
     }
-	if(property_get(MODEM_TDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+    if(property_get(MODEM_TDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
     {
         MY_TRACE("%s:%s", __func__, MODEM_TDDCSFB_ENABLE_PROPERTY);
         csfb_enable = true;
-        s_vbc_pipe_count++;
     }
+
+	for(i=0;i<adev->cp->num;i++)
+	{
+
+		if(csfb_enable && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_CSFB){
+		       MY_TRACE("%s:found CP_CSFB", __func__);
+			s_vbc_pipe_count++;
+			continue;
+		}
+		if(w_enalbe && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_W){
+		       MY_TRACE("%s:found W", __func__);
+			s_vbc_pipe_count++;
+			continue;
+		}
+		if(t_enable && (adev->cp->vbc_ctrl_pipe_info+i)->cp_type == CP_TG){
+			 MY_TRACE("%s:found TG", __func__);
+			s_vbc_pipe_count++;
+			continue;
+			}
+
+	}
+
+
 
     if(adev->cp && s_vbc_pipe_count)
     {
@@ -1242,6 +1263,7 @@ int vbc_ctrl_open(struct tiny_audio_device *adev)
     vbc_ctrl_init(adev);
     while(i<s_vbc_pipe_count)
     {
+
         rc = pthread_create((pthread_t *)(s_vbc_ctrl_thread_id+i), NULL,
             vbc_ctrl_thread_routine, (void *)(st_vbc_ctrl_thread_para+i));
         if (rc) {
@@ -1662,12 +1684,14 @@ void *vbc_ctrl_thread_routine(void *arg)
     write_common_head.cmd_type = VBC_CMD_NONE;
     write_common_head.paras_size = 0;
     MY_TRACE("voice:vbc_ctrl_thread_routine in pipe_name:%s.", para->vbpipe);
+    if( para->vbpipe == NULL)
+		goto EXIT;
 
 RESTART:
     /* open vbpipe to build connection.*/
-    if (para->vbpipe_fd == -1) {
+    if (para->vbpipe_fd <= 0) {
         para->vbpipe_fd = open(para->vbpipe, O_RDWR);//open("/dev/vbpipe6", O_RDWR);
-        if (para->vbpipe_fd < 0) {
+        if (para->vbpipe_fd <= 0) {
             MY_TRACE("vbc_ctrl_thread_routine open fail, pipe_name:%s, %d.", para->vbpipe, errno);
             sleep(1);
             goto RESTART;
