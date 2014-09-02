@@ -309,8 +309,8 @@ public class DmAlertDialog extends Activity {
 					smsSoundPath = smsSoundCursor.getString(smsSoundColumnIndex);
 					Log.i(TAG, "smsSoundPath = " + smsSoundPath);
 				}
-				
-	        }catch (IllegalStateException e) {
+			// SPRD BugFix 20140902 Spreadst of bug346598, IllegalStateException.
+	        }catch (Exception e) {
 	            Log.e(TAG, "getSMSSoundUri", e);
 	        } finally {
 	        	if(null != smsSoundCursor){
