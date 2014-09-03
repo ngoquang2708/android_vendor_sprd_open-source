@@ -49,7 +49,7 @@ endif
 ifeq ($(strip $(BOARD_USES_SS_VOIP)), true)
 # Default case, Nothing to do.
 else
-LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
+#LOCAL_CFLAGS += -DVOIP_DSP_PROCESS
 endif
 
 
