@@ -92,13 +92,11 @@ bool SprdPrimaryDisplayDevice:: Init(FrameBufferInfo **fbInfo)
     if (mUtil->getGSPCapability(mGXPCap))
     {
         ALOGE("get gsp capability failed");
-        return false;
     }
 
     if (mGXPCap->magic != CAPABILITY_MAGIC_NUMBER)
     {
         ALOGE("SprdPrimaryDisplayDevice:: Init GXP device init failed");
-	 return false;
     }
     pData = static_cast<void *>(mGXPCap);
 #endif
@@ -218,7 +216,7 @@ int SprdPrimaryDisplayDevice:: AcceleratorProbe(void *pData)
     if (pData == NULL)
     {
         ALOGD("SprdPrimaryDisplayDevice:: AcceleratorProbe GXP device error");
-	 return 0;
+        return 0;
     }
     GSP_CAPABILITY_T *GXPCap = static_cast<GSP_CAPABILITY_T *>(pData);
     if (GXPCap->buf_type_support == GSP_ADDR_TYPE_PHYSICAL)
