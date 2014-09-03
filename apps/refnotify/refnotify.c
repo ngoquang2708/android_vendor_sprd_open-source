@@ -370,7 +370,6 @@ static void RefNotify_DoTimesync(char * path, struct refnotify_cmd *pcmd)
 		REF_LOGE("RefNotify_DoTimesync path is null! \n");
 		return;
 	}
-
 	gettimeofday(&(time_info.tv), &tz);
 	time_info.sys_cnt = *(unsigned int*)(pcmd+1);
 	time_info.uptime = info.uptime;
@@ -540,21 +539,22 @@ int main(int argc, char *argv[])
 			strcpy(path, TD_NOTIFY_DEV);
 		} else{
 			strcat(path, pathnumber);
-			if( -1 == access(TD_FIFO_PATH, F_OK)){
-				mk_ret = mkfifo(TD_FIFO_PATH, 0666);
-				if(mk_ret == 0) {
-					REF_LOGE("create tdfifo success");
-				} else {
-					REF_LOGE("create tdfifo failed, error: %s",strerror(errno));
-					exit(EXIT_FAILURE);
-				}
-			}
-			g_fifopath = TD_FIFO_PATH;
 		}
 		REF_LOGD("get TD_NOTIFY_DEV property path is: %s \n", path);
+		if( -1 == access(TD_FIFO_PATH, F_OK)){
+			mk_ret = mkfifo(TD_FIFO_PATH, 0666);
+			if(mk_ret == 0) {
+				REF_LOGE("create tdfifo success");
+			} else {
+				REF_LOGE("create tdfifo failed, error: %s",strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+		}
+		g_fifopath = TD_FIFO_PATH;
 	} else if(flag == 1){
 		strcpy(path, W_NOTIFY_DEV);
-		/*if( -1 == access(W_FIFO_PATH, F_OK)){
+		REF_LOGD("get W_NOTIFY_DEV property path is: %s \n", path);
+		if( -1 == access(W_FIFO_PATH, F_OK)){
 			mk_ret = mkfifo(W_FIFO_PATH, 0666);
 			if(mk_ret == 0) {
 				REF_LOGE("create wfifo success");
@@ -563,25 +563,25 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 		}
-		g_fifopath = W_FIFO_PATH;*/
+		g_fifopath = W_FIFO_PATH;
 	} else if(flag == 2){
 		property_get("ro.modem.l.tty",path,"not_find");
 		if(0 == strcmp(path, "not_find")){
 			strcpy(path, LTE_NOTIFY_DEV);
 		} else{
 			strcat(path, pathnumber);
-			REF_LOGD("get L_NOTIFY_DEV property path is: %s \n", path);
-			if( -1 == access(L_FIFO_PATH, F_OK)){
-				mk_ret = mkfifo(L_FIFO_PATH, 0666);
-				if(mk_ret == 0) {
-					REF_LOGE("create lfifo success");
-				} else {
-					REF_LOGE("create lfifo failed, error: %s",strerror(errno));
-					exit(EXIT_FAILURE);
-				}
-			}
-			g_fifopath = L_FIFO_PATH;
 		}
+		REF_LOGD("get L_NOTIFY_DEV property path is: %s \n", path);
+		if( -1 == access(L_FIFO_PATH, F_OK)){
+			mk_ret = mkfifo(L_FIFO_PATH, 0666);
+			if(mk_ret == 0) {
+				REF_LOGE("create lfifo success");
+			} else {
+				REF_LOGE("create lfifo failed, error: %s",strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+		}
+		g_fifopath = L_FIFO_PATH;
 	}
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
