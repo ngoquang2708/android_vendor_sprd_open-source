@@ -78,6 +78,7 @@ static void handle_dump_shark_sipc_info()
 #endif
 #define MODEM_WCN_DEVICE_PROPERTY "ro.modem.wcn.enable"
 #define MODEM_L_DEVICE_PROPERTY "persist.modem.l.enable"
+#define MODEM_TL_DEVICE_PROPERTY "persist.modem.tl.enable"
 
 #define MODEM_W_LOG_PROPERTY "ro.modem.w.log"
 #define MODEM_TD_LOG_PROPERTY "ro.modem.t.log"
@@ -88,6 +89,7 @@ static void handle_dump_shark_sipc_info()
 #define MODEM_TD_DIAG_PROPERTY "ro.modem.t.diag"
 #define MODEM_WCN_DIAG_PROPERTY "ro.modem.wcn.diag"
 #define MODEM_L_DIAG_PROPERTY "ro.modem.l.diag"
+#define MODEM_TL_DIAG_PROPERTY "ro.modem.tl.diag"
 
 #define MODME_WCN_DEVICE_RESET "persist.sys.sprd.wcnreset"
 #define MODEM_WCN_DUMP_LOG "persist.sys.sprd.wcnlog"
@@ -122,6 +124,10 @@ static void handle_init_modem_state(struct slog_info *info)
 	} else if (!strncmp(info->name, "cp3", 3)) {
 		property_get(MODEM_L_DEVICE_PROPERTY, modem_property, "");
 		ret = atoi(modem_property);
+		if(ret == 0) {
+			property_get(MODEM_TL_DEVICE_PROPERTY, modem_property, "");
+			ret = atoi(modem_property);
+		}
 	}
 
 	err_log("Init %s state is '%s'.", info->name, ret==0? "disable":"enable");
@@ -166,8 +172,13 @@ static void handle_open_modem_device(struct slog_info *info)
 			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
 			info->fd_device = open_device(info, modem_property);
 			info->fd_dump_cp = info->fd_device;
-			if(info->fd_device < 0)
-				info->state = SLOG_STATE_OFF;
+			if(info->fd_device < 0) {
+				property_get(MODEM_TL_DIAG_PROPERTY, modem_property, "not_find");
+				info->fd_device = open_device(info, modem_property);
+				info->fd_dump_cp = info->fd_device;
+				if(info->fd_device < 0)
+					info->state = SLOG_STATE_OFF;
+			}
 		} else {
 			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
 			info->fd_dump_cp = open_device(info, modem_property);
