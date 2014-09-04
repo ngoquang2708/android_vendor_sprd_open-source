@@ -26,10 +26,16 @@
 #include <linux/mali/mali_utgard.h>
 #include "mali_kernel_linux.h"
 
+#ifdef CONFIG_64BIT
+#include <soc/sprd/irqs.h>
+#include <soc/sprd/sci.h>
+#include <soc/sprd/sci_glb_regs.h>
+#else
 #include <mach/irqs.h>
 #include <mach/hardware.h>
 #include <mach/sci.h>
 #include <mach/sci_glb_regs.h>
+#endif
 #include <linux/workqueue.h>
 #include <linux/semaphore.h>
 #include "mali_kernel_common.h"
@@ -69,6 +75,10 @@
 #endif
 
 #define __SPRD_GPU_TIMEOUT      (3*1000)
+
+#ifdef CONFIG_64BIT
+#define SPRD_MALI_PHYS          0x60000000
+#endif
 
 struct gpu_clock_source {
 	char* name;
