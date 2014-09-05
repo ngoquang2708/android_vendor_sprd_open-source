@@ -16,6 +16,7 @@
 #include "eng_at.h"
 #include "eng_sqlite.h"
 #include "eng_uevent.h"
+#include "eng_debug.h"
 
 #define VLOG_PRI  -20
 #define USB_CONFIG_VSER  "vser"
@@ -387,7 +388,10 @@ int main (int argc, char** argv)
     char cmdline[ENG_CMDLINE_LEN];
     char run_type[32] = {0};
     run_type[0] = 't';
-    eng_thread_t t0,t1,t2,t3;
+    eng_thread_t t0,t1,t2,t3,t4;
+    int fd;
+    char set_propvalue[] = {"1"};
+    char get_propvalue[PROPERTY_VALUE_MAX] = {0};
     eng_dev_info_t dev_info = {{"/dev/ttyGS0", "/dev/vser", 0, 1}, {0, 0, 0}};
 
     eng_get_usb_int(argc, argv, dev_info.host_int.dev_at,
@@ -417,28 +421,6 @@ int main (int argc, char** argv)
     ENG_LOG("eng_pcclient: modem at chan: %s, modem diag chan: %s, modem log chan: %s\n",
             dev_info.modem_int.at_chan, dev_info.modem_int.diag_chan, dev_info.modem_int.log_chan);
 
-    // Create the sqlite database for factory mode.
-    // FIX ME:temporarily check by ENG_RUN_TYPE_WCN/LTE
-    if(strcmp(run_type,"wcn") != 0){
-                if(strcmp(run_type,"l") != 0){
-                    if(strcmp(run_type,"tl") != 0)
-                        eng_sqlite_create();
-        }
-        if(cmdparam.califlag != 1){
-	if(cmdparam.normal_cali){
-          	  //Change gser port
-		  memcpy(dev_info.host_int.dev_diag, "/dev/vser", sizeof("/dev/vser"));
-            }
-            // Check factory mode and switch device mode.
-            eng_check_factorymode(cmdparam.normal_cali);
-	    if(cmdparam.normal_cali)
-                eng_autotestStart();
-        }else{
-            // Initialize file for ADC
-            initialize_ctrl_file();
-        }
-    }
-
     set_vlog_priority();
 
     // Semaphore & log state initialization
@@ -447,6 +429,31 @@ int main (int argc, char** argv)
         g_armlog_enable = 1;
     }
 
+    fd = eng_file_lock();
+    if(fd >= 0){
+        property_get("sys.onemodem.start.enable", get_propvalue, "not_find");
+        ENG_LOG("sys.onemodem.start.enable = %s",get_propvalue);
+        if(0 == strcmp(get_propvalue, "not_find") || 0 != strcmp(get_propvalue, set_propvalue)){
+            property_set("sys.onemodem.start.enable", set_propvalue);
+            eng_file_unlock(fd);
+            eng_sqlite_create();
+            if(cmdparam.califlag != 1){
+                if(cmdparam.normal_cali){
+                    //Change gser port
+                    memcpy(dev_info.host_int.dev_diag, "/dev/vser", sizeof("/dev/vser"));
+                }
+                // Check factory mode and switch device mode.
+                eng_check_factorymode(cmdparam.normal_cali);
+                if(cmdparam.normal_cali)
+                    eng_autotestStart();
+            }else{
+            // Initialize file for ADC
+                initialize_ctrl_file();
+            }
+        }else{
+            eng_file_unlock(fd);
+        }
+    }
     if(0 != eng_thread_create(&t0, eng_uevt_thread, NULL)){
         ENG_LOG("uevent thread start error");
     }
