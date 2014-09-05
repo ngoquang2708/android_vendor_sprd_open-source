@@ -441,6 +441,10 @@ struct isp_reg{
 	//HUE
 	uint32_t HUE_STATUS_V0001;
 	uint32_t HUE_PARAM_V0001;
+
+	/*PRE GAIN GLB */
+	uint32_t PRE_GLB_GAIN_PARAM;
+
 };
 
 struct isp_drv_context{
@@ -625,7 +629,7 @@ int32_t ispGetFetchPreviewStatus(uint32_t handler_id, uint32_t* status)
 	uint32_t isp_id = _isp_GetIspId();
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 
 	/*	union _isp_fetch_status_preview_v0001_tag* reg_ptr=(union _isp_fetch_status_preview_v0001_tag*)FETCH_STATUS_PREVIEW_V0001;*/
@@ -692,6 +696,32 @@ int32_t ispFetchSubtract(uint32_t handler_id, uint8_t eb)
 	ISP_CHECK_FD;
 
 	reg_s_ptr->mBits.sub_stract=eb;
+/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+	reg_config.reg_addr = ISP_FETCH_PARAM - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->FETCH_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	_isp_write((uint32_t *)&write_param);
+
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispAfifoWrMode(uint32_t handler_id, uint8_t mode)
+{
+/*	union _isp_fetch_param_tag* reg_ptr=(union _isp_fetch_param_tag*)ISP_FETCH_PARAM;*/
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_fetch_param_tag* reg_s_ptr=(union _isp_fetch_param_tag*)&isp_reg_ptr->FETCH_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.afifo_wr_mode=mode;
 /*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
 	reg_config.reg_addr = ISP_FETCH_PARAM - ISP_BASE_ADDR;
 	reg_config.reg_value = isp_reg_ptr->FETCH_PARAM;
@@ -1047,7 +1077,7 @@ int32_t ispSetBlcCalibration(uint32_t handler_id, uint16_t r, uint16_t b, uint16
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 2;
 
-	/*_isp_write((uint32_t *)&write_param);eddy for SharkL isp bring up*/
+	_isp_write((uint32_t *)&write_param);
 
 	return ISP_SUCCESS;
 }
@@ -1062,7 +1092,7 @@ int32_t ispGetNLCStatus(uint32_t handler_id, uint32_t* status)
 	uint32_t isp_id=_isp_GetIspId();
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		/*union _isp_bnlc_status_tag* reg_ptr=(union _isp_bnlc_status_tag*)ISP_NLC_STATUS_V0001;*/
 		union _isp_bnlc_status_tag* reg_s_ptr=(union _isp_bnlc_status_tag*)&isp_reg_ptr->NLC_STATUS;
@@ -1112,7 +1142,7 @@ int32_t ispNlcBypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		/*	union _isp_nlc_param_tag* reg_ptr=(union _isp_bnlc_param_tag*)ISP_BNLC_PARAM;*/
 		union _isp_nlc_param_v0001_tag* reg_s_ptr=(union _isp_nlc_param_v0001_tag*)&isp_reg_ptr->NLC_PARAM;
@@ -1124,7 +1154,7 @@ int32_t ispNlcBypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 	}
-	/*_isp_write((uint32_t *)&write_param);eddy for SharkL isp bring up*/
+	_isp_write((uint32_t *)&write_param);
 
 	return ISP_SUCCESS;
 }
@@ -1226,7 +1256,7 @@ int32_t ispSetNlcRNode(uint32_t handler_id, uint16_t* r_node_ptr)
 		reg_config[9].reg_addr = ISP_BNLC_N_PARAM_R9 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_R9;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 	/*	reg0_ptr->dwValue=reg0_s_ptr->dwValue;
 		reg1_ptr->dwValue=reg1_s_ptr->dwValue;
@@ -1260,12 +1290,12 @@ int32_t ispSetNlcRNode(uint32_t handler_id, uint16_t* r_node_ptr)
 		reg_config[9].reg_addr = ISP_NLC_N_PARAM_R9_V0001 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_R9;
 	}
-#if 0 //eddy for SharkL isp bring up
+
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
 	_isp_write((uint32_t *)&write_param);
-#endif
+
 	return ISP_SUCCESS;
 }
 
@@ -1368,7 +1398,7 @@ int32_t ispSetNlcGNode(uint32_t handler_id, uint16_t* g_node_ptr)
 		reg_config[9].reg_addr = ISP_BNLC_N_PARAM_G9 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_G9;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 	/*
 		reg0_ptr->dwValue=reg0_s_ptr->dwValue;
@@ -1403,12 +1433,12 @@ int32_t ispSetNlcGNode(uint32_t handler_id, uint16_t* g_node_ptr)
 		reg_config[9].reg_addr = ISP_NLC_N_PARAM_G9_V0001 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_G9;
 	}
-#if 0 //eddy for SharkL isp bring up
+
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
 	_isp_write((uint32_t *)&write_param);
-#endif
+
 	return ISP_SUCCESS;
 }
 
@@ -1511,7 +1541,7 @@ int32_t ispSetNlcBNode(uint32_t handler_id, uint16_t* b_node_ptr)
 		reg_config[9].reg_addr = ISP_BNLC_N_PARAM_B9 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_B9;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 	/*
 		reg0_ptr->dwValue=reg0_s_ptr->dwValue;
@@ -1650,7 +1680,7 @@ int32_t ispSetNlcLNode(uint32_t handler_id, uint16_t* l_node_ptr)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 9;
 	}
-	else if(SC8830_ISP_ID==isp_id)
+	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 	/*
 		reg0_ptr->dwValue=reg0_s_ptr->dwValue;
@@ -1682,12 +1712,12 @@ int32_t ispSetNlcLNode(uint32_t handler_id, uint16_t* l_node_ptr)
 		reg_config[8].reg_addr = ISP_NLC_N_PARAM_L8_V0001 - ISP_BASE_ADDR;
 		reg_config[8].reg_value = isp_reg_ptr->BNLC_N_PARAM_L8;
 	}
-#if 0 //eddy for SharkL isp bring up
+
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 9;
 
 	_isp_write((uint32_t *)&write_param);
-#endif
+
 	return ISP_SUCCESS;
 }
 
@@ -2584,6 +2614,30 @@ int32_t ispBpcMode(uint32_t handler_id, uint16_t mode)
 	return ISP_SUCCESS;
 }
 
+int32_t ispBpcPatternThr(uint32_t handler_id, uint16_t pattern_type, uint16_t maxminThr, uint16_t super_badThr)
+{
+/*	union _isp_bpc_param_tag* reg_ptr=(union _isp_bpc_param_tag*)ISP_BPC_PARAM;*/
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_bpc_param_tag* reg_s_ptr=(union _isp_bpc_param_tag*)&isp_reg_ptr->BPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.pattern_type = pattern_type;
+	reg_s_ptr->mBits.maxminThr = maxminThr;
+	reg_s_ptr->mBits.super_badThr = super_badThr;
+/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+	reg_config.reg_addr = ISP_BPC_PARAM - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->BPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	_isp_write((uint32_t *)&write_param);
+
+	return ISP_SUCCESS;
+}
+
 /*	--
 *@
 *@
@@ -2817,18 +2871,22 @@ int32_t ispWDenoiseSliceInfo(uint32_t handler_id, uint16_t edge_info)
 	union _isp_wave_slice_info_tag* reg_s_ptr=(union _isp_wave_slice_info_tag*)&isp_reg_ptr->WAVE_SLICE_INFO;
 	struct isp_reg_bits reg_config;
 	struct isp_reg_param write_param;
+	uint32_t isp_id=_isp_GetIspId();
 
 	ISP_CHECK_FD;
 
-	reg_s_ptr->mBits.edge_info=edge_info;
-/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
-	reg_config.reg_addr = ISP_WAVE_SLICE_INFO - ISP_BASE_ADDR;
-	reg_config.reg_value = isp_reg_ptr->WAVE_SLICE_INFO;
-	write_param.reg_param = (uint32_t)&reg_config;
-	write_param.counts = 1;
+	/* sharkl don't have this register */
+	if(SC9630_ISP_ID != isp_id)
+	{
+		reg_s_ptr->mBits.edge_info=edge_info;
+	/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+		reg_config.reg_addr = ISP_WAVE_SLICE_INFO - ISP_BASE_ADDR;
+		reg_config.reg_value = isp_reg_ptr->WAVE_SLICE_INFO;
+		write_param.reg_param = (uint32_t)&reg_config;
+		write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
+		_isp_write((uint32_t *)&write_param);
+	}
 	return ISP_SUCCESS;
 }
 
@@ -4057,7 +4115,7 @@ int32_t ispSetCCEUVC(uint32_t handler_id, uint8_t* t_ptr, uint8_t* m_ptr)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -4905,7 +4963,7 @@ int32_t ispAFMSkipNum(uint32_t handler_id, uint8_t num)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -4935,7 +4993,7 @@ int32_t ispAFMSkipClear(uint32_t handler_id, uint8_t eb)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -5148,7 +5206,7 @@ int32_t ispGetAFMStatistic(uint32_t handler_id, uint32_t* statistic_ptr)
 			statistic_ptr[7] = reg_config[7].reg_value;
 			statistic_ptr[8] = reg_config[8].reg_value;
 		}
-	}else if(SC8830_ISP_ID==isp_id){
+	}else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id) {
 	/*	union _isp_afm_statistic0_tag* reg0_ptr=(union _isp_afm_statistic0_tag*)ISP_AFM_STATISTIC0_L_V0001;
 		union _isp_afm_statistic1_tag* reg1_ptr=(union _isp_afm_statistic1_tag*)ISP_AFM_STATISTIC0_H_V0001;
 		union _isp_afm_statistic2_tag* reg2_ptr=(union _isp_afm_statistic2_tag*)ISP_AFM_STATISTIC1_L_V0001;
@@ -5441,7 +5499,7 @@ int32_t ispFalseColorMode(uint32_t handler_id, uint8_t mode)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id){
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id){
 
 		ISP_CHECK_FD;
 
@@ -5722,15 +5780,26 @@ int32_t ispGetStoreStatusPreview(uint32_t handler_id, uint32_t* status)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
+	ISP_CHECK_FD;
 	if(SC8830_ISP_ID==isp_id)
 	{
-		ISP_CHECK_FD;
-
 		reg_config.reg_addr = ISP_STORE_STATUS_PREVIEW_V0001 - ISP_BASE_ADDR;
 		read_param.reg_param = (uint32_t)&reg_config;
 		read_param.counts = 1;
 
 	/*	reg_s_ptr->dwValue=reg_ptr->dwValue;*/
+		if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param)) {
+			reg_s_ptr->dwValue = reg_config.reg_value;
+			*status=reg_s_ptr->dwValue;
+		}
+	}
+	else if (SC9630_ISP_ID==isp_id)
+	{
+		reg_config.reg_addr = ISP_STORE_STATUS_PREVIEW_V0002 - ISP_BASE_ADDR;
+		read_param.reg_param = (uint32_t)&reg_config;
+		read_param.counts = 1;
+
+		/*	reg_s_ptr->dwValue=reg_ptr->dwValue;*/
 		if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param)) {
 			reg_s_ptr->dwValue = reg_config.reg_value;
 			*status=reg_s_ptr->dwValue;
@@ -6002,6 +6071,12 @@ int32_t ispSetStoreInt(uint32_t handler_id, uint16_t int_cnt_num, uint8_t int_eb
 	return ISP_SUCCESS;
 }
 
+int32_t ispSetStoreBoarder(uint32_t handler_id, uint8_t right, uint8_t left, uint8_t down, uint8_t up)
+{
+	return ISP_SUCCESS;
+}
+
+
 /* FEEDER */
 /*	--
 *@
@@ -6124,7 +6199,7 @@ int32_t ispGetAxiWrMasterStatus(uint32_t handler_id, uint32_t* status)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -6154,7 +6229,7 @@ int32_t ispGetAxiRdMasterStatus(uint32_t handler_id, uint32_t* status)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7072,7 +7147,7 @@ int32_t ispSliceCntEb(uint32_t handler_id, uint8_t eb)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7102,7 +7177,7 @@ int32_t ispPerformCntEb(uint32_t handler_id, uint8_t eb)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7132,7 +7207,7 @@ int32_t ispSetSliceNum(uint32_t handler_id, uint8_t num)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7163,7 +7238,7 @@ uint8_t ispGetSliceNum(uint32_t handler_id)
 	uint32_t isp_id=_isp_GetIspId();
 	uint8_t num=0x00;
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7195,7 +7270,7 @@ int32_t ispGetPerformCntRStatus(uint32_t handler_id, uint32_t* cnt)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7226,7 +7301,7 @@ int32_t ispGetPerformCntStatus(uint32_t handler_id, uint32_t* cnt)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7258,7 +7333,7 @@ int32_t ispGetYiqStatus(uint32_t handler_id, uint32_t* yiq_status)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 	ISP_CHECK_FD;
 
@@ -7290,7 +7365,7 @@ int32_t ispYGammabypass(uint32_t handler_id, uint8_t bypass)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7464,7 +7539,7 @@ int32_t ispAutoFlickerVHeight(uint32_t handler_id, uint16_t height)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7499,7 +7574,7 @@ int32_t ispAutoFlickerLineConter(uint32_t handler_id, uint16_t counter)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7533,7 +7608,7 @@ int32_t ispAutoFlickerLineStep(uint32_t handler_id, uint8_t step)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7567,7 +7642,7 @@ int32_t ispAutoFlickerLineStart(uint32_t handler_id, uint16_t start_line)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7600,7 +7675,7 @@ int32_t ispAembypass(uint32_t handler_id, uint8_t bypass)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7630,7 +7705,7 @@ int32_t ispAemMode(uint32_t handler_id, uint8_t mode)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7660,7 +7735,7 @@ int32_t ispAemSkipNum(uint32_t handler_id, uint8_t num)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7690,7 +7765,7 @@ int32_t ispAemSourceSel(uint32_t handler_id, uint8_t src_sel)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7735,6 +7810,7 @@ int32_t ispGetAEMStatistic(uint32_t handler_id, uint32_t* y_info)
 	switch(isp_id)
 	{
 		case SC8830_ISP_ID:
+		case SC9630_ISP_ID:
 		{
 			if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param))
 			{
@@ -7767,7 +7843,7 @@ int32_t ispAutoFlickerbypass(uint32_t handler_id, uint8_t bypass)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7797,7 +7873,7 @@ int32_t ispAutoFlickerMode(uint32_t handler_id, uint8_t mode)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -7866,6 +7942,58 @@ int32_t ispGetIntCom(uint32_t handler_id, uint32_t* raw)
 
 	return ISP_SUCCESS;
 }
+
+/*	--
+*@
+*@
+*/
+int32_t ispPreGlbGainBypass(uint32_t handler_id, uint8_t bypass)
+{
+/*	union _isp_glb_gain_param_tag* reg_ptr=(union _isp_glb_gain_param_tag*)ISP_PRE_GLOBAL_GAIN;*/
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_pre_global_gain_tag* reg_s_ptr=(union _isp_pre_global_gain_tag*)&isp_reg_ptr->PRE_GLB_GAIN_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.bypass=bypass;
+/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+	reg_config.reg_addr = ISP_PRE_GLOBAL_GAIN - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->PRE_GLB_GAIN_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	_isp_write((uint32_t *)&write_param);
+
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispPreSetGlbGain(uint32_t handler_id, uint32_t gain)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_pre_global_gain_tag* reg_s_ptr=(union _isp_pre_global_gain_tag*)&isp_reg_ptr->PRE_GLB_GAIN_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.gain=gain;
+/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+	reg_config.reg_addr = ISP_PRE_GLOBAL_GAIN - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->PRE_GLB_GAIN_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	_isp_write((uint32_t *)&write_param);
+
+	return ISP_SUCCESS;
+}
+
 
 /*Glb gain */
 /*	--
@@ -7946,6 +8074,7 @@ int32_t ispSetGlbGain(uint32_t handler_id, uint32_t gain)
 
 	return ISP_SUCCESS;
 }
+
 
 /*	--
 *@
@@ -8098,7 +8227,7 @@ int32_t ispGetHueStatus(uint32_t handler_id, uint32_t* status)
 	struct isp_reg_param read_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -8130,7 +8259,7 @@ int32_t ispHuebypass(uint32_t handler_id, uint8_t bypass)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -8160,7 +8289,7 @@ int32_t ispSetHueFactor(uint32_t handler_id, uint8_t factor)
 	struct isp_reg_param write_param;
 	uint32_t isp_id=_isp_GetIspId();
 
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		ISP_CHECK_FD;
 
@@ -8427,7 +8556,7 @@ int32_t ispSetLncParam(uint32_t handler_id, uint32_t addr, uint32_t len)
 {
 	int32_t ret = ISP_SUCCESS;
 	struct isp_reg_param write_param;
-	return ret;/*eddy for SharkL isp bring up*/
+
 	ISP_CHECK_FD;
 
 	write_param.reg_param = addr;
@@ -8574,7 +8703,7 @@ int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint3
 	return _isp_read((uint32_t *)&read_param);
 }
 
-int32_t ispBypassAll(uint32_t handler_id)
+int32_t ispBypassNewFeature(uint32_t handler_id)
 {
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 	struct isp_reg_bits reg_config[32];
@@ -8583,84 +8712,25 @@ int32_t ispBypassAll(uint32_t handler_id)
 
 	ISP_CHECK_FD;
 
-	reg_config[0].reg_addr = 0x0114;
-	reg_config[0].reg_value = 0x01;
-	reg_config[1].reg_addr = 0x0214;
-	reg_config[1].reg_value = 0x01;
-	reg_config[2].reg_addr = 0x0314;
-	reg_config[2].reg_value = 0x01;
-	reg_config[3].reg_addr = 0x0414;
-	reg_config[3].reg_value = 0x00;
-	reg_config[4].reg_addr = 0x0514;
-	reg_config[4].reg_value = 0x01;
-	reg_config[5].reg_addr = 0x0614;
-	reg_config[5].reg_value = 0x01;
-	reg_config[6].reg_addr = 0x0714;
-	reg_config[6].reg_value = 0x01;
-	reg_config[7].reg_addr = 0x0914;
-	reg_config[7].reg_value = 0x01;
-	reg_config[8].reg_addr = 0x0A14;
-	reg_config[8].reg_value = 0x01;
-	reg_config[9].reg_addr = 0x0C14;
-	reg_config[9].reg_value = 0x01;
+	if (isp_id == SC9630_ISP_ID)
+	{
+		reg_config[0].reg_addr = 0x1C14;  //nawbm new feature
+		reg_config[0].reg_value = 0x01;
+		reg_config[1].reg_addr = 0x1D14; //wavelet, new feature
+		reg_config[1].reg_value = 0x01;
+		reg_config[2].reg_addr = 0x1E14; //binning4awb, new feature
+		reg_config[2].reg_value = 0x01;
+		reg_config[3].reg_addr = 0x1F14; //pre gain, new feature
+		reg_config[3].reg_value = 0x01;
 
-	reg_config[10].reg_addr = 0x0D14;
-	reg_config[10].reg_value = 0x01;
-	reg_config[11].reg_addr = 0x0E14;
-	reg_config[11].reg_value = 0x01;
-	reg_config[12].reg_addr = 0x0F14;
-	reg_config[12].reg_value = 0x01;
-	reg_config[13].reg_addr = 0x1014;
-	reg_config[13].reg_value = 0x01;
-	reg_config[14].reg_addr = 0x1114;
-	reg_config[14].reg_value = 0x01;
-	reg_config[15].reg_addr = 0x1214;
-	reg_config[15].reg_value = 0x01;
-	reg_config[16].reg_addr = 0x1314;
-	reg_config[16].reg_value = 0x01;
-	reg_config[17].reg_addr = 0x1414;
-	reg_config[17].reg_value = 0x01;
-	reg_config[18].reg_addr = 0x1514;
-	reg_config[18].reg_value = 0x01;
-	reg_config[19].reg_addr = 0x1614;
-	reg_config[19].reg_value = 0x01;
+		write_param.reg_param = (uint32_t)&reg_config[0];
+		write_param.counts = 4;
 
-	reg_config[20].reg_addr = 0x1A14;
-	reg_config[20].reg_value = 0x01;
-	reg_config[21].reg_addr = 0x1B14;
-	reg_config[21].reg_value = 0x01;
-	reg_config[22].reg_addr = 0x1C14;
-	reg_config[22].reg_value = 0x01;
-	reg_config[23].reg_addr = 0x1D14;
-	reg_config[23].reg_value = 0x01;
-	reg_config[24].reg_addr = 0x1E14;
-	reg_config[24].reg_value = 0x01;
-	reg_config[25].reg_addr = 0x1F14;
-	reg_config[25].reg_value = 0x01;
-	reg_config[26].reg_addr = 0x2114;
-	reg_config[26].reg_value = 0x80000000;
-	reg_config[27].reg_addr = 0x2214;
-	reg_config[27].reg_value = 0x80000000;
-	reg_config[28].reg_addr = 0x2314;
-	reg_config[28].reg_value = 0x01;
-	reg_config[29].reg_addr = 0x2414;
-	reg_config[29].reg_value = 0x01;
-
-	reg_config[30].reg_addr = 0x2514;
-	reg_config[30].reg_value = 0x01;
-
-	reg_config[31].reg_addr = 0x0B14;
-	reg_config[31].reg_value = 0x02;
-
-
-	write_param.reg_param = (uint32_t)&reg_config[0];
-	write_param.counts = 32;
-
-	_isp_write((uint32_t *)&write_param);
-
-
+		_isp_write((uint32_t *)&write_param);
+	}
 	return ISP_SUCCESS;
 }
+
 
 /**----------------------------------------------------------------------------*
 *			Compiler Flag						*

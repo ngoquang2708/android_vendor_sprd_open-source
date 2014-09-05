@@ -329,6 +329,10 @@ uint8_t ispGetSliceNum(uint32_t handler_id);
 int32_t ispGetPerformCntRStatus(uint32_t handler_id, uint32_t* cnt);
 int32_t ispGetPerformCntStatus(uint32_t handler_id, uint32_t* cnt);
 
+//Pre Glb Gain
+int32_t ispPreGlbGainBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispPreSetGlbGain(uint32_t handler_id, uint32_t gain);
+
 //Glb gain
 int32_t ispGetGlbGainStatus(uint32_t handler_id, uint32_t* status);
 int32_t ispGlbGainBypass(uint32_t handler_id, uint8_t bypass);
@@ -386,7 +390,7 @@ int32_t ispRegWrite(uint32_t handler_id, uint32_t num, void* param_ptr);
 int32_t ispRegRead(uint32_t handler_id, uint32_t num, void* param_ptr);
 
 int ispGetRegVal(uint32_t handler_id, uint32_t base_offset, uint32_t *buf, uint32_t len);
-int32_t ispBypassAll(uint32_t handler_id);
+int32_t ispBypassNewFeature(uint32_t handler_id);
 
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*

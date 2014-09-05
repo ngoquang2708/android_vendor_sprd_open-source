@@ -3050,6 +3050,21 @@ static int32_t _ispCfgGlobalGain(uint32_t handler_id, struct isp_global_gain_par
 	return rtn;
 }
 
+/* _ispCfgGlobalGain --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispCfgPreGlobalGain(uint32_t handler_id, struct isp_pre_global_gain_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+
+	ispPreSetGlbGain(handler_id, param_ptr->gain);
+	ispPreGlbGainBypass(handler_id, param_ptr->bypass);
+
+	return rtn;
+}
+
 /* _ispCfgChnGain --
 *@
 *@
@@ -5751,7 +5766,7 @@ static int32_t _ispChangeProcAwbGain(uint32_t handler_id)
 	uint32_t param_index=isp_context_ptr->param_index-ISP_ONE;
 
 	/*flash on need modify awb gan*/
-	/*isp_awb_set_flash_gain();eddy for SharkL isp bring up*/
+	isp_awb_set_flash_gain();
 
 	awbc_ptr->r_gain=(awbc_ptr->r_gain*awb_ptr->gain_convert[param_index].r)>>0x08;
 	awbc_ptr->g_gain=(awbc_ptr->g_gain*awb_ptr->gain_convert[param_index].g)>>0x08;
@@ -5786,7 +5801,7 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	}
 
 	/*flash on need modify awb gan*/
-	/*isp_awb_set_flash_gain();eddy for SharkL isp bring up*/
+	isp_awb_set_flash_gain();
 
 	/* isp param index */
 	isp_context_ptr->video_param_index=_ispGetIspParamIndex(handler_id, &isp_context_ptr->src);
@@ -5904,6 +5919,7 @@ static int32_t _ispCfg(uint32_t handler_id)
 	rtn=_ispCfgGlobalGain(handler_id, &isp_context_ptr->global);
 	rtn=_ispCfgChnGain(handler_id, &isp_context_ptr->chn);
 	rtn=_ispCfgHue(handler_id, (struct isp_hue_param*)&isp_context_ptr->hue);
+	//rtn=_ispCfgPreGlobalGain(handler_id, &isp_context_ptr->pre_global); //new feature pre global gain
 
 	return rtn;
 }
@@ -5974,12 +5990,12 @@ static int32_t _ispStart(uint32_t handler_id)
 	rtn=_ispCfgFeeder(handler_id, &isp_context_ptr->feeder);
 	rtn=_ispCfgComData(handler_id, &isp_context_ptr->com);
 
+	rtn=ispBypassNewFeature(handler_id);
+	rtn=ispShadow(handler_id, ISP_ONE);
+
 	rtn=_ispLncParamLoad(handler_id, &isp_context_ptr->lnc);
 	rtn=_ispLncParamValid(handler_id);
 
-	rtn=ispBypassAll(handler_id);
-
-	rtn=ispShadow(handler_id, ISP_ONE);
 
 	if(ISP_CAP_MODE!=isp_context_ptr->com.in_mode) {
 		rtn=isp_Start(handler_id, ISP_ONE);
