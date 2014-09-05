@@ -955,6 +955,39 @@ int SprdHWLayerList::prepareForGXP(SprdHWLayer *l)
         return 1;
     }
 
+
+    if(destHeight<srcHeight)//scaling down
+    {
+        uint32_t div = 1;
+
+        if(destHeight*2>srcHeight)//
+        {
+            div = 32;
+        }else if(destHeight*4>srcHeight)
+        {
+            div = 64;
+        }else if(destHeight*8>srcHeight)
+        {
+            div = 128;
+        }
+        else if(destHeight*16>srcHeight)
+        {
+            div = 256;
+        }
+
+        if(srcHeight/div*div != srcHeight)
+        {
+            if((srcHeight/div*div*destHeight) > (srcHeight*(destHeight-1)+1))
+            {
+                ALOGI_IF(mDebugFlag,"prepareForGXP[%d], GXP can't support %dx%d->%dx%d scaling!",__LINE__,
+                srcWidth,srcHeight,destWidth,destHeight);
+                l->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+                return 1;
+            }
+        }
+    }
+
+
     /*
      *  The GXP do not support scailing up and down at the same time.
      * */

@@ -1490,8 +1490,9 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
             return -1;
         }
 
-        ALOGI_IF(mDebugFlag,"util[%04d] imgLayer src info [f:%x,x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+        ALOGI_IF(mDebugFlag,"util[%04d] imgLayer src info [f:%x,pm:%d,x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  private_h->format,
+                 hwcLayer->blending,
                  srcRect->x, srcRect->y,
                  srcRect->w, srcRect->h,
                  private_h->width, private_h->height,
@@ -1512,6 +1513,11 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
 
             gsp_cfg_info.layer0_info.img_format = formatType_convert(private_h->format);
             switch(private_h->format) {
+                case HAL_PIXEL_FORMAT_RGBA_8888:
+                case HAL_PIXEL_FORMAT_RGBX_8888:
+                    gsp_cfg_info.layer0_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
+                    gsp_cfg_info.layer0_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
+                    break;
                 case HAL_PIXEL_FORMAT_YV12://YUV420_3P, Y V U
                     gsp_cfg_info.layer0_info.mem_info.uv_offset += (pixel_cnt>>2);
                     break;
@@ -1631,8 +1637,9 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
         }
     }
 
-    ALOGI_IF(mDebugFlag,"util[%04d] imgLayer info [f%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+    ALOGI_IF(mDebugFlag,"util[%04d] imgLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
              gsp_cfg_info.layer0_info.img_format,
+             gsp_cfg_info.layer0_info.pmargb_mod,
              gsp_cfg_info.layer0_info.clip_rect.st_x,
              gsp_cfg_info.layer0_info.clip_rect.st_y,
              gsp_cfg_info.layer0_info.clip_rect.rect_w,
@@ -1664,8 +1671,9 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
             return -1;
         }
 
-        ALOGI_IF(mDebugFlag,"util[%04d] osdLayer src info [f:%d,x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+        ALOGI_IF(mDebugFlag,"util[%04d] osdLayer src info [f:%d,pm:%d,x%d,y%d,w%d,h%d,p%d,s%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
                  private_h->format,
+                 hwcLayer->blending,
                  srcRect->x, srcRect->y,
                  srcRect->w, srcRect->h,
                  private_h->width, private_h->height,
@@ -1697,6 +1705,11 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
             //config OSD,use GSP L1
             gsp_cfg_info.layer1_info.img_format = formatType_convert(private_h->format);
             switch(private_h->format) {
+                case HAL_PIXEL_FORMAT_RGBA_8888:
+                case HAL_PIXEL_FORMAT_RGBX_8888:
+                    gsp_cfg_info.layer1_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
+                    gsp_cfg_info.layer1_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
+                    break;
                 case HAL_PIXEL_FORMAT_YCrCb_420_SP:
                     gsp_cfg_info.layer1_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_2;
                     break;
@@ -1750,8 +1763,9 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
             //gsp_cfg_info.layer1_info.des_pos.pos_pt_x = gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
             gsp_cfg_info.layer1_info.layer_en = 1;
 
-            ALOGI_IF(mDebugFlag,"util[%04d] osdLayer info [f%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d]",__LINE__,
+            ALOGI_IF(mDebugFlag,"util[%04d] osdLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d]",__LINE__,
                      gsp_cfg_info.layer1_info.img_format,
+                     gsp_cfg_info.layer1_info.pmargb_mod,
                      gsp_cfg_info.layer1_info.clip_rect.st_x,
                      gsp_cfg_info.layer1_info.clip_rect.st_y,
                      gsp_cfg_info.layer1_info.clip_rect.rect_w,
@@ -1883,6 +1897,14 @@ int SprdUtil::gsp_dst_layer_config(GSP_CONFIG_INFO_T &gsp_cfg_info,
         gsp_cfg_info.misc_info.split_pages = 0;
     }
 
+    if(gsp_cfg_info.layer_des_info.img_format == GSP_DST_FMT_ARGB888
+       ||gsp_cfg_info.layer_des_info.img_format == GSP_DST_FMT_RGB888) {
+        gsp_cfg_info.layer_des_info.endian_mode.y_word_endn = GSP_WORD_ENDN_1;
+        gsp_cfg_info.layer_des_info.endian_mode.a_swap_mode = GSP_A_SWAP_RGBA;
+    }
+    if(gsp_cfg_info.layer1_info.pallet_en == 1) {
+        gsp_cfg_info.layer0_info.pmargb_mod = 1;
+    }
     gsp_cfg_info.layer_des_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_0;
 
     ALOGI_IF(mDebugFlag,"util[%04d] dstLayer info [f%d,p%d] split%d",__LINE__,
