@@ -429,6 +429,11 @@ struct isp_hdr_index{
 	uint8_t* e2p_ptr;
 };
 
+struct isp_pre_global_gain_param{
+	uint32_t bypass;
+	uint32_t gain;
+};
+
 struct isp_global_gain_param{
 	uint32_t bypass;
 	uint32_t gain;
@@ -558,6 +563,7 @@ struct isp_context{
 	struct isp_tune_block tune;
 	struct isp_smart_light_param smart_light;
 	struct auto_adjust_init_info auto_adjust;
+	struct isp_pre_global_gain_param pre_global;
 	uint32_t reserved[256];
 
 	struct isp_blc_offset blc_offset[8];

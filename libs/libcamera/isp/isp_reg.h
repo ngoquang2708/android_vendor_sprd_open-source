@@ -145,6 +145,7 @@ extern   "C"
 #define ISP_LENS_MISC             (ISP_BASE_ADDR+0x0230)
 #define ISP_LENS_SLICE_SIZE       (ISP_BASE_ADDR+0x0234)
 #define ISP_LENS_SLICE_INFO       (ISP_BASE_ADDR+0x0238)
+#define ISP_LENS_GRP_DONE_SEL     (ISP_BASE_ADDR+0x0238) //SharkL
 
 //AWB monitor
 #define ISP_AWBM_STATUS           (ISP_BASE_ADDR+0x0300)
@@ -371,6 +372,7 @@ extern   "C"
 //Store
 #define ISP_STORE_STATUS               (ISP_BASE_ADDR+0x1700)
 #define ISP_STORE_STATUS_PREVIEW_V0001 (ISP_BASE_ADDR+0x1700)
+#define ISP_STORE_STATUS_PREVIEW_V0002 (ISP_BASE_ADDR+0x1704)
 #define ISP_STORE_PARAM                (ISP_BASE_ADDR+0x1714)
 #define ISP_STORE_SLICE_SIZE           (ISP_BASE_ADDR+0x1718)
 #define ISP_STORE_SLICE_Y_ADDR         (ISP_BASE_ADDR+0x171c)
@@ -380,6 +382,7 @@ extern   "C"
 #define ISP_STORE_SLICE_V_ADDR         (ISP_BASE_ADDR+0x172c)
 #define ISP_STORE_V_PITCH              (ISP_BASE_ADDR+0x1730)
 #define ISP_STORE_INT_CTRL             (ISP_BASE_ADDR+0x1734)
+#define ISP_STORE_BORDER               (ISP_BASE_ADDR+0x1738)
 
 //Feeder
 #define ISP_FEEDER_STATUS         (ISP_BASE_ADDR+0x1800)
@@ -398,6 +401,10 @@ extern   "C"
 #define ISP_HDR_STATUS            (ISP_BASE_ADDR+0x1a00)
 #define ISP_HDR_PARAM             (ISP_BASE_ADDR+0x1a14)
 #define ISP_HDR_INDEX             (ISP_BASE_ADDR+0x1a18)
+
+//Pre global gain
+#define ISP_PRE_GLOBAL_GAIN_STATUS     (ISP_BASE_ADDR+0X1f00)
+#define ISP_PRE_GLOBAL_GAIN            (ISP_BASE_ADDR+0X1f14)
 
 //Common
 #define ISP_COMMON_STATUS              (ISP_BASE_ADDR+0x2000)
@@ -442,9 +449,9 @@ extern   "C"
 #define ISP_YGAMMA_Y0_V0001       (ISP_BASE_ADDR+0x2320)
 #define ISP_YGAMMA_Y1_V0001       (ISP_BASE_ADDR+0x2324)
 #define ISP_YGAMMA_Y2_V0001       (ISP_BASE_ADDR+0x2328)
-#define ISP_AF_V_HEIGHT_V0001     (ISP_BASE_ADDR+0x2338)
-#define ISP_AF_LINE_COUNTER_V0001 (ISP_BASE_ADDR+0x233c)
-#define ISP_AF_LINE_STEP_V0001    (ISP_BASE_ADDR+0x233c)
+#define ISP_AF_V_HEIGHT_V0001     (ISP_BASE_ADDR+0x232C)
+#define ISP_AF_LINE_COUNTER_V0001 (ISP_BASE_ADDR+0x2330)
+#define ISP_AF_LINE_STEP_V0001    (ISP_BASE_ADDR+0x2334)
 #define ISP_YGAMMA_NODE_IDX_V0001 (ISP_BASE_ADDR+0x2338)
 #define ISP_AF_LINE_START_V0001   (ISP_BASE_ADDR+0x233c)
 
@@ -511,8 +518,9 @@ union _isp_fetch_status_preview_v0001_tag {
 union _isp_fetch_param_tag {
     struct _isp_fetch_param_map {
         volatile unsigned int bypass          :1;
-        volatile unsigned int reserved0       :7;
+        volatile unsigned int reserved0       :6;
         volatile unsigned int sub_stract      :1;
+        volatile unsigned int afifo_wr_mode   :1;
         volatile unsigned int reserved1       :23;
     }mBits ;
     volatile unsigned int dwValue ;
@@ -1070,8 +1078,10 @@ union _isp_lens_param_addr_tag {
 
 union _isp_lens_slice_pos_tag {
     struct _isp_lens_slice_pos_map {
-        volatile unsigned int offset_x        :8;
-        volatile unsigned int offset_y        :8;
+        volatile unsigned int offset_x        :7;
+        volatile unsigned int reserved0       :1;
+        volatile unsigned int offset_y        :7;
+        volatile unsigned int reserved1       :1;
         volatile unsigned int reserved        :16;
     }mBits ;
     volatile unsigned int dwValue ;
@@ -1251,7 +1261,11 @@ union _isp_bpc_param_tag {
     struct _isp_bpc_param_map {
         volatile unsigned int bypass        :1;
         volatile unsigned int mode          :1; // 0: maping 1:adptive
-        volatile unsigned int reserved      :30;
+        volatile unsigned int pattern_type  :6;
+        volatile unsigned int reserved0     :2;
+        volatile unsigned int maxminThr     :10;
+        volatile unsigned int super_badThr  :10;
+        volatile unsigned int reserved1     :2;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1275,7 +1289,8 @@ union _isp_bpc_map_addr_tag {
 
 union _isp_bpc_pixel_num_tag {
     struct _isp_bpc_pixel_num_map {
-        volatile unsigned int pixel_num     :32;
+        volatile unsigned int pixel_num     :14;
+        volatile unsigned int reserved      :18;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -2904,8 +2919,8 @@ union _isp_arbiter_prerst_tag {
 
 union _isp_arbiter_pause_cycle_tag {
     struct _isp_arbiter_pause_cycle_map {
-        volatile unsigned int pause_cycle :16;
-        volatile unsigned int reserved    :16;
+        volatile unsigned int pause_cycle :8;
+        volatile unsigned int reserved    :24;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3274,7 +3289,8 @@ union _isp_yiq_param_v0001_tag {
         volatile unsigned int ae_mode        :1;
         volatile unsigned int ae_skip_num    :4;
         volatile unsigned int flicker_mode   :1;
-        volatile unsigned int reserved1      :10;
+        volatile unsigned int skip_num_clear :1;
+        volatile unsigned int reserved1      :9;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3390,6 +3406,17 @@ union _isp_hue_param_v0001_tag {
         volatile unsigned int reserved0 :3;
 		volatile unsigned int theta     :8;
 		volatile unsigned int reserved1 :20;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+//PRE GLOBAL GAIN
+union _isp_pre_global_gain_tag {
+    struct _isp_pre_global_gain_map {
+        volatile unsigned int bypass      :1;
+        volatile unsigned int reserved0   :7;
+        volatile unsigned int gain        :16;
+        volatile unsigned int reserved1   :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };

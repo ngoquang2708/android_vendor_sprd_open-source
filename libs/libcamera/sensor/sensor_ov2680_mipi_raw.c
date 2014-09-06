@@ -602,30 +602,30 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 
 	//bypass
 	sensor_ptr->version_id=0x00020000;
-	sensor_ptr->blc_bypass=0x01;
+	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
 	sensor_ptr->ae_bypass=0x00;
 	sensor_ptr->awb_bypass=0x00;
-	sensor_ptr->bpc_bypass=0x01;
-	sensor_ptr->denoise_bypass=0x01;
-	sensor_ptr->grgb_bypass=0x01;
+	sensor_ptr->bpc_bypass=0x00;
+	sensor_ptr->denoise_bypass=0x00;
+	sensor_ptr->grgb_bypass=0x00;
 	sensor_ptr->cmc_bypass=0x00;
 	sensor_ptr->gamma_bypass=0x01;
 	sensor_ptr->uvdiv_bypass=0x01;
-	sensor_ptr->pref_bypass=0x01;
-	sensor_ptr->bright_bypass=0x01;
+	sensor_ptr->pref_bypass=0x00;
+	sensor_ptr->bright_bypass=0x00;
 	sensor_ptr->contrast_bypass=0x01;
 	sensor_ptr->hist_bypass=0x01;
-	sensor_ptr->auto_contrast_bypass=0x01;
+	sensor_ptr->auto_contrast_bypass=0x00;
 	sensor_ptr->af_bypass=0x01;
-	sensor_ptr->edge_bypass=0x01;
-	sensor_ptr->fcs_bypass=0x01;
-	sensor_ptr->css_bypass=0x01;
+	sensor_ptr->edge_bypass=0x00;
+	sensor_ptr->fcs_bypass=0x00;
+	sensor_ptr->css_bypass=0x00;
 	sensor_ptr->saturation_bypass=0x01;
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
-	sensor_ptr->chn_gain_bypass=0x01;
+	sensor_ptr->chn_gain_bypass=0x00;
 #if 0
 
 	//blc
