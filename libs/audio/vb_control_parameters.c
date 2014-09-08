@@ -1480,9 +1480,15 @@ RESTART:
             case VBC_CMD_HAL_OPEN:
             {
                 cur_timeout = &timeout;
+                parameters_head_t write_common_head = {0};
+				i2s_ctl_t * i2s_ctl_info = adev->i2s_btcall_info->i2s_ctl_info + adev->cp->vbc_ctrl_pipe_info->cpu_index;;
+				uint32_t i2s_ctl = ((i2s_ctl_info->is_switch << 8) | (i2s_ctl_info->i2s_index << 0) );
                 MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
-                SetParas_OpenHal_Incall(adev,para->vbpipe_fd);
-                ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_OPEN);
+                SetParas_OpenHal_Incall(adev,para->vbpipe_fd); 
+                write_common_head.cmd_type = VBC_CMD_RSP_OPEN;
+                write_common_head.paras_size = i2s_ctl ;
+                ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
+                //ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_HAL_OPEN);
                 if(ret < 0){
                     ALOGE("voip1:VBC_CMD_HAL_OPEN: write1 cmd VBC_CMD_RSP_CLOSE ret(%d) error(%s).",ret,strerror(errno));
                 }
@@ -1579,6 +1585,36 @@ RESTART:
         		    ALOGE("voip1:Error, DEVICE_CTRL Write_Rsp2cp1 failed(%d).",ret);
         		}
                 MY_TRACE("voip1:VBC_CMD_DEVICE_CTRL OUT.");
+            }
+            break;
+        case VBC_CMD_SET_SAMPLERATE:
+            {
+            MY_TRACE("voip1:VBC_CMD_SET_SAMPLERATE IN.");
+            if( 0 != pcm_stop(adev->pcm_modem_dl))
+            {
+                ALOGE("pcm dl start unsucessfully");
+            }
+            if( 0 != pcm_stop(adev->pcm_modem_ul))
+            {
+                ALOGE("pcm ul start unsucessfully");
+            }
+            ret = SetParas_Samplerate_Incall(para->vbpipe_fd,adev);
+            if(ret < 0){
+                MY_TRACE("voip1:VBC_CMD_SET_SAMPLERATE SetParas_Samplerate_Incall error.s ");
+            }
+            if( 0 != pcm_start(adev->pcm_modem_dl))
+            {
+                ALOGE("pcm dl start unsucessfully");
+            }
+            if( 0 != pcm_start(adev->pcm_modem_ul))
+            {
+                ALOGE("pcm ul start unsucessfully");
+            }
+            ret = Write_Rsp2cp(para->vbpipe_fd,VBC_CMD_SET_SAMPLERATE);
+            if(ret < 0){
+                ALOGE("Error, SET_SAMPLERATE Write_Rsp2cp1 failed(%d).",ret);
+            }
+            MY_TRACE("voip1:VBC_CMD_SET_SAMPLERATE OUT.");
             }
             break;
             default:

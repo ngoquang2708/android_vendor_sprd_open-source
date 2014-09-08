@@ -251,7 +251,7 @@ struct pcm_config pcm_config_record_incall = {
 
 struct pcm_config pcm_config_vx_voip = {
     .channels = 2,
-    .rate = VX_NB_SAMPLING_RATE,
+    .rate = VX_WB_SAMPLING_RATE,
     .period_size = VBC_BASE_FRAME_COUNT,
     .period_count = 2,
     .format = PCM_FORMAT_S16_LE,
@@ -259,7 +259,7 @@ struct pcm_config pcm_config_vx_voip = {
 };
 struct pcm_config pcm_config_vrec_vx_voip = {
     .channels = 1,
-    .rate = VX_NB_SAMPLING_RATE,
+    .rate = VX_WB_SAMPLING_RATE,
     .period_size = 320,
     .period_count = 8,
     .format = PCM_FORMAT_S16_LE,
@@ -281,7 +281,7 @@ struct pcm_config pcm_config_vplayback = {
 
 struct pcm_config pcm_config_scoplayback = {
     .channels = 1,
-    .rate = VX_NB_SAMPLING_RATE,
+    .rate = VX_WB_SAMPLING_RATE,
     //.period_size = 320,
     .period_size = 640,
     .period_count = 8,
@@ -301,7 +301,7 @@ struct pcm_config pcm_config_btscoplayback = {
 
 struct pcm_config pcm_config_scocapture = {
     .channels = 1,
-    .rate = VX_NB_SAMPLING_RATE,
+    .rate = VX_WB_SAMPLING_RATE,
     .period_size = 640,
     .period_count = 8,
     .format = PCM_FORMAT_S16_LE,
@@ -1375,12 +1375,12 @@ static void select_mode(struct tiny_audio_device *adev)
 
 static int start_vaudio_output_stream(struct tiny_stream_out *out)
 {
-    unsigned int card = 0;
+    unsigned int card = -1;
     unsigned int port = PORT_MM;
     struct pcm_config old_pcm_config;
     int ret=0;
     cp_type_t cp_type;
-    card = s_vaudio;
+//    card = s_vaudio;
     old_pcm_config=out->config;
     out->config = pcm_config_vplayback;
     out->buffer_vplayback = malloc(RESAMPLER_BUFFER_SIZE);
@@ -1559,7 +1559,7 @@ error:
 #endif
 static int start_sco_output_stream(struct tiny_stream_out *out)
 {
-    unsigned int card = 0;
+    unsigned int card = -1;
     unsigned int port = PORT_MM;
 	struct tiny_audio_device *adev = out->dev;
 
@@ -1733,6 +1733,9 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->out_devices &= (~AUDIO_DEVICE_OUT_ALL);
             adev->out_devices |= out->devices;
         }
+        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+             i2s_pin_mux_sel(adev,0);
+         }
 
 	adev->prev_out_devices = ~adev->out_devices;
         select_devices_signal(adev);
@@ -2041,6 +2044,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 			   i2s_pin_mux_sel(adev,CP_CSFB);
                 }
             }
+		else if(adev->voip_start){
+                if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+                    i2s_pin_mux_sel(adev,0);
+                }
+            }
             else {
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
                     i2s_pin_mux_sel(adev,AP_TYPE);
@@ -2303,7 +2311,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         return bytes;
     }
 #ifdef VOIP_DSP_PROCESS
-    if (((adev->voip_start == 1) && (!(out->devices & AUDIO_DEVICE_OUT_ALL_SCO)))&&(!adev->call_start))
+    if ((adev->voip_start == 1) &&(!adev->call_start))
     {
         if(!out->is_voip ) {
 
@@ -2322,7 +2330,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         }
     }
 #endif
-    if((adev->mode  != AUDIO_MODE_IN_CALL) && (out->devices & AUDIO_DEVICE_OUT_ALL_SCO)) {
+    if((adev->mode  != AUDIO_MODE_IN_CALL) && (out->devices & AUDIO_DEVICE_OUT_ALL_SCO) && (!out->is_voip )) {
         if(!out->is_bt_sco) {
             ALOGI("bt_sco:out_write_start and do standby");
             do_output_standby(out);
@@ -2707,7 +2715,11 @@ static int start_input_stream(struct tiny_stream_in *in)
         adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->in_devices |= in->device;
         if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+            if(!adev->voip_start) {
             i2s_pin_mux_sel(adev,AP_TYPE);
+            }else {
+                i2s_pin_mux_sel(adev,0);
+            }
         }
 	adev->prev_in_devices = ~adev->in_devices;
         select_devices_signal(adev);
@@ -2786,7 +2798,7 @@ static int start_input_stream(struct tiny_stream_in *in)
         ALOGE("bt sco : %s after", __func__);
     }
     else if(adev->call_start) {
-        int card=0;
+        int card=-1;
         cp_type_t cp_type = CP_MAX;
         in->active_rec_proc = 0;
         in->config = pcm_config_record_incall;
@@ -2805,6 +2817,10 @@ static int start_input_stream(struct tiny_stream_in *in)
 	        s_vaudio_w = get_snd_card_number(CARD_VAUDIO_W);
             card = s_vaudio_w;
         }
+	else if( adev->cp_type == CP_CSFB) {
+		s_vaudio_lte = get_snd_card_number(CARD_VAUDIO_LTE);
+		card = s_vaudio_lte;
+	}
 
 #ifdef AUDIO_MUX_PCM
         in->mux_pcm = mux_pcm_open(SND_CARD_VOICE_TG,PORT_MM,PCM_IN,&in->config);
@@ -3275,8 +3291,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
 
 #ifdef VOIP_DSP_PROCESS
-    if(((adev->voip_start == 1) && (!((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_SCO)))
-            &&(!adev->call_start))
+    if((adev->voip_start == 1)
+                &&(!adev->call_start))
     {
         if(!in->is_voip ) {
             ALOGD(": in_read sco start  and do standby");
@@ -3294,7 +3310,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     }
 #endif
     if((adev->call_start != 1) &&
-            ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET))
+            ((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET)
+            && (!in->is_voip))
     {
         if(!in->is_bt_sco) {
             ALOGD("bt_sco:in_read start and do standby");
