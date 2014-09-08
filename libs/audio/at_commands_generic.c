@@ -149,7 +149,10 @@ static int at_cmd_route(struct tiny_audio_device *adev)
     }
 
     if (adev->out_devices & (AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
-        at_cmd = "AT+SSAM=2";
+        if(!headset_no_mic())
+            at_cmd = "AT+SSAM=2";
+        else
+            at_cmd = "AT+SSAM=4";
     } else if (adev->out_devices & (AUDIO_DEVICE_OUT_BLUETOOTH_SCO
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET
                                 | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT)) {
