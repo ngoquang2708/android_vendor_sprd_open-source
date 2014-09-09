@@ -382,7 +382,7 @@ struct isp_flicker_param{
 struct isp_hue_param{
 	uint32_t bypass;
 	uint8_t factor;
-	int16_t offset;
+	uint8_t offset;
 };
 
 struct isp_af_statistic_info{
@@ -563,7 +563,7 @@ struct isp_context{
 	struct isp_tune_block tune;
 	struct isp_smart_light_param smart_light;
 	struct auto_adjust_init_info auto_adjust;
-	struct isp_pre_global_gain_param pre_global;
+	//struct isp_pre_global_gain_param pre_global;
 	uint32_t reserved[256];
 
 	struct isp_blc_offset blc_offset[8];

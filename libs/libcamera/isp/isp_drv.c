@@ -443,7 +443,7 @@ struct isp_reg{
 	uint32_t HUE_PARAM_V0001;
 
 	/*PRE GAIN GLB */
-	uint32_t PRE_GLB_GAIN_PARAM;
+	//uint32_t PRE_GLB_GAIN_PARAM;
 
 };
 
@@ -1576,12 +1576,12 @@ int32_t ispSetNlcBNode(uint32_t handler_id, uint16_t* b_node_ptr)
 		reg_config[9].reg_addr = ISP_NLC_N_PARAM_B9_V0001 - ISP_BASE_ADDR;
 		reg_config[9].reg_value = isp_reg_ptr->BNLC_N_PARAM_B9;
 	}
-#if 0 //eddy for SharkL isp bring up
+
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
 	_isp_write((uint32_t *)&write_param);
-#endif
+
 	return ISP_SUCCESS;
 }
 
@@ -3988,15 +3988,15 @@ int32_t ispSetCCEMatrix(uint32_t handler_id, uint16_t* matrix_ptr)
 	reg4_ptr->dwValue=reg4_s_ptr->dwValue;
 */
 	reg_config[0].reg_addr = ISP_CCE_MATRIX0 - ISP_BASE_ADDR;
-	reg_config[0].reg_value = 0x4b04d;/*isp_reg_ptr->CCE_MATRIX0;eddy for SharkL isp bring up*/
+	reg_config[0].reg_value = isp_reg_ptr->CCE_MATRIX0;
 	reg_config[1].reg_addr = ISP_CCE_MATRIX1 - ISP_BASE_ADDR;
-	reg_config[1].reg_value = 0x3ea81d;/*isp_reg_ptr->CCE_MATRIX1;eddy for SharkL isp bring up*/
+	reg_config[1].reg_value = isp_reg_ptr->CCE_MATRIX1;
 	reg_config[2].reg_addr = ISP_CCE_MATRIX2 - ISP_BASE_ADDR;
-	reg_config[2].reg_value = 0x407ab;/*isp_reg_ptr->CCE_MATRIX2;eddy for SharkL isp bring up*/
+	reg_config[2].reg_value = isp_reg_ptr->CCE_MATRIX2;
 	reg_config[3].reg_addr = ISP_CCE_MATRIX3 - ISP_BASE_ADDR;
-	reg_config[3].reg_value = 0x3ca880;/*isp_reg_ptr->CCE_MATRIX3;eddy for SharkL isp bring up*/
+	reg_config[3].reg_value = isp_reg_ptr->CCE_MATRIX3;
 	reg_config[4].reg_addr = ISP_CCE_MATRIX4 - ISP_BASE_ADDR;
-	reg_config[4].reg_value = 0x7eb;/*isp_reg_ptr->CCE_MATRIX4;eddy for SharkL isp bring up*/
+	reg_config[4].reg_value = isp_reg_ptr->CCE_MATRIX4;
 
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 5;
@@ -4025,7 +4025,7 @@ int32_t ispSetCCEShift(uint32_t handler_id, uint16_t y_shift, uint16_t u_shift, 
 	reg_s_ptr->mBits.v_shift=v_shift;
 /*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
 	reg_config.reg_addr = ISP_CCE_SHIFT - ISP_BASE_ADDR;
-	reg_config.reg_value = 0x100;/*isp_reg_ptr->CCE_SHIFT;eddy for SharkL isp bring up*/
+	reg_config.reg_value = isp_reg_ptr->CCE_SHIFT;
 
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
@@ -7949,6 +7949,7 @@ int32_t ispGetIntCom(uint32_t handler_id, uint32_t* raw)
 */
 int32_t ispPreGlbGainBypass(uint32_t handler_id, uint8_t bypass)
 {
+#if 0
 /*	union _isp_glb_gain_param_tag* reg_ptr=(union _isp_glb_gain_param_tag*)ISP_PRE_GLOBAL_GAIN;*/
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 	union _isp_pre_global_gain_tag* reg_s_ptr=(union _isp_pre_global_gain_tag*)&isp_reg_ptr->PRE_GLB_GAIN_PARAM;
@@ -7965,7 +7966,7 @@ int32_t ispPreGlbGainBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.counts = 1;
 
 	_isp_write((uint32_t *)&write_param);
-
+#endif
 	return ISP_SUCCESS;
 }
 
@@ -7975,6 +7976,7 @@ int32_t ispPreGlbGainBypass(uint32_t handler_id, uint8_t bypass)
 */
 int32_t ispPreSetGlbGain(uint32_t handler_id, uint32_t gain)
 {
+#if 0
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 	union _isp_pre_global_gain_tag* reg_s_ptr=(union _isp_pre_global_gain_tag*)&isp_reg_ptr->PRE_GLB_GAIN_PARAM;
 	struct isp_reg_bits reg_config;
@@ -7990,7 +7992,7 @@ int32_t ispPreSetGlbGain(uint32_t handler_id, uint32_t gain)
 	write_param.counts = 1;
 
 	_isp_write((uint32_t *)&write_param);
-
+#endif
 	return ISP_SUCCESS;
 }
 
@@ -8714,7 +8716,7 @@ int32_t ispBypassNewFeature(uint32_t handler_id)
 
 	if (isp_id == SC9630_ISP_ID)
 	{
-		reg_config[0].reg_addr = 0x1C14;  //nawbm new feature
+		reg_config[0].reg_addr = 0x1C14;  //nawbm, new feature
 		reg_config[0].reg_value = 0x01;
 		reg_config[1].reg_addr = 0x1D14; //wavelet, new feature
 		reg_config[1].reg_value = 0x01;
