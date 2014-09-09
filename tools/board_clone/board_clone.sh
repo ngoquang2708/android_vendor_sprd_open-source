@@ -43,7 +43,7 @@ function clear_file()
 
 function add_to_file()
 {
-	echo "add_to_file"
+	#echo "add_to_file"
 	file=$1
 	cd $2
 	substring=$3
@@ -143,7 +143,7 @@ function add_to_file()
 	if [ $end -gt 0 ];then
 		cat $file | while read  line
 		do
-			echo "$line" | grep -qi "$var2" >$file_n
+			echo "$line" | grep -qi "$var2""\>" >$file_n
 			m=$?
 			if [ $begin -gt 0 ];then
 				n=n+1
@@ -252,8 +252,10 @@ function add_to_file_e()
 	only_add_one_line=0
 
 	if [ $# -ge 7 ];then
-		if [ $7 -gt 0 ];then
-			echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,以它结束为准
+		temp=$7
+		if [ ${#temp} -gt 1 ];then
+			#second_end_str所在的行必须紧跟着var1所在的行,
+			echo "second_end_str="$7  #有第二结束字符串,第一结束字符串的后面是第二结束字符串,如连续存在第二结束字符串的行,以最后的第二结束字符串结束为准
 			second_end_string=$7
 			have_second_end_string=1
 		fi
@@ -307,13 +309,21 @@ function add_to_file_e()
 					echo have_second_end_string
 					continue
 				elif [ $have_second_end_string -eq 2 ];then
-					echo "find second_end_string:"$var1
+					echo "find second_end_string:"$var1" in $line"
+					have_second_end_string=3  #continue,置标志3
 					echo $have_second_end_string >$file_s
+					continue
+				elif [ $have_second_end_string -eq 3 ];then
+					echo "find second_end_string:"$var1" in $line"
+					continue   #continue,需找到最后一个
 				fi
 				break
 			elif [ $have_second_end_string -eq 2 ];then  #没找到第二结束字符串,以第一结束字符串为准
 				echo "not find second_end_string:"$var1
-				have_second_end_string=1
+				have_second_end_string=0
+				break
+			elif [ $have_second_end_string -eq 3 ];then  #不再是第二结束字符串,break
+				echo "find second_end_string:"$var1" and break"
 				break
 			fi
 		elif [ $m -eq 0 ];then
@@ -346,7 +356,7 @@ function add_to_file_e()
 	    have_second_end_string=$line
 		done < $file_s
 		rm $file_s -rf
-		if [ $have_second_end_string -eq 2 ];then
+		if [ $have_second_end_string -eq 3 ];then
 			var1=$second_end_string  #以第二结束字符串为准
 		fi
 	fi
@@ -371,7 +381,7 @@ function add_to_file_e()
 	if [ $end -gt 0 ];then
 		cat $file | while read line
 		do
-			echo "$line" | grep -qi "$var2" >$file_n
+			echo "$line" | grep -qi "$var2""\>" >$file_n   #字符串向后须全配比
 			m=$?
 			if [ $begin -gt 0 ];then
 				n=n+1
@@ -384,11 +394,30 @@ function add_to_file_e()
 					replacement_b=`tr '[a-z]' '[A-Z]' <<<"$replacement"`
 					line=${line//$substring_b/$replacement_b}
 				fi
+				line_s_b=$line_s #备份一下
 				line_s="$line_s""\n\t$line"
 				echo "$line" |grep -qi "$var1" >$file_n
 				if [ $? -eq 0 ];then
+					if [ $have_second_end_string -eq 3 ];then
+					#继续,需找到最后配比的second_end_string
+						have_second_end_string=4
+						#echo $line
+						continue
+					elif [ $have_second_end_string -eq 4 ];then
+						#echo $line
+						continue
+					fi
 					echo "begin to write to file"
 					#echo $end
+					#echo $line_s
+					sed -e "$end""a\\$line_s"  $file >$file_t
+					cp $file_t $file
+					rm $file_t -rf
+					break
+				elif [ $have_second_end_string -eq 4 ];then
+					#echo $line
+					echo "second,begin to write to file,end=$end"
+					line_s=$line_s_b  #用上一个line_s
 					#echo $line_s
 					sed -e "$end""a\\$line_s"  $file >$file_t
 					cp $file_t $file
@@ -526,6 +555,17 @@ function board_for_kernel()
 		file=$TEMP_1
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
+
+	#clone dt_defconfig
+	TEMP_=$BOARD_NAME_R"_dt_defconfig"
+	#echo "xxx"$TEMP_
+	TEMP_1=$BOARD_NAME_N"_dt_defconfig"
+	if [  -f $TEMP_ ];then
+		cp $TEMP_ $TEMP_1
+		have_dt_board=1
+		file=$TEMP_1
+		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	fi
 	#---------产生*native_defconfig文件 end-------
 	
 	#---------产生*dts文件 begin-------
@@ -635,7 +675,7 @@ function board_for_kernel()
 	if [ $USE_INPUT_BOARD_MACRO -gt 0 ];then
 	#kconfig中的board宏因为不规范,使用重新输入的串
 		substring=$BOARD_MACRO_IN_KERNLE
-		begin_string=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+		begin_string=`tr '[a-z]' '[A-Z]' <<<"MACH_$BOARD_MACRO_IN_KERNLE"`
 		add_to_file $file $path $substring $replacement $begin_string $end_string 2 $BOARD_NAME_R $replacement
 	else
 		substring=$BOARD_NAME_R
@@ -925,37 +965,13 @@ function board_for_device()
 	cd $PATH_N
 
 	if  [ $BOARD_TYPE = 1 ];then
-		TEMP1="xxx122222"
-		mkdir $TEMP1
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""base.mk"
-		find=0
-		if [  -f $TEMP ];then
-			TEMP2=$PLATFORM"_""$BOARD_NAME_N""base.mk"
-			cp $TEMP $TEMP1/$TEMP2
-			find=1
-		fi
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""base_dt.mk"
-		if [  -f $TEMP ];then
-			TEMP2=$PLATFORM"_""$BOARD_NAME_N""base_dt.mk"
-			cp $TEMP $TEMP1/$TEMP2
-			find=1
-		fi
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus.mk"
-		if [  -f $TEMP ];then
-			TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
-			cp $TEMP $TEMP1/$TEMP2
-			find=1
-		fi
-		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus_dt.mk"
-		if [  -f $TEMP ];then
-			TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus_dt.mk"
-			cp $TEMP $TEMP1/$TEMP2
-			find=1
-		fi
-		if  [ $find = 0 ];then
-			echo "no base or plus or base_dt or plus_dt mk file,maybe something error!\nplease check!"
-			exit 0
-		fi
+		for filename in *$BOARD_NAME_R*
+		do
+		#echo $filename
+		newname=`echo $filename | sed -n "s/$BOARD_NAME_R/$BOARD_NAME_N/p"`
+		#echo "n="$newname
+		mv $filename $newname
+		done
 	elif [ $BOARD_TYPE = 2 ];then
 		TEMP=$PLATFORM"_""$BOARD_NAME_R""plus.mk"
 		if [ ! -f $TEMP ];then
@@ -966,15 +982,13 @@ function board_for_device()
 		mkdir $TEMP1
 		TEMP2=$PLATFORM"_""$BOARD_NAME_N"".mk"
 		cp $TEMP $TEMP1/$TEMP2
+		find -maxdepth 1 -name "*$BOARD_NAME_R*" | xargs rm -rf
+		cp $TEMP1/* ./
+		rm $TEMP1 -rf
 	else
 		echo "maybe choice error before"
 		exit 0
 	fi
-
-	find -maxdepth 1 -name "*$BOARD_NAME_R*" | xargs rm -rf
-
-	cp $TEMP1/* ./
-	rm $TEMP1 -rf
 
 	#---------替换board名关键字begin----------------
 	sed -i s/$BOARD_NAME_R/$BOARD_NAME_N/g `grep $BOARD_NAME_R -rl --include="*.*" ./`
@@ -989,70 +1003,70 @@ function board_for_device()
 	#---------替换board名关键字end--------------------
 
 
-	#---------删除vendorsetup.sh AndroidProducts中其他衍生的board-------
-	file=vendorsetup.sh
-	if [ $BOARD_TYPE = 1 ];then
-		TEMP=asgii77jusua778
-		TEMP1=$PLATFORM"_""$BOARD_NAME_N""base-"
-		TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt-"
-		#赋个随意不重复的字符串
-		TEMP_=ad899mmkkk
+	#---------删除vendorsetup.sh AndroidProducts中其他衍生的board begin-------
+	if [ $BOARD_TYPE = 2 ];then  #clone trisim的board才需要删,normal board的UUI等工程都会被clone
+		file=vendorsetup.sh
+		if [ $BOARD_TYPE = 1 ];then
+			TEMP=asgii77jusua778
+			TEMP1=$PLATFORM"_""$BOARD_NAME_N""base-"
+			TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt-"
+			#赋个随意不重复的字符串
+			TEMP_=ad899mmkkk
+		fi
+		TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus-"
+		TEMP3=kjjs8j8jjshh7
+	
+		TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt-"
+		TEMP_3=iujk9990iuk
+	
+		if [ $BOARD_TYPE = 1 ];then
+			sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
+			sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
+		fi
+		sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
+		sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
+	
+		sed -i -e /$BOARD_NAME_N/d $file
+	
+		if [ $BOARD_TYPE = 1 ];then
+			sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
+			sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
+		fi
+		sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
+		sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
+	
+		file=AndroidProducts.mk
+		if [ $BOARD_TYPE = 1 ];then
+			#TEMP=asgii77jusua778
+			TEMP1=$PLATFORM"_""$BOARD_NAME_N""base.mk"
+			TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt.mk"
+		fi
+		TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
+		TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt.mk"
+		#TEMP3=kjjs8j8jjshh7
+	
+		if [ $BOARD_TYPE = 1 ];then
+			sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
+			sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
+		fi
+		sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
+		sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
+	
+		#删除包含BOARD_NAME_N*.mk的行,需要留下的board都已替换字符串
+		sed -i -e /"$BOARD_NAME_N".*".mk"\/d $file
+	
+		#把留下的board改回去,还原
+		if [ $BOARD_TYPE = 1 ];then
+			sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
+			sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
+		fi
+		sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
+		sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
 	fi
-	TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus-"
-	TEMP3=kjjs8j8jjshh7
+	#---------删除vendorsetup.sh AndroidProducts中其他衍生的board end-------
 
-	TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt-"
-	TEMP_3=iujk9990iuk
-
-	if [ $BOARD_TYPE = 1 ];then
-		sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
-		sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
-	fi
-	sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
-	sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
-
-	sed -i -e /$BOARD_NAME_N/d $file
-
-	if [ $BOARD_TYPE = 1 ];then
-		sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
-		sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
-	fi
-	sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
-	sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
-
-	file=AndroidProducts.mk
-	if [ $BOARD_TYPE = 1 ];then
-		#TEMP=asgii77jusua778
-		TEMP1=$PLATFORM"_""$BOARD_NAME_N""base.mk"
-		TEMP_1=$PLATFORM"_""$BOARD_NAME_N""base_dt.mk"
-	fi
-	TEMP2=$PLATFORM"_""$BOARD_NAME_N""plus.mk"
-	TEMP_2=$PLATFORM"_""$BOARD_NAME_N""plus_dt.mk"
-	#TEMP3=kjjs8j8jjshh7
-
-	if [ $BOARD_TYPE = 1 ];then
-		sed -i s/$TEMP1/$TEMP/g `grep $TEMP1 -rl --include="$file" ./`
-		sed -i s/$TEMP_1/$TEMP_/g `grep $TEMP_1 -rl --include="$file" ./`
-	fi
-	sed -i s/$TEMP2/$TEMP3/g `grep $TEMP2 -rl --include="$file" ./`
-	sed -i s/$TEMP_2/$TEMP_3/g `grep $TEMP_2 -rl --include="$file" ./`
-
-	#删除包含BOARD_NAME_N*.mk的行,需要留下的board都已替换字符串
-	sed -i -e /"$BOARD_NAME_N".*".mk"\/d $file
-
-	#把留下的board改回去,还原
-	if [ $BOARD_TYPE = 1 ];then
-		sed -i s/$TEMP/$TEMP1/g `grep $TEMP -rl --include="$file" ./`
-		sed -i s/$TEMP_/$TEMP_1/g `grep $TEMP_ -rl --include="$file" ./`
-	fi
-	sed -i s/$TEMP3/$TEMP2/g `grep $TEMP3 -rl --include="$file" ./`
-	sed -i s/$TEMP_3/$TEMP_2/g `grep $TEMP_3 -rl --include="$file" ./`
-	#---------删除vendorsetup.sh AndroidProducts中其他衍生的board-------
-
-
-
-	#---------删除AndroidProducts最后的\字符-------
-	clear_file $file .
+	#---------删除AndroidProducts最后的\字符begin-------
+	clear_file vendorsetup.sh .
 	TEMP=`tail -1 $file`
 	TEMP1='\'
 	TEMP2=${#TEMP}-1
@@ -1067,7 +1081,7 @@ function board_for_device()
 		sed -i '$s/.$//' $file
 		fi
 	fi
-	#---------删除AndroidProducts最后的\字符-------
+	#---------删除AndroidProducts最后的\字符end-------
 
 	if [ $BOARD_TYPE = 2 ];then
 		TEMP1="$BOARD_NAME_N""plus"
@@ -1125,6 +1139,7 @@ function select_Platform_and_BoardType()
 	echo "2. scx15 for dolphin and trisim(three sim cards)"
 	echo "3. scx35 for shark(tshark or 9620) and normal(for example:base or plus)"
 	echo "4. scx35 for shark(tshark or 9620) and trisim(three sim cards)"
+	echo "5. scx35l for sharkl(9630)"
 	echo "==================================================================="
 	read BOARD_PLATFORM_TYPE
 }
@@ -1138,6 +1153,7 @@ function input_board_macro_for_kernel()
 	read BOARD_MACRO_IN_KERNLE
 }
 
+#程序的入口 is here
 workdir=$PWD
 declare -i g_count
 
@@ -1186,6 +1202,11 @@ do
 				echo "you have choose scx35 and trisim board!!"
 				break
 				;;
+				5)PLATFORM="scx35l"
+				BOARD_TYPE=1
+				echo "you have choose scx35l(9630) board!!"
+				break
+				;;
 				*)echo "Invalid choice !"
 			esac
 		fi
@@ -1211,8 +1232,8 @@ then
 		echo "please input reference board name,for example:sp7715ea or sp7715ga or sp8815ga or 6815ea"
 		TEMP="please input new board name,for example:sp7715ed or sp7715gc or sp8815gd or sp6815ef"
 	else
-		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga or sc9620openphone or sp7731gea"
-		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb or sc9620openphone_zt or sp7731gec"
+		echo "please input reference board name,for example:sp7730ec or sp8830ec or sp7730gea or sp7730gga or sc9620openphone or sp7731gea or sp9630ea"
+		TEMP="please input new board name,for example:sp7730ed or sp8830ef or sp7730gee or sp7730ggb or sc9620openphone_zt or sp7731gec or sp9630eb"
 	fi
 	read BOARD_NAME_R
 	if [ $BOARD_TYPE = 2 ];then
