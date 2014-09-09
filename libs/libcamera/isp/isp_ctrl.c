@@ -893,7 +893,7 @@ static int32_t _ispSofWbTrimHandler(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
-	struct isp_tune_block* isp_tune_ptr=&isp_context_ptr->tune;
+	//struct isp_tune_block* isp_tune_ptr=&isp_context_ptr->tune;
 
 	if (ISP_AWB_SKIP_FOREVER!=isp_context_ptr->wb_trim_conter) {
 		isp_context_ptr->wb_trim_conter++;
@@ -938,7 +938,7 @@ static int32_t _ispSofAWBWindowHandler(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
-	struct isp_tune_block* isp_tune_ptr=&isp_context_ptr->tune;
+	//struct isp_tune_block* isp_tune_ptr=&isp_context_ptr->tune;
 
 	if (ISP_AWB_SKIP_FOREVER != isp_context_ptr->awb_win_conter) {
 		ISP_LOG("wait to open ae");
@@ -2875,7 +2875,7 @@ static int32_t _ispCfgHue(uint32_t handler_id, struct isp_hue_param* param_ptr)
 	int32_t rtn=ISP_SUCCESS;
 
 	ispSetHueFactor(handler_id, param_ptr->factor + param_ptr->offset);
-	/*ispHuebypass(handler_id, param_ptr->bypass);eddy for SharkL isp bring up*/
+	ispHuebypass(handler_id, param_ptr->bypass);
 
 	return rtn;
 }
@@ -3030,7 +3030,7 @@ static int32_t _ispCfgHDRIndexTab(uint32_t handler_id, struct isp_hdr_index* par
 	int32_t rtn=ISP_SUCCESS;
 
 	ispSetHDRIndex(handler_id, param_ptr->r_index, param_ptr->g_index, param_ptr->b_index);
-	/*ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);eddy for SharkL isp bring up*/
+	ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);
 
 	return rtn;
 }
@@ -6444,7 +6444,7 @@ int32_t _ispAeMeasureLumIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_b
 	enum isp_ae_weight weight = *(uint32_t*)param_ptr;
 
 	ISP_LOG("--IOCtrl--AE_MEASURE_LUM--:0x%x",*(uint32_t*)param_ptr);
-	/*_ispAeMeasureLumSet(handler_id, weight);eddy for SharkL isp bring up*/
+	_ispAeMeasureLumSet(handler_id, weight);
 
 	return rtn;
 }
