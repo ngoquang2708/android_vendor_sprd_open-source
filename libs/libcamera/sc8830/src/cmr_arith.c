@@ -307,6 +307,7 @@ void *arithmetic_fd_thread_proc(void *data)
 			}
 			memcpy(s_arith_cxt->addr,addr,s_arith_cxt->mem_size);
 			sem_post(&s_arith_cxt->fd_sync_sem);
+			memset((void *)&frame_type, 0, sizeof(frame_type));
 			frame_type.face_num = 0;
 			if ( 0 != FaceSolid_Function((uint8_t*)s_arith_cxt->addr,
 				&face_rect_ptr,
