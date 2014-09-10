@@ -38,6 +38,7 @@ static uint32_t set_GC0310_MIPI_anti_flicker(uint32_t mode);
 static uint32_t GC0310_MIPI_StreamOn(uint32_t param);
 static uint32_t GC0310_MIPI_StreamOff(uint32_t param);
 static uint32_t set_saturation(uint32_t level);
+static uint32_t set_GC0310_video_mode(uint32_t mode);
 
 typedef enum
 {
@@ -469,13 +470,25 @@ static SENSOR_IOCTL_FUNC_TAB_T s_GC0310_MIPI_ioctl_func_tab =
 	PNULL,
 	PNULL,
 	set_GC0310_MIPI_anti_flicker,
-	PNULL,
+	set_GC0310_video_mode,
 	PNULL,
 	PNULL,
 	PNULL,				//get_status
 	GC0310_MIPI_StreamOn,
 	GC0310_MIPI_StreamOff,
 	PNULL,
+};
+
+LOCAL SENSOR_VIDEO_INFO_T s_GC0310_video_info[] = {
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 30, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL},
+	{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, PNULL}
 };
 
 SENSOR_INFO_T g_GC0310_MIPI_yuv_info =
@@ -553,7 +566,7 @@ SENSOR_INFO_T g_GC0310_MIPI_yuv_info =
 
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
 
-	PNULL,
+	s_GC0310_video_info,
 	3,								// skip frame num while change setting
 };
 
@@ -650,6 +663,54 @@ static uint32_t set_brightness(uint32_t level)
 
 	return 0;
 }
+
+LOCAL const SENSOR_REG_T gc0310_video_mode_tab[][18]=
+{
+	/* normal preview mode*/
+	{
+		{0xff, 0xff}
+	},
+	/* video mode: 15fps */
+	{
+		{0xfe, 0x00},
+		{0x05, 0x02},
+		{0x06, 0xd1},
+		{0x07, 0x00},
+		{0x08, 0x22},
+		{0xfe, 0x01},
+		{0x25, 0x00},
+		{0x26, 0x6a},
+		{0x27, 0x02},
+		{0x28, 0x7c},
+		{0x29, 0x02},
+		{0x2a, 0x7c},
+		{0x2b, 0x02},
+		{0x2c, 0x7c},
+		{0x2d, 0x02},
+		{0x2e, 0x7c},
+		{0xfe, 0x00},
+		{0xff, 0xff}
+	}
+};
+
+static uint32_t set_GC0310_video_mode(uint32_t mode)
+{
+	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)gc0310_video_mode_tab[mode];
+	uint16_t i=0x00;
+
+	SENSOR_PRINT_ERR("SENSOR: set_video_mode: mode = %d\n", mode);
+	if(mode>1 || mode == 0)
+		return 0;
+
+	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
+		SENSOR_PRINT_ERR("SENSOR: set_video_mode: addr 0x%x, value 0x%x\n",
+			sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+		GC0310_MIPI_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+	}
+
+	return 0;
+}
+
 
 SENSOR_REG_T GC0310_MIPI_ev_tab[][4]=
 {
