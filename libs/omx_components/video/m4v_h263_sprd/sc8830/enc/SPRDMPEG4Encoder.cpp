@@ -186,6 +186,7 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
     int32 size_inter = MP4ENC_INTERNAL_BUFFER_SIZE;
 
     mPbuf_inter = (uint8 *)malloc(size_inter);
+    CHECK(mPbuf_inter != NULL);
     InterMemBfr.common_buffer_ptr = (uint8 *)mPbuf_inter;
     InterMemBfr.common_buffer_ptr_phy = 0;
     InterMemBfr.size = size_inter;

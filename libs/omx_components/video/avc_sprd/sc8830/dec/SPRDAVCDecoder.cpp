@@ -395,6 +395,7 @@ status_t SPRDAVCDecoder::initDecoder() {
 
     int32 size_inter = H264_DECODER_INTERNAL_BUFFER_SIZE;
     mCodecInterBuffer = (uint8 *)malloc(size_inter);
+    CHECK(mCodecInterBuffer != NULL);
 
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;

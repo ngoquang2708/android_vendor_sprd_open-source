@@ -361,6 +361,7 @@ status_t SPRDMPEG4Decoder::initDecoder() {
 
     int32 size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
     mCodecInterBuffer = (uint8 *)malloc(size_inter);
+    CHECK(mCodecInterBuffer != NULL);
 
     MMCodecBuffer codec_buf;
 
