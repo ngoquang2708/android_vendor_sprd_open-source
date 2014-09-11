@@ -666,7 +666,7 @@ def IncrementalOTA_InstallBegin(info):
 
   if OPTIONS.uboot_update:
     #spl.bin
-    partion_spl = PartitionIncrementalUpdater("/spl", "u-boot-spl-16k.bin", target_radio_dir, source_radio_dir, spl_merge=False)
+    partion_spl = PartitionIncrementalUpdater("/spl", "u-boot-spl-16k.bin", target_radio_dir, source_radio_dir, spl_merge=True)
     partion_spl.AddToOutputZip(output_zip)
     #uboot.bin
     partion_uboot = PartitionIncrementalUpdater("/uboot", "u-boot.bin", target_radio_dir, source_radio_dir, verbatim=True)
