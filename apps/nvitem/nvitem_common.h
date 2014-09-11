@@ -45,7 +45,7 @@ typedef signed int			int32;
 //-------------------------------------------------
 #define RAMNV_NUM					15		// max number of ramdisk, can not >= 15.
 #define RAMNV_SECT_SIZE			512		// sect size of ramdisk
-
+#define NV_PATH_MAX_LEN           100
 //-------------------------------------------------
 //				Config: can be changed if nessarry
 //-------------------------------------------------
