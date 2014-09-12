@@ -9,10 +9,10 @@
 #include "sprd_scale.h"
 
 #ifdef   __cplusplus
-    extern   "C" 
+    extern   "C"
     {
 #endif
-		
+
 #if defined(JPEG_ENC)
 #include "sprd_jpg.h"
 
@@ -27,8 +27,8 @@ typedef struct scale_param
 	SCALE_RECT_T in_rect;
 	SCALE_ADDRESS_T in_addr;
 	SCALE_DATA_FORMAT_E out_fmt;
-	SCALE_SIZE_T out_size;	
-	SCALE_ADDRESS_T out_addr;	
+	SCALE_SIZE_T out_size;
+	SCALE_ADDRESS_T out_addr;
 }SCALE_PARAM_T;
 static uint32_t g_stream_buf_id = 1;  //record the bsm buf id for switch buf. the init buf is 0.
 uint32_t g_stream_buf_size = 0;
@@ -46,7 +46,7 @@ int JPG_reset_cb(int fd)
 	return 0;
 }
 
-LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params, 
+LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 									JPEG_ENC_INPUT_PARA_T *enc_fw_info_ptr)
 {
 	uint32_t slice_height = 0;
@@ -98,6 +98,7 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 	enc_fw_info_ptr->stream_buf0 = (uint8_t *)jpegenc_params->stream_phy_buf[0];
 	enc_fw_info_ptr->stream_buf1 =(uint8_t *)jpegenc_params->stream_virt_buf[0];//enc_fw_info_ptr->stream_buf0+enc_fw_info_ptr->bitstream_buf_len;
 	jpeg_fw_codec->g_stream_buf_ptr = (uint8_t *)jpegenc_params->stream_virt_buf[0];
+	enc_fw_info_ptr->uv_interleaved = jpegenc_params->uv_interleaved;
 	enc_fw_info_ptr->enc_buf.buf_size = 0;
 	enc_fw_info_ptr->enc_buf.buf_ptr = NULL;
 
@@ -127,92 +128,92 @@ LOCAL int xioctl(int fd, int request, void * arg)
 }
 LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 {
-	static int fd = -1; 	
-	SCALE_CONFIG_T scale_config;	
+	static int fd = -1;
+	SCALE_CONFIG_T scale_config;
 	SCALE_MODE_E scale_mode;
 	uint32_t enable = 0, endian_mode;
 
 	fd = open("/dev/sprd_scale", O_RDONLY);
-	if (-1 == fd) 
-	{   
+	if (-1 == fd)
+	{
 		SCI_TRACE_LOW("Fail to open scale device.");
-        	return JPEG_FAILED;   
+        	return JPEG_FAILED;
    	 }
-    	
+
 	//set mode
-	scale_config.id = SCALE_PATH_MODE;	
+	scale_config.id = SCALE_PATH_MODE;
 	scale_mode = SCALE_MODE_SCALE;
-	scale_config.param = &scale_mode;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.param = &scale_mode;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set input data format
-	scale_config.id = SCALE_PATH_INPUT_FORMAT;	
-	scale_config.param = &scale_param->in_fmt;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.id = SCALE_PATH_INPUT_FORMAT;
+	scale_config.param = &scale_param->in_fmt;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set output data format
-	scale_config.id = SCALE_PATH_OUTPUT_FORMAT;	
-	scale_config.param = &scale_param->out_fmt;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.id = SCALE_PATH_OUTPUT_FORMAT;
+	scale_config.param = &scale_param->out_fmt;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set input size
-	scale_config.id = SCALE_PATH_INPUT_SIZE;	
-	scale_config.param = &scale_param->in_size;	 
+	scale_config.id = SCALE_PATH_INPUT_SIZE;
+	scale_config.param = &scale_param->in_size;
 	SCI_TRACE_LOW("test scale:input size:%d,%d.",scale_param->in_size.w,scale_param->in_size.h);
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set output size
-	scale_config.id = SCALE_PATH_OUTPUT_SIZE;	
-	scale_config.param = &scale_param->out_size;	 
+	scale_config.id = SCALE_PATH_OUTPUT_SIZE;
+	scale_config.param = &scale_param->out_size;
 	SCI_TRACE_LOW("test scale:out size:%d,%d.",scale_param->out_size.w,scale_param->out_size.h);
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
-	}	
+	}
 	//set input size
 	scale_config.id = SCALE_PATH_INPUT_RECT;
-	scale_config.param = &scale_param->in_rect;	 
+	scale_config.param = &scale_param->in_rect;
 	SCI_TRACE_LOW("test scale:input rect:%d,%d,%d,%d .",scale_param->in_rect.x,scale_param->in_rect.y,scale_param->in_rect.w,scale_param->in_rect.h);
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set input address
-	scale_config.id = SCALE_PATH_INPUT_ADDR;	
-	scale_config.param = &scale_param->in_addr;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.id = SCALE_PATH_INPUT_ADDR;
+	scale_config.param = &scale_param->in_addr;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
 	}
 	//set output address
-	scale_config.id = SCALE_PATH_OUTPUT_ADDR;	
-	scale_config.param = &scale_param->out_addr;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.id = SCALE_PATH_OUTPUT_ADDR;
+	scale_config.param = &scale_param->out_addr;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
-	}	
-	
+	}
+
 	//set input endian
 	scale_config.id = SCALE_PATH_INPUT_ENDIAN;
 	endian_mode = 1;
-	scale_config.param = &endian_mode;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.param = &endian_mode;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
@@ -220,26 +221,26 @@ LOCAL JPEG_RET_E JPEGENC_Scale_For_Thumbnail(SCALE_PARAM_T *scale_param)
 	//set output endian
 	scale_config.id = SCALE_PATH_OUTPUT_ENDIAN;
 	endian_mode = 1;
-	scale_config.param = &endian_mode;	 
-	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))   
+	scale_config.param = &endian_mode;
+	if (-1 == xioctl(fd, SCALE_IOC_CONFIG, &scale_config))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_CONFIG: id=%d", scale_config.id);
 		return JPEG_FAILED;
-	}	
-	
-	//done	 
-	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))   
+	}
+
+	//done
+	if (-1 == xioctl(fd, SCALE_IOC_DONE, 0))
 	{
 		SCI_TRACE_LOW("Fail to SCALE_IOC_DONE");
 		return JPEG_FAILED;
 	}
 
-	if(-1 == close(fd))   
-	{   
+	if(-1 == close(fd))
+	{
 		SCI_TRACE_LOW("Fail to close scale device.");
-        	return JPEG_FAILED;   
-   	 } 
-    	fd = -1;   
+        	return JPEG_FAILED;
+   	 }
+    	fd = -1;
 
 	return JPEG_SUCCESS;
 }
@@ -281,11 +282,11 @@ LOCAL JPEG_RET_E JPEGENC_start_encode_thumbnail(JPEGENC_PARAMS_T *jpegenc_params
 	}
 		#if 0
 			{
-				FILE *fp = NULL;				
-				SCI_TRACE_LOW("cap yuv420: width: %d, hei: %d.", scale_param.out_size.w, scale_param.out_size.h);				
+				FILE *fp = NULL;
+				SCI_TRACE_LOW("cap yuv420: width: %d, hei: %d.", scale_param.out_size.w, scale_param.out_size.h);
 				fp = fopen("/data/out_enc_yuv420.yuv", "wb");
 				fwrite(jpegenc_params->stream_virt_buf[0], 1, scale_param.out_size.w * scale_param.out_size.h * 3 / 2, fp);
-				fclose(fp);								
+				fclose(fp);
 			}
 		#endif
 
@@ -299,7 +300,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode_thumbnail(JPEGENC_PARAMS_T *jpegenc_params
 	jpegenc_params_tmp.yuv_phy_buf = scale_param.out_addr.yaddr;
 	jpegenc_params_tmp.stream_phy_buf[0] = jpegenc_params->stream_phy_buf[1];
 	jpegenc_params_tmp.stream_virt_buf[0] = jpegenc_params->stream_virt_buf[1];
-	jpegenc_params_tmp.quality = jpegenc_params->thumb_quality;	
+	jpegenc_params_tmp.quality = jpegenc_params->thumb_quality;
 
 	JPEGENC_init_fw_param(&jpegenc_params_tmp, &jpeg_enc_fw_info);
 
@@ -309,7 +310,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode_thumbnail(JPEGENC_PARAMS_T *jpegenc_params
 		SCI_TRACE_LOW("JPEG_HWEncInit failed for thubmnail  = %d", ret_value);
 		return ret_value;
 	}
-	
+
 	ret_value = JPEG_HWWriteHeadForThumbnail();
 	if(JPEG_SUCCESS != ret_value)
 	{
@@ -317,14 +318,14 @@ LOCAL JPEG_RET_E JPEGENC_start_encode_thumbnail(JPEGENC_PARAMS_T *jpegenc_params
 		return ret_value;
 	}
 
-	/*the input width must be mcu aligned width*/	
+	/*the input width must be mcu aligned width*/
 	ret_value = JPEG_HWEncStart(jpegenc_params_tmp.width, jpegenc_params_tmp.height, &jpeg_enc_out_param);
 
-	SCI_TRACE_LOW("[JPEG_6600L_StartEncode for thumbnail] start enc, src_aligned_width = %d, slice height = %d", 
+	SCI_TRACE_LOW("[JPEG_6600L_StartEncode for thumbnail] start enc, src_aligned_width = %d, slice height = %d",
 										jpegenc_params_tmp.width, jpegenc_params_tmp.height);
 
 	//poll the end of jpeg encoder
-	JPEGENC_Poll_VLC_BSM(0xFFF, jpegenc_params_tmp.stream_buf_len, NULL);	
+	JPEGENC_Poll_VLC_BSM(0xFFF, jpegenc_params_tmp.stream_buf_len, NULL);
 
 	ret_value = JPEG_HWWriteTail();
 	if(JPEG_SUCCESS != ret_value)
@@ -352,7 +353,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 	JPEG_ENC_OUTPUT_PARA_T jpeg_enc_out_param;
 	JPEG_ENC_INPUT_PARA_T 	jpeg_enc_fw_info;
 	uint32_t slice_height = SLICE_HEIGHT;
-	APP1_T app1_param;	
+	APP1_T app1_param;
 
 	if(0 != jpegenc_params->set_slice_height)
 	{
@@ -365,7 +366,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 		jpegenc_params->stream_size = 0;
 	}
 	else{
-		if(JPEG_SUCCESS != JPEGENC_start_encode_thumbnail(jpegenc_params))		
+		if(JPEG_SUCCESS != JPEGENC_start_encode_thumbnail(jpegenc_params))
 		{
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_start_encode_thumbnail.");
 			return ret_value;
@@ -383,11 +384,11 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 	app1_param.Latitude_mm.denominator = jpegenc_params->Latitude_mm.denominator;
 	app1_param.Latitude_ss.numerator = jpegenc_params->Latitude_ss.numerator;
 	app1_param.Latitude_ss.denominator = jpegenc_params->Latitude_ss.denominator;
-	app1_param.Latitude_ref = jpegenc_params->Latitude_ref;	
+	app1_param.Latitude_ref = jpegenc_params->Latitude_ref;
 	app1_param.Longitude_dd.numerator = jpegenc_params->Longitude_dd.numerator;
-	app1_param.Longitude_dd.denominator = jpegenc_params->Longitude_dd.denominator;	
+	app1_param.Longitude_dd.denominator = jpegenc_params->Longitude_dd.denominator;
 	app1_param.Longitude_mm.numerator = jpegenc_params->Longitude_mm.numerator;
-	app1_param.Longitude_mm.denominator = jpegenc_params->Longitude_mm.denominator;	
+	app1_param.Longitude_mm.denominator = jpegenc_params->Longitude_mm.denominator;
 	app1_param.Longitude_ss.numerator = jpegenc_params->Longitude_ss.numerator;
 	app1_param.Longitude_ss.denominator = jpegenc_params->Longitude_ss.denominator;
 	app1_param.Longitude_ref = jpegenc_params->Longitude_ref;
@@ -399,9 +400,9 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 	app1_param.datetime = jpegenc_params->datetime;
 	app1_param.gps_date = jpegenc_params->gps_date;
 	app1_param.gps_process_method = jpegenc_params->gps_process_method;
-	app1_param.gps_hour = jpegenc_params->gps_hour;	
+	app1_param.gps_hour = jpegenc_params->gps_hour;
 	app1_param.gps_minuter = jpegenc_params->gps_minuter;
-	app1_param.gps_second = jpegenc_params->gps_second;	
+	app1_param.gps_second = jpegenc_params->gps_second;
 	app1_param.image_width = jpegenc_params->width;
 	app1_param.image_height = jpegenc_params->height;
 	app1_param.focal_length.numerator = jpegenc_params->focal_length.numerator;
@@ -432,7 +433,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 	{
 		SCI_TRACE_LOW("JPEG_HWWriteHead failed = %d", ret_value);
 		return ret_value;
-	}	
+	}
 
 	SCI_TRACE_LOW("[JPEG_6600L_StartEncode] hardware write head done");
 
@@ -445,7 +446,7 @@ LOCAL JPEG_RET_E JPEGENC_start_encode(JPEGENC_PARAMS_T *jpegenc_params)
 		ret_value = JPEG_HWEncStart(jpegenc_params->width, jpegenc_params->height, &jpeg_enc_out_param);
 	}
 
-	SCI_TRACE_LOW("[JPEG_6600L_StartEncode] start enc, src_aligned_width = %d, slice height = %d", 
+	SCI_TRACE_LOW("[JPEG_6600L_StartEncode] start enc, src_aligned_width = %d, slice height = %d",
 										jpegenc_params->width, jpegenc_params->height);
 
 	return ret_value;
@@ -464,13 +465,13 @@ PUBLIC JPEG_RET_E JPEGENC_stop_encode(JPEGENC_PARAMS_T *jpegenc_params)
 		/*if (jpegenc_params->stream_size > jpegenc_params->stream_buf_len)
 		{
 			SCI_TRACE_LOW("[JPEG_StopEncode] jpeg stream buffer is not enough, stream size = %d, target buffer size = %d",
-							jpegenc_params->stream_size, jpegenc_params->stream_buf_len);	
+							jpegenc_params->stream_size, jpegenc_params->stream_buf_len);
 			return JPEG_MEMORY_NOT_ENOUGH;
 		}*/
 	}
-	
-	SCI_TRACE_LOW("[JPEG_6600L_StopEncode] start enc, stream_size = %d", jpegenc_params->stream_size);	
-	
+
+	SCI_TRACE_LOW("[JPEG_6600L_StopEncode] start enc, stream_size = %d", jpegenc_params->stream_size);
+
 	return jpeg_ret_value;
 }
 
@@ -486,13 +487,13 @@ PUBLIC JPEG_RET_E JPEGENC_stop_encode_ext(uint32_t *jpeg_size_ptr)
 		/*if (jpegenc_params->stream_size > jpegenc_params->stream_buf_len)
 		{
 			SCI_TRACE_LOW("[JPEG_StopEncode] jpeg stream buffer is not enough, stream size = %d, target buffer size = %d",
-							jpegenc_params->stream_size, jpegenc_params->stream_buf_len);	
+							jpegenc_params->stream_size, jpegenc_params->stream_buf_len);
 			return JPEG_MEMORY_NOT_ENOUGH;
 		}*/
 	}
-	
-	SCI_TRACE_LOW("[JPEG_6600L_StopEncode] start enc, stream_size = %d", *jpeg_size_ptr);	
-	
+
+	SCI_TRACE_LOW("[JPEG_6600L_StopEncode] start enc, stream_size = %d", *jpeg_size_ptr);
+
 	return jpeg_ret_value;
 }
 
@@ -506,7 +507,7 @@ void get_regs(void)
 	{
 		value = VSP_READ_REG(VSP_GLB_REG_BASE + i * 4,"");
 		SCI_TRACE_LOW("GLB 0x%x : 0x%x", VSP_GLB_REG_BASE + i * 4, value);
-	}		
+	}
 	for(i = 0; i < 3; i++)
 	{
 		value = VSP_READ_REG(VSP_AHBM_REG_BASE + i * 4,"");
@@ -516,7 +517,7 @@ void get_regs(void)
 	{
 		value = VSP_READ_REG(VSP_BSM_REG_BASE + i * 4,"");
 		SCI_TRACE_LOW("BSM 0x%x : 0x%x", VSP_BSM_REG_BASE + i * 4, value);
-	}	
+	}
 	for(i = 0; i < 3; i++)
 	{
 		value = VSP_READ_REG(VSP_VLC_REG_BASE + i * 4,"");
@@ -531,15 +532,15 @@ void get_regs(void)
 	{
 		value = VSP_READ_REG(VSP_MEA_REG_BASE + i * 4,"");
 		SCI_TRACE_LOW("MEA 0x%x : 0x%x", VSP_MEA_REG_BASE + i * 4, value);
-	}	
+	}
 }
 #endif
 void JPGEENC_Clear_INT(uint32_t mask)
-{	
+{
 	uint32_t value;
-	
+
 	value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "");
-	SCI_TRACE_LOW("JPEGDEC GLB_INT_RAW_OFFSET: 0x%x.", value);	
+	SCI_TRACE_LOW("JPEGDEC GLB_INT_RAW_OFFSET: 0x%x.", value);
 	value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_CLR_OFFSET, "read the interrupt clear bits.");
 	value |= mask;
 	JPG_WRITE_REG(JPG_GLB_REG_BASE + GLB_INT_CLR_OFFSET, value, "clear the VLC interrupt.");
@@ -555,20 +556,20 @@ void JPEGENC_Handle_BSM_INT(jpegenc_callback callback)
 	uint32_t tmp = stream_buf_id;
 
 	JPGEENC_Clear_INT(0x1);
-	if(0 == stream_buf_id){				
+	if(0 == stream_buf_id){
 		stream_buf_id = 1;
 	}
-	else{		
-		stream_buf_id = 0;				
+	else{
+		stream_buf_id = 0;
 	}
 	JPEG_HWSet_BSM_Buf_WriteOnly(stream_buf_id);
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM JPEG_HWSet_BSM_Buf_WriteOnly after.stream_buf_id: %d.\n", stream_buf_id);
 	callback(stream_buf_id, g_stream_buf_size, 0);
 
 	jpeg_fw_codec->stream_buf_id = stream_buf_id;
-	
-	
-	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM callback after.\n");		
+
+
+	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM callback after.\n");
 }
 
 
@@ -583,13 +584,13 @@ void JPEGENC_Handle_BSM_INT_Ext(void)
 /*	if(0 == stream_buf_id){
 		stream_buf_id = 1;
 	}else{
-		stream_buf_id = 0;				
+		stream_buf_id = 0;
 	}
 	JPEG_HWSet_BSM_Buf_WriteOnly(stream_buf_id);*/
 	jpeg_fw_codec->stream_buf_id = stream_buf_id;
-	
+
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM JPEG_HWSet_BSM_Buf_WriteOnly after.stream_buf_id: %d.\n", stream_buf_id);
-	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM callback after.\n");		
+	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM callback after.\n");
 
 	return;
 }
@@ -599,14 +600,14 @@ uint32_t JPEGENC_Poll_MEA_BSM(uint32_t time, uint32_t buf_len,  uint32_t slice_n
 {
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
-	uint32_t buf_id = 1; 
+	uint32_t buf_id = 1;
 
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM E,slice_num=%d.\n",slice_num);
-			
+
 	while (1)
 	{
-		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");		
-		if(value & 0x1){ //for BSM done			
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");
+		if(value & 0x1){ //for BSM done
 			JPEGENC_Handle_BSM_INT(callback);
 		}
 		if(value & 0x8){ //for MEA done
@@ -637,7 +638,7 @@ uint32_t JPEGENC_Poll_MEA_BSM(uint32_t time, uint32_t buf_len,  uint32_t slice_n
 		}
 		vsp_time_out_cnt++;
 		usleep(1000);
-	}	
+	}
 }
 
 
@@ -647,95 +648,18 @@ uint32_t JPEGENC_Poll_MEA_BSM_OneSlice(uint32_t time, uint32_t slice_num)
 	uint32_t ret = 0;
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
-	uint32_t buf_id = 1; 
+	uint32_t buf_id = 1;
 	int jpg_fd = -1;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
 
 	SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM E,slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
-	jpeg_fw_codec->stream_switch_num = 0;
+//	jpeg_fw_codec->stream_switch_num = 0;
 	jpg_fd = jpeg_fw_codec->fd;
-#if 0
-	while(1)
-	{
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
-		if(value & 0x80){ //for BSM done
-			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM_OneSlice stream buf is small.\n");
-			ret = 2;
-			break;
-#if 0
-			JPEGENC_Handle_BSM_INT_Ext();
-			jpeg_fw_codec->stream_switch_num ++;
-			if(2 <= jpeg_fw_codec->stream_switch_num){
-				ret = 2;
-				break;
-			}
-#endif
-		}
-		if(value & 0x4000){ //for MEA done
-			 slice_num--;
-			 if(slice_num>0)
-			 {
-				 JPEG_HWUpdateMBIOBufInfo();
 
-				JPGEENC_Clear_INT(0x4000);
-
-				ret = 0;
-				break;
-			 }
-			 else
-			 {
-			 	JPGEENC_Clear_INT(0x4000);
-				SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X done.\n");
-				ret = 0;
-
-				break;
-			 }
-		}
-		if (vsp_time_out_cnt > time)
-		{
-			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, fail..\n");
-			ret = 1;
-			break;
-		}
-		vsp_time_out_cnt++;
-		usleep(1000);
-	}	
-//#else
-	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MBIO_DONE,time);
-	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MBIO_DONE");
-	value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
-
-	SCI_TRACE_LOW("DCAM_INT_RAW_OFF value %x",value);
-	if(2 == ret) {
-		SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM_OneSlice stream buf is small.\n");
-		ret = 2;
-	} else if(1 == ret) {
-		SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, timeout..\n");
-			ret = 1;
-	} else if (0 == ret) {
-			slice_num--;
-			if(slice_num>0) {
-				JPEG_HWUpdateMBIOBufInfo();
-				JPGEENC_Clear_INT(0x4000);
-				ret = 0;
-			 } else {
-			 	JPGEENC_Clear_INT(0x4000);
-				SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X done.\n");
-				ret = 0;
-			 }
-	}
-#else
 	//ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_MBIO);
 	ret = 0;
 	SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
-//	if(0 == ret)
-//	{
-//		slice_num--;
-//		if(slice_num>0) 
-//				JPEG_HWUpdateMEABufInfo();
-//	}
-#endif
 	SCI_TRACE_LOW("slice_num=%d.\n",jpeg_fw_codec->slice_num);
 
 	jpeg_fw_codec->slice_num--;
@@ -777,15 +701,15 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 	while(1)
 	{
 		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
-		if(value & 0x80){ //for BSM done			
-		
+		if(value & 0x80){ //for BSM done
+
 			JPEGENC_Handle_BSM_INT_Ext();
 			SCI_TRACE_LOW("BSM done.");
-			ret = 1; 
+			ret = 1;
 			break;
 		}
 		if(value & 0x4000){ //for MEA done
-			 
+
 			 if(slice_num>0)
 			 {
 				JPEG_HWUpdateMBIOBufInfo();
@@ -814,7 +738,7 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 		SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM: count: %d\n",  vsp_time_out_cnt);
 		vsp_time_out_cnt++;
 		usleep(1000);
-	}	
+	}
 //#else
 	ret = ioctl(vsp_fd,VSP_ACQUAIRE_MBIO_DONE,time);
 	SCI_TRACE_LOW("after ioctl VSP_ACQUAIRE_MBIO_DONE ret %d",ret);
@@ -841,9 +765,9 @@ static uint32_t _Encode_NextSlice(uint32_t time,JPEGENC_SLICE_NEXT_T *update_par
 	SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
 //	if(0 == ret)
 //	{
-//		if(slice_num>0) 
+//		if(slice_num>0)
 //				JPEG_HWUpdateMEABufInfo();
-//	}	
+//	}
 #endif
 	//match with start, update buf_id and slice_num
 	jpeg_fw_codec->buf_id = !jpeg_fw_codec->buf_id;
@@ -861,63 +785,16 @@ uint32_t JPEGENC_Poll_VLC_BSM_Slice(uint32_t time)
 	uint32_t vsp_time_out_cnt = 0;
 	int jpg_fd = -1;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
+
 	jpg_fd = jpeg_fw_codec->fd;
-	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E.\n");
-#if 0
-	while (1)
-	{
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");		
-		if(value & 0x100){ //for VLC done			
-			JPGEENC_Clear_INT(0x100);
-			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X.\n");		
-			ret = 1;
-			break;
-		}
-		if(value & 0x80){ //for BSM done		
-			JPEGENC_Handle_BSM_INT_Ext();
-		}
 
-		if (vsp_time_out_cnt > time)
-		{			
-			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X, fail.\n");	
-			ret =  0xffffffff;
-			break;
-		}
-		vsp_time_out_cnt++;
-		usleep(1000);
-	}	
-//#else
-while(1)
-	{
-		ret = ioctl(vsp_fd,VSP_ACQUAIRE_MBIO_DONE,time);
-		SCI_TRACE_LOW("after  JPEGENC_Poll_VLC_BSM");
-		value = VSP_READ_REG(VSP_DCAM_REG_BASE + DCAM_INT_RAW_OFF, "read the interrupt register.");
-
-		SCI_TRACE_LOW("DCAM_INT_RAW_OFF value %x",value);
-		if(2 == ret) {
-			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM_OneSlice stream buf is small.\n");
-			JPEGENC_Handle_BSM_INT_Ext();
-			break;
-		} else if(1 == ret) {
-			SCI_TRACE_LOW("JPEGENC_Poll_MEA_BSM X, timeout..\n");
-			ret =  0xffffffff;
-			break;
-		} else if (4 == ret) {//VLC done
-			JPGEENC_Clear_INT(0x100);
-			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X.\n");
-			ret = 1;
-			break;
-		} else if (0 == ret) {
-			JPGEENC_Clear_INT(0x4000);
-		}
-	}
-#else
+	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E jpg_fd %d\n", jpg_fd);
 	do
 	{
-		ret =  ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_VLC);
+		ret = ioctl(jpg_fd,JPG_ACQUAIRE_MBIO_DONE,INTS_VLC);
 		SCI_TRACE_LOW("after ioctl JPG_ACQUAIRE_MBIO_DONE ret %d",ret);
-	}while(!ret ); 
-#endif
+	}while(!ret );
+
 	return ret;
 }
 
@@ -928,30 +805,30 @@ uint32_t JPEGENC_Poll_VLC_BSM(uint32_t time, uint32_t buf_len,  jpegenc_callback
 {
 	uint32_t value;
 	uint32_t vsp_time_out_cnt = 0;
-	
-	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E.\n");	
+
+	SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM E.\n");
 	while (1)
 	{
-		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");		
-		if(value & 0x2){ //for VLC done			
+		value = JPG_READ_REG(JPG_GLB_REG_BASE + GLB_INT_RAW_OFFSET, "read the interrupt register.");
+		if(value & 0x2){ //for VLC done
 			JPGEENC_Clear_INT(0x2);
-			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X.\n");		
+			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X.\n");
 			return 1;
 		}
-		if(value & 0x1){ //for BSM done		
-			JPEGENC_Handle_BSM_INT(callback);		
+		if(value & 0x1){ //for BSM done
+			JPEGENC_Handle_BSM_INT(callback);
 		}
 
 		if (vsp_time_out_cnt > time)
-		{			
-			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X, fail.\n");	
+		{
+			SCI_TRACE_LOW("JPEGENC_Poll_VLC_BSM X, fail.\n");
 			return 1;
 		}
 		vsp_time_out_cnt++;
 		usleep(1000);
-	}	
+	}
 }
-
+#if 0
 uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callback callback)
 {
 	int jpg_fd = -1;
@@ -973,7 +850,7 @@ uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callb
 	slice_num = (jpegenc_params->height%slice_height) ? (jpegenc_params->height/slice_height+1):(jpegenc_params->height/slice_height);
 	if(0 ==(jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR)))
     	{
-        	SCI_TRACE_LOW("JPEGENC open jpg error, jpg_fd: %d.\n", jpg_fd);   
+        	SCI_TRACE_LOW("JPEGENC open jpg error, jpg_fd: %d.\n", jpg_fd);
 		return -1;
     	}
 	else
@@ -981,10 +858,10 @@ uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callb
         	jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
 		SCI_TRACE_LOW("JPEGENC  vsp addr 0x%x\n",(uint32_t)jpg_addr);
     	}
-	
+
         ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 	if(ret){
-   		 SCI_TRACE_LOW("JPG hardware timeout try again %d\n",ret);	
+   		 SCI_TRACE_LOW("JPG hardware timeout try again %d\n",ret);
 		ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 		if(ret){
    			 SCI_TRACE_LOW("JPG hardware timeout give up %d\n",ret);
@@ -1006,12 +883,12 @@ uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callb
 	}
 
 	if(jpegenc_params->height > SLICE_HEIGHT)
-	{			
-		JPEGENC_Poll_MEA_BSM(0xFFF, jpegenc_params->stream_buf_len, slice_num,callback,jpegenc_params->read_callback);		
+	{
+		JPEGENC_Poll_MEA_BSM(0xFFF, jpegenc_params->stream_buf_len, slice_num,callback,jpegenc_params->read_callback);
 	}
-	
+
 	//poll the end of jpeg encoder
-	JPEGENC_Poll_VLC_BSM(0xFFF, jpegenc_params->stream_buf_len, callback);	
+	JPEGENC_Poll_VLC_BSM(0xFFF, jpegenc_params->stream_buf_len, callback);
 
 	if(JPEG_SUCCESS != JPEGENC_stop_encode(jpegenc_params))
 	{
@@ -1024,17 +901,67 @@ uint32_t JPEGENC_encode_one_pic(JPEGENC_PARAMS_T *jpegenc_params,  jpegenc_callb
 	}
 	else{
 		callback(1, JPEG_HWGetSize(), 1);
-	}	
+	}
 
 error:
-	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);    
+	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
 	ioctl(jpg_fd,JPG_DISABLE,NULL);
-   	ioctl(jpg_fd,JPG_RELEASE,NULL);	
+   	ioctl(jpg_fd,JPG_RELEASE,NULL);
 	if(jpg_fd >= 0){
 		close(jpg_fd);
 	}
-		
+
 	return ret;
+}
+#endif
+int JPEGCODEC_Open(void)
+{
+	JPEG_CODEC_T *jpeg_fw_enc = Get_JPEGEncCodec();
+	JPEG_CODEC_T *jpeg_fw_dec = Get_JPEGDecCodec();
+	int jpg_fd = -1;
+	void *jpg_addr = NULL;
+
+	jpeg_fw_enc->fd = jpg_fd;
+	jpeg_fw_enc->jpg_addr = jpg_addr;
+	jpeg_fw_dec->fd = jpg_fd;
+	jpeg_fw_dec->jpg_addr = jpg_addr;
+	if(0 > (jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR))) {
+		SCI_TRACE_LOW("JPEGENC open jpg module error, jpg_fd: %d\n", jpg_fd);
+		return -1;
+	} else {
+		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
+		SCI_TRACE_LOW("JPEGENC jpg addr 0x%x\n",(uint32_t)jpg_addr);
+    }
+	jpeg_fw_enc->fd = jpg_fd;
+	jpeg_fw_enc->jpg_addr = jpg_addr;
+	jpeg_fw_dec->fd = jpg_fd;
+	jpeg_fw_dec->jpg_addr = jpg_addr;
+	SCI_TRACE_LOW("jpeg dev fd %d, reg addr 0x%x", jpeg_fw_enc->fd, jpeg_fw_enc->jpg_addr);
+	return 0;
+}
+
+int JPEGCODEC_Close(void)
+{
+	JPEG_CODEC_T *jpeg_fw_enc = Get_JPEGEncCodec();
+	JPEG_CODEC_T *jpeg_fw_dec = Get_JPEGDecCodec();
+	int jpg_fd = -1;
+	void *jpg_addr = NULL;
+
+	jpg_fd = jpeg_fw_enc->fd;
+	jpg_addr = jpeg_fw_enc->jpg_addr;
+
+	if (jpg_addr) {
+		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+	}
+	if (jpg_fd >= 0) {
+		close(jpg_fd);
+	}
+	jpeg_fw_enc->fd = -1;
+	jpeg_fw_enc->jpg_addr = NULL;
+	jpeg_fw_dec->fd = -1;
+	jpeg_fw_dec->jpg_addr = NULL;
+	SCI_TRACE_LOW("jpeg dev close \n");
+	return 0;
 }
 
 int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *out_ptr)
@@ -1055,15 +982,15 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	slice_height = jpegenc_params->set_slice_height ? jpegenc_params->set_slice_height : SLICE_HEIGHT;
 	slice_num = (jpegenc_params->height%slice_height) ? (jpegenc_params->height/slice_height+1):(jpegenc_params->height/slice_height);
 
-	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d, slice_height: %d.\n", slice_num, slice_height);   
+	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d, slice_height: %d.\n", slice_num, slice_height);
 
-	if(0 > (jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR))) {
-		SCI_TRACE_LOW("JPEGENC open jpg module error, jpg_fd: %d.\n", jpg_fd);
+	jpg_fd = jpeg_fw_codec->fd;
+	jpg_addr = jpeg_fw_codec->jpg_addr;
+	SCI_TRACE_LOW("JPEGENC_Slice_Start, fd %d jpg_addr 0x%x", jpg_fd, jpg_addr);
+	if ((jpg_fd < 0) || (NULL == jpg_addr)) {
+		SCI_TRACE_LOW("JPEGENC_Slice_Start, param err %d", jpg_fd);
 		return -1;
-	} else {
-		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
-		SCI_TRACE_LOW("JPEGENC jpg addr 0x%x\n",(uint32_t)jpg_addr);
-    }
+	}
 
     ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 	if(ret){
@@ -1077,11 +1004,9 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	}
 	ioctl(jpg_fd,JPG_ENABLE,NULL);
 	ioctl(jpg_fd,JPG_RESET,NULL);
-        ioctl(jpg_fd,JPG_CONFIG_FREQ,&jpg_clk);
-//	ioctl(jpg_fd,JPG_REG_IRQ,NULL);
+    ioctl(jpg_fd,JPG_CONFIG_FREQ,&jpg_clk);
 	JPG_SetVirtualBaseAddr((uint32)jpg_addr);
 	JPG_reg_reset_callback(JPG_reset_cb,jpg_fd);
-
 	if(JPEG_SUCCESS != JPEGENC_start_encode(jpegenc_params)) {
 		SCI_TRACE_LOW("JPEGENC fail to JPEGENC_start_encode.");
 		ret = -1;
@@ -1089,19 +1014,18 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 	}
 	jpeg_fw_codec->slice_num = slice_num;
 	jpeg_fw_codec->total_slice_num = slice_num;
-    jpeg_fw_codec->fd = jpg_fd;
+/*    jpeg_fw_codec->fd = jpg_fd;*/
 	ret = JPEGENC_Poll_MEA_BSM_OneSlice(0xFFF,slice_num);
 
-	jpeg_fw_codec->addr = (uint32)jpg_addr;
-
-	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num%d.\n", jpeg_fw_codec->slice_num);   
+/*	jpeg_fw_codec->addr = (uint32)jpg_addr;*/
+	SCI_TRACE_LOW("JPEGENC_Slice_Start: slice num %d\n", jpeg_fw_codec->slice_num);
 	if(0 == (slice_num-1)) {
 		if(ret != 4) // 4 indicate vlc done
 		{
 			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
 		}
 		ret = (ret == 4) ? 0 : ret;
-		
+
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext((uint32_t *)&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
 			ret = -1;
@@ -1117,30 +1041,28 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 			ret = -1;
 			goto error;
 		}
-		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+/*		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);*/
 		ioctl(jpg_fd,JPG_DISABLE,NULL);
 		ioctl(jpg_fd,JPG_RELEASE,NULL);
-//		ioctl(jpg_fd,JPG_UNREG_IRQ,NULL);
-		if(jpg_fd >= 0){
+/*		if(jpg_fd >= 0){
 			close(jpg_fd);
 			jpg_fd = -1;
-		}
+		}*/
 
 		out_ptr->is_over = 1;
 		out_ptr->stream_size =  stream_size;
 		SCI_TRACE_LOW("JPEGENC_Slice_Start,end stream_size %d.",stream_size);
 
 	}
-	
-error: 
+
+error:
 	if(-1==ret) {
-		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);    
+/*		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);*/
 		ioctl(jpg_fd,JPG_DISABLE,NULL);
-	   	ioctl(jpg_fd,JPG_RELEASE,NULL);	
-//		ioctl(jpg_fd,JPG_UNREG_IRQ,NULL);
-		if(jpg_fd >= 0){
+	   	ioctl(jpg_fd,JPG_RELEASE,NULL);
+/*		if(jpg_fd >= 0){
 			close(jpg_fd);
-		}
+		}*/
 	}
 	return ret;
 }
@@ -1162,7 +1084,7 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 	jpg_addr = (void*)jpeg_fw_codec->addr;
 	ret = _Encode_NextSlice(0xFFF,update_parm_ptr);
 	//poll the end of jpeg encoder
-	
+
 	memset(out_ptr, 0, sizeof(JPEGENC_SLICE_OUT_T));
 
 	slice_num = jpeg_fw_codec->slice_num;
@@ -1179,13 +1101,13 @@ uint32_t JPEGENC_Slice_Next(JPEGENC_SLICE_NEXT_T *update_parm_ptr, JPEGENC_SLICE
 		return ret;
 	}
 	if(0 == (slice_num) || (0 != ret&& 1 != ret) ) {
-		if(ret != 4) 
+		if(ret != 4)
 		{
 			ret = JPEGENC_Poll_VLC_BSM_Slice(0xFFF);
 		}
 
 		ret = ((ret == 4)||(ret == 1)) ? 0 : ret;
-				
+
 		if(JPEG_SUCCESS != JPEGENC_stop_encode_ext(&stream_size)) {
 			SCI_TRACE_LOW("JPEGENC fail to JPEGENC_stop_encode.");
 			ret = 1;
@@ -1254,4 +1176,4 @@ int adjust_jpg_resolution(void* jpg_buf,int jpg_size,int width,int height)
     }
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

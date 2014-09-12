@@ -21,7 +21,7 @@
 #include "isp_param_tune_v0001.h"
 #include "isp_param_size.h"
 #include "isp_app.h"
-#include "cmr_set.h"
+#include "cmr_setting.h"
 /**---------------------------------------------------------------------------*
  **				Compiler Flag					*
  **---------------------------------------------------------------------------*/
@@ -149,6 +149,8 @@ static int32_t _ispParserDownLevel(void* in_param_ptr)
 		uint16_t prv_width=sensor_info_ptr->sensor_mode_info[1].width;
 		uint16_t prv_height=sensor_info_ptr->sensor_mode_info[1].height;
 		uint32_t i=0x00;
+
+		CMR_LOGE("zone prv_width=%d prv_height=%d",prv_width,prv_height);
 
 		af_param.valid_win=in_af_ptr->valid_win;
 		af_param.mode=in_af_ptr->mode;

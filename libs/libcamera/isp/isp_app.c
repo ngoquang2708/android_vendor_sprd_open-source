@@ -90,6 +90,7 @@ struct isp_app_context{
 	enum isp_ae_weight lum_measure_mode;
 
 	proc_callback ctrl_callback;
+	uint32_t oem_handle;
 };
 
 struct isp_app_system{
@@ -327,10 +328,12 @@ int32_t _isp_AppCtrlCallback(uint32_t handler_id, int32_t mode, void* param_ptr,
 			rtn = _isp_app_msg_post(&isp_ctrl_msg);
 			ISP_APP_RETURN_IF_FAIL(rtn, ("ctrl callback send msg to app thread error"));
 		} else {
-			isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
+			//isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
+			isp_context_ptr->ctrl_callback(isp_context_ptr->oem_handle, mode, param_ptr, param_len);
 		}
 	} else {
-		isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
+		//isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
+		isp_context_ptr->ctrl_callback(isp_context_ptr->oem_handle, mode, param_ptr, param_len);
 	}
 
 	return rtn;
@@ -357,8 +360,9 @@ uint32_t _isp_AppCtrlCallbackHandler(uint32_t handler_id, int32_t mode, void* pa
 			rtn = _isp_AppLumMeasureRecover(handler_id);
 		}
 	}
+	isp_context_ptr->ctrl_callback(isp_context_ptr->oem_handle, mode, param_ptr, param_len);
 
-	isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
+	//isp_context_ptr->ctrl_callback(handler_id, mode, param_ptr, param_len);
 
 	return rtn;
 }
@@ -378,7 +382,9 @@ uint32_t _isp_AppStopVideoHandler(uint32_t handler_id)
 		ISP_LOG("App Stop ISP_AF_NOTICE_CALLBACK");
 		af_notice.mode=ISP_FOCUS_MOVE_END;
 		af_notice.valid_win=0x00;
-		isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
+		//isp_context_ptr->ctrl_callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
+		isp_context_ptr->ctrl_callback(isp_context_ptr->oem_handle,ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
+
 		isp_context_ptr->af_flag = ISP_APP_UEB;
 		isp_context_ptr->stop_handle_flag = 1;
 	}
@@ -434,6 +440,7 @@ static int32_t _isp_AppSofHandler(uint32_t handler_id)
 {
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
+	ISP_LOG("_isp_AppSofHandler isp_context_ptr->af_flag=%d",isp_context_ptr->af_flag);
 
 	if (ISP_APP_EB == isp_context_ptr->af_flag) {
 		struct isp_af_win af_param;
@@ -457,6 +464,9 @@ static int32_t _isp_AppAfIoCtrlHandler(uint32_t handler_id, void* param_ptr)
 	struct isp_af_win* af_param_ptr=(struct isp_af_win*)param_ptr;
 	uint32_t ae_stab = ISP_APP_EB;
 
+	ISP_LOG("af_param_ptr->ae_touch=%d ae_stab=%d",af_param_ptr->ae_touch,isp_context_ptr->ae_stab);
+
+	ISP_LOG("x=%d y=%d ,e_x=%d ,e_y=%d ",af_param_ptr->ae_touch_rect.start_x,af_param_ptr->ae_touch_rect.start_y,af_param_ptr->ae_touch_rect.end_x,af_param_ptr->ae_touch_rect.end_y);
 	if (ISP_APP_EB == af_param_ptr->ae_touch) {
 		rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AE_TOUCH, (void*)&af_param_ptr->ae_touch_rect);
 		if (ISP_APP_SUCCESS == rtn) {
@@ -468,12 +478,15 @@ static int32_t _isp_AppAfIoCtrlHandler(uint32_t handler_id, void* param_ptr)
 			rtn = ISP_APP_SUCCESS;
 		}
 	}
+	ISP_LOG("isp_context_ptr->ae_stab=0x%0x",isp_context_ptr->ae_stab);
 
 	if (ISP_APP_EB != isp_context_ptr->ae_stab) {
 		memcpy((void*)&isp_context_ptr->af_info, af_param_ptr, sizeof(struct isp_af_win));
 		isp_context_ptr->af_flag = ISP_APP_EB;
 		rtn = ISP_APP_ERROR;
+		ISP_LOG("error ISP_APP_ERROR");
 	}
+	ISP_LOG("rtn=%d",rtn);
 	return rtn;
 }
 
@@ -488,14 +501,19 @@ static int32_t _isp_AppIoCtrlHandler(uint32_t handler_id, enum isp_ctrl_cmd io_c
 	int32_t rtn = ISP_APP_SUCCESS;
 	struct isp_app_context* isp_context_ptr = ispAppGetContext(handler_id);
 	enum isp_ctrl_cmd cmd = io_cmd&0x3fffffff;
+	ISP_LOG("cmd =%d",cmd);
 
 	switch (cmd)
 	{
 		case ISP_CTRL_AF:
 		{
 			uint32_t denoise_level=0xfe;
+			ISP_LOG("handler_id= 0x%x",handler_id);
+			ISP_LOG(" ISP_CTRL_AF -> && -> ISP_CTRL_AF_DENOISE E");
 			//rtn = isp_ctrl_ioctl(handler_id, ISP_CTRL_AF_DENOISE, (void*)&denoise_level);
+			ISP_LOG("ISP_CTRL_AF_DENOISE rtn =%d",rtn);
 			rtn = _isp_AppAfIoCtrlHandler(handler_id, param_ptr);
+			ISP_LOG(" _isp_AppAfIoCtrlHandler rtn =%d",rtn);
 			break ;
 		}
 		case ISP_CTRL_AE_MEASURE_LUM:
@@ -551,6 +569,8 @@ static int32_t _isp_set_app_init_param(uint32_t handler_id, struct isp_init_para
 	ptr->self_callback = _isp_AppCallBack;
 	isp_context_ptr->ctrl_callback = ptr->ctrl_callback;
 	ptr->ctrl_callback = _isp_AppCtrlCallback;
+	isp_context_ptr->oem_handle = ptr->oem_handle;
+	ISP_LOG("isp_context_ptr->oem_handle =0x%x",(uint32_t)(isp_context_ptr->oem_handle));
 
 	return rtn;
 }
@@ -818,12 +838,16 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_IOCTRL:
-				//ISP_LOG("--app_isp_ioctl--cmd:0x%x", sub_type);
+				ISP_LOG(" --app_isp_ioctl--cmd :0x%x", sub_type);
 				rtn = _isp_AppIoCtrlHandler(handler_id, sub_type, param_ptr);
+				ISP_LOG("_isp_AppIoCtrlHandler rtn =%d",rtn);
 				if (ISP_APP_SUCCESS == rtn) {
 					res_ptr->rtn = isp_ctrl_ioctl(handler_id, sub_type, param_ptr);
+				} else {
+					ISP_LOG("@@@ _isp_AppIoCtrlHandler error ,and cann`t exec isp_ctrl_ioctl @@@");
 				}
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				ISP_LOG("come here");
 				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
@@ -837,10 +861,12 @@ static void *_isp_app_routine(void *client_data)
 				break;
 
 			case ISP_APP_EVT_SOF:
+				ISP_LOG("-- ISP_APP_EVT_SOF --cmd:0x%x handler_id=%d", sub_type,handler_id);
 				rtn = _isp_AppSofHandler(handler_id);
 				break;
 
 			case ISP_APP_EVT_CTRL_CALLBAC:
+				ISP_LOG("-- ISP_APP_EVT_CTRL_CALLBAC --cmd:0x%x handler_id=%d", sub_type,handler_id);
 				rtn = _isp_AppCtrlCallbackHandler(handler_id, sub_type, param_ptr, param_len);
 				break;
 

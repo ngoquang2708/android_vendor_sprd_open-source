@@ -22,7 +22,6 @@
 #include "jpeg_fw_def.h"
 #include "isp_exif.h"
 #define JPEG_HEADER_BYTE	2
-
 #ifdef __cplusplus
     extern   "C"
     {

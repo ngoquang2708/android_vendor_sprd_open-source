@@ -103,7 +103,7 @@ extern "C"
 #define CAMERA_WIDTH(w)                              ((w)& ~(CAMERA_PIXEL_ALIGNED - 1))
 #define CAMERA_HEIGHT(h)                             ((h)& ~(CAMERA_PIXEL_ALIGNED - 1))
 #define CAMERA_ALIGNED_16(w)                         ((((w) + 16 -1) >> 4) << 4)
-#define CAMERA_SAFE_SCALE_DOWN(w)                    (uint32_t)((w)*18/10)
+#define CAMERA_SAFE_SCALE_DOWN(w)                    (uint32_t)((w)*11/10)
 #define CAMERA_FOCUS_RECT_PARAM_LEN                  200
 #define CAMERA_RECOVER_CNT                           3
 

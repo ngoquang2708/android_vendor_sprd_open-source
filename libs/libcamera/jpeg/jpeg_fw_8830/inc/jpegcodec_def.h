@@ -224,13 +224,12 @@ typedef struct jpeg_codec_tag
 	uint8  		*quant_tbl[3];		/*quantization table*/
 	uint16		*quant_tbl_new[3];
 	uint8		*quant_tbl_shift[3];
-	
+
 	YUV_FORMAT_T	YUV_Info_0;
 	YUV_FORMAT_T	YUV_Info_1;
 	int32		uv_interleaved;
 
 	JINF_READ_FILE_FUNC read;
-
 	uint8			out_put_dataType;
 	uint8 			using_default_huff_tab;
 	uint8 			using_default_quant_tab;
@@ -240,35 +239,27 @@ typedef struct jpeg_codec_tag
 	BOOLEAN			mbio_bfr1_valid; //0: invalid, 1: valid
 	BOOLEAN 		bsm_buf0_valid;//0: invalid, 1: valid
 	BOOLEAN			bsm_buf1_valid;//0: invalid, 1: valid
-
 	BOOLEAN			is_first_slice;
 	BOOLEAN			is_last_slice;
-
-	uint8				comp_id_map[3];      /*index map for three component of one scan*/
+	uint8				  comp_id_map[3];      /*index map for three component of one scan*/
 	jpeg_component_info * comp_info;
-	uint8			comps_in_scan;
-
-	int16				Ss;
-	int16				Se;
-	int16				Ah;
-	int16				Al;
-
-	uint8				input_scan_number;
-	int8				is_res_file;
-	int16				resv;
-
-	uint32                   stream_buf_id;
-	uint32                   buf_id;
-	
-
-	uint32                    total_slice_num;
-	uint32                    slice_num;
-	int			fd ;
-	uint32			addr;
-	uint32                      stream_switch_num;
-	uint8 *g_stream_buf_ptr;
-	
-
+	uint8			      comps_in_scan;
+	int16				  Ss;
+	int16				  Se;
+	int16				  Ah;
+	int16				  Al;
+	uint8				  input_scan_number;
+	int8				  is_res_file;
+	int16			  	  resv;
+	uint32                stream_buf_id;
+	uint32                buf_id;
+	uint32                total_slice_num;
+	uint32                slice_num;
+	int			          fd ;
+	void                  *jpg_addr;
+	uint32			      addr;
+	uint32                stream_switch_num;
+	uint8                 *g_stream_buf_ptr;
 }JPEG_CODEC_T;
 
 typedef struct jpeg_progressive_info_tag

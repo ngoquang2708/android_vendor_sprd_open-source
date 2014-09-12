@@ -565,7 +565,7 @@ uint32_t _isp_ContinueFocusInforCallback(uint32_t handler_id, uint32_t mode)
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
 
-	//ISP_LOG("mode: 0x%x", mode);
+	ISP_LOG("mode: 0x%x", mode);
 
 	if (ISP_END_FLAG !=isp_context_ptr->af.continue_status) {
 		isp_context_ptr->af.continue_stat_flag|=mode;
@@ -585,7 +585,7 @@ uint32_t _isp_ContinueFocusHandler(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
-//	ISP_LOG("status:0x%x, flag:0x%x", isp_context_ptr->af.continue_status, isp_context_ptr->af.continue_stat_flag);
+	ISP_LOG("status:0x%x, flag:0x%x", isp_context_ptr->af.continue_status, isp_context_ptr->af.continue_stat_flag);
 	if ((ISP_IDLE_FLAG==isp_context_ptr->af.continue_status)
 		&&((ISP_AWB_STAT_FLAG|ISP_AF_STAT_FLAG)&isp_context_ptr->af.continue_stat_flag)
 		&&(ISP_AF_STOP == isp_context_ptr->af.status)) {
@@ -1845,6 +1845,7 @@ static int32_t _ispCfgAfWin(uint32_t handler_id, struct isp_af_param* af, struct
 	uint32_t max_y_end;
 	uint8_t i = ISP_ZERO;
 
+    ISP_LOG("src_af->valid_win =%d src_af->mode=%d",src_af->valid_win,src_af->mode);
 
 	if((ISP_ZERO == src_af->valid_win) || (ISP_FOCUS_CONTINUE == src_af->mode) || (ISP_FOCUS_VIDEO == src_af->mode)) {
 		if (af->multi_win_enable) {
@@ -6887,7 +6888,7 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 	raw_info_ptr=(struct sensor_raw_info*)param_ptr->setting_param_ptr;
 	version_info_ptr=(struct sensor_version_info*)raw_info_ptr->version_info;
 	raw_tune_ptr=(struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
-
+#if 0
 	if((version_info_ptr->version_id & 0xffff0000)!=(param_ptr->isp_id & 0xffff0000)){
 		rtn=ISP_PARAM_ERROR;
 		ISP_RETURN_IF_FAIL(rtn, ("check isp id chip_id:0x%08x, isp_id:0x%08x  error", param_ptr->isp_id, version_info_ptr->version_id));
@@ -6908,7 +6909,7 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 		rtn=ISP_CALLBACK_NULL;
 		ISP_RETURN_IF_FAIL(rtn, ("ctrl callback null error"));
 	}
-
+#endif
 	return rtn;
 }
 

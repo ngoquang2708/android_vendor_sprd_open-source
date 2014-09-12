@@ -3146,9 +3146,11 @@ LOCAL JPEG_RET_E JPEG_AddExifToMemory(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
 	} else {
 		app3_size = 0;
 	}
-	target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size - app3_size;
-	out_param_ptr->output_buf_ptr = target_buf_ptr;
-	out_param_ptr->output_size = app1_size + app3_size + in_param_ptr->src_jpeg_size;
+    target_buf_ptr = in_param_ptr->src_jpeg_buf_ptr - app1_size - app3_size;
+
+    out_param_ptr->output_buf_ptr = target_buf_ptr;
+    out_param_ptr->output_size = app1_size + app3_size + in_param_ptr->src_jpeg_size;
+
     //write SOI marker
     *target_buf_ptr++ = M_MARKER;
     *target_buf_ptr++ = M_SOI;

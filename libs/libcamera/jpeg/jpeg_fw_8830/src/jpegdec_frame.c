@@ -278,7 +278,6 @@ PUBLIC JPEG_RET_E START_HW_DECODE(JPEG_CODEC_T *jpeg_fw_codec, uint32 num_of_row
 	pingpang_buf_status = ((jpeg_fw_codec->bsm_buf0_valid<<1) | (jpeg_fw_codec->bsm_buf1_valid));
 	cmd = ((uint32)pingpang_buf_status<<30) | ((jpeg_fw_codec->pingpang_buf_len+3) >> 2);
 	JPG_WRITE_REG(JPG_BSM_REG_BASE+BSM_CFG0_OFFSET, cmd, "BSM_CFG0: buffer0 for read, and the buffer size");
-	SCI_TRACE_LOW("%s,%d Stream_buf_len  %d",__FUNCTION__,__LINE__,(int)(jpeg_fw_codec->pingpang_buf_len));
 #if _CMODEL_
 if((SWITCH_MODE == jpeg_fw_codec->work_mode) || (jpeg_fw_codec->is_first_slice && (ALONE_MODE == jpeg_fw_codec->work_mode)))
 {

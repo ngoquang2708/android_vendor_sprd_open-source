@@ -260,8 +260,8 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_HIST,
 	ISP_CTRL_AUTO_CONTRAST,
 	ISP_CTRL_SATURATION,
-	ISP_CTRL_AF,
-	ISP_CTRL_AF_MODE,
+	ISP_CTRL_AF,/*12*/
+	ISP_CTRL_AF_MODE,/*13*/
 	ISP_CTRL_CSS,
 	ISP_CTRL_HDR,
 	ISP_CTRL_GLOBAL_GAIN,
@@ -272,7 +272,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_PARAM_UPDATE,
 	ISP_CTRL_FLASH_EG,
 	ISP_CTRL_VIDEO_MODE,
-	ISP_CTRL_AF_STOP,
+	ISP_CTRL_AF_STOP,/*24*/
 	ISP_CTRL_AE_TOUCH,
 	ISP_CTRL_AE_INFO,
 	ISP_CTRL_SHARPNESS,
@@ -440,6 +440,7 @@ struct isp_init_param{
 	struct isp_size size;
 	proc_callback ctrl_callback;
 	proc_callback self_callback;
+	void *oem_handle;
 };
 
 struct isp_video_limit{

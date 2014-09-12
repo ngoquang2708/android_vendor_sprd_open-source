@@ -70,6 +70,7 @@ typedef struct enc_input_para_tag
 	BOOLEAN				is_first_slice;
 	BOOLEAN				is_last_slice;
 	uint32				restart_interval;
+	int32 				uv_interleaved;
 } JPEG_ENC_INPUT_PARA_T;
 
 typedef struct enc_output_para_tag

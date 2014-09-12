@@ -35,15 +35,19 @@
 PUBLIC void JPEGFW_configure_vld_reg_jpegDec (void);
 PUBLIC void JPEGFW_build_hufftab_jpegDec(void);
 PUBLIC void JPEGFW_InitHuffTbl(void);
-
 PUBLIC JPEG_RET_E  JPEG_FWParseHead(JPEG_DEC_INPUT_PARA_T  *jpeg_dec_input)
 {
 	uint32 i;
 	JPEG_RET_E ret; 
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
+	int fd;
+	void *jpg_addr;
 
+	fd = jpeg_fw_codec->fd;
+	jpg_addr = jpeg_fw_codec->jpg_addr;
 	SCI_MEMSET(jpeg_fw_codec, 0, sizeof(JPEG_CODEC_T));
-
+	jpeg_fw_codec->fd = fd;
+	jpeg_fw_codec->jpg_addr = jpg_addr;
 	//@cr170390, add by shan.he
 	g_huff_tbl_malloced = FALSE; //??? leon
 
@@ -85,7 +89,6 @@ PUBLIC JPEG_RET_E  JPEG_FWParseHead(JPEG_DEC_INPUT_PARA_T  *jpeg_dec_input)
 	
 	if(ret != JPEG_SUCCESS)
 	{
-		SCI_TRACE_LOW("failed to ParseHead");
 		return ret;
 	}
 

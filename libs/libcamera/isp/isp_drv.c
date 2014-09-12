@@ -5781,7 +5781,7 @@ int32_t ispGetStoreStatusPreview(uint32_t handler_id, uint32_t* status)
 	uint32_t isp_id=_isp_GetIspId();
 
 	ISP_CHECK_FD;
-	if(SC8830_ISP_ID==isp_id)
+	if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
 		reg_config.reg_addr = ISP_STORE_STATUS_PREVIEW_V0001 - ISP_BASE_ADDR;
 		read_param.reg_param = (uint32_t)&reg_config;
@@ -5793,6 +5793,7 @@ int32_t ispGetStoreStatusPreview(uint32_t handler_id, uint32_t* status)
 			*status=reg_s_ptr->dwValue;
 		}
 	}
+#if 0
 	else if (SC9630_ISP_ID==isp_id)
 	{
 		reg_config.reg_addr = ISP_STORE_STATUS_PREVIEW_V0002 - ISP_BASE_ADDR;
@@ -5805,7 +5806,7 @@ int32_t ispGetStoreStatusPreview(uint32_t handler_id, uint32_t* status)
 			*status=reg_s_ptr->dwValue;
 		}
 	}
-
+#endif
 	return ISP_SUCCESS;
 }
 
