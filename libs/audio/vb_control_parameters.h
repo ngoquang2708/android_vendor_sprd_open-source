@@ -90,7 +90,8 @@ typedef enum {
     CP_TG,
     CP_CSFB,
     AP_TYPE = 3 , //the num of audio_hw.xml must be adjusted  at once
-    CP_MAX
+    CP_MAX,
+    FM_IIS //add for i2s_pin_mux for fm
 }cp_type_t;
 
 /*support multiple call for multiple modem(cp0/cp1/...):
@@ -161,6 +162,7 @@ typedef struct{
     int num;
     vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info;
     i2s_ctl_t i2s_extspk;
+    ctrl_node *i2s_fm;
     struct voip_res  voip_res;
     debuginfo debug_info;
 }audio_modem_t;

@@ -760,9 +760,14 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 
    ctrl_node *p_ctlr_node = NULL; 
 
-
-
-  ALOGW("i2s_pin_mux_sel in type i-----------2 adev->cp =%lx num = %d  vbc_ctrl_pipe_info = %lx   cp_type = %d" ,adev->cp , modem->num , vbc_ctrl_pipe_info ,  vbc_ctrl_pipe_info->cp_type);				
+  ALOGW("i2s_pin_mux_sel in type i-----------2 adev->cp =%lx num = %d  vbc_ctrl_pipe_info = %lx   cp_type = %d" ,adev->cp , modem->num , vbc_ctrl_pipe_info ,  vbc_ctrl_pipe_info->cp_type);
+  if(type == FM_IIS){
+      if(modem->i2s_fm->ctrl_file_fd  <= 0){
+           modem->i2s_fm->ctrl_file_fd = open(modem->i2s_fm->ctrl_path,O_RDWR | O_SYNC);
+	}
+	 count = write(modem->i2s_fm->ctrl_file_fd,"1",1);
+     return true;
+  }
 
    if( type != AP_TYPE)
    {
@@ -867,7 +872,6 @@ static int out_dump_release(FILE **fd)
     }
     return 0;
 }
-
 
 int set_call_route(struct tiny_audio_device *adev, int device, int on)
 {
@@ -1207,6 +1211,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
             ALOGE("%s:open FM device",__func__);
             pthread_mutex_lock(&adev->lock);
             //force_all_standby(adev);
+            i2s_pin_mux_sel(adev, FM_IIS);
             adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
             if (!pcm_is_ready(adev->pcm_fm_dl)) {
             ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
@@ -3987,6 +3992,7 @@ static int adev_close(hw_device_t *device)
 #endif
 
     free(adev->cp->vbc_ctrl_pipe_info);
+    free(adev->cp->i2s_fm);
     free(adev->cp);
     free(adev->pga_gain_nv);
 
@@ -4822,7 +4828,20 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
 
 
 }
-
+    else if (strcmp(tag_name, "fm_i2s") == 0){
+	 modem->i2s_fm = malloc(sizeof(ctrl_node));
+	 if(modem->i2s_fm == NULL){
+             ALOGE("malloc i2s_fm err ");
+	 }else{
+            if (strcmp(attr[0], "ctl_file") == 0) {
+                memcpy(modem->i2s_fm->ctrl_path,attr[i+1],strlen(attr[i+1])+1);
+		   modem->i2s_fm->ctrl_file_fd=open(modem->i2s_fm->ctrl_path,O_RDWR | O_SYNC);
+		   if(modem->i2s_fm->ctrl_file_fd <= 0){
+                    ALOGE("open i2s_fm file err");
+		   }
+            }
+	 }
+    }
      	
    /*else if (strcmp(tag_name, "i2s_for_extspeaker") == 0)
     {
