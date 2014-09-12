@@ -177,8 +177,8 @@ PUBLIC void JpegEnc_HwTopRegCfg(void)
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+GLB_CTRL_OFFSET, cmd, "GLB_CTRL: enable JPEG encoder");
 	
 	//VSP_CFG1
-        jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?1:0;//1: uv_interleaved, two plane, 0: three plane
-	cmd = (((!jpeg_fw_codec->uv_interleaved) << 27)) | (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
+    //jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?1:0;//1: uv_interleaved, two plane, 0: three plane
+	cmd = ((jpeg_fw_codec->uv_interleaved - 1)<<28)|(((jpeg_fw_codec->uv_interleaved == 0? 1:0) << 27)) | (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "uv_interleaved, input mcu infor, mcu max number x and y");
 	
 	//cmd = ((uint32)0xffff << 0) | (0 << 16);
@@ -345,6 +345,8 @@ PUBLIC JPEG_RET_E JpegEnc_InitParam(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 {
 	int32 h_ratio_max, v_ratio_max;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGEncCodec();
+	int fd;
+	void *jpg_addr;
 	
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 	SCI_ASSERT(input_para_ptr != PNULL);
@@ -366,9 +368,12 @@ PUBLIC JPEG_RET_E JpegEnc_InitParam(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 		JPEG_TRACE("Too small image size!\n");
 		return JPEG_FAILED;
 	}
-	
+	fd = jpeg_fw_codec->fd;
+	jpg_addr = jpeg_fw_codec->jpg_addr;
 	SCI_MEMSET(jpeg_fw_codec, 0, (sizeof(JPEG_CODEC_T)));
-	
+	jpeg_fw_codec->fd = fd;
+	jpeg_fw_codec->jpg_addr = jpg_addr;
+	jpeg_fw_codec->uv_interleaved = input_para_ptr->uv_interleaved;
 	jpeg_fw_codec->RST_Count = M_RST0;
 	jpeg_fw_codec->mbio_bfr0_valid = TRUE;
 	jpeg_fw_codec->mbio_bfr1_valid = FALSE;

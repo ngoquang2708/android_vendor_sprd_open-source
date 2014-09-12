@@ -159,7 +159,7 @@ LOCAL const SENSOR_REG_T ov2680_com_mipi_raw[] = {
 	{0x5002, 0x30},
 	{0x5080, 0x00},
 	{0x5081, 0x41},
-	//{0x0100, 0x01},
+	{0x0100, 0x00}
 
 };
 
@@ -210,6 +210,7 @@ LOCAL const SENSOR_REG_T ov2680_640X480_mipi_raw[] = {
 	{0x4008, 0x00},
 	{0x4009, 0x03},
 	{0x4837, 0x30},
+	{0x0100, 0x00}
 
 };
 
@@ -295,7 +296,7 @@ LOCAL const SENSOR_REG_T ov2680_800X600_mipi_raw[] = {
 	{0x5002, 0x30},
 	{0x5080, 0x00}, 
 	{0x5081, 0x41}, 
-	//{0x0100, 0x01}, 
+	{0x0100, 0x00}
 
 };
 
@@ -597,11 +598,11 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
 
-	raw_sensor_ptr->version_info->version_id=0x00020000;
+	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//bypass
-	sensor_ptr->version_id=0x00020000;
+	sensor_ptr->version_id=0x00010000;
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
@@ -2484,10 +2485,10 @@ LOCAL uint32_t _ov2680_StreamOff(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_ov2680: StreamOff");
 
-	Sensor_WriteReg(0x0100, 0x00);
-	usleep(100*1000);
+	//Sensor_WriteReg(0x0100, 0x00);
+	//usleep(100*1000);
 
-	return 0;
+	return -1;
 }
 
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)

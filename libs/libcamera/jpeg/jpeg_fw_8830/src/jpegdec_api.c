@@ -513,30 +513,6 @@ uint32_t JPEGDEC_Poll_VLC_BSM(uint32_t time, uint32_t buf_len,  jpegdec_callback
 }
 
 
-static int save_jpgdec_file2debug(JPEGDEC_PARAMS_T *jpegdec_params)
-{
-	uint8*				bitstream_ptr = (uint8*)jpegdec_params->stream_virt_buf[0];
-	uint32    				bitstream_len = jpegdec_params->stream_buf_len;
-	FILE* jpg = fopen("/data/misc/media/dec_failed.jpg","wb");
-
-	if(NULL == jpg)
-	{
-		SCI_TRACE_LOW("failed to open file /data/misc/media/dec_failed.jpg \n");
-		return 0;
-	}
-
-	if(NULL == bitstream_ptr || bitstream_len == 0)
-	{
-		SCI_TRACE_LOW("null dec bitstream\n");
-		fclose(jpg);
-		return 0;
-	}
-
-	fwrite(bitstream_ptr,1,bitstream_len,jpg );
-	fclose(jpg);
-	return 0;
-}
-
 /********
 
 jpegdec_params->stream_phy_buf[0];
@@ -553,6 +529,7 @@ jpegdec_params->fw_decode_buf_size;
 jpegdec_params->fw_decode_buf;
 
 ***/
+#if 0
 int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback callback)
 {
 	int32_t jpg_fd = -1;
@@ -563,7 +540,7 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 	uint32 align_height = ((jpegdec_params->height  + 7)/8)*8;
 	uint32_t slice_num = (align_height > 1024) ? 2 : 1;
 	uint32_t slice_height = SLICE_HEIGHT;
-    SCI_TRACE_LOW("JPEGDEC_decode_one_pic enter");
+
 	if(0 != jpegdec_params->set_slice_height) {
 		slice_height = jpegdec_params->set_slice_height;
 		slice_num = (jpegdec_params->height%slice_height) ? (jpegdec_params->height/slice_height+1):(jpegdec_params->height/slice_height);
@@ -600,14 +577,12 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 	if(JPEG_SUCCESS != JPEGDEC_start_decode(jpegdec_params)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC_start_decode.");
 		ret = -1;
-		save_jpgdec_file2debug(jpegdec_params);
 		goto error;
 	}
 	//poll the end of jpeg decoder
 	if( JPEG_SUCCESS != JPEGDEC_Poll_DBK_BSM(0xFFF, jpegdec_params->stream_buf_len,callback, slice_num)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC decode.");
 		ret = -1;
-		save_jpgdec_file2debug(jpegdec_params);
 		goto error;
 	}
 	SCI_TRACE_LOW("JPEGDEC decode   JPEGDEC_Poll_DBK_BSM ---1 end ");
@@ -615,7 +590,6 @@ int JPEGDEC_decode_one_pic(JPEGDEC_PARAMS_T *jpegdec_params,  jpegdec_callback c
 	if(JPEG_SUCCESS != JPEGDEC_stop_decode(jpegdec_params)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC_stop_decode.");
 		ret = -1;
-		save_jpgdec_file2debug(jpegdec_params);
 		goto error;
 	}
 error:
@@ -627,7 +601,7 @@ error:
 	}
 	return ret;
 }
-
+#endif
 int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *out_ptr)
 {
 	int jpg_fd = -1;
@@ -639,7 +613,7 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 	uint32_t slice_num = (align_height > 1024) ? 2 : 1;
 	uint32_t slice_height = SLICE_HEIGHT;
 	JPEG_CODEC_T *jpeg_fw_codec = Get_JPEGDecCodec();
-    SCI_TRACE_LOW("JPEGDEC_Slice_Start enter");
+
 	if(0 != jpegdec_params->set_slice_height) {
 		slice_height = jpegdec_params->set_slice_height;
 		slice_num = (jpegdec_params->height%slice_height) ? (jpegdec_params->height/slice_height+1):(jpegdec_params->height/slice_height);
@@ -653,6 +627,14 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
 		SCI_TRACE_LOW("JPEGDEC  jpg addr 0x%x\n",(uint32_t)jpg_addr);
     }
+	jpg_fd = jpeg_fw_codec->fd;
+	jpg_addr = jpeg_fw_codec->jpg_addr;
+
+	if ((jpg_fd < 0) || (NULL == jpg_addr)) {
+		SCI_TRACE_LOW("JPEGDEC_Slice_Start, param err %d", jpg_fd);
+		return -1;
+	}
+
 	SCI_TRACE_LOW("JPEGDEC_Slice_Start --1 ");
     ret =  ioctl(jpg_fd,JPG_ACQUAIRE,NULL);
 	if(ret){
@@ -676,7 +658,6 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 	if(JPEG_SUCCESS != JPEGDEC_start_decode(jpegdec_params)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC_start_decode.");
 		ret = -1;
-		save_jpgdec_file2debug(jpegdec_params);
 		goto slice_error;
 	}
 	jpeg_fw_codec->slice_num = slice_num;
@@ -685,32 +666,31 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 	if( JPEG_SUCCESS != JPEGDEC_Poll_DBK_BSM_FOR_SLICE(0xFFF, &jpeg_fw_codec->buf_id,&jpeg_fw_codec->slice_num)) {
 		SCI_TRACE_LOW("JPEGDEC fail to JPEGDEC decode.");
 		ret = -1;
-		save_jpgdec_file2debug(jpegdec_params);
 		goto slice_error;
 	} else {
 		goto slice_start_end;
 	}
 slice_error:
-	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+/*	munmap(jpg_addr,SPRD_JPG_MAP_SIZE);*/
 	ioctl(jpg_fd,JPG_DISABLE,NULL);
 	ioctl(jpg_fd,JPG_RELEASE,NULL);
 
-	if(jpg_fd >= 0){
+/*	if(jpg_fd >= 0){
  		close(jpg_fd);
- 	}
+ 	}*/
 slice_start_end:
-	jpeg_fw_codec->fd =jpg_fd;
-	jpeg_fw_codec->addr = (uint32)jpg_addr;
+/*	jpeg_fw_codec->fd =jpg_fd;
+	jpeg_fw_codec->addr = (uint32)jpg_addr;*/
 	if(0 == jpeg_fw_codec->slice_num) {
 		out_ptr->is_over = 1;
 
-		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);
+/*		munmap(jpg_addr,SPRD_JPG_MAP_SIZE);*/
 		ioctl(jpg_fd,JPG_DISABLE,NULL);
 		ioctl(jpg_fd,JPG_RELEASE,NULL);
 
-		if(jpg_fd >= 0){
+/*		if(jpg_fd >= 0){
  			close(jpg_fd);
- 		}
+ 		}*/
 	
 	}
 	SCI_TRACE_LOW("JPEGDEC_Slice_start end,slice_num %d.",jpeg_fw_codec->slice_num);
