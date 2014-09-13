@@ -26,6 +26,8 @@ extern   "C"
 #define ISP_BASE_ADDR             0x00000000
 #define ISP_BASE_ADDR_V0000       0x22000000
 #define ISP_BASE_ADDR_V0001       0x60a00000
+#define ISP_BASE_ADDR_V0002       0x60a00000
+
 // Fetch
 #define ISP_FETCH_STATUS               (ISP_BASE_ADDR+0x0000)
 #define ISP_FETCH_STATUS_PREVIEW_V0001 (ISP_BASE_ADDR+0x0004)
@@ -40,6 +42,7 @@ extern   "C"
 #define ISP_FETCH_SLICE_V_ADDR         (ISP_BASE_ADDR+0x0034)
 #define ISP_FETCH_V_PITCH              (ISP_BASE_ADDR+0x0038)
 #define ISP_FETCH_PREVIEW_CNT          (ISP_BASE_ADDR+0x003c)
+#define ISP_FETCH_BUF_ADDR_V0002       (ISP_BASE_ADDR+0x0040)
 
 //BLC and NLC
 #define ISP_BNLC_STATUS           (ISP_BASE_ADDR+0x0100)
@@ -168,6 +171,7 @@ extern   "C"
 #define ISP_BPC_THRD              (ISP_BASE_ADDR+0x0518)
 #define ISP_BPC_MAP_ADDR          (ISP_BASE_ADDR+0x051c)
 #define ISP_BPC_PIXEL_NUM         (ISP_BASE_ADDR+0x0520)
+#define ISP_BPC_DIFF_THRD_V0002   (ISP_BASE_ADDR+0x0524)
 
 //Wave denoise
 #define ISP_WAVE_STATUS           (ISP_BASE_ADDR+0x0600)
@@ -252,6 +256,55 @@ extern   "C"
 #define ISP_GAMMA_NODE_IDX2_V0001 (ISP_BASE_ADDR+0x0a94)
 #define ISP_GAMMA_NODE_IDX3_V0001 (ISP_BASE_ADDR+0x0a98)
 
+#define ISP_GAMMA_NODE_R0_V0002     (ISP_BASE_ADDR+0x0a18)
+#define ISP_GAMMA_NODE_R1_V0002     (ISP_BASE_ADDR+0x0a1c)
+#define ISP_GAMMA_NODE_R2_V0002     (ISP_BASE_ADDR+0x0a20)
+#define ISP_GAMMA_NODE_R3_V0002     (ISP_BASE_ADDR+0x0a24)
+#define ISP_GAMMA_NODE_R4_V0002     (ISP_BASE_ADDR+0x0a28)
+#define ISP_GAMMA_NODE_R5_V0002     (ISP_BASE_ADDR+0x0a2c)
+#define ISP_GAMMA_NODE_R6_V0002     (ISP_BASE_ADDR+0x0a30)
+#define ISP_GAMMA_NODE_R7_V0002     (ISP_BASE_ADDR+0x0a34)
+#define ISP_GAMMA_NODE_R8_V0002     (ISP_BASE_ADDR+0x0a38)
+#define ISP_GAMMA_NODE_R9_V0002     (ISP_BASE_ADDR+0x0a3c)
+#define ISP_GAMMA_NODE_R10_V0002   (ISP_BASE_ADDR+0x0a40)
+#define ISP_GAMMA_NODE_R11_V0002   (ISP_BASE_ADDR+0x0a44)
+#define ISP_GAMMA_NODE_R12_V0002   (ISP_BASE_ADDR+0x0a48)
+#define ISP_GAMMA_NODE_R13_V0002   (ISP_BASE_ADDR+0x0a4c)
+#define ISP_GAMMA_NODE_R14_V0002   (ISP_BASE_ADDR+0x0a50)
+#define ISP_GAMMA_NODE_R15_V0002   (ISP_BASE_ADDR+0x0a54)
+#define ISP_GAMMA_NODE_G0_V0002     (ISP_BASE_ADDR+0x0a58)
+#define ISP_GAMMA_NODE_G1_V0002     (ISP_BASE_ADDR+0x0a5c)
+#define ISP_GAMMA_NODE_G2_V0002     (ISP_BASE_ADDR+0x0a60)
+#define ISP_GAMMA_NODE_G3_V0002     (ISP_BASE_ADDR+0x0a64)
+#define ISP_GAMMA_NODE_G4_V0002     (ISP_BASE_ADDR+0x0a68)
+#define ISP_GAMMA_NODE_G5_V0002     (ISP_BASE_ADDR+0x0a6c)
+#define ISP_GAMMA_NODE_G6_V0002     (ISP_BASE_ADDR+0x0a70)
+#define ISP_GAMMA_NODE_G7_V0002     (ISP_BASE_ADDR+0x0a74)
+#define ISP_GAMMA_NODE_G8_V0002     (ISP_BASE_ADDR+0x0a78)
+#define ISP_GAMMA_NODE_G9_V0002     (ISP_BASE_ADDR+0x0a7c)
+#define ISP_GAMMA_NODE_G10_V0002   (ISP_BASE_ADDR+0x0a80)
+#define ISP_GAMMA_NODE_G11_V0002   (ISP_BASE_ADDR+0x0a84)
+#define ISP_GAMMA_NODE_G12_V0002   (ISP_BASE_ADDR+0x0a88)
+#define ISP_GAMMA_NODE_G13_V0002   (ISP_BASE_ADDR+0x0a8c)
+#define ISP_GAMMA_NODE_G14_V0002   (ISP_BASE_ADDR+0x0a90)
+#define ISP_GAMMA_NODE_G15_V0002   (ISP_BASE_ADDR+0x0a94)
+#define ISP_GAMMA_NODE_B0_V0002     (ISP_BASE_ADDR+0x0a98)
+#define ISP_GAMMA_NODE_B1_V0002     (ISP_BASE_ADDR+0x0a9c)
+#define ISP_GAMMA_NODE_B2_V0002     (ISP_BASE_ADDR+0x0aa0)
+#define ISP_GAMMA_NODE_B3_V0002     (ISP_BASE_ADDR+0x0aa4)
+#define ISP_GAMMA_NODE_B4_V0002     (ISP_BASE_ADDR+0x0aa8)
+#define ISP_GAMMA_NODE_B5_V0002     (ISP_BASE_ADDR+0x0aac)
+#define ISP_GAMMA_NODE_B6_V0002     (ISP_BASE_ADDR+0x0ab0)
+#define ISP_GAMMA_NODE_B7_V0002     (ISP_BASE_ADDR+0x0ab4)
+#define ISP_GAMMA_NODE_B8_V0002     (ISP_BASE_ADDR+0x0ab8)
+#define ISP_GAMMA_NODE_B9_V0002     (ISP_BASE_ADDR+0x0abc)
+#define ISP_GAMMA_NODE_B10_V0002   (ISP_BASE_ADDR+0x0ac0)
+#define ISP_GAMMA_NODE_B11_V0002   (ISP_BASE_ADDR+0x0ac4)
+#define ISP_GAMMA_NODE_B12_V0002   (ISP_BASE_ADDR+0x0ac8)
+#define ISP_GAMMA_NODE_B13_V0002   (ISP_BASE_ADDR+0x0acc)
+#define ISP_GAMMA_NODE_B14_V0002   (ISP_BASE_ADDR+0x0ad0)
+#define ISP_GAMMA_NODE_B15_V0002   (ISP_BASE_ADDR+0x0ad4)
+
 //CCE: Color conversion and enhancement
 #define ISP_CCE_STATUS            (ISP_BASE_ADDR+0x0b00)
 #define ISP_CCE_PARAM             (ISP_BASE_ADDR+0x0b14)
@@ -292,8 +345,10 @@ extern   "C"
 
 //AUTOCONT: auto contrast adjustment
 #define ISP_AUTOCONT_STATUS       (ISP_BASE_ADDR+0x1000)
+#define ISP_AUTOCONT_MAX_MINSTATUS_V0002    (ISP_BASE_ADDR+0x1004)
 #define ISP_AUTOCONT_PARAM        (ISP_BASE_ADDR+0x1014)
 #define ISP_AUTOCONT_MAX_MIN      (ISP_BASE_ADDR+0x1018)
+#define ISP_AUTOCONT_ADJUST_V0002                  (ISP_BASE_ADDR+0x1018)
 
 //AFM: auto focus monitor
 #define ISP_AFM_STATUS            (ISP_BASE_ADDR+0x1100)
@@ -402,6 +457,33 @@ extern   "C"
 #define ISP_HDR_PARAM             (ISP_BASE_ADDR+0x1a14)
 #define ISP_HDR_INDEX             (ISP_BASE_ADDR+0x1a18)
 
+//NAWB monitor
+#define ISP_NAWBM_STATUS           (ISP_BASE_ADDR+0x1c00)
+#define ISP_NAWBM_PARAM            (ISP_BASE_ADDR+0x1c14)
+#define ISP_NAWBM_OFFSET           (ISP_BASE_ADDR+0x1c18)
+#define ISP_NAWBM_BLK_SIZE        (ISP_BASE_ADDR+0x1c1c)
+#define ISP_NAWBM_WR_0_S          (ISP_BASE_ADDR+0x1c20)
+#define ISP_NAWBM_WR_0_E          (ISP_BASE_ADDR+0x1c24)
+#define ISP_NAWBM_WR_1_S          (ISP_BASE_ADDR+0x1c28)
+#define ISP_NAWBM_WR_1_E          (ISP_BASE_ADDR+0x1c2c)
+#define ISP_NAWBM_WR_2_S          (ISP_BASE_ADDR+0x1c30)
+#define ISP_NAWBM_WR_2_E          (ISP_BASE_ADDR+0x1c34)
+#define ISP_NAWBM_WR_3_S          (ISP_BASE_ADDR+0x1c38)
+#define ISP_NAWBM_WR_3_E          (ISP_BASE_ADDR+0x1c40)
+#define ISP_NAWBM_WR_4_S          (ISP_BASE_ADDR+0x1c44)
+#define ISP_NAWBM_WR_4_E          (ISP_BASE_ADDR+0x1c48)
+#define ISP_NAWBM_ADDR              (ISP_BASE_ADDR+0x1c98)
+
+//PRE wavelet
+#define ISP_PRE_WAVELET_STATUS           (ISP_BASE_ADDR+0x1d00)
+#define ISP_PRE_WAVELET_PARAM            (ISP_BASE_ADDR+0x1d14)
+
+//PRE binning
+#define ISP_BINNING_STATUS           (ISP_BASE_ADDR+0x1e00)
+#define ISP_BINNING_PARAM            (ISP_BASE_ADDR+0x1e14)
+#define ISP_BINNING_ADDR              (ISP_BASE_ADDR+0x1e18)
+#define ISP_BINNING_PITCH             (ISP_BASE_ADDR+0x1e1c)
+
 //Pre global gain
 #define ISP_PRE_GLOBAL_GAIN_STATUS     (ISP_BASE_ADDR+0X1f00)
 #define ISP_PRE_GLOBAL_GAIN            (ISP_BASE_ADDR+0X1f14)
@@ -423,6 +505,7 @@ extern   "C"
 #define ISP_COMMON_PREVIEW_STOP        (ISP_BASE_ADDR+0x204c)
 #define ISP_COMMON_SHADOW_CNT          (ISP_BASE_ADDR+0x2050)
 #define ISP_COMMON_AXI_STOP            (ISP_BASE_ADDR+0x2054)
+#define ISP_COMMON_AXI_CTRL_V0002  	   (ISP_BASE_ADDR+0x2054)
 #define ISP_COMMON_SLICE_CNT_V0001     (ISP_BASE_ADDR+0x2058)
 #define ISP_COMMON_PERFORM_CNT_R_V0001 (ISP_BASE_ADDR+0x205c)
 #define ISP_COMMON_PERFORM_CNT_V0001   (ISP_BASE_ADDR+0x2060)
@@ -430,6 +513,10 @@ extern   "C"
 #define ISP_COMMON_CLR_INTERRUPT       (ISP_BASE_ADDR+0x207c)
 #define ISP_COMMON_RAW_INTERRUPT       (ISP_BASE_ADDR+0x2080)
 #define ISP_COMMON_INTERRUPT           (ISP_BASE_ADDR+0x2084)
+#define ISP_COMMON_ENA_INTERRUPT1      (ISP_BASE_ADDR+0x2088)
+#define ISP_COMMON_CLR_INTERRUPT1      (ISP_BASE_ADDR+0x208c)
+#define ISP_COMMON_RAW_INTERRUPT1      (ISP_BASE_ADDR+0x2090)
+#define ISP_COMMON_INTERRUPT1          (ISP_BASE_ADDR+0x2094)
 
 //glb gain control
 #define ISP_GAIN_GLB_STATUS       (ISP_BASE_ADDR+0x2100)
@@ -458,6 +545,43 @@ extern   "C"
 //HUE
 #define ISP_HUE_STATUS_V0001      (ISP_BASE_ADDR+0x2400)
 #define ISP_HUE_PARAM_V0001       (ISP_BASE_ADDR+0x2414)
+
+//NBPC
+#define ISP_NBPC_STATUS_V0002      (ISP_BASE_ADDR+0x2500)
+#define ISP_NBPC_PARAM_V0002       (ISP_BASE_ADDR+0x2514)
+#define ISP_NBPC_CFG_V0002           (ISP_BASE_ADDR+0x2518)
+#define ISP_NBPC_FACTOR_V0002     (ISP_BASE_ADDR+0x251c)
+#define ISP_NBPC_COEFF_V0002       (ISP_BASE_ADDR+0x2520)
+#define ISP_NBPC_LUT0_V0002          (ISP_BASE_ADDR+0x2524)
+#define ISP_NBPC_LUT1_V0002          (ISP_BASE_ADDR+0x2528)
+#define ISP_NBPC_LUT2_V0002          (ISP_BASE_ADDR+0x252c)
+#define ISP_NBPC_LUT3_V0002          (ISP_BASE_ADDR+0x2530)
+#define ISP_NBPC_LUT4_V0002          (ISP_BASE_ADDR+0x2534)
+#define ISP_NBPC_LUT5_V0002          (ISP_BASE_ADDR+0x2538)
+#define ISP_NBPC_LUT6_V0002          (ISP_BASE_ADDR+0x253c)
+#define ISP_NBPC_LUT7_V0002          (ISP_BASE_ADDR+0x2540)
+#define ISP_NBPC_SEL_V0002            (ISP_BASE_ADDR+0x2544)
+#define ISP_NBPC_MAP_ADDR_V0002  (ISP_BASE_ADDR+0x2548)
+
+//GAMMA CORE
+#define ISP_GAMMA_NODE_RX0_V0002  (ISP_BASE_ADDR+0x2a14)
+#define ISP_GAMMA_NODE_RX1_V0002  (ISP_BASE_ADDR+0x2a18)
+#define ISP_GAMMA_NODE_RX2_V0002  (ISP_BASE_ADDR+0x2a1c)
+#define ISP_GAMMA_NODE_RX3_V0002  (ISP_BASE_ADDR+0x2a20)
+#define ISP_GAMMA_NODE_RX4_V0002  (ISP_BASE_ADDR+0x2a24)
+#define ISP_GAMMA_NODE_RX5_V0002  (ISP_BASE_ADDR+0x2a28)
+#define ISP_GAMMA_NODE_GX0_V0002  (ISP_BASE_ADDR+0x2a2c)
+#define ISP_GAMMA_NODE_GX1_V0002  (ISP_BASE_ADDR+0x2a30)
+#define ISP_GAMMA_NODE_GX2_V0002  (ISP_BASE_ADDR+0x2a34)
+#define ISP_GAMMA_NODE_GX3_V0002  (ISP_BASE_ADDR+0x2a38)
+#define ISP_GAMMA_NODE_GX4_V0002  (ISP_BASE_ADDR+0x2a3c)
+#define ISP_GAMMA_NODE_GX5_V0002  (ISP_BASE_ADDR+0x2a40)
+#define ISP_GAMMA_NODE_BX0_V0002  (ISP_BASE_ADDR+0x2a44)
+#define ISP_GAMMA_NODE_BX1_V0002  (ISP_BASE_ADDR+0x2a48)
+#define ISP_GAMMA_NODE_BX2_V0002  (ISP_BASE_ADDR+0x2a4c)
+#define ISP_GAMMA_NODE_BX3_V0002  (ISP_BASE_ADDR+0x2a50)
+#define ISP_GAMMA_NODE_BX4_V0002  (ISP_BASE_ADDR+0x2a54)
+#define ISP_GAMMA_NODE_BX5_V0002  (ISP_BASE_ADDR+0x2a58)
 
 //awbm param output
 #define ISP_AWBM_OUTPUT           (ISP_BASE_ADDR + 0x5000) //end: 0x7000
@@ -598,6 +722,17 @@ union _isp_fetch_preview_cnt_tag {
         volatile unsigned int reserved0       :7;
         volatile unsigned int stop_cnt_num    :8;
         volatile unsigned int reserved1       :16;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+
+union _isp_fetch_buf_addr_v0002_tag {
+    struct _isp_fetch_buf_addr_v0002__map {
+        volatile unsigned int fetch_buf_waddr   :13;
+        volatile unsigned int reserved0             :3;
+        volatile unsigned int fetch_buf_raddr    :13;
+        volatile unsigned int reserved1             :3;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1137,6 +1272,14 @@ union _isp_lens_slice_size_tag {
     volatile unsigned int dwValue ;
 };
 
+union _isp_lens_done_sel_v0002_tag {
+    struct _isp_lens_done_sel_v0002_map {
+        volatile unsigned int done_sel        :1;
+        volatile unsigned int reserved        :31;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
 // AWBM
 union _isp_awbm_status_tag {
     struct _isp_awbm_status_map {
@@ -1169,6 +1312,192 @@ union _isp_awbm_blk_size_tag {
         volatile unsigned int blk_height    :9;
         volatile unsigned int awbm_avgshf   :5;
         volatile unsigned int reserved      :9;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+// NAWBM
+union _isp_nawbm_status_v0002_tag {
+    struct _isp_nawbm_status_v0002_map {
+        volatile unsigned int status        :32; // nawbm status read only
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_awbm_param_v0002_tag {
+    struct _isp_awbm_param_v0002_map {
+        volatile unsigned int bypass                 :1;
+        volatile unsigned int mode                   :1;
+        volatile unsigned int skip_num             :4;
+        volatile unsigned int skip_clr                :1;
+        volatile unsigned int reserved0            :17;
+        volatile unsigned int o_bypass             :1;
+        volatile unsigned int reserved1            :3;
+        volatile unsigned int skip_num_status  :4;	
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_offset_v0002_tag {
+    struct _isp_nawbm_offset_v0002_map {
+        volatile unsigned int offset_x      :16;
+        volatile unsigned int offset_y      :16;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_blk_size_v0002_tag {
+    struct _isp_nawbm_blk_size_v0002_map {
+        volatile unsigned int blk_width      :9;
+        volatile unsigned int blk_height     :9;
+        volatile unsigned int awbm_avgshf :5;
+        volatile unsigned int reserved0      :1;
+        volatile unsigned int ddr_bypass    :1;
+        volatile unsigned int reserved1      :7;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_s0_v0002_tag {
+    struct _isp_nawbm_wr_s0_v0002_map {
+        volatile unsigned int wr_0_sy      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_0_sx      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_e0_v0002_tag {
+    struct _isp_nawbm_wr_e0_v0002_map {
+        volatile unsigned int wr_0_ey      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_0_ex      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_s1_v0002_tag {
+    struct _isp_nawbm_wr_s1_v0002_map {
+        volatile unsigned int wr_1_sy      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_1_sx      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_e1_v0002_tag {
+    struct _isp_nawbm_wr_e1_v0002_map {
+        volatile unsigned int wr_1_ey      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_1_ex      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_s2_v0002_tag {
+    struct _isp_nawbm_wr_s2_v0002_map {
+        volatile unsigned int wr_2_sy      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_2_sx      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_e2_v0002_tag {
+    struct _isp_nawbm_wr_e2_v0002_map {
+        volatile unsigned int wr_2_ey      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_2_ex      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_s3_v0002_tag {
+    struct _isp_nawbm_wr_s3_v0002_map {
+        volatile unsigned int wr_3_sy      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_3_sx      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_e3_v0002_tag {
+    struct _isp_nawbm_wr_e3_v0002_map {
+        volatile unsigned int wr_3_ey      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_3_ex      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_s4_v0002_tag {
+    struct _isp_nawbm_wr_s4_v0002_map {
+        volatile unsigned int wr_4_sy      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_4_sx      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_wr_e4_v0002_tag {
+    struct _isp_nawbm_wr_e4_v0002_map {
+        volatile unsigned int wr_0_ey      :10;
+        volatile unsigned int reserved0    :5;
+        volatile unsigned int wr_0_ex      :10;
+        volatile unsigned int reserved1    :5;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nawbm_addr_v0002_tag {
+    struct _isp_nawbm_addr_v0002_map {
+        volatile unsigned int addr      :32;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+
+// BINING
+union _isp_bining_status_v0002_tag {
+    struct _isp_bining_status_v0002_map {
+        volatile unsigned int status        :32; // bining status read only
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_bining_param_v0002_tag {
+    struct _isp_bining_param_v0002_map {
+        volatile unsigned int bypass                :1;
+        volatile unsigned int endian                :1;
+        volatile unsigned int burst_len            :2;
+        volatile unsigned int h_bining             :3;
+        volatile unsigned int fifo_clr               :1;
+        volatile unsigned int v_bining             :3;
+        volatile unsigned int reserved            :19;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_bining_addr_v0002_tag {
+    struct _isp_bining_addr_v0002_map {
+        volatile unsigned int addr      :32;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_bining_pitch_v0002_tag {
+    struct _isp_bining_pitch_v0002_map {
+        volatile unsigned int pitch        :16;
+        volatile unsigned int reserved  :16;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1291,6 +1620,164 @@ union _isp_bpc_pixel_num_tag {
     struct _isp_bpc_pixel_num_map {
         volatile unsigned int pixel_num     :14;
         volatile unsigned int reserved      :18;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_bpc_diff_thrd_v0002_tag {
+    struct _isp_bpc_diff_thrd_v0002_map {
+        volatile unsigned int diff_thr        :10;
+        volatile unsigned int reserved      :22;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+// NBPC
+union _isp_nbpc_status_v0002_tag {
+    struct _isp_nbpc_status_v0002_map {
+        volatile unsigned int status        :32; // bpc status read only
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_param_v0002_tag {
+    struct _isp_nbpc_param_v0002_map {
+        volatile unsigned int bypass        :1;
+        volatile unsigned int mode          :1; // 0: maping 1:adptive
+        volatile unsigned int pattern_type  :6;
+        volatile unsigned int reserved0     :2;
+        volatile unsigned int maxminThr     :10;
+        volatile unsigned int super_badThr  :10;
+        volatile unsigned int reserved1     :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_cfg_v0002_tag {
+    struct _isp_nbpc_cfg_v0002_map {
+        volatile unsigned int flat_thr      :10;
+        volatile unsigned int std_thr       :10;
+        volatile unsigned int texture_thr   :10;
+        volatile unsigned int reserved      :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_factor_v0002_tag {
+    struct _isp_nbpc_factor_v0002_map {
+        volatile unsigned int flat_thr      :10;
+        volatile unsigned int std_thr       :10;
+        volatile unsigned int texture_thr   :10;
+        volatile unsigned int reserved      :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_coeff_v0002_tag {
+    struct _isp_nbpc_coeff_v0002_map {
+        volatile unsigned int flat_thr      :10;
+        volatile unsigned int std_thr       :10;
+        volatile unsigned int texture_thr   :10;
+        volatile unsigned int reserved      :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut0_v0002_tag {
+    struct _isp_nbpc_lut0_v0002_map {
+        volatile unsigned int intercept_b0      :10;
+        volatile unsigned int slope_k0           :10;
+        volatile unsigned int lut_level0          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut1_v0002_tag {
+    struct _isp_nbpc_lut1_v0002_map {
+        volatile unsigned int intercept_b1      :10;
+        volatile unsigned int slope_k1           :10;
+        volatile unsigned int lut_level1          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut2_v0002_tag {
+    struct _isp_nbpc_lut2_v0002_map {
+        volatile unsigned int intercept_b2      :10;
+        volatile unsigned int slope_k2           :10;
+        volatile unsigned int lut_level2          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut3_v0002_tag {
+    struct _isp_nbpc_lut3_v0003_map {
+        volatile unsigned int intercept_b3      :10;
+        volatile unsigned int slope_k3           :10;
+        volatile unsigned int lut_level3          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut4_v0002_tag {
+    struct _isp_nbpc_lut4_v0002_map {
+        volatile unsigned int intercept_b4      :10;
+        volatile unsigned int slope_k4           :10;
+        volatile unsigned int lut_level4          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut5_v0002_tag {
+    struct _isp_nbpc_lut5_v0002_map {
+        volatile unsigned int intercept_b5      :10;
+        volatile unsigned int slope_k5           :10;
+        volatile unsigned int lut_level5          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut6_v0002_tag {
+    struct _isp_nbpc_lut6_v0002_map {
+        volatile unsigned int intercept_b6      :10;
+        volatile unsigned int slope_k6           :10;
+        volatile unsigned int lut_level6          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_lut7_v0002_tag {
+    struct _isp_nbpc_lut7_v0002_map {
+        volatile unsigned int intercept_b7      :10;
+        volatile unsigned int slope_k7           :10;
+        volatile unsigned int lut_level7          :10;
+        volatile unsigned int reserved           :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+// PRE wavelet
+union _isp_pre_wave_status_v0002_tag {
+    struct _isp_pre_wave_status_v0002_map {
+        volatile unsigned int status        :32; // wave denoise status read only
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_pre_wave_param_v0002_tag {
+    struct _isp_pre_wave_param_v0002_map {
+        volatile unsigned int bypass        :1;
+        volatile unsigned int reserved0    :7;
+        volatile unsigned int thrs0           :8;
+        volatile unsigned int thrs1           :8;
+        volatile unsigned int reserved1    :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1966,6 +2453,74 @@ union _isp_gamma_node_idx3_v0001_tag {
     volatile unsigned int dwValue ;
 };
 
+union _isp_gamma_node_x0_v0002_tag {
+    struct _isp_gamma_node_x0_v0002_map {
+        volatile unsigned int node2         :10;
+        volatile unsigned int node1         :10;
+        volatile unsigned int node0         :10;
+        volatile unsigned int reserved      :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_gamma_node_x1_v0002_tag {
+    struct _isp_gamma_node_x1_v0002_map {
+        volatile unsigned int node5         :10;
+        volatile unsigned int node4         :10;
+        volatile unsigned int node3         :10;
+        volatile unsigned int reserved      :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_gamma_node_x2_v0002_tag {
+    struct _isp_gamma_node_x2_v0002_map {
+        volatile unsigned int node8         :10;
+        volatile unsigned int node7         :10;
+        volatile unsigned int node6         :10;
+        volatile unsigned int reserved      :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_gamma_node_x3_v0002_tag {
+    struct _isp_gamma_node_x3_v0002_map {
+        volatile unsigned int node11         :10;
+        volatile unsigned int node10         :10;
+        volatile unsigned int node9         :10;
+        volatile unsigned int reserved      :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_gamma_node_x4_v0002_tag {
+    struct _isp_gamma_node_x4_v0002_map {
+        volatile unsigned int node14         :10;
+        volatile unsigned int node13         :10;
+        volatile unsigned int node12         :10;
+        volatile unsigned int reserved      :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_gamma_node_x5_v0002_tag {
+    struct _isp_gamma_node_x5_v0002_map {
+        volatile unsigned int reserve1       :20;
+        volatile unsigned int node15         :10;
+        volatile unsigned int reserved       :2;		
+	}mBits ;
+    volatile unsigned int dwValue ;
+};
+
+
+union _isp_gamma_node_y_v0002_tag {
+    struct _isp_gamma_node_y_v0002_map {
+        volatile unsigned int b         :16;
+        volatile unsigned int k         :16;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
 // CCE
 union _isp_cce_status_tag {
     struct _isp_cce_status_map {
@@ -2224,6 +2779,16 @@ union _isp_auto_contrast_status_tag {
     volatile unsigned int dwValue ;
 };
 
+union _isp_auto_contrast_max_min_status_v0002_tag {
+    struct _isp_auto_contrast_max_min_status_v0002_map {
+        volatile unsigned int in_min        :8;
+        volatile unsigned int in_max       :8;
+        volatile unsigned int out_min      :8;
+        volatile unsigned int out_max      :8;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
 union _isp_auto_contrast_param_tag {
     struct _isp_auto_contrast_param_map {
         volatile unsigned int bypass        :1;
@@ -2239,6 +2804,16 @@ union _isp_auto_contrast_max_min_tag {
         volatile unsigned int in_max        :8;
         volatile unsigned int out_min       :8;
         volatile unsigned int out_max       :8;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_auto_contrast_adjust_v0002_tag {
+    struct _isp_auto_contrast_adjust_v0002_map {
+        volatile unsigned int diff_thr        :8;
+        volatile unsigned int small_adj    :8;
+        volatile unsigned int big_adj        :8;
+        volatile unsigned int reserved      :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3033,6 +3608,28 @@ union _isp_com_bayer_mode_tag {
     volatile unsigned int dwValue ;
 };
 
+union _isp_com_shadow_type_v0002_tag {
+    struct _isp_com_shadow_type_v0002_map {
+        volatile unsigned int reserved0 :2;
+        volatile unsigned int store     :2;
+        volatile unsigned int fetch     :2;
+        volatile unsigned int css       :2;
+        volatile unsigned int fcs       :2;
+        volatile unsigned int edge      :2;
+        volatile unsigned int bright    :2;
+        volatile unsigned int pref      :2;
+        volatile unsigned int reserved1 :2;
+        volatile unsigned int yiq       :2;
+        volatile unsigned int cfa       :2;
+        volatile unsigned int lens      :2;
+        volatile unsigned int denoise   :2;
+        volatile unsigned int bpc       :2;
+        volatile unsigned int blc       :2;
+        volatile unsigned int reserved2 :2;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
 union _isp_com_pmu_ram_mask_tag {
     struct _isp_com_pmu_ram_mask_map {
         volatile unsigned int ram_mask    :1;
@@ -3106,8 +3703,21 @@ union _isp_com_shadow_cnt_tag {
 
 union _isp_com_axi_stop_tag {
     struct _isp_com_axi_stop_map {
-        volatile unsigned int stop        :1;
-        volatile unsigned int reserved    :30;
+        volatile unsigned int stop      :1;
+        volatile unsigned int reserved  :30;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_com_axi_ctrl_v0002_tag {
+    struct _isp_com_axi_ctrl_v0002_map {
+        volatile unsigned int w_outstanding        :4;
+        volatile unsigned int r_outstanding        :4;
+        volatile unsigned int interval_cycle       :8;
+        volatile unsigned int maxlen_8             :1;
+        volatile unsigned int wait_bresp           :1;
+        volatile unsigned int trans_stop           :1;
+        volatile unsigned int reserved             :13;
     }mBits ;
     volatile unsigned int dwValue ;
 };

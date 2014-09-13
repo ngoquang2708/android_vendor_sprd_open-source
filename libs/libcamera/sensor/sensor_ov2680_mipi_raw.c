@@ -99,7 +99,7 @@ LOCAL const SENSOR_REG_T ov2680_com_mipi_raw[] = {
 	{0x3600, 0xb4},
 	{0x3603, 0x39},
 	{0x3604, 0x24},
-	{0x3605, 0x00},
+	{0x3605, 0x00}, //bit3:   1: use external regulator  0: use internal regulator
 	{0x3620, 0x26},
 	{0x3621, 0x37},
 	{0x3622, 0x04},
@@ -236,7 +236,7 @@ LOCAL const SENSOR_REG_T ov2680_800X600_mipi_raw[] = {
 	{0x3600, 0xb4}, 
 	{0x3603, 0x39}, 
 	{0x3604, 0x24}, 
-	{0x3605, 0x00}, 
+	{0x3605, 0x00},  //bit3:   1: use external regulator  0: use internal regulator
 	{0x3620, 0x26}, 
 	{0x3621, 0x37}, 
 	{0x3622, 0x04}, 
@@ -369,7 +369,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov2680_resolution_Tab_RAW[] = {
 LOCAL SENSOR_TRIM_T s_ov2680_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	//{0, 0, 800, 600, 518, 330, 644, {0, 0, 800, 600}},
-	{0, 0, 1600, 1200, 258, 451, 1294, {0, 0, 1600, 1200}},
+	{0, 0, 1600, 1200, 258, 660, 1294, {0, 0, 1600, 1200}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -492,7 +492,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_ov2680_ioctl_func_tab = {
 	_ov2680_write_gain,
 	PNULL,
 	PNULL,
-	_ov2680_write_af,
+	PNULL,//_ov2680_write_af,
 	PNULL,
 	PNULL, //_ov2680_set_awb,
 	PNULL,
@@ -601,8 +601,13 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
+#if 0
+	raw_sensor_ptr->version_info->version_id=0x00020000;
+	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
+
 	//bypass
-	sensor_ptr->version_id=0x00010000;
+
+	sensor_ptr->version_id=0x00020000;
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
@@ -627,6 +632,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x00;
+#endif	
 #if 0
 
 	//blc
@@ -987,9 +993,10 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.steady_speed = 6;
 	sensor_ptr->awb.debug_level = 2;
 	sensor_ptr->awb.smart = 1;
-#endif
+
 	sensor_ptr->awb.alg_id = 0;
-	sensor_ptr->awb.smart_index = 0;
+	sensor_ptr->awb.smart_index = 0;	
+#endif
 
 #if 0
 	//bpc
@@ -1702,23 +1709,25 @@ LOCAL uint32_t _ov2680_PowerOn(uint32_t power_on)
 
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
-		// Open power
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(20*1000);
-		//_dw9174_SRCInit(2);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
+		usleep(1000);		
+		// Open power
+		Sensor_SetAvddVoltage(avdd_val);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(1000);
+		//_dw9174_SRCInit(2);
 		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
+		usleep(3*1000);  // > 8192*MCLK + 1ms
 		// Reset sensor
-		Sensor_Reset(reset_level);
-		usleep(20*1000);
+		//Sensor_Reset(reset_level);
+		//usleep(20*1000);
 	} else {
-		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
-		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
+		usleep(1000); // >512 	mclk
+		Sensor_PowerDown(power_down);
+		usleep(500);
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
 	}
 	SENSOR_PRINT("SENSOR_ov2680: _ov2680_Power_On(1:on, 0:off): %d", power_on);
 	return SENSOR_SUCCESS;

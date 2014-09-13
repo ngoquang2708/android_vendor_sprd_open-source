@@ -180,6 +180,8 @@ int32_t ispSetGammaRNode(uint32_t handler_id, uint16_t* node);
 int32_t ispSetGammaGNode(uint32_t handler_id, uint16_t* node);
 int32_t ispSetGammaBNode(uint32_t handler_id, uint16_t* node);
 int32_t ispSetGammaNodeIndex(uint32_t handler_id, uint8_t* node);
+int32_t ispSetGammaXNode_v002(uint32_t handler_id, uint16_t* node);
+int32_t ispSetGammaYNode_v002(uint32_t handler_id, uint16_t* node);
 
 //CCE
 int32_t ispGetCCEStatus(uint32_t handler_id, uint32_t* status);

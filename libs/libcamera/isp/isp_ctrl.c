@@ -2663,6 +2663,7 @@ static int32_t _ispCfgCmc(uint32_t handler_id, struct isp_cmc_param* param_ptr)
 *@
 *@ return:
 */
+#if 0
 static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
@@ -2674,9 +2675,23 @@ static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_p
 	ispSetGammaBNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
 	ispSetGammaNodeIndex(handler_id, (uint8_t*)&param_ptr->index);
 	ispGammabypass(handler_id, param_ptr->bypass);
+	
+	return rtn;
+}
+#else
+static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+
+	ispSetGammaXNode_v002(handler_id, (uint16_t*)&param_ptr->axis[0]);
+	ispSetGammaYNode_v002(handler_id, (uint16_t*)&param_ptr->axis[1]);
+	ispGammabypass(handler_id, param_ptr->bypass);
 
 	return rtn;
 }
+
+#endif
+
 
 /* _ispCfgCCEMatrix --
 *@

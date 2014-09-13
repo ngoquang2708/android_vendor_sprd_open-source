@@ -3849,11 +3849,6 @@ int32_t ispSetGammaBNode(uint32_t handler_id, uint16_t* node)
 */
 int32_t ispSetGammaNodeIndex(uint32_t handler_id, uint8_t* node)
 {
-/*	union _isp_gamma_node_idx0_v0001_tag* reg0_s_ptr=(union _isp_gamma_node_idx0_v0001_tag*)ISP_GAMMA_NODE_IDX0_V0001;
-	union _isp_gamma_node_idx1_v0001_tag* reg1_s_ptr=(union _isp_gamma_node_idx1_v0001_tag*)ISP_GAMMA_NODE_IDX1_V0001;
-	union _isp_gamma_node_idx2_v0001_tag* reg2_s_ptr=(union _isp_gamma_node_idx2_v0001_tag*)ISP_GAMMA_NODE_IDX2_V0001;
-	union _isp_gamma_node_idx3_v0001_tag* reg3_s_ptr=(union _isp_gamma_node_idx3_v0001_tag*)ISP_GAMMA_NODE_IDX3_V0001;
-*/
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
 	union _isp_gamma_node_idx0_v0001_tag* reg0_s_ptr=(union _isp_gamma_node_idx0_v0001_tag*)&isp_reg_ptr->GAMMA_NODE_IDX0_V0001;
 	union _isp_gamma_node_idx1_v0001_tag* reg1_s_ptr=(union _isp_gamma_node_idx1_v0001_tag*)&isp_reg_ptr->GAMMA_NODE_IDX1_V0001;
@@ -3920,6 +3915,1180 @@ int32_t ispSetGammaNodeIndex(uint32_t handler_id, uint8_t* node)
 	return ISP_SUCCESS;
 }
 
+#if 0
+int32_t ispSetGammaXNode_v002(uint32_t handler_id, uint16_t* node)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_gamma_node_x0_v0002_tag* reg_rx0_ptr=(union _isp_gamma_node_x0_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X0;
+	union _isp_gamma_node_x1_v0002_tag* reg_rx1_ptr=(union _isp_gamma_node_x1_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X1;
+	union _isp_gamma_node_x2_v0002_tag* reg_rx2_ptr=(union _isp_gamma_node_x2_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X2;
+	union _isp_gamma_node_x3_v0002_tag* reg_rx3_ptr=(union _isp_gamma_node_x3_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X3;
+	union _isp_gamma_node_x4_v0002_tag* reg_rx4_ptr=(union _isp_gamma_node_x4_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X4;
+	union _isp_gamma_node_x5_v0002_tag* reg_rx5_ptr=(union _isp_gamma_node_x5_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X5;
+
+	union _isp_gamma_node_x0_v0002_tag* reg_gx0_ptr=(union _isp_gamma_node_x0_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X0;
+	union _isp_gamma_node_x1_v0002_tag* reg_gx1_ptr=(union _isp_gamma_node_x1_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X1;
+	union _isp_gamma_node_x2_v0002_tag* reg_gx2_ptr=(union _isp_gamma_node_x2_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X2;
+	union _isp_gamma_node_x3_v0002_tag* reg_gx3_ptr=(union _isp_gamma_node_x3_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X3;
+	union _isp_gamma_node_x4_v0002_tag* reg_gx4_ptr=(union _isp_gamma_node_x4_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X4;
+	union _isp_gamma_node_x5_v0002_tag* reg_gx5_ptr=(union _isp_gamma_node_x5_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X5;	
+
+	union _isp_gamma_node_x0_v0002_tag* reg_bx0_ptr=(union _isp_gamma_node_x0_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X0;
+	union _isp_gamma_node_x1_v0002_tag* reg_bx1_ptr=(union _isp_gamma_node_x1_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X1;
+	union _isp_gamma_node_x2_v0002_tag* reg_bx2_ptr=(union _isp_gamma_node_x2_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X2;
+	union _isp_gamma_node_x3_v0002_tag* reg_bx3_ptr=(union _isp_gamma_node_x3_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X3;
+	union _isp_gamma_node_x4_v0002_tag* reg_bx4_ptr=(union _isp_gamma_node_x4_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X4;
+	union _isp_gamma_node_x5_v0002_tag* reg_bx5_ptr=(union _isp_gamma_node_x5_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_X5;	
+
+	struct isp_reg_bits reg_config[18];
+	struct isp_reg_param write_param;
+	uint32_t i;
+	
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+		i = 0;
+		reg_rx0_ptr->mBits.node0=node[i++];
+		reg_rx0_ptr->mBits.node1=node[i++];
+		reg_rx0_ptr->mBits.node2=node[i++];
+		reg_rx1_ptr->mBits.node3=node[i++];
+		reg_rx1_ptr->mBits.node4=node[i++];
+		reg_rx1_ptr->mBits.node5=node[i++];
+		reg_rx2_ptr->mBits.node6=node[i++];
+		reg_rx2_ptr->mBits.node7=node[i++];
+		reg_rx2_ptr->mBits.node8=node[i++];
+		reg_rx3_ptr->mBits.node9=node[i++];
+		reg_rx3_ptr->mBits.node10=node[i++];
+		reg_rx3_ptr->mBits.node11=node[i++];
+		reg_rx4_ptr->mBits.node12=node[i++];
+		reg_rx4_ptr->mBits.node13=node[i++];
+		reg_rx4_ptr->mBits.node14=node[i++];
+		reg_rx5_ptr->mBits.node15=node[i++];
+		reg_rx5_ptr->mBits.node16=node[i++];
+		reg_rx5_ptr->mBits.node17=node[i++];
+
+		reg_gx0_ptr->mBits.node0=node[i++];
+		reg_gx0_ptr->mBits.node1=node[i++];
+		reg_gx0_ptr->mBits.node2=node[i++];
+		reg_gx1_ptr->mBits.node3=node[i++];
+		reg_gx1_ptr->mBits.node4=node[i++];
+		reg_gx1_ptr->mBits.node5=node[i++];
+		reg_gx2_ptr->mBits.node6=node[i++];
+		reg_gx2_ptr->mBits.node7=node[i++];
+		reg_gx2_ptr->mBits.node8=node[i++];
+		reg_gx3_ptr->mBits.node9=node[i++];
+		reg_gx3_ptr->mBits.node10=node[i++];
+		reg_gx3_ptr->mBits.node11=node[i++];
+		reg_gx4_ptr->mBits.node12=node[i++];
+		reg_gx4_ptr->mBits.node13=node[i++];
+		reg_gx4_ptr->mBits.node14=node[i++];
+		reg_gx5_ptr->mBits.node15=node[i++];
+		reg_gx5_ptr->mBits.node16=node[i++];
+		reg_gx5_ptr->mBits.node17=node[i++];
+
+		reg_bx0_ptr->mBits.node0=node[i++];
+		reg_bx0_ptr->mBits.node1=node[i++];
+		reg_bx0_ptr->mBits.node2=node[i++];
+		reg_bx1_ptr->mBits.node3=node[i++];
+		reg_bx1_ptr->mBits.node4=node[i++];
+		reg_bx1_ptr->mBits.node5=node[i++];
+		reg_bx2_ptr->mBits.node6=node[i++];
+		reg_bx2_ptr->mBits.node7=node[i++];
+		reg_bx2_ptr->mBits.node8=node[i++];
+		reg_bx3_ptr->mBits.node9=node[i++];
+		reg_bx3_ptr->mBits.node10=node[i++];
+		reg_bx3_ptr->mBits.node11=node[i++];
+		reg_bx4_ptr->mBits.node12=node[i++];
+		reg_bx4_ptr->mBits.node13=node[i++];
+		reg_bx4_ptr->mBits.node14=node[i++];
+		reg_bx5_ptr->mBits.node15=node[i++];
+		reg_bx5_ptr->mBits.node16=node[i++];
+		reg_bx5_ptr->mBits.node17=node[i++];		
+
+
+		reg_config[0].reg_addr = ISP_GAMMA_NODE_RX0_V0002 - ISP_BASE_ADDR;
+		reg_config[0].reg_value = reg_rx0_ptr->dwValue;
+		reg_config[1].reg_addr = ISP_GAMMA_NODE_RX1_V0002 - ISP_BASE_ADDR;
+		reg_config[1].reg_value = reg_rx1_ptr->dwValue;
+		reg_config[2].reg_addr = ISP_GAMMA_NODE_RX2_V0002 - ISP_BASE_ADDR;
+		reg_config[2].reg_value = reg_rx2_ptr->dwValue;
+		reg_config[3].reg_addr = ISP_GAMMA_NODE_RX3_V0002 - ISP_BASE_ADDR;
+		reg_config[3].reg_value = reg_rx3_ptr->dwValue;
+		reg_config[4].reg_addr = ISP_GAMMA_NODE_RX4_V0002 - ISP_BASE_ADDR;
+		reg_config[4].reg_value = reg_rx4_ptr->dwValue;
+		reg_config[5].reg_addr = ISP_GAMMA_NODE_RX5_V0002 - ISP_BASE_ADDR;
+		reg_config[5].reg_value = reg_rx5_ptr->dwValue;
+		
+		reg_config[6].reg_addr = ISP_GAMMA_NODE_GX0_V0002 - ISP_BASE_ADDR;
+		reg_config[6].reg_value = reg_gx0_ptr->dwValue;
+		reg_config[7].reg_addr = ISP_GAMMA_NODE_GX1_V0002 - ISP_BASE_ADDR;
+		reg_config[7].reg_value = reg_gx1_ptr->dwValue;
+		reg_config[8].reg_addr = ISP_GAMMA_NODE_GX2_V0002 - ISP_BASE_ADDR;
+		reg_config[8].reg_value = reg_gx2_ptr->dwValue;
+		reg_config[9].reg_addr = ISP_GAMMA_NODE_GX3_V0002 - ISP_BASE_ADDR;
+		reg_config[9].reg_value = reg_gx3_ptr->dwValue;
+		reg_config[10].reg_addr = ISP_GAMMA_NODE_GX4_V0002 - ISP_BASE_ADDR;
+		reg_config[10].reg_value = reg_gx4_ptr->dwValue;
+		reg_config[11].reg_addr = ISP_GAMMA_NODE_GX5_V0002 - ISP_BASE_ADDR;
+		reg_config[11].reg_value = reg_gx5_ptr->dwValue;
+
+
+		reg_config[12].reg_addr = ISP_GAMMA_NODE_BX0_V0002 - ISP_BASE_ADDR;
+		reg_config[12].reg_value = reg_bx0_ptr->dwValue;
+		reg_config[13].reg_addr = ISP_GAMMA_NODE_BX1_V0002 - ISP_BASE_ADDR;
+		reg_config[13].reg_value = reg_bx1_ptr->dwValue;
+		reg_config[14].reg_addr = ISP_GAMMA_NODE_BX2_V0002 - ISP_BASE_ADDR;
+		reg_config[14].reg_value = reg_bx2_ptr->dwValue;
+		reg_config[15].reg_addr = ISP_GAMMA_NODE_BX3_V0002 - ISP_BASE_ADDR;
+		reg_config[15].reg_value = reg_bx3_ptr->dwValue;
+		reg_config[16].reg_addr = ISP_GAMMA_NODE_BX4_V0002 - ISP_BASE_ADDR;
+		reg_config[16].reg_value = reg_bx4_ptr->dwValue;
+		reg_config[17].reg_addr = ISP_GAMMA_NODE_BX5_V0002 - ISP_BASE_ADDR;
+		reg_config[17].reg_value = reg_bx5_ptr->dwValue;
+
+
+		write_param.reg_param = (uint32_t)&reg_config[0];
+		write_param.counts = 18;
+
+		_isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetGammaYNode_v002(uint32_t handler_id, uint32_t isp_id, uint16_t* node)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_gamma_node_y_v0002_tag* reg_r0_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_r1_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_r2_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_r3_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_r4_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_r5_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_r6_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+	union _isp_gamma_node_y_v0002_tag* reg_r7_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R7;
+	union _isp_gamma_node_y_v0002_tag* reg_r8_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R8;
+	union _isp_gamma_node_y_v0002_tag* reg_r9_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_r10_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_r11_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_r12_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_r13_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_r14_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_r15_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+	
+
+	union _isp_gamma_node_y_v0002_tag* reg_g0_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_g1_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_g2_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_g3_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_g4_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_g5_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_g6_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+	union _isp_gamma_node_y_v0002_tag* reg_g7_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R7;
+	union _isp_gamma_node_y_v0002_tag* reg_g8_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R8;
+	union _isp_gamma_node_y_v0002_tag* reg_g9_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_g10_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_g11_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_g12_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_g13_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_g14_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_g15_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+
+	union _isp_gamma_node_y_v0002_tag* reg_b0_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_b1_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_b2_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_b3_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_b4_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_b5_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_b6_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+	union _isp_gamma_node_y_v0002_tag* reg_b7_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R7;
+	union _isp_gamma_node_y_v0002_tag* reg_b8_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R8;
+	union _isp_gamma_node_y_v0002_tag* reg_b9_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R0;
+	union _isp_gamma_node_y_v0002_tag* reg_b10_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R1;
+	union _isp_gamma_node_y_v0002_tag* reg_b11_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R2;
+	union _isp_gamma_node_y_v0002_tag* reg_b12_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R3;
+	union _isp_gamma_node_y_v0002_tag* reg_b13_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R4;
+	union _isp_gamma_node_y_v0002_tag* reg_b14_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R5;
+	union _isp_gamma_node_y_v0002_tag* reg_b15_ptr=(union _isp_gamma_node_y_v0002_tag*)&isp_reg_ptr->GAMMA_NODE_R6;
+
+
+	
+	struct isp_reg_bits reg_config[48];
+	struct isp_reg_param write_param;
+	uint32_t i;
+	//uint32_t isp_id=_isp_GetIspId();
+
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+		i = 0;
+		reg_r0_ptr->mBits.k=node[i++];
+		reg_r0_ptr->mBits.b=node[i++];
+		reg_r1_ptr->mBits.k=node[i++];
+		reg_r1_ptr->mBits.b=node[i++];
+		reg_r2_ptr->mBits.k=node[i++];
+		reg_r2_ptr->mBits.b=node[i++];
+		reg_r3_ptr->mBits.k=node[i++];
+		reg_r3_ptr->mBits.b=node[i++];
+		reg_r4_ptr->mBits.k=node[i++];
+		reg_r4_ptr->mBits.b=node[i++];
+		reg_r5_ptr->mBits.k=node[i++];
+		reg_r5_ptr->mBits.b=node[i++];
+		reg_r6_ptr->mBits.k=node[i++];
+		reg_r6_ptr->mBits.b=node[i++];
+		reg_r7_ptr->mBits.k=node[i++];
+		reg_r7_ptr->mBits.b=node[i++];
+		reg_r8_ptr->mBits.k=node[i++];
+		reg_r8_ptr->mBits.b=node[i++];
+		reg_r9_ptr->mBits.k=node[i++];
+		reg_r9_ptr->mBits.b=node[i++];
+		reg_r10_ptr->mBits.k=node[i++];
+		reg_r10_ptr->mBits.b=node[i++];
+		reg_r11_ptr->mBits.k=node[i++];
+		reg_r11_ptr->mBits.b=node[i++];
+		reg_r12_ptr->mBits.k=node[i++];
+		reg_r12_ptr->mBits.b=node[i++];
+		reg_r13_ptr->mBits.k=node[i++];
+		reg_r13_ptr->mBits.b=node[i++];
+		reg_r14_ptr->mBits.k=node[i++];
+		reg_r14_ptr->mBits.b=node[i++];
+		reg_r15_ptr->mBits.k=node[i++];
+		reg_r15_ptr->mBits.b=node[i++];
+
+		reg_g0_ptr->mBits.k=node[i++];
+		reg_g0_ptr->mBits.b=node[i++];
+		reg_g1_ptr->mBits.k=node[i++];
+		reg_g1_ptr->mBits.b=node[i++];
+		reg_g2_ptr->mBits.k=node[i++];
+		reg_g2_ptr->mBits.b=node[i++];
+		reg_g3_ptr->mBits.k=node[i++];
+		reg_g3_ptr->mBits.b=node[i++];
+		reg_g4_ptr->mBits.k=node[i++];
+		reg_g4_ptr->mBits.b=node[i++];
+		reg_g5_ptr->mBits.k=node[i++];
+		reg_g5_ptr->mBits.b=node[i++];
+		reg_g6_ptr->mBits.k=node[i++];
+		reg_g6_ptr->mBits.b=node[i++];
+		reg_g7_ptr->mBits.k=node[i++];
+		reg_g7_ptr->mBits.b=node[i++];
+		reg_g8_ptr->mBits.k=node[i++];
+		reg_g8_ptr->mBits.b=node[i++];
+		reg_g9_ptr->mBits.k=node[i++];
+		reg_g9_ptr->mBits.b=node[i++];
+		reg_g10_ptr->mBits.k=node[i++];
+		reg_g10_ptr->mBits.b=node[i++];
+		reg_g11_ptr->mBits.k=node[i++];
+		reg_g11_ptr->mBits.b=node[i++];
+		reg_g12_ptr->mBits.k=node[i++];
+		reg_g12_ptr->mBits.b=node[i++];
+		reg_g13_ptr->mBits.k=node[i++];
+		reg_g13_ptr->mBits.b=node[i++];
+		reg_g14_ptr->mBits.k=node[i++];
+		reg_g14_ptr->mBits.b=node[i++];
+		reg_g15_ptr->mBits.k=node[i++];
+		reg_g15_ptr->mBits.b=node[i++];		
+
+		reg_b0_ptr->mBits.k=node[i++];
+		reg_b0_ptr->mBits.b=node[i++];
+		reg_b1_ptr->mBits.k=node[i++];
+		reg_b1_ptr->mBits.b=node[i++];
+		reg_b2_ptr->mBits.k=node[i++];
+		reg_b2_ptr->mBits.b=node[i++];
+		reg_b3_ptr->mBits.k=node[i++];
+		reg_b3_ptr->mBits.b=node[i++];
+		reg_b4_ptr->mBits.k=node[i++];
+		reg_b4_ptr->mBits.b=node[i++];
+		reg_b5_ptr->mBits.k=node[i++];
+		reg_b5_ptr->mBits.b=node[i++];
+		reg_b6_ptr->mBits.k=node[i++];
+		reg_b6_ptr->mBits.b=node[i++];
+		reg_b7_ptr->mBits.k=node[i++];
+		reg_b7_ptr->mBits.b=node[i++];
+		reg_b8_ptr->mBits.k=node[i++];
+		reg_b8_ptr->mBits.b=node[i++];
+		reg_b9_ptr->mBits.k=node[i++];
+		reg_b9_ptr->mBits.b=node[i++];
+		reg_b10_ptr->mBits.k=node[i++];
+		reg_b10_ptr->mBits.b=node[i++];
+		reg_b11_ptr->mBits.k=node[i++];
+		reg_b11_ptr->mBits.b=node[i++];
+		reg_b12_ptr->mBits.k=node[i++];
+		reg_b12_ptr->mBits.b=node[i++];
+		reg_b13_ptr->mBits.k=node[i++];
+		reg_b13_ptr->mBits.b=node[i++];
+		reg_b14_ptr->mBits.k=node[i++];
+		reg_b14_ptr->mBits.b=node[i++];
+		reg_b15_ptr->mBits.k=node[i++];
+		reg_b15_ptr->mBits.b=node[i++]; 
+		
+		i = 0;
+		reg_config[0].reg_addr = ISP_GAMMA_NODE_R0_V0002 - ISP_BASE_ADDR;
+		reg_config[0].reg_value = reg_r0_ptr->dwValue;
+		reg_config[1].reg_addr = ISP_GAMMA_NODE_R1_V0002 - ISP_BASE_ADDR;
+		reg_config[1].reg_value = reg_r1_ptr->dwValue;
+		reg_config[2].reg_addr = ISP_GAMMA_NODE_R2_V0002 - ISP_BASE_ADDR;
+		reg_config[2].reg_value = reg_r2_ptr->dwValue;
+		reg_config[3].reg_addr = ISP_GAMMA_NODE_R3_V0002 - ISP_BASE_ADDR;
+		reg_config[3].reg_value = reg_r3_ptr->dwValue;
+		reg_config[4].reg_addr = ISP_GAMMA_NODE_R4_V0002 - ISP_BASE_ADDR;
+		reg_config[4].reg_value = reg_r4_ptr->dwValue;
+		reg_config[5].reg_addr = ISP_GAMMA_NODE_R5_V0002 - ISP_BASE_ADDR;
+		reg_config[5].reg_value = reg_r5_ptr->dwValue;
+		reg_config[6].reg_addr = ISP_GAMMA_NODE_R6_V0002 - ISP_BASE_ADDR;
+		reg_config[6].reg_value = reg_r6_ptr->dwValue;
+		reg_config[7].reg_addr = ISP_GAMMA_NODE_R7_V0002 - ISP_BASE_ADDR;
+		reg_config[7].reg_value = reg_r7_ptr->dwValue;
+		reg_config[8].reg_addr = ISP_GAMMA_NODE_R8_V0002 - ISP_BASE_ADDR;
+		reg_config[8].reg_value = reg_r8_ptr->dwValue;
+		reg_config[9].reg_addr = ISP_GAMMA_NODE_R9_V0002 - ISP_BASE_ADDR;
+		reg_config[9].reg_value = reg_r9_ptr->dwValue;
+		reg_config[10].reg_addr = ISP_GAMMA_NODE_R10_V0002 - ISP_BASE_ADDR;
+		reg_config[10].reg_value = reg_r10_ptr->dwValue;
+		reg_config[11].reg_addr = ISP_GAMMA_NODE_R11_V0002 - ISP_BASE_ADDR;
+		reg_config[11].reg_value = reg_r11_ptr->dwValue;
+		reg_config[12].reg_addr = ISP_GAMMA_NODE_R12_V0002 - ISP_BASE_ADDR;
+		reg_config[12].reg_value = reg_r12_ptr->dwValue;
+		reg_config[13].reg_addr = ISP_GAMMA_NODE_R13_V0002 - ISP_BASE_ADDR;
+		reg_config[13].reg_value = reg_r13_ptr->dwValue;
+		reg_config[14].reg_addr = ISP_GAMMA_NODE_R14_V0002 - ISP_BASE_ADDR;
+		reg_config[14].reg_value = reg_r14_ptr->dwValue;
+		reg_config[15].reg_addr = ISP_GAMMA_NODE_R15_V0002 - ISP_BASE_ADDR;
+		reg_config[15].reg_value = reg_r15_ptr->dwValue;
+
+		i = 16;
+		reg_config[16].reg_addr = ISP_GAMMA_NODE_G0_V0002 - ISP_BASE_ADDR;
+		reg_config[16].reg_value = reg_g0_ptr->dwValue;
+		reg_config[17].reg_addr = ISP_GAMMA_NODE_G1_V0002 - ISP_BASE_ADDR;
+		reg_config[17].reg_value = reg_g1_ptr->dwValue;
+		reg_config[18].reg_addr = ISP_GAMMA_NODE_G2_V0002 - ISP_BASE_ADDR;
+		reg_config[18].reg_value = reg_g2_ptr->dwValue;
+		reg_config[19].reg_addr = ISP_GAMMA_NODE_G3_V0002 - ISP_BASE_ADDR;
+		reg_config[19].reg_value = reg_g3_ptr->dwValue;
+		reg_config[20].reg_addr = ISP_GAMMA_NODE_G4_V0002 - ISP_BASE_ADDR;
+		reg_config[20].reg_value = reg_g4_ptr->dwValue;
+		reg_config[21].reg_addr = ISP_GAMMA_NODE_G5_V0002 - ISP_BASE_ADDR;
+		reg_config[21].reg_value = reg_g5_ptr->dwValue;
+		reg_config[22].reg_addr = ISP_GAMMA_NODE_G6_V0002 - ISP_BASE_ADDR;
+		reg_config[22].reg_value = reg_g6_ptr->dwValue;
+		reg_config[23].reg_addr = ISP_GAMMA_NODE_G7_V0002 - ISP_BASE_ADDR;
+		reg_config[23].reg_value = reg_g7_ptr->dwValue;
+		reg_config[24].reg_addr = ISP_GAMMA_NODE_G8_V0002 - ISP_BASE_ADDR;
+		reg_config[24].reg_value = reg_g8_ptr->dwValue;
+		reg_config[25].reg_addr = ISP_GAMMA_NODE_G9_V0002 - ISP_BASE_ADDR;
+		reg_config[25].reg_value = reg_g9_ptr->dwValue;
+		reg_config[26].reg_addr = ISP_GAMMA_NODE_G10_V0002 - ISP_BASE_ADDR;
+		reg_config[26].reg_value = reg_g10_ptr->dwValue;
+		reg_config[27].reg_addr = ISP_GAMMA_NODE_G11_V0002 - ISP_BASE_ADDR;
+		reg_config[27].reg_value = reg_g11_ptr->dwValue;
+		reg_config[28].reg_addr = ISP_GAMMA_NODE_G12_V0002 - ISP_BASE_ADDR;
+		reg_config[28].reg_value = reg_g12_ptr->dwValue;
+		reg_config[29].reg_addr = ISP_GAMMA_NODE_G13_V0002 - ISP_BASE_ADDR;
+		reg_config[29].reg_value = reg_g13_ptr->dwValue;
+		reg_config[30].reg_addr = ISP_GAMMA_NODE_G14_V0002 - ISP_BASE_ADDR;
+		reg_config[30].reg_value = reg_g14_ptr->dwValue;
+		reg_config[31].reg_addr = ISP_GAMMA_NODE_G15_V0002 - ISP_BASE_ADDR;
+		reg_config[31].reg_value = reg_g15_ptr->dwValue;
+
+		reg_config[32].reg_addr = ISP_GAMMA_NODE_B0_V0002 - ISP_BASE_ADDR;
+		reg_config[32].reg_value = reg_b0_ptr->dwValue;
+		reg_config[33].reg_addr = ISP_GAMMA_NODE_B1_V0002 - ISP_BASE_ADDR;
+		reg_config[33].reg_value = reg_b1_ptr->dwValue;
+		reg_config[34].reg_addr = ISP_GAMMA_NODE_B2_V0002 - ISP_BASE_ADDR;
+		reg_config[34].reg_value = reg_b2_ptr->dwValue;
+		reg_config[35].reg_addr = ISP_GAMMA_NODE_B3_V0002 - ISP_BASE_ADDR;
+		reg_config[35].reg_value = reg_b3_ptr->dwValue;
+		reg_config[36].reg_addr = ISP_GAMMA_NODE_B4_V0002 - ISP_BASE_ADDR;
+		reg_config[36].reg_value = reg_b4_ptr->dwValue;
+		reg_config[37].reg_addr = ISP_GAMMA_NODE_B5_V0002 - ISP_BASE_ADDR;
+		reg_config[37].reg_value = reg_b5_ptr->dwValue;
+		reg_config[38].reg_addr = ISP_GAMMA_NODE_B6_V0002 - ISP_BASE_ADDR;
+		reg_config[38].reg_value = reg_b6_ptr->dwValue;
+		reg_config[39].reg_addr = ISP_GAMMA_NODE_B7_V0002 - ISP_BASE_ADDR;
+		reg_config[39].reg_value = reg_b7_ptr->dwValue;
+		reg_config[40].reg_addr = ISP_GAMMA_NODE_B8_V0002 - ISP_BASE_ADDR;
+		reg_config[40].reg_value = reg_b8_ptr->dwValue;
+		reg_config[41].reg_addr = ISP_GAMMA_NODE_B9_V0002 - ISP_BASE_ADDR;
+		reg_config[41].reg_value = reg_b9_ptr->dwValue;
+		reg_config[42].reg_addr = ISP_GAMMA_NODE_B10_V0002 - ISP_BASE_ADDR;
+		reg_config[42].reg_value = reg_b10_ptr->dwValue;
+		reg_config[43].reg_addr = ISP_GAMMA_NODE_B11_V0002 - ISP_BASE_ADDR;
+		reg_config[43].reg_value = reg_b11_ptr->dwValue;
+		reg_config[44].reg_addr = ISP_GAMMA_NODE_B12_V0002 - ISP_BASE_ADDR;
+		reg_config[44].reg_value = reg_b12_ptr->dwValue;
+		reg_config[45].reg_addr = ISP_GAMMA_NODE_B13_V0002 - ISP_BASE_ADDR;
+		reg_config[45].reg_value = reg_b13_ptr->dwValue;
+		reg_config[46].reg_addr = ISP_GAMMA_NODE_B14_V0002 - ISP_BASE_ADDR;
+		reg_config[46].reg_value = reg_b14_ptr->dwValue;
+		reg_config[47].reg_addr = ISP_GAMMA_NODE_B15_V0002 - ISP_BASE_ADDR;
+		reg_config[47].reg_value = reg_b15_ptr->dwValue;
+
+
+		write_param.reg_param = (uint32_t)&reg_config[0];
+		write_param.counts = 48;
+
+		_isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+#else
+
+union _isp_gamma_node_x0_v0002_tag reg_rx0;
+union _isp_gamma_node_x1_v0002_tag reg_rx1;
+union _isp_gamma_node_x2_v0002_tag reg_rx2;
+union _isp_gamma_node_x3_v0002_tag reg_rx3;
+union _isp_gamma_node_x4_v0002_tag reg_rx4;
+union _isp_gamma_node_x5_v0002_tag reg_rx5;
+
+union _isp_gamma_node_x0_v0002_tag reg_gx0;
+union _isp_gamma_node_x1_v0002_tag reg_gx1;
+union _isp_gamma_node_x2_v0002_tag reg_gx2;
+union _isp_gamma_node_x3_v0002_tag reg_gx3;
+union _isp_gamma_node_x4_v0002_tag reg_gx4;
+union _isp_gamma_node_x5_v0002_tag reg_gx5;	
+
+union _isp_gamma_node_x0_v0002_tag reg_bx0;
+union _isp_gamma_node_x1_v0002_tag reg_bx1;
+union _isp_gamma_node_x2_v0002_tag reg_bx2;
+union _isp_gamma_node_x3_v0002_tag reg_bx3;
+union _isp_gamma_node_x4_v0002_tag reg_bx4;
+union _isp_gamma_node_x5_v0002_tag reg_bx5;	
+
+
+
+int32_t ispSetGammaXNode_v002(uint32_t handler_id, uint16_t* node)
+{
+//	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_gamma_node_x0_v0002_tag* reg_rx0_ptr = &reg_rx0;
+	union _isp_gamma_node_x1_v0002_tag* reg_rx1_ptr = &reg_rx1;
+	union _isp_gamma_node_x2_v0002_tag* reg_rx2_ptr = &reg_rx2;
+	union _isp_gamma_node_x3_v0002_tag* reg_rx3_ptr = &reg_rx3;
+	union _isp_gamma_node_x4_v0002_tag* reg_rx4_ptr = &reg_rx4;
+	union _isp_gamma_node_x5_v0002_tag* reg_rx5_ptr = &reg_rx5;
+
+	union _isp_gamma_node_x0_v0002_tag* reg_gx0_ptr = &reg_gx0;
+	union _isp_gamma_node_x1_v0002_tag* reg_gx1_ptr = &reg_gx1;
+	union _isp_gamma_node_x2_v0002_tag* reg_gx2_ptr = &reg_gx2;
+	union _isp_gamma_node_x3_v0002_tag* reg_gx3_ptr = &reg_gx3;
+	union _isp_gamma_node_x4_v0002_tag* reg_gx4_ptr = &reg_gx4;
+	union _isp_gamma_node_x5_v0002_tag* reg_gx5_ptr = &reg_gx5;	
+
+	union _isp_gamma_node_x0_v0002_tag* reg_bx0_ptr = &reg_bx0;
+	union _isp_gamma_node_x1_v0002_tag* reg_bx1_ptr = &reg_bx1;
+	union _isp_gamma_node_x2_v0002_tag* reg_bx2_ptr = &reg_bx2;
+	union _isp_gamma_node_x3_v0002_tag* reg_bx3_ptr = &reg_bx3;
+	union _isp_gamma_node_x4_v0002_tag* reg_bx4_ptr = &reg_bx4;
+	union _isp_gamma_node_x5_v0002_tag* reg_bx5_ptr = &reg_bx5;	
+
+	struct isp_reg_bits reg_config[18];
+	struct isp_reg_param write_param;	
+	uint32_t isp_id=_isp_GetIspId();
+	uint32_t i;
+	
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+#if 0
+		i = 0;
+		reg_rx0_ptr->mBits.node0=20;
+		reg_rx0_ptr->mBits.node1=76;
+		reg_rx0_ptr->mBits.node2=130;
+		reg_rx1_ptr->mBits.node3=139;
+		reg_rx1_ptr->mBits.node4=210;
+		reg_rx1_ptr->mBits.node5=211;
+		reg_rx2_ptr->mBits.node6=310;
+		reg_rx2_ptr->mBits.node7=316;
+		reg_rx2_ptr->mBits.node8=440;
+		reg_rx3_ptr->mBits.node9=448;
+		reg_rx3_ptr->mBits.node10=600;
+		reg_rx3_ptr->mBits.node11=640;
+		reg_rx4_ptr->mBits.node12=850;
+		reg_rx4_ptr->mBits.node13=900;
+		reg_rx4_ptr->mBits.node14=1000;
+		reg_rx5_ptr->mBits.node15=1023;
+
+		reg_gx0_ptr->mBits.node0=20;
+		reg_gx0_ptr->mBits.node1=76;
+		reg_gx0_ptr->mBits.node2=130;
+		reg_gx1_ptr->mBits.node3=139;
+		reg_gx1_ptr->mBits.node4=210;
+		reg_gx1_ptr->mBits.node5=211;
+		reg_gx2_ptr->mBits.node6=310;
+		reg_gx2_ptr->mBits.node7=316;
+		reg_gx2_ptr->mBits.node8=440;
+		reg_gx3_ptr->mBits.node9=448;
+		reg_gx3_ptr->mBits.node10=600;
+		reg_gx3_ptr->mBits.node11=640;
+		reg_gx4_ptr->mBits.node12=850;
+		reg_gx4_ptr->mBits.node13=900;
+		reg_gx4_ptr->mBits.node14=1000;
+		reg_gx5_ptr->mBits.node15=1023;
+
+		reg_bx0_ptr->mBits.node0=20;
+		reg_bx0_ptr->mBits.node1=76;
+		reg_bx0_ptr->mBits.node2=130;
+		reg_bx1_ptr->mBits.node3=139;
+		reg_bx1_ptr->mBits.node4=210;
+		reg_bx1_ptr->mBits.node5=211;
+		reg_bx2_ptr->mBits.node6=310;
+		reg_bx2_ptr->mBits.node7=316;
+		reg_bx2_ptr->mBits.node8=440;
+		reg_bx3_ptr->mBits.node9=448;
+		reg_bx3_ptr->mBits.node10=600;
+		reg_bx3_ptr->mBits.node11=640;
+		reg_bx4_ptr->mBits.node12=850;
+		reg_bx4_ptr->mBits.node13=900;
+		reg_bx4_ptr->mBits.node14=1000;
+		reg_bx5_ptr->mBits.node15=1023;
+#else
+		i = 0;
+		reg_rx0_ptr->mBits.node0=8;
+		reg_rx0_ptr->mBits.node1=16;
+		reg_rx0_ptr->mBits.node2=24;
+		reg_rx1_ptr->mBits.node3=32;
+		reg_rx1_ptr->mBits.node4=48;
+		reg_rx1_ptr->mBits.node5=80;
+		reg_rx2_ptr->mBits.node6=96;
+		reg_rx2_ptr->mBits.node7=160;
+		reg_rx2_ptr->mBits.node8=224;
+		reg_rx3_ptr->mBits.node9=288;
+		reg_rx3_ptr->mBits.node10=384;
+		reg_rx3_ptr->mBits.node11=512;
+		reg_rx4_ptr->mBits.node12=640;
+		reg_rx4_ptr->mBits.node13=768;
+		reg_rx4_ptr->mBits.node14=960;
+		reg_rx5_ptr->mBits.node15=1023;
+
+		reg_gx0_ptr->mBits.node0=8;
+		reg_gx0_ptr->mBits.node1=16;
+		reg_gx0_ptr->mBits.node2=24;
+		reg_gx1_ptr->mBits.node3=32;
+		reg_gx1_ptr->mBits.node4=48;
+		reg_gx1_ptr->mBits.node5=80;
+		reg_gx2_ptr->mBits.node6=96;
+		reg_gx2_ptr->mBits.node7=160;
+		reg_gx2_ptr->mBits.node8=224;
+		reg_gx3_ptr->mBits.node9=288;
+		reg_gx3_ptr->mBits.node10=384;
+		reg_gx3_ptr->mBits.node11=512;
+		reg_gx4_ptr->mBits.node12=640;
+		reg_gx4_ptr->mBits.node13=768;
+		reg_gx4_ptr->mBits.node14=960;
+		reg_gx5_ptr->mBits.node15=1023;
+
+		reg_bx0_ptr->mBits.node0=8;
+		reg_bx0_ptr->mBits.node1=16;
+		reg_bx0_ptr->mBits.node2=24;
+		reg_bx1_ptr->mBits.node3=32;
+		reg_bx1_ptr->mBits.node4=48;
+		reg_bx1_ptr->mBits.node5=80;
+		reg_bx2_ptr->mBits.node6=96;
+		reg_bx2_ptr->mBits.node7=160;
+		reg_bx2_ptr->mBits.node8=224;
+		reg_bx3_ptr->mBits.node9=288;
+		reg_bx3_ptr->mBits.node10=384;
+		reg_bx3_ptr->mBits.node11=512;
+		reg_bx4_ptr->mBits.node12=640;
+		reg_bx4_ptr->mBits.node13=768;
+		reg_bx4_ptr->mBits.node14=960;
+		reg_bx5_ptr->mBits.node15=1023;
+#endif
+
+		reg_config[0].reg_addr = ISP_GAMMA_NODE_RX0_V0002 - ISP_BASE_ADDR;
+		reg_config[0].reg_value = reg_rx0_ptr->dwValue;
+		reg_config[1].reg_addr = ISP_GAMMA_NODE_RX1_V0002 - ISP_BASE_ADDR;
+		reg_config[1].reg_value = reg_rx1_ptr->dwValue;
+		reg_config[2].reg_addr = ISP_GAMMA_NODE_RX2_V0002 - ISP_BASE_ADDR;
+		reg_config[2].reg_value = reg_rx2_ptr->dwValue;
+		reg_config[3].reg_addr = ISP_GAMMA_NODE_RX3_V0002 - ISP_BASE_ADDR;
+		reg_config[3].reg_value = reg_rx3_ptr->dwValue;
+		reg_config[4].reg_addr = ISP_GAMMA_NODE_RX4_V0002 - ISP_BASE_ADDR;
+		reg_config[4].reg_value = reg_rx4_ptr->dwValue;
+		reg_config[5].reg_addr = ISP_GAMMA_NODE_RX5_V0002 - ISP_BASE_ADDR;
+		reg_config[5].reg_value = reg_rx5_ptr->dwValue;
+		
+		reg_config[6].reg_addr = ISP_GAMMA_NODE_GX0_V0002 - ISP_BASE_ADDR;
+		reg_config[6].reg_value = reg_gx0_ptr->dwValue;
+		reg_config[7].reg_addr = ISP_GAMMA_NODE_GX1_V0002 - ISP_BASE_ADDR;
+		reg_config[7].reg_value = reg_gx1_ptr->dwValue;
+		reg_config[8].reg_addr = ISP_GAMMA_NODE_GX2_V0002 - ISP_BASE_ADDR;
+		reg_config[8].reg_value = reg_gx2_ptr->dwValue;
+		reg_config[9].reg_addr = ISP_GAMMA_NODE_GX3_V0002 - ISP_BASE_ADDR;
+		reg_config[9].reg_value = reg_gx3_ptr->dwValue;
+		reg_config[10].reg_addr = ISP_GAMMA_NODE_GX4_V0002 - ISP_BASE_ADDR;
+		reg_config[10].reg_value = reg_gx4_ptr->dwValue;
+		reg_config[11].reg_addr = ISP_GAMMA_NODE_GX5_V0002 - ISP_BASE_ADDR;
+		reg_config[11].reg_value = reg_gx5_ptr->dwValue;
+
+
+		reg_config[12].reg_addr = ISP_GAMMA_NODE_BX0_V0002 - ISP_BASE_ADDR;
+		reg_config[12].reg_value = reg_bx0_ptr->dwValue;
+		reg_config[13].reg_addr = ISP_GAMMA_NODE_BX1_V0002 - ISP_BASE_ADDR;
+		reg_config[13].reg_value = reg_bx1_ptr->dwValue;
+		reg_config[14].reg_addr = ISP_GAMMA_NODE_BX2_V0002 - ISP_BASE_ADDR;
+		reg_config[14].reg_value = reg_bx2_ptr->dwValue;
+		reg_config[15].reg_addr = ISP_GAMMA_NODE_BX3_V0002 - ISP_BASE_ADDR;
+		reg_config[15].reg_value = reg_bx3_ptr->dwValue;
+		reg_config[16].reg_addr = ISP_GAMMA_NODE_BX4_V0002 - ISP_BASE_ADDR;
+		reg_config[16].reg_value = reg_bx4_ptr->dwValue;
+		reg_config[17].reg_addr = ISP_GAMMA_NODE_BX5_V0002 - ISP_BASE_ADDR;
+		reg_config[17].reg_value = reg_bx5_ptr->dwValue;
+
+
+		write_param.reg_param = (uint32_t)&reg_config[0];
+		write_param.counts = 18;
+
+		_isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+
+
+union _isp_gamma_node_y_v0002_tag  reg_r0;
+union _isp_gamma_node_y_v0002_tag  reg_r1;
+union _isp_gamma_node_y_v0002_tag  reg_r2;
+union _isp_gamma_node_y_v0002_tag  reg_r3;
+union _isp_gamma_node_y_v0002_tag  reg_r4;
+union _isp_gamma_node_y_v0002_tag  reg_r5;
+union _isp_gamma_node_y_v0002_tag  reg_r6;
+union _isp_gamma_node_y_v0002_tag  reg_r7;
+union _isp_gamma_node_y_v0002_tag  reg_r8;
+union _isp_gamma_node_y_v0002_tag  reg_r9;
+union _isp_gamma_node_y_v0002_tag  reg_r10;
+union _isp_gamma_node_y_v0002_tag  reg_r11;
+union _isp_gamma_node_y_v0002_tag  reg_r12;
+union _isp_gamma_node_y_v0002_tag  reg_r13;
+union _isp_gamma_node_y_v0002_tag  reg_r14;
+union _isp_gamma_node_y_v0002_tag  reg_r15;
+                                  
+                                  
+union _isp_gamma_node_y_v0002_tag  reg_g0;
+union _isp_gamma_node_y_v0002_tag  reg_g1;
+union _isp_gamma_node_y_v0002_tag  reg_g2;
+union _isp_gamma_node_y_v0002_tag  reg_g3;
+union _isp_gamma_node_y_v0002_tag  reg_g4;
+union _isp_gamma_node_y_v0002_tag  reg_g5;
+union _isp_gamma_node_y_v0002_tag  reg_g6;
+union _isp_gamma_node_y_v0002_tag  reg_g7;
+union _isp_gamma_node_y_v0002_tag  reg_g8;
+union _isp_gamma_node_y_v0002_tag  reg_g9;
+union _isp_gamma_node_y_v0002_tag  reg_g10;
+union _isp_gamma_node_y_v0002_tag  reg_g11;
+union _isp_gamma_node_y_v0002_tag  reg_g12;
+union _isp_gamma_node_y_v0002_tag  reg_g13;
+union _isp_gamma_node_y_v0002_tag  reg_g14;
+union _isp_gamma_node_y_v0002_tag  reg_g15;
+                                  
+union _isp_gamma_node_y_v0002_tag  reg_b0;
+union _isp_gamma_node_y_v0002_tag  reg_b1;
+union _isp_gamma_node_y_v0002_tag  reg_b2;
+union _isp_gamma_node_y_v0002_tag  reg_b3;
+union _isp_gamma_node_y_v0002_tag  reg_b4;
+union _isp_gamma_node_y_v0002_tag  reg_b5;
+union _isp_gamma_node_y_v0002_tag  reg_b6;
+union _isp_gamma_node_y_v0002_tag  reg_b7;
+union _isp_gamma_node_y_v0002_tag  reg_b8;
+union _isp_gamma_node_y_v0002_tag  reg_b9;
+union _isp_gamma_node_y_v0002_tag  reg_b10;
+union _isp_gamma_node_y_v0002_tag  reg_b11;
+union _isp_gamma_node_y_v0002_tag  reg_b12;
+union _isp_gamma_node_y_v0002_tag  reg_b13;
+union _isp_gamma_node_y_v0002_tag  reg_b14;
+union _isp_gamma_node_y_v0002_tag  reg_b15;
+
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetGammaYNode_v002(uint32_t handler_id, uint16_t* node)
+{
+//	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_gamma_node_y_v0002_tag* reg_r0_ptr  = &reg_r0; 
+	union _isp_gamma_node_y_v0002_tag* reg_r1_ptr  = &reg_r1; 
+	union _isp_gamma_node_y_v0002_tag* reg_r2_ptr  = &reg_r2; 
+	union _isp_gamma_node_y_v0002_tag* reg_r3_ptr  = &reg_r3; 
+	union _isp_gamma_node_y_v0002_tag* reg_r4_ptr  = &reg_r4; 
+	union _isp_gamma_node_y_v0002_tag* reg_r5_ptr  = &reg_r5; 
+	union _isp_gamma_node_y_v0002_tag* reg_r6_ptr  = &reg_r6; 
+	union _isp_gamma_node_y_v0002_tag* reg_r7_ptr  = &reg_r7; 
+	union _isp_gamma_node_y_v0002_tag* reg_r8_ptr  = &reg_r8; 
+	union _isp_gamma_node_y_v0002_tag* reg_r9_ptr  = &reg_r9; 
+	union _isp_gamma_node_y_v0002_tag* reg_r10_ptr = &reg_r10;
+	union _isp_gamma_node_y_v0002_tag* reg_r11_ptr = &reg_r11;
+	union _isp_gamma_node_y_v0002_tag* reg_r12_ptr = &reg_r12;
+	union _isp_gamma_node_y_v0002_tag* reg_r13_ptr = &reg_r13;
+	union _isp_gamma_node_y_v0002_tag* reg_r14_ptr = &reg_r14;
+	union _isp_gamma_node_y_v0002_tag* reg_r15_ptr = &reg_r15;
+	
+
+	union _isp_gamma_node_y_v0002_tag* reg_g0_ptr  =&reg_g0; 
+	union _isp_gamma_node_y_v0002_tag* reg_g1_ptr  =&reg_g1; 
+	union _isp_gamma_node_y_v0002_tag* reg_g2_ptr  =&reg_g2; 
+	union _isp_gamma_node_y_v0002_tag* reg_g3_ptr  =&reg_g3; 
+	union _isp_gamma_node_y_v0002_tag* reg_g4_ptr  =&reg_g4; 
+	union _isp_gamma_node_y_v0002_tag* reg_g5_ptr  =&reg_g5; 
+	union _isp_gamma_node_y_v0002_tag* reg_g6_ptr  =&reg_g6; 
+	union _isp_gamma_node_y_v0002_tag* reg_g7_ptr  =&reg_g7; 
+	union _isp_gamma_node_y_v0002_tag* reg_g8_ptr  =&reg_g8; 
+	union _isp_gamma_node_y_v0002_tag* reg_g9_ptr  =&reg_g9; 
+	union _isp_gamma_node_y_v0002_tag* reg_g10_ptr =&reg_g10;
+	union _isp_gamma_node_y_v0002_tag* reg_g11_ptr =&reg_g11;
+	union _isp_gamma_node_y_v0002_tag* reg_g12_ptr =&reg_g12;
+	union _isp_gamma_node_y_v0002_tag* reg_g13_ptr =&reg_g13;
+	union _isp_gamma_node_y_v0002_tag* reg_g14_ptr =&reg_g14;
+	union _isp_gamma_node_y_v0002_tag* reg_g15_ptr =&reg_g15;
+
+	union _isp_gamma_node_y_v0002_tag* reg_b0_ptr  =&reg_b0; 
+	union _isp_gamma_node_y_v0002_tag* reg_b1_ptr  =&reg_b1; 
+	union _isp_gamma_node_y_v0002_tag* reg_b2_ptr  =&reg_b2; 
+	union _isp_gamma_node_y_v0002_tag* reg_b3_ptr  =&reg_b3; 
+	union _isp_gamma_node_y_v0002_tag* reg_b4_ptr  =&reg_b4; 
+	union _isp_gamma_node_y_v0002_tag* reg_b5_ptr  =&reg_b5; 
+	union _isp_gamma_node_y_v0002_tag* reg_b6_ptr  =&reg_b6; 
+	union _isp_gamma_node_y_v0002_tag* reg_b7_ptr  =&reg_b7; 
+	union _isp_gamma_node_y_v0002_tag* reg_b8_ptr  =&reg_b8; 
+	union _isp_gamma_node_y_v0002_tag* reg_b9_ptr  =&reg_b9; 
+	union _isp_gamma_node_y_v0002_tag* reg_b10_ptr =&reg_b10;
+	union _isp_gamma_node_y_v0002_tag* reg_b11_ptr =&reg_b11;
+	union _isp_gamma_node_y_v0002_tag* reg_b12_ptr =&reg_b12;
+	union _isp_gamma_node_y_v0002_tag* reg_b13_ptr =&reg_b13;
+	union _isp_gamma_node_y_v0002_tag* reg_b14_ptr =&reg_b14;
+	union _isp_gamma_node_y_v0002_tag* reg_b15_ptr =&reg_b15;
+	
+	struct isp_reg_bits reg_config[48];
+	struct isp_reg_param write_param;
+	uint32_t isp_id=_isp_GetIspId();
+	uint32_t i;
+
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+#if 0
+		i = 0;
+		reg_r0_ptr->mBits.k=589;
+		reg_r0_ptr->mBits.b=0;
+		reg_r1_ptr->mBits.k=589;
+		reg_r1_ptr->mBits.b=0;
+		reg_r2_ptr->mBits.k=522;
+		reg_r2_ptr->mBits.b=5;
+		reg_r3_ptr->mBits.k=522;
+		reg_r3_ptr->mBits.b=5;
+		reg_r4_ptr->mBits.k=432;
+		reg_r4_ptr->mBits.b=17;
+		reg_r5_ptr->mBits.k=432;
+		reg_r5_ptr->mBits.b=17;
+		reg_r6_ptr->mBits.k=320;
+		reg_r6_ptr->mBits.b=40;
+		reg_r7_ptr->mBits.k=320;
+		reg_r7_ptr->mBits.b=40;
+		reg_r8_ptr->mBits.k=234;
+		reg_r8_ptr->mBits.b=67;
+		reg_r9_ptr->mBits.k=234;
+		reg_r9_ptr->mBits.b=67;
+		reg_r10_ptr->mBits.k=171;
+		reg_r10_ptr->mBits.b=94;
+		reg_r11_ptr->mBits.k=171;
+		reg_r11_ptr->mBits.b=94;
+		reg_r12_ptr->mBits.k=144;
+		reg_r12_ptr->mBits.b=111;
+		reg_r13_ptr->mBits.k=144;
+		reg_r13_ptr->mBits.b=111;
+		reg_r14_ptr->mBits.k=144;
+		reg_r14_ptr->mBits.b=111;
+		reg_r15_ptr->mBits.k=144;
+		reg_r15_ptr->mBits.b=111;
+
+
+		reg_g0_ptr->mBits.k=589;
+		reg_g0_ptr->mBits.b=0;
+		reg_g1_ptr->mBits.k=589;
+		reg_g1_ptr->mBits.b=0;
+		reg_g2_ptr->mBits.k=522;
+		reg_g2_ptr->mBits.b=5;
+		reg_g3_ptr->mBits.k=522;
+		reg_g3_ptr->mBits.b=5;
+		reg_g4_ptr->mBits.k=432;
+		reg_g4_ptr->mBits.b=17;
+		reg_g5_ptr->mBits.k=432;
+		reg_g5_ptr->mBits.b=17;
+		reg_g6_ptr->mBits.k=320;
+		reg_g6_ptr->mBits.b=40;
+		reg_g7_ptr->mBits.k=320;
+		reg_g7_ptr->mBits.b=40;
+		reg_g8_ptr->mBits.k=234;
+		reg_g8_ptr->mBits.b=67;
+		reg_g9_ptr->mBits.k=234;
+		reg_g9_ptr->mBits.b=67;
+		reg_g10_ptr->mBits.k=171;
+		reg_g10_ptr->mBits.b=94;
+		reg_g11_ptr->mBits.k=171;
+		reg_g11_ptr->mBits.b=94;
+		reg_g12_ptr->mBits.k=144;
+		reg_g12_ptr->mBits.b=111;
+		reg_g13_ptr->mBits.k=144;
+		reg_g13_ptr->mBits.b=111;
+		reg_g14_ptr->mBits.k=144;
+		reg_g14_ptr->mBits.b=111;
+		reg_g15_ptr->mBits.k=144;
+		reg_g15_ptr->mBits.b=111;		
+
+
+		reg_b0_ptr->mBits.k=589;
+		reg_b0_ptr->mBits.b=0;
+		reg_b1_ptr->mBits.k=589;
+		reg_b1_ptr->mBits.b=0;
+		reg_b2_ptr->mBits.k=522;
+		reg_b2_ptr->mBits.b=5;
+		reg_b3_ptr->mBits.k=522;
+		reg_b3_ptr->mBits.b=5;
+		reg_b4_ptr->mBits.k=432;
+		reg_b4_ptr->mBits.b=17;
+		reg_b5_ptr->mBits.k=432;
+		reg_b5_ptr->mBits.b=17;
+		reg_b6_ptr->mBits.k=320;
+		reg_b6_ptr->mBits.b=40;
+		reg_b7_ptr->mBits.k=320;
+		reg_b7_ptr->mBits.b=40;
+		reg_b8_ptr->mBits.k=234;
+		reg_b8_ptr->mBits.b=67;
+		reg_b9_ptr->mBits.k=234;
+		reg_b9_ptr->mBits.b=67;
+		reg_b10_ptr->mBits.k=171;
+		reg_b10_ptr->mBits.b=94;
+		reg_b11_ptr->mBits.k=171;
+		reg_b11_ptr->mBits.b=94;
+		reg_b12_ptr->mBits.k=144;
+		reg_b12_ptr->mBits.b=111;
+		reg_b13_ptr->mBits.k=144;
+		reg_b13_ptr->mBits.b=111;
+		reg_b14_ptr->mBits.k=144;
+		reg_b14_ptr->mBits.b=111;
+		reg_b15_ptr->mBits.k=144;
+		reg_b15_ptr->mBits.b=111; 
+#else
+
+#if 0
+		reg_r0_ptr->mBits.k=0x0100;
+		reg_r0_ptr->mBits.b=0x0000;
+		reg_r1_ptr->mBits.k=0x0180;
+		reg_r1_ptr->mBits.b=0x0000;
+		reg_r2_ptr->mBits.k=0x0200;
+		reg_r2_ptr->mBits.b=0xfffe;
+		reg_r3_ptr->mBits.k=0x0280;
+		reg_r3_ptr->mBits.b=0xfffb;
+		reg_r4_ptr->mBits.k=0x0380;
+		reg_r4_ptr->mBits.b=0xfff3;
+		reg_r5_ptr->mBits.k=0x0380;
+		reg_r5_ptr->mBits.b=0xfff3;
+		reg_r6_ptr->mBits.k=0x0300;
+		reg_r6_ptr->mBits.b=0xfffd;
+		reg_r7_ptr->mBits.k=0x0240;
+		reg_r7_ptr->mBits.b=0x000e;
+		reg_r8_ptr->mBits.k=0x01a0;
+		reg_r8_ptr->mBits.b=0x0027;
+		reg_r9_ptr->mBits.k=0x0170;
+		reg_r9_ptr->mBits.b=0x0032;
+		reg_r10_ptr->mBits.k=0x0100;
+		reg_r10_ptr->mBits.b=0x0051;
+		reg_r11_ptr->mBits.k=0x00b8;
+		reg_r11_ptr->mBits.b=0x006c;
+		reg_r12_ptr->mBits.k=0x0080;
+		reg_r12_ptr->mBits.b=0x0088;
+		reg_r13_ptr->mBits.k=0x0060;
+		reg_r13_ptr->mBits.b=0x009c;
+		reg_r14_ptr->mBits.k=0x0060;
+		reg_r14_ptr->mBits.b=0x009c;
+		reg_r15_ptr->mBits.k=0x0092;
+		reg_r15_ptr->mBits.b=0x006d;
+
+		reg_g0_ptr->mBits.k=0x0100;
+		reg_g0_ptr->mBits.b=0x0000;
+		reg_g1_ptr->mBits.k=0x0180;
+		reg_g1_ptr->mBits.b=0x0000;
+		reg_g2_ptr->mBits.k=0x0200;
+		reg_g2_ptr->mBits.b=0xfffe;
+		reg_g3_ptr->mBits.k=0x0280;
+		reg_g3_ptr->mBits.b=0xfffb;
+		reg_g4_ptr->mBits.k=0x0380;
+		reg_g4_ptr->mBits.b=0xfff3;
+		reg_g5_ptr->mBits.k=0x0380;
+		reg_g5_ptr->mBits.b=0xfff3;
+		reg_g6_ptr->mBits.k=0x0300;
+		reg_g6_ptr->mBits.b=0xfffd;
+		reg_g7_ptr->mBits.k=0x0240;
+		reg_g7_ptr->mBits.b=0x000e;
+		reg_g8_ptr->mBits.k=0x01a0;
+		reg_g8_ptr->mBits.b=0x0027;
+		reg_g9_ptr->mBits.k=0x0170;
+		reg_g9_ptr->mBits.b=0x0032;
+		reg_g10_ptr->mBits.k=0x0100;
+		reg_g10_ptr->mBits.b=0x0051;
+		reg_g11_ptr->mBits.k=0x00b8;
+		reg_g11_ptr->mBits.b=0x006c;
+		reg_g12_ptr->mBits.k=0x0080;
+		reg_g12_ptr->mBits.b=0x0088;
+		reg_g13_ptr->mBits.k=0x0060;
+		reg_g13_ptr->mBits.b=0x009c;
+		reg_g14_ptr->mBits.k=0x0060;
+		reg_g14_ptr->mBits.b=0x009c;
+		reg_g15_ptr->mBits.k=0x0092;
+		reg_g15_ptr->mBits.b=0x006d;
+
+		reg_b0_ptr->mBits.k=0x0100;
+		reg_b0_ptr->mBits.b=0x0000;
+		reg_b1_ptr->mBits.k=0x0180;
+		reg_b1_ptr->mBits.b=0x0000;
+		reg_b2_ptr->mBits.k=0x0200;
+		reg_b2_ptr->mBits.b=0xfffe;
+		reg_b3_ptr->mBits.k=0x0280;
+		reg_b3_ptr->mBits.b=0xfffb;
+		reg_b4_ptr->mBits.k=0x0380;
+		reg_b4_ptr->mBits.b=0xfff3;
+		reg_b5_ptr->mBits.k=0x0380;
+		reg_b5_ptr->mBits.b=0xfff3;
+		reg_b6_ptr->mBits.k=0x0300;
+		reg_b6_ptr->mBits.b=0xfffd;
+		reg_b7_ptr->mBits.k=0x0240;
+		reg_b7_ptr->mBits.b=0x000e;
+		reg_b8_ptr->mBits.k=0x01a0;
+		reg_b8_ptr->mBits.b=0x0027;
+		reg_b9_ptr->mBits.k=0x0170;
+		reg_b9_ptr->mBits.b=0x0032;
+		reg_b10_ptr->mBits.k=0x0100;
+		reg_b10_ptr->mBits.b=0x0051;
+		reg_b11_ptr->mBits.k=0x00b8;
+		reg_b11_ptr->mBits.b=0x006c;
+		reg_b12_ptr->mBits.k=0x0080;
+		reg_b12_ptr->mBits.b=0x0088;
+		reg_b13_ptr->mBits.k=0x0060;
+		reg_b13_ptr->mBits.b=0x009c;
+		reg_b14_ptr->mBits.k=0x0060;
+		reg_b14_ptr->mBits.b=0x009c;
+		reg_b15_ptr->mBits.k=0x0092;
+		reg_b15_ptr->mBits.b=0x006d;
+#else
+		reg_r0_ptr->mBits.k=0x0480;
+		reg_r0_ptr->mBits.b=0x0000;
+		reg_r1_ptr->mBits.k=0x0400;
+		reg_r1_ptr->mBits.b=0x0001;
+		reg_r2_ptr->mBits.k=0x0380;
+		reg_r2_ptr->mBits.b=0x0003;
+		reg_r3_ptr->mBits.k=0x0380;
+		reg_r3_ptr->mBits.b=0x0003;
+		reg_r4_ptr->mBits.k=0x0280;
+		reg_r4_ptr->mBits.b=0x000b;
+		reg_r5_ptr->mBits.k=0x0220;
+		reg_r5_ptr->mBits.b=0x0010;
+		reg_r6_ptr->mBits.k=0x0280;
+		reg_r6_ptr->mBits.b=0x0008;
+		reg_r7_ptr->mBits.k=0x0220;
+		reg_r7_ptr->mBits.b=0x0011;
+		reg_r8_ptr->mBits.k=0x0180;
+		reg_r8_ptr->mBits.b=0x002a;
+		reg_r9_ptr->mBits.k=0x0110;
+		reg_r9_ptr->mBits.b=0x0043;
+		reg_r10_ptr->mBits.k=0x00d5;
+		reg_r10_ptr->mBits.b=0x0053;
+		reg_r11_ptr->mBits.k=0x00b8;
+		reg_r11_ptr->mBits.b=0x005e;
+		reg_r12_ptr->mBits.k=0x00a0;
+		reg_r12_ptr->mBits.b=0x006a;
+		reg_r13_ptr->mBits.k=0x0090;
+		reg_r13_ptr->mBits.b=0x0074;
+		reg_r14_ptr->mBits.k=0x0075;
+		reg_r14_ptr->mBits.b=0x0088;
+		reg_r15_ptr->mBits.k=0x0092;
+		reg_r15_ptr->mBits.b=0x006d;
+
+		reg_g0_ptr->mBits.k=0x0480;
+		reg_g0_ptr->mBits.b=0x0000;
+		reg_g1_ptr->mBits.k=0x0400;
+		reg_g1_ptr->mBits.b=0x0001;
+		reg_g2_ptr->mBits.k=0x0380;
+		reg_g2_ptr->mBits.b=0x0003;
+		reg_g3_ptr->mBits.k=0x0380;
+		reg_g3_ptr->mBits.b=0x0003;
+		reg_g4_ptr->mBits.k=0x0280;
+		reg_g4_ptr->mBits.b=0x000b;
+		reg_g5_ptr->mBits.k=0x0220;
+		reg_g5_ptr->mBits.b=0x0010;
+		reg_g6_ptr->mBits.k=0x0280;
+		reg_g6_ptr->mBits.b=0x0008;
+		reg_g7_ptr->mBits.k=0x0220;
+		reg_g7_ptr->mBits.b=0x0011;
+		reg_g8_ptr->mBits.k=0x0180;
+		reg_g8_ptr->mBits.b=0x002a;
+		reg_g9_ptr->mBits.k=0x0110;
+		reg_g9_ptr->mBits.b=0x0043;
+		reg_g10_ptr->mBits.k=0x00d5;
+		reg_g10_ptr->mBits.b=0x0053;
+		reg_g11_ptr->mBits.k=0x00b8;
+		reg_g11_ptr->mBits.b=0x005e;
+		reg_g12_ptr->mBits.k=0x00a0;
+		reg_g12_ptr->mBits.b=0x006a;
+		reg_g13_ptr->mBits.k=0x0090;
+		reg_g13_ptr->mBits.b=0x0074;
+		reg_g14_ptr->mBits.k=0x0075;
+		reg_g14_ptr->mBits.b=0x0088;
+		reg_g15_ptr->mBits.k=0x0092;
+		reg_g15_ptr->mBits.b=0x006d;
+
+		reg_b0_ptr->mBits.k=0x0480;
+		reg_b0_ptr->mBits.b=0x0000;
+		reg_b1_ptr->mBits.k=0x0400;
+		reg_b1_ptr->mBits.b=0x0001;
+		reg_b2_ptr->mBits.k=0x0380;
+		reg_b2_ptr->mBits.b=0x0003;
+		reg_b3_ptr->mBits.k=0x0380;
+		reg_b3_ptr->mBits.b=0x0003;
+		reg_b4_ptr->mBits.k=0x0280;
+		reg_b4_ptr->mBits.b=0x000b;
+		reg_b5_ptr->mBits.k=0x0220;
+		reg_b5_ptr->mBits.b=0x0010;
+		reg_b6_ptr->mBits.k=0x0280;
+		reg_b6_ptr->mBits.b=0x0008;
+		reg_b7_ptr->mBits.k=0x0220;
+		reg_b7_ptr->mBits.b=0x0011;
+		reg_b8_ptr->mBits.k=0x0180;
+		reg_b8_ptr->mBits.b=0x002a;
+		reg_b9_ptr->mBits.k=0x0110;
+		reg_b9_ptr->mBits.b=0x0043;
+		reg_b10_ptr->mBits.k=0x00d5;
+		reg_b10_ptr->mBits.b=0x0053;
+		reg_b11_ptr->mBits.k=0x00b8;
+		reg_b11_ptr->mBits.b=0x005e;
+		reg_b12_ptr->mBits.k=0x00a0;
+		reg_b12_ptr->mBits.b=0x006a;
+		reg_b13_ptr->mBits.k=0x0090;
+		reg_b13_ptr->mBits.b=0x0074;
+		reg_b14_ptr->mBits.k=0x0075;
+		reg_b14_ptr->mBits.b=0x0088;
+		reg_b15_ptr->mBits.k=0x0092;
+		reg_b15_ptr->mBits.b=0x006d;
+#endif
+#endif
+		i = 0;
+		reg_config[0].reg_addr = ISP_GAMMA_NODE_R0_V0002 - ISP_BASE_ADDR;
+		reg_config[0].reg_value = reg_r0_ptr->dwValue;
+		reg_config[1].reg_addr = ISP_GAMMA_NODE_R1_V0002 - ISP_BASE_ADDR;
+		reg_config[1].reg_value = reg_r1_ptr->dwValue;
+		reg_config[2].reg_addr = ISP_GAMMA_NODE_R2_V0002 - ISP_BASE_ADDR;
+		reg_config[2].reg_value = reg_r2_ptr->dwValue;
+		reg_config[3].reg_addr = ISP_GAMMA_NODE_R3_V0002 - ISP_BASE_ADDR;
+		reg_config[3].reg_value = reg_r3_ptr->dwValue;
+		reg_config[4].reg_addr = ISP_GAMMA_NODE_R4_V0002 - ISP_BASE_ADDR;
+		reg_config[4].reg_value = reg_r4_ptr->dwValue;
+		reg_config[5].reg_addr = ISP_GAMMA_NODE_R5_V0002 - ISP_BASE_ADDR;
+		reg_config[5].reg_value = reg_r5_ptr->dwValue;
+		reg_config[6].reg_addr = ISP_GAMMA_NODE_R6_V0002 - ISP_BASE_ADDR;
+		reg_config[6].reg_value = reg_r6_ptr->dwValue;
+		reg_config[7].reg_addr = ISP_GAMMA_NODE_R7_V0002 - ISP_BASE_ADDR;
+		reg_config[7].reg_value = reg_r7_ptr->dwValue;
+		reg_config[8].reg_addr = ISP_GAMMA_NODE_R8_V0002 - ISP_BASE_ADDR;
+		reg_config[8].reg_value = reg_r8_ptr->dwValue;
+		reg_config[9].reg_addr = ISP_GAMMA_NODE_R9_V0002 - ISP_BASE_ADDR;
+		reg_config[9].reg_value = reg_r9_ptr->dwValue;
+		reg_config[10].reg_addr = ISP_GAMMA_NODE_R10_V0002 - ISP_BASE_ADDR;
+		reg_config[10].reg_value = reg_r10_ptr->dwValue;
+		reg_config[11].reg_addr = ISP_GAMMA_NODE_R11_V0002 - ISP_BASE_ADDR;
+		reg_config[11].reg_value = reg_r11_ptr->dwValue;
+		reg_config[12].reg_addr = ISP_GAMMA_NODE_R12_V0002 - ISP_BASE_ADDR;
+		reg_config[12].reg_value = reg_r12_ptr->dwValue;
+		reg_config[13].reg_addr = ISP_GAMMA_NODE_R13_V0002 - ISP_BASE_ADDR;
+		reg_config[13].reg_value = reg_r13_ptr->dwValue;
+		reg_config[14].reg_addr = ISP_GAMMA_NODE_R14_V0002 - ISP_BASE_ADDR;
+		reg_config[14].reg_value = reg_r14_ptr->dwValue;
+		reg_config[15].reg_addr = ISP_GAMMA_NODE_R15_V0002 - ISP_BASE_ADDR;
+		reg_config[15].reg_value = reg_r15_ptr->dwValue;
+
+		i = 16;
+		reg_config[16].reg_addr = ISP_GAMMA_NODE_G0_V0002 - ISP_BASE_ADDR;
+		reg_config[16].reg_value = reg_g0_ptr->dwValue;
+		reg_config[17].reg_addr = ISP_GAMMA_NODE_G1_V0002 - ISP_BASE_ADDR;
+		reg_config[17].reg_value = reg_g1_ptr->dwValue;
+		reg_config[18].reg_addr = ISP_GAMMA_NODE_G2_V0002 - ISP_BASE_ADDR;
+		reg_config[18].reg_value = reg_g2_ptr->dwValue;
+		reg_config[19].reg_addr = ISP_GAMMA_NODE_G3_V0002 - ISP_BASE_ADDR;
+		reg_config[19].reg_value = reg_g3_ptr->dwValue;
+		reg_config[20].reg_addr = ISP_GAMMA_NODE_G4_V0002 - ISP_BASE_ADDR;
+		reg_config[20].reg_value = reg_g4_ptr->dwValue;
+		reg_config[21].reg_addr = ISP_GAMMA_NODE_G5_V0002 - ISP_BASE_ADDR;
+		reg_config[21].reg_value = reg_g5_ptr->dwValue;
+		reg_config[22].reg_addr = ISP_GAMMA_NODE_G6_V0002 - ISP_BASE_ADDR;
+		reg_config[22].reg_value = reg_g6_ptr->dwValue;
+		reg_config[23].reg_addr = ISP_GAMMA_NODE_G7_V0002 - ISP_BASE_ADDR;
+		reg_config[23].reg_value = reg_g7_ptr->dwValue;
+		reg_config[24].reg_addr = ISP_GAMMA_NODE_G8_V0002 - ISP_BASE_ADDR;
+		reg_config[24].reg_value = reg_g8_ptr->dwValue;
+		reg_config[25].reg_addr = ISP_GAMMA_NODE_G9_V0002 - ISP_BASE_ADDR;
+		reg_config[25].reg_value = reg_g9_ptr->dwValue;
+		reg_config[26].reg_addr = ISP_GAMMA_NODE_G10_V0002 - ISP_BASE_ADDR;
+		reg_config[26].reg_value = reg_g10_ptr->dwValue;
+		reg_config[27].reg_addr = ISP_GAMMA_NODE_G11_V0002 - ISP_BASE_ADDR;
+		reg_config[27].reg_value = reg_g11_ptr->dwValue;
+		reg_config[28].reg_addr = ISP_GAMMA_NODE_G12_V0002 - ISP_BASE_ADDR;
+		reg_config[28].reg_value = reg_g12_ptr->dwValue;
+		reg_config[29].reg_addr = ISP_GAMMA_NODE_G13_V0002 - ISP_BASE_ADDR;
+		reg_config[29].reg_value = reg_g13_ptr->dwValue;
+		reg_config[30].reg_addr = ISP_GAMMA_NODE_G14_V0002 - ISP_BASE_ADDR;
+		reg_config[30].reg_value = reg_g14_ptr->dwValue;
+		reg_config[31].reg_addr = ISP_GAMMA_NODE_G15_V0002 - ISP_BASE_ADDR;
+		reg_config[31].reg_value = reg_g15_ptr->dwValue;
+
+		reg_config[32].reg_addr = ISP_GAMMA_NODE_B0_V0002 - ISP_BASE_ADDR;
+		reg_config[32].reg_value = reg_b0_ptr->dwValue;
+		reg_config[33].reg_addr = ISP_GAMMA_NODE_B1_V0002 - ISP_BASE_ADDR;
+		reg_config[33].reg_value = reg_b1_ptr->dwValue;
+		reg_config[34].reg_addr = ISP_GAMMA_NODE_B2_V0002 - ISP_BASE_ADDR;
+		reg_config[34].reg_value = reg_b2_ptr->dwValue;
+		reg_config[35].reg_addr = ISP_GAMMA_NODE_B3_V0002 - ISP_BASE_ADDR;
+		reg_config[35].reg_value = reg_b3_ptr->dwValue;
+		reg_config[36].reg_addr = ISP_GAMMA_NODE_B4_V0002 - ISP_BASE_ADDR;
+		reg_config[36].reg_value = reg_b4_ptr->dwValue;
+		reg_config[37].reg_addr = ISP_GAMMA_NODE_B5_V0002 - ISP_BASE_ADDR;
+		reg_config[37].reg_value = reg_b5_ptr->dwValue;
+		reg_config[38].reg_addr = ISP_GAMMA_NODE_B6_V0002 - ISP_BASE_ADDR;
+		reg_config[38].reg_value = reg_b6_ptr->dwValue;
+		reg_config[39].reg_addr = ISP_GAMMA_NODE_B7_V0002 - ISP_BASE_ADDR;
+		reg_config[39].reg_value = reg_b7_ptr->dwValue;
+		reg_config[40].reg_addr = ISP_GAMMA_NODE_B8_V0002 - ISP_BASE_ADDR;
+		reg_config[40].reg_value = reg_b8_ptr->dwValue;
+		reg_config[41].reg_addr = ISP_GAMMA_NODE_B9_V0002 - ISP_BASE_ADDR;
+		reg_config[41].reg_value = reg_b9_ptr->dwValue;
+		reg_config[42].reg_addr = ISP_GAMMA_NODE_B10_V0002 - ISP_BASE_ADDR;
+		reg_config[42].reg_value = reg_b10_ptr->dwValue;
+		reg_config[43].reg_addr = ISP_GAMMA_NODE_B11_V0002 - ISP_BASE_ADDR;
+		reg_config[43].reg_value = reg_b11_ptr->dwValue;
+		reg_config[44].reg_addr = ISP_GAMMA_NODE_B12_V0002 - ISP_BASE_ADDR;
+		reg_config[44].reg_value = reg_b12_ptr->dwValue;
+		reg_config[45].reg_addr = ISP_GAMMA_NODE_B13_V0002 - ISP_BASE_ADDR;
+		reg_config[45].reg_value = reg_b13_ptr->dwValue;
+		reg_config[46].reg_addr = ISP_GAMMA_NODE_B14_V0002 - ISP_BASE_ADDR;
+		reg_config[46].reg_value = reg_b14_ptr->dwValue;
+		reg_config[47].reg_addr = ISP_GAMMA_NODE_B15_V0002 - ISP_BASE_ADDR;
+		reg_config[47].reg_value = reg_b15_ptr->dwValue;
+
+
+		write_param.reg_param = (uint32_t)&reg_config[0];
+		write_param.counts = 48;
+
+		_isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+
+#endif
 /*CCE */
 /*	--
 *@
