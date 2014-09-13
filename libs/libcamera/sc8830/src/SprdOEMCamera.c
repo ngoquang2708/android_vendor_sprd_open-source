@@ -6961,7 +6961,7 @@ int camera_start_isp_process(struct frm_info *data)
 
 	ips_in.src_avail_height = g_cxt->cap_mem[frm_id].cap_raw.size.height;
 
-#if 0
+#if 1
 	ips_in.src_slice_height = ips_in.src_avail_height;
 	ips_in.dst_slice_height = ips_in.src_avail_height;
 #else
@@ -8398,6 +8398,15 @@ int camera_isp_proc_handle(struct ips_out_param *isp_out)
 			}
 		}
 		g_cxt->isp_cxt.is_first_slice = 0;
+		if (process->slice_height_out == orig_height) {
+			if (is_jpeg_encode) {
+				camera_post_convert_thum_msg();
+				camera_take_picture_done(&process->frame_info);
+			} else {
+				process->frame_info.height = process->slice_height_out;
+				camera_capture_yuv_process(&process->frame_info);
+			}
+		}
 	} else {
 		if (process->slice_height_out == g_cxt->cap_orig_size.height) {
 			if (is_jpeg_encode) {

@@ -2327,9 +2327,15 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 		chn_param_ptr->isp_proc_in[i].src_frame = req_param_ptr->post_proc_setting.mem[i].cap_raw;
 		chn_param_ptr->isp_proc_in[i].src_avail_height = req_param_ptr->post_proc_setting.mem[i].cap_raw.size.height;
+#if 1
+		chn_param_ptr->isp_proc_in[i].src_slice_height = chn_param_ptr->isp_proc_in[i].src_avail_height;
+		chn_param_ptr->isp_proc_in[i].dst_slice_height = chn_param_ptr->isp_proc_in[i].src_avail_height;
+		chn_param_ptr->isp_process[i].slice_height_in = chn_param_ptr->isp_proc_in[i].src_avail_height;
+#else
 		chn_param_ptr->isp_proc_in[i].src_slice_height = CMR_SLICE_HEIGHT;
 		chn_param_ptr->isp_proc_in[i].dst_slice_height = CMR_SLICE_HEIGHT;
 		chn_param_ptr->isp_process[i].slice_height_in = CMR_SLICE_HEIGHT;
+#endif
 //		chn_param_ptr->isp_process[i].slice_height_out = CMR_SLICE_HEIGHT;
 		chn_param_ptr->isp_proc_in[i].dst_frame.fmt = ISP_DATA_YUV420_2FRAME;
 		chn_param_ptr->isp_proc_in[i].src_frame.fmt = ISP_DATA_CSI2_RAW10;
@@ -3085,6 +3091,7 @@ cmr_int snp_post_proc(cmr_handle snp_handle, void *data)
 			break;
 		case IMG_DATA_TYPE_RAW:
 			ret = snp_post_proc_for_raw(snp_handle, data);
+			break;
 		default:
 			CMR_LOGE("err, fmt %d", fmt);
 			ret = CMR_CAMERA_INVALID_FORMAT;
