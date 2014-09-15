@@ -841,6 +841,29 @@ err:
 	return -1;
 }
 
+struct eng_wifi_eutops wifi_eutops =
+{
+    wifi_eut_set,				//int (*wifieut)(int,char *);
+    wifi_eut_get,				//int (*wifieut_req)(char *);
+    wifi_tx_set,				//int (*wifi_tx)(int,char *);
+    NULL,						//int (*set_wifi_tx_factor)(long ,char *);
+    wifi_rx_set,				//int (*wifi_rx)(int,char *);
+    NULL,						//int (*set_wifi_mode)(char *,char *);
+    NULL,						//int (*set_wifi_ratio)(float,char *);
+    wifi_channel_set,			//int (*set_wifi_ch)(int,char *);
+    wifi_tx_get,				//int (*wifi_tx_req)(char *);
+    NULL,						//int (*wifi_tx_factor_req)(char *);
+    wifi_rx_get,				//int (*wifi_rx_req)(char *);
+    NULL,						//int (*wifi_ratio_req)(char *);
+    wifi_channel_get,			//int (*wifi_ch_req)(char *);
+    wifi_rxpktcnt_get,			//int (*wifi_rxpackcount)(char *);
+    NULL,						//int (*wifi_clr_rxpackcount)(char *);
+    wifi_rate_set,				//int (*set_wifi_rate)(char *, char *);
+    wifi_rate_get,				//int (*wifi_rate_req)(char *);
+    wifi_txgainindex_set,		//int (*set_wifi_txgainindex)(int , char *);
+    wifi_txgainindex_get,		//int (*wifi_txgainindex_req)(char *);
+    wifi_rssi_get				//int (*wifi_rssi_req)(char *);
+};
 
 
 

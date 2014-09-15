@@ -18,7 +18,7 @@
 #define EUT_WIFI_CH_REQ	"+SPWIFITEST:CH="
 #define EUT_WIFI_RATIO_REQ	"+SPWIFITEST:RATIO="
 #define EUT_WIFI_TXFAC_REQ	"+SPWIFITEST:TXFAC="
-#define EUT_WIFI_RXPACKCOUNT_REQ	"+SPWIFITEST:RXPACCOUNT="
+#define EUT_WIFI_RXPACKCOUNT_REQ	"+SPWIFITEST:RXPACKCOUNT="
 
 #define EUT_GPS_OK	"+SPGPSTEST:OK"
 #define EUT_GPS_ERROR	"+SPGPSTEST:ERR="
@@ -65,6 +65,11 @@ struct eng_wifi_eutops{
     int (*wifi_ch_req)(char *);
     int (*wifi_rxpackcount)(char *);
     int (*wifi_clr_rxpackcount)(char *);
+    int (*set_wifi_rate)(char *, char *);
+    int (*wifi_rate_req)(char *);
+    int (*set_wifi_txgainindex)(int , char *);
+    int (*wifi_txgainindex_req)(char *);
+    int (*wifi_rssi_req)(char *);
 };
 
 struct eng_gps_eutops{
@@ -89,6 +94,11 @@ int set_wifi_ratio(float ratio,char *result);
 int set_wifi_ch(int ch,char *result);
 int wifi_rxpackcount(char *result);
 int wifi_clr_rxpackcount(char *result);
+int set_wifi_rate(char *string, char *rsp);
+int wifi_rate_req(char *rsp);
+int set_wifi_txgainindex(int index, char *rsp);
+int wifi_txgainindex_req(char *rsp);
+int wifi_rssi_req(char *rsp);
 static int start_bteut(char *result);
 static int start_wifieut(char *result);
 static int end_wifieut(char *result);

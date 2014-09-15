@@ -8,11 +8,29 @@
 #endif
 #define COUNTER_BUF_SIZE 2048
 
-static int wifieut_state;
+#define WIFI_RATE_REQ_RET         "+SPWIFITEST:RATE="
+#define EUT_WIFI_RSSI_REQ_RET     "+SPWIFITEST:RSSI="
+#define WIFI_TXGAININDEX_REQ_RET  "+SPWIFITEST:TXGAININDEX="
+
+
+
+#ifndef WIFI_DRIVER_FW_PATH_PARAM
+#define WIFI_DRIVER_FW_PATH_PARAM	"sys/module/bcmdhd/parameters/firmware_path"
+#endif
+#ifndef WIFI_DRIVER_FW_PATH_MFG
+#define WIFI_DRIVER_FW_PATH_MFG "system/vendor/firmware/fw_bcmdhd_mfg.bin"
+#endif
+
+#ifdef STR(str)
+#undef STR
+#endif
+#define STR(str) str
+
+static int wifieut_state=0;
 static int wifiwork_mode;
 static float ratio_p;
 static int channel_p;
-static int tx_power_factor;
+static int tx_power_factor=17;//17dbm=50mW
 static int tx_power_factor_p;
 static int tx_state;
 
@@ -43,7 +61,13 @@ struct eng_wifi_eutops wifi_eutops ={   wifieut,
     wifi_ratio_req,
     wifi_ch_req,
     wifi_rxpackcount,
-    wifi_clr_rxpackcount
+    wifi_clr_rxpackcount,
+    set_wifi_rate,				//int (*set_wifi_rate)(char *, char *);
+    wifi_rate_req,				//int (*wifi_rate_req)(char *);
+    set_wifi_txgainindex,		//int (*set_wifi_txgainindex)(int , char *);
+    wifi_txgainindex_req,		//int (*wifi_txgainindex_req)(char *);
+    wifi_rssi_req				//int (*wifi_rssi_req)(char *);
+
 };
 
 struct wifi_ratio2mode{
@@ -59,6 +83,66 @@ struct wifi_ratio2mode mode_list[]={
 
 static int get_reflect_factor(int factor,int mode);
 static long parse_packcount(char *filename);
+
+typedef struct
+{
+	float rate;
+	char *name;
+} WIFI_RATE;
+
+static WIFI_RATE g_wifi_rate_table[] = 
+{
+	{1, "DSSS-1"},
+	{2, "DSSS-2"},
+	{5.5, "CCK-5.6"},
+	{11, "CCK-11"},
+	{6, "OFDM-6"},
+	{9, "OFDM-9"},
+	{12, "OFDM-12"},
+	{18, "OFDM-18"},
+	{24, "OFDM-24"},
+	{36, "OFDM-36"},
+	{48, "OFDM-48"},
+	{54, "OFDM-54"},
+	{6.5, "MCS-0"},
+	{13, "MCS-1"},
+	{19.5, "MCS-2"},
+	{26, "MCS-3"},
+	{39, "MCS-4"},
+	{52, "MCS-5"},
+	{58.5, "MCS-6"},
+	{65, "MCS-7"},
+};
+
+static float mattch_rate_table_str(char *string)
+{
+	int i;
+	float ret = 0;
+	for( i = 0; i < (int)NUM_ELEMS(g_wifi_rate_table); i++)
+	{
+		if( NULL != strstr(string, g_wifi_rate_table[i].name) )
+		{
+			ret = g_wifi_rate_table[i].rate;
+			break;
+		}
+	}
+	return ret;
+}
+
+static char *mattch_rate_table_index(float rate)
+{
+	int i;
+	char *p = NULL;
+	for( i = 0; i < (int)NUM_ELEMS(g_wifi_rate_table); i++)
+	{
+		if((int)(rate*1000) == (int)(g_wifi_rate_table[i].rate))
+		{
+			p = g_wifi_rate_table[i].name;
+			break;
+		}
+	}
+	return p;
+}
 
 int wifieut(int command_code,char *rsp)
 {
@@ -100,9 +184,11 @@ int start_wifieut(char *result)
         ALOGE("=== start_wifieut test failed on cmd : ifconfig wlan0 down ===\n");
         sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
     }else{
-        error = system("echo -n /system/etc/wifi/sdio-g-mfgtest.bin > /sys/module/bcmdhd/parameters/firmware_path");
+        //error = system("echo -n /system/etc/wifi/sdio-g-mfgtest.bin > /sys/module/bcmdhd/parameters/firmware_path");
+        error = system("echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM));
         if(error == -1 || error ==127){
-            ALOGE("=== start_wifieut test failed on cmd : echo -n \"/system/etc/sdio-g-mfgtest.bin\" > /sys/module/bcmdhd/parameters/firmware_path ===\n");
+            //ALOGE("=== start_wifieut test failed on cmd : echo -n \"/system/etc/sdio-g-mfgtest.bin\" > /sys/module/bcmdhd/parameters/firmware_path ===\n");
+            ALOGE("=== start_wifieut test failed on cmd : echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM)"\n");
             sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
         }else{
             error = system("ifconfig wlan0 up");
@@ -510,4 +596,111 @@ static long parse_packcount(char * filename)
     }else{
         return 0;
     }
+}
+
+int set_wifi_rate(char *string, char *rsp)
+{
+	float rate = -1;
+	if(0 == wifieut_state)
+	{
+		ALOGE("%s(), wifieut_state:%d", __FUNCTION__, wifieut_state);
+		sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
+		return -1;
+	}
+	rate = mattch_rate_table_str(string);
+	return set_wifi_ratio(rate, rsp);
+}
+
+int wifi_rate_req(char *rsp)
+{
+	int ret = -1;
+	char *str = NULL;
+	ALOGI("%s()...\n", __FUNCTION__);
+	if(0 == ratio_p)
+	{
+		ALOGE("%s(), ratio_p is 0", __FUNCTION__);
+		goto err;
+	}
+	str = mattch_rate_table_index(ratio_p);
+	if(NULL == str)
+	{
+		ALOGE("%s(), don't mattch rate", __FUNCTION__);
+		goto err;
+	}
+		
+	sprintf(rsp, "%s%s", WIFI_RATE_REQ_RET, str);
+	return 0;
+err:
+	sprintf(rsp, "%s%s", WIFI_RATE_REQ_RET, "null");
+	return -1;
+}
+
+int set_wifi_txgainindex(int index, char *rsp)
+{
+	if(0 == wifieut_state)
+	{
+		ALOGE("%s(), wifieut_state:%d", __FUNCTION__, wifieut_state);
+		goto err;
+	}		
+	ALOGI("%s(), index:%d\n",  __FUNCTION__, index);
+	return set_wifi_tx_factor_83780(index, rsp);
+
+err:
+	sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
+	return -1;
+}
+
+int wifi_txgainindex_req(char *rsp)
+{
+	if(0 == wifieut_state)
+	{
+		ALOGE("%s(), wifieut_state:%d", __FUNCTION__, wifieut_state);
+		goto err;
+	}	
+
+	sprintf(rsp,"%s%d",WIFI_TXGAININDEX_REQ_RET,tx_power_factor);
+	return 0;
+err:
+	sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
+	return -1;
+}
+
+int wifi_rssi_req(char *rsp)
+{
+	char buf[100]={0};
+	FILE *fp;
+	int rssi=-100;
+
+	if( 1 == tx_state )
+	{
+		ALOGE("wifi_rssi_req(),tx_state:%d", tx_state);
+		goto err;
+	}
+
+	if ((fp = popen("wl rssi", "r" )) == NULL)
+	{
+		ALOGE("=== wifi_rssi_req popen() fail ===\n");
+		sprintf(rsp,"%s%s",EUT_WIFI_ERROR,"popen");
+		return -1;
+	}
+	while(fgets(buf, sizeof(buf), fp) != NULL)
+	{
+		if (buf[0]=='-' ||(buf[0]>='0' && buf[0]<='9'))
+		{
+			rssi = atoi(buf);
+			break;
+		}
+	}
+	pclose(fp);
+
+	if(-100 == rssi)
+	{
+		ALOGE("get_rssi cmd  err");
+		goto err;
+	}
+	
+	sprintf(rsp, "%s0x%x", EUT_WIFI_RSSI_REQ_RET, rssi);
+err:
+	sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
+	return -1;
 }

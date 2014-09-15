@@ -43,7 +43,6 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       vlog.c \
 		       vdiag.c \
 		       bt_eut.c \
-		       wifi_eut_shark.c \
 		       eng_productdata.c \
 		       adc_calibration.c\
 		       crc16.c \
@@ -72,6 +71,18 @@ ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
 	LOCAL_SRC_FILES     += eng_controllerbqbtest.c
 endif
+endif
+
+ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
+LOCAL_SRC_FILES     += wifi_eut.c
+ifdef WIFI_DRIVER_FW_PATH_PARAM
+LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_PARAM=\"$(WIFI_DRIVER_FW_PATH_PARAM)\"
+endif
+ifdef WIFI_DRIVER_FW_PATH_MFG
+LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_MFG=\"$(WIFI_DRIVER_FW_PATH_MFG)\"
+endif
+else
+LOCAL_SRC_FILES     += wifi_eut_shark.c
 endif
 
 LOCAL_MODULE := engpc
