@@ -348,7 +348,7 @@ extern   "C"
 #define ISP_AUTOCONT_MAX_MINSTATUS_V0002    (ISP_BASE_ADDR+0x1004)
 #define ISP_AUTOCONT_PARAM        (ISP_BASE_ADDR+0x1014)
 #define ISP_AUTOCONT_MAX_MIN      (ISP_BASE_ADDR+0x1018)
-#define ISP_AUTOCONT_ADJUST_V0002                  (ISP_BASE_ADDR+0x1018)
+#define ISP_AUTOCONT_ADJUST_V0002                  (ISP_BASE_ADDR+0x101c)
 
 //AFM: auto focus monitor
 #define ISP_AFM_STATUS            (ISP_BASE_ADDR+0x1100)
@@ -419,6 +419,7 @@ extern   "C"
 #define ISP_CSS_THRD2             (ISP_BASE_ADDR+0x1520)
 #define ISP_CSS_THRD3             (ISP_BASE_ADDR+0x1524)
 #define ISP_CSS_SLICE_SIZE        (ISP_BASE_ADDR+0x1528)
+#define ISP_CSS_RATIO            (ISP_BASE_ADDR+0x152c)
 
 //CSA: color saturation adjustment
 #define ISP_CSA_STATUS            (ISP_BASE_ADDR+0x1600)
@@ -1361,9 +1362,9 @@ union _isp_nawbm_blk_size_v0002_tag {
 union _isp_nawbm_wr_s0_v0002_tag {
     struct _isp_nawbm_wr_s0_v0002_map {
         volatile unsigned int wr_0_sy      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_0_sx      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1371,9 +1372,9 @@ union _isp_nawbm_wr_s0_v0002_tag {
 union _isp_nawbm_wr_e0_v0002_tag {
     struct _isp_nawbm_wr_e0_v0002_map {
         volatile unsigned int wr_0_ey      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_0_ex      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1381,9 +1382,9 @@ union _isp_nawbm_wr_e0_v0002_tag {
 union _isp_nawbm_wr_s1_v0002_tag {
     struct _isp_nawbm_wr_s1_v0002_map {
         volatile unsigned int wr_1_sy      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_1_sx      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1391,9 +1392,9 @@ union _isp_nawbm_wr_s1_v0002_tag {
 union _isp_nawbm_wr_e1_v0002_tag {
     struct _isp_nawbm_wr_e1_v0002_map {
         volatile unsigned int wr_1_ey      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_1_ex      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1401,9 +1402,9 @@ union _isp_nawbm_wr_e1_v0002_tag {
 union _isp_nawbm_wr_s2_v0002_tag {
     struct _isp_nawbm_wr_s2_v0002_map {
         volatile unsigned int wr_2_sy      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_2_sx      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1411,9 +1412,9 @@ union _isp_nawbm_wr_s2_v0002_tag {
 union _isp_nawbm_wr_e2_v0002_tag {
     struct _isp_nawbm_wr_e2_v0002_map {
         volatile unsigned int wr_2_ey      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_2_ex      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1421,9 +1422,9 @@ union _isp_nawbm_wr_e2_v0002_tag {
 union _isp_nawbm_wr_s3_v0002_tag {
     struct _isp_nawbm_wr_s3_v0002_map {
         volatile unsigned int wr_3_sy      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_3_sx      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1431,9 +1432,9 @@ union _isp_nawbm_wr_s3_v0002_tag {
 union _isp_nawbm_wr_e3_v0002_tag {
     struct _isp_nawbm_wr_e3_v0002_map {
         volatile unsigned int wr_3_ey      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_3_ex      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1441,9 +1442,9 @@ union _isp_nawbm_wr_e3_v0002_tag {
 union _isp_nawbm_wr_s4_v0002_tag {
     struct _isp_nawbm_wr_s4_v0002_map {
         volatile unsigned int wr_4_sy      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_4_sx      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1451,9 +1452,9 @@ union _isp_nawbm_wr_s4_v0002_tag {
 union _isp_nawbm_wr_e4_v0002_tag {
     struct _isp_nawbm_wr_e4_v0002_map {
         volatile unsigned int wr_0_ey      :10;
-        volatile unsigned int reserved0    :5;
+        volatile unsigned int reserved0    :6;
         volatile unsigned int wr_0_ex      :10;
-        volatile unsigned int reserved1    :5;
+        volatile unsigned int reserved1    :6;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -1643,42 +1644,49 @@ union _isp_nbpc_status_v0002_tag {
 union _isp_nbpc_param_v0002_tag {
     struct _isp_nbpc_param_v0002_map {
         volatile unsigned int bypass        :1;
-        volatile unsigned int mode          :1; // 0: maping 1:adptive
-        volatile unsigned int pattern_type  :6;
-        volatile unsigned int reserved0     :2;
-        volatile unsigned int maxminThr     :10;
-        volatile unsigned int super_badThr  :10;
-        volatile unsigned int reserved1     :2;
+        volatile unsigned int bypass_pvd        :1;
+        volatile unsigned int reserved0        :2;
+        volatile unsigned int mode          :2;
+        volatile unsigned int reserved1        :2;
+        volatile unsigned int mask_mode        :3;
+        volatile unsigned int reserved2        :5;
+        volatile unsigned int kmin        :3;
+        volatile unsigned int reserved3      :1;
+        volatile unsigned int kmax        :3;
+        volatile unsigned int reserved4        :9;
     }mBits ;
     volatile unsigned int dwValue ;
 };
 
 union _isp_nbpc_cfg_v0002_tag {
     struct _isp_nbpc_cfg_v0002_map {
-        volatile unsigned int flat_thr      :10;
-        volatile unsigned int std_thr       :10;
-        volatile unsigned int texture_thr   :10;
-        volatile unsigned int reserved      :2;
+        volatile unsigned int cntr_theshold         :3;
+        volatile unsigned int map_hw_fifo_clr_en   :1;
+        volatile unsigned int ktimes               :3;
+        volatile unsigned int map_fifo_clr         :1;
+        volatile unsigned int delt34               :3;
+        volatile unsigned int reserved1            :5;
+        volatile unsigned int bad_pixel_num        :16;
     }mBits ;
     volatile unsigned int dwValue ;
 };
 
 union _isp_nbpc_factor_v0002_tag {
     struct _isp_nbpc_factor_v0002_map {
-        volatile unsigned int flat_thr      :10;
-        volatile unsigned int std_thr       :10;
-        volatile unsigned int texture_thr   :10;
-        volatile unsigned int reserved      :2;
+        volatile unsigned int flat_factor       :3;
+        volatile unsigned int reserved0         :1;
+        volatile unsigned int safe_factor       :5;
+        volatile unsigned int reserved1         :23;
     }mBits ;
     volatile unsigned int dwValue ;
 };
 
 union _isp_nbpc_coeff_v0002_tag {
     struct _isp_nbpc_coeff_v0002_map {
-        volatile unsigned int flat_thr      :10;
-        volatile unsigned int std_thr       :10;
-        volatile unsigned int texture_thr   :10;
-        volatile unsigned int reserved      :2;
+        volatile unsigned int spike_coeff       :3;
+        volatile unsigned int reserved0         :1;
+        volatile unsigned int dead_coeff        :3;
+        volatile unsigned int reserved1         :25;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3333,7 +3341,19 @@ union _isp_css_slice_size_tag {
     }mBits ;
     volatile unsigned int dwValue ;
 };
-
+union _isp_css_ratio_tag {
+    struct _isp_css_ratio_map {
+        volatile unsigned int ratio_7   :4;
+        volatile unsigned int ratio_6   :4;
+        volatile unsigned int ratio_5   :4;
+        volatile unsigned int ratio_4   :4;
+        volatile unsigned int ratio_3   :4;
+        volatile unsigned int ratio_2   :4;
+        volatile unsigned int ratio_1   :4;
+        volatile unsigned int ratio_0   :4;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
 // CSA
 union _isp_csa_status_tag {
     struct _isp_csa_status_map {
@@ -3583,7 +3603,7 @@ union _isp_com_burst_size_tag {
 union _isp_com_mem_switch_v0000_tag {
     struct _isp_com_mem_switch_v0000_map {
         volatile unsigned int mem_switch  :1;
-        volatile unsigned int reserved    :30;
+        volatile unsigned int reserved    :31;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3591,7 +3611,7 @@ union _isp_com_mem_switch_v0000_tag {
 union _isp_com_shadow_tag {
     struct _isp_com_shadow_map {
         volatile unsigned int shadow_bit  :1;
-        volatile unsigned int reserved    :30;
+        volatile unsigned int reserved    :31;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3667,7 +3687,7 @@ union _isp_com_hw_eb_tag {
 union _isp_com_sw_switch_tag {
     struct _isp_com_sw_switch_map {
         volatile unsigned int pmu_sel     :1; // 0:hw 1:sw
-        volatile unsigned int reserved    :30;
+        volatile unsigned int reserved    :31;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3686,7 +3706,7 @@ union _isp_com_sw_toggle_tag {
 union _isp_com_preview_stop_tag {
     struct _isp_com_preview_stop_map {
         volatile unsigned int stop        :1;
-        volatile unsigned int reserved    :30;
+        volatile unsigned int reserved    :31;
     }mBits ;
     volatile unsigned int dwValue ;
 };
