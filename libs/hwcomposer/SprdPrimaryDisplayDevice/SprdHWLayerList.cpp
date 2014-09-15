@@ -368,7 +368,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
                                                GXPMaxComposeWithVideoLayerCount)
                                              : (((uint32_t)mOSDLayerCount >
                                                  GXPMaxComposeOSDLayerCount)
-                                                || (mOSDLayerCount > 0 && mFBLayerCount > 0));
+                                                || (mOSDLayerCount > 0 && mFBLayerCount > 0)
+                                                || accelerateOSDByOVC);
         if (resetOSDLayerCond)
         {
             resetOverlayFlag(mOSDLayerList[i]);
@@ -534,7 +535,10 @@ void SprdHWLayerList:: resetOverlayFlag(SprdHWLayer *l)
     }
 
     hwc_layer_1_t *layer = l->getAndroidLayer();
-    layer->compositionType = HWC_FRAMEBUFFER;
+    if (layer)
+    {
+        layer->compositionType = HWC_FRAMEBUFFER;
+    }
     int index = l->getSprdLayerIndex();
 
     if (index < 0)
@@ -1130,7 +1134,7 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
              ((mRGBLayerCount > 0) && (mRGBLayerFullScreenFlag == false)))
         {
             ALOGI_IF(mDebugFlag, "mRGBLayerFullScreenFlag: %d", mRGBLayerFullScreenFlag);
-             mSkipLayerFlag = true;
+            mSkipLayerFlag = true;
         }
         else if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == GRALLOC_USAGE_PROTECTED)
         {
@@ -1184,6 +1188,22 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             }
         }
         displayType |= HWC_DISPLAY_OVERLAY_COMPOSER_GPU;
+    }
+    else
+    {
+        for (int i = 0; i < LayerCount; i++)
+        {
+            SprdHWLayer *SprdLayer = &(mLayerList[i]);
+            if (SprdLayer == NULL)
+            {
+                continue;
+            }
+
+            if (SprdLayer->InitCheck())
+            {
+                resetOverlayFlag(SprdLayer);
+            }
+        }
     }
 
 
