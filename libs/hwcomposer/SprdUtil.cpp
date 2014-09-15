@@ -1500,9 +1500,6 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
                  dstRect->x, dstRect->y,
                  dstRect->w, dstRect->h);
 
-
-
-
         if((mGsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL)
            ||((mGsp_cap.buf_type_support == GSP_ADDR_TYPE_PHYSICAL) && (private_h->flags & private_handle_t::PRIV_FLAGS_USES_PHY))) {
             //config Video ,use GSP L0
@@ -1525,7 +1522,7 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
                     gsp_cfg_info.layer0_info.endian_mode.uv_word_endn = GSP_WORD_ENDN_2;
                     break;
                 case HAL_PIXEL_FORMAT_RGB_565:
-                    gsp_cfg_info.layer0_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_BGR;
+                    gsp_cfg_info.layer0_info.endian_mode.rgb_swap_mode = GSP_RGB_SWP_RGB;
                     break;
                 default:
                     break;

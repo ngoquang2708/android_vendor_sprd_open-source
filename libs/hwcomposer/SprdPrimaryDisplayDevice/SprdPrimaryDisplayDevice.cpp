@@ -775,7 +775,7 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         {
             if (mOverlayPlane->getPlaneFormat() == PLANE_FORMAT_RGB888)
             {
-                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_RGB888);
             }
             else if (mOverlayPlane->getPlaneFormat() == PLANE_FORMAT_YUV422)
             {
@@ -790,11 +790,11 @@ int SprdPrimaryDisplayDevice:: commit(hwc_display_contents_1_t* list)
         {
             if (mPrimaryPlane->getPlaneFormat() == PLANE_FORMAT_RGB888)
             {
-                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB888);
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_RGB888);
             }
             else if (mPrimaryPlane->getPlaneFormat() == PLANE_FORMAT_RGB565)
             {
-                      mUtil->UpdateOutputFormat(GSP_DST_FMT_ARGB565);
+                      mUtil->UpdateOutputFormat(GSP_DST_FMT_RGB565);
             }
         }
 
