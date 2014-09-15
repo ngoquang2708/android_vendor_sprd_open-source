@@ -1059,6 +1059,7 @@ ret);
             ALOGE("%s:open FM device",__func__);
 
             //force_all_standby(adev);
+            i2s_pin_mux_sel(adev, FM_IIS);
             adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
             if (!pcm_is_ready(adev->pcm_fm_dl)) {
             ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
