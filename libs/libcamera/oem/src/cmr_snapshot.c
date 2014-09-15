@@ -540,12 +540,21 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 		goto exit;
 	}
 	if (enc_out_ptr->total_height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
-#ifdef TEST_MEM_DATA
-		camera_save_to_file(SNP_ENCODE_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+//#ifdef TEST_MEM_DATA
+		/* temp modify to trace bug350005 */
+		if(cxt->req_param.post_proc_setting.actual_snp_size.width < 60 ||
+			cxt->req_param.post_proc_setting.actual_snp_size.height < 60
+			|| enc_out_ptr->stream_size < 100) {
+			CMR_LOGE("picture error, look bug350005,{%d, %d, %d}", 
 				cxt->req_param.post_proc_setting.actual_snp_size.width,
 				cxt->req_param.post_proc_setting.actual_snp_size.height,
-				&mem_ptr->target_jpeg.addr_vir);
-#endif
+				enc_out_ptr->stream_size);
+			camera_save_to_file(SNP_ENCODE_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+					cxt->req_param.post_proc_setting.actual_snp_size.width,
+					cxt->req_param.post_proc_setting.actual_snp_size.height,
+					&mem_ptr->target_jpeg.addr_vir);
+		}
+//#endif
 		if (CAMERA_ISP_TUNING_MODE == cxt->req_param.mode) {
 			send_capture_data(0x10,/* jpg */
 								cxt->req_param.post_proc_setting.actual_snp_size.width,
@@ -568,6 +577,16 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 		snp_set_status(snp_handle, POST_PROCESSING);
 		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_DONE, (void*)ret);
 	} else {
+		/* temp modify to trace bug350005 */
+		if(enc_out_ptr->stream_size < 100 || enc_out_ptr->total_height < 60) {
+			CMR_LOGE("picture error, look bug350005,{%d, %d}", 
+				enc_out_ptr->total_height, enc_out_ptr->stream_size);
+			camera_save_to_file(SNP_ENCODE_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+					cxt->req_param.post_proc_setting.actual_snp_size.width,
+					cxt->req_param.post_proc_setting.actual_snp_size.height,
+					&mem_ptr->target_jpeg.addr_vir);
+		}
+
 		ret = CMR_CAMERA_NO_SUPPORT;
 		CMR_LOGI("don't support");
 		goto exit;
