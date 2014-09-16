@@ -307,8 +307,10 @@ static cmr_int setting_sn_ctrl(struct setting_component *cpt, cmr_uint sn_cmd,
 	return ret;
 }
 
-static cmr_uint camera_param_to_isp(cmr_uint cmd, cmr_uint in_param)
+static cmr_uint camera_param_to_isp(cmr_uint cmd,
+											struct setting_cmd_parameter *parm)
 {
+	cmr_uint in_param = parm->cmd_type_value;
 	cmr_uint out_param = in_param;
 
 	switch (cmd) {
@@ -370,6 +372,11 @@ static cmr_uint camera_param_to_isp(cmr_uint cmd, cmr_uint in_param)
 			}
 			break;
 		}
+
+	case COM_ISP_SET_VIDEO_MODE:
+		out_param = parm->preview_fps_param.frame_rate;
+		break;
+
 	default:
 		break;
 
@@ -392,7 +399,7 @@ static cmr_int setting_isp_ctrl(struct setting_component *cpt, cmr_uint isp_cmd,
 
 	if (init_in->setting_isp_ioctl) {
 		isp_param.camera_id = parm->camera_id;
-		isp_param.cmd_value = camera_param_to_isp(isp_cmd, parm->cmd_type_value);
+		isp_param.cmd_value = camera_param_to_isp(isp_cmd, parm);
 		ret = (*init_in->setting_isp_ioctl)(init_in->oem_handle, isp_cmd, &isp_param);
 		if (ret) {
 			CMR_LOGE("sn ctrl failed");
@@ -510,9 +517,9 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 			}
 
 			if (setting_is_rawrgb_format(cpt, parm)) {
-				ret =  setting_isp_ctrl(cpt, item->isp_cmd, parm);
+				ret = setting_isp_ctrl(cpt, item->isp_cmd, parm);
 			} else {
-				ret = setting_sn_ctrl(cpt, item->sn_cmd,parm);
+				ret = setting_sn_ctrl(cpt, item->sn_cmd, parm);
 			}
 			if (ret) {
 				CMR_LOGE("failed %ld", ret);
@@ -520,13 +527,17 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 			}
 
 			if (type == SETTING_GENERAL_PREVIEW_FPS) {
-				cmr_int  is_recording = parm->preview_fps_param.is_recording;
+				if (parm->preview_fps_param.frame_rate != 0) {
+					struct setting_cmd_parameter isoParm = {0};
 
-				if (setting_is_rawrgb_format(cpt, parm)) {
-							ret =  setting_isp_ctrl(cpt, COM_ISP_SET_ISO, parm);
+					isoParm.camera_id = parm->camera_id;
+					isoParm.cmd_type_value = 5;
+					if (setting_is_rawrgb_format(cpt, &isoParm)) {
+						ret = setting_isp_ctrl(cpt, COM_ISP_SET_ISO, &isoParm);
+					}
 				}
 				//always do
-				setting_sn_ctrl(cpt, item->sn_cmd, parm);
+				//setting_sn_ctrl(cpt, item->sn_cmd, parm);
 			}
 
 
@@ -546,7 +557,7 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 	}
 setting_out:
 	if (SETTING_GENERAL_SCENE_MODE == type) {
-		CMR_LOGI(" wjp scene %d",*item->cmd_type_value);
+		CMR_LOGI("scene %d",*item->cmd_type_value);
 	}
 	return ret;
 }
@@ -843,10 +854,12 @@ static cmr_int setting_set_preview_fps(struct setting_component *cpt,
 	cmr_int                      ret = 0;
 	struct setting_local_param   *local_param = get_local_param(cpt, parm->camera_id);
 
-
-	if (0 != parm->cmd_type_value) {
+	if (0 != parm->preview_fps_param.frame_rate) {
 		local_param->is_dv_mode = 1;
+	} else {
+		local_param->is_dv_mode = 0;
 	}
+
 	ret = setting_set_general(cpt, SETTING_GENERAL_PREVIEW_FPS, parm);
 
 	return ret;
@@ -1330,9 +1343,20 @@ static cmr_int setting_get_exif_info(struct setting_component *cpt,
 	return ret;
 }
 
-static cmr_int setting_set_video_mode(cmr_uint mode, cmr_uint frame_rate)
+static cmr_int setting_set_video_mode(struct setting_component *cpt,
+				                      struct setting_cmd_parameter *parm)
 {
-	cmr_int ret = 0;
+	cmr_int 					 ret = 0;
+	struct setting_local_param	 *local_param = get_local_param(cpt, parm->camera_id);
+	struct setting_cmd_parameter setting;
+
+	if (0 != parm->preview_fps_param.frame_rate) {
+		local_param->is_dv_mode = 1;
+	} else {
+		local_param->is_dv_mode = 0;
+	}
+
+	ret = setting_set_general(cpt, SETTING_GENERAL_PREVIEW_FPS, parm);
 
 	return ret;
 }
@@ -1690,6 +1714,12 @@ static cmr_int setting_set_environment(struct setting_component *cpt,
 		cmd_param.cmd_type_value = hal_param->hal_common.scene_mode;
 		ret = setting_set_scene_mode(cpt, &cmd_param);
 		CMR_RTN_IF_ERR(ret);
+	}
+
+	if (invalid_word != hal_param->hal_common.frame_rate) {
+		//setting_get_video_mode
+		cmd_param.preview_fps_param.frame_rate= hal_param->hal_common.frame_rate;
+		ret = setting_set_video_mode(cpt, &cmd_param);
 	}
 
 exit:
@@ -2215,7 +2245,6 @@ cmr_int cmr_setting_ioctl(cmr_handle setting_handle, cmr_uint cmd_type,
 		CMR_LOGE("param has error");
 		return -CMR_CAMERA_INVALID_PARAM;
 	}
-
 
 	item = &setting_list[cmd_type];
 	if (item && item->setting_ioctl) {

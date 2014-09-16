@@ -706,8 +706,6 @@ static uint32_t set_GC0310_video_mode(uint32_t mode)
 		return 0;
 
 	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff!=sensor_reg_ptr[i].reg_value); i++) {
-		SENSOR_PRINT_ERR("SENSOR: set_video_mode: addr 0x%x, value 0x%x\n",
-			sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 		GC0310_MIPI_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
 
