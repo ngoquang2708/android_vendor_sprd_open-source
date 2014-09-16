@@ -188,16 +188,18 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                     /*get calibration mode*/
                     len = cali_parse_one_para(str, ',', &mode);
                     if(len > 0){
-                        str = str + len +1;
+                        str = str + len + 1;
                         /*get calibration freq*/
                         len = cali_parse_one_para(str, ',', &freq);
                         /*get calibration device*/
-                        str = str + len +1;
+                        str = str + len + 1;
                         len = cali_parse_one_para(str, ' ', &device);
                     }
                     switch(mode){
                         case 1:
                         case 5:
+                            strcpy(cmdvalue->cp_type,"gge");
+                            break;
                         case 7:
                         case 8:
                             strcpy(cmdvalue->cp_type,"tl");
@@ -205,6 +207,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                         case 11:
                         case 12:
                             strcpy(cmdvalue->cp_type,"w");
+                            break;
                         case 14:
                         case 15:
                             strcpy(cmdvalue->cp_type,"tl"); /*tddcsfb gsm cali and cali-post */
@@ -449,6 +452,9 @@ int main (int argc, char** argv)
             }else{
             // Initialize file for ADC
                 initialize_ctrl_file();
+            }
+            if(0 != eng_thread_create(&t4, eng_printlog_thread, NULL)){
+                ENG_LOG("printlog thread start error");
             }
         }else{
             eng_file_unlock(fd);

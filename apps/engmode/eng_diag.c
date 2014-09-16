@@ -2650,34 +2650,40 @@ static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen)
         ENG_LOG("%s,null pointer",__FUNCTION__);
        return 0;
     }
+
     rsplen = sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(MSG_HEAD_T);
-    if(NULL != (rsp_ptr = (char*)malloc(rsplen))){
-	    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
-	    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
-	    ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x01;
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
     }
+
+	memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+	((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+	((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x01;
 
     TOOLS_DIAG_AP_CMD_T* reqcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
     TOOLS_DIAG_AP_SWITCH_CP_T* cp_status = (TOOLS_DIAG_AP_SWITCH_CP_T*)(reqcmd + 1);
 
-    ENG_LOG("%s, come to success, err: %s\n", __FUNCTION__, strerror(errno));
     type = cp_status->cp_no;
+
     switch(type) {
-	case 0:
-	     property_set("sys.cfg.type", "0");
-	     ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
-	     break;
-	case 1:
-	     property_set("sys.cfg.type", "1");
-	     ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
-	     break;
-	 default:
-	    ENG_LOG("%s:ERROR type !!!",__FUNCTION__);
+        case 0:
+            property_set("sys.cfg.type", "0");
+            ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
+            break;
+        case 1:
+            property_set("sys.cfg.type", "1");
+            ((TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T)))->status = 0x00;
+            break;
+        default:
+            ENG_LOG("%s:ERROR type !!!",__FUNCTION__);
     }
-   rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
-   eng_diag_write2pc(rsp,rsplen);
-   free(rsp_ptr);
-   exit(1);
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    eng_diag_write2pc(rsp,rsplen);
+    free(rsp_ptr);
+    exit(1);
 }
 
 static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
