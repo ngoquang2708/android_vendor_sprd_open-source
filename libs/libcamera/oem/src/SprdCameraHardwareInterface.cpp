@@ -3004,6 +3004,7 @@ int SprdCameraHardware::Callback_CaptureMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		*phy_addr++ = (cmr_uint)memory->phys_addr;
 		*vir_addr++ = (cmr_uint)memory->data;
 	}
+	mCapBufIsAvail = 1;
 	return 0;
 
 mem_fail:
@@ -3096,6 +3097,7 @@ int SprdCameraHardware::Callback_CaptureFree(cmr_uint *phy_addr, cmr_uint *vir_a
 		mSubRawHeapArray[i] = NULL;
 	}
 	mSubRawHeapNum = 0;
+	mCapBufIsAvail = 0;
 
 	return 0;
 }
@@ -6392,6 +6394,7 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 	MemoryHeapIon *pHeapIon = NULL;
 	uint32_t i;
 
+	LOGV("flush_buffer %d %d",type,index);
 	switch(type)
 	{
 	case CAMERA_FLUSH_RAW_HEAP:
@@ -6399,16 +6402,26 @@ int SprdCameraHardware::flush_buffer(camera_flush_mem_type_e  type, int index, v
 		break;
 
 	case CAMERA_FLUSH_RAW_HEAP_ALL:
-/*		pmem = mRawHeap;
-		v_addr = (void*)pmem->data;
-		p_addr = (void*)pmem->phys_addr;
-		size = (int)pmem->phys_size;*/
-		if ((uint32_t)index < mSubRawHeapNum) {
-			pmem = mSubRawHeapArray[index];
-			v_addr = (void*)mSubRawHeapArray[index]->data;
-			p_addr = (void*)mSubRawHeapArray[index]->phys_addr;
-		} else {
-			LOGE("flush_buffer,index is error %d, %d", index, mSubRawHeapNum);
+		for ( i=0 ; i<mSubRawHeapNum ; i++) {
+			pmem = mSubRawHeapArray[i];
+			v_addr = (void*)mSubRawHeapArray[i]->data;
+			p_addr = (void*)mSubRawHeapArray[i]->phys_addr;
+			size = (int)mSubRawHeapArray[i]->phys_size;
+			if ( (mSubRawHeapNum-1) != i) {
+				if (pmem) {
+					pHeapIon = pmem->ion_heap;
+				}
+				if (pHeapIon) {
+					LOGE("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x,size=0x%x", i, (uint32_t)v_addr, (uint32_t)p_addr,size);
+					ret = pHeapIon->flush_ion_buffer(v_addr, p_addr, size);
+					if (ret) {
+						LOGW("flush_buffer abnormal ret=%d", ret);
+						LOGW("flush_buffer index=%d,vaddr=0x%x, paddr=0x%x", i, (uint32_t)v_addr, (uint32_t)p_addr);
+					}
+				}
+			} else {
+				index = i;
+			}
 		}
 		break;
 
