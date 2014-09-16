@@ -72,7 +72,7 @@ void SprdHWLayerList::dump_yuv(uint8_t* pBuffer,uint32_t aInBufSize)
 }
 
 void SprdHWLayerList::dump_layer(hwc_layer_1_t const* l) {
-    ALOGI_IF(mDebugFlag , "\ttype=%d, flags=%08x, handle=%p, tr=%02x, blend=%04x, {%f,%f,%f,%f}, {%d,%d,%d,%d}",
+    ALOGI_IF(mDebugFlag , "\ttype=%d, flags=%08x, handle=%p, tr=%02x, blend=%04x, {%f,%f,%f,%f}, {%d,%d,%d,%d}, planeAlpha: %d",
              l->compositionType, l->flags, l->handle, l->transform, l->blending,
              l->sourceCropf.left,
              l->sourceCropf.top,
@@ -81,7 +81,8 @@ void SprdHWLayerList::dump_layer(hwc_layer_1_t const* l) {
              l->displayFrame.left,
              l->displayFrame.top,
              l->displayFrame.right,
-             l->displayFrame.bottom);
+             l->displayFrame.bottom,
+             l->planeAlpha);
 }
 
 void SprdHWLayerList:: HWCLayerPreCheck()
@@ -355,8 +356,20 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         bool supportYUVLayerCond = false;
         if (YUVLayer)
         {
-            supportYUVLayerCond = (YUVLayer && ((RGBIndex + 1) == LayerCount - 1) &&
+            supportYUVLayerCond = (((RGBIndex + 1) == LayerCount - 1) &&
                                    (YUVIndex <= RGBIndex -1));
+
+            /*
+             *  If the OSD layer is the bottom layer, video layer is the top layer.
+             *  We should disable GXP.
+             *  GXP just accept video layer is bottom layer.
+             * */
+            if (supportYUVLayerCond == false)
+            {
+                accelerateVideoByGSP = false;
+                YUVLayer->setLayerAccelerator(ACCELERATOR_OVERLAYCOMPOSER);
+                ALOGI_IF(mDebugFlag, "revisitGeometry GXP cannot handle top video(bottom OSD), switch to OVC");
+            }
         }
 
         /*
@@ -1202,6 +1215,7 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
             if (SprdLayer->InitCheck())
             {
                 resetOverlayFlag(SprdLayer);
+                (*FBLayerCount)++;
             }
         }
     }
@@ -1215,17 +1229,6 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
       * */
      if (mSkipLayerFlag)
      {
-         resetOverlayFlag(YUVLayer);
-
-         (*FBLayerCount)++;
-
-         if (RGBLayer)
-         {
-             resetOverlayFlag(RGBLayer);
-
-             (*FBLayerCount)++;
-         }
-
          displayType &= ~HWC_DISPLAY_OVERLAY_COMPOSER_GPU;
      }
 
