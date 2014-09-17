@@ -178,6 +178,12 @@ enum camera_preview_mode_type {
 	CAMERA_MAX_PREVIEW_MODE
 };
 
+enum fast_ctrl_mode {
+	CAMERA_FAST_MODE_FD = 0,
+	CAMERA_FAST_MODE_MAX
+};
+
+
 struct camera_face_info {
 	cmr_u32                  face_id;
 	cmr_u32                  sx;
@@ -294,6 +300,8 @@ cmr_int camera_is_need_stop_preview(cmr_handle camera_handle);
 cmr_int camera_takepicture_process(cmr_handle camera_handle, cmr_uint src_phy_addr, cmr_uint src_vir_addr, cmr_u32 width, cmr_u32 height);
 
 uint32_t camera_get_size_align_page(uint32_t size);
+
+cmr_int camera_fast_ctrl(cmr_handle camera_handle, enum fast_ctrl_mode mode, cmr_u32 param);
 
 #ifdef __cplusplus
 }

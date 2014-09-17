@@ -733,6 +733,15 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 	if (ret) {
 		goto exit;
 	}
+
+	if (CAMERA_FUNC_STOP_PREVIEW == oem_func && CAMERA_RSP_CB_SUCCESS == oem_cb_type) {
+		CMR_LOGI("stop preview response, notify directly");
+		if (cxt->camera_cb) {
+			cxt->camera_cb(oem_cb_type, cxt->client_data, oem_func, param);
+		}
+		return ret;
+	}
+
 	if (param) {
 		message.data = malloc(sizeof(struct camera_frame_type));
 		if (!message.data) {
@@ -752,6 +761,7 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 		free(message.data);
 	}
 exit:
+	CMR_LOGD("out ret %ld", ret);
 	return ret;
 }
 
@@ -1546,6 +1556,7 @@ cmr_int camera_preview_init(cmr_handle  oem_handle)
 		goto exit;
 	}
 	init_param.oem_handle = oem_handle;
+	init_param.ipm_handle = cxt->ipm_cxt.ipm_handle;
 	init_param.ops.channel_cfg = camera_channel_cfg;
 	init_param.ops.channel_start = camera_channel_start;
 	init_param.ops.channel_pause = camera_channel_pause;
@@ -1897,6 +1908,7 @@ cmr_int camera_preview_cb_thread_proc(struct cmr_msg *message, void* data)
 	}
 	CMR_PRINT_TIME;
 exit:
+	CMR_LOGD("out ret %ld", ret);
 	return ret;
 }
 
@@ -2834,7 +2846,7 @@ cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_
 		goto exit;
 	}
 
-	CMR_LOGI("@xin frm_num 0x%x", param_ptr->frm_num);
+	CMR_LOGI("frm_num 0x%x", param_ptr->frm_num);
 
 	sensor_mode_info = &sensor_info.mode_info[param_ptr->sensor_mode];
 	sensor_cfg.sn_size.width = sensor_mode_info->width;

@@ -26,6 +26,7 @@ extern "C"
 struct ipm_frame_in {
 	struct img_frm          src_frame;
 	struct img_frm          dst_frame;
+	cmr_handle              caller_handle;
 	void                    *private_data;
 };
 
@@ -34,6 +35,8 @@ struct ipm_frame_out {
 	struct img_frm          dst_frame;
 	struct img_face_area    face_area;
 	};
+
+	cmr_handle              caller_handle;
 	void                    *private_data;
 };
 

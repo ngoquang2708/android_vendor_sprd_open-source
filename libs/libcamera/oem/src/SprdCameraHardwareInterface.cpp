@@ -760,6 +760,8 @@ status_t SprdCameraHardware::takePicture()
 		return ALREADY_EXISTS;
 	}
 
+	camera_fast_ctrl(mCameraHandle, CAMERA_FAST_MODE_FD, 0);
+
 	waitSetParamsOK();
 /*	camera_set_capture_trace(1);*/
 
@@ -4853,6 +4855,11 @@ void SprdCameraHardware::receivePreviewFDFrame(struct camera_frame_type *frame)
 		return;
 	}
 
+	if (SPRD_IDLE != getSetParamsState()) {
+		LOGE("set param in progress, ignore this FD frame");
+		return;
+	}
+
 	ssize_t offset = frame->buf_id;
 	camera_frame_metadata_t metadata;
 	camera_face_t face_info[FACE_DETECT_NUM];
@@ -6017,7 +6024,6 @@ void SprdCameraHardware::camera_cb(enum camera_cb_type cb,
 		void* parm4)
 {
 	SprdCameraHardware *obj = (SprdCameraHardware *)client_data;
-	LOGI("wangtao func=%d cb=%d",(int)func,cb);
 
 	switch(func) {
 	case CAMERA_FUNC_START_PREVIEW:

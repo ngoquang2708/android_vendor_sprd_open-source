@@ -22,6 +22,17 @@
 #include "SprdOEMCamera.h"
 #include "../../arithmetic/sc8830/inc/FaceFinder.h"
 
+
+typedef int (*face_finder_int)(int width, int height);
+typedef int (*face_finder_function)(unsigned char *src, struct face_finder_data **ppDstFaces, int *pDstFaceNum ,int skip);
+typedef int (*face_finder_finalize)();
+
+struct face_finder_ops {
+	face_finder_int      init;
+	face_finder_function function;
+	face_finder_finalize finalize;
+};
+
 struct class_fd {
 	struct ipm_common               common;
 	cmr_handle                      thread_handle;
@@ -39,6 +50,7 @@ struct class_fd {
 struct fd_start_parameter {
 	void                            *frame_data;
 	ipm_callback                    frame_cb;
+	cmr_handle                      caller_handle;
 	void                            *private_data;
 };
 
@@ -55,6 +67,20 @@ static cmr_uint fd_is_busy(struct class_fd *class_handle);
 static void fd_set_busy(struct class_fd *class_handle, cmr_uint is_busy);
 static cmr_int fd_thread_create(struct class_fd *class_handle);
 static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data);
+
+
+static struct face_finder_ops fd_face_finder_ops = {
+
+#if defined(CONFIG_CAMERA_FACE_DETECT)
+	FaceFinder_Init,
+	(face_finder_function)FaceFinder_Function,
+	FaceFinder_Finalize
+#else
+	NULL,
+	NULL,
+	NULL
+#endif
+};
 
 
 static struct class_ops fd_ops_tab_info = {
@@ -114,6 +140,13 @@ static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm
 	fd_handle->frame_total_num    = in->frame_cnt;
 	fd_handle->frame_cnt          = 0;
 
+	CMR_LOGD("mem_size = 0x%ld", fd_handle->mem_size);
+	fd_handle->alloc_addr = malloc(fd_handle->mem_size);
+	if (!fd_handle->alloc_addr) {
+		CMR_LOGE("mem alloc failed");
+		goto free_fd_handle;
+	}
+
 	ret = fd_thread_create(fd_handle);
 	if (ret) {
 		CMR_LOGE("FD error: create thread.");
@@ -132,6 +165,9 @@ static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm
 	return ret;
 
 free_fd_handle:
+	if (fd_handle->alloc_addr) {
+		free(fd_handle->alloc_addr);
+	}
 	free(fd_handle);
 	return ret;
 }
@@ -157,6 +193,10 @@ static cmr_int fd_close(cmr_handle class_handle)
 		fd_handle->thread_handle = 0;
 	}
 
+	if (fd_handle->alloc_addr) {
+		free(fd_handle->alloc_addr);
+	}
+
 	free(fd_handle);
 
 out:
@@ -171,7 +211,7 @@ static cmr_int fd_transfer_frame(cmr_handle class_handle,struct ipm_frame_in *in
 	cmr_u32                    is_busy    = 0;
 	struct fd_start_parameter param;
 
-	if (!out || !in || !class_handle) {
+	if (!in || !class_handle) {
 		CMR_LOGE("Invalid Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
@@ -186,12 +226,14 @@ static cmr_int fd_transfer_frame(cmr_handle class_handle,struct ipm_frame_in *in
 
 	if (!is_busy) {
 		fd_handle->frame_cnt = 0;
-		fd_handle->alloc_addr = malloc(fd_handle->mem_size);
-		fd_handle->frame_in = *in;
+		fd_handle->frame_in  = *in;
 
-		param.frame_data = (void *)in->src_frame.addr_phy.addr_y;
-		param.frame_cb = fd_handle->frame_cb;
-		param.private_data = in->private_data;
+		param.frame_data    = (void *)in->src_frame.addr_phy.addr_y;
+		param.frame_cb      = fd_handle->frame_cb;
+		param.caller_handle = in->caller_handle;
+		param.private_data  = in->private_data;
+
+		memcpy(fd_handle->alloc_addr, (void *)in->src_frame.addr_vir.addr_y, fd_handle->mem_size);
 
 		ret = fd_start(class_handle,&param);
 		if (ret) {
@@ -200,13 +242,18 @@ static cmr_int fd_transfer_frame(cmr_handle class_handle,struct ipm_frame_in *in
 		}
 
 		if (fd_handle->frame_cb) {
-			cmr_bzero(out,sizeof(struct ipm_frame_out));
+			if (out != NULL) {
+				cmr_bzero(out,sizeof(struct ipm_frame_out));
+			}
 		} else {
-			out = &fd_handle->frame_out;
+			if (out != NULL) {
+				out = &fd_handle->frame_out;
+			} else {
+				CMR_LOGE("sync err,out parm can't NULL.");
+			}
 		}
 	}
 out:
-	free(fd_handle->alloc_addr);
 	return ret;
 }
 
@@ -257,6 +304,7 @@ static cmr_int fd_start(cmr_handle class_handle, struct fd_start_parameter *para
 
 	if (fd_handle->frame_cb) {
 		message.sync_flag = CMR_MSG_SYNC_RECEIVED;
+		//message.sync_flag = CMR_MSG_SYNC_PROCESSED;
 	} else {
 		message.sync_flag = CMR_MSG_SYNC_PROCESSED;
 	}
@@ -371,7 +419,7 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_uint                  mem_size      = 0;
 	void                      *addr         = 0;
 	cmr_int                   facesolid_ret = 0;
-	FaceFinder_Data           *face_rect_ptr = NULL;
+	struct face_finder_data   *face_rect_ptr = NULL;
 	cmr_int                   face_num = 0;
 	cmr_int                   k;
 	struct fd_start_parameter *start_param;
@@ -390,12 +438,16 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 			CMR_PRINT_TIME;
 
 			if (!check_size_data_invalid(fd_size)) {
-				FaceFinder_Finalize();
-				if ( 0 != FaceFinder_Init(fd_size->width, fd_size->height)) {
-					ret = -CMR_CAMERA_FAIL;
-					CMR_LOGE("FaceSolid_Init fail.");
-				} else {
-					CMR_LOGI("FaceSolid_Init done.");
+				if (fd_face_finder_ops.finalize) {
+					fd_face_finder_ops.finalize();
+				}
+				if (fd_face_finder_ops.init) {
+					if ( 0 != fd_face_finder_ops.init(fd_size->width, fd_size->height)) {
+						ret = -CMR_CAMERA_FAIL;
+						CMR_LOGE("init fail.");
+					} else {
+						CMR_LOGI("init done.");
+					}
 				}
 			}
 
@@ -404,7 +456,6 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 		break;
 
 	case CMR_EVT_FD_START:
-
 		start_param = (struct fd_start_parameter *)message->data;
 
 		if (NULL == start_param) {
@@ -415,24 +466,23 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 		fd_set_busy(class_handle, 1);
 
 		/*check memory addr*/
-
-		addr = start_param->frame_data;
-		if (NULL == addr || NULL == class_handle->alloc_addr) {
-			CMR_LOGE("addr 0x%lx, handle->addr 0x%lx",(cmr_uint)addr, (cmr_uint)class_handle->alloc_addr);
+		if (NULL == class_handle->alloc_addr) {
+			CMR_LOGE("handle->addr 0x%lx", (cmr_uint)class_handle->alloc_addr);
 			break;
 		}
-		memcpy(class_handle->alloc_addr,addr,class_handle->mem_size);
 
 		/*start call lib function*/
 		CMR_LOGV("fd detect start");
-		facesolid_ret = FaceFinder_Function((cmr_u8*)class_handle->alloc_addr,
+
+		if (fd_face_finder_ops.function) {
+			facesolid_ret = fd_face_finder_ops.function((cmr_u8*)class_handle->alloc_addr,
 									&face_rect_ptr,
-									(cmr_s32*)&face_num,
+									(int*)&face_num,
 									0);
-		CMR_LOGV("fd detect end");
+		}
 
 		if (0 != facesolid_ret) {
-			CMR_LOGE("FaceSolid_Function fail.");
+			CMR_LOGE("face function fail.");
 		} else {
 			class_handle->frame_out.face_area.face_count = face_num;
 			for (k = 0; k < face_num, k < FACE_DETECT_NUM; k++) {
@@ -447,6 +497,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 
 			/*callback*/
 			if (class_handle->frame_cb) {
+				class_handle->frame_out.private_data  = start_param->private_data;
+				class_handle->frame_out.caller_handle = start_param->caller_handle;
 				class_handle->frame_cb(IPM_TYPE_FD, &class_handle->frame_out);
 			}
 
@@ -455,7 +507,9 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 		break;
 
 	case CMR_EVT_FD_EXIT:
-		FaceFinder_Finalize();
+		if (fd_face_finder_ops.finalize) {
+			fd_face_finder_ops.finalize();
+		}
 		break;
 
 	default:

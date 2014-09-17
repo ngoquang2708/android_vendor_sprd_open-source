@@ -71,6 +71,7 @@ struct preview_md_ops {
 
 struct preview_init_param {
 	cmr_handle               oem_handle;
+	cmr_handle               ipm_handle;
 	cmr_uint                 sensor_bits;
 	preview_cb_func          oem_cb;
 	struct preview_md_ops    ops;

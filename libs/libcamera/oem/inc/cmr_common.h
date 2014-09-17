@@ -589,14 +589,21 @@ enum img_fmt {
 	IMG_FMT_CRYCBY422,
 };
 
-struct img_face_range {
-	struct img_rect         rect;
-	cmr_uint                smile_level;
+struct face_finder_data{
+    int face_id;
+    int sx;
+    int sy;
+    int ex;
+    int ey;
+    int brightness;
+    int angle;
+    int smile_level;
+    int blink_level;
 };
 
 struct img_face_area {
 	cmr_uint                face_count;
-	FaceFinder_Data         range[FACE_DETECT_NUM];
+	struct face_finder_data range[FACE_DETECT_NUM];
 };
 /*************************** ipm data type **************************/
 

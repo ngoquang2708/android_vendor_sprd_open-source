@@ -262,6 +262,8 @@ cmr_int camera_local_set_param(cmr_handle camera_handle, enum camera_param_type 
 
 cmr_int camera_local_get_zsl_info(cmr_handle oem_handle, cmr_uint *is_support, cmr_uint *max_width, cmr_uint *max_height);
 
+cmr_int camera_local_fast_ctrl(cmr_handle oem_handle);
+
 #ifdef __cplusplus
 }
 #endif

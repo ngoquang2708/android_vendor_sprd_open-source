@@ -433,3 +433,29 @@ uint32_t camera_get_size_align_page(uint32_t size)
 
 	return buffer_size;
 }
+
+cmr_int camera_fast_ctrl(cmr_handle camera_handle, enum fast_ctrl_mode mode, cmr_u32 param)
+{
+	cmr_int                          ret = CMR_CAMERA_SUCCESS;
+	struct camera_context            *cxt = (struct camera_context *)camera_handle;
+
+	if (!camera_handle) {
+		CMR_LOGE("camera handle is null");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+	}
+
+	switch (mode) {
+	case CAMERA_FAST_MODE_FD:
+		cxt->fd_on_off = param;
+		ret = camera_local_fd_start(camera_handle);
+		if (ret) {
+			CMR_LOGE("fail to start fd %ld", ret);
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}

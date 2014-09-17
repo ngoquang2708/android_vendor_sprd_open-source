@@ -614,7 +614,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
         /*{"flash-mode", "off"},*/
         {"flash-mode-supported", "false"},
 #endif
-#if 0 //defined(CONFIG_CAMERA_FACE_DETECT)
+#if defined(CONFIG_CAMERA_FACE_DETECT)
         {"max-num-detected-faces-hw", "10"},
 #else
         {"max-num-detected-faces-hw", "0"},
