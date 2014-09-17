@@ -803,9 +803,9 @@ SENSOR_REG_T GC0310_MIPI_awb_tab[][6]=
 	//INCANDESCENCE:
 	{
 		{0x42, 0xcd},    // Disable AWB
-		{0x77, 0x68},//48
+		{0x77, 0x4c},
 		{0x78, 0x40},
-		{0x79, 0x7c},//5c
+		{0x79, 0x7b},
 		{0xff, 0xff}
 	},
 	//U30
@@ -844,8 +844,8 @@ SENSOR_REG_T GC0310_MIPI_awb_tab[][6]=
 	{
 		{0x42, 0xcd},   // Disable AWB
 		{0x77, 0x5a},
-		{0x78, 0x42},
-		{0x79, 0x40},
+		{0x78, 0x26}, //42
+		{0x79, 0x32},
 		{0xff, 0xff}
 	},
 };
@@ -861,7 +861,7 @@ static uint32_t set_GC0310_MIPI_awb(uint32_t mode)
 		return 0;
 
 	for (i = 0; (0xFF != sensor_reg_ptr[i].reg_addr) || (0xFF != sensor_reg_ptr[i].reg_value); i++) {
-	GC0310_MIPI_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
+		GC0310_MIPI_WriteReg(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
 
 	return 0;
