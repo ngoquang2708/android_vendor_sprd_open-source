@@ -556,9 +556,6 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 		*item->cmd_type_value = type_val;
 	}
 setting_out:
-	if (SETTING_GENERAL_SCENE_MODE == type) {
-		CMR_LOGI("scene %d",*item->cmd_type_value);
-	}
 	return ret;
 }
 
@@ -1735,7 +1732,7 @@ static cmr_int setting_get_hdr(struct setting_component *cpt,
 
 
 	parm->cmd_type_value = hal_param->is_hdr;
-	CMR_LOGI("wjp get hdr %d",parm->cmd_type_value);
+	CMR_LOGI("get hdr %d",parm->cmd_type_value);
 
 	return ret;
 }

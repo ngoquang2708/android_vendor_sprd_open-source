@@ -933,7 +933,7 @@ cmr_int cmr_sns_get_ioctl_cmd(SENSOR_IOCTL_CMD_E *sns_cmd, enum sensor_cmd in_cm
 			break;
 
 		case SENSOR_SET_HDR_EV:
-			*sns_cmd = SENSOR_IOCTL_WRITE_EV;
+			*sns_cmd = SENSOR_IOCTL_FOCUS;
 			break;
 
 		case SENSOR_RESTORE:

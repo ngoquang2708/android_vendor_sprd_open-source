@@ -194,6 +194,9 @@ static cmr_int hdr_transfer_frame(cmr_handle class_handle, struct ipm_frame_in *
 	cmr_u32               frame_in_cnt;
 	struct img_addr       *addr;
 	struct img_size       size;
+	cmr_handle            oem_handle;
+	ipm_sensor_ioctl      sensor_ioctl;
+	struct common_sn_cmd_parameter param;
 
 	if (!out || !in || !class_handle) {
 		CMR_LOGE("Invalid Param!");
@@ -221,6 +224,8 @@ static cmr_int hdr_transfer_frame(cmr_handle class_handle, struct ipm_frame_in *
 	cmr_bzero(&out->dst_frame,sizeof(struct img_frm));
 
 	if (frame_in_cnt == HDR_CAP_NUM) {
+		sensor_ioctl = hdr_handle->common.ipm_cxt->init_in.ipm_sensor_ioctl;
+		oem_handle = hdr_handle->common.ipm_cxt->init_in.oem_handle;
 		hdr_handle->frame_in = *in;
 		hdr_handle->common.frame_count = 0;
 
@@ -228,6 +233,11 @@ static cmr_int hdr_transfer_frame(cmr_handle class_handle, struct ipm_frame_in *
 
 		out->dst_frame = in->dst_frame;
 		out->private_data = in->private_data;
+		param.cmd_value = OEM_EV_LEVEL_2;
+		ret = sensor_ioctl(oem_handle,COM_SN_SET_HDR_EV,(void *)&param);
+		if (ret) {
+			CMR_LOGE("HDR failed to set ev.");
+		}
 	}
 
 	return ret;
@@ -241,6 +251,7 @@ static cmr_int hdr_pre_proc(cmr_handle class_handle)
 	cmr_handle            oem_handle;
 	enum oem_ev_level     ev_level;
 	ipm_sensor_ioctl      sensor_ioctl = hdr_handle->common.ipm_cxt->init_in.ipm_sensor_ioctl;
+	struct common_sn_cmd_parameter param;
 
 	oem_handle = hdr_handle->common.ipm_cxt->init_in.oem_handle;
 
@@ -254,10 +265,14 @@ static cmr_int hdr_pre_proc(cmr_handle class_handle)
 	case 3:
 		ev_level = OEM_EV_LEVEL_3;
 		break;
+	default:
+		ev_level = OEM_EV_LEVEL_1;
+		break;
 	}
 
 	CMR_LOGE("HDR ev_level = %d",ev_level);
-	ret = sensor_ioctl(oem_handle,COM_SN_SET_HDR_EV,(void *)&ev_level);
+	param.cmd_value = (cmr_u32)ev_level;
+	ret = sensor_ioctl(oem_handle,COM_SN_SET_HDR_EV,(void *)&param);
 	if (ret) {
 		CMR_LOGE("HDR failed to set ev.");
 	}

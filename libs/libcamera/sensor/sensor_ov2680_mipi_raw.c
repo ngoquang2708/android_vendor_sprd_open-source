@@ -31,6 +31,8 @@ static uint32_t g_module_id = 0;
 
 static uint32_t g_flash_mode_en = 0;
 static uint32_t s_ov2680_gain = 0;
+static int s_capture_VTS = 0;
+static int s_capture_shutter = 0;
 
 #define ov2680_RAW_PARAM_Truly     0x02
 #define ov2680_RAW_PARAM_Sunny    0x01
@@ -62,7 +64,7 @@ LOCAL uint32_t _ov2680_StreamOff(uint32_t param);
 LOCAL uint32_t _ov2680_write_exposure(uint32_t param);
 LOCAL uint32_t _ov2680_write_gain(uint32_t param);
 LOCAL uint32_t _ov2680_write_af(uint32_t param);
-LOCAL uint32_t _ov2680_ReadGain(uint32_t*  gain_ptr);
+LOCAL uint32_t _ov2680_ReadGain(uint32_t param);
 LOCAL uint32_t _ov2680_SetEV(uint32_t param);
 LOCAL uint32_t _ov2680_ExtFunc(uint32_t ctl_param);
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode);
@@ -216,68 +218,68 @@ LOCAL const SENSOR_REG_T ov2680_640X480_mipi_raw[] = {
 
 
 LOCAL const SENSOR_REG_T ov2680_800X600_mipi_raw[] = {
-	{0x0103, 0x01}, 
-	{0x3002, 0x00}, 
-	{0x3016, 0x1c}, 
-	{0x3018, 0x44}, 
-	{0x3020, 0x00}, 
+	{0x0103, 0x01},
+	{0x3002, 0x00},
+	{0x3016, 0x1c},
+	{0x3018, 0x44},
+	{0x3020, 0x00},
 
 
-	{0x3080, 0x02}, 
-	{0x3082, 0x37}, 
-	{0x3084, 0x09}, 
-	{0x3085, 0x04}, 
-	{0x3086, 0x01}, 
+	{0x3080, 0x02},
+	{0x3082, 0x37},
+	{0x3084, 0x09},
+	{0x3085, 0x04},
+	{0x3086, 0x01},
 
-	{0x3501, 0x26}, 
-	{0x3502, 0x40}, 
-	{0x3503, 0x03}, 
-	{0x350b, 0x36}, 
-	{0x3600, 0xb4}, 
-	{0x3603, 0x39}, 
-	{0x3604, 0x24}, 
+	{0x3501, 0x26},
+	{0x3502, 0x40},
+	{0x3503, 0x03},
+	{0x350b, 0x36},
+	{0x3600, 0xb4},
+	{0x3603, 0x39},
+	{0x3604, 0x24},
 	{0x3605, 0x00},  //bit3:   1: use external regulator  0: use internal regulator
-	{0x3620, 0x26}, 
-	{0x3621, 0x37}, 
-	{0x3622, 0x04}, 
-	{0x3628, 0x00}, 
-	{0x3705, 0x3c}, 
-	{0x370c, 0x50}, 
-	{0x370d, 0xc0}, 
-	{0x3718, 0x88}, 
-	{0x3720, 0x00}, 
-	{0x3721, 0x00}, 
-	{0x3722, 0x00}, 
-	{0x3723, 0x00}, 
-	{0x3738, 0x00}, 
-	{0x370a, 0x23}, 
-	{0x3717, 0x58}, 
-	{0x3781, 0x80}, 
-	{0x3784, 0x0c}, 
+	{0x3620, 0x26},
+	{0x3621, 0x37},
+	{0x3622, 0x04},
+	{0x3628, 0x00},
+	{0x3705, 0x3c},
+	{0x370c, 0x50},
+	{0x370d, 0xc0},
+	{0x3718, 0x88},
+	{0x3720, 0x00},
+	{0x3721, 0x00},
+	{0x3722, 0x00},
+	{0x3723, 0x00},
+	{0x3738, 0x00},
+	{0x370a, 0x23},
+	{0x3717, 0x58},
+	{0x3781, 0x80},
+	{0x3784, 0x0c},
 	{0x3789, 0x60},
-	{0x3800, 0x00}, 
-	{0x3801, 0x00}, 
-	{0x3802, 0x00}, 
-	{0x3803, 0x00}, 
-	{0x3804, 0x06}, 
-	{0x3805, 0x4f}, 
-	{0x3806, 0x04}, 
-	{0x3807, 0xbf}, 
-	{0x3808, 0x03}, 
-	{0x3809, 0x20}, 
-	{0x380a, 0x02}, 
-	{0x380b, 0x58}, 
+	{0x3800, 0x00},
+	{0x3801, 0x00},
+	{0x3802, 0x00},
+	{0x3803, 0x00},
+	{0x3804, 0x06},
+	{0x3805, 0x4f},
+	{0x3806, 0x04},
+	{0x3807, 0xbf},
+	{0x3808, 0x03},
+	{0x3809, 0x20},
+	{0x380a, 0x02},
+	{0x380b, 0x58},
 	{0x380c, 0x06},//hts 1708 6ac  1710 6ae
-	{0x380d, 0xae}, 
+	{0x380d, 0xae},
 	{0x380e, 0x02}, //vts 644
-	{0x380f, 0x84}, 
-	{0x3810, 0x00}, 
-	{0x3811, 0x04}, 
-	{0x3812, 0x00}, 
-	{0x3813, 0x04}, 
-	{0x3814, 0x31}, 
-	{0x3815, 0x31}, 
-	{0x3819, 0x04}, 
+	{0x380f, 0x84},
+	{0x3810, 0x00},
+	{0x3811, 0x04},
+	{0x3812, 0x00},
+	{0x3813, 0x04},
+	{0x3814, 0x31},
+	{0x3815, 0x31},
+	{0x3819, 0x04},
 #ifdef CONFIG_CAMERA_IMAGE_180
 	{0x3820, 0xc2}, //bit[2] flip
 	{0x3821, 0x00}, //bit[2] mirror
@@ -285,17 +287,17 @@ LOCAL const SENSOR_REG_T ov2680_800X600_mipi_raw[] = {
 	{0x3820, 0xc6}, //bit[2] flip
 	{0x3821, 0x05}, //bit[2] mirror
 #endif
-	{0x4000, 0x81}, 
-	{0x4001, 0x40}, 
-	{0x4008, 0x00}, 
-	{0x4009, 0x03}, 
-	{0x4602, 0x02}, 
-	{0x481f, 0x36}, 
-	{0x4825, 0x36}, 
-	{0x4837, 0x30}, 
+	{0x4000, 0x81},
+	{0x4001, 0x40},
+	{0x4008, 0x00},
+	{0x4009, 0x03},
+	{0x4602, 0x02},
+	{0x481f, 0x36},
+	{0x4825, 0x36},
+	{0x4837, 0x30},
 	{0x5002, 0x30},
-	{0x5080, 0x00}, 
-	{0x5081, 0x41}, 
+	{0x5080, 0x00},
+	{0x5081, 0x41},
 	{0x0100, 0x00}
 
 };
@@ -632,7 +634,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x00;
-#endif	
+#endif
 #if 0
 
 	//blc
@@ -995,7 +997,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->awb.smart = 1;
 
 	sensor_ptr->awb.alg_id = 0;
-	sensor_ptr->awb.smart_index = 0;	
+	sensor_ptr->awb.smart_index = 0;
 #endif
 
 #if 0
@@ -1710,7 +1712,7 @@ LOCAL uint32_t _ov2680_PowerOn(uint32_t power_on)
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(1000);		
+		usleep(1000);
 		// Open power
 		Sensor_SetAvddVoltage(avdd_val);
 		Sensor_SetIovddVoltage(iovdd_val);
@@ -2316,7 +2318,7 @@ LOCAL uint32_t _ov2680_write_af(uint32_t param)
 	return ret_value;
 }
 
-LOCAL uint32_t _ov2680_ReadGain(uint32_t*  gain_ptr)
+LOCAL uint32_t _ov2680_ReadGain(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	uint16_t value=0x00;
@@ -2327,33 +2329,81 @@ LOCAL uint32_t _ov2680_ReadGain(uint32_t*  gain_ptr)
 	value = Sensor_ReadReg(0x350a);/*8*/
 	gain |= (value<<0x08)&0x300;
 
-	s_ov2680_gain=gain;
-	if (gain_ptr) {
-		*gain_ptr = gain;
-	}
+	s_ov2680_gain=(int)gain;
 
-	SENSOR_PRINT("SENSOR: _ov2680_ReadGain gain: 0x%x", s_ov2680_gain);
+	SENSOR_PRINT("SENSOR_ov2680: _ov2680_ReadGain gain: 0x%x", s_ov2680_gain);
 
 	return rtn;
+}
+
+LOCAL int _ov2680_set_gain16(int gain16)
+{
+	// write gain, 16 = 1x
+	int temp;
+	gain16 = gain16 & 0x3ff;
+
+	temp = gain16 & 0xff;
+	Sensor_WriteReg(0x350b, temp);
+
+	temp = gain16>>8;
+	Sensor_WriteReg(0x350a, temp);
+
+	return 0;
+}
+
+LOCAL int _ov2680_set_shutter(int shutter)
+{
+	// write shutter, in number of line period
+	int temp;
+
+	shutter = shutter & 0xffff;
+
+	temp = shutter & 0x0f;
+	temp = temp<<4;
+	Sensor_WriteReg(0x3502, temp);
+
+	temp = shutter & 0xfff;
+	temp = temp>>4;
+	Sensor_WriteReg(0x3501, temp);
+
+	temp = shutter>>12;
+	Sensor_WriteReg(0x3500, temp);
+
+	return 0;
+}
+
+LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int capture_shutter)
+{
+	// write capture gain
+	_ov2680_set_gain16(capture_gain16);
+
+	_ov2680_set_shutter(capture_shutter);
 }
 
 LOCAL uint32_t _ov2680_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-	SENSOR_EXT_FUN_T_PTR ext_ptr = (SENSOR_EXT_FUN_T_PTR) param;
+//	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
+
 	uint16_t value=0x00;
 	uint32_t gain = s_ov2680_gain;
-	uint32_t ev = ext_ptr->param;
+	uint32_t ev = param;
 
-	SENSOR_PRINT("SENSOR: _ov2680_SetEV param: 0x%x", ev);
+	SENSOR_PRINT("_ov2680_SetEV param: 0x%x,0x%x,0x%x,0x%x", param, s_ov2680_gain,s_capture_VTS,s_capture_shutter);
 
-	gain=(gain*ext_ptr->param)>>0x06;
-
-	value = gain&0xff;
-	Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (gain>>0x08)&0x03;
-	Sensor_WriteReg(0x350a, value);/*8*/
-
+	switch(ev) {
+	case SENSOR_HDR_EV_LEVE_0:
+		_calculate_hdr_exposure(s_ov2680_gain/2,s_capture_VTS,s_capture_shutter);
+		break;
+	case SENSOR_HDR_EV_LEVE_1:
+		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter);
+		break;
+	case SENSOR_HDR_EV_LEVE_2:
+		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter *4);
+		break;
+	default:
+		break;
+	}
 	return rtn;
 }
 
@@ -2361,11 +2411,9 @@ LOCAL uint32_t _ov2680_ExtFunc(uint32_t ctl_param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
-
 	switch (ext_ptr->cmd) {
-		//case SENSOR_EXT_EV:
-		case 10:
-			rtn = _ov2680_SetEV(ctl_param);
+		case SENSOR_EXT_EV:
+			rtn = _ov2680_SetEV(ext_ptr->param);
 			break;
 		default:
 			break;
@@ -2374,88 +2422,96 @@ LOCAL uint32_t _ov2680_ExtFunc(uint32_t ctl_param)
 	return rtn;
 }
 
+int _ov2680_get_shutter(void)
+{
+	// read shutter, in number of line period
+	int shutter;
+
+	shutter = (Sensor_ReadReg(0x03500) & 0x0f);
+	shutter = (shutter<<8) + Sensor_ReadReg(0x3501);
+	shutter = (shutter<<4) + (Sensor_ReadReg(0x3502)>>4);
+
+	return shutter;
+}
+
+LOCAL int _ov2680_get_VTS(void)
+{
+	// read VTS from register settings
+	int VTS;
+
+	VTS = Sensor_ReadReg(0x380e);//total vertical size[15:8] high byte
+
+	VTS = (VTS<<8) + Sensor_ReadReg(0x380f);
+
+	return VTS;
+}
+
 LOCAL uint32_t _ov2680_PreBeforeSnapshot(uint32_t param)
 {
 	uint8_t ret_l, ret_m, ret_h;
 	uint32_t capture_exposure, preview_maxline;
 	uint32_t capture_maxline, preview_exposure;
-	uint32_t gain = 0, value = 0;
-	uint32_t prv_linetime=s_ov2680_Resolution_Trim_Tab[SENSOR_MODE_PREVIEW_ONE].line_time;
-	uint32_t cap_linetime = s_ov2680_Resolution_Trim_Tab[param].line_time;
+	uint32_t capture_mode = param & 0xffff;
+	uint32_t preview_mode = (param >> 0x10 ) & 0xffff;
+	uint32_t prv_linetime = s_ov2680_Resolution_Trim_Tab[preview_mode].line_time;
+	uint32_t cap_linetime = s_ov2680_Resolution_Trim_Tab[capture_mode].line_time;
 
-	SENSOR_PRINT("SENSOR_ov2680: BeforeSnapshot moe: %d, prv_linetime:%d, cap_linetime:%d",param, prv_linetime, cap_linetime);
+	SENSOR_PRINT("SENSOR_ov2680: BeforeSnapshot mode: 0x%08x",param);
 
-	if (SENSOR_MODE_PREVIEW_ONE >= param){
-		_ov2680_ReadGain(0x00);
-		SENSOR_PRINT("SENSOR_ov2680: prvmode equal to capmode");
-		return SENSOR_SUCCESS;
+	if (preview_mode == capture_mode) {
+		SENSOR_PRINT("SENSOR_ov2680: prv mode equal to capmode");
+		goto CFG_INFO;
 	}
 
 	ret_h = (uint8_t) Sensor_ReadReg(0x3500);
 	ret_m = (uint8_t) Sensor_ReadReg(0x3501);
 	ret_l = (uint8_t) Sensor_ReadReg(0x3502);
-	preview_exposure = ((ret_h&0x0f) << 12) + (ret_m << 4) + ((ret_l >> 4)&0x0f);
+	preview_exposure = (ret_h << 12) + (ret_m << 4) + (ret_l >> 4);
 
 	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
 	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
 	preview_maxline = (ret_h << 8) + ret_l;
 
-	_ov2680_ReadGain(&gain);
-	Sensor_SetMode(param);
+	Sensor_SetMode(capture_mode);
 	Sensor_SetMode_WaitDone();
 
 	if (prv_linetime == cap_linetime) {
 		SENSOR_PRINT("SENSOR_ov2680: prvline equal to capline");
-		return SENSOR_SUCCESS;
+		goto CFG_INFO;
 	}
 
 	ret_h = (uint8_t) Sensor_ReadReg(0x380e);
 	ret_l = (uint8_t) Sensor_ReadReg(0x380f);
 	capture_maxline = (ret_h << 8) + ret_l;
-	if (prv_linetime == cap_linetime) {
-		SENSOR_PRINT("SENSOR_ov2680: prvline equal to capline");
-		Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
-	}
 
-	capture_exposure = preview_exposure *prv_linetime  / cap_linetime ;
+	capture_exposure = preview_exposure * prv_linetime/cap_linetime;
 
-	if (0 == capture_exposure) {
+	if(0 == capture_exposure){
 		capture_exposure = 1;
 	}
-	SENSOR_PRINT("SENSOR_ov2680: BeforeSnapshot gain: 0x%x,  capture_exposure = %d, capture_maxline = %d", gain, capture_exposure, capture_maxline);
 
-	while(gain >= 0x20){
-		SENSOR_PRINT("SENSOR_ov2680:  gain = %d ", gain);
-		if(capture_exposure*2  > capture_maxline)
-			break;
-		capture_exposure =capture_exposure*2;
-		gain=gain / 2;
-	}
-
-	SENSOR_PRINT("SENSOR_ov2680:yanwei BeforeSnapshot gain: 0x%x,  capture_exposure = %d, capture_maxline = %d", gain, capture_exposure, capture_maxline);
 	if(capture_exposure > (capture_maxline - 4)){
 		capture_maxline = capture_exposure + 4;
+		capture_maxline = (capture_maxline+1)>>1<<1;
 		ret_l = (unsigned char)(capture_maxline&0x0ff);
 		ret_h = (unsigned char)((capture_maxline >> 8)&0xff);
 		Sensor_WriteReg(0x380e, ret_h);
 		Sensor_WriteReg(0x380f, ret_l);
 	}
 
-	ret_l = (unsigned char)((capture_exposure&0x0f) << 4);
-	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4);
-	ret_h = (unsigned char)(capture_exposure >> 12)&0x0f;
+	ret_l = ((unsigned char)capture_exposure&0xf) << 4;
+	ret_m = (unsigned char)((capture_exposure&0xfff) >> 4) & 0xff;
+	ret_h = (unsigned char)(capture_exposure >> 12);
 
 	Sensor_WriteReg(0x3502, ret_l);
 	Sensor_WriteReg(0x3501, ret_m);
 	Sensor_WriteReg(0x3500, ret_h);
 
-	value = gain&0xff;
-	Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (gain>>0x08)&0x03;
-	Sensor_WriteReg(0x350a, value);/*8-9*/
-	s_ov2680_gain = gain;
-	//usleep(200*1000);
-	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, capture_exposure);
+	CFG_INFO:
+	s_capture_shutter = _ov2680_get_shutter();
+	s_capture_VTS = _ov2680_get_VTS();
+	_ov2680_ReadGain(capture_mode);
+	Sensor_SetSensorExifInfo(SENSOR_EXIF_CTRL_EXPOSURETIME, s_capture_shutter);
 
 	return SENSOR_SUCCESS;
 }
@@ -2465,7 +2521,6 @@ LOCAL uint32_t _ov2680_BeforeSnapshot(uint32_t param)
 	uint32_t cap_mode = (param>>CAP_MODE_BITS);
 	uint32_t rtn = SENSOR_SUCCESS;
 
-	param = param & 0xffff;
 	SENSOR_PRINT("%d,%d.",cap_mode,param);
 
 	rtn = _ov2680_PreBeforeSnapshot(param);

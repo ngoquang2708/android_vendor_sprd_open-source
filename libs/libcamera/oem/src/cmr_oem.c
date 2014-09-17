@@ -3226,9 +3226,14 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		}
 		return ret;
 	case COM_SN_SET_HDR_EV:
+	{
+		SENSOR_EXT_FUN_PARAM_T hdr_ev_param;
 		cmd = SENSOR_SET_HDR_EV;
-		sensor_param = param_ptr->cmd_value;
+		hdr_ev_param.cmd = SENSOR_EXT_EV;
+		hdr_ev_param.param = param_ptr->cmd_value;
+		sensor_param = (cmr_uint)&hdr_ev_param;
 		break;
+	}
 	case COM_SN_GET_INFO:
 		ret = cmr_sensor_get_info(cxt->sn_cxt.sensor_handle, cxt->camera_id, &param_ptr->sensor_static_info);
 		if (ret) {
