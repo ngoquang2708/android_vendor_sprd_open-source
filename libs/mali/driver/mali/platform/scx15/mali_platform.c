@@ -180,7 +180,6 @@ static void sprd_gpu_domain_wait_for_ready(void)
 
 	while(sprd_gpu_domain_state() != BITS_PD_GPU_TOP_STATE(0))
 	{
-		printk("frank wait \n");
 		if(0==timeout_count)
 		{
 			pr_emerg("gpu domain is not ready for too long time, state %08x %08x\n",

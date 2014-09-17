@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 ARM Limited. All rights reserved.
+ * Copyright (C) 2011-2014 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -34,10 +34,6 @@ struct mali_gp_job {
 	u32 perf_counter_value1;                           /**< Value of performance counter 1 (to be returned to user space) */
 	u32 pid;                                           /**< Process ID of submitting process */
 	u32 tid;                                           /**< Thread ID of submitting thread */
-#if MALI_ENABLE_SYSTRACE
-	_mali_osk_notification_t *start_notification;      /**< Notification sent back to userspace on job start */
-	_mali_osk_notification_t *end_notification;        /**< Notification sent back to userspace on job end */
-#endif
 	_mali_osk_notification_t *finished_notification;   /**< Notification sent back to userspace on job complete */
 	_mali_osk_notification_t *oom_notification;        /**< Notification sent back to userspace on OOM */
 	struct mali_timeline_tracker tracker;              /**< Timeline tracker for this job */
@@ -62,7 +58,7 @@ MALI_STATIC_INLINE u32 mali_gp_job_get_cache_order(struct mali_gp_job *job)
 	return (NULL == job) ? 0 : job->cache_order;
 }
 
-MALI_STATIC_INLINE u32 mali_gp_job_get_user_id(struct mali_gp_job *job)
+MALI_STATIC_INLINE u64 mali_gp_job_get_user_id(struct mali_gp_job *job)
 {
 	return job->uargs.user_job_ptr;
 }
@@ -87,7 +83,7 @@ MALI_STATIC_INLINE u32 mali_gp_job_get_tid(struct mali_gp_job *job)
 	return job->tid;
 }
 
-MALI_STATIC_INLINE u32* mali_gp_job_get_frame_registers(struct mali_gp_job *job)
+MALI_STATIC_INLINE u32 *mali_gp_job_get_frame_registers(struct mali_gp_job *job)
 {
 	return job->uargs.frame_registers;
 }

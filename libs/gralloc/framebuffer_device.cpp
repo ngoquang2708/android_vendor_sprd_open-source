@@ -69,10 +69,10 @@ enum
 
 static int64_t systemTime()
 {
-    struct timespec t;
-    t.tv_sec = t.tv_nsec = 0;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec*1000000000LL + t.tv_nsec;
+	struct timespec t;
+	t.tv_sec = t.tv_nsec = 0;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return t.tv_sec*1000000000LL + t.tv_nsec;
 }
 
 #ifdef SPRD_MONITOR_FBPOST
@@ -85,125 +85,126 @@ static int64_t post_fb_after = 0;
 
 static void post_fb_timeout_func(int signo)
 {
-    if (signal_flag == false)
-    {
-        ALOGW("[Gralloc]: post Framebuffer timeout > %d ms", TIMEOUT_VALUE/1000);
-    }
+	MALI_IGNORE(signo);
+	if (signal_flag == false)
+	{
+		ALOGW("[Gralloc]: post Framebuffer timeout > %d ms", TIMEOUT_VALUE/1000);
+	}
 }
 
 static void insert_timer()
 {
-    int ret = -1;
-    current_value.it_value.tv_sec = 0;
-    current_value.it_value.tv_usec = TIMEOUT_VALUE;
-    orignal_value.it_value.tv_sec = 0;
-    orignal_value.it_value.tv_usec = 0;
+	int ret = -1;
+	current_value.it_value.tv_sec = 0;
+	current_value.it_value.tv_usec = TIMEOUT_VALUE;
+	orignal_value.it_value.tv_sec = 0;
+	orignal_value.it_value.tv_usec = 0;
 
-    ret = setitimer(ITIMER_REAL, &current_value, &orignal_value);
-    if (ret != 0)
-    {
-        ALOGE("[Gralloc]: insert_timer failed");
-        return;
-    }
+	ret = setitimer(ITIMER_REAL, &current_value, &orignal_value);
+	if (ret != 0)
+	{
+		ALOGE("[Gralloc]: insert_timer failed");
+		return;
+	}
 
-    signal(SIGALRM, post_fb_timeout_func);
+	signal(SIGALRM, post_fb_timeout_func);
 
-    signal_flag = false;
+	signal_flag = false;
 
-    post_fb_before = systemTime();
+	post_fb_before = systemTime();
 }
 
 static void signal_timer()
 {
-    static int64_t diff = 0;
-    signal_flag = true;
+	static int64_t diff = 0;
+	signal_flag = true;
 
-    post_fb_after = systemTime();
+	post_fb_after = systemTime();
 
-    diff = post_fb_after - post_fb_before;
+	diff = post_fb_after - post_fb_before;
 
-    /*
-     *  If FBPost take more than 300ms, need print the Log info.
-     * */
-    if (diff > 300000000LL)
-    {
-        ALOGW("[Gralloc] FBPost actually take %lfms", (((double)diff)/((double)1000000)));
-    }
+	/*
+	 *  If FBPost take more than 300ms, need print the Log info.
+	 * */
+	if (diff > 300000000LL)
+	{
+		ALOGW("[Gralloc] FBPost actually take %lfms", (((double)diff)/((double)1000000)));
+	}
 }
 #endif
 
 #ifdef SPRD_DITHER_ENABLE
 
 struct dither_info {
-    FILE*    fp;
-    uint32_t alg_handle;
+	FILE*    fp;
+	uint32_t alg_handle;
 };
 
 uint32_t dither_open(uint32_t w, uint32_t h)
 {
-    struct dither_info *dither = NULL;
+	struct dither_info *dither = NULL;
 
-    ALOGE("dither: open: %dx%d", w, h);
+	ALOGE("dither: open: %dx%d", w, h);
 
-    dither = (struct dither_info *)malloc(sizeof(struct dither_info));
-    if (NULL != dither) {
-        int ret = 0;
-        struct img_dither_init_in_param init_in;
-        struct img_dither_init_out_param init_out;
-        FILE* fp = NULL;
+	dither = (struct dither_info *)malloc(sizeof(struct dither_info));
+	if (NULL != dither) {
+		int ret = 0;
+		struct img_dither_init_in_param init_in;
+		struct img_dither_init_out_param init_out;
+		FILE* fp = NULL;
 
-        memset(dither, 0, sizeof(struct dither_info));
+		memset(dither, 0, sizeof(struct dither_info));
 
-        fp = fopen("/sys/module/mali/parameters/gpu_cur_freq", "r");
-        if(fp == NULL)
-        {
-            AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
-            free (dither);
-            dither = NULL;
-            return 0;
-        }
+		fp = fopen("/sys/module/mali/parameters/gpu_cur_freq", "r");
+		if(fp == NULL)
+		{
+			AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
+			free (dither);
+			dither = NULL;
+			return 0;
+		}
 
-        dither->fp = fp;
-        init_in.alg_id = 0;
-        init_in.height = h; //m->info.yres;
-        init_in.width = w; //m->info.xres;
+		dither->fp = fp;
+		init_in.alg_id = 0;
+		init_in.height = h; //m->info.yres;
+		init_in.width = w; //m->info.xres;
 
-        ret = img_dither_init(&init_in, &init_out);
-        if (0 != ret || 0 == init_out.param) {
-            if(dither->fp) {
-                fclose(dither->fp);
-            }
-            free (dither);
-            dither = NULL;
-            ALOGE("dither: init failed ,ret = 0x%x", ret);
-            return 0;
-        }
+		ret = img_dither_init(&init_in, &init_out);
+		if (0 != ret || 0 == init_out.param) {
+			if(dither->fp) {
+				fclose(dither->fp);
+			}
+			free (dither);
+			dither = NULL;
+			ALOGE("dither: init failed ,ret = 0x%x", ret);
+			return 0;
+		}
 
-        dither->alg_handle = (uint32_t)init_out.param;
+		dither->alg_handle = (uint32_t)init_out.param;
 
-        AINF("dither open ID %i, handle = 0x%x\n", 1, dither->alg_handle);
+		AINF("dither open ID %i, handle = 0x%x\n", 1, dither->alg_handle);
 
-    }
-    else {
-        ALOGE("dither: dither_open failed!");
-    }
+	}
+	else {
+		ALOGE("dither: dither_open failed!");
+	}
 
-    return (uint32_t)dither;
+	return (uint32_t)dither;
 }
 
 void dither_close(uint32_t handle)
 {
-    if (NULL != handle)
-    {
-        struct dither_info *dither = (struct dither_info *)handle;
+	if (NULL != handle)
+	{
+		struct dither_info *dither = (struct dither_info *)handle;
 
-        img_dither_deinit(dither->alg_handle);
-        dither->alg_handle = NULL;
-        if(dither->fp) {
-            fclose(dither->fp);
-        }
-        free((void *)handle);
-    }
+		img_dither_deinit(dither->alg_handle);
+		dither->alg_handle = NULL;
+		if(dither->fp) {
+			fclose(dither->fp);
+		}
+		free((void *)handle);
+	}
 }
 #endif
 
@@ -241,73 +242,73 @@ static int fb_setUpdateRect(struct framebuffer_device_t* dev,
 /* SPRD: add for apct functions @{ */
 static void writeFpsToProc(float fps)
 {
-    char fps_buf[256] = {0};
-    char *fps_proc = "/proc/benchMark/fps";
-    int fpsInt = (int)(fps+0.5);
-    
-    sprintf(fps_buf, "fps:%d", fpsInt);
-       
-    FILE *f = fopen(fps_proc,"r+w");
+	char fps_buf[256] = {0};
+	const char *fps_proc = "/proc/benchMark/fps";
+	int fpsInt = (int)(fps+0.5);
+	
+	sprintf(fps_buf, "fps:%d", fpsInt);
+	   
+	FILE *f = fopen(fps_proc,"r+w");
 	if (NULL != f)
 	{
-        fseek(f,0,0);
-        fwrite(fps_buf,strlen(fps_buf),1,f);
-        fclose(f);
-    }
+		fseek(f,0,0);
+		fwrite(fps_buf,strlen(fps_buf),1,f);
+		fclose(f);
+	}
 }
   
 bool gIsApctFpsShow = false;
 bool gIsApctRead  = false;
 bool getApctFpsSupport()
 {
-    if (gIsApctRead)
-    {
-        return gIsApctFpsShow;
-    }
-    gIsApctRead = true;
+	if (gIsApctRead)
+	{
+		return gIsApctFpsShow;
+	}
+	gIsApctRead = true;
 
-    char str[10] = {'\0'};
-    char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
+	char str[10] = {'\0'};
+	const char *FILE_NAME = "/data/data/com.sprd.APCT/apct/apct_support";
 
-    FILE *f = fopen(FILE_NAME, "r");
+	FILE *f = fopen(FILE_NAME, "r");
 
-    if (NULL != f)
-    {
-        fseek(f, 0, 0);
-        fread(str, 5, 1, f);
-        fclose(f);
+	if (NULL != f)
+	{
+		fseek(f, 0, 0);
+		fread(str, 5, 1, f);
+		fclose(f);
 
-        long apct_config = atol(str);
+		long apct_config = atol(str);
 
-        gIsApctFpsShow =  (apct_config & 0x8002) == 0x8002 ? true : false;
-    }
-    return gIsApctFpsShow;
+		gIsApctFpsShow =  (apct_config & 0x8002) == 0x8002 ? true : false;
+	}
+	return gIsApctFpsShow;
 }
 /* @} */
 
 #ifdef SPRD_DITHER_ENABLE
 static bool fb_is_dither_enable(struct dither_info *dither, private_handle_t const* hnd)
 {
-    char buf[16] = "312000";
-    FILE *fp = dither->fp;
+	char buf[16] = "312000";
+	FILE *fp = dither->fp;
 
-    if(fp == NULL)
-    {
-        AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
-    }
-    else
-    {
-        fseek(fp, 0, SEEK_SET);
-        fread(buf, 1, 8, dither->fp);
-    }
+	if(fp == NULL)
+	{
+		AERR( "can not open /sys/module/mali/parameters/gpu_cur_freq %x", fp);
+	}
+	else
+	{
+		fseek(fp, 0, SEEK_SET);
+		fread(buf, 1, 8, dither->fp);
+	}
 
-    int gpu_cur_freq = atoi(buf);
-    if(gpu_cur_freq <= 256000) {
-        if(hnd->flags & private_handle_t::PRIV_FLAGS_SPRD_DITHER) {
-            return true;
-        }
-    }
-    return false;
+	int gpu_cur_freq = atoi(buf);
+	if(gpu_cur_freq <= 256000) {
+		if(hnd->flags & private_handle_t::PRIV_FLAGS_SPRD_DITHER) {
+			return true;
+		}
+	}
+	return false;
 }
 #endif
 
@@ -319,23 +320,23 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		return -EINVAL;
 	}
 
-    /* SPRD: add for apct functions @{ */
-    static int64_t now = 0, last = 0;
-    static int flip_count = 0;
+	/* SPRD: add for apct functions @{ */
+	static int64_t now = 0, last = 0;
+	static int flip_count = 0;
 
-    if (getApctFpsSupport())
-    {
-        flip_count++;
-        now = systemTime();
-        if ((now - last) >= 1000000000LL)
-        {
-            float fps = flip_count*1000000000.0f/(now-last);
-            writeFpsToProc(fps);
-            flip_count = 0;
-            last = now;
-        }
-    }
-    /* @} */
+	if (getApctFpsSupport())
+	{
+		flip_count++;
+		now = systemTime();
+		if ((now - last) >= 1000000000LL)
+		{
+			float fps = flip_count*1000000000.0f/(now-last);
+			writeFpsToProc(fps);
+			flip_count = 0;
+			last = now;
+		}
+	}
+	/* @} */
 
 	/*
 	  in surfaceflinger init process, first setTransactionState(...) will evoke a screen update which is not necessary
@@ -370,7 +371,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #endif
 
 #ifdef SPRD_MONITOR_FBPOST
-    insert_timer();
+	insert_timer();
 #endif
 	if (m->currentBuffer)
 	{
@@ -383,45 +384,45 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		m->base.lock(&m->base, buffer, private_module_t::PRIV_USAGE_LOCKED_FOR_POST,
 		             0, 0, m->info.xres, m->info.yres, NULL);
 
-		const size_t offset = hnd->base - m->framebuffer->base;
+		const size_t offset = (uintptr_t)hnd->base - (uintptr_t)m->framebuffer->base;
 		int interrupt;
 		m->info.activate = FB_ACTIVATE_VBL;
 		m->info.yoffset = offset / m->finfo.line_length;
 
 #ifdef DUMP_FB
-        {
-            dump_fb((void*)(hnd->base),&m->info,m->fbFormat);
-        }
+		{
+			dump_fb((void*)(hnd->base),&m->info,dev->format);
+		}
 #endif
 
 #ifdef SPRD_DITHER_ENABLE
-        struct dither_info *dither = (struct dither_info *)dev->reserved[6];
+		struct dither_info *dither = (struct dither_info *)dev->reserved[6];
 
-        if (NULL != dither) {
-            if(fb_is_dither_enable(dither, hnd)) {
-                struct img_dither_in_param in_param;
-                struct img_dither_out_param out_param;
-                uint32_t dither_handle = 0;
+		if (NULL != dither) {
+			if(fb_is_dither_enable(dither, hnd)) {
+				struct img_dither_in_param in_param;
+				struct img_dither_out_param out_param;
+				uint32_t dither_handle = 0;
 
-                dither_handle = dither->alg_handle;
-                in_param.alg_id = 0;
-                in_param.data_addr = (void*)(hnd->base);
-                in_param.format = 0;
-                in_param.height =  m->info.yres;
-                in_param.width =  m->info.xres;
-                if(img_dither_process(dither_handle, &in_param, &out_param) == img_dither_rtn_sucess) {
-                    m->info.reserved[3] = 1;
-                }
-                else {
-                    m->info.reserved[3] = 0;
-                }
-            }
-        }
-        else
+				dither_handle = dither->alg_handle;
+				in_param.alg_id = 0;
+				in_param.data_addr = (void*)(hnd->base);
+				in_param.format = 0;
+				in_param.height =  m->info.yres;
+				in_param.width =  m->info.xres;
+				if(img_dither_process(dither_handle, &in_param, &out_param) == img_dither_rtn_sucess) {
+					m->info.reserved[3] = 1;
+				}
+				else {
+					m->info.reserved[3] = 0;
+				}
+			}
+		}
+		else
 #endif
-        {
-            m->info.reserved[3] = 0;
-        }
+		{
+			m->info.reserved[3] = 0;
+		}
 
 #ifdef STANDARD_LINUX_SCREEN
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
@@ -441,7 +442,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 
 			if (ioctl(m->framebuffer->fd, S3CFB_SET_VSYNC_INT, &interrupt) < 0)
 			{
-				AERR("S3CFB_SET_VSYNC_INT enable failed for fd: %d", m->framebuffer->fd);
+				//AERR("S3CFB_SET_VSYNC_INT enable failed for fd: %d", m->framebuffer->fd);
 				return 0;
 			}
 
@@ -479,31 +480,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_BEGIN_WAIT);
 #endif
 
-#ifdef FB_FORMAT_SWITCH
-		if(dev->format==HAL_PIXEL_FORMAT_RGB_565){
-			m->info.bits_per_pixel = 16;
-			m->info.red.offset     = 11;
-			m->info.red.length     = 5;
-			m->info.green.offset   = 5;
-			m->info.green.length   = 6;
-			m->info.blue.offset    = 0;
-			m->info.blue.length    = 5;
-			m->info.transp.offset  = 0;
-			m->info.transp.length  = 0;
-		}
-		else{
-			m->info.bits_per_pixel = 32;
-			m->info.red.offset     = 0;
-			m->info.red.length     = 8;
-			m->info.green.offset   = 8;
-			m->info.green.length   = 8;
-			m->info.blue.offset    = 16;
-			m->info.blue.length    = 8;
-			m->info.transp.offset  = 24;
-			m->info.transp.length  = 0;
-		}
-#endif
-		if (ioctl(m->framebuffer->fd, FBIOPUT_VSCREENINFO, &m->info) == -1) 
+		if (ioctl(m->framebuffer->fd, FBIOPUT_VSCREENINFO, &m->info) == -1)
 		{
 			AERR("FBIOPUT_VSCREENINFO failed for fd: %d", m->framebuffer->fd);
 #ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
@@ -542,7 +519,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 #endif
 
 #ifdef SPRD_MONITOR_FBPOST
-    signal_timer();
+	signal_timer();
 #endif
 
 	return 0;
@@ -685,40 +662,33 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	property_get("ro.sf.lcd_height", value, "1");
 	info.height = atoi(value);
 
-    if(info.bits_per_pixel == 16)
-    {
-        /*
-         * Explicitly request 5/6/5
-         */
-        info.bits_per_pixel = 16;
-        info.red.offset     = 11;
-        info.red.length     = 5;
-        info.green.offset   = 5;
-        info.green.length   = 6;
-        info.blue.offset    = 0;
-        info.blue.length    = 5;
-        info.transp.offset  = 0;
-        info.transp.length  = 0;
-
-        module->fbFormat = HAL_PIXEL_FORMAT_RGB_565;
-    }
-    else
-    {
-        /*
-         * Explicitly request 8/8/8
-         */
-        info.bits_per_pixel = 32;
-        info.red.offset     = 0;
-        info.red.length     = 8;
-        info.green.offset   = 8;
-        info.green.length   = 8;
-        info.blue.offset    = 16;
-        info.blue.length    = 8;
-        info.transp.offset  = 24;
-        info.transp.length  = 0;
-
-        module->fbFormat = HAL_PIXEL_FORMAT_RGBA_8888;
-    }
+#ifdef GRALLOC_16_BITS
+	/*
+	 * Explicitly request 5/6/5
+	 */
+	info.bits_per_pixel = 16;
+	info.red.offset     = 11;
+	info.red.length     = 5;
+	info.green.offset   = 5;
+	info.green.length   = 6;
+	info.blue.offset    = 0;
+	info.blue.length    = 5;
+	info.transp.offset  = 0;
+	info.transp.length  = 0;
+#else
+	/*
+	 * Explicitly request 8/8/8
+	 */
+	info.bits_per_pixel = 32;
+	info.red.offset     = 0;
+	info.red.length     = 8;
+	info.green.offset   = 8;
+	info.green.length   = 8;
+	info.blue.offset    = 16;
+	info.blue.length    = 8;
+	info.transp.offset  = 24;
+	info.transp.length  = 0;
+#endif
 
 	/*
 	 * Request NUM_BUFFERS screens (at lest 2 for page flipping)
@@ -843,7 +813,7 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	memset(vaddr, 0, fbSize);
 
 	// Create a "fake" buffer object for the entire frame buffer memory, and store it in the module
-	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, intptr_t(vaddr),
+	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, vaddr,
 	        0, dup(fd), 0);
 
 	close(fd);
@@ -880,12 +850,12 @@ static int fb_close(struct hw_device_t *device)
 	framebuffer_device_t *dev = reinterpret_cast<framebuffer_device_t *>(device);
 
 #ifdef SPRD_DITHER_ENABLE
-    if (dev->reserved[6]) {
-        int ret = 0;
-        dither_close(dev->reserved[6]);
-        dev->reserved[6] = 0;
-        AINF("dither close ID %i\n", 1);
-    }
+	if (dev->reserved[6]) {
+		int ret = 0;
+		dither_close(dev->reserved[6]);
+		dev->reserved[6] = 0;
+		AINF("dither close ID %i\n", 1);
+	}
 #endif
 
 	if (dev)
@@ -901,6 +871,7 @@ static int fb_close(struct hw_device_t *device)
 
 int compositionComplete(struct framebuffer_device_t *dev)
 {
+	MALI_IGNORE(dev);
 	/* By doing a finish here we force the GL driver to start rendering
 	   all the drawcalls up to this point, and to wait for the rendering to be complete.*/
 	glFinish();
@@ -958,7 +929,11 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	const_cast<uint32_t &>(dev->width) = m->info.xres;
 	const_cast<uint32_t &>(dev->height) = m->info.yres;
 	const_cast<int &>(dev->stride) = stride;
-	const_cast<int&>(dev->format) = m->fbFormat;
+#ifdef GRALLOC_16_BITS
+	const_cast<int &>(dev->format) = HAL_PIXEL_FORMAT_RGB_565;
+#else
+	const_cast<int &>(dev->format) = HAL_PIXEL_FORMAT_RGBA_8888;
+#endif
 	const_cast<float &>(dev->xdpi) = m->xdpi;
 	const_cast<float &>(dev->ydpi) = m->ydpi;
 	const_cast<float &>(dev->fps) = m->fps;
@@ -967,14 +942,14 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	*device = &dev->common;
 
 #ifdef SPRD_DITHER_ENABLE
-    uint32_t dither_handle = (uint32_t)dither_open(m->info.xres, m->info.yres);
-    if (dither_handle > 0) {
-        dev->reserved[6] = dither_handle;
-    }
-    else {
-        dev->reserved[6] = 0;
-        ALOGE("dither: dither open failed!");
-    }
+	uint32_t dither_handle = (uint32_t)dither_open(m->info.xres, m->info.yres);
+	if (dither_handle > 0) {
+		dev->reserved[6] = dither_handle;
+	}
+	else {
+		dev->reserved[6] = 0;
+		ALOGE("dither: dither open failed!");
+	}
 #endif
 
 	//if (m->finfo.reserved[0] == 0x6f76 &&
@@ -984,5 +959,6 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	//}
 
 	status = 0;
+	MALI_IGNORE(name);
 	return status;
 }
