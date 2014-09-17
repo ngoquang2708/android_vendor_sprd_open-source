@@ -1346,7 +1346,7 @@ static cmr_int setting_get_exif_info(struct setting_component *cpt,
 static cmr_int setting_set_video_mode(struct setting_component *cpt,
 				                      struct setting_cmd_parameter *parm)
 {
-	cmr_int 					 ret = 0;
+	cmr_int                      ret = 0;
 	struct setting_local_param	 *local_param = get_local_param(cpt, parm->camera_id);
 	struct setting_cmd_parameter setting;
 
