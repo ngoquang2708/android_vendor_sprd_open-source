@@ -1212,6 +1212,7 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
 	struct frm_info                *frame = (struct frm_info*)data;
+	cmr_u32                        index = 0;
 
 	if (!data) {
 		CMR_LOGE("param error");
@@ -1222,6 +1223,12 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 	sem_wait(&cxt->jpeg_sync_sm);
 	CMR_LOGI("wait done");
 
+	if (cxt->ops.channel_free_frame) {
+		index += cxt->cur_frame_info.base;
+		ret = cxt->ops.channel_free_frame(cxt->oem_handle, cxt->req_param.channel_id, index);
+	} else {
+		CMR_LOGE("err,channel_free_frame is null");
+	}
 	if (cxt->err_code) {
 		CMR_LOGE("error exit");
 		send_capture_complete_msg();
