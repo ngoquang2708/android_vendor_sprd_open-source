@@ -144,6 +144,8 @@ struct prev_context {
 	cmr_uint                        camera_id;
 	struct preview_param            prev_param;
 
+	cmr_int                         out_ret_val; /*for external function get return value*/
+
 	/*preview*/
 	struct img_size                 actual_prev_size;
 	cmr_uint                        prev_status;
@@ -514,6 +516,7 @@ cmr_int cmr_preview_set_param (cmr_handle preview_handle,
 {
 	CMR_MSG_INIT(message);
 	cmr_int               ret = CMR_CAMERA_SUCCESS;
+	cmr_int               call_ret = CMR_CAMERA_SUCCESS;
 	struct internal_param *inter_param = NULL;
 	struct prev_handle    *handle = (struct prev_handle*)preview_handle;
 
@@ -549,14 +552,16 @@ cmr_int cmr_preview_set_param (cmr_handle preview_handle,
 	}
 
 exit:
-	CMR_LOGI("out, ret %ld", ret);
 	if (ret) {
 		if (inter_param) {
 			free(inter_param);
 		}
+	} else {
+		call_ret = handle->prev_cxt[camera_id].out_ret_val;
+		CMR_LOGI("call ret %ld", call_ret);
 	}
 
-	return ret;
+	return ret | call_ret;
 }
 
 cmr_int cmr_preview_start(cmr_handle preview_handle, cmr_u32 camera_id)
@@ -3197,7 +3202,8 @@ cmr_int prev_set_param_internal(struct prev_handle *handle,
 
 	/*cmr_bzero(out_param_ptr, sizeof(struct preview_out_param));*/
 
-	handle->prev_cxt[camera_id].camera_id = camera_id;
+	handle->prev_cxt[camera_id].camera_id   = camera_id;
+	handle->prev_cxt[camera_id].out_ret_val = CMR_CAMERA_SUCCESS;
 
 	CMR_LOGI("camera_id %ld, preview_eb %d, snapshot_eb %d, tool_eb %d, prev_status %ld",
 		handle->prev_cxt[camera_id].camera_id,
@@ -3248,6 +3254,7 @@ cmr_int prev_set_param_internal(struct prev_handle *handle,
 
 exit:
 	CMR_LOGD(" out, ret %ld", ret);
+	handle->prev_cxt[camera_id].out_ret_val = ret;
 	return ret;
 }
 
@@ -3418,7 +3425,11 @@ cmr_int prev_set_prev_param(struct prev_handle *handle, cmr_u32 camera_id, struc
 	}
 
 exit:
-	CMR_LOGI("out");
+	CMR_LOGI("ret %ld", ret);
+	if (ret) {
+		prev_free_prev_buf(handle, camera_id);
+	}
+
 	return ret;
 }
 
