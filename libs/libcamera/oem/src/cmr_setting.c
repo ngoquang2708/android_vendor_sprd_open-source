@@ -26,7 +26,6 @@
 #include "cmr_exif.h"
 
 
-
 #define SETTING_MSG_QUEUE_SIZE              5
 
 #define SETTING_EVT_INIT                    (1 << 16)
@@ -501,7 +500,14 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 		type_val = parm->ae_param.mode;
 		break;
 	case SETTING_GENERAL_PREVIEW_FPS:
-		type_val = parm->preview_fps_param.frame_rate;
+		if (setting_is_rawrgb_format(cpt, parm)){
+			type_val = parm->preview_fps_param.frame_rate;
+		} else {
+			hal_param->hal_common.frame_rate = parm->preview_fps_param.frame_rate;
+			type_val = parm->preview_fps_param.video_mode;
+			item->cmd_type_value = &hal_param->hal_common.video_mode;
+			parm->cmd_type_value = type_val;
+		}
 		break;
 	default:
 		type_val = parm->cmd_type_value;
@@ -555,6 +561,7 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 		}
 		*item->cmd_type_value = type_val;
 	}
+
 setting_out:
 	return ret;
 }
@@ -1358,9 +1365,47 @@ static cmr_int setting_set_video_mode(struct setting_component *cpt,
 	return ret;
 }
 
-static cmr_int setting_get_video_mode(cmr_uint frame_rate, cmr_uint * video_mode)
+static cmr_int setting_get_preview_mode(struct setting_component *cpt,
+				                     struct setting_cmd_parameter *parm)
 {
-	cmr_int ret = 0;
+	cmr_int 					 ret = 0;
+	struct setting_init_in		 *init_in = &cpt->init_in;
+	struct setting_io_parameter  io_param = {0};
+
+	if (init_in->io_cmd_ioctl) {
+		ret = (*init_in->io_cmd_ioctl)(init_in->oem_handle, SETTING_IO_GET_PREVIEW_MODE, &io_param);
+		parm->preview_fps_param.video_mode = io_param.cmd_value;
+	}
+
+	return ret;
+}
+
+static cmr_int setting_get_video_mode(struct setting_component *cpt,
+				                      struct setting_cmd_parameter *parm)
+{
+	cmr_int                      ret = 0;
+	cmr_u32                      i;
+	cmr_u32                      sensor_mode;
+	cmr_uint                     frame_rate;
+	SENSOR_AE_INFO_T             *sensor_ae_info;
+	struct setting_hal_param     *hal_param = get_hal_param(cpt, parm->camera_id);
+	struct setting_local_param	 *local_param = get_local_param(cpt, parm->camera_id);
+
+	setting_get_preview_mode(cpt, parm);
+	frame_rate = hal_param->hal_common.frame_rate;
+	sensor_mode = parm->preview_fps_param.video_mode;
+	sensor_ae_info = &local_param->sensor_static_info.video_info[sensor_mode].ae_info[0];
+
+	parm->preview_fps_param.video_mode = 0;
+	for (i = 0 ; i < SENSOR_VIDEO_MODE_MAX; i++) {
+		if (frame_rate <= sensor_ae_info[i].max_frate) {
+			parm->preview_fps_param.video_mode = i;
+			break;
+		}
+	}
+	if (SENSOR_VIDEO_MODE_MAX == i) {
+		CMR_LOGD("use default video mode");
+	}
 
 	return ret;
 }
@@ -1714,9 +1759,13 @@ static cmr_int setting_set_environment(struct setting_component *cpt,
 	}
 
 	if (invalid_word != hal_param->hal_common.frame_rate) {
-		//setting_get_video_mode
-		cmd_param.preview_fps_param.frame_rate= hal_param->hal_common.frame_rate;
+		setting_get_video_mode(cpt, parm);
+		hal_param->hal_common.video_mode = parm->preview_fps_param.video_mode;
+		cmd_param.camera_id = parm->camera_id;
+		cmd_param.preview_fps_param.frame_rate = hal_param->hal_common.frame_rate;
+		cmd_param.preview_fps_param.video_mode = hal_param->hal_common.video_mode;
 		ret = setting_set_video_mode(cpt, &cmd_param);
+		CMR_RTN_IF_ERR(ret);
 	}
 
 exit:

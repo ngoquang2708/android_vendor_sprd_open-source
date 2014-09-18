@@ -3098,6 +3098,9 @@ cmr_int camera_ioctl_for_setting(cmr_handle oem_handle, cmr_uint cmd_type, struc
 	case SETTING_IO_CTRL_FLASH:
 		cmr_v4l2_flash_cb(v4l2_handle, param_ptr->cmd_value);
 		break;
+	case SETTING_IO_GET_PREVIEW_MODE:
+		param_ptr->cmd_value = cxt->prev_cxt.preview_sn_mode;
+		break;
 	default:
 		CMR_LOGE("don't support cmd %ld", cmd_type);
 		ret = CMR_CAMERA_NO_SUPPORT;

@@ -2315,9 +2315,10 @@ void SprdCameraHardware::setCameraPreviewMode(bool isRecordMode)
 	fps_param.is_recording = isRecordMode;
 	if (mIsDvPreview) {
 		fps_param.frame_rate = mParameters.getPreviewFameRate();
-
+		fps_param.video_mode = 1;
 	} else {
 		fps_param.frame_rate = CAMERA_PREVIEW_MODE_SNAPSHOT;
+		fps_param.video_mode = 0;
 	}
 	SET_PARM(mCameraHandle, CAMERA_PARAM_PREVIEW_FPS, (cmr_uint)&fps_param);
 }

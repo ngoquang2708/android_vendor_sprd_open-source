@@ -99,7 +99,8 @@ struct cmr_ae_param {
 
 struct cmr_preview_fps_param {
 	cmr_int                                 is_recording;
-    cmr_uint                                frame_rate;
+	cmr_uint                                frame_rate;
+	cmr_uint                                video_mode;
 };
 
 struct img_data_end {
