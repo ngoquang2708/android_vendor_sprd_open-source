@@ -749,16 +749,16 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
     uint8_t cur_state[2] = {0};
     uint8_t *ctl_str = "1";
    char cp_name[CP_NAME_MAX_LEN];
-   
+
     ALOGW("i2s_pin_mux_sel in type is %d",type);
 
     modem = adev->cp;
     i2s_btcall_info = adev->i2s_btcall_info;
    vbc_ctrl_pipe_para_t	*vbc_ctrl_pipe_info = modem->vbc_ctrl_pipe_info;
-   
+
     i2s_ctl_t * i2s_ctl_info =  NULL;
 
-   ctrl_node *p_ctlr_node = NULL; 
+   ctrl_node *p_ctlr_node = NULL;
 
   ALOGW("i2s_pin_mux_sel in type i-----------2 adev->cp =%lx num = %d  vbc_ctrl_pipe_info = %lx   cp_type = %d" ,adev->cp , modem->num , vbc_ctrl_pipe_info ,  vbc_ctrl_pipe_info->cp_type);
   if(type == FM_IIS){
@@ -773,7 +773,7 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
    {
 	for( count = 0 ; count < modem->num ; count++)
 	{
-		  ALOGW("i2s_pin_mux_sel in type i--11-----%s----%d ----" , vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name ,vbc_ctrl_pipe_info->cp_type);	
+		  ALOGW("i2s_pin_mux_sel in type i--11-----%s----%d ----" , vbc_ctrl_pipe_info->s_vbc_ctrl_pipe_name ,vbc_ctrl_pipe_info->cp_type);
 		if(  vbc_ctrl_pipe_info->cp_type == type )
 			break;
 			vbc_ctrl_pipe_info++ ;
@@ -785,16 +785,16 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
    }
    else
    {
-   	vbc_ctrl_pipe_info += AP_TYPE;
-   	vbc_ctrl_pipe_info->cpu_index = AP_TYPE;
+	vbc_ctrl_pipe_info += AP_TYPE;
+	vbc_ctrl_pipe_info->cpu_index = AP_TYPE;
    }
-   
+
 	i2s_ctl_info =  i2s_btcall_info->i2s_ctl_info + vbc_ctrl_pipe_info->cpu_index;;
-    
+
  ALOGW("-----in  cpu_index  is %d ", vbc_ctrl_pipe_info->cpu_index);
-   	p_ctlr_node = i2s_ctl_info->p_ctlr_node_head ; 
-			  ALOGW("i2s_pin_mux_sel in type i----------i2s_ctl_info->is_switch = %d " ,i2s_ctl_info->is_switch );	
-        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) 
+	p_ctlr_node = i2s_ctl_info->p_ctlr_node_head ;
+			  ALOGW("i2s_pin_mux_sel in type i----------i2s_ctl_info->is_switch = %d " ,i2s_ctl_info->is_switch );
+        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO)
 		{
 		if( i2s_ctl_info->is_switch  ){
 			  ALOGW("i2s_pin_mux_sel in type i-----------3");	
@@ -806,19 +806,19 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 				if( p_ctlr_node->ctrl_file_fd > 0 )
 				{
 				    ALOGW("-----in  i2s_pin_mux_sel in type is %s write  %s ",  p_ctlr_node->ctrl_path  ,p_ctlr_node->ctrl_value );
-   	                     		count = write(p_ctlr_node->ctrl_file_fd,p_ctlr_node->ctrl_value,1);
+					count = write(p_ctlr_node->ctrl_file_fd,p_ctlr_node->ctrl_value,1);
 				}
 				p_ctlr_node =   p_ctlr_node->next;
 
-			}	
-		}    
+			}
+		}
         }
         /*if(adev->out_devices& AUDIO_DEVICE_OUT_SPEAKER) {
             if(modem->i2s_extspk.is_switch && (modem->i2s_extspk.fd_sys_cp1 >= 0))
                 count = write(modem->i2s_extspk.fd_sys_cp1,ctl_str,1);
         }*/
 
-		
+
     return true;
 }
 
@@ -2475,7 +2475,7 @@ exit:
             ALOGW("vwarning:%d, (%s)", ret, pcm_get_error(out->pcm_vplayback));
 	pthread_mutex_unlock(&out->lock);
 	pthread_mutex_lock(&adev->lock);
- 	pthread_mutex_lock(&out->lock);
+	pthread_mutex_lock(&out->lock);
         do_output_standby(out);
 	pthread_mutex_unlock(&adev->lock);
         usleep(10000);
@@ -2940,18 +2940,18 @@ static int start_input_stream(struct tiny_stream_in *in)
 err:
     in->config = old_config;
     if(in->pcm) {
-    	pcm_close(in->pcm);
+	pcm_close(in->pcm);
         ALOGE("normal rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
         in->pcm = NULL;
     }
 
      if(in->mux_pcm) {
-     		ALOGE("normal rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
+		ALOGE("normal rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
 #ifdef AUDIO_MUX_PCM
 		mux_pcm_close(in->mux_pcm);
 #endif
 		 in->mux_pcm = NULL;
-    	}
+	}
 
 	adev->active_input = NULL;
     in_deinit_resampler(in);
@@ -3639,7 +3639,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                     else if(adev->cp_type == CP_W)
                         i2s_pin_mux_sel(adev,0);
 		    else if( adev->cp_type == CP_CSFB)
-			i2s_pin_mux_sel(adev,CP_CSFB);					
+			i2s_pin_mux_sel(adev,CP_CSFB);
                 }
                 ret = at_cmd_route(adev);  //send at command to cp
                 pthread_mutex_unlock(&adev->lock);
@@ -4662,9 +4662,9 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
     vbc_ctrl_pipe_para_t item;
     vbc_ctrl_pipe_para_t *vbc_ctrl_pipe_info = NULL;
 
-    i2s_bt_t  *i2s_btcall_info = state->i2s_btcall_info;	
+    i2s_bt_t  *i2s_btcall_info = state->i2s_btcall_info;
    ctrl_node *p_ctlr_node = NULL;
-   
+
     /* Look at tags */
     if (strcmp(tag_name, "audio") == 0) {
         if (strcmp(attr[0], "device") == 0) {
@@ -4701,8 +4701,8 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
                 ALOGE("'%s' No cpu index filed!", attr[0]);
                 goto attr_err;
             }
-			
-					
+
+
             ALOGD("cp name is '%s', pipe is '%s',vbc is '%s',cpu index is '%s'", attr[1], attr[3],attr[5],attr[7]);
             if(strcmp(attr[1], "w") == 0)
             {
@@ -4724,7 +4724,7 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             ALOGE("error profile!");
         }
     }
-     else if (strcmp(tag_name, "i2s_for_btcall") == 0)     	
+     else if (strcmp(tag_name, "i2s_for_btcall") == 0)
 	{
         /* Obtain the modem num */
            ALOGE("The i2s_for_btcall num is %s = '%s'", attr[0] ,attr[1]);
@@ -4740,14 +4740,14 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
     {
 
            ALOGE("The btcal_I2S num is %s = '%s--- %s = '%s  --- %s = '%s '", attr[0] ,attr[1] ,attr[12],attr[13],  attr[16],attr[17]);
-		   
+
         if (strcmp(attr[0], "cpu_index") == 0) {
             ALOGD("The iis_for_btcall cpu index is '%s'", attr[1]);
             state->i2s_ctl_info->cpu_index = atoi((char *)attr[1]);
         } else {
             ALOGE("no iis_ctl index for bt call!");
         }
-	
+
 	if (strcmp(attr[2], "i2s_index") == 0) {
             ALOGD("The iis_for_btcall i2s index is '%s'", attr[3]);
             state->i2s_ctl_info->i2s_index= atoi((char *)attr[3]);
@@ -4774,8 +4774,8 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
         } else {
             ALOGE("no dst path for bt call!");
         }
-ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) " , state->i2s_ctl_info->cpu_index , 
-	state->i2s_ctl_info->i2s_index , 
+ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) " , state->i2s_ctl_info->cpu_index ,
+	state->i2s_ctl_info->i2s_index ,
 	state->i2s_ctl_info->is_switch,
 	state->i2s_ctl_info->is_ext ,
 	sizeof(*attr)/sizeof( XML_Char *)
@@ -4788,21 +4788,21 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
 	i = 8;
 	while(( attr[i]  ) && ( (i - 8 )  /2  <MAX_CTRL_FILE))
 	{
-		
-	        if (strstr(attr[i], "ctl_file") > 0) 
+
+	        if (strstr(attr[i], "ctl_file") > 0)
 		{
 	            if((strlen(attr[i+1]) +1) <= I2S_CTL_PATH_MAX){
-					
+
 					if( state->i2s_ctl_info->p_ctlr_node_head== NULL )
 					{
-						p_ctlr_node = malloc(sizeof(ctrl_node));		
-						state->i2s_ctl_info->p_ctlr_node_head = p_ctlr_node;							
+						p_ctlr_node = malloc(sizeof(ctrl_node));
+						state->i2s_ctl_info->p_ctlr_node_head = p_ctlr_node;
 					}
 					else
 					{
 						p_ctlr_node->next = malloc(sizeof(ctrl_node));
 						p_ctlr_node = p_ctlr_node->next;	
-						
+
 					}
 				
 					p_ctlr_node->next = NULL;
@@ -4813,14 +4813,15 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
 	                if(p_ctlr_node->ctrl_file_fd <= 0 ) {
 	                    ALOGE(" open ctl_file[%d] ,errno is %d", i-8 , errno);
 	                }
-	            }
-	        }
 			if (strstr(attr[i+2], "value") > 0) {
-				if( (strlen(attr[i+3]) +1) <= I2S_CTL_VALUE_MAX )
+				if(( (strlen(attr[i+3]) +1) <= I2S_CTL_VALUE_MAX )&&( p_ctlr_node != NULL))
 					memcpy(p_ctlr_node->ctrl_value , attr[i+3], strlen(attr[i+3])+1);
 			}
-			i += 4;
-	                ALOGE(" - ---------att[%d] is %s",   i ,attr[i]   );			
+	              ALOGE(" - ---------att[%d] is %s",   i ,attr[i]   );
+	            }
+	        }
+
+		i += 4;
 			
 	}
 
@@ -4843,7 +4844,7 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
             }
 	 }
     }
-     	
+
    /*else if (strcmp(tag_name, "i2s_for_extspeaker") == 0)
     {
         if (strcmp(attr[0], "index") == 0) {
@@ -5084,8 +5085,8 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
     modem->num = 0;
     modem->vbc_ctrl_pipe_info = NULL;
 
-    		      ALOGE("----adev_modem_i2s_parse----000- ");
-		i2s_bt_t  *i2s_btcall_info;	 
+	ALOGE("----adev_modem_i2s_parse----000- ");
+	i2s_bt_t  *i2s_btcall_info;
     i2s_btcall_info = calloc(1, sizeof(i2s_bt_t));
     if (!i2s_btcall_info)
     {
@@ -5100,8 +5101,8 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
 
     i2s_btcall_info->num = 0;
     i2s_btcall_info->i2s_ctl_info = NULL;
-	
-	
+
+
     file = fopen(AUDIO_XML_PATH, "r");
     if (!file) {
         ALOGE("Failed to open %s", AUDIO_XML_PATH);
@@ -5118,7 +5119,7 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
 
     memset(&state, 0, sizeof(state));
     state.modem_info = modem;
-state.i2s_btcall_info = i2s_btcall_info;	
+state.i2s_btcall_info = i2s_btcall_info;
     XML_SetUserData(parser, &state);
     XML_SetElementHandler(parser, adev_modem_start_tag, adev_modem_end_tag);
 
