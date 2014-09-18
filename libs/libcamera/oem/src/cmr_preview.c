@@ -2229,12 +2229,14 @@ cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_rest
 		prev_post_set(handle, camera_id);
 		prev_free_prev_buf(handle, camera_id);
 
-		/*response*/
-		CMR_LOGI("stop response");
-		cb_data_info.cb_type    = PREVIEW_RSP_CB_SUCCESS;
-		cb_data_info.func_type  = PREVIEW_FUNC_STOP_PREVIEW;
-		cb_data_info.frame_data = NULL;
-		prev_cb_start(handle, &cb_data_info);
+		CMR_LOGD("is_restart %d, recovery_status %dd", is_restart, prev_cxt->recovery_status);
+		if (!is_restart) {
+			/*stop response*/
+			cb_data_info.cb_type    = PREVIEW_RSP_CB_SUCCESS;
+			cb_data_info.func_type  = PREVIEW_FUNC_STOP_PREVIEW;
+			cb_data_info.frame_data = NULL;
+			prev_cb_start(handle, &cb_data_info);
+		}
 	}
 
 	if (snapshot_enable) {
