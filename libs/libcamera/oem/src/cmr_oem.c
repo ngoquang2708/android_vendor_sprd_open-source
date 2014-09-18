@@ -1437,7 +1437,7 @@ cmr_int camera_rotation_deinit(cmr_handle  oem_handle)
 		goto exit;
 	}
 
-	ret = cmr_rot_close(&rot_cxt->rotation_handle);
+	ret = cmr_rot_close(rot_cxt->rotation_handle);
 	if (ret) {
 		CMR_LOGE("failed to de-init rot %ld", ret);
 		goto exit;
