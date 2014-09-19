@@ -324,6 +324,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
 	mSetDDRFreqCount(0),
 	mSetDDRFreq(NO_FREQ_REQ),
+	mCPURaised(0),
 	mCaptureNum(1),
 	mSwitchMonitorMsgQueHandle(0),
 	mSwitchMonitorInited(0),
@@ -5071,6 +5072,96 @@ int SprdCameraHardware::relaseOneFrameMem(struct SprdCameraHardware::OneFrameMem
 	return 0;
 }
 
+void SprdCameraHardware::cpu_hotplug_disable(uint8_t is_disable)
+{
+#define DISABLE_CPU_HOTPLUG	"1"
+#define ENABLE_CPU_HOTPLUG	"0"
+	const char* const hotplug = "/sys/devices/system/cpu/cpuhotplug/cpu_hotplug_disable";
+	const char* cmd_str  = DISABLE_CPU_HOTPLUG;
+	uint8_t org_flag = 0;
+
+	FILE* fp = fopen(hotplug, "w");
+
+	LOGI("cpu hotplug disable %d", is_disable);
+	if (!fp) {
+		LOGE("Failed to open: cpu_hotplug_disable, %s", hotplug);
+		return;
+	}
+
+	if(1 == is_disable) {
+		cmd_str = DISABLE_CPU_HOTPLUG;
+	} else {
+		cmd_str = ENABLE_CPU_HOTPLUG;
+	}
+	fprintf(fp, "%s", cmd_str);
+	fclose(fp);
+
+	return;
+}
+
+void SprdCameraHardware::cpu_dvfs_disable(uint8_t is_disable)
+{
+#define DISABLE_CPU_DVFS	"10"
+#define ENABLE_CPU_DVFS	    "95"
+	const char* const dvfs = "/sys/devices/system/cpu/cpuhotplug/up_threshold";
+	const char* cmd_str  = DISABLE_CPU_DVFS;
+	uint8_t org_flag = 0;
+
+	FILE* fp = fopen(dvfs, "w");
+
+	LOGI("cpu_dvfs_disable %d", is_disable);
+
+	if (!fp) {
+		LOGE("Failed to open: cpu_dvfs_disable, %s", dvfs);
+		return;
+	}
+
+	if(1 == is_disable) {
+		cmd_str = DISABLE_CPU_DVFS;
+	} else {
+		cmd_str = ENABLE_CPU_DVFS;
+	}
+	fprintf(fp, "%s", cmd_str);
+	fclose(fp);
+
+	return;
+}
+
+void  SprdCameraHardware::prepareForPostProcess(void)
+{
+	int b_need_raise = 0;
+
+#ifdef CONFIG_CAPTURE_DENOISE
+	b_need_raise = 1;
+#endif
+
+	if (0 == strcmp("hdr",mSetParameters.get_SceneMode())) {
+		b_need_raise = 1;
+	}
+
+	LOGI("prepareForPostProcess %d %d", b_need_raise, mCPURaised);
+
+	if (b_need_raise && !mCPURaised) {
+		cpu_hotplug_disable(1);
+		cpu_dvfs_disable(1);
+		mCPURaised = 1;
+	}
+
+	return;
+}
+
+void  SprdCameraHardware::exitFromPostProcess(void)
+{
+	LOGI("exitFromPostProcess %d", mCPURaised);
+	if (mCPURaised) {
+		cpu_dvfs_disable(0);
+		cpu_hotplug_disable(0);
+		mCPURaised = 0;
+	}
+
+	return;
+}
+
 int SprdCameraHardware::overwritePreviewFrameMemInit(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr)
 {
 	struct SprdCameraHardware::OneFrameMem *tmp_one_frame_mem_ptr = one_frame_mem_ptr;
@@ -5781,6 +5872,9 @@ void SprdCameraHardware::HandleTakePicture(enum camera_cb_type cb, void* parm4)
 		return;
 	}
 	switch (cb) {
+	case CAMERA_EXIT_CB_PREPARE:
+		prepareForPostProcess();
+		break;
 	case CAMERA_EVT_CB_FLUSH:
 		LOGD("capture:flush.");
 		mCapBufLock.lock();
@@ -5821,7 +5915,9 @@ void SprdCameraHardware::HandleTakePicture(enum camera_cb_type cb, void* parm4)
 			LOGE("HandleTakePicture: drop current rawPicture");
 		}
 		break;
-
+	case CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE:
+		exitFromPostProcess();
+		break;
 	case CAMERA_EXIT_CB_DONE:
 		LOGI("HandleTakePicture: CAMERA_EXIT_CB_DONE");
 		if (1 != mParameters.getInt("zsl"))

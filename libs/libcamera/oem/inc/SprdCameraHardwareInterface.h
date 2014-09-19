@@ -334,12 +334,16 @@ private:
 	void                            setCameraPrivateData(void);
 	void                            overwritePreviewFrame(camera_frame_type *frame);
 	int                               overwritePreviewFrameMemInit(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
-	void                            shakeTestInit(ShakeTest *tmpShakeTest);
-	void                            setShakeTestState(shake_test_state state);
-	shake_test_state          getShakeTestState();
+	void                              shakeTestInit(ShakeTest *tmpShakeTest);
+	void                              setShakeTestState(shake_test_state state);
+	shake_test_state                  getShakeTestState();
 	int                               IommuIsEnabled(void);
 	int                               allocOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
 	int                               relaseOneFrameMem(struct SprdCameraHardware::OneFrameMem *one_frame_mem_ptr);
+	void                              cpu_dvfs_disable(uint8_t is_disable);
+	void                              cpu_hotplug_disable(uint8_t is_disable);
+	void                              prepareForPostProcess(void);
+	void                              exitFromPostProcess(void);
 
 	/* These constants reflect the number of buffers that libqcamera requires
 	for preview and raw, and need to be updated when libqcamera
@@ -449,6 +453,7 @@ private:
 	int                             mSetDDRFreqCount;
 	uint32_t                        mSetDDRFreq;
 	uint32_t                        mCaptureNum;
+	uint32_t                        mCPURaised;
 
 	/*callback thread*/
 	pthread_t                       mSwitchMonitorThread;

@@ -2801,6 +2801,9 @@ cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 								SNAPSHOT_FUNC_TAKE_PICTURE,
 								SNAPSHOT_EXIT_CB_FAILED,NULL);
 	}
+	snp_send_msg_notify_thr(snp_handle,
+							SNAPSHOT_FUNC_TAKE_PICTURE,
+							SNAPSHOT_EVT_CB_SNAPSHOT_JPEG_DONE,NULL);
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;

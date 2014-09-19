@@ -162,6 +162,7 @@ static void camera_set_snp_req(cmr_handle oem_handle, cmr_uint is_req);
 static cmr_uint camera_get_snp_req(cmr_handle oem_handle);
 static cmr_int camera_get_cap_time(cmr_handle snp_handle);
 static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data);
+static void camera_snapshot_started(cmr_handle oem_handle);
 /**********************************************************************************************/
 
 void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
@@ -202,6 +203,12 @@ void camera_free(cmr_u32 mem_type, cmr_handle oem_handle,cmr_uint *phy_addr,
 	cxt->hal_free(mem_type, phy_addr, vir_addr, sum, cxt->client_data);
 exit:
 	CMR_PRINT_TIME;
+}
+
+void camera_snapshot_started(cmr_handle oem_handle)
+{
+	CMR_PRINT_TIME;
+	camera_snapshot_cb_to_hal(oem_handle, CAMERA_EXIT_CB_PREPARE, CAMERA_FUNC_TAKE_PICTURE, 0);
 }
 
 void camera_set_discard_frame(cmr_handle oem_handle, cmr_uint is_discard)
@@ -811,6 +818,7 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 		oem_func = CAMERA_FUNC_ENCODE_PICTURE;
 		break;
     default:
+		oem_func = func;
 		break;
 	}
 	switch (cb) {
@@ -836,7 +844,11 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 		oem_cb_type = CAMERA_EVT_CB_CAPTURE_FRAME_DONE;
 		send_thr_handle = cxt->snp_secondary_thr_handle;
 		break;
+	case SNAPSHOT_EVT_CB_SNAPSHOT_JPEG_DONE:
+		oem_cb_type = CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE;
+		break;
 	default:
+		oem_cb_type = cb;
 		break;
 	}
 	CMR_LOGI("camera_cb %ld %ld", oem_cb_type, oem_func);
@@ -854,6 +866,8 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 	message.sub_msg_type = oem_cb_type;
 	if (CAMERA_EVT_CB_CAPTURE_FRAME_DONE == oem_cb_type) {
 		message.sync_flag  = CMR_MSG_SYNC_RECEIVED;
+	} else if ((CAMERA_EXIT_CB_PREPARE == oem_cb_type) || (CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE == oem_cb_type)) {
+		message.sync_flag  = CMR_MSG_SYNC_NONE;
 	} else {
 		message.sync_flag  = CMR_MSG_SYNC_PROCESSED;
 	}
@@ -4090,6 +4104,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 		cxt->camera_mode = mode;
 	}
 	camera_set_snp_req((cmr_handle)cxt, TAKE_PICTURE_NEEDED);
+	camera_snapshot_started((cmr_handle)cxt);
 	ret = camera_get_cap_time((cmr_handle)cxt);
 	cxt->snp_cxt.status = SNAPSHOTING;
 exit:

@@ -91,6 +91,8 @@ enum camera_cb_type {
 	CAMERA_EVT_CB_FOCUS_MOVE,
 	CAMERA_EVT_CB_FLUSH,
 	CAMERA_EVT_CB_ZSL_FRM,
+	CAMERA_EXIT_CB_PREPARE,   /* prepared to be executed      */
+	CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE,
 	CAMERA_CB_TYPE_MAX
 };
 
