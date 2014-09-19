@@ -281,11 +281,12 @@ cmr_int camera_get_redisplay_data(cmr_handle camera_handle, cmr_uint output_addr
 
 cmr_int camera_is_change_size(cmr_handle camera_handle, cmr_u32 cap_width, cmr_u32 cap_height, cmr_u32 preview_width,
 	                                        cmr_u32 preview_height, cmr_uint *is_change);
-int camera_pre_capture_get_buffer_id(uint32_t camera_id);
+int camera_pre_capture_get_buffer_id(cmr_u32 camera_id);
 
-int camera_pre_capture_get_buffer_size(uint32_t camera_id,
-						int32_t mem_size_id,
-						uint32_t *mem_size);
+int camera_pre_capture_get_buffer_size(cmr_u32 camera_id,
+						cmr_s32 mem_size_id,
+						cmr_u32 *mem_size,
+						cmr_u32 *mem_sum);
 
 cmr_int camera_get_preview_rect(cmr_handle camera_handle, cmr_uint *rect_x, cmr_uint *rect_y, cmr_uint *rect_width, cmr_uint *rect_height);
 

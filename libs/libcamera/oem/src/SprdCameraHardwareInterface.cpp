@@ -273,6 +273,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mRawHeap(NULL),
 	mRawHeapSize(0),
 	mSubRawHeapNum(0),
+	mSubRawHeapSize(0),
 	mFDAddr(0),
 	mMetadataHeap(NULL),
 	mParameters(),
@@ -359,6 +360,7 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	s_mem_method = MemoryHeapIon::Mm_iommu_is_enabled();
 	memset(mPreviewHeapArray_phy, 0, sizeof(mPreviewHeapArray_phy));
 	memset(mPreviewHeapArray_vir, 0, sizeof(mPreviewHeapArray_vir));
+	memset(mSubRawHeapArray, 0, sizeof(mSubRawHeapArray));
 	memset(mPreviewBufferHandle, 0, kPreviewBufferCount * sizeof(void*));
 	memset(mPreviewCancelBufHandle, 0, kPreviewBufferCount * sizeof(void*));
 	memset(mGraphBufferCount, 0, kPreviewBufferCount * sizeof(uint32_t));
@@ -2976,7 +2978,7 @@ int SprdCameraHardware::Callback_CaptureMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 	sprd_camera_memory_t *memory = NULL;
 	cmr_int              i = 0;
 
-	LOGI("Callback_CaptureMalloc: size %d sum %d", size, sum);
+	LOGI("Callback_CaptureMalloc: size %d sum %d mSubRawHeapNum %d mSubRawHeapSize %d", size, sum, mSubRawHeapNum, mSubRawHeapSize);
 
 	*phy_addr = 0;
 	*vir_addr = 0;
@@ -2989,23 +2991,37 @@ int SprdCameraHardware::Callback_CaptureMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		LOGE("Callback_CaptureMalloc: malloc is too more %d %d", mSubRawHeapNum, sum);
 		return -1;
 	}
-	for (i=0 ; i<(cmr_int)sum ; i++) {
-		memory = allocCameraMem(size, true);
+	if (0 == mSubRawHeapNum) {
+		for (i=0 ; i<(cmr_int)sum ; i++) {
+			memory = allocCameraMem(size, true);
 
-		if (NULL == memory) {
-			LOGE("Callback_CaptureMalloc: error memory is null.");
+			if (NULL == memory) {
+				LOGE("Callback_CaptureMalloc: error memory is null.");
+				goto mem_fail;
+			}
+
+			mSubRawHeapArray[mSubRawHeapNum] = memory;
+			mSubRawHeapNum++;
+
+			if (NULL == memory->handle) {
+				LOGE("Callback_CaptureMalloc: error memory->handle is null.");
+				goto mem_fail;
+			}
+			*phy_addr++ = (cmr_uint)memory->phys_addr;
+			*vir_addr++ = (cmr_uint)memory->data;
+		}
+	} else {
+		if ((mSubRawHeapNum >= sum) && (mSubRawHeapSize >= size)) {
+			LOGI("Callback_CaptureMalloc :test");
+			for (i=0 ; i<(cmr_int)sum ; i++) {
+				*phy_addr++ = (cmr_uint)mSubRawHeapArray[i]->phys_addr;
+				*vir_addr++ = (cmr_uint)mSubRawHeapArray[i]->data;
+			}
+		} else {
+			LOGE("failed to malloc memory, malloced num %d,request num %d, size 0x%x, request size 0x%x",
+				mSubRawHeapNum, sum, mSubRawHeapSize, size);
 			goto mem_fail;
 		}
-
-		mSubRawHeapArray[mSubRawHeapNum] = memory;
-		mSubRawHeapNum++;
-
-		if (NULL == memory->handle) {
-			LOGE("Callback_CaptureMalloc: error memory->handle is null.");
-			goto mem_fail;
-		}
-		*phy_addr++ = (cmr_uint)memory->phys_addr;
-		*vir_addr++ = (cmr_uint)memory->data;
 	}
 	mCapBufIsAvail = 1;
 	return 0;
@@ -3100,6 +3116,7 @@ int SprdCameraHardware::Callback_CaptureFree(cmr_uint *phy_addr, cmr_uint *vir_a
 		mSubRawHeapArray[i] = NULL;
 	}
 	mSubRawHeapNum = 0;
+	mSubRawHeapSize = 0;
 	mCapBufIsAvail = 0;
 
 	return 0;
@@ -3893,7 +3910,11 @@ bool SprdCameraHardware::initCapture()
 
 void SprdCameraHardware::deinitCapture(bool isPreAllocCapMem)
 {
-Callback_CaptureFree(0, 0, 0);
+	if (0 == isPreAllocCapMem) {
+		Callback_CaptureFree(0, 0, 0);
+	} else {
+		LOGI("deinitCapture: pre_allocate mode.");
+	}
 
 }
 
@@ -6273,6 +6294,7 @@ void * SprdCameraHardware::pre_alloc_cap_mem_thread_proc(void *p_data)
 {
 	uint32_t mem_size = 0;
 	int32_t buffer_id = 0;
+	cmr_u32 sum = 0;
 	SprdCameraHardware * obj = (SprdCameraHardware *)p_data;
 
 	if (!obj) {
@@ -6283,12 +6305,17 @@ void * SprdCameraHardware::pre_alloc_cap_mem_thread_proc(void *p_data)
 	buffer_id = camera_pre_capture_get_buffer_id(obj->mCameraId);
 
 	if (camera_pre_capture_get_buffer_size(obj->mCameraId,
-		buffer_id, &mem_size)) {
+		buffer_id, &mem_size, &sum)) {
 		obj->mIsPreAllocCapMem = 0;
 		LOGE("pre_alloc_cap_mem_thread_proc: buffer size error, using normal alloc cap buffer mode");
 	} else {
-		if (obj->allocateCaptureMem(0, mem_size)) {
+		cmr_uint phy_addr[MAX_SUB_RAWHEAP_NUM] = {0,0,0,0,0,0,0,0,0,0};
+		cmr_uint virt_addr[MAX_SUB_RAWHEAP_NUM] = {0,0,0,0,0,0,0,0,0,0};
+		obj->mSubRawHeapSize = mem_size;
+		if (!obj->Callback_CaptureMalloc(mem_size, sum, &phy_addr[0], &virt_addr[0])) {
 			obj->mIsPreAllocCapMemDone = 1;
+			LOGI("pre alloc capture mem sum %d, phy addr:0x%lx 0x%lx 0x%lx 0x%lx",
+				sum, phy_addr[0], phy_addr[1], phy_addr[2], phy_addr[3]);
 		} else {
 			obj->mIsPreAllocCapMem = 0;
 			LOGE("pre_alloc_cap_mem_thread_proc: buffer alloc error, using normal alloc cap buffer mode");

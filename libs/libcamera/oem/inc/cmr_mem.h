@@ -33,11 +33,12 @@ struct cmr_cap_2_frm {
 	alloc_mem_ptr alloc_mem;
 	free_mem_ptr free_mem;
 };
-int camera_pre_capture_buf_id(uint32_t camera_id);
+int camera_pre_capture_buf_id(cmr_u32 camera_id);
 
-int camera_pre_capture_buf_size(uint32_t camera_id,
-					int32_t mem_size_id,
-					uint32_t *mem_size);
+int camera_pre_capture_buf_size(cmr_u32 camera_id,
+					cmr_s32 mem_size_id,
+					cmr_u32 *mem_size,
+					cmr_u32 *mem_sum);
 
 int camera_capture_buf_size(uint32_t     camera_id,
 					uint32_t        sn_fmt,

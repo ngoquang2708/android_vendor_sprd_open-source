@@ -230,7 +230,7 @@ static const cmr_get_size get_size[BUF_TYPE_NUM] = {
 
 };
 
-int camera_pre_capture_buf_id(uint32_t camera_id)
+int camera_pre_capture_buf_id(cmr_u32 camera_id)
 {
 	int buffer_id = 0;
 
@@ -277,9 +277,10 @@ int camera_pre_capture_buf_id(uint32_t camera_id)
 	return buffer_id;
 }
 
-int camera_pre_capture_buf_size(uint32_t camera_id,
-					int32_t mem_size_id,
-					uint32_t *mem_size)
+int camera_pre_capture_buf_size(cmr_u32 camera_id,
+					cmr_s32 mem_size_id,
+					cmr_u32 *mem_size,
+					cmr_u32 *mem_sum)
 {
 	struct cap_size_to_mem *mem_tab_ptr = NULL;
 
@@ -292,6 +293,7 @@ int camera_pre_capture_buf_size(uint32_t camera_id,
 		return -1;
 	}
 
+	*mem_sum = 4;//to do
 	if (BACK_CAMERA_ID == camera_id) {
 		mem_tab_ptr = (struct cap_size_to_mem*)&back_cam_raw_mem_size_tab[0];
 	} else if (FRONT_CAMERA_ID == camera_id) {

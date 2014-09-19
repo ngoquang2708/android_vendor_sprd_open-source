@@ -400,20 +400,21 @@ cmr_int camera_takepicture_process(cmr_handle camera_handle, cmr_uint src_phy_ad
 	return ret;
 }
 
-int camera_pre_capture_get_buffer_size(uint32_t camera_id,
-						int32_t mem_size_id,
-						uint32_t *mem_size)
+int camera_pre_capture_get_buffer_size(cmr_u32 camera_id,
+						cmr_s32 mem_size_id,
+						cmr_u32 *mem_size,
+						cmr_u32 *mem_sum)
 {
 	int                      ret = CMR_CAMERA_SUCCESS;
 
 	ret = camera_pre_capture_buf_size(camera_id,
 					mem_size_id,
-					mem_size);
-
+					mem_size,
+					mem_sum);
 	return ret;
 }
 
-int camera_pre_capture_get_buffer_id(uint32_t camera_id)
+int camera_pre_capture_get_buffer_id(cmr_u32 camera_id)
 {
 	int buffer_id = 0;
 

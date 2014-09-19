@@ -390,6 +390,7 @@ private:
 	
 	sprd_camera_memory_t            *mSubRawHeapArray[MAX_SUB_RAWHEAP_NUM];
 	uint32_t                        mSubRawHeapNum;
+	uint32_t                        mSubRawHeapSize;
 
 	uint32_t                        mFDAddr;
 	camera_memory_t                 *mMetadataHeap;
