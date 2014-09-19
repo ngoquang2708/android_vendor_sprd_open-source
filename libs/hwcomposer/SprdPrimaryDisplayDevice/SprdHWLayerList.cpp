@@ -333,6 +333,21 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
             continue;
         }
 
+        /*
+         *  If the video layer do not exist, and one layer can be processed by GXP,
+         *  another layer cannot be processed by GXP,
+         *  we should disable all OSD Overlay.
+         * */
+        if ((mPrivateFlag[0] == 1)
+            && (mVideoLayerCount == 0)
+            && (mOSDLayerCount > 0))
+        {
+            resetOverlayFlag(mOSDLayerList[i]);
+            mFBLayerCount++;
+            ALOGI_IF(mDebugFlag, "No video, one OSD cannot be accerlated by GXP, also should disable other OSD");
+            continue;
+        }
+
         accelerateOSDByOVC = (RGBLayer->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER) ? true : false;
 
 #ifdef DIRECT_DISPLAY_SINGLE_OSD_LAYER
@@ -386,10 +401,6 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         if (resetOSDLayerCond)
         {
             resetOverlayFlag(mOSDLayerList[i]);
-            if (mOSDLayerList[i])
-            {
-                mOSDLayerList[i]->resetAccelerator();
-            }
             mFBLayerCount++;
             RGBLayer = NULL;
             RGBIndex = 0;
@@ -398,7 +409,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         }
 
         /*
-         *  At present, some OSD layer cannot be accelerated by GXP,
+         *  At present, some OSD layer cannot not be accelerated by GXP,
          *  So we need change video to OVC.
          * */
         if (YUVLayer && accelerateOSDByOVC)
@@ -411,6 +422,7 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         RGBLayer = mOSDLayerList[i];
         RGBIndex = RGBLayer->getLayerIndex();
     }
+
 
 #ifdef DYNAMIC_RELEASE_PLANEBUFFER
     int ret = -1;
@@ -711,6 +723,20 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             l->resetAccelerator();
             return 0;
         }
+    }
+
+    /*
+     *  If OSD layer cannot be accerlated by GXP,
+     *  can be accerlated by OverlayComposer,
+     *  Should use a flag to record this thing.
+     * */
+    if (l->getAccelerator() == ACCELERATOR_OVERLAYCOMPOSER)
+    {
+        mPrivateFlag[0] = 1;
+    }
+    else
+    {
+         mPrivateFlag[0] = 0;
     }
 
     l->setLayerType(LAYER_OSD);
