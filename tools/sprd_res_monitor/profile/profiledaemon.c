@@ -23,7 +23,54 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <cutils/log.h>
-#include "oprofiledaemon.h"
+#include "profiledaemon.h"
+
+static void do_ftrace(unsigned long tracetime)
+{
+   char ftrace[256];
+   sprintf(ftrace , "/system/bin/capture_ftrace.sh %lu" , tracetime);
+   system(ftrace);
+}
+
+int start_ftrace(unsigned long time)
+{
+    int client;
+    profileinfo info;
+    char property[PROPERTY_VALUE_MAX];
+    struct sockaddr_un addr;
+    int slen = sizeof(addr);
+    property_get(FTRACE_DEBUG_SWITCHER , property , "0");
+    if(atoi(property) == 1)
+    {
+        client = socket(AF_UNIX , SOCK_DGRAM , 0);
+        if(client == -1)
+        {
+            ALOGD("start ftrace faild creat socket error");
+            return -1;
+        }
+        memset(&addr , 0 , sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        strcpy(addr.sun_path , PROFILE_SOCKET_NAME);
+        info.cmd = FTRACE_START;
+        info.profiletime = time;
+        int ret = sendto(client , &info , sizeof(info) , 0 , (struct sockaddr*)&addr , slen);
+        close(client);
+        if(ret < 0)
+        {
+            ALOGD("start ftrace failed");
+            return -1;
+        }
+        else
+        {
+            ALOGD("start ftrace");
+            return 0;
+        }
+    }
+    else
+    {
+        return -2;
+    }
+}
 
 static void do_oprofile(unsigned long profiletime)
 {
@@ -50,7 +97,7 @@ int start_oprofile(unsigned long time)
         }
         memset(&addr , 0 , sizeof(addr));
         addr.sun_family = AF_UNIX;
-        strcpy(addr.sun_path , OPROFILE_SOCKET_NAME);
+        strcpy(addr.sun_path , PROFILE_SOCKET_NAME);
         info.cmd = OPROFILE_START;
         info.profiletime = time;
         int ret = sendto(client , &info , sizeof(info) , 0 , (struct sockaddr*)&addr , slen);
@@ -72,17 +119,17 @@ int start_oprofile(unsigned long time)
     }
 }
 
-void* oprofile_daemon(void* param)
+void* profile_daemon(void* param)
 {
     int serv;
-    profileinfo pinfo;
-    int len;
-    char property[PROPERTY_VALUE_MAX];
-    struct sockaddr_un addr;
-    memset(&addr , 0 , sizeof(addr));
-    socklen_t addr_len = sizeof(addr);
-    umask(0);
-    int ret = mkdir(OPROFILE_SOCKET_PATH , S_IRWXU | S_IRWXG | S_IRWXO);
+	profileinfo pinfo;
+	int len;
+	char property[PROPERTY_VALUE_MAX];
+	struct sockaddr_un addr;
+	memset(&addr , 0 , sizeof(addr));
+	socklen_t addr_len = sizeof(addr);
+	umask(0);
+    int ret = mkdir(PROFILE_SOCKET_PATH , S_IRWXU | S_IRWXG | S_IRWXO);
     if (-1 == ret && (errno != EEXIST)) {
         ALOGE("oprofile daemon create socket path failed");
         return NULL;
@@ -96,7 +143,7 @@ void* oprofile_daemon(void* param)
     }
     //setsockopt();
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path , OPROFILE_SOCKET_NAME);
+    strcpy(addr.sun_path , PROFILE_SOCKET_NAME);
     unlink(addr.sun_path);
     if(bind(serv , (struct sockaddr*) &addr , sizeof(addr)) < 0)
     {
@@ -107,10 +154,12 @@ void* oprofile_daemon(void* param)
     for(;;) {
         len = recvfrom(serv , &pinfo , sizeof(pinfo) , 0 , (struct sockaddr*)&addr , &addr_len);
         ALOGD("----------------------receive from client---------------------");
+        /*
         property_get(OPROFILE_DEBUG_SWITCHER , property , "0");
         // if property is not set continue
         if(atoi(property) != 1)
             continue;
+		*/
         if(len < 0)
             continue;
         ALOGD("----------------------receive from client--------------------- cmd is:%d" , pinfo.cmd);
@@ -120,7 +169,11 @@ void* oprofile_daemon(void* param)
              ALOGD("do_oprofile time is:%lu" , pinfo.profiletime);
              do_oprofile(pinfo.profiletime);
              break;
-        default:
+		case FTRACE_START:
+             ALOGD("do_ftrace time is:%lu", pinfo.profiletime);
+             do_ftrace(pinfo.profiletime);
+             break;
+		default:
              ALOGW("oprofiledaemon cmd invalid");
              break; 
         }

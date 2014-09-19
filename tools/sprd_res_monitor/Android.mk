@@ -8,7 +8,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libc \
-    liboprofiledaemon
+    libprofiledaemon
 
 LOCAL_MODULE := sprd_res_monitor
 LOCAL_MODULE_TAGS := optional

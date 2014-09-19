@@ -15,16 +15,15 @@
 #define MONITOR_USER_CONFIG "/system/etc/sprd_monitor-user.conf"
 #define MONITOR_USERDEBUG_CONFIG "/system/etc/sprd_monitor-userdebug.conf"
 #define MONITOR_CONFIG_FILE "/data/local/tmp/sprd_monitor.conf"
-#define MAX_FEATURE_CNT 6
 
 extern void *start_monitor(void *arg);
-extern void *oprofile_daemon(void* param);
+extern void *profile_daemon(void* param);
 
-struct {
+struct config_info{
 	char *name;
 	char *on;
 	char *off;
-}monitor_config_info[MAX_FEATURE_CNT] = {
+}monitor_config_info[] = {
 	{
 		"sysdump",
 		"echo on > /productinfo/sysdump_flag",
@@ -49,6 +48,10 @@ struct {
 		"oprofile",
 		"setprop debug.oprofile.value 1",
 		"setprop debug.oprofile.value 0"
+	},{
+		"ftrace",
+		"setprop debug.ftrace.value 1",
+		"setprop debug.ftrace.value 0"
 	}
 };
 
@@ -64,7 +67,6 @@ static void parse_config()
 	char *default_config_file;
 	char cmd[128];
 	int i;
-
 	property_get("ro.debuggable", p_value, "");
 	if (strcmp(p_value, "1") != 0) {
 		default_config_file = MONITOR_USER_CONFIG;
@@ -93,10 +95,10 @@ static void parse_config()
 		}
 	}
 
-        while(fscanf(fp,"%s %s",f_name,f_status) != EOF) {
+    while(fscanf(fp,"%s %s",f_name,f_status) != EOF){
 		if(f_name[0] == '#')
 			continue;
-		for(i = 0; i < MAX_FEATURE_CNT; i++) {
+		for(i = 0; i < sizeof(monitor_config_info)/sizeof(struct config_info); i++) {
 			if(!strcmp(monitor_config_info[i].name, f_name)) {
 				if(!strncmp(f_status,"off",3))
 					system(monitor_config_info[i].off);
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
 
 	if(!pthread_create(&tid_monitor,NULL,start_monitor,NULL))
 		ALOGD("res_monitor thread created!\n");
-	if(!pthread_create(&tid_oprofile_monitor , NULL , oprofile_daemon , NULL))
+	if(!pthread_create(&tid_oprofile_monitor , NULL , profile_daemon , NULL))
 		ALOGD("oprofile daemon created!");
         else
 		ALOGW("oprofile daemon create failed!");
