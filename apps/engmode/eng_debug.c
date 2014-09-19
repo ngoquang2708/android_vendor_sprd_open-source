@@ -34,7 +34,7 @@ int eng_file_unlock(int fd)
 
 void* eng_printlog_thread(void *x)
 {
-    int ret;
+    int ret,fd = -1;
 
     ENG_LOG("eng_printlog_thread thread start\n");
 
@@ -45,14 +45,13 @@ void* eng_printlog_thread(void *x)
             return 0;
         }
     }
-
     ret = chmod("/data/local/englog",S_IRWXU | S_IRWXG | S_IRWXO);
     if (-1 == ret) {
         ENG_LOG("chmod /data/local/englog failed.");
-        exit(0);
+        return 0;
     }
 
-    if (0 == access("/data/local/englog/last_eng.log",F_OK) ){
+    if (0 == access("/data/local/englog/last_eng.log",F_OK)){
         ret = remove("/data/local/englog/last_eng.log");
         if (-1 == ret) {
             ENG_LOG("remove failed.");
@@ -60,19 +59,20 @@ void* eng_printlog_thread(void *x)
         }
     }
 
-    if (0 == access("/data/local/englog/eng.log",F_OK) ){
-        ret = rename("/data/local/englog/eng.log","/data/local/englog/last_eng.log");
+    if (0 == access("/data/local/englog/eng.log",F_OK)){
+        ret =  rename("/data/local/englog/eng.log","/data/local/englog/last_eng.log");
         if (-1 == ret) {
             ENG_LOG("rename failed.");
             return 0;
         }
     }
 
-    ret = creat("/data/local/englog/eng.log",S_IRWXU | S_IRWXG | S_IRWXO);
-    if (-1 == ret && (errno != EEXIST)) {
+    fd = creat("/data/local/englog/eng.log",S_IRWXU | S_IRWXG | S_IRWXO);
+    if (-1 == fd && (errno != EEXIST)) {
         ENG_LOG("creat /data/local/englog/eng.log failed.");
         return 0;
     }
+    close(fd);
 
     ret = chmod("/data/local/englog/eng.log",0777);
     if (-1 == ret) {

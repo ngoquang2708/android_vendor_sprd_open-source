@@ -361,25 +361,18 @@ static void eng_get_usb_int(int argc, char** argv, char* at_dev, char* diag_dev,
 static void eng_get_modem_int(char* type, char* at_chan, char* diag_chan, char* log_chan)
 {
     char property_name[32] = {0};
-    char *property_ro = "ro.modem.";
-    char *property_diag = ".diag";
-    char *property_at = ".tty";
-    char *property_log =".log";
 
-    strcpy(property_name,property_ro);
-    strcat(property_name,type);
-    strcat(property_name,property_diag);
+    sprintf(property_name,"%s%s%s","ro.modem.",type,".diag");
     property_get(property_name, diag_chan, "not_find");
+    ENG_LOG("%s %s diag_chan:%s", __FUNCTION__,property_name,diag_chan);
 
-    strcpy(property_name,property_ro);
-    strcat(property_name,type);
-    strcat(property_name,property_at);
+    sprintf(property_name,"%s%s%s","ro.modem.",type,".tty");
     property_get(property_name, at_chan, "not_find");
+    ENG_LOG("%s %s at_chan:%s", __FUNCTION__,property_name,at_chan);
 
-    strcpy(property_name,property_ro);
-    strcat(property_name,type);
-    strcat(property_name,property_log);
+    sprintf(property_name,"%s%s%s","ro.modem.",type,".log");
     property_get(property_name, log_chan, "not_find");
+    ENG_LOG("%s %s log_chan:%s", __FUNCTION__,property_name,log_chan);
 
     if(strcmp(type,"wcn") != 0 && 0 != strcmp(at_chan, "not_find")){
         strcat(at_chan, "31"); // channel31 is reserved for eng at
