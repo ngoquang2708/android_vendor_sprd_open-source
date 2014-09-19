@@ -293,7 +293,12 @@ int camera_pre_capture_buf_size(cmr_u32 camera_id,
 		return -1;
 	}
 
-	*mem_sum = 4;//to do
+#ifdef CONFIG_LOW_CAPTURE_MEM
+	*mem_sum = 1;
+#else
+	*mem_sum = CMR_CAPTURE_MEM_SUM;
+#endif
+
 	if (BACK_CAMERA_ID == camera_id) {
 		mem_tab_ptr = (struct cap_size_to_mem*)&back_cam_raw_mem_size_tab[0];
 	} else if (FRONT_CAMERA_ID == camera_id) {

@@ -100,7 +100,6 @@
 	} while(0)
 
 
-
 /**************************LOCAL FUNCTION DECLEARATION*********************************************************/
 enum isp_status {
 	PREV_ISP_IDLE = 0,
@@ -2479,7 +2478,7 @@ cmr_int prev_alloc_cap_buf(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 	struct cmr_cap_2_frm     cap_2_mems;
 	struct img_frm           *cur_img_frm = NULL;
 	struct cmr_zoom_param    *zoom_param = NULL;
-	cmr_u32                  sum = CMR_CAPTURE_MEM_SUM;
+	cmr_u32                  sum = 0;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -2487,6 +2486,12 @@ cmr_int prev_alloc_cap_buf(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 		CMR_LOGE("null param");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
+
+#ifdef CONFIG_LOW_CAPTURE_MEM
+	sum = 1;
+#else
+	sum = CMR_CAPTURE_MEM_SUM;
+#endif
 
 	prev_cxt     = &handle->prev_cxt[camera_id];
 	mem_ops      = &prev_cxt->prev_param.memory_setting;
@@ -2517,6 +2522,13 @@ cmr_int prev_alloc_cap_buf(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 				   &sum,
 				   prev_cxt->cap_phys_addr_array,
 				   prev_cxt->cap_virt_addr_array);
+
+#ifdef CONFIG_LOW_CAPTURE_MEM
+		for (i = 1; i < CMR_CAPTURE_MEM_SUM; i++) {
+			prev_cxt->cap_phys_addr_array[i] = prev_cxt->cap_phys_addr_array[0];
+			prev_cxt->cap_virt_addr_array[i] = prev_cxt->cap_virt_addr_array[0];
+		}
+#endif
 
 		/*check memory valid*/
 		CMR_LOGI("cap mem size 0x%x, mem_num %d", total_mem_size, CMR_CAPTURE_MEM_SUM);
@@ -2668,9 +2680,16 @@ cmr_int prev_free_cap_buf(struct prev_handle *handle, cmr_u32 camera_id)
 	cmr_int                  ret = CMR_CAMERA_SUCCESS;
 	struct prev_context      *prev_cxt = NULL;
 	struct memory_param      *mem_ops = NULL;
+	cmr_u32                  sum = 0;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
+
+#ifdef CONFIG_LOW_CAPTURE_MEM
+	sum = 1;
+#else
+	sum = CMR_CAPTURE_MEM_SUM;
+#endif
 
 	prev_cxt = &handle->prev_cxt[camera_id];
 	mem_ops  = &prev_cxt->prev_param.memory_setting;
@@ -2689,7 +2708,7 @@ cmr_int prev_free_cap_buf(struct prev_handle *handle, cmr_u32 camera_id)
 			  handle->oem_handle,
 			  prev_cxt->cap_phys_addr_array,
 			  prev_cxt->cap_phys_addr_array,
-			  CMR_CAPTURE_MEM_SUM);
+			  sum);
 
 	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
 	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
