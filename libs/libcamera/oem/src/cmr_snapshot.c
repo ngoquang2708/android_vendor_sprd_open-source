@@ -2820,7 +2820,7 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
 		ret = CMR_CAMERA_NORNAL_EXIT;
-		goto exit;
+		return ret;
 	}
 
 	cxt->cap_cnt++;
@@ -2843,6 +2843,8 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 		ret = snp_start_rot(snp_handle, data);
 		if (ret) {
 			CMR_LOGE("failed to start rot %ld", ret);
+			sem_post(&cxt->scaler_sync_sm);
+			sem_post(&cxt->jpeg_sync_sm);
 			goto exit;
 		}
 	}
@@ -2851,6 +2853,8 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 		ret = snp_start_scale(snp_handle, data);
 		if (ret) {
 			CMR_LOGE("failed to start scale %ld", ret);
+			sem_post(&cxt->scaler_sync_sm);
+			sem_post(&cxt->jpeg_sync_sm);
 			goto exit;
 		}
 	}
