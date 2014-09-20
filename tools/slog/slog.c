@@ -308,9 +308,10 @@ static void create_log_dir()
 	time_t when;
 	struct tm start_tm;
 	char path[MAX_NAME_LEN];
+	char cmd[MAX_NAME_LEN];
 	int ret = 0;
 
-		/* generate log dir */
+	/* generate log dir */
 	when = time(NULL);
 	localtime_r(&when, &start_tm);
 	sprintf(top_logdir, "20%02d-%02d-%02d-%02d-%02d-%02d",
@@ -324,6 +325,8 @@ static void create_log_dir()
 	ret = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", path);
+		sprintf(cmd, "rm -r %s", current_log_path);
+		system(cmd);
 		exit(0);
 	}
 
@@ -336,10 +339,13 @@ static void use_ori_log_dir()
 	DIR *p_dir;
 	struct dirent *p_dirent;
 	int log_num = 0;
+	char cmd[MAX_NAME_LEN];
 
 	if(( p_dir = opendir(current_log_path)) == NULL) {
 		err_log("Can't open %s.", current_log_path);
-		return;
+		sprintf(cmd, "rm -r %s", current_log_path);
+		system(cmd);
+		exit(0);
 	}
 
 	while((p_dirent = readdir(p_dir))) {
@@ -371,24 +377,60 @@ static void handle_low_power()
 
 static int start_sub_threads()
 {
+	int ret;
+
 	if(slog_enable != SLOG_ENABLE)
 		return 0;
 
-	if(!stream_log_handler_started)
-		pthread_create(&stream_tid, NULL, stream_log_handler, NULL);
-	if(!snapshot_log_handler_started)
-		pthread_create(&snapshot_tid, NULL, snapshot_log_handler, NULL);
-	if(!notify_log_handler_started)
-		pthread_create(&notify_tid, NULL, notify_log_handler, NULL);
-	if(!bt_log_handler_started)
-		pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
-	if(!tcp_log_handler_started)
-		pthread_create(&tcp_tid, NULL, tcp_log_handler, NULL);
-	if(!modem_log_handler_started)
-		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
-	if(!kmemleak_handler_started)
-		pthread_create(&kmemleak_tid, NULL, kmemleak_handler, NULL);
-
+	if(!stream_log_handler_started) {
+		ret = pthread_create(&stream_tid, NULL, stream_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create stream thread failed.");
+			exit(0);
+		}
+	}
+	if(!snapshot_log_handler_started) {
+		ret = pthread_create(&snapshot_tid, NULL, snapshot_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create snapshot thread failed.");
+			exit(0);
+		}
+	}
+	if(!notify_log_handler_started) {
+		ret = pthread_create(&notify_tid, NULL, notify_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create notify thread failed.");
+			exit(0);
+		}
+	}
+	if(!bt_log_handler_started) {
+		ret = pthread_create(&bt_tid, NULL, bt_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create bt thread failed.");
+			exit(0);
+		}
+	}
+	if(!tcp_log_handler_started) {
+		ret = pthread_create(&tcp_tid, NULL, tcp_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create tcp thread failed.");
+			exit(0);
+		}
+	}
+	if(!modem_log_handler_started) {
+		ret = pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+		if(ret < 0) {
+			err_log("create modem thread failed.");
+			exit(0);
+		}
+	}
+	if(!kmemleak_handler_started) {
+		ret = pthread_create(&kmemleak_tid, NULL, kmemleak_handler, NULL);
+		if(ret < 0) {
+			err_log("create kmemleak thread failed.");
+			exit(0);
+		}
+	}
 	return 0;
 }
 
@@ -553,6 +595,7 @@ int clear_all_log()
 		operate_bt_status("false", NULL);
 #endif
 	slog_enable = SLOG_DISABLE;
+	sleep(4);
 	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
 	system(cmd);
 	sprintf(cmd, "rm -r %s", external_storage);
@@ -595,6 +638,7 @@ static void handler_internal_log_size()
 	struct statfs diskInfo;
 	unsigned int internal_availabled_size;
 	int ret;
+	char cmd[MAX_NAME_LEN];
 
 	if( strncmp(current_log_path, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)))
 		return;
@@ -602,6 +646,8 @@ static void handler_internal_log_size()
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", current_log_path);
+		sprintf(cmd, "rm -r %s", current_log_path);
+		system(cmd);
 		exit(0);
 	}
 
@@ -733,6 +779,7 @@ static void handle_dropbox()
  */
 static void handle_top_logdir()
 {
+	char cmd[MAX_NAME_LEN];
 	int ret;
 
 	if(slog_enable != SLOG_ENABLE)
@@ -741,6 +788,8 @@ static void handle_top_logdir()
 	ret = mkdir(current_log_path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if(-1 == ret && (errno != EEXIST)) {
 		err_log("mkdir %s failed.", current_log_path);
+		sprintf(cmd, "rm -r %s", current_log_path);
+		system(cmd);
 		exit(0);
 	}
 
