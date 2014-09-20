@@ -572,8 +572,8 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	NULL,			//&g_ov2680_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	3,			// skip frame num before preview
-	3,			// skip frame num before capture
+	1,			// skip frame num before preview
+	0,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -584,7 +584,7 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	0,
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 10, 0},
 	s_ov2680_video_info,
-	3,			// skip frame num while change setting
+	1,			// skip frame num while change setting
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)

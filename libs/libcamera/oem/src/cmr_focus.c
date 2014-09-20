@@ -48,7 +48,6 @@ struct af_context {
 	cmr_handle               thread_handle;
 	af_cb_func_ptr           evt_cb;
 	struct af_md_ops         ops;
-	pthread_mutex_t          af_cb_mutex;
 	pthread_mutex_t          set_af_cancel_mutex;
 	pthread_mutex_t          af_sensor_caf_mutex;
 	pthread_mutex_t          af_isp_caf_mutex;
@@ -151,7 +150,6 @@ cmr_int cmr_focus_init(struct af_init_param *parm_ptr, cmr_u32 camera_id, cmr_ha
 	*af_handle = (cmr_handle)af_cxt;
 
 	/*local init*/
-	pthread_mutex_init(&af_cxt->af_cb_mutex, NULL);
 	pthread_mutex_init(&af_cxt->af_isp_caf_mutex, NULL);
 	pthread_mutex_init(&af_cxt->set_af_cancel_mutex, NULL);
 	sem_init(&af_cxt->isp_af_sem, 0, 0);
@@ -190,7 +188,6 @@ af_init_end:
 		sem_destroy(&af_cxt->isp_af_sem);
 		pthread_mutex_destroy(&af_cxt->set_af_cancel_mutex);
 		pthread_mutex_destroy(&af_cxt->af_isp_caf_mutex);
-		pthread_mutex_destroy(&af_cxt->af_cb_mutex);
 	}
 
 	CMR_LOGI("X ret= %ld", ret);
@@ -228,7 +225,6 @@ cmr_int cmr_focus_deinit(cmr_handle af_handle)
 	sem_destroy(&af_cxt->isp_af_sem);
 	pthread_mutex_destroy(&af_cxt->set_af_cancel_mutex);
 	pthread_mutex_destroy(&af_cxt->af_isp_caf_mutex);
-	pthread_mutex_destroy(&af_cxt->af_cb_mutex);
 
 	free(af_cxt);
 	af_cxt = NULL;

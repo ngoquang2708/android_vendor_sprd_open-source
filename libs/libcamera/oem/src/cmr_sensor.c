@@ -79,8 +79,6 @@ struct cmr_exif_param {
 struct cmr_sns_thread_cxt {
 	cmr_uint                        is_inited;
 	cmr_handle                      thread_handle;
-	sem_t                           sensor_sync_sem;
-	pthread_mutex_t                 sensor_mutex;
 };
 
 struct cmr_sns_ops_thread_cxt {
@@ -574,7 +572,7 @@ cmr_int cmr_sensor_get_autotest_mode(cmr_handle sensor_handle, cmr_u32 sensor_id
 		goto exit;
 	}
 	*is_autotest = handle->is_autotest;
-	CMR_LOGI("auto test %d", *is_autotest);
+	CMR_LOGI("auto test %d", (cmr_s32)*is_autotest);
 exit:
 	return ret;
 }
@@ -592,36 +590,17 @@ cmr_int cmr_sns_create_thread(struct cmr_sensor_handle *handle)
 	CMR_LOGI("is_inited %ld", handle->thread_cxt.is_inited);
 
 	if (!handle->thread_cxt.is_inited) {
-		pthread_mutex_init(&handle->thread_cxt.sensor_mutex, NULL);
-		sem_init(&handle->thread_cxt.sensor_sync_sem, 0, 0);
-
 		ret = cmr_thread_create(&handle->thread_cxt.thread_handle,
 					SENSOR_MSG_QUEUE_SIZE,
 					cmr_sns_thread_proc,
 					(void*)handle);
-		if (ret) {
-			CMR_LOGE("send msg failed!");
-			ret = CMR_CAMERA_FAIL;
-			goto end;
-		}
-
-		handle->thread_cxt.is_inited = 1;
-
-		message.msg_type  = CMR_SENSOR_EVT_INIT;
-		message.sync_flag = CMR_MSG_SYNC_RECEIVED;
-		ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
-		if (ret) {
-			CMR_LOGE("send msg failed!");
-			ret = CMR_CAMERA_FAIL;
-			goto end;
-		}
 	}
 
 end:
 	if (ret) {
-		sem_destroy(&handle->thread_cxt.sensor_sync_sem);
-		pthread_mutex_destroy(&handle->thread_cxt.sensor_mutex);
 		handle->thread_cxt.is_inited = 0;
+	} else {
+		handle->thread_cxt.is_inited = 1;
 	}
 
 	CMR_LOGI("ret %ld", ret);
@@ -741,18 +720,8 @@ cmr_int cmr_sns_destroy_thread(struct cmr_sensor_handle *handle)
 	CMR_LOGI("is_inited %ld", handle->thread_cxt.is_inited);
 
 	if (handle->thread_cxt.is_inited) {
-		message.msg_type  = CMR_SENSOR_EVT_EXIT;
-		message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-		ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
-		if (ret) {
-			CMR_LOGE("send msg failed!");
-		}
-
 		ret = cmr_thread_destroy(handle->thread_cxt.thread_handle);
 		handle->thread_cxt.thread_handle = 0;
-
-		sem_destroy(&handle->thread_cxt.sensor_sync_sem);
-		pthread_mutex_destroy(&handle->thread_cxt.sensor_mutex);
 		handle->thread_cxt.is_inited = 0;
 	}
 

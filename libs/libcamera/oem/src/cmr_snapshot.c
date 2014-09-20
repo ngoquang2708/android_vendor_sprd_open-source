@@ -763,7 +763,7 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 		CMR_LOGI("post proc has been cancel");
 		goto exit;
 	}
-
+	CMR_PRINT_TIME;
 	snp_cxt->index = index;
 	jpeg_in_ptr = &chn_param_ptr->jpeg_in[index];
 	jpeg_in_ptr->src.data_end = frm_ptr->data_endian;

@@ -5289,9 +5289,9 @@ void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 				uint32_t tmpIndex = frame->order_buf_id;
 				if (mPreviewWindow && isPreviewing()) {
-				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-					tmpIndex,
-					0, NULL, mUser, 1);
+					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+						tmpIndex,
+						0, NULL, mUser, 1);
 				} else {
 					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
 						mPreviewWindow,
@@ -5301,11 +5301,11 @@ void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 			} else {
 				uint32_t dataSize = frame->width * frame->height * 3 / 2;
 				if (mPreviewWindow && isPreviewing()) {
-				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
-						(void*)frame->y_vir_addr, dataSize);
-				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-									mPreviewDcamAllocBufferCnt - 1,
-									0, NULL, mUser, 1);
+					memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
+							(void*)frame->y_vir_addr, dataSize);
+					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+										mPreviewDcamAllocBufferCnt - 1,
+										0, NULL, mUser, 1);
 				} else {
 					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
 						mPreviewWindow,

@@ -175,13 +175,6 @@ static cmr_int cmr_scale_create_thread(struct scale_file *file)
 
 		file->is_inited = 1;
 
-		message.msg_type  = CMR_EVT_SCALE_INIT;
-		message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-		ret = cmr_thread_msg_send(file->scale_thread, &message);
-		if (ret) {
-			CMR_LOGE("send msg failed!");
-			ret = CMR_CAMERA_FAIL;
-		}
 	}
 
 out:
@@ -200,18 +193,11 @@ static cmr_int cmr_scale_destory_thread(struct scale_file *file)
 	}
 
 	if (file->is_inited) {
-		message.msg_type  = CMR_EVT_SCALE_EXIT;
-		message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-		ret = cmr_thread_msg_send(file->scale_thread, &message);
-		if (ret) {
-			CMR_LOGE("send msg failed!");
-		}
+		ret = cmr_thread_destroy(file->scale_thread);
+		file->scale_thread= 0;
+
+		file->is_inited = 0;
 	}
-
-	ret = cmr_thread_destroy(file->scale_thread);
-	file->scale_thread= 0;
-
-	file->is_inited = 0;
 
 	return ret;
 }
@@ -325,29 +311,7 @@ cmr_int cmr_scale_start(cmr_handle scale_handle, struct img_frm *src_img,
 
 	memcpy((void*)&frame_params->output_endian, (void*)&dst_img->data_end,
 		sizeof(struct scale_endian_sel_t));
-#if 0
-	/*temp code, need to double check*/
-	{
-		uint8_t *tmp_endian = NULL;
-		switch (dst_img->fmt) {
-		case IMG_DATA_TYPE_YUV420:
-			tmp_endian = &frame_params->output_endian.uv_endian;
-			break;
 
-		case IMG_DATA_TYPE_YVU420:
-			tmp_endian = &frame_params->input_endian.uv_endian;
-			break;
-
-		default:
-			break;
-		}
-		if (1 == *tmp_endian) {
-			*tmp_endian = 2;
-		} else if (2 == *tmp_endian) {
-			*tmp_endian = 1;
-		}
-	}
-#endif
 	/*set scale mode*/
 	frame_params->scale_mode = SCALE_MODE_NORMAL;
 
