@@ -2703,13 +2703,13 @@ cmr_int prev_free_cap_buf(struct prev_handle *handle, cmr_u32 camera_id)
 		CMR_LOGE("already freed");
 		return ret;
 	}
-
+#ifndef CONFIG_PRE_ALLOC_CAPTURE_MEM
 	mem_ops->free_mem(CAMERA_SNAPSHOT,
 			  handle->oem_handle,
 			  prev_cxt->cap_phys_addr_array,
 			  prev_cxt->cap_phys_addr_array,
 			  sum);
-
+#endif
 	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
 	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
 

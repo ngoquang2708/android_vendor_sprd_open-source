@@ -5472,39 +5472,6 @@ void SprdCameraHardware::receiveRawPicture(struct camera_frame_type *frame)
 	}
 
 callbackraw:
-#if 0
-	if (mData_cb!= NULL) {
-		ssize_t offset = (uint32_t)frame->y_vir_addr;
-		offset -= (uint32_t)mRawHeap->data;
-		ssize_t frame_size = 0;
-
-		if (CAMERA_YCBCR_4_2_2 == frame->format)
-			frame_size = frame->width * frame->height * 2;
-		else if (CAMERA_YCBCR_4_2_0 == frame->format)
-			frame_size = frame->width * frame->height * 3 / 2;
-		else
-			frame_size = frame->width * frame->height * 2;
-
-		if (offset + frame_size <= (ssize_t)mRawHeap->phys_size) {
-			offset /= frame_size;
-
-			LOGD("mMsgEnabled: 0x%x, offset: %d.",mMsgEnabled, (uint32_t)offset);
-
-			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
-				handleDataCallback(CAMERA_MSG_RAW_IMAGE, 0, offset, NULL, mUser, 0);
-			}
-
-			if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
-				LOGD("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
-				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0,0,mUser);
-			}
-		} else {
-			LOGE("receiveRawPicture: virtual address 0x%lx is out of range!", frame->y_vir_addr);
-		}
-	} else {
-		LOGD("Raw-picture callback was canceled--skipping.");
-	}
-#else
 	if (mData_cb!= NULL) {
 		ssize_t offset = 0;
 
@@ -5519,7 +5486,7 @@ callbackraw:
 	} else {
 		LOGD("Raw-picture callback was canceled--skipping.");
 	}
-#endif
+
 	print_time();
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("receiveRawPicture: X");
@@ -5922,22 +5889,13 @@ void SprdCameraHardware::HandleTakePicture(enum camera_cb_type cb, void* parm4)
 		LOGI("HandleTakePicture: CAMERA_EXIT_CB_DONE");
 		if (1 != mParameters.getInt("zsl"))
 			set_ddr_freq(BASE_FREQ_REQ);
-		if (SPRD_WAITING_RAW == getCaptureState())
-		{
+		if (SPRD_WAITING_RAW == getCaptureState()) {
 			transitionState(SPRD_WAITING_RAW,
 				((NULL != mData_cb) ? SPRD_WAITING_JPEG : SPRD_IDLE),
 				STATE_CAPTURE);
-			// It's important that we call receiveRawPicture() before
-			// we transition the state because another thread may be
-			// waiting in cancelPicture(), and then delete this object.
-			// If the order were reversed, we might call
-			// receiveRawPicture on a dead object.
-			if (checkPreviewStateForCapture()) {
-				receivePostLpmRawPicture((camera_frame_type *)parm4);
-			} else {
-				LOGE("HandleTakePicture drop current LpmRawPicture");
-			}
+			checkPreviewStateForCapture();
 		}
+		LOGI("HandleTakePicture: CAMERA_EXIT_CB_DONE done");
 		break;
 
 	case CAMERA_EXIT_CB_FAILED:
@@ -5998,8 +5956,6 @@ void SprdCameraHardware::HandleEncode(enum camera_cb_type cb, void* parm4)
 		LOGI("HandleEncode: CAMERA_EXIT_CB_DONE");
 		if ((SPRD_WAITING_JPEG == getCaptureState())) {
 			Sprd_camera_state tmpCapState= SPRD_WAITING_JPEG;
-			receiveJpegPictureFragment((struct camera_jpeg_param*)parm4);
-			LOGI("CAMERA_EXIT_CB_DONE MID.");
 			if (checkPreviewStateForCapture()) {
 				receiveJpegPicture((struct camera_jpeg_param *)parm4);
 			} else {

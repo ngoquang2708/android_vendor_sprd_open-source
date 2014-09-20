@@ -221,6 +221,7 @@ struct camera_context {
 	cmr_handle               prev_cb_thr_handle;
 	cmr_handle               snp_cb_thr_handle;
 	cmr_handle               snp_secondary_thr_handle;
+	cmr_handle               snp_send_raw_image_handle;
 
 	/*for setting*/
 	struct camera_settings   cmr_set;

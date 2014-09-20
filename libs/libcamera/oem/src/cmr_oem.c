@@ -95,6 +95,7 @@ static cmr_int camera_focus_deinit(cmr_handle  oem_handle);
 static cmr_int camera_preview_cb_thread_proc(struct cmr_msg *message, void* data);
 static cmr_int camera_snapshot_cb_thread_proc(struct cmr_msg *message, void* data);
 static cmr_int camera_snapshot_secondary_thread_proc(struct cmr_msg *message, void* data);
+static cmr_int camera_snapshot_send_raw_thread_proc(struct cmr_msg *message, void* data);
 static cmr_int camera_create_prev_thread(cmr_handle oem_handle);
 static cmr_int camera_destroy_prev_thread(cmr_handle oem_handle);
 static cmr_int camera_create_snp_thread(cmr_handle oem_handle);
@@ -836,6 +837,7 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 		break;
 	case SNAPSHOT_EVT_CB_SNAPSHOT_DONE:
 		oem_cb_type = CAMERA_EVT_CB_SNAPSHOT_DONE;
+		send_thr_handle = cxt->snp_send_raw_image_handle;
 		break;
 	case SNAPSHOT_EXIT_CB_DONE:
 		oem_cb_type = CAMERA_EXIT_CB_DONE;
@@ -866,7 +868,8 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 	message.sub_msg_type = oem_cb_type;
 	if (CAMERA_EVT_CB_CAPTURE_FRAME_DONE == oem_cb_type) {
 		message.sync_flag  = CMR_MSG_SYNC_RECEIVED;
-	} else if ((CAMERA_EXIT_CB_PREPARE == oem_cb_type) || (CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE == oem_cb_type)) {
+	} else if ((CAMERA_EXIT_CB_PREPARE == oem_cb_type) || (CAMERA_EVT_CB_SNAPSHOT_JPEG_DONE == oem_cb_type)
+		|| (CAMERA_EVT_CB_SNAPSHOT_DONE == oem_cb_type)) {
 		message.sync_flag  = CMR_MSG_SYNC_NONE;
 	} else {
 		message.sync_flag  = CMR_MSG_SYNC_PROCESSED;
@@ -1976,6 +1979,31 @@ exit:
 	return ret;
 }
 
+cmr_int camera_snapshot_send_raw_thread_proc(struct cmr_msg *message, void* data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct camera_context          *cxt = (struct camera_context*)data;
+	camera_cb_of_type              callback;
+
+	if (!message || !data) {
+		CMR_LOGE("param error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	CMR_LOGD("msg_type 0x%x, sub msg type 0x%x", message->msg_type, message->sub_msg_type);
+	CMR_PRINT_TIME;
+	callback = cxt->camera_cb;
+	if (callback) {
+		callback(message->sub_msg_type, cxt->client_data, message->msg_type, message->data);
+	} else {
+		CMR_LOGE("err, camera cb is null");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+	}
+	CMR_PRINT_TIME;
+exit:
+	return ret;
+}
+
 cmr_int camera_create_prev_thread(cmr_handle oem_handle)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2032,17 +2060,27 @@ cmr_int camera_create_snp_thread(cmr_handle oem_handle)
 							camera_snapshot_secondary_thread_proc, (void*)oem_handle);
 
 	if (CMR_MSG_SUCCESS != ret) {
-		CMR_LOGE("failed to create snapshot thread %ld", ret);
-		if (cxt->snp_cb_thr_handle) {
-			ret = cmr_thread_destroy(cxt->snp_cb_thr_handle);
-			if (!ret) {
-				cxt->snp_cb_thr_handle = (cmr_handle)0;
-			} else {
-				CMR_LOGE("failed to destroy snp thr %ld", ret);
-			}
-		}
 		ret = -CMR_CAMERA_NO_SUPPORT;
+		goto destroy_cb_thr;
 	}
+
+	ret = cmr_thread_create(&cxt->snp_send_raw_image_handle, SNAPSHOT_MSG_QUEUE_SIZE,
+							camera_snapshot_send_raw_thread_proc, (void*)oem_handle);
+
+	if (CMR_MSG_SUCCESS != ret) {
+		ret = -CMR_CAMERA_NO_SUPPORT;
+		goto destroy_secondary_thr;
+	} else {
+		goto exit;
+	}
+
+destroy_secondary_thr:
+	cmr_thread_destroy(cxt->snp_secondary_thr_handle);
+	cxt->snp_secondary_thr_handle = (cmr_handle)0;
+destroy_cb_thr:
+	cmr_thread_destroy(cxt->snp_cb_thr_handle);
+	cxt->snp_cb_thr_handle = (cmr_handle)0;
+exit:
 	CMR_LOGD("done %ld", ret);
 	return ret;
 }
@@ -2070,6 +2108,14 @@ cmr_int camera_destroy_snp_thread(cmr_handle oem_handle)
 		ret = cmr_thread_destroy(cxt->snp_secondary_thr_handle);
 		if (!ret) {
 			cxt->snp_secondary_thr_handle = (cmr_handle)0;
+		} else {
+			CMR_LOGE("failed to destroy snp thr %ld", ret);
+		}
+	}
+	if (cxt->snp_send_raw_image_handle) {
+		ret = cmr_thread_destroy(cxt->snp_send_raw_image_handle);
+		if (!ret) {
+			cxt->snp_send_raw_image_handle = (cmr_handle)0;
 		} else {
 			CMR_LOGE("failed to destroy snp thr %ld", ret);
 		}
