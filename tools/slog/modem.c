@@ -594,7 +594,7 @@ void *modem_log_handler(void *arg)
 	pthread_create(&modem_state_monitor_tid, NULL, handle_modem_state_monitor, NULL);
 
 	modem_log_handler_started = 1;
-	while(slog_enable != SLOG_DISABLE) {
+	while(slog_enable != SLOG_DISABLE && cplog_enable == SLOG_ENABLE) {
 
 		if(modem_assert_flag == 1) {
 			err_log("Modem %s Assert!", modem_info->name);

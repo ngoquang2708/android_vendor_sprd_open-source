@@ -72,8 +72,10 @@ enum {
 
 #define MAX_NAME_LEN			128
 #define MAX_LINE_LEN			2048
-#define DEFAULT_MAX_LOG_SIZE		256 /* MB */
-#define MAXROLLLOGS			9
+#define DEFAULT_LOG_SIZE_AP		256 /* MB */
+#define DEFAULT_LOG_SIZE_CP		512 /* MB */
+#define MAXROLLLOGS_FOR_AP		9
+#define MAXROLLLOGS_FOR_CP		100
 #define INTERNAL_ROLLLOGS		1
 #define TIMEOUT_FOR_SD_MOUNT		10 /* seconds */
 #define BUFFER_SIZE			(32 * 1024) /* 32k */
@@ -157,6 +159,7 @@ extern struct slog_info *stream_log_head, *snapshot_log_head;
 extern struct slog_info *notify_log_head, *misc_log;
 extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid, kmemleak_tid;
 extern int slog_enable;
+extern int cplog_enable;
 extern int internal_log_size;
 extern int screenshot_enable;
 #ifdef LOW_POWER_MODE
