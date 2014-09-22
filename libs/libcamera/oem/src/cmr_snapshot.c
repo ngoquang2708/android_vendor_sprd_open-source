@@ -2626,12 +2626,25 @@ cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_in
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	cmr_u32                        sync_flag = CMR_MSG_SYNC_PROCESSED;
 	CMR_MSG_INIT(message);
 
 	CMR_LOGI("evt %ld", evt);
+	if (SNAPSHOT_FUNC_STATE == func_type) {
+		sync_flag = CMR_MSG_SYNC_NONE;
+	} else {
+		switch (evt) {
+		case SNAPSHOT_EVT_CB_SNAPSHOT_DONE:
+			sync_flag = CMR_MSG_SYNC_RECEIVED;
+			break;
+		default:
+			sync_flag = CMR_MSG_SYNC_PROCESSED;
+			break;
+		}
+	}
 	message.msg_type = evt;
 	message.sub_msg_type = func_type;
-	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
+	message.sync_flag = sync_flag;
 	message.alloc_flag = 0;
 	message.data = data;
 	ret = cmr_thread_msg_send(cxt->thread_cxt.notify_thr_handle, &message);
