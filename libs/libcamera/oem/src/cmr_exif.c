@@ -168,7 +168,7 @@ cmr_int cmr_exif_init(JINF_EXIF_INFO_T *jinf_exif_info_ptr, setting_get_pic_taki
 cmr_int set_exif_pri_desc(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_PRI_DESC_T *p_exif_pri_desc)
 {
 	JINF_EXIF_INFO_T   *p_jinf_exif_info =  jinf_exif_info_ptr;
-	char               arr_time[ARR_MAX_LEN] = {0};
+	char               arr_time[20] = {0};
 
 
 	CMR_LOGD("E");
@@ -334,7 +334,7 @@ cmr_int set_exif_specific_data_time(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
                                    EXIF_SPEC_DATE_TIME_T *p_image_date_time)
 {
 	JINF_EXIF_INFO_T   *jinf_exif_info = jinf_exif_info_ptr;
-	char               arr_time[100] = {0};
+	char               arr_time[20] = {0};
 
 
 	if (!jinf_exif_info || !p_image_date_time) {

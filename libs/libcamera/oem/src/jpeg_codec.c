@@ -304,6 +304,7 @@ static cmr_int _enc_start(cmr_handle handle, struct jpeg_codec_context *jcontext
 
 	if (_jpeg_is_stop(jcontext)) {
 		CMR_LOGI("jpeg: cancel");
+		free(jenc_parm_ptr);
 		return JPEG_CODEC_STOP;
 	}
 

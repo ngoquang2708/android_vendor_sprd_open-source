@@ -619,16 +619,16 @@ int JPEGDEC_Slice_Start(JPEGDEC_PARAMS_T *jpegdec_params,  JPEGDEC_SLICE_OUT_T *
 		slice_num = (jpegdec_params->height%slice_height) ? (jpegdec_params->height/slice_height+1):(jpegdec_params->height/slice_height);
 		SCI_TRACE_LOW("JPEGDEC set slice_num = %d .",slice_num);
 	}
-
-	if(0 ==(jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR))) {
+	jpg_fd = open(SPRD_JPG_DRIVER,O_RDWR);
+	if(jpg_fd < 0) {
 		SCI_TRACE_LOW("JPEGDEC open jpg module error, jpg_fd: %d.\n", jpg_fd);
 		return -1;
     } else {
 		jpg_addr = mmap(NULL,SPRD_JPG_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,jpg_fd,0);
 		SCI_TRACE_LOW("JPEGDEC  jpg addr 0x%x\n",(uint32_t)jpg_addr);
     }
-	jpg_fd = jpeg_fw_codec->fd;
-	jpg_addr = jpeg_fw_codec->jpg_addr;
+//	jpg_fd = jpeg_fw_codec->fd;
+//	jpg_addr = jpeg_fw_codec->jpg_addr;
 
 	if ((jpg_fd < 0) || (NULL == jpg_addr)) {
 		SCI_TRACE_LOW("JPEGDEC_Slice_Start, param err %d", jpg_fd);
