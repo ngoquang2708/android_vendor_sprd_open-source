@@ -30,6 +30,8 @@ public class AssertApplication extends Application {
     private static final String MODEM_STAT_CHANGE = "com.android.modemassert.MODEM_STAT_CHANGE";
     //extra data key in intent for assert broadcast
     private static final String MODEM_STAT = "modem_stat";
+    //SPRD: add modem assert reason for PhoneInfo feature
+    private static final String MODEM_INFO= "modem_info";
     //values of extra data in intent.
     private static final String MODEM_ALIVE = "modem_alive";
     private static final String MODEM_ASSERT = "modem_assert";
@@ -125,7 +127,8 @@ public class AssertApplication extends Application {
                         continue;
                     }
                     if (info.contains("Modem Alive")) {
-                        sendModemStatBroadcast(MODEM_ALIVE);
+                        //SPRD: add modem assert reason for PhoneInfo feature
+                        sendModemStatBroadcast(MODEM_ALIVE,info);
                         hideNotification(MODEM_ASSERT_ID);
                         hideNotification(MODEM_BLOCK_ID);
                     } else if (info.contains("Modem Assert")) {
@@ -140,7 +143,8 @@ public class AssertApplication extends Application {
                         Log.i(MTAG,"modem assert Send ACTION_LTE_READY  false");
                         sendBroadcast(intent);
                         /* @} */
-                        sendModemStatBroadcast(MODEM_ASSERT);
+                        //SPRD: add modem assert reason for PhoneInfo feature
+                        sendModemStatBroadcast(MODEM_ASSERT,info);
                     } else if (info.contains("Modem Blocked")) {
                         showNotification(MODEM_BLOCK_ID,"modem block",info);
                     } else {
@@ -237,10 +241,12 @@ public class AssertApplication extends Application {
         manager.cancel(notificationId);
     }
 
-    private void sendModemStatBroadcast(String modemStat) {
+    private void sendModemStatBroadcast(String modemStat,String info) {
         Log.d(MTAG, "sendModemStatBroadcast : " + modemStat);
         Intent intent = new Intent(MODEM_STAT_CHANGE);
         intent.putExtra(MODEM_STAT, modemStat);
+        //SPRD: add modem assert reason for PhoneInfo feature
+        intent.putExtra(MODEM_INFO, info);
         sendBroadcast(intent);
     }
 
