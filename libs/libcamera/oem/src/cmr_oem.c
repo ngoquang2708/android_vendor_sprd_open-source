@@ -803,7 +803,7 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	cmr_uint                        oem_func;
+	cmr_uint                        oem_func = CAMERA_FUNC_TYPE_MAX;
 	cmr_uint                        oem_cb_type = CAMERA_CB_TYPE_MAX;
 	cmr_handle                      send_thr_handle = cxt->snp_cb_thr_handle;
 	CMR_MSG_INIT(message);
@@ -1594,7 +1594,7 @@ cmr_int camera_preview_init(cmr_handle  oem_handle)
 	init_param.ops.sensor_open = camera_open_sensor;
 	init_param.ops.sensor_close = camera_close_sensor;
 	init_param.oem_cb = camera_preview_cb;
-/*	init_param.private_data =*/
+	init_param.private_data = NULL;
 	init_param.sensor_bits = (1 << cxt->camera_id);
 	ret = cmr_preview_init(&init_param, &prev_cxt->preview_handle);
 	if (ret) {
@@ -1671,7 +1671,7 @@ cmr_int camera_snapshot_init(cmr_handle  oem_handle)
 	init_param.ops.channel_stop = camera_channel_stop;
 	init_param.ops.get_sensor_info = camera_get_sensor_info;
 	init_param.ops.stop_codec = camera_stop_codec;
-/*	init_param.private_data */
+	init_param.private_data = NULL;
 	ret = cmr_snapshot_init(&init_param, &snp_cxt->snapshot_handle);
 	if (ret) {
 		CMR_LOGE("failed to init snapshot,ret %ld", ret);
@@ -1790,6 +1790,7 @@ cmr_int camera_setting_init(cmr_handle  oem_handle)
 	init_param.get_setting_activity = camera_get_setting_activity;
 	init_param.before_set_cb = camera_before_set;
 	init_param.after_set_cb = camera_after_set;
+	init_param.padding=0;
 	ret = cmr_setting_init(&init_param, &setting_cxt->setting_handle);
 	if (ret) {
 		CMR_LOGE("failed to init setting %ld", ret);
@@ -2481,6 +2482,9 @@ cmr_int camera_start_exif_encode(cmr_handle oem_handle, cmr_handle caller_handle
 	enc_exif_param.exif_ptr->inter_ptr = NULL;
 	enc_exif_param.exif_ptr->spec_ptr = NULL;//wjp*/
 	enc_exif_param.exif_isp_info = NULL;
+	enc_exif_param.padding = 0;
+	out_pram.output_buf_virt_addr = 0;
+	out_pram.output_buf_size = 0;
 	ret = jpeg_enc_add_eixf(&enc_exif_param, &out_pram);
 	if (!ret) {
 		*out_ptr = out_pram;

@@ -4418,7 +4418,7 @@ status_t SprdCameraHardware::setCameraParameters()
 
 	SprdCameraParameters::Size preview_size = {0, 0};
 	SprdCameraParameters::Rect preview_rect = {0, 0, 0, 0};
-	int area[4 * SprdCameraParameters::kFocusZoneMax + 1] = {0};
+	int area[4 * SprdCameraParameters::kFocusZoneMax + 2] = {0};
 
 	preview_size.width = mPreviewWidth;
 	preview_size.height = mPreviewHeight;
