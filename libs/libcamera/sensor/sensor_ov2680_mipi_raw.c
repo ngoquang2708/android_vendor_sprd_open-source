@@ -2347,6 +2347,7 @@ LOCAL int _ov2680_set_gain16(int gain16)
 
 	temp = gain16>>8;
 	Sensor_WriteReg(0x350a, temp);
+	SENSOR_PRINT("gain %d",gain16);
 
 	return 0;
 }
@@ -2369,6 +2370,8 @@ LOCAL int _ov2680_set_shutter(int shutter)
 	temp = shutter>>12;
 	Sensor_WriteReg(0x3500, temp);
 
+	SENSOR_PRINT("shutter %d",shutter);
+
 	return 0;
 }
 
@@ -2383,8 +2386,6 @@ LOCAL void _calculate_hdr_exposure(int capture_gain16,int capture_VTS, int captu
 LOCAL uint32_t _ov2680_SetEV(uint32_t param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
-//	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) param;
-
 	uint16_t value=0x00;
 	uint32_t gain = s_ov2680_gain;
 	uint32_t ev = param;
@@ -2393,13 +2394,13 @@ LOCAL uint32_t _ov2680_SetEV(uint32_t param)
 
 	switch(ev) {
 	case SENSOR_HDR_EV_LEVE_0:
-		_calculate_hdr_exposure(s_ov2680_gain/2,s_capture_VTS,s_capture_shutter);
+		_calculate_hdr_exposure(s_ov2680_gain/2,s_capture_VTS,s_capture_shutter/2);
 		break;
 	case SENSOR_HDR_EV_LEVE_1:
 		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter);
 		break;
 	case SENSOR_HDR_EV_LEVE_2:
-		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter *4);
+		_calculate_hdr_exposure(s_ov2680_gain*4,s_capture_VTS,s_capture_shutter*4);
 		break;
 	default:
 		break;
@@ -2411,6 +2412,7 @@ LOCAL uint32_t _ov2680_ExtFunc(uint32_t ctl_param)
 {
 	uint32_t rtn = SENSOR_SUCCESS;
 	SENSOR_EXT_FUN_PARAM_T_PTR ext_ptr = (SENSOR_EXT_FUN_PARAM_T_PTR) ctl_param;
+	SENSOR_PRINT("cmd %d",ext_ptr->cmd);
 	switch (ext_ptr->cmd) {
 		case SENSOR_EXT_EV:
 			rtn = _ov2680_SetEV(ext_ptr->param);

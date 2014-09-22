@@ -3178,6 +3178,7 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 	cmr_uint                       sensor_param = 0;
 	cmr_uint                       set_exif_flag = 0;
 	SENSOR_EXIF_CTRL_E             exif_cmd;
+	SENSOR_EXT_FUN_PARAM_T_PTR 	   hdr_ev_param_ptr = 0;
 
 
 	if (!oem_handle || !param_ptr) {
@@ -3290,11 +3291,15 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		return ret;
 	case COM_SN_SET_HDR_EV:
 	{
-		SENSOR_EXT_FUN_PARAM_T hdr_ev_param;
 		cmd = SENSOR_SET_HDR_EV;
-		hdr_ev_param.cmd = SENSOR_EXT_EV;
-		hdr_ev_param.param = param_ptr->cmd_value;
-		sensor_param = (cmr_uint)&hdr_ev_param;
+		hdr_ev_param_ptr = malloc(sizeof(SENSOR_EXT_FUN_PARAM_T));
+		if (!hdr_ev_param_ptr) {
+			CMR_LOGE("fail to malloc");
+			return CMR_CAMERA_NO_MEM;
+		}
+		hdr_ev_param_ptr->cmd = SENSOR_EXT_EV;
+		hdr_ev_param_ptr->param = param_ptr->cmd_value;
+		sensor_param = (cmr_uint)hdr_ev_param_ptr;
 		break;
 	}
 	case COM_SN_GET_INFO:
@@ -3309,7 +3314,11 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		break;
 	}
 	if (!ret) {
-		ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, cmd, sensor_param);//to do
+		ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, cmd, sensor_param);
+		if ((COM_SN_SET_HDR_EV == cmd_type) && hdr_ev_param_ptr) {
+			free(hdr_ev_param_ptr);
+			hdr_ev_param_ptr = 0;
+		}
 		if (ret) {
 			CMR_LOGE("failed to sn ioctrl %ld", ret);
 		}
