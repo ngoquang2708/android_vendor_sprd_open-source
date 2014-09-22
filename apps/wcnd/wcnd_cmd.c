@@ -72,6 +72,19 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 	int ret_value = -1;
 	int to_tell_cp2_sleep = 0;
 
+
+	//First check if wcn modem is enabled or not, if not, the at cmd is not supported
+	char value[PROPERTY_VALUE_MAX] = {'\0'};
+
+	property_get(WCND_MODEM_ENABLE_PROP_KEY, value, "1");
+	int is_enabled = atoi(value);
+
+	if(!is_enabled)
+	{
+		wcnd_send_back_cmd_result(client_fd, ":WCN Disabled", 0);
+		return 0;
+	}
+
 	if( !atcmd_str || !pWcndManger)
 		return -1;
 
