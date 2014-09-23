@@ -38,6 +38,8 @@ struct SprdSimpleOMXComponent : public SprdOMXComponent {
 
     virtual void prepareForDestruction();
 
+    virtual void sendConvertMessage(OMX_BUFFERHEADERTYPE *buffer);
+
     void onMessageReceived(const sp<AMessage> &msg);
 
 protected:
