@@ -280,6 +280,7 @@ void camera_send_channel_data(cmr_handle oem_handle, cmr_handle receiver_handle,
 	if (cxt->snp_cxt.channel_bits & chn_bit) {
 		cxt->snp_cxt.cur_frm_info.data_endian = frm_ptr->data_endian;
 		if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt)) {
+			ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_CHANNEL_DONE, data);
 #ifdef CAMERA_PATH_SHARE
 			if (CAMERA_ZSL_MODE == cxt->snp_cxt.snp_mode || 1 != cxt->snp_cxt.total_num) {
 				camera_set_discard_frame(cxt, 1);
@@ -296,7 +297,6 @@ void camera_send_channel_data(cmr_handle oem_handle, cmr_handle receiver_handle,
 			ret = cmr_preview_receive_data(cxt->prev_cxt.preview_handle, cxt->camera_id, evt, data);
 			camera_post_share_path_available(oem_handle);
 #endif
-			ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_CHANNEL_DONE, data);
 		} else {
 			ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_FREE_FRM, data);
 		}

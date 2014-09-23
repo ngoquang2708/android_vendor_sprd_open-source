@@ -49,6 +49,7 @@
 #define SNP_EVT_FREE_FRM                             (SNP_EVT_BASE + 42)
 #define SNP_EVT_WRITE_EXIF                           (SNP_EVT_BASE + 43)
 #define SNP_EVT_REDISPLAY                            (SNP_EVT_BASE + 44)
+#define SNP_EVT_THUMB                                (SNP_EVT_BASE + 45)
 
 #define CHECK_HANDLE_VALID(handle) \
 													 do { \
@@ -89,6 +90,7 @@ struct snp_thread_context {
 	cmr_handle                          cvt_thr_handle;
 	cmr_handle                          write_exif_thr_handle;
 	cmr_handle                          proc_redisplay_handle;
+	cmr_handle                          proc_thumb_handle;
 };
 
 struct process_status {
@@ -211,6 +213,7 @@ static cmr_int snp_secondary_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_cvt_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_write_exif_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_redisplay_thread_proc(struct cmr_msg *message, void* p_data);
+static cmr_int snp_thumb_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_create_main_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_main_thread(cmr_handle snp_handle);
 static cmr_int snp_create_postproc_thread(cmr_handle snp_handle);
@@ -227,6 +230,8 @@ static cmr_int snp_create_write_exif_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_write_exif_thread(cmr_handle snp_handle);
 static cmr_int snp_create_redisplay_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_redisplay_thread(cmr_handle snp_handle);
+static cmr_int snp_create_thumb_thread(cmr_handle snp_handle);
+static cmr_int snp_destroy_thumb_thread(cmr_handle snp_handle);
 static cmr_int snp_create_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_thread(cmr_handle snp_handle);
 static void snp_local_init(cmr_handle snp_handle);
@@ -271,12 +276,15 @@ static cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type,
 static cmr_int snp_send_msg_secondary_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data);
 static cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *data);
 static cmr_int snp_send_msg_redisplay_thr(cmr_handle snp_handle, cmr_int evt, void *data);
+static cmr_int snp_send_msg_thumb_thr(cmr_handle snp_handle, cmr_int evt, void *data);
 static cmr_int snp_checkout_exit(cmr_handle snp_handle);
 static cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data);
+static cmr_int snp_thumbnail(cmr_handle snp_handle, struct frm_info *data);
 static cmr_int camera_set_frame_type(cmr_handle snp_handle, struct camera_frame_type *frame_type, struct frm_info* info);
 static void snp_takepic_callback_done(cmr_handle snp_handle);
 static void snp_takepic_callback_wait(cmr_handle snp_handle);
 static cmr_int snp_redisplay(cmr_handle snp_handle, struct frm_info *data);
+static cmr_int snp_start_thumb_proc(cmr_handle snp_handle, struct frm_info *data);
 static cmr_int snp_ipm_cb_handle(cmr_handle snp_handle, void *data);
 static cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data);
 static cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data);
@@ -458,30 +466,25 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 	}
 	if (scale_out_ptr->size.height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
 //		ret = snp_take_picture_done(snp_handle, &cxt->cur_frame_info);
+		ret = snp_start_thumb_proc(snp_handle, &cxt->cur_frame_info);
+		if (ret) {
+			CMR_LOGE("failed to start thumb %ld", ret);
+			goto exit;
+		}
 		ret = snp_redisplay(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to take pic done %ld", ret);
 			goto exit;
-		}
-		if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
-			&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
-			ret = snp_start_convet_thumb(snp_handle, &cxt->cur_frame_info);
-			if (ret) {
-				CMR_LOGE("failed to convert thumb %ld", ret);
-				goto exit;
-			}
-			ret = snp_start_encode_thumb(snp_handle);
-			if (ret) {
-				CMR_LOGE("failed to start encode thumb %ld", ret);
-				goto exit;
-			}
 		}
 	} else {
 		ret = CMR_CAMERA_NO_SUPPORT;
 		CMR_LOGI("don't support");
 	}
 exit:
-	sem_post(&cxt->scaler_sync_sm);
+	if ((0 == cxt->req_param.jpeg_setting.thum_size.width)
+		|| (0 == cxt->req_param.jpeg_setting.thum_size.height)) {
+		sem_post(&cxt->scaler_sync_sm);
+	}
 	CMR_LOGI("post jpeg sync sm");
 	if (ret) {
 		snp_post_proc_err_exit(snp_handle, ret);
@@ -553,7 +556,7 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 		if(cxt->req_param.post_proc_setting.actual_snp_size.width < 60 ||
 			cxt->req_param.post_proc_setting.actual_snp_size.height < 60
 			|| enc_out_ptr->stream_size < 100) {
-			CMR_LOGE("picture error, look bug350005,{%d, %d, %d}", 
+			CMR_LOGE("picture error, look bug350005,{%d, %d, %d}",
 				cxt->req_param.post_proc_setting.actual_snp_size.width,
 				cxt->req_param.post_proc_setting.actual_snp_size.height,
 				enc_out_ptr->stream_size);
@@ -587,7 +590,7 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 	} else {
 		/* temp modify to trace bug350005 */
 		if(enc_out_ptr->stream_size < 100 || enc_out_ptr->total_height < 60) {
-			CMR_LOGE("picture error, look bug350005,{%d, %d}", 
+			CMR_LOGE("picture error, look bug350005,{%d, %d}",
 				enc_out_ptr->total_height, enc_out_ptr->stream_size);
 			camera_save_to_file(SNP_ENCODE_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
 					cxt->req_param.post_proc_setting.actual_snp_size.width,
@@ -1360,6 +1363,32 @@ exit:
 	return ret;
 }
 
+cmr_int snp_thumb_thread_proc(struct cmr_msg *message, void* p_data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	cmr_handle                     snp_handle = (cmr_handle)p_data;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	struct frm_info                *frm_ptr;
+
+	if (!message || !p_data) {
+		CMR_LOGE("param error");
+		goto exit;
+	}
+	CMR_LOGI("message.msg_type 0x%x, data 0x%lx", message->msg_type, (cmr_uint)message->data);
+	switch (message->msg_type) {
+	case SNP_EVT_THUMB:
+		frm_ptr = (struct frm_info*)message->data;
+		ret = snp_thumbnail(snp_handle, frm_ptr);
+		break;
+	default:
+		CMR_LOGI("don't support msg");
+		break;
+	}
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int snp_create_main_thread(cmr_handle snp_handle)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -1715,6 +1744,47 @@ exit:
 	return ret;
 }
 
+cmr_int snp_create_thumb_thread(cmr_handle snp_handle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+
+	ret = cmr_thread_create(&cxt->thread_cxt.proc_thumb_handle, SNP_MSG_QUEUE_SIZE,
+							snp_thumb_thread_proc, (void*)snp_handle);
+	CMR_LOGI("0x%lx", (cmr_uint)cxt->thread_cxt.proc_thumb_handle);
+	if (CMR_MSG_SUCCESS != ret) {
+		CMR_LOGE("failed to create thumb thread %ld", ret);
+		ret = -CMR_CAMERA_NO_SUPPORT;
+	}
+	CMR_LOGD("done %ld", ret);
+	return ret;
+}
+
+cmr_int snp_destroy_thumb_thread(cmr_handle snp_handle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	struct snp_thread_context      *snp_thread_cxt;
+
+	if (!snp_handle) {
+		CMR_LOGE("in parm error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	snp_thread_cxt = &cxt->thread_cxt;
+	if (snp_thread_cxt->proc_redisplay_handle) {
+		ret = cmr_thread_destroy(snp_thread_cxt->proc_thumb_handle);
+		if (!ret) {
+			snp_thread_cxt->proc_thumb_handle = (cmr_handle)0;
+		} else {
+			CMR_LOGE("failed to destroy thumb %ld", ret);
+		}
+	}
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int snp_create_thread(cmr_handle snp_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
@@ -1747,12 +1817,18 @@ cmr_int snp_create_thread(cmr_handle snp_handle)
 	if (ret) {
 		goto destroy_cvt_thr;
 	}
-	ret = snp_create_write_exif_thread(snp_handle);
+	ret = snp_create_thumb_thread(snp_handle);
 	if (ret) {
 		goto destroy_redisplay_thr;
+	}
+	ret = snp_create_write_exif_thread(snp_handle);
+	if (ret) {
+		goto destroy_thumb_thr;
 	} else {
 		goto exit;
 	}
+destroy_thumb_thr:
+	snp_destroy_thumb_thread(snp_handle);
 destroy_redisplay_thr:
 	snp_destroy_redisplay_thread(snp_handle);
 destroy_cvt_thr:
@@ -1779,6 +1855,10 @@ cmr_int snp_destroy_thread(cmr_handle snp_handle)
 	ret = snp_destroy_write_exif_thread(snp_handle);
 	if (ret) {
 		CMR_LOGE("failed to destroy write exif thread %ld", ret);
+	}
+	ret = snp_destroy_thumb_thread(snp_handle);
+	if (ret) {
+		CMR_LOGE("failed to destroy thumb thread %ld", ret);
 	}
 	ret = snp_destroy_redisplay_thread(snp_handle);
 	if (ret) {
@@ -2810,6 +2890,31 @@ cmr_int snp_send_msg_redisplay_thr(cmr_handle snp_handle, cmr_int evt, void *dat
 	return ret;
 }
 
+cmr_int snp_send_msg_thumb_thr(cmr_handle snp_handle, cmr_int evt, void *data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	CMR_MSG_INIT(message);
+
+	CMR_LOGI("evt 0x%ld", evt);
+	message.msg_type = evt;
+	message.sync_flag = CMR_MSG_SYNC_NONE;
+	message.alloc_flag = 1;
+	message.data = malloc(sizeof(struct frm_info));
+	if (!message.data) {
+		CMR_LOGE("failed to malloc");
+		return -CMR_CAMERA_NO_MEM;
+	} else {
+		cmr_copy(message.data, data, sizeof(struct frm_info));
+	}
+	ret = cmr_thread_msg_send(cxt->thread_cxt.proc_thumb_handle, &message);
+	if (ret) {
+		CMR_LOGE("failed to send msg to thumb thr %ld", ret);
+	}
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int camera_set_frame_type(cmr_handle snp_handle, struct camera_frame_type *frame_type, struct frm_info* info)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2908,6 +3013,33 @@ exit:
 	return ret;
 }
 
+cmr_int snp_start_thumb_proc(cmr_handle snp_handle, struct frm_info *data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+
+	if (!data) {
+		CMR_LOGE("param error");
+		ret = CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
+		&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
+		ret = snp_send_msg_thumb_thr(snp_handle, SNP_EVT_THUMB, &cxt->cur_frame_info);
+		if (ret) {
+			CMR_LOGE("failed to send msg thumb %ld", ret);
+			goto exit;
+		}
+	}
+exit:
+	if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
+		&& (0 != cxt->req_param.jpeg_setting.thum_size.height)
+		&& (CMR_CAMERA_SUCCESS != ret)) {
+		sem_post(&cxt->scaler_sync_sm);
+	}
+	return ret;
+}
+
 cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2950,6 +3082,30 @@ exit:
 	return ret;
 }
 
+cmr_int snp_thumbnail(cmr_handle snp_handle, struct frm_info *data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+
+	if (!data) {
+		CMR_LOGE("param error");
+		ret = CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	ret = snp_start_convet_thumb(snp_handle, data);
+	if (ret) {
+		CMR_LOGE("failed to convert thumb %ld", ret);
+		goto exit;
+	}
+	ret = snp_start_encode_thumb(snp_handle);
+	if (ret) {
+		CMR_LOGE("failed to start encode thumb %ld", ret);
+		goto exit;
+	}
+exit:
+	sem_post(&cxt->scaler_sync_sm);
+	return ret;
+}
 cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2999,7 +3155,15 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 			goto exit;
 		}
 	}
-
+	if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
+		&& (0 != cxt->req_param.jpeg_setting.thum_size.height)
+		&& (!chn_param_ptr->is_scaling)) {
+		ret = snp_start_thumb_proc(snp_handle, data);
+		if (ret) {
+			CMR_LOGE("failed to start thumb proc %ld", ret);
+			goto exit;
+		}
+	}
 	ret = snp_start_encode(snp_handle, data);
 	if (ret) {
 		CMR_LOGE("failed to start encode %ld", ret);
@@ -3014,22 +3178,10 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 			sem_post(&cxt->scaler_sync_sm);
 			goto exit;
 		}
-		if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
-			&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
-			ret = snp_start_convet_thumb(snp_handle, data);
-			if (ret) {
-				CMR_LOGE("failed to convert thumb %ld", ret);
-				sem_post(&cxt->scaler_sync_sm);
-				goto exit;
-			}
-			ret = snp_start_encode_thumb(snp_handle);
-			if (ret) {
-				CMR_LOGE("failed to start encode thumb %ld", ret);
-				sem_post(&cxt->scaler_sync_sm);
-				goto exit;
-			}
+		if ((0 == cxt->req_param.jpeg_setting.thum_size.width)
+			|| (0 == cxt->req_param.jpeg_setting.thum_size.height)) {
+			sem_post(&cxt->scaler_sync_sm);
 		}
-		sem_post(&cxt->scaler_sync_sm);
 		if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 			CMR_LOGI("post proc has been cancel");
 			ret = CMR_CAMERA_NORNAL_EXIT;
