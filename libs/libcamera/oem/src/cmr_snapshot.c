@@ -48,6 +48,7 @@
 #define SNP_EVT_HDR_POST_PROC                        (SNP_EVT_BASE + 41)
 #define SNP_EVT_FREE_FRM                             (SNP_EVT_BASE + 42)
 #define SNP_EVT_WRITE_EXIF                           (SNP_EVT_BASE + 43)
+#define SNP_EVT_REDISPLAY                            (SNP_EVT_BASE + 44)
 
 #define CHECK_HANDLE_VALID(handle) \
 													 do { \
@@ -87,6 +88,7 @@ struct snp_thread_context {
 	cmr_handle                          secondary_thr_handle;
 	cmr_handle                          cvt_thr_handle;
 	cmr_handle                          write_exif_thr_handle;
+	cmr_handle                          proc_redisplay_handle;
 };
 
 struct process_status {
@@ -208,6 +210,7 @@ static cmr_int snp_proc_cb_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_secondary_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_cvt_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_write_exif_thread_proc(struct cmr_msg *message, void* p_data);
+static cmr_int snp_redisplay_thread_proc(struct cmr_msg *message, void* p_data);
 static cmr_int snp_create_main_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_main_thread(cmr_handle snp_handle);
 static cmr_int snp_create_postproc_thread(cmr_handle snp_handle);
@@ -222,6 +225,8 @@ static cmr_int snp_create_cvt_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_cvt_thread(cmr_handle snp_handle);
 static cmr_int snp_create_write_exif_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_write_exif_thread(cmr_handle snp_handle);
+static cmr_int snp_create_redisplay_thread(cmr_handle snp_handle);
+static cmr_int snp_destroy_redisplay_thread(cmr_handle snp_handle);
 static cmr_int snp_create_thread(cmr_handle snp_handle);
 static cmr_int snp_destroy_thread(cmr_handle snp_handle);
 static void snp_local_init(cmr_handle snp_handle);
@@ -265,11 +270,13 @@ static void snp_main_thr_proc_exit(struct snp_context *snp_cxt);
 static cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data);
 static cmr_int snp_send_msg_secondary_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data);
 static cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *data);
+static cmr_int snp_send_msg_redisplay_thr(cmr_handle snp_handle, cmr_int evt, void *data);
 static cmr_int snp_checkout_exit(cmr_handle snp_handle);
 static cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data);
 static cmr_int camera_set_frame_type(cmr_handle snp_handle, struct camera_frame_type *frame_type, struct frm_info* info);
 static void snp_takepic_callback_done(cmr_handle snp_handle);
 static void snp_takepic_callback_wait(cmr_handle snp_handle);
+static cmr_int snp_redisplay(cmr_handle snp_handle, struct frm_info *data);
 static cmr_int snp_ipm_cb_handle(cmr_handle snp_handle, void *data);
 static cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data);
 static cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data);
@@ -450,7 +457,8 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 		goto exit;
 	}
 	if (scale_out_ptr->size.height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
-		ret = snp_take_picture_done(snp_handle, &cxt->cur_frame_info);
+//		ret = snp_take_picture_done(snp_handle, &cxt->cur_frame_info);
+		ret = snp_redisplay(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to take pic done %ld", ret);
 			goto exit;
@@ -1326,6 +1334,32 @@ exit:
 	return ret;
 }
 
+cmr_int snp_redisplay_thread_proc(struct cmr_msg *message, void* p_data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	cmr_handle                     snp_handle = (cmr_handle)p_data;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	struct frm_info                *frm_ptr;
+
+	if (!message || !p_data) {
+		CMR_LOGE("param error");
+		goto exit;
+	}
+	CMR_LOGI("message.msg_type 0x%x, data 0x%lx", message->msg_type, (cmr_uint)message->data);
+	switch (message->msg_type) {
+	case SNP_EVT_REDISPLAY:
+		frm_ptr = (struct frm_info*)message->data;
+		ret = snp_take_picture_done(snp_handle, frm_ptr);
+		break;
+	default:
+		CMR_LOGI("don't support msg");
+		break;
+	}
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int snp_create_main_thread(cmr_handle snp_handle)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -1640,6 +1674,47 @@ exit:
 	return ret;
 }
 
+cmr_int snp_create_redisplay_thread(cmr_handle snp_handle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+
+	ret = cmr_thread_create(&cxt->thread_cxt.proc_redisplay_handle, SNP_MSG_QUEUE_SIZE,
+							snp_redisplay_thread_proc, (void*)snp_handle);
+	CMR_LOGI("0x%lx", (cmr_uint)cxt->thread_cxt.proc_redisplay_handle);
+	if (CMR_MSG_SUCCESS != ret) {
+		CMR_LOGE("failed to create redisplay thread %ld", ret);
+		ret = -CMR_CAMERA_NO_SUPPORT;
+	}
+	CMR_LOGD("done %ld", ret);
+	return ret;
+}
+
+cmr_int snp_destroy_redisplay_thread(cmr_handle snp_handle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	struct snp_thread_context      *snp_thread_cxt;
+
+	if (!snp_handle) {
+		CMR_LOGE("in parm error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	snp_thread_cxt = &cxt->thread_cxt;
+	if (snp_thread_cxt->proc_redisplay_handle) {
+		ret = cmr_thread_destroy(snp_thread_cxt->proc_redisplay_handle);
+		if (!ret) {
+			snp_thread_cxt->proc_redisplay_handle = (cmr_handle)0;
+		} else {
+			CMR_LOGE("failed to destroy redisplay %ld", ret);
+		}
+	}
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int snp_create_thread(cmr_handle snp_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
@@ -1668,12 +1743,18 @@ cmr_int snp_create_thread(cmr_handle snp_handle)
 	if (ret) {
 		goto destroy_sencondary_thr;
 	}
-	ret = snp_create_write_exif_thread(snp_handle);
+	ret = snp_create_redisplay_thread(snp_handle);
 	if (ret) {
 		goto destroy_cvt_thr;
+	}
+	ret = snp_create_write_exif_thread(snp_handle);
+	if (ret) {
+		goto destroy_redisplay_thr;
 	} else {
 		goto exit;
 	}
+destroy_redisplay_thr:
+	snp_destroy_redisplay_thread(snp_handle);
 destroy_cvt_thr:
 	snp_destroy_write_exif_thread(snp_handle);
 destroy_sencondary_thr:
@@ -1698,6 +1779,10 @@ cmr_int snp_destroy_thread(cmr_handle snp_handle)
 	ret = snp_destroy_write_exif_thread(snp_handle);
 	if (ret) {
 		CMR_LOGE("failed to destroy write exif thread %ld", ret);
+	}
+	ret = snp_destroy_redisplay_thread(snp_handle);
+	if (ret) {
+		CMR_LOGE("failed to destroy redisplay thread %ld", ret);
 	}
 	ret = snp_destroy_cvt_thread(snp_handle);
 	if (ret) {
@@ -2675,7 +2760,6 @@ cmr_int snp_send_msg_secondary_thr(cmr_handle snp_handle, cmr_int func_type, cmr
 	return ret;
 }
 
-
 cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *data)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2696,6 +2780,31 @@ cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *da
 	ret = cmr_thread_msg_send(cxt->thread_cxt.write_exif_thr_handle, &message);
 	if (ret) {
 		CMR_LOGE("failed to send msg to write thr %ld", ret);
+	}
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
+cmr_int snp_send_msg_redisplay_thr(cmr_handle snp_handle, cmr_int evt, void *data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+	CMR_MSG_INIT(message);
+
+	CMR_LOGI("evt 0x%ld", evt);
+	message.msg_type = evt;
+	message.sync_flag = CMR_MSG_SYNC_NONE;
+	message.alloc_flag = 1;
+	message.data = malloc(sizeof(struct frm_info));
+	if (!message.data) {
+		CMR_LOGE("failed to malloc");
+		return -CMR_CAMERA_NO_MEM;
+	} else {
+		cmr_copy(message.data, data, sizeof(struct frm_info));
+	}
+	ret = cmr_thread_msg_send(cxt->thread_cxt.proc_redisplay_handle, &message);
+	if (ret) {
+		CMR_LOGE("failed to send msg to redisplay thr %ld", ret);
 	}
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2784,6 +2893,21 @@ void snp_takepic_callback_wait(cmr_handle snp_handle)
 	CMR_LOGI("wait end");
 }
 
+cmr_int snp_redisplay(cmr_handle snp_handle, struct frm_info *data)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct snp_context             *cxt = (struct snp_context*)snp_handle;
+
+	if (!data) {
+		CMR_LOGE("param error");
+		goto exit;
+	}
+	ret = snp_send_msg_redisplay_thr(snp_handle, SNP_EVT_REDISPLAY, data);
+exit:
+	CMR_LOGI("done");
+	return ret;
+}
+
 cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -2793,6 +2917,10 @@ cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
 		ret = CMR_CAMERA_NORNAL_EXIT;
+		goto exit;
+	}
+	if (!data) {
+		ret = CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
 	cmr_bzero(&frame_type, sizeof(frame_type));
@@ -2879,7 +3007,8 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 	}
 	cxt->cur_frame_info = *chn_data_ptr;
 	if (!chn_param_ptr->is_scaling) {
-		ret = snp_take_picture_done(snp_handle, data);
+//		ret = snp_take_picture_done(snp_handle, data);
+		ret = snp_redisplay(snp_handle, data);
 		if (ret) {
 			CMR_LOGE("failed to take pic done %ld", ret);
 			sem_post(&cxt->scaler_sync_sm);
