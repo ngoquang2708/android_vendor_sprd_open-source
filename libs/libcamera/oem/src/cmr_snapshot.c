@@ -2002,7 +2002,7 @@ cmr_int snp_set_channel_out_param(cmr_handle snp_handle)
 	}
 	if (!ret) {
 		chn_out_frm_ptr = &cxt->chn_param.chn_frm[0];
-		for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+		for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 			CMR_LOGI("phy addr 0x%lx 0x%lx vir addr 0x%lx 0x%lx size %d %d", chn_out_frm_ptr->addr_phy.addr_y,
 					chn_out_frm_ptr->addr_phy.addr_u, chn_out_frm_ptr->addr_vir.addr_y,
 					chn_out_frm_ptr->addr_vir.addr_u, chn_out_frm_ptr->size.width, chn_out_frm_ptr->size.height);
@@ -2031,102 +2031,9 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 	struct snapshot_param           *req_param_ptr = &cxt->req_param;
 	struct snp_channel_param        *chn_param_ptr = &cxt->chn_param;
 	struct img_frm                  *frm_ptr;
-/*	struct sensor_mode_info         *sensor_mode_ptr;
-	struct sensor_exp_info          *sensor_info_ptr = &cxt->sensor_info;*/
 	cmr_uint                        i;
 	cmr_u32                         offset[CMR_CAPTURE_MEM_SUM] = {0, 0, 0, 0};
-#if 0
-	if (cxt->ops.get_sensor_info) {
-		ret = cxt->ops.get_sensor_info(cxt->oem_handle, req_param_ptr->camera_id, sensor_info_ptr);
-	} else {
-		ret = CMR_CAMERA_FAIL;
-	}
-	if (ret) {
-		CMR_LOGE("done %ld", ret);
-		return ret;
-	}
-	sensor_mode_ptr = &sensor_info_ptr->mode_info[req_param_ptr->sn_mode];
 
-	CMR_LOGI("channel id zoom mode");
-	if (ZOOM_BY_CAP == req_param_ptr->post_proc_setting.channel_zoom_mode) {
-		rect.start_x = 0;
-		rect.start_y = 0;
-		rect.width = req_param_ptr->post_proc_setting.chn_out_frm[0].size.width;
-		rect.height = req_param_ptr->post_proc_setting.chn_out_frm[0].size.height;
-	} else {
-		switch (req_param_ptr->rot_angle) {
-		case IMG_ANGLE_MIRROR:
-			rect.start_x = sensor_mode_ptr->trim_width - sensor_mode_ptr->scaler_trim.start_x - sensor_mode_ptr->scaler_trim.width;
-			rect.start_y = sensor_mode_ptr->scaler_trim.start_y;
-			rect.width = sensor_mode_ptr->scaler_trim.width;
-			rect.height = sensor_mode_ptr->scaler_trim.height;
-			break;
-
-		case IMG_ANGLE_90:
-			rect.start_x = sensor_mode_ptr->trim_height - sensor_mode_ptr->scaler_trim.start_y- sensor_mode_ptr->scaler_trim.height;
-			rect.start_y = sensor_mode_ptr->scaler_trim.start_x;
-			rect.width = sensor_mode_ptr->scaler_trim.height;
-			rect.height = sensor_mode_ptr->scaler_trim.width;
-			break;
-
-		case IMG_ANGLE_180:
-			rect.start_x = sensor_mode_ptr->trim_width - sensor_mode_ptr->scaler_trim.start_x- sensor_mode_ptr->scaler_trim.width;
-			rect.start_y = sensor_mode_ptr->trim_height - sensor_mode_ptr->scaler_trim.start_y- sensor_mode_ptr->scaler_trim.height;
-			rect.width = sensor_mode_ptr->scaler_trim.width;
-			rect.height = sensor_mode_ptr->scaler_trim.height;
-			break;
-
-		case IMG_ANGLE_270:
-			rect.start_x = sensor_mode_ptr->scaler_trim.start_y;
-			rect.start_y = sensor_mode_ptr->trim_width - sensor_mode_ptr->scaler_trim.start_x- sensor_mode_ptr->scaler_trim.width;
-			rect.width = sensor_mode_ptr->scaler_trim.height;
-			rect.height = sensor_mode_ptr->scaler_trim.width;
-			break;
-
-		case IMG_ANGLE_0:
-		default:
-			rect.start_x = sensor_mode_ptr->scaler_trim.start_x;
-			rect.start_y = sensor_mode_ptr->scaler_trim.start_y;
-			rect.width = sensor_mode_ptr->scaler_trim.width;
-			rect.height = sensor_mode_ptr->scaler_trim.height;
-			break;
-		}
-	}
-
-	if (ZOOM_RECT != req_param_ptr->zoom_param.mode) {
-		ret = camera_get_trim_rect(&rect, req_param_ptr->zoom_param.zoom_level, &req_param_ptr->post_proc_setting.actual_snp_size);
-		if (ret) {
-			CMR_LOGE("failed to calculate scaling window %ld", ret);
-			return ret;
-		}
-	} else {
-		cmr_u32 sn_w = sensor_mode_ptr->trim_width;
-		cmr_u32 sn_h = sensor_mode_ptr->trim_height;
-		float sensor_ratio, zoom_ratio, min_output_ratio;
-		sensor_ratio = (float)sn_w / sn_h;
-		min_output_ratio = (float)(req_param_ptr->zoom_param.zoom_rect.width) /req_param_ptr->zoom_param.zoom_rect.height;
-		if (min_output_ratio < sensor_ratio) {
-			zoom_ratio = (float)sn_h / req_param_ptr->zoom_param.zoom_rect.height;
-		} else {
-			zoom_ratio = (float)sn_w / req_param_ptr->zoom_param.zoom_rect.width;
-		}
-		ret = camera_get_trim_rect2(&rect, zoom_ratio, min_output_ratio, rect.width, rect.height, req_param_ptr->rot_angle);
-		if (ret) {
-			CMR_LOGE("failed to calculate scaling window %ld", ret);
-			return ret;
-		}
-	}
-	CMR_LOGI("rect %d %d %d %d", rect.start_x, rect.start_y, rect.width, rect.height);
-
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
-		frm_ptr = &req_param_ptr->post_proc_setting.chn_out_frm[i];
-		if (IMG_DATA_TYPE_RAW != frm_ptr->fmt) {
-			offset[i] = (cmr_u32)(rect[i].start_y * frm_ptr->size.width);
-			rect[i].start_y = 0;
-			CMR_LOGI("start_y %d width %d offset 0x%x", rect[i].start_y, frm_ptr->size.width, offset[i]);
-		}
-	}
-#endif
 	cmr_copy(&rect[0], &req_param_ptr->post_proc_setting.scaler_src_rect[0], CMR_CAPTURE_MEM_SUM*sizeof(struct img_rect));
 
 	CMR_LOGI("scaler_src_rect %d %d %d %d", rect[0].start_x, rect[0].start_y, rect[0].width, rect[0].height);
@@ -2148,7 +2055,7 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 
 	if (IMG_ANGLE_0 == req_param_ptr->post_proc_setting.rot_angle ||
 		(cxt->req_param.is_cfg_rot_cap && (IMG_ANGLE_0 == cxt->req_param.rot_angle))) {
-		for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+		for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_y = chn_param_ptr->chn_frm[i].addr_phy.addr_y + offset[i];
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_u = chn_param_ptr->chn_frm[i].addr_phy.addr_u + (offset[i] >> 1);
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_v = chn_param_ptr->chn_frm[i].addr_phy.addr_v + (offset[i] >> 1);
@@ -2158,7 +2065,7 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 			chn_param_ptr->scale[i].src_img.addr_vir.addr_v = chn_param_ptr->chn_frm[i].addr_vir.addr_v + (offset[i] >> 1);
 		}
 	} else {//rotation case
-		for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+		for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_y = chn_param_ptr->rot[i].dst_img.addr_phy.addr_y + offset[i];
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_u = chn_param_ptr->rot[i].dst_img.addr_phy.addr_u + (offset[i] >> 1);
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_v = chn_param_ptr->rot[i].dst_img.addr_phy.addr_v + (offset[i] >> 1);
@@ -2169,7 +2076,7 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 		}
 	}
 
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst add 0x%lx 0x%lx",
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_y,
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_u,
@@ -2229,7 +2136,7 @@ cmr_int snp_set_convert_thumb_param(cmr_handle snp_handle)
 		}
 	}
 	thumb_ptr = &cxt->chn_param.convert_thumb[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst addr 0x%lx 0x%lx", thumb_ptr->src_img.addr_phy.addr_y, thumb_ptr->src_img.addr_phy.addr_u,
 				thumb_ptr->dst_img.addr_phy.addr_y, thumb_ptr->dst_img.addr_phy.addr_u);
 		CMR_LOGI("src size %d %d dst size %d %d slice height %d", thumb_ptr->src_img.size.width, thumb_ptr->src_img.size.height,
@@ -2289,7 +2196,7 @@ cmr_int snp_set_rot_param(cmr_handle snp_handle)
 		}
 	}
 	rot_ptr = &cxt->chn_param.rot[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst 0x%lx 0x%lx", rot_ptr->src_img.addr_phy.addr_y, rot_ptr->src_img.addr_phy.addr_u,
 				rot_ptr->dst_img.addr_phy.addr_y, rot_ptr->dst_img.addr_phy.addr_u);
 		CMR_LOGI("src size %d %d dst size %d %d", rot_ptr->src_img.size.width, rot_ptr->src_img.size.height,
@@ -2335,7 +2242,7 @@ cmr_int snp_set_jpeg_enc_param(cmr_handle snp_handle)
 		jpeg_ptr++;
 	}
 	jpeg_ptr = &chn_param_ptr->jpeg_in[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst 0x%lx", jpeg_ptr->src.addr_phy.addr_y, jpeg_ptr->src.addr_phy.addr_u,
 				jpeg_ptr->dst.addr_phy.addr_y);
 		CMR_LOGI("src size %d %d out size %d %d", jpeg_ptr->src.size.width, jpeg_ptr->src.size.height,
@@ -2377,7 +2284,7 @@ cmr_int snp_set_jpeg_thumb_param(cmr_handle snp_handle)
 		jpeg_ptr++;
 	}
 	jpeg_ptr = &chn_param_ptr->thumb_in[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst 0x%lx", jpeg_ptr->src.addr_phy.addr_y, jpeg_ptr->src.addr_phy.addr_u,
 				jpeg_ptr->dst.addr_phy.addr_y);
 		CMR_LOGI("src size %d %d out size %d %d", jpeg_ptr->src.size.width, jpeg_ptr->src.size.height,
@@ -2404,7 +2311,7 @@ cmr_int snp_set_jpeg_exif_param(cmr_handle snp_handle)
 		exif_in_ptr++;
 	}
 	exif_in_ptr = &chn_param_ptr->exif_in[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx 0x%lx dst addr 0x%lx", exif_in_ptr->big_pic_stream_src.addr_vir.addr_y,
 				exif_in_ptr->thumb_stream_src.addr_vir.addr_y, exif_in_ptr->dst.addr_vir.addr_y);
 		CMR_LOGI("dst buf size %d", exif_in_ptr->dst.buf_size);
@@ -2477,11 +2384,11 @@ cmr_int snp_set_jpeg_dec_param(cmr_handle snp_handle)
 		dec_in_ptr++;
 	}
 	dec_in_ptr = &chn_param_ptr->jpeg_dec_in[0];
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+/*	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 		CMR_LOGI("src addr 0x%lx dst 0x%lx 0x%lx", dec_in_ptr->src.addr_phy.addr_y,
 				dec_in_ptr->dst.addr_phy.addr_y, dec_in_ptr->dst.addr_phy.addr_u);
 		CMR_LOGI("dst size %d %d", dec_in_ptr->dst.size.width, dec_in_ptr->dst.size.height);
-	}
+	}*/
 	return ret;
 }
 
@@ -2538,7 +2445,7 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 			chn_param_ptr->isp_process[i].is_encoding = 1;
 		}
 	}
-	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
 		CMR_LOGI("src addr 0x%lx  dst addr 0x%lx 0x%lx", chn_param_ptr->isp_proc_in[i].src_frame.addr_phy.addr_y,
 				chn_param_ptr->isp_proc_in[i].dst_frame.addr_phy.addr_y, chn_param_ptr->isp_proc_in[i].dst_frame.addr_phy.addr_u);
 	}

@@ -139,7 +139,7 @@ cmr_int cmr_msg_get(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 lo
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
-	CMR_LOGD("msg_cur 0x%lx", (cmr_uint)msg_cur);
+/*	CMR_LOGD("msg_cur 0x%lx", (cmr_uint)msg_cur);*/
 
 	if (NULL != msg_cur) {
 		if (CMR_MSG_SYNC_RECEIVED == msg_cur->sync_f) {
@@ -282,7 +282,7 @@ cmr_int cmr_msg_post(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 l
 
 	pthread_mutex_unlock(&msg_cxt->mutex);
 
-	CMR_LOGD("msg_cur 0x%lx", (cmr_uint)msg_cur);
+/*	CMR_LOGD("msg_cur 0x%lx", (cmr_uint)msg_cur);*/
 	sem_post(&msg_cxt->msg_sem);
 	if (NULL != msg_cur) {
 		if (CMR_MSG_SYNC_NONE != msg_cur->sync_f) {

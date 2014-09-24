@@ -176,7 +176,6 @@ void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
 		CMR_LOGE("error param 0x%lx 0x%lx 0x%lx", (cmr_uint)oem_handle, (cmr_uint)phy_addr, (cmr_uint)vir_addr);
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	CMR_LOGI("mem type %d size %d sum %d", mem_type, *size_ptr, *sum_ptr);
 	if (cxt->hal_malloc) {
 		cxt->hal_malloc(mem_type, size_ptr, sum_ptr, phy_addr, vir_addr, cxt->client_data);
@@ -199,8 +198,7 @@ void camera_free(cmr_u32 mem_type, cmr_handle oem_handle,cmr_uint *phy_addr,
 		goto exit;
 	}
 	CMR_LOGI("mem type %d sum %d", mem_type, sum);
-	CMR_LOGI("free 0x%lx 0x%lx", (cmr_uint)phy_addr, (cmr_uint)vir_addr);
-	CMR_PRINT_TIME;
+	CMR_LOGV("free 0x%lx 0x%lx", (cmr_uint)phy_addr, (cmr_uint)vir_addr);
 	cxt->hal_free(mem_type, phy_addr, vir_addr, sum, cxt->client_data);
 exit:
 	CMR_PRINT_TIME;
@@ -208,7 +206,6 @@ exit:
 
 void camera_snapshot_started(cmr_handle oem_handle)
 {
-	CMR_PRINT_TIME;
 	camera_snapshot_cb_to_hal(oem_handle, CAMERA_EXIT_CB_PREPARE, CAMERA_FUNC_TAKE_PICTURE, 0);
 }
 
@@ -688,7 +685,7 @@ void camera_focus_evt_cb(enum af_cb_type cb, cmr_s32 param, void *privdata)
 	}
 	CMR_LOGI("param =0x%lx camera_cb 0x%lx focus cb %ld, oem cb 0x%lx", (cmr_uint)param, (cmr_uint)cb, (cmr_uint)oem_cb, (cmr_uint)cxt->camera_cb);
 	if (cxt->camera_cb) {
-		CMR_LOGI("cxt->camera_cb run");
+		CMR_LOGV("cxt->camera_cb run");
 		cxt->camera_cb(oem_cb, cxt->client_data, CAMERA_FUNC_START_FOCUS, (void*)param);
 	} else {
 		CMR_LOGI("cxt->camera_cb null error");
@@ -743,7 +740,7 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 	}
 
 	if (CAMERA_FUNC_STOP_PREVIEW == oem_func && CAMERA_RSP_CB_SUCCESS == oem_cb_type) {
-		CMR_LOGI("stop preview response, notify directly");
+		CMR_LOGV("stop preview response, notify directly");
 		if (cxt->camera_cb) {
 			cxt->camera_cb(oem_cb_type, cxt->client_data, oem_func, param);
 		}
@@ -972,7 +969,6 @@ void camera_snapshot_state_handle(cmr_handle oem_handle, enum snapshot_cb_type c
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (SNAPSHOT_FUNC_STATE == func) {
 		switch (cb) {
 		case SNAPSHOT_EVT_START_ROT:
@@ -1100,9 +1096,7 @@ cmr_int camera_before_set(cmr_handle oem_handle, enum preview_param_mode mode)
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	ret = cmr_preview_before_set_param(cxt->prev_cxt.preview_handle, cxt->camera_id, mode);
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -1118,9 +1112,7 @@ cmr_int camera_after_set(cmr_handle oem_handle, struct after_set_cb_param *param
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	ret = cmr_preview_after_set_param(cxt->prev_cxt.preview_handle, cxt->camera_id, param->re_mode, param->skip_mode, param->skip_number);
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -1134,7 +1126,6 @@ cmr_int camera_focus_pre_proc(cmr_handle oem_handle)
 
 	/*open flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
-	//	setting_param.flash_param.capture_mode = cxt->snp_cxt.snapshot_sn_mode;//robert
 		setting_param.ctrl_flash.is_active = 1;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
@@ -1153,7 +1144,6 @@ cmr_int camera_focus_post_proc(cmr_handle oem_handle)
 
 	/*close flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
-//		setting_param.flash_param.capture_mode = cxt->snp_cxt.snapshot_sn_mode;//robert
 		setting_param.ctrl_flash.is_active = 0;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
@@ -1192,7 +1182,6 @@ cmr_int camera_sensor_init(cmr_handle  oem_handle, cmr_uint is_autotest)
 		CMR_LOGD("sensor has been intialized");
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	cmr_bzero(&init_param, sizeof(init_param));
 	init_param.oem_handle = oem_handle;
 	init_param.is_autotest = is_autotest;
@@ -1204,7 +1193,6 @@ cmr_int camera_sensor_init(cmr_handle  oem_handle, cmr_uint is_autotest)
 	}
 	sn_cxt->sensor_handle = sensor_handle;
 	sn_cxt->inited = 1;
-	CMR_PRINT_TIME;
 	if (ret) {
 		CMR_LOGE("failed to set auto test mode %ld", ret);
 	}
@@ -1214,8 +1202,6 @@ cmr_int camera_sensor_init(cmr_handle  oem_handle, cmr_uint is_autotest)
 		CMR_LOGE("open %d sensor failed %ld", cxt->camera_id, ret);
 		goto sensor_exit;
 	}
-	CMR_PRINT_TIME;
-
 	cmr_sensor_event_reg(sensor_handle, cxt->camera_id, camera_sensor_evt_cb);
 	cxt->sn_cxt.sensor_handle = sensor_handle;
     goto exit;
@@ -1246,11 +1232,8 @@ cmr_int camera_sensor_deinit(cmr_handle  oem_handle)
 		goto exit;
 	}
 	sensor_handle = sn_cxt->sensor_handle;
-	CMR_PRINT_TIME;
 	cmr_sensor_close(sensor_handle, (1 << cxt->camera_id));
-	CMR_PRINT_TIME;
     cmr_sensor_deinit(sensor_handle);
-	CMR_PRINT_TIME;
 	cmr_bzero(sn_cxt,sizeof(*sn_cxt));
 
 exit:
@@ -1377,7 +1360,6 @@ cmr_int camera_scaler_init(cmr_handle  oem_handle)
 		CMR_LOGE("failed to init scaler %ld", ret);
 		ret = -CMR_CAMERA_NO_SUPPORT;
 	} else {
-//		cmr_scale_evt_reg(camera_scaler_evt_cb);
 		scaler_cxt->inited = 1;
 	}
 
@@ -2360,7 +2342,6 @@ cmr_int camera_start_encode(cmr_handle oem_handle, cmr_handle caller_handle,
 	CMR_LOGI("src size %d %d", src->size.width, src->size.height);
 	CMR_LOGI("out size %d %d", dst->size.width, dst->size.height);
 	CMR_LOGD("caller_handle 0x%lx jpeg handle 0x%lx", (cmr_uint)caller_handle, (cmr_uint)cxt->jpeg_cxt.jpeg_handle);
-	CMR_PRINT_TIME;
 	enc_in_param.slice_height = mean->slice_height;
 	enc_in_param.slice_mod = mean->slice_mode;
 	enc_in_param.quality_level = mean->quality_level;
@@ -2467,23 +2448,17 @@ cmr_int camera_start_exif_encode(cmr_handle oem_handle, cmr_handle caller_handle
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_PRINT_TIME;
+
 	enc_exif_param.jpeg_handle = cxt->jpeg_cxt.jpeg_handle;
 	enc_exif_param.src_jpeg_addr_virt = pic_src->addr_vir.addr_y;
 	enc_exif_param.thumbnail_addr_virt = thumb_src->addr_vir.addr_y;
 	enc_exif_param.target_addr_virt = dst->addr_vir.addr_y;
-	enc_exif_param.src_jpeg_size = pic_src->buf_size;//pic_src->size.width;
+	enc_exif_param.src_jpeg_size = pic_src->buf_size;
 	enc_exif_param.thumbnail_size = thumb_src->buf_size;
 	enc_exif_param.target_size = dst->buf_size;
 	setting_param.camera_id = cxt->camera_id;
 	ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_GET_EXIF_INFO, &setting_param);
 	enc_exif_param.exif_ptr = setting_param.exif_all_info_ptr;
-/*	enc_exif_param.exif_ptr->primary.data_char_ptr = NULL;
-	enc_exif_param.exif_ptr->primary.data_struct_ptr = NULL;
-	enc_exif_param.exif_ptr->primary.img_desc_ptr = NULL;
-	enc_exif_param.exif_ptr->gps_ptr = NULL;
-	enc_exif_param.exif_ptr->inter_ptr = NULL;
-	enc_exif_param.exif_ptr->spec_ptr = NULL;//wjp*/
 	enc_exif_param.exif_isp_info = NULL;
 	enc_exif_param.padding = 0;
 	out_pram.output_buf_virt_addr = 0;
@@ -2495,7 +2470,6 @@ cmr_int camera_start_exif_encode(cmr_handle oem_handle, cmr_handle caller_handle
 	} else {
 		CMR_LOGE("failed to compund exif jpeg %ld", ret);
 	}
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2533,7 +2507,6 @@ cmr_int camera_start_scale(cmr_handle oem_handle, cmr_handle caller_handle, stru
 		dst->data_end.y_endian,
 		dst->data_end.uv_endian);
 
-	CMR_PRINT_TIME;
 	if (1 != mean->is_sync) {
 		ret = cmr_scale_start(cxt->scaler_cxt.scaler_handle, src, dst, camera_scaler_evt_cb, (void*)caller_handle);
 	} else {
@@ -2542,7 +2515,6 @@ cmr_int camera_start_scale(cmr_handle oem_handle, cmr_handle caller_handle, stru
 	if (ret) {
 		CMR_LOGE("failed to start scaler, ret %ld", ret);
 	}
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2560,7 +2532,6 @@ cmr_int camera_start_rot(cmr_handle oem_handle, cmr_handle caller_handle, struct
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	camera_take_snapshot_step(CMR_STEP_ROT_S);
 	rot_param.angle = mean->rot;
 	rot_param.handle = cxt->rot_cxt.rotation_handle;
@@ -2571,7 +2542,6 @@ cmr_int camera_start_rot(cmr_handle oem_handle, cmr_handle caller_handle, struct
 		CMR_LOGE("failed to rotate %ld", ret);
 	}
 	camera_take_snapshot_step(CMR_STEP_ROT_E);
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2601,7 +2571,6 @@ cmr_int camera_preview_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 	cxt->prev_cxt.preview_sn_mode = preview_sn_mode;
 
 	CMR_LOGI("sensor work mode %d", sensor_mode);
-	CMR_PRINT_TIME;
 	ret = cmr_sensor_set_mode(cxt->sn_cxt.sensor_handle, camera_id, sensor_mode);
 	if (ret) {
 		CMR_LOGE("failed to set sensor work mode %ld", ret);
@@ -2612,8 +2581,6 @@ cmr_int camera_preview_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 		CMR_LOGE("failed to wait done %ld", ret);
 		goto exit;
 	}
-	CMR_PRINT_TIME;
-
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2633,7 +2600,6 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 	struct snapshot_context        *snp_cxt;
 	struct setting_cmd_parameter   setting_param;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle || (camera_id != cxt->camera_id)) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -2673,7 +2639,6 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 		}
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -2685,7 +2650,6 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 	struct snapshot_context        *snp_cxt;
 	struct setting_cmd_parameter   setting_param;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -2708,7 +2672,6 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 		}
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -2721,7 +2684,6 @@ cmr_int camera_open_sensor(cmr_handle oem_handle, cmr_u32 camera_id)
 	cmr_handle                      sensor_handle;
 	cmr_u32                         camera_id_bits = 0;
 
-	CMR_PRINT_TIME;
 	sensor_handle  = sn_cxt->sensor_handle;
 	camera_id_bits = 1 << cxt->camera_id;
 	ret = cmr_sensor_open(sensor_handle, camera_id_bits);
@@ -2729,8 +2691,6 @@ cmr_int camera_open_sensor(cmr_handle oem_handle, cmr_u32 camera_id)
 		CMR_LOGE("open %d sensor failed %ld", cxt->camera_id, ret);
 		return CMR_CAMERA_FAIL;
 	}
-	CMR_PRINT_TIME;
-
 	return ret;
 }
 
@@ -2742,7 +2702,6 @@ cmr_int camera_close_sensor(cmr_handle oem_handle, cmr_u32 camera_id)
 	cmr_handle                      sensor_handle;
 	cmr_u32                         camera_id_bits = 0;
 
-	CMR_PRINT_TIME;
 	sensor_handle  = sn_cxt->sensor_handle;
 	camera_id_bits = 1 << cxt->camera_id;
 	ret = cmr_sensor_close(sensor_handle, camera_id_bits);
@@ -2750,8 +2709,6 @@ cmr_int camera_close_sensor(cmr_handle oem_handle, cmr_u32 camera_id)
 		CMR_LOGE("open %d sensor failed %ld", cxt->camera_id, ret);
 		return CMR_CAMERA_FAIL;
 	}
-	CMR_PRINT_TIME;
-
 	return ret;
 }
 
@@ -2836,7 +2793,6 @@ cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *
 	isp_param.mode = param_ptr->video_mode;
 
 	CMR_LOGI("isp w h, %d %d", isp_param.size.w, isp_param.size.h);
-	CMR_PRINT_TIME;
 	ret = isp_video_start(&isp_param);
 	if (!ret) {
 		isp_cxt->is_work = 1;
@@ -2844,7 +2800,6 @@ cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *
 		isp_cxt->is_work = 0;
 		CMR_LOGE("failed to start isp, ret %ld", ret);
 	}
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -2868,7 +2823,6 @@ cmr_int camera_isp_stop_video(cmr_handle oem_handle)
 		} else {
 			cxt->isp_cxt.is_work = 0;
 		}
-	CMR_PRINT_TIME;
 	}
 exit:
 	CMR_LOGI("done %ld", ret);
@@ -2885,7 +2839,6 @@ cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_
 	struct sensor_mode_info        *sensor_mode_info;
 	struct sn_cfg                  sensor_cfg;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle || !caller_handle || !param_ptr || !channel_id) {
 		CMR_LOGE("in parm error 0x%lx 0x%lx 0x%lx 0x%lx", (cmr_uint)oem_handle, (cmr_uint)caller_handle,
 				(cmr_uint)param_ptr, (cmr_uint)channel_id);
@@ -2950,7 +2903,6 @@ cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_
 	CMR_LOGI("channel id %d, caller_handle 0x%lx, skip num %d",
 			  *channel_id, (cmr_uint)caller_handle, param_ptr->skip_num);
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -2960,7 +2912,6 @@ cmr_int camera_channel_start(cmr_handle oem_handle, cmr_u32 channel_bits, cmr_ui
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -2974,7 +2925,6 @@ cmr_int camera_channel_start(cmr_handle oem_handle, cmr_u32 channel_bits, cmr_ui
 		goto exit;
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -2984,7 +2934,6 @@ cmr_int camera_channel_pause(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -3000,7 +2949,6 @@ exit:
 	if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt)) {
 		camera_post_share_path_available(oem_handle);
 	}
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -3011,7 +2959,6 @@ cmr_int camera_channel_resume(cmr_handle oem_handle, cmr_uint channel_id, cmr_u3
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -3026,7 +2973,6 @@ cmr_int camera_channel_resume(cmr_handle oem_handle, cmr_uint channel_id, cmr_u3
 		goto exit;
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -3060,14 +3006,12 @@ cmr_int camera_channel_stop(cmr_handle oem_handle, cmr_u32 channel_bits)
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_PRINT_TIME;
 	ret = cmr_v4l2_cap_stop(cxt->v4l2_cxt.v4l2_handle);
 	if (ret) {
 		CMR_LOGE("failed to stop channel %ld", ret);
 		goto exit;
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -3187,7 +3131,6 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 	SENSOR_EXIF_CTRL_E             exif_cmd;
 	SENSOR_EXT_FUN_PARAM_T_PTR 	   hdr_ev_param_ptr = 0;
 
-
 	if (!oem_handle || !param_ptr) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
@@ -3243,8 +3186,6 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		sensor_param = param_ptr->cmd_value;
 		break;
 	case COM_SN_SET_PREVIEW_MODE:
-//		cmd = ??;
-//		sensor_param = param_ptr->cmd_value;
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_SCENECAPTURETYPE;
 		break;
@@ -3525,7 +3466,6 @@ cmr_int camera_get_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	struct setting_cmd_parameter   setting_param;
 	cmr_u32                        is_cfg_snp = 0;
 
-	CMR_PRINT_TIME;
 	setting_param.camera_id = cxt->camera_id;
 	cmr_bzero((void*)out_param_ptr, sizeof(*out_param_ptr));
 
@@ -3746,7 +3686,6 @@ cmr_int camera_set_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	struct preview_param           start_param;
 	struct preview_out_param       preview_out;
 
-	CMR_PRINT_TIME;
 	if (1 != prev_cxt->inited) {
 		CMR_LOGE("err, don't init preview");
 		ret = -CMR_CAMERA_INVALID_STATE;
@@ -3782,7 +3721,6 @@ cmr_int camera_set_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	CMR_LOGI("rot angle %ld", snp_cxt->post_proc_setting.rot_angle);
 
 exit:
-	CMR_PRINT_TIME;
 	return ret;
 }
 
@@ -4039,9 +3977,7 @@ cmr_int camera_local_int(cmr_u32 camera_id, camera_cb_of_type callback,
 	cxt->client_data = client_data;
 
 	CMR_LOGI("create handle 0x%lx 0x%lx", (cmr_uint)cxt, (cmr_uint)cxt->client_data);
-	CMR_PRINT_TIME;
 	ret = camera_init_internal((cmr_handle)cxt, is_autotest);
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("ret %ld", ret);
 	if (CMR_CAMERA_SUCCESS == ret) {
@@ -4059,13 +3995,12 @@ cmr_int camera_local_deinit(cmr_handle oem_handle)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
-	CMR_PRINT_TIME;
+
 	camera_deinit_internal(oem_handle);
 	free((void*)oem_handle);
 	CMR_PRINT_TIME;
 	return ret;
 }
-
 
 cmr_int camera_local_start_preview(cmr_handle oem_handle, enum takepicture_mode mode,  cmr_uint is_snapshot)
 {
@@ -4094,7 +4029,6 @@ cmr_int camera_local_start_preview(cmr_handle oem_handle, enum takepicture_mode 
 	ret = cmr_sensor_focus_init(cxt->sn_cxt.sensor_handle ,cxt->camera_id);
 #endif
 exit:
-	CMR_PRINT_TIME;
 	return ret;
 }
 
@@ -4105,7 +4039,6 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 	cmr_int                        snp_ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (PREVIEWING != cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id)) {
 		CMR_LOGI("don't previewing");
 		goto exit;
@@ -4123,7 +4056,6 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 		CMR_LOGE("failed to stop prev %ld", ret);
 	}
 	ret = prev_ret | snp_ret;
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -4170,7 +4102,6 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 	ret = camera_get_cap_time((cmr_handle)cxt);
 	cxt->snp_cxt.status = SNAPSHOTING;
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -4180,7 +4111,6 @@ cmr_int camera_local_stop_snapshot(cmr_handle oem_handle)
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 
-	CMR_PRINT_TIME;
 	if (TAKE_PICTURE_NEEDED == camera_get_snp_req(oem_handle)) {
 		camera_channel_stop(oem_handle, cxt->snp_cxt.channel_bits);
 	}
@@ -4202,7 +4132,6 @@ cmr_int camera_local_stop_snapshot(cmr_handle oem_handle)
 	cxt->snp_cxt.status = IDLE;
 
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -4217,7 +4146,6 @@ cmr_int camera_local_get_prev_rect(cmr_handle oem_handle, struct img_rect *param
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	//*param_ptr = cxt->prev_cxt.rect;
 	ret = cmr_preview_get_prev_rect(cxt->prev_cxt.preview_handle, cxt->camera_id, param_ptr);
 	CMR_LOGI("%d %d %d %d", param_ptr->start_x, param_ptr->start_y, param_ptr->width, param_ptr->height);
 exit:
@@ -4274,7 +4202,6 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 		goto exit;
 	}
 
-	CMR_PRINT_TIME;
 	rect.start_x = 0;
 	rect.start_y = 0;
 	rect.width = input_width;
@@ -4356,7 +4283,6 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 		}
 	}
 exit:
-	CMR_PRINT_TIME;
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }

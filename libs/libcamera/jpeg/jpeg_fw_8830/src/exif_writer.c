@@ -2618,7 +2618,9 @@ LOCAL JPEG_RET_E Jpeg_WriteExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
     JPEG_WRITE_DATA(Jpeg_WriteW, context_ptr, entries, return JPEG_FAILED);
 
     *end_offset_ptr = ifd_value_offset;
+#ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("end.");
+#endif
     return JPEG_SUCCESS;
 }
 
@@ -2800,8 +2802,9 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
         JPEG_PRINT_LOW("[Jpeg_WriteAPP1] write IFD0 failed");
         return ret;
     }
+#ifdef EXIF_DEBUG
 	JPEG_PRINT_LOW("test 0");
-
+#endif
     if (is_ifd1_exist)
     {
         BOOLEAN is_next_ifd_exist = FALSE;
@@ -3315,7 +3318,9 @@ JINF_RET_E IMGJPEG_WriteExif(JINF_WEXIF_IN_PARAM_T *in_param_ptr,
 
         ret = JPEG_AddExifToMemory(in_param_ptr, out_param_ptr);
     }
+#ifdef EXIF_DEBUG
     JPEG_PRINT_LOW("end.");
+#endif
     return JPEG_SUCCESS == ret ? JINF_SUCCESS : JINF_FAILED;
 }
 

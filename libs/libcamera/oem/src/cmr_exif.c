@@ -124,7 +124,7 @@ cmr_int get_time (cmr_int user_time, char *p_time)
 				cur_time.sec);
 #endif
 	}
-	CMR_LOGD("year_date_time =%s", p_time);
+	CMR_LOGV("year_date_time =%s", p_time);
 
 	return 0;
 }
@@ -135,7 +135,7 @@ cmr_int cmr_exif_init(JINF_EXIF_INFO_T *jinf_exif_info_ptr, setting_get_pic_taki
 	EXIF_SPEC_PIC_TAKING_COND_T   *img_sensor_exif_ptr = (EXIF_SPEC_PIC_TAKING_COND_T *)(*setting_cb)(priv_data);
 
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 	CMR_LOGD("flash=%d denominator=%d",img_sensor_exif_ptr->Flash ,img_sensor_exif_ptr->ExposureIndex.denominator);
 
 	if (!jinf_exif_info_ptr) {
@@ -171,7 +171,7 @@ cmr_int set_exif_pri_desc(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_PRI_DESC_T 
 	char               arr_time[20] = {0};
 
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	if (!p_jinf_exif_info || !p_exif_pri_desc) {
 		CMR_LOGD("jinf_exif_info  or p_exif_pri_desc null !");
@@ -180,7 +180,7 @@ cmr_int set_exif_pri_desc(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_PRI_DESC_T 
 
 	get_time(1, arr_time);
 
-	CMR_LOGD("arr_time =%s", arr_time);
+	CMR_LOGV("arr_time =%s", arr_time);
 
 	strcpy((char *)p_exif_pri_desc->DateTime, arr_time);
 
@@ -188,9 +188,9 @@ cmr_int set_exif_pri_desc(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_PRI_DESC_T 
 
 	p_jinf_exif_info->primary.img_desc_ptr  = p_exif_pri_desc;
 
-	CMR_LOGD("return 0x%p DateTime=%s", p_exif_pri_desc, p_exif_pri_desc->DateTime);
+	CMR_LOGV("return 0x%p DateTime=%s", p_exif_pri_desc, p_exif_pri_desc->DateTime);
 
-	CMR_LOGD("X");
+	CMR_LOGV("X");
 	return 0;
 }
 
@@ -201,7 +201,7 @@ cmr_int set_exif_specific_basic(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
 {
 	JINF_EXIF_INFO_T *jinf_exif_info =  jinf_exif_info_ptr;
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	if (!jinf_exif_info) {
 		CMR_LOGD("jinf_exif_info null !");
@@ -211,7 +211,7 @@ cmr_int set_exif_specific_basic(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
 	jinf_exif_info->spec_ptr        = p_exif_specific_info;
 	jinf_exif_info->spec_ptr->basic = exif_spec_basic;
 
-	CMR_LOGD(" X");
+	CMR_LOGV(" X");
 	return 0;
 }
 
@@ -219,7 +219,7 @@ cmr_int set_exif_specific_user(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_SPEC_U
 {
 	JINF_EXIF_INFO_T *jinf_exif_info = jinf_exif_info_ptr;
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	if (!jinf_exif_info) {
 		CMR_LOGD("jinf_exif_info null !");
@@ -233,7 +233,7 @@ cmr_int set_exif_specific_user(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_SPEC_U
 
 	jinf_exif_info->spec_ptr->user_ptr = p_exif_spec_user;
 
-	CMR_LOGD("X");
+	CMR_LOGV("X");
 	return 0;
 
 }
@@ -243,7 +243,7 @@ cmr_int set_exif_specific_pic_taking_cond(JINF_EXIF_INFO_T *jinf_exif_info_ptr ,
 {
 	JINF_EXIF_INFO_T *jinf_exif_info = jinf_exif_info_ptr;
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	if (!jinf_exif_info) {
 		CMR_LOGD("jinf_exif_info null !");
@@ -257,7 +257,7 @@ cmr_int set_exif_specific_pic_taking_cond(JINF_EXIF_INFO_T *jinf_exif_info_ptr ,
 
 	jinf_exif_info->spec_ptr->pic_taking_cond_ptr = exif_spec_pic_taking_cond_ptr;
 
-	CMR_LOGD("X");
+	CMR_LOGV("X");
 	return 0;
 }
 
@@ -271,7 +271,7 @@ cmr_int set_exif_primary(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
 		return  -1;
 	}
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	jinf_exif_info->primary.basic.YCbCrPositioning        = 1;
 	jinf_exif_info->primary.basic.XResolution.numerator   = 72;
@@ -284,7 +284,7 @@ cmr_int set_exif_primary(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
 	p_exif_pri_data->valid.Orientation = 1;
 	p_exif_pri_data->Orientation       = 1;
 
-	CMR_LOGD("X");
+	CMR_LOGV("X");
 	return 0;
 }
 
@@ -294,7 +294,7 @@ cmr_int set_exif_spec_other(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_SPEC_OTHE
 	char               arr_time[ARR_MAX_LEN] = {0};
 	cmr_int            ret = 0;
 
-	CMR_LOGD("E");
+	CMR_LOGV("E");
 
 	if (!jinf_exif_info) {
 		CMR_LOGD("jinf_exif_info null !");
@@ -308,11 +308,11 @@ cmr_int set_exif_spec_other(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_SPEC_OTHE
 	if ((p_exif_spec_other->ImageUniqueID != NULL) && (strlen(arr_time) < 33))
 		strncpy((char *)p_exif_spec_other->ImageUniqueID, arr_time, strlen(arr_time));
 
-	CMR_LOGD("%s",p_exif_spec_other->ImageUniqueID);
+	CMR_LOGV("%s",p_exif_spec_other->ImageUniqueID);
 
 	jinf_exif_info->spec_ptr->other_ptr = p_exif_spec_other;
 
-	CMR_LOGD("X");
+	CMR_LOGV("X");
 	return 0;
 }
 
@@ -350,7 +350,7 @@ cmr_int set_exif_specific_data_time(JINF_EXIF_INFO_T *jinf_exif_info_ptr,
 	p_image_date_time->valid.DateTimeOriginal  = 1;
 	p_image_date_time->valid.DateTimeDigitized = 1;
 
-	CMR_LOGD("%s",p_image_date_time->DateTimeOriginal);
+	CMR_LOGV("%s",p_image_date_time->DateTimeOriginal);
 
 	if (NULL != jinf_exif_info->spec_ptr)
 		jinf_exif_info->spec_ptr->date_time_ptr = p_image_date_time;
