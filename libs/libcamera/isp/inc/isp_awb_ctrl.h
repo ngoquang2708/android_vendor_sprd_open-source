@@ -35,6 +35,10 @@ extern "C"
 /*------------------------------------------------------------------------------*
 *				Data Structures					*
 *-------------------------------------------------------------------------------*/
+enum isp_awb_set_cmd {
+	ISP_AWB_SET_QUICK_MODE = 1,
+};
+
 enum isp_awb_wditht{
 	ISP_AWB_WDITHT_AVG=0x00,
 	ISP_AWB_WDITHT_CENTER,
@@ -66,6 +70,7 @@ struct isp_awb_adjust {
 	uint32_t index0;
 	uint32_t index1;
 	uint32_t alpha; // index1 alpha----1024->1X
+	uint32_t dec_ratio;
 };
 
 struct isp_awb_param{
@@ -126,6 +131,7 @@ struct isp_awb_param{
 	uint32_t green_factor;
 	uint32_t skin_factor;
 	uint32_t debug_file;
+	uint32_t quick_mode_enable;
 	uint32_t(*continue_focus_stat) (uint32_t handler_id, uint32_t param);
 	uint32_t(*mointor_info) (uint32_t handler_id, void* param_ptr);
 	uint32_t(*set_monitor_win) (struct isp_pos pos, struct isp_size win_size);
@@ -154,6 +160,7 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id);
 uint32_t isp_awb_ctrl_deinit(uint32_t handler_id);
 uint32_t isp_awb_ctrl_calculation(uint32_t handler_id);
 uint32_t isp_awb_set_flash_gain(void);
+uint32_t isp_awb_ctrl_set(uint32_t handler_id, uint32_t cmd, void *param0, void *param1);
 /*------------------------------------------------------------------------------*
 *				Compiler Flag					*
 *-------------------------------------------------------------------------------*/

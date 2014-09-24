@@ -275,7 +275,7 @@ struct af_input_param_struct_v04{
 struct af_output_param_struct_v04{
 	uint32_t new_position;
 	uint32_t rtn_suc_win;
-	uint32_t skip_num;
+	uint32_t *skip_num;
 };
 
 

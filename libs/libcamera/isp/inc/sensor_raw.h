@@ -169,8 +169,8 @@ struct sensor_ae_param{
 	uint8_t video_fps;
 	uint8_t target_lum;
 	uint8_t target_zone;
-	uint8_t smart;
-	uint8_t smart_rotio;
+	uint16_t smart;
+//	uint8_t smart_rotio;
 	uint8_t quick_mode;
 	uint8_t min_exposure;
 	int8_t ev[16];
@@ -225,7 +225,12 @@ struct sensor_ae_param{
 	uint8_t smart_denoise_soft_uv_mid_index;
 	uint8_t smart_denoise_soft_uv_max_index;
 
-	uint32_t reserved[26];
+	uint8_t smart_pref_y_outdoor;
+	uint8_t smart_pref_y_mid;
+	uint8_t smart_pref_uv_outdoor;
+	uint8_t smart_pref_uv_mid;
+	
+	uint32_t reserved[25];
 };
 
 struct sensor_ae_tab{

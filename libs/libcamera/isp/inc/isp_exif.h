@@ -47,9 +47,10 @@ struct exif_awb_map{
 
 
 struct exif_ae_param{
-	uint8_t iso;
-	uint8_t exposure;
-	uint8_t gain;
+	uint32_t iso;
+	uint32_t exposure;
+	uint32_t gain;
+	uint32_t cur_lum;
 };
 
 struct exif_awb_param{
@@ -146,9 +147,19 @@ struct exif_saturation_param{
 };
 
 struct exif_af_param{
+	uint8_t magic[16];
 	uint16_t alg_id;
 	uint16_t cur_step;
 	uint16_t edge_info[32];
+	uint32_t denoise_lv;
+	uint32_t win_num;
+	uint32_t suc_win;
+	uint32_t mode;
+	uint32_t step_cnt;
+	uint16_t win[9][4];
+	uint16_t pos[32];
+	uint32_t value[9][32];
+	uint16_t time[32];
 };
 
 struct exif_emboss_param{

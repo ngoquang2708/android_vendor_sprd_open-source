@@ -382,7 +382,7 @@ struct isp_flicker_param{
 struct isp_hue_param{
 	uint32_t bypass;
 	uint8_t factor;
-	uint8_t offset;
+	int16_t offset;
 };
 
 struct isp_af_statistic_info{
@@ -579,11 +579,14 @@ struct isp_context{
 	uint8_t bright_tab[16];
 	uint8_t contrast_tab[16];
 	uint8_t saturation_tab[16];
-	int8_t ev_tab[16];
+	int32_t ev_tab[16];
 
 	uint32_t awb_r_gain[9];
 	uint32_t awb_g_gain[9];
 	uint32_t awb_b_gain[9];
+
+	/*R/G/B coef to change cce*/
+	uint16_t cce_coef[3];
 
 	uint32_t lnc_index;
 	uint32_t cce_index;
