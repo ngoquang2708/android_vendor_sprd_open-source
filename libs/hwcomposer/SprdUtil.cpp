@@ -1545,7 +1545,7 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
             gsp_cfg_info.layer0_info.clip_rect.rect_w = srcRect->w;
             gsp_cfg_info.layer0_info.clip_rect.rect_h = srcRect->h;
 
-            gsp_cfg_info.layer0_info.alpha = 0xff;
+            gsp_cfg_info.layer0_info.alpha = hwcLayer->planeAlpha;
             gsp_cfg_info.layer0_info.pmargb_mod = ((hwcLayer->blending&HWC_BLENDING_PREMULT) == HWC_BLENDING_PREMULT);
             gsp_cfg_info.layer0_info.rot_angle = rotationType_convert(hwcLayer->transform);
 
@@ -1634,7 +1634,7 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
         }
     }
 
-    ALOGI_IF(mDebugFlag,"util[%04d] imgLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d,w%d,h%d]",__LINE__,
+    ALOGI_IF(mDebugFlag,"util[%04d] imgLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d,w%d,h%d], planeAlpha: %d",__LINE__,
              gsp_cfg_info.layer0_info.img_format,
              gsp_cfg_info.layer0_info.pmargb_mod,
              gsp_cfg_info.layer0_info.clip_rect.st_x,
@@ -1646,7 +1646,8 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
              gsp_cfg_info.layer0_info.des_rect.st_x,
              gsp_cfg_info.layer0_info.des_rect.st_y,
              gsp_cfg_info.layer0_info.des_rect.rect_w,
-             gsp_cfg_info.layer0_info.des_rect.rect_h);
+             gsp_cfg_info.layer0_info.des_rect.rect_h,
+             gsp_cfg_info.layer0_info.alpha);
     return 0;
 }
 
@@ -1750,7 +1751,7 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
             }
 
 
-            gsp_cfg_info.layer1_info.alpha = 0xff;
+            gsp_cfg_info.layer1_info.alpha = hwcLayer->planeAlpha;
             gsp_cfg_info.layer1_info.pmargb_mod = ((hwcLayer->blending&HWC_BLENDING_PREMULT) == HWC_BLENDING_PREMULT);
 
             ALOGI_IF((private_h->width != private_h->stride),"util[%04d] warning: osdLayer width %d, stride %d, not equal!",__LINE__, private_h->width, private_h->stride);
@@ -1760,7 +1761,7 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
             //gsp_cfg_info.layer1_info.des_pos.pos_pt_x = gsp_cfg_info.layer1_info.des_pos.pos_pt_y = 0;
             gsp_cfg_info.layer1_info.layer_en = 1;
 
-            ALOGI_IF(mDebugFlag,"util[%04d] osdLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d]",__LINE__,
+            ALOGI_IF(mDebugFlag,"util[%04d] osdLayer info [f%d,pm:%d,x%d,y%d,w%d,h%d,p%d] r%d [x%d,y%d], planeAlpha: %d",__LINE__,
                      gsp_cfg_info.layer1_info.img_format,
                      gsp_cfg_info.layer1_info.pmargb_mod,
                      gsp_cfg_info.layer1_info.clip_rect.st_x,
@@ -1770,7 +1771,8 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
                      gsp_cfg_info.layer1_info.pitch,
                      gsp_cfg_info.layer1_info.rot_angle,
                      gsp_cfg_info.layer1_info.des_pos.pos_pt_x,
-                     gsp_cfg_info.layer1_info.des_pos.pos_pt_y);
+                     gsp_cfg_info.layer1_info.des_pos.pos_pt_y,
+                     gsp_cfg_info.layer1_info.alpha);
         } else {
             ALOGE("util[%04d] err:layer buffer type is not supported!",__LINE__);
             return -1;

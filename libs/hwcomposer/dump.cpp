@@ -267,8 +267,13 @@ void queryDebugFlag(int *debugFlag)
     {
         if (openFileFlag == 0)
         {
+            int ret;
             memset(cfg, '\0', 100);
-            fread(cfg, 1, 99, fp);
+            ret = fread(cfg, 1, 99, fp);
+            if (ret < 1) {
+                ALOGE("fread return size is wrong %d", ret);
+            }
+            cfg[sizeof(cfg) - 1] = 0;
             pch = strstr(cfg, "enable");
             if (pch != NULL)
             {
@@ -280,8 +285,8 @@ void queryDebugFlag(int *debugFlag)
         {
             *debugFlag = 1;
         }
+        fclose(fp);
     }
-    fclose(fp);
 }
 
 void queryDumpFlag(int *dumpFlag)

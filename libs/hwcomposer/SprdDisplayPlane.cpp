@@ -175,6 +175,9 @@ private_handle_t* SprdDisplayPlane::dequeueBuffer()
         buffer = createPlaneBuffer(found);
     }
 
+    if (buffer == NULL) {
+        ALOGE("buffer is NULL");
+    }
 
     /*
      *  eglMakeCurrent will call dequeueBuffer first.

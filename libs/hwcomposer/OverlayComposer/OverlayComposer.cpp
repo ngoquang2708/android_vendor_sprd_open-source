@@ -466,7 +466,8 @@ int OverlayComposer::composerHWLayers()
 
         L->setLayerTransform(pL->transform);
         L->setLayerRect(&r, &rV);
-        //L->setLayerAlpha(pL->alpha);
+        L->setLayerAlpha(pL->planeAlpha);
+        L->setBlendFlag(pL->blending);
 
         L->draw();
 

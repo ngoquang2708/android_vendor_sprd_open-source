@@ -67,8 +67,10 @@ SprdHWLayerList::~SprdHWLayerList()
 void SprdHWLayerList::dump_yuv(uint8_t* pBuffer,uint32_t aInBufSize)
 {
     FILE *fp = fopen("/data/video.data","ab");
-    fwrite(pBuffer,1,aInBufSize,fp);
-    fclose(fp);
+    if (fp) {
+        fwrite(pBuffer,1,aInBufSize,fp);
+        fclose(fp);
+    }
 }
 
 void SprdHWLayerList::dump_layer(hwc_layer_1_t const* l) {
@@ -659,6 +661,7 @@ int SprdHWLayerList:: prepareOSDLayer(SprdHWLayer *l)
             return 0;
         }
     }
+
 
     if ((layer->transform != 0) &&
         ((layer->transform & HAL_TRANSFORM_ROT_90) != HAL_TRANSFORM_ROT_90))
