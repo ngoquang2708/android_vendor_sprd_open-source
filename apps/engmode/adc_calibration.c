@@ -18,6 +18,7 @@
 #define PRECISION_10MV      (0)
 #define MAX_VOLTAGE         (0xFFFFFF)
 
+#define ADC_CAL_TYPE_FILE "/sys/class/power_supply/sprdfgu/fgu_cal_from_type"
 static	int	vbus_charger_disconnect = 0;
 void	disconnect_vbus_charger(void)
 {
@@ -55,6 +56,7 @@ void	initialize_ctrl_file(void)
     }
     if(cali_info.magic!=CALI_MAGIC){
 	memset(&cali_info,0xff,sizeof(cali_info));
+        cali_info.adc_para.reserved[7] = 0;
 	cali_info.magic = CALI_MAGIC;
     }
 
@@ -261,6 +263,82 @@ static void ap_get_fgu_vol_adc(MSG_AP_ADC_CNF *pMsgADC)
 
     if(read_len>0){
 		pMsgADC->ap_adc_req.parameters[0] = vol_adc;
+        pMsgADC->diag_ap_cnf.status = 0;
+    }
+    else{
+        pMsgADC->diag_ap_cnf.status = 1;
+    }
+}
+static int get_fgu_current_real(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+    fd = open(FGU_CURRENT_FILE_PATH,O_RDONLY);
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+        {
+             *value = strtol(buffer,&endptr,0);
+             ENG_LOG("%s %s value = %d\n",__func__,FGU_VOL_FILE_PATH, *value);
+        }
+        else
+        {
+             ENG_LOG("%s %s read_len = %d\n",__func__,FGU_VOL_FILE_PATH, read_len);
+        }
+        close(fd);
+    }
+    else{
+        ENG_LOG("%s open %s failed\n",__func__,FGU_CURRENT_FILE_PATH);
+    }
+    return read_len;
+}
+static int get_fgu_vol_real(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+    fd = open(FGU_VOL_FILE_PATH,O_RDONLY);
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+        {
+            *value = strtol(buffer,&endptr,0);
+            ENG_LOG("%s %s value = %d, read_len = %d \n",__func__,FGU_VOL_FILE_PATH, *value, read_len);
+        }
+        else
+        {
+            ENG_LOG("%s %s read_len = %d \n",__func__,FGU_VOL_FILE_PATH, read_len);
+        }
+        close(fd);
+     }
+    else{
+        ENG_LOG("%s open %s failed\n",__func__,FGU_VOL_FILE_PATH);
+    }
+    return read_len;
+}
+static void ap_get_fgu_current_real(MSG_AP_ADC_CNF *pMsgADC)
+{
+    int	real_current = 0;
+    int      read_len = 0;
+    read_len = get_fgu_current_real(&real_current);
+    if(read_len>0){
+        pMsgADC->ap_adc_req.parameters[0] = real_current;
+        pMsgADC->diag_ap_cnf.status = 0;
+    }
+    else{
+        pMsgADC->diag_ap_cnf.status = 1;
+    }
+}
+static void ap_get_fgu_vol_real(MSG_AP_ADC_CNF *pMsgADC)
+{
+    int	real_vol = 0;
+    int      read_len = 0;
+    read_len = get_fgu_vol_real(&real_vol);
+    if(read_len>0){
+        pMsgADC->ap_adc_req.parameters[0] = real_vol ;
 		pMsgADC->diag_ap_cnf.status = 0;
 	}
 	else{
@@ -362,6 +440,12 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
                             return AP_GET_FGU_VOL_ADC;
 			    else if (lpAPADCReq->operate == 4)
                             return AP_GET_FGU_CURRENT_ADC;
+                    else if (lpAPADCReq->operate == 5)
+                        return AP_GET_FGU_TYPE;
+                    else if (lpAPADCReq->operate == 6)
+                        return AP_GET_FGU_VOL_REAL;
+                    else if (lpAPADCReq->operate == 7)
+                        return AP_GET_FGU_CURRENT_REAL;
 			    else
                             return 0;
                     }
@@ -445,6 +529,33 @@ static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
 
     return voltage;
 }
+static void ap_get_fgu_type(MSG_AP_ADC_CNF *pMsgADC)
+{
+    int fd = -1;
+    int r_cnt = 0;
+    char fgu_type[2] = {0};
+    MSG_HEAD_T *Msg = (MSG_HEAD_T*)pMsgADC;
+    fd = open(ADC_CAL_TYPE_FILE, O_RDONLY);
+    if(fd >= 0){
+        r_cnt = read(fd, fgu_type, 2);
+        if(r_cnt > 0){
+            ENG_LOG("%s: fgu_type:%s\n", __FUNCTION__, fgu_type);
+            pMsgADC->ap_adc_req.parameters[0] = atoi(fgu_type);
+            pMsgADC->diag_ap_cnf.status = 0;
+        }
+        else
+        {
+            ENG_LOG("%s: read fgu cali file failed,read:%d\n", __FUNCTION__, r_cnt);
+            pMsgADC->diag_ap_cnf.status = 1;
+        }
+        close(fd);
+    }
+    else
+    {
+        ENG_LOG("%s: open fgu cali file failed, err: %s\n", __FUNCTION__, strerror(errno));
+        pMsgADC->diag_ap_cnf.status = 1;
+    }
+}
 int  ap_adc_process(int adc_cmd, char * src, int size, MSG_AP_ADC_CNF * pMsgADC)
 {
     MSG_HEAD_T *lpHeader = (MSG_HEAD_T *)src;
@@ -475,6 +586,14 @@ int  ap_adc_process(int adc_cmd, char * src, int size, MSG_AP_ADC_CNF * pMsgADC)
 	 case AP_GET_FGU_CURRENT_ADC:
 		ap_get_fgu_current_adc(pMsgADC);
 		break;
+        case AP_GET_FGU_TYPE:
+            ap_get_fgu_type(pMsgADC);
+            break;
+        case AP_GET_FGU_VOL_REAL:
+            ap_get_fgu_vol_real(pMsgADC);
+            break;
+        case AP_GET_FGU_CURRENT_REAL:
+            ap_get_fgu_current_real(pMsgADC);
         default:
             return 0;
     }

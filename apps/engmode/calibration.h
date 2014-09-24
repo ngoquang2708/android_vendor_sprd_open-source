@@ -7,6 +7,8 @@
 #define ADC_CHAN_FILE_PATH      "/sys/kernel/debug/sc2713-regulator/adc_chan"
 #define	FGU_CURRENT_ADC_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_current_adc"
 #define	FGU_VOL_ADC_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_vol_adc"
+#define	FGU_CURRENT_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_current"
+#define	FGU_VOL_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_vol"
 #define	BATTER_CALI_CONFIG_FILE	CALI_CTRL_FILE_PATH
 typedef enum
 {
@@ -24,6 +26,9 @@ typedef enum
 #define AP_DIAG_LOOP	5
 #define AP_GET_FGU_VOL_ADC	6
 #define AP_GET_FGU_CURRENT_ADC	7
+#define AP_GET_FGU_TYPE	8
+#define AP_GET_FGU_VOL_REAL 9
+#define AP_GET_FGU_CURRENT_REAL 10
 
 
 #define	CALI_MAGIC	(0x49424143) //CALI
