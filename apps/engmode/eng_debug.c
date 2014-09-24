@@ -34,7 +34,8 @@ int eng_file_unlock(int fd)
 
 void* eng_printlog_thread(void *x)
 {
-    int ret,fd = -1;
+    int ret = -1;
+    int fd = -1;
 
     ENG_LOG("eng_printlog_thread thread start\n");
 
@@ -67,12 +68,13 @@ void* eng_printlog_thread(void *x)
         }
     }
 
-    fd = creat("/data/local/englog/eng.log",S_IRWXU | S_IRWXG | S_IRWXO);
-    if (-1 == fd && (errno != EEXIST)) {
+    fd = open("/data/local/englog/eng.log",O_RDWR|O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+    if (fd == -1 && (errno != EEXIST)) {
         ENG_LOG("creat /data/local/englog/eng.log failed.");
         return 0;
     }
-    close(fd);
+    if (fd >= 0 )
+        close(fd);
 
     ret = chmod("/data/local/englog/eng.log",0777);
     if (-1 == ret) {
