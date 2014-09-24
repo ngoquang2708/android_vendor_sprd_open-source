@@ -344,9 +344,13 @@ struct isp_ae{
 	uint8_t denoise_start_index;
 	uint8_t denoise_lum_thr;
 
+	uint8_t smart_pref_y_outdoor;
 	uint8_t smart_pref_y_min;
+	uint8_t smart_pref_y_mid;
 	uint8_t smart_pref_y_max;
+	uint8_t smart_pref_uv_outdoor;
 	uint8_t smart_pref_uv_min;
+	uint8_t smart_pref_uv_mid;
 	uint8_t smart_pref_uv_max;
 	uint8_t smart_denoise_diswei_outdoor_index;
 	uint8_t smart_denoise_diswei_min_index;

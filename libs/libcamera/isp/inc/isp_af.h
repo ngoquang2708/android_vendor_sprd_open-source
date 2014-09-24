@@ -119,6 +119,10 @@ struct isp_af_param{
 	uint32_t control_denoise;
 	uint32_t denoise_lv;
 	uint32_t frame_skip;
+	uint32_t in_processing;
+	uint16_t time[32];
+	uint32_t af_value[9][32];
+	uint32_t pos[32];
 	struct af_contex_struct_v03 alg_v03_context;
 	struct af_contex_struct_v04 alg_v04_context;
 	struct isp_caf_cal_cfg ctn_af_cal_cfg[2];

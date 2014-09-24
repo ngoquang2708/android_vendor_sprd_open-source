@@ -175,6 +175,7 @@ struct isp_awb_init_param {
 struct isp_awb_calc_param {
 	struct isp_awb_statistic_info *awb_stat;
 	enum isp_awb_envi_id envi_id;
+	uint32_t quick_mode;
 };
 
 struct isp_awb_calc_result {

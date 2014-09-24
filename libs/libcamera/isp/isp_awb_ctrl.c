@@ -57,7 +57,8 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 	ISP_LOGV("envi_id = %d", awb_param->envi_id);
 
 	/*the lsc and cmc should set the same index now*/
-	if (0 != smart_result->cmc.update || 0 != smart_result->lsc.update) {
+	if (0 != smart_result->cmc.update || 0 != smart_result->lsc.update
+		|| 0 != smart_result->denoise.update) {
 
 		if (smart_result->lsc.index[0] != smart_result->cmc.index[0]
 			|| smart_result->lsc.index[1] != smart_result->cmc.index[1]) {
@@ -67,7 +68,7 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 				smart_result->cmc.index[0], smart_result->cmc.index[1]);
 		}
 
-		if (1 == smart_result->lsc.update) {
+		if (1 == smart_result->lsc.update || 1 == smart_result->denoise.update) {
 
 			/* adjust lnc param */
 			uint32_t weight1 = 0;
@@ -82,6 +83,7 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 				lsc_adjust.alpha = weight1;
 				lsc_adjust.index0 = smart_result->lsc.index[0];
 				lsc_adjust.index1 = smart_result->lsc.index[1];
+				lsc_adjust.dec_ratio = smart_result->denoise.lsc_dec_ratio;
 				awb_param->change_param(handler_id, ISP_CHANGE_LNC, (void*)&lsc_adjust);
 			}
 		}
@@ -146,7 +148,7 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 }
 
 int32_t _smart_light_calc(uint32_t handler_id, struct isp_smart_light_param *smart_light_param, 
-				struct isp_awb_gain *gain, uint16_t ct, int32_t bright_value)
+				struct isp_awb_gain *gain, uint16_t ct, int32_t bright_value, uint32_t quick_mode)
 {
 	int32_t rtn = SMART_LIGHT_SUCCESS;
 	struct smart_light_calc_param *calc_param = &smart_light_param->calc_param;
@@ -164,12 +166,13 @@ int32_t _smart_light_calc(uint32_t handler_id, struct isp_smart_light_param *sma
 		return SMART_LIGHT_ERROR;
 	}
 
-	calc_param->bv = bright_value < 0 ? 0 : bright_value;
+	calc_param->bv = bright_value;
 	calc_param->smart = smart_light_param->smart;
 	calc_param->ct = ct;
 	calc_param->gain.r = gain->r;
 	calc_param->gain.g = gain->g;
 	calc_param->gain.b = gain->b;
+	calc_param->quick_mode = quick_mode;
 
 	rtn = smart_light_calculation(handler_id, (void *)calc_param, (void *)calc_result);
 
@@ -285,6 +288,19 @@ enum isp_awb_envi_id _envi_id_convert(enum smart_light_envi_id envi_id)
 	}
 }
 
+uint32_t _get_quick_mode(struct isp_awb_param* awb_param)
+{
+	if (awb_param->quick_mode_enable > 0)
+		return 1;
+	else
+		return 0;
+}
+
+void _set_quick_mode(struct isp_awb_param* awb_param, uint32_t mode)
+{
+	awb_param->quick_mode_enable = mode;
+}
+
 /* isp_awb_init --
 *@
 *@
@@ -310,6 +326,7 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id)
 	awb_param->matrix_index=ISP_ZERO;
 	awb_param->gain_div=0x100;
 	awb_param->win_size = isp_cxt->awbm.win_size;
+	awb_param->quick_mode_enable = 1;
 
 	ISP_LOGI("smart = 0x%d, envi=%d", smart_light_param->smart, awb_param->envi_id);
 
@@ -364,6 +381,9 @@ uint32_t isp_awb_ctrl_deinit(uint32_t handler_id)
 	awb_param->init_ct = awb_param->cur_ct;
 	awb_param->init_gain = awb_param->cur_gain;
 
+	smart_light_param->init_param.init_gain = smart_light_param->calc_result.gain;
+	smart_light_param->init_param.init_hue_sat = smart_light_param->calc_result.hue_saturation;
+
 	ISP_LOGI("deinit awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
 
@@ -389,6 +409,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	uint32_t setting_index = awb_param->cur_setting_index;
 	uint16_t ct = 0;
 	uint32_t bv = 0;
+	uint32_t time = 0;
 
 	if(ISP_EB==isp_cxt->awb_get_stat)
 		isp_cxt->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AWB_STAT_CALLBACK,
@@ -409,6 +430,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 
 	calc_param->awb_stat = &isp_cxt->awb_stat;
 	calc_param->envi_id = _envi_id_convert(awb_param->envi_id);
+	calc_param->quick_mode = _get_quick_mode(awb_param);
 
 	ISP_LOGV("envi_id smart=%d, awb=%d", awb_param->envi_id, calc_param->envi_id);
 
@@ -417,6 +439,8 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	ct = calc_result->ct;
 
 	ISP_LOGV("gain = (%d, %d, %d), ct=%d, rtn=%d", gain.r, gain.g, gain.b, ct, rtn);
+
+	
 
 	/* update ccm and lsc parameters */
 	if (ISP_SUCCESS == rtn && gain.r > 0 && gain.b > 0 && gain.g > 0) {
@@ -427,16 +451,19 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 		awb_param->cur_gain = gain;
 		awb_param->cur_ct = ct;
 
+		ISP_LOGI("smart init=%d", smart_light_param->init);
+#if 0
 		if (ISP_EB == smart_light_param->init) {
 
 			bright_value = awb_param->get_ev_lux(handler_id);
-			rtn = _smart_light_calc(handler_id, smart_light_param, &gain, ct, bright_value);
+			rtn = _smart_light_calc(handler_id, smart_light_param, &gain, ct,
+							bright_value, calc_param->quick_mode);
 			if (ISP_SUCCESS == rtn)
 				_set_smart_param(handler_id, awb_param, &smart_light_param->calc_result);
 			else
 				ISP_LOGE("smart calc failed!");
 		}
-
+#endif
 		if(awb_param->cur_gain.r != last_gain.r || awb_param->cur_gain.g != last_gain.g
 			|| awb_param->cur_gain.b != last_gain.b) {
 
@@ -454,12 +481,38 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 		}
 	}
 
-	ISP_LOGI("calc awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
+	awb_param->quick_mode_enable = 0;
+	ISP_LOGI("awb calc time = %d", time);
+	ISP_LOGI("SHAN: calc awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
 
 EXIT:
 
 	return rtn;
+}
+
+uint32_t isp_awb_ctrl_set(uint32_t handler_id, uint32_t cmd, void *param0, void *param1)
+{
+	struct isp_context* isp_cxt = ispGetAlgContext(0);
+	struct isp_awb_param* awb_param = &isp_cxt->awb;
+
+	ISP_LOGI("cmd = %d, param0 = %d, param1=%d", cmd, (uint32_t)param0, (uint32_t)param1);
+
+	switch (cmd) {
+	case ISP_AWB_SET_QUICK_MODE:
+		if (NULL != param0)
+		{
+			uint32_t quick_mode = *(uint32_t *)param0;
+			_set_quick_mode(awb_param, quick_mode);
+			ISP_LOGI("set_quick_mode=%d", quick_mode);
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return ISP_SUCCESS;
 }
 
 /* isp_awb_set_flash_gain --

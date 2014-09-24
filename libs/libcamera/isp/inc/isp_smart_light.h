@@ -40,6 +40,8 @@ extern "C"
 #define SMART_GAIN 		(1 << 3)	//bit3: adjust gain
 #define SMART_HUE 		(1 << 4)	//bit4: smart hue
 #define SMART_SATURATION 	(1 << 5)	//bit 5: smart saturation
+#define SMART_POST_GAIN		(1 << 6)	//bit6: adjust gain after gamma, in cce
+#define SMART_LNC_DENOISE	(1 << 7)	//bit7: adjust denoise according to ae index
 
 #define SMART_CT_SECTION_NUM		9
 #define SMART_LSC_NUM			9
@@ -60,6 +62,7 @@ extern "C"
 #define SMART_ENVI_SIMPLE_MAX_NUM	6
 
 #define SMART_HUE_SAT_GAIN_UNIT		1024
+#define SMART_MAX_LSC_DEC_RATIO		100
 
 #define SMART_MAX_BV			0x7fff
 /*------------------------------------------------------------------------------*
@@ -192,6 +195,17 @@ struct smart_light_gain_param {
 	struct smart_light_piecewise_func b_gain_func[SMART_ENVI_SIMPLE_MAX_NUM];
 };
 
+struct smart_light_denoise_param {
+	struct smart_light_range_l bv_range;
+	/*value range: 0-100*/
+	struct smart_light_range lsc_dec_ratio_range;
+};
+
+struct smart_light_denoise_result {
+	uint32_t lsc_dec_ratio;
+	uint32_t update;
+};
+
 struct smart_light_init_param {
 	struct smart_light_envi_param envi;
 	struct smart_light_lsc_param lsc;
@@ -199,13 +213,18 @@ struct smart_light_init_param {
 	struct smart_light_gain_param gain;
 	struct smart_light_hue_param hue;
 	struct smart_light_saturation_param saturation;
+	struct smart_light_denoise_param denoise;
+	struct smart_light_gain_result init_gain;
+	struct smart_light_hue_saturation_result init_hue_sat;
+	uint32_t steady_speed;
 };
 
 struct smart_light_calc_param {
 	uint32_t smart;
-	uint32_t bv;
+	int32_t bv;
 	uint32_t ct;
 	struct smart_light_gain gain;
+	uint32_t quick_mode;
 };
 
 struct smart_light_calc_result {
@@ -216,6 +235,7 @@ struct smart_light_calc_result {
 	struct smart_light_hue_result hue;
 	struct smart_light_saturation_result saturation;
 	struct smart_light_hue_saturation_result hue_saturation;
+	struct smart_light_denoise_result denoise;
 };
 /*------------------------------------------------------------------------------*
 *				Data Prototype					*

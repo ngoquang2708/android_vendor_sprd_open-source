@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include "isp_ae_alg_v00.h"
 #include "isp_app.h"
+#include "isp_awb_ctrl.h"
 
 /**---------------------------------------------------------------------------*
  **				 Compiler Flag					*
@@ -34,6 +35,9 @@ extern	 "C"
 /**---------------------------------------------------------------------------*
 **				 Micro Define					*
 **----------------------------------------------------------------------------*/
+#define SC8825_ISP_ID 0x00000000
+#define SC8830_ISP_ID 0x00010000
+#define SC9630_ISP_ID 0x00020000
 
 #define AE_STAB_NUM 3
 
@@ -46,6 +50,12 @@ extern	 "C"
 #define AE_SMART_GAMMA 0x10
 #define AE_SMART_CSS 0x20
 #define AE_SMART_HW_STA_HUE 0x40
+#define AE_SMART_DENOISE_DISWEI 0x80
+#define AE_SMART_DENOISE_RANWEI 0x100
+#define AE_SMART_DENOISE_PREF_Y 0x200
+#define AE_SMART_DENOISE_PREF_UV 0x400
+#define AE_SMART_DENOISE_SOFT_Y 0x800
+#define AE_SMART_DENOISE_SOFT_UV 0x1000
 
 #define ISP_DENOISE_MAX_LEVEL 0xFE
 
@@ -125,6 +135,7 @@ struct isp_lnc_param{
 	struct isp_lnc_map map;
 	uint32_t* lnc_ptr;
 	uint32_t lnc_len;
+	struct isp_awb_adjust cur_lnc;
 };
 
 struct isp_fetch_param{
@@ -143,6 +154,8 @@ int32_t isp_ae_get_real_gain(uint32_t gain);
 int32_t isp_ae_fast_smart_adjust(uint32_t handler_id, int32_t cur_ev, uint32_t eb);
 int32_t isp_ae_stab_smart_adjust(uint32_t handler_id, int32_t cur_ev);
 int32_t isp_get_denoise_tab(uint32_t de_level, uint8_t** diswei, uint8_t** ranwei);
+int32_t isp_get_denoise_tab_diswei(uint32_t de_level, uint8_t** diswei);
+int32_t isp_get_denoise_tab_ranwei(uint32_t de_level, uint8_t** ranwei);
 int32_t isp_flash_calculation(uint32_t handler_id, struct isp_ae_v00_flash_alg_param* v00_flash_ptr);
 int32_t isp_adjust_cmc(uint32_t handler_id, int32_t cur_ev);
 int32_t _ispGetFetchPitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);
@@ -153,8 +166,7 @@ int32_t _ispSetSlicePosInfo(struct isp_slice_param* slice_ptr);
 int32_t _ispAddSliceBorder(enum isp_slice_type type, enum isp_process_type proc_type, struct isp_slice_param* slice_ptr);
 int32_t _ispGetSliceSize(enum isp_process_type proc_type, struct isp_size* src_size_ptr, struct isp_slice_param* slice_ptr);
 int32_t _ispGetSliceEdgeInfo(struct isp_slice_param* slice_ptr);
-uint16_t _ispGetLensGridPitch(uint16_t src_width, uint8_t len_grid);
-int32_t _ispGetLncAddr(struct isp_lnc_param* param_ptr,struct isp_slice_param* isp_ptr, uint16_t src_width);
+int32_t _ispGetLncAddr(struct isp_lnc_param* param_ptr,struct isp_slice_param* isp_ptr, uint16_t src_width,uint32_t isp_id);
 int32_t _ispGetLncCurrectParam(void* lnc0_ptr,void* lnc1_ptr, uint32_t lnc_len, uint32_t alpha, void* dst_lnc_ptr);
 int32_t _ispGetFetchAddr(uint32_t handler_id, struct isp_fetch_param* fetch_ptr);
 int32_t _ispGetFetchPitch(struct isp_pitch* pitch_ptr, uint16_t width, enum isp_format format);
@@ -165,7 +177,7 @@ int32_t _ispSetSlicePosInfo(struct isp_slice_param* slice_ptr);
 int32_t _ispAddSliceBorder(enum isp_slice_type type, enum isp_process_type proc_type, struct isp_slice_param* slice_ptr);
 int32_t _ispGetSliceSize(enum isp_process_type proc_type, struct isp_size* src_size_ptr, struct isp_slice_param* slice_ptr);
 int32_t _ispGetSliceEdgeInfo(struct isp_slice_param* slice_ptr);
-uint16_t _ispGetLensGridPitch(uint16_t src_width, uint8_t len_grid);
+uint16_t _ispGetLensGridPitch(uint16_t src_width, uint8_t len_grid, uint32_t isp_id);
 int32_t _ispGetFetchAddr(uint32_t handler_id, struct isp_fetch_param* fetch_ptr);
 int32_t _ispSetTuneParam(uint32_t handler_id);
 //int32_t _ispSetSlice(uint32_t handler_id, struct isp_slice_param* slice_ptr);

@@ -40,7 +40,7 @@ extern "C"
 
 #define ISP_AE_ISO_NUM 0x06
 #define ISP_AE_TAB_NUM 0x04
-#define ISP_AE_WEIGHT_TAB_NUM 0x03
+#define ISP_AE_WEIGHT_TAB_NUM 0x04
 #define ISP_AE_SKIP_FOREVER 0x7FFFFFFF
 #define ISP_AE_SKIP_LOCK 0xFFFFFFFF
 /**---------------------------------------------------------------------------*
@@ -189,9 +189,13 @@ struct isp_ae_param
 	uint16_t smart_wave_max;
 	uint16_t smart_pref_min;
 	uint16_t smart_pref_max;
+	uint16_t smart_pref_y_outdoor;
 	uint16_t smart_pref_y_min;
+	uint16_t smart_pref_y_mid;
 	uint16_t smart_pref_y_max;
+	uint16_t smart_pref_uv_outdoor;
 	uint16_t smart_pref_uv_min;
+	uint16_t smart_pref_uv_mid;
 	uint16_t smart_pref_uv_max;
 	uint8_t smart_denoise_min_index;
 	uint8_t smart_denoise_mid_index;

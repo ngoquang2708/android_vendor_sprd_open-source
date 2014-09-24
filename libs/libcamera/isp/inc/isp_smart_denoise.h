@@ -61,19 +61,23 @@ struct isp_smart_denoise{
 	uint16_t dependon_gain;
 	uint16_t dependon_lum;
 
-	struct isp_smart_denoise_info bil;
+	struct isp_smart_denoise_info bil_dis;
+	struct isp_smart_denoise_info bil_ran;
 	struct isp_smart_denoise_info pref_y;
 	struct isp_smart_denoise_info pref_uv;
 	struct isp_smart_denoise_info y;
 	struct isp_smart_denoise_info uv;
+	struct isp_smart_denoise_info edge;
 };
 
 struct isp_smart_denoise_out{
-	uint16_t bil_level;
+	uint16_t bil_dis_level;
+	uint16_t bil_ran_level;
 	uint16_t pref_y_level;
 	uint16_t pref_uv_level;
 	uint16_t y_level;
 	uint16_t uv_level;
+	uint16_t edge_level;
 };
 
 /**---------------------------------------------------------------------------*
