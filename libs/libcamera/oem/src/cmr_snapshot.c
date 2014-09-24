@@ -2935,7 +2935,7 @@ cmr_int snp_start_thumb_proc(cmr_handle snp_handle, struct frm_info *data)
 	}
 	if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
 		&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
-		ret = snp_send_msg_thumb_thr(snp_handle, SNP_EVT_THUMB, &cxt->cur_frame_info);
+		ret = snp_send_msg_thumb_thr(snp_handle, SNP_EVT_THUMB, data);
 		if (ret) {
 			CMR_LOGE("failed to send msg thumb %ld", ret);
 			goto exit;

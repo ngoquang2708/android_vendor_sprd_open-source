@@ -374,7 +374,7 @@ cmr_int cmr_scale_close(cmr_handle scale_handle)
 	} else {
 		CMR_LOGE("scale error: handle is invalid");
 	}
-
+	sem_destroy(&file->sync_sem);
 	free(file);
 
 exit:
