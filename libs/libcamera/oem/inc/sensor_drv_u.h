@@ -40,6 +40,7 @@ extern	 "C"
 #define SENSOR_CTX_ERROR                              CMR_CAMERA_INVALID_PARAM
 #define SENSOR_FALSE                                  0
 #define SENSOR_TRUE                                   1
+#define SENSOR_FD_INIT                                CMR_CAMERA_FD_INIT
 
 #define SENSOR_Sleep(ms)                              usleep(ms*1000)
 #define SENSOR_MEMSET                                 memset

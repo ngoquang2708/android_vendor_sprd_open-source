@@ -208,8 +208,9 @@ deinit_end:
 cmr_int cmr_sensor_open(cmr_handle sensor_handle, cmr_u32 sensor_id_bits)
 {
 	CMR_MSG_INIT(message);
-	cmr_int             ret = CMR_CAMERA_SUCCESS;
+	cmr_int                   ret = CMR_CAMERA_SUCCESS;
 	struct cmr_sensor_handle  *handle = (struct cmr_sensor_handle *)sensor_handle;
+	cmr_u32                   cameraId = 0;
 	CMR_LOGI("E");
 
 	CHECK_HANDLE_VALID(handle);
@@ -222,6 +223,16 @@ cmr_int cmr_sensor_open(cmr_handle sensor_handle, cmr_u32 sensor_id_bits)
 	if (ret) {
 		CMR_LOGE("X send msg failed!");
 		return CMR_CAMERA_FAIL;
+	} else {
+		for (cameraId = 0; cameraId < CAMERA_ID_MAX; cameraId++) {
+			if (sensor_id_bits & (1 << cameraId)) {
+				break;
+			}
+		}
+		if (handle->sensor_cxt[cameraId].fd_sensor == CMR_CAMERA_FD_INIT) {
+			CMR_LOGE("camera %d open fail!", cameraId);
+			ret = CMR_CAMERA_FAIL;
+		}
 	}
 	CMR_LOGI("X ret %ld", ret);
 	return ret;
@@ -634,8 +645,7 @@ cmr_int cmr_sns_thread_proc(struct cmr_msg *message, void *p_data)
 		ops_param = (cmr_u32)message->data;
 		ret = cmr_sns_open(handle, ops_param);
 		if (ret) {
-			/*todo, need to notify OEM that open camera sensor fail*/
-
+			/* notify oem through fd_sensor */
 			CMR_LOGE("cmr_sns_open failed!");
 		}
 		break;

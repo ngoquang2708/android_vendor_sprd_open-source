@@ -286,7 +286,7 @@ cmr_int cmr_msg_post(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 l
 	sem_post(&msg_cxt->msg_sem);
 	if (NULL != msg_cur) {
 		if (CMR_MSG_SYNC_NONE != msg_cur->sync_f) {
-				rtn = sem_wait(&msg_cur->sem);
+			rtn = sem_wait(&msg_cur->sem);
 		}
 	}
 	return rtn;

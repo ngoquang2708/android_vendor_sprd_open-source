@@ -1344,16 +1344,16 @@ void sns_set_status(struct sensor_drv_context *sensor_cxt, SENSOR_ID_E sensor_id
 
 cmr_int sns_device_init(struct sensor_drv_context *sensor_cxt, cmr_u32 sensor_id)
 {
-	cmr_int                    ret = 0;
+	cmr_int                    ret = SENSOR_SUCCESS;
 	cmr_s8                     sensor_dev_name[50] = CMR_SENSOR_DEV_NAME;
 
 	CMR_LOGI("To open sensor device.");
 
 	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
-	if (-1 == sensor_cxt->fd_sensor) {
+	if (SENSOR_FD_INIT == sensor_cxt->fd_sensor) {
 		sensor_cxt->fd_sensor = open(CMR_SENSOR_DEV_NAME, O_RDWR, 0);
 		CMR_LOGI("fd 0x%lx", sensor_cxt->fd_sensor);
-		if (-1 == sensor_cxt->fd_sensor) {
+		if (SENSOR_FD_INIT == sensor_cxt->fd_sensor) {
 			CMR_LOGE("Failed to open sensor device.errno : %d", errno);
 			fprintf(stderr, "Cannot open '%s': %d, %s", sensor_dev_name, errno,  strerror(errno));
 		} else {
@@ -1362,7 +1362,7 @@ cmr_int sns_device_init(struct sensor_drv_context *sensor_cxt, cmr_u32 sensor_id
 			ret = ioctl(sensor_cxt->fd_sensor, SENSOR_IO_SET_ID, &sensor_id);
 			if (0 != ret) {
 				CMR_LOGE("SENSOR_IO_SET_ID %u failed %ld", sensor_id, ret);
-				ret = -1;
+				ret = SENSOR_FAIL;
 			}
 		}
 	}
@@ -1376,7 +1376,7 @@ cmr_int sns_device_deinit(struct sensor_drv_context *sensor_cxt)
 	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
 	if (-1 != sensor_cxt->fd_sensor) {
 		ret = close(sensor_cxt->fd_sensor);
-		sensor_cxt->fd_sensor = -1;
+		sensor_cxt->fd_sensor = SENSOR_FD_INIT;
 		CMR_LOGI("is done, ret = %ld ", ret);
 	}
 	return 0;
@@ -2113,7 +2113,7 @@ cmr_int sns_destroy_ctrl_thread(struct sensor_drv_context *sensor_cxt)
 	}
 
 	cmr_bzero((void*)sensor_cxt, sizeof(struct sensor_drv_context));
-	sensor_cxt->fd_sensor = -1;
+	sensor_cxt->fd_sensor = SENSOR_FD_INIT;
 	sensor_cxt->i2c_addr = 0xff;
 
 	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
