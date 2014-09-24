@@ -2713,6 +2713,33 @@ bool SprdCameraHardware::WaitForFocusCancelDone()
 	return SPRD_IDLE == mCameraState.focus_state;
 }
 
+bool SprdCameraHardware::WaitForCaptureJpegState()
+{
+	if (mIsPerformanceTestable) {
+		sprd_startPerfTracking(" WaitForCaptureJpegState E.\n");
+	} else {
+		CMR_LOGD(" WaitForCaptureJpegState E.\n");
+	}
+	Mutex::Autolock stateLock(&mStateLock);
+
+	while (SPRD_WAITING_JPEG != mCameraState.capture_state
+		&& SPRD_IDLE != mCameraState.capture_state
+		&& SPRD_ERROR != mCameraState.capture_state
+		&& SPRD_ERROR != mCameraState.camera_state) {
+		LOGI("WaitForCaptureJpegState: waiting for SPRD_WAITING_JPEG");
+		mStateWait.wait(mStateLock);
+		LOGI("WaitForCaptureJpegState: woke up, state is %s",
+			getCameraStateStr(mCameraState.capture_state));
+	}
+
+	if (mIsPerformanceTestable) {
+		sprd_stopPerfTracking("WaitForCaptureJpegState X.\n");
+	} else {
+		CMR_LOGD(" WaitForCaptureJpegState X.\n");
+	}
+	return (SPRD_WAITING_JPEG == mCameraState.capture_state);
+}
+
 bool SprdCameraHardware::startCameraIfNecessary()
 {
 	if (mIsPerformanceTestable) {
@@ -5954,6 +5981,10 @@ void SprdCameraHardware::HandleEncode(enum camera_cb_type cb, void* parm4)
 
 	case CAMERA_EXIT_CB_DONE:
 		LOGI("HandleEncode: CAMERA_EXIT_CB_DONE");
+		if (!WaitForCaptureJpegState()) {
+			LOGE("HandleEncode: state error");
+			break;
+		}
 		if ((SPRD_WAITING_JPEG == getCaptureState())) {
 			Sprd_camera_state tmpCapState= SPRD_WAITING_JPEG;
 			if (checkPreviewStateForCapture()) {

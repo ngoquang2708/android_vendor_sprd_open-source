@@ -282,6 +282,7 @@ private:
 	bool                            WaitForCameraStart();
 	bool                            WaitForCameraStop();
 	bool                            WaitForFocusCancelDone();
+	bool                            WaitForCaptureJpegState();
 	bool                            isRecordingMode();
 	void                            setRecordingMode(bool enable);
 	bool                            startCameraIfNecessary();

@@ -841,6 +841,9 @@ void camera_snapshot_cb_to_hal(cmr_handle oem_handle, enum snapshot_cb_type cb, 
 		break;
 	case SNAPSHOT_EXIT_CB_DONE:
 		oem_cb_type = CAMERA_EXIT_CB_DONE;
+		if (CAMERA_FUNC_TAKE_PICTURE == oem_func) {
+			send_thr_handle = cxt->snp_send_raw_image_handle;
+		}
 		break;
 	case SNAPSHOT_EVT_CB_CAPTURE_FRAME_DONE:
 		oem_cb_type = CAMERA_EVT_CB_CAPTURE_FRAME_DONE;
