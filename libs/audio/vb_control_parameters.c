@@ -1485,6 +1485,14 @@ RESTART:
 				uint32_t i2s_ctl = ((i2s_ctl_info->is_switch << 8) | (i2s_ctl_info->i2s_index << 0) );
                 MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
                 SetParas_OpenHal_Incall(adev,para->vbpipe_fd); 
+                if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
+                    if(adev->cp_type == CP_TG)
+                        i2s_pin_mux_sel(adev,1);
+                    else if(adev->cp_type == CP_W)
+                        i2s_pin_mux_sel(adev,0);
+                    else if( adev->cp_type == CP_CSFB)
+                        i2s_pin_mux_sel(adev,CP_CSFB);
+                }
                 write_common_head.cmd_type = VBC_CMD_RSP_OPEN;
                 write_common_head.paras_size = i2s_ctl ;
                 ret = WriteParas_Head(para->vbpipe_fd, &write_common_head);
