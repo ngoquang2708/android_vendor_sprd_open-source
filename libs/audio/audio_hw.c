@@ -778,9 +778,11 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 			break;
 			vbc_ctrl_pipe_info++ ;
 	}
-	 ALOGW("-----in  cpu_index count  is %d ", count);
-	if( count == modem->num)
-	   return -1;
+	ALOGW("-----in  cpu_index count  is %d ", count);
+	if( count == modem->num){
+		ALOGE("i2s_pin_mux_sel ERROR return");
+		return -1;
+	}
 	//vbc_ctrl_pipe_info->cpu_index = 0;
    }
    else
@@ -1740,7 +1742,12 @@ static int start_output_stream(struct tiny_stream_out *out)
             adev->out_devices |= out->devices;
         }
         if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-             i2s_pin_mux_sel(adev,0);
+            if(adev->cp_type == CP_TG)
+                i2s_pin_mux_sel(adev,1);
+            else if(adev->cp_type == CP_W)
+                i2s_pin_mux_sel(adev,0);
+            else if( adev->cp_type ==  CP_CSFB)
+                i2s_pin_mux_sel(adev,CP_CSFB);
          }
 
 	adev->prev_out_devices = ~adev->out_devices;
@@ -2011,6 +2018,7 @@ static int out_dump(const struct audio_stream *stream, int fd)
     return 0;
 }
 
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct tiny_stream_out *out = (struct tiny_stream_out *)stream;
@@ -2046,13 +2054,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                         i2s_pin_mux_sel(adev,1);
                     else if(adev->cp_type == CP_W)
                         i2s_pin_mux_sel(adev,0);
-			else if( adev->cp_type ==  CP_CSFB) 					
-			   i2s_pin_mux_sel(adev,CP_CSFB);
+                    else if( adev->cp_type ==  CP_CSFB)
+                        i2s_pin_mux_sel(adev,CP_CSFB);
                 }
             }
-		else if(adev->voip_start){
+            else if(adev->voip_start){
                 if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-                    i2s_pin_mux_sel(adev,0);
+                    if(adev->cp_type == CP_TG)
+                        i2s_pin_mux_sel(adev,1);
+                    else if(adev->cp_type == CP_W)
+                        i2s_pin_mux_sel(adev,0);
+                    else if( adev->cp_type ==  CP_CSFB)
+                        ALOGE("WANGZUOO 0");
+                        i2s_pin_mux_sel(adev,CP_CSFB);
                 }
             }
             else {
@@ -2722,9 +2736,14 @@ static int start_input_stream(struct tiny_stream_in *in)
         adev->in_devices |= in->device;
         if((in->device & ~ AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
             if(!adev->voip_start) {
-            i2s_pin_mux_sel(adev,AP_TYPE);
+                i2s_pin_mux_sel(adev,AP_TYPE);
             }else {
-                i2s_pin_mux_sel(adev,0);
+                if(adev->cp_type == CP_TG)
+                    i2s_pin_mux_sel(adev,1);
+                else if(adev->cp_type == CP_W)
+                    i2s_pin_mux_sel(adev,0);
+                else if( adev->cp_type ==  CP_CSFB)
+                    i2s_pin_mux_sel(adev,CP_CSFB);
             }
         }
 	adev->prev_in_devices = ~adev->in_devices;
@@ -3638,8 +3657,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                         i2s_pin_mux_sel(adev,1);
                     else if(adev->cp_type == CP_W)
                         i2s_pin_mux_sel(adev,0);
-		    else if( adev->cp_type == CP_CSFB)
-			i2s_pin_mux_sel(adev,CP_CSFB);
+                    else if( adev->cp_type == CP_CSFB)
+                        i2s_pin_mux_sel(adev,CP_CSFB);
                 }
                 ret = at_cmd_route(adev);  //send at command to cp
                 pthread_mutex_unlock(&adev->lock);
