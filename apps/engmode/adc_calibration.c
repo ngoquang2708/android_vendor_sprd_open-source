@@ -68,6 +68,7 @@ void	initialize_ctrl_file(void)
     }
     if(cali_info.magic!=CALI_MAGIC){
         memset(&cali_info,0xff,sizeof(cali_info));
+        cali_info.adc_para.reserved[7] = 0;
         cali_info.magic = CALI_MAGIC;
     }
 
