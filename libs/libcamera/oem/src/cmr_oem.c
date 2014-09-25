@@ -156,6 +156,8 @@ static cmr_int camera_open_hdr(struct camera_context *cxt, struct ipm_open_in *i
 static cmr_int camera_close_hdr(struct camera_context *cxt);
 static void camera_snapshot_channel_handle(struct camera_context *cxt, void* param);
 static void camera_post_share_path_available(cmr_handle oem_handle);
+static void camera_set_share_path_sm_flag(cmr_handle oem_handle, cmr_uint flag);
+static cmr_uint camera_get_share_path_sm_flag(cmr_handle oem_handle);
 static void camera_wait_share_path_available(cmr_handle oem_handle);
 static void camera_set_discard_frame(cmr_handle oem_handle, cmr_uint is_discard);
 static cmr_uint camera_get_is_discard_frame(cmr_handle oem_handle, struct frm_info *data);
@@ -1036,8 +1038,31 @@ void camera_post_share_path_available(cmr_handle oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 
 	CMR_LOGI("post beging");
+	camera_set_share_path_sm_flag(oem_handle, 0);
 	sem_post(&cxt->share_path_sm);
 	CMR_LOGI("post end");
+}
+
+void camera_set_share_path_sm_flag(cmr_handle oem_handle, cmr_uint flag)
+{
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+
+	CMR_LOGI("%ld", flag);
+	sem_wait(&cxt->access_sm);
+	cxt->share_path_sm_flag = flag;
+	sem_post(&cxt->access_sm);
+}
+
+cmr_uint camera_get_share_path_sm_flag(cmr_handle oem_handle)
+{
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	cmr_uint                        flag = 0;
+
+	sem_wait(&cxt->access_sm);
+	flag = cxt->share_path_sm_flag;
+	sem_post(&cxt->access_sm);
+	CMR_LOGI("%ld", flag);
+	return flag;
 }
 
 void camera_wait_share_path_available(cmr_handle oem_handle)
@@ -1045,6 +1070,7 @@ void camera_wait_share_path_available(cmr_handle oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 
 	CMR_LOGI("wait beging");
+	camera_set_share_path_sm_flag(oem_handle, 1);
 	sem_wait(&cxt->share_path_sm);
 	CMR_LOGI("wait end");
 }
@@ -2946,7 +2972,7 @@ cmr_int camera_channel_pause(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32
 		goto exit;
 	}
 exit:
-	if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt)) {
+	if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt) || (1== camera_get_share_path_sm_flag(oem_handle))) {
 		camera_post_share_path_available(oem_handle);
 	}
 	CMR_LOGI("done %ld", ret);

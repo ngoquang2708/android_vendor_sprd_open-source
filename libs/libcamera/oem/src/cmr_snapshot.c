@@ -773,6 +773,7 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		sem_post(&snp_cxt->jpeg_sync_sm);
 		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
 		goto exit;
 	}
 	CMR_PRINT_TIME;
@@ -939,6 +940,12 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 	struct img_frm                 src, dst;
 	struct cmr_op_mean             mean;
 
+	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
+		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
+		goto exit;
+	}
+
 	if (snp_cxt->ops.start_rot) {
 		src = chn_param_ptr->rot[index].src_img;
 		dst = chn_param_ptr->rot[index].dst_img;
@@ -957,6 +964,7 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 							&dst.addr_vir);
 #endif
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret);
+exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -973,6 +981,7 @@ cmr_int snp_start_scale(cmr_handle snp_handle, void *data)
 
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
 		goto exit;
 	}
 	camera_take_snapshot_step(CMR_STEP_SC_S);
@@ -2645,7 +2654,7 @@ cmr_u32 snp_get_request(cmr_handle snp_handle)
 
 cmr_int snp_checkout_exit(cmr_handle snp_handle)
 {
-	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	cmr_u32                         is_request = 0;
 	struct snp_context              *cxt = (struct snp_context*)snp_handle;
 

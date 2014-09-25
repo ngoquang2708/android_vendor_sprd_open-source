@@ -216,6 +216,7 @@ struct camera_context {
 	sem_t                    hdr_flag_sm;
 	sem_t                    share_path_sm;
 	sem_t                    access_sm;
+	cmr_uint                 share_path_sm_flag;
 
 	/*callback thread to hal*/
 	cmr_handle               prev_cb_thr_handle;
