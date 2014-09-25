@@ -1154,7 +1154,7 @@ static cmr_int cmr_sns_fmove_proc(void *p_data)
 			cnt = 0;
 			for (i = 0; i < CAMERA_ID_MAX; i++) {
 				if (0 != ( sensor_handle->sensor_bits & (1<<i))) {
-					CMR_LOGE("valid camera id =%d",i);
+/*					CMR_LOGV("valid camera id =%d",i);*/
 					cmr_sns_check_fmove(sensor_handle, i);
 				}
 			}
@@ -1172,7 +1172,7 @@ static cmr_int  cmr_sns_create_fmove_thread(struct cmr_sensor_handle *sensor_han
 	CHECK_HANDLE_VALID(sensor_handle);
 
 	CMR_LOGI("E is_inited thread %p", (void *)sensor_handle->fmove_thread_cxt.thread_handle);
-
+#if defined(CONFIG_CAMERA_CAF)
 	if (!sensor_handle->fmove_thread_cxt.thread_handle) {
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -1182,7 +1182,7 @@ static cmr_int  cmr_sns_create_fmove_thread(struct cmr_sensor_handle *sensor_han
 					(void *)sensor_handle);
 		pthread_attr_destroy(&attr);
 	}
-
+#endif
 	CMR_LOGI("X ret %ld", ret);
 	return ret;
 }

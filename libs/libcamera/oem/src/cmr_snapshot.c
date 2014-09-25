@@ -2955,7 +2955,7 @@ cmr_int snp_notify_redisplay_proc(cmr_handle snp_handle, cmr_int func_type, cmr_
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
 
-	if (!snp_handle || !data) {
+	if (!snp_handle) {
 		CMR_LOGE("param error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
