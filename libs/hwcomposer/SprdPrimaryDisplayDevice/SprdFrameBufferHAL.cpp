@@ -127,6 +127,7 @@ int loadFrameBufferHAL(FrameBufferInfo **fbInfo)
     if (FBInfo == NULL)
     {
         ALOGE("Cannot malloc the FrameBufferInfo, no MEM");
+        munmap(vaddr, fbSize);
         close(fd);
         ret = -1;
         return ret;

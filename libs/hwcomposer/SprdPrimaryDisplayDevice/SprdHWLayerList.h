@@ -171,7 +171,7 @@ private:
     bool mDisableHWCFlag;
     bool mSkipLayerFlag;
     void *mPData;
-    int mPrivateFlag[2];
+    uint32_t mPrivateFlag[2];
     int mDebugFlag;
     int mDumpFlag;
 

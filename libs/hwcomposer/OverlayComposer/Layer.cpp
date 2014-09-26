@@ -32,6 +32,7 @@
 #include "Layer.h"
 #include "GLErro.h"
 #include "OverlayComposer.h"
+#include <hardware/hwcomposer.h>
 
 
 namespace android
@@ -233,6 +234,18 @@ void Layer::destroyTextureImage()
 void Layer::setLayerAlpha(float alpha)
 {
     mAlpha = alpha;
+}
+
+void Layer::setBlendFlag(int32_t blendFlag)
+{
+    if (blendFlag == HWC_BLENDING_PREMULT)
+    {
+        mPremultipliedAlpha = true;
+    }
+    else
+    {
+        mPremultipliedAlpha = false;
+    }
 }
 
 bool Layer::setLayerTransform(uint32_t transform)
@@ -504,24 +517,24 @@ int Layer::draw()
      *  By default, we use Premultiplied Alpha
      * */
     GLenum src = mPremultipliedAlpha ? GL_ONE : GL_SRC_ALPHA;
-    //if (mAlpha < 0xFF)
-    //{
-    //    const GLfloat alpha = (GLfloat)mAlpha * (1.0f/255.0f);
-    //    if (mPremultipliedAlpha)
-    //    {
-    //        glColor4f(alpha, alpha, alpha, alpha);
-    //    }
-    //    else
-    //    {
-    //        glColor4f(1, 1, 1, alpha);
-    //    }
-    //    glEnable(GL_BLEND);
-    //    glBlendFunc(src, GL_ONE_MINUS_SRC_ALPHA);
-    //    glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    //}
-    //else
+    if (mAlpha < 0xFF)
     {
-        glColor4f(1, 1, 1, 1);
+        const GLfloat alpha = (GLfloat)mAlpha * (1.0f/255.0f);
+        if (mPremultipliedAlpha)
+        {
+            glColor4f(alpha, alpha, alpha, alpha);
+        }
+        else
+        {
+            glColor4f(1.0f, 1.0f, 1.0f, alpha);
+        }
+        glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glEnable(GL_BLEND);
+        glBlendFunc(src, GL_ONE_MINUS_SRC_ALPHA);
+    }
+    else
+    {
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
         glEnable(GL_BLEND);
         glBlendFunc(src, GL_ONE_MINUS_SRC_ALPHA);

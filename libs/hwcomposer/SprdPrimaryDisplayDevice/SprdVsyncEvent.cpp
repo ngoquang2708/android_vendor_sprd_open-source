@@ -187,7 +187,7 @@ bool SprdVsyncEvent::threadLoop() {
         if(!mProcs || !mProcs->vsync)
         {
             ALOGW("device procs or vsync is null procs:%p , vsync:%p",
-                  (void *)mProcs , (void *)(mProcs->vsync));
+                  (void *)mProcs , mProcs ? (void *)(mProcs->vsync):NULL);
             return true;
         }
         mProcs->vsync(mProcs, 0, systemTime(CLOCK_MONOTONIC));
