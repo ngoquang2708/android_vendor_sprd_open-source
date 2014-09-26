@@ -1958,7 +1958,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 				}
 			}
 		}
-		if ((FLASH_OPEN == FLASH_HIGH_LIGHT) || (FLASH_HIGH_LIGHT == FLASH_HIGH_LIGHT)) {
+		if ((ctrl_flash_status == FLASH_HIGH_LIGHT) || (ctrl_flash_status == FLASH_OPEN)) {
 			exif_flash = 1;
 		} else {
 			exif_flash = 0;

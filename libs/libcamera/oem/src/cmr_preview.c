@@ -2256,8 +2256,10 @@ cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_rest
 	if (!is_restart) {
 		prev_cxt->cap_frm_cnt = 0;
 	}
+	pthread_mutex_lock(&handle->thread_cxt.prev_mutex);
 	prev_cxt->restart_skip_cnt = 0;
 	prev_cxt->restart_skip_en  = 0;
+	pthread_mutex_unlock(&handle->thread_cxt.prev_mutex);
 
 exit:
 
@@ -4379,12 +4381,13 @@ cmr_uint prev_get_rot_enum(cmr_uint rot_val)
 cmr_uint prev_search_rot_buffer(struct prev_context *prev_cxt)
 {
 	cmr_uint ret = CMR_CAMERA_FAIL;
-	cmr_uint search_index = prev_cxt->prev_rot_index;
+	cmr_uint search_index;
 	cmr_uint count = 0;
 
 	if (!prev_cxt) {
 		return ret;
 	}
+	search_index = prev_cxt->prev_rot_index;
 
 	for (count = 0; count < PREV_ROT_FRM_CNT; count++){
 		search_index += count;
@@ -4770,6 +4773,8 @@ cmr_int prev_send_fd_data(struct prev_handle *handle, cmr_u32 camera_id, struct 
 
 	if (!prev_cxt->fd_handle) {
 		CMR_LOGE("fd closed");
+		ret = CMR_CAMERA_INVALID_PARAM;
+		goto exit;
 	}
 
 	CMR_LOGD("is_support_fd %ld, is_fd_on %ld",

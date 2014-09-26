@@ -306,7 +306,8 @@ cmr_int camera_is_change_size(cmr_handle camera_handle, cmr_u32 cap_width,
 		}
 	}
 exit:
-	CMR_LOGI("done %ld", *is_change);
+	if(is_change != NULL)
+		CMR_LOGI("done %ld", *is_change);
 	return ret;
 }
 

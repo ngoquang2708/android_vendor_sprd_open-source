@@ -360,7 +360,7 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 
 			af_cxt->evt_cb(AF_CB_DONE, 0, af_cxt->oem_handle);
 
-			if (NULL != af_cxt->ops.af_pre_proc) {
+			if (NULL != af_cxt->ops.af_post_proc) {
 				af_cxt->ops.af_post_proc(af_cxt->oem_handle);
 			}
 
@@ -848,7 +848,9 @@ cmr_int af_start(cmr_handle af_handle, cmr_u32 camera_id)
 			isp_af_param.win[i].end_x,
 			isp_af_param.win[i].end_y);
 
+		pthread_mutex_lock(&af_cxt->af_isp_caf_mutex);
 		af_cxt->isp_af_timeout = 0;
+		pthread_mutex_unlock(&af_cxt->af_isp_caf_mutex);
 		com_isp_af.af_param    = isp_af_param;
 
 		ret = af_cxt->ops.af_isp_ioctrl(af_cxt->oem_handle, COM_ISP_SET_AF, &com_isp_af);
@@ -1075,13 +1077,14 @@ cmr_int af_check_area(cmr_handle  af_handle,
 	struct sensor_mode_info *sensor_mode_info;
 	struct sensor_exp_info  sensor_info;
 	struct af_context       *af_cxt      = (struct af_context *)af_handle;
-	struct camera_context   *cam_cxt     = (struct camera_context*)af_cxt->oem_handle;
+	struct camera_context   *cam_cxt;
 
 	if (!af_cxt) {
 		CMR_LOGE("handle param invalid");
 		ret = CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
+	cam_cxt     = (struct camera_context*)af_cxt->oem_handle;
 
 	if (!af_cxt->ops.get_sensor_info) {
 		CMR_LOGE("ops is null");
@@ -1280,8 +1283,8 @@ cmr_int focus_rect_parse(cmr_handle af_handle, SENSOR_EXT_FUN_PARAM_T_PTR p_focu
 	*p_focus_rect = af_param;
 
 exit:
-
-	CMR_LOGI("ret= %ld  af_cxt->af_mode = %d af_param.zone_cnt=%d", ret, af_cxt->af_mode, af_param.zone_cnt);
+	if(af_cxt != NULL)
+		CMR_LOGI("ret= %ld  af_cxt->af_mode = %d af_param.zone_cnt=%d", ret, af_cxt->af_mode, af_param.zone_cnt);
 	return ret;
 }
 

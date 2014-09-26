@@ -887,7 +887,8 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 
 	case  JPEG_EVT_ENC_NEXT:
 		enc_cxt_ptr = (struct jpeg_enc *)jcontext->active_handle;
-
+		param_ptr = (struct jpeg_enc_next_param*)message->data;
+		if (NULL == param_ptr) break;
 		do {
 			ret = _enc_next((cmr_handle)enc_cxt_ptr, jcontext, param_ptr);
 			if (JPEG_CODEC_SUCCESS != ret) {
@@ -896,7 +897,7 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 			}
 		} while((param_ptr->ready_line_num >= enc_cxt_ptr->size.height) && (enc_cxt_ptr->cur_line_num<enc_cxt_ptr->size.height));
 
-		_enc_next_post(handle, jcontext, ret);
+		_enc_next_post(enc_cxt_ptr, jcontext, ret);
 		break;
 
 	case JPEG_EVT_DEC_START:
@@ -908,6 +909,7 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 		break;
 
 	case  JPEG_EVT_DEC_NEXT:
+		handle = (cmr_handle )message->data;
 		if (0 != message->data) {
 			ret = _dec_next(jcontext->active_handle, jcontext, (struct jpeg_dec_next_param *)message->data);
 		} else {
@@ -1530,7 +1532,7 @@ cmr_int jpeg_enc_add_eixf(struct jpeg_enc_exif_param *param_ptr,
 	CMR_MSG_INIT(message);
 
 	if (!param_ptr || !param_ptr->jpeg_handle) {
-		CMR_LOGE("jpeg:param error %d", (cmr_u32)param_ptr->jpeg_handle);
+		CMR_LOGE("jpeg:param error");
 		return JPEG_CODEC_PARAM_ERR;
 	}
 

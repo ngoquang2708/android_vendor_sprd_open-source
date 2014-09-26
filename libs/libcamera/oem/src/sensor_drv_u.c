@@ -3403,6 +3403,9 @@ cmr_int sns_cfg_otp_update_isparam(struct sensor_drv_context *sensor_cxt,
 		&& (NULL != sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr)
 		&& (PNULL != sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp)) {
 		sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->cfg_otp(0);
+	}else{
+		CMR_LOGE("invalid param failed!");
+		return CMR_CAMERA_INVALID_PARAM;
 	}
 	
 	isp_raw_para_update_from_file(sensor_cxt->sensor_info_ptr, sensor_id);

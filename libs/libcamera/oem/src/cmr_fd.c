@@ -207,7 +207,7 @@ static cmr_int fd_transfer_frame(cmr_handle class_handle,struct ipm_frame_in *in
 {
 	cmr_int                   ret         = CMR_CAMERA_SUCCESS;
 	struct class_fd           *fd_handle  = (struct class_fd *)class_handle;
-	cmr_uint                  frame_cnt   = ++fd_handle->frame_cnt;
+	cmr_uint                  frame_cnt;
 	cmr_u32                    is_busy    = 0;
 	struct fd_start_parameter param;
 
@@ -215,6 +215,8 @@ static cmr_int fd_transfer_frame(cmr_handle class_handle,struct ipm_frame_in *in
 		CMR_LOGE("Invalid Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
+
+	frame_cnt   = ++fd_handle->frame_cnt;
 
 	if (frame_cnt < fd_handle->frame_total_num) {
 		CMR_LOGD("This is fd 0x%ld frame. need the 0x%ld frame,",frame_cnt, fd_handle->frame_total_num);
@@ -421,7 +423,7 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_int                   facesolid_ret = 0;
 	struct face_finder_data   *face_rect_ptr = NULL;
 	cmr_int                   face_num = 0;
-	cmr_int                   k;
+	cmr_int                   k,min_fd;
 	struct fd_start_parameter *start_param;
 
 	if (!message || !class_handle) {
@@ -485,7 +487,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 			CMR_LOGE("face function fail.");
 		} else {
 			class_handle->frame_out.face_area.face_count = face_num;
-			for (k = 0; k < face_num, k < FACE_DETECT_NUM; k++) {
+			min_fd = MIN(face_num,FACE_DETECT_NUM);
+			for (k = 0; min_fd; k++) {
 				class_handle->frame_out.face_area.range[k]      = *face_rect_ptr;
 				face_rect_ptr++;
 			}

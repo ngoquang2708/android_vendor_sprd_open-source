@@ -3429,7 +3429,7 @@ cmr_int snp_stop_proc(cmr_handle snp_handle)
 	struct snp_context              *cxt = (struct snp_context*)snp_handle;
 
 	CMR_LOGI("s");
-	snp_checkout_exit(snp_handle);
+	ret = snp_checkout_exit(snp_handle);
 	snp_set_status(snp_handle, IDLE);
 	CMR_LOGI("e");
 	return ret;
@@ -3516,6 +3516,7 @@ cmr_int cmr_snapshot_init(struct snapshot_init_param *param_ptr, cmr_handle *sna
 		CMR_LOGE("err param 0x%lx 0x%lx 0x%lx 0x%lx", (cmr_uint)param_ptr,
 				(cmr_uint)snapshot_handle, (cmr_uint)param_ptr->ipm_handle,
 				(cmr_uint)param_ptr->oem_handle);
+		ret = CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
 

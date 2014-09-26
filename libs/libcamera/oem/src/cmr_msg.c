@@ -234,7 +234,7 @@ cmr_int cmr_msg_timedget(cmr_handle queue_handle, struct cmr_msg *message)
 cmr_int cmr_msg_post(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 log_level)
 {
 	struct cmr_msg_cxt       *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
-	struct cmr_msg_in        *ori_node = msg_cxt->msg_write;
+	struct cmr_msg_in        *ori_node;
 	struct cmr_msg_in        *msg_cur = NULL;
 	cmr_int                  rtn = CMR_MSG_SUCCESS;
 
@@ -242,7 +242,7 @@ cmr_int cmr_msg_post(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 l
 		CMR_LOGW("post msg to NULL queue! discard");
 		return -CMR_MSG_PARAM_ERR;
 	}
-
+	ori_node = msg_cxt->msg_write;
 
 	if (0 != log_level) {
 		CMR_LOGD("queue_handle 0x%lx, msg type 0x%x num %d cnt %d",
