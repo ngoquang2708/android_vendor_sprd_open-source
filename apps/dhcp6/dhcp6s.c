@@ -77,10 +77,10 @@
 #include <signal.h>
 #include <lease.h>
 
-#define DUID_FILE "/data/misc/dhcp6s_duid"
-#define DHCP6S_CONF "/data/misc/dhcp6s.conf"
-#define DEFAULT_KEYFILE "/data/misc/dhcp6sctlkey"
-#define DHCP6S_PIDFILE "/data/misc/dhcp6s.pid"
+#define DUID_FILE "/data/misc/wifi/dhcp6s_duid"
+#define DHCP6S_CONF "/data/misc/wifi/dhcp6s.conf"
+#define DEFAULT_KEYFILE "/data/misc/wifi/dhcp6sctlkey"
+#define DHCP6S_PIDFILE "/data/misc/wifi/dhcp6s.pid"
 
 #define CTLSKEW 300
 //add by yjshi
