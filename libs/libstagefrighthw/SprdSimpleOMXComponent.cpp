@@ -356,6 +356,9 @@ OMX_ERRORTYPE SprdSimpleOMXComponent::freeBuffer(
 
 OMX_ERRORTYPE SprdSimpleOMXComponent::emptyThisBuffer(
     OMX_BUFFERHEADERTYPE *buffer) {
+
+    sendConvertMessage(buffer);
+
     sp<AMessage> msg = new AMessage(kWhatEmptyThisBuffer, mHandler->id());
     msg->setPointer("header", buffer);
     msg->post();
@@ -733,6 +736,9 @@ void SprdSimpleOMXComponent::onPortFlushCompleted(OMX_U32 portIndex) {
 
 void SprdSimpleOMXComponent::onPortEnableCompleted(
     OMX_U32 portIndex, bool enabled) {
+}
+
+void SprdSimpleOMXComponent::sendConvertMessage(OMX_BUFFERHEADERTYPE *buffer){
 }
 
 void SprdSimpleOMXComponent::onPortFlushPrepare(OMX_U32 portIndex) {
