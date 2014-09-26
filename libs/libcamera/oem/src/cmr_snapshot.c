@@ -799,7 +799,7 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_encode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ENC, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ENC, (void*)ret);
 exit:
 	CMR_LOGI("done %ld", ret);
 	if (ret) {
@@ -846,7 +846,7 @@ cmr_int snp_start_encode_thumb(cmr_handle snp_handle)
 								&jpeg_in_ptr->dst.addr_vir);
 #endif
 		}
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_THUMB_DONE, (void*)ret);
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_THUMB_DONE, (void*)ret);
 	} else {
 		CMR_LOGE("err start_encode is null");
 		ret = -CMR_CAMERA_FAIL;
@@ -896,7 +896,7 @@ cmr_int snp_start_decode_sync(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_decode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_DEC_DONE, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_DEC_DONE, (void*)ret);
 	return ret;
 }
 
@@ -925,7 +925,7 @@ cmr_int snp_start_decode(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_decode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_DEC, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_DEC, (void*)ret);
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -963,7 +963,7 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 							dst.size.height,
 							&dst.addr_vir);
 #endif
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret);
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -997,7 +997,7 @@ cmr_int snp_start_scale(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_scale is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_SCALE, (void*)ret);
+//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_SCALE, (void*)ret);
 exit:
 	CMR_LOGI("done %ld", ret);
 	if (ret) {
@@ -1042,7 +1042,7 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_scale is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CONVERT_THUMB_DONE, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CONVERT_THUMB_DONE, (void*)ret);
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1093,7 +1093,7 @@ cmr_int snp_start_isp_proc(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err raw_proc is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP, (void*)ret);
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1146,7 +1146,7 @@ cmr_int snp_start_isp_next_proc(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err raw_proc is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP_NEXT, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP_NEXT, (void*)ret);
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1168,7 +1168,7 @@ void snp_cvt_done(cmr_handle snp_handle)
 	CMR_MSG_INIT(message);
 
 	sem_post(&cxt->cvt.cvt_sync_sm);
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CVT_DONE, (void*)ret);
+//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CVT_DONE, (void*)ret);
 	CMR_LOGI("cvt done");
 }
 
@@ -1181,11 +1181,11 @@ cmr_int snp_start_cvt(cmr_handle snp_handle, void *data)
 	cxt->cur_frame_info = *frm_ptr;
 	if (IMG_DATA_TYPE_JPEG == frm_ptr->fmt) {
 		ret = snp_start_decode_sync(snp_handle, data);
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
 		snp_cvt_done(snp_handle);
 	} else if (IMG_DATA_TYPE_RAW == frm_ptr->fmt) {
 		ret = snp_start_isp_proc(snp_handle, data);
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
+//		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
 	}
 	if (ret) {
 		CMR_LOGE("failed to start cvt %ld", ret);
@@ -1289,7 +1289,7 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 		camera_take_snapshot_step(CMR_STEP_CALL_BACK);
 		camera_snapshot_step_statisic();
 		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param);
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_EXIF_JPEG_DONE, (void*)ret);
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_EXIF_JPEG_DONE, (void*)ret);
 		if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 			CMR_LOGI("snp has been cancel");
 			ret = CMR_CAMERA_NORNAL_EXIT;
@@ -3100,22 +3100,23 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 			goto exit;
 		}
 	}
-	if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
-		&& (0 != cxt->req_param.jpeg_setting.thum_size.height)
-		&& (!chn_param_ptr->is_scaling)) {
-		ret = snp_start_thumb_proc(snp_handle, data);
-		if (ret) {
-			CMR_LOGE("failed to start thumb proc %ld", ret);
-			goto exit;
-		}
-	}
+
 	ret = snp_start_encode(snp_handle, data);
 	if (ret) {
 		CMR_LOGE("failed to start encode %ld", ret);
 		goto exit;
 	}
+
 	cxt->cur_frame_info = *chn_data_ptr;
 	if (!chn_param_ptr->is_scaling) {
+		if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
+			&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
+			ret = snp_start_thumb_proc(snp_handle, data);
+			if (ret) {
+				CMR_LOGE("failed to start thumb proc %ld", ret);
+				goto exit;
+			}
+		}
 //		ret = snp_take_picture_done(snp_handle, data);
 		ret = snp_redisplay(snp_handle, data);
 		if (ret) {

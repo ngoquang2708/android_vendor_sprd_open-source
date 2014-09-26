@@ -2362,6 +2362,7 @@ cmr_int camera_start_encode(cmr_handle oem_handle, cmr_handle caller_handle,
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
+	sem_wait(&cxt->access_sm);
 	CMR_LOGI("src phy addr 0x%lx 0x%lx src vir addr 0x%lx 0x%lx", src->addr_phy.addr_y, src->addr_phy.addr_u,
 			 src->addr_vir.addr_y, src->addr_vir.addr_u);
 	CMR_LOGI("dst phr addr 0x%lx vir addr 0x%lx", dst->addr_phy.addr_y, dst->addr_vir.addr_y);
@@ -2391,8 +2392,8 @@ cmr_int camera_start_encode(cmr_handle oem_handle, cmr_handle caller_handle,
 		cxt->jpeg_cxt.enc_caller_handle = (cmr_handle)0;
 		CMR_LOGE("failed to enc start %ld", ret);
 	}
-	CMR_PRINT_TIME;
 exit:
+	sem_post(&cxt->access_sm);
 	CMR_LOGD("done %ld", ret);
 	return ret;
 }

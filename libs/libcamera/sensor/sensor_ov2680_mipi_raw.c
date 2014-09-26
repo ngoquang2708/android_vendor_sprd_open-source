@@ -2551,10 +2551,10 @@ LOCAL uint32_t _ov2680_StreamOff(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_ov2680: StreamOff");
 
-	//Sensor_WriteReg(0x0100, 0x00);
-	//usleep(100*1000);
+	Sensor_WriteReg(0x0100, 0x00);
+	usleep(100*1000);
 
-	return -1;
+	return 0;
 }
 
 LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
