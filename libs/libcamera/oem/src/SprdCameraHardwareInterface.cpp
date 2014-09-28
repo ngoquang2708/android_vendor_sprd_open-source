@@ -4973,6 +4973,14 @@ void SprdCameraHardware::handleDataCallback(int32_t msg_type,
 		if (!isCapturing()) return;
 		data = mRawHeap;
 	}
+	if (!data) {
+		LOGE("data is null");
+		return;
+	}
+	if (frame_index > (mPreviewDcamAllocBufferCnt-1) || (0xFFFFFFFF == (uint32_t)data->camera_memory->data)) {
+		LOGE("error,index addr %d array num %d",frame_index, mPreviewDcamAllocBufferCnt);
+		return;
+	}
 	data->busy_flag = true;
 	mData_cb(msg_type, data->camera_memory, index, metadata, user);
 	data->busy_flag = false;
