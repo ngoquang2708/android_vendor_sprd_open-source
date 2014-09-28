@@ -43,8 +43,8 @@ static pthread_t alarm_t_ShowUi = -1;
 static int alarm_BootSystem;
 unsigned boot_alarm = 0;
 int time_dm;
-int mount_flag = -1;
-
+int mount_externalsd_flag = -1;
+int mount_internalsd_flag = -1;
 struct boot_status gs_boot_state = {0};
 struct alarm_db *g_alarm_db_list = NULL;
 struct alarm_sec *g_alarm_sec_list = NULL;
@@ -136,15 +136,47 @@ static int alarm_mount_externalsd(void)
         LOGE("Can't mount %s\n(%s)\n", sd, strerror(errno));
         return -1;
 }
+static int alarm_mount_internalsd(void)
+{
+	int flag = -1;
+	int ret = -1;
+	char value[10] = {0};
+	char *sd = "/dev/block/platform/sprd-sdhci.3/by-name/internalsd";
+	property_get("sys.internal.emulated", value, "10");
+	flag = atoi(value);
 
+	if( flag == 0){
+		ret = mount(sd, "/storage/internalsd", "vfat", MS_NOATIME | MS_NODEV | MS_NODIRATIME | MS_NOSUID , "utf8=true");
+		if(ret == 0){
+			LOGE("alarm_mount sdmount %s done\n", sd);
+			return ret;
+		}
+		LOGE("Can't mount %s\n(%s)\n", sd, strerror(errno));
+	}
+        return -1;
+}
 static void alarm_umountsd(void)
 {
 	int ret;
 	int n = 50;
-	if(mount_flag < 0)
-		return;
+
 	while(n){
+		if(mount_externalsd_flag < 0)
+			break;
 		ret= umount("/storage/sdcard0");
+		if(ret == 0){
+			LOGE("alarm_umountsd done\n");
+			break;
+		}
+		LOGE("Can't umount(%s)\n",strerror(errno));
+		usleep(500000);
+		n--;
+	}
+	n = 50;
+	while(n){
+		if(mount_internalsd_flag < 0)
+			return;
+		ret= umount("/storage/internalsd");
 		if(ret == 0){
 			LOGE("alarm_umountsd done\n");
 			return;
@@ -472,7 +504,8 @@ int alarm_init(void)
 		gs_boot_state.alarm_init = 0;
 		return ERR_BOOT_ALARM_NOT_ALARM_ITEM;
 	}
-	mount_flag = alarm_mount_externalsd();
+	mount_externalsd_flag = alarm_mount_externalsd();
+	mount_internalsd_flag = alarm_mount_internalsd();
 	get_ring_file();
 	sprintf(g_brightness,"%d", 100);
 	gs_boot_state.alarm_state = BOOT_ALARM_ALARMING;
