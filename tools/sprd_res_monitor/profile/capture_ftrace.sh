@@ -7,7 +7,7 @@ time=`date | busybox grep -o "[0-9]*:[0-9]*:[0-9]*" | busybox sed -e 's/://g'`;
 logdir=`ls /storage/sdcard0/slog/ | busybox grep -o -E "[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+"`;
 echo
 
-mount -t debugfs none /sys/kernel/debug  2>/dev/null
+#mount -t debugfs none /sys/kernel/debug  2>/dev/null
 cd /sys/kernel/debug/tracing
    
    #echo 50000 > buffer_size_kb
