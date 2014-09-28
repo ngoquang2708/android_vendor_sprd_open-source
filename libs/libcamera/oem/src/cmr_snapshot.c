@@ -3091,6 +3091,7 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 		}
 	}
 
+	cxt->cur_frame_info = *chn_data_ptr;
 	if (chn_param_ptr->is_scaling) {
 		ret = snp_start_scale(snp_handle, data);
 		if (ret) {
@@ -3107,7 +3108,6 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 		goto exit;
 	}
 
-	cxt->cur_frame_info = *chn_data_ptr;
 	if (!chn_param_ptr->is_scaling) {
 		if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
 			&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
