@@ -11,6 +11,7 @@ mount -t debugfs none /sys/kernel/debug  2>/dev/null
 cd /sys/kernel/debug/tracing
    
    #echo 50000 > buffer_size_kb
+   echo 1411 > buffer_size_kb
    echo nop > current_tracer
    #  exemple for also tracing all function starting with hsi:
    echo function > current_tracer
