@@ -1752,6 +1752,12 @@ static cmr_int setting_set_environment(struct setting_component *cpt,
 		CMR_RTN_IF_ERR(ret);
 	}
 
+	if (invalid_word != hal_param->hal_common.exposure_compensation) {
+		cmd_param.cmd_type_value = hal_param->hal_common.exposure_compensation;
+		ret = setting_set_exposure_compensation(cpt, &cmd_param);
+		CMR_RTN_IF_ERR(ret);
+	}
+
 	if (invalid_word != hal_param->hal_common.iso) {
 		cmd_param.cmd_type_value = hal_param->hal_common.iso;
 		ret = setting_set_iso(cpt, &cmd_param);

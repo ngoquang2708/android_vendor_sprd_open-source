@@ -46,6 +46,7 @@
 
 #define OEM_HANDLE_HDR                               1
 #define CAMERA_PATH_SHARE                            1
+#define POWER2(x)                                    (1<<(x))
 /**********************************************************************************************/
 
 
@@ -166,6 +167,7 @@ static cmr_uint camera_get_snp_req(cmr_handle oem_handle);
 static cmr_int camera_get_cap_time(cmr_handle snp_handle);
 static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data);
 static void camera_snapshot_started(cmr_handle oem_handle);
+static void camera_exif_handle_before_snapshot(cmr_handle oem_handle);
 /**********************************************************************************************/
 
 void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
@@ -3455,6 +3457,17 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	ret = isp_ioctl(isp_cmd, (void*)&isp_param);
 	if (ret) {
 		CMR_LOGE("failed isp ioctl %ld", ret);
+	} else {
+		if (COM_ISP_SET_ISO == cmd_type) {
+			if (0 == param_ptr->cmd_value) {
+				isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+				isp_param = POWER2(isp_param-1)*100;
+				cxt->setting_cxt.is_auto_iso = 1;
+			} else {
+				cxt->setting_cxt.is_auto_iso = 0;
+			}
+			CMR_LOGI("auto iso %d, exif iso %d", cxt->setting_cxt.is_auto_iso, isp_param);
+		}
 	}
 
 	if (set_exif_flag) {
@@ -3977,6 +3990,19 @@ cmr_int camera_set_setting(cmr_handle oem_handle, enum camera_param_type id, cmr
 	return ret;
 }
 
+void camera_exif_handle_before_snapshot(cmr_handle oem_handle)
+{
+	struct camera_context          *cxt = (struct camera_context*)oem_handle;
+	cmr_u32                        isp_param = 0;
+
+	if ((1 == cxt->isp_cxt.is_work) && (1 == cxt->setting_cxt.is_auto_iso)) {
+		isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+		isp_param = POWER2(isp_param-1)*100;
+		cxt->setting_cxt.is_auto_iso = 1;
+		cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_EXIF_CTRL_ISOSPEEDRATINGS, isp_param);
+	}
+}
+
 /*****************************************external function*****************************************/
 
 cmr_int camera_local_int(cmr_u32 camera_id, camera_cb_of_type callback,
@@ -4062,10 +4088,11 @@ exit:
 
 cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 {
-	cmr_int                        ret = CMR_CAMERA_SUCCESS;
-	cmr_int                        prev_ret = CMR_CAMERA_SUCCESS;
-	cmr_int                        snp_ret = CMR_CAMERA_SUCCESS;
-	struct camera_context          *cxt = (struct camera_context*)oem_handle;
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+	cmr_int                         prev_ret = CMR_CAMERA_SUCCESS;
+	cmr_int                         snp_ret = CMR_CAMERA_SUCCESS;
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	struct common_isp_cmd_parameter param;
 
 	if (PREVIEWING != cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id)) {
 		CMR_LOGI("don't previewing");
@@ -4079,6 +4106,8 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 			}
 		}
 	}
+	camera_exif_handle_before_snapshot(oem_handle);
+
 	prev_ret = cmr_preview_stop(cxt->prev_cxt.preview_handle, cxt->camera_id);
 	if (ret) {
 		CMR_LOGE("failed to stop prev %ld", ret);
@@ -4095,6 +4124,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 	struct preview_context         *prev_cxt;
 	struct snapshot_param          snp_param;
+	struct common_sn_cmd_parameter param;
 
 	CMR_PRINT_TIME;
 	if (!oem_handle) {
@@ -4106,7 +4136,10 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 
 	if (CAMERA_ZSL_MODE != mode) {
 		ret = camera_set_preview_param(oem_handle, mode, is_snapshot);
+	} else {
+		camera_exif_handle_before_snapshot(oem_handle);
 	}
+
 	ret = camera_get_snapshot_param(oem_handle, &snp_param);
 	if (ret) {
 		CMR_LOGE("failed to get snp num %ld", ret);
