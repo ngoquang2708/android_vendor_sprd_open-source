@@ -800,6 +800,18 @@ static void control_engservice(int  open)
           {
               stop_engservice(W_MODEM);
           }
+          memset(prop,'\0',256);
+          property_get(TL_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              stop_engservice(TL_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(LF_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              stop_engservice(LF_MODEM);
+          }
       }
       else
       {
@@ -815,6 +827,18 @@ static void control_engservice(int  open)
           if(!strcmp(prop, "1"))
           {
               start_engservice(W_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(TL_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              start_engservice(TL_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(LF_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              start_engservice(LF_MODEM);
           }
       }
 }
