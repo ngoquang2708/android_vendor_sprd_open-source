@@ -1795,7 +1795,7 @@ cmr_int prev_error_handle(struct prev_handle *handle, cmr_u32 camera_id, cmr_uin
 	}
 	cmr_bzero(&cb_data_info, sizeof(struct prev_cb_info));
 
-	CMR_LOGI("error type 0x%lx", evt_type);
+	CMR_LOGI("error type 0x%lx, camera_id", evt_type, camera_id);
 
 	prev_cxt = &handle->prev_cxt[camera_id];
 
@@ -1888,7 +1888,7 @@ cmr_int prev_recovery_pre_proc(struct prev_handle *handle, cmr_u32 camera_id, en
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	CMR_LOGI("mode %d", mode);
+	CMR_LOGI("mode %d, camera_id %d", mode, camera_id);
 
 	prev_cxt = &handle->prev_cxt[camera_id];
 
@@ -1919,7 +1919,7 @@ cmr_int prev_recovery_post_proc(struct prev_handle *handle, cmr_u32 camera_id, e
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	CMR_LOGI("mode %d", mode);
+	CMR_LOGI("mode %d, camera_id %d", mode, camera_id);
 
 	prev_cxt = &handle->prev_cxt[camera_id];
 
@@ -2054,8 +2054,8 @@ cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_res
 	preview_enable  = prev_cxt->prev_param.preview_eb;
 	snapshot_enable = prev_cxt->prev_param.snapshot_eb;
 	tool_eb         = prev_cxt->prev_param.tool_eb;
-	CMR_LOGI("prev_status %ld, preview_eb %d, snapshot_eb %d",
-		prev_cxt->prev_status, preview_enable, snapshot_enable);
+	CMR_LOGI("camera_id %d, prev_status %ld, preview_eb %d, snapshot_eb %d",
+		camera_id, prev_cxt->prev_status, preview_enable, snapshot_enable);
 
 	if (preview_enable && PREVIEWING == prev_cxt->prev_status) {
 		CMR_LOGE("is previewing now, do nothing");
@@ -2177,8 +2177,8 @@ cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_rest
 	preview_enable	= prev_cxt->prev_param.preview_eb;
 	snapshot_enable = prev_cxt->prev_param.snapshot_eb;
 
-	CMR_LOGI("prev_status %ld, isp_status %ld, preview_eb %d, snapshot_eb %d",
-		prev_cxt->prev_status, prev_cxt->isp_status, preview_enable, snapshot_enable);
+	CMR_LOGI("camera_id %d, prev_status %ld, isp_status %ld, preview_eb %d, snapshot_eb %d",
+		camera_id, prev_cxt->prev_status, prev_cxt->isp_status, preview_enable, snapshot_enable);
 
 	if (IDLE == prev_cxt->prev_status && preview_enable) {
 		CMR_LOGE("is idle now, do nothing");
@@ -2233,7 +2233,7 @@ cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_rest
 		prev_post_set(handle, camera_id);
 		prev_free_prev_buf(handle, camera_id);
 
-		CMR_LOGD("is_restart %d, recovery_status %dd", is_restart, prev_cxt->recovery_status);
+		CMR_LOGD("is_restart %d, recovery_status %ld", is_restart, prev_cxt->recovery_status);
 		if (!is_restart) {
 			/*stop response*/
 			cb_data_info.cb_type    = PREVIEW_RSP_CB_SUCCESS;

@@ -2288,7 +2288,9 @@ cmr_int cmr_setting_ioctl(cmr_handle setting_handle, cmr_uint cmd_type,
 	if (!cpt || !parm || cmd_type >= SETTING_TYPE_MAX
 		|| SETTING_TYPE_MAX != cmr_array_size(setting_list)
 		|| parm->camera_id >= CAMERA_ID_MAX) {
-		CMR_LOGE("param has error");
+
+		CMR_LOGE("param has error cpt 0x%p, camera_id %ld, array_size %d",
+			cpt, parm->camera_id, cmr_array_size(setting_list));
 		return -CMR_CAMERA_INVALID_PARAM;
 	}
 
