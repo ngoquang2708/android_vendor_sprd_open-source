@@ -556,8 +556,8 @@ SENSOR_INFO_T g_GC0310_MIPI_yuv_info =
 	PNULL,							// extend information about sensor	
 	SENSOR_AVDD_1800MV,				// iovdd
 	SENSOR_AVDD_1800MV,				// dvdd
-	3,								// skip frame num before preview
-	3,								// skip frame num before capture
+	1,								// skip frame num before preview
+	1,								// skip frame num before capture
 	0,
 	0,
 
