@@ -6671,6 +6671,8 @@ int32_t _ispSpecialEffectIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_
 		isp_context_ptr->emboss.bypass=ISP_EB;
 	}
 
+	_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
+
 	if(ISP_EFFECT_NORMAL == (*(uint32_t*)param_ptr)) {
 		/*use */
 		uint16_t *src = NULL;
@@ -6685,9 +6687,6 @@ int32_t _ispSpecialEffectIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_
 			ISP_LOG("ret:0x%x", rtn);
 			return ISP_ERROR;
 		}
-	}
-	else {
-		_ispSetCceMatrix(&isp_context_ptr->cce_matrix, &isp_context_ptr->cce_tab[isp_context_ptr->cce_index]);
 	}
 	isp_context_ptr->tune.special_effect=ISP_EB;
 
