@@ -76,7 +76,7 @@ extern SENSOR_INFO_T g_hi544_mipi_raw_info;
 extern SENSOR_INFO_T g_hi255_yuv_info;
 extern SENSOR_INFO_T g_ov2680_mipi_raw_info;
 extern SENSOR_INFO_T g_GC0310_MIPI_yuv_info;
-
+extern SENSOR_INFO_T g_sr030pc50_yuv_info;
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -135,6 +135,7 @@ const SENSOR_INFO_T* sub_sensor_infor_tab[]=
 	&g_GC0310_MIPI_yuv_info,
 	&g_hi255_yuv_info,
 	&g_GC2155_MIPI_yuv_info,
+	&g_sr030pc50_yuv_info,
 #endif
 	PNULL
 };
