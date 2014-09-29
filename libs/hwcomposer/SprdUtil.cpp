@@ -1503,7 +1503,8 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
         if((mGsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL)
            ||((mGsp_cap.buf_type_support == GSP_ADDR_TYPE_PHYSICAL) && (private_h->flags & private_handle_t::PRIV_FLAGS_USES_PHY))) {
             //config Video ,use GSP L0
-            uint32_t pixel_cnt = private_h->stride * ALIGN(private_h->height, 16);
+            //uint32_t pixel_cnt = private_h->stride * ALIGN(private_h->height, 16);
+            uint32_t pixel_cnt = private_h->stride * private_h->height;
             gsp_cfg_info.layer0_info.mem_info.share_fd = private_h->share_fd;
             gsp_cfg_info.layer0_info.mem_info.v_offset =
                 gsp_cfg_info.layer0_info.mem_info.uv_offset = pixel_cnt;
@@ -1530,6 +1531,12 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
             if(private_h->yuv_info == MALI_YUV_BT601_NARROW
                ||private_h->yuv_info == MALI_YUV_BT709_NARROW) {
                 gsp_cfg_info.misc_info.y2r_opt = 1;
+            }
+
+            if(GSP_SRC_FMT_RGB565 < gsp_cfg_info.layer0_info.img_format && gsp_cfg_info.layer0_info.img_format<GSP_SRC_FMT_8BPP ) {
+                ALOGI_IF((private_h->stride%16 | private_h->height%16),"util[%04d] warning: buffer stride:%d or height:%d is not 16 aligned!",__LINE__,
+                         private_h->stride,
+                         private_h->height);
             }
 
             ALOGI_IF(mDebugFlag,"util[%04d] fd:%d u_offset:%08x,v_offset:%08x,",__LINE__,
