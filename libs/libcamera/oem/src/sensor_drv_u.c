@@ -615,6 +615,7 @@ cmr_int Sensor_SetMonitorVoltage(SENSOR_AVDD_VAL_E vdd_val)
 
 void Sensor_PowerOn(struct sensor_drv_context *sensor_cxt, cmr_u32 power_on)
 {
+	struct sensor_power_info_tag power_cfg;
 	cmr_u32 power_down;
 	SENSOR_AVDD_VAL_E dvdd_val;
 	SENSOR_AVDD_VAL_E avdd_val;
@@ -643,22 +644,14 @@ void Sensor_PowerOn(struct sensor_drv_context *sensor_cxt, cmr_u32 power_on)
 	if (PNULL != power_func) {
 		power_func(power_on);
 	} else {
+		memset(&power_cfg, 0, sizeof(struct sensor_power_info_tag));
+		power_cfg.op_sensor_id = snr_get_cur_id(sensor_cxt);
 		if (power_on) {
-			Sensor_PowerDown(power_down);
-			Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-			SENSOR_Sleep(10);
-			Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-			SENSOR_Sleep(5);
-			Sensor_PowerDown(!power_down);
-			Sensor_Reset(rst_lvl);
+			power_cfg.is_on = 1;
 		} else {
-			Sensor_PowerDown(power_down);
-			SENSOR_Sleep(20);
-			Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-			Sensor_SetVoltage(SENSOR_AVDD_CLOSED,
-					  SENSOR_AVDD_CLOSED,
-					  SENSOR_AVDD_CLOSED);
+			power_cfg.is_on = 0;
 		}
+		ioctl(sensor_cxt->fd_sensor, SENSOR_IO_POWER_CFG, &power_cfg);
 	}
 }
 
@@ -666,6 +659,7 @@ void Sensor_PowerOn(struct sensor_drv_context *sensor_cxt, cmr_u32 power_on)
 void Sensor_PowerOn_Ex(struct sensor_drv_context *sensor_cxt,
 				cmr_u32 sensor_id)
 {
+	struct sensor_power_info_tag power_cfg;
 	cmr_u32 power_down;
 	SENSOR_AVDD_VAL_E dvdd_val;
 	SENSOR_AVDD_VAL_E avdd_val;
@@ -691,11 +685,10 @@ void Sensor_PowerOn_Ex(struct sensor_drv_context *sensor_cxt,
 	if (PNULL != power_func) {
 		power_func(1);
 	} else {
-		Sensor_PowerDown(power_down);
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		SENSOR_Sleep(10);
-		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		SENSOR_Sleep(5);
+		memset(&power_cfg, 0, sizeof(struct sensor_power_info_tag));
+		power_cfg.is_on = 1;
+		power_cfg.op_sensor_id = sensor_id;
+		ioctl(sensor_cxt->fd_sensor, SENSOR_IO_POWER_CFG, &power_cfg);
 	}
 }
 
