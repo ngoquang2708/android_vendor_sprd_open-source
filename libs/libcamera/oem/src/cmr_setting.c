@@ -343,35 +343,6 @@ static cmr_uint camera_param_to_isp(cmr_uint cmd,
 			break;
 		}
 
-	case COM_ISP_SET_AWB_MODE:
-		{
-			switch (in_param) {
-			case CAMERA_WB_AUTO:
-				out_param = ISP_AWB_AUTO;
-				break;
-
-			case CAMERA_WB_INCANDESCENT:
-				out_param = ISP_AWB_INDEX1;
-				break;
-
-			case CAMERA_WB_FLUORESCENT:
-				out_param = ISP_AWB_INDEX4;
-				break;
-
-			case CAMERA_WB_DAYLIGHT:
-				out_param = ISP_AWB_INDEX5;
-				break;
-
-			case CAMERA_WB_CLOUDY_DAYLIGHT:
-				out_param = ISP_AWB_INDEX6;
-				break;
-
-			default:
-				break;
-			}
-			break;
-		}
-
 	case COM_ISP_SET_VIDEO_MODE:
 		out_param = parm->preview_fps_param.frame_rate;
 		break;

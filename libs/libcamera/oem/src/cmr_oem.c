@@ -168,6 +168,7 @@ static cmr_int camera_get_cap_time(cmr_handle snp_handle);
 static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data);
 static void camera_snapshot_started(cmr_handle oem_handle);
 static void camera_exif_handle_before_snapshot(cmr_handle oem_handle);
+static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm);
 /**********************************************************************************************/
 
 void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
@@ -3310,6 +3311,48 @@ exit:
 	return ret;
 }
 
+cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm)
+{
+	cmr_uint in_param = parm->cmd_value;
+	cmr_uint out_param = in_param;
+
+	switch (cmd) {
+	case COM_ISP_SET_AWB_MODE:
+		{
+			switch (in_param) {
+			case CAMERA_WB_AUTO:
+				out_param = ISP_AWB_AUTO;
+				break;
+
+			case CAMERA_WB_INCANDESCENT:
+				out_param = ISP_AWB_INDEX1;
+				break;
+
+			case CAMERA_WB_FLUORESCENT:
+				out_param = ISP_AWB_INDEX4;
+				break;
+
+			case CAMERA_WB_DAYLIGHT:
+				out_param = ISP_AWB_INDEX5;
+				break;
+
+			case CAMERA_WB_CLOUDY_DAYLIGHT:
+				out_param = ISP_AWB_INDEX6;
+				break;
+
+			default:
+				break;
+			}
+			break;
+		}
+	default:
+		break;
+
+	}
+
+	return out_param;
+}
+
 cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_parameter *param_ptr)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -3383,11 +3426,12 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		CMR_LOGI("ev %d", param_ptr->cmd_value);
 		break;
 	case COM_ISP_SET_AWB_MODE:
+		CMR_LOGI("awb mode 00 %d isp param %d", param_ptr->cmd_value, isp_param);
 		isp_cmd = ISP_CTRL_AWB_MODE;
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_LIGHTSOURCE;
-		isp_param = param_ptr->cmd_value;
-		CMR_LOGI("awb mode %d", param_ptr->cmd_value);
+		isp_param = camera_param_to_isp(COM_ISP_SET_AWB_MODE, param_ptr);
+		CMR_LOGI("awb mode %d isp param %d", param_ptr->cmd_value, isp_param);
 		break;
 	case COM_ISP_SET_ANTI_BANDING:
 		isp_cmd = ISP_CTRL_FLICKER;
@@ -3472,7 +3516,12 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 
 	if (set_exif_flag) {
 		CMR_LOGD("ERIC set exif");
-		cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, isp_param);
+		if (COM_ISP_SET_AWB_MODE == cmd_type) {
+			cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, param_ptr->cmd_value);
+			cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_EXIF_CTRL_WHITEBALANCE, param_ptr->cmd_value);
+		} else {
+			cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, isp_param);
+		}
 	}
 exit:
 	CMR_LOGI("done %ld", ret);

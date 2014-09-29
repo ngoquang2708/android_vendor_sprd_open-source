@@ -2814,7 +2814,7 @@ cmr_int sensor_set_exif_common(struct sensor_drv_context *sensor_cxt,
 				sensor_exif_info_ptr->LightSource = 0x0e;
 				break;
 			case 4:
-				sensor_exif_info_ptr->LightSource = 0x03;
+				sensor_exif_info_ptr->LightSource = 0x02;
 				break;
 			case 5:
 				sensor_exif_info_ptr->LightSource = 0x01;
