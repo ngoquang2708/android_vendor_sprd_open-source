@@ -2063,7 +2063,7 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 
 	if (IMG_ANGLE_0 == req_param_ptr->post_proc_setting.rot_angle ||
 		(cxt->req_param.is_cfg_rot_cap && (IMG_ANGLE_0 == cxt->req_param.rot_angle))) {
-		for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
+		for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_y = chn_param_ptr->chn_frm[i].addr_phy.addr_y + offset[i];
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_u = chn_param_ptr->chn_frm[i].addr_phy.addr_u + (offset[i] >> 1);
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_v = chn_param_ptr->chn_frm[i].addr_phy.addr_v + (offset[i] >> 1);
@@ -2073,7 +2073,7 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 			chn_param_ptr->scale[i].src_img.addr_vir.addr_v = chn_param_ptr->chn_frm[i].addr_vir.addr_v + (offset[i] >> 1);
 		}
 	} else {//rotation case
-		for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
+		for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_y = chn_param_ptr->rot[i].dst_img.addr_phy.addr_y + offset[i];
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_u = chn_param_ptr->rot[i].dst_img.addr_phy.addr_u + (offset[i] >> 1);
 			chn_param_ptr->scale[i].src_img.addr_phy.addr_v = chn_param_ptr->rot[i].dst_img.addr_phy.addr_v + (offset[i] >> 1);
