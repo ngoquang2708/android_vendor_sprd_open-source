@@ -469,7 +469,7 @@ struct sensor_mode_info {
 	cmr_u16                             trim_height;
 	cmr_u16                             image_format;
 	cmr_u32                             line_time;
-	cmr_u32                             pclk;
+	cmr_u32                             bps_per_lane;
 	cmr_u32                             frame_line;
 	cmr_u32                             padding;
 	struct img_rect                     scaler_trim;

@@ -526,7 +526,7 @@ typedef struct sensor_trim_tag {
 	cmr_u16 trim_width;
 	cmr_u16 trim_height;
 	cmr_u32 line_time;
-	cmr_u32 pclk;
+	cmr_u32 bps_per_lane;/* bps_per_lane = 2 * mipi_clock */
 	cmr_u32 frame_line;
 	SENSOR_RECT_T scaler_trim;
 } SENSOR_TRIM_T, *SENSOR_TRIM_T_PTR;
@@ -572,7 +572,7 @@ typedef struct sensor_mode_info_tag {
 	cmr_u16 trim_height;
 	cmr_u32 line_time;
 	SENSOR_IMAGE_FORMAT image_format;
-	cmr_u32 pclk;
+	cmr_u32 bps_per_lane;
 	cmr_u32 frame_line;
 	SENSOR_RECT_T scaler_trim;
 } SENSOR_MODE_INFO_T, *SENSOR_MODE_INFO_T_PTR;

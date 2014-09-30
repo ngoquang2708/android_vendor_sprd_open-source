@@ -234,7 +234,6 @@ int camera_pre_capture_buf_id(cmr_u32 camera_id)
 {
 	int buffer_id = 0;
 
-	if (BACK_CAMERA_ID == camera_id) {
 #if defined(CONFIG_CAMERA_SUPPORT_8M)
 		buffer_id = IMG_8P0_MEGA;
 #elif defined(CONFIG_CAMERA_SUPPORT_7M)
@@ -250,28 +249,8 @@ int camera_pre_capture_buf_id(cmr_u32 camera_id)
 #elif defined(CONFIG_CAMERA_SUPPORT_2M)
 		buffer_id = IMG_2P0_MEGA;
 #else
-		buffer_id = IMG_8P0_MEGA;
-#endif
-	} else {
-#if defined(CONFIG_FRONT_CAMERA_SUPPORT_8M)
-		buffer_id = IMG_8P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_7M)
-		buffer_id = IMG_7P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_6M)
-		buffer_id = IMG_6P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_5M)
-		buffer_id = IMG_5P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_4M)
-		buffer_id = IMG_4P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_3M)
-		buffer_id = IMG_3P0_MEGA;
-#elif defined(CONFIG_FRONT_CAMERA_SUPPORT_2M)
 		buffer_id = IMG_2P0_MEGA;
-#else
-		buffer_id = IMG_8P0_MEGA;
 #endif
-	}
-
 	CMR_LOGI("buffer id = %d", buffer_id);
 
 	return buffer_id;

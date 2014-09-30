@@ -303,7 +303,7 @@ cmr_int cmr_sns_copy_mode_info(struct sensor_mode_info *out_mode_info, SENSOR_MO
 	out_mode_info->trim_height = in_mode_info->trim_height;
 	out_mode_info->image_format = (cmr_u16)in_mode_info->image_format;
 	out_mode_info->line_time = in_mode_info->line_time;
-	out_mode_info->pclk = in_mode_info->pclk;
+	out_mode_info->bps_per_lane = in_mode_info->bps_per_lane;
 	out_mode_info->frame_line = in_mode_info->frame_line;
 	out_mode_info->scaler_trim.start_x = (cmr_u32)in_mode_info->scaler_trim.x;
 	out_mode_info->scaler_trim.start_y = (cmr_u32)in_mode_info->scaler_trim.y;

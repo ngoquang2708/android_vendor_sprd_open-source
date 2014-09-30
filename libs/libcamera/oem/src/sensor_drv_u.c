@@ -442,7 +442,7 @@ cmr_int sns_dev_mipi_init(struct sensor_drv_context *sensor_cxt,
 	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
 
 	cmr_u32 lane_num = sensor_cxt->sensor_exp_info.sensor_interface.bus_width;
-	cmr_u32 bps      = sensor_cxt->sensor_exp_info.sensor_mode_info[mode].pclk;
+	cmr_u32 bps      = sensor_cxt->sensor_exp_info.sensor_mode_info[mode].bps_per_lane;
 
 	cmr_bzero((void*)&if_cfg, sizeof(SENSOR_IF_CFG_T));
 	if_cfg.if_type      = INTERFACE_MIPI;
@@ -827,8 +827,8 @@ void Sensor_SetExportInfo(struct sensor_drv_context *sensor_cxt)
 				    resolution_trim_ptr[i].trim_height;
 				exp_info_ptr->sensor_mode_info[i].line_time =
 				    resolution_trim_ptr[i].line_time;
-				exp_info_ptr->sensor_mode_info[i].pclk =
-				    resolution_trim_ptr[i].pclk;
+				exp_info_ptr->sensor_mode_info[i].bps_per_lane =
+				    resolution_trim_ptr[i].bps_per_lane;
 				exp_info_ptr->sensor_mode_info[i].frame_line=
 				    resolution_trim_ptr[i].frame_line;
 			} else {
