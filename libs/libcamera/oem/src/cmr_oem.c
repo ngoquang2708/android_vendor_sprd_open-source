@@ -480,6 +480,7 @@ void camera_v4l2_handle(cmr_int evt, void* data, void* privdata)
 		if(ipm_cxt->frm_num == ipm_cxt->hdr_num) {
 			camera_post_share_path_available((cmr_handle)cxt);
 			sem_wait(&cxt->hdr_sync_sm);
+			cxt->ipm_cxt.frm_num = 0;
 		}
 	} else {
 		camera_send_channel_data((cmr_handle)cxt, receiver_handle, evt, data);
@@ -788,7 +789,6 @@ cmr_int camera_ipm_cb(cmr_u32 class_type, struct ipm_frame_out *cb_param)
 	}
 	cxt = (struct camera_context*)cb_param->private_data;
 #ifdef OEM_HANDLE_HDR
-	cxt->ipm_cxt.frm_num = 0;
 	frame = cxt->snp_cxt.cur_frm_info;
 	cmr_snapshot_memory_flush(cxt->snp_cxt.snapshot_handle);
 	sem_post(&cxt->hdr_sync_sm);

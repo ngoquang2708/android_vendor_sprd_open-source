@@ -33,7 +33,6 @@
 #define SNP_EVT_START_PROC                           (SNP_EVT_BASE + 4)
 #define SNP_EVT_START_CVT                            (SNP_EVT_BASE + 5)
 
-
 #define SNP_EVT_CHANNEL_DONE                         (SNP_EVT_BASE + 30)/*SNAPSHOT_EVT_CHANNEL_DONE*/
 #define SNP_EVT_RAW_PROC                             (SNP_EVT_BASE + 31)/*SNAPSHOT_EVT_RAW_PROC*/
 #define SNP_EVT_SC_DONE                              (SNP_EVT_BASE + 32)/*SNAPSHOT_EVT_SC_DONE*/
