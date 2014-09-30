@@ -347,6 +347,7 @@ LOCAL const SENSOR_REG_T ov2680_1600X1200_mipi_raw[] = {
 #endif
 	{0x4008, 0x02},
 	{0x4009, 0x09},
+	{0x481B, 0x3e},
 	{0x4837, 0x18},
 
 };
