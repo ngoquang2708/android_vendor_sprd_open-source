@@ -674,9 +674,9 @@ GSP_ROT_ANGLE_E SprdUtil::rotationType_convert(int angle)
         default:
             return GSP_ROT_ANGLE_270;
         case (HAL_TRANSFORM_ROT_90|HAL_TRANSFORM_FLIP_H)://5
-            return GSP_ROT_ANGLE_90_M;
-        case (HAL_TRANSFORM_ROT_90|HAL_TRANSFORM_FLIP_V)://6
             return GSP_ROT_ANGLE_270_M;
+        case (HAL_TRANSFORM_ROT_90|HAL_TRANSFORM_FLIP_V)://6
+            return GSP_ROT_ANGLE_90_M;
         case HAL_TRANSFORM_ROT_270:// 7
             return GSP_ROT_ANGLE_90;
     }
@@ -1261,6 +1261,7 @@ int SprdUtil::gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info)
             }
         } else {
             ALOGI_IF(mDebugFlag,"util[%04d] copy:osd is pallet, don't need copy",__LINE__);
+            return -1;
         }
     }
 
