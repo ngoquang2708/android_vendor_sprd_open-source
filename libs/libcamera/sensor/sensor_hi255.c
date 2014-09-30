@@ -968,7 +968,7 @@ LOCAL const SENSOR_REG_T HI255_common[]=
 	{0x9a, 0x0d,},
 	{0x9b, 0xde,},
 
-	{0x9c, 0x17,}, /* EXP Limit 541.67 fps */
+	{0x9c, 0x17,}, /*EXP Limit 500.00 fps */
 	{0x9d, 0x70,},
 
 	{0x9e, 0x01,}, /* EXP Unit */
@@ -1110,7 +1110,7 @@ LOCAL const SENSOR_REG_T HI255_common[]=
 	{0x1a, 0x32,},
 	{0x1b, 0x17,},
 	{0x1c, 0x0c,},
-	{0x1d, 0x0d,}, /* 20140806 Dn 0x0f -> 0x0d */
+	{0x1d, 0x0f,},
 	{0x1e, 0x06,},
 	{0x1f, 0x02,}, /* 0x05->0x03 20131101 */ /* 0x03->0x02 20140509 */
 	{0x20, 0x00,},
@@ -1166,9 +1166,9 @@ LOCAL const SENSOR_REG_T HI255_common[]=
 
 	{0x03, 0x00,},
 
-	{0x01, 0x30,},
+	//{0x01, 0x30,},
 
-	{0xffff, 0x0a,}, /* NEED Delay 100ms */
+	{SENSOR_WRITE_DELAY, 0x0a,}, /* NEED Delay 100ms */
 };
 
 LOCAL const SENSOR_REG_T HI255_640X480[]=
@@ -1190,9 +1190,6 @@ LOCAL const SENSOR_REG_T HI255_640X480[]=
 	{0x21, 0x02,}, /* windowing, row start, low byte */ /* modify 20110929 0x04 -> 0x02 */
 	{0x22, 0x00,}, /* windowing, column start, high byte */
 	{0x23, 0x0a,}, /* windowing, column start, low byte */ /* modify 20110929 0x14 -> 0x0a */
-
-	{0x42, 0x00,}, /* VBlank */
-	{0x43, 0x58,}, /* 88 */
 
 	/* Page 10 */
 	{0x03, 0x10,},
@@ -1244,7 +1241,7 @@ LOCAL const SENSOR_REG_T HI255_640X480[]=
 	{0x1a, 0x32,},
 	{0x1b, 0x17,},
 	{0x1c, 0x0c,},
-	{0x1d, 0x0d,}, /* 20140806 Dn 0x0f -> 0x0d */
+	{0x1d, 0x0f,},
 	{0x1e, 0x06,},
 	{0x1f, 0x02,}, /* 0x05->0x03 20131101 */ /* 0x03->0x02 20140509 */
 	{0x20, 0x00,},
@@ -1294,9 +1291,9 @@ LOCAL const SENSOR_REG_T HI255_640X480[]=
 	{0x03, 0x00,},
 
 	{0x03, 0x00,}, /* Sleep Off */
-	{0x01, 0x30,},
+	//{0x01, 0x30,},
 
-	{0xffff, 0x28,}, /* 400ms */
+	{SENSOR_WRITE_DELAY, 0x28,}, /* 400ms */
 };
 
 
@@ -1319,9 +1316,6 @@ LOCAL const SENSOR_REG_T HI255_800X600[]=
 	{0x21, 0x02,}, /* windowing, row start, low byte */ /* modify 20110929 0x04 -> 0x02 */
 	{0x22, 0x00,}, /* windowing, column start, high byte */
 	{0x23, 0x0a,}, /* windowing, column start, low byte */ /* modify 20110929 0x14 -> 0x0a */
-
-	{0x42, 0x00,}, /* VBlank */
-	{0x43, 0x58,}, /* 88 */
 
 	/* Page 10 */
 	{0x03, 0x10,},
@@ -1373,7 +1367,7 @@ LOCAL const SENSOR_REG_T HI255_800X600[]=
 	{0x1a, 0x32,},
 	{0x1b, 0x17,},
 	{0x1c, 0x0c,},
-	{0x1d, 0x0d,}, /* 20140806 Dn 0x0f -> 0x0d */
+	{0x1d, 0x0f,},
 	{0x1e, 0x06,},
 	{0x1f, 0x02,}, /* 0x05->0x03 20131101 */ /* 0x03->0x02 20140509 */
 	{0x20, 0x00,},
@@ -1389,8 +1383,11 @@ LOCAL const SENSOR_REG_T HI255_800X600[]=
 	{0x2c, 0x04,},
 	{0x2d, 0xb0,},
 
-	{0x30, 0x40,}, /* 800 x 600 MiPi OutPut */
+	{0x30, 0x40,}, /* 800x600 MiPi OutPut */
 	{0x31, 0x06,},
+
+	/* {0x30, 0x00,}, */ /* 640 x 480 MiPi OutPut */
+	/* {0x31, 0x05,}, */
 
 	{0x32, 0x0c,},
 	{0x33, 0x0a,},
@@ -1423,70 +1420,132 @@ LOCAL const SENSOR_REG_T HI255_800X600[]=
 	{0x03, 0x00,},
 
 	{0x03, 0x00,}, /* Sleep Off */
-	{0x01, 0x30,},
+	//{0x01, 0x30,},
 
-	{0xffff, 0x28,}, /* 400ms */
+	{SENSOR_WRITE_DELAY, 0x28,}, /* 400ms */
 };
 
 LOCAL const SENSOR_REG_T HI255_1600X1200[] =
 {
-	{0x03, 0x00},
-	{0x01, 0xf9},
 
-	{0x0e, 0x03}, //PLL Off
+	{0x03, 0x00,},
+	{0x01, 0x31,}, /* b[0] set power sleep by preserving all register values, 0=OFF 1=ON */
 
-	{0x03, 0x22}, //Page 22
-	{0x10, 0x69}, //AWB Off
+	{0x03, 0x22,}, /* Page 22 */
+	{0x10, 0x69,}, /* AWB Off */
 
-	{0x03, 0x00},
-	{0x10, 0x08},
-	{0x11, 0x90},
+	{0x03, 0x00,},
+	{0x10, 0x00,}, /* Imge size, windowing, Hsync, Vsync */
 
-	{0x20, 0x00},
-	{0x21, 0x0a}, //modify 20110929 0x0c->0x0a
-	{0x22, 0x00},
-	{0x23, 0x0a}, //modify 20110929 0x14->0x0a
+	{0x20, 0x00,}, /* windowing */
+	{0x21, 0x0a,}, /* modify 20110929 0x0c -> 0x0a */
+	{0x22, 0x00,},
+	{0x23, 0x0a,}, /* modify 20110929 0x14 -> 0x0a */
 
-	//Page10
-	{0x03, 0x10},
-	{0x60, 0x61},
+	/* Page10 */
+	{0x03, 0x10,},
+	{0x3f, 0x00,}, /* not defined in data sheet */
+	{0x60, 0x63,}, /* color saturation */
 
-	//Page12
-	{0x03, 0x12},
-	{0x20, 0x0f},
-	{0x21, 0x0f},
-	{0x90, 0x5d},
+	/* Page12 */  /* Noise reduction */
+	{0x03, 0x12,},
+	{0x20, 0x0f,},
+	{0x21, 0x0f,},
+	{0x90, 0x5d,},
 
-	//only for Preview DPC Off
-	{0xd2, 0x67},
-	{0xd5, 0x02},
-	{0xd7, 0x18},
+	/* only for Preview DPC Off */
+	{0xd2, 0x67,},
+	{0xd5, 0x02,},
+	{0xd7, 0x18,},
 
-	//Page13
-	{0x03, 0x13},
-	{0x80, 0xfd},
+	/* Page13 */  /* Edge enhancement */
+	{0x03, 0x13,},
+	{0x10, 0xcb,}, /* Edge On */
+	{0x80, 0xfd,},
 
-	//Page0
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x0e, 0x03}, //PLL ON
-	{0x0e, 0x73}, //PLL ON x2
+	/* PAGE 18 */ /* Image scaling */
+	{0x03, 0x18,},
+	{0x10, 0x00,}, /* Scaling Off */
 
-	{0x03, 0x00}, //Dummy 750us
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
-	{0x03, 0x00},
+	/* PAGE 48 START */
+	{0x03, 0x48,},
 
-	{0x03, 0x00},
-	{0x01, 0xf8}, //Sleep Off
+	/* PLL Setting */
+	{0x70, 0x05,},
+	{0x71, 0x30,}, /* MiPi Pllx2 */
+	{0x72, 0x81,},
+	{0x70, 0x85,}, /* PLL Enable */
+	{0x03, 0x48,},
+	{0x03, 0x48,},
+	{0x03, 0x48,},
+	{0x03, 0x48,},
+	{0x70, 0x95,}, /* CLK_GEN_ENABLE */
 
-	{0xffff, 0x03},  //Increase from 30ms
+	/* MIPI TX Setting */
+	{0x11, 0x00,}, /* 20111013 0x10 continuous -> 0x00 not Continuous */
+	{0x10, 0x1c,},
+	{0x12, 0x00,},
+	{0x14, 0x30,}, /* 20111013 0x00 -> 0x30 Clock Delay */
+	{0x16, 0x04,},
+
+	{0x19, 0x00,},
+	{0x1a, 0x32,},
+	{0x1b, 0x17,},
+	{0x1c, 0x0b,},
+	{0x1d, 0x0e,},
+	{0x1e, 0x08,},
+	{0x1f, 0x03,},
+	{0x20, 0x00,},
+
+	{0x23, 0x01,},
+	{0x24, 0x1e,},
+	{0x25, 0x00,},
+	{0x26, 0x00,},
+	{0x27, 0x01,},
+	{0x28, 0x00,},
+	{0x2a, 0x06,},
+	{0x2b, 0x40,},
+	{0x2c, 0x04,},
+	{0x2d, 0xb0,},
+
+	{0x30, 0x80,}, /* 1600 x 1200 MiPi OutPut */
+	{0x31, 0x0c,},
+
+	/* {0x30, 0x40,}, */ /* 800x600 MiPi OutPut */
+	/* {0x31, 0x06,}, */
+
+	{0x32, 0x0c,},
+	{0x33, 0x0a,},
+	{0x34, 0x03,}, /* CLK LP -> HS Prepare time 24MHz:0x02, 48MHz:0x03 */
+	{0x35, 0x03,},
+	{0x36, 0x01,},
+	{0x37, 0x07,},
+	{0x38, 0x02,},
+	{0x39, 0x03,}, /* drivability 24MHZ:02, 48MHz:03 */
+
+	{0x50, 0x00,},
+	/* PAGE 48 END */
+
+	/* Page0 */
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,}, /* Dummy 750us */
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+	{0x03, 0x00,},
+
+	{0x03, 0x00,},
+	//{0x01, 0x30,}, /* Sleep Off */
+
+	{0xffff, 0x30,},  //Increase from 30ms
+
+
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_HI255_resolution_Tab_YUV[]=
@@ -1495,8 +1554,8 @@ LOCAL SENSOR_REG_TAB_INFO_T s_HI255_resolution_Tab_YUV[]=
 	{ADDR_AND_LEN_OF_ARRAY(HI255_common),   0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	//{PNULL, 0, 0, 24, SENSOR_IMAGE_FORMAT_YUV422},
 	{ADDR_AND_LEN_OF_ARRAY(HI255_640X480),   640,  480,   24, SENSOR_IMAGE_FORMAT_YUV422},
-	//{ADDR_AND_LEN_OF_ARRAY(HI255_1600X1200), 1600, 1200,  24, SENSOR_IMAGE_FORMAT_YUV422},
-	{PNULL, 0, 0, 0, 0, 0},
+	{ADDR_AND_LEN_OF_ARRAY(HI255_1600X1200), 1600, 1200,  24, SENSOR_IMAGE_FORMAT_YUV422},
+	//{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 	{PNULL, 0, 0, 0, 0, 0},
 
@@ -1511,8 +1570,8 @@ static SENSOR_TRIM_T s_HI255_Resolution_Trim_Tab[] = {
 	{0, 0, 640, 480, 0, 0,0, {0, 0, 640, 480}},
 	{0, 0, 640, 480, 68, 500, 0x2bc, {0, 0, 640, 480}},
 	//{0, 0, 1280, 960, 68, 900, 0x03b8, {0, 0, 1280, 960}},
-	//{0, 0, 1600, 1200, 68, 900, 0x03b8, {0, 0, 1600, 1200}},
-	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
+	{0, 0, 1600, 1200, 68, 500, 0x03b8, {0, 0, 1600, 1200}},
+	//{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -1567,7 +1626,7 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI255_ioctl_func_tab =
 {
 	// Internal
 	PNULL,
-	_HI255_PowerOn,
+	PNULL,//_HI255_PowerOn,
 	PNULL,
 	_HI255_Identify,
 
@@ -1691,7 +1750,7 @@ SENSOR_INFO_T g_hi255_yuv_info =
 	//5,
 	SENSOR_AVDD_1800MV,                     // iovdd
 	SENSOR_AVDD_1800MV,                      // dvdd
-	8,                     // skip frame num before preview
+	2,                     // skip frame num before preview
 	0,                      // skip frame num before capture
 	0,                      // deci frame num during preview
 	0,                      // deci frame num during video preview
@@ -1888,27 +1947,28 @@ LOCAL uint32_t _HI255_PowerOn(uint32_t power_on)
 	CMR_LOGI("SENSOR: _HI255_PowerOn (1:on, 0:off): %d \n", power_on);
 
 	if (SENSOR_TRUE == power_on) {
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
 		Sensor_SetResetLevel(reset_level);
 		Sensor_PowerDown(power_down);
 		// Open power
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
+		Sensor_SetIovddVoltage(iovdd_val);
+		SENSOR_Sleep(5);
+		Sensor_SetAvddVoltage(avdd_val);
 		SENSOR_Sleep(10);
-		//Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		Sensor_PowerDown(!power_down);
 		SENSOR_Sleep(10);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		//Sensor_PowerDown(!power_down);
 		SENSOR_Sleep(30);
 		// Reset sensor
-		Sensor_Reset(reset_level);
-		//Sensor_SetResetLevel(!reset_level);
+		//Sensor_Reset(reset_level);
+		Sensor_SetResetLevel(!reset_level);
 		SENSOR_Sleep(10);
 	} else {
 		Sensor_SetResetLevel(reset_level);
 		SENSOR_Sleep(1);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		Sensor_PowerDown(power_down);
-		//Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
 		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED,
 				SENSOR_AVDD_CLOSED);
 	}
@@ -2688,19 +2748,19 @@ LOCAL uint32_t _HI255_BeforeSnapshot(uint32_t param)
 	uint32_t cap_mode = (param>>CAP_MODE_BITS);
 
 	param = param&0xffff;
-	SENSOR_PRINT("%d,%d.",cap_mode,param);
+	CMR_LOGE("%d,%d.",cap_mode,param);
 
-	SENSOR_PRINT("HI255: HI255_before_snapshot\n");
+	CMR_LOGE("HI255: HI255_before_snapshot\n");
 	if(SENSOR_MODE_PREVIEW_ONE>=param)
 	{
 	 	return SENSOR_SUCCESS;
 	}
-	SENSOR_PRINT("terry  _HI255_BeforeSnapshot =%d.\n",param);
+	CMR_LOGE("terry  _HI255_BeforeSnapshot =%d.\n",param);
 
 	  _HI255_SetExifInfo_ISO(param);
 
 	Sensor_SetMode(param);
-
+	Sensor_SetMode_WaitDone();
 	return SENSOR_SUCCESS;
 }
 
