@@ -204,6 +204,9 @@ private:
 											const void *client_data,
 											camera_func_type func,
 											void* parm4);
+	void                  sendPreviewFrameToApp(struct camera_frame_type *frame);
+	void                  sendPreviewFrameToVideo(struct camera_frame_type *frame);
+	void                  yuvConvertFormat(struct camera_frame_type *frame);
 	void                  notifyShutter();
 	void                  receiveJpegPictureFragment(struct camera_jpeg_param *encInfo);
 	void                  receiveJpegPosPicture(void);

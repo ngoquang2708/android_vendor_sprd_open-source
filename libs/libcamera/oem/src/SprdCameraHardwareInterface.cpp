@@ -932,7 +932,6 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 	uint32_t index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
 
 	Mutex::Autolock pbl(&mPrevBufLock);
-
 	if (!isPreviewing()) {
 		LOGE("releaseRecordingFrame: Preview not in progress!");
 		return;
@@ -2902,7 +2901,7 @@ bool SprdCameraHardware::allocatePreviewMemFromGraphics(cmr_u32 size, cmr_u32 su
 				*vir_addr++ = (cmr_uint)private_h->base;
 			}
 			LOGI("allocatePreviewMemFromGraphics: phyaddr:0x%x, base:0x%x, size:0x%x, stride:0x%x ",
-				 mPreviewHeapArray_phy[i],private_h->base,private_h->size, stride);
+				 mPreviewHeapArray_phy[i],(unsigned int)private_h->base,private_h->size, stride);
 			mCancelBufferEb[i] = 0;
 		}
 
@@ -3500,7 +3499,7 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 				mPreviewHeapArray_size[i]=iova_size;
 			}
 			LOGI("allocatePreviewMemByGraphics: phyaddr:0x%x, base:0x%x, size:0x%x, stride:0x%x ",
-				mPreviewHeapArray_phy[i],private_h->base,private_h->size, stride);
+				mPreviewHeapArray_phy[i],(unsigned int)private_h->base,private_h->size, stride);
 			mCancelBufferEb[i] = 0;
 		}
 
@@ -4974,6 +4973,10 @@ void SprdCameraHardware::handleDataCallback(int32_t msg_type,
 	else
 		Mutex::Autolock cl(&mCbCapDataBusyLock);
 
+	if (NULL == mPreviewHeapArray) {
+		LOGI("memory has been free");
+		return;
+	}
 	LOGV("handleDataCallback E");
 	if (isPrev) {
 		if (!isPreviewing()) return;
@@ -5255,6 +5258,121 @@ void SprdCameraHardware::overwritePreviewFrame(camera_frame_type *frame)
 	}
 }
 
+void SprdCameraHardware::sendPreviewFrameToApp(struct camera_frame_type *frame)
+{
+	Mutex::Autolock pcpl(&mPrevBufLock);
+	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
+		uint32_t tmpIndex = frame->order_buf_id;
+		if (mPreviewWindow && isPreviewing()) {
+			handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+				tmpIndex,
+				0, NULL, mUser, 1);
+		} else {
+			LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
+				mPreviewWindow,
+				getCameraStateStr(mCameraState.preview_state));
+			return;
+		}
+	} else {
+		uint32_t dataSize = frame->width * frame->height * 3 / 2;
+		if (mPreviewWindow && isPreviewing()) {
+			if (mPreviewHeapArray) {
+				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
+						(void*)frame->y_vir_addr, dataSize);
+			}
+			handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+								mPreviewDcamAllocBufferCnt - 1,
+								0, NULL, mUser, 1);
+		} else {
+			LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
+				mPreviewWindow,
+				getCameraStateStr(mCameraState.preview_state));
+			return;
+		}
+	}
+}
+
+void SprdCameraHardware::sendPreviewFrameToVideo(struct camera_frame_type *frame)
+{
+	ssize_t offset = frame->buf_id;
+	camera_frame_metadata_t metadata;
+	int width, height;
+	nsecs_t timestamp = frame->timestamp;
+
+	LOGI("test timestamp = %lld, mIsStoreMetaData: %d. buffer_id 0x%x",
+		timestamp,
+		mIsStoreMetaData,
+		frame->buf_id);
+	if (mTimeCoeff > 1) {
+		if (0 != mRecordingFirstFrameTime) {
+			timestamp = mRecordingFirstFrameTime + (timestamp - mRecordingFirstFrameTime)*mTimeCoeff;
+		} else {
+			mRecordingFirstFrameTime = timestamp;
+			LOGI("first frame.");
+		}
+	}
+	width = frame->width;
+	height = frame->height;
+	if (mIsStoreMetaData) {
+		uint32_t tmpIndex = frame->order_buf_id;
+		uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
+		*data++ = kMetadataBufferTypeCameraSource;
+		*data++ = frame->y_phy_addr;
+		*data++ = (uint32_t)frame->y_vir_addr;
+		*data++ = width;
+		*data++ = height;
+		*data++ = mPreviewWidth_trimx;
+		*data = mPreviewHeight_trimy;
+		{
+			Mutex::Autolock l(&mCbPrevDataBusyLock);
+			if(!isPreviewing()) return;
+			if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+				tmpIndex = mPreviewDcamAllocBufferCnt - 1;
+			}
+			if (mPreviewHeapArray) {
+				mPreviewHeapArray[tmpIndex]->busy_flag = true;
+				mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
+				mPreviewHeapArray[tmpIndex]->busy_flag = false;
+			}
+		}
+	} else {
+		uint32_t tmpIndex = frame->order_buf_id;
+		if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+			tmpIndex = mPreviewDcamAllocBufferCnt - 1;
+		}
+		if (mPreviewHeapArray) {
+			handleDataCallbackTimestamp(timestamp,
+				CAMERA_MSG_VIDEO_FRAME,
+				mPreviewHeapArray[tmpIndex],
+				0, mUser);
+		}
+	}
+	if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
+		Mutex::Autolock pgbcl(&mGraphBufCntLock);
+		mGraphBufferCount[offset]++;
+	};
+}
+
+void SprdCameraHardware::yuvConvertFormat(struct camera_frame_type *frame)
+{
+	int width, height;
+	Mutex::Autolock pbl(&mPrevBufLock);
+
+	width = frame->width;
+	height = frame->height;
+	if (mIsYuv420p) {
+		if (mYV12Buf){
+			char * addr0 = (char *)frame->y_vir_addr + width * height;
+			char * addr1 = addr0 + width * height/4;
+			char * addr2 = (char *)mYV12Buf;
+			memcpy((void *)mYV12Buf, (void *)addr0, width * height/2);
+			for (int i = 0; i < width * height/4; i++) {
+				*addr0++ = *addr2++; // U
+				*addr1++ = *addr2++; // V
+			}
+		}
+	}
+}
 
 void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 {
@@ -5274,7 +5392,7 @@ void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 	camera_frame_metadata_t metadata;
 	camera_face_t face_info[FACE_DETECT_NUM];
 	uint32_t k = 0;
-	int width, height, frame_size, offset_size;
+	int width, height, frame_size;
 
 	width = frame->width;
 	height = frame->height;
@@ -5301,20 +5419,7 @@ void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 	}
 
 	if (isPreviewing()) {
-//#if defined(CONFIG_CAMERA_PREVIEW_YV12)
-		if (mIsYuv420p) {
-			if (mYV12Buf){
-				char * addr0 = (char *)frame->y_vir_addr + width * height;
-				char * addr1 = addr0 + width * height/4;
-				char * addr2 = (char *)mYV12Buf;
-				memcpy((void *)mYV12Buf, (void *)addr0, width * height/2);
-				for (int i = 0; i < width * height/4; i++) {
-					*addr0++ = *addr2++; // U
-					*addr1++ = *addr2++; // V
-				}
-			}
-		}
-//#endif
+		yuvConvertFormat(frame);
 		if (!displayOneFrame(width, height, frame->y_phy_addr, (char *)frame->y_vir_addr, frame->buf_id)) {
 			LOGE("%s: displayOneFrame not successful!", __func__);
 		}
@@ -5330,84 +5435,12 @@ void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
 	if(mData_cb != NULL)
 	{
 		LOGV("receivePreviewFrame mMsgEnabled: 0x%x",mMsgEnabled);
-		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
-			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-				uint32_t tmpIndex = frame->order_buf_id;
-				if (mPreviewWindow && isPreviewing()) {
-					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-						tmpIndex,
-						0, NULL, mUser, 1);
-				} else {
-					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
-						mPreviewWindow,
-						getCameraStateStr(mCameraState.preview_state));
-					return;
-				}
-			} else {
-				uint32_t dataSize = frame->width * frame->height * 3 / 2;
-				if (mPreviewWindow && isPreviewing()) {
-					memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
-							(void*)frame->y_vir_addr, dataSize);
-					handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-										mPreviewDcamAllocBufferCnt - 1,
-										0, NULL, mUser, 1);
-				} else {
-					LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
-						mPreviewWindow,
-						getCameraStateStr(mCameraState.preview_state));
-					return;
-				}
-			}
-		}
 
+		if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME) {
+			sendPreviewFrameToApp(frame);
+		}
 		if ((mMsgEnabled & CAMERA_MSG_VIDEO_FRAME) && isRecordingMode()) {
-			nsecs_t timestamp = frame->timestamp;
-			LOGI("test timestamp = %lld, mIsStoreMetaData: %d. buffer_id 0x%x",
-				timestamp,
-				mIsStoreMetaData,
-				frame->buf_id);
-			if (mTimeCoeff > 1) {
-				if (0 != mRecordingFirstFrameTime) {
-					timestamp = mRecordingFirstFrameTime + (timestamp - mRecordingFirstFrameTime)*mTimeCoeff;
-				} else {
-					mRecordingFirstFrameTime = timestamp;
-					LOGI("first frame.");
-				}
-			}
-			if (mIsStoreMetaData) {
-				uint32_t tmpIndex = frame->order_buf_id;
-				uint32_t *data = (uint32_t *)mMetadataHeap->data + offset * METADATA_SIZE / 4;
-				*data++ = kMetadataBufferTypeCameraSource;
-				*data++ = frame->y_phy_addr;
-				*data++ = (uint32_t)frame->y_vir_addr;
-				*data++ = width;
-				*data++ = height;
-				*data++ = mPreviewWidth_trimx;
-				*data = mPreviewHeight_trimy;
-				{
-					Mutex::Autolock l(&mCbPrevDataBusyLock);
-					if(!isPreviewing()) return;
-					if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
-						tmpIndex = mPreviewDcamAllocBufferCnt - 1;
-					}
-					mPreviewHeapArray[tmpIndex]->busy_flag = true;
-					mData_cb_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME, mMetadataHeap, offset, mUser);
-					mPreviewHeapArray[tmpIndex]->busy_flag = false;
-				}
-			} else {
-				uint32_t tmpIndex = frame->order_buf_id;
-				if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
-					tmpIndex = mPreviewDcamAllocBufferCnt - 1;
-				}
-				handleDataCallbackTimestamp(timestamp,
-					CAMERA_MSG_VIDEO_FRAME,
-					mPreviewHeapArray[tmpIndex],
-					0, mUser);
-			}
-			if (PREVIEW_BUFFER_USAGE_GRAPHICS == mPreviewBufferUsage) {
-				Mutex::Autolock pgbcl(&mGraphBufCntLock);
-				mGraphBufferCount[offset]++;
-			};
+			sendPreviewFrameToVideo(frame);
 		} else {
 			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 				if (CMR_CAMERA_SUCCESS != camera_release_frame(mCameraHandle, CAMERA_PREVIEW_DATA, offset)) {
