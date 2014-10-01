@@ -306,7 +306,7 @@ static cmr_int hdr_do(cmr_handle class_handle, struct img_addr *dst_addr, struct
 	hdr_handle->height = frame_size.height;
 
 	message.msg_type = CMR_EVT_HDR_START;
-	message.sync_flag = CMR_MSG_SYNC_RECEIVED;
+	message.sync_flag = CMR_MSG_SYNC_NONE;
 	ret = cmr_thread_msg_send(hdr_handle->hdr_thread, &message);
 	if (ret) {
 		CMR_LOGE("Failed to send one msg to hdr thread.");

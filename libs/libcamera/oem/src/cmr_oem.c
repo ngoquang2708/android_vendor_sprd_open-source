@@ -477,11 +477,11 @@ void camera_v4l2_handle(cmr_int evt, void* data, void* privdata)
 			goto exit;
 		}
 		cmr_snapshot_memory_flush(cxt->snp_cxt.snapshot_handle);
-		if(ipm_cxt->frm_num == ipm_cxt->hdr_num) {
+/*		if(ipm_cxt->frm_num == ipm_cxt->hdr_num) {
 			camera_post_share_path_available((cmr_handle)cxt);
 			sem_wait(&cxt->hdr_sync_sm);
 			cxt->ipm_cxt.frm_num = 0;
-		}
+		}*/
 	} else {
 		camera_send_channel_data((cmr_handle)cxt, receiver_handle, evt, data);
 	}
@@ -791,7 +791,8 @@ cmr_int camera_ipm_cb(cmr_u32 class_type, struct ipm_frame_out *cb_param)
 #ifdef OEM_HANDLE_HDR
 	frame = cxt->snp_cxt.cur_frm_info;
 	cmr_snapshot_memory_flush(cxt->snp_cxt.snapshot_handle);
-	sem_post(&cxt->hdr_sync_sm);
+	camera_post_share_path_available((cmr_handle)cxt);
+	cxt->ipm_cxt.frm_num = 0;
 #endif
 	ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_HDR_DONE, &frame);
 	if (ret) {
@@ -4234,7 +4235,7 @@ cmr_int camera_local_stop_snapshot(cmr_handle oem_handle)
 #ifdef OEM_HANDLE_HDR
 		if (0 != cxt->ipm_cxt.frm_num) {
 			cxt->ipm_cxt.frm_num = 0;
-			sem_post(&cxt->hdr_sync_sm);
+	//		sem_post(&cxt->hdr_sync_sm);
 		}
 #endif
 		ret = camera_close_hdr(cxt);
