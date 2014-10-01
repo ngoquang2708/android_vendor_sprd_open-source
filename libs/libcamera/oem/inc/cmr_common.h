@@ -75,7 +75,7 @@ extern "C"
 #define V4L2_CHANNEL_MAX                   6
 #define SESNOR_NAME_LEN                    40
 #define CMR_CAPTURE_MEM_SUM                4
-#define CAMERA_PIXEL_ALIGNED               4
+#define CAMERA_PIXEL_ALIGNED               8
 
 #define HDR_CAP_NUM                        3
 #define FACE_DETECT_NUM                    10
