@@ -3214,28 +3214,33 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t 
 
 	if (NULL == pHeapIon) {
 		LOGE("allocCameraMem: error pHeapIon is null.");
+		result = -1;
 		goto getpmem_end;
 	}
 
 	if (NULL == pHeapIon->getBase()
 		|| 0xFFFFFFFF == (uint32_t)pHeapIon->getBase()) {
 		LOGE("allocCameraMem: error getBase is null.");
+		result = -1;
 		goto getpmem_end;
 	}
 
 	if (NULL == mGetMemory_cb) {
 		LOGE("allocCameraMem: error mGetMemory_cb is null.");
+		result = -1;
 		goto getpmem_end;
 	}
 	camera_memory = mGetMemory_cb(pHeapIon->getHeapID(), buf_size, 1, NULL);
 
 	if(NULL == camera_memory) {
 		LOGE("allocCameraMem: error camera_memory is null.");
+		result = -1;
 		goto getpmem_end;
 	}
 
 	if (0xFFFFFFFF == (uint32_t)camera_memory->data) {
 		camera_memory = NULL;
+		result = -1;
 		LOGE("allocCameraMem: error data is null.");
 		goto getpmem_end;
 	}
@@ -3258,32 +3263,36 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t 
 	}
 
 getpmem_end:
+	if (0 == result) {
+		memory->ion_heap = pHeapIon;
+		memory->camera_memory = camera_memory;
+		memory->phys_addr = paddr;
+		memory->phys_size = psize;
+		if (camera_memory) {
+			memory->handle = camera_memory->handle;
+		}
+		if (pHeapIon) {
+			memory->data = pHeapIon->getBase();
+		}
 
-	memory->ion_heap = pHeapIon;
-	memory->camera_memory = camera_memory;
-	memory->phys_addr = paddr;
-	memory->phys_size = psize;
-	if (camera_memory) {
-		memory->handle = camera_memory->handle;
-	}
-	if (pHeapIon) {
-		memory->data = pHeapIon->getBase();
-	}
-
-	if (camera_memory) {
-		if (0 == s_mem_method) {
-			LOGI("allocCameraMem X: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-				memory->phys_addr, (uint32_t)memory->data,
-				camera_memory->size, memory->phys_size);
+		if (camera_memory) {
+			if (0 == s_mem_method) {
+				LOGI("allocCameraMem X: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+					memory->phys_addr, (uint32_t)memory->data,
+					camera_memory->size, memory->phys_size);
+			} else {
+				LOGI("allocCameraMem X: mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
+					memory->phys_addr, (uint32_t)memory->data,
+					camera_memory->size, memory->phys_size);
+			}
 		} else {
-			LOGI("allocCameraMem X: mm_iova: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
-				memory->phys_addr, (uint32_t)memory->data,
-				camera_memory->size, memory->phys_size);
+				LOGE("allocCameraMem X: phys_addr or mm_iova: error.");
 		}
 	} else {
-			LOGE("allocCameraMem X: phys_addr or mm_iova: error.");
+		LOGE("allocCameraMem fail");
+		freeCameraMem(memory);
+		memory = NULL;
 	}
-
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" allocCameraMem X.\n");
 	} else {
