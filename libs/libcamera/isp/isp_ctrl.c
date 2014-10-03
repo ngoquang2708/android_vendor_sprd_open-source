@@ -544,8 +544,23 @@ uint32_t ispAlgin(uint32_t pLen , uint16_t algin_blk, uint16_t algin_bits)
 *@
 *@ return:
 */
+
+static int ev_tlb[] ={90,128,181,256,368,512,724};
+
 int _isp_calc_ev_offset(uint32_t target_lum, int8_t ev)
 {
+	uint32_t handler_id=0;
+	int32_t old_target = target_lum;
+	int32_t new_target = 0;
+	int32_t diff = 0;
+
+	ev = ev/16+3;
+	new_target = target_lum * ev_tlb[ev]/256;
+	diff = new_target - old_target;
+	AAA_LOG("new_target:%d, offset: %d \n",new_target, diff);
+
+	return diff;
+#if 0
 	int32_t lum=target_lum;
 	int32_t back_lum=target_lum;
 	int16_t calc_ev=ev;
@@ -583,6 +598,8 @@ int _isp_calc_ev_offset(uint32_t target_lum, int8_t ev)
 	AAA_LOG("i:%d,lum:%d,offset:%d \n",ev_conter, lum, offset);
 
 	return offset;
+#endif
+
 }
 
 /* _isp_StopCallbackHandler --

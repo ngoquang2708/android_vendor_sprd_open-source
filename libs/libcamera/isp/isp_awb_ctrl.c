@@ -452,7 +452,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 		awb_param->cur_ct = ct;
 
 		ISP_LOGI("smart init=%d", smart_light_param->init);
-#if 0
+
 		if (ISP_EB == smart_light_param->init) {
 
 			bright_value = awb_param->get_ev_lux(handler_id);
@@ -463,7 +463,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 			else
 				ISP_LOGE("smart calc failed!");
 		}
-#endif
+
 		if(awb_param->cur_gain.r != last_gain.r || awb_param->cur_gain.g != last_gain.g
 			|| awb_param->cur_gain.b != last_gain.b) {
 
