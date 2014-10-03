@@ -86,7 +86,7 @@
 #define LF_MODEM_SIZE                (10*1024*1024)
 #define LF_DSP_SIZE                  (5*1024*1024)
 #define TL_MODEM_SIZE                (8*1024*1024)
-#define TL_TGDSP_SIZE                  (0x3e0000)
+#define TL_TGDSP_SIZE                  (0x2e0000)
 #define TL_LDSP_SIZE                  (0x1c0000)
 
 /* detect assert/hangup interface */
