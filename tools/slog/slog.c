@@ -25,6 +25,7 @@
 #include "slog.h"
 
 int slog_enable = SLOG_ENABLE;
+int cplog_enable = SLOG_ENABLE;
 int screenshot_enable = 1;
 int slog_start_step = 0;
 int slog_reload_flag = 0;
@@ -561,11 +562,14 @@ static void check_available_volume()
 			return;
 		}
 		ret = diskInfo.f_bavail * diskInfo.f_bsize >> 20;
-		if(ret > 0 && ret < 50) {
-			err_log("sdcard available %dM", ret);
+		if(ret > 0 && ret < 100) {
+			err_log("sdcard available %dM, disable slog", ret);
+			slog_enable = SLOG_DISABLE;
 			sprintf(cmd, "%s %d", "am startservice -a slogui.intent.action.LOW_VOLUME --ei freespace ", ret);
 			system(cmd);
-			sleep(300);
+		} else if(ret >= 100 && ret < 500 && cplog_enable == SLOG_ENABLE) {
+			err_log("sdcard available %dM, disable CP log", ret);
+			cplog_enable = SLOG_DISABLE;
 		}
 	} else {
 		if( statfs(current_log_path, &diskInfo) < 0 ) {

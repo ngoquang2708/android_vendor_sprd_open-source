@@ -378,7 +378,8 @@ void file_name_rotate(struct slog_info *info, int num, char *buffer)
 					free(file1);
 				} else {
 					sprintf(filename, "%s", p_dirent->d_name);
-					err = asprintf(&file0, "%s/%s/%s/%d%s", current_log_path, top_logdir, info->log_path, i + 1, filename + 1);
+					err = asprintf(&file0, "%s/%s/%s/%d%s",
+						current_log_path, top_logdir, info->log_path, i + 1, filename + 1 + i/10);
 					if(err == -1) {
 						err_log("asprintf return err!");
 						exit(0);
@@ -429,8 +430,13 @@ void log_size_handler(struct slog_info *info)
 		return;
 	}
 
-	if(info->outbytecount >= DEFAULT_MAX_LOG_SIZE * 1024 * 1024)
-		rotatelogs(MAXROLLLOGS, info);
+	if (!strncmp(info->name, "cp", 2)) {
+		if(info->outbytecount >= DEFAULT_LOG_SIZE_CP * 1024 * 1024)
+			rotatelogs(MAXROLLLOGS_FOR_CP, info);
+	} else {
+		if(info->outbytecount >= DEFAULT_LOG_SIZE_AP * 1024 * 1024)
+			rotatelogs(MAXROLLLOGS_FOR_AP, info);
+	}
 }
 
 void log_buffer_flush(void)
