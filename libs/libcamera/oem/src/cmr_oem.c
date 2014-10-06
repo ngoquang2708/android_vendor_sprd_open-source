@@ -3844,6 +3844,20 @@ cmr_int camera_get_snapshot_param(cmr_handle oem_handle, struct snapshot_param *
 	}
 	out_ptr->total_num = setting_param.cmd_type_value;
 	cxt->snp_cxt.total_num = out_ptr->total_num;
+	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_THUMB_QUALITY, &setting_param);
+	if (ret) {
+		CMR_LOGE("failed to get thumb quality %ld", ret);
+		goto exit;
+	}
+	jpeg_cxt->param.thumb_quality = setting_param.cmd_type_value;
+
+	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_THUMB_SIZE, &setting_param);
+	if (ret) {
+		CMR_LOGE("failed to get thumb size %ld", ret);
+		goto exit;
+	}
+	jpeg_cxt->param.thum_size = setting_param.size_param;
+
 	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_ENCODE_ANGLE, &setting_param);
 	if (ret) {
 		CMR_LOGE("failed to get enc angle %ld", ret);
