@@ -259,6 +259,7 @@ typedef struct tagAVCHandle
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
 MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability);
+MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder
@@ -308,6 +309,7 @@ typedef MMDecRet (*FT_H264DecRelease)(AVCHandle *avcHandle);
 typedef void (* FT_H264Dec_SetCurRecPic)(AVCHandle *avcHandle, uint8 *pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 typedef MMDecRet (* FT_H264Dec_GetLastDspFrm)(AVCHandle *avcHandle, void **pOutput, int32 *picId);
 typedef void (* FT_H264Dec_ReleaseRefBuffers)(AVCHandle *avcHandle);
+typedef MMDecRet (*FT_H264DecSetparam)(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

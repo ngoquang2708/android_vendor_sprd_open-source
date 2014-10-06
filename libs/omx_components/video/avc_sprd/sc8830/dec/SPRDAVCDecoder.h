@@ -65,6 +65,8 @@ protected:
         OMX_BUFFERHEADERTYPE *header);
 
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
+    virtual OMX_ERRORTYPE setConfig(
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
@@ -127,6 +129,7 @@ private:
     FT_H264Dec_GetLastDspFrm  mH264Dec_GetLastDspFrm;
     FT_H264Dec_ReleaseRefBuffers  mH264Dec_ReleaseRefBuffers;
     FT_H264DecMemInit mH264DecMemInit;
+    FT_H264DecSetparam mH264DecSetparam;
 
     int32_t mPicId;  // Which output picture is for which input buffer?
 
@@ -137,6 +140,8 @@ private:
 
     EOSStatus mEOSStatus;
     bool mNeedIVOP;
+    bool mStopDecode;
+    OMX_BOOL mThumbnailMode;
 
     enum OutputPortSettingChange {
         NONE,
