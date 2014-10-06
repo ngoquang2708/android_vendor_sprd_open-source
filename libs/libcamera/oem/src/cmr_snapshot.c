@@ -465,7 +465,11 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 		goto exit;
 	}
 	if (scale_out_ptr->size.height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
-//		ret = snp_take_picture_done(snp_handle, &cxt->cur_frame_info);
+		ret = snp_start_encode(snp_handle, &cxt->cur_frame_info);
+		if (ret) {
+			CMR_LOGE("failed to start encode %ld", ret);
+			goto exit;
+		}
 		ret = snp_start_thumb_proc(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to start thumb %ld", ret);
@@ -3101,13 +3105,12 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 		}
 	}
 
-	ret = snp_start_encode(snp_handle, data);
-	if (ret) {
-		CMR_LOGE("failed to start encode %ld", ret);
-		goto exit;
-	}
-
 	if (!chn_param_ptr->is_scaling) {
+		ret = snp_start_encode(snp_handle, data);
+		if (ret) {
+			CMR_LOGE("failed to start encode %ld", ret);
+			goto exit;
+		}
 		if ((0 != cxt->req_param.jpeg_setting.thum_size.width)
 			&& (0 != cxt->req_param.jpeg_setting.thum_size.height)) {
 			ret = snp_start_thumb_proc(snp_handle, data);
@@ -3116,7 +3119,6 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 				goto exit;
 			}
 		}
-//		ret = snp_take_picture_done(snp_handle, data);
 		ret = snp_redisplay(snp_handle, data);
 		if (ret) {
 			CMR_LOGE("failed to take pic done %ld", ret);
