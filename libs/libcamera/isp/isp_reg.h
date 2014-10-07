@@ -2650,7 +2650,7 @@ union _isp_pref_status_tag {
 union _isp_pref_param_tag {
     struct _isp_pref_param_map {
         volatile unsigned int bypass        :1;
-        volatile unsigned int write_back    :1; // 0: no 1: write back
+        volatile unsigned int write_back    :2; // 0: no 1: write back
         volatile unsigned int reserved      :29;
     }mBits ;
     volatile unsigned int dwValue ;
@@ -3296,10 +3296,10 @@ union _isp_css_param_tag {
 
 union _isp_css_thrd0_tag {
     struct _isp_css_thrd0_map {
-        volatile unsigned int th_0        :8;
-        volatile unsigned int th_1        :8;
-        volatile unsigned int th_2        :8;
         volatile unsigned int th_3        :8;
+        volatile unsigned int th_2        :8;
+        volatile unsigned int th_1        :8;
+        volatile unsigned int th_0        :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3307,19 +3307,19 @@ union _isp_css_thrd0_tag {
 union _isp_css_thrd1_tag {
     struct _isp_css_thrd1_map {
         volatile unsigned int luma_th     :8;
-        volatile unsigned int th_4        :8;
-        volatile unsigned int th_5        :8;
         volatile unsigned int th_6        :8;
+        volatile unsigned int th_5        :8;
+        volatile unsigned int th_4        :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };
 
 union _isp_css_thrd2_tag {
     struct _isp_css_thrd2_map {
-        volatile unsigned int th_0        :8;
-        volatile unsigned int th_1        :8;
-        volatile unsigned int th_2        :8;
         volatile unsigned int th_3        :8;
+        volatile unsigned int th_2        :8;
+        volatile unsigned int th_1        :8;
+        volatile unsigned int th_0        :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };
@@ -3327,9 +3327,9 @@ union _isp_css_thrd2_tag {
 union _isp_css_thrd3_tag {
     struct _isp_css_thrd3_map {
         volatile unsigned int chrom_th    :8;
-        volatile unsigned int th_4        :8;
-        volatile unsigned int th_5        :8;
         volatile unsigned int th_6        :8;
+        volatile unsigned int th_5        :8;
+        volatile unsigned int th_4        :8;
     }mBits ;
     volatile unsigned int dwValue ;
 };

@@ -509,6 +509,7 @@ struct isp_css{
 	uint8_t lum_thr;
 	uint8_t low_sum_thr[7];
 	uint8_t chr_thr;
+	uint8_t ratio[8];
 };
 
 struct isp_af{

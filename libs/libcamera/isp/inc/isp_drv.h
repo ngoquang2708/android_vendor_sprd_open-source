@@ -257,6 +257,8 @@ int32_t ispGetColorSaturationSuppressStatus(uint32_t handler_id, uint32_t* statu
 int32_t ispColorSaturationSuppressBypass(uint32_t handler_id, uint8_t bypass);
 int32_t ispSetColorSaturationSuppressThrd(uint32_t handler_id, uint8_t* low_thr, uint8_t* low_sum_thr, uint8_t lum_thr, uint chr_thr);
 int32_t ispColorSaturationSuppressSliceSize(uint32_t handler_id, uint16_t w, uint16_t h);
+int32_t ispSetColorSaturationSuppressRatio(uint32_t handler_id, uint8_t* ratio);
+
 
 //SATURATION
 int32_t ispGetSaturationStatus(uint32_t handler_id, uint32_t* status);
