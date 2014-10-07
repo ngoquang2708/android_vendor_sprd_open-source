@@ -613,11 +613,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->ae.smart_denoise_soft_uv_mid_index = 24;
 	sensor_ptr->ae.smart_denoise_soft_uv_max_index = 36;
 
-	sensor_ptr->ae.target_lum = 0x7c;
-	sensor_ptr->ae.target_zone = 0x06;
 
-	sensor_ptr->css_bypass=0x01;
-/*
 	sensor_ptr->css.ratio[0] = 3;
 	sensor_ptr->css.ratio[1] = 4;
 	sensor_ptr->css.ratio[2] = 5;
@@ -626,7 +622,7 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	sensor_ptr->css.ratio[5] = 7;
 	sensor_ptr->css.ratio[6] = 7;
 	sensor_ptr->css.ratio[7] = 8;
-*/
+
 #if 0
 	raw_sensor_ptr->version_info->version_id=0x00020000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);

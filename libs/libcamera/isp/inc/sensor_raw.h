@@ -598,7 +598,8 @@ struct sensor_css_param{
 	uint8_t lum_thr;
 	uint8_t low_sum_thr[7];
 	uint8_t chr_thr;
-	uint32_t reserved[70];
+	uint8_t ratio[8];
+	uint32_t reserved[68];
 };
 
 struct sensor_auto_adjust{

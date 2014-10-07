@@ -3124,9 +3124,14 @@ static int32_t _ispCfgFalseColor(uint32_t handler_id, struct isp_fcs_param* para
 static int32_t _ispCfgSatursationSup(uint32_t handler_id, struct isp_css_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
+	uint32_t isp_id = IspGetId();
 
 	ispSetColorSaturationSuppressThrd(handler_id, param_ptr->low_thr, param_ptr->low_sum_thr, param_ptr->lum_thr, param_ptr->chr_thr);
 	ispColorSaturationSuppressBypass(handler_id, param_ptr->bypass);
+
+	if(ISP_ID_SC9630 == isp_id ) {
+		ispSetColorSaturationSuppressRatio(handler_id, param_ptr->ratio);
+	}
 
 	return rtn;
 }
@@ -5629,6 +5634,14 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->css.low_sum_thr[5]=raw_tune_ptr->css.low_sum_thr[5];
 	isp_context_ptr->css.low_sum_thr[6]=raw_tune_ptr->css.low_sum_thr[6];
 	isp_context_ptr->css.chr_thr=raw_tune_ptr->css.chr_thr;
+	isp_context_ptr->css.ratio[0]=raw_tune_ptr->css.ratio[0];
+	isp_context_ptr->css.ratio[1]=raw_tune_ptr->css.ratio[1];
+	isp_context_ptr->css.ratio[2]=raw_tune_ptr->css.ratio[2];
+	isp_context_ptr->css.ratio[3]=raw_tune_ptr->css.ratio[3];
+	isp_context_ptr->css.ratio[4]=raw_tune_ptr->css.ratio[4];
+	isp_context_ptr->css.ratio[5]=raw_tune_ptr->css.ratio[5];
+	isp_context_ptr->css.ratio[6]=raw_tune_ptr->css.ratio[6];
+	isp_context_ptr->css.ratio[7]=raw_tune_ptr->css.ratio[7];
 
 	/*hdr*/
 	isp_context_ptr->hdr_index.r_index=0x4d;
@@ -6515,6 +6528,10 @@ static int32_t _ispGetExifInfo(uint32_t handler_id, void *exif_info_ptr)
 		exif_isp_info_ptr->css.low_sum_thr[i] = isp_context_ptr->css.low_sum_thr[i];
 	}
 	exif_isp_info_ptr->css.chr_thr = isp_context_ptr->css.chr_thr;
+	for(i=0; i<8; i++)
+	{
+		exif_isp_info_ptr->css.ratio[i] = isp_context_ptr->css.ratio[i];
+	}
 
 	strcpy((char *)(&(exif_isp_info_ptr->af.magic)), "af_debug_info");
 	exif_isp_info_ptr->af.alg_id = isp_context_ptr->af.alg_id;

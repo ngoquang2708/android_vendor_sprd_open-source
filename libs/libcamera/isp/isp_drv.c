@@ -353,6 +353,7 @@ struct isp_reg{
 	uint32_t CSS_THRD2;
 	uint32_t CSS_THRD3;
 	uint32_t CSS_SLICE_SIZE;
+	uint32_t CSS_RATIO;
 
 	/* CSA */
 	uint32_t CSA_STATUS;
@@ -6819,6 +6820,39 @@ int32_t ispColorSaturationSuppressSliceSize(uint32_t handler_id, uint16_t w, uin
 	reg_config.reg_value = isp_reg_ptr->CSS_SLICE_SIZE;
 
 	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	_isp_write((uint32_t *)&write_param);
+
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetColorSaturationSuppressRatio(uint32_t handler_id, uint8_t* ratio)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_css_ratio_tag* reg0_s_ptr=(union _isp_css_ratio_tag*)&isp_reg_ptr->CSS_RATIO;
+	struct isp_reg_bits reg_config[1];
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg0_s_ptr->mBits.ratio_0=ratio[0];
+	reg0_s_ptr->mBits.ratio_1=ratio[1];
+	reg0_s_ptr->mBits.ratio_2=ratio[2];
+	reg0_s_ptr->mBits.ratio_3=ratio[3];
+	reg0_s_ptr->mBits.ratio_4=ratio[4];
+	reg0_s_ptr->mBits.ratio_5=ratio[5];
+	reg0_s_ptr->mBits.ratio_6=ratio[6];
+	reg0_s_ptr->mBits.ratio_7=ratio[7];
+
+	reg_config[0].reg_addr = ISP_CSS_RATIO - ISP_BASE_ADDR;
+	reg_config[0].reg_value = isp_reg_ptr->CSS_RATIO;
+
+	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 1;
 
 	_isp_write((uint32_t *)&write_param);
