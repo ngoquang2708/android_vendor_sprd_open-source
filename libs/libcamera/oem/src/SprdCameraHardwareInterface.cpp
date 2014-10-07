@@ -324,8 +324,8 @@ SprdCameraHardware::SprdCameraHardware(int cameraId)
 	mPreviewBufferUsage(PREVIEW_BUFFER_USAGE_GRAPHICS),
 	mSetDDRFreqCount(0),
 	mSetDDRFreq(NO_FREQ_REQ),
-	mCPURaised(0),
 	mCaptureNum(1),
+	mCPURaised(0),
 	mSwitchMonitorMsgQueHandle(0),
 	mSwitchMonitorInited(0),
 	mCameraHandle(0),
@@ -3097,6 +3097,7 @@ int SprdCameraHardware::Callback_PreviewFree(cmr_uint *phy_addr, cmr_uint *vir_a
 	}
 #endif
 	Mutex::Autolock pcpl(&mPrevBufLock);
+    Mutex::Autolock videolock(&mVideoBufLock);
 	LOGI("Callback_PreviewFree got Prev Cp lock");
 
 	if (mPreviewHeapArray != NULL) {
@@ -5298,6 +5299,7 @@ void SprdCameraHardware::sendPreviewFrameToVideo(struct camera_frame_type *frame
 	camera_frame_metadata_t metadata;
 	int width, height;
 	nsecs_t timestamp = frame->timestamp;
+	Mutex::Autolock videoll(&mVideoBufLock);
 
 	LOGI("test timestamp = %lld, mIsStoreMetaData: %d. buffer_id 0x%x",
 		timestamp,
