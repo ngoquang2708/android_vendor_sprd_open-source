@@ -76,6 +76,7 @@ enum isp_status{
 	ISP_RUN,
 	ISP_CONTINUE,
 	ISP_SIGNAL,
+	ISP_EXIT,
 	ISP_STATE_MAX
 };
 
@@ -631,6 +632,8 @@ struct isp_system{
 	pthread_cond_t signal_cond;
 	pthread_cond_t ioctrl_cond;
 	pthread_cond_t thread_common_cond;
+
+	pthread_mutex_t ctrl_3a_mutex;
 };
 
 struct isp_param{
@@ -653,6 +656,7 @@ int32_t ispAfmUeb(uint32_t handler_id);
 int32_t ispCfgAwbm(uint32_t handler_id,struct isp_awbm_param* param_ptr);
 int32_t ispAwbmEb_immediately(uint32_t handler_id);
 struct isp_context* ispGetAlgContext(uint32_t handler_id);
+void isp_perror(const char *prefix);
 
 /**----------------------------------------------------------------------------*
 **						   Compiler Flag									  **

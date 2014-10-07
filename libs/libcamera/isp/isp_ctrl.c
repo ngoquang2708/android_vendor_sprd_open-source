@@ -1423,6 +1423,7 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 	struct isp_context* isp_context_ptr=ispGetContext(handler_id);
+	struct isp_system* isp_system_ptr = ispGetSystem();
 
 	ISP_LOG("_isp3AInit \n");
 
@@ -1430,7 +1431,10 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 
 	if(ISP_VIDEO_MODE_CONTINUE==_ispGetVideoMode(handler_id))
 	{
+		pthread_mutex_lock(&isp_system_ptr->ctrl_3a_mutex);
 		rtn = isp_awb_ctrl_init(handler_id);
+		pthread_mutex_unlock(&isp_system_ptr->ctrl_3a_mutex);
+
 		ISP_TRACE_IF_FAIL(rtn, ("isp_awb_init error"));
 		_ispAwbCorrect(handler_id);
 
@@ -1441,8 +1445,8 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 		rtn = isp_af_init(handler_id);
 		ISP_TRACE_IF_FAIL(rtn, ("isp_af_init error"));
 
-		rtn = auto_adjust_init(handler_id, (void*)&isp_context_ptr->auto_adjust, NULL);
-		ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_init error"));
+		auto_adjust_init(handler_id, (void*)&isp_context_ptr->auto_adjust, NULL);
+//		ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_init error"));
 
 	}
 
@@ -1456,12 +1460,15 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 */
 static uint32_t _isp3ADeInit(uint32_t handler_id)
 {
+	struct isp_system* isp_system_ptr = ispGetSystem();
 	int32_t rtn=ISP_SUCCESS;
 
 	rtn = isp_ae_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_ae_deinit error"));
 
+	pthread_mutex_lock(&isp_system_ptr->ctrl_3a_mutex);
 	rtn = isp_awb_ctrl_deinit(handler_id);
+	pthread_mutex_unlock(&isp_system_ptr->ctrl_3a_mutex);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_awb_deinit error"));
 
 	rtn = isp_af_deinit(handler_id);
@@ -1509,10 +1516,13 @@ static uint32_t _ispAwbCalculation(uint32_t handler_id)
 static uint32_t _ispAeAwbCorrect(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
+	struct isp_system* isp_system_ptr = ispGetSystem();
 
 	rtn = isp_ae_calculation(handler_id);
 
+	pthread_mutex_lock(&isp_system_ptr->ctrl_3a_mutex);
 	rtn = isp_awb_ctrl_calculation(handler_id);
+	pthread_mutex_unlock(&isp_system_ptr->ctrl_3a_mutex);
 
 	return rtn;
 }
@@ -2230,16 +2240,35 @@ static int32_t _ispCfgFeatchData(uint32_t handler_id, struct isp_fetch_param* pa
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispFetchSubtract(handler_id, param_ptr->sub_stract);
-	ispSetFetchYAddr(handler_id, param_ptr->addr.chn0);
-	ispSetFetchYPitch(handler_id, param_ptr->pitch.chn0);
-	ispSetFetchUAddr(handler_id, param_ptr->addr.chn1);
-	ispSetFetchUPitch(handler_id, param_ptr->pitch.chn1);
-	ispSetFetchMipiWordInfo(handler_id, param_ptr->mipi_word_num);
-	ispSetFetchMipiByteInfo(handler_id, param_ptr->mipi_byte_rel_pos);
-	ispSetFetchVAddr(handler_id, param_ptr->addr.chn2);
-	ispSetFetchVPitch(handler_id, param_ptr->pitch.chn2);
-	ispFetchBypass(handler_id, param_ptr->bypass);
+	rtn = ispFetchSubtract(handler_id, param_ptr->sub_stract);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFetchSubtract error"));
+
+	rtn = ispSetFetchYAddr(handler_id, param_ptr->addr.chn0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchYAddr error"));
+
+	rtn = ispSetFetchYPitch(handler_id, param_ptr->pitch.chn0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchYPitch error"));
+
+	rtn = ispSetFetchUAddr(handler_id, param_ptr->addr.chn1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchUAddr error"));
+
+	rtn = ispSetFetchUPitch(handler_id, param_ptr->pitch.chn1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchUPitch error"));
+
+	rtn = ispSetFetchMipiWordInfo(handler_id, param_ptr->mipi_word_num);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchMipiWordInfo error"));
+
+	rtn = ispSetFetchMipiByteInfo(handler_id, param_ptr->mipi_byte_rel_pos);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchMipiByteInfo error"));
+
+	rtn = ispSetFetchVAddr(handler_id, param_ptr->addr.chn2);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchVAddr error"));
+
+	rtn = ispSetFetchVPitch(handler_id, param_ptr->pitch.chn2);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchVPitch error"));
+
+	rtn = ispFetchBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFetchBypass error"));
 
 	return rtn;
 }
@@ -2253,14 +2282,29 @@ static int32_t _ispCfgStoreData(uint32_t handler_id, struct isp_store_param* par
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispStoreSubtract(handler_id, param_ptr->sub_stract);
-	ispSetStoreYAddr(handler_id, param_ptr->addr.chn0);
-	ispSetStoreYPitch(handler_id, param_ptr->pitch.chn0);
-	ispSetStoreUAddr(handler_id, param_ptr->addr.chn1);
-	ispSetStoreUPitch(handler_id, param_ptr->pitch.chn1);
-	ispSetStoreVAddr(handler_id, param_ptr->addr.chn2);
-	ispSetStoreVPitch(handler_id, param_ptr->pitch.chn2);
-	ispStoreBypass(handler_id, param_ptr->bypass);
+	rtn = ispStoreSubtract(handler_id, param_ptr->sub_stract);
+	ISP_RETURN_IF_FAIL(rtn, ("ispStoreSubtract error"));
+
+	rtn = ispSetStoreYAddr(handler_id, param_ptr->addr.chn0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreYAddr error"));
+
+	rtn = ispSetStoreYPitch(handler_id, param_ptr->pitch.chn0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreYPitch error"));
+
+	rtn = ispSetStoreUAddr(handler_id, param_ptr->addr.chn1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreUAddr error"));
+
+	rtn = ispSetStoreUPitch(handler_id, param_ptr->pitch.chn1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreUPitch error"));
+
+	rtn = ispSetStoreVAddr(handler_id, param_ptr->addr.chn2);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreVAddr error"));
+
+	rtn = ispSetStoreVPitch(handler_id, param_ptr->pitch.chn2);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreVPitch error"));
+
+	rtn = ispStoreBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispStoreBypass error"));
 
 	return rtn;
 }
@@ -2274,7 +2318,7 @@ static int32_t _ispCfgFeeder(uint32_t handler_id, struct isp_feeder_param* param
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetFeederDataType(handler_id, param_ptr->data_type);
+	rtn = ispSetFeederDataType(handler_id, param_ptr->data_type);
 
 	return rtn;
 }
@@ -2293,17 +2337,32 @@ static int32_t _ispCfgComData(uint32_t handler_id, struct isp_com_param* param_p
 	uint32_t cfa_bayer;
 	uint32_t gain_bayer;
 
-	ispInMode(handler_id, param_ptr->in_mode);
-	ispFetchEdian(handler_id, param_ptr->fetch_endian, param_ptr->fetch_bit_reorder);
-	ispFetchDataFormat(handler_id, param_ptr->fetch_color_format);
-	ispBPCEdian(handler_id, param_ptr->bpc_endian);
+	rtn = ispInMode(handler_id, param_ptr->in_mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispInMode error"));
 
-	ispOutMode(handler_id, param_ptr->in_mode);
-	ispStoreEdian(handler_id, param_ptr->store_endian);
-	ispStoreFormat(handler_id, param_ptr->store_yuv_format);
+	rtn = ispFetchEdian(handler_id, param_ptr->fetch_endian, param_ptr->fetch_bit_reorder);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFetchEdian error"));
 
-	_ispChangeByerPattern(handler_id, & nlc_bayer, & awbc_bayer,& wave_bayer,& cfa_bayer,& gain_bayer);
-	ispByerMode(handler_id, nlc_bayer, awbc_bayer, wave_bayer, cfa_bayer, gain_bayer);
+	rtn = ispFetchDataFormat(handler_id, param_ptr->fetch_color_format);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFetchDataFormat error"));
+
+	rtn = ispBPCEdian(handler_id, param_ptr->bpc_endian);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBPCEdian error"));
+
+	rtn = ispOutMode(handler_id, param_ptr->in_mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispOutMode error"));
+
+	rtn = ispStoreEdian(handler_id, param_ptr->store_endian);
+	ISP_RETURN_IF_FAIL(rtn, ("ispStoreEdian error"));
+
+	rtn = ispStoreFormat(handler_id, param_ptr->store_yuv_format);
+	ISP_RETURN_IF_FAIL(rtn, ("ispStoreFormat error"));
+
+	rtn = _ispChangeByerPattern(handler_id, & nlc_bayer, & awbc_bayer,& wave_bayer,& cfa_bayer,& gain_bayer);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispChangeByerPattern error"));
+
+	rtn = ispByerMode(handler_id, nlc_bayer, awbc_bayer, wave_bayer, cfa_bayer, gain_bayer);
+	ISP_RETURN_IF_FAIL(rtn, ("ispByerMode error"));
 
 	return rtn;
 }
@@ -2317,9 +2376,14 @@ static int32_t _ispCfgBlc(uint32_t handler_id, struct isp_blc_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetBlcMode(handler_id, param_ptr->mode);
-	ispSetBlcCalibration(handler_id, param_ptr->r, param_ptr->b, param_ptr->gr, param_ptr->gb);
-	ispBlcBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetBlcMode(handler_id, param_ptr->mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBlcMode error"));
+
+	rtn = ispSetBlcCalibration(handler_id, param_ptr->r, param_ptr->b, param_ptr->gr, param_ptr->gb);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBlcCalibration error"));
+
+	rtn = ispBlcBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBlcBypass error"));
 
 	return rtn;
 }
@@ -2333,11 +2397,20 @@ static int32_t _ispCfgNlc(uint32_t handler_id, struct isp_nlc_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetNlcRNode(handler_id, param_ptr->r_node);
-	ispSetNlcGNode(handler_id, param_ptr->g_node);
-	ispSetNlcBNode(handler_id, param_ptr->b_node);
-	ispSetNlcLNode(handler_id, param_ptr->l_node);
-	ispNlcBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetNlcRNode(handler_id, param_ptr->r_node);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNlcRNode error"));
+
+	rtn = ispSetNlcGNode(handler_id, param_ptr->g_node);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNlcGNode error"));
+
+	rtn = ispSetNlcBNode(handler_id, param_ptr->b_node);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNlcBNode error"));
+
+	rtn = ispSetNlcLNode(handler_id, param_ptr->l_node);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNlcLNode error"));
+
+	rtn = ispNlcBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNlcBypass error"));
 
 	return rtn;
 }
@@ -2351,8 +2424,11 @@ static int32_t _ispCfgLnc(uint32_t handler_id, struct isp_lnc_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetLensEndian(handler_id, ISP_ONE);
-	ispLensBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetLensEndian(handler_id, ISP_ONE);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensEndian error"));
+
+	rtn = ispLensBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispLensBypass error"));
 
 	return rtn;
 }
@@ -2367,9 +2443,14 @@ static int32_t _ispLncParamSet(uint32_t handler_id, struct isp_lnc_param* param_
 	int32_t rtn=ISP_SUCCESS;
 
 	//ispLensParamAddr((uint32_t)__pa(param_ptr->map.param_addr));
-	ispSetLensGridPitch(handler_id, param_ptr->map.grid_pitch);
-	ispSetLensGridMode(handler_id, param_ptr->map.grid_mode);
-	ispSetLensBuf(handler_id, param_ptr->load_buf);
+	rtn = ispSetLensGridPitch(handler_id, param_ptr->map.grid_pitch);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensGridPitch error"));
+
+	rtn = ispSetLensGridMode(handler_id, param_ptr->map.grid_mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensGridMode error"));
+
+	rtn = ispSetLensBuf(handler_id, param_ptr->load_buf);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensBuf error"));
 
 	return rtn;
 }
@@ -2383,7 +2464,7 @@ static int32_t _ispLncParamLoad(uint32_t handler_id, struct isp_lnc_param* param
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetLensLoaderEnable(handler_id, param_ptr->map.param_addr);
+	rtn = ispSetLensLoaderEnable(handler_id, param_ptr->map.param_addr);
 
 	return rtn;
 }
@@ -2400,7 +2481,7 @@ static int32_t _ispLncParamValid(uint32_t handler_id)
 	struct isp_lnc_param* lnc_param_ptr = &isp_context_ptr->lnc;
 
 	lnc_param_ptr->cur_use_buf=lnc_param_ptr->load_buf;
-	ispLensBufSel(handler_id, lnc_param_ptr->cur_use_buf);
+	rtn = ispLensBufSel(handler_id, lnc_param_ptr->cur_use_buf);
 
 	return rtn;
 }
@@ -2424,7 +2505,7 @@ static int32_t _ispAfmEb(uint32_t handler_id)
 	{
 		if(ISP_UEB == af_param_ptr->monitor_bypass)
 		{
-			ispAFMbypass(handler_id, ISP_UEB);
+			rtn = ispAFMbypass(handler_id, ISP_UEB);
 			af_param_ptr->monitor_bypass = ISP_EB;
 
 		}
@@ -2450,8 +2531,12 @@ static int32_t _ispAwbmEb(uint32_t handler_id)
 		if((ISP_UEB == awb_param_ptr->bypass)&&(ISP_EB == awb_param_ptr->init))
 		{
 			if (ISP_UEB==awb_param_ptr->monitor_bypass) {
-				ispAwbmSkip(handler_id, 2);//ISP_ZERO);
-				ispAwbmBypass(handler_id, ISP_UEB);
+				rtn = ispAwbmSkip(handler_id, 2);//ISP_ZERO);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmSkip error"));
+
+				rtn = ispAwbmBypass(handler_id, ISP_UEB);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+
 				awb_param_ptr->monitor_bypass = ISP_UEB;
 			}
 		}
@@ -2481,8 +2566,13 @@ static int32_t _ispAemEb(uint32_t handler_id)
 				if (ISP_ZERO < skip_frame) {
 					skip_frame -= ISP_ZERO;
 				}
-				ispAemSkipNum(handler_id, skip_frame);
-				ispAembypass(handler_id, ISP_UEB);
+
+				rtn = ispAemSkipNum(handler_id, skip_frame);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAemSkipNum error"));
+
+				rtn = ispAembypass(handler_id, ISP_UEB);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAembypass error"));
+
 				ae_param_ptr->monitor_bypass = ISP_EB;
 				isp_context_ptr->ae.monitor_conter = ISP_ZERO;
 			}
@@ -2516,7 +2606,9 @@ static int32_t _ispAeAwbmEb(uint32_t handler_id)
 			{
 				if(ISP_ZERO == ae_param_ptr->cur_skip_num)
 				{
-					ispAwbmBypass(handler_id, ISP_EB);
+					rtn = ispAwbmBypass(handler_id, ISP_EB);
+					ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+
 					ae_param_ptr->cur_skip_num = ISP_AE_SKIP_FOREVER;
 				}
 				else
@@ -2532,7 +2624,9 @@ static int32_t _ispAeAwbmEb(uint32_t handler_id)
 			if((ISP_UEB==ae_param_ptr->monitor_bypass)
 				||(ISP_UEB==awb_param_ptr->monitor_bypass))
 			{
-				ispAwbmBypass(handler_id, ISP_UEB);
+				rtn = ispAwbmBypass(handler_id, ISP_UEB);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+
 				ae_param_ptr->monitor_bypass = ISP_EB;
 				awb_param_ptr->monitor_bypass = ISP_EB;
 				ae_param_ptr->cur_skip_num = ae_param_ptr->monitor_conter+ISP_TWO;
@@ -2569,16 +2663,24 @@ static int32_t _ispAeAwbmEb(uint32_t handler_id)
 
 			if(ISP_UEB==ae_param_ptr->monitor_bypass)
 			{
-				ispAwbmBypass(handler_id, ISP_UEB);
-				ispAwbmSkip(handler_id, ae_param_ptr->skip_frame);
+				rtn = ispAwbmBypass(handler_id, ISP_UEB);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+
+				rtn = ispAwbmSkip(handler_id, ae_param_ptr->skip_frame);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmSkip error"));
+
 				ae_param_ptr->monitor_bypass = ISP_EB;
 				ae_param_ptr->cur_skip_num=ae_param_ptr->skip_frame+ISP_TWO;
 			}
 			else if((ISP_UEB==awb_param_ptr->monitor_bypass)
 				&&(ISP_EB == ae_param_ptr->bypass))
 			{
-				ispAwbmBypass(handler_id, ISP_UEB);
-				ispAwbmSkip(handler_id, 0);
+				rtn = ispAwbmBypass(handler_id, ISP_UEB);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+
+				rtn = ispAwbmSkip(handler_id, 0);
+				ISP_RETURN_IF_FAIL(rtn, ("ispAwbmSkip error"));
+
 				awb_param_ptr->monitor_bypass = ISP_EB;
 			}
 
@@ -2601,19 +2703,31 @@ static int32_t _ispCfgAwbm(uint32_t handler_id, struct isp_awbm_param* param_ptr
 	int32_t rtn=ISP_SUCCESS;
 	uint32_t isp_id=IspGetId();
 
-	ispSetAwbmWinStart(handler_id, param_ptr->win_start.x, param_ptr->win_start.y);
-	ispSetAwbmWinSize(handler_id, param_ptr->win_size.w, param_ptr->win_size.h);
-	ispSetAwbmShift(handler_id, 0);
+	rtn = ispSetAwbmWinStart(handler_id, param_ptr->win_start.x, param_ptr->win_start.y);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbmWinStart error"));
+
+	rtn = ispSetAwbmWinSize(handler_id, param_ptr->win_size.w, param_ptr->win_size.h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbmWinSize error"));
+
+	rtn = ispSetAwbmShift(handler_id, 0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbmShift error"));
+
 	if(SC8825_ISP_ID==isp_id)
 	{
-		ispAwbmMode(handler_id, 1);
+		rtn = ispAwbmMode(handler_id, 1);
+		ISP_RETURN_IF_FAIL(rtn, ("ispAwbmMode error"));
 	}
 	else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id)
 	{
-		ispAwbmMode(handler_id, 0);
+		rtn = ispAwbmMode(handler_id, 0);
+		ISP_RETURN_IF_FAIL(rtn, ("ispAwbmMode error"));
 	}
-	ispAwbmSkip(handler_id, 1);
-	ispAwbmBypass(handler_id, param_ptr->bypass);
+
+	rtn = ispAwbmSkip(handler_id, 1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAwbmSkip error"));
+
+	rtn = ispAwbmBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
 
 	return rtn;
 }
@@ -2627,8 +2741,11 @@ static int32_t _ispCfgAwbWin(uint32_t handler_id, struct isp_awbm_param* param_p
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetAwbmWinStart(handler_id, param_ptr->win_start.x, param_ptr->win_start.y);
-	ispSetAwbmWinSize(handler_id, param_ptr->win_size.w, param_ptr->win_size.h);
+	rtn = ispSetAwbmWinStart(handler_id, param_ptr->win_start.x, param_ptr->win_start.y);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbmWinStart error"));
+
+	rtn = ispSetAwbmWinSize(handler_id, param_ptr->win_size.w, param_ptr->win_size.h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbmWinSize error"));
 
 	return rtn;
 }
@@ -2672,10 +2789,17 @@ static int32_t _ispCfgAwbc(uint32_t handler_id, struct isp_awbc_param* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetAwbGain(handler_id, param_ptr->r_gain, param_ptr->g_gain, param_ptr->b_gain);
-	ispSetAwbGainOffset(handler_id, param_ptr->r_offset, param_ptr->g_offset, param_ptr->b_offset);
-	ispSetAwbGainThrd(handler_id, 0x3ff, 0x3ff, 0x3ff);
-	ispAwbcBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetAwbGain(handler_id, param_ptr->r_gain, param_ptr->g_gain, param_ptr->b_gain);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbGain error"));
+
+	rtn = ispSetAwbGainOffset(handler_id, param_ptr->r_offset, param_ptr->g_offset, param_ptr->b_offset);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbGainOffset error"));
+
+	rtn = ispSetAwbGainThrd(handler_id, 0x3ff, 0x3ff, 0x3ff);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAwbGainThrd error"));
+
+	rtn = ispAwbcBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAwbcBypass error"));
 
 	return rtn;
 }
@@ -2703,10 +2827,17 @@ static int32_t _ispCfgBPC(uint32_t handler_id, struct isp_bpc_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispBpcMode(handler_id, param_ptr->mode);
-	ispSetBpcThrd(handler_id, param_ptr->flat_thr, param_ptr->std_thr, param_ptr->texture_thr);
-	ispBpcMapAddr(handler_id, param_ptr->map_addr);
-	ispBpcBypass(handler_id, param_ptr->bypass);
+	rtn = ispBpcMode(handler_id, param_ptr->mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBpcMode error"));
+
+	rtn = ispSetBpcThrd(handler_id, param_ptr->flat_thr, param_ptr->std_thr, param_ptr->texture_thr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBpcThrd error"));
+
+	rtn = ispBpcMapAddr(handler_id, param_ptr->map_addr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBpcMapAddr error"));
+
+	rtn = ispBpcBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBpcBypass error"));
 
 	return rtn;
 }
@@ -2720,11 +2851,20 @@ static int32_t _ispCfgDenoise(uint32_t handler_id, struct isp_denoise_param* par
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispWDenoiseWriteBack(handler_id, param_ptr->write_back);
-	ispWDenoiseThrd(handler_id, param_ptr->r_thr, param_ptr->g_thr, param_ptr->b_thr);
-	ispWDenoiseDiswei(handler_id, param_ptr->diswei);
-	ispWDenoiseRanwei(handler_id, param_ptr->ranwei);
-	ispWDenoiseBypass(handler_id, param_ptr->bypass);
+	rtn = ispWDenoiseWriteBack(handler_id, param_ptr->write_back);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseWriteBack error"));
+
+	rtn = ispWDenoiseThrd(handler_id, param_ptr->r_thr, param_ptr->g_thr, param_ptr->b_thr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseThrd error"));
+
+	rtn = ispWDenoiseDiswei(handler_id, param_ptr->diswei);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseDiswei error"));
+
+	rtn = ispWDenoiseRanwei(handler_id, param_ptr->ranwei);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseRanwei error"));
+
+	rtn = ispWDenoiseBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseBypass error"));
 
 	return rtn;
 }
@@ -2738,8 +2878,11 @@ static int32_t _ispCfgGrGb(uint32_t handler_id, struct isp_grgb_param* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetGrGbThrd(handler_id, param_ptr->edge_thr, param_ptr->diff_thr);
-	ispGrGbbypass(handler_id, param_ptr->bypass);
+	rtn = ispSetGrGbThrd(handler_id, param_ptr->edge_thr, param_ptr->diff_thr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetGrGbThrd error"));
+
+	rtn = ispGrGbbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispGrGbbypass error"));
 
 	return rtn;
 }
@@ -2753,7 +2896,7 @@ static int32_t _ispCfgCfa(uint32_t handler_id, struct isp_cfa_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetCFAThrd(handler_id, param_ptr->edge_thr, param_ptr->diff_thr);
+	rtn = ispSetCFAThrd(handler_id, param_ptr->edge_thr, param_ptr->diff_thr);
 
 	return rtn;
 }
@@ -2767,8 +2910,11 @@ static int32_t _ispCfgCmc(uint32_t handler_id, struct isp_cmc_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetCMCMatrix(handler_id, param_ptr->matrix);
-	ispCMCbypass(handler_id, param_ptr->bypass);
+	rtn = ispSetCMCMatrix(handler_id, param_ptr->matrix);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetCMCMatrix error"));
+
+	rtn = ispCMCbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispCMCbypass error"));
 
 	return rtn;
 }
@@ -2785,20 +2931,35 @@ static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_p
 
 	if((SC8830_ISP_ID == isp_id)||(SC8825_ISP_ID == isp_id))
 	{
-		ispSetGammaXNode(handler_id, (uint16_t*)&param_ptr->axis[0]);
-		ispSetGammaYNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
-		ispSetGammaRNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
-		ispSetGammaGNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
-		ispSetGammaBNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
-		ispSetGammaNodeIndex(handler_id, (uint8_t*)&param_ptr->index);	
+		rtn = ispSetGammaXNode(handler_id, (uint16_t*)&param_ptr->axis[0]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaXNode error"));
+
+		rtn = ispSetGammaYNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaYNode error"));
+
+		rtn = ispSetGammaRNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaRNode error"));
+
+		rtn = ispSetGammaGNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaGNode error"));
+
+		rtn = ispSetGammaBNode(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaBNode error"));
+
+		rtn = ispSetGammaNodeIndex(handler_id, (uint8_t*)&param_ptr->index);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaNodeIndex error"));
 	}
 	else if(SC9630_ISP_ID == isp_id)
 	{
-		ispSetGammaXNode_v002(handler_id, (uint16_t*)&param_ptr->axis[0]);
-		ispSetGammaYNode_v002(handler_id, (uint16_t*)&param_ptr->axis[1]);	
+		rtn = ispSetGammaXNode_v002(handler_id, (uint16_t*)&param_ptr->axis[0]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaXNode_v002 error"));
+
+		rtn = ispSetGammaYNode_v002(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaYNode_v002 error"));
 	}
-	
-	ispGammabypass(handler_id, param_ptr->bypass);
+
+	rtn = ispGammabypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispGammabypass error"));
 
 	return rtn;
 }
@@ -2812,8 +2973,11 @@ static int32_t _ispCfgCCEMatrix(uint32_t handler_id, struct isp_cce_matrix* para
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetCCEMatrix(handler_id, param_ptr->matrix);
-	ispSetCCEShift(handler_id, param_ptr->y_shift, param_ptr->u_shift, param_ptr->v_shift);
+	rtn = ispSetCCEMatrix(handler_id, param_ptr->matrix);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetCCEMatrix error"));
+
+	rtn = ispSetCCEShift(handler_id, param_ptr->y_shift, param_ptr->u_shift, param_ptr->v_shift);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetCCEShift error"));
 
 	return rtn;
 }
@@ -2827,9 +2991,14 @@ static int32_t _ispCfgUVDiv(uint32_t handler_id, struct isp_cce_uvdiv* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetCCEUVDiv(handler_id, param_ptr->thrd);
-	ispSetCCEUVC(handler_id, &param_ptr->t[0], &param_ptr->m[0]);
-	ispCCEUVDivBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetCCEUVDiv(handler_id, param_ptr->thrd);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetCCEUVDiv error"));
+
+	rtn = ispSetCCEUVC(handler_id, &param_ptr->t[0], &param_ptr->m[0]);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetCCEUVC error"));
+
+	rtn = ispCCEUVDivBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispCCEUVDivBypass error"));
 
 	return rtn;
 }
@@ -2843,9 +3012,14 @@ static int32_t _ispCfgPref(uint32_t handler_id, struct isp_pref_param* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispPrefWriteBack(handler_id, param_ptr->write_back);
-	ispSetPrefThrd(handler_id, param_ptr->y_thr, param_ptr->u_thr, param_ptr->v_thr);
-	ispPrefBypass(handler_id, param_ptr->bypass);
+	rtn = ispPrefWriteBack(handler_id, param_ptr->write_back);
+	ISP_RETURN_IF_FAIL(rtn, ("ispPrefWriteBack error"));
+
+	rtn = ispSetPrefThrd(handler_id, param_ptr->y_thr, param_ptr->u_thr, param_ptr->v_thr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetPrefThrd error"));
+
+	rtn = ispPrefBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispPrefBypass error"));
 
 	return rtn;
 }
@@ -2859,8 +3033,11 @@ static int32_t _ispCfgBright(uint32_t handler_id, struct isp_bright_param* param
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetBrightFactor(handler_id, param_ptr->factor);
-	ispBrightBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetBrightFactor(handler_id, param_ptr->factor);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBrightFactor error"));
+
+	rtn = ispBrightBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBrightBypass error"));
 
 	return rtn;
 }
@@ -2874,8 +3051,11 @@ static int32_t _ispCfgContrast(uint32_t handler_id, struct isp_contrast_param* p
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetContrastFactor(handler_id, param_ptr->factor);
-	ispContrastbypass(handler_id, param_ptr->bypass);
+	rtn = ispSetContrastFactor(handler_id, param_ptr->factor);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetContrastFactor error"));
+
+	rtn = ispContrastbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispContrastbypass error"));
 
 	return rtn;
 }
@@ -2889,7 +3069,7 @@ static int32_t _ispCfgHist(uint32_t handler_id, struct isp_hist_param* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispHistbypass(handler_id, param_ptr->bypass);
+	rtn = ispHistbypass(handler_id, param_ptr->bypass);
 
 	return rtn;
 }
@@ -2903,9 +3083,14 @@ static int32_t _ispCfgAutoContrast(uint32_t handler_id, struct isp_auto_contrast
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetAutoContrastMode(handler_id, param_ptr->mode);
-	ispSetAutoContrastMaxMin(handler_id, param_ptr->in_min, param_ptr->in_max, param_ptr->out_min, param_ptr->out_max);
-	ispAutoContrastbypass(handler_id, param_ptr->bypass);
+	rtn = ispSetAutoContrastMode(handler_id, param_ptr->mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAutoContrastMode error"));
+
+	rtn = ispSetAutoContrastMaxMin(handler_id, param_ptr->in_min, param_ptr->in_max, param_ptr->out_min, param_ptr->out_max);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAutoContrastMaxMin error"));
+
+	rtn = ispAutoContrastbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoContrastbypass error"));
 
 	return rtn;
 }
@@ -2919,8 +3104,11 @@ static int32_t _ispCfgSaturation(uint32_t handler_id, struct isp_saturation_para
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetSaturationFactor(handler_id, param_ptr->factor + param_ptr->offset);
-	ispSaturationbypass(handler_id, param_ptr->bypass);
+	rtn = ispSetSaturationFactor(handler_id, param_ptr->factor + param_ptr->offset);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetSaturationFactor error"));
+
+	rtn = ispSaturationbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSaturationbypass error"));
 
 	return rtn;
 }
@@ -2934,9 +3122,14 @@ static int32_t _ispCfgYGamma(uint32_t handler_id, struct isp_ygamma_param* param
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispYGammabypass(handler_id, param_ptr->bypass);
-	ispSetYGammaXNode(handler_id, (uint8_t*)&param_ptr->gamma[0][0]);
-	ispSetYGammaYNode(handler_id, (uint16_t*)&param_ptr->gamma[1][0]);
+	rtn = ispYGammabypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispYGammabypass error"));
+
+	rtn = ispSetYGammaXNode(handler_id, (uint8_t*)&param_ptr->gamma[0][0]);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetYGammaXNode error"));
+
+	rtn = ispSetYGammaYNode(handler_id, (uint16_t*)&param_ptr->gamma[1][0]);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetYGammaYNode error"));
 
 	return rtn;
 }
@@ -2950,10 +3143,17 @@ static int32_t _ispCfgAe(uint32_t handler_id)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispAemMode(handler_id, ISP_ZERO);
-	ispAemSkipNum(handler_id, ISP_ZERO);
-	ispAemSourceSel(handler_id, ISP_TWO);
-	ispAembypass(handler_id, ISP_ONE);
+	rtn = ispAemMode(handler_id, ISP_ZERO);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAemMode error"));
+
+	rtn = ispAemSkipNum(handler_id, ISP_ZERO);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAemSkipNum error"));
+
+	rtn = ispAemSourceSel(handler_id, ISP_TWO);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAemSourceSel error"));
+
+	rtn = ispAembypass(handler_id, ISP_ONE);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAembypass error"));
 
 	return rtn;
 }
@@ -2967,7 +3167,7 @@ static int32_t _ispCfgAemInfo(uint32_t handler_id, struct isp_ae_statistic_info*
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispGetAEMStatistic(handler_id, param_ptr->y);
+	rtn = ispGetAEMStatistic(handler_id, param_ptr->y);
 
 	return rtn;
 }
@@ -2981,12 +3181,23 @@ static int32_t _ispCfgFlicker(uint32_t handler_id, struct isp_flicker_param* par
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispAutoFlickerbypass(handler_id, param_ptr->bypass);
-	ispAutoFlickerMode(handler_id, 0);
-	ispAutoFlickerVHeight(handler_id, param_ptr->flicker_v_height);
-	ispAutoFlickerLineConter(handler_id, param_ptr->flicker_line_conter);
-	ispAutoFlickerLineStep(handler_id, param_ptr->flicker_line_step);
-	ispAutoFlickerLineStart(handler_id, param_ptr->flicker_line_start);
+	rtn = ispAutoFlickerbypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerbypass error"));
+
+	rtn = ispAutoFlickerMode(handler_id, 0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerMode error"));
+
+	rtn = ispAutoFlickerVHeight(handler_id, param_ptr->flicker_v_height);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerVHeight error"));
+
+	rtn = ispAutoFlickerLineConter(handler_id, param_ptr->flicker_line_conter);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerLineConter error"));
+
+	rtn = ispAutoFlickerLineStep(handler_id, param_ptr->flicker_line_step);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerLineStep error"));
+
+	rtn = ispAutoFlickerLineStart(handler_id, param_ptr->flicker_line_start);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAutoFlickerLineStart error"));
 
 	return rtn;
 }
@@ -3000,8 +3211,11 @@ static int32_t _ispCfgHue(uint32_t handler_id, struct isp_hue_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetHueFactor(handler_id, param_ptr->factor + param_ptr->offset);
-	ispHuebypass(handler_id, param_ptr->bypass);
+	rtn = ispSetHueFactor(handler_id, param_ptr->factor + param_ptr->offset);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetHueFactor error"));
+
+	rtn = ispHuebypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispHuebypass error"));
 
 	return rtn;
 }
@@ -3026,12 +3240,24 @@ static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr)
 		param_ptr->start_time = ts.tv_sec*1000 + ts.tv_nsec/1000000;
 	}
 	
-	ispSetAFMShift(handler_id, 0x00);
-	ispSetAFMWindow(handler_id, param_ptr->win);
-	ispAFMMode(handler_id, 1);
-	ispAFMSkipNum(handler_id, 0);
-	ispAFMSkipClear(handler_id, 1);
-	ispAFMbypass(handler_id, param_ptr->monitor_bypass);
+	rtn = ispSetAFMShift(handler_id, 0x00);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAFMShift error"));
+
+	rtn = ispSetAFMWindow(handler_id, param_ptr->win);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetAFMWindow error"));
+
+	rtn = ispAFMMode(handler_id, 1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAFMMode error"));
+
+	rtn = ispAFMSkipNum(handler_id, 0);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAFMSkipNum error"));
+
+	rtn = ispAFMSkipClear(handler_id, 1);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAFMSkipClear error"));
+
+	rtn = ispAFMbypass(handler_id, param_ptr->monitor_bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispAFMbypass error"));
+
 	param_ptr->monitor_bypass = ISP_EB;
 
 	return rtn;
@@ -3051,7 +3277,7 @@ static int32_t _ispCfgAfConStat(uint32_t handler_id, struct isp_af_param* param_
 	//ispAFMMode(1);
 	//ispAFMSkipNum(0);
 	//ispAFMSkipClear(1);
-	ispAFMbypass(handler_id, param_ptr->monitor_bypass);
+	rtn = ispAFMbypass(handler_id, param_ptr->monitor_bypass);
 	//param_ptr->monitor_bypass = ISP_EB;
 
 	return rtn;
@@ -3066,7 +3292,7 @@ static int32_t _ispGetAfInof(uint32_t handler_id, struct isp_af_statistic_info* 
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispGetAFMStatistic(handler_id, param_ptr->info);
+	rtn = ispGetAFMStatistic(handler_id, param_ptr->info);
 
 	return rtn;
 }
@@ -3080,8 +3306,11 @@ static int32_t _ispCfgEdge(uint32_t handler_id, struct isp_edge_param* param_ptr
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetEdgeParam(handler_id, param_ptr->detail_thr, param_ptr->smooth_thr, param_ptr->strength);
-	ispEdgeBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetEdgeParam(handler_id, param_ptr->detail_thr, param_ptr->smooth_thr, param_ptr->strength);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetEdgeParam error"));
+
+	rtn = ispEdgeBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispEdgeBypass error"));
 
 	return rtn;
 }
@@ -3095,8 +3324,11 @@ static int32_t _ispCfgEmboss(uint32_t handler_id, struct isp_emboss_param* param
 {
 	uint32_t rtn=ISP_SUCCESS;
 
-	ispSetEmbossParam(handler_id, param_ptr->step);
-	ispEmbossypass(handler_id, param_ptr->bypass);
+	rtn = ispSetEmbossParam(handler_id, param_ptr->step);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetEmbossParam error"));
+
+	rtn = ispEmbossypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispEmbossypass error"));
 
 	return rtn;
 }
@@ -3110,8 +3342,11 @@ static int32_t _ispCfgFalseColor(uint32_t handler_id, struct isp_fcs_param* para
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispFalseColorMode(handler_id, ISP_ONE);
-	ispFalseColorBypass(handler_id, param_ptr->bypass);
+	rtn = ispFalseColorMode(handler_id, ISP_ONE);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFalseColorMode error"));
+
+	rtn = ispFalseColorBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispFalseColorBypass error"));
 
 	return rtn;
 }
@@ -3126,8 +3361,11 @@ static int32_t _ispCfgSatursationSup(uint32_t handler_id, struct isp_css_param* 
 	int32_t rtn=ISP_SUCCESS;
 	uint32_t isp_id = IspGetId();
 
-	ispSetColorSaturationSuppressThrd(handler_id, param_ptr->low_thr, param_ptr->low_sum_thr, param_ptr->lum_thr, param_ptr->chr_thr);
-	ispColorSaturationSuppressBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetColorSaturationSuppressThrd(handler_id, param_ptr->low_thr, param_ptr->low_sum_thr, param_ptr->lum_thr, param_ptr->chr_thr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetColorSaturationSuppressThrd error"));
+
+	rtn = ispColorSaturationSuppressBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispColorSaturationSuppressBypass error"));
 
 	if(ISP_ID_SC9630 == isp_id ) {
 		ispSetColorSaturationSuppressRatio(handler_id, param_ptr->ratio);
@@ -3145,8 +3383,11 @@ static int32_t _ispCfgHdr(uint32_t handler_id, struct isp_hdr_param* param_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetHDRLevel(handler_id, param_ptr->level);
-	ispHDRBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetHDRLevel(handler_id, param_ptr->level);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetHDRLevel error"));
+
+	rtn = ispHDRBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispHDRBypass error"));
 
 	return rtn;
 }
@@ -3160,8 +3401,11 @@ static int32_t _ispCfgHDRIndexTab(uint32_t handler_id, struct isp_hdr_index* par
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetHDRIndex(handler_id, param_ptr->r_index, param_ptr->g_index, param_ptr->b_index);
-	ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);
+	rtn = ispSetHDRIndex(handler_id, param_ptr->r_index, param_ptr->g_index, param_ptr->b_index);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetHDRIndex error"));
+
+	rtn = ispSetHDRIndexTab(handler_id, param_ptr->com_ptr, param_ptr->p2e_ptr, param_ptr->e2p_ptr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetHDRIndexTab error"));
 
 	return rtn;
 }
@@ -3175,8 +3419,11 @@ static int32_t _ispCfgGlobalGain(uint32_t handler_id, struct isp_global_gain_par
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetGlbGain(handler_id, param_ptr->gain);
-	ispGlbGainBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetGlbGain(handler_id, param_ptr->gain);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetGlbGain error"));
+
+	rtn = ispGlbGainBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispGlbGainBypass error"));
 
 	return rtn;
 }
@@ -3190,8 +3437,11 @@ static int32_t _ispCfgPreGlobalGain(uint32_t handler_id, struct isp_pre_global_g
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispPreSetGlbGain(handler_id, param_ptr->gain);
-	ispPreGlbGainBypass(handler_id, param_ptr->bypass);
+	rtn = ispPreSetGlbGain(handler_id, param_ptr->gain);
+	ISP_RETURN_IF_FAIL(rtn, ("ispPreSetGlbGain error"));
+
+	rtn = ispPreGlbGainBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispPreGlbGainBypass error"));
 
 	return rtn;
 }
@@ -3205,9 +3455,14 @@ static int32_t _ispCfgChnGain(uint32_t handler_id, struct isp_chn_gain_param* pa
 {
 	int32_t rtn=ISP_SUCCESS;
 
-	ispSetChnGain(handler_id, param_ptr->r_gain, param_ptr->g_gain, param_ptr->b_gain);
-	ispSetChnGainOffset(handler_id, param_ptr->r_offset, param_ptr->g_offset, param_ptr->g_offset);
-	ispChnGainBypass(handler_id, param_ptr->bypass);
+	rtn = ispSetChnGain(handler_id, param_ptr->r_gain, param_ptr->g_gain, param_ptr->b_gain);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetChnGain error"));
+
+	rtn = ispSetChnGainOffset(handler_id, param_ptr->r_offset, param_ptr->g_offset, param_ptr->g_offset);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetChnGainOffset error"));
+
+	rtn = ispChnGainBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispChnGainBypass error"));
 
 	return rtn;
 }
@@ -6099,24 +6354,59 @@ int32_t _ispSetSlice(uint32_t handler_id, struct isp_slice_param* slice_ptr)
 	int32_t rtn=ISP_SUCCESS;
 	uint8_t i=0x00;
 
-	ispSetFetchSliceSize(handler_id, slice_ptr->size[ISP_FETCH].w, slice_ptr->size[ISP_FETCH].h);
-	ispSetBNLCSliceSize(handler_id, slice_ptr->size[ISP_BNLC].w, slice_ptr->size[ISP_BNLC].h);
-	ispSetBNLCSliceInfo(handler_id, slice_ptr->edge_info);
-	ispSetLensSliceStart(handler_id, slice_ptr->size[ISP_LENS].x, slice_ptr->size[ISP_LENS].y);
-	ispSetLensGridSize(handler_id, slice_ptr->size[ISP_LENS].w, slice_ptr->size[ISP_LENS].h);
-	ispLensSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
-	ispWDenoiseSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
-	ispWDenoiseSliceInfo(handler_id, slice_ptr->edge_info&(ISP_SLICE_LEFT|ISP_SLICE_UP));
-	ispCFASliceSize(handler_id, slice_ptr->size[ISP_CFA].w, slice_ptr->size[ISP_CFA].h);
-	ispCFASliceInfo(handler_id, slice_ptr->edge_info);
-	ispPrefSliceSize(handler_id, slice_ptr->size[ISP_PREF].w, slice_ptr->size[ISP_PREF].h);
-	ispPrefSliceInfo(handler_id, slice_ptr->edge_info&(ISP_SLICE_LEFT|ISP_SLICE_UP));
-	ispBrightSliceSize(handler_id, slice_ptr->size[ISP_BRIGHT].w, slice_ptr->size[ISP_BRIGHT].h);
-	ispBrightSliceInfo(handler_id, slice_ptr->edge_info);
-	ispColorSaturationSuppressSliceSize(handler_id, slice_ptr->size[ISP_CSS].w, slice_ptr->size[ISP_CSS].h);
-	ispSetStoreSliceSize(handler_id, slice_ptr->size[ISP_STORE].w, slice_ptr->size[ISP_STORE].h);
-	ispSetFeederSliceSize(handler_id, slice_ptr->size[ISP_FEEDER].w, slice_ptr->size[ISP_FEEDER].h);
-	ispGlbGainSliceSize(handler_id, slice_ptr->size[ISP_GLB_GAIN].w, slice_ptr->size[ISP_GLB_GAIN].h);
+	rtn = ispSetFetchSliceSize(handler_id, slice_ptr->size[ISP_FETCH].w, slice_ptr->size[ISP_FETCH].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFetchSliceSize error"));
+
+	rtn = ispSetBNLCSliceSize(handler_id, slice_ptr->size[ISP_BNLC].w, slice_ptr->size[ISP_BNLC].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBNLCSliceSize error"));
+
+	rtn = ispSetBNLCSliceInfo(handler_id, slice_ptr->edge_info);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetBNLCSliceInfo error"));
+
+	rtn = ispSetLensSliceStart(handler_id, slice_ptr->size[ISP_LENS].x, slice_ptr->size[ISP_LENS].y);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensSliceStart error"));
+
+	rtn = ispSetLensGridSize(handler_id, slice_ptr->size[ISP_LENS].w, slice_ptr->size[ISP_LENS].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetLensGridSize error"));
+
+	rtn = ispLensSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispLensSliceSize error"));
+
+	rtn = ispWDenoiseSliceSize(handler_id, slice_ptr->size[ISP_WAVE].w, slice_ptr->size[ISP_WAVE].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseSliceSize error"));
+
+	rtn = ispWDenoiseSliceInfo(handler_id, slice_ptr->edge_info&(ISP_SLICE_LEFT|ISP_SLICE_UP));
+	ISP_RETURN_IF_FAIL(rtn, ("ispWDenoiseSliceInfo error"));
+
+	rtn = ispCFASliceSize(handler_id, slice_ptr->size[ISP_CFA].w, slice_ptr->size[ISP_CFA].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispCFASliceSize error"));
+
+	rtn = ispCFASliceInfo(handler_id, slice_ptr->edge_info);
+	ISP_RETURN_IF_FAIL(rtn, ("ispCFASliceInfo error"));
+
+	rtn = ispPrefSliceSize(handler_id, slice_ptr->size[ISP_PREF].w, slice_ptr->size[ISP_PREF].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispPrefSliceSize error"));
+
+	rtn = ispPrefSliceInfo(handler_id, slice_ptr->edge_info&(ISP_SLICE_LEFT|ISP_SLICE_UP));
+	ISP_RETURN_IF_FAIL(rtn, ("ispPrefSliceInfo error"));
+
+	rtn = ispBrightSliceSize(handler_id, slice_ptr->size[ISP_BRIGHT].w, slice_ptr->size[ISP_BRIGHT].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBrightSliceSize error"));
+
+	rtn = ispBrightSliceInfo(handler_id, slice_ptr->edge_info);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBrightSliceInfo error"));
+
+	rtn = ispColorSaturationSuppressSliceSize(handler_id, slice_ptr->size[ISP_CSS].w, slice_ptr->size[ISP_CSS].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispColorSaturationSuppressSliceSize error"));
+
+	rtn = ispSetStoreSliceSize(handler_id, slice_ptr->size[ISP_STORE].w, slice_ptr->size[ISP_STORE].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetStoreSliceSize error"));
+
+	rtn = ispSetFeederSliceSize(handler_id, slice_ptr->size[ISP_FEEDER].w, slice_ptr->size[ISP_FEEDER].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetFeederSliceSize error"));
+
+	rtn = ispGlbGainSliceSize(handler_id, slice_ptr->size[ISP_GLB_GAIN].w, slice_ptr->size[ISP_GLB_GAIN].h);
+	ISP_RETURN_IF_FAIL(rtn, ("ispGlbGainSliceSize error"));
 
 	return rtn;
 }
@@ -6134,33 +6424,67 @@ static int32_t _ispStart(uint32_t handler_id)
 	struct isp_store_param store_param;
 
 	rtn=_ispGetSliceEdgeInfo(&isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispGetSliceEdgeInfo error"));
 
 	rtn=_ispGetSliceSize(isp_context_ptr->com.proc_type, &isp_context_ptr->src, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispGetSliceSize error"));
 
 	rtn=_ispAddSliceBorder(ISP_WAVE, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispAddSliceBorder(ISP_CFA, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispAddSliceBorder(ISP_PREF, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispAddSliceBorder(ISP_BRIGHT, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispAddSliceBorder(ISP_CSS, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispAddSliceBorder(ISP_GLB_GAIN, isp_context_ptr->com.proc_type, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispAddSliceBorder error"));
+
 	rtn=_ispSetLncParam(&isp_context_ptr->lnc, isp_context_ptr);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispSetLncParam error"));
 
 	rtn=_ispSetSlice(handler_id, &isp_context_ptr->slice);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispSetSlice error"));
+
 	rtn=_ispLncParamSet(handler_id, &isp_context_ptr->lnc);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispLncParamSet error"));
 
 	rtn=_ispGetFetchAddr(handler_id, &fetch_param);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispGetFetchAddr error"));
+
 	rtn=_ispGetStoreAddr(handler_id, &store_param);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispGetStoreAddr error"));
+
 	rtn=_ispCfgFeatchData(handler_id, &fetch_param);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispCfgFeatchData error"));
+
 	rtn=_ispCfgStoreData(handler_id, &store_param);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispCfgStoreData error"));
+
 	rtn=_ispCfgFeeder(handler_id, &isp_context_ptr->feeder);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispCfgFeeder error"));
+
 	rtn=_ispCfgComData(handler_id, &isp_context_ptr->com);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispCfgComData error"));
 
 	rtn=ispBypassNewFeature(handler_id);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBypassNewFeature error"));
+
 	rtn=ispShadow(handler_id, ISP_ONE);
+	ISP_RETURN_IF_FAIL(rtn, ("ispShadow error"));
 
 	rtn=_ispLncParamLoad(handler_id, &isp_context_ptr->lnc);
-	rtn=_ispLncParamValid(handler_id);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispLncParamLoad error"));
 
+	rtn=_ispLncParamValid(handler_id);
+	ISP_RETURN_IF_FAIL(rtn, ("_ispLncParamValid error"));
 
 	if(ISP_CAP_MODE!=isp_context_ptr->com.in_mode) {
 		rtn=isp_Start(handler_id, ISP_ONE);
@@ -7690,6 +8014,7 @@ static void *_isp_monitor_routine(void *client_data)
 
 	while (1) {
 		if(ISP_SUCCESS != ispGetIRQ((uint32_t*)&evt)) {
+			rtn = -1;
 			ISP_LOG("wait int 0x%08x error ", evt.irq_val);
 			break;
 		} else {
@@ -7792,6 +8117,8 @@ static void *_isp_monitor_routine(void *client_data)
 		}
 		isp_system_ptr->monitor_status = ISP_IDLE;
 	}
+	if (rtn)
+		isp_system_ptr->monitor_status = ISP_EXIT;
 
 	ISP_LOG("exit isp monitor routine.");
 
@@ -7911,6 +8238,12 @@ static void *_isp_ctrl_routine(void *client_data)
 
 			case ISP_CTRL_EVT_DEINIT:
 				rtn=_isp_deinit(handler_id);
+				ISP_LOG("monitor_status=%d",isp_system_ptr->monitor_status);
+				if(ISP_EXIT == isp_system_ptr->monitor_status) {
+					pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+					rtn=pthread_cond_signal(&isp_system_ptr->deinit_cond);
+					pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+				}
 				break;
 
 			case ISP_CTRL_EVT_MONITOR_STOP:
@@ -7922,8 +8255,11 @@ static void *_isp_ctrl_routine(void *client_data)
 			case ISP_CTRL_EVT_CONTINUE:
 				rtn = _isp_video_start(handler_id, (struct isp_video_start*)param_ptr);
 				ISP_TRACE_IF_FAIL(rtn, ("_isp_video_start error"));
-				rtn = _isp3AInit(handler_id);
-				ISP_TRACE_IF_FAIL(rtn, ("_isp3AInit error"));
+				if (ISP_SUCCESS == rtn) {
+					rtn = _isp3AInit(handler_id);
+					ISP_TRACE_IF_FAIL(rtn, ("_isp3AInit error"));
+				}
+				map_res_ptr->rtn = rtn;
 
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn=pthread_cond_signal(&isp_system_ptr->continue_cond);
@@ -7932,6 +8268,7 @@ static void *_isp_ctrl_routine(void *client_data)
 
 			case ISP_CTRL_EVT_CONTINUE_STOP:
 				rtn = _isp_video_stop(handler_id);
+				map_res_ptr->rtn = rtn;
 				isp_proc_msg.handler_id = handler_id;
 				isp_proc_msg.msg_type = ISP_PROC_EVT_STOP_HANDLER;
 				rtn = _isp_proc_msg_post(&isp_proc_msg);
@@ -7944,24 +8281,25 @@ static void *_isp_ctrl_routine(void *client_data)
 			case ISP_CTRL_EVT_SIGNAL:
 			{
 				rtn = _isp_proc_start(handler_id, (struct ips_in_param*)param_ptr);
+				map_res_ptr->rtn = rtn;
 				break;
 			}
 			case ISP_CTRL_EVT_SIGNAL_NEXT:
 				rtn = _isp_proc_next(handler_id, (struct ipn_in_param*)param_ptr);
+				map_res_ptr->rtn = rtn;
 				break;
 
 			case ISP_CTRL_EVT_IOCTRL:
 				res_ptr=map_res_ptr;
 				rtn = _ispTuneIOCtrl(handler_id, sub_type, param_ptr,NULL);
 				res_ptr->rtn = rtn;
-					pthread_mutex_lock(&isp_system_ptr->cond_mutex);
-					rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
-					pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
+				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
+				rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
+				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_CTRL_EVT_CTRL_SYNC:
-				res_ptr=map_res_ptr;
-				res_ptr->rtn=sub_type;
+
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
@@ -8218,6 +8556,13 @@ static void *_isp_proc_routine(void *client_data)
 				_ispAfDenoiseRecover(handler_id);
 				ispAfmUeb(handler_id);
 				isp_af_end(handler_id, ISP_ONE);
+				if (ISP_ZERO==isp_context_ptr->isp_callback_bypass) {
+					struct isp_af_notice af_notice={0x00};
+					af_notice.mode=ISP_FOCUS_MOVE_END;
+					af_notice.valid_win=isp_context_ptr->af.suc_win;
+					ISP_LOG("callback ISP_AF_NOTICE_CALLBACK");
+					isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AF_NOTICE_CALLBACK, (void*)&af_notice, sizeof(struct isp_af_notice));
+				}
 				ISP_LOG("--ISP_PROC_EVT_AF_STOP--end");
 				break;
 			case ISP_PROC_EVT_CONTINUE_AF:
@@ -8337,6 +8682,7 @@ int _isp_create_Resource(void)
 	//pthread_mutex_init (&isp_system_ptr->ctrl_mutex, NULL);
 	//pthread_mutex_init (&isp_system_ptr->proc_mutex, NULL);
 	pthread_mutex_init (&isp_system_ptr->cond_mutex, NULL);
+	pthread_mutex_init (&isp_system_ptr->ctrl_3a_mutex, NULL);
 
 	pthread_cond_init(&isp_system_ptr->init_cond, NULL);
 	pthread_cond_init(&isp_system_ptr->deinit_cond, NULL);
@@ -8370,6 +8716,8 @@ int _isp_release_resource(void)
 	//pthread_mutex_destroy(&isp_system_ptr->ctrl_mutex);
 	//pthread_mutex_destroy(&isp_system_ptr->proc_mutex);
 	pthread_mutex_destroy(&isp_system_ptr->cond_mutex);
+	pthread_mutex_destroy(&isp_system_ptr->ctrl_3a_mutex);
+
 
 	pthread_cond_destroy(&isp_system_ptr->init_cond);
 	pthread_cond_destroy(&isp_system_ptr->deinit_cond);
@@ -8642,8 +8990,6 @@ int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	rtn=respond.rtn;
-
 	if((0x00==callback_flag)
 		&&(PNULL!=isp_context_ptr->cfg.callback))
 	{
@@ -8656,6 +9002,8 @@ int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 
 	rtn = _isp_CtrlUnlock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
+
+	ISP_RETURN_IF_FAIL(respond.rtn, ("isp_ctrl_ioctl error"));
 
 	return rtn;
 }
@@ -8680,6 +9028,7 @@ int isp_ctrl_video_start(uint32_t handler_id, struct isp_video_start* param_ptr)
 	int rtn=ISP_SUCCESS;
 	struct isp_system* isp_system_ptr = ispGetSystem();
 	ISP_MSG_INIT(isp_msg);
+	struct isp_respond respond = {0};
 
 	ISP_LOG("--isp_video_start--");
 
@@ -8697,6 +9046,7 @@ int isp_ctrl_video_start(uint32_t handler_id, struct isp_video_start* param_ptr)
 	isp_msg.handler_id = handler_id;
 	isp_msg.msg_type = ISP_CTRL_EVT_CONTINUE;
 	isp_msg.sub_msg_type;
+	isp_msg.respond = (void*)(&respond);
 	//isp_msg.data=(void*)param_ptr;
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
@@ -8715,6 +9065,8 @@ int isp_ctrl_video_start(uint32_t handler_id, struct isp_video_start* param_ptr)
 	rtn = _isp_CtrlUnlock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
 
+	ISP_RETURN_IF_FAIL(respond.rtn, ("isp_ctrl_video_start error"));
+
 	ISP_LOG("---isp_video_start-- end");
 
 	return rtn;
@@ -8730,6 +9082,7 @@ int isp_ctrl_video_stop(uint32_t handler_id)
 	int rtn=ISP_SUCCESS;
 	struct isp_system* isp_system_ptr = ispGetSystem();
 	ISP_MSG_INIT(isp_msg);
+	struct isp_respond respond = {0};
 
 	ISP_LOG("--isp_video_stop--");
 
@@ -8741,6 +9094,7 @@ int isp_ctrl_video_stop(uint32_t handler_id)
 	isp_msg.sub_msg_type;
 	isp_msg.data=NULL;
 	isp_msg.alloc_flag=0x00;
+	isp_msg.respond = (void*)(&respond);
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
@@ -8756,6 +9110,8 @@ int isp_ctrl_video_stop(uint32_t handler_id)
 
 	rtn = _isp_CtrlUnlock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
+
+	ISP_RETURN_IF_FAIL(respond.rtn, ("isp_ctrl_video_stop error"));
 
 	ISP_LOG("--isp_video_stop--end");
 
@@ -8790,6 +9146,7 @@ int isp_ctrl_proc_start(uint32_t handler_id, struct ips_in_param* in_param_ptr, 
 {
 	int rtn=ISP_SUCCESS;
 	ISP_MSG_INIT(isp_msg);
+	struct isp_respond respond = {0};
 
 	ISP_LOG("--isp_proc_start--");
 
@@ -8807,12 +9164,15 @@ int isp_ctrl_proc_start(uint32_t handler_id, struct ips_in_param* in_param_ptr, 
 	isp_msg.data = malloc(sizeof(struct ips_in_param));
 	memcpy(isp_msg.data, in_param_ptr, sizeof(struct ips_in_param));
 	isp_msg.alloc_flag=0x01;
+	isp_msg.respond = (void*)(&respond);
 
 	rtn = _isp_ctrl_msg_post(&isp_msg);
 	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
 	rtn = _isp_CtrlUnlock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
+
+	ISP_RETURN_IF_FAIL(respond.rtn, ("isp_ctrl_proc_start error"));
 
 	ISP_LOG("--isp_proc_start--end");
 
@@ -8828,6 +9188,7 @@ int isp_ctrl_proc_next(uint32_t handler_id, struct ipn_in_param* in_ptr, struct 
 {
 	int rtn = ISP_SUCCESS;
 	ISP_MSG_INIT(isp_msg);
+	struct isp_respond respond = {0};
 
 	ISP_LOG("--isp_proc_next--");
 
@@ -8843,12 +9204,15 @@ int isp_ctrl_proc_next(uint32_t handler_id, struct ipn_in_param* in_ptr, struct 
 	isp_msg.data = malloc(sizeof(struct ipn_in_param));
 	memcpy(isp_msg.data, in_ptr, sizeof(struct ipn_in_param));
 	isp_msg.alloc_flag=0x01;
+	isp_msg.respond = (void*)(&respond);
 
 	rtn = _isp_ctrl_msg_post(&isp_msg);
 	ISP_RETURN_IF_FAIL(rtn, ("send msg to ctrl thread error"));
 
 	rtn = _isp_CtrlUnlock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
+
+	ISP_RETURN_IF_FAIL(respond.rtn, ("isp_ctrl_proc_next error"));
 
 	ISP_LOG("--isp_proc_next--end");
 

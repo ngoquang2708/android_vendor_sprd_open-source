@@ -3194,7 +3194,6 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t 
 
 	camera_memory_t *camera_memory = NULL;
 	int paddr = 0, psize = 0;
-	void *base = NULL;
 	int result = 0;
 	LOGI("allocCameraMem E: size 0x%x", buf_size);
 
@@ -3220,7 +3219,7 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t 
 
 	if (NULL == pHeapIon->getBase()
 		|| 0xFFFFFFFF == (uint32_t)pHeapIon->getBase()) {
-		LOGE("allocCameraMem: error getBase is null.");
+		LOGE("allocCameraMem: error getBase is 0x%x.", (uint32_t)pHeapIon->getBase());
 		result = -1;
 		goto getpmem_end;
 	}
@@ -3256,25 +3255,20 @@ sprd_camera_memory_t* SprdCameraHardware::allocCameraMem(int buf_size, uint32_t 
 		goto getpmem_end;
 	}
 
-	base =  pHeapIon->getBase();
-	if (0xFFFFFFFF == (uint32_t)base) {
-		LOGE("allocCameraMem: error pHeapIon->getBase() failed 0x%x",(uint32_t)base);
-		goto  getpmem_end;
+getpmem_end:
+
+	memory->ion_heap = pHeapIon;
+	memory->camera_memory = camera_memory;
+	memory->phys_addr = paddr;
+	memory->phys_size = psize;
+	if (camera_memory) {
+		memory->handle = camera_memory->handle;
+	}
+	if (pHeapIon) {
+		memory->data = pHeapIon->getBase();
 	}
 
-getpmem_end:
 	if (0 == result) {
-		memory->ion_heap = pHeapIon;
-		memory->camera_memory = camera_memory;
-		memory->phys_addr = paddr;
-		memory->phys_size = psize;
-		if (camera_memory) {
-			memory->handle = camera_memory->handle;
-		}
-		if (pHeapIon) {
-			memory->data = pHeapIon->getBase();
-		}
-
 		if (camera_memory) {
 			if (0 == s_mem_method) {
 				LOGI("allocCameraMem X: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",

@@ -500,7 +500,7 @@ static int32_t _isp_write(uint32_t *param)
 	}
 #endif
 	if (-1 == ioctl(s_isp_fd, ISP_IO_WRITE, param)) {
-
+		return ISP_ERROR;
 	} else {
 		//ISP_LOG("OK to ISP_IO_WRITE");
 	}
@@ -677,9 +677,7 @@ int32_t ispFetchBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -703,9 +701,7 @@ int32_t ispFetchSubtract(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -729,9 +725,7 @@ int32_t ispAfifoWrMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -756,9 +750,7 @@ int32_t ispSetFetchSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -782,9 +774,7 @@ int32_t ispSetFetchYAddr(uint32_t handler_id, uint32_t y_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -808,9 +798,7 @@ int32_t ispSetFetchYPitch(uint32_t handler_id, uint32_t y_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -834,9 +822,7 @@ int32_t ispSetFetchUAddr(uint32_t handler_id, uint32_t u_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -860,9 +846,7 @@ int32_t ispSetFetchUPitch(uint32_t handler_id, uint32_t u_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -886,9 +870,7 @@ int32_t ispSetFetchMipiWordInfo(uint32_t handler_id, uint16_t word_num)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -912,9 +894,7 @@ int32_t ispSetFetchMipiByteInfo(uint32_t handler_id, uint16_t byte_rel_pos)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -938,9 +918,7 @@ int32_t ispSetFetchVAddr(uint32_t handler_id, uint32_t v_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -964,9 +942,7 @@ int32_t ispSetFetchVPitch(uint32_t handler_id, uint32_t v_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*BNLC */
@@ -1018,9 +994,7 @@ int32_t ispBlcBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1044,9 +1018,7 @@ int32_t ispSetBlcMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1078,9 +1050,7 @@ int32_t ispSetBlcCalibration(uint32_t handler_id, uint16_t r, uint16_t b, uint16
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 2;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*NLC */
@@ -1155,9 +1125,7 @@ int32_t ispNlcBypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 	}
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1295,9 +1263,7 @@ int32_t ispSetNlcRNode(uint32_t handler_id, uint16_t* r_node_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1438,9 +1404,7 @@ int32_t ispSetNlcGNode(uint32_t handler_id, uint16_t* g_node_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1581,9 +1545,7 @@ int32_t ispSetNlcBNode(uint32_t handler_id, uint16_t* b_node_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 10;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1717,9 +1679,7 @@ int32_t ispSetNlcLNode(uint32_t handler_id, uint16_t* l_node_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 9;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1752,9 +1712,7 @@ int32_t ispSetBNLCSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1786,9 +1744,7 @@ int32_t ispSetBNLCSliceInfo(uint32_t handler_id, uint8_t edge_info)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /* Lens */
@@ -1839,9 +1795,7 @@ int32_t ispLensBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1865,9 +1819,7 @@ int32_t ispLensBufSel(uint32_t handler_id, uint8_t buf_mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1892,9 +1844,7 @@ int32_t ispLensParamAddr(uint32_t handler_id, uint32_t param_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1919,9 +1869,7 @@ int32_t ispSetLensSliceStart(uint32_t handler_id, uint16_t x, uint16_t y)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -1981,9 +1929,7 @@ int32_t ispSetLensGridPitch(uint32_t handler_id, uint16_t pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2007,9 +1953,7 @@ int32_t ispSetLensGridMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2034,9 +1978,7 @@ int32_t ispSetLensGridSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2060,9 +2002,7 @@ int32_t ispSetLensBuf(uint32_t handler_id, uint8_t buf_sel)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2086,9 +2026,7 @@ int32_t ispSetLensEndian(uint32_t handler_id, uint8_t endian)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2111,9 +2049,7 @@ int32_t ispLensSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*AWBM */
@@ -2165,9 +2101,7 @@ int32_t ispAwbmBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2194,7 +2128,7 @@ int32_t ispAwbmSkip(uint32_t handler_id, uint8_t num)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -2221,9 +2155,7 @@ int32_t ispAwbmMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2248,9 +2180,7 @@ int32_t ispSetAwbmWinStart(uint32_t handler_id, uint16_t x, uint16_t y)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2275,9 +2205,7 @@ int32_t ispSetAwbmWinSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2301,9 +2229,7 @@ int32_t ispSetAwbmShift(uint32_t handler_id, uint16_t shift)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*AWBC */
@@ -2355,9 +2281,7 @@ int32_t ispAwbcBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2403,9 +2327,7 @@ int32_t ispSetAwbGain(uint32_t handler_id, uint16_t r_gain, uint16_t g_gain, uin
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 2;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2437,9 +2359,7 @@ int32_t ispSetAwbGainOffset(uint32_t handler_id, uint16_t r_offset, uint16_t g_o
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 2;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2465,9 +2385,7 @@ int32_t ispSetAwbGainThrd(uint32_t handler_id, uint16_t r_thr, uint16_t g_thr, u
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2584,9 +2502,7 @@ int32_t ispBpcBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2610,9 +2526,7 @@ int32_t ispBpcMode(uint32_t handler_id, uint16_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 int32_t ispBpcPatternThr(uint32_t handler_id, uint16_t pattern_type, uint16_t maxminThr, uint16_t super_badThr)
@@ -2634,9 +2548,7 @@ int32_t ispBpcPatternThr(uint32_t handler_id, uint16_t pattern_type, uint16_t ma
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2662,9 +2574,7 @@ int32_t ispSetBpcThrd(uint32_t handler_id, uint16_t flat_thr, uint16_t std_thr, 
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2688,9 +2598,7 @@ int32_t ispBpcMapAddr(uint32_t handler_id, uint32_t map_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2714,9 +2622,7 @@ int32_t ispBpcPixelNum(uint32_t handler_id, uint32_t pixel_num)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*Wave denoise */
@@ -2767,9 +2673,7 @@ int32_t ispWDenoiseBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2796,7 +2700,7 @@ int32_t ispWDenoiseWriteBack(uint32_t handler_id, uint16_t write_back)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -2828,7 +2732,7 @@ int32_t ispWDenoiseThrd(uint32_t handler_id, uint16_t r_thr, uint16_t g_thr, uin
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -2856,9 +2760,7 @@ int32_t ispWDenoiseSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -2886,7 +2788,7 @@ int32_t ispWDenoiseSliceInfo(uint32_t handler_id, uint16_t edge_info)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 	return ISP_SUCCESS;
 }
@@ -2953,9 +2855,7 @@ int32_t ispWDenoiseDiswei(uint32_t handler_id, uint8_t* diswei_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 5;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3039,9 +2939,7 @@ int32_t ispWDenoiseRanwei(uint32_t handler_id, uint8_t* ranwei_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 8;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*GrGb C */
@@ -3094,9 +2992,7 @@ int32_t ispGrGbbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3121,9 +3017,7 @@ int32_t ispSetGrGbThrd(uint32_t handler_id, uint16_t edge_thr, uint16_t diff_thr
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*CFA */
@@ -3176,9 +3070,7 @@ int32_t ispSetCFAThrd(uint32_t handler_id, uint16_t edge_thr, uint16_t diff_thr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3203,9 +3095,7 @@ int32_t ispCFASliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3229,9 +3119,7 @@ int32_t ispCFASliceInfo(uint32_t handler_id, uint16_t edge_info)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*CMC */
@@ -3283,9 +3171,7 @@ int32_t ispCMCbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3341,9 +3227,7 @@ int32_t ispSetCMCMatrix(uint32_t handler_id, uint16_t* matrix_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 5;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*Gamma */
@@ -3395,9 +3279,7 @@ int32_t ispGammabypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3483,9 +3365,7 @@ int32_t ispSetGammaXNode(uint32_t handler_id, uint16_t* node)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 8;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -3571,7 +3451,7 @@ int32_t ispSetGammaYNode(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 7;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -3660,7 +3540,7 @@ int32_t ispSetGammaRNode(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 7;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -3749,7 +3629,7 @@ int32_t ispSetGammaGNode(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 7;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -3838,7 +3718,7 @@ int32_t ispSetGammaBNode(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 7;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -3910,7 +3790,7 @@ int32_t ispSetGammaNodeIndex(uint32_t handler_id, uint8_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 4;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -4052,7 +3932,7 @@ int32_t ispSetGammaXNode_v002(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 18;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -4333,7 +4213,7 @@ int32_t ispSetGammaYNode_v002(uint32_t handler_id, uint32_t isp_id, uint16_t* no
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 48;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -4546,7 +4426,7 @@ int32_t ispSetGammaXNode_v002(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 18;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -5083,7 +4963,7 @@ int32_t ispSetGammaYNode_v002(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 48;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -5171,9 +5051,7 @@ int32_t ispSetCCEMatrix(uint32_t handler_id, uint16_t* matrix_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 5;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5200,9 +5078,7 @@ int32_t ispSetCCEShift(uint32_t handler_id, uint16_t y_shift, uint16_t u_shift, 
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5227,9 +5103,7 @@ int32_t ispCCEUVDivBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5265,9 +5139,7 @@ int32_t ispSetCCEUVDiv(uint32_t handler_id, uint8_t* div_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 2;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5304,7 +5176,7 @@ int32_t ispSetCCEUVC(uint32_t handler_id, uint8_t* t_ptr, uint8_t* m_ptr)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 2;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -5359,9 +5231,7 @@ int32_t ispPrefBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5385,9 +5255,7 @@ int32_t ispPrefWriteBack(uint32_t handler_id, uint16_t write_back)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5413,9 +5281,7 @@ int32_t ispSetPrefThrd(uint32_t handler_id, uint8_t y_thr, uint8_t u_thr, uint8_
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 
@@ -5441,9 +5307,7 @@ int32_t ispPrefSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5469,9 +5333,7 @@ int32_t ispPrefSliceInfo(uint32_t handler_id, uint16_t edge_info)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*BRIGHT */
@@ -5523,9 +5385,7 @@ int32_t ispBrightBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5549,9 +5409,7 @@ int32_t ispSetBrightFactor(uint32_t handler_id, uint8_t factor)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5576,9 +5434,7 @@ int32_t ispBrightSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5602,9 +5458,7 @@ int32_t ispBrightSliceInfo(uint32_t handler_id, uint16_t edge_info)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*CONTRAST */
@@ -5656,9 +5510,7 @@ int32_t ispContrastbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5682,9 +5534,7 @@ int32_t ispSetContrastFactor(uint32_t handler_id, uint8_t factor)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*HIST */
@@ -5736,9 +5586,7 @@ int32_t ispHistbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5762,9 +5610,7 @@ int32_t ispHistAutoRstDisenable(uint32_t handler_id, uint8_t off)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5788,9 +5634,7 @@ int32_t ispHistMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5815,9 +5659,7 @@ int32_t ispSetHistRatio(uint32_t handler_id, uint16_t low_ratio, uint16_t high_r
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5844,9 +5686,7 @@ int32_t ispSetHistMaxMin(uint32_t handler_id, uint16_t in_min, uint16_t in_max, 
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5870,9 +5710,7 @@ int32_t ispHistClearEn(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5954,9 +5792,7 @@ int32_t ispAutoContrastbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -5980,9 +5816,7 @@ int32_t ispSetAutoContrastMode(uint32_t handler_id, uint16_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6009,9 +5843,7 @@ int32_t ispSetAutoContrastMaxMin(uint32_t handler_id, uint16_t in_min, uint16_t 
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*AFM */
@@ -6063,9 +5895,7 @@ int32_t ispAFMbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6089,9 +5919,7 @@ int32_t ispSetAFMShift(uint32_t handler_id, uint16_t shift)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6115,9 +5943,7 @@ int32_t ispAFMMode(uint32_t handler_id, uint8_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6144,7 +5970,7 @@ int32_t ispAFMSkipNum(uint32_t handler_id, uint8_t num)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -6174,7 +6000,7 @@ int32_t ispAFMSkipClear(uint32_t handler_id, uint8_t eb)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -6325,9 +6151,7 @@ int32_t ispSetAFMWindow(uint32_t handler_id, uint16_t win[][4])
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 18;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6489,9 +6313,7 @@ int32_t ispEdgeBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6517,9 +6339,7 @@ int32_t ispSetEdgeParam(uint32_t handler_id, uint16_t detail_th, uint16_t smooth
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*Emboss */
@@ -6571,9 +6391,7 @@ int32_t ispEmbossypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6597,9 +6415,7 @@ int32_t ispSetEmbossParam(uint32_t handler_id, uint16_t step)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*FS */
@@ -6651,9 +6467,7 @@ int32_t ispFalseColorBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6680,7 +6494,7 @@ int32_t ispFalseColorMode(uint32_t handler_id, uint8_t mode)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 	return ISP_SUCCESS;
 }
@@ -6734,9 +6548,7 @@ int32_t ispColorSaturationSuppressBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6794,9 +6606,7 @@ int32_t ispSetColorSaturationSuppressThrd(uint32_t handler_id, uint8_t* low_thr,
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = 4;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6822,9 +6632,7 @@ int32_t ispColorSaturationSuppressSliceSize(uint32_t handler_id, uint16_t w, uin
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6910,9 +6718,7 @@ int32_t ispSaturationbypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -6937,9 +6743,7 @@ int32_t ispSetSaturationFactor(uint32_t handler_id, uint8_t factor)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /* STORE */
@@ -7034,9 +6838,7 @@ int32_t ispStoreBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7060,9 +6862,7 @@ int32_t ispStoreSubtract(uint32_t handler_id, uint8_t subtract)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7087,9 +6887,7 @@ int32_t ispSetStoreSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7113,9 +6911,7 @@ int32_t ispSetStoreYAddr(uint32_t handler_id, uint32_t y_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7139,9 +6935,7 @@ int32_t ispSetStoreYPitch(uint32_t handler_id, uint32_t y_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7165,9 +6959,7 @@ int32_t ispSetStoreUAddr(uint32_t handler_id, uint32_t u_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7191,9 +6983,7 @@ int32_t ispSetStoreUPitch(uint32_t handler_id, uint32_t u_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7217,9 +7007,7 @@ int32_t ispSetStoreVAddr(uint32_t handler_id, uint32_t v_addr)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7243,9 +7031,7 @@ int32_t ispSetStoreVPitch(uint32_t handler_id, uint32_t v_pitch)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7270,9 +7056,7 @@ int32_t ispSetStoreInt(uint32_t handler_id, uint16_t int_cnt_num, uint8_t int_eb
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 int32_t ispSetStoreBoarder(uint32_t handler_id, uint8_t right, uint8_t left, uint8_t down, uint8_t up)
@@ -7330,9 +7114,7 @@ int32_t ispSetFeederDataType(uint32_t handler_id, uint16_t data_type)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7357,9 +7139,7 @@ int32_t ispSetFeederSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /* ARBITER */
@@ -7471,9 +7251,7 @@ int32_t ispArbiterReset(uint32_t handler_id, uint8_t rst)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7497,9 +7275,7 @@ int32_t ispSetArbiterPauseCycle(uint32_t handler_id, uint16_t cycle)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7526,7 +7302,7 @@ int32_t ispAxiMasterCtrl(uint32_t handler_id, uint8_t wait_resp)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -7581,9 +7357,7 @@ int32_t ispHDRBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7607,9 +7381,7 @@ int32_t ispSetHDRLevel(uint32_t handler_id, uint16_t level)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7635,9 +7407,7 @@ int32_t ispSetHDRIndex(uint32_t handler_id, uint8_t r_index, uint8_t g_index, ui
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7700,9 +7470,7 @@ int32_t ispSetHDRIndexTab(uint32_t handler_id, uint8_t* com_ptr, uint8_t* p2e_pt
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = ISP_HDR_COMP_ITEM+ISP_HDR_P2E_ITEM+ISP_HDR_E2P_ITEM;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /* COMMON */
@@ -7755,9 +7523,7 @@ int32_t isp_Start(uint32_t handler_id, uint8_t start)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7781,9 +7547,7 @@ int32_t ispInMode(uint32_t handler_id, uint32_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7807,9 +7571,7 @@ int32_t ispOutMode(uint32_t handler_id, uint32_t mode)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7834,9 +7596,7 @@ int32_t ispFetchEdian(uint32_t handler_id, uint32_t endian, uint32_t bit_reorder
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7860,9 +7620,7 @@ int32_t ispBPCEdian(uint32_t handler_id, uint32_t endian)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7886,9 +7644,7 @@ int32_t ispStoreEdian(uint32_t handler_id, uint32_t endian)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 /*	--
 *@
@@ -7911,9 +7667,7 @@ int32_t ispFetchDataFormat(uint32_t handler_id, uint32_t format)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7937,9 +7691,7 @@ int32_t ispStoreFormat(uint32_t handler_id, uint32_t format)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7963,9 +7715,7 @@ int32_t ispSetBurstSize(uint32_t handler_id, uint16_t burst_size)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -7983,16 +7733,16 @@ int32_t ispMemSwitch(uint32_t handler_id, uint8_t mem_switch)
 
 	if(SC8825_ISP_ID==isp_id)
 	{
-	ISP_CHECK_FD;
+		ISP_CHECK_FD;
 
-	reg_s_ptr->mBits.mem_switch=mem_switch;
-	/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
-	reg_config.reg_addr = ISP_COMMON_MEM_SWITCH_V0000- ISP_BASE_ADDR;
-	reg_config.reg_value = reg_s_ptr->dwValue;
-	write_param.reg_param = (uint32_t)&reg_config;
-	write_param.counts = 1;
+		reg_s_ptr->mBits.mem_switch=mem_switch;
+		/*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
+		reg_config.reg_addr = ISP_COMMON_MEM_SWITCH_V0000- ISP_BASE_ADDR;
+		reg_config.reg_value = reg_s_ptr->dwValue;
+		write_param.reg_param = (uint32_t)&reg_config;
+		write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8017,9 +7767,7 @@ int32_t ispShadowAll(uint32_t handler_id, uint8_t shadow)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8043,9 +7791,7 @@ int32_t ispShadow(uint32_t handler_id, uint8_t shadow)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8073,9 +7819,7 @@ int32_t ispByerMode(uint32_t handler_id, uint32_t nlc_bayer, uint32_t awbc_bayer
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8099,9 +7843,7 @@ int32_t ispPMURamMask(uint32_t handler_id, uint8_t mask)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8125,9 +7867,7 @@ int32_t ispHwMask(uint32_t handler_id, uint32_t hw_logic)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8151,9 +7891,7 @@ int32_t ispHwEnable(uint32_t handler_id, uint32_t hw_logic)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8177,9 +7915,7 @@ int32_t ispPMUSel(uint32_t handler_id, uint8_t sel)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8203,9 +7939,7 @@ int32_t ispSwEnable(uint32_t handler_id, uint32_t sw_logic)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8229,9 +7963,7 @@ int32_t ispPreviewStop(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8255,9 +7987,7 @@ int32_t ispSetShadowConterEb(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8281,9 +8011,7 @@ int32_t ispShadowConterClear(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8307,9 +8035,7 @@ int32_t ispSetShadowConter(uint32_t handler_id, uint32_t conter)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8333,9 +8059,7 @@ int32_t ispAXIStop(uint32_t handler_id, uint8_t eb)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -8362,7 +8086,7 @@ int32_t ispSliceCntEb(uint32_t handler_id, uint8_t eb)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8392,7 +8116,7 @@ int32_t ispPerformCntEb(uint32_t handler_id, uint8_t eb)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8422,7 +8146,7 @@ int32_t ispSetSliceNum(uint32_t handler_id, uint8_t num)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8580,7 +8304,7 @@ int32_t ispYGammabypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8627,7 +8351,7 @@ int32_t ispSetYGammaXNode(uint32_t handler_id, uint8_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 2;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8681,7 +8405,7 @@ int32_t ispSetYGammaYNode(uint32_t handler_id, uint16_t* node)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 3;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8723,7 +8447,7 @@ int32_t ispSetYGammaNodeIdx(uint32_t handler_id, uint16_t* index)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8758,7 +8482,7 @@ int32_t ispAutoFlickerVHeight(uint32_t handler_id, uint16_t height)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8792,7 +8516,7 @@ int32_t ispAutoFlickerLineConter(uint32_t handler_id, uint16_t counter)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8826,7 +8550,7 @@ int32_t ispAutoFlickerLineStep(uint32_t handler_id, uint8_t step)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8860,7 +8584,7 @@ int32_t ispAutoFlickerLineStart(uint32_t handler_id, uint16_t start_line)
 		write_param.reg_param = (uint32_t)&reg_config[0];
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8890,7 +8614,7 @@ int32_t ispAembypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8920,7 +8644,7 @@ int32_t ispAemMode(uint32_t handler_id, uint8_t mode)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8950,7 +8674,7 @@ int32_t ispAemSkipNum(uint32_t handler_id, uint8_t num)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -8980,7 +8704,7 @@ int32_t ispAemSourceSel(uint32_t handler_id, uint8_t src_sel)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -9058,7 +8782,7 @@ int32_t ispAutoFlickerbypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -9088,7 +8812,7 @@ int32_t ispAutoFlickerMode(uint32_t handler_id, uint8_t mode)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -9250,9 +8974,7 @@ int32_t ispGlbGainBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -9276,9 +8998,7 @@ int32_t ispSetGlbGain(uint32_t handler_id, uint32_t gain)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 
@@ -9304,9 +9024,7 @@ int32_t ispGlbGainSliceSize(uint32_t handler_id, uint16_t w, uint16_t h)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*RGB gain */
@@ -9358,9 +9076,7 @@ int32_t ispChnGainBypass(uint32_t handler_id, uint8_t bypass)
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -9386,9 +9102,7 @@ int32_t ispSetChnGain(uint32_t handler_id, uint16_t r_gain, uint16_t g_gain, uin
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -9414,9 +9128,7 @@ int32_t ispSetChnGainOffset(uint32_t handler_id, uint16_t r_offset, uint16_t g_o
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /* HUE */
@@ -9476,7 +9188,7 @@ int32_t ispHuebypass(uint32_t handler_id, uint8_t bypass)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -9506,7 +9218,7 @@ int32_t ispSetHueFactor(uint32_t handler_id, uint8_t factor)
 		write_param.reg_param = (uint32_t)&reg_config;
 		write_param.counts = 1;
 
-		_isp_write((uint32_t *)&write_param);
+		return _isp_write((uint32_t *)&write_param);
 	}
 
 	return ISP_SUCCESS;
@@ -9711,8 +9423,20 @@ int32_t ispGetIRQ(uint32_t *evt_ptr)
 
 	ISP_CHECK_FD;
 
-	if (-1 == ioctl(s_isp_fd, ISP_IO_IRQ, ptr)) {
-		ret = -1;
+	while (1) {
+		ret = ioctl(s_isp_fd, ISP_IO_IRQ, ptr);
+		if (0 == ret) {
+			break;
+		} else {
+			if (-EINTR == ptr->ret_val) {
+				usleep(5000);
+				ISP_LOG("continue.");
+				continue;
+			}
+			isp_perror("ispGetIRQ failed");
+			ISP_LOG("ret_val=%d", ptr->ret_val);
+			break;
+		}
 	}
 
 	return ret;
@@ -9769,6 +9493,7 @@ int32_t ispSetLncParam(uint32_t handler_id, uint32_t addr, uint32_t len)
 	write_param.counts = len;
 	if (-1 == ioctl(s_isp_fd, ISP_IO_LNC_PARAM, (uint32_t *)&write_param)) {
 		ret = -1;
+		isp_perror("ispSetLncParam failed");
 		ISP_LOG("kernal alloc lnc param buf error");
 	}
 
@@ -9844,9 +9569,7 @@ int32_t ispRegWrite(uint32_t handler_id, uint32_t num, void* param_ptr)
 	write_param.reg_param = (uint32_t)&reg_config[0];
 	write_param.counts = reg_num;
 
-	_isp_write((uint32_t *)&write_param);
-
-	return ISP_SUCCESS;
+	return _isp_write((uint32_t *)&write_param);
 }
 
 /*	--
@@ -9937,6 +9660,19 @@ int32_t ispBypassNewFeature(uint32_t handler_id)
 	return ISP_SUCCESS;
 }
 
+void isp_perror(const char *prefix)
+{
+	char   buff[100];
+	uint32_t handler_id = 0;
+
+
+	strerror_r(errno, buff, sizeof(buff));
+	if (prefix) {
+		ISP_LOG("%s:errno=%d, %s", prefix, errno, buff);
+	} else {
+		ISP_LOG("errno=%d, %s", errno, buff);
+	}
+}
 
 /**----------------------------------------------------------------------------*
 *			Compiler Flag						*
