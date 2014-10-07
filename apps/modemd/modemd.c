@@ -471,12 +471,22 @@ int stop_service(int modem, int is_vlx)
         snprintf(pid_str, sizeof(pid_str), "%d", pid);
         property_set(PHONE_APP_PROP, pid_str);
     }
-    if(modem == TD_MODEM)
+    if (modem == TD_MODEM) {
+        MODEMD_LOGD("kill TD phone process");
         property_set("ctl.start", "kill_td_phone");
-    else if(modem == W_MODEM)
+    } else if (modem == W_MODEM) {
+        MODEMD_LOGD("kill W phone process");
         property_set("ctl.start", "kill_w_phone");
-    else if(modem == LTE_MODEM)
+    } else if (modem == LTE_MODEM) {
+        MODEMD_LOGD("kill LTE phone process");
         property_set("ctl.start", "kill_l_phone");
+    } else if (modem == TL_MODEM) {
+        MODEMD_LOGD("kill TL phone process");
+        property_set("ctl.start", "kill_tl_phone");
+    } else if (modem == LF_MODEM) {
+        MODEMD_LOGD("kill LF phone process");
+        property_set("ctl.start", "kill_lf_phone");
+    }
 
     return 0;
 }
