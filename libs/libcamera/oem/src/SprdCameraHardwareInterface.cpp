@@ -6642,6 +6642,7 @@ static int HAL_camera_device_close(struct hw_device_t* device)
 	ispvideo_RegCameraFunc(4, NULL);
 #endif
 
+	mtrace_print_alllog(TRACE_MEMSTAT);
 	return 0;
 }
 

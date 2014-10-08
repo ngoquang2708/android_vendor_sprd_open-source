@@ -22,6 +22,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/isp/inc \
 	$(LOCAL_PATH)/isp/uv_denoise \
 	$(LOCAL_PATH)/isp/uv_denoise/inc \
+	$(LOCAL_PATH)/mtrace \
 	external/skia/include/images \
 	external/skia/include/core\
         external/jhead \
@@ -111,6 +112,7 @@ LOCAL_SRC_FILES:= \
 	jpeg/jpeg_fw_8830/src/jpegdec_api.c  \
 	jpeg/jpeg_fw_8830/src/exif_writer.c  \
 	jpeg/jpeg_fw_8830/src/jpeg_stream.c \
+	mtrace/mtrace.c \
 	isp/isp_app.c \
 	isp/isp_msg.c \
 	isp/isp_drv.c \

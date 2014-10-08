@@ -22,6 +22,7 @@ extern "C"
 #endif
 
 #include <sys/types.h>
+#include "mtrace.h"
 
 typedef unsigned long   cmr_uint;
 typedef long            cmr_int;

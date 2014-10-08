@@ -433,13 +433,14 @@ cmr_int cmr_thread_destroy(cmr_handle thread_handle)
 {
 	CMR_MSG_INIT(message);
 	cmr_int                  ret = CMR_MSG_SUCCESS;
-	struct cmr_thread        *thread = NULL;
+	struct cmr_thread        *thread = (struct cmr_thread *)thread_handle;
 	struct cmr_msg_cxt       *msg_cxt = NULL;
 
 	message.msg_type = CMR_THREAD_EXIT_EVT;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
 	ret = cmr_thread_msg_send(thread_handle, &message);
 	if (thread_handle) {
+		cmr_msg_queue_destroy(thread->queue_handle);
 		free(thread_handle);
 		thread_handle = NULL;
 	}
