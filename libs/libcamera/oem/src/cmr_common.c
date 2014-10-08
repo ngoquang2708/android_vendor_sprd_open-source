@@ -213,7 +213,7 @@ cmr_int camera_save_to_file(cmr_u32 index, cmr_u32 img_fmt, cmr_u32 width, cmr_u
 		strcat(file_name, "_");
 		sprintf(tmp_str, "%d", index);
 		strcat(file_name, tmp_str);
-		strcat(file_name, ".raw");
+		strcat(file_name, ".mipi_raw");
 		CMR_LOGI("file name %s", file_name);
 
 		fp = fopen(file_name, "wb");

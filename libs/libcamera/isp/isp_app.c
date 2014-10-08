@@ -813,6 +813,7 @@ static void *_isp_app_routine(void *client_data)
 			case ISP_APP_EVT_CONTINUE:
 				//ISP_LOG("ISP_APP_EVT_CONTINUE");
 				rtn=_isp_app_video_start(handler_id, (struct isp_video_start*)param_ptr);
+				res_ptr->rtn = rtn;
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->continue_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
@@ -821,7 +822,10 @@ static void *_isp_app_routine(void *client_data)
 			case ISP_APP_EVT_CONTINUE_STOP:
 				//ISP_LOG("ISP_APP_EVT_CONTINUE_STOP");
 				rtn = isp_ctrl_video_stop(handler_id);
-				rtn = _isp_AppStopVideoHandler(handler_id);
+				if (ISP_APP_SUCCESS == rtn) {
+					rtn = _isp_AppStopVideoHandler(handler_id);
+				}
+				res_ptr->rtn = rtn;
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn = pthread_cond_signal(&isp_system_ptr->continue_stop_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
@@ -830,11 +834,13 @@ static void *_isp_app_routine(void *client_data)
 			case ISP_APP_EVT_SIGNAL:
 				//ISP_LOG("ISP_APP_EVT_SIGNAL");
 				rtn = isp_ctrl_proc_start(handler_id, (struct ips_in_param*)param_ptr, NULL);
+				res_ptr->rtn = rtn;
 				break;
 
 			case ISP_APP_EVT_SIGNAL_NEXT:
 				//ISP_LOG("ISP_APP_EVT_SIGNAL_NEXT");
 				rtn=isp_ctrl_proc_next(handler_id, (struct ipn_in_param*)param_ptr, NULL);
+				res_ptr->rtn = rtn;
 				break;
 
 			case ISP_APP_EVT_IOCTRL:
@@ -842,10 +848,11 @@ static void *_isp_app_routine(void *client_data)
 				rtn = _isp_AppIoCtrlHandler(handler_id, sub_type, param_ptr);
 				ISP_LOG("_isp_AppIoCtrlHandler rtn =%d",rtn);
 				if (ISP_APP_SUCCESS == rtn) {
-					res_ptr->rtn = isp_ctrl_ioctl(handler_id, sub_type, param_ptr);
+					rtn = isp_ctrl_ioctl(handler_id, sub_type, param_ptr);
 				} else {
 					ISP_LOG("@@@ _isp_AppIoCtrlHandler error ,and cann`t exec isp_ctrl_ioctl @@@");
 				}
+				res_ptr->rtn = rtn;
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				ISP_LOG("come here");
 				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
@@ -1170,10 +1177,10 @@ int isp_capability(enum isp_capbility_cmd cmd, void* param_ptr)
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	rtn = respond.rtn;
-
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
+
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_capability error"));
 
 	return rtn;
 }
@@ -1210,10 +1217,10 @@ int isp_ioctl(enum isp_ctrl_cmd cmd, void* param_ptr)
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	rtn = respond.rtn;
-
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
+
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_ioctl error"));
 
 	return rtn;
 }
@@ -1257,6 +1264,8 @@ int isp_video_start(struct isp_video_start* param_ptr)
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_video_start error"));
+
 	ISP_LOG("--isp_app_video_start-- end");
 
 	return rtn;
@@ -1299,6 +1308,8 @@ int isp_video_stop(void)
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_video_stop error"));
+
 	ISP_LOG("--isp_app_video_stop--end");
 
 	return rtn;
@@ -1336,6 +1347,8 @@ int isp_proc_start(struct ips_in_param* in_param_ptr, struct ips_out_param* out_
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
 
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_proc_start error"));
+
 	ISP_LOG("--isp_app_proc_start--end");
 
 	return rtn;
@@ -1372,6 +1385,8 @@ int isp_proc_next(struct ipn_in_param* in_ptr, struct ips_out_param *out_ptr)
 
 	rtn = _isp_AppUnlock();
 	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
+
+	ISP_APP_RETURN_IF_FAIL(respond.rtn, ("isp_proc_next error"));
 
 	ISP_LOG("--isp_app_proc_next--end");
 
