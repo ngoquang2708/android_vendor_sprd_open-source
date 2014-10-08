@@ -689,8 +689,7 @@ static void do_select_devices(struct tiny_audio_device *adev);
 static int set_route_by_array(struct mixer *mixer, struct route_setting *route,unsigned int len);
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume);
 static int adev_set_master_mute(struct audio_hw_device *dev, bool mute);
-static int set_codec_mute(struct tiny_audio_device *adev);
-static void set_codec_mute_forFM(struct tiny_audio_device *adev ,bool mute);
+static int set_codec_mute(struct tiny_audio_device *adev,bool mute);
 static int do_input_standby(struct tiny_stream_in *in);
 static int do_output_standby(struct tiny_stream_out *out);
 static void force_all_standby(struct tiny_audio_device *adev);
@@ -1008,18 +1007,17 @@ ret);
         }
         return;
     }
+    pthread_mutex_lock(&adev->device_lock);
     if (adev->cache_mute == adev->master_mute) {
         ALOGI("Not to change mute: %d", adev->cache_mute);
     } else {
-        adev->cache_mute = adev->master_mute;
         /* mute codec PA */
         if(adev->master_mute && adev->pcm_fm_dl != NULL){
             ALOGD("%s,fm is open so do not mute codec",__func__);
         }else{
-            set_codec_mute(adev);
+            set_codec_mute(adev,adev->master_mute);
         }
     }
-    pthread_mutex_lock(&adev->device_lock);
     if(adev->call_start == 1){
        goto out;
     }
@@ -1073,7 +1071,7 @@ ret);
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
-                  set_codec_mute_forFM(adev,false);
+                  set_codec_mute(adev,false);
               }
             }
 
@@ -1118,7 +1116,7 @@ ret);
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
-                set_codec_mute_forFM(adev,true);
+                set_codec_mute(adev,true);
             }
 
         }
@@ -1146,7 +1144,6 @@ static void do_select_devices(struct tiny_audio_device *adev)
     int cur_in = 0;
     int pre_out = 0;
     int pre_in = 0;
-    bool mute_ops = false;
     bool voip_route_ops = false;
     ALOGI("do_select_devices E");
     pthread_mutex_lock(&adev->lock);
@@ -1154,24 +1151,24 @@ static void do_select_devices(struct tiny_audio_device *adev)
         ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
         voip_route_ops = true;
     }
-    if (adev->cache_mute != adev->master_mute) {
-        adev->cache_mute = adev->master_mute;
-        /* mute codec PA */
-        if(!(adev->master_mute && adev->pcm_fm_dl != NULL)){
-            mute_ops = true;
-            ALOGD("%s,fm is open so do not mute codec",__func__);
-        }
-    }
-    pthread_mutex_unlock(&adev->lock);
+   pthread_mutex_unlock(&adev->lock);
     if(voip_route_ops){
       ret = at_cmd_route(adev);  //send at command to cp
       return;
     }
-    if(mute_ops){
-      set_codec_mute(adev);
-    }
     pthread_mutex_lock(&adev->device_lock);
     pthread_mutex_lock(&adev->lock);
+    if (adev->cache_mute == adev->master_mute) {
+        ALOGI("Not to change mute: %d", adev->cache_mute);
+    } else {
+        /* mute codec PA */
+        if(adev->master_mute && adev->pcm_fm_dl != NULL){
+            ALOGD("%s,fm is open so do not mute codec",__func__);
+        }else{
+            set_codec_mute(adev,adev->master_mute);
+        }
+    }
+
     if(adev->call_start == 1){
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&adev->device_lock);
@@ -1226,7 +1223,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
-                  set_codec_mute_forFM(adev,false);
+                  set_codec_mute(adev,false);
               }
             }
             pthread_mutex_unlock(&adev->lock);
@@ -1271,7 +1268,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
-                set_codec_mute_forFM(adev,true);
+                set_codec_mute(adev,true);
             }
             pthread_mutex_unlock(&adev->lock);
         }
@@ -3737,28 +3734,11 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 
     return 0;
 }
-
-static int set_codec_mute(struct tiny_audio_device *adev)
+static int set_codec_mute(struct tiny_audio_device *adev ,bool mute)
 {
-    ALOGD("set_codec_mute(%d)", adev->master_mute);
-    if (adev->private_ctl.speaker_mute)
-        mixer_ctl_set_value(adev->private_ctl.speaker_mute, 0, adev->master_mute);
+    ALOGI("%s in  mute:%d",__func__, mute);
+    adev->cache_mute = mute;
 
-    if (adev->private_ctl.speaker2_mute)
-        mixer_ctl_set_value(adev->private_ctl.speaker2_mute, 0, adev->master_mute);
-
-    if (adev->private_ctl.earpiece_mute)
-        mixer_ctl_set_value(adev->private_ctl.earpiece_mute, 0, adev->master_mute);
-
-    if (adev->private_ctl.headphone_mute)
-        mixer_ctl_set_value(adev->private_ctl.headphone_mute, 0, adev->master_mute);
-
-    return 0;
-}
-
-static void set_codec_mute_forFM(struct tiny_audio_device *adev ,bool mute)
-{
-    ALOGV("%s in ",__func__);
     if (adev->private_ctl.speaker_mute)
         mixer_ctl_set_value(adev->private_ctl.speaker_mute, 0, mute);
 
@@ -3771,7 +3751,7 @@ static void set_codec_mute_forFM(struct tiny_audio_device *adev ,bool mute)
     if (adev->private_ctl.headphone_mute)
         mixer_ctl_set_value(adev->private_ctl.headphone_mute, 0, mute);
 
-    return;
+    return 0;
 
 }
 
@@ -3779,20 +3759,18 @@ static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
 
-    //ALOGD("%s, mute=%d, master_mute=%d", __func__, mute, adev->master_mute);
+    ALOGD("%s, mute=%d, master_mute=%d", __func__, mute, adev->master_mute);
     if (adev->master_mute == mute)
         return 0;
     if (!adev->master_mute && adev->mode == AUDIO_MODE_IN_CALL)
 	return 0;
+    pthread_mutex_lock(&adev->device_lock);
     pthread_mutex_lock(&adev->lock);
     adev->master_mute = mute;
-    if(mute && adev->pcm_fm_dl != NULL){
-        pthread_mutex_unlock(&adev->lock);
-        ALOGD("FM is open so wo can not set master mute");
-        return 0;
-    }
-    select_devices_signal(adev);
     pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->device_lock);
+
+    select_devices_signal(adev);
     ALOGD("adev_set_master_mute(%d)", adev->master_mute);
     return 0;
 }
