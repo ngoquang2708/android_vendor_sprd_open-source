@@ -65,6 +65,8 @@ protected:
         OMX_BUFFERHEADERTYPE *header);
 
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
+    virtual OMX_ERRORTYPE setConfig(
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual void onQueueFilled(OMX_U32 portIndex);
     virtual void onPortFlushCompleted(OMX_U32 portIndex);
@@ -135,6 +137,8 @@ private:
     bool mNeedIVOP;
     bool mHeadersDecoded;
     bool mAllocateBuffers;
+    bool mStopDecode;
+    OMX_BOOL mThumbnailMode;
     FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
     FT_MP4DecInit mMP4DecInit;
     FT_MP4DecVolHeader mMP4DecVolHeader;

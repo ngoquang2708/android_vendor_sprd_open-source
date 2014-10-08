@@ -154,6 +154,8 @@ SPRDAVCDecoder::SPRDAVCDecoder(
       mChangeToSwDec(false),
       mAllocateBuffers(false),
       mNeedIVOP(true),
+      mStopDecode(false),
+      mThumbnailMode(OMX_FALSE),
       mIOMMUEnabled(false),
       mCodecInterBuffer(NULL),
       mCodecExtraBuffer(NULL),
@@ -790,7 +792,7 @@ OMX_ERRORTYPE SPRDAVCDecoder::allocateBuffer(
     case OMX_DirOutput:
     {
         mAllocateBuffers = true;
-        if(mDecoderSwFlag) {
+        if(mDecoderSwFlag  || mChangeToSwDec) {
             return SprdSimpleOMXComponent::allocateBuffer(header, portIndex, appPrivate, size);
         } else {
             MemoryHeapIon* pMem = NULL;
@@ -897,6 +899,37 @@ OMX_ERRORTYPE SPRDAVCDecoder::getConfig(
     }
 }
 
+OMX_ERRORTYPE SPRDAVCDecoder::setConfig(
+    OMX_INDEXTYPE index, const OMX_PTR params) {
+    switch (index) {
+        case OMX_IndexConfigThumbnailMode:
+        {
+            OMX_BOOL *pEnable = (OMX_BOOL *)params;
+
+            if (*pEnable == OMX_TRUE) {
+                mThumbnailMode = OMX_TRUE;
+            }
+
+            ALOGI("setConfig, mThumbnailMode = %d", mThumbnailMode);
+
+            if (mThumbnailMode) {
+                PortInfo *pInPort = editPortInfo(OMX_DirInput);
+                PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
+                pInPort->mDef.nBufferCountActual = 2;
+                pOutPort->mDef.nBufferCountActual = 2;
+                pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+                if(!mDecoderSwFlag) {
+                    mChangeToSwDec = true;
+                }
+            }
+            return OMX_ErrorNone;
+        }
+
+        default:
+            return SprdSimpleOMXComponent::setConfig(index, params);
+    }
+}
+
 void dump_bs( uint8* pBuffer,int32 aInBufSize) {
     FILE *fp = fopen("/data/video_es.m4v","ab");
     fwrite(pBuffer,1,aInBufSize,fp);
@@ -922,7 +955,8 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
 
         mChangeToSwDec = false;
 
-        ALOGI("%s, %d, change to sw decoder", __FUNCTION__, __LINE__);
+        ALOGI("%s, %d, change to sw decoder, mThumbnailMode: %d",
+            __FUNCTION__, __LINE__, mThumbnailMode);
 
         releaseDecoder();
 
@@ -942,12 +976,18 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             mSignalledError = true;
             return;
         }
+
+        if (mThumbnailMode) {
+            MMDecVideoFormat video_format;
+            video_format.yuv_format = YUV420P_YU12;
+            (*mH264DecSetparam)(mHandle, &video_format);
+        }
     }
 
     List<BufferInfo *> &inQueue = getPortQueue(kInputPortIndex);
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
 
-    while ((mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
+    while (!mStopDecode && (mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
             && outQueue.size() != 0) {
 
         if (mEOSStatus == INPUT_EOS_SEEN) {
@@ -1011,9 +1051,6 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         uint8_t *bitstream = inHeader->pBuffer + inHeader->nOffset;
         int32_t bufferSize = inHeader->nFilledLen;
 
-        if (mPbuf_stream_v != NULL) {
-            memcpy(mPbuf_stream_v, bitstream, bufferSize);
-        }
         dec_in.pStream = (uint8 *) mPbuf_stream_v;
         dec_in.pStream_phy = (uint32) mPbuf_stream_p;
         dec_in.dataLen = bufferSize;
@@ -1021,8 +1058,31 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         dec_in.expected_IVOP = mNeedIVOP;
         dec_in.beDisplayed = 1;
         dec_in.err_pkt_num = 0;
-
         dec_out.frameEffective = 0;
+
+        if(mThumbnailMode) {
+            int32 add_startcode_len = 0;
+
+            uint8 *p = (uint8 *)(inHeader->pBuffer + inHeader->nOffset);
+
+            if((p[0] != 0x0) || (p[1] != 0x0) || (p[2] != 0x0) || (p[3] != 0x1))
+            {
+                ALOGI("%s, %d, p[0]: %x, p[1]: %x, p[2]: %x, p[3]: %x", __FUNCTION__, __LINE__, p[0], p[1], p[2], p[3]);
+
+                ((uint8 *) mPbuf_stream_v)[0] = 0x0;
+                ((uint8 *) mPbuf_stream_v)[1] = 0x0;
+                ((uint8 *) mPbuf_stream_v)[2] = 0x0;
+                ((uint8 *) mPbuf_stream_v)[3] = 0x1;
+
+                add_startcode_len = 4;
+                dec_in.dataLen += add_startcode_len;
+            }
+            memcpy((void *)mPbuf_stream_v+add_startcode_len, inHeader->pBuffer + inHeader->nOffset, inHeader->nFilledLen);
+        } else {
+            if (mPbuf_stream_v != NULL) {
+                memcpy(mPbuf_stream_v, bitstream, bufferSize);
+            }
+        }
 
         ALOGV("%s, %d, dec_in.dataLen: %d, mPicId: %d", __FUNCTION__, __LINE__, dec_in.dataLen, mPicId);
 
@@ -1072,7 +1132,8 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
                   __FUNCTION__, __LINE__, yuv, mPicId,outHeader, outHeader->pBuffer, outHeader->nTimeStamp);
             (*mH264Dec_SetCurRecPic)(mHandle, yuv, (uint8 *)picPhyAddr, (void *)outHeader, mPicId);
         } else {
-            (*mH264Dec_SetCurRecPic)(mHandle, outHeader->pBuffer, (uint8 *)picPhyAddr, (void *)outHeader, mPicId);
+            uint8 *yuv = (uint8 *)(outHeader->pBuffer + outHeader->nOffset);
+            (*mH264Dec_SetCurRecPic)(mHandle, yuv, (uint8 *)picPhyAddr, (void *)outHeader, mPicId);
         }
 
 //        dump_bs( mPbuf_stream_v, dec_in.dataLen);
@@ -1104,10 +1165,8 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
                 return;
             } else if (decRet == MMDEC_STREAM_ERROR) {
                 ALOGE("failed to decode video frame, stream error");
-//                notify(OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
             } else if (decRet == MMDEC_HW_ERROR) {
                 ALOGE("failed to decode video frame, hardware error");
-//                notify(OMX_EventError, OMX_ErrorHardware, 0, NULL);
             } else {
                 ALOGI("now, we don't take care of the decoder return: %d", decRet);
             }
@@ -1168,6 +1227,9 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
             //dump_yuv(dec_out.pOutFrameY, mPictureSize);
             drainOneOutputBuffer(picId, dec_out.pBufferHeader);
             dec_out.frameEffective = false;
+            if(mThumbnailMode) {
+                mStopDecode = true;
+            }
         }
     }
 }
@@ -1385,7 +1447,9 @@ int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
             mCodecExtraBuffer = NULL;
         }
         mCodecExtraBuffer = (uint8 *)malloc(size_extra);
-
+        if (mCodecExtraBuffer == NULL) {
+            return -1;
+        }
         extra_mem[SW_CACHABLE].common_buffer_ptr = mCodecExtraBuffer;
         extra_mem[SW_CACHABLE].common_buffer_ptr_phy = 0;
         extra_mem[SW_CACHABLE].size = size_extra;
@@ -1477,6 +1541,10 @@ OMX_ERRORTYPE SPRDAVCDecoder::getExtensionIndex(
     }	else if (strcmp(name, SPRD_INDEX_PARAM_USE_ANB) == 0) {
         ALOGI("getExtensionIndex:%s",SPRD_INDEX_PARAM_USE_ANB);
         *index = OMX_IndexParamUseAndroidNativeBuffer2;
+        return OMX_ErrorNone;
+    }  else if (strcmp(name, SPRD_INDEX_CONFIG_THUMBNAIL_MODE) == 0) {
+        ALOGI("getExtensionIndex:%s",SPRD_INDEX_CONFIG_THUMBNAIL_MODE);
+        *index = OMX_IndexConfigThumbnailMode;
         return OMX_ErrorNone;
     }
 
@@ -1575,6 +1643,15 @@ bool SPRDAVCDecoder::openDecoder(const char* libName) {
         mLibHandle = NULL;
         return false;
     }
+
+    mH264DecSetparam = (FT_H264DecSetparam)dlsym(mLibHandle, "H264DecSetParameter");
+    if(mH264DecSetparam == NULL) {
+        ALOGE("Can't find H264DecSetParameter in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return false;
+    }
+
 
     return true;
 }
