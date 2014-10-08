@@ -1966,7 +1966,10 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 */
 static int start_engineer_service(void)
 {
-	char prop[PROPERTY_VALUE_MAX] = {'\0'};;
+
+	if(!check_if_wcnmodem_enable()) return 0;
+
+	char prop[PROPERTY_VALUE_MAX] = {'\0'};
 	WCND_LOGD("start engservice!");
 	property_get(WCND_ENGCTRL_PROP_KEY,prop, "0");
 	if(!strcmp(prop, "1")) {
