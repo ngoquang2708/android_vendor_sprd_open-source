@@ -3503,7 +3503,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		return ret;
 	}
 
-    if (set_isp_flag) {
+	if (set_isp_flag) {
 		ret = isp_ioctl(isp_cmd, (void*)&isp_param);
 		if (ret) {
 			CMR_LOGE("failed isp ioctl %ld", ret);
