@@ -29,7 +29,6 @@ namespace android {
 
 //#define SPRD_DUMP_YUV
 //#define SPRD_DUMP_BS
-#define SPRD_WFD_SUPPORT 1
 #define CONVERT_THREAD
 #ifdef CONVERT_THREAD
 struct ALooper;
@@ -165,11 +164,9 @@ private:
     int32_t  mIDRFrameRefreshIntervalInSec;
     AVCProfile mAVCEncProfile;
     AVCLevel   mAVCEncLevel;
-#if SPRD_WFD_SUPPORT
     uint8_t  header[100];
     int      spssize;
     int      ppssize;
-#endif
     int64_t  mNumInputFrames;
     int64_t  mPrevTimestampUs;
     bool     mStarted;
