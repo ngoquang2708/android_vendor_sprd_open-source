@@ -5723,13 +5723,12 @@ void SprdCameraHardware::receiveCameraExitError(void)
 	Mutex::Autolock cbPreviewLock(&mPreviewCbLock);
 	Mutex::Autolock cbCaptureLock(&mCaptureCbLock);
 
-	if (!checkPreviewStateForCapture()) {
+/*	if (!checkPreviewStateForCapture()) {
 		LOGE("drop current cameraExit msg");
-		return;
-	}
+	}*/
 	if ((mMsgEnabled & CAMERA_MSG_ERROR) && (mData_cb != NULL)) {
 		LOGE("HandleErrorState");
-		mNotify_cb(CAMERA_MSG_ERROR, 0,0,mUser);
+		mNotify_cb(CAMERA_MSG_ERROR, 100,0,mUser);
 	}
 
 	LOGE("HandleErrorState:don't enable error msg!");

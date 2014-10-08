@@ -46,6 +46,7 @@
 
 #define OEM_HANDLE_HDR                               1
 #define CAMERA_PATH_SHARE                            1
+#define OEM_RESTART_SUM                              2
 #define POWER2(x)                                    (1<<(x))
 /**********************************************************************************************/
 
@@ -169,6 +170,7 @@ static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * da
 static void camera_snapshot_started(cmr_handle oem_handle);
 static void camera_exif_handle_before_snapshot(cmr_handle oem_handle);
 static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm);
+static cmr_int camera_restart_rot(cmr_handle oem_handle);
 /**********************************************************************************************/
 
 void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
@@ -2557,6 +2559,7 @@ cmr_int camera_start_rot(cmr_handle oem_handle, cmr_handle caller_handle, struct
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 	struct cmr_rot_param           rot_param;
+	cmr_uint                       restart_cnt = 0;
 
 	if (!caller_handle || !oem_handle || !src || !dst || !mean) {
 		CMR_LOGE("in parm error");
@@ -2564,14 +2567,21 @@ cmr_int camera_start_rot(cmr_handle oem_handle, cmr_handle caller_handle, struct
 		goto exit;
 	}
 	camera_take_snapshot_step(CMR_STEP_ROT_S);
-	rot_param.angle = mean->rot;
-	rot_param.handle = cxt->rot_cxt.rotation_handle;
-	rot_param.src_img = *src;
-	rot_param.dst_img = *dst;
-	ret = cmr_rot(&rot_param);
-	if (ret) {
-		CMR_LOGE("failed to rotate %ld", ret);
-	}
+	do {
+		rot_param.angle = mean->rot;
+		rot_param.handle = cxt->rot_cxt.rotation_handle;
+		rot_param.src_img = *src;
+		rot_param.dst_img = *dst;
+		ret = cmr_rot(&rot_param);
+		if (ret) {
+			CMR_LOGE("failed to rotate %ld", ret);
+			ret = camera_restart_rot(oem_handle);
+		} else {
+			goto rot_end;
+		}
+		restart_cnt++;
+	} while (restart_cnt < OEM_RESTART_SUM);
+rot_end:
 	camera_take_snapshot_step(CMR_STEP_ROT_E);
 exit:
 	CMR_LOGI("done %ld", ret);
@@ -3364,7 +3374,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	cmr_u32                        ptr_flag = 0;
 	cmr_uint                       set_exif_flag = 0;
 	cmr_uint                       set_isp_flag = 1;
-	SENSOR_EXIF_CTRL_E             exif_cmd;
+	SENSOR_EXIF_CTRL_E             exif_cmd = SENSOR_EXIF_CTRL_MAX;
 
 	if (!oem_handle || !param_ptr) {
 		CMR_LOGE("in parm error");
@@ -4070,6 +4080,32 @@ void camera_exif_handle_before_snapshot(cmr_handle oem_handle)
 		cxt->setting_cxt.is_auto_iso = 1;
 		cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_EXIF_CTRL_ISOSPEEDRATINGS, isp_param);
 	}
+}
+
+
+cmr_int camera_restart_rot(cmr_handle oem_handle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct camera_context          *cxt = (struct camera_context*)oem_handle;
+
+	if (!oem_handle) {
+		CMR_LOGE("in parm error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+
+	ret = camera_rotation_deinit(oem_handle);
+	if (ret) {
+		CMR_LOGE("failed to de-init rotate %ld", ret);
+	} else {
+		ret = camera_rotation_init(oem_handle);
+		if (ret) {
+			CMR_LOGE("failed to initizalize rot");
+		}
+	}
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
 }
 
 /*****************************************external function*****************************************/
