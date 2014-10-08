@@ -3363,6 +3363,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	void                           *isp_param_ptr = NULL;
 	cmr_u32                        ptr_flag = 0;
 	cmr_uint                       set_exif_flag = 0;
+	cmr_uint                       set_isp_flag = 1;
 	SENSOR_EXIF_CTRL_E             exif_cmd;
 
 	if (!oem_handle || !param_ptr) {
@@ -3377,6 +3378,9 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_SCENECAPTURETYPE;
 		isp_param = param_ptr->cmd_value;
+		if (ISP_AE_MODE_MAX == isp_param) {
+			set_isp_flag = 0;
+		}
 		CMR_LOGI("ae mode %d", param_ptr->cmd_value);
 		break;
 	case COM_ISP_SET_AE_MEASURE_LUM:
@@ -3499,22 +3503,23 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		return ret;
 	}
 
-	ret = isp_ioctl(isp_cmd, (void*)&isp_param);
-	if (ret) {
-		CMR_LOGE("failed isp ioctl %ld", ret);
-	} else {
-		if (COM_ISP_SET_ISO == cmd_type) {
-			if (0 == param_ptr->cmd_value) {
-				isp_capability(ISP_CUR_ISO,(void *)&isp_param);
-				isp_param = POWER2(isp_param-1)*100;
-				cxt->setting_cxt.is_auto_iso = 1;
-			} else {
-				cxt->setting_cxt.is_auto_iso = 0;
+    if (set_isp_flag) {
+		ret = isp_ioctl(isp_cmd, (void*)&isp_param);
+		if (ret) {
+			CMR_LOGE("failed isp ioctl %ld", ret);
+		} else {
+			if (COM_ISP_SET_ISO == cmd_type) {
+				if (0 == param_ptr->cmd_value) {
+					isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+					isp_param = POWER2(isp_param-1)*100;
+					cxt->setting_cxt.is_auto_iso = 1;
+				} else {
+					cxt->setting_cxt.is_auto_iso = 0;
+				}
+				CMR_LOGI("auto iso %d, exif iso %d", cxt->setting_cxt.is_auto_iso, isp_param);
 			}
-			CMR_LOGI("auto iso %d, exif iso %d", cxt->setting_cxt.is_auto_iso, isp_param);
 		}
-	}
-
+    }
 	if (set_exif_flag) {
 		CMR_LOGD("ERIC set exif");
 		if (COM_ISP_SET_AWB_MODE == cmd_type) {
