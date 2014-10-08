@@ -50,7 +50,15 @@
 #define IQ_DEV "/sys/module/sprd_iq/parameters/iq_base"
 #define IQ_BASE_LENGTH 32
 
-#define freq_fb_dev "/sys/class/graphics/fb0/dynamic_pclk"
+#define FREQ_RGB_FB_DEV  "/sys/class/graphics/fb0/dynamic_pclk"
+#define FREQ_MIPI_FB_DEV "/sys/class/graphics/fb0/dynamic_mipi_clk"
+
+enum {
+	REF_DISABLE_LCD = 0,
+	REF_MIPI_LCD,
+	REF_RGB_LCD
+};
+
 
 enum {
 	REF_PSFREQ_CMD,
@@ -93,6 +101,7 @@ struct refnotify_cmd {
 struct ref_lcdfreq {
 	uint32_t clk;
 	uint32_t divisor;
+	uint32_t type;
 };
 
 struct time_sync
@@ -384,9 +393,12 @@ static void RefNotify_DoTimesync(char * path, struct refnotify_cmd *pcmd)
 static void RefNotify_DoFreqCmd(struct refnotify_cmd *pcmd)
 {
 	struct ref_lcdfreq *p_freq = (struct ref_lcdfreq *)(pcmd + 1);
-	REF_LOGD("%s: %d, %d\n",__func__, p_freq->clk, p_freq->divisor);
 	int fd, wr;
-	char freq_str[32] = {"0,0"};//default value 0, if suspended
+	char mipi_freq_str[12] = {"0"};//default value 0, if suspended
+	char rgb_freq_str[32] = {"0,0"};//default value 0, if suspended
+
+	REF_LOGD("%s: clk = %d, divisor = %d, type = %d\n",__func__, p_freq->clk, p_freq->divisor, p_freq->type);
+
 #if 0
 	char freq_fb_dev[64];
 	if(property_get("ro.refnotify.freqdev",freq_fb_dev,NULL)>0){
@@ -396,19 +408,41 @@ static void RefNotify_DoFreqCmd(struct refnotify_cmd *pcmd)
 		return;
 	}
 #endif
-	fd = open(freq_fb_dev, O_RDWR, 0);
-	if(fd < 0) {
-		REF_LOGE("open %s failed, error: %s", freq_fb_dev, strerror(errno));
-		return;
+
+	if(REF_MIPI_LCD == p_freq->type)
+	{
+		fd = open(FREQ_MIPI_FB_DEV, O_RDWR, 0);
+		if(fd < 0) {
+			REF_LOGE("open %s failed, error: %s", FREQ_MIPI_FB_DEV, strerror(errno));
+			return;
+		}
+		if(p_freq->clk){
+			sprintf(mipi_freq_str, "%d", p_freq->clk);
+		}
+		REF_LOGD("%s:MIPI LCD, mipi_freq_str is %s", __func__, mipi_freq_str);
+		wr = write(fd, mipi_freq_str, strlen(mipi_freq_str));
+		if(wr < 0) {
+			REF_LOGE("write %s failed, error: %s", FREQ_MIPI_FB_DEV, strerror(errno));
+		}
+		close(fd);
 	}
-	if(p_freq->clk){
-		sprintf(freq_str, "%d,%d", p_freq->clk, p_freq->divisor);
+	else if(REF_RGB_LCD == p_freq->type)
+	{
+		fd = open(FREQ_RGB_FB_DEV, O_RDWR, 0);
+		if(fd < 0) {
+			REF_LOGE("open %s failed, error: %s", FREQ_RGB_FB_DEV, strerror(errno));
+			return;
+		}
+		if(p_freq->clk){
+			sprintf(rgb_freq_str, "%d,%d", p_freq->clk, p_freq->divisor);
+		}
+		REF_LOGD("%s:RGB LCD, rgb_freq_str is %s", __func__, rgb_freq_str);	
+		wr = write(fd, rgb_freq_str, strlen(rgb_freq_str));
+		if(wr < 0) {
+			REF_LOGE("write %s failed, error: %s", FREQ_RGB_FB_DEV, strerror(errno));
+		}
+		close(fd);
 	}
-	wr = write(fd, freq_str, strlen(freq_str));
-	if(wr < 0) {
-		REF_LOGE("write %s failed, error: %s", freq_fb_dev, strerror(errno));
-	}
-	close(fd);
 }
 
 void RefNotify_DoCmd(int fd, struct refnotify_cmd *pcmd)
