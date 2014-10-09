@@ -856,6 +856,7 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 	cmr_int                        ret = JPEG_CODEC_SUCCESS;
 	cmr_int                        evt_id;
 	cmr_u32                        evt;
+	cmr_u32                        restart_cnt = 0;
 	cmr_handle                     handle = NULL;
 	struct jpeg_enc_next_param     *param_ptr = NULL;
 	struct jpeg_dec_next_param     *dec_param_ptr = NULL;
@@ -879,9 +880,25 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 
 	switch(evt) {
 	case  JPEG_EVT_ENC_START:
+enc_start:
 		handle = (cmr_handle )message->data;
 		ret = _enc_start(handle, jcontext);
+		if (ret && (JPEG_CODEC_STOP != ret) && (0 == restart_cnt)) {
+			ret = JPEGCODEC_Close();
+			if (ret) {
+				CMR_LOGE("failed to close jpeg codec %ld", ret);
+			} else {
+				ret = JPEGCODEC_Open();
+				if (ret) {
+					CMR_LOGE("failed to open jpeg codec %ld", ret);
+				} else {
+					restart_cnt++;
+					goto enc_start;
+				}
+			}
+		}
 		_enc_start_post(handle, jcontext, ret);
+		restart_cnt = 0;
 		CMR_LOGV("jpeg:receive JPEG_EVT_ENC_START message");
 		break;
 
@@ -941,13 +958,30 @@ static cmr_int jpeg_thread_proc(struct cmr_msg *message, void* data)
 		break;
 
 	case JPEG_EVT_ENC_THUMB:
+thumb_start:
 		handle = (cmr_handle )message->data;
 		ret = _enc_start(handle,jcontext);
 		memset((void*)&jcontext->thumbnail_info, 0, sizeof(struct jpeg_enc_cb_param));
 		if (JPEG_CODEC_SUCCESS == ret) {
 			jcontext->thumbnail_info.is_thumbnail = 1;
 			_prc_enc_cbparam(handle, &jcontext->thumbnail_info);
+		} else {
+			if (!restart_cnt) {
+				ret = JPEGCODEC_Close();
+				if (ret) {
+					CMR_LOGE("failed to close jpeg codec %ld", ret);
+				} else {
+					ret = JPEGCODEC_Open();
+					if (ret) {
+						CMR_LOGE("failed to open jpeg codec %ld", ret);
+					} else {
+						restart_cnt++;
+						goto thumb_start;
+					}
+				}
+			}
 		}
+		restart_cnt = 0;
 		CMR_LOGI("jpeg:enc thumbnail done,ret = %d.", (cmr_u32)ret);
 		break;
 
