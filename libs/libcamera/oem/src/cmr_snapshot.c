@@ -682,6 +682,7 @@ void snp_jpeg_enc_err_handle(cmr_handle snp_handle)
 
 	CMR_LOGI("err code %ld", cxt->err_code);
 	sem_post(&cxt->jpeg_sync_sm);
+	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EXIT_CB_FAILED, NULL);
 }
 
 void snp_jpeg_dec_err_handle(cmr_handle snp_handle)
