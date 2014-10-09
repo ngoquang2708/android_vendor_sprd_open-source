@@ -3128,8 +3128,10 @@ cmr_int prev_get_cap_max_size(struct prev_handle *handle,
 			img_sz.height = img_rc.height;
 		}
 
-		max_size->width  = MAX(max_size->width, img_sz.width);
-		max_size->height = MAX(max_size->height, img_sz.height);
+		if (!(max_size->width == img_sz.height && max_size->height == img_sz.width)) {
+			max_size->width  = MAX(max_size->width, img_sz.width);
+			max_size->height = MAX(max_size->height, img_sz.height);
+		}
 	}
 
 exit:

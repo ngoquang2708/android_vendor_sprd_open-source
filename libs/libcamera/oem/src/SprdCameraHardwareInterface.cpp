@@ -2843,7 +2843,8 @@ bool SprdCameraHardware::allocatePreviewMemFromGraphics(cmr_u32 size, cmr_u32 su
 			return 0;
 		}
 		if (sum > (cmr_u32)kPreviewBufferCount) {
-			LOGE("malloc is too more %d", sum);
+			LOGE("malloc %d is too more %d", sum, kPreviewBufferCount);
+			return -1;
 		}
 
 		if (0 != mPreviewWindow->set_buffer_count(mPreviewWindow, sum)) {
@@ -2928,10 +2929,11 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 	cmr_uint buffer_start_id = 0, buffer_end_id = 0;
 	cmr_uint i = 0, j = 0;
 
-	LOGI("prev mem req size %d sum %d", size, sum);
+	LOGI("Callback_PreviewMalloc Usage %d, org %d, prev mem req size %d sum %d",
+		mPreviewBufferUsage, mOriginalPreviewBufferUsage, size, sum);
 
 	mPreviewHeapNum = sum;
-	if (allocatePreviewMemFromGraphics(size, sum, phy_addr, vir_addr)) {
+	if (allocatePreviewMemFromGraphics(size, kPreviewBufferCount, phy_addr, vir_addr)) {
 		cancelPreviewMemFromGraphics(sum);
 		return -1;
 	}
@@ -2944,10 +2946,22 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		buffer_start_id = sum;
 		buffer_end_id = buffer_start_id;
 
+		if (sum > (cmr_u32)kPreviewBufferCount) {
+			mPreviewDcamAllocBufferCnt = sum - kPreviewBufferCount; //kPreviewRotBufferCount;
+			buffer_start_id = kPreviewBufferCount;
+			buffer_end_id = sum;
+		}
+
 		/*add one node, specially used for mData_cb when receive preview frame*/
 		mPreviewDcamAllocBufferCnt += 1;
 		buffer_end_id += 1;
 	}
+
+	LOGI("Callback_PreviewMalloc DcamAllocBufferCnt %d, mPreviewHeapArray 0x%p, start_id %ld, end_id %ld",
+		mPreviewDcamAllocBufferCnt,
+		mPreviewHeapArray,
+		buffer_start_id,
+		buffer_end_id);
 
 	if (mPreviewDcamAllocBufferCnt>0 && NULL == mPreviewHeapArray) {
 		mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewDcamAllocBufferCnt * sizeof(sprd_camera_memory_t*));
@@ -2956,6 +2970,10 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		} else {
 			memset(&mPreviewHeapArray[0], 0, mPreviewDcamAllocBufferCnt * sizeof(sprd_camera_memory_t*));
 		}
+
+		phy_addr += buffer_start_id;
+		vir_addr += buffer_start_id;
+
 		for (i=buffer_start_id ; i<buffer_end_id ; i++) {
 			sprd_camera_memory_t* PreviewHeap = allocCameraMem(size, true);
 			if (NULL == PreviewHeap) {
@@ -2980,9 +2998,11 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 			mPreviewHeapArray[j++] = PreviewHeap;
 			mPreviewHeapArray_phy[i] = PreviewHeap->phys_addr;
 			mPreviewHeapArray_vir[i] = (cmr_u32)PreviewHeap->data;
-			if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
+
+			if (i < sum) {
 				*phy_addr++ = (cmr_uint)PreviewHeap->phys_addr;
 				*vir_addr++ = (cmr_uint)PreviewHeap->data;
+				LOGI("Callback_PreviewMalloc: DCAM %ld, phys_addr 0x%x", i, PreviewHeap->phys_addr);
 			}
 		}
 	}
@@ -3112,7 +3132,7 @@ int SprdCameraHardware::Callback_PreviewFree(cmr_uint *phy_addr, cmr_uint *vir_a
 	}
 
 	LOGI("Callback_PreviewFree start cancel Prev Mem");
-	cancelPreviewMemFromGraphics(sum);
+	cancelPreviewMemFromGraphics(kPreviewBufferCount);
 	LOGI("Callback_PreviewFree cancel Prev Mem OK");
 	mPreviewHeapSize = 0;
 	mPreviewHeapNum = 0;
@@ -3762,22 +3782,29 @@ bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
 {
 	bool ret = true;
 
+	LOGI("switchBufferMode src %d, dst %d,  mPreviewBufferUsage %d, org %d",
+		src, dst, mPreviewBufferUsage, mOriginalPreviewBufferUsage);
+
 	if ((src != dst) && (!isPreviewing())) {
 		if (SPRD_INTERNAL_PREVIEW_STOPPING == mCameraState.preview_state) {
 			/*change to new value*/
 			mPreviewBufferUsage = dst;
+			LOGI("switchBufferMode preview stopping");
 		} else if (mPreviewHeapArray != NULL) {
 			/*free original memory*/
 			Callback_PreviewFree(0, 0, 0);
 			/*change to new value*/
 			mPreviewBufferUsage = dst;
+			LOGI("switchBufferMode need free preview mem");
 		} else {
 			/*change to new value*/
 			mPreviewBufferUsage = dst;
+			LOGI("switchBufferMode directly");
 		}
 	}
 
 	if ((src != dst) && (PREVIEW_BUFFER_USAGE_DCAM == dst) && isPreviewing()) {
+		LOGI("switchBufferMode need stop preview");
 		stopPreviewInternal();
 		mPreviewBufferUsage = PREVIEW_BUFFER_USAGE_DCAM;
 		if (NO_ERROR != startPreviewInternal(isRecordingMode())) {
@@ -4432,6 +4459,7 @@ status_t SprdCameraHardware::setCameraParameters()
 		rotation = 0;
 	SET_PARM(mCameraHandle, CAMERA_PARAM_SENSOR_ROTATION, rotation);
 
+	LOGI("sensorrotation: %d.",rotation);
 	if (0 != rotation) {
 		switch_ret = switchBufferMode(mPreviewBufferUsage, PREVIEW_BUFFER_USAGE_DCAM);
 	} else {
