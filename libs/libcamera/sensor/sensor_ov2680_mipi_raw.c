@@ -2420,7 +2420,7 @@ LOCAL uint32_t _ov2680_SetEV(uint32_t param)
 		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter);
 		break;
 	case SENSOR_HDR_EV_LEVE_2:
-		_calculate_hdr_exposure(s_ov2680_gain*4,s_capture_VTS,s_capture_shutter*4);
+		_calculate_hdr_exposure(s_ov2680_gain,s_capture_VTS,s_capture_shutter*4);
 		break;
 	default:
 		break;
