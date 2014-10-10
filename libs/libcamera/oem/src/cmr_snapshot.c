@@ -484,9 +484,13 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 			goto exit;
 		}
 	} else {
-		ret = CMR_CAMERA_NO_SUPPORT;
+		if (0 != scale_out_ptr->size.width) {
+			ret = CMR_CAMERA_NO_SUPPORT;
+		} else {
+			ret = CMR_CAMERA_FAIL;
+		}
 		sem_post(&cxt->scaler_sync_sm);
-		CMR_LOGI("don't support");
+		CMR_LOGI("don't support %ld", ret);
 	}
 exit:
 	if ((0 == cxt->req_param.jpeg_setting.thum_size.width)

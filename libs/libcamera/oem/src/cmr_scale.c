@@ -29,6 +29,7 @@
 #define CMR_EVT_SCALE_EXIT              (CMR_EVT_OEM_BASE + 18)
 
 #define SCALE_MSG_QUEUE_SIZE 20
+#define SCALE_RESTART_SUM    2
 
 enum scale_work_mode {
 	SC_FRAME = SCALE_MODE_NORMAL,
@@ -39,6 +40,7 @@ enum scale_work_mode {
 struct scale_file {
 	cmr_int                         handle;
 	cmr_uint                        is_inited;
+	cmr_int                         err_code;
 	cmr_handle                      scale_thread;
 	sem_t                           sync_sem;
 };
@@ -50,6 +52,8 @@ struct scale_cfg_param_t{
 };
 
 static cmr_s8 scaler_dev_name[50] = "/dev/sprd_scale";
+
+static cmr_int cmr_scale_restart(struct scale_file *file);
 
 static enum scale_fmt_e cmr_scale_fmt_cvt(cmr_u32 cmt_fmt)
 {
@@ -85,6 +89,7 @@ static cmr_int cmr_scale_thread_proc(struct cmr_msg *message, void *private_data
 {
 	cmr_int               ret = CMR_CAMERA_SUCCESS;
 	cmr_u32               evt = 0;
+	cmr_int               restart_cnt = 0;
 	struct scale_file     *file = (struct scale_file *)private_data;
 
 	if (!file) {
@@ -113,29 +118,49 @@ static cmr_int cmr_scale_thread_proc(struct cmr_msg *message, void *private_data
 		struct scale_cfg_param_t *cfg_params = (struct scale_cfg_param_t *)message->data;
 		struct scale_frame_param_t *frame_params = &cfg_params->frame_params;
 
-		ret = ioctl(file->handle, SCALE_IO_START, frame_params);
-		if (ret) {
-			CMR_LOGE("scale error: start");
-		}
-		CMR_LOGI("scale started");
+		while ((restart_cnt < SCALE_RESTART_SUM) && (CMR_CAMERA_SUCCESS == file->err_code)) {
+			file->err_code = CMR_CAMERA_SUCCESS;
+			ret = ioctl(file->handle, SCALE_IO_START, frame_params);
+			if (ret) {
+				CMR_LOGE("scale error: start");
+			}
+			CMR_LOGI("scale started");
 
-		if (cfg_params->scale_cb) {
-			sem_post(&file->sync_sem);
-		}
-		ret = ioctl(file->handle, SCALE_IO_DONE, frame_params);
-		if (ret) {
-			CMR_LOGE("scale error: start");
-		}
+			if (CMR_CAMERA_SUCCESS != ret) {
+				file->err_code = CMR_CAMERA_INVALID_PARAM;
+			}
+			if (cfg_params->scale_cb) {
+				sem_post(&file->sync_sem);
+			}
+			if (CMR_CAMERA_SUCCESS == ret) {
+				ret = ioctl(file->handle, SCALE_IO_DONE, frame_params);
+				if (ret) {
+					CMR_LOGE("scale done error");
+					ret = cmr_scale_restart(file);
+					if (ret) {
+						file->err_code = CMR_CAMERA_FAIL;
+					} else {
+						restart_cnt++;
+					}
+				}
 
-		if (cfg_params->scale_cb) {
-			memset((void *)&frame, 0x00, sizeof(frame));
-			frame.size.width = frame_params->output_size.w;
-			frame.size.height = frame_params->output_size.h;
-			frame.addr_phy.addr_y = frame_params->output_addr.yaddr;
-			frame.addr_phy.addr_u = frame_params->output_addr.uaddr;
-			frame.addr_phy.addr_v = frame_params->output_addr.vaddr;
-			(*cfg_params->scale_cb)(CMR_IMG_CVT_SC_DONE, &frame, cfg_params->cb_handle);
+				if (CMR_CAMERA_SUCCESS == file->err_code) {
+					if (cfg_params->scale_cb) {
+						memset((void *)&frame, 0x00, sizeof(frame));
+						if (CMR_CAMERA_SUCCESS == ret) {
+							frame.size.width = frame_params->output_size.w;
+							frame.size.height = frame_params->output_size.h;
+							frame.addr_phy.addr_y = frame_params->output_addr.yaddr;
+							frame.addr_phy.addr_u = frame_params->output_addr.uaddr;
+							frame.addr_phy.addr_v = frame_params->output_addr.vaddr;
+						}
+						(*cfg_params->scale_cb)(CMR_IMG_CVT_SC_DONE, &frame, cfg_params->cb_handle);
+					}
+					break;
+				}
+			}
 		}
+		restart_cnt = 0;
 		break;
 
 	case CMR_EVT_SCALE_EXIT:
@@ -202,10 +227,52 @@ static cmr_int cmr_scale_destory_thread(struct scale_file *file)
 	return ret;
 }
 
+static cmr_int cmr_scale_restart(struct scale_file *file)
+{
+	cmr_int                 ret = CMR_CAMERA_SUCCESS;
+	cmr_int                 fd = -1;
+	cmr_int                 time_out = 3;
+
+	if (!file) {
+		ret = CMR_CAMERA_INVALID_PARAM;
+		CMR_LOGE("param error");
+		goto exit;
+	}
+
+	if (-1 != file->handle) {
+		if (-1 == close(file->handle)) {
+			CMR_LOGE("scale error: close");
+		}
+	} else {
+		CMR_LOGE("scale error: handle is invalid");
+		ret = CMR_CAMERA_FAIL;
+		goto exit;
+	}
+
+	for ( ; time_out > 0; time_out--) {
+		fd = open(scaler_dev_name, O_RDWR, 0);
+
+		if (-1 == fd) {
+			CMR_LOGI("scale sleep 50ms");
+			usleep(50*1000);
+		} else {
+			break;
+		}
+	};
+	if (-1 == fd) {
+		CMR_LOGE("failed to open scale dev");
+		ret = CMR_CAMERA_FAIL;
+		goto exit;
+	}
+exit:
+	file->handle = fd;
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
 cmr_int cmr_scale_open(cmr_handle *scale_handle)
 {
 	cmr_int                 ret = CMR_CAMERA_SUCCESS;
-
 	cmr_int                 fd = -1;
 	cmr_int                 time_out = 3;
 	struct scale_file       *file = NULL;
@@ -337,6 +404,8 @@ cmr_int cmr_scale_start(cmr_handle scale_handle, struct img_frm *src_img,
 		sem_wait(&file->sync_sem);
 	}
 
+	ret = file->err_code;
+	file->err_code = CMR_CAMERA_SUCCESS;
 	return ret;
 
 free_frame:
