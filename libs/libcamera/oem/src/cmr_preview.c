@@ -2297,6 +2297,9 @@ cmr_int prev_alloc_prev_buf(struct prev_handle *handle, cmr_u32 camera_id, struc
 		prev_cxt->prev_mem_size = (width * height * 3) >> 1;
 	} else if (IMG_DATA_TYPE_YUV422 == prev_cxt->prev_param.preview_fmt) {
 		prev_cxt->prev_mem_size = (width * height) << 1;
+	} else if (IMG_DATA_TYPE_YV12 == prev_cxt->prev_param.preview_fmt) {
+		prev_cxt->prev_mem_size = (width + CAMERA_ALIGNED_16(width/2))* height;
+		prev_cxt->prev_param.preview_fmt = IMG_DATA_TYPE_YUV420;
 	} else {
 		CMR_LOGE("unsupprot fmt %ld", prev_cxt->prev_param.preview_fmt);
 		return CMR_CAMERA_INVALID_PARAM;

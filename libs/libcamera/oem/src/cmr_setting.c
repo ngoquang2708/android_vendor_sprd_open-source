@@ -1489,6 +1489,9 @@ static enum img_data_type get_image_format_from_param(cmr_uint param)
 	case 4:
 		fmt = IMG_DATA_TYPE_YVU420;
 		break;
+	case 5:
+		fmt = IMG_DATA_TYPE_YV12;
+		break;
 	default:
 		break;
 	}

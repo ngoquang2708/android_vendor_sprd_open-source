@@ -58,6 +58,7 @@ namespace android {
 			camera_set_param (x, y, z);\
 		} while(0)
 #define SIZE_ALIGN(x) (((x)+15)&(~15))
+#define SIZE_ALIGN64(x) (((x)+63)&(~63))
 #define SWITCH_MONITOR_QUEUE_SIZE 50
 #define GET_START_TIME do {\
 			s_start_timestamp = systemTime();\
@@ -662,14 +663,12 @@ status_t SprdCameraHardware::setPreviewWindow(preview_stream_ops *w)
 	const char *str_preview_format = mParameters.getPreviewFormat();
 	int usage;
 
-//#if defined(CONFIG_CAMERA_PREVIEW_YV12)
 	if(strcmp(mParameters.getPreviewFormat(), "yuv420p") == 0){
 		hal_pixel_format = HAL_PIXEL_FORMAT_YV12;
 		mIsYuv420p = 1;
 	} else {
 		mIsYuv420p = 0;
 	}
-//#endif
 
 	LOGI("%s: preview format %s", __func__, str_preview_format);
 
@@ -1927,13 +1926,13 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	} else if (strcmp(params.getPreviewFormat(), "rgb565") == 0) {
 		mPreviewFormat = 2;
 	} else if (strcmp(params.getPreviewFormat(), "yuv420p") == 0) {
-//		mPreviewFormat = 3;
-		mPreviewFormat = 1;
+		mPreviewFormat = 5;
 	} else {
 		LOGE("Onlyyuv422sp/yuv420sp/rgb565 preview is supported.\n");
 		mParamLock.unlock();
 		return INVALID_OPERATION;
 	}
+
 #if 0
 	if (strcmp(params.getPictureFormat(), "yuv422sp")== 0) {
 		mPictureFormat = 0;
@@ -4725,6 +4724,12 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 #else
 		if (mIsDvPreview) {
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w)*SIZE_ALIGN(src_h)*3/2);
+		} else if (mIsYuv420p) {
+			char *src = (char *)src_virtual_addr + src_w * src_h + SIZE_ALIGN(src_w/2) * src_h/2;
+			int  skip = SIZE_ALIGN64(SIZE_ALIGN(src_w/2) * src_h/2) - SIZE_ALIGN(src_w/2) * src_h/2;
+			char *dst = (char *)dst_virtual_addr + src_w * src_h + SIZE_ALIGN(src_w/2) * src_h/2 + skip;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h + SIZE_ALIGN(src_w/2)*src_h/2);
+			memcpy(dst, src, SIZE_ALIGN(src_w/2) * src_h/2);
 		} else {
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
@@ -4734,6 +4739,12 @@ int SprdCameraHardware::displayCopy(uint32_t dst_phy_addr, uint32_t dst_virtual_
 	} else {
 		if (mIsDvPreview) {
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, SIZE_ALIGN(src_w) * SIZE_ALIGN(src_h) * 3/2);
+		} else if (mIsYuv420p) {
+			char *src = (char *)src_virtual_addr + src_w * src_h + SIZE_ALIGN(src_w/2) * src_h/2;
+			int  skip = SIZE_ALIGN64(SIZE_ALIGN(src_w/2) * src_h/2) - SIZE_ALIGN(src_w/2) * src_h/2;
+			char *dst = (char *)dst_virtual_addr + src_w * src_h + SIZE_ALIGN(src_w/2) * src_h/2 + skip;
+			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h + SIZE_ALIGN(src_w/2)*src_h/2);
+			memcpy(dst, src, SIZE_ALIGN(src_w/2) * src_h/2);
 		} else {
 			memcpy((void *)dst_virtual_addr, (void *)src_virtual_addr, src_w*src_h*3/2);
 		}
@@ -5392,18 +5403,30 @@ void SprdCameraHardware::yuvConvertFormat(struct camera_frame_type *frame)
 
 	width = frame->width;
 	height = frame->height;
-	if (mIsYuv420p) {
-		if (mYV12Buf){
-			char * addr0 = (char *)frame->y_vir_addr + width * height;
-			char * addr1 = addr0 + width * height/4;
-			char * addr2 = (char *)mYV12Buf;
-			memcpy((void *)mYV12Buf, (void *)addr0, width * height/2);
+	if (mIsYuv420p && mYV12Buf) {
+		char * addr0 = (char *)frame->y_vir_addr + width * height;
+		char * addr1 = addr0 + SIZE_ALIGN(width/2) * height/2;
+		char * addr2 = (char *)mYV12Buf;
+
+		memcpy((void *)mYV12Buf, (void *)addr0, width * height/2);
+		if (width % 32) {
+			int gap = SIZE_ALIGN(width/2) - width/2;
 			for (int i = 0; i < width * height/4; i++) {
-				*addr0++ = *addr2++; // U
-				*addr1++ = *addr2++; // V
+				*addr0++ = *addr2++;
+				*addr1++ = *addr2++;
+				if (!((i+1) % (width/2))) {
+					addr0 = addr0 + gap;
+					addr1 = addr1 + gap;
+				}
+			}
+		} else {
+			for (int i = 0; i < width * height/4; i++) {
+				*addr0++ = *addr2++;
+				*addr1++ = *addr2++;
 			}
 		}
 	}
+
 }
 
 void SprdCameraHardware::receivePreviewFrame(struct camera_frame_type *frame)
