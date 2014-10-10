@@ -457,19 +457,19 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 	if (cxt->err_code) {
 		CMR_LOGE("err exit");
 		sem_post(&cxt->scaler_sync_sm);
+		sem_post(&cxt->jpeg_sync_sm);
 		return ret;
 	}
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
 		ret = CMR_CAMERA_NORNAL_EXIT;
-		sem_post(&cxt->scaler_sync_sm);
+		sem_post(&cxt->jpeg_sync_sm);
 		goto exit;
 	}
 	if (scale_out_ptr->size.height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
 		ret = snp_start_encode(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to start encode %ld", ret);
-			sem_post(&cxt->scaler_sync_sm);
 			goto exit;
 		}
 		ret = snp_start_thumb_proc(snp_handle, &cxt->cur_frame_info);
@@ -480,7 +480,6 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 		ret = snp_redisplay(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to take pic done %ld", ret);
-			sem_post(&cxt->scaler_sync_sm);
 			goto exit;
 		}
 	} else {
@@ -489,15 +488,12 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 		} else {
 			ret = CMR_CAMERA_FAIL;
 		}
-		sem_post(&cxt->scaler_sync_sm);
+		sem_post(&cxt->jpeg_sync_sm);
 		CMR_LOGI("don't support %ld", ret);
 	}
 exit:
-	if ((0 == cxt->req_param.jpeg_setting.thum_size.width)
-		|| (0 == cxt->req_param.jpeg_setting.thum_size.height)) {
-		sem_post(&cxt->scaler_sync_sm);
-	}
 	CMR_LOGI("post jpeg sync sm");
+	sem_post(&cxt->scaler_sync_sm);
 	if (ret) {
 		snp_post_proc_err_exit(snp_handle, ret);
 		cxt->err_code = ret;
