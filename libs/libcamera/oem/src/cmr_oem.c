@@ -3312,10 +3312,13 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		if (ret) {
 			CMR_LOGE("failed to sn ioctrl %ld", ret);
 		}
-
 		if (set_exif_flag) {
 			CMR_LOGD("ERIC set exif");
-			cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, sensor_param);
+			if (cmd_type == COM_SN_SET_WB_MODE){
+				cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, param_ptr->cmd_value);
+				cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_EXIF_CTRL_WHITEBALANCE, param_ptr->cmd_value);
+			} else
+				cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, exif_cmd, sensor_param);
 		}
 	}
 exit:
