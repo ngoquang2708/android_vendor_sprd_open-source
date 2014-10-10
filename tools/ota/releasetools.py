@@ -547,7 +547,7 @@ def FullOTA_InstallBegin(info):
     partion_tl_modem = PartitionFullUpdater("/tlmodem", "tlmodem.bin", radio_dir)
     partion_tl_modem.AddToOutputZip(output_zip)
     #tlnvitem.bin
-    partion_tl_nvitem = PartitionFullUpdater("/tlfixnv", "tlnvitem.bin", radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnvv2", nv_merge="l")
+    partion_tl_nvitem = PartitionFullUpdater("/tlfixnv", "tlnvitem.bin", radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnv2", nv_merge="tl")
     partion_tl_nvitem.AddToOutputZip(output_zip)
     ######## WCN ########
     #wcnmodem.bin
@@ -743,7 +743,7 @@ def IncrementalOTA_InstallBegin(info):
     partion_tl_modem = PartitionIncrementalUpdater("/tlmodem", "tlmodem.bin", target_radio_dir, source_radio_dir)
     partion_tl_modem.AddToOutputZip(output_zip)
     #tlnvitem.bin
-    partion_tl_nvitem = PartitionIncrementalUpdater("/tlfixnv", "tlnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnvv2", nv_merge="l")
+    partion_tl_nvitem = PartitionIncrementalUpdater("/tlfixnv", "tlnvitem.bin", target_radio_dir, source_radio_dir, mount_point2="/tlfixnv1", mount_point3="/tlfixnv2", nv_merge="tl")
     partion_tl_nvitem.AddToOutputZip(output_zip)
     ######## WCN ########
     #wcnmodem.bin
