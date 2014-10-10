@@ -759,8 +759,15 @@ status_t SprdCameraHardware::takePicture()
 		LOGE("takePicture in error status, deinit capture at first ");
 		deinitCapture(mIsPreAllocCapMem);
 	} else if (SPRD_IDLE != mCameraState.capture_state) {
-		LOGE("take picture: action alread exist, direct return!");
-		return ALREADY_EXISTS;
+		if (SPRD_WAITING_JPEG == getCaptureState()) {
+			if (!WaitForCaptureDone()) {
+				LOGE("take picture: wait timeout, direct return!");
+				return ALREADY_EXISTS;
+			}
+		} else {
+			LOGE("take picture: action alread exist, direct return!");
+			return ALREADY_EXISTS;
+		}
 	}
 
 	camera_fast_ctrl(mCameraHandle, CAMERA_FAST_MODE_FD, 0);
@@ -5960,6 +5967,12 @@ void SprdCameraHardware::HandleTakePicture(enum camera_cb_type cb, void* parm4)
 				SPRD_WAITING_RAW,
 				STATE_CAPTURE);
 		}
+		encode_location = getCameraLocation(&pt);
+		if (encode_location) {
+			SET_PARM(mCameraHandle, CAMERA_PARAM_POSITION, (cmr_uint)&pt);
+		} else {
+			LOGI("not setting image location");
+		}
 		break;
 	case CAMERA_EVT_CB_CAPTURE_FRAME_DONE:
 		LOGI("HandleTakePicture: CAMERA_EVT_CB_CAPTURE_FRAME_DONE");
@@ -5971,12 +5984,6 @@ void SprdCameraHardware::HandleTakePicture(enum camera_cb_type cb, void* parm4)
 		break;
 	case CAMERA_EVT_CB_SNAPSHOT_DONE:
 		LOGI("HandleTakePicture: CAMERA_EVT_CB_SNAPSHOT_DONE");
-		encode_location = getCameraLocation(&pt);
-		if (encode_location) {
-			SET_PARM(mCameraHandle, CAMERA_PARAM_POSITION, (cmr_uint)&pt);
-		} else {
-			LOGI("receiveRawPicture: not setting image location");
-		}
 		if (checkPreviewStateForCapture()) {
 			receiveRawPicture((struct camera_frame_type *)parm4);
 		} else {
