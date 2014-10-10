@@ -376,6 +376,7 @@ private:
 	Mutex                           mCapBufLock;
 	Mutex                           mGraphBufCntLock;
 	Mutex                           mVideoBufLock;
+	Mutex                           mReleaseVideoBufLock;
 	uint32_t                        mCapBufIsAvail;
 
 	uint32_t                        mPreviewHeapSize;

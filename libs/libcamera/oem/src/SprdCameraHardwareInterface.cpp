@@ -938,7 +938,7 @@ void SprdCameraHardware::releaseRecordingFrame(const void *opaque)
 	uint8_t *addr = (uint8_t *)opaque;
 	uint32_t index = (addr - (uint8_t *)mMetadataHeap->data) / (METADATA_SIZE);
 
-	Mutex::Autolock pbl(&mPrevBufLock);
+	Mutex::Autolock pbl(&mReleaseVideoBufLock);
 	if (!isPreviewing()) {
 		LOGE("releaseRecordingFrame: Preview not in progress!");
 		return;
@@ -3125,6 +3125,7 @@ int SprdCameraHardware::Callback_PreviewFree(cmr_uint *phy_addr, cmr_uint *vir_a
 #endif
 	Mutex::Autolock pcpl(&mPrevBufLock);
     Mutex::Autolock videolock(&mVideoBufLock);
+	Mutex::Autolock releaevideolock(&mReleaseVideoBufLock);
 	LOGI("Callback_PreviewFree got Prev Cp lock");
 
 	if (mPreviewHeapArray != NULL) {
