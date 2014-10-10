@@ -3521,11 +3521,11 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 			if (COM_ISP_SET_ISO == cmd_type) {
 				if (0 == param_ptr->cmd_value) {
 					isp_capability(ISP_CUR_ISO,(void *)&isp_param);
-					isp_param = POWER2(isp_param-1)*100;
 					cxt->setting_cxt.is_auto_iso = 1;
 				} else {
 					cxt->setting_cxt.is_auto_iso = 0;
 				}
+				isp_param = POWER2(isp_param-1)*100;
 				CMR_LOGI("auto iso %d, exif iso %d", cxt->setting_cxt.is_auto_iso, isp_param);
 			}
 		}
