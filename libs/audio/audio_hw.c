@@ -626,8 +626,7 @@ static const dev_names_para_t dev_names_digitalfm[] = {
 };
 #define FM_VOLUME_MAX 15
 static const int fm_volume_tbl[FM_VOLUME_MAX] = {
-    80,76,72,68,64,60,56,52,48,44,40,36,32,28,24};
-
+    47,45,43,41,39,37,35,33,31,29,27,25,23,21,19};
 static dev_names_para_t *dev_names = NULL;
 
 /* this enum is for use-case type processed in cp side */
@@ -3629,10 +3628,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
         if(checkvalid && val != adev->fm_volume)
         {
-            adev->fm_volume = val;
-            gain |=fm_volume_tbl[val-1];
-            gain |=fm_volume_tbl[val-1]<<16;
-            SetAudio_gain_fmradio(adev,gain);
+	        adev->fm_volume = val;
+	        gain |=fm_volume_tbl[val-1];
+	        gain |=fm_volume_tbl[val-1]<<16;
+	        SetAudio_gain_fmradio(adev,gain);
         }
         ALOGE("adev_set_parameters fm volume :%d",val);
     }
