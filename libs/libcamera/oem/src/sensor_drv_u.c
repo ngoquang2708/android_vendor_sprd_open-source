@@ -2748,7 +2748,12 @@ cmr_int sensor_set_exif_common(struct sensor_drv_context *sensor_cxt,
 	case SENSOR_EXIF_CTRL_SPECTRALSENSITIVITY:
 		break;
 	case SENSOR_EXIF_CTRL_ISOSPEEDRATINGS:
-		sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
+		if (param == 6) {
+			/*6 = CAMERA_ISO_MAX*/
+			sensor_exif_info_ptr->valid.ISOSpeedRatings = 0;
+		} else {
+			sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
+		}
 		sensor_exif_info_ptr->ISOSpeedRatings.count = 1;
 		sensor_exif_info_ptr->ISOSpeedRatings.type  = EXIF_SHORT;
 		sensor_exif_info_ptr->ISOSpeedRatings.size  = 2;

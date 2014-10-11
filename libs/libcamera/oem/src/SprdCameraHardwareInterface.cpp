@@ -4557,7 +4557,11 @@ status_t SprdCameraHardware::setCameraParameters()
 	SET_PARM(mCameraHandle, CAMERA_PARAM_SATURATION, mParameters.getSaturation());
 	SET_PARM(mCameraHandle, CAMERA_PARAM_EXPOSURE_COMPENSATION, mParameters.getExposureCompensation());
 	SET_PARM(mCameraHandle, CAMERA_PARAM_ANTIBANDING, mParameters.getAntiBanding());
-	SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, mParameters.getIso());
+	if (mParameters.get_Iso() == NULL) {
+		SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, 6); /*6 = CAMERA_ISO_MAX*/
+	} else {
+		SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, mParameters.getIso());
+	}
 /*	SET_PARM(CAMERA_PARM_DCDV_MODE, mParameters.getRecordingHint());*/
 
 /*	int ns_mode = mParameters.getInt("nightshot-mode");
