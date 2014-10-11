@@ -925,12 +925,12 @@ cmr_int camera_close_hdr(struct camera_context *cxt)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 
-	sem_post(&cxt->hdr_flag_sm);
+	sem_wait(&cxt->hdr_flag_sm);
 	if (cxt->ipm_cxt.hdr_handle) {
 		ret = cmr_ipm_close(cxt->ipm_cxt.hdr_handle);
 		cxt->ipm_cxt.hdr_handle = 0;
 	}
-	sem_wait(&cxt->hdr_flag_sm);
+	sem_post(&cxt->hdr_flag_sm);
 	CMR_LOGI("close hdr done %ld", ret);
 	return ret;
 }
