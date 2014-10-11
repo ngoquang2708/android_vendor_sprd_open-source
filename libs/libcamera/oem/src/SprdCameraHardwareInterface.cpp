@@ -5555,6 +5555,36 @@ void SprdCameraHardware::notifyShutter()
 	}
 }
 
+bool SprdCameraHardware::HandleTakePictureInterLock(void)
+{
+	bool ret = 1;
+	int  wait_cnt = 100;
+
+	while(1) {
+		if (NO_ERROR == mLock.tryLock()) {
+			mLock.unlock();
+			break;
+		} else {
+			if ((SPRD_INTERNAL_CAPTURE_STOPPING == getCaptureState())
+				|| (SPRD_ERROR == getCaptureState())) {
+				LOGW("HandleTakePictureInterLock, capture state = SPRD_INTERNAL_CAPTURE_STOPPING, return \n");
+				ret = 0;
+				break;
+			} else {
+				if (wait_cnt) {
+					LOGW("HandleTakePictureInterLock, enter sleep \n");
+					usleep(10 * 1000);//wait 10 ms
+					wait_cnt--;
+				} else {
+					ret = 0;
+					break;
+				}
+			}
+		}
+	}
+	return ret;
+}
+
 void SprdCameraHardware::receiveRawPicture(struct camera_frame_type *frame)
 {
 	if (mIsPerformanceTestable) {
@@ -5610,11 +5640,17 @@ callbackraw:
 
 		LOGD("mMsgEnabled: 0x%x, offset: %d", mMsgEnabled, (uint32_t)offset);
 		if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE) {
-			handleDataCallback(CAMERA_MSG_RAW_IMAGE, 0, offset, NULL, mUser, 0);
+			if (HandleTakePictureInterLock()) {
+				handleDataCallback(CAMERA_MSG_RAW_IMAGE, 0, offset, NULL, mUser, 0);
+			}
 		}
 		if (mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY) {
 			LOGD("mMsgEnabled & CAMERA_MSG_RAW_IMAGE_NOTIFY");
-			mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0, 0, mUser);
+			if (HandleTakePictureInterLock()) {
+				mNotify_cb(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0, 0, mUser);
+			} else {
+				LOGI("drop this notify");
+			}
 		}
 	} else {
 		LOGD("Raw-picture callback was canceled--skipping.");
