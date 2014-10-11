@@ -33,7 +33,7 @@
 //#define mtrace_log_info   ALOGI
 #define mtrace_log_error(format,...)	ALOGE("mtrace:error "format,##__VA_ARGS__)
 #define mtrace_log_warn(format,...)		ALOGW("mtrace:warn "format,##__VA_ARGS__)
-#define mtrace_log_info(format,...)		ALOGI("mtrace:info "format,##__VA_ARGS__)
+#define mtrace_log_info(format,...)		ALOGV("mtrace:info "format,##__VA_ARGS__)
 
 #else
 

@@ -331,12 +331,12 @@ static int  updata_meminfo(char *pmem, int type, int size, memstat_t *stat, int 
 		size = p->size;
 
 		if ((p->magic != (HEAD_MAGIC_MASK|type))) {
-			mtrace_log_error("head overwite at 0x%x,0x%x,0x%x\n", p, p->magic, p->size);
+			//mtrace_log_error("head overwite at 0x%x,0x%x,0x%x\n", p, p->magic, p->size);
 			error = 1;
 		}
 
 		if (type == MB_TYPE_F) {
-			mtrace_log_error("free 0x%x again\n", p);
+			//mtrace_log_error("free 0x%x again\n", p);
 			error = 1;
 		}
 		if (error != 0) {
@@ -395,12 +395,12 @@ static int  updata_meminfo(char *pmem, int type, int size, memstat_t *stat, int 
 #endif
 
 	}
-
+#if 0
 	mtrace_log_info("total:0x%x,max_once:0x%x,max_total:0x%x,max_total_cnt:0x%x\n", 
 		stat->total, stat->max_once, stat->max_total, stat->max_total_cnt);
 	mtrace_log_info("calloc_cnt:0x%x,malloc_cnt:0x%x,realloc_cnt:0x%x,total_cnt:0x%x\n", 
 		stat->calloc_cnt, stat->malloc_cnt, stat->realloc_cnt, stat->total_cnt);
-
+#endif
 	THREAD_UNLOCK(memstat_sem);
 	return ret;
 }
@@ -419,7 +419,7 @@ void *mtrace_calloc_trace(size_t size, int nunit, const char *file, const char* 
 		return NULL;
 	size *= nunit;
 
-	mtrace_log_info("calloc at %s:%s:%d \n", file, fun, line);
+//	mtrace_log_info("calloc at %s:%s:%d \n", file, fun, line);
 	p = (char *)raw_calloc(1, ALIGN(size, 4)+headinfo_len+tailinfo_len);
 	if (!p)	{
 		mtrace_log_error("Failed to calloc %d bytes at %s:%s:%d \n", (long)size, file, fun, line);
@@ -439,7 +439,7 @@ void *mtrace_malloc_trace(size_t size, const char *file, const char* fun, int li
 	if (size <= 0)
 		return NULL;
 
-	mtrace_log_info("malloc at %s:%s:%d \n", file, fun, line);
+//	mtrace_log_info("malloc at %s:%s:%d \n", file, fun, line);
 	p = (char *)raw_malloc(ALIGN(size,4) + headinfo_len + tailinfo_len);
 	if (!p)	{
 		mtrace_log_error("Failed to malloc %d bytes at %s:%s:%d \n", (long)size, file, fun, line);
@@ -460,7 +460,7 @@ void *mtrace_realloc_trace(void *old, size_t size, const char *file, const char*
 	if (size<=0)
 		return NULL;
 
-	mtrace_log_info("realloc at %s:%s:%d \n", file, fun, line);
+//	mtrace_log_info("realloc at %s:%s:%d \n", file, fun, line);
 	if (old) {
 		p =(char *)((char *)old - headinfo_len) ;
 
@@ -488,7 +488,7 @@ void *mtrace_realloc_trace(void *old, size_t size, const char *file, const char*
 void mtrace_free_trace(void *pmen, const char *file, const char* fun, int line, memstat_t *stat)
 {
 	if (pmen) {
-		mtrace_log_info("free at %s:%s:%d \n",file, fun, line);
+//		mtrace_log_info("free at %s:%s:%d \n",file, fun, line);
 
 		char *p = (char *)((char *)pmen - headinfo_len) ;
 
@@ -597,6 +597,12 @@ void mtrace_print_alllog(memstat_t *stat)
 	if (MAX_ALLOC_ENTRYS != stat->log.limit) {
 		mtrace_log_warn("limit=%d,%d\n",stat->log.limit,MAX_ALLOC_ENTRYS);
 	}
+
+	mtrace_log_info("total:0x%x,max_once:0x%x,max_total:0x%x,max_total_cnt:0x%x\n",
+		stat->total, stat->max_once, stat->max_total, stat->max_total_cnt);
+	mtrace_log_info("calloc_cnt:0x%x,malloc_cnt:0x%x,realloc_cnt:0x%x,total_cnt:0x%x\n",
+		stat->calloc_cnt, stat->malloc_cnt, stat->realloc_cnt, stat->total_cnt);
+
 	for  (i = 0; i < stat->log.limit; i++) {
 		if (stat->log.logstr[i] != NULL) {
 			mtrace_log_warn("logindex = %d,log = %s\n", i, stat->log.logstr[i]);
