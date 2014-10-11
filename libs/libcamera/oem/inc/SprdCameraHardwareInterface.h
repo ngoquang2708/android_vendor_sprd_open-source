@@ -226,6 +226,7 @@ private:
 	void                  HandleEncode(enum camera_cb_type cb,  void* parm4);
 	void                  HandleFocus(enum camera_cb_type cb, void* parm4);
 	void                  HandleCancelPicture(enum camera_cb_type cb, void* parm4);
+	bool                  HandleTakePictureInterLock(void);
 
 	enum Sprd_camera_state {
 		SPRD_INIT,
