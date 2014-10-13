@@ -500,6 +500,7 @@ struct tiny_private_ctl private_ctl;
     bool master_mute;
     bool cache_mute;
     int fm_volume;
+    bool fm_open;
 
     int requested_channel_cnt;
     int  input_source;
@@ -611,8 +612,7 @@ static const dev_names_para_t dev_names_digitalfm[] = {
         "headphone" },
     { AUDIO_DEVICE_OUT_EARPIECE, "earpiece" },
     /* ANLG for voice call via linein*/
-    { AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, "line" },
-    { AUDIO_DEVICE_OUT_ALL_FM, "digital-fm" },
+    { AUDIO_DEVICE_OUT_FM, "digital-fm" },
 
 
     { AUDIO_DEVICE_IN_COMMUNICATION, "comms" },
@@ -622,6 +622,7 @@ static const dev_names_para_t dev_names_digitalfm[] = {
     { AUDIO_DEVICE_IN_AUX_DIGITAL, "digital" },
     { AUDIO_DEVICE_IN_BACK_MIC, "back-mic" },
     { SPRD_AUDIO_IN_DUALMIC_VOICE, "dual-mic-voice" },
+    { AUDIO_DEVICE_IN_LINE_IN, "line"},
     //{ "linein-capture"},
 };
 #define FM_VOLUME_MAX 15
@@ -1021,6 +1022,11 @@ ret);
        goto out;
     }
 
+    if(adev->fm_open){
+        adev->out_devices |= AUDIO_DEVICE_OUT_FM;
+    }else{
+        adev->out_devices &= ~AUDIO_DEVICE_OUT_FM;
+    }
     cur_in = adev->in_devices;
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
@@ -1054,7 +1060,7 @@ ret);
 	/* separate INPUT/OUTPUT case for some common bit used. */
         if ((cur_out & adev->dev_cfgs[i].mask)
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
+        if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
 
             //force_all_standby(adev);
@@ -1104,7 +1110,7 @@ ret);
             && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
-        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
+        if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
         {
             ALOGE("%s:close FM device",__func__);
 
@@ -1173,6 +1179,11 @@ static void do_select_devices(struct tiny_audio_device *adev)
         pthread_mutex_unlock(&adev->device_lock);
         return;
     }
+    if(adev->fm_open){
+        adev->out_devices |= AUDIO_DEVICE_OUT_FM;
+    }else{
+        adev->out_devices &= ~AUDIO_DEVICE_OUT_FM;
+    }
     cur_in = adev->in_devices;
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
@@ -1206,7 +1217,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
 	/* separate INPUT/OUTPUT case for some common bit used. */
         if ((cur_out & adev->dev_cfgs[i].mask)
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
-        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
+        if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
             pthread_mutex_lock(&adev->lock);
             //force_all_standby(adev);
@@ -1256,7 +1267,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
             && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
                     adev->dev_cfgs[i].off_len);
-        if(AUDIO_DEVICE_OUT_ALL_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
+        if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL)
         {
             ALOGE("%s:close FM device",__func__);
             pthread_mutex_lock(&adev->lock);
@@ -1291,7 +1302,7 @@ out:
 static void select_devices_signal(struct tiny_audio_device *adev)
 {
     ALOGE("select_devices_signal starting... adev->out_devices 0x%x adev->in_devices 0x%x",adev->out_devices,adev->in_devices);
-    if((AUDIO_DEVICE_OUT_ALL_FM & adev->out_devices) && adev->pcm_fm_dl == NULL){
+    if((AUDIO_DEVICE_OUT_FM & adev->out_devices) && adev->pcm_fm_dl == NULL){
         ALOGE("xxselect_devices_signal");
         do_select_devices_static(adev);} else
         sem_post(&adev->routing_mgr.device_switch_sem);
@@ -2036,7 +2047,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
+		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
                   || (AUDIO_MODE_IN_CALL == adev->mode)
                   ||adev->voip_start) {
             adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
@@ -2083,6 +2094,21 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             pthread_mutex_unlock(&adev->lock);
             ALOGW("the same devices(0x%x) with val(0x%x) val is zero...",adev->out_devices,val);
         }
+    }
+
+    ret = str_parms_get_str(parms,"handleFm",value,sizeof(value));
+    if(ret >= 0){
+        val = atoi(value);
+	    if(val){
+            pthread_mutex_lock(&adev->lock);
+            adev->fm_open = true;
+            pthread_mutex_unlock(&adev->lock);
+        }else{
+            pthread_mutex_lock(&adev->lock);
+            adev->fm_open = false;
+            pthread_mutex_unlock(&adev->lock);
+	    }
+        select_devices_signal(adev);
     }
     ALOGW("out_set_parameters out...call_start:%d",adev->call_start);
     str_parms_destroy(parms);
@@ -2859,7 +2885,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     }
     else {
-        if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_FM){
+        if(adev->out_devices & AUDIO_DEVICE_OUT_FM){
             in->config = pcm_config_fm_ul;
             if(in->config.channels != in->requested_channels) {
               in->config.channels = in->requested_channels;
@@ -3635,6 +3661,23 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
         ALOGE("adev_set_parameters fm volume :%d",val);
     }
+    ret = str_parms_get_str(parms, "line_in", value, sizeof(value));
+    if(ret >= 0){
+        if(strcmp(value,"on") == 0){
+            pthread_mutex_lock(&adev->device_lock);
+            pthread_mutex_lock(&adev->lock);
+            adev->in_devices |= AUDIO_DEVICE_IN_LINE_IN;
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&adev->device_lock);
+        }else if(strcmp(value,"off") == 0){
+            pthread_mutex_lock(&adev->device_lock);
+            pthread_mutex_lock(&adev->lock);
+            adev->in_devices &= ~AUDIO_DEVICE_IN_LINE_IN;
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&adev->device_lock);
+        }
+        select_devices_signal(adev);
+    }
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
@@ -4012,7 +4055,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
             AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
             AUDIO_DEVICE_OUT_ALL_SCO |
-            AUDIO_DEVICE_OUT_ALL_FM |
+            AUDIO_DEVICE_OUT_FM |
             AUDIO_DEVICE_OUT_DEFAULT |
             /* IN */
             AUDIO_DEVICE_IN_COMMUNICATION |
@@ -4024,6 +4067,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET |
             AUDIO_DEVICE_IN_ALL_SCO|
             AUDIO_DEVICE_IN_VOICE_CALL |
+            AUDIO_DEVICE_IN_LINE_IN |
             AUDIO_DEVICE_IN_DEFAULT);
 }
 
