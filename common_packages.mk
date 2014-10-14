@@ -43,3 +43,7 @@ endif
 ifeq ($(strip $(GMS_SUPPORT)), true)
 $(call inherit-product-if-exists, vendor/sprd/partner/google/products/gms.mk)
 endif
+
+ifeq ($(strip $(PREBUILD_WIDEVINE)), true)
+$(call inherit-product-if-exists, vendor/widevine/prebuild_drm.mk)
+endif
