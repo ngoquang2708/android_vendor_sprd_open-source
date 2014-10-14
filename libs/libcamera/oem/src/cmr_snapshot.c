@@ -493,7 +493,10 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 	}
 exit:
 	CMR_LOGI("post jpeg sync sm");
-	sem_post(&cxt->scaler_sync_sm);
+	if ((0 == cxt->req_param.jpeg_setting.thum_size.width)
+		|| (0 == cxt->req_param.jpeg_setting.thum_size.height)) {
+		sem_post(&cxt->scaler_sync_sm);
+	}
 	if (ret) {
 		snp_post_proc_err_exit(snp_handle, ret);
 		cxt->err_code = ret;
