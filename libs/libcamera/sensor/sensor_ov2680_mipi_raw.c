@@ -84,7 +84,7 @@ struct sensor_raw_info* s_ov2680_mipi_raw_info_ptr=NULL;
 //800x600
 LOCAL const SENSOR_REG_T ov2680_com_mipi_raw[] = {
 	{0x0103, 0x01},
-	{0xffff, 0xa0},
+	{0xffff, 0x0a},
 	{0x3002, 0x00},
 	{0x3016, 0x1c},
 	{0x3018, 0x44},
@@ -521,7 +521,7 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	ov2680_I2C_ADDR_W,	// salve i2c write address
 	ov2680_I2C_ADDR_R,	// salve i2c read address
 
-	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT|SENSOR_I2C_FREQ_100,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT | SENSOR_I2C_FREQ_400,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
 	// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
 	// other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_N | SENSOR_HW_SIGNAL_VSYNC_N | SENSOR_HW_SIGNAL_HSYNC_P,	// bit0: 0:negative; 1:positive -> polarily of pixel clock
@@ -573,7 +573,7 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	NULL,			//&g_ov2680_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	1,			// skip frame num before preview
+	0,			// skip frame num before preview
 	0,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
@@ -585,7 +585,7 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	0,
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 10, 0},
 	s_ov2680_video_info,
-	1,			// skip frame num while change setting
+	0,			// skip frame num while change setting
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -2572,7 +2572,7 @@ LOCAL uint32_t _ov2680_StreamOff(uint32_t param)
 	SENSOR_PRINT("SENSOR_ov2680: StreamOff");
 
 	Sensor_WriteReg(0x0100, 0x00);
-	usleep(100*1000);
+	usleep(50*1000);
 
 	return 0;
 }
