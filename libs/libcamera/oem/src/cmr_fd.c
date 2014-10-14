@@ -487,16 +487,20 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 			CMR_LOGE("face function fail.");
 		} else {
 			class_handle->frame_out.face_area.face_count = face_num;
+			CMR_LOGI("face num %ld", face_num);
+
 			min_fd = MIN(face_num,FACE_DETECT_NUM);
-			for (k = 0; min_fd; k++) {
+			for (k = 0; k < min_fd; k++) {
 				class_handle->frame_out.face_area.range[k]      = *face_rect_ptr;
 				face_rect_ptr++;
 			}
 
+			/*
 			for (k = 0 ; k < face_num ; k++) {
 				CMR_LOGI("face num 0x%lx,smile_level 0x%d.", k, face_rect_ptr->smile_level);
 				face_rect_ptr++;
 			}
+			*/
 
 			/*callback*/
 			if (class_handle->frame_cb) {
