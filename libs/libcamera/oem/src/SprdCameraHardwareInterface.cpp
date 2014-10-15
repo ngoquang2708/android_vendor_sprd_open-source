@@ -5310,9 +5310,11 @@ void SprdCameraHardware::sendPreviewFrameToApp(struct camera_frame_type *frame)
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		uint32_t tmpIndex = frame->order_buf_id;
 		if (mPreviewWindow && isPreviewing()) {
-			handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-				tmpIndex,
-				0, NULL, mUser, 1);
+			if (HandleAPPCallBackInterLock()) {
+				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+					tmpIndex,
+					0, NULL, mUser, 1);
+			}
 		} else {
 			LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
 				mPreviewWindow,
@@ -5326,9 +5328,11 @@ void SprdCameraHardware::sendPreviewFrameToApp(struct camera_frame_type *frame)
 				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
 						(void*)frame->y_vir_addr, dataSize);
 			}
-			handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
-								mPreviewDcamAllocBufferCnt - 1,
-								0, NULL, mUser, 1);
+			if (HandleAPPCallBackInterLock()) {
+				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
+									mPreviewDcamAllocBufferCnt - 1,
+									0, NULL, mUser, 1);
+			}
 		} else {
 			LOGW("condition not fit, w is %p Previewing state: %s skip the cb",
 				mPreviewWindow,
@@ -5585,6 +5589,19 @@ bool SprdCameraHardware::HandleTakePictureInterLock(void)
 				}
 			}
 		}
+	}
+	return ret;
+}
+
+bool SprdCameraHardware::HandleAPPCallBackInterLock(void)
+{
+	bool ret = 1;
+
+	if (NO_ERROR == mLock.tryLock()) {
+		mLock.unlock();
+	} else {
+		ret = 0;
+		LOGI("discard a frame");
 	}
 	return ret;
 }
