@@ -227,6 +227,10 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
                     if(0 == strcmp(ssda_mode, "tdd-csfb")){
                             strcpy(cmdvalue->cp_type,"tl");
                     }
+                    else if(0 == strcmp(ssda_mode, "fdd-csfb")){
+                            strcpy(cmdvalue->cp_type,"lf");
+                    }
+
 
                     /*Device[4:6] : device that AP uses;  0: UART 1:USB  2:SPIPE*/
                     cmdvalue->connect_type = (device >> 4) & 0x3;

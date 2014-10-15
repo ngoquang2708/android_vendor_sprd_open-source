@@ -83,8 +83,9 @@
 #define TD_DSP_SIZE                 (5*1024*1024)
 #define W_MODEM_SIZE                (10*1024*1024)
 #define W_DSP_SIZE                  (5*1024*1024)
-#define LF_MODEM_SIZE                (10*1024*1024)
-#define LF_DSP_SIZE                  (5*1024*1024)
+#define LF_MODEM_SIZE                (8*1024*1024)
+#define LF_TGDSP_SIZE                  (0x3e0000)
+#define LF_LDSP_SIZE                  (0x1c0000)
 #define TL_MODEM_SIZE                (8*1024*1024)
 #define TL_TGDSP_SIZE                  (0x2e0000)
 #define TL_LDSP_SIZE                  (0x1c0000)
@@ -122,7 +123,7 @@
 #define TD_WATCHDOG_DEV              "/proc/cpt/wdtirq"
 #define W_WATCHDOG_DEV               "/proc/cpw/wdtirq"
 #define TL_WATCHDOG_DEV              "/proc/cptl/wdtirq"
-#define LF_WATCHDOG_DEV               "/proc/cplf/wdtirq"
+#define LF_WATCHDOG_DEV               "/proc/cptl/wdtirq"
 #define L_WATCHDOG_DEV               "/proc/cpl/wdtirq"
 
 #define TTY_DEV_PROP             "persist.ttydev"

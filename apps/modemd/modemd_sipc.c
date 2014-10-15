@@ -218,19 +218,31 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
                 dsp_partition, dsp_bank, sipc_dsp_size);
         load_sipc_image(dsp_partition, 0, dsp_bank, 0, sipc_dsp_size);
     } else if(modem == LF_MODEM) {
+        char tgdsp_bank[128];
+        char ldsp_bank[128];
+        uint sipc_ldsp_size = 0;
+        uint sipc_tgdsp_size = 0;
+
         sipc_modem_size = LF_MODEM_SIZE;
-        sipc_dsp_size = LF_DSP_SIZE;
+        sipc_tgdsp_size = LF_TGDSP_SIZE;
+        sipc_ldsp_size = LF_LDSP_SIZE;
         strcat(persist_prop, "lf.nvp");
         property_get(LF_PROC_PROP, proc_prop, "");
         /* write 1 to stop*/
         strcpy(modem_stop, proc_prop);
         strcat(modem_stop, MODEM_STOP);
         write_proc_file(modem_stop, 0, "1");
-
         strcpy(modem_bank, proc_prop);
         strcat(modem_bank, MODEM_BANK);
-        strcpy(dsp_bank, proc_prop);
-        strcat(dsp_bank, DSP_BANK);
+
+        /*handle tgdsp image*/
+        strcpy(tgdsp_bank, proc_prop);
+        strcat(tgdsp_bank, TGDSP_BANK);
+
+        /*handle ldsp image*/
+        strcpy(ldsp_bank, proc_prop);
+        strcat(ldsp_bank, LDSP_BANK);
+
         strcpy(modem_start, proc_prop);
         strcat(modem_start, MODEM_START);
 
@@ -244,17 +256,23 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcpy(modem_partition,path);
         strcpy(dsp_partition,path);
         strcat(modem_partition,"modem");
-        strcat(dsp_partition,"dsp");
+        strcat(dsp_partition,"gdsp");
 
         /* load modem */
         MODEMD_LOGD("load modem image from %s to %s, len=%d",
                 modem_partition, modem_bank, sipc_modem_size);
         load_sipc_image(modem_partition, 0, modem_bank, 0, sipc_modem_size);
 
+
         /* load dsp */
         MODEMD_LOGD("load dsp image from %s to %s, len=%d",
-                dsp_partition, dsp_bank, sipc_dsp_size);
-        load_sipc_image(dsp_partition, 0, dsp_bank, 0, sipc_dsp_size);
+                dsp_partition, tgdsp_bank, sipc_tgdsp_size);
+        load_sipc_image(dsp_partition, 0, tgdsp_bank, 0, sipc_tgdsp_size);
+
+        strcpy(dsp_partition,path);
+        strcat(dsp_partition,"ldsp");
+        load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
+
     } else if(modem == TL_MODEM) {
         char tgdsp_bank[128];
         char ldsp_bank[128];
