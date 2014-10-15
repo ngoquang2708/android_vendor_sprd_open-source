@@ -1987,6 +1987,11 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 	mParameters = params;
 
 	/*if in dv previewing, then the ZSL parameter should be keeped 1*/
+	LOGI("recording-hint %d zsl %d",mParameters.getRecordingHint(),mParameters.getInt("zsl"));
+	isZslSupport = (char *)mParameters.get("zsl-supported");
+	if (NULL != isZslSupport) {
+		LOGI("isZslSupport is %s.",isZslSupport);
+	}
 	if ((1 == mParameters.getRecordingHint())
 		&& isPreviewing()
 		&& oriZsl != mParameters.getInt("zsl")) {
@@ -2092,7 +2097,7 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 			}
 		}
 	}
-	if ((0 == mParameters.getInt("zsl")) && (mCaptureMode == CAMERA_ZSL_MODE)) {
+	if ((0 == mParameters.getInt("zsl")) && (mCaptureMode == CAMERA_ZSL_MODE) && ((1 != mParameters.getRecordingHint()))) {
 		if (isPreviewing()) {
 			mPreviewLock.lock();
 			LOGI("setParametersInternal mode change:stop preview.ZSL OFF");
