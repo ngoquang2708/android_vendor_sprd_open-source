@@ -27,6 +27,8 @@ sem_t g_armlog_sem;
 int g_ap_cali_flag = 0;
 extern int g_armlog_enable;
 extern void	disconnect_vbus_charger(void);
+extern int turnoff_calibration_backlight(void);
+
 
 static struct eng_param cmdparam = {
     .califlag = 0,
@@ -181,6 +183,7 @@ static int eng_parse_cmdline(struct eng_param * cmdvalue)
             if ( str  != NULL){
                 cmdvalue->califlag = 1;
                 disconnect_vbus_charger();
+		turnoff_calibration_backlight();
                 /*calibration= mode,freq, device. Example: calibration=8,10096,146*/
                 str = strchr(str, '=');
                 if(str != NULL){
