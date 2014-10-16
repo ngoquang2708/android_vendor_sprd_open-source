@@ -77,6 +77,8 @@ extern SENSOR_INFO_T g_hi255_yuv_info;
 extern SENSOR_INFO_T g_ov2680_mipi_raw_info;
 extern SENSOR_INFO_T g_GC0310_MIPI_yuv_info;
 extern SENSOR_INFO_T g_sr030pc50_yuv_info;
+extern SENSOR_INFO_T g_at_ov2680_mipi_raw_info;
+extern SENSOR_INFO_T g_at_GC0310_MIPI_yuv_info;
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -154,6 +156,7 @@ const SENSOR_INFO_T* atv_infor_tab[]=
 const SENSOR_INFO_T* at_main_sensor_infor_tab[]=
 {
 #ifdef CONFIG_BACK_CAMERA_MIPI
+	&g_at_ov2680_mipi_raw_info,
 	&g_autotest_ov8825_mipi_raw_info,
 	&g_autotest_ov5640_mipi_yuv_info,
 #endif
@@ -176,6 +179,8 @@ const SENSOR_INFO_T* at_sub_sensor_infor_tab[]=
 //	&g_HI702_yuv_info,
 	&g_OV7675_yuv_info,
 	//&g_autotest_yuv_info,
+#else
+	&g_at_GC0310_MIPI_yuv_info,
 #endif
 PNULL
 
