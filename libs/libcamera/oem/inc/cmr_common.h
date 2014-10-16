@@ -668,7 +668,7 @@ cmr_int camera_get_trim_rect2(struct img_rect *src_trim_rect, float zoom_ratio, 
 
 cmr_int camera_save_to_file(cmr_u32 index, cmr_u32 img_fmt, cmr_u32 width, cmr_u32 height, struct img_addr *addr);
 
-void camera_snapshot_step_statisic(void);
+void camera_snapshot_step_statisic(struct img_size *img_size);
 
 void camera_take_snapshot_step(enum CAMERA_TAKEPIC_STEP step);
 #ifdef __cplusplus
