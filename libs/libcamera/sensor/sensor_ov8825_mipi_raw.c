@@ -3287,7 +3287,7 @@ LOCAL uint32_t _ov8825_StreamOff(uint32_t param)
 	SENSOR_PRINT("SENSOR_ov8825: StreamOff");
 
 	Sensor_WriteReg(0x0100, 0x00);
-	usleep(40*1000);
+	usleep(100*1000);
 
 	return 0;
 }
