@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">DM</string>
+<string-array name="app_list">
+<item>"ਵਰਤਮਾਨ ਸੌਫਟਵੇਅਰ ਜਾਣਕਾਰੀ"</item>
+<item>ਸਾੱਫਟਵੇਅਰ ਅਪਡੇਟ</item>
+<item>ਅਪਡੇਟ ਪੈਕੇਜ ਤੁਰੰਤ ਸਥਾਪਿਤ ਕਰੋ</item>
+</string-array>
+<string name="debug_menu">DM ਡੀਬਗ ਮੀਨੂੰ</string>
+<string-array name="debug_list">
+<item>ਡੀਬੱਗ ਮੋਡ</item>
+<item>ਸੈਲਫਰਜਿਸਟ ਫਲੈਗ ਸਾਫ਼ ਕਰੋ</item>
+<item>ਸਵੈ ਰਜਿਸਟਰਡ ਸੰਦੇਸ਼ ਭੇਜੋ</item>
+<item>ਸਰਵਰ ਤੇ ਸਵਿੱਚ ਕਰੋ</item>
+<item>ਨਿਰਮਾਣ ਕਰਨਾ</item>
+<item>ਮਾਡਲ</item>
+<item>ਸਾੱਫਟਵੇਅਰ ਸੰਸਕਰਣ</item>
+<item>"IMEI"</item>
+<item>"APN"</item>
+<item>ਸਰਵਰ ਪਤਾ</item>
+<item>Sms ਗੇਟਵੇ ਪਤਾ</item>
+<item>Sms ਗੇਟਵੇ ਪੋਰਟ</item>
+<item>ਸੇਵਾ ਸ਼ੁਰੂ ਕਰੋ</item>
+<item>Dm ਸਥਿਤੀ</item>
+<item>ਸਵੈ-ਰਜਿਸਟਰ ਸਵਿੱਚ</item>
+<item>ਅਨੁਕਾਰੀ ਕਨੈਕਟ</item>
+<item>"ਡਾਇਲੌਗ ਕੰਟ੍ਰੌਲ ਫਲੈਗ ਮਿਟਾਓ"</item>
+<item>"AGPS Apn"</item>
+</string-array>
+<string name="menu_save">ਸੁਰੱਖਿਅਤ ਕਰੋ</string>
+<string name="menu_cancel">ਰੱਦ ਕਰੋ</string>
+<string name="notify_msg">ਵਧੀ ਹੋਈ ਵਿਕਰੀ ਤੋਂ ਬਾਅਦ ਸੇਵਾ</string>
+<string name="notify_confirm_msg">ਕੀ ਤੁਸੀ ਵਧੀ ਵਿਕਰੀ ਬਾਅਦ ਸੇਵਾ ਸਵੀਕਾਰ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋਂ?</string>
+<string name="menu_ok">OK</string>
+<string name="menu_yes">ਹਾਂ</string>
+<string name="menu_no">ਨਹੀਂ</string>
+<string name="sms_prompt">""</string>
+<string name="network_connect_prompt">""</string>
+</resources>
