@@ -1276,6 +1276,7 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 		cmr_u32 index = cxt->index;
 		struct camera_jpeg_param   enc_param;
 		struct snp_exif_param *exif_in_ptr = &cxt->chn_param.exif_in[index];
+		struct img_size image_size= cxt->req_param.req_size;
 		struct jpeg_wexif_cb_param  enc_out_param;
 		exif_in_ptr->big_pic_stream_src.buf_size = cxt->jpeg_stream_size;
 		exif_in_ptr->thumb_stream_src.buf_size = cxt->thumb_stream_size;
@@ -1298,7 +1299,7 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 			enc_param.need_free = 1;
 		}
 		camera_take_snapshot_step(CMR_STEP_CALL_BACK);
-		camera_snapshot_step_statisic();
+		camera_snapshot_step_statisic(&image_size);
 		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param);
 	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_EXIF_JPEG_DONE, (void*)ret);
 		if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {

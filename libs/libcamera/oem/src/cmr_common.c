@@ -228,11 +228,17 @@ cmr_int camera_save_to_file(cmr_u32 index, cmr_u32 img_fmt, cmr_u32 width, cmr_u
 	return 0;
 }
 
-void camera_snapshot_step_statisic(void)
+void camera_snapshot_step_statisic(struct img_size *image_size)
 {
 	cmr_int i = 0, time_delta = 0;
 
-	ALOGE("*********************Take picture statistic*******Start******************");
+	if (NULL == image_size) {
+		ALOGE("image_size is null,para invalid");
+		return;
+	}
+	ALOGE("*********************Take picture statistic*******Start****%4d*%4d*****",
+		  image_size->width,
+		  image_size->height);
 
 	for (i = 0; i < CMR_STEP_MAX; i++) {
 		if (i == 0) {
