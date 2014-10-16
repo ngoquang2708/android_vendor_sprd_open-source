@@ -347,7 +347,7 @@ LOCAL const SENSOR_REG_T ov2680_1600X1200_mipi_raw[] = {
 #endif
 	{0x4008, 0x02},
 	{0x4009, 0x09},
-	{0x481B, 0x3e},
+	{0x481B, 0x43},
 	{0x4837, 0x18},
 
 };
@@ -573,7 +573,7 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	NULL,			//&g_ov2680_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1500MV,	// dvdd
-	0,			// skip frame num before preview
+	1,			// skip frame num before preview
 	0,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
