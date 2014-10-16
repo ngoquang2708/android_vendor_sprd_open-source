@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"CU שירותים משופרים"</string>
+<string-array name="app_list">
+<item>מידע על תוכנה הנוכחית</item>
+<item>עדכון תוכנה</item>
+<item>התקינו את חבילת העדכון מייד</item>
+</string-array>
+<string name="debug_menu">DM תפריט פתרון תקלות</string>
+<string-array name="debug_list">
+<item>תצורת פתרון תקלות</item>
+<item>נקו את תיוווי הרישום-העצמי</item>
+<item>שלח הודעה ברישום עצמי</item>
+<item>החלף שרת</item>
+<item>מיוצר</item>
+<item>דגם</item>
+<item>עדכון תוכנה</item>
+<item>"IMEI"</item>
+<item>"IMEI2"</item>
+<item>כתובת שרת</item>
+<item>כתובת gateway למסרונים</item>
+<item>יציאת gateway למסרונים</item>
+<item>התחל שירות</item>
+<item>מצב DM</item>
+<item>מתג רישום עצמי</item>
+</string-array>
+<string name="menu_save">שמור</string>
+<string name="menu_cancel">בטל</string>
+<string name="notify_msg">שירותי לקוחות מתקדמים</string>
+<string name="notify_confirm_msg">האם לקבל שירות לקוחות מתקדם?</string>
+<string name="menu_ok">אישור</string>
+<string name="menu_yes">כן</string>
+<string name="menu_no">לא</string>
+</resources>
