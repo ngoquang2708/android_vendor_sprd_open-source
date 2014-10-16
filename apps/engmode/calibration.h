@@ -17,6 +17,7 @@ typedef enum
     DIAG_AP_CMD_LOOP,
     DIAG_AP_CMD_FILE_OPER,
     DIAG_AP_CMD_SWITCH_CP,
+    DIAG_AP_CMD_CHANGE = 0x0008,
     MAX_DIAG_AP_CMD
 } DIAG_AP_CMD_E;
 
@@ -69,6 +70,11 @@ typedef struct
     TOOLS_DIAG_AP_CNF_T diag_ap_cnf;
     TOOLS_AP_ADC_REQ_T ap_adc_req;
 }MSG_AP_ADC_CNF;
+
+typedef struct
+{
+    unsigned int on_off; //1:0n    0:offf
+}TOOLS_DIAG_AP_CHARGE_T;
 
 void initialize_ctrl_file(void);
 

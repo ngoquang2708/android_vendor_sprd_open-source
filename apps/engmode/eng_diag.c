@@ -64,6 +64,9 @@ extern void enable_calibration(void);
 extern void stringfile2nvstruct(char *filename, void *para_ptr, int lenbytes);
 extern void  nvstruct2stringfile(char* filename,void *para_ptr, int lenbytes);
 extern char* get_ser_diag_path(void);
+extern int	disconnect_vbus_charger(void);
+extern int	connect_vbus_charger(void);
+
 
 extern  struct eng_bt_eutops bt_eutops;
 extern  struct eng_wifi_eutops wifi_eutops;
@@ -115,6 +118,8 @@ int eng_diag_decode7d7e(char *buf,int len);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen);
+static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen);
+
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -535,6 +540,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
             rlen = eng_diag_gps_autotest_hdlr(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
             eng_diag_len = rlen;
             eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+            return 0;
+	case CMD_USER_ENABLE_CHARGE:
+            rlen = eng_diag_enable_charge(buf, len, rsp, sizeof(rsp));
+            eng_diag_write2pc(rsp, rlen);
             return 0;
         default:
             break;
@@ -2424,6 +2433,8 @@ static int eng_diag_ap_req(char *buf, int len)
         ret = CMD_USER_FILE_OPER;
     }else if(DIAG_AP_CMD_SWITCH_CP == apcmd->cmd){
         ret = CMD_USER_CFT_SWITCH;
+    }else if(DIAG_AP_CMD_CHANGE == apcmd->cmd){
+	ret = CMD_USER_ENABLE_CHARGE;
     }else{
         ret = CMD_USER_APCALI;
     }
@@ -2829,4 +2840,52 @@ static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
     ENG_LOG("%s: ret: %d\n", __FUNCTION__, ret);
 
     return ret;
+}
+
+static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen)
+{
+    int ret = 0;
+    char *rsp_ptr;
+    TOOLS_DIAG_AP_CNF_T* aprsp;
+
+    if(NULL == buf){
+	ENG_LOG("%s,null pointer",__FUNCTION__);
+	return 0;
+    }
+
+    MSG_HEAD_T* msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    TOOLS_DIAG_AP_CHARGE_T* charge_flag = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T)+sizeof(TOOLS_DIAG_AP_CMD_T));
+
+    rsplen = sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
+    }
+
+    aprsp = (TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T));
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    aprsp->status = 0x01;
+    if( 1 == charge_flag->on_off){
+	ret = connect_vbus_charger();
+	if(ret > 0) {
+	    aprsp->status = 0x00;
+	}else{
+	    aprsp->status = 0x01;
+	    ENG_LOG("%s: enable charge failed !!!", __FUNCTION__);
+	}
+    }else if(0 == charge_flag->on_off){
+	ret = disconnect_vbus_charger();
+	if(ret > 0) {
+	    aprsp->status = 0x00;
+	}else{
+	    aprsp->status = 0x01;
+	    ENG_LOG("%s: disable charge failed !!!", __FUNCTION__);
+	}
+    }
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
 }
