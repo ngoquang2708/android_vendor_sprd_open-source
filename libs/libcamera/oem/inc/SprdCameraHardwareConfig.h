@@ -603,8 +603,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"antibanding","50hz"},
 	{"antibanding-supported","true"},
 	{"focal-length", "3.75"},
-	{"horizontal-view-angle", "54"},
-	{"vertical-view-angle", "54"},
+	{"horizontal-view-angle", "50"},
+	{"vertical-view-angle", "50"},
 #ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 	{"flash-mode-values", "off,on,torch,auto"},
 	{"flash-mode", "off"},
