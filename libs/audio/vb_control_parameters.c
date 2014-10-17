@@ -2138,7 +2138,7 @@ reconnect:
             goto reconnect;
         }
         ALOGD("modem_monitor: %s",buf);
-        if(mystrstr(buf,"Assert") || mystrstr(buf,"Reset")) {
+        if(mystrstr(buf,"Assert") || mystrstr(buf,"Reset") || mystrstr(buf,"Blocked")) {
             ALOGD("modem asserted1 %s",buf);
             cur_out_devices_l = adev->out_devices;
             cur_out_devices_l &= ~AUDIO_DEVICE_OUT_ALL;
