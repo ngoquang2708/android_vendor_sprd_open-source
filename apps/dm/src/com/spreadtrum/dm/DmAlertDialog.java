@@ -110,7 +110,7 @@ public class DmAlertDialog extends Activity {
                     // cancel dm session
                     break;
                 case DmService.SEND_SELF_SMS:
-                case DmService.DATA_CONNECT_CONFRIM:                    
+                case DmService.DATA_CONNECT_CONFRIM:
                     if(builder != null )
                         builder.dismiss();
                     if(builderSub != null)
@@ -119,7 +119,6 @@ public class DmAlertDialog extends Activity {
                     finish();
                     DestroyAlertDialog();
                     break;
-                                                       
                 default:
                     Log.d(TAG, "run() : mDialogId is invalid ");
                     break;
@@ -163,7 +162,7 @@ public class DmAlertDialog extends Activity {
         if(id == DmService.DATA_CONNECT_CONFRIM){
             createDataConnectConfrimDialog(msg,timeout,intent);
         }else{
-            CreateAlertDialog(id, msg, timeout);            
+            CreateAlertDialog(id, msg, timeout);
         }
         
         mDialogId = id;
@@ -412,7 +411,7 @@ public class DmAlertDialog extends Activity {
                 Log.d(TAG, "CreateAlertDialog: DM_PROGRESS_DIALOG");
                 break;
                 
-            case DmService.SEND_SELF_SMS:                
+            case DmService.SEND_SELF_SMS:
                 createShowSelfRegisterDialog(message,timeout);
                 break;
 
@@ -518,7 +517,7 @@ public class DmAlertDialog extends Activity {
                         builderSub = new AlertDialog.Builder(mContext).setTitle("").setMessage(getResources().getString(R.string.sms_prompt_cancel))
                         .setPositiveButton(getResources().getString(R.string.menu_yes), new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
-                                Log.d(TAG, "createShowSelfRegisterDialog setNegativeButton click");                                
+                                Log.d(TAG, "createShowSelfRegisterDialog setNegativeButton click");
                                 DmService.getInstance().saveStatus4CancelAllowRegiste();
                                 mNotificationMgr.cancel(R.drawable.icon);
                                 finish();

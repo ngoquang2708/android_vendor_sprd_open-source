@@ -314,8 +314,8 @@ public class DmDebugMenu extends Activity {
                     }
                     break;
                     
-                case ITEM_CLEAN_DIALOG_CONTROLL_FLAGE:                                    
-                    DmService.getInstance().cleanDailogControllFlag();                                        
+                case ITEM_CLEAN_DIALOG_CONTROLL_FLAGE:
+                    DmService.getInstance().cleanDailogControllFlag();
                     ShowMessage("Clean finished!");
                     break;
                     
@@ -336,8 +336,8 @@ public class DmDebugMenu extends Activity {
         AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
         String message = new String();
         message = "Debug Mode : " + DmService.getInstance().isDebugMode();
-        message = message + "\nSend message : " + DmService.getInstance().isHaveSendSelfRegMsg();
-        message = message + "\nSelfReg State : " + DmService.getInstance().isSelfRegOk();
+        message = message + "\nSend message : " + DmService.getInstance().isHaveSendSelfRegMsg(mContext);
+        message = message + "\nSelfReg State : " + DmService.getInstance().isSelfRegOk(mContext);
         message = message + "\nSession is running : " + Vdmc.getInstance().isVDMRunning();
         message = message + "\nLast Session State : " + Vdmc.getLastSessionState();
         message = message + "\nLast Error : " + Vdmc.getLastError();
