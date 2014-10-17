@@ -2914,7 +2914,7 @@ static int start_input_stream(struct tiny_stream_in *in)
               in->config.channels = in->requested_channels;
             }
 
-            if(in->config.rate != in->requested_rate)
+            if((in->config.rate != in->requested_rate) && (in->requested_rate != 44100))
             {
                 in->config.rate = in->requested_rate;
             }
@@ -3399,12 +3399,24 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
       in->num_preprocessors, in->resampler);*/
     if (in->resampler != NULL) {
             ret = read_frames(in, buffer, frames_rq);
+            if (ret != frames_rq){
+                ALOGE("ERR:in_read0");
+                ret = -1;
+            }
+            else
+                ret = 0;
     } else {
 
 #ifdef  AUDIO_MUX_PCM
         if(in->mux_pcm){
             ALOGE("  peter: mux read  in");
             ret = mux_pcm_read(in->mux_pcm, buffer, bytes);
+            if (ret != bytes){
+                ALOGE("ERR:in_read2");
+                ret = -1;
+            }
+            else
+                ret = 0
         }
         else
 #endif
