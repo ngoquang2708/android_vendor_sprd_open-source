@@ -1041,7 +1041,11 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 		src.data_end = frm_ptr->data_endian;
 		dst.data_end = src.data_end;
 		camera_take_snapshot_step(CMR_STEP_CVT_THUMB_S);
-		ret = snp_cxt->ops.start_scale(snp_cxt->oem_handle, snp_handle, &src, &dst, &mean);
+		if ((src.size.width != dst.size.width) || (src.size.height != dst.size.height)) {
+			ret = snp_cxt->ops.start_scale(snp_cxt->oem_handle, snp_handle, &src, &dst, &mean);
+		} else {
+			CMR_LOGI("don't need to scale");
+		}
 		camera_take_snapshot_step(CMR_STEP_CVT_THUMB_E);
 #ifdef TEST_MEM_DATA
 		camera_save_to_file(SNP_THUMB_DATA, IMG_DATA_TYPE_YUV420,
@@ -2281,10 +2285,16 @@ cmr_int snp_set_jpeg_thumb_param(cmr_handle snp_handle)
 	struct snapshot_param           *req_param_ptr = &cxt->req_param;
 	struct snp_channel_param        *chn_param_ptr = &cxt->chn_param;
 	struct snp_jpeg_param           *jpeg_ptr = &chn_param_ptr->thumb_in[0];
+	struct snp_scale_param          *thumb_ptr = &cxt->chn_param.convert_thumb[0];
 	cmr_uint                        i;
 
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
-		jpeg_ptr->src = req_param_ptr->post_proc_setting.mem[i].thum_yuv;
+		if ((thumb_ptr->src_img.size.width != thumb_ptr->dst_img.size.width)
+			|| (thumb_ptr->src_img.size.height != thumb_ptr->dst_img.size.height)) {
+			jpeg_ptr->src = req_param_ptr->post_proc_setting.mem[i].thum_yuv;
+		} else {
+			jpeg_ptr->src = req_param_ptr->post_proc_setting.mem[i].target_yuv;
+		}
 		jpeg_ptr->dst = req_param_ptr->post_proc_setting.mem[i].thum_jpeg;
 		jpeg_ptr->src.size = cxt->chn_param.convert_thumb[i].dst_img.size;
 		jpeg_ptr->mean.is_sync = 1;
@@ -2303,6 +2313,7 @@ cmr_int snp_set_jpeg_thumb_param(cmr_handle snp_handle)
 			jpeg_ptr->mean.rot = req_param_ptr->jpeg_setting.set_encode_rotation;
 		}
 		jpeg_ptr++;
+		thumb_ptr++;
 	}
 	jpeg_ptr = &chn_param_ptr->thumb_in[0];
 	for (i=0 ; i<1/*CMR_CAPTURE_MEM_SUM*/ ; i++) {
