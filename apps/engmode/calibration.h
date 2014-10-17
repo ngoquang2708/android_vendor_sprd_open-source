@@ -10,6 +10,9 @@
 #define ADC_CHAN_FILE_PATH      "/sys/kernel/debug/sc2713-regulator/adc_chan"
 #define	FGU_CURRENT_ADC_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_current_adc"
 #define	FGU_VOL_ADC_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_vol_adc"
+#define	CHARGING_CURRENT_FILE_PATH   "sys/class/power_supply/battery/real_time_current" //charging current
+#define	BATTERY_CURRENT_FILE_PATH   "sys/class/power_supply/sprdfgu/fgu_current"      //battery current
+
 #define	BATTER_CALI_CONFIG_FILE	CALI_CTRL_FILE_PATH
 typedef enum
 {
@@ -18,6 +21,7 @@ typedef enum
     DIAG_AP_CMD_FILE_OPER,
     DIAG_AP_CMD_SWITCH_CP,
     DIAG_AP_CMD_CHANGE = 0x0008,
+    DIAG_AP_CMD_READ_CURRENT= 0x0009,
     MAX_DIAG_AP_CMD
 } DIAG_AP_CMD_E;
 
@@ -63,6 +67,11 @@ typedef struct {
     unsigned short status;   // ==0: success, != 0: fail
     unsigned short length;   // length of  result
 } TOOLS_DIAG_AP_CNF_T;
+
+typedef struct {
+    int charging;
+    int battery;
+} TOOLS_DIAG_CHARGE_CURRENT_CNF_T;
 
 typedef struct
 {

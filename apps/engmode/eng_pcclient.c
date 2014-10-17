@@ -26,7 +26,7 @@
 sem_t g_armlog_sem;
 int g_ap_cali_flag = 0;
 extern int g_armlog_enable;
-extern void	disconnect_vbus_charger(void);
+extern int	disconnect_vbus_charger(void);
 extern int turnoff_calibration_backlight(void);
 
 
