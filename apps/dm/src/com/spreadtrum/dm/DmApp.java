@@ -11,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
+import android.content.Context;
 
 public class DmApp extends Activity {
 
@@ -19,12 +20,13 @@ public class DmApp extends Activity {
     private String[] mlistItem;
 
     private Toast mToast;
+    private Context mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-
+        mContext = this;
         mListView = (ListView) findViewById(R.id.app_list);
 
         // init list item content
@@ -53,7 +55,7 @@ public class DmApp extends Activity {
 
                 case 1:
                     // search avalable software update package and download it
-                    if (selfReg.isSelfRegOk()) {
+                    if (selfReg.isSelfRegOk(mContext)) {
                     } else {
                         ShowMessage("Have not self registe!");
                     }
