@@ -1026,7 +1026,7 @@ void camera_snapshot_state_handle(cmr_handle oem_handle, enum snapshot_cb_type c
 	//		camera_snapshot_channel_handle(cxt);
 			break;
 		case SNAPSHOT_EVT_STATE:
-			cxt->snp_cxt.status = (cmr_u32)param;
+			cxt->snp_cxt.status = *((cmr_u32*)param);
 			CMR_LOGI("snapshot state is %d", cxt->snp_cxt.status);
 			break;
 		default:

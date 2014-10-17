@@ -271,7 +271,7 @@ static void snp_cvt_done(cmr_handle snp_handle);
 static cmr_int snp_start_cvt(cmr_handle snp_handle, void *data);
 static void snp_post_proc_exit(struct snp_context *snp_cxt);
 static void snp_main_thr_proc_exit(struct snp_context *snp_cxt);
-static cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data);
+static cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data, cmr_uint data_len);
 static cmr_int snp_send_msg_secondary_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data);
 static cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *data);
 static cmr_int snp_send_msg_redisplay_thr(cmr_handle snp_handle, cmr_int evt, void *data);
@@ -518,7 +518,7 @@ void snp_post_proc_err_exit(cmr_handle snp_handle, cmr_int err_code)
 	}
 	snp_set_status(snp_handle, IDLE);
 	if (CMR_CAMERA_NORNAL_EXIT != err_code) {
-		ret = snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EXIT_CB_FAILED, NULL);
+		ret = snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EXIT_CB_FAILED, NULL, 0);
 	}
 	CMR_LOGI("done");
 }
@@ -597,7 +597,7 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 			CMR_LOGI("post end");
 		}
 		snp_set_status(snp_handle, POST_PROCESSING);
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_DONE, (void*)ret);
+		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_DONE, (void*)ret, sizeof(cmr_int));
 	} else {
 		/* temp modify to trace bug350005 */
 		if(enc_out_ptr->stream_size < 100 || enc_out_ptr->total_height < 60) {
@@ -642,7 +642,7 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 			}
 			camera_take_snapshot_step(CMR_STEP_CALL_BACK);
 			camera_snapshot_step_statisic();
-			snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param);
+			snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param, sizeof(struct camera_jpeg_param));
 			if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 				CMR_LOGI("snp has been cancel");
 				ret = CMR_CAMERA_NORNAL_EXIT;
@@ -685,7 +685,7 @@ void snp_jpeg_enc_err_handle(cmr_handle snp_handle)
 
 	CMR_LOGI("err code %ld", cxt->err_code);
 	sem_post(&cxt->jpeg_sync_sm);
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EXIT_CB_FAILED, NULL);
+	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EXIT_CB_FAILED, NULL, 0);
 }
 
 void snp_jpeg_dec_err_handle(cmr_handle snp_handle)
@@ -810,7 +810,7 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_encode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ENC, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ENC, (void*)ret, sizeof(cmr_int));
 exit:
 	CMR_LOGI("done %ld", ret);
 	if (ret) {
@@ -857,7 +857,7 @@ cmr_int snp_start_encode_thumb(cmr_handle snp_handle)
 								&jpeg_in_ptr->dst.addr_vir);
 #endif
 		}
-	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_THUMB_DONE, (void*)ret);
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_THUMB_DONE, (void*)ret, sizeof(cmr_int));
 	} else {
 		CMR_LOGE("err start_encode is null");
 		ret = -CMR_CAMERA_FAIL;
@@ -907,7 +907,7 @@ cmr_int snp_start_decode_sync(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_decode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_DEC_DONE, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_DEC_DONE, (void*)ret, sizeof(cmr_int));
 	return ret;
 }
 
@@ -936,7 +936,7 @@ cmr_int snp_start_decode(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_decode is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_DEC, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_DEC, (void*)ret, sizeof(cmr_int));
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -974,7 +974,7 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 							dst.size.height,
 							&dst.addr_vir);
 #endif
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret, sizeof(cmr_int));
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -1008,7 +1008,7 @@ cmr_int snp_start_scale(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_scale is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_SCALE, (void*)ret);
+//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_SCALE, (void*)ret, sizeof(cmr_int));
 exit:
 	CMR_LOGI("done %ld", ret);
 	if (ret) {
@@ -1057,7 +1057,7 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_scale is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CONVERT_THUMB_DONE, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CONVERT_THUMB_DONE, (void*)ret, sizeof(cmr_int));
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1108,7 +1108,7 @@ cmr_int snp_start_isp_proc(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err raw_proc is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP, (void*)ret, sizeof(cmr_int));
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1161,7 +1161,7 @@ cmr_int snp_start_isp_next_proc(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err raw_proc is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP_NEXT, (void*)ret);
+	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ISP_NEXT, (void*)ret, sizeof(cmr_int));
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -1183,7 +1183,7 @@ void snp_cvt_done(cmr_handle snp_handle)
 	CMR_MSG_INIT(message);
 
 	sem_post(&cxt->cvt.cvt_sync_sm);
-//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CVT_DONE, (void*)ret);
+//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_CVT_DONE, (void*)ret, sizeof(cmr_int));
 	CMR_LOGI("cvt done");
 }
 
@@ -1196,11 +1196,11 @@ cmr_int snp_start_cvt(cmr_handle snp_handle, void *data)
 	cxt->cur_frame_info = *frm_ptr;
 	if (IMG_DATA_TYPE_JPEG == frm_ptr->fmt) {
 		ret = snp_start_decode_sync(snp_handle, data);
-	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret, sizeof(cmr_int));
 		snp_cvt_done(snp_handle);
 	} else if (IMG_DATA_TYPE_RAW == frm_ptr->fmt) {
 		ret = snp_start_isp_proc(snp_handle, data);
-//		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret);
+//		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_CVT, (void*)ret, sizeof(cmr_int));
 	}
 	if (ret) {
 		CMR_LOGE("failed to start cvt %ld", ret);
@@ -1304,8 +1304,8 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 		}
 		camera_take_snapshot_step(CMR_STEP_CALL_BACK);
 		camera_snapshot_step_statisic(&image_size);
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param);
-	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_EXIF_JPEG_DONE, (void*)ret);
+		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_ENCODE_PICTURE, SNAPSHOT_EXIT_CB_DONE, (void*)&enc_param, sizeof(struct camera_jpeg_param));
+	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_EXIF_JPEG_DONE, (void*)ret, sizeof(cmr_int));
 		if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 			CMR_LOGI("snp has been cancel");
 			ret = CMR_CAMERA_NORNAL_EXIT;
@@ -2727,7 +2727,7 @@ cmr_int snp_check_frame_is_valid(cmr_handle snp_handle, struct frm_info *frm_ptr
 exit:
 	return ret;
 }
-cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data)
+cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_int evt, void *data, cmr_uint data_len)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
@@ -2737,7 +2737,8 @@ cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_in
 	CMR_LOGI("evt %ld", evt);
 	if (SNAPSHOT_FUNC_STATE == func_type) {
 		sync_flag = CMR_MSG_SYNC_NONE;
-	} else if ((SNAPSHOT_FUNC_TAKE_PICTURE == func_type) && (SNAPSHOT_EXIT_CB_DONE == evt)) {
+	} else if (((SNAPSHOT_FUNC_TAKE_PICTURE == func_type) || (SNAPSHOT_FUNC_ENCODE_PICTURE == func_type))
+				&& (SNAPSHOT_EXIT_CB_DONE == evt)) {
 		sync_flag = CMR_MSG_SYNC_NONE;
 	} else {
 		switch (evt) {
@@ -2749,15 +2750,30 @@ cmr_int snp_send_msg_notify_thr(cmr_handle snp_handle, cmr_int func_type, cmr_in
 			break;
 		}
 	}
+	if (data) {
+		message.data = malloc(data_len);
+		if (!message.data) {
+			ret = CMR_CAMERA_NO_MEM;
+			goto exit;
+		} else {
+			memcpy(message.data, data, data_len);
+			message.alloc_flag = 1;
+		}
+	} else {
+		message.alloc_flag = 0;
+	}
 	message.msg_type = evt;
 	message.sub_msg_type = func_type;
 	message.sync_flag = sync_flag;
-	message.alloc_flag = 0;
-	message.data = data;
 	ret = cmr_thread_msg_send(cxt->thread_cxt.notify_thr_handle, &message);
 	if (ret) {
 		CMR_LOGE("failed to send exit msg to notify thr %ld", ret);
+		if (message.data) {
+			free(message.data);
+			message.data = NULL;
+		}
 	}
+exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
@@ -3090,9 +3106,9 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 
 	cxt->cap_cnt++;
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE,
-								SNAPSHOT_EVT_CB_CAPTURE_FRAME_DONE, NULL);
+								SNAPSHOT_EVT_CB_CAPTURE_FRAME_DONE, NULL, 0);
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE,
-							SNAPSHOT_RSP_CB_SUCCESS, NULL);
+							SNAPSHOT_RSP_CB_SUCCESS, NULL, 0);
 	snp_set_status(snp_handle, POST_PROCESSING);
 
 	camera_take_snapshot_step(CMR_STEP_CAP_E);
@@ -3239,7 +3255,7 @@ cmr_int isp_overwrite_cap_mem(cmr_handle snp_handle)
 	frame_type.height = mem_ptr->cap_raw.size.height * pixel_width /8;
 
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE,
-							SNAPSHOT_EVT_CB_FLUSH, (void*)&frame_type);
+							SNAPSHOT_EVT_CB_FLUSH, (void*)&frame_type, sizeof(struct camera_frame_type));
 
 	return CMR_CAMERA_SUCCESS;
 
@@ -3488,7 +3504,7 @@ cmr_int snp_proc_android_zsl_data(cmr_handle snp_handle, void *data)
 	frame.width = cxt->chn_param.chn_frm[index].size.width;
 	frame.height = cxt->chn_param.chn_frm[index].size.height;
 	frame.timestamp = frm_ptr->sec * 1000000000LL + frm_ptr->usec * 1000;
-	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EVT_CB_ZSL_NEW_FRM, (void*)&frame);
+	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EVT_CB_ZSL_NEW_FRM, (void*)&frame, sizeof(struct camera_cap_frm_info));
 #endif
 exit:
 	CMR_LOGI("done %ld", ret);
@@ -3505,10 +3521,10 @@ void snp_set_status(cmr_handle snp_handle, cmr_uint status)
 	sem_post(&cxt->access_sm);
 	if (IDLE == status) {
 		if (cxt->oem_cb) {
-			cxt->oem_cb(cxt->oem_handle, SNAPSHOT_EVT_STATE, SNAPSHOT_FUNC_STATE, (void*)status);
+			cxt->oem_cb(cxt->oem_handle, SNAPSHOT_EVT_STATE, SNAPSHOT_FUNC_STATE, (void*)&status);
 		}
 	} else {
-		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_STATE, (void*)status);
+		snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_STATE, (void*)&status, sizeof(cmr_uint));
 	}
 	CMR_LOGI("done");
 }
@@ -3831,7 +3847,7 @@ cmr_int cmr_snapshot_memory_flush(cmr_handle snapshot_handle)
 
 	CHECK_HANDLE_VALID(snapshot_handle);
 
-	ret = snp_send_msg_notify_thr(snapshot_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EVT_CB_FLUSH, NULL);
+	ret = snp_send_msg_notify_thr(snapshot_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EVT_CB_FLUSH, NULL, 0);
 	CMR_LOGI("done %ld", ret);
 	return ret;
 }
