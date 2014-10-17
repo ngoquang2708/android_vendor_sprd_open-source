@@ -2003,7 +2003,7 @@ public class DmService extends Service {
             str = sharedPreferences.getString(AGPS_CONREF, "");
             break;
         case MyTreeIoHandler.AGPS_CONNPROFILE_IO_HANDLER:
-            str = sharedPreferences.getString(AGPS_CONNPROFILE, "cmnet");
+            str = sharedPreferences.getString(AGPS_CONNPROFILE, "CMNET");
             break;
         default:
             Log.d(TAG, "getAGPSParam error type = " + type);
