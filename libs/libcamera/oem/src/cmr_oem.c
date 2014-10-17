@@ -2696,6 +2696,7 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
+	CMR_LOGI("start");
 	snp_cxt = &cxt->snp_cxt;
 	/*close flash*/
 	setting_param.camera_id = camera_id;
