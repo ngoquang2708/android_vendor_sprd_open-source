@@ -590,9 +590,10 @@ void mtrace_print_alllog(memstat_t *stat)
 
 	THREAD_LOCK(memstat_sem);
 	mtrace_log_info("mtrace_print_alllog E\n");
-	if (!(stat->log.flag & memstat_logflag_inited))
+	if (!(stat->log.flag & memstat_logflag_inited)) {
+		THREAD_UNLOCK(memstat_sem);
 		return ;
-
+	}
 	mtrace_log_warn("max_index=%d,free_index=%d\n", stat->log.max_index, stat->log.free_index);
 	if (MAX_ALLOC_ENTRYS != stat->log.limit) {
 		mtrace_log_warn("limit=%d,%d\n",stat->log.limit,MAX_ALLOC_ENTRYS);

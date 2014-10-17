@@ -9596,8 +9596,10 @@ int32_t ispAwbmEb_immediately(uint32_t handler_id)
 	if(SC8825_ISP_ID==isp_id){
 		isp_context_ptr->ae.monitor_conter = 0;
 	}else if(SC8830_ISP_ID==isp_id || SC9630_ISP_ID==isp_id){
-		ispAwbmBypass(handler_id, ISP_UEB);
-		ispAwbmSkip(handler_id, 0);
+		rtn = ispAwbmBypass(handler_id, ISP_UEB);
+		ISP_RETURN_IF_FAIL(rtn, ("ispAwbmBypass error"));
+		rtn = ispAwbmSkip(handler_id, 0);
+		ISP_RETURN_IF_FAIL(rtn, ("ispAwbmSkip error"));
 	}
 	return rtn;
 }

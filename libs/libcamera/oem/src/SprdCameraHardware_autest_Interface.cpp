@@ -417,6 +417,10 @@ int autotest_came_save_to_buf(uint32_t **ppbuf_addr,struct auto_test_cmr_context
 	}
 	if ((ppbuf_addr != NULL) && (save_cmr_cxt_ptr != NULL)) {
 		*ppbuf_addr = (uint32_t *)malloc(g_image_size);
+		if (!*ppbuf_addr) {
+	         ERR("No mem!");
+	         return ret_val;
+		}
 		memset((void*)*ppbuf_addr, 0x00, g_image_size);
 		memcpy(*ppbuf_addr,(void *)capture_addr,g_image_size);
 		ret_val = 0;

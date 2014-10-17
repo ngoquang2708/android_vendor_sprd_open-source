@@ -3552,9 +3552,7 @@ cmr_int cmr_snapshot_init(struct snapshot_init_param *param_ptr, cmr_handle *sna
 
 	if (!param_ptr || !snapshot_handle || !param_ptr->ipm_handle
 		|| !param_ptr->oem_handle || !param_ptr->oem_cb) {
-		CMR_LOGE("err param 0x%lx 0x%lx 0x%lx 0x%lx", (cmr_uint)param_ptr,
-				(cmr_uint)snapshot_handle, (cmr_uint)param_ptr->ipm_handle,
-				(cmr_uint)param_ptr->oem_handle);
+		CMR_LOGE("err param");
 		ret = CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}

@@ -394,6 +394,10 @@ cmr_int cmr_thread_create(cmr_handle *thread_handle, cmr_u32 queue_length, msg_p
 	}
 	*thread_handle = 0;
 	thread = (struct cmr_thread*)malloc(sizeof(struct cmr_thread));
+	if (!thread) {
+		CMR_LOGE("No mem!");
+		return CMR_MSG_NO_MEM;
+	}
 	thread->magic = CMR_THREAD_MAGIC_CODE;
 	thread->p_data = p_data;
 	thread->msg_process_cb = proc_cb;

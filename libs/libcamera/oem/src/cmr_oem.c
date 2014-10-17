@@ -2980,7 +2980,7 @@ cmr_int camera_channel_pause(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
+		return ret;
 	}
 	CMR_LOGI("channel id %ld, reconfig flag %d", channel_id, reconfig_flag);
 	ret = cmr_v4l2_cap_pause(cxt->v4l2_cxt.v4l2_handle, channel_id, reconfig_flag);
@@ -3117,7 +3117,7 @@ cmr_int camera_get_sensor_autotest_mode(cmr_handle oem_handle, cmr_uint sensor_i
 	if (!oem_handle || !is_autotest) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
+		return ret;
 	}
 	CMR_LOGI("sensor id %ld", sensor_id);
 	ret = cmr_sensor_get_autotest_mode(cxt->sn_cxt.sensor_handle, sensor_id, is_autotest);
@@ -3134,13 +3134,14 @@ cmr_int camera_ioctl_for_setting(cmr_handle oem_handle, cmr_uint cmd_type, struc
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
-	cmr_handle                     v4l2_handle = cxt->v4l2_cxt.v4l2_handle;
+	cmr_handle                     v4l2_handle;
 
 	if (!oem_handle) {
 		CMR_LOGE("in parm error");
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
+	v4l2_handle = cxt->v4l2_cxt.v4l2_handle;
 
 	switch (cmd_type) {
 	case SETTING_IO_GET_CAPTURE_SIZE:
@@ -4366,12 +4367,11 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 	enum img_angle                 angle = IMG_ANGLE_0;
 	cmr_uint                       img_len = (cmr_uint)(output_width * output_height);
 
-	CMR_LOGI("0x%lx %d", (cmr_uint)oem_handle, cxt->snp_cxt.cfg_cap_rot);
 	if (!oem_handle) {
 		CMR_LOGE("err, handle is null");
 		goto exit;
 	}
-
+	CMR_LOGI("0x%lx %d", (cmr_uint)oem_handle, cxt->snp_cxt.cfg_cap_rot);
 	rect.start_x = 0;
 	rect.start_y = 0;
 	rect.width = input_width;

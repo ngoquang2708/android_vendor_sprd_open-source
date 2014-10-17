@@ -305,7 +305,7 @@ cmr_int set_exif_spec_other(JINF_EXIF_INFO_T *jinf_exif_info_ptr, EXIF_SPEC_OTHE
 
 	p_exif_spec_other->valid.ImageUniqueID = 1;
 
-	if ((&p_exif_spec_other->ImageUniqueID != NULL) && (strlen(arr_time) < 33))
+	if (strlen(arr_time) < 33)
 		strncpy((char *)p_exif_spec_other->ImageUniqueID, arr_time, strlen(arr_time));
 
 	CMR_LOGV("%s",p_exif_spec_other->ImageUniqueID);

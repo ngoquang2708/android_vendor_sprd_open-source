@@ -236,7 +236,7 @@ static cmr_int cmr_scale_restart(struct scale_file *file)
 	if (!file) {
 		ret = CMR_CAMERA_INVALID_PARAM;
 		CMR_LOGE("param error");
-		goto exit;
+		return ret;
 	}
 
 	if (-1 != file->handle) {

@@ -1912,9 +1912,10 @@ status_t SprdCameraHardware::setParametersInternal(const SprdCameraParameters& p
 		LOGI("setParametersInternal: E params = %p", &params);
 	}
 	mParamLock.lock();
-	if (true != startCameraIfNecessary())
+	if (true != startCameraIfNecessary()) {
+		mParamLock.unlock();
 		return UNKNOWN_ERROR;
-
+	}
 	// FIXME: verify params
 	// yuv422sp is here only for legacy reason. Unfortunately, we release
 	// the code with yuv422sp as the default and enforced setting. The
