@@ -119,7 +119,9 @@ int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get 
 void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen);
 static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen);
-
+static int eng_diag_get_charge_current(char *buf, int len, char *rsp, int rsplen);
+static int get_charging_current(int *value);
+static int get_battery_current(int *value);
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -541,13 +543,18 @@ int eng_diag_user_handle(int type, char *buf,int len)
             eng_diag_len = rlen;
             eng_diag_write2pc(eng_diag_buf, eng_diag_len);
             return 0;
-	case CMD_USER_ENABLE_CHARGE:
+	case CMD_USER_ENABLE_CHARGE_ONOFF:
             rlen = eng_diag_enable_charge(buf, len, rsp, sizeof(rsp));
             eng_diag_write2pc(rsp, rlen);
             return 0;
+	case CMD_USER_GET_CHARGE_CURRENT:
+	    rlen = eng_diag_get_charge_current(buf, len, rsp, sizeof(rsp));
+	    eng_diag_write2pc(rsp, rlen);
+	    return 0;
         default:
             break;
     }
+
 
     memcpy((char*)&head,buf+1,sizeof(MSG_HEAD_T));
     head.len = sizeof(MSG_HEAD_T)+rlen-extra_len;
@@ -2434,7 +2441,9 @@ static int eng_diag_ap_req(char *buf, int len)
     }else if(DIAG_AP_CMD_SWITCH_CP == apcmd->cmd){
         ret = CMD_USER_CFT_SWITCH;
     }else if(DIAG_AP_CMD_CHANGE == apcmd->cmd){
-	ret = CMD_USER_ENABLE_CHARGE;
+	ret = CMD_USER_ENABLE_CHARGE_ONOFF;
+    }else if(DIAG_AP_CMD_READ_CURRENT == apcmd->cmd){
+        ret = CMD_USER_GET_CHARGE_CURRENT;
     }else{
         ret = CMD_USER_APCALI;
     }
@@ -2867,6 +2876,7 @@ static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen)
     memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
     ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
     aprsp->status = 0x01;
+    aprsp->length = 0;
     if( 1 == charge_flag->on_off){
 	ret = connect_vbus_charger();
 	if(ret > 0) {
@@ -2888,4 +2898,96 @@ static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen)
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
     free(rsp_ptr);
     return rsplen;
+}
+static int eng_diag_get_charge_current(char *buf, int len, char *rsp, int rsplen)
+{
+    int ret = 0;
+    int  charging_current = 0, battery_current = 0;
+    int charging_read_len = 0, battery_read_len = 0;
+    char *rsp_ptr;
+    MSG_HEAD_T* msg_head_ptr;
+    TOOLS_DIAG_AP_CNF_T* aprsp;
+    TOOLS_DIAG_CHARGE_CURRENT_CNF_T* currentdata;
+
+    if(NULL == buf){
+	ENG_LOG("%s,null pointer",__FUNCTION__);
+	return 0;
+    }
+    msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(TOOLS_DIAG_CHARGE_CURRENT_CNF_T)+ sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+    aprsp = (TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T));
+    currentdata = (TOOLS_DIAG_CHARGE_CURRENT_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T));
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    aprsp->status = 0x01;
+    aprsp->length= sizeof(TOOLS_DIAG_CHARGE_CURRENT_CNF_T);
+
+    charging_read_len = get_charging_current(&charging_current);
+    if(charging_read_len <= 0){
+	ENG_LOG("%s: read charging current failed !!!%s\n", __FUNCTION__,strerror(errno));
+	goto out;
+    }
+
+    battery_read_len = get_battery_current(&battery_current);
+    if(battery_read_len <= 0){
+	ENG_LOG("%s: read battery current failed !!!%s\n", __FUNCTION__,strerror(errno));
+	goto out;
+    }
+    currentdata->charging = charging_current;
+    currentdata->battery = battery_current;
+    aprsp->status = 0x00;
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+
+}
+static int get_charging_current(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+
+    fd = open(CHARGING_CURRENT_FILE_PATH,O_RDONLY);
+
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+            *value = strtol(buffer,&endptr,0);
+        close(fd);
+        ENG_LOG("%s %s value = %d, read_len = %d \n",__FUNCTION__,CHARGING_CURRENT_FILE_PATH, *value, read_len);
+    }
+    else{
+        ENG_LOG("%s open %s failed\n",__FUNCTION__,CHARGING_CURRENT_FILE_PATH);
+    }
+    return read_len;
+}
+
+static int get_battery_current(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+
+    fd = open(BATTERY_CURRENT_FILE_PATH,O_RDONLY);
+
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+            *value = strtol(buffer,&endptr,0);
+        close(fd);
+        ENG_LOG("%s %s value = %d, read_len = %d \n",__FUNCTION__,BATTERY_CURRENT_FILE_PATH, *value, read_len);
+    }
+    else{
+        ENG_LOG("%s open %s failed\n",__FUNCTION__,BATTERY_CURRENT_FILE_PATH);
+    }
+    return read_len;
 }
