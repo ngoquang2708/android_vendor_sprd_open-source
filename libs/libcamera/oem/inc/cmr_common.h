@@ -144,8 +144,8 @@ enum preview_param_mode {
 };
 
 typedef void (*cmr_evt_cb)(cmr_int evt, void* data, void* privdata);
-typedef void (*cmr_malloc)(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 size,
-	                         cmr_u32 sum, cmr_uint *phy_addr, cmr_uint *vir_addr);
+typedef void (*cmr_malloc)(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size,
+	                         cmr_u32 *sum, cmr_uint *phy_addr, cmr_uint *vir_addr);
 typedef void (*cmr_free)(cmr_u32 mem_type, cmr_handle oem_handle, cmr_uint *phy_addr,
 	                       cmr_uint *vir_addr, cmr_u32 sum);
 typedef cmr_int  (*cmr_before_set_cb)(cmr_handle oem_handle, enum preview_param_mode mode);

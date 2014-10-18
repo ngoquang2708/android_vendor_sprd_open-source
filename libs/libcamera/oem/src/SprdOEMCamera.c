@@ -25,8 +25,6 @@
 #include "cmr_oem.h"
 #include "SprdOEMCamera.h"
 
-
-#define CMR_1080P_HEIGHT    1088
 cmr_int camera_init(cmr_u32 camera_id, camera_cb_of_type callback, void *client_data, cmr_uint is_autotest, cmr_handle *camera_handle)
 {
 	cmr_int                          ret = CMR_CAMERA_SUCCESS;

@@ -48,6 +48,15 @@
 #define CAMERA_PATH_SHARE                            1
 #define OEM_RESTART_SUM                              2
 #define POWER2(x)                                    (1<<(x))
+
+
+#define CHECK_HANDLE_VALID(handle) \
+                                                     do { \
+                                                            if (!handle) { \
+                                                                CMR_LOGE("err handle");  \
+                                                                return CMR_CAMERA_INVALID_PARAM; \
+                                                            } \
+                                                     } while(0)
 /**********************************************************************************************/
 
 
@@ -1205,10 +1214,14 @@ cmr_int camera_sensor_init(cmr_handle  oem_handle, cmr_uint is_autotest)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct sensor_context           *sn_cxt = &cxt->sn_cxt;
+	struct sensor_context           *sn_cxt = NULL;
 	struct sensor_init_param        init_param;
 	cmr_handle                      sensor_handle;
 	cmr_u32                         camera_id_bits = 0;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	sn_cxt = &cxt->sn_cxt;
+	CHECK_HANDLE_VALID(sn_cxt);
 
 	if (1 == sn_cxt->inited) {
 		CMR_LOGD("sensor has been intialized");
@@ -1253,11 +1266,8 @@ cmr_int camera_sensor_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct sensor_context           *sn_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
+
 	sn_cxt = &cxt->sn_cxt;
 	if (0 == sn_cxt->inited) {
 		CMR_LOGI("sensor has been de-intialized");
@@ -1276,9 +1286,13 @@ cmr_int camera_v4l2_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct v4l2_context             *v4l2_cxt = &cxt->v4l2_cxt;
+	struct v4l2_context             *v4l2_cxt = NULL;
 	cmr_handle                      v4l2_handle;
 	struct v4l2_init_param          v4l2_param;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	v4l2_cxt = &cxt->v4l2_cxt;
+	CHECK_HANDLE_VALID(v4l2_cxt);
 
 	if (0 == v4l2_cxt->inited) {
 		v4l2_param.oem_handle = oem_handle;
@@ -1303,13 +1317,9 @@ cmr_int camera_v4l2_deinit(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct v4l2_context             *v4l2_cxt;
+	struct v4l2_context             *v4l2_cxt = NULL;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	v4l2_cxt = &cxt->v4l2_cxt;
 	if (0 == v4l2_cxt->inited) {
 		CMR_LOGD("V4L2 has been de-intialized");
@@ -1331,7 +1341,11 @@ cmr_int camera_jpeg_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct jpeg_context             *jpeg_cxt = &cxt->jpeg_cxt;
+	struct jpeg_context             *jpeg_cxt = NULL;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	jpeg_cxt = &cxt->jpeg_cxt;
+	CHECK_HANDLE_VALID(jpeg_cxt);
 
 	if (0 == jpeg_cxt->inited) {
 		ret = jpeg_init(oem_handle, &jpeg_cxt->jpeg_handle);
@@ -1353,12 +1367,10 @@ cmr_int camera_jpeg_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct jpeg_context             *jpeg_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	jpeg_cxt = &cxt->jpeg_cxt;
+	CHECK_HANDLE_VALID(jpeg_cxt);
+
 	if (0 == jpeg_cxt->inited) {
 		CMR_LOGD("jpeg codec has been de-intialized");
 		goto exit;
@@ -1380,7 +1392,11 @@ cmr_int camera_scaler_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct scaler_context           *scaler_cxt = &cxt->scaler_cxt;
+	struct scaler_context           *scaler_cxt = NULL;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	scaler_cxt = &cxt->scaler_cxt;
+	CHECK_HANDLE_VALID(scaler_cxt);
 
 	if (1 == scaler_cxt->inited) {
 		CMR_LOGD("scaler has been intialized");
@@ -1406,12 +1422,9 @@ cmr_int camera_scaler_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct scaler_context           *scaler_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	scaler_cxt = &cxt->scaler_cxt;
+	CHECK_HANDLE_VALID(scaler_cxt);
 	if (0 == scaler_cxt->inited) {
 		CMR_LOGD("scaler has been de-intialized");
 		goto exit;
@@ -1432,8 +1445,12 @@ cmr_int camera_rotation_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct rotation_context         *rot_cxt = &cxt->rot_cxt;
+	struct rotation_context         *rot_cxt = NULL;
 	cmr_handle                      rot_handle;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	rot_cxt = &cxt->rot_cxt;
+	CHECK_HANDLE_VALID(rot_cxt);
 
 	if (1 == rot_cxt->inited) {
 		CMR_LOGD("rot has been intialized");
@@ -1460,12 +1477,10 @@ cmr_int camera_rotation_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct rotation_context         *rot_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	rot_cxt = &cxt->rot_cxt;
+	CHECK_HANDLE_VALID(rot_cxt);
+
 	if (0 == rot_cxt->inited) {
 		CMR_LOGD("rot has been de-intialized");
 		goto exit;
@@ -1487,11 +1502,17 @@ cmr_int camera_isp_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct isp_context              *isp_cxt = &cxt->isp_cxt;
-	struct sensor_context           *sn_cxt = &cxt->sn_cxt;
+	struct isp_context              *isp_cxt = NULL;
+	struct sensor_context           *sn_cxt = NULL;
 	struct sensor_exp_info          *sensor_info_ptr;
 	struct isp_init_param           isp_param;
 	struct isp_video_limit          isp_limit;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	isp_cxt = &cxt->isp_cxt;
+	CHECK_HANDLE_VALID(isp_cxt);
+	sn_cxt = &cxt->sn_cxt;
+	CHECK_HANDLE_VALID(sn_cxt);
 
 	if (1 == isp_cxt->inited) {
 		CMR_LOGD("isp has been intialized");
@@ -1511,6 +1532,7 @@ cmr_int camera_isp_init(cmr_handle  oem_handle)
 
 	isp_param.isp_id = ISP_ID_SC9630;
 	sensor_info_ptr = &sn_cxt->sensor_info;
+	CHECK_HANDLE_VALID(sensor_info_ptr);
 	isp_param.setting_param_ptr = sensor_info_ptr->raw_info_ptr;
 	if (0 != sensor_info_ptr->mode_info[SENSOR_MODE_COMMON_INIT].width) {
 		isp_param.size.w = sensor_info_ptr->mode_info[SENSOR_MODE_COMMON_INIT].width;
@@ -1554,12 +1576,10 @@ cmr_int camera_isp_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct isp_context              *isp_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	isp_cxt = &cxt->isp_cxt;
+	CHECK_HANDLE_VALID(isp_cxt);
+
 	if (0 == isp_cxt->inited) {
 		CMR_LOGD("isp has been de-intialized");
 		goto exit;
@@ -1581,10 +1601,13 @@ cmr_int camera_preview_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct preview_context          *prev_cxt = &cxt->prev_cxt;
+	struct preview_context          *prev_cxt = NULL;
     struct preview_init_param       init_param;
 
-	CMR_PRINT_TIME;
+	CHECK_HANDLE_VALID(oem_handle);
+	prev_cxt = &cxt->prev_cxt;
+	CHECK_HANDLE_VALID(prev_cxt);
+
 	if (1 == prev_cxt->inited) {
 		CMR_LOGD("preview has been intialized");
 		goto exit;
@@ -1632,12 +1655,10 @@ cmr_int camera_preview_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct preview_context          *prev_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	prev_cxt = &cxt->prev_cxt;
+	CHECK_HANDLE_VALID(prev_cxt);
+
 	if (0 == prev_cxt->inited) {
 		CMR_LOGD("preview has been de-intialized");
 		goto exit;
@@ -1659,10 +1680,13 @@ cmr_int camera_snapshot_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct snapshot_context         *snp_cxt = &cxt->snp_cxt;
+	struct snapshot_context         *snp_cxt = NULL;
 	struct snapshot_init_param      init_param;
 
-	CMR_PRINT_TIME;
+	CHECK_HANDLE_VALID(oem_handle);
+	snp_cxt = &cxt->snp_cxt;
+	CHECK_HANDLE_VALID(snp_cxt);
+
 	if (1 == snp_cxt->inited) {
 		CMR_LOGD("snp has been intialized");
 		goto exit;
@@ -1696,7 +1720,6 @@ cmr_int camera_snapshot_init(cmr_handle  oem_handle)
 		goto exit;
 	}
 	snp_cxt->inited = 1;
-	CMR_PRINT_TIME;
 exit:
 	CMR_LOGD("done %ld", ret);
 	return ret;
@@ -1708,12 +1731,10 @@ cmr_int camera_snapshot_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct snapshot_context         *snp_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	snp_cxt = &cxt->snp_cxt;
+	CHECK_HANDLE_VALID(snp_cxt);
+
 	if (0 == snp_cxt->inited) {
 		CMR_LOGD("snp has been de-intialized");
 		goto exit;
@@ -1735,8 +1756,12 @@ cmr_int camera_ipm_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct ipm_context              *ipm_cxt = &cxt->ipm_cxt;
+	struct ipm_context              *ipm_cxt = NULL;
 	struct ipm_init_in              init_param;
+
+	CHECK_HANDLE_VALID(oem_handle);
+	ipm_cxt = &cxt->ipm_cxt;
+	CHECK_HANDLE_VALID(ipm_cxt);
 
 	if (1 == ipm_cxt->inited) {
 		CMR_LOGD("ipm has been intialized");
@@ -1764,12 +1789,10 @@ cmr_int camera_ipm_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct ipm_context              *ipm_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	ipm_cxt = &cxt->ipm_cxt;
+	CHECK_HANDLE_VALID(ipm_cxt);
+
 	if (0 == ipm_cxt->inited) {
 		CMR_LOGD("ipm has been de-intialized");
 		goto exit;
@@ -1791,10 +1814,13 @@ cmr_int camera_setting_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct setting_context          *setting_cxt = &cxt->setting_cxt;
+	struct setting_context          *setting_cxt = NULL;
 	struct setting_init_in          init_param;
 
-	CMR_PRINT_TIME;
+	CHECK_HANDLE_VALID(oem_handle);
+	setting_cxt = &cxt->setting_cxt;
+	CHECK_HANDLE_VALID(setting_cxt);
+
 	if (1 == setting_cxt->inited) {
 		CMR_LOGD("setting has been de-intialized");
 		goto exit;
@@ -1827,12 +1853,10 @@ cmr_int camera_setting_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct setting_context          *setting_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	setting_cxt = &cxt->setting_cxt;
+	CHECK_HANDLE_VALID(setting_cxt);
+
 	if (0 == setting_cxt->inited) {
 		CMR_LOGD("setting has been de-intialized");
 		goto exit;
@@ -1857,13 +1881,10 @@ cmr_int camera_focus_init(cmr_handle  oem_handle)
 	struct focus_context            *focus_cxt;
 	struct af_init_param            init_param;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
-	CMR_PRINT_TIME;
+	CHECK_HANDLE_VALID(oem_handle);
 	focus_cxt = &cxt->focus_cxt;
+	CHECK_HANDLE_VALID(focus_cxt);
+
 	if (1 == focus_cxt->inited) {
 		CMR_LOGD("focus has been intialized");
 		goto exit;
@@ -1895,12 +1916,10 @@ cmr_int camera_focus_deinit(cmr_handle  oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct focus_context            *focus_cxt;
 
-	if (!oem_handle) {
-		CMR_LOGE("in parm error");
-		ret = -CMR_CAMERA_INVALID_PARAM;
-		goto exit;
-	}
+	CHECK_HANDLE_VALID(oem_handle);
 	focus_cxt = &cxt->focus_cxt;
+	CHECK_HANDLE_VALID(focus_cxt);
+
 	if (0 == focus_cxt->inited) {
 		CMR_LOGD("focus has been de-intialized");
 		goto exit;
