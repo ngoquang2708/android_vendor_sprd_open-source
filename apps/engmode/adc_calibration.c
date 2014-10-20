@@ -36,6 +36,7 @@ int	disconnect_vbus_charger(void)
 	    ret = write(fd,"1",2);
 	    if(ret < 0){
 		ENG_LOG("%s write %s failed! \n",__func__,CHARGER_STOP_PATH);
+		close(fd);
 		return 0;
 	    }
             close(fd);
@@ -60,6 +61,7 @@ int	connect_vbus_charger(void)
 	    ret = write(fd,"0",2);
 	    if(ret < 0){
 		ENG_LOG("%s write %s failed! \n",__func__,CHARGER_STOP_PATH);
+		close(fd);
 		return 0;
 	    }
 	    close(fd);
