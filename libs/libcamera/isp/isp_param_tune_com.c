@@ -104,6 +104,7 @@ static int32_t _ispParserDownParam(void* in_param_ptr)
 		}
 		case ISP_VERSION_0001_ID:
 		case ISP_VERSION_00010001_ID:
+		case ISP_VERSION_00020000_ID:
 		{
 			fun_ptr=ispGetDownParamFunV0001(module_id);
 			break;
@@ -203,8 +204,10 @@ static int32_t _ispParserUpMainInfo(void* rtn_param_ptr)
 	if((NULL!=sensor_info_ptr)
 		&&(NULL!=sensor_info_ptr->raw_info_ptr))
 	{
+		/*get sensor name*/
 		strcpy((char*)&param_ptr->sensor_id, sensor_info_ptr->name);
-		param_ptr->version_id=sensor_info_ptr->raw_info_ptr->version_info->version_id;
+		/*get version info*/
+		param_ptr->version_id=sensor_info_ptr->raw_info_ptr->tune_ptr->version_id;
 
 		/*set preview param*/
 		param_ptr->preview_size=(sensor_info_ptr->sensor_mode_info[1].width<<0x10)&0xffff0000;
@@ -259,6 +262,7 @@ static int32_t _ispParserUpParam(void* rtn_param_ptr)
 
 		case ISP_VERSION_0001_ID:
 		case ISP_VERSION_00010001_ID:
+		case ISP_VERSION_00020000_ID:
 		{
 			rtn = ispGetUpParamV0001(NULL, rtn_param_ptr);
 			break;

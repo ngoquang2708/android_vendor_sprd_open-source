@@ -399,6 +399,11 @@ static int32_t _ispCfgDenoise(uint32_t handler_id, struct isp_denoise_param* par
 
 static int32_t _isp_change_lnc_param(uint32_t handler_id);
 
+/* isp_savelog --
+*@
+*@
+*@ return:
+*/
 int isp_savelog(void)
 {
 	uint32_t handler_id=0x00;
@@ -429,6 +434,27 @@ int isp_savelog(void)
 	fclose(fp);
 
 	return 0;
+}
+
+/* _isp_save_file --
+*@
+*@
+*@ return:
+*/
+void _isp_save_file(void* param_ptr, uint32_t param_len)
+{
+	uint32_t handler_id = 0x00;
+	FILE *fp;
+	#define ISP_FILE "/data/misc/media/isp.bin"
+
+	fp = fopen(ISP_FILE,"wb+");
+
+	if(NULL == fp){
+		ISP_LOG(": file %s open error:%s \n",ISP_FILE,strerror(errno));
+	}else{
+		fwrite(param_ptr, 1, param_len, fp);
+		fclose(fp);
+	}
 }
 
 
@@ -557,7 +583,6 @@ int _isp_calc_ev_offset(uint32_t target_lum, int8_t ev)
 	ev = ev/16+3;
 	new_target = target_lum * ev_tlb[ev]/256;
 	diff = new_target - old_target;
-	AAA_LOG("new_target:%d, offset: %d \n",new_target, diff);
 
 	return diff;
 #if 0
@@ -1159,9 +1184,15 @@ static uint32_t _ispAeTouchZone(uint32_t handler_id, struct isp_pos_rect* param_
 	uint32_t bord = 0x06;
 	uint32_t half_bord = bord/2;
 
-	if((ISP_ZERO==param_ptr->end_x)
-		||(ISP_ZERO==param_ptr->end_y))
-	{
+	if((ISP_ZERO > param_ptr->start_x)
+		|| (isp_context_ptr->src.w <= param_ptr->start_x)
+		|| (ISP_ZERO > param_ptr->start_y)
+		|| (isp_context_ptr->src.h <= param_ptr->start_y)
+		|| (ISP_ZERO > param_ptr->end_x)
+		|| (isp_context_ptr->src.w <= param_ptr->end_x)
+		|| (ISP_ZERO > param_ptr->end_y)
+		|| (isp_context_ptr->src.h <= param_ptr->end_y)) {
+
 		ISP_LOG("w:%d, h:%d error \n", param_ptr->end_x, param_ptr->end_y);
 		rtn=ISP_PARAM_ERROR;
 		return rtn;
@@ -1352,7 +1383,6 @@ static uint32_t _ispAeMeasureLumSet(uint32_t handler_id, enum isp_ae_weight weig
 		memcpy((void*)&ae_param_ptr->weight_tab[weight_id], (void*)ae_param_ptr->weight_ptr[weight], 1024);
 	} else {
 		ISP_LOG("_ispAeMeasureLumSet, hander %d, weight %d, NULL pionter error", handler_id, weight);
-
 	}
 
 	ae_param_ptr->weight_id=weight_id;
@@ -8762,6 +8792,7 @@ int isp_init_param_trace(uint32_t handler_id, struct isp_init_param* ptr)
 	//ISP_LOG("raw_info_ptr 0x%08x", raw_info_ptr);
 	//ISP_LOG("raw_tune_ptr 0x%08x", raw_tune_ptr);
 	//ISP_LOG("raw_fix_ptr 0x%08x", raw_fix_ptr);
+	ISP_LOG("chip_id 0x%08x", ptr->isp_id);
 	ISP_LOG("param version_id 0x%08x", raw_info_ptr->version_info->version_id);
 	ISP_LOG("param_id 0x%08x", raw_info_ptr->tune_ptr->version_id);
 	ISP_LOG("image_pattern 0x%02x", resolution_ptr->image_pattern);

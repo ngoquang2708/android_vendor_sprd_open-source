@@ -762,7 +762,6 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 	uint32_t handler_id=0x00;
 	int ret;
 
-	DBG("ISP_TOOL:send_img_data s \n");
 	if (0==preview_img_end_flag)
 	{
 		pthread_mutex_lock(&ispstream_lock);
@@ -773,9 +772,9 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 		uint32_t img_h;
 		/*if preview size more than vga that is subsample to less than vga for preview frame ratio*/
 		ispvideo_Scale(format, width, height, imgptr, imagelen, &img_w, &img_h, &img_ptr, &img_len);
-        DBG("ISP_TOOL:handle_img_data s \n");
+
 		ret = handle_img_data(format, img_w, img_h, img_ptr, img_len, 0, 0, 0, 0);
-		DBG("ISP_TOOL:handle_img_data e \n");
+
 		sem_post(&preview_sem_lock);
 		if (ret != 0) {
 			DBG("ISP_TOOL:handle_img_data().error ret = %d.", ret);
@@ -783,7 +782,6 @@ void send_img_data(uint32_t format, uint32_t width, uint32_t height, char *imgpt
 
 		pthread_mutex_unlock(&ispstream_lock);
 	}
-	DBG("ISP_TOOL:send_img_data e \n");
 }
 
 void send_capture_complete_msg()
@@ -1054,6 +1052,12 @@ void stopispserver()
 	uint32_t handler_id=0x00;
 
 	DBG("ISP_TOOL:stopispserver \n");
+	wire_connected = 0;
+
+	if((1 == preview_flag) && (0 == preview_img_end_flag)) {
+		sem_post(&preview_sem_lock);
+	}
+
 	if(0x00!=sock_fd)
 	{
 		shutdown(sock_fd, 0);
