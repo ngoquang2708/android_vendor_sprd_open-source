@@ -90,6 +90,7 @@ struct snp_thread_context {
 	cmr_handle                          write_exif_thr_handle;
 	cmr_handle                          proc_redisplay_handle;
 	cmr_handle                          proc_thumb_handle;
+	sem_t                               writte_exif_access_sm;
 };
 
 struct process_status {
@@ -1699,6 +1700,8 @@ cmr_int snp_create_write_exif_thread(cmr_handle snp_handle)
 	if (CMR_MSG_SUCCESS != ret) {
 		CMR_LOGE("failed to create write exif thread %ld", ret);
 		ret = -CMR_CAMERA_NO_SUPPORT;
+	} else {
+		sem_init(&cxt->thread_cxt.writte_exif_access_sm, 0, 1);
 	}
 	CMR_LOGD("done %ld", ret);
 	return ret;
@@ -1715,14 +1718,20 @@ cmr_int snp_destroy_write_exif_thread(cmr_handle snp_handle)
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
+	sem_wait(&cxt->thread_cxt.writte_exif_access_sm);
 	snp_thread_cxt = &cxt->thread_cxt;
 	if (snp_thread_cxt->write_exif_thr_handle) {
 		ret = cmr_thread_destroy(snp_thread_cxt->write_exif_thr_handle);
 		if (!ret) {
 			snp_thread_cxt->write_exif_thr_handle = (cmr_handle)0;
+			sem_post(&cxt->thread_cxt.writte_exif_access_sm);
+			sem_destroy(&cxt->thread_cxt.writte_exif_access_sm);
 		} else {
+			sem_post(&cxt->thread_cxt.writte_exif_access_sm);
 			CMR_LOGE("failed to destroy write exif %ld", ret);
 		}
+	} else {
+		sem_post(&cxt->thread_cxt.writte_exif_access_sm);
 	}
 exit:
 	CMR_LOGI("done %ld", ret);
@@ -2805,12 +2814,14 @@ cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *da
 	CMR_MSG_INIT(message);
 
 	CMR_LOGI("evt 0x%ld", evt);
+	sem_wait(&cxt->thread_cxt.writte_exif_access_sm);
 	message.msg_type = evt;
 	message.sync_flag = CMR_MSG_SYNC_RECEIVED;
 	message.alloc_flag = 1;
 	message.data = malloc(sizeof(struct frm_info));
 	if (!message.data) {
 		CMR_LOGE("failed to malloc");
+		sem_post(&cxt->thread_cxt.writte_exif_access_sm);
 		return -CMR_CAMERA_NO_MEM;
 	} else {
 		cmr_copy(message.data, data, sizeof(struct frm_info));
@@ -2820,6 +2831,7 @@ cmr_int snp_send_msg_write_exif_thr(cmr_handle snp_handle, cmr_int evt, void *da
 		CMR_LOGE("failed to send msg to write thr %ld", ret);
 	}
 	CMR_LOGI("done %ld", ret);
+	sem_post(&cxt->thread_cxt.writte_exif_access_sm);
 	return ret;
 }
 
@@ -3118,7 +3130,9 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 							chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].size.height,
 							&chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].addr_vir);
 #endif
-	snp_send_msg_write_exif_thr(snp_handle, SNP_EVT_WRITE_EXIF, data);
+	if (CMR_CAMERA_SUCCESS != snp_send_msg_write_exif_thr(snp_handle, SNP_EVT_WRITE_EXIF, data)) {
+		goto exit;
+	}
 	if (chn_param_ptr->is_rot) {
 		CMR_LOGI("need rotate");
 		ret = snp_start_rot(snp_handle, data);
