@@ -122,6 +122,7 @@ static cmr_int cmr_scale_thread_proc(struct cmr_msg *message, void *private_data
 			file->err_code = CMR_CAMERA_SUCCESS;
 			ret = ioctl(file->handle, SCALE_IO_START, frame_params);
 			if (ret) {
+				CMR_PERROR;
 				CMR_LOGE("scale error: start");
 			}
 			CMR_LOGI("scale started");

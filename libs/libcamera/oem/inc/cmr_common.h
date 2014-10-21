@@ -113,6 +113,12 @@ extern "C"
                         CMR_LOGV("timestamp = %lld.", timestamp/1000000);  \
 		} while(0)
 
+
+#define CMR_PERROR                                                     \
+		do {                                                       \
+                        CMR_LOGE("device.errno %d %s", errno, strerror(errno)); \
+		} while(0)
+
 #ifndef MIN
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #endif
