@@ -338,7 +338,7 @@ static cmr_uint camera_param_to_isp(cmr_uint cmd,
 				break;
 
 			default:
-				out_param = ISP_AE_MODE_MAX;
+				out_param = CAMERA_SCENE_MODE_AUTO;
 				break;
 			}
 			break;
