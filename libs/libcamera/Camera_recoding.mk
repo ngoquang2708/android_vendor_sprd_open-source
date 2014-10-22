@@ -17,6 +17,9 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/vsp/sc8830/src \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/inc \
 	$(LOCAL_PATH)/jpeg/jpeg_fw_8830/src \
+	$(LOCAL_PATH)/common/inc \
+	$(LOCAL_PATH)/hal1.0/inc \
+	$(LOCAL_PATH)/auto_test/inc \
 	$(LOCAL_PATH)/oem/inc \
 	$(LOCAL_PATH)/oem/isp_calibration/inc \
 	$(LOCAL_PATH)/isp/inc \
@@ -34,13 +37,13 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SRC_FILES:= \
 	oem/src/SprdOEMCamera.c \
-	oem/src/SprdCameraParameters.cpp \
-	oem/src/SprdCameraHardware_autest_Interface.cpp \
+	hal1.0/src/SprdCameraParameters.cpp \
+	auto_test/src/SprdCameraHardware_autest_Interface.cpp \
 	oem/src/cmr_common.c \
 	oem/src/cmr_oem.c \
 	oem/src/cmr_setting.c \
 	oem/src/cmr_mem.c \
-	oem/src/cmr_msg.c \
+	common/src/cmr_msg.c \
 	oem/src/cmr_scale.c \
 	oem/src/cmr_rotate.c \
 	oem/src/cmr_v4l2.c \
@@ -133,7 +136,7 @@ LOCAL_SRC_FILES:= \
 	oem/isp_calibration/src/isp_calibration.c \
 	oem/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \
-	oem/src/SprdCameraHardwareInterface.cpp
+	hal1.0/src/SprdCameraHardwareInterface.cpp
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
