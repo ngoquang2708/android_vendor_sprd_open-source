@@ -6123,7 +6123,10 @@ void SprdCameraHardware::HandleCancelPicture(enum camera_cb_type cb, void* parm4
 {
 	LOGI("HandleCancelPicture E: cb = %d, parm4 = 0x%lx, state = %s",
 		cb, (cmr_uint)parm4, getCameraStateStr(getCaptureState()));
-
+	if (SPRD_INTERNAL_CAPTURE_STOPPING != getCaptureState()) {
+		LOGI("HandleCancelPicture don't handle");
+		return;
+	}
 	setCameraState(SPRD_IDLE,
 			STATE_CAPTURE);
 
