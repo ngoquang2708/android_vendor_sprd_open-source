@@ -859,28 +859,28 @@ OMX_ERRORTYPE SPRDMPEG4Decoder::getConfig(
 OMX_ERRORTYPE SPRDMPEG4Decoder::setConfig(
     OMX_INDEXTYPE index, const OMX_PTR params) {
     switch (index) {
-        case OMX_IndexConfigThumbnailMode:
-        {
-            OMX_BOOL *pEnable = (OMX_BOOL *)params;
+    case OMX_IndexConfigThumbnailMode:
+    {
+        OMX_BOOL *pEnable = (OMX_BOOL *)params;
 
-            if (*pEnable == OMX_TRUE) {
-                mThumbnailMode = OMX_TRUE;
-            }
-
-            ALOGI("setConfig, mThumbnailMode = %d", mThumbnailMode);
-
-            if (mThumbnailMode) {
-                PortInfo *pInPort = editPortInfo(OMX_DirInput);
-                PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
-                pInPort->mDef.nBufferCountActual = 2;
-                pOutPort->mDef.nBufferCountActual = 2;
-                pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
-            }
-            return OMX_ErrorNone;
+        if (*pEnable == OMX_TRUE) {
+            mThumbnailMode = OMX_TRUE;
         }
 
-        default:
-            return SprdSimpleOMXComponent::setConfig(index, params);
+        ALOGI("setConfig, mThumbnailMode = %d", mThumbnailMode);
+
+        if (mThumbnailMode) {
+            PortInfo *pInPort = editPortInfo(OMX_DirInput);
+            PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
+            pInPort->mDef.nBufferCountActual = 2;
+            pOutPort->mDef.nBufferCountActual = 2;
+            pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+        }
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return SprdSimpleOMXComponent::setConfig(index, params);
     }
 }
 
@@ -958,7 +958,7 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
         while(pBufCtrl->iRefCount > 0);
 
         ALOGI("%s, %d, outHeader:0x%x, inHeader: 0x%x, len: %d, time: %lld, EOS: %d, cfg:%d", __FUNCTION__, __LINE__,outHeader,
-            inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS,inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG);
+              inHeader, inHeader->nFilledLen,inHeader->nTimeStamp,inHeader->nFlags & OMX_BUFFERFLAG_EOS,inHeader->nFlags & OMX_BUFFERFLAG_CODECCONFIG);
 
         if (inHeader->nFlags & OMX_BUFFERFLAG_EOS) {
             mEOSStatus = INPUT_EOS_SEEN; //the last frame size may be not zero, it need to be decoded.
@@ -1015,7 +1015,7 @@ void SPRDMPEG4Decoder::onQueueFilled(OMX_U32 portIndex) {
             MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
 
             ALOGI("%s, %d, MP4DecVolHeader, ret: %d, width: %d, height: %d, yuv_format: %d", __FUNCTION__, __LINE__,
-                ret, video_format.frame_width, video_format.frame_height, video_format.yuv_format);
+                  ret, video_format.frame_width, video_format.frame_height, video_format.yuv_format);
 
             if (ret != MMDEC_OK) {
                 ALOGW("MP4DecVolHeader failed. Unsupported content?");
@@ -1303,43 +1303,26 @@ bool SPRDMPEG4Decoder::portSettingsChanged() {
         return false;
     }
 
-    if (!((disp_width <= 1920 && disp_height <= 1088) || (disp_width <= 1088 && disp_height <= 1920))) {
+    if (!((disp_width <= mMaxWidth && disp_height <= mMaxHeight) || (disp_width <= mMaxHeight && disp_height <= mMaxWidth))) {
         return false;
     }
 
     CHECK_LE(disp_width, buf_width);
     CHECK_LE(disp_height, buf_height);
 
-    if(mDecoderSwFlag) {
-        if (mCropRight != disp_width  - 1
-                || mCropBottom != disp_height  - 1) {
-            ALOGI("%s, %d, SwDecoder, mCropLeft: %d, mCropTop: %d, mCropRight: %d, mCropBottom: %d", __FUNCTION__, __LINE__, mCropLeft, mCropTop, mCropRight, mCropBottom);
+    if ((mCropRight != disp_width  - 1) || (mCropBottom != disp_height  - 1)) {
+        ALOGI("%s, %d, mCropLeft: %d, mCropTop: %d, mCropRight: %d, mCropBottom: %d",
+              __FUNCTION__, __LINE__, mCropLeft, mCropTop, mCropRight, mCropBottom);
 
-            mCropLeft = 0;
-            mCropTop = 0;
-            mCropRight = disp_width  - 1;
-            mCropBottom = disp_height  - 1;
+        mCropLeft = 0;
+        mCropTop = 0;
+        mCropRight = disp_width  - 1;
+        mCropBottom = disp_height  - 1;
 
-            notify(OMX_EventPortSettingsChanged,
-                   1,
-                   OMX_IndexConfigCommonOutputCrop,
-                   NULL);
-        }
-    } else {
-        if (mCropRight != disp_width - 1
-                || mCropBottom != disp_height - 1) {
-            ALOGI("%s, %d, mCropLeft: %d, mCropTop: %d, mCropRight: %d, mCropBottom: %d", __FUNCTION__, __LINE__, mCropLeft, mCropTop, mCropRight, mCropBottom);
-
-            mCropLeft = 0;
-            mCropTop = 0;
-            mCropRight = disp_width - 1;
-            mCropBottom = disp_height - 1;
-
-            notify(OMX_EventPortSettingsChanged,
-                   1,
-                   OMX_IndexConfigCommonOutputCrop,
-                   NULL);
-        }
+        notify(OMX_EventPortSettingsChanged,
+               1,
+               OMX_IndexConfigCommonOutputCrop,
+               NULL);
     }
 
     if(mDecoderSwFlag && !mThumbnailMode) {
