@@ -3416,7 +3416,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
                 ret = -1;
             }
             else
-                ret = 0
+                ret = 0;
         }
         else
 #endif
