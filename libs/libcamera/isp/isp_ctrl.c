@@ -7732,12 +7732,12 @@ static int _isp_deinit(uint32_t handler_id)
 	int rtn=0x00;
 
 	rtn=_ispUncfg(handler_id);
-	ISP_RETURN_IF_FAIL(rtn, ("isp uncfg error"));
+	ISP_TRACE_IF_FAIL(rtn, ("isp uncfg error"));
 
 	rtn = ispStop(handler_id);
-	ISP_RETURN_IF_FAIL(rtn, ("isp stop error"));
+	ISP_TRACE_IF_FAIL(rtn, ("isp stop error"));
 
-	return rtn;
+	return ISP_SUCCESS;
 }
 
 /* _isp_video_start --
