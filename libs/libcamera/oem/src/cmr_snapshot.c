@@ -61,17 +61,16 @@
 #define IS_CAP_FRM(id, v)                            ((((id) & (v)) == (v)) && (((id) - (v)) < CMR_CAPTURE_MEM_SUM))
 #define SRC_MIPI_RAW                                 "/data/isptool_src_mipi_raw_file.raw"
 
-//#define TEST_MEM_DATA                                1
-#define SNP_CHN_OUT_DATA    		                 8000
-#define SNP_ROT_DATA                                 8001
+#define SNP_CHN_OUT_DATA    		                 8000 /*debug.camera.save.snpfile 1*/
+#define SNP_ROT_DATA                                 8001 /*debug.camera.save.snpfile 2*/
 #define SNP_SCALE_DATA                               8002
-#define SNP_REDISPLAY_DATA                           8003
-#define SNP_ENCODE_SRC_DATA                          8004
-#define SNP_ENCODE_STREAM                            9000
-#define SNP_THUMB_DATA                               8006
-#define SNP_THUMB_STREAM                             1000
-#define SNP_JPEG_STREAM                              2000
-
+#define SNP_REDISPLAY_DATA                           8003 /*debug.camera.save.snpfile 3*/
+#define SNP_ENCODE_SRC_DATA                          8004 /*debug.camera.save.snpfile 4*/
+#define SNP_ENCODE_STREAM                            9000 /*debug.camera.save.snpfile 5*/
+#define SNP_THUMB_DATA                               8006 /*debug.camera.save.snpfile 6*/
+#define SNP_THUMB_STREAM                             1000 /*debug.camera.save.snpfile 7*/
+#define SNP_JPEG_STREAM                              2000 /*debug.camera.save.snpfile 8*/
+#define PROPERTY_VALUE_MAX                           100
 /********************************* internal data type *********************************/
 
 enum cvt_trigger_src {
@@ -551,6 +550,7 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
 	struct jpeg_enc_cb_param       *enc_out_ptr = (struct jpeg_enc_cb_param*)data;
 	struct cmr_cap_mem             *mem_ptr = &cxt->req_param.post_proc_setting.mem[cxt->index];
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
 	if (cxt->err_code) {
 		CMR_LOGE("error exit");
@@ -561,6 +561,13 @@ cmr_int snp_jpeg_enc_cb_handle(cmr_handle snp_handle, void *data)
 		CMR_LOGI("post proc has been cancel");
 		ret = CMR_CAMERA_NORNAL_EXIT;
 		goto exit;
+	}
+	property_get("debug.camera.save.snpfile", value, "0");
+	if (atoi(value) == 5) {
+		camera_save_to_file(SNP_ENCODE_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+		cxt->req_param.post_proc_setting.actual_snp_size.width,
+		cxt->req_param.post_proc_setting.actual_snp_size.height,
+		&mem_ptr->target_jpeg.addr_vir);
 	}
 	if (enc_out_ptr->total_height == cxt->req_param.post_proc_setting.actual_snp_size.height) {
 //#ifdef TEST_MEM_DATA
@@ -793,12 +800,14 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 	jpeg_in_ptr = &chn_param_ptr->jpeg_in[index];
 	jpeg_in_ptr->src.data_end = frm_ptr->data_endian;
 	if (snp_cxt->ops.start_encode) {
-#ifdef TEST_MEM_DATA
-		camera_save_to_file(SNP_ENCODE_SRC_DATA, IMG_DATA_TYPE_YUV420,
-							jpeg_in_ptr->src.size.width,
-							jpeg_in_ptr->src.size.height,
-							&jpeg_in_ptr->src.addr_vir);
-#endif
+		cmr_s8 value[PROPERTY_VALUE_MAX];
+		property_get("debug.camera.save.snpfile", value, "0");
+		if (atoi(value) == 4) {
+			camera_save_to_file(SNP_ENCODE_SRC_DATA, IMG_DATA_TYPE_YUV420,
+								jpeg_in_ptr->src.size.width,
+								jpeg_in_ptr->src.size.height,
+								&jpeg_in_ptr->src.addr_vir);
+		}
 		camera_take_snapshot_step(CMR_STEP_JPG_ENC_S);
 		ret = snp_cxt->ops.start_encode(snp_cxt->oem_handle, snp_handle, &jpeg_in_ptr->src,
 										&jpeg_in_ptr->dst, &jpeg_in_ptr->mean);
@@ -851,12 +860,14 @@ cmr_int snp_start_encode_thumb(cmr_handle snp_handle)
 			CMR_LOGE("failed to start thumb enc %ld", ret);
 		} else {
 			snp_cxt->thumb_stream_size = (cmr_u32)jpeg_in_ptr->dst.reserved;
-#ifdef TEST_MEM_DATA
-			camera_save_to_file(SNP_THUMB_STREAM+snp_cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
-								jpeg_in_ptr->src.size.width,
-								jpeg_in_ptr->src.size.height,
-								&jpeg_in_ptr->dst.addr_vir);
-#endif
+			cmr_s8 value[PROPERTY_VALUE_MAX];
+			property_get("debug.camera.save.snpfile", value, "0");
+			if (atoi(value) == 7) {
+				camera_save_to_file(SNP_THUMB_STREAM+snp_cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+									jpeg_in_ptr->src.size.width,
+									jpeg_in_ptr->src.size.height,
+									&jpeg_in_ptr->dst.addr_vir);
+			}
 		}
 	//	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_ENC_THUMB_DONE, (void*)ret, sizeof(cmr_int));
 	} else {
@@ -877,21 +888,24 @@ cmr_int snp_start_decode_sync(cmr_handle snp_handle, void *data)
 	cmr_u32                        index = frm_ptr->frame_id - frm_ptr->base;
 	struct img_frm                 src, dst;
 	struct cmr_op_mean             mean;
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
-#ifdef TEST_MEM_DATA
-        CMR_LOGI("index %d phy addr 0x%lx 0x%lx 0x%lx vrit addr 0x%lx 0x%lx 0x%lx length %d",
-        		index, chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_y,
-        		chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_u,
-        		chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_v,
-        		chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_y,
-        		chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_u,
-        		chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_v,
-        		frm_ptr->length);
+    CMR_LOGI("index %d phy addr 0x%lx 0x%lx 0x%lx vrit addr 0x%lx 0x%lx 0x%lx length %d",
+			index, chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_y,
+			chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_u,
+			chn_param_ptr->jpeg_dec_in[index].src.addr_phy.addr_v,
+			chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_y,
+			chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_u,
+			chn_param_ptr->jpeg_dec_in[index].src.addr_vir.addr_v,
+			frm_ptr->length);
+
+	property_get("debug.camera.save.snpfile", value, "0");
+	if (atoi(value) == 1) {
 		camera_save_to_file(SNP_CHN_OUT_DATA, IMG_DATA_TYPE_JPEG,
 							chn_param_ptr->chn_frm[frm_ptr->frame_id-frm_ptr->base].size.width,
 							chn_param_ptr->chn_frm[frm_ptr->frame_id-frm_ptr->base].size.height,
 							&chn_param_ptr->jpeg_dec_in[index].src.addr_vir);
-#endif
+	}
 	if (snp_cxt->ops.start_decode) {
 		src = chn_param_ptr->jpeg_dec_in[index].src;
 		dst = chn_param_ptr->jpeg_dec_in[index].dst;
@@ -951,6 +965,7 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 	cmr_u32                        index = frm_ptr->frame_id - frm_ptr->base;
 	struct img_frm                 src, dst;
 	struct cmr_op_mean             mean;
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
@@ -969,12 +984,13 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 		CMR_LOGE("err start_rot is null");
 		ret = -CMR_CAMERA_FAIL;
 	}
-#ifdef TEST_MEM_DATA
+	property_get("debug.camera.save.snpfile", value, "0");
+	if (atoi(value) == 2) {
 		camera_save_to_file(SNP_ROT_DATA, IMG_DATA_TYPE_YUV420,
 							dst.size.width,
 							dst.size.height,
 							&dst.addr_vir);
-#endif
+	}
 	//snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_STATE, SNAPSHOT_EVT_START_ROT, (void*)ret, sizeof(cmr_int));
 exit:
 	CMR_LOGI("done %ld", ret);
@@ -1028,6 +1044,7 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 	cmr_u32                        index = frm_ptr->frame_id - frm_ptr->base;
 	struct img_frm                 src, dst;
 	struct cmr_op_mean             mean;
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
@@ -1048,12 +1065,13 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 			CMR_LOGI("don't need to scale");
 		}
 		camera_take_snapshot_step(CMR_STEP_CVT_THUMB_E);
-#ifdef TEST_MEM_DATA
-		camera_save_to_file(SNP_THUMB_DATA, IMG_DATA_TYPE_YUV420,
-							src.size.width,
-							src.size.height,
-							&dst.addr_vir);
-#endif
+		property_get("debug.camera.save.snpfile", value, "0");
+		if (atoi(value) == 6) {
+			camera_save_to_file(SNP_THUMB_DATA, IMG_DATA_TYPE_YUV420,
+								src.size.width,
+								src.size.height,
+								&dst.addr_vir);
+		}
 	} else {
 		CMR_LOGE("err start_scale is null");
 		ret = -CMR_CAMERA_FAIL;
@@ -1312,16 +1330,19 @@ cmr_int snp_write_exif(cmr_handle snp_handle, void *data)
 			ret = CMR_CAMERA_NORNAL_EXIT;
 			goto exit;
 		}
-#ifdef TEST_MEM_DATA
-{
-	struct img_addr jpeg_addr;
-	jpeg_addr.addr_y = enc_out_param.output_buf_virt_addr;
-	camera_save_to_file(SNP_JPEG_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
-						cxt->req_param.post_proc_setting.actual_snp_size.width,
-						cxt->req_param.post_proc_setting.actual_snp_size.height,
-						&jpeg_addr);
-}
-#endif
+		{
+			struct img_addr jpeg_addr;
+			cmr_s8 value[PROPERTY_VALUE_MAX];
+			property_get("debug.camera.save.snpfile", value, "0");
+			if (atoi(value) == 8) {
+				jpeg_addr.addr_y = enc_out_param.output_buf_virt_addr;
+				camera_save_to_file(SNP_JPEG_STREAM+cxt->cap_cnt, IMG_DATA_TYPE_JPEG,
+									cxt->req_param.post_proc_setting.actual_snp_size.width,
+									cxt->req_param.post_proc_setting.actual_snp_size.height,
+									&jpeg_addr);
+			}
+		}
+
 	} else {
 		CMR_LOGE("err, start enc func is null");
 		ret = CMR_CAMERA_FAIL;
@@ -2892,6 +2913,7 @@ cmr_int camera_set_frame_type(cmr_handle snp_handle, struct camera_frame_type *f
 	struct snapshot_param          *req_param_ptr;
 	struct cmr_cap_mem             *mem_ptr;
 	cmr_u32                        frm_id = info->frame_id - info->base;
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
 	req_param_ptr = &cxt->req_param;
 	mem_ptr = &req_param_ptr->post_proc_setting.mem[frm_id];
@@ -2933,12 +2955,13 @@ cmr_int camera_set_frame_type(cmr_handle snp_handle, struct camera_frame_type *f
 		break;
 	}
 
-#ifdef TEST_MEM_DATA
+	property_get("debug.camera.save.snpfile", value, "0");
+	if (atoi(value) == 3) {
 		camera_save_to_file(SNP_REDISPLAY_DATA, IMG_DATA_TYPE_YUV420,
 							frame_type->width,
 							frame_type->height,
 							&mem_ptr->target_yuv.addr_vir);
-#endif
+	}
 	CMR_LOGI("index 0x%x, addr 0x%lx 0x%lx, w h %d %d, format %d, sec %ld usec %ld",
 			info->frame_id,
 			frame_type->y_vir_addr,
@@ -3109,6 +3132,7 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 	struct snp_context             *cxt = (struct snp_context*)snp_handle;
 	struct snp_channel_param       *chn_param_ptr = &cxt->chn_param;
 	cmr_u32                        index;
+	cmr_s8                         value[PROPERTY_VALUE_MAX];
 
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
@@ -3124,12 +3148,13 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 	snp_set_status(snp_handle, POST_PROCESSING);
 
 	camera_take_snapshot_step(CMR_STEP_CAP_E);
-#ifdef TEST_MEM_DATA
+	property_get("debug.camera.save.snpfile", value, "0");
+	if (atoi(value) == 1) {
 		camera_save_to_file(SNP_CHN_OUT_DATA, IMG_DATA_TYPE_YUV420,
 							chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].size.width,
 							chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].size.height,
 							&chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].addr_vir);
-#endif
+	}
 	if (CMR_CAMERA_SUCCESS != snp_send_msg_write_exif_thr(snp_handle, SNP_EVT_WRITE_EXIF, data)) {
 		goto exit;
 	}
