@@ -533,7 +533,7 @@ struct yuv_sn_af_param {
 
 
 /***************************** common ctrl start ******************************/
-struct common_isp_cmd_parameter{
+struct common_isp_cmd_param {
 	cmr_uint	                                camera_id;
 	union {
 		cmr_u32                                 cmd_value;
@@ -544,7 +544,7 @@ struct common_isp_cmd_parameter{
 	};
 };
 
-struct common_sn_cmd_parameter{
+struct common_sn_cmd_param {
 	cmr_uint                                    camera_id;
 	struct sensor_exp_info                      sensor_static_info;
 	union {
@@ -578,9 +578,9 @@ struct snp_proc_param {
 /*************************** ipm data type **************************/
 
 enum ipm_class_type {
-	IPM_TYPE_NONE=0x0,
-	IPM_TYPE_HDR=0x00000001,
-	IPM_TYPE_FD=0x00000002
+	IPM_TYPE_NONE = 0x0,
+	IPM_TYPE_HDR = 0x00000001,
+	IPM_TYPE_FD = 0x00000002,
 };
 
 enum img_fmt {
@@ -596,7 +596,7 @@ enum img_fmt {
 	IMG_FMT_CRYCBY422,
 };
 
-struct face_finder_data{
+struct face_finder_data {
     int face_id;
     int sx;
     int sy;

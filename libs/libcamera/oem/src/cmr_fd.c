@@ -134,7 +134,7 @@ static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm
 
 	fd_handle->common.ipm_cxt     = (struct ipm_context_t*)ipm_handle;
 	fd_handle->common.class_type  = IPM_TYPE_FD;
-	fd_handle->common.frame_count = 0;
+	fd_handle->common.ops         = &fd_ops_tab_info;
 	fd_handle->frame_cb           = in->reg_cb;
 	fd_handle->mem_size           = in->frame_size.height * in->frame_size.width * 3 / 2;
 	fd_handle->frame_total_num    = in->frame_cnt;
