@@ -219,7 +219,7 @@ static cmr_int setting_get_sensor_static_info(struct setting_component *cpt,
 	struct setting_init_in           *init_in = &cpt->init_in;
 	struct setting_local_param       *local_param = get_local_param(cpt, parm->camera_id);
 	cmr_uint                         cmd = COM_SN_GET_INFO;
-	struct common_sn_cmd_parameter   sn_param;
+	struct common_sn_cmd_param      sn_param;
 
 
 	if (!local_param->is_sensor_info_store && init_in->setting_sn_ioctl) {
@@ -286,7 +286,7 @@ static cmr_int setting_sn_ctrl(struct setting_component *cpt, cmr_uint sn_cmd,
 {
 	cmr_int                             ret = 0;
 	struct setting_init_in              *init_in = &cpt->init_in;
-	struct common_sn_cmd_parameter      sn_param;
+	struct common_sn_cmd_param         sn_param;
 
 
 	if (sn_cmd >= COM_SN_TYPE_MAX) {
@@ -361,7 +361,7 @@ static cmr_int setting_isp_ctrl(struct setting_component *cpt, cmr_uint isp_cmd,
 {
 	cmr_int                             ret = 0;
 	struct setting_init_in              *init_in = &cpt->init_in;
-	struct common_isp_cmd_parameter     isp_param;
+	struct common_isp_cmd_param         isp_param;
 
 
 	if (isp_cmd >= COM_ISP_TYPE_MAX) {
@@ -694,7 +694,7 @@ static cmr_int setting_set_auto_exposure_mode(struct setting_component *cpt,
 {
 	cmr_int                             ret = 0;
 	struct setting_init_in              *init_in = &cpt->init_in;
-	struct common_isp_cmd_parameter     isp_param;
+	struct common_isp_cmd_param        isp_param;
 
 
 	ret = setting_set_general(cpt, SETTING_GENERAL_AUTO_EXPOSURE_MODE, parm);
@@ -1052,7 +1052,7 @@ static void* setting_get_pic_taking(void *priv_data)
 
 	// read exif info from sensor only
 	if (init_in->setting_sn_ioctl) {
-		struct common_sn_cmd_parameter		sn_param;
+		struct common_sn_cmd_param		sn_param;
 
 		sn_param.camera_id = cb_param->parm->camera_id;
 		ret = (*init_in->setting_sn_ioctl)(init_in->oem_handle,
@@ -1899,7 +1899,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 			if (setting_is_need_flash(cpt, parm)) {
 				if (IMG_DATA_TYPE_RAW == image_format) {
 					struct sensor_flash_level flash_level;
-					struct common_sn_cmd_parameter   sn_param;
+					struct common_sn_cmd_param   sn_param;
 
 					memset(&flash_level, 0, sizeof(flash_level));
 					sn_param.camera_id = parm->camera_id;
@@ -1927,7 +1927,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 				if (setting_is_need_flash(cpt, parm)) {
 					/*open flash*/
 					if (IMG_DATA_TYPE_RAW == image_format) {
-						struct common_isp_cmd_parameter   isp_param;
+						struct common_isp_cmd_param   isp_param;
 
 						isp_param.camera_id = parm->camera_id;
 						isp_param.cmd_value = 0;

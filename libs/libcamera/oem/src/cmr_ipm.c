@@ -22,11 +22,11 @@
 extern struct class_tab_t hdr_tab_info;
 extern struct class_tab_t fd_tab_info;
 
-struct class_tab_t* arith_info_tab[] =
+struct ipm_class_tab class_type_tab[] =
 {
-	NULL,
-	&hdr_tab_info,
-	&fd_tab_info,
+	{IPM_TYPE_NONE,                NULL},
+	{IPM_TYPE_HDR,                 &hdr_tab_info},
+	{IPM_TYPE_FD,                  &fd_tab_info},
 };
 
 #define CHECK_HANDLE_VALID(handle) \
@@ -77,18 +77,29 @@ cmr_int cmr_ipm_open(cmr_handle ipm_handle, cmr_uint class_type,struct ipm_open_
 			struct ipm_open_out *out, cmr_handle *ipm_class_handle)
 {
 	cmr_int              ret = CMR_CAMERA_SUCCESS;
+	cmr_int              index = 0;
+	cmr_int              class_type_max;
 
 	if (!out || !in || !ipm_handle || !ipm_class_handle) {
 		CMR_LOGE("Invalid Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	if (!arith_info_tab[class_type]->ops->open) {
+	class_type_max = cmr_array_size(class_type_tab);
+	for (index = 0; index < class_type_max; index++) {
+		if (class_type_tab[index].class_type == class_type)
+			break;
+	}
+	if ((index == 0) || (index >= class_type_max)) {
+		CMR_LOGE("index = %d class_type does't has relevant info", index);
+		return CMR_CAMERA_INVALID_PARAM;
+	}
+	if (!class_type_tab[index].hdr_tab_info->ops->open) {
 		CMR_LOGE("Invalid ops Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	ret = arith_info_tab[class_type]->ops->open(ipm_handle,in,out,ipm_class_handle);
+	ret = class_type_tab[index].hdr_tab_info->ops->open(ipm_handle,in,out,ipm_class_handle);
 
 	return ret;
 }
@@ -96,16 +107,15 @@ cmr_int cmr_ipm_close(cmr_handle ipm_class_handle)
 {
 	cmr_int              ret             = CMR_CAMERA_SUCCESS;
 	struct ipm_common    *common_handle  = (struct ipm_common *)ipm_class_handle;
-	cmr_uint             class_type;
 
-	class_type = common_handle->class_type;
+	CHECK_HANDLE_VALID(common_handle);
 
-	if (!arith_info_tab[class_type]->ops->close) {
+	if (!common_handle->ops->close) {
 		CMR_LOGE("Invalid ops Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	ret = arith_info_tab[class_type]->ops->close(ipm_class_handle);
+	ret = common_handle->ops->close(ipm_class_handle);
 
 	return ret;
 }
@@ -114,16 +124,16 @@ cmr_int ipm_transfer_frame(cmr_handle ipm_class_handle, struct ipm_frame_in *in,
 {
 	cmr_int              ret             = CMR_CAMERA_SUCCESS;
 	struct ipm_common    *common_handle  = (struct ipm_common *)ipm_class_handle;
-	cmr_uint             class_type;
+	cmr_int              index;
 
-	class_type = common_handle->class_type;
+	CHECK_HANDLE_VALID(common_handle);
 
-	if (!arith_info_tab[class_type]->ops->transfer_frame) {
+	if (!common_handle->ops->transfer_frame) {
 		CMR_LOGE("Invalid ops Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	ret = arith_info_tab[class_type]->ops->transfer_frame(ipm_class_handle,in,out);
+	ret = common_handle->ops->transfer_frame(ipm_class_handle,in,out);
 
 	return ret;
 }
@@ -132,16 +142,11 @@ cmr_int cmr_ipm_pre_proc(cmr_handle ipm_class_handle)
 {
 	cmr_int              ret             = CMR_CAMERA_SUCCESS;
 	struct ipm_common    *common_handle  = (struct ipm_common *)ipm_class_handle;
-	cmr_uint             class_type;
 
-	class_type = common_handle->class_type;
+	CHECK_HANDLE_VALID(common_handle);
 
-	if (!arith_info_tab[class_type]->ops->pre_proc) {
-		CMR_LOGE("Invalid ops Param!");
-		return CMR_CAMERA_INVALID_PARAM;
-	}
-
-	ret = arith_info_tab[class_type]->ops->pre_proc(ipm_class_handle);
+	if (NULL != common_handle->ops->pre_proc)
+		ret = common_handle->ops->pre_proc(ipm_class_handle);
 
 	return ret;
 }
@@ -150,16 +155,11 @@ cmr_int cmr_ipm_post_proc(cmr_handle ipm_class_handle)
 {
 	cmr_int              ret             = CMR_CAMERA_SUCCESS;
 	struct ipm_common    *common_handle  = (struct ipm_common *)ipm_class_handle;
-	cmr_uint             class_type;
 
-	class_type = common_handle->class_type;
+	CHECK_HANDLE_VALID(common_handle);
 
-	if (!arith_info_tab[class_type]->ops->post_proc) {
-		CMR_LOGE("Invalid ops Param!");
-		return CMR_CAMERA_INVALID_PARAM;
-	}
-
-	ret = arith_info_tab[class_type]->ops->post_proc(ipm_class_handle);
+	if (NULL != common_handle->ops->post_proc)
+		ret = common_handle->ops->post_proc(ipm_class_handle);
 
 	return ret;
 }
@@ -167,10 +167,13 @@ cmr_int cmr_ipm_post_proc(cmr_handle ipm_class_handle)
 cmr_int cmr_ipm_get_capability (struct ipm_capability *out)
 {
 	cmr_int              ret  = CMR_CAMERA_SUCCESS;
-	enum ipm_class_type  type = IPM_TYPE_NONE;
+	cmr_uint 			 i;
+	cmr_uint 			 class_type_max;
 
-	for (; arith_info_tab[type] != NULL; ++type) {
-		out->class_type_bits |= type;
+	class_type_max = cmr_array_size(class_type_tab);
+	for (i = 0; i < class_type_max; i++) {
+		if (NULL != class_type_tab[i].hdr_tab_info)
+			out->class_type_bits |= 1<<(i-1);
 	}
 
 	return ret;

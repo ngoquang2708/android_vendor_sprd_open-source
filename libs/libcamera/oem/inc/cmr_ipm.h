@@ -23,6 +23,11 @@ extern "C"
 
 #include "cmr_common.h"
 
+struct ipm_class_tab {
+	cmr_uint                             class_type;
+	struct class_tab_t                  *hdr_tab_info;
+};
+
 struct ipm_frame_in {
 	struct img_frm          src_frame;
 	struct img_frm          dst_frame;
@@ -45,7 +50,7 @@ typedef cmr_int (*ipm_callback)(cmr_u32 class_type, struct ipm_frame_out *cb_par
 struct ipm_init_in {
 	cmr_handle              oem_handle;
 	cmr_int                 (*ipm_sensor_ioctl)(cmr_handle oem_handle,
-						cmr_uint cmd_type, struct common_sn_cmd_parameter *parm);
+						cmr_uint cmd_type, struct common_sn_cmd_param *parm);
 };
 
 struct ipm_open_in {
@@ -85,8 +90,8 @@ struct ipm_context_t {
 struct ipm_common {
 	cmr_uint                  class_type;
 	struct ipm_context_t      *ipm_cxt;
-	cmr_uint                  frame_count;
 	cmr_uint                  receive_frame_count;
+	struct class_ops         *ops;
 };
 
 cmr_int cmr_ipm_init(struct ipm_init_in *in, cmr_handle *ipm_handle);

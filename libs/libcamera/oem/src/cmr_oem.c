@@ -151,8 +151,8 @@ static cmr_int camera_channel_scale_capability(cmr_handle oem_handle, cmr_u32 *w
 static cmr_int camera_channel_get_cap_time(cmr_handle oem_handle, cmr_u32 *sec, cmr_u32 *usec);
 static cmr_int camera_set_hal_cb(cmr_handle oem_handle, camera_cb_of_type hal_cb);
 static cmr_int camera_ioctl_for_setting(cmr_handle oem_handle, cmr_uint cmd_type, struct setting_io_parameter *param_ptr);
-static cmr_int camera_sensor_ioctl(cmr_handle	oem_handle, cmr_uint cmd_type, struct common_sn_cmd_parameter *param_ptr);
-static cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_parameter *param_ptr);
+static cmr_int camera_sensor_ioctl(cmr_handle	oem_handle, cmr_uint cmd_type, struct common_sn_cmd_param *param_ptr);
+static cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_param *param_ptr);
 static cmr_int camera_get_setting_activity(cmr_handle oem_handle, cmr_uint *is_active);
 static cmr_int camera_set_preview_param(cmr_handle oem_handle, enum takepicture_mode mode,  cmr_uint is_snapshot);
 static cmr_int camera_get_preview_param(cmr_handle oem_handle, enum takepicture_mode mode,
@@ -178,7 +178,7 @@ static cmr_int camera_get_cap_time(cmr_handle snp_handle);
 static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data);
 static void camera_snapshot_started(cmr_handle oem_handle);
 static void camera_exif_handle_before_snapshot(cmr_handle oem_handle);
-static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm);
+static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_param *parm);
 static cmr_int camera_restart_rot(cmr_handle oem_handle);
 /**********************************************************************************************/
 
@@ -3184,7 +3184,7 @@ exit:
 	return ret;
 }
 
-cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_sn_cmd_parameter *param_ptr)
+cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_sn_cmd_param *param_ptr)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
@@ -3346,7 +3346,7 @@ exit:
 	return ret;
 }
 
-cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm)
+cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_param *parm)
 {
 	cmr_uint in_param = parm->cmd_value;
 	cmr_uint out_param = in_param;
@@ -3388,7 +3388,7 @@ cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_parameter *parm
 	return out_param;
 }
 
-cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_parameter *param_ptr)
+cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_param *param_ptr)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
@@ -4221,7 +4221,7 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 	cmr_int                         prev_ret = CMR_CAMERA_SUCCESS;
 	cmr_int                         snp_ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
-	struct common_isp_cmd_parameter param;
+	struct common_isp_cmd_param param;
 
 	if (PREVIEWING != cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id)) {
 		CMR_LOGI("don't previewing");
@@ -4253,7 +4253,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 	struct preview_context         *prev_cxt;
 	struct snapshot_param          snp_param;
-	struct common_sn_cmd_parameter param;
+	struct common_sn_cmd_param param;
 
 	CMR_PRINT_TIME;
 	if (!oem_handle) {

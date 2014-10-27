@@ -729,7 +729,7 @@ cmr_int af_set_mode(cmr_handle af_handle, cmr_u32 came_id, cmr_u32 af_mode)
 	cmr_u32                 isp_af_mode = 0;
 	struct sensor_exp_info  sensor_info;
 	struct af_context       *af_cxt     = (struct af_context *)af_handle;
-	struct common_isp_cmd_parameter isp_cmd;
+	struct common_isp_cmd_param isp_cmd;
 
 	if (!af_cxt) {
 		CMR_LOGE("handle param invalid");
@@ -787,10 +787,10 @@ cmr_int af_start(cmr_handle af_handle, cmr_u32 camera_id)
 	cmr_u32                         af_cancel_is_ext     = 0;
 	SENSOR_EXT_FUN_PARAM_T          af_param;
 	struct isp_af_win               isp_af_param;
-	struct common_isp_cmd_parameter com_isp_af;
+	struct common_isp_cmd_param     com_isp_af;
 	struct sensor_exp_info          sensor_info;
 	struct af_context               *af_cxt               = (struct af_context *)af_handle;
-	struct common_sn_cmd_parameter  yuv_sn_param          = {0};
+	struct common_sn_cmd_param      yuv_sn_param          = {0};
 
 	cmr_bzero(&af_param, sizeof(af_param));
 	cmr_bzero(&isp_af_param, sizeof(isp_af_param));
@@ -893,7 +893,7 @@ cmr_int af_start_lightly(cmr_handle af_handle, cmr_u32 camera_id)
 	SENSOR_EXT_FUN_PARAM_T          af_param;
 	struct sensor_exp_info          sensor_info;
 	struct af_context               *af_cxt      = (struct af_context *)af_handle;
-	struct common_sn_cmd_parameter  yuv_sn_param = {0};
+	struct common_sn_cmd_param      yuv_sn_param = {0};
 
 	CMR_LOGI("E");
 
@@ -988,12 +988,12 @@ cmr_int af_quit(cmr_handle af_handle, cmr_u32 camera_id)
 	if (IMG_DATA_TYPE_RAW == sensor_info.image_format) {
 		struct isp_af_win isp_af_param;
 		cmr_bzero(&isp_af_param,  sizeof(struct isp_af_win));
-		ret = af_cxt->ops.af_isp_ioctrl(af_cxt->oem_handle, COM_ISP_SET_AF_STOP, (struct common_isp_cmd_parameter *)&isp_af_param);
+		ret = af_cxt->ops.af_isp_ioctrl(af_cxt->oem_handle, COM_ISP_SET_AF_STOP, (struct common_isp_cmd_param *)&isp_af_param);
 	} else {
 		SENSOR_EXT_FUN_PARAM_T af_param;
 		cmr_bzero(&af_param, sizeof(af_param));
 		af_param.cmd = SENSOR_EXT_FOCUS_QUIT;
-		af_cxt->ops.af_sensor_ioctrl(af_cxt->oem_handle, COM_SN_SET_FOCUS, (struct common_sn_cmd_parameter *)&af_param);
+		af_cxt->ops.af_sensor_ioctrl(af_cxt->oem_handle, COM_SN_SET_FOCUS, (struct common_sn_cmd_param *)&af_param);
 	}
 
 exit:

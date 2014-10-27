@@ -115,8 +115,8 @@ struct setting_init_in {
     cmr_u32                  camera_id_bits;
     cmr_u32                  padding;
     cmr_int                  (*io_cmd_ioctl)(cmr_handle oem_handle, cmr_uint cmd_type,struct setting_io_parameter *param);
-    cmr_int                  (*setting_sn_ioctl)(cmr_handle	oem_handle, cmr_uint cmd_type, struct common_sn_cmd_parameter *parm);
-    cmr_int                  (*setting_isp_ioctl)(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_parameter *parm);
+    cmr_int                  (*setting_sn_ioctl)(cmr_handle	oem_handle, cmr_uint cmd_type, struct common_sn_cmd_param *parm);
+    cmr_int                  (*setting_isp_ioctl)(cmr_handle oem_handle, cmr_uint cmd_type, struct common_isp_cmd_param *parm);
     cmr_int                  (*get_setting_activity)(cmr_handle oem_handle, cmr_uint *is_active);
     cmr_before_set_cb        before_set_cb;
     cmr_after_set_cb         after_set_cb;
