@@ -320,6 +320,11 @@ void SoftMJPG::onQueueFilled(OMX_U32 portIndex) {
 
         mjpeg_create_decompress(&cinfo, JPEG_LIB_VERSION, sizeof(cinfo));
 
+        if (mjpeg_mem_src == NULL) {
+            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+            mSignalledError = true;
+            return;
+        }
         /* specify data source */
         mjpeg_mem_src(&cinfo, bitstream, bufferSize);
 
@@ -542,10 +547,7 @@ bool SoftMJPG::openDecoder(const char* libName)
 
     mjpeg_mem_src = (jpeg_mem_src_ptr)dlsym(mLibHandle, "jpeg_mem_src");
     if(mjpeg_mem_src == NULL) {
-        ALOGE("Can't find jpeg_mem_src in %s",libName);
-        dlclose(mLibHandle);
-        mLibHandle = NULL;
-        return false;
+        ALOGE("Can't find jpeg_mem_src in %s, and cant't play mjpg video clips",libName);
     }
 
     mjpeg_read_header = (jpeg_read_header_ptr)dlsym(mLibHandle, "jpeg_read_header");
