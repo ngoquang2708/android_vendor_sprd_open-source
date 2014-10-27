@@ -62,6 +62,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_autotest_ov8825_mipi_raw.c \
 	sensor/sensor_ov13850_mipi_raw.c \
 	sensor/sensor_ov5648_mipi_raw.c \
+	sensor/sensor_ov5670_mipi_raw.c \
 	sensor/sensor_ov2680_mipi_raw.c \
 	sensor/sensor_imx179_mipi_raw.c \
 	sensor/sensor_imx219_mipi_raw.c \
