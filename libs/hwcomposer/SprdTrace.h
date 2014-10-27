@@ -39,13 +39,13 @@
 #define _SPRD_TRACE_H_
 
 
+#define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
+
 #include <utils/Trace.h>
 #include <cutils/trace.h>
 
 
 #ifdef HWC_DEBUG_TRACE
-
-#define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 
 #define HWC_TRACE_CALL                                            ATRACE_CALL()
 #define HWC_TRACE_BEGIN_VSYNC        atrace_begin(ATRACE_TAG, "SprdVsyncEvent")

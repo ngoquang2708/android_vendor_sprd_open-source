@@ -125,8 +125,12 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
     HWC_TRACE_CALL;
 
     int releaseFenceFd = -1;
+    int AndroidLayerCount = mLayerList->getSprdLayerCount();
     SprdHWLayer *SprdFBTLayer = NULL;
+    SprdHWLayer *SprdLayer = NULL;
+    SprdHWLayer **OSDLayerList = NULL;
     hwc_layer_1_t *FBTargetLayer = NULL;
+    int OSDLayerCount = mLayerList->getOSDLayerCount();
 
     queryDebugFlag(&mDebugFlag);
 
@@ -152,7 +156,22 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
         return -1;
     }
     SprdFBTLayer->updateAndroidLayer(FBTargetLayer);
-    mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
+
+#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
+    OSDLayerList = mLayerList->getSprdOSDLayerList();
+    SprdLayer = OSDLayerList[0];
+    if ((AndroidLayerCount - 1 == 1) && (OSDLayerCount == 1)
+        && SprdLayer
+        && (SprdLayer->getAndroidLayer()))
+    {
+        ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: commit attach Overlay layer[OSD]");
+        mDisplayPlane->AttachVDFramebufferTargetLayer(SprdLayer);
+    }
+    else
+#endif
+    {
+        mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
+    }
 
     const native_handle_t *pNativeHandle = FBTargetLayer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;

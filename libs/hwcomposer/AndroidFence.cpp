@@ -348,7 +348,7 @@ int HWCBufferSyncBuildForVirtualDisplay(hwc_display_contents_1_t *list)
     if (fenceData.release_fence_fd >= 0)
     {
         close(fenceData.release_fence_fd);
-	fenceData.release_fence_fd = -1;
+        fenceData.release_fence_fd = -1;
     }
 
     list->retireFenceFd = fenceData.retired_fence_fd;

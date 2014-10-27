@@ -22,7 +22,7 @@ ifeq ($(strip $(USE_SPRD_HWCOMPOSER)),true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils libGLESv1_CM libhardware libui libsync
+LOCAL_SHARED_LIBRARIES := liblog libEGL libbinder libutils libcutils libGLESv1_CM libGLESv2 libhardware libui libsync
 LOCAL_SRC_FILES := SprdHWComposer.cpp \
 		   SprdPrimaryDisplayDevice/SprdFrameBufferHAL.cpp \
 		   AndroidFence.cpp \
