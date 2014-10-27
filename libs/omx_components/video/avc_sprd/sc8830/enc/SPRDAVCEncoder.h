@@ -29,7 +29,14 @@ namespace android {
 
 //#define SPRD_DUMP_YUV
 //#define SPRD_DUMP_BS
+
+#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
+#define GET_YUV_DATA_FROM_SURFACEFLINGER
+#else
+//get rgb data from surfaceflinger
 #define CONVERT_THREAD
+#endif
+
 #ifdef CONVERT_THREAD
 struct ALooper;
 #endif
