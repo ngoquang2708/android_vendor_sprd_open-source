@@ -33,10 +33,26 @@
 #define SENSORS_LIGHT_HANDLE            3
 #define SENSORS_PROXIMITY_HANDLE        4
 /*****************************************************************************/
+#define LTR558_DEVICE_NAME               		"/dev/ltr_558als"
+#define AL3006_DEVICE_NAME               		"/dev/al3006_pls"
+#define TMD2771_DEVICE_NAME                            "/dev/taos"
+static char const *PlsChipInfoList[] = {
+	"TMD2771",
+	"LTR558ALS",
+	"AL3006",
+};
+enum {
+	TMD2771,
+	LTR558ALS,
+	AL3006,
+	PlsChipNum
+};
+//static char PlsChipNum = sizeof(PlsChipInfoList)/sizeof(PlsChipInfoList[1]);
+static bool PlsNewSuccess = false;
 
 struct input_event;
 
-class PlsSensor : public SensorBase {
+class PlsSensor : virtual public SensorBase {
 public:
 			PlsSensor();
     virtual ~PlsSensor();
@@ -57,7 +73,7 @@ public:
 	virtual int getEnable(int32_t handle);
     void processEvent(int code, int value);
     virtual int populateSensorList(struct sensor_t *list);
-
+    virtual void getChipInfo(char *buf);
 
 private:
     int update_delay();
@@ -67,6 +83,27 @@ private:
     bool mHasPendingEvent;
     sensors_event_t mPendingEvents[numSensors];
     uint64_t mDelays[numSensors];
+};
+
+class PlsLTR558 : public PlsSensor {
+public:
+    PlsLTR558():SensorBase(LTR558_DEVICE_NAME, "alps_pxy"){};
+    virtual  ~PlsLTR558(){};
+    virtual int populateSensorList(struct sensor_t *list);
+};
+
+class PlsAL3006 : public PlsSensor {
+public:
+    PlsAL3006():SensorBase(AL3006_DEVICE_NAME, "proximity"){};
+    virtual  ~PlsAL3006(){};
+    virtual int populateSensorList(struct sensor_t *list);
+};
+
+class PlsTMD2771 : public PlsSensor {
+public:
+    PlsTMD2771():SensorBase(TMD2771_DEVICE_NAME, "light sensor"){};
+    virtual  ~PlsTMD2771(){};
+    virtual int populateSensorList(struct sensor_t *list);
 };
 
 /*****************************************************************************/
