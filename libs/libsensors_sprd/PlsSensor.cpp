@@ -98,6 +98,19 @@ static struct sensor_t sSensorListAL3006[] = {
 	 1.0f, 0.005f, 0, 0, 0, {}},
 };
 
+static struct sensor_t sSensorListEPL2182[] = {
+	{"EPL2182 Light sensor",
+	"Eminent",
+	1, SENSORS_LIGHT_HANDLE,
+	SENSOR_TYPE_LIGHT, 1.0f,
+	102400.0f, 0.5f, 0, 0, 0, {}},
+	{"EPL2182 Proximity sensor",
+	"Eminent",
+	1, SENSORS_PROXIMITY_HANDLE,
+	SENSOR_TYPE_PROXIMITY, 1.0f,
+	10240.0f, 0.5f, 20000, 0, 0, {}},
+};
+
 PlsSensor::PlsSensor() :
        SensorBase("", ""),
                mEnabled(0), mPendingMask(0), mInputReader(32), mHasPendingEvent(false)
@@ -294,6 +307,12 @@ int PlsLTR558::populateSensorList(struct sensor_t *list)
 int PlsAL3006::populateSensorList(struct sensor_t *list)
 {
 	memcpy(list, sSensorListAL3006, sizeof(struct sensor_t) * numSensors);
+	return numSensors;
+}
+
+int PlsEPL2182::populateSensorList(struct sensor_t *list)
+{
+	memcpy(list, sSensorListEPL2182, sizeof(struct sensor_t) * numSensors);
 	return numSensors;
 }
 /*****************************************************************************/

@@ -171,6 +171,7 @@ sensors_poll_context_t::sensors_poll_context_t()
 	PlsObjList[LTR558ALS] = new PlsLTR558();
 	PlsObjList[TMD2771] = new PlsTMD2771();
 	PlsObjList[AL3006] = new PlsAL3006();
+	PlsObjList[EPL2182] = new PlsEPL2182();
 	for( int i=0; i<PlsChipNum; i++) {
 		memset(GetChipInfo,0,sizeof(GetChipInfo));
 		mSensors[pls] = PlsObjList[i];
@@ -251,6 +252,7 @@ int sensors_poll_context_t::activate(int handle, int enabled)
 		ALOGE_IF(result < 0, "error sending wake message (%s)",
 			 strerror(errno));
 	}
+
 	return err;
 }
 

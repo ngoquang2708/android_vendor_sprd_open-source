@@ -36,15 +36,18 @@
 #define LTR558_DEVICE_NAME               		"/dev/ltr_558als"
 #define AL3006_DEVICE_NAME               		"/dev/al3006_pls"
 #define TMD2771_DEVICE_NAME                            "/dev/taos"
+#define ELAN_DEVICE_NAME               		"/dev/epl2182_pls"
 static char const *PlsChipInfoList[] = {
 	"TMD2771",
 	"LTR558ALS",
 	"AL3006",
+	"EPL2182",
 };
 enum {
 	TMD2771,
 	LTR558ALS,
 	AL3006,
+	EPL2182,
 	PlsChipNum
 };
 //static char PlsChipNum = sizeof(PlsChipInfoList)/sizeof(PlsChipInfoList[1]);
@@ -103,6 +106,13 @@ class PlsTMD2771 : public PlsSensor {
 public:
     PlsTMD2771():SensorBase(TMD2771_DEVICE_NAME, "light sensor"){};
     virtual  ~PlsTMD2771(){};
+    virtual int populateSensorList(struct sensor_t *list);
+};
+
+class PlsEPL2182 : public PlsSensor {
+public:
+    PlsEPL2182():SensorBase(ELAN_DEVICE_NAME, "proximity"){};
+    virtual  ~PlsEPL2182(){};
     virtual int populateSensorList(struct sensor_t *list);
 };
 
