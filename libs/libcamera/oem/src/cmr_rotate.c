@@ -165,6 +165,8 @@ cmr_int cmr_rot(struct cmr_rot_param *rot_param)
 
 	ret = ioctl(fd, ROT_IO_START, &rot_cfg);
 	if (ret) {
+		CMR_LOGE("src y=%x u=%x v=%x", rot_cfg.src_addr.y_addr, rot_cfg.src_addr.u_addr, rot_cfg.src_addr.v_addr);
+		CMR_LOGE("dst y=%x u=%x v=%x", rot_cfg.dst_addr.y_addr, rot_cfg.dst_addr.u_addr, rot_cfg.dst_addr.v_addr);
 		CMR_LOGE("Unsupported format %d, %d", src_img->fmt, rot_cfg.format);
 		ret = -CMR_CAMERA_FAIL;
 		goto rot_exit;

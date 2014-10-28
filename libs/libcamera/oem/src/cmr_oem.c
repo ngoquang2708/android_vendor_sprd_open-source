@@ -4417,6 +4417,7 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 		dst_img.addr_phy.addr_y = output_addr;
 		dst_img.addr_phy.addr_u = dst_img.addr_phy.addr_y + img_len;
 	}
+	dst_img.addr_phy.addr_v = 0;
 	dst_img.fmt = IMG_DATA_TYPE_YUV420;
 	cmr_v4l2_get_dcam_endian(&cxt->snp_cxt.cur_frm_info.data_endian, &dst_img.data_end);
 	CMR_LOGI("data_end %d %d", cxt->snp_cxt.cur_frm_info.data_endian.y_endian, cxt->snp_cxt.cur_frm_info.data_endian.uv_endian);
@@ -4452,6 +4453,7 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 		rect.height = dst_img.size.height;
 		src_img.addr_phy.addr_y = dst_img.addr_phy.addr_y;
 		src_img.addr_phy.addr_u = dst_img.addr_phy.addr_u;
+		src_img.addr_phy.addr_v = 0;
 		src_img.size.width = dst_img.size.width;
 		src_img.size.height = dst_img.size.height;
 		src_img.fmt = IMG_DATA_TYPE_YUV420;
