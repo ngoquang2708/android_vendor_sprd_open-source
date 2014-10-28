@@ -932,10 +932,12 @@ int arrange_yuv_buf(struct cmr_cap_2_frm *cap_2_frm,
 		cap_mem->target_yuv.addr_vir.addr_y = cap_2_frm->mem_frm.addr_vir.addr_y;
 		cap_mem->target_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_y + channel_size;
 		cap_mem->target_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_y + channel_size;
+		cap_mem->target_yuv.addr_phy.addr_v = 0;
 		cap_mem->cap_yuv.addr_phy.addr_y = cap_mem->target_yuv.addr_phy.addr_u - tmp;
 		cap_mem->cap_yuv.addr_vir.addr_y = cap_mem->target_yuv.addr_vir.addr_u - tmp;
 		cap_mem->cap_yuv.addr_phy.addr_u = cap_mem->target_yuv.addr_phy.addr_u + ((channel_size - tmp) >> 1);
 		cap_mem->cap_yuv.addr_vir.addr_u = cap_mem->target_yuv.addr_vir.addr_u + ((channel_size - tmp) >> 1);
+		cap_mem->cap_yuv.addr_phy.addr_v = 0;
 		yy_to_y = channel_size - tmp;
 	} else {
 		/*means scaling down*/
@@ -944,6 +946,7 @@ int arrange_yuv_buf(struct cmr_cap_2_frm *cap_2_frm,
 		cap_mem->cap_yuv.addr_vir.addr_y = cap_2_frm->mem_frm.addr_vir.addr_y;
 		cap_mem->cap_yuv.addr_phy.addr_u = cap_mem->cap_yuv.addr_phy.addr_y + tmp;
 		cap_mem->cap_yuv.addr_vir.addr_u = cap_mem->cap_yuv.addr_vir.addr_y + tmp;
+		cap_mem->cap_yuv.addr_phy.addr_v = 0;
 		memcpy((void*)&cap_mem->target_yuv, (void*)&cap_mem->cap_yuv, sizeof(struct img_frm));
 		channel_size = tmp;
 		yy_to_y = 0;
@@ -1181,7 +1184,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 		cap_mem->cap_yuv_rot.addr_phy.addr_u = addr_phy;
 		cap_mem->cap_yuv_rot.addr_vir.addr_u = addr_vir;
 	}
-
+	cap_mem->cap_yuv_rot.addr_phy.addr_v = 0;
 	cap_mem->cap_yuv_rot.size.width = align16_image_size.height;
 	cap_mem->cap_yuv_rot.size.height = align16_image_size.width;
 	cap_mem->cap_yuv_rot.buf_size = size_pixel;

@@ -2422,6 +2422,8 @@ cmr_int prev_alloc_prev_buf(struct prev_handle *handle, cmr_u32 camera_id, struc
 		}
 	}
 
+	prev_cxt->prev_frm[i].addr_phy.addr_v = 0;
+
 	if (prev_cxt->prev_param.prev_rot) {
 		for (i = 0; i < PREV_ROT_FRM_CNT; i++) {
 			prev_cxt->prev_frm[i].buf_size            = frame_size;
@@ -2429,6 +2431,7 @@ cmr_int prev_alloc_prev_buf(struct prev_handle *handle, cmr_u32 camera_id, struc
 			prev_cxt->prev_rot_frm[i].addr_vir.addr_u = prev_cxt->prev_rot_frm[i].addr_vir.addr_y + buffer_size;
 			prev_cxt->prev_rot_frm[i].addr_phy.addr_y = prev_cxt->prev_phys_addr_array[prev_num +i];
 			prev_cxt->prev_rot_frm[i].addr_phy.addr_u = prev_cxt->prev_rot_frm[i].addr_phy.addr_y + buffer_size;
+			prev_cxt->prev_rot_frm[i].addr_phy.addr_v = 0;
 			prev_cxt->prev_rot_frm[i].fmt             = prev_cxt->prev_param.preview_fmt;
 			prev_cxt->prev_rot_frm[i].size.width      = prev_cxt->actual_prev_size.width;
 			prev_cxt->prev_rot_frm[i].size.height     = prev_cxt->actual_prev_size.height;
@@ -2671,6 +2674,7 @@ cmr_int prev_alloc_cap_buf(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 		prev_cxt->cap_frm[i].buf_size        = cur_img_frm->buf_size;
 		prev_cxt->cap_frm[i].addr_phy.addr_y = y_addr;
 		prev_cxt->cap_frm[i].addr_phy.addr_u = u_addr;
+		prev_cxt->cap_frm[i].addr_phy.addr_v = 0;
 		prev_cxt->cap_frm[i].addr_vir.addr_y = y_addr_vir;
 		prev_cxt->cap_frm[i].addr_vir.addr_u = u_addr_vir;
 
