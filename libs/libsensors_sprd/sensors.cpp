@@ -60,6 +60,7 @@ static struct sensor_t sSensorList[AccSensor::numSensors
 };
 
 static int numSensors = 0;
+static char GetChipInfo[256] = {0};
 
 static int open_sensors(const struct hw_module_t *module, const char *id,
 			struct hw_device_t **device);
@@ -120,6 +121,7 @@ private:
 	struct pollfd mPollFds[numFds];
 	int mWritePipeFd;
 	SensorBase *mSensors[numSensorDrivers];
+	PlsSensor *PlsObjList[PlsChipNum];
 
 	int handleToDriver(int handle) const {
 		switch (handle) {
@@ -166,7 +168,29 @@ sensors_poll_context_t::sensors_poll_context_t()
 	ALOGD("OnumSensors=%d; %d", numSensors, OriSensor::numSensors);
 #endif
 #ifndef PLS_NULL
-	mSensors[pls] = new PlsSensor();
+	PlsObjList[LTR558ALS] = new PlsLTR558();
+	PlsObjList[TMD2771] = new PlsTMD2771();
+	PlsObjList[AL3006] = new PlsAL3006();
+	PlsObjList[EPL2182] = new PlsEPL2182();
+	for( int i=0; i<PlsChipNum; i++) {
+		memset(GetChipInfo,0,sizeof(GetChipInfo));
+		mSensors[pls] = PlsObjList[i];
+		mSensors[pls]->setEnable(ID_L, 1);
+		mSensors[pls]->getChipInfo(GetChipInfo);
+		ALOGD("[PlsSensor] the chip information is %s\n", GetChipInfo);
+		mSensors[pls]->setEnable(ID_L, 0);
+		if(0 == strcmp(GetChipInfo,PlsChipInfoList[i])) {
+			PlsNewSuccess = true;
+			for(int j=i+1; j<PlsChipNum; j++)
+				delete PlsObjList[j];
+			break;
+		}else
+			delete PlsObjList[i];
+	}
+	if(false == PlsNewSuccess) {
+		mSensors[pls] = new PlsSensor();
+		PlsNewSuccess = true;
+	}
 	numSensors +=
 	    mSensors[pls]->populateSensorList(sSensorList + numSensors);
 	mPollFds[pls].fd = mSensors[pls]->getFd();
@@ -228,6 +252,7 @@ int sensors_poll_context_t::activate(int handle, int enabled)
 		ALOGE_IF(result < 0, "error sending wake message (%s)",
 			 strerror(errno));
 	}
+
 	return err;
 }
 

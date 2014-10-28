@@ -68,6 +68,7 @@ public:
 	/* It returns the number of reference. */
     virtual int getEnable(int32_t handle) = 0;
     virtual int populateSensorList(struct sensor_t *list);
+    virtual void getChipInfo(char *buf);
 };
 
 /*****************************************************************************/

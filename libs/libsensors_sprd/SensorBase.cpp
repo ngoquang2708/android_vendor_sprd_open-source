@@ -112,6 +112,7 @@ int SensorBase::populateSensorList(struct sensor_t *list)
 	return 0;
 }
 
+void SensorBase::getChipInfo(char *buf){}
 bool SensorBase::hasPendingEvents() const
 {
 	return false;
