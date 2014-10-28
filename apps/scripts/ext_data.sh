@@ -9,6 +9,9 @@ if [ "$1" = "-u" ]; then
 	ip $ifname
 	ifname=`getprop sys.data.noarp`
 	ip $ifname
+        temp=`getprop sys.data.IPV6.disable`
+        ifname=`getprop sys.data.net.addr`
+       `echo ${temp} > /proc/sys/net/ipv6/conf/${ifname}/disable_ipv6`
 
 ##For Auto Test
 	ethup=`getprop ril.gsps.eth.up`
