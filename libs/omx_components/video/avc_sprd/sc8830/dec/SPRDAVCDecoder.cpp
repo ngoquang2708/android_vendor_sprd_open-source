@@ -434,7 +434,8 @@ status_t SPRDAVCDecoder::initDecoder() {
 }
 
 void SPRDAVCDecoder::releaseDecoder() {
-    (*mH264DecRelease)(mHandle);
+    if( mH264DecRelease!=NULL )
+           (*mH264DecRelease)(mHandle);
 
     if (mCodecInterBuffer != NULL) {
         free(mCodecInterBuffer);
@@ -473,6 +474,8 @@ void SPRDAVCDecoder::releaseDecoder() {
     if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
+        mH264Dec_ReleaseRefBuffers = NULL;
+        mH264DecRelease = NULL;
     }
 }
 
@@ -1397,7 +1400,8 @@ void SPRDAVCDecoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
 
 void SPRDAVCDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
     if(portIndex == OMX_DirOutput) {
-        (*mH264Dec_ReleaseRefBuffers)(mHandle);
+          if( NULL!=mH264Dec_ReleaseRefBuffers )
+              (*mH264Dec_ReleaseRefBuffers)(mHandle);
     }
 }
 

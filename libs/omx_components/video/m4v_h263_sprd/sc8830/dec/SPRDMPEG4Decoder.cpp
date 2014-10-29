@@ -392,7 +392,8 @@ status_t SPRDMPEG4Decoder::initDecoder() {
 }
 
 void SPRDMPEG4Decoder::releaseDecoder() {
-    (*mMP4DecRelease)(mHandle);
+    if( mMP4DecRelease!=NULL )
+        (*mMP4DecRelease)(mHandle);
 
     if (mInitialized) {
         mInitialized = false;
@@ -436,6 +437,8 @@ void SPRDMPEG4Decoder::releaseDecoder() {
     if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
+        mMP4DecReleaseRefBuffers = NULL;
+        mMP4DecRelease = NULL;
     }
 }
 
@@ -1387,7 +1390,8 @@ void SPRDMPEG4Decoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
 
 void SPRDMPEG4Decoder::onPortFlushPrepare(OMX_U32 portIndex) {
     if(portIndex == OMX_DirOutput) {
-        (*mMP4DecReleaseRefBuffers)(mHandle);
+          if( mMP4DecReleaseRefBuffers!=NULL )
+               (*mMP4DecReleaseRefBuffers)(mHandle);
     }
 }
 
