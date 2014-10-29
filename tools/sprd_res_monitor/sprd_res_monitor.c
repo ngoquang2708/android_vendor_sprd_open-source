@@ -52,10 +52,6 @@ struct config_info{
 		"ftrace",
 		"setprop debug.ftrace.value 1",
 		"setprop debug.ftrace.value 0"
-	},{
-		"blktrace",
-		"setprop debug.blktrace.value 1",
-		"setprop debug.blktrace.value 0"
 	}
 };
 
@@ -151,7 +147,7 @@ static void notify_config_file()
 
 		while(index < size) {
 			event = (struct inotify_event *)((char *)buffer + index);
-                        ALOGD("notify event: wd: %d, mask 0x%x, index %lu, len %d, file %s\n",
+                        ALOGD("notify event: wd: %d, mask 0x%x, index %d, len %d, file %s\n",
                                         event->wd, event->mask, index, event->len, event->name);
 			if(event->mask & IN_MODIFY)
 				parse_config();
@@ -170,13 +166,13 @@ static void notify_config_file()
 int main(int argc, char *argv[])
 {
 	pthread_t tid_monitor;
-	pthread_t tid_profile_monitor;
+	pthread_t tid_oprofile_monitor;
 
 	parse_config();
 
 	if(!pthread_create(&tid_monitor,NULL,start_monitor,NULL))
 		ALOGD("res_monitor thread created!\n");
-	if(!pthread_create(&tid_profile_monitor , NULL , profile_daemon , NULL))
+	if(!pthread_create(&tid_oprofile_monitor , NULL , profile_daemon , NULL))
 		ALOGD("oprofile daemon created!");
         else
 		ALOGW("oprofile daemon create failed!");
@@ -184,6 +180,6 @@ int main(int argc, char *argv[])
         notify_config_file();
 
         pthread_join(tid_monitor , NULL);
-        pthread_join(tid_profile_monitor , NULL);
+        pthread_join(tid_oprofile_monitor , NULL);
 	return 0;
 }
