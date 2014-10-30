@@ -464,6 +464,7 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
 		ret = CMR_CAMERA_NORNAL_EXIT;
+		sem_post(&cxt->scaler_sync_sm);
 		sem_post(&cxt->jpeg_sync_sm);
 		goto exit;
 	}
@@ -471,6 +472,7 @@ cmr_int snp_scale_cb_handle(cmr_handle snp_handle, void *data)
 		ret = snp_start_encode(snp_handle, &cxt->cur_frame_info);
 		if (ret) {
 			CMR_LOGE("failed to start encode %ld", ret);
+			sem_post(&cxt->scaler_sync_sm);
 			goto exit;
 		}
 		ret = snp_start_thumb_proc(snp_handle, &cxt->cur_frame_info);
