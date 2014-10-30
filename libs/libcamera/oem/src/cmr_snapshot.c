@@ -20,6 +20,7 @@
 #include "cmr_msg.h"
 #include "isp_video.h"
 #include "cmr_ipm.h"
+#include "cutils/properties.h"
 
 
 #define SNP_MSG_QUEUE_SIZE                           50
@@ -70,7 +71,6 @@
 #define SNP_THUMB_DATA                               8006 /*debug.camera.save.snpfile 6*/
 #define SNP_THUMB_STREAM                             1000 /*debug.camera.save.snpfile 7*/
 #define SNP_JPEG_STREAM                              2000 /*debug.camera.save.snpfile 8*/
-#define PROPERTY_VALUE_MAX                           100
 /********************************* internal data type *********************************/
 
 enum cvt_trigger_src {
@@ -201,6 +201,7 @@ struct snp_context {
 	sem_t                               scaler_sync_sm;
 	sem_t                               takepic_callback_sem;
 	sem_t                               hdr_sync_sm;
+	sem_t                               redisplay_sm;
 	struct snp_cvt_context              cvt;
 };
 /********************************* internal data type *********************************/
@@ -532,7 +533,9 @@ void snp_post_proc_done(cmr_handle snp_handle)
 		cxt->cap_cnt = 0;
 		goto exit;
 	}
-
+	CMR_LOGI("wait beging for redisplay sm");
+	sem_wait(&cxt->redisplay_sm);
+	CMR_LOGI("wait end for redisplay sm");
 	if (cxt->cap_cnt >= cxt->req_param.total_num) {
 		cxt->cap_cnt = 0;
 		snp_set_request(snp_handle, TAKE_PICTURE_NO);
@@ -1959,6 +1962,7 @@ void snp_local_init(cmr_handle snp_handle)
 	sem_init(&cxt->jpeg_sync_sm, 0, 0);
 	sem_init(&cxt->hdr_sync_sm, 0, 0);
 	sem_init(&cxt->scaler_sync_sm, 0, 0);
+	sem_init(&cxt->redisplay_sm, 0, 0);
 }
 
 void snp_local_deinit(cmr_handle snp_handle)
@@ -1972,6 +1976,7 @@ void snp_local_deinit(cmr_handle snp_handle)
 	sem_destroy(&cxt->jpeg_sync_sm);
 	sem_destroy(&cxt->scaler_sync_sm);
 	sem_destroy(&cxt->hdr_sync_sm);
+	sem_destroy(&cxt->redisplay_sm);
 	cxt->is_inited = 0;
 }
 
@@ -2604,6 +2609,7 @@ cmr_int snp_set_post_proc_param(cmr_handle snp_handle, struct snapshot_param *pa
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct snp_context              *cxt = (struct snp_context*)snp_handle;
 	struct snp_proc_param           *proc_param_ptr = &cxt->req_param.post_proc_setting;
+	cmr_s32                         sm_val = 0;
 
 	cxt->cap_cnt = 0;
 	cxt->req_param = *param_ptr;
@@ -2676,6 +2682,13 @@ cmr_int snp_set_post_proc_param(cmr_handle snp_handle, struct snapshot_param *pa
 	ret = snp_set_jpeg_exif_param(snp_handle);
 	if (ret) {
 		CMR_LOGE("failed to set exif param %ld", ret);
+	} else {
+		sem_getvalue(&cxt->redisplay_sm, &sm_val);
+		if (0 != sm_val) {
+			sem_destroy(&cxt->redisplay_sm);
+			sem_init(&cxt->redisplay_sm, 0, 0);
+			CMR_LOGI("re-initialize redisplay sm");
+		}
 	}
 
 exit:
@@ -3067,6 +3080,7 @@ cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 
 	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
 		CMR_LOGI("post proc has been cancel");
+		sem_post(&cxt->redisplay_sm);
 		ret = CMR_CAMERA_NORNAL_EXIT;
 		goto exit;
 	}
@@ -3096,6 +3110,7 @@ cmr_int snp_take_picture_done(cmr_handle snp_handle, struct frm_info *data)
 	snp_notify_redisplay_proc(snp_handle,
 							SNAPSHOT_FUNC_TAKE_PICTURE,
 							SNAPSHOT_EVT_CB_SNAPSHOT_JPEG_DONE,NULL);
+	sem_post(&cxt->redisplay_sm);
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
