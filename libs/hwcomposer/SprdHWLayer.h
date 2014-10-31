@@ -99,6 +99,7 @@ public:
           mLayerIndex(-1),
           mSprdLayerIndex(-1),
           mAccelerator(-1),
+          mProtectedFlag(false),
           mDebugFlag(0)
     {
 
@@ -177,6 +178,11 @@ public:
     bool checkRGBLayerFormat();
     bool checkYUVLayerFormat();
 
+    inline bool getProtectedFlag() const
+    {
+        return mProtectedFlag;
+    }
+
 private:
     friend class SprdHWLayerList;
     friend class SprdVDLayerList;
@@ -189,6 +195,7 @@ private:
     struct sprdRect srcRect;
     struct sprdRect FBRect;
     int mAccelerator;
+    bool mProtectedFlag;
     int mDebugFlag;
 
     inline void setAndroidLayer(hwc_layer_1_t *l)
@@ -219,6 +226,11 @@ private:
     inline void setLayerAccelerator(int flag)
     {
         mAccelerator = flag;
+    }
+
+    inline void setProtectedFlag(bool flag)
+    {
+        mProtectedFlag = flag;
     }
 };
 

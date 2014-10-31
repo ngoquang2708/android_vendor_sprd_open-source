@@ -373,8 +373,8 @@ int SprdHWLayerList:: revisitGeometry(int *DisplayFlag, SprdPrimaryDisplayDevice
         bool supportYUVLayerCond = false;
         if (YUVLayer)
         {
-            supportYUVLayerCond = (((RGBIndex + 1) == LayerCount - 1) &&
-                                   (YUVIndex <= RGBIndex -1));
+            supportYUVLayerCond = ((YUVLayer->getLayerIndex())
+                                   < RGBLayer->getLayerIndex()) ? true : false;
 
             /*
              *  If the OSD layer is the bottom layer, video layer is the top layer.
@@ -772,12 +772,23 @@ int SprdHWLayerList:: prepareVideoLayer(SprdHWLayer *l)
         return -1;
     }
 
+    if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == GRALLOC_USAGE_PROTECTED)
+    {
+        l->setProtectedFlag(true);
+        ALOGI_IF(mDebugFlag, "prepareVideoLayer L: %d, find protected video",
+                 __LINE__);
+    }
+    else
+    {
+        l->setProtectedFlag(false);
+    }
+
     /*
      *  Some RGB DRM video should also be considered as video layer
      *  which must be processed by HWC.
      * */
     if ((!(l->checkYUVLayerFormat()))
-        && ((privateH->usage & GRALLOC_USAGE_PROTECTED) != GRALLOC_USAGE_PROTECTED))
+        && (l->getProtectedFlag() == false))
     {
         ALOGI_IF(mDebugFlag, "prepareVideoLayer L%d,color format:0x%08x,ret 0", __LINE__, privateH->format);
         return 0;
@@ -1151,34 +1162,18 @@ int SprdHWLayerList:: revisitOverlayComposerLayer(SprdHWLayer *YUVLayer, SprdHWL
      * */
     if (YUVLayer != NULL)
     {
-        hwc_layer_1_t *layer = YUVLayer->getAndroidLayer();
-        if (layer == NULL)
-        {
-            ALOGE("Android layer is NULL");
-            return -1;
-        }
-
-        const native_handle_t *pNativeHandle = layer->handle;
-        struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
-        if (privateH == NULL)
-        {
-            ALOGE("Android layer handle is NULL");
-            return -1;
-        }
-
         if (mYUVLayerCount > 1)
         {
             ALOGI_IF(mDebugFlag, "YUVLayerCount: %d", mYUVLayerCount);
             mSkipLayerFlag = true;
         }
-        else if (((mYUVLayerCount == 1) &&
-            (privateH->usage & GRALLOC_USAGE_PROTECTED) == false) &&
-             ((mRGBLayerCount > 0) && (mRGBLayerFullScreenFlag == false)))
+        else if ((mYUVLayerCount == 1)
+                 && (YUVLayer->getProtectedFlag() == false))
         {
-            ALOGI_IF(mDebugFlag, "mRGBLayerFullScreenFlag: %d", mRGBLayerFullScreenFlag);
+            ALOGI_IF(mDebugFlag, "Not protected Video, switch back to SF. L :%d", __LINE__);
             mSkipLayerFlag = true;
         }
-        else if ((privateH->usage & GRALLOC_USAGE_PROTECTED) == GRALLOC_USAGE_PROTECTED)
+        else if (YUVLayer->getProtectedFlag())
         {
             ALOGI_IF(mDebugFlag, "Find Protected Video layer, force Overlay");
             mSkipLayerFlag = false;
