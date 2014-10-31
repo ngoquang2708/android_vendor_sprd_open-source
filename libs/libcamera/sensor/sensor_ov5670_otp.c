@@ -217,8 +217,8 @@ LOCAL int read_otp_info(int index, struct otp_struct *otp_ptr)
 LOCAL int read_otp_wb(int index, struct otp_struct *otp_ptr)
 {
 	int i, temp;
-	int address_start;
-	int address_end;
+	int address_start = 0;
+	int address_end = 0;
 	
 	OTP_PRINT("read_otp_wb : index = %d\n", index);
 	//select group

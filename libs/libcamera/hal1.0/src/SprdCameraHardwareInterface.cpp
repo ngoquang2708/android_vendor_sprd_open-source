@@ -1764,17 +1764,14 @@ status_t SprdCameraHardware::checkSetParameters(const SprdCameraParameters& para
 
 	flash_mode = ((SprdCameraParameters)params).get_FlashMode();
 	LOGI("flash-mode:%s.",flash_mode);
-	if (!flash_mode) {
 #ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
+	if (!flash_mode) {
 		return BAD_VALUE;
-#endif
 	}
 	if (0 == strcmp(flash_mode,"invalid")) {
-#ifndef CONFIG_CAMERA_FLASH_NOT_SUPPORT
 		return BAD_VALUE;
-#endif
 	}
-
+#endif
 	focus_mode = ((SprdCameraParameters)params).get_FocusMode();
 	LOGI("focus-mode:%s",focus_mode);
 	if (!focus_mode) {
