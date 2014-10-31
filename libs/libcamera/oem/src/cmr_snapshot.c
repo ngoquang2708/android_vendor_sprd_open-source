@@ -3160,8 +3160,18 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 	cxt->cap_cnt++;
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE,
 								SNAPSHOT_EVT_CB_CAPTURE_FRAME_DONE, NULL, 0);
+	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
+		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
+		goto exit;
+	}
 	snp_send_msg_notify_thr(snp_handle, SNAPSHOT_FUNC_TAKE_PICTURE,
 							SNAPSHOT_RSP_CB_SUCCESS, NULL, 0);
+	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
+		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
+		goto exit;
+	}
 	snp_set_status(snp_handle, POST_PROCESSING);
 
 	camera_take_snapshot_step(CMR_STEP_CAP_E);
@@ -3172,6 +3182,13 @@ cmr_int snp_post_proc_for_yuv(cmr_handle snp_handle, void *data)
 							chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].size.height,
 							&chn_param_ptr->chn_frm[chn_data_ptr->frame_id-chn_data_ptr->base].addr_vir);
 	}
+
+	if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
+		CMR_LOGI("post proc has been cancel");
+		ret = CMR_CAMERA_NORNAL_EXIT;
+		goto exit;
+	}
+
 	if (CMR_CAMERA_SUCCESS != snp_send_msg_write_exif_thr(snp_handle, SNP_EVT_WRITE_EXIF, data)) {
 		goto exit;
 	}
