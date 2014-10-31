@@ -191,7 +191,12 @@ int FenceWaitForever(const String8& name, int fenceFd)
     {
         ALOGE("Fence: %s FD: %d didn't signal in %u ms", name.string(), fenceFd, warningTimeout);
 
-        err = sync_wait(fenceFd, TIMEOUT_NEVER);
+        err = sync_wait(fenceFd, 6000);
+        if (err < 0)
+        {
+            ALOGE("Fence: %s FD: %d didn't signal in 6000 ms, app do not finish the rendering work",
+                  name.string(), fenceFd);
+        }
     }
 
     return err;
