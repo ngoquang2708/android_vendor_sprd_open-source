@@ -38,15 +38,11 @@
 #define TMD2771_DEVICE_NAME                            "/dev/taos"
 #define ELAN_DEVICE_NAME               		"/dev/epl2182_pls"
 static char const *PlsChipInfoList[] = {
-	"TMD2771",
 	"LTR558ALS",
-	"AL3006",
 	"EPL2182",
 };
 enum {
-	TMD2771,
 	LTR558ALS,
-	AL3006,
 	EPL2182,
 	PlsChipNum
 };

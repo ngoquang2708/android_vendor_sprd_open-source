@@ -168,9 +168,8 @@ sensors_poll_context_t::sensors_poll_context_t()
 	ALOGD("OnumSensors=%d; %d", numSensors, OriSensor::numSensors);
 #endif
 #ifndef PLS_NULL
+#ifdef PLS_COMPATIBLE
 	PlsObjList[LTR558ALS] = new PlsLTR558();
-	PlsObjList[TMD2771] = new PlsTMD2771();
-	PlsObjList[AL3006] = new PlsAL3006();
 	PlsObjList[EPL2182] = new PlsEPL2182();
 	for( int i=0; i<PlsChipNum; i++) {
 		memset(GetChipInfo,0,sizeof(GetChipInfo));
@@ -191,6 +190,10 @@ sensors_poll_context_t::sensors_poll_context_t()
 		mSensors[pls] = new PlsSensor();
 		PlsNewSuccess = true;
 	}
+#else
+	mSensors[pls] = new PlsSensor();
+	ALOGD("[PlsSensor]non compatible\n");
+#endif
 	numSensors +=
 	    mSensors[pls]->populateSensorList(sSensorList + numSensors);
 	mPollFds[pls].fd = mSensors[pls]->getFd();

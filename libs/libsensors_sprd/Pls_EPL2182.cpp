@@ -213,6 +213,8 @@ int PlsSensor::readEvents(sensors_event_t * data, int count)
 	return numEventReceived;
 }
 
+void PlsSensor::getChipInfo(char *buf){}
+
 void PlsSensor::processEvent(int code, int value)
 {
 	switch (code) {

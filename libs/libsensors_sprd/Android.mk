@@ -68,7 +68,12 @@ endif
 #################################################################
 #LIGHT&PROXIMITY
 ifneq ($(BOARD_HAVE_PLS),NULL)
+ifeq ($(BOARD_PLS_COMPATIBLE),true)
 LOCAL_SRC_FILES += PlsSensor.cpp
+LOCAL_CFLAGS += -DPLS_COMPATIBLE
+else
+LOCAL_SRC_FILES += Pls_$(BOARD_HAVE_PLS).cpp
+endif
 else
 LOCAL_CFLAGS += -DPLS_NULL
 endif
