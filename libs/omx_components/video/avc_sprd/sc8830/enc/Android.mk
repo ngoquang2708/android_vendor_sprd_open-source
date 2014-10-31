@@ -2,7 +2,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-        SPRDAVCEncoder.cpp
+        SPRDAVCEncoder.cpp \
+        rgb2yuv_neon.s
 
 LOCAL_C_INCLUDES := \
         frameworks/av/media/libstagefright/include \
@@ -14,6 +15,8 @@ LOCAL_C_INCLUDES := \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video
 
 LOCAL_CFLAGS := -DOSCL_EXPORT_REF= -DOSCL_IMPORT_REF=
+
+LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel
 
 LOCAL_ARM_MODE := arm
 

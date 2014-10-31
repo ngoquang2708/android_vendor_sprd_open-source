@@ -31,7 +31,7 @@ namespace android {
 //#define SPRD_DUMP_BS
 
 #ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
-#define GET_YUV_DATA_FROM_SURFACEFLINGER
+#define SURFACEFLINGER_TRANSFORM_RGB2YUV
 #else
 //get rgb data from surfaceflinger
 #define CONVERT_THREAD
