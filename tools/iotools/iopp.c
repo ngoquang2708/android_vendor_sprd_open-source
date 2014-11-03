@@ -111,8 +111,12 @@ int get_cmdline(struct io_node *ion)
 	fd = open(filename, O_RDONLY);
 	if (fd == -1)
 		return 1;
+
 	length = read(fd, buffer, sizeof(buffer) - 1);
 	close(fd);
+	if (-1 == length)
+		return -1;
+
 	buffer[length] = '\0';
 	if (length == 0)
 		return 2;
@@ -164,10 +168,14 @@ int get_tcomm(struct io_node *ion)
 		return 1;
 	length = read(fd, buffer, sizeof(buffer) - 1);
 	close(fd);
+	if (-1 == length)
+		return -1;
+
 	/*
 	 * The command is near the beginning; we don't need to be able to
 	 * the entire stat file.
 	 */
+	buffer[length] = '\0';
 	p = strchr(buffer, '(');
 	++p;
 	q = strchr(p, ')');
@@ -248,7 +256,7 @@ void get_stats()
 
 	/* Loop through the process table and display a line per pid. */
 	while ((ent = readdir(dir)) != NULL) {
-		int rc;
+		int rc = 0;
 		int fd;
 		int length;
 
@@ -297,6 +305,9 @@ void get_stats()
 		}
 		length = read(fd, buffer, sizeof(buffer) - 1);
 		close(fd);
+		if (-1 == length)
+			return;
+
 		buffer[length] = '\0';
 
 		/* Parsing the io file data. */
@@ -442,7 +453,7 @@ int main(int argc, char *argv[])
 {
 	int c;
 
-	int delay = 0;
+	unsigned int delay = 0;
 	int count = 0;
 	int max_count = 1;
 
@@ -469,7 +480,7 @@ int main(int argc, char *argv[])
 				delay = atoi(argv[optind]);
 				max_count = -1;
 			} else if ((argc - optind) == 2) {
-				delay = atoi(argv[optind]);
+				delay = (unsigned int)atoi(argv[optind]);
 				max_count = atoi(argv[optind + 1]);
 			} else {
 				/* Too many additional arguments. */
