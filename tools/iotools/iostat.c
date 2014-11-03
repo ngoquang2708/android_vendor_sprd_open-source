@@ -191,7 +191,7 @@ void initialize(char **match_list, int n_dev)
 				if (n_dev) {
 					unsigned int j;
 
-					for (j = 0; j < n_dev && match_list[j];
+					for (j = 0; j < (unsigned int)n_dev && match_list[j];
 					     j++) {
 						if (!strcmp(curr.name,
 							    match_list[j])) {
@@ -478,7 +478,7 @@ void process(int lineno)
 int main(int argc, char **argv)
 {
 	int c, n_dev, lineno;
-	int interval = 1;
+	unsigned int interval = 1;
 	int count = -1;
 
 	setlinebuf(stdout);
@@ -540,7 +540,7 @@ int main(int argc, char **argv)
 		count = atoi(argv[optind + 1]);
 		/* drop down */
 	case 1:
-		interval = atoi(argv[optind]);
+		interval = (unsigned int)atoi(argv[optind]);
 		break;
 	case 0:
 		count = 0;
