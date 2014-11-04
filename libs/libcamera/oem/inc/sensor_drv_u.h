@@ -823,6 +823,9 @@ cmr_int sensor_get_exif_common(struct sensor_drv_context *sensor_cxt,
 cmr_int sensor_get_info_common(struct sensor_drv_context *sensor_cxt,
 				SENSOR_EXP_INFO_T **sensor_exp_info_pptr);
 
+cmr_int sns_dev_get_flash_level(struct sensor_drv_context *sensor_cxt,
+								struct sensor_flash_level *level);
+
 /*for 3rd party functions*/
 cmr_int Sensor_WriteData(cmr_u8 *regPtr, cmr_u32 length);
 

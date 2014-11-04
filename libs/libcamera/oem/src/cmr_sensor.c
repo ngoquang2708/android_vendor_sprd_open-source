@@ -588,6 +588,29 @@ exit:
 	return ret;
 }
 
+cmr_int cmr_sensor_get_flash_info (cmr_handle sensor_handle, cmr_u32 sensor_id, struct sensor_flash_level *level)
+{
+	cmr_int ret = CMR_CAMERA_SUCCESS;
+	struct cmr_sensor_handle *handle = (struct cmr_sensor_handle *)sensor_handle;
+	CHECK_HANDLE_VALID(handle);
+
+	if (!handle || !level) {
+		CMR_LOGE("param err 0x%lx", (cmr_uint)sensor_handle);
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+
+	ret = sns_dev_get_flash_level (&handle->sensor_cxt[sensor_id], level);
+	if (ret) {
+		CMR_LOGE("get falsh level failed!");
+		ret = CMR_CAMERA_FAIL;
+	}
+
+exit:
+	CMR_LOGI("ret= %d", ret);
+	return ret;
+}
+
 /**---------------------------------------------------------------------------*
  **                         Local Functions Contents                          *
  **---------------------------------------------------------------------------*/

@@ -308,6 +308,21 @@ cmr_int sns_dev_write_reg(struct sensor_drv_context *sensor_cxt,
 	return ret;
 }
 
+cmr_int sns_dev_get_flash_level (struct sensor_drv_context *sensor_cxt,
+								 struct sensor_flash_level *level)
+{
+	int ret = SENSOR_SUCCESS;
+	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
+
+	ret = ioctl(sensor_cxt->fd_sensor, SENSOR_IO_GET_FLASH_LEVEL, level);
+	if (0 != ret) {
+		CMR_LOGE("_Sensor_Device_GetFlashLevel failed, ret=%d \n",  ret);
+		ret = -1;
+	}
+
+	return ret;
+}
+
 //TBSPLIT
 cmr_int Sensor_Device_WriteRegTab(SENSOR_REG_TAB_PTR reg_tab)
 {

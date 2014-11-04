@@ -777,6 +777,11 @@ status_t SprdCameraHardware::takePicture()
 	if (!iSZslMode()) {
 		if (isPreviewing()) {
 			LOGI("call stopPreviewInternal in takePicture().");
+#ifdef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
+			if (CAMERA_ZSL_MODE != mCaptureMode) {
+		         camera_start_preflash(mCameraHandle);
+			}
+#endif
 			stopPreviewInternal();
 		}
 		if (mIsPerformanceTestable) {

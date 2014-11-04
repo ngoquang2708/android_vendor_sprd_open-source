@@ -648,12 +648,12 @@ cmr_int camera_isp_evt_cb(cmr_handle oem_handle, cmr_u32 evt, void* data, cmr_u3
 			ret = cmr_focus_isp_handle(cxt->focus_cxt.focus_handle, FOCUS_EVT_ISP_AF_NOTICE, cxt->camera_id, data);
 		}
 		break;
-	/*case ISP_FLASH_AE_CALLBACK:
-		ret = camera_isp_alg_done(data);
+	case ISP_FLASH_AE_CALLBACK:
+		ret = cmr_setting_isp_alg_done(oem_handle, data);
 		break;
 	case ISP_AE_BAPASS_CALLBACK:
-		ret = camera_isp_alg_done(data);
-		break;*/ //to do with robert
+		ret = cmr_setting_isp_alg_done(oem_handle, data);
+		break;
 
 	/*case ISP_AF_STAT_CALLBACK:
 		ret = camera_isp_af_stat(data);
@@ -1169,6 +1169,7 @@ cmr_int camera_focus_pre_proc(cmr_handle oem_handle)
 	/*open flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
 		setting_param.ctrl_flash.is_active = 1;
+		setting_param.ctrl_flash.flash_type = FLASH_OPEN;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
 			CMR_LOGE("failed to open flash");
@@ -1187,6 +1188,7 @@ cmr_int camera_focus_post_proc(cmr_handle oem_handle)
 	/*close flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
 		setting_param.ctrl_flash.is_active = 0;
+		setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
 			CMR_LOGE("failed to open flash %ld", ret);
@@ -2676,6 +2678,7 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 		setting_param.ctrl_flash.capture_mode.capture_mode= capture_mode;
 		setting_param.camera_id = camera_id;
 		setting_param.ctrl_flash.is_active = 1;
+		setting_param.ctrl_flash.flash_type = FLASH_HIGH_LIGHT;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
 			CMR_LOGE("failed to open flash");
@@ -2722,6 +2725,7 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 	setting_param.camera_id = camera_id;
 	setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snapshot_sn_mode;
 	setting_param.ctrl_flash.is_active = 0;
+	setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 	ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 	if (ret) {
 		CMR_LOGE("failed to open flash");
@@ -3319,6 +3323,14 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		if (ret) {
 			CMR_LOGE("sn get info failed!");
 		}
+		return ret;
+	case COM_SN_GET_FLASH_LEVEL:
+		ret = cmr_sensor_get_flash_info(cxt->sn_cxt.sensor_handle, cxt->camera_id, &param_ptr->flash_level);
+		if (ret) {
+			CMR_LOGE("sn get flash level failed!");
+		}
+		CMR_LOGI("flash level low_light = %ld, high_light = %ld",
+				 param_ptr->flash_level.low_light, param_ptr->flash_level.high_light);
 		return ret;
 	default:
 		CMR_LOGE("don't support cmd %ld", cmd_type);
@@ -4546,5 +4558,24 @@ cmr_int camera_local_cancel_focus(cmr_handle oem_handle)
 	ret = cmr_focus_stop(cxt->focus_cxt.focus_handle, cxt->camera_id, 1);
 
 	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
+cmr_int camera_local_pre_flash (cmr_handle oem_handle)
+{
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	struct setting_cmd_parameter    setting_param;
+
+	/*start preflash*/
+	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
+        setting_param.camera_id = cxt->camera_id;
+        setting_param.ctrl_flash.capture_mode.capture_mode= CAMERA_NORMAL_MODE;
+		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_SET_PRE_FLASH, &setting_param);
+		if (ret) {
+			CMR_LOGE("failed to open flash");
+		}
+	}
+
 	return ret;
 }

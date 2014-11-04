@@ -24,6 +24,7 @@
 #include "cmr_common.h"
 #include "sensor_drv_u.h"
 #include "cmr_exif.h"
+#include "cmr_oem.h"
 
 
 #define SETTING_MSG_QUEUE_SIZE              5
@@ -1889,6 +1890,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 	p_auto_flash_status = &hal_param->flash_param.auto_flash_status;
 	flash_status = hal_param->flash_param.flash_status;
 
+	ctrl_flash_status = parm->ctrl_flash.flash_type;
 	if (is_active) {
 		/*pre flash or focus*/
 		if (is_pre) {
@@ -1913,13 +1915,11 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 					setting_isp_ae_bypass(ISP_AE_BYPASS);
 
 					/*camera_isp_alg_wait();*/
-					ctrl_flash_status = FLASH_OPEN;
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 					setting_isp_flash_ratio(&flash_level);
 				}
 			}
 			if (setting_is_need_flash(cpt, parm)) {
-				ctrl_flash_status = FLASH_OPEN;
 				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 			}
 		}else {
@@ -1936,11 +1936,9 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 							CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 						}
 					}
-					ctrl_flash_status = FLASH_HIGH_LIGHT;
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 				} else if ((CAMERA_FLASH_MODE_AUTO == flash_mode)
 					&& ((uint32_t)FLASH_OPEN == *p_auto_flash_status)) {
-					ctrl_flash_status = FLASH_HIGH_LIGHT;
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 				}
 			}
@@ -2132,6 +2130,108 @@ setting_proc_out:
 	return ret;
 }
 
+static cmr_int cmr_setting_isp_alg_wait (cmr_handle  setting_handle)
+{
+    cmr_int rtn = 0;
+    struct timespec ts;
+    struct camera_context *cxt = (struct camera_context*)setting_handle;
+
+	if (!cxt) {
+		CMR_LOGE("camera_context is null.");
+	    return -1;
+	}
+	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+	if (clock_gettime(CLOCK_REALTIME, &ts)) {
+		rtn = -1;
+		CMR_LOGE("get time failed.");
+	} else {
+		ts.tv_sec += ISP_ALG_TIMEOUT;
+		pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+		if (sem_timedwait((&cxt->cmr_set.isp_alg_sem), &ts)) {
+			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+			rtn = -1;
+			cxt->cmr_set.isp_alg_timeout = 1;
+			CMR_LOGW("timeout.");
+		} else {
+			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+			cxt->cmr_set.isp_alg_timeout = 0;
+			CMR_LOGI("done.");
+		}
+	}
+	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+	return rtn;
+}
+
+cmr_int cmr_setting_isp_alg_done (cmr_handle setting_handle, void *data)
+{
+	struct camera_context *cxt = (struct camera_context*)setting_handle;
+	if (!cxt) {
+		CMR_LOGE("camera_context is null.");
+		return -1;
+	}
+
+	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+	CMR_LOGI("isp ALG done.");
+	if (0 == cxt->cmr_set.isp_alg_timeout) {
+		sem_post(&cxt->cmr_set.isp_alg_sem);
+	}
+	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+	return 0;
+}
+
+static cmr_int setting_set_pre_flash (struct setting_component *cpt,
+					                  struct setting_cmd_parameter *parm)
+{
+	cmr_int                  ret = 0;
+	struct setting_hal_param       *hal_param = get_hal_param(cpt, parm->camera_id);
+	struct setting_local_param     *local_param = get_local_param(cpt, parm->camera_id);
+	cmr_uint                       flash_mode = 0;
+	cmr_uint                       image_format = 0;
+	struct setting_init_in         *init_in = &cpt->init_in;
+	cmr_handle                     oem_handle = init_in->oem_handle;
+
+#ifdef CONFIG_CAMERA_AUTOFOCUS_NOT_SUPPORT
+	CMR_LOGD("camera_preflash start camera_id = %ld.", parm->camera_id);
+	image_format = local_param->sensor_static_info.image_format;
+	flash_mode = hal_param->flash_param.flash_mode;
+
+    if (CAMERA_FLASH_MODE_AUTO == flash_mode) {
+	    ret = setting_flash_handle(cpt, parm, flash_mode);
+	}
+
+	if (setting_is_need_flash(cpt, parm)) {
+		if (IMG_DATA_TYPE_RAW == image_format) {
+
+			struct sensor_flash_level flash_level;
+			struct common_sn_cmd_param  sn_param;
+
+			memset(&flash_level, 0, sizeof(flash_level));
+			sn_param.camera_id = parm->camera_id;
+			if (init_in->setting_sn_ioctl) {
+				if ((*init_in->setting_sn_ioctl)(oem_handle, COM_SN_GET_FLASH_LEVEL, &sn_param)) {
+					CMR_LOGE("get flash level error.");
+				}
+			}
+
+			setting_isp_awb_bypass(ISP_AWB_BYPASS);
+			setting_isp_ae_bypass(ISP_AE_BYPASS);
+
+			cmr_setting_isp_alg_wait(oem_handle);
+			setting_set_flashdevice(cpt, parm, (uint32_t)FLASH_OPEN);
+			setting_isp_flash_ratio(&flash_level);
+		}
+	}
+
+	if (setting_is_need_flash(cpt, parm)) {
+		if (IMG_DATA_TYPE_RAW == image_format) {
+			cmr_setting_isp_alg_wait(oem_handle);
+		}
+		setting_set_flashdevice(cpt, parm, (uint32_t)FLASH_CLOSE_AFTER_OPEN);
+	}
+#endif
+	return ret;
+}
+
 cmr_int cmr_setting_init(struct setting_init_in * param_ptr,
 			              cmr_handle * out_setting_handle)
 {
@@ -2266,7 +2366,8 @@ cmr_int cmr_setting_ioctl(cmr_handle setting_handle, cmr_uint cmd_type,
 		{SETTING_GET_ANDROID_ZSL_FLAG,         setting_get_android_zsl},
 		{SETTING_CTRL_FLASH,                   setting_ctrl_flash},
 		{SETTING_GET_CAPTURE_MODE,             setting_get_capture_mode},
-		{SETTING_GET_DV_MODE,                  setting_get_dv_mode}
+		{SETTING_GET_DV_MODE,                  setting_get_dv_mode},
+		{SETTING_SET_PRE_FLASH,                setting_set_pre_flash}
 	};
 	struct setting_item          *item = NULL;
 	struct setting_component     *cpt =	 (struct setting_component *)setting_handle;
@@ -2294,7 +2395,8 @@ cmr_int cmr_setting_ioctl(cmr_handle setting_handle, cmr_uint cmd_type,
 
 int camera_set_flashdevice(uint32_t param)/*to do,wjp for isp*/
 {
-	int                      ret = 0;
+	cmr_int                      ret = 0;
 
 	return ret;
 }
+

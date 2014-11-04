@@ -459,3 +459,23 @@ cmr_int camera_fast_ctrl(cmr_handle camera_handle, enum fast_ctrl_mode mode, cmr
 
 	return ret;
 }
+
+cmr_int camera_start_preflash (cmr_handle camera_handle)
+{
+	cmr_int ret = CMR_CAMERA_SUCCESS;
+
+	if (!camera_handle) {
+		CMR_LOGE("camera handle is null");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+
+	ret = camera_local_pre_flash(camera_handle);
+	if (ret) {
+		CMR_LOGE("failed to cancel snapshot %ld", ret);
+	}
+exit:
+	CMR_LOGI("done");
+	return ret;
+
+}

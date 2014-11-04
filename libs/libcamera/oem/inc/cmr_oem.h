@@ -189,6 +189,9 @@ struct camera_settings {
 /*all the above value will be set as 0xFFFFFFFF after inited*/
     cmr_u32                  set_end;
     struct cmr_zoom_param    zoom_param;
+	uint32_t                 isp_alg_timeout;
+	sem_t                    isp_alg_sem;
+	pthread_mutex_t          isp_alg_mutex;
 };
 
 struct camera_context {
@@ -266,6 +269,8 @@ cmr_int camera_local_set_param(cmr_handle camera_handle, enum camera_param_type 
 cmr_int camera_local_get_zsl_info(cmr_handle oem_handle, cmr_uint *is_support, cmr_uint *max_width, cmr_uint *max_height);
 
 cmr_int camera_local_fast_ctrl(cmr_handle oem_handle);
+
+cmr_int camera_local_pre_flash (cmr_handle oem_handle);
 
 #ifdef __cplusplus
 }

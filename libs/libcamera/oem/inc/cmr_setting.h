@@ -26,6 +26,7 @@ extern "C"
 
 
 #define PARAM_BUFFER_MAX       200/sizeof(cmr_int)
+#define ISP_ALG_TIMEOUT        5 /*sec*/
 
 
 enum cmr_flash_status {
@@ -63,6 +64,7 @@ enum setting_cmd_type {
 	SETTING_CTRL_FLASH,
 	SETTING_GET_CAPTURE_MODE,
 	SETTING_GET_DV_MODE,
+	SETTING_SET_PRE_FLASH,
 	SETTING_TYPE_MAX
 };
 
@@ -83,6 +85,7 @@ struct setting_capture_mode_param {
 struct setting_ctrl_flash_param {
 	struct setting_capture_mode_param    capture_mode;
 	cmr_uint                             is_active;
+	cmr_uint                             flash_type;
 };
 
 struct setting_cmd_parameter {
@@ -130,6 +133,8 @@ typedef void* (*setting_get_pic_taking_cb)(void *priv_data);
 cmr_int cmr_setting_init(struct setting_init_in *param_ptr, cmr_handle *out_setting_handle);
 cmr_int cmr_setting_deinit(cmr_handle setting_handle);
 cmr_int cmr_setting_ioctl(cmr_handle setting_handle, cmr_uint cmd_type, struct setting_cmd_parameter *parm);
+cmr_int cmr_setting_isp_alg_done(cmr_handle setting_handle, void *data);
+
 
 #ifdef __cplusplus
 }

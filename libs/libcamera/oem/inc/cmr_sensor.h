@@ -99,6 +99,8 @@ cmr_int cmr_sensor_focus_init(cmr_handle sensor_handle, cmr_u32 sensor_id);
 
 cmr_int cmr_sensor_get_autotest_mode(cmr_handle sensor_handle, cmr_u32 sensor_id, cmr_uint *is_autotest);
 
+cmr_int cmr_sensor_get_flash_info(cmr_handle sensor_handle, cmr_u32 sensor_id, struct sensor_flash_level *level);
+
 #ifdef __cplusplus
 }
 #endif

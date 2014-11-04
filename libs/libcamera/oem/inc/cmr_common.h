@@ -29,6 +29,7 @@ extern "C"
 #include "isp_app.h"
 #include "jpeg_exif_header.h"
 #include "../../arithmetic/sc8830/inc/FaceFinder.h"
+#include "sensor_drv_k.h"
 
 //#define NCMRDBG 1
 #ifndef LOG_NDEBUG
@@ -547,6 +548,7 @@ struct common_isp_cmd_param {
 struct common_sn_cmd_param {
 	cmr_uint                                    camera_id;
 	struct sensor_exp_info                      sensor_static_info;
+	struct sensor_flash_level                   flash_level;
 	union {
 		cmr_u32                                 cmd_value;
 		cmr_u32                                 padding;
