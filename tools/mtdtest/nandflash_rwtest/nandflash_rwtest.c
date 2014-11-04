@@ -390,6 +390,7 @@ static int show_mtd_info(char* mtd_device)
 
 	if (ioctl(fd, MEMGETINFO, &mtd) != 0){
 		debug_info("%s MEMGETINFO error\n", __FUNCTION__);
+		close(fd);
 		return -EPERM;
 
 	}
@@ -404,6 +405,7 @@ static int show_mtd_info(char* mtd_device)
 	do {
 		if ((ret = ioctl(fd, MEMGETBADBLOCK, &offset)) < 0) {
 			debug_info("%s MEMGETBADBLOCK error\n", __FUNCTION__);
+			close(fd);
 			return -EPERM;
 		}
 		if (ret == 1) {
@@ -454,6 +456,8 @@ static int show_mtd_info(char* mtd_device)
 	debug_info("   size  \t pagesize\t  block  \t  obsize  \tbadblock/totalblock\n");
 	debug_info(" 0x%.8x\t0x%.8x\t0x%.8x\t0x%.8x\t %d/%d\t\n", mtd.size,  mtd.writesize,mtd.erasesize,
 		mtd.oobsize,bad,mtd.size/mtd.erasesize);
+
+	close(fd);
 	return 0;
 }
 
