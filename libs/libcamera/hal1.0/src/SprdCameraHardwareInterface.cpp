@@ -2966,7 +2966,7 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		buffer_end_id += 1;
 	}
 
-	LOGI("Callback_PreviewMalloc DcamAllocBufferCnt %d, mPreviewHeapArray 0x%p, start_id %ld, end_id %ld",
+	LOGI("Callback_PreviewMalloc DcamAllocBufferCnt %d, mPreviewHeapArray %p, start_id %ld, end_id %ld",
 		mPreviewDcamAllocBufferCnt,
 		mPreviewHeapArray,
 		buffer_start_id,
@@ -4990,21 +4990,30 @@ void SprdCameraHardware::receivePreviewFDFrame(struct camera_frame_type *frame)
 	metadata.faces = &face_info[0];
 	if (mMsgEnabled&CAMERA_MSG_PREVIEW_METADATA) {
 		LOGV("smile capture msg is enabled.");
+
+		if (!HandleFDInterLock()) {
+			LOGE("receivePreviewFDFrame: trylock fail, ignore this FD frame");
+			return;
+		}
+
 		if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 			uint32_t tmpIndex = offset;
 /*			if (camera_get_rot_set()) {
 			tmpIndex += kPreviewBufferCount;
 			}*/
-			handleDataCallback(CAMERA_MSG_PREVIEW_METADATA,
+			handleFDDataCallback(CAMERA_MSG_PREVIEW_METADATA,
 			tmpIndex,
 			0, &metadata, mUser, 1);
 		} else {
 			uint32_t dataSize = frame->width * frame->height * 3 / 2;
 			memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
 					(void*)frame->y_vir_addr, dataSize);
-			handleDataCallback(CAMERA_MSG_PREVIEW_METADATA,
-								mPreviewDcamAllocBufferCnt -1,
-								0, &metadata, mUser, 1);
+
+			if (HandleFDInterLock()) {
+				handleFDDataCallback(CAMERA_MSG_PREVIEW_METADATA,
+									mPreviewDcamAllocBufferCnt -1,
+									0, &metadata, mUser, 1);
+			}
 		}
 	} else {
 		LOGV("smile capture msg is disabled.");
@@ -5061,6 +5070,40 @@ void SprdCameraHardware::handleDataCallbackTimestamp(int64_t timestamp,
 	data->busy_flag = false;
 	LOGV("handleDataCallbackTimestamp X");
 }
+
+void SprdCameraHardware::handleFDDataCallback(int32_t msg_type,
+		uint32_t frame_index, unsigned int index,
+		camera_frame_metadata_t *metadata, void *user,
+		uint32_t isPrev)
+{
+	sprd_camera_memory_t *data;
+
+	if (isPrev)
+		Mutex::Autolock l(&mCbPrevDataBusyLock);
+
+	if (NULL == mPreviewHeapArray) {
+		LOGI("memory has been free");
+		return;
+	}
+	LOGV("handleFDDataCallback E");
+	if (isPrev) {
+		if (!isPreviewing()) return;
+		data = mPreviewHeapArray[frame_index];
+	}
+
+	if (!data) {
+		LOGE("data is null");
+		return;
+	}
+	if (frame_index > (mPreviewDcamAllocBufferCnt-1) || (0xFFFFFFFF == (uint32_t)data->camera_memory->data)) {
+		LOGE("error,index addr %d array num %d",frame_index, mPreviewDcamAllocBufferCnt);
+		return;
+	}
+
+	mData_cb(msg_type, data->camera_memory, index, metadata, user);
+	LOGV("handleFDDataCallback X");
+}
+
 
 void SprdCameraHardware::cameraBakMemCheckAndFree()
 {
@@ -5606,6 +5649,19 @@ bool SprdCameraHardware::HandleAPPCallBackInterLock(void)
 		ret = 0;
 		LOGI("discard a frame");
 	}
+	return ret;
+}
+
+bool SprdCameraHardware::HandleFDInterLock(void)
+{
+	bool ret = 1;
+
+	if (NO_ERROR == mLock.tryLock()) {
+		mLock.unlock();
+	} else {
+		ret = 0;
+	}
+
 	return ret;
 }
 

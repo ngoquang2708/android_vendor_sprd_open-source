@@ -776,7 +776,7 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 	}
 	message.msg_type = oem_func;
 	message.sub_msg_type = oem_cb_type;
-	message.sync_flag  = CMR_MSG_SYNC_RECEIVED;
+	message.sync_flag  = CMR_MSG_SYNC_NONE;
 	ret = cmr_thread_msg_send(cxt->prev_cb_thr_handle, &message);
 	if (ret) {
 		CMR_LOGE("failed to send msg, ret %ld", ret);
@@ -1004,6 +1004,7 @@ void camera_snapshot_state_handle(cmr_handle oem_handle, enum snapshot_cb_type c
 			CMR_LOGI("start jpeg enc");
 			break;
 		case SNAPSHOT_EVT_ENC_DONE:
+			CMR_LOGI("close hdr before jpeg enc done");
 			if (1 == camera_get_hdr_flag(cxt)) {
 				ret = camera_close_hdr(cxt);
 			}

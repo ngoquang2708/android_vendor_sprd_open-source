@@ -85,6 +85,9 @@ cmr_int cmr_msg_queue_create(cmr_u32 count, cmr_handle *queue_handle)
 		free(msg_cxt);
 		return -CMR_MSG_NO_MEM;
 	}
+
+	memset(msg_cxt->msg_head, 0, (unsigned int)(count * sizeof(struct cmr_msg_in)));
+
 	msg_cxt->msg_magic = CMR_MSG_MAGIC_CODE;
 	msg_cxt->msg_count = count;
 	msg_cxt->msg_number= 0;
@@ -134,8 +137,10 @@ cmr_int cmr_msg_get(cmr_handle queue_handle, struct cmr_msg *message, cmr_u32 lo
 			if (msg_cxt->msg_read > msg_cxt->msg_head + msg_cxt->msg_count - 1) {
 				msg_cxt->msg_read = msg_cxt->msg_head;
 			}
+
+			msg_cxt->msg_number--;
 		}
-		msg_cxt->msg_number--;
+
 	}
 
 	pthread_mutex_unlock(&msg_cxt->mutex);

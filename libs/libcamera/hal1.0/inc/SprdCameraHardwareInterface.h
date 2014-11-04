@@ -228,6 +228,7 @@ private:
 	void                  HandleCancelPicture(enum camera_cb_type cb, void* parm4);
 	bool                  HandleTakePictureInterLock(void);
 	bool                  HandleAPPCallBackInterLock(void);
+	bool                  HandleFDInterLock(void);
 
 	enum Sprd_camera_state {
 		SPRD_INIT,
@@ -328,6 +329,10 @@ private:
 						int32_t msg_type,
 						sprd_camera_memory_t *data, unsigned int index,
 						void *user);
+	void                            handleFDDataCallback(int32_t msg_type,
+						uint32_t frame_index, unsigned int index,
+						camera_frame_metadata_t *metadata, void *user,
+						uint32_t isPrev);
 	void                            cameraBakMemCheckAndFree();
 	void                            sync_bak_parameters();
 	bool                            iSDisplayCaptureFrame();
