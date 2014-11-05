@@ -1199,13 +1199,7 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
                 return;
             }
         } else {
-            inInfo->mOwnedByUs = false;
-            inQueue.erase(inQueue.begin());
-            inInfo = NULL;
-            notifyEmptyBufferDone(inHeader);
-            inHeader = NULL;
-
-            continue;
+            ALOGE("failed to get decoder information.");
         }
 
         bufferSize = dec_in.dataLen;
