@@ -1179,17 +1179,18 @@ static void do_select_devices(struct tiny_audio_device *adev)
         pthread_mutex_unlock(&adev->device_lock);
         return;
     }
-    if(adev->fm_open){
-        adev->out_devices |= AUDIO_DEVICE_OUT_FM;
-    }else{
-        adev->out_devices &= ~AUDIO_DEVICE_OUT_FM;
-    }
+
     cur_in = adev->in_devices;
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
     pre_out = adev->prev_out_devices;
     adev->prev_out_devices = cur_out;
     adev->prev_in_devices = cur_in;
+    if(adev->fm_open){
+        cur_out |= AUDIO_DEVICE_OUT_FM;
+    }else{
+        cur_out &= ~AUDIO_DEVICE_OUT_FM;
+    }
     pthread_mutex_unlock(&adev->lock);
 
     if (pre_out == cur_out
@@ -2047,7 +2048,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         ALOGW("[out_set_parameters],after str_parms_get_str,val(0x%x) ",val);
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
-		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0) || ((val == 0) && (adev->out_devices & AUDIO_DEVICE_OUT_FM))) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
+		  if (((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val) && ((val != 0)) //val=0 will cause XRUN. So ignore the "val=0"expect for closing FM path.
                   || (AUDIO_MODE_IN_CALL == adev->mode)
                   ||adev->voip_start) {
             adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
@@ -2096,20 +2097,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         }
     }
 
-    ret = str_parms_get_str(parms,"handleFm",value,sizeof(value));
-    if(ret >= 0){
-        val = atoi(value);
-	    if(val){
-            pthread_mutex_lock(&adev->lock);
-            adev->fm_open = true;
-            pthread_mutex_unlock(&adev->lock);
-        }else{
-            pthread_mutex_lock(&adev->lock);
-            adev->fm_open = false;
-            pthread_mutex_unlock(&adev->lock);
-	    }
-        select_devices_signal(adev);
-    }
     ALOGW("out_set_parameters out...call_start:%d",adev->call_start);
     str_parms_destroy(parms);
     return ret;
@@ -3728,6 +3715,20 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         else {
             pthread_mutex_unlock(&adev->lock);
         }
+    }
+    ret = str_parms_get_str(parms,"handleFm",value,sizeof(value));
+    if(ret >= 0){
+        val = atoi(value);
+        if(val){
+            pthread_mutex_lock(&adev->lock);
+            adev->fm_open = true;
+            pthread_mutex_unlock(&adev->lock);
+        }else{
+            pthread_mutex_lock(&adev->lock);
+            adev->fm_open = false;
+            pthread_mutex_unlock(&adev->lock);
+        }
+        select_devices_signal(adev);
     }
 
     str_parms_destroy(parms);
