@@ -290,7 +290,6 @@ static int bbctest_main(char *mtd_device)
 {
 	int i = 0;
 	int ret = 0;
-	int ctl_dev = 0;
 	FILE *fd = NULL;
 	unsigned int test_blk = 0;
 	char system_cmd[100] = {0};
@@ -402,7 +401,11 @@ clean:
 			debug_info("alloc txt_buf failed!\n");
 			goto exit;
 		}
-		fread(txt_buf, 1, 100, fd);
+		memset(txt_buf, '\0', 100);
+		if(fread(txt_buf, 1, 100, fd) <= 0) {
+			debug_info("read file %s failed!\n", RECORD_FILE);
+			goto exit;
+		}
 		debug_info("the txt_buf is %s\n", txt_buf);
 		tmp_buf = (char *)malloc(100);
 		if(!tmp_buf) {
@@ -443,8 +446,6 @@ exit:
 		free(tmp_buf);
 	if(fd)
 		fclose(fd);
-	if(ctl_dev)
-		close(ctl_dev);
 	return ret;
 }
 
