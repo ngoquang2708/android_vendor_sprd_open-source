@@ -79,6 +79,7 @@ int main()
 				"fishnoodle.benchmark",
 				"it.JBench.bench",
 				"com.re3.benchmark",
+				"com.ludashi.benchmark",
 				"com.qb"
 			}
 		},
