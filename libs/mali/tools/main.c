@@ -90,6 +90,7 @@ int main()
 			.data_list =
 			{
 				"com.android.launcher",
+				"com.android.sprdlauncher1",
 				"com.android.sprdlauncher2",
 				"com.android.cts",
 				"eu.chainfire.cfbench",
