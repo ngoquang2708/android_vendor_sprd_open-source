@@ -108,7 +108,9 @@ private_handle_t *SprdVirtualPlane:: dequeueBuffer()
     mPlaneHeight = privateH->height;
     mPlaneFormat = mDefaultPlaneFormat;
 
-    ALOGI_IF(mDebugFlag, "SprdVirtualPlane::dequeueBuffer width:%d, height: %d, format: 0x%x vir addr: %p, phyAddr: %d", mPlaneWidth, mPlaneHeight, mPlaneFormat, (void *)(privateH->base), phyType);
+    ALOGI_IF(mDebugFlag, "SprdVirtualPlane::dequeueBuffer width:%d, height: %d, vir addr: %p, phyAddr: %d, handle format: %d",
+             mPlaneWidth, mPlaneHeight, (void *)(privateH->base),
+             phyType, privateH->format);
 
     return mDisplayBuffer;
 }

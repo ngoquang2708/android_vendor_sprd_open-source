@@ -423,6 +423,7 @@ int SprdWIDIBlit:: NEONBlit(uint8_t *inrgb, uint8_t *outy, uint8_t *outuv, int32
 
 GLuint gProgramY;
 GLuint gProgramUV;
+GLuint gProgramRGB;
 GLuint gProgramY_YUVSource;
 GLuint gProgramUV_YUVSource;
 GLuint gProgramY_YUVSource_Clear;
@@ -430,6 +431,51 @@ GLuint gProgramUV_YUVSource_Clear;
 GLint iLocPosition = 0;
 GLint iLocTexcoord = 1;
 GLint iLocTexSampler = 0;
+GLint iLocTexMatrixY = 0;
+GLint iLocTexMatrixUV = 0;
+GLint iLocTexMatrixYSource = 0;
+GLint iLocTexMatrixUVSource = 0;
+GLint iLocTexMatrixRGB = 0;
+
+/*
+ *  Matrix for ratation.
+ * */
+static float mtxIdentity[16] = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+};
+static float mtxFlipH[16] = {
+    -1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    1, 0, 0, 1,
+};
+static float mtxFlipV[16] = {
+    1, 0, 0, 0,
+    0, -1, 0, 0,
+    0, 0, 1, 0,
+    0, 1, 0, 1,
+};
+static float mtxRot90[16] = {
+    0, -1, 0, 0,
+    1, 0, 0, 0,
+    0, 0, 1, 0,
+    0, 1, 0, 1,
+};
+static float mtxRot270[16] = {
+    0, 1, 0, 0,
+    -1, 0, 0, 0,
+    0, 0, 1, 0,
+    1, 0, 0, 1,
+};
+static float gTexMatrix[16] = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+};
 
 #define Y_FIRST 1
 
@@ -444,20 +490,24 @@ GLint iLocTexSampler = 0;
 GLint tex_src=1;
 GLint tex_src_uv = 2;
 GLint tex_dst_y=3, tex_dst_uv=4;
+GLint tex_dst_rgb = 5;
 GLint fbo_y=1,     fbo_uv=2;
+GLint fbo_rgb = 3;
 
-EGLImageKHR img_src, img_src_uv, img_dstY, img_dstUV;
+EGLImageKHR img_src, img_src_uv, img_dstY, img_dstUV, img_dstRGB;
 
 bool YUVToYUV = false;
+bool TargetOutputRGB = false;
 
 static struct sprdRect TargetRegion;
 
 static const char gVertexShader[] = "attribute vec4 aPosition;\n"
-    "attribute vec2 aTexCoords;                               \n"
+    "attribute vec4 aTexCoords;                               \n"
+    "uniform mat4 textureMatrix;                              \n"
     "varying vec2 vTexCoords;                                 \n"
     "void main() {                                            \n"
-    "  vTexCoords = aTexCoords;                               \n"
-    "  gl_Position = aPosition;                               \n"
+    "  vTexCoords = (textureMatrix * aTexCoords).st;          \n"
+    "  gl_Position = aPosition;               \n"
     "}                                                        \n";
 
 static const char gVertexShader_Clear[] = "attribute vec4 aPosition;\n"
@@ -473,6 +523,15 @@ static const char gFragmentShaderY[] =
     "void main() {                                                \n"
     "  vec4 color = texture2D(uTexSampler, vTexCoords);           \n"
     "  gl_FragColor.r = 0.2578*color.r+0.5039*color.g+0.0977*color.b + 0.0625;   \n"
+    "}                                                            \n";
+
+static const char gFragmentShaderRGB[] =
+    "#extension GL_OES_EGL_image_external : require               \n"
+    "precision mediump float;                                     \n"
+    "uniform sampler2D uTexSampler;                               \n"
+    "varying vec2 vTexCoords;                                     \n"
+    "void main() {                                                \n"
+    "  gl_FragColor = texture2D(uTexSampler, vTexCoords);           \n"
     "}                                                            \n";
 
 static const char gFragmentShaderUV[] =
@@ -522,6 +581,27 @@ static const char gFragmentShaderUV_YUVSource_Clear[] =
     "  gl_FragColor.a = 0.5;                                  \n"
     "}                                                            \n";
 
+static void mtxMul(float out[16], const float a[16], const float b[16]) {
+    out[0] = a[0]*b[0] + a[4]*b[1] + a[8]*b[2] + a[12]*b[3];
+    out[1] = a[1]*b[0] + a[5]*b[1] + a[9]*b[2] + a[13]*b[3];
+    out[2] = a[2]*b[0] + a[6]*b[1] + a[10]*b[2] + a[14]*b[3];
+    out[3] = a[3]*b[0] + a[7]*b[1] + a[11]*b[2] + a[15]*b[3];
+
+    out[4] = a[0]*b[4] + a[4]*b[5] + a[8]*b[6] + a[12]*b[7];
+    out[5] = a[1]*b[4] + a[5]*b[5] + a[9]*b[6] + a[13]*b[7];
+    out[6] = a[2]*b[4] + a[6]*b[5] + a[10]*b[6] + a[14]*b[7];
+    out[7] = a[3]*b[4] + a[7]*b[5] + a[11]*b[6] + a[15]*b[7];
+
+    out[8] = a[0]*b[8] + a[4]*b[9] + a[8]*b[10] + a[12]*b[11];
+    out[9] = a[1]*b[8] + a[5]*b[9] + a[9]*b[10] + a[13]*b[11];
+    out[10] = a[2]*b[8] + a[6]*b[9] + a[10]*b[10] + a[14]*b[11];
+    out[11] = a[3]*b[8] + a[7]*b[9] + a[11]*b[10] + a[15]*b[11];
+
+    out[12] = a[0]*b[12] + a[4]*b[13] + a[8]*b[14] + a[12]*b[15];
+    out[13] = a[1]*b[12] + a[5]*b[13] + a[9]*b[14] + a[13]*b[15];
+    out[14] = a[2]*b[12] + a[6]*b[13] + a[10]*b[14] + a[14]*b[15];
+    out[15] = a[3]*b[12] + a[7]*b[13] + a[11]*b[14] + a[15]*b[15];
+}
 
 void SprdWIDIBlit:: printGLString(const char *name, GLenum s)
 {
@@ -792,7 +872,10 @@ int SprdWIDIBlit:: setupGraphics()
     iLocPosition = glGetAttribLocation(gProgramY, "aPosition");
     iLocTexcoord = glGetAttribLocation(gProgramY, "aTexcoord");
     checkGlError("glGetAttribLocation");
-    ALOGI_IF(DebugGFX, "aPosition, aTexcoord = %d, %d\n", iLocPosition, iLocTexcoord);
+    iLocTexMatrixY = glGetUniformLocation(gProgramY, "textureMatrix");
+    checkGlError("glGetUniformLocation");
+    ALOGI_IF(DebugGFX, "aPosition, aTexcoord = %d, %d, iLocTexMatrixY: %d",
+             iLocPosition, iLocTexcoord, iLocTexMatrixY);
 
     iLocTexSampler = glGetUniformLocation(gProgramY, "uTexSampler");
     checkGlError("glGetUniformLocation");
@@ -810,7 +893,10 @@ int SprdWIDIBlit:: setupGraphics()
     iLocPosition = glGetAttribLocation(gProgramUV, "aPosition");
     iLocTexcoord = glGetAttribLocation(gProgramUV, "aTexcoord");
     checkGlError("glGetAttribLocation");
-    ALOGI_IF(DebugGFX, "aPosition, aTexcoord = %d, %d\n", iLocPosition, iLocTexcoord);
+    iLocTexMatrixUV = glGetUniformLocation(gProgramUV, "textureMatrix");
+    checkGlError("glGetUniformLocation");
+    ALOGI_IF(DebugGFX, "UV aPosition, aTexcoord = %d, %d, iLocTexMatrixUV: %d",
+             iLocPosition, iLocTexcoord, iLocTexMatrixUV);
 
     iLocTexSampler = glGetUniformLocation(gProgramUV, "uTexSampler");
     checkGlError("glGetUniformLocation");
@@ -832,7 +918,10 @@ int SprdWIDIBlit:: setupGraphics()
     iLocPosition = glGetAttribLocation(gProgramY_YUVSource, "aPosition");
     iLocTexcoord = glGetAttribLocation(gProgramY_YUVSource, "aTexcoord");
     checkGlError("glGetAttribLocation");
-    ALOGI_IF(DebugGFX, "aPosition, aTexcoord = %d, %d\n", iLocPosition, iLocTexcoord);
+    iLocTexMatrixYSource = glGetUniformLocation(gProgramY_YUVSource, "textureMatrix");
+    checkGlError("glGetUniformLocation");
+    ALOGI_IF(DebugGFX, "YSource aPosition, aTexcoord = %d, %d, iLocTexMatrixYSource: %d",
+             iLocPosition, iLocTexcoord, iLocTexMatrixYSource);
 
     iLocTexSampler = glGetUniformLocation(gProgramY_YUVSource, "uTexSampler");
     checkGlError("glGetUniformLocation");
@@ -850,7 +939,10 @@ int SprdWIDIBlit:: setupGraphics()
     iLocPosition = glGetAttribLocation(gProgramUV_YUVSource, "aPosition");
     iLocTexcoord = glGetAttribLocation(gProgramUV_YUVSource, "aTexcoord");
     checkGlError("glGetAttribLocation");
-    ALOGI_IF(DebugGFX, "aPosition, aTexcoord = %d, %d\n", iLocPosition, iLocTexcoord);
+    iLocTexMatrixUVSource = glGetUniformLocation(gProgramUV_YUVSource, "textureMatrix");
+    checkGlError("glGetUniformLocation");
+    ALOGI_IF(DebugGFX, "UVSource aPosition, aTexcoord = %d, %d, iLocTexMatrixUVSource: %d",
+             iLocPosition, iLocTexcoord, iLocTexMatrixUVSource);
 
     iLocTexSampler = glGetUniformLocation(gProgramUV_YUVSource, "uTexSampler");
     checkGlError("glGetUniformLocation");
@@ -884,9 +976,33 @@ int SprdWIDIBlit:: setupGraphics()
     ALOGI_IF(DebugGFX, "UV Clear aPosition = %d", iLocPosition);
     glUseProgram(gProgramUV_YUVSource_Clear);
 
+    /*
+     *  For Target RGB shader.
+     * */
+    gProgramRGB = createProgram(gVertexShader, gFragmentShaderRGB);
+    if (!gProgramRGB)
+    {
+        ALOGE("SprdWIDIBlit:: setupGraphics createProgram gProgramRGB failed");
+        goto err10;
+    }
+    iLocPosition = glGetAttribLocation(gProgramRGB, "aPosition");
+    iLocTexcoord = glGetAttribLocation(gProgramRGB, "aTexcoord");
+    checkGlError("glGetAttribLocationRGB");
+    iLocTexMatrixRGB = glGetUniformLocation(gProgramRGB, "textureMatrix");
+    checkGlError("glGetUniformLocation");
+    ALOGI_IF(DebugGFX, "RGB target aPosition, aTexcoord = %d, %d, iLocTexMatrixRGB: %d",
+             iLocPosition, iLocTexcoord, iLocTexMatrixRGB);
+
+    iLocTexSampler = glGetUniformLocation(gProgramRGB, "uTexSampler");
+    checkGlError("glGetUniformLocationRGB");
+    ALOGI_IF(DebugGFX, "RGB target uTexSampler = %d\n", iLocTexSampler);
+    glUseProgram(gProgramRGB);
+    glUniform1i(iLocTexSampler, 0);
 
     return 0;
 
+err10:
+   glDeleteProgram(gProgramUV_YUVSource_Clear);
 err9:
    glDeleteProgram(gProgramY_YUVSource_Clear);
 err8:
@@ -925,6 +1041,7 @@ void SprdWIDIBlit:: destoryGraphics()
     glDeleteProgram(gProgramY_YUVSource);
     glDeleteProgram(gProgramUV);
     glDeleteProgram(gProgramY);
+    glDeleteProgram(gProgramRGB);
 
     eglDestroySurface(dpy, surface);
     eglDestroyContext(dpy, context);
@@ -982,17 +1099,38 @@ int SprdWIDIBlit:: setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handl
         EGL_NONE
     };
 
-    if (Source->getPixelFormat() == HAL_PIXEL_FORMAT_YCbCr_420_SP)
+    if (((Target->getPixelFormat() == HAL_PIXEL_FORMAT_YCbCr_420_SP)
+         || (Target->getPixelFormat() == HAL_PIXEL_FORMAT_YCrCb_420_SP))
+         && (Source->getPixelFormat() == HAL_PIXEL_FORMAT_YCbCr_420_SP))
+    {
+        YUVToYUV = true;
+        TargetOutputRGB = false;
+    }
+    else if ((Target->getPixelFormat() == HAL_PIXEL_FORMAT_RGBA_8888)
+         ||  (Target->getPixelFormat() == HAL_PIXEL_FORMAT_RGBX_8888)
+         ||  (Target->getPixelFormat() == HAL_PIXEL_FORMAT_BGRA_8888)
+         ||  (Target->getPixelFormat() == HAL_PIXEL_FORMAT_RGB_888)
+         ||  (Target->getPixelFormat() == HAL_PIXEL_FORMAT_RGB_565))
+    {
+        YUVToYUV = false;
+        TargetOutputRGB = true;
+        ALOGI_IF(DebugGFX, "SprdWIDIBlit GFX output RGB");
+    }
+    else
+    {
+        YUVToYUV = false;
+        TargetOutputRGB = false;
+    }
+
+    if (YUVToYUV)
     {
         img_src = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
                   (EGLClientBuffer)Source->getNativeBuffer(), image_attrib_source);
-        YUVToYUV = true;
     }
     else
     {
         img_src = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
                   (EGLClientBuffer)Source->getNativeBuffer(), NULL);
-        YUVToYUV = false;
     }
 
     glBindTexture(GL_TEXTURE_2D, tex_src);
@@ -1004,19 +1142,38 @@ int SprdWIDIBlit:: setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handl
     checkGlError("glEGLImageTargetTexture 1");
 
 
-    img_dstY = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
-               (EGLClientBuffer)Target->getNativeBuffer(), image_attrib);
-    glBindTexture(GL_TEXTURE_2D, tex_dst_y);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img_dstY);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    checkGlError("glEGLImageTargetTexture 2");
+    if (TargetOutputRGB)
+    {
+        img_dstRGB = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
+                   (EGLClientBuffer)Target->getNativeBuffer(), NULL);
+        glBindTexture(GL_TEXTURE_2D, tex_dst_rgb);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img_dstRGB);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        checkGlError("glEGLImageTargetTexture 2");
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_rgb);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst_rgb, 0);
+        checkGlError("glFramebufferTexture2DOES 1");
+    }
+    else
+    {
+        img_dstY = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
+                   (EGLClientBuffer)Target->getNativeBuffer(), image_attrib);
+        glBindTexture(GL_TEXTURE_2D, tex_dst_y);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img_dstY);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        checkGlError("glEGLImageTargetTexture 2");
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst_y, 0);
+        checkGlError("glFramebufferTexture2DOES 1");
+    }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst_y, 0);
-    checkGlError("glFramebufferTexture2DOES 1");
+
 
     image_attrib_source[1] = EGL_IMAGE_FORMAT_A8L8_SPRD;
 #if Y_FIRST
@@ -1051,19 +1208,22 @@ int SprdWIDIBlit:: setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handl
     }
 
 
-    img_dstUV = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
-                (EGLClientBuffer)Target->getNativeBuffer(), image_attrib);
-    glBindTexture(GL_TEXTURE_2D, tex_dst_uv);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img_dstUV);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    checkGlError("glEGLImageTargetTexture 4");
+    if (TargetOutputRGB == false)
+    {
+        img_dstUV = eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
+                    (EGLClientBuffer)Target->getNativeBuffer(), image_attrib);
+        glBindTexture(GL_TEXTURE_2D, tex_dst_uv);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img_dstUV);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        checkGlError("glEGLImageTargetTexture 4");
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_uv);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst_uv, 0);
-    checkGlError("glFramebufferTexture2DOES 2");
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_uv);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst_uv, 0);
+        checkGlError("glFramebufferTexture2DOES 2");
+    }
 
     static GLfloat vertex[] = {
         -1.0f, -1.0f,
@@ -1103,6 +1263,33 @@ int SprdWIDIBlit:: setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handl
         }
     }
 
+    /*
+     *  Update the texture matrix.
+     * */
+    memcpy(gTexMatrix, mtxIdentity, sizeof(gTexMatrix));
+    int tr = layer->transform;
+
+    if (tr & NATIVE_WINDOW_TRANSFORM_FLIP_H)
+    {
+        float res[16];
+        mtxMul(res, gTexMatrix, mtxFlipH);
+        memcpy(gTexMatrix, res, sizeof(gTexMatrix));
+    }
+
+    if (tr & NATIVE_WINDOW_TRANSFORM_FLIP_V)
+    {
+        float res[16];
+        mtxMul(res, gTexMatrix, mtxFlipV);
+        memcpy(gTexMatrix, res, sizeof(gTexMatrix));
+    }
+
+    if (tr & NATIVE_WINDOW_TRANSFORM_ROT_90)
+    {
+        float res[16];
+        mtxMul(res, gTexMatrix, mtxRot90);
+        memcpy(gTexMatrix, res, sizeof(gTexMatrix));
+    }
+
     return 0;
 }
 
@@ -1112,16 +1299,29 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
     char* buf = NULL;
     int w = Target->getStride();
     int h = Target->getHeight();
+
+    int x2 = (int)((float)TargetRegion.x + 0.5) / 2.0;
+    int y2 = (int)((float)TargetRegion.y + 0.5) / 2.0;
+    int w2 = (int)((float)TargetRegion.w + 0.5) / 2.0;
+    int h2 = (int)((float)TargetRegion.h + 0.5) / 2.0;
+
     EGLDisplay dpy = eglGetCurrentDisplay();
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
 
     if (YUVToYUV)
     {
         glUseProgram(gProgramY_YUVSource_Clear);
         glViewport(0, 0, w, h);
-        //glClearColor(0.0625f, 0.0f, 0.0f, 0.0f);
-        //glClear(GL_COLOR_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    }
+    else if (TargetOutputRGB)
+    {
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
     }
 
     glBindTexture(GL_TEXTURE_2D, tex_src);
@@ -1130,53 +1330,75 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
     {
         ALOGI_IF(DebugGFX, "SprdWIDIBlit:: renderImage use YUVSource shader");
         glUseProgram(gProgramY_YUVSource);
+        glUniformMatrix4fv(iLocTexMatrixYSource, 1, GL_FALSE, static_cast<GLfloat const*>(gTexMatrix));
+    }
+    else if (TargetOutputRGB)
+    {
+        ALOGI_IF(DebugGFX, "SprdWIDIBlit:: renderImage use RGB target shader");
+        glUseProgram(gProgramRGB);
+        glUniformMatrix4fv(iLocTexMatrixRGB, 1, GL_FALSE, static_cast<GLfloat const*>(gTexMatrix));
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_rgb);
+        checkGlError("glBindFramebufferOES RGB 1");
     }
     else
     {
         glUseProgram(gProgramY);
+        glUniformMatrix4fv(iLocTexMatrixY, 1, GL_FALSE, static_cast<GLfloat const*>(gTexMatrix));
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
+        checkGlError("glBindFramebufferOES 1");
     }
 
     glViewport(TargetRegion.x, TargetRegion.y, TargetRegion.w, TargetRegion.h);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
-    checkGlError("glBindFramebufferOES 1");
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    checkGlError("glDrawArrays");
+
+    if (TargetOutputRGB)
+    {
+        goto SchedualDone;
+    }
 
     if (YUVToYUV)
     {
+        /*
+         *  For clear UV plane.
+         * */
         glUseProgram(gProgramUV_YUVSource_Clear);
         glViewport(0, 0, w/2, h/2);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo_uv);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-    }
 
-
-    int x2 = (int)((float)TargetRegion.x + 0.5) / 2.0;
-    int y2 = (int)((float)TargetRegion.y + 0.5) / 2.0;
-    int w2 = (int)((float)TargetRegion.w + 0.5) / 2.0;
-    int h2 = (int)((float)TargetRegion.h + 0.5) / 2.0;
-
-    if (YUVToYUV)
-    {
         glUseProgram(gProgramUV_YUVSource);
+        glUniformMatrix4fv(iLocTexMatrixUVSource, 1, GL_FALSE, static_cast<GLfloat const*>(gTexMatrix));
         glBindTexture(GL_TEXTURE_2D, tex_src_uv);
     }
     else
     {
         glUseProgram(gProgramUV);
+        glUniformMatrix4fv(iLocTexMatrixUV, 1, GL_FALSE, static_cast<GLfloat const*>(gTexMatrix));
     }
 
     glViewport(x2, y2, w2, h2);
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_uv);
-    checkGlError("glBindFramebufferOES 2");
+    checkGlError("glBindFramebufferOESuv");
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    checkGlError("glDrawArraysUV");
 
+SchedualDone:
     glFinish();
+    checkGlError("glFinish");
 
     Target->lock(GRALLOC_USAGE_SW_WRITE_OFTEN, (void**)(&buf));
-    ALOGI_IF(DebugGFX, "renderImage get output Y:%02x, CrCb:%04x",
-             *(GLubyte*)buf, *(GLushort*)(buf + Target->getStride() * h));
+    if (TargetOutputRGB)
+    {
+        ALOGI_IF(DebugGFX, "renderImage get output R:%02x, G:%02x, B:%02x",
+                 *(GLubyte*)buf, *(GLubyte*)(buf+1), *(GLubyte*)(buf+2));
+    }
+    else
+    {
+        ALOGI_IF(DebugGFX, "renderImage get output Y:%02x, CrCb:%04x",
+                 *(GLubyte*)buf, *(GLushort*)(buf + Target->getStride() * h));
+    }
 
 
     eglDestroyImageKHR(dpy, img_src);
@@ -1184,8 +1406,15 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
     {
         eglDestroyImageKHR(dpy, img_src_uv);
     }
-    eglDestroyImageKHR(dpy, img_dstY);
-    eglDestroyImageKHR(dpy, img_dstUV);
+    if (TargetOutputRGB)
+    {
+        eglDestroyImageKHR(dpy, img_dstRGB);
+    }
+    else
+    {
+        eglDestroyImageKHR(dpy, img_dstY);
+        eglDestroyImageKHR(dpy, img_dstUV);
+    }
 
     return 0;
 }
