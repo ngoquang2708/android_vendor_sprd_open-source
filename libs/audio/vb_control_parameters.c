@@ -1177,6 +1177,11 @@ void vbc_ctrl_init(struct tiny_audio_device *adev)
         MY_TRACE("%s:%s", __func__, MODEM_TDDCSFB_ENABLE_PROPERTY);
         csfb_enable = true;
     }
+    if(property_get(MODEM_FDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+    {
+        MY_TRACE("%s:%s", __func__, MODEM_FDDCSFB_ENABLE_PROPERTY);
+        csfb_enable = true;
+    }
 
 	for(i=0;i<adev->cp->num;i++)
 	{

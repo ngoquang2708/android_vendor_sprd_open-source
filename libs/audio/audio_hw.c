@@ -4992,6 +4992,11 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
                 MY_TRACE("%s:%s",__func__,MODEM_TDDCSFB_ENABLE_PROPERTY);
                 csfb_enable = true;
             }
+            if(property_get(MODEM_FDDCSFB_ENABLE_PROPERTY, prop_w, "") && 0 == strcmp(prop_w, "1"))
+            {
+                MY_TRACE("%s:%s",__func__,MODEM_FDDCSFB_ENABLE_PROPERTY);
+                csfb_enable = true;
+            }
            /* Obtain the modem num */
 
            if (strcmp(attr[0], "modem") == 0) {
