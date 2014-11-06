@@ -4579,3 +4579,28 @@ cmr_int camera_local_pre_flash (cmr_handle oem_handle)
 
 	return ret;
 }
+
+cmr_int camera_local_get_viewangle(cmr_handle oem_handle, struct sensor_view_angle *view_angle)
+{
+	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct camera_context          *cxt;
+	struct sensor_exp_info         exp_info;
+
+	if (!oem_handle || !view_angle) {
+		CMR_LOGE("in parm error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+
+	cxt = (struct camera_context*)oem_handle;
+	ret = cmr_sensor_get_info(cxt->sn_cxt.sensor_handle, cxt->camera_id, &exp_info);
+	if (ret) {
+		CMR_LOGE("failed to get sensor info %ld", ret);
+		goto exit;
+	}
+
+	view_angle->horizontal_val = exp_info.view_angle.horizontal_val;
+	view_angle->vertical_val = exp_info.view_angle.vertical_val;
+exit:
+	return ret;
+}

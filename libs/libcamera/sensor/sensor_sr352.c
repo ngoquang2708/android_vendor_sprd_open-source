@@ -8927,6 +8927,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_sr352_ioctl_func_tab =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	0,						// skip frame num while change setting
+	48,						// horizontal view angle
+	48,						// vertical view angle
 };
 
 LOCAL uint32_t _sr352_GetExifInfo(uint32_t param)

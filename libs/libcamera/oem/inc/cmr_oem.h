@@ -272,6 +272,8 @@ cmr_int camera_local_fast_ctrl(cmr_handle oem_handle);
 
 cmr_int camera_local_pre_flash (cmr_handle oem_handle);
 
+cmr_int camera_local_get_viewangle(cmr_handle oem_handle, struct sensor_view_angle *view_angle);
+
 #ifdef __cplusplus
 }
 #endif

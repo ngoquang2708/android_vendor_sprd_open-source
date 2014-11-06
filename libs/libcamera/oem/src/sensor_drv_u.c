@@ -915,6 +915,8 @@ void Sensor_SetExportInfo(struct sensor_drv_context *sensor_cxt)
 	}
 	exp_info_ptr->sensor_interface = sensor_info_ptr->sensor_interface;
 	exp_info_ptr->change_setting_skip_num = sensor_info_ptr->change_setting_skip_num;
+	exp_info_ptr->horizontal_view_angle = sensor_info_ptr->horizontal_view_angle;
+	exp_info_ptr->vertical_view_angle = sensor_info_ptr->vertical_view_angle;
 	
 	CMR_LOGI("X");
 }

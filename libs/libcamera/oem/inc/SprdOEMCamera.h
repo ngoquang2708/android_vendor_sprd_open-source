@@ -307,6 +307,8 @@ uint32_t camera_get_size_align_page(uint32_t size);
 cmr_int camera_fast_ctrl(cmr_handle camera_handle, enum fast_ctrl_mode mode, cmr_u32 param);
 
 cmr_int camera_start_preflash(cmr_handle camera_handle);
+
+cmr_int camera_get_viewangle(cmr_handle camera_handle, struct sensor_view_angle *view_angle);
 #ifdef __cplusplus
 }
 #endif

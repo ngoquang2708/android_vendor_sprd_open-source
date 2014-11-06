@@ -627,6 +627,8 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_OV7675_ioctl_func_tab =
 		{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 		PNULL,
 		3,							// skip frame num while change setting
+		48,							// horizontal view angle
+		48,							// veritcal view angle
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions

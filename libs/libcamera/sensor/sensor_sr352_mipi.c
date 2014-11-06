@@ -23044,6 +23044,8 @@ SENSOR_INFO_T g_sr352_mipi_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
 	PNULL,
 	3,
+	48,					// horizontal view angle
+	48,					// vertical view angle
 };
 
 static uint32_t _sr352_GetResolutionTrimTab(uint32_t param)

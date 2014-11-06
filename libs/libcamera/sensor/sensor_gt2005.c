@@ -1263,6 +1263,8 @@ SENSOR_INFO_T g_GT2005_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	s_GT2005_video_info,
 	4,						//skip frame num while change setting
+	48,						//horizontal view angle
+	48,						//vertical view angle
 };
 
 static void GT2005_WriteReg(uint16_t  subaddr, uint8_t data )

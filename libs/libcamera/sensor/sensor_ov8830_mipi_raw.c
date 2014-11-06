@@ -550,6 +550,8 @@ SENSOR_INFO_T g_ov8830_mipi_raw_info = {
 	{SENSOR_INTERFACE_TYPE_CSI2, 4, 10, 0},
 	PNULL,
 	3,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)

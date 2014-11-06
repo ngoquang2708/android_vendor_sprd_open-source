@@ -7194,6 +7194,8 @@ SENSOR_INFO_T g_hi351_mipi_yuv_info =
     {SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
     PNULL,
     0,						// skip frame num while change setting
+    48,						// horizontal view angle
+    48,						// vertical view angle
 };
 /******************************************************************************/
 // Description:

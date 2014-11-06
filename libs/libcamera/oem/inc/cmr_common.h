@@ -495,6 +495,11 @@ struct sensor_video_info {
 	void                               *setting_pptr;
 };
 
+struct sensor_view_angle {
+	cmr_u16                             horizontal_val;
+	cmr_u16                             vertical_val;
+};
+
 struct sensor_exp_info {
 	cmr_u32                             image_format;
 	cmr_u32                             image_pattern;
@@ -520,6 +525,7 @@ struct sensor_exp_info {
 	struct sensor_raw_info              *raw_info_ptr;
 	struct sensor_interface             sn_interface;
 	struct sensor_video_info            video_info[SENSOR_MODE_MAX];
+	struct sensor_view_angle            view_angle;
 };
 
 struct yuv_sn_af_param {

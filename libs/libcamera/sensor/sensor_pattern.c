@@ -533,6 +533,8 @@ SENSOR_INFO_T g_patternyuv_info = {
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	3,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 SENSOR_INFO_T g_patternyuv_info_RAWRGB = {
@@ -596,4 +598,6 @@ SENSOR_INFO_T g_patternyuv_info_RAWRGB = {
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	3,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
