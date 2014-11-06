@@ -4414,6 +4414,11 @@ status_t SprdCameraHardware::setCameraParameters()
 		LOGI("setCameraParameters: E");
 	}
 
+	if (SPRD_INTERNAL_PREVIEW_STOPPING == getPreviewState()) {
+		LOGI("setCameraParameters: invaid state, preview is stoping");
+		return UNKNOWN_ERROR;
+	}
+
 	//Because libqcamera is broken, for the camera_set_parm() calls
 	//SprdCameraHardware camera_cb() is called synchronously,
 	//so we cannot wait on a state change.  Also, we have to unlock
