@@ -1090,10 +1090,18 @@ int SprdWIDIBlit:: setupYuvTexSurface(hwc_layer_1_t *AndroidLayer, private_handl
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    TargetRegion.x = layer->displayFrame.left & 0xFFFFFFFE;
-    TargetRegion.y = layer->displayFrame.top & 0xFFFFFFFE;
-    TargetRegion.w = (layer->displayFrame.right - layer->displayFrame.left) & 0xFFFFFFFE;
+    TargetRegion.x = layer->displayFrame.left;
+    TargetRegion.y = (layer->displayFrame.top) & 0xFFFFFFFE;
+    TargetRegion.w = (layer->displayFrame.right - layer->displayFrame.left);
     TargetRegion.h = (layer->displayFrame.bottom - layer->displayFrame.top) & 0xFFFFFFFE;
+
+    if (YUVToYUV == false)
+    {
+        if (TargetRegion.y > 1)
+        {
+            TargetRegion.y -= 1;
+        }
+    }
 
     return 0;
 }
@@ -1102,7 +1110,7 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
 {
     HWC_TRACE_CALL;
     char* buf = NULL;
-    int w = Target->getWidth();
+    int w = Target->getStride();
     int h = Target->getHeight();
     EGLDisplay dpy = eglGetCurrentDisplay();
 
@@ -1129,6 +1137,7 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
     }
 
     glViewport(TargetRegion.x, TargetRegion.y, TargetRegion.w, TargetRegion.h);
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_y);
     checkGlError("glBindFramebufferOES 1");
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -1141,6 +1150,12 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     }
 
+
+    int x2 = (int)((float)TargetRegion.x + 0.5) / 2.0;
+    int y2 = (int)((float)TargetRegion.y + 0.5) / 2.0;
+    int w2 = (int)((float)TargetRegion.w + 0.5) / 2.0;
+    int h2 = (int)((float)TargetRegion.h + 0.5) / 2.0;
+
     if (YUVToYUV)
     {
         glUseProgram(gProgramUV_YUVSource);
@@ -1151,7 +1166,8 @@ int SprdWIDIBlit:: renderImage(sp<GraphicBuffer> Source, sp<GraphicBuffer> Targe
         glUseProgram(gProgramUV);
     }
 
-    glViewport(TargetRegion.x/2, TargetRegion.y/2, TargetRegion.w/2, TargetRegion.h/2);
+    glViewport(x2, y2, w2, h2);
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_uv);
     checkGlError("glBindFramebufferOES 2");
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
