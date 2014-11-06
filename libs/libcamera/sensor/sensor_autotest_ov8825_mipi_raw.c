@@ -826,6 +826,8 @@ SENSOR_INFO_T g_autotest_ov8825_mipi_raw_info = {
 
 	NULL,//s_at_ov8825_video_info,
 	3,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 LOCAL struct sensor_raw_info* Sensor_at_GetContext(void)

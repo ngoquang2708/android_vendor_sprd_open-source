@@ -581,6 +581,8 @@ SENSOR_INFO_T g_ov2680_mipi_raw_info = {
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 10, 0},
 	s_ov2680_video_info,
 	0,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)

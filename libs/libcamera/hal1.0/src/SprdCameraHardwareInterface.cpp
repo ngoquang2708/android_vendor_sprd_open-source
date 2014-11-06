@@ -2802,6 +2802,24 @@ bool SprdCameraHardware::startCameraIfNecessary()
 	} else {
 		LOGI("camera hardware has been started already");
 	}
+
+	cmr_int ret;
+	struct sensor_view_angle view_angle;
+	char str_hz_angle[4], str_vt_angle[4];
+	ret = camera_get_viewangle(mCameraHandle, &view_angle);
+	if (!ret) {
+		LOGI("HorizontalViewAngle = %d, VerticalViewAngle = %d",
+			 view_angle.horizontal_val, view_angle.vertical_val);
+		sprintf(str_hz_angle, "%d", view_angle.horizontal_val);
+		sprintf(str_vt_angle, "%d", view_angle.vertical_val);
+		mParameters.setHorizontalViewAngle(str_hz_angle);
+		mParameters.setVerticalViewAngle(str_vt_angle);
+		mSetParameters.setHorizontalViewAngle(str_hz_angle);
+		mSetParameters.setVerticalViewAngle(str_vt_angle);
+		mSetParametersBak.setHorizontalViewAngle(str_hz_angle);
+		mSetParametersBak.setVerticalViewAngle(str_vt_angle);
+	}
+
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking("startCameraIfNecessary X.\n");
 	} else {

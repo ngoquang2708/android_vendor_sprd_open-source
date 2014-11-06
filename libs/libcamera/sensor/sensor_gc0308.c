@@ -676,6 +676,8 @@ SENSOR_INFO_T g_GC0308_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	s_GC0308_video_info,
 	4,						//skip frame num while change setting
+	48,						// horizontal view angle
+	48,						// vertical view angle
 };
 
 static void GC0308_WriteReg( uint8_t  subaddr, uint8_t data )

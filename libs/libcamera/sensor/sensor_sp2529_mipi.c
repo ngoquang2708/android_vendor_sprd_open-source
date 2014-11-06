@@ -1233,6 +1233,8 @@ SENSOR_INFO_T g_SP2529_MIPI_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
 	s_SP2529_video_info,
 	4,						//skip frame num while change setting
+	48,						//horizontal view angle
+	48,						//vertical view angle
 };
 
 static void SP2529_WriteReg( uint8_t  subaddr, uint8_t data )

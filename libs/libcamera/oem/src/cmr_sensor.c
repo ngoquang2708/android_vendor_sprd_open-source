@@ -357,6 +357,8 @@ cmr_int cmr_sns_copy_info(struct sensor_exp_info *out_sensor_info, SENSOR_EXP_IN
 		cmr_sns_copy_mode_info(&out_sensor_info->mode_info[i], &in_sensor_info->sensor_mode_info[i]);
 		cmr_sns_copy_video_info(&out_sensor_info->video_info[i], &in_sensor_info->sensor_video_info[i]);
 	}
+	out_sensor_info->view_angle.horizontal_val = in_sensor_info->horizontal_view_angle;
+	out_sensor_info->view_angle.vertical_val =in_sensor_info->vertical_view_angle;
 
 	return CMR_CAMERA_SUCCESS;
 

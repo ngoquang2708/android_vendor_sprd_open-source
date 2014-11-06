@@ -851,6 +851,8 @@ SENSOR_INFO_T g_HM2058_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},
 	PNULL,
 	1,					// skip frame num while change setting
+	48,					// horizontal view angle
+	48,					// vertical view angle
 };
 
 static uint32_t HM2058_Power_On(uint32_t power_on)

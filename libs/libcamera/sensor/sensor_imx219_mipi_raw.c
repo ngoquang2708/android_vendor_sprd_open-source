@@ -517,6 +517,8 @@ SENSOR_INFO_T g_imx219_mipi_raw_info = {
 
 	s_imx219_video_info,
 	3,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 static struct sensor_raw_info* Sensor_GetContext(void)

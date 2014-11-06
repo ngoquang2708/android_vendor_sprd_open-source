@@ -172,6 +172,8 @@ SENSOR_INFO_T g_autotest_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1},  //SENSOR_INTERFACE_CCIR601_8BITS
 	PNULL,
 	3,
+	48,						// horizontal view angle
+	48,						// vertical view angle
 };
 
 LOCAL uint32_t autotst_PowerOn(uint32_t power_on)

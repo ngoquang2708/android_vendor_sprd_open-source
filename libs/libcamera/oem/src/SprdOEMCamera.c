@@ -479,3 +479,22 @@ exit:
 	return ret;
 
 }
+
+cmr_int camera_get_viewangle(cmr_handle camera_handle, struct sensor_view_angle *view_angle)
+{
+	cmr_int    ret = CMR_CAMERA_SUCCESS;
+
+	if (!camera_handle || !view_angle) {
+		CMR_LOGE("Invalid param error");
+		ret = -CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+	ret = camera_local_get_viewangle(camera_handle, view_angle);
+	if (ret) {
+		CMR_LOGE("failed %ld", ret);
+	}
+
+exit:
+	CMR_LOGI("done %ld", ret);
+	return ret;
+}

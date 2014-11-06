@@ -723,6 +723,8 @@ SENSOR_INFO_T g_sr030pc50_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CSI2, 1, 8, 1},
 	s_sr030pc50_video_info,
 	1,			// skip frame num while change setting
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 
 static uint32_t Sr030pc50_GetExifInfo(uint32_t param)

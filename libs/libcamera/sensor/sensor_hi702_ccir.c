@@ -593,7 +593,9 @@ LOCAL SENSOR_IOCTL_FUNC_TAB_T s_HI702_ioctl_func_tab =
 	0,
 	{0, 2, 8, 1},
 	PNULL,
-	1
+	1,
+	48,			// horizontal view angle
+	48,			// vertical view angle
 };
 /**---------------------------------------------------------------------------*
  ** 							Function  Definitions

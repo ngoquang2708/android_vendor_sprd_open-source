@@ -276,6 +276,8 @@ SENSOR_INFO_T g_s5k5ccgx_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CCIR601, 8, 16, 1}, // SENSOR_INF_T
 	PNULL,
 	4,						// skip frame num while change setting
+	48,						// horizontal view angle
+	48,						// vertical view angle
 };
 
 /**---------------------------------------------------------------------------*

@@ -4792,6 +4792,8 @@ SENSOR_INFO_T g_s5k4ec_mipi_yuv_info =
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 8, 1},
 	s_s5k4ec_video_info,
 	1,                     // skip frame num while change setting
+	48,						// horizontal view angle
+	48,						// vertical view angle
 };
 
 LOCAL uint32_t _s5k4ec_GetExifInfo(uint32_t param)
