@@ -1714,7 +1714,8 @@ cmr_int prev_capture_frame_handle(struct prev_handle *handle, cmr_u32 camera_id,
 	prev_cxt     = &handle->prev_cxt[camera_id];
 	channel_bits = 1 << prev_cxt->cap_channel_id;
 
-	if (!(CMR_CAP0_ID_BASE == data->frame_id || CMR_CAP1_ID_BASE == data->frame_id)) {
+	CMR_LOGI("frame_id 0x%x", data->frame_id);
+	if (!(CMR_CAP0_ID_BASE == (data->frame_id & CMR_CAP0_ID_BASE) || CMR_CAP1_ID_BASE == (data->frame_id & CMR_CAP1_ID_BASE))) {
 		CMR_LOGE("0x%x not capture frame, drop it", data->frame_id);
 		return ret;
 	}
