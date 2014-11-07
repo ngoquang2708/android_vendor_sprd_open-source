@@ -242,7 +242,10 @@ inline static void ConvertARGB888ToYVU420SemiPlanar(uint8_t *inrgb, uint8_t* out
     int64_t end_encode = systemTime();
     ALOGI("rgb2yuv time: %d",(unsigned int)((end_encode-start_encode) / 1000000L));
 }
+extern "C" void neon_intrinsics_ARGB888ToYVU420Semi(uint8_t *inrgb, uint8_t* outy,uint8_t* outuv,
+                    int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst);
 
+#if 0
 void neon_intrinsics_ARGB888ToYVU420Semi(uint8_t *inrgb, uint8_t* outy,uint8_t* outuv,
                     int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst){
    uint32_t i, j;
@@ -363,13 +366,13 @@ void neon_intrinsics_ARGB888ToYVU420Semi(uint8_t *inrgb, uint8_t* outy,uint8_t* 
       argb_ptr += width_org<<2;
    }
 }
-
+#endif
 inline static void ConvertARGB888ToYVU420SemiPlanar_neon(uint8_t *inrgb, uint8_t* outy,uint8_t* outuv,
                     int32_t width_org, int32_t height_org, int32_t width_dst, int32_t height_dst) {
 #define RGB2Y(_r, _g, _b) (((66 * (_r) + 129 * (_g) + 25 * (_b)) >> 8) + 16)
 #define RGB2CB(_r, _g, _b) (((-38 * (_r) - 74 * (_g) + 112 * (_b)) >> 8) + 128)
 #define RGB2CR(_r, _g, _b) (((112 * (_r) - 94 * (_g) - 18 * (_b)) >> 8) + 128)
-
+    //ALOGI("RGB DATA:%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x",inrgb[0],inrgb[1],inrgb[2],inrgb[3],inrgb[4],inrgb[5],inrgb[6],inrgb[7],inrgb[8],inrgb[9],inrgb[10],inrgb[11],inrgb[12],inrgb[13],inrgb[14],inrgb[15]);
     uint32_t i, j;
     uint32_t *argb_ptr = (uint32_t *)inrgb;
     uint8_t *y_ptr = outy;
@@ -381,11 +384,11 @@ inline static void ConvertARGB888ToYVU420SemiPlanar_neon(uint8_t *inrgb, uint8_t
     if (0 != (width_org & 1) || 0 != (height_org & 1))
         return;
 
-    //int64_t start_encode = systemTime();
+    int64_t start_encode = systemTime();
     neon_intrinsics_ARGB888ToYVU420Semi(inrgb,  y_ptr, vu_ptr,                         //  1280*720  =>  22ms in padv2
                                         width_org,  height_org,  width_dst,  height_dst);
-    //int64_t end_encode = systemTime();
-    //ALOGI("wfd: ConvertARGB888ToYVU420SemiPlanar_neon:  rgb2yuv cost time: %d",(unsigned int)((end_encode-start_encode) / 1000000L));
+    int64_t end_encode = systemTime();
+    ALOGI("wfd: ConvertARGB888ToYVU420SemiPlanar_neon:  rgb2yuv cost time: %d",(unsigned int)((end_encode-start_encode) / 1000000L));
 }
 
 #ifdef VIDEOENC_CURRENT_OPT
@@ -1642,23 +1645,29 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                         ConvertYUV420PlanarToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
                                                               (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-#ifdef GET_YUV_DATA_FROM_SURFACEFLINGER
+#ifdef SURFACEFLINGER_TRANSFORM_RGB2YUV
                         struct private_handle_t *pH = (struct private_handle_t *)buf;
                         int64_t start_queue = systemTime();
                         int size = 0;
                         private_handle_t* pBuf = (private_handle_t* )buf;
-                        if (mIOMMUEnabled) {
-                            MemoryHeapIon::Get_mm_iova(pBuf->share_fd, &(pBuf->phyaddr), &size);
+                        //ALOGI("meijiaxi:pBuf->format:%d",pBuf->format);
+                        if(HAL_PIXEL_FORMAT_YCbCr_420_SP == pBuf->format){
+                            if (mIOMMUEnabled) {
+                                MemoryHeapIon::Get_mm_iova(pBuf->share_fd, &(pBuf->phyaddr), &size);
+                            }else{
+                                MemoryHeapIon::Get_phy_addr_from_ion(pBuf->share_fd, &(pBuf->phyaddr), &size);
+                            }
+                            py_phy = (uint8_t*)(pBuf->phyaddr);
+                            py = (uint8_t*)vaddr;
+                            int64_t end_queue = systemTime();
+                            ALOGI("wfd: get yuv data directly. queue yuv buffer time: %d ms",(unsigned int)((end_queue-start_queue) / 1000000L));
                         }else{
-                            MemoryHeapIon::Get_phy_addr_from_ion(pBuf->share_fd, &(pBuf->phyaddr), &size);
+                            ALOGI("wfd:get rgb data in SURFACEFLINGER_TRANSFORM_RGB2YUV");
+                            ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                         }
-                        py_phy = (uint8_t*)(pBuf->phyaddr);
-                        py = (uint8_t*)vaddr;
-                        int64_t end_queue = systemTime();
-                        ALOGI("wfd: get yuv data directly. queue yuv buffer time: %d ms",(unsigned int)((end_queue-start_queue) / 1000000L));
  #else
                          //ConvertARGB888ToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
-			ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+((mVideoWidth+15)&(~15) * (mVideoHeight+15)&(~15)),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+			ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
  #endif
                     } else {
                         memcpy(py, vaddr, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
@@ -1706,11 +1715,11 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     ConvertYUV420PlanarToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
                                                           (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-#ifdef GET_YUV_DATA_FROM_SURFACEFLINGER
+#ifdef SURFACEFLINGER_TRANSFORM_RGB2YUV
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
 #else
                     //ConvertARGB888ToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
-                    ConvertARGB888ToYVU420SemiPlanar_neon(inputData, py, py+((mVideoWidth+15)&(~15) * (mVideoHeight+15)&(~15)),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                    ConvertARGB888ToYVU420SemiPlanar_neon(inputData, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
 #endif
                 } else {
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
