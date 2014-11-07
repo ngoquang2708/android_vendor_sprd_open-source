@@ -23,9 +23,9 @@
 #include "../../arithmetic/sc8830/inc/FaceFinder.h"
 
 
-typedef int (*face_finder_int)(int width, int height);
+typedef int (*face_finder_int)(int width, int height, MallocFun Mfp, FreeFun Ffp);
 typedef int (*face_finder_function)(unsigned char *src, struct face_finder_data **ppDstFaces, int *pDstFaceNum ,int skip);
-typedef int (*face_finder_finalize)();
+typedef int (*face_finder_finalize)(FreeFun Ffp);
 
 struct face_finder_ops {
 	face_finder_int      init;
@@ -421,6 +421,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_uint                  mem_size      = 0;
 	void                      *addr         = 0;
 	cmr_int                   facesolid_ret = 0;
+	MallocFun                 Mfp;
+	FreeFun                   Ffp;
 	struct face_finder_data   *face_rect_ptr = NULL;
 	cmr_int                   face_num = 0;
 	cmr_int                   k,min_fd;
@@ -440,11 +442,12 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 			CMR_PRINT_TIME;
 
 			if (!check_size_data_invalid(fd_size)) {
-				if (fd_face_finder_ops.finalize) {
-					fd_face_finder_ops.finalize();
+				if (fd_face_finder_ops.finalize) 
+{
+					fd_face_finder_ops.finalize(Ffp);
 				}
 				if (fd_face_finder_ops.init) {
-					if ( 0 != fd_face_finder_ops.init(fd_size->width, fd_size->height)) {
+					if ( 0 != fd_face_finder_ops.init(fd_size->width, fd_size->height, Mfp, Ffp)) {
 						ret = -CMR_CAMERA_FAIL;
 						CMR_LOGE("init fail.");
 					} else {
@@ -485,6 +488,7 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 
 		if (0 != facesolid_ret) {
 			CMR_LOGE("face function fail.");
+			fd_set_busy(class_handle, 0);
 		} else {
 			class_handle->frame_out.face_area.face_count = face_num;
 			CMR_LOGI("face num %ld", face_num);
@@ -515,7 +519,7 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 
 	case CMR_EVT_FD_EXIT:
 		if (fd_face_finder_ops.finalize) {
-			fd_face_finder_ops.finalize();
+			fd_face_finder_ops.finalize(Ffp);
 		}
 		break;
 

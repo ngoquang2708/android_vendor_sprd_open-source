@@ -608,8 +608,12 @@ struct face_finder_data {
     int face_id;
     int sx;
     int sy;
+    int srx;
+    int sry;
     int ex;
     int ey;
+    int elx;
+    int ely;
     int brightness;
     int angle;
     int smile_level;
