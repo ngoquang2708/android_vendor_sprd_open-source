@@ -3818,6 +3818,12 @@ bool SprdCameraHardware::switchBufferMode(uint32_t src, uint32_t dst)
 	LOGI("switchBufferMode src %d, dst %d,  mPreviewBufferUsage %d, org %d",
 		src, dst, mPreviewBufferUsage, mOriginalPreviewBufferUsage);
 
+	LOGI("switchBufferMode preview_state %s", getCameraStateStr(getPreviewState()));
+	if (SPRD_ERROR == getPreviewState()) {
+		LOGE("switchBufferMode preview state is error, return");
+		return ret;
+	}
+
 	if ((src != dst) && (!isPreviewing())) {
 		if (SPRD_INTERNAL_PREVIEW_STOPPING == mCameraState.preview_state) {
 			/*change to new value*/

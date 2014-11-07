@@ -2516,14 +2516,13 @@ cmr_int sns_stream_off(struct sensor_drv_context *sensor_cxt)
 	/*when use the camera vendor functions, the sensor_cxt should be set at first */
 	sensor_set_cxt_common(sensor_cxt);
 
-	if (sensor_cxt->stream_on) {
-		stream_off_func = sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_off;
+	stream_off_func = sensor_cxt->sensor_info_ptr->ioctl_func_tab_ptr->stream_off;
 
-		if (PNULL != stream_off_func) {
-			err = stream_off_func(param);
-		}
-		sensor_cxt->stream_on = 0;
+	if (PNULL != stream_off_func) {
+		err = stream_off_func(param);
 	}
+	sensor_cxt->stream_on = 0;
+
 	
 	CMR_LOGI("X");
 	return err;
