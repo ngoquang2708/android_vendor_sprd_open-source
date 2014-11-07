@@ -1052,6 +1052,7 @@ static void cmr_sns_check_err(struct cmr_sensor_handle *sensor_handle, cmr_u32 c
 		ret = cmr_sns_ioctl(&sensor_handle->sensor_cxt[camera_id],
 			SENSOR_IOCTL_GET_STATUS,
 			(cmr_u32)&param);
+
 		if (ret) {
 			CMR_LOGE("Sensor run in wrong way");
 			pthread_mutex_lock(&sensor_handle->monitor_thread_cxt.cb_mutex);
@@ -1072,7 +1073,10 @@ static cmr_int cmr_sns_monitor_proc(void *p_data)
 	struct cmr_sensor_handle  *sensor_handle = (struct cmr_sensor_handle *)p_data;
 
 	while (1) {
-		CHECK_HANDLE_VALID((cmr_u32)sensor_handle);
+		if (!sensor_handle) {
+			CMR_LOGE("sensor_handle is NULL");
+			return CMR_CAMERA_INVALID_PARAM;
+		}
 		usleep(10000);
 
 		if (sensor_handle->monitor_thread_cxt.is_exit) {
@@ -1085,7 +1089,7 @@ static cmr_int cmr_sns_monitor_proc(void *p_data)
 		if (cnt >= SENSOR_CHECK_STATUS_INTERVAL) {
 			cnt = 0;
 			for (i = 0; i < CAMERA_ID_MAX; i++) {
-				if (0 != (i & sensor_handle->sensor_bits)) {
+				if (0 != ((1 << i) & sensor_handle->sensor_bits)) {
 					cmr_sns_check_err(sensor_handle, i);
 				}
 			}
