@@ -4301,6 +4301,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 		cxt->camera_mode = mode;
 	}
 	camera_set_snp_req((cmr_handle)cxt, TAKE_PICTURE_NEEDED);
+	camera_set_discard_frame(cxt, 0);
 	camera_snapshot_started((cmr_handle)cxt);
 	ret = camera_get_cap_time((cmr_handle)cxt);
 	cxt->snp_cxt.status = SNAPSHOTING;
