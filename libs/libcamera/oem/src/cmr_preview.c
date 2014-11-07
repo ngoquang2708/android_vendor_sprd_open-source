@@ -478,7 +478,8 @@ cmr_int cmr_preview_deinit(cmr_handle preview_handle)
 		CMR_LOGD("id %d, prev_status %ld", i, handle->prev_cxt[i].prev_status);
 
 		if (PREVIEWING == handle->prev_cxt[i].prev_status) {
-			prev_stop(handle, i, 0);
+			/*prev_stop(handle, i, 0);*/
+			cmr_preview_stop(preview_handle, i);
 		}
 	}
 
