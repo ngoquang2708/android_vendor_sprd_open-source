@@ -34,11 +34,6 @@ struct class_hdr {
 	struct ipm_frame_in            frame_in;
 };
 
-struct msg_boxm {
-	void                            *param1;
-	void                            *param2;
-};
-
 enum oem_ev_level {
 	OEM_EV_LEVEL_1,
 	OEM_EV_LEVEL_2,
@@ -79,8 +74,8 @@ static cmr_int hdr_arithmetic(cmr_handle class_handle, struct img_addr *dst_addr
 static cmr_int hdr_thread_proc(struct cmr_msg *message, void *private_data);
 static cmr_int hdr_thread_create(struct class_hdr *class_handle);
 static cmr_int hdr_thread_destroy(struct class_hdr *class_handle);
-static cmr_int hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in, cmr_uint frame_sn);
-static cmr_int req_hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in, cmr_uint frame_sn);
+static cmr_int hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in);
+static cmr_int req_hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in);
 static cmr_int hdr_frame_proc(cmr_handle class_handle);
 
 static struct class_ops hdr_ops_tab_info = {
@@ -131,7 +126,7 @@ static cmr_int hdr_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ip
 	for (i = 0; i < HDR_CAP_NUM; i++) {
 		hdr_handle->alloc_addr[i] = (cmr_u8*)malloc(size);
 		if (NULL == hdr_handle->alloc_addr[i]){
-			CMR_LOGE("mem alloc failed i = %d", i);
+			CMR_LOGE("mem alloc failed i = %ld", i);
 			goto free_all;
 		}
 	}
@@ -186,11 +181,10 @@ static cmr_int hdr_close(cmr_handle class_handle)
 	return ret;
 }
 
-static cmr_int req_hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in, cmr_uint frame_sn)
+static cmr_int req_hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in)
 {
 	cmr_int                 ret         = CMR_CAMERA_SUCCESS;
 	struct class_hdr       *hdr_handle = (struct class_hdr *)class_handle;
-	struct msg_boxm       *msg_box;
 
 	CMR_MSG_INIT(message);
 
@@ -199,27 +193,25 @@ static cmr_int req_hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	if (frame_sn > (HDR_CAP_NUM-1)) {
-		CMR_LOGE("cap cnt error,%ld.",frame_sn);
+	if (hdr_handle->common.receive_frame_count > HDR_CAP_NUM) {
+		CMR_LOGE("cap cnt error,%ld.",hdr_handle->common.receive_frame_count);
 		return CMR_CAMERA_FAIL;
 	}
-	msg_box = (struct msg_boxm*)malloc(sizeof(struct msg_boxm));
-	if (!msg_box) {
+	message.data = (struct ipm_frame_in*)malloc(sizeof(struct ipm_frame_in));
+	if (!message.data) {
 		CMR_LOGE("No mem!");
 		ret = CMR_CAMERA_NO_MEM;
 		return ret;
 	}
-	cmr_bzero(msg_box, sizeof(struct msg_boxm));
-	msg_box->param1 = (void*)in;
-	msg_box->param2 = (void*)frame_sn;
+	memcpy(message.data, in, sizeof(struct ipm_frame_in));
 	message.msg_type = CMR_EVT_HDR_SAVE_FRAME;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-	message.data = (void *)msg_box;
+	message.alloc_flag = 1;
 	ret = cmr_thread_msg_send(hdr_handle->hdr_thread, &message);
 	if (ret) {
 		CMR_LOGE("Failed to send one msg to hdr thread.");
-		if (msg_box) {
-			free(msg_box);
+		if (message.data) {
+			free(message.data);
 		}
 	}
 	return ret;
@@ -242,19 +234,17 @@ static cmr_int hdr_transfer_frame(cmr_handle class_handle, struct ipm_frame_in *
 	}
 
 	CMR_LOGI("ipm_frame_in.private_data 0x%lx", (cmr_int)in->private_data);
-	frame_in_cnt = hdr_handle->common.receive_frame_count - 1;
 	addr = &in->dst_frame.addr_vir;
 	size = in->src_frame.size;
 
-	ret = req_hdr_save_frame(class_handle, in, frame_in_cnt);
+	ret = req_hdr_save_frame(class_handle, in);
 	if (ret != CMR_CAMERA_SUCCESS) {
 		CMR_LOGE("req_hdr_save_frame fail");
 		return CMR_CAMERA_FAIL;
 	}
 
-	cmr_bzero(&out->dst_frame,sizeof(struct img_frm));
-
-	if (frame_in_cnt == (HDR_CAP_NUM - 1)) {
+	if (hdr_handle->common.receive_frame_count == HDR_CAP_NUM) {
+		cmr_bzero(&out->dst_frame,sizeof(struct img_frm));
 		sensor_ioctl = hdr_handle->common.ipm_cxt->init_in.ipm_sensor_ioctl;
 		oem_handle = hdr_handle->common.ipm_cxt->init_in.oem_handle;
 		hdr_handle->frame_in = *in;
@@ -417,27 +407,31 @@ static cmr_int hdr_arithmetic(cmr_handle class_handle, struct img_addr *dst_addr
 	return ret;
 }
 
-static cmr_int hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in, cmr_uint frame_sn)
+static cmr_int hdr_save_frame(cmr_handle class_handle, struct ipm_frame_in *in)
 {
 	cmr_int                 ret         = CMR_CAMERA_SUCCESS;
 	cmr_u8                  *uv_addr    = NULL;
 	cmr_uint                y_size      = 0;
 	cmr_uint                uv_size     = 0;
 	struct class_hdr       *hdr_handle = (struct class_hdr *)class_handle;
-
+	cmr_int                 frame_sn    = 0;
 	if (!class_handle || !in) {
 		CMR_LOGE("Invalid Param!");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-	if (frame_sn > (HDR_CAP_NUM-1)) {
-		CMR_LOGE("cap cnt error,%ld.", frame_sn);
+	if (hdr_handle->common.receive_frame_count > HDR_CAP_NUM) {
+		CMR_LOGE("cap cnt error,%ld.", hdr_handle->common.receive_frame_count);
 		return CMR_CAMERA_FAIL;
 	}
 
 	y_size = in->src_frame.size.height * in->src_frame.size.width;
 	uv_size = in->src_frame.size.height * in->src_frame.size.width / 2;
-
+	frame_sn = hdr_handle->common.receive_frame_count -1;
+	if (frame_sn < 0) {
+		CMR_LOGE("frame_sn error,%ld.", frame_sn);
+		return CMR_CAMERA_FAIL;
+	}
 	if (NULL == hdr_handle->alloc_addr[frame_sn]) {
 		CMR_LOGE("no memory.");
 		return CMR_CAMERA_FAIL;
@@ -461,55 +455,51 @@ static cmr_int hdr_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_u32                 evt = 0;
 	struct ipm_frame_out   out;
 	struct 					ipm_frame_in *in;
-	struct msg_boxm   		*msg_box;
-	cmr_uint 				frame_sn;
 
 	if (!message || !class_handle) {
 		CMR_LOGE("parameter is fail");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 
-		evt = (cmr_u32)message->msg_type;
+	evt = (cmr_u32)message->msg_type;
 
-		switch (evt) {
-		case CMR_EVT_HDR_INIT:
-			CMR_LOGI("HDR thread inited.");
-			break;
-		case CMR_EVT_HDR_PRE_PROC:
-			CMR_LOGI("HDR pre_proc");
-			hdr_frame_proc(class_handle);
-			break;
-		case CMR_EVT_HDR_SAVE_FRAME:
-			CMR_LOGI("HDR save frame");
-			msg_box = message->data;
-			in = (struct ipm_frame_in *)msg_box->param1;
-			frame_sn = (cmr_u32)msg_box->param2;
-			ret = hdr_save_frame(class_handle, in, frame_sn);
-			if (ret != CMR_CAMERA_SUCCESS) {
-				CMR_LOGE("HDR save frame failed.");
-			}
-			break;
-		case CMR_EVT_HDR_START:
-			class_handle->common.receive_frame_count = 0;
-			out.dst_frame = class_handle->frame_in.dst_frame;
-			out.private_data = class_handle->frame_in.private_data;
-			CMR_LOGI("out private_data 0x%lx", (cmr_int)out.private_data);
-			CMR_LOGI("CMR_EVT_HDR_START addr 0x%lx %ld %ld", class_handle->dst_addr.addr_y, class_handle->width, class_handle->width);
-			CMR_LOGI("HDR thread proc start ");
-			hdr_arithmetic(class_handle, &class_handle->dst_addr, class_handle->width, class_handle->height);
-			CMR_LOGI("HDR thread proc done ");
-
-			if (class_handle->reg_cb) {
-				(class_handle->reg_cb)(IPM_TYPE_HDR, &out);
-			}
-
-			break;
-		case CMR_EVT_HDR_EXIT:
-			CMR_LOGD("HDR thread exit.");
-			break;
-		default:
-			break;
+	switch (evt) {
+	case CMR_EVT_HDR_INIT:
+		CMR_LOGI("HDR thread inited.");
+		break;
+	case CMR_EVT_HDR_PRE_PROC:
+		CMR_LOGI("HDR pre_proc");
+		hdr_frame_proc(class_handle);
+		break;
+	case CMR_EVT_HDR_SAVE_FRAME:
+		CMR_LOGI("HDR save frame");
+		in = message->data;
+		ret = hdr_save_frame(class_handle, in);
+		if (ret != CMR_CAMERA_SUCCESS) {
+			CMR_LOGE("HDR save frame failed.");
 		}
+		break;
+	case CMR_EVT_HDR_START:
+		class_handle->common.receive_frame_count = 0;
+		out.dst_frame = class_handle->frame_in.dst_frame;
+		out.private_data = class_handle->frame_in.private_data;
+		CMR_LOGI("out private_data 0x%lx", (cmr_int)out.private_data);
+		CMR_LOGI("CMR_EVT_HDR_START addr 0x%lx %ld %ld", class_handle->dst_addr.addr_y, class_handle->width, class_handle->height);
+		CMR_LOGI("HDR thread proc start ");
+		hdr_arithmetic(class_handle, &class_handle->dst_addr, class_handle->width, class_handle->height);
+		CMR_LOGI("HDR thread proc done ");
+
+		if (class_handle->reg_cb) {
+			(class_handle->reg_cb)(IPM_TYPE_HDR, &out);
+		}
+
+		break;
+	case CMR_EVT_HDR_EXIT:
+		CMR_LOGD("HDR thread exit.");
+		break;
+	default:
+		break;
+	}
 
 	return ret;
 }
