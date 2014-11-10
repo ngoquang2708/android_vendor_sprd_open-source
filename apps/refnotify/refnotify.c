@@ -131,15 +131,17 @@ static void usage(void)
 void RefNotify_DoAutodloader(struct refnotify_cmd *pcmd)
 {
 	sync();
-	__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
-						LINUX_REBOOT_CMD_RESTART2, "autodloader");
+	property_set("sys.powerctl", "reboot,autodloader");
+	//__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+					//	LINUX_REBOOT_CMD_RESTART2, "autodloader");
 }
 
 void RefNotify_DoReset(struct refnotify_cmd *pcmd)
 {
 	sync();
-	__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
-						LINUX_REBOOT_CMD_RESTART2, "normal");
+	property_set("sys.powerctl", "reboot,normal");
+	//__reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+					//	LINUX_REBOOT_CMD_RESTART2, "normal");
 }
 
 int RefNotify_rtc_readtm(struct tm *ptm)
