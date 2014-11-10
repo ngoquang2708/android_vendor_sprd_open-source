@@ -84,7 +84,7 @@
 #define W_MODEM_SIZE                (10*1024*1024)
 #define W_DSP_SIZE                  (5*1024*1024)
 #define LF_MODEM_SIZE                (8*1024*1024)
-#define LF_TGDSP_SIZE                  (0x3e0000)
+#define LF_TGDSP_SIZE                  (0x2e0000)
 #define LF_LDSP_SIZE                  (0x1c0000)
 #define TL_MODEM_SIZE                (8*1024*1024)
 #define TL_TGDSP_SIZE                  (0x2e0000)
