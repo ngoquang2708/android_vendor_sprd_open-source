@@ -387,15 +387,15 @@ static cmr_int prev_restart_cap_channel(struct prev_handle *handle,
 				    cmr_u32 camera_id,
 				    struct frm_info *data);
 
-static cmr_int prev_open_fd(struct prev_handle *handle, cmr_u32 camera_id);
+static cmr_int prev_fd_open(struct prev_handle *handle, cmr_u32 camera_id);
 
-static cmr_int prev_close_fd(struct prev_handle *handle, cmr_u32 camera_id);
+static cmr_int prev_fd_close(struct prev_handle *handle, cmr_u32 camera_id);
 
-static cmr_int prev_send_fd_data(struct prev_handle *handle, cmr_u32 camera_id, struct img_frm *frm);
+static cmr_int prev_fd_send_data(struct prev_handle *handle, cmr_u32 camera_id, struct img_frm *frm);
 
 static cmr_int prev_fd_cb(cmr_u32 class_type, struct ipm_frame_out *cb_param);
 
-static cmr_int prev_ctrl_fd(struct prev_handle *handle,
+static cmr_int prev_fd_ctrl(struct prev_handle *handle,
 				cmr_u32 camera_id,
 				cmr_u32 on_off);
 
@@ -1315,7 +1315,7 @@ cmr_int prev_thread_proc(struct cmr_msg *message, void *p_data)
 		inter_param = (struct internal_param*)message->data;
 		camera_id   = (cmr_u32)inter_param->param1;
 
-		ret = prev_ctrl_fd(handle,
+		ret = prev_fd_ctrl(handle,
 				camera_id,
 				(cmr_u32)inter_param->param2);
 		break;
@@ -2142,7 +2142,7 @@ cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_res
 		/*init fd*/
 		CMR_LOGI("is_support_fd %ld", prev_cxt->prev_param.is_support_fd);
 		if (prev_cxt->prev_param.is_support_fd) {
-			prev_open_fd(handle, camera_id);
+			prev_fd_open(handle, camera_id);
 		}
 	}
 
@@ -2224,7 +2224,7 @@ cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_rest
 
 		/*deinit fd*/
 		if (prev_cxt->prev_param.is_support_fd) {
-			prev_close_fd(handle, camera_id);
+			prev_fd_close(handle, camera_id);
 		}
 	}
 
@@ -3210,7 +3210,7 @@ cmr_int prev_construct_frame(struct prev_handle *handle,
 		frame_type->timestamp = info->sec * 1000000000LL + info->usec * 1000;
 
 		if (prev_cxt->prev_param.is_support_fd && prev_cxt->prev_param.is_fd_on) {
-			prev_send_fd_data(handle, camera_id, frm_ptr);
+			prev_fd_send_data(handle, camera_id, frm_ptr);
 		}
 
 		#if 0
@@ -4713,7 +4713,7 @@ exit:
 	return ret;
 }
 
-cmr_int prev_open_fd(struct prev_handle *handle, cmr_u32 camera_id)
+cmr_int prev_fd_open(struct prev_handle *handle, cmr_u32 camera_id)
 {
 	cmr_int                     ret = CMR_CAMERA_SUCCESS;
 	struct prev_context         *prev_cxt = NULL;
@@ -4762,7 +4762,7 @@ exit:
 	return ret;
 }
 
-cmr_int prev_close_fd(struct prev_handle *handle, cmr_u32 camera_id)
+cmr_int prev_fd_close(struct prev_handle *handle, cmr_u32 camera_id)
 {
 	cmr_int                     ret = CMR_CAMERA_SUCCESS;
 	struct prev_context         *prev_cxt = NULL;
@@ -4783,7 +4783,7 @@ cmr_int prev_close_fd(struct prev_handle *handle, cmr_u32 camera_id)
 	return ret;
 }
 
-cmr_int prev_send_fd_data(struct prev_handle *handle, cmr_u32 camera_id, struct img_frm *frm)
+cmr_int prev_fd_send_data(struct prev_handle *handle, cmr_u32 camera_id, struct img_frm *frm)
 {
 	cmr_int                     ret = CMR_CAMERA_SUCCESS;
 	struct prev_context         *prev_cxt = NULL;
@@ -4876,7 +4876,7 @@ cmr_int prev_fd_cb(cmr_u32 class_type, struct ipm_frame_out *cb_param)
 	return ret;
 }
 
-cmr_int prev_ctrl_fd(struct prev_handle *handle,
+cmr_int prev_fd_ctrl(struct prev_handle *handle,
 				cmr_u32 camera_id,
 				cmr_u32 on_off)
 {
@@ -4893,9 +4893,9 @@ cmr_int prev_ctrl_fd(struct prev_handle *handle,
 	prev_cxt->prev_param.is_fd_on = on_off;
 
 	if (0 == on_off) {
-		prev_close_fd(handle, camera_id);
+		prev_fd_close(handle, camera_id);
 	} else {
-		prev_open_fd(handle, camera_id);
+		prev_fd_open(handle, camera_id);
 	}
 
 	return ret;

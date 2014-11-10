@@ -38,6 +38,7 @@ struct class_fd {
 	cmr_handle                      thread_handle;
 	cmr_uint                        is_busy;
 	cmr_uint                        is_inited;
+	cmr_int                         ops_init_ret;
 	void                            *alloc_addr;
 	cmr_uint                        mem_size;
 	cmr_uint                        frame_cnt;
@@ -95,6 +96,7 @@ struct class_tab_t fd_tab_info = {
 	&fd_ops_tab_info,
 };
 
+#define CMR_FD_LIMIT_SIZE         (320 * 240)
 #define CMR_EVT_FD_START          (1 << 16)
 #define CMR_EVT_FD_EXIT           (1 << 17)
 #define CMR_EVT_FD_INIT           (1 << 18)
@@ -149,17 +151,17 @@ static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm
 
 	ret = fd_thread_create(fd_handle);
 	if (ret) {
-		CMR_LOGE("FD error: create thread.");
+		CMR_LOGE("failed to create thread.");
 		goto free_fd_handle;
 	}
 
 	fd_size = &in->frame_size;
 	ret = fd_call_init(fd_handle, fd_size);
-
-	if (ret == CMR_CAMERA_SUCCESS) {
-		*out_class_handle = (cmr_handle )fd_handle;
-	} else {
+	if (ret) {
+		CMR_LOGE("failed to init fd");
 		fd_close(fd_handle);
+	} else {
+		*out_class_handle = (cmr_handle )fd_handle;
 	}
 
 	return ret;
@@ -191,6 +193,7 @@ static cmr_int fd_close(cmr_handle class_handle)
 	if (fd_handle->thread_handle) {
 		cmr_thread_destroy(fd_handle->thread_handle);
 		fd_handle->thread_handle = 0;
+		fd_handle->is_inited     = 0;
 	}
 
 	if (fd_handle->alloc_addr) {
@@ -357,7 +360,7 @@ static cmr_int fd_call_init(struct class_fd *class_handle, const struct img_size
 		goto free_all;
 	}
 
-	return ret;
+	return ret | class_handle->ops_init_ret;
 
 free_all:
 	free(message.data);
@@ -407,6 +410,8 @@ static cmr_int fd_thread_create(struct class_fd *class_handle)
 		}
 
 		class_handle->is_inited = 1;
+	} else {
+		CMR_LOGI("fd is inited already");
 	}
 
 end:
@@ -421,8 +426,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_uint                  mem_size      = 0;
 	void                      *addr         = 0;
 	cmr_int                   facesolid_ret = 0;
-	MallocFun                 Mfp;
-	FreeFun                   Ffp;
+	MallocFun                 Mfp = NULL;
+	FreeFun                   Ffp = NULL;
 	struct face_finder_data   *face_rect_ptr = NULL;
 	cmr_int                   face_num = 0;
 	cmr_int                   k,min_fd;
@@ -439,24 +444,20 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	case CMR_EVT_FD_INIT: {
 			struct img_size *fd_size = message->data;
 
-			CMR_PRINT_TIME;
-
 			if (!check_size_data_invalid(fd_size)) {
-				if (fd_face_finder_ops.finalize) 
-{
-					fd_face_finder_ops.finalize(Ffp);
-				}
-				if (fd_face_finder_ops.init) {
+				if (fd_face_finder_ops.init && (fd_size->width * fd_size->height >= CMR_FD_LIMIT_SIZE)) {
+					CMR_LOGI("[FD] w/h %d %d", fd_size->width, fd_size->height);
 					if ( 0 != fd_face_finder_ops.init(fd_size->width, fd_size->height, Mfp, Ffp)) {
+						class_handle->ops_init_ret = -CMR_CAMERA_FAIL;
 						ret = -CMR_CAMERA_FAIL;
-						CMR_LOGE("init fail.");
+						CMR_LOGE("[FD] init fail.");
 					} else {
-						CMR_LOGI("init done.");
+						CMR_LOGI("[FD] init done.");
 					}
+				} else {
+					class_handle->ops_init_ret = -CMR_CAMERA_FAIL;
 				}
 			}
-
-			CMR_PRINT_TIME;
 		}
 		break;
 
@@ -518,9 +519,14 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 		break;
 
 	case CMR_EVT_FD_EXIT:
-		if (fd_face_finder_ops.finalize) {
-			fd_face_finder_ops.finalize(Ffp);
+		if (fd_face_finder_ops.finalize && !class_handle->ops_init_ret) {
+			if ( 0 != fd_face_finder_ops.finalize(Ffp)) {
+				CMR_LOGE("[FD] deinit fail");
+			} else {
+				CMR_LOGI("[FD] deinit done");
+			}
 		}
+		class_handle->ops_init_ret = 0;
 		break;
 
 	default:
