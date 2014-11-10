@@ -83,7 +83,9 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 typedef int32_t (*GSP_PROCESS)(GSP_CONFIG_INFO_T *pgsp_cfg_info);
+typedef int32_t (*GSP_GETCAPABILITY)(GSP_CAPABILITY_T *pGsp_cap);
 
+/*
 typedef struct
 {
     uint16_t    w;
@@ -95,7 +97,7 @@ typedef struct
     uint16_t    x;
     uint16_t    y;
 } GSP_POSITION_T;
-
+*/
 typedef enum
 {
     GSP_INTF_INVALID,
@@ -108,6 +110,7 @@ GSP_INTF_OPS_E;// the address type of gsp can process
 typedef struct
 {
     char                    *filename;
+    char                    pallet;// pallet enable flag
 
     char                    format;
     char                    pixel_format;// for alloc buffer
@@ -158,12 +161,13 @@ typedef struct
     char                    power_flag;// take a test at fixed frequence to test power
     //char                    so_flag;// 0:linked gsp hal; 1:load gsp hal so
     GSP_PROCESS      gsp_process;
+    GSP_GETCAPABILITY gsp_getCapability;
     char                    map_once;// 0:map every time; 1:once
 }
 GSP_MISC_INFO_T;
 
 
-static int s_log_out = 1;
+int s_log_out = 1;
 
 //GSP_PROCESS gsp_process = NULL;
 //static int s_so_flag = 1;// 0:linked gsp hal; 1:load gsp hal so
@@ -240,6 +244,14 @@ int parse_main_params(int argc, char **argv,
         else if (strcmp(argv[i], "-f1") == 0 && (i < argc-1))
         {
             pLayer1->filename = argv[1+i];
+        }
+        else if (strcmp(argv[i], "-plt0") == 0 && (i < argc-1))
+        {
+            pLayer0->pallet= atoi(argv[1+i]);
+        }
+        else if (strcmp(argv[i], "-plt1") == 0 && (i < argc-1))
+        {
+            pLayer1->pallet= atoi(argv[1+i]);
         }
         else if (strcmp(argv[i], "-fd") == 0 && (i < argc-1))
         {
@@ -345,23 +357,23 @@ int parse_main_params(int argc, char **argv,
         {
             pLayer1->rotation = atoi(argv[1+i]);
         }
-        else if (strcmp(argv[i], "-bt0") == 0 && (i < argc-1))// buffer type, 0 physical buffer, 1 iova
+        else if (strcmp(argv[i], "-bt0") == 0 && (i < argc-1))     // buffer type, 0 physical buffer, 1 iova
         {
             pLayer0->addr_type = atoi(argv[1+i]);
         }
-        else if (strcmp(argv[i], "-bt1") == 0 && (i < argc-1))// buffer type, 0 physical buffer, 1 iova
+        else if (strcmp(argv[i], "-bt1") == 0 && (i < argc-1))     // buffer type, 0 physical buffer, 1 iova
         {
             pLayer1->addr_type = atoi(argv[1+i]);
         }
-        else if (strcmp(argv[i], "-btd") == 0 && (i < argc-1))// buffer type, 0 physical buffer, 1 iova
+        else if (strcmp(argv[i], "-btd") == 0 && (i < argc-1))     // buffer type, 0 physical buffer, 1 iova
         {
             pLayerd->addr_type = atoi(argv[1+i]);
         }
-        else if (strcmp(argv[i], "-cbt0") == 0 && (i < argc-1))//cpy buffer type, 0 physical buffer, 1 iova
+        else if (strcmp(argv[i], "-cbt0") == 0 && (i < argc-1))     //cpy buffer type, 0 physical buffer, 1 iova
         {
             pLayer0->addr_type_cpy = atoi(argv[1+i]);
         }
-        else if (strcmp(argv[i], "-cbt1") == 0 && (i < argc-1))//cpy buffer type, 0 physical buffer, 1 iova
+        else if (strcmp(argv[i], "-cbt1") == 0 && (i < argc-1))     //cpy buffer type, 0 physical buffer, 1 iova
         {
             pLayer1->addr_type_cpy = atoi(argv[1+i]);
         }
@@ -388,6 +400,14 @@ int parse_main_params(int argc, char **argv,
         else if (strcmp(argv[i], "-mp") == 0 && (i < argc-1))
         {
             pMisc->map_once = atoi(argv[1+i]);
+        }
+        else if (strcmp(argv[i], "-alpha0") == 0 && (i < argc-1))
+        {
+            pLayer0->alpha = atoi(argv[1+i]);
+        }
+        else if (strcmp(argv[i], "-alpha1") == 0 && (i < argc-1))
+        {
+            pLayer1->alpha = atoi(argv[1+i]);
         }
         else if (strcmp(argv[i], "-help") == 0)
         {
@@ -633,7 +653,7 @@ int iommu_map_if_need(GSP_LAYER_INFO_T *pLayer)
 
     if(pLayer == NULL) return 0;
 
-    if(pLayer->addr_type == 1)//iova buffer
+    if(pLayer->addr_type == 1)   //iova buffer
     {
         if(pLayer->map_once == 0 && pLayer->MemoryHeap != NULL)
         {
@@ -642,7 +662,7 @@ int iommu_map_if_need(GSP_LAYER_INFO_T *pLayer)
                 pLayer->pa.addr_y = mmu_addr;
                 pLayer->pa.addr_uv = pLayer->pa.addr_y + pLayer->size_y;
                 pLayer->pa.addr_v = pLayer->pa.addr_uv + pLayer->size_u;
-                ALOGE_IF(s_log_out,"[%d] map iommu addr success! 0x%08x\n",__LINE__,mmu_addr);
+                ALOGE_IF(s_log_out,"[%d] map iommu addr success! %p\n",__LINE__,(void*)mmu_addr);
             }
             else
             {
@@ -654,7 +674,7 @@ int iommu_map_if_need(GSP_LAYER_INFO_T *pLayer)
 
     if(pLayer->need_copy == 1)
     {
-        if(pLayer->addr_type_cpy == 1)//iova buffer
+        if(pLayer->addr_type_cpy == 1)   //iova buffer
         {
             if(pLayer->map_once == 0 && pLayer->MemoryHeap_cpy != NULL)
             {
@@ -663,7 +683,7 @@ int iommu_map_if_need(GSP_LAYER_INFO_T *pLayer)
                     pLayer->pa_cpy.addr_y = mmu_addr;
                     pLayer->pa_cpy.addr_uv = pLayer->pa_cpy.addr_y + pLayer->size_y;
                     pLayer->pa_cpy.addr_v = pLayer->pa_cpy.addr_uv + pLayer->size_u;
-                    ALOGE_IF(s_log_out,"[%d] map iommu cpy addr success! 0x%08x\n",__LINE__,mmu_addr);
+                    ALOGE_IF(s_log_out,"[%d] map iommu cpy addr success! %p\n",__LINE__,(void*)mmu_addr);
                 }
                 else
                 {
@@ -682,7 +702,7 @@ int iommu_unmap_if_need(GSP_LAYER_INFO_T *pLayer)
 
     if(pLayer->MemoryHeap)
     {
-        if(pLayer->addr_type == 1)//iova buffer
+        if(pLayer->addr_type == 1)   //iova buffer
         {
             if(pLayer->pa.addr_y && (pLayer->map_once == 0))
             {
@@ -697,7 +717,7 @@ int iommu_unmap_if_need(GSP_LAYER_INFO_T *pLayer)
     {
         if(pLayer->MemoryHeap_cpy)
         {
-            if(pLayer->addr_type_cpy == 1)//iova buffer
+            if(pLayer->addr_type_cpy == 1)   //iova buffer
             {
                 if(pLayer->pa_cpy.addr_y && (pLayer->map_once == 0))
                 {
@@ -717,13 +737,13 @@ int alloc_buffer(GSP_LAYER_INFO_T *pLayer)
     size_t      temp_size = 0;
 
     //alloc none cached and buffered memory
-    if(pLayer->addr_type == 0)//physical buffer
+    if(pLayer->addr_type == 0)   //physical buffer
     {
         ALOGE("[%d] alloc phy buffer \n",__LINE__);
         pLayer->MemoryHeap = new MemoryHeapIon("/dev/ion", pLayer->size_all, NO_CACHING, ION_HEAP_ID_MASK_OVERLAY);//GRALLOC_USAGE_OVERLAY_BUFFER ION_HEAP_CARVEOUT_MASK
         pLayer->MemoryHeap->get_phy_addr_from_ion((unsigned long *)&pLayer->pa.addr_y, &temp_size);
     }
-    else// iova
+    else     // iova
     {
         ALOGE("[%d] alloc virt buffer \n",__LINE__);
         pLayer->MemoryHeap = new MemoryHeapIon("/dev/ion", pLayer->size_all, NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
@@ -732,7 +752,7 @@ int alloc_buffer(GSP_LAYER_INFO_T *pLayer)
             if((pLayer->MemoryHeap->get_gsp_iova(&mmu_addr, &pLayer->buffersize) == 0) && (mmu_addr != 0) && (pLayer->buffersize > 0))
             {
                 pLayer->pa.addr_y = mmu_addr;
-                ALOGE_IF(s_log_out,"[%d] map iommu addr success! 0x%08x\n",__LINE__,mmu_addr);
+                ALOGE_IF(s_log_out,"[%d] map iommu addr success! %p\n",__LINE__,(void*)mmu_addr);
             }
             else
             {
@@ -753,13 +773,13 @@ int alloc_buffer(GSP_LAYER_INFO_T *pLayer)
     if(pLayer->need_copy == 1)
     {
         ALOGE("[%d] alloc cpy buffer \n",__LINE__);
-        if(pLayer->addr_type_cpy == 0)//physical buffer
+        if(pLayer->addr_type_cpy == 0)   //physical buffer
         {
             ALOGE("[%d] alloc cpy phy buffer \n",__LINE__);
             pLayer->MemoryHeap_cpy = new MemoryHeapIon("/dev/ion", pLayer->size_all, NO_CACHING, ION_HEAP_ID_MASK_OVERLAY);//GRALLOC_USAGE_OVERLAY_BUFFER ION_HEAP_CARVEOUT_MASK
             pLayer->MemoryHeap_cpy->get_phy_addr_from_ion((unsigned long *)&pLayer->pa_cpy.addr_y, &temp_size);
         }
-        else// iova
+        else     // iova
         {
             ALOGE("[%d] alloc cpy virt buffer \n",__LINE__);
             pLayer->MemoryHeap_cpy = new MemoryHeapIon("/dev/ion", pLayer->size_all, NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
@@ -795,7 +815,7 @@ int free_buffer(GSP_LAYER_INFO_T *pLayer)
     //alloc none cached and buffered memory
     if(pLayer->MemoryHeap)
     {
-        if(pLayer->addr_type == 1)//iova buffer
+        if(pLayer->addr_type == 1)   //iova buffer
         {
             if(pLayer->pa.addr_y && (pLayer->map_once == 1))
             {
@@ -813,7 +833,7 @@ int free_buffer(GSP_LAYER_INFO_T *pLayer)
     {
         if(pLayer->MemoryHeap_cpy)
         {
-            if(pLayer->addr_type_cpy == 1)//iova buffer
+            if(pLayer->addr_type_cpy == 1)   //iova buffer
             {
                 if(pLayer->pa_cpy.addr_y && (pLayer->map_once == 1))
                 {
@@ -949,16 +969,17 @@ int set_gsp_cfg_info(GSP_CONFIG_INFO_T *pgsp_cfg_info,
         pgsp_cfg_info->layer0_info.des_rect.rect_w = pLayer0->out_size.w;
         pgsp_cfg_info->layer0_info.des_rect.rect_h = pLayer0->out_size.h;
         pgsp_cfg_info->layer0_info.pitch = pLayer0->pitch.w;
-        pgsp_cfg_info->layer0_info.alpha = 0xff;
+        pgsp_cfg_info->layer0_info.alpha = (pLayer0->alpha==0)?0xff:pLayer0->alpha;
         pgsp_cfg_info->layer0_info.layer_en = 1;
-        if(pLayer0->filename == NULL)
+
+        if(pLayer0->filename == NULL || pLayer0->pallet)
         {
-            //pgsp_cfg_info->layer0_info.pallet_en = 1;
-            pgsp_cfg_info->layer0_info.grey.a_val = 0;
-            pgsp_cfg_info->layer0_info.grey.r_val = 0;
+            pgsp_cfg_info->layer0_info.pallet_en = 1;
+            pgsp_cfg_info->layer0_info.grey.a_val = 255;
+            pgsp_cfg_info->layer0_info.grey.r_val = 255;
             pgsp_cfg_info->layer0_info.grey.g_val = 0;
             pgsp_cfg_info->layer0_info.grey.b_val = 0;
-            //pgsp_cfg_info->layer0_info.alpha = 1;
+            //pgsp_cfg_info->layer0_info.alpha = 255;
         }
     }
 
@@ -983,16 +1004,15 @@ int set_gsp_cfg_info(GSP_CONFIG_INFO_T *pgsp_cfg_info,
         pgsp_cfg_info->layer1_info.des_pos.pos_pt_x = pLayer1->out_start.x;
         pgsp_cfg_info->layer1_info.des_pos.pos_pt_y = pLayer1->out_start.y;
         pgsp_cfg_info->layer1_info.pitch = pLayer1->pitch.w;
-        pgsp_cfg_info->layer1_info.alpha = 0x60;
+        pgsp_cfg_info->layer1_info.alpha = (pLayer1->alpha==0)?0xff:pLayer1->alpha;
         pgsp_cfg_info->layer1_info.layer_en = pLayer1->size_all?1:0;
-        if(pLayer1->filename == NULL)
+        if(pLayer1->filename == NULL || pLayer1->pallet)
         {
             pgsp_cfg_info->layer1_info.pallet_en = 1;
             pgsp_cfg_info->layer1_info.grey.a_val = 0;
             pgsp_cfg_info->layer1_info.grey.r_val = 0;
             pgsp_cfg_info->layer1_info.grey.g_val = 0;
             pgsp_cfg_info->layer1_info.grey.b_val = 0;
-            pgsp_cfg_info->layer1_info.alpha = 1;
             pgsp_cfg_info->layer1_info.src_addr.addr_y = pgsp_cfg_info->layer0_info.src_addr.addr_y;
             pgsp_cfg_info->layer1_info.src_addr.addr_v = pgsp_cfg_info->layer0_info.src_addr.addr_uv;
             pgsp_cfg_info->layer1_info.src_addr.addr_uv = pgsp_cfg_info->layer0_info.src_addr.addr_v;
@@ -1014,6 +1034,38 @@ int set_gsp_cfg_info(GSP_CONFIG_INFO_T *pgsp_cfg_info,
         pgsp_cfg_info->layer_des_info.mem_info.v_offset = pgsp_cfg_info->layer_des_info.mem_info.uv_offset;
 #endif
     }
+    ALOGE("L0 {%04dx%04d[(%04d,%04d)%04dx%04d]} ==rot:%d alpha:%03d copy:%d==> [(%04d,%04d)%04dx%04d] bufferType:%d format:%d \n",
+          pgsp_cfg_info->layer0_info.pitch,
+          0,
+          pgsp_cfg_info->layer0_info.clip_rect.st_x,
+          pgsp_cfg_info->layer0_info.clip_rect.st_y,
+          pgsp_cfg_info->layer0_info.clip_rect.rect_w,
+          pgsp_cfg_info->layer0_info.clip_rect.rect_h,
+          pgsp_cfg_info->layer0_info.rot_angle,
+          pgsp_cfg_info->layer0_info.alpha,
+          0,
+          pgsp_cfg_info->layer0_info.des_rect.st_x,
+          pgsp_cfg_info->layer0_info.des_rect.st_y,
+          pgsp_cfg_info->layer0_info.des_rect.rect_w,
+          pgsp_cfg_info->layer0_info.des_rect.rect_h,
+          0,
+          pgsp_cfg_info->layer0_info.img_format);
+    ALOGE("L1 {%04dx%04d[(%04d,%04d)%04dx%04d]} ==rot:%d alpha:%03d copy:%d==> [(%04d,%04d)%04dx%04d] bufferType:%d format:%d \n",
+          pgsp_cfg_info->layer1_info.pitch,
+          0,
+          pgsp_cfg_info->layer1_info.clip_rect.st_x,
+          pgsp_cfg_info->layer1_info.clip_rect.st_y,
+          pgsp_cfg_info->layer1_info.clip_rect.rect_w,
+          pgsp_cfg_info->layer1_info.clip_rect.rect_h,
+          pgsp_cfg_info->layer1_info.rot_angle,
+          pgsp_cfg_info->layer1_info.alpha,
+          0,
+          pgsp_cfg_info->layer1_info.des_pos.pos_pt_x,
+          pgsp_cfg_info->layer1_info.des_pos.pos_pt_y,
+          0,
+          0,
+          0,
+          pgsp_cfg_info->layer1_info.img_format);
 
     return 0;
 }
@@ -1119,7 +1171,7 @@ static int64_t systemTime()
     struct timespec t;
     t.tv_sec = t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    ALOGI_IF(s_log_out,"time: %u:%09u.\n",t.tv_sec,t.tv_nsec);
+    ALOGI_IF(s_log_out,"time: %ld : %09ld.\n",t.tv_sec,t.tv_nsec);
     return t.tv_sec*1000000000LL + t.tv_nsec;
 }
 /*
@@ -1159,6 +1211,7 @@ static int get_gsp_interface(GSP_MISC_INFO_T *misc, GSP_INTF_OPS_E ops)
         if(gsp_dev)
         {
             misc->gsp_process = gsp_dev->GSP_Proccess;
+            misc->gsp_getCapability = gsp_dev->GSP_GetCapability;
         }
         else
         {
@@ -1225,6 +1278,9 @@ int main(int argc, char **argv)
 
     int64_t start_time = 0;//used for performace
     int64_t end_time = 0;//used for performace
+    int64_t single_max = 0;//
+    int64_t single_min = 1000000;//
+    GSP_CAPABILITY_T Gsp_cap;
 
     //print_main_params();
 
@@ -1314,7 +1370,10 @@ int main(int argc, char **argv)
     ret |= open_raw_file(&layerd,"wb");
     if(ret)
     {
-        goto close_file;
+        if(!(misc.power_flag || misc.performance_flag))
+        {
+            goto close_file;
+        }
     }
 
 
@@ -1322,9 +1381,12 @@ int main(int argc, char **argv)
     ret |= read_raw_file(&layer1);
     if(ret)
     {
-        goto close_file;
+        if(!(misc.power_flag || misc.performance_flag))
+        {
+            goto close_file;
+        }
     }
-    add_frame_boundary(&layer0);
+    //add_frame_boundary(&layer0);
 
 
     ret = get_gsp_interface(&misc, GSP_INTF_GET);
@@ -1333,6 +1395,15 @@ int main(int argc, char **argv)
         goto close_file;
     }
 
+    (*misc.gsp_getCapability)(&Gsp_cap);
+    if(Gsp_cap.magic == CAPABILITY_MAGIC_NUMBER)
+    {
+        ALOGE("GSP Capability info: version:%d, support %s buffer, %s page boundary issue, %s process reduce yuv\n",
+              Gsp_cap.version,
+              (Gsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL)?"virtual":"physical",
+              (Gsp_cap.video_need_copy == 1)?"with":"without",
+              (Gsp_cap.blend_video_with_OSD == 1)?"can":"can't");
+    }
 
     if(misc.performance_flag)
     {
@@ -1352,18 +1423,18 @@ int main(int argc, char **argv)
         int64_t single_end = 0;//used for power test
         int64_t single_st = 0;//used for power test
         GSP_CONFIG_INFO_T gsp_cfg_info;
-        if(misc.power_flag)
+        if(misc.power_flag || misc.performance_flag)
         {
             single_st = systemTime()/1000;
         }
         memset(&gsp_cfg_info,0,sizeof(gsp_cfg_info));
 
 
-        if(misc.map_once == 0)// map every time
+        if(misc.map_once == 0)   // map every time
         {
-            iommu_map_if_need(&layer0);
-            iommu_map_if_need(&layer1);
-            iommu_map_if_need(&layerd);
+                iommu_map_if_need(&layer0);
+                iommu_map_if_need(&layer1);
+                iommu_map_if_need(&layerd);
         }
         set_gsp_cfg_info(&gsp_cfg_info,&layer0,&layer1,&layerd);
 
@@ -1371,7 +1442,7 @@ int main(int argc, char **argv)
 
         gsp_cfg_info.misc_info.split_pages = 0;
         ret = (*misc.gsp_process)(&gsp_cfg_info);
-        if(misc.map_once == 0)// unmap every time
+        if(misc.map_once == 0)   // unmap every time
         {
             iommu_unmap_if_need(&layer0);
             iommu_unmap_if_need(&layer1);
@@ -1388,12 +1459,14 @@ int main(int argc, char **argv)
             goto close_file;
         }
 
-        if(misc.power_flag)
+        if(misc.power_flag || misc.performance_flag)
         {
             int64_t calc = 0;
             single_end = systemTime()/1000;
             calc = single_end - single_st;
-            if(calc < 30000)
+            single_max = (single_max<calc)?calc:single_max;
+            single_min =  (single_min<calc)?single_min:calc;
+            if(calc < 30000 && misc.power_flag)
             {
                 usleep(30000-calc);
                 //sleep(2);
@@ -1410,7 +1483,7 @@ int main(int argc, char **argv)
         end_time = systemTime()/1000;
         calc = end_time - start_time;
         calc /= test_cnt_max;
-        ALOGE("GSP start:%lld, end:%lld,avg:%lld us !!\n",start_time,end_time,calc);
+        ALOGE("GSP start:%lld, end:%lld,max:%lld,min:%lld,avg:%lld us !!\n",start_time,end_time,single_max,single_min,calc);
     }
 
     ALOGE("%s[%d],write %s params: addr:0x%08x size:%d \n",  __func__, __LINE__,layerd.filename,layerd.va.addr_y,(layerd.size_y+layerd.size_u+layerd.size_v));

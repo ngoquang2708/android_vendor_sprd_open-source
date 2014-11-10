@@ -15,6 +15,7 @@
 
 #include "ion.h"
 #include "MemoryHeapIon.h"
+ extern int s_log_out;
 
 status_t MemoryHeapIon::mapIonFd(int fd, size_t size, unsigned long memory_type, int uflags)
 {
@@ -43,7 +44,7 @@ status_t MemoryHeapIon::mapIonFd(int fd, size_t size, unsigned long memory_type,
 
     if (ioctl(fd, ION_IOC_ALLOC, &data) < 0)
     {
-        ALOGE("%s: ION_IOC_ALLOC error!\n",__func__);
+        ALOGE("%s: ION_IOC_ALLOC error:%s!\n",__func__,strerror(errno));
         close(fd);
         return -errno;
     }
@@ -76,7 +77,7 @@ status_t MemoryHeapIon::mapIonFd(int fd, size_t size, unsigned long memory_type,
         }
         else
         {
-            ALOGE("mmap(fd=%d, size=%u) success,0x%08x\n", fd, uint32_t(size),base);
+            ALOGE_IF(s_log_out,"mmap success, fd=%d, size=%u, addr=%p\n", fd, uint32_t(size),base);
         }
     }
     mIonHandle = data.handle;
@@ -96,13 +97,13 @@ status_t MemoryHeapIon::mapIonFd(int fd, size_t size, unsigned long memory_type,
     return NO_ERROR;
 }
 
-MemoryHeapIon::MemoryHeapIon() : mIonDeviceFd(-1), mIonHandle(NULL)
+MemoryHeapIon::MemoryHeapIon() :  mIonHandle(NULL),mIonDeviceFd(-1)
 {
 }
 
 
 MemoryHeapIon::MemoryHeapIon(const char* device, size_t size,
-                             uint32_t flags, unsigned long memory_types)
+                             uint32_t flags, unsigned long memory_types): mIonHandle(NULL),mIonDeviceFd(-1)
 {
     int open_flags = O_RDONLY;
     int fd = 0;
@@ -115,12 +116,12 @@ MemoryHeapIon::MemoryHeapIon(const char* device, size_t size,
     {
         const size_t pagesize = getpagesize();
         //const size_t pagesize = 4096;
-        ALOGE("open ion success\n");
+        ALOGE_IF(s_log_out,"open ion success\n");
         size = ((size + pagesize-1) & ~(pagesize-1));
         if (mapIonFd(fd, size, memory_types, flags) == NO_ERROR)
         {
             mDevice = device;
-            ALOGE("alloc ion buffer success\n");
+            ALOGE_IF(s_log_out,"alloc ion buffer success\n");
         }
         else
         {
@@ -138,25 +139,44 @@ MemoryHeapIon::~MemoryHeapIon()
 {
     struct ion_handle_data data;
 
-    data.handle = mIonHandle;
+
 
     /*
      * Due to the way MemoryHeapBase is set up, munmap will never
      * be called so we need to call it ourselves here.
      */
-    munmap(mBase, mSize);
-    ALOGE("%s:unmap buffer virt addr:0x%08x\n",__func__,mBase);
+    if(mBase && mSize > 0)
+    {
+        if (munmap(mBase, mSize) < 0)
+        {
+            ALOGE("%s:unmap buffer virt addr:%p,size:%d failed, errno:%s\n",__func__,mBase,mSize,strerror(errno));
+        }
+        else
+        {
+            ALOGE_IF(s_log_out,"%s:unmap buffer virt addr:%p,size:%d success.\n",__func__,mBase,mSize);
+        }
+        mBase = 0;
+        mSize=0;
+    }
     if (mIonDeviceFd > 0)
     {
+        data.handle = mIonHandle;
         ioctl(mIonDeviceFd, ION_IOC_FREE, &data);
         close(mIonDeviceFd);
-        ALOGE("%s:free ion buffer fd:%d\n",__func__,mIonDeviceFd);
+        if(mFD>=0)
+        {
+            close(mFD);
+            mFD = -1;
+        }
+        ALOGE_IF(s_log_out,"%s:free ion buffer fd:%d\n",__func__,mIonDeviceFd);
+        mIonDeviceFd = -1;
+        mIonHandle = NULL;
     }
 }
 
 int MemoryHeapIon::get_phy_addr_from_ion(unsigned long *phy_addr, size_t *size)
 {
-    if(mIonDeviceFd<0)
+    if(mIonDeviceFd<0 || mIonHandle == NULL)
     {
         ALOGE("%s:open dev ion error!\n",__func__);
         return -1;
@@ -177,7 +197,7 @@ int MemoryHeapIon::get_phy_addr_from_ion(unsigned long *phy_addr, size_t *size)
             ALOGE("%s: get phy addr error:%d!\n",__func__,ret);
             return -2;
         }
-        ALOGE("%s: get phy addr success:0x%08x!\n",__func__,*phy_addr);
+        ALOGE_IF(s_log_out,"%s: get phy addr success:%p!\n",__func__,(void*)*phy_addr);
     }
     return 0;
 }
