@@ -3,7 +3,7 @@
 
 #ifndef __ROM_
    #define  TRACE_MEM_PRINT_ENABLE   1
-   #define  TRACE_MEM_MODE   2                   //0,1,2,3 可以修改
+   #define  TRACE_MEM_MODE   0                   //0,1,2,3 可以修改
 #else   //dont modify below
    #define  TRACE_MEM_PRINT_ENABLE   0
    #define  TRACE_MEM_MODE   0
