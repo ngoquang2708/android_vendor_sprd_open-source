@@ -5110,7 +5110,7 @@ void SprdCameraHardware::handleFDDataCallback(int32_t msg_type,
 		camera_frame_metadata_t *metadata, void *user,
 		uint32_t isPrev)
 {
-	sprd_camera_memory_t *data;
+	sprd_camera_memory_t *data = NULL;
 
 	if (isPrev)
 		Mutex::Autolock l(&mCbPrevDataBusyLock);
