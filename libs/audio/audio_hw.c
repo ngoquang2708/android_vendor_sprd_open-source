@@ -1063,16 +1063,15 @@ ret);
         if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
 
-            //force_all_standby(adev);
             i2s_pin_mux_sel(adev, FM_IIS);
             adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
             if (!pcm_is_ready(adev->pcm_fm_dl)) {
-            ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+            ALOGE("%s:AUDIO_DEVICE_OUT_FM cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
             pcm_close(adev->pcm_fm_dl);
             adev->pcm_fm_dl= NULL;
             } else {
               if( 0 != pcm_start(adev->pcm_fm_dl)){
-                  ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+                  ALOGE("%s:pcm_start pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
@@ -1230,7 +1229,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
             adev->pcm_fm_dl= NULL;
             } else {
               if( 0 != pcm_start(adev->pcm_fm_dl)){
-                  ALOGE("%s:pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+                  ALOGE("%s:pcm_start pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
@@ -1427,7 +1426,9 @@ static int start_vaudio_output_stream(struct tiny_stream_out *out)
 #else
     out->pcm_vplayback= pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &out->config);
 #endif
+
     if (!pcm_is_ready(out->pcm_vplayback)) {
+        ALOGE("%s:cannot open pcm_vplayback : %s", __func__,pcm_get_error(out->pcm_vplayback));
         goto error;
     }
     else {
@@ -1450,7 +1451,7 @@ error:
         out->buffer_vplayback=NULL;
     }
     if(out->pcm_vplayback){
-        ALOGE("start_vaudio_output_stream error: %s", pcm_get_error(out->pcm_vplayback));
+        ALOGE("%s: pcm_vplayback open error: %s", __func__, pcm_get_error(out->pcm_vplayback));
 #ifdef AUDIO_MUX_PCM
 
 #else
@@ -1466,24 +1467,21 @@ error:
 
 static int open_voip_codec_pcm(struct tiny_audio_device *adev)
 {
-    ALOGE("voip:open voip_codec_pcm in");
-
-    ALOGD("voip:open codec pcm in adev->voip_state is %x",adev->voip_state);
+    ALOGD("voip:%s in adev->voip_state is %x", __func__, adev->voip_state);
        if(!adev->pcm_modem_dl) {
            adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx_voip);
            if (!pcm_is_ready(adev->pcm_modem_dl)) {
-              ALOGE("cannot open pcm_modem_dl : %s", pcm_get_error(adev->pcm_modem_dl));
+              ALOGE("%s:cannot open pcm_modem_dl : %s", __func__, pcm_get_error(adev->pcm_modem_dl));
                pcm_close(adev->pcm_modem_dl);
                adev->pcm_modem_dl = NULL;
 		ALOGE("voip:open voip_codec_pcm dl fail");
 		return -1;
            }
        }
-    ALOGD("voip:open codec pcm in 2");
        if(!adev->pcm_modem_ul) {
            adev->pcm_modem_ul= pcm_open(s_tinycard, PORT_MODEM, PCM_IN, &pcm_config_vrec_vx_voip);
            if (!pcm_is_ready(adev->pcm_modem_ul)) {
-               ALOGE("cannot open pcm_modem_ul : %s", pcm_get_error(adev->pcm_modem_ul));
+               ALOGE("%s:cannot open pcm_modem_ul : %s", __func__, pcm_get_error(adev->pcm_modem_ul));
               pcm_close(adev->pcm_modem_ul);
                adev->pcm_modem_ul = NULL;
 		ALOGE("voip:open voip_codec_pcm ul fail");
@@ -1492,10 +1490,10 @@ static int open_voip_codec_pcm(struct tiny_audio_device *adev)
        }
 
 	if( 0 != pcm_start(adev->pcm_modem_dl)) {
-		 ALOGE("voip pcm dl start unsucessfully");
+		 ALOGE("voip:pcm_start pcm_modem_dl start unsucessfully");
 	}
 	if( 0 != pcm_start(adev->pcm_modem_ul)) {
-	    ALOGE("voip pcm ul start unsucessfully");
+	    ALOGE("voip:pcm_start pcm_modem_ul start unsucessfully");
 	}
     ALOGD("voip:open codec pcm out 2");
 
@@ -1543,6 +1541,7 @@ static int start_mux_output_stream(struct tiny_stream_out *out)
     }
     out->pcm_vplayback= mux_pcm_open(card, port, PCM_OUT, &out->config);
     if (!pcm_is_ready(out->pcm_vplayback)) {
+        ALOGE("%s:mux_pcm_open pcm is not ready!!!", __func__);
         goto error;
     }
     else {
@@ -1591,21 +1590,20 @@ static int start_sco_output_stream(struct tiny_stream_out *out)
     else {
         memset(out->buffer_voip, 0, RESAMPLER_BUFFER_SIZE);
     }
-    //out->pcm_voip = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
 
-	ALOGD("start_sco_output_stream ok 1 ");
+    ALOGD("start_sco_output_stream ok 1 ");
     open_voip_codec_pcm(adev);
-    ALOGD("start_sco_output_stream error ok");
+
 #ifdef AUDIO_MUX_PCM
 	out->pcm_voip = mux_pcm_open(SND_CARD_VOIP_TG, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);
 #else
     out->pcm_voip = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_scoplayback);
 #endif
-    ALOGD("start_sco_output_stream ok 4");
+    ALOGD("start_sco_output_stream ok 2");
 
 
     if (!pcm_is_ready(out->pcm_voip)) {
-        ALOGE("pcm_is  not ready");
+        ALOGE("%s:cannot open pcm_voip : %s", __func__,pcm_get_error(out->pcm_voip));
         goto error;
     }
     else {
@@ -1620,7 +1618,7 @@ static int start_sco_output_stream(struct tiny_stream_out *out)
         }
     }
 
-    ALOGE("start_sco_output_stream error ok");
+    ALOGE("start_sco_output_stream ok");
     return 0;
 
 error:
@@ -1679,14 +1677,10 @@ static int start_bt_sco_output_stream(struct tiny_stream_out *out)
 
     ALOGE("bt sco : %s after", __func__);
 
-    //out->pcm_voip = pcm_open(card, port, PCM_OUT, &pcm_config_scoplayback);
-
-    ALOGD("start_bt_sco_output_stream ok 1 ");
     out->pcm_bt_sco = pcm_open(card, port, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_btscoplayback);
-    ALOGD("start_bt_sco_output_stream ok 4");////
-
 
     if (!pcm_is_ready(out->pcm_bt_sco)) {
+        ALOGE("%s:cannot open pcm_bt_sco : %s", __func__,pcm_get_error(out->pcm_bt_sco));
         goto error;
     }
     else {
@@ -1731,7 +1725,8 @@ static int start_output_stream(struct tiny_stream_out *out)
     int ret=0;
 
     adev->active_output = out;
-    ALOGD("start output stream out->is_voip is %d, in adev->out_devices = %d",out->is_voip , adev->out_devices);
+    ALOGD("start output stream mode:%x devices:%x call_start:%d, call_connected:%d, is_voip:%d, voip_state:%x, is_bt_sco:%d",
+        adev->mode, adev->out_devices, adev->call_start, adev->call_connected, out->is_voip,adev->voip_state, out->is_bt_sco);
 
     if (!adev->call_start && adev->voip_state == 0) {
         /* FIXME: only works if only one output can be active at a time*/
@@ -1812,7 +1807,7 @@ static int start_output_stream(struct tiny_stream_out *out)
         out->pcm = pcm_open(card, port, PCM_OUT | PCM_MMAP | PCM_NOIRQ, &out->config);
 
         if (!pcm_is_ready(out->pcm)) {
-            ALOGE("cannot open pcm_out driver: %s", pcm_get_error(out->pcm));
+            ALOGE("%s: cannot open pcm: %s", __func__, pcm_get_error(out->pcm));
             pcm_close(out->pcm);
             out->pcm = NULL;
             adev->active_output = NULL;
@@ -1913,12 +1908,17 @@ static int do_output_standby(struct tiny_stream_out *out)
 {
     struct tiny_audio_device *adev = out->dev;
     ALOGD("do_output_standby in");
+    ALOGD("%s: standby(%d), mode(%d), out_devices(%x), in_devices(%x), cp_type(%d), call_start(%d), call_connected(%d),mic_mute(%d),", __func__,
+        out->standby, adev->mode, adev->out_devices, adev->in_devices, adev->cp_type, adev->call_start, adev->call_connected, adev->mic_mute);
+    ALOGD("out->is_bt_sco(%d), bluetooth_nrec(%d), bluetooth_type(%d),///////out->is_voip(%d), realCall(%d), voip_start(%x), voip_state(%d), master_mute(%d), cache_mute(%d)",
+        out->is_bt_sco, adev->bluetooth_nrec, adev->bluetooth_type,
+        out->is_voip,adev->realCall, adev->voip_start,adev->voip_state, adev->master_mute, adev->cache_mute);
+
     if (!out->standby) {
         if (out->pcm) {
             pcm_close(out->pcm);
             out->pcm = NULL;
         }
-        BLUE_TRACE("do_output_standby.mode:%d ",adev->mode);
         adev->active_output = 0;
         if(out->pcm_voip) {
 #ifdef AUDIO_MUX_PCM
@@ -2134,7 +2134,7 @@ static bool out_bypass_data(struct tiny_stream_out *out, uint32_t frame_size, ui
             || (adev->call_start && (!adev->call_connected))
             || ((!adev->vbc_2arm) && (!adev->call_start) && (adev->mode == AUDIO_MODE_IN_CALL))
             || adev->call_prestop) {
-        MY_TRACE("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->out_devices,adev->call_connected,adev->vbc_2arm,adev->call_prestop);
+        ALOGD("out_write throw away data call_start(%d) mode(%d) devices(0x%x) call_connected(%d) vbc_2arm(%d) call_prestop(%d)...",adev->call_start,adev->mode,adev->out_devices,adev->call_connected,adev->vbc_2arm,adev->call_prestop);
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
         usleep((int64_t)bytes * 1000000 / frame_size / sample_rate);
@@ -2609,10 +2609,9 @@ static void *audio_bt_sco_dup_thread_func(void * param)
         if(adev->bt_sco_manager.dup_need_start) {
             pthread_mutex_unlock(&adev->bt_sco_manager.cond_mutex);
             if(bt_sco_playback == NULL) {
-                ALOGE("bt sco : duplicate downlink card opening");
                 bt_sco_playback = pcm_open(s_bt_sco, PORT_MM, PCM_OUT| PCM_MMAP |PCM_NOIRQ, &pcm_config_btscoplayback);
                 if(!pcm_is_ready(bt_sco_playback)) {
-                    ALOGE("bt sco : duplicate downlink card open fail");
+                    ALOGE("%s:cannot open bt_sco_playback : %s", __func__,pcm_get_error(bt_sco_playback));
                     pcm_close(bt_sco_playback);
                     bt_sco_playback = NULL;
                     adev->bt_sco_state |= BT_SCO_DOWNLINK_OPEN_FAIL;
@@ -2739,7 +2738,7 @@ static int start_input_stream(struct tiny_stream_in *in)
     struct tiny_audio_device *adev = in->dev;
     struct pcm_config  old_config = in->config;
     adev->active_input = in;
-    ALOGW("start_input_stream in mode:0x%x devices:0x%x call_start:%d ",adev->mode,adev->in_devices,adev->call_start);
+    ALOGW("start_input_stream in mode:%x devices:%x call_start:%d, is_voip:%d, is_bt_sco:%d",adev->mode,adev->in_devices,adev->call_start, in->is_voip, in->is_bt_sco);
     if (!adev->call_start) {
         adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
         adev->in_devices |= in->device;
@@ -2776,12 +2775,13 @@ static int start_input_stream(struct tiny_stream_in *in)
 #ifdef AUDIO_MUX_PCM
 	in->mux_pcm = mux_pcm_open(SND_CARD_VOIP_TG,PORT_MM,PCM_IN,&in->config );
 	 if (!pcm_is_ready(in->mux_pcm)) {
-	 	ALOGE(" in->mux_pcm = mux_pcm_open open error");
+            ALOGE("%s:cannot open in->pcm : %s", __func__,pcm_get_error(in->mux_pcm));
             goto err;
         }
 #else
         in->pcm = pcm_open(s_voip,PORT_MM,PCM_IN,&in->config );
         if (!pcm_is_ready(in->pcm)) {
+            ALOGE("%s:cannot open in->pcm : %s", __func__,pcm_get_error(in->pcm));
             goto err;
         }
 #endif
@@ -2800,9 +2800,9 @@ static int start_input_stream(struct tiny_stream_in *in)
             in->config.channels = in->requested_channels;
         }
         in->active_rec_proc = 0;
-        BLUE_TRACE("in  bt_sco:opencard");
         in->pcm = pcm_open(s_bt_sco,PORT_MM,PCM_IN,&in->config );
         if (!pcm_is_ready(in->pcm)) {
+            ALOGE("%s:cannot open in->pcm : %s", __func__,pcm_get_error(in->pcm));
             goto err;
         }
         in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev), in->requested_rate );
@@ -2859,13 +2859,13 @@ static int start_input_stream(struct tiny_stream_in *in)
 #ifdef AUDIO_MUX_PCM
         in->mux_pcm = mux_pcm_open(SND_CARD_VOICE_TG,PORT_MM,PCM_IN,&in->config);
         if (!pcm_is_ready(in->mux_pcm)) {
-            ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->mux_pcm));
+            ALOGE("voice-call rec cannot mux_pcm_open mux_pcm driver: %s", pcm_get_error(in->mux_pcm));
            goto err;
         }
 #else
         in->pcm = pcm_open(card,PORT_MM,PCM_IN,&in->config);
         if (!pcm_is_ready(in->pcm)) {
-            ALOGE("voice-call rec cannot open pcm_in driver: %s", pcm_get_error(in->pcm));
+            ALOGE("%s: voice-call rec cannot open pcm_in driver: %s", __func__, pcm_get_error(in->pcm));
             goto err;
         }
 #endif
@@ -2880,7 +2880,7 @@ static int start_input_stream(struct tiny_stream_in *in)
            in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
            if(!pcm_is_ready(in->pcm)) {
              pcm_close(in->pcm);
-             ALOGE("fm rec cannot open pcm_in driver : %s,samplerate:%d", pcm_get_error(in->pcm),in->config.rate);
+             ALOGE("%s: pcm_open AUDIO_DEVICE_OUT_FM 0 cannot open pcm: %s", __func__, pcm_get_error(in->pcm));
              in->pcm = NULL;
            }
            if(NULL == in->pcm){
@@ -2889,9 +2889,9 @@ static int start_input_stream(struct tiny_stream_in *in)
                if(in->config.channels != in->requested_channels) {
                  in->config.channels = in->requested_channels;
                }
-               ALOGE("fm rec try to open pcm_in driver again using samplerate:%d",in->config.rate);
                in->pcm = pcm_open(s_tinycard, PORT_MM, PCM_IN, &in->config);
                if(!pcm_is_ready(in->pcm)) {
+                 ALOGE("%s: pcm_open AUDIO_DEVICE_OUT_FM 1 cannot open pcm: %s", __func__, pcm_get_error(in->pcm));
                  goto err;
                }
            }
@@ -2905,18 +2905,17 @@ static int start_input_stream(struct tiny_stream_in *in)
             {
                 in->config.rate = in->requested_rate;
             }
-            ALOGE("start_input_stream pcm_open_0");
             in->pcm = pcm_open(s_tinycard, PORT_MM_C, PCM_IN, &in->config);
             if(!pcm_is_ready(in->pcm)) {
-                if(in->pcm) {
+              ALOGE("%s: pcm_open 0 cannot open pcm: %s", __func__, pcm_get_error(in->pcm));
+               if(in->pcm) {
                     pcm_close(in->pcm);
                     in->pcm = NULL;
                 }
                 in->config.rate = pcm_config_mm_ul.rate;
-                ALOGE("start_input_stream pcm_open_1");
                 in->pcm = pcm_open(s_tinycard, PORT_MM_C, PCM_IN, &in->config);
                 if(!pcm_is_ready(in->pcm)) {
-                    ALOGE("start_input_stream pcm open err");
+                    ALOGE("%s: pcm_open 1 cannot open pcm: %s", __func__, pcm_get_error(in->pcm));
                     goto err;
                 }
             }
@@ -3048,7 +3047,12 @@ static int in_set_format(struct audio_stream *stream, audio_format_t format)
 static int do_input_standby(struct tiny_stream_in *in)
 {
     struct tiny_audio_device *adev = in->dev;
-    ALOGI("%s, standby=%d, in_devices=0x%08x", __func__, in->standby, adev->in_devices);
+    ALOGD("do_input_standby in->standby(%d), mode(%d), out_devices(%x), in_devices(%x), cp_type(%d), call_start(%d), call_connected(%d),mic_mute(%d), ",
+        in->standby, adev->mode, adev->out_devices, adev->in_devices, adev->cp_type, adev->call_start, adev->call_connected, adev->mic_mute);
+    ALOGD("in->is_bt_sco(%d), bluetooth_nrec(%d), bluetooth_type(%d) /////  in->is_voip(%d), realCall(%d), voip_start(%x), voip_state(%d), master_mute(%d), cache_mute(%d)",
+        in->is_bt_sco, adev->bluetooth_nrec, adev->bluetooth_type, 
+        in->is_voip,adev->realCall, adev->voip_start,adev->voip_state, adev->master_mute, adev->cache_mute);
+
     if (!in->standby) {
 #ifdef AUDIO_MUX_PCM
         if (in->mux_pcm) {
