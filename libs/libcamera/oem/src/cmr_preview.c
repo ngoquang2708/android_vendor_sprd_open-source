@@ -4741,12 +4741,23 @@ cmr_int prev_fd_open(struct prev_handle *handle, cmr_u32 camera_id)
 	}
 
 	in_param.frame_cnt          = 1;
-	in_param.frame_size.width   = prev_cxt->actual_prev_size.width;
-	in_param.frame_size.height  = prev_cxt->actual_prev_size.height;
-	in_param.frame_rect.start_x = 0;
-	in_param.frame_rect.start_y = 0;
-	in_param.frame_rect.width   = in_param.frame_size.width;
-	in_param.frame_rect.height  = in_param.frame_size.height;
+	if ((IMG_ANGLE_90 == prev_cxt->prev_param.prev_rot) ||
+		(IMG_ANGLE_270 == prev_cxt->prev_param.prev_rot)) {
+		in_param.frame_size.width   = prev_cxt->actual_prev_size.height;
+		in_param.frame_size.height  = prev_cxt->actual_prev_size.width;
+		in_param.frame_rect.start_x = 0;
+		in_param.frame_rect.start_y = 0;
+		in_param.frame_rect.width   = in_param.frame_size.height;
+		in_param.frame_rect.height  = in_param.frame_size.width;
+	} else {
+		in_param.frame_size.width   = prev_cxt->actual_prev_size.width;
+		in_param.frame_size.height  = prev_cxt->actual_prev_size.height;
+		in_param.frame_rect.start_x = 0;
+		in_param.frame_rect.start_y = 0;
+		in_param.frame_rect.width   = in_param.frame_size.width;
+		in_param.frame_rect.height  = in_param.frame_size.height;
+	}
+
 	in_param.reg_cb             = prev_fd_cb;
 
 	ret = cmr_ipm_open(handle->ipm_handle, IPM_TYPE_FD, &in_param, &out_param, &prev_cxt->fd_handle);
