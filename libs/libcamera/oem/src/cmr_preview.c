@@ -2881,6 +2881,7 @@ cmr_int prev_get_sn_preview_mode(struct sensor_exp_info *sensor_info, struct img
 		if (SENSOR_MODE_MAX != sensor_info->mode_info[i].mode) {
 			height = sensor_info->mode_info[i].trim_height;
 			CMR_LOGI("height = %d", height);
+			height = CAMERA_ALIGNED_16(height);
 			if (IMG_DATA_TYPE_JPEG != sensor_info->mode_info[i].image_format) {
 				if (search_height <= height) {
 					target_mode = i;
@@ -2931,6 +2932,7 @@ cmr_int prev_get_sn_capture_mode(struct sensor_exp_info *sensor_info, struct img
 			}*/
 			height = sensor_info->mode_info[i].trim_height;
 			CMR_LOGI("height = %d", height);
+			height = CAMERA_ALIGNED_16(height);
 			if (search_height <= height) {
 				target_mode = i;
 				ret = CMR_CAMERA_SUCCESS;

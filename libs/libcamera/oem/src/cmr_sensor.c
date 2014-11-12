@@ -969,7 +969,7 @@ cmr_int cmr_sns_get_ioctl_cmd(SENSOR_IOCTL_CMD_E *sns_cmd, enum sensor_cmd in_cm
 			break;
 
 		default:
-			CMR_LOGE("invalid cmd!");
+			CMR_LOGE("invalid cmd! %d",in_cmd);
 			ret = CMR_CAMERA_INVALID_PARAM;
 			break;
 	}

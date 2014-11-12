@@ -1086,6 +1086,66 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 	return ret;
 }
 
+static int camera_get_system_time(char *datetime)
+{
+	time_t timep;
+	struct tm *p;
+	time(&timep);
+	p = localtime(&timep);
+	sprintf(datetime, "%04d%02d%02d%02d%02d%02d",
+			(1900 + p->tm_year),
+			(1 + p->tm_mon),
+			p->tm_mday,
+			p->tm_hour,
+			p->tm_min,
+			p->tm_sec);
+
+	CMR_LOGI("datatime = %s", datetime);
+
+	return 0;
+}
+
+static int camera_save_raw_to_file(char *name, uint32_t img_fmt,
+					uint32_t width, uint32_t height, struct img_addr *addr)
+{
+#if 1
+#define FILE_DIR "/data/misc/media/"
+#else
+#define FILE_DIR "/storage/sdcard0/DCIM/Camera/raw/"
+#endif
+#define FILE_NAME_LEN 70
+	int ret = CMR_CAMERA_SUCCESS;
+	char file_name[FILE_NAME_LEN] = {0};
+	char tmp_str[20] = {0};
+	FILE *fp = NULL;
+
+	CMR_LOGI("name %s, format %d, width %d, heght %d",
+			name, img_fmt, width, height);
+
+	strcpy(file_name, FILE_DIR);
+	sprintf(tmp_str, "%d", width);
+	strcat(file_name, tmp_str);
+	strcat(file_name, "X");
+	sprintf(tmp_str, "%d", height);
+	strcat(file_name, tmp_str);
+
+	strcat(file_name, "_");
+	sprintf(tmp_str, "%s", name);
+	strcat(file_name, tmp_str);
+	strcat(file_name, ".raw");
+	CMR_LOGI("file name %s", file_name);
+
+	fp = fopen(file_name, "wb");
+	if (NULL == fp) {
+		CMR_LOGE("can not open file: %s errno = %d\n", file_name, errno);
+		return -1;
+	}
+
+	fwrite((void *)addr->addr_y, 1, (uint32_t) (width * height * 5 / 4), fp);
+	fclose(fp);
+	return 0;
+}
+
 cmr_int snp_start_isp_proc(cmr_handle snp_handle, void *data)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -1116,11 +1176,24 @@ cmr_int snp_start_isp_proc(cmr_handle snp_handle, void *data)
 								(char *)mem_ptr->cap_raw.addr_vir.addr_y,
 								mem_ptr->cap_raw.size.width*mem_ptr->cap_raw.size.height*raw_pixel_width /8,
 								0, 0, 0, 0);
+#if 0
 			camera_save_to_file(isp_get_saved_file_count(snp_handle),
 								IMG_DATA_TYPE_RAW,
 								mem_ptr->cap_raw.size.width,
 								mem_ptr->cap_raw.size.height,
 								&mem_ptr->cap_raw.addr_vir);
+#else
+			if (CAMERA_ISP_TUNING_MODE == snp_cxt->req_param.mode) {
+				char datetime[15] = {0};
+				CMR_LOGI("ISP save raw to file");
+				camera_get_system_time(datetime);
+				camera_save_raw_to_file(datetime,
+										IMG_DATA_TYPE_RAW,
+										mem_ptr->cap_raw.size.width,
+										mem_ptr->cap_raw.size.height,
+										&mem_ptr->cap_raw.addr_vir);
+			}
+#endif
 		}
 		ret = snp_cxt->ops.raw_proc(snp_cxt->oem_handle, snp_handle, &isp_in_param);
 		if (ret) {
@@ -2050,6 +2123,9 @@ cmr_int snp_set_channel_out_param(cmr_handle snp_handle)
 			} else {
 				if (CAMERA_AUTOTEST_MODE != cxt->req_param.mode) {
 					for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+						if (ISP_DATA_YUV420_2FRAME == cxt->chn_param.isp_proc_in[i].dst_frame.fmt) {
+							cxt->chn_param.isp_proc_in[i].dst_frame.fmt = IMG_DATA_TYPE_YUV420;
+						}
 						cxt->chn_param.chn_frm[i] = cxt->chn_param.isp_proc_in[i].dst_frame;
 					}
 				} else {
@@ -2493,6 +2569,11 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 	}
 
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
+		chn_param_ptr->isp_proc_in[i].dst_frame.size = req_param_ptr->post_proc_setting.snp_size;
+		CMR_LOGI("piano actual w/h %d %d", req_param_ptr->post_proc_setting.actual_snp_size.width,
+				req_param_ptr->post_proc_setting.actual_snp_size.height);
+		CMR_LOGI("piano w/h %d %d", req_param_ptr->post_proc_setting.snp_size.width,
+						req_param_ptr->post_proc_setting.snp_size.height);
 		chn_param_ptr->isp_proc_in[i].src_frame = req_param_ptr->post_proc_setting.mem[i].cap_raw;
 		chn_param_ptr->isp_proc_in[i].src_avail_height = req_param_ptr->post_proc_setting.mem[i].cap_raw.size.height;
 #if 1

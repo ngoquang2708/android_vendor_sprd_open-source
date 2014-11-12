@@ -2811,6 +2811,7 @@ cmr_int camera_raw_proc(cmr_handle oem_handle, cmr_handle caller_handle, struct 
 		in_param.dst_frame.img_fmt = param_ptr->dst_frame.fmt;
 		in_param.dst_frame.img_size.w = param_ptr->dst_frame.size.width;
 		in_param.dst_frame.img_size.h = param_ptr->dst_frame.size.height;
+		CMR_LOGI("piano shabi w/h %d %d", in_param.dst_frame.img_size.w, in_param.dst_frame.img_size.h);
 		in_param.dst_frame.img_addr_phy.chn0 = param_ptr->dst_frame.addr_phy.addr_y;
 		in_param.dst_frame.img_addr_phy.chn1 = param_ptr->dst_frame.addr_phy.addr_u;
 		in_param.dst_frame.img_addr_vir.chn0 = param_ptr->dst_frame.addr_vir.addr_y;

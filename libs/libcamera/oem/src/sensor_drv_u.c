@@ -33,6 +33,7 @@
 #define SENSOR_CTRL_EVT_SETMODE                (SENSOR_CTRL_EVT_BASE + 0x2)
 #define SENSOR_CTRL_EVT_SETMODONE              (SENSOR_CTRL_EVT_BASE + 0x3)
 #define SENSOR_CTRL_EVT_CFGOTP                 (SENSOR_CTRL_EVT_BASE + 0x4)
+#define SENSOR_CTRL_EVT_STREAM_CTRL            (SENSOR_CTRL_EVT_BASE + 0x5)
 /**---------------------------------------------------------------------------*
  **                         Local Variables                                   *
  **---------------------------------------------------------------------------*/
@@ -60,6 +61,7 @@ static cmr_int sensor_cfg_otp_update_isparam(struct sensor_drv_context *sensor_c
 static cmr_int sns_create_ctrl_thread(struct sensor_drv_context *sensor_cxt);
 static cmr_int sns_ctrl_thread_proc(struct cmr_msg *message, void *p_data);
 static cmr_int sns_destroy_ctrl_thread(struct sensor_drv_context *sensor_cxt);
+static cmr_int sns_stream_ctrl_common(struct sensor_drv_context *sensor_cxt, cmr_u32 on_off);
 
 /***---------------------------------------------------------------------------*
  **                       Local function contents                              *
@@ -2025,7 +2027,7 @@ end:
 cmr_int sns_ctrl_thread_proc(struct cmr_msg *message, void *p_data)
 {
 	cmr_int                   ret = CMR_CAMERA_SUCCESS;
-	cmr_u32                   evt = 0;
+	cmr_u32                   evt = 0, on_off = 0;
 	cmr_u32                   camera_id = CAMERA_ID_MAX;
 	struct sensor_drv_context *sensor_cxt = (struct sensor_drv_context *)p_data;
 
@@ -2058,6 +2060,9 @@ cmr_int sns_ctrl_thread_proc(struct cmr_msg *message, void *p_data)
 		camera_id = (cmr_u32)message->sub_msg_type;
 		sns_cfg_otp_update_isparam(sensor_cxt, camera_id);
 		break;
+	case SENSOR_CTRL_EVT_STREAM_CTRL:
+		on_off = (cmr_u32)message->sub_msg_type;
+		sns_stream_ctrl_common(sensor_cxt, on_off);
 
 	case SENSOR_CTRL_EVT_EXIT:
 		/*common control info clear*/
@@ -2469,6 +2474,25 @@ cmr_int sns_stream_on(struct sensor_drv_context *sensor_cxt)
 }
 
 cmr_int sensor_stream_ctrl_common(struct sensor_drv_context *sensor_cxt, cmr_u32 on_off)
+{
+	CMR_MSG_INIT(message);
+	cmr_int                  ret = CMR_CAMERA_SUCCESS;
+
+	SENSOR_DRV_CHECK_ZERO(sensor_cxt);
+
+	/*the set mode function can be async control*/
+	message.msg_type     = SENSOR_CTRL_EVT_STREAM_CTRL;
+	message.sync_flag    = CMR_MSG_SYNC_PROCESSED;
+	message.sub_msg_type = on_off;
+	ret = cmr_thread_msg_send(sensor_cxt->ctrl_thread_cxt.thread_handle, &message);
+	if (ret) {
+		CMR_LOGE("send msg failed!");
+		return CMR_CAMERA_FAIL;
+	}
+	return ret;
+}
+
+cmr_int sns_stream_ctrl_common(struct sensor_drv_context *sensor_cxt, cmr_u32 on_off)
 {
 	cmr_int                      ret = 0;
 	cmr_u32           		 mode;

@@ -1077,8 +1077,24 @@ status_t SprdCameraHardware::cancelAutoFocus()
 
 void SprdCameraHardware::setCaptureRawMode(bool mode)
 {
+	struct img_size req_size;
+	struct cmr_zoom_param zoom_param;
+
 	mCaptureRawMode = mode;
 	LOGI("ISP_TOOL: setCaptureRawMode: %d, %d", mode, mCaptureRawMode);
+	if (1 == mode) {
+		LOGI("ISP_TOOL: setCaptureRawMode: Tool Mode");
+		req_size.width = (cmr_u32)mRawWidth;
+		req_size.height = (cmr_u32)mRawHeight;
+		SET_PARM(mCameraHandle, CAMERA_PARAM_CAPTURE_SIZE, (cmr_uint)&req_size);
+
+		zoom_param.mode = ZOOM_LEVEL;
+		zoom_param.zoom_level = 0;
+		SET_PARM(mCameraHandle, CAMERA_PARAM_ZOOM, (cmr_uint)&zoom_param);
+
+		SET_PARM(mCameraHandle, CAMERA_PARAM_ROTATION_CAPTURE, 0);
+		SET_PARM(mCameraHandle, CAMERA_PARAM_SENSOR_ROTATION,  0);
+	}
 }
 
 void SprdCameraHardware::antiShakeParamSetup( )
@@ -4246,12 +4262,19 @@ void SprdCameraHardware::stopPreviewInternal()
 
 takepicture_mode SprdCameraHardware::getCaptureMode()
 {
+	char value[PROPERTY_VALUE_MAX];
+	property_get("persist.sys.camera.raw.mode", value, "jpeg");
+
 	if (1 == mParameters.getInt("zsl")) {
 		mCaptureMode = CAMERA_ZSL_MODE;
 	} else {
 		mCaptureMode = CAMERA_NORMAL_MODE;
 	}
+
 	if (1 == mCaptureRawMode) {
+		mCaptureMode = CAMERA_ISP_TUNING_MODE;
+	}
+	if (!strcmp(value, "raw")) {
 		mCaptureMode = CAMERA_ISP_TUNING_MODE;
 	}
 
@@ -7191,11 +7214,12 @@ static int HAL_IspVideoStopPreview(uint32_t param1, uint32_t param2)
 static int HAL_IspVideoSetParam(uint32_t width, uint32_t height)
 {
 	int rtn=0x00;
+	LOGE("piano ");
 	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
 	if (NULL != fun_ptr) {
 		LOGE("ISP_TOOL: HAL_IspVideoSetParam width:%d, height:%d", width, height);
-		fun_ptr->setCaptureRawMode(1);
 		rtn=fun_ptr->setTakePictureSize(width,height);
+		fun_ptr->setCaptureRawMode(1);
 	}
 	return rtn;
 }
