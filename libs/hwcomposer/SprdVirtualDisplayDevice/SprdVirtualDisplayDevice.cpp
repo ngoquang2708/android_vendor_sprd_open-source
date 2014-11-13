@@ -43,6 +43,7 @@ SprdVirtualDisplayDevice:: SprdVirtualDisplayDevice()
     : mLayerList(0),
       mDisplayPlane(0),
       mBlit(NULL),
+      mHWCCopy(false),
       mDebugFlag(0),
       mDumpFlag(0)
 {
@@ -86,6 +87,12 @@ int SprdVirtualDisplayDevice:: Init()
         return -1;
     }
 
+#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
+    mHWCCopy = true;
+#else
+    mHWCCopy = false;
+#endif
+
     return 0;
 }
 
@@ -124,6 +131,7 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
 {
     HWC_TRACE_CALL;
 
+    bool BlitCond = false;
     int releaseFenceFd = -1;
     int AndroidLayerCount = mLayerList->getSprdLayerCount();
     SprdHWLayer *SprdFBTLayer = NULL;
@@ -157,22 +165,6 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
     }
     SprdFBTLayer->updateAndroidLayer(FBTargetLayer);
 
-#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
-    OSDLayerList = mLayerList->getSprdOSDLayerList();
-    SprdLayer = OSDLayerList[0];
-    if ((AndroidLayerCount - 1 == 1) && (OSDLayerCount == 1)
-        && SprdLayer
-        && (SprdLayer->getAndroidLayer()))
-    {
-        ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: commit attach Overlay layer[OSD]");
-        mDisplayPlane->AttachVDFramebufferTargetLayer(SprdLayer);
-    }
-    else
-#endif
-    {
-        mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
-    }
-
     const native_handle_t *pNativeHandle = FBTargetLayer->handle;
     struct private_handle_t *privateH = (struct private_handle_t *)pNativeHandle;
 
@@ -193,37 +185,78 @@ int SprdVirtualDisplayDevice:: commit(hwc_display_contents_1_t *list)
 
     closeAcquireFDs(list);
 
-#ifndef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
-    /*
-     *  Virtual display just have outbufAcquireFenceFd.
-     *  We do not touch this outbuf, and do not need
-     *  wait this fence, so just send this acquireFence
-     *  back to SurfaceFlinger as retireFence.
-     * */
-    list->retireFenceFd = list->outbufAcquireFenceFd;
-#else
-    if (list->outbufAcquireFenceFd >= 0)
+    if (mHWCCopy)
     {
-        String8 name("HWCFBTVirtual::outbuf");
-
-        FenceWaitForever(name, list->outbufAcquireFenceFd);
-
-        if (list->outbufAcquireFenceFd >= 0)
+        struct private_handle_t *outHandle = ((struct private_handle_t *)list->outbuf);
+        bool TargetIsRGBFormat = false;
+        if (outHandle
+            && (outHandle->format != HAL_PIXEL_FORMAT_YCbCr_420_SP)
+            && (outHandle->format != HAL_PIXEL_FORMAT_YCrCb_420_SP))
         {
-            close(list->outbufAcquireFenceFd);
-            list->outbufAcquireFenceFd = -1;
+            TargetIsRGBFormat = true;
+        }
+
+        if (TargetIsRGBFormat)
+        {
+            BlitCond = mLayerList->getSkipMode() ? false : true;
+        }
+        else
+        {
+            BlitCond = true;
         }
     }
 
-    HWCBufferSyncBuildForVirtualDisplay(list);
+    if ((mHWCCopy == false)
+        || (BlitCond == false))
+    {
+        /*
+         *  Virtual display just have outbufAcquireFenceFd.
+         *  We do not touch this outbuf, and do not need
+         *  wait this fence, so just send this acquireFence
+         *  back to SurfaceFlinger as retireFence.
+         * */
+        ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: commit do not need COPY");
+        list->retireFenceFd = list->outbufAcquireFenceFd;
+    }
+    else if (mHWCCopy && BlitCond)
+    {
+        OSDLayerList = mLayerList->getSprdOSDLayerList();
+        SprdLayer = OSDLayerList[0];
+        if ((AndroidLayerCount - 1 == 1) && (OSDLayerCount == 1)
+            && SprdLayer
+            && (SprdLayer->getAndroidLayer()))
+        {
+            ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: commit attach Overlay layer[OSD]");
+            mDisplayPlane->AttachVDFramebufferTargetLayer(SprdLayer);
+        }
+        else
+        {
+            ALOGI_IF(mDebugFlag, "SprdVirtualDisplayDevice:: commit attach FBT layer");
+            mDisplayPlane->AttachVDFramebufferTargetLayer(SprdFBTLayer);
+        }
 
-    /*
-     *  Blit buffer for Virtual Display
-     * */
-    mBlit->onStart();
+        if (list->outbufAcquireFenceFd >= 0)
+        {
+            String8 name("HWCFBTVirtual::outbuf");
 
-    mBlit->onDisplay();
-#endif
+            FenceWaitForever(name, list->outbufAcquireFenceFd);
+
+            if (list->outbufAcquireFenceFd >= 0)
+            {
+                close(list->outbufAcquireFenceFd);
+                list->outbufAcquireFenceFd = -1;
+            }
+        }
+
+        HWCBufferSyncBuildForVirtualDisplay(list);
+
+        /*
+         *  Blit buffer for Virtual Display
+         * */
+        mBlit->onStart();
+
+        mBlit->onDisplay();
+    }
 
     return 0;
 }

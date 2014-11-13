@@ -64,7 +64,7 @@ public:
           mOSDLayerCount(0),
           mVideoLayerCount(0),
           mFBLayerCount(0),
-          mSkipLayerFlag(false),
+          mSkipMode(false),
           mDebugFlag(0),
           mDumpFlag(0)
     {
@@ -115,6 +115,11 @@ public:
         return mFBLayerCount;
     }
 
+    inline bool getSkipMode() const
+    {
+        return mSkipMode;
+    }
+
 private:
     SprdHWLayer *mLayerList;
     SprdHWLayer **mOSDLayerList;
@@ -124,7 +129,7 @@ private:
     int mOSDLayerCount;
     int mVideoLayerCount;
     int mFBLayerCount;
-    bool mSkipLayerFlag;
+    bool mSkipMode;
     int mDebugFlag;
     int mDumpFlag;
 
