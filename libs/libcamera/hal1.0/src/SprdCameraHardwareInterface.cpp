@@ -5409,7 +5409,7 @@ void SprdCameraHardware::overwritePreviewFrame(camera_frame_type *frame)
 
 void SprdCameraHardware::sendPreviewFrameToApp(struct camera_frame_type *frame)
 {
-	Mutex::Autolock pcpl(&mPrevBufLock);
+	//Mutex::Autolock pcpl(&mPrevBufLock);
 	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
 		uint32_t tmpIndex = frame->order_buf_id;
 		if (mPreviewWindow && isPreviewing()) {
@@ -5427,10 +5427,14 @@ void SprdCameraHardware::sendPreviewFrameToApp(struct camera_frame_type *frame)
 	} else {
 		uint32_t dataSize = frame->width * frame->height * 3 / 2;
 		if (mPreviewWindow && isPreviewing()) {
-			if (mPreviewHeapArray) {
-				memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
-						(void*)frame->y_vir_addr, dataSize);
+			{
+				Mutex::Autolock pcpl(&mPrevBufLock);
+				if (mPreviewHeapArray) {
+					memcpy(mPreviewHeapArray[mPreviewDcamAllocBufferCnt -1]->camera_memory->data,
+							(void*)frame->y_vir_addr, dataSize);
+				}
 			}
+
 			if (HandleAPPCallBackInterLock()) {
 				handleDataCallback(CAMERA_MSG_PREVIEW_FRAME,
 									mPreviewDcamAllocBufferCnt - 1,

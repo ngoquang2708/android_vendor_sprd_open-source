@@ -4237,6 +4237,8 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct common_isp_cmd_param param;
 
+	CMR_LOGI("start");
+
 	if (PREVIEWING != cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id)) {
 		CMR_LOGI("don't previewing");
 		goto exit;
