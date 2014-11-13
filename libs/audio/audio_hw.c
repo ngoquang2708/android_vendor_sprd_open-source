@@ -1022,15 +1022,15 @@ ret);
        goto out;
     }
 
-    if(adev->fm_open){
-        adev->out_devices |= AUDIO_DEVICE_OUT_FM;
-    }else{
-        adev->out_devices &= ~AUDIO_DEVICE_OUT_FM;
-    }
     cur_in = adev->in_devices;
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
     pre_out = adev->prev_out_devices;
+    if(adev->fm_open){
+        cur_out |= AUDIO_DEVICE_OUT_FM;
+    }else{
+        cur_out &= ~AUDIO_DEVICE_OUT_FM;
+    }
     adev->prev_out_devices = cur_out;
     adev->prev_in_devices = cur_in;
 
@@ -1183,13 +1183,14 @@ static void do_select_devices(struct tiny_audio_device *adev)
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
     pre_out = adev->prev_out_devices;
-    adev->prev_out_devices = cur_out;
-    adev->prev_in_devices = cur_in;
     if(adev->fm_open){
         cur_out |= AUDIO_DEVICE_OUT_FM;
     }else{
         cur_out &= ~AUDIO_DEVICE_OUT_FM;
     }
+    adev->prev_out_devices = cur_out;
+    adev->prev_in_devices = cur_in;
+
     pthread_mutex_unlock(&adev->lock);
 
     if (pre_out == cur_out
