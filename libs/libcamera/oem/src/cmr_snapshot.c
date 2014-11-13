@@ -2570,10 +2570,6 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 		chn_param_ptr->isp_proc_in[i].dst_frame.size = req_param_ptr->post_proc_setting.snp_size;
-		CMR_LOGI("piano actual w/h %d %d", req_param_ptr->post_proc_setting.actual_snp_size.width,
-				req_param_ptr->post_proc_setting.actual_snp_size.height);
-		CMR_LOGI("piano w/h %d %d", req_param_ptr->post_proc_setting.snp_size.width,
-						req_param_ptr->post_proc_setting.snp_size.height);
 		chn_param_ptr->isp_proc_in[i].src_frame = req_param_ptr->post_proc_setting.mem[i].cap_raw;
 		chn_param_ptr->isp_proc_in[i].src_avail_height = req_param_ptr->post_proc_setting.mem[i].cap_raw.size.height;
 #if 1

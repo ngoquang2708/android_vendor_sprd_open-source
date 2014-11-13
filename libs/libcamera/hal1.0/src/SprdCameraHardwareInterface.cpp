@@ -7117,7 +7117,6 @@ static int HAL_IspVideoStopPreview(uint32_t param1, uint32_t param2)
 static int HAL_IspVideoSetParam(uint32_t width, uint32_t height)
 {
 	int rtn=0x00;
-	LOGE("piano ");
 	SprdCameraHardware * fun_ptr = dynamic_cast<SprdCameraHardware *>((SprdCameraHardware *)g_cam_device->priv);
 	if (NULL != fun_ptr) {
 		LOGE("ISP_TOOL: HAL_IspVideoSetParam width:%d, height:%d", width, height);
