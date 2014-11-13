@@ -598,9 +598,6 @@ LOCAL uint32_t Sensor_InitRawTuneInfo(void)
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
 
-	raw_sensor_ptr->version_info->version_id=0x00010000;
-	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
-
 	//sensor_ptr->ae.smart_denoise_soft_y_outdoor_index =2;
 	//sensor_ptr->ae.smart_denoise_soft_y_min_index =4;
 	//sensor_ptr->ae.smart_denoise_soft_y_mid_index =4;
@@ -2258,8 +2255,6 @@ LOCAL uint32_t _ov2680_write_exposure(uint32_t param)
 	size_index=(param>>0x1c)&0x0f;
 
 	SENSOR_PRINT("SENSOR_ov2680: write_exposure line:%d, dummy:%d, size_index:%d\n", expsure_line, dummy_line, size_index);
-	SENSOR_PRINT("SENSOR_ov2680: read reg :0x3820=%x\n", Sensor_ReadReg(0x3820));
-	SENSOR_PRINT("SENSOR_ov2680: read reg :0x3821=%x\n", Sensor_ReadReg(0x3821));
 	max_frame_len=_ov2680_GetMaxFrameLine(size_index);
 
 	if(0x00!=max_frame_len)

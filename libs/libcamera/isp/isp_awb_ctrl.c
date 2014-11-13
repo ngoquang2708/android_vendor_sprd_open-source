@@ -19,6 +19,8 @@
 #include "isp_log.h"
 #include "isp_awb.h"
 #include "isp_awb_ctrl.h"
+#include <utils/Timers.h>
+
 /*------------------------------------------------------------------------------*
 *					Compiler Flag				*
 *-------------------------------------------------------------------------------*/
@@ -44,8 +46,27 @@
 #endif
 
 /*------------------------------------------------------------------------------*
+*					Locals				*
+*-------------------------------------------------------------------------------*/
+static nsecs_t s_begin_time;
+static nsecs_t s_end_time;
+/*------------------------------------------------------------------------------*
 *					functions				*
 *-------------------------------------------------------------------------------*/
+static void _timer_begin()
+{
+	s_begin_time = systemTime(CLOCK_MONOTONIC);
+}
+
+static uint32_t _timer_end()
+{
+	uint32_t time = 0;
+
+	s_end_time = systemTime(CLOCK_MONOTONIC);
+	time = (uint32_t)(((s_end_time - s_begin_time) + 1000000 / 2) /1000000);
+	return time;
+}
+
 static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_param, struct smart_light_calc_result *smart_result)
 {
 	struct isp_awb_gain hue_sat_gain = {0x00};
@@ -405,11 +426,12 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	struct isp_awb_calc_param *calc_param = &awb_param->calc_param;
 	struct isp_awb_calc_result *calc_result = &awb_param->calc_result;
 	struct isp_awb_gain gain = {0, 0 , 0};
-	struct isp_awb_result awb_result = {{0, 0, 0}, 0};
 	uint32_t setting_index = awb_param->cur_setting_index;
 	uint16_t ct = 0;
 	uint32_t bv = 0;
 	uint32_t time = 0;
+
+	_timer_begin();
 
 	if(ISP_EB==isp_cxt->awb_get_stat)
 		isp_cxt->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_AWB_STAT_CALLBACK,
@@ -439,8 +461,6 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	ct = calc_result->ct;
 
 	ISP_LOGV("gain = (%d, %d, %d), ct=%d, rtn=%d", gain.r, gain.g, gain.b, ct, rtn);
-
-	
 
 	/* update ccm and lsc parameters */
 	if (ISP_SUCCESS == rtn && gain.r > 0 && gain.b > 0 && gain.g > 0) {
@@ -482,6 +502,8 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	}
 
 	awb_param->quick_mode_enable = 0;
+
+	time = _timer_end();
 	ISP_LOGI("awb calc time = %d", time);
 	ISP_LOGI("SHAN: calc awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);

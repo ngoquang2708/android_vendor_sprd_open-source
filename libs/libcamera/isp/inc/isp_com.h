@@ -276,6 +276,15 @@ struct isp_denoise_param
 	uint8_t reserved0;
 };
 
+struct isp_pre_wave_denoise_param
+{
+	uint32_t bypass;
+	uint8_t thrs0;
+	uint8_t thrs1;
+	uint8_t reserved1;
+	uint8_t reserved0;
+};
+
 struct isp_grgb_param
 {
 	uint32_t bypass;
@@ -480,12 +489,14 @@ struct isp_tune_block{
 	uint8_t wb_trim;
 	uint8_t alg;
 	uint8_t denoise;
-	uint8_t pref;
+	uint8_t pref_y;
+	uint8_t pref_uv;
 	uint8_t edge;
 	uint8_t cmc;
 	uint8_t lnc;
 	uint8_t lnc_load;
 	uint8_t gamma;
+	uint8_t pre_wave;
 };
 
 struct isp_data_param
@@ -566,7 +577,8 @@ struct isp_context{
 	struct isp_smart_light_param smart_light;
 	struct auto_adjust_init_info auto_adjust;
 	//struct isp_pre_global_gain_param pre_global;
-	uint32_t reserved[256];
+	struct isp_pre_wave_denoise_param pre_wave_denoise;
+	uint32_t reserved[254];
 
 	struct isp_blc_offset blc_offset[8];
 	struct isp_edge_param edge_tab[16];

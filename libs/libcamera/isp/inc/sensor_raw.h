@@ -650,6 +650,13 @@ struct sensor_lnc_param{
 	uint32_t reserved[32];
 };
 
+struct sensor_pre_wave_denoise_param{
+	uint8_t thrs0;
+	uint8_t thrs1;
+	uint8_t reserved1;
+	uint8_t reserved0;
+};
+
 struct sensor_raw_tune_info{
 	uint32_t version_id;
 	uint32_t blc_bypass;
@@ -676,7 +683,7 @@ struct sensor_raw_tune_info{
 	uint32_t hdr_bypass;
 	uint32_t glb_gain_bypass;
 	uint32_t chn_gain_bypass;
-	uint32_t reserve9;
+	uint32_t pre_wave_bypass;
 	uint32_t reserve8;
 	uint32_t reserve7;
 	uint32_t reserve6;
@@ -718,7 +725,8 @@ struct sensor_raw_tune_info{
 	struct sensor_smart_light_param smart_light;
 	struct sensor_caf_info caf;
 	struct sensor_af_multi_win_param af_multi_win;
-	uint32_t reserved[256];
+	struct sensor_pre_wave_denoise_param pre_wave_denoise;
+	uint32_t reserved[255];
 };
 
 struct sensor_raw_fix_info{

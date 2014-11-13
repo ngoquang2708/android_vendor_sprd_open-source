@@ -51,6 +51,8 @@ struct exif_ae_param{
 	uint32_t exposure;
 	uint32_t gain;
 	uint32_t cur_lum;
+	uint32_t cur_index;
+	uint32_t max_index;
 };
 
 struct exif_awb_param{
@@ -211,6 +213,85 @@ struct eixf_read_check{
 	uint16_t app_head;
 	uint16_t status;
 };
+
+struct exif_smart_param {
+	uint32_t smart;
+	uint32_t smart_base_gain;
+
+	uint8_t denoise_lum_thr;
+	uint8_t denoise_start_index;
+	uint8_t denoise_start_zone;
+	uint8_t reserved1;
+
+	uint8_t  smart_pref_y_outdoor_index;
+	uint8_t smart_pref_y_min_index;
+	uint8_t smart_pref_y_mid_index;
+	uint8_t smart_pref_y_max_index;
+	uint8_t smart_pref_y_cur;
+	uint8_t reserved2;
+	uint16_t reserved3;
+
+	uint8_t smart_pref_uv_outdoor_index;
+	uint8_t smart_pref_uv_min_index;
+	uint8_t smart_pref_uv_mid_index;
+	uint8_t smart_pref_uv_max_index;
+	uint8_t smart_pref_uv_cur;
+	uint8_t reserved4;
+	uint16_t reserved5;
+
+	uint8_t smart_denoise_diswei_outdoor_index;
+	uint8_t smart_denoise_diswei_min_index;
+	uint8_t smart_denoise_diswei_mid_index;
+	uint8_t smart_denoise_diswei_max_index;
+	uint8_t smart_denoise_diswei_cur;
+	uint8_t reserved6;
+	uint16_t reserved7;
+
+	uint8_t smart_denoise_ranwei_outdoor_index;
+	uint8_t smart_denoise_ranwei_min_index;
+	uint8_t smart_denoise_ranwei_mid_index;
+	uint8_t smart_denoise_ranwei_max_index;
+	uint8_t smart_denoise_ranwei_cur;
+	uint8_t reserved8;
+	uint16_t reserved9;
+
+	uint8_t smart_denoise_soft_y_outdoor_index;
+	uint8_t smart_denoise_soft_y_min_index;
+	uint8_t smart_denoise_soft_y_mid_index;
+	uint8_t smart_denoise_soft_y_max_index;
+	uint8_t smart_denoise_soft_y_cur;
+	uint8_t reserved10;
+	uint16_t reserved11;
+
+	uint8_t smart_denoise_soft_uv_outdoor_index;
+	uint8_t smart_denoise_soft_uv_min_index;
+	uint8_t smart_denoise_soft_uv_mid_index;
+	uint8_t smart_denoise_soft_uv_max_index;
+	uint8_t smart_denoise_soft_uv_cur;
+	uint8_t reserved12;
+	uint16_t reserved13;
+
+	uint8_t gamma_start;
+	uint8_t gamma_num;
+	uint8_t gamma_zone;
+	uint8_t reserved14;
+	uint8_t gamma_thr[4];
+
+	uint8_t gamma_lum_thr;
+	uint8_t smart_edge_max_index;
+	uint8_t smart_edge_min_index;
+	uint8_t smart_edge_cur;
+
+	uint8_t smart_sta_start_index;
+	uint8_t smart_sta_low_thr;
+	uint8_t smart_sta_ratio1;
+	uint8_t smart_sta_ratio;
+
+	uint16_t lum_cali_index;
+	uint16_t reserved16;
+	uint32_t lum_cali_lux;
+};
+
 typedef struct exif_isp_info{
 	uint32_t is_exif_validate;
 	uint32_t tool_version;
@@ -268,7 +349,7 @@ typedef struct exif_isp_info{
 	struct exif_chn_gain_param chn;
 	struct exif_flash_cali_param flash;
 	struct eixf_read_check exif_check;
-
+	struct exif_smart_param smart_adjust;
 }EXIT_ISP_INFO_T;
 
 #endif //_ISP_EXIF_H_
