@@ -2087,7 +2087,7 @@ cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_res
 
 	CMR_LOGI("channel_bits %d, skip_num %ld", channel_bits, skip_num);
 
-	if (snapshot_enable) {
+	if (snapshot_enable && !preview_enable) {
 		if (handle->ops.capture_pre_proc) {
 			handle->ops.capture_pre_proc(handle->oem_handle,
 						camera_id,
