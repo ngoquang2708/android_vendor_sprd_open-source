@@ -86,6 +86,7 @@ private:
     SprdVDLayerList *mLayerList;
     SprdVirtualPlane *mDisplayPlane;
     sp<SprdWIDIBlit> mBlit;
+    bool mHWCCopy;
     int mDebugFlag;
     int mDumpFlag;
 

@@ -118,7 +118,7 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
          if (!IsHWCLayer(layer))
          {
              ALOGI_IF(mDebugFlag, "NOT HWC layer");
-             mSkipLayerFlag = true;
+             mSkipMode = true;
              continue;
          }
 
@@ -159,10 +159,18 @@ int SprdVDLayerList:: updateGeometry(hwc_display_contents_1_t *list)
 
 int SprdVDLayerList:: revistGeometry(hwc_display_contents_1_t *list)
 {
+#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
     SprdHWLayer *l = &(mLayerList[0]);
     hwc_layer_1_t *layer = l->getAndroidLayer();
     if (layer == NULL)
     {
+        return 0;
+    }
+
+    if (!IsHWCLayer(layer))
+    {
+        ALOGI_IF(mDebugFlag, "SprdVDLayerList:: revistGeometry NOT HWC layer");
+        mSkipMode = true;
         return 0;
     }
 
@@ -191,6 +199,7 @@ int SprdVDLayerList:: revistGeometry(hwc_display_contents_1_t *list)
         setOverlayFlag(&(mLayerList[0]), 0);
         ALOGI_IF(mDebugFlag, "SprdVDLayerList:: revistGeometry find single layer, force goto Overlay");
     }
+#endif
 
     return 0;
 }
