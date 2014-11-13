@@ -48,6 +48,9 @@
 #define CAMERA_PATH_SHARE                            1
 #define OEM_RESTART_SUM                              2
 #define POWER2(x)                                    (1<<(x))
+#define ONE_HUNDRED                                  100
+#define MS_TO_NANOSEC                                1000
+#define SEC_TO_NANOSEC                               1000000000LL
 
 
 #define CHECK_HANDLE_VALID(handle) \
@@ -177,7 +180,6 @@ static cmr_uint camera_get_snp_req(cmr_handle oem_handle);
 static cmr_int camera_get_cap_time(cmr_handle snp_handle);
 static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data);
 static void camera_snapshot_started(cmr_handle oem_handle);
-static void camera_exif_handle_before_snapshot(cmr_handle oem_handle);
 static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_param *parm);
 static cmr_int camera_restart_rot(cmr_handle oem_handle);
 /**********************************************************************************************/
@@ -417,7 +419,7 @@ cmr_int camera_get_cap_time(cmr_handle snp_handle)
 	sem_wait(&cxt->access_sm);
 	ret = cmr_v4l2_get_cap_time(cxt->v4l2_cxt.v4l2_handle, &sec, &usec);
 	CMR_LOGI("cap time %d %d", sec, usec);
-	cxt->snp_cxt.cap_time_stamp = sec * 1000000000LL + usec * 1000;
+	cxt->snp_cxt.cap_time_stamp = sec * SEC_TO_NANOSEC + usec * MS_TO_NANOSEC;
 	sem_post(&cxt->access_sm);
 	return ret;
 }
@@ -426,7 +428,7 @@ cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)snp_handle;
-	cmr_s64                         frame_time = data->sec * 1000000000LL + data->usec * 1000;
+	cmr_s64                         frame_time = data->sec * SEC_TO_NANOSEC + data->usec * MS_TO_NANOSEC;
 
 	CMR_LOGI("frame_time %ld, %ld", data->sec, data->usec);
 	sem_wait(&cxt->access_sm);
@@ -3496,7 +3498,6 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_ISOSPEEDRATINGS;
 		isp_param = param_ptr->cmd_value;
-		CMR_LOGI("iso %d", param_ptr->cmd_value);
 		break;
 	case COM_ISP_SET_VIDEO_MODE:
 		isp_cmd = ISP_CTRL_VIDEO_MODE;
@@ -3558,16 +3559,17 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		} else {
 			if (COM_ISP_SET_ISO == cmd_type) {
 				if (0 == param_ptr->cmd_value) {
-					isp_capability(ISP_CUR_ISO,(void *)&isp_param);
+					isp_capability(ISP_CUR_ISO, (void *)&isp_param);
 					cxt->setting_cxt.is_auto_iso = 1;
 				} else {
 					cxt->setting_cxt.is_auto_iso = 0;
 				}
-				isp_param = POWER2(isp_param-1)*100;
+				isp_param = POWER2(isp_param-1) * ONE_HUNDRED;
 				CMR_LOGI("auto iso %d, exif iso %d", cxt->setting_cxt.is_auto_iso, isp_param);
 			}
 		}
-    }
+	}
+
 	if (set_exif_flag) {
 		CMR_LOGD("ERIC set exif");
 		if (COM_ISP_SET_AWB_MODE == cmd_type) {
@@ -3707,12 +3709,6 @@ cmr_int camera_get_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	out_param_ptr->is_cfg_rot_cap = setting_param.cmd_type_value;
 	cxt->snp_cxt.is_cfg_rot_cap = out_param_ptr->is_cfg_rot_cap;
 
-/*	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_ENVIRONMENT, &setting_param);
-	if (ret) {
-		CMR_LOGE("failed to get environment %d", ret);
-		goto exit;
-	}
-	out_param_ptr->is_dv = setting_param.cmd_type_value;*/ //to do for robert
 	/*get hdr flag*/
 	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_HDR, &setting_param);
 	if (ret) {
@@ -4107,20 +4103,6 @@ cmr_int camera_set_setting(cmr_handle oem_handle, enum camera_param_type id, cmr
 	return ret;
 }
 
-void camera_exif_handle_before_snapshot(cmr_handle oem_handle)
-{
-	struct camera_context          *cxt = (struct camera_context*)oem_handle;
-	cmr_u32                        isp_param = 0;
-
-	if ((1 == cxt->isp_cxt.is_work) && (1 == cxt->setting_cxt.is_auto_iso)) {
-		isp_capability(ISP_CUR_ISO,(void *)&isp_param);
-		isp_param = POWER2(isp_param-1)*100;
-		cxt->setting_cxt.is_auto_iso = 1;
-		cmr_sensor_set_exif(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_EXIF_CTRL_ISOSPEEDRATINGS, isp_param);
-	}
-}
-
-
 cmr_int camera_restart_rot(cmr_handle oem_handle)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
@@ -4251,7 +4233,7 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 			}
 		}
 	}
-	camera_exif_handle_before_snapshot(oem_handle);
+	camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->camera_id);
 
 	prev_ret = cmr_preview_stop(cxt->prev_cxt.preview_handle, cxt->camera_id);
 	if (ret) {
@@ -4282,7 +4264,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 	if (CAMERA_ZSL_MODE != mode) {
 		ret = camera_set_preview_param(oem_handle, mode, is_snapshot);
 	} else {
-		camera_exif_handle_before_snapshot(oem_handle);
+		camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->camera_id);
 	}
 
 	ret = camera_get_snapshot_param(oem_handle, &snp_param);

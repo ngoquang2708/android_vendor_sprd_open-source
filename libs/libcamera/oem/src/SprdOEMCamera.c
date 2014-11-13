@@ -424,6 +424,7 @@ int camera_pre_capture_get_buffer_id(cmr_u32 camera_id)
 
 uint32_t camera_get_size_align_page(uint32_t size)
 {
+/* todo: will be deprecated
 	return size;
 	uint32_t buffer_size, page_size;
 
@@ -432,6 +433,8 @@ uint32_t camera_get_size_align_page(uint32_t size)
 	buffer_size = (buffer_size + page_size - 1) & ~(page_size - 1);
 
 	return buffer_size;
+*/
+	return 0;
 }
 
 cmr_int camera_fast_ctrl(cmr_handle camera_handle, enum fast_ctrl_mode mode, cmr_u32 param)

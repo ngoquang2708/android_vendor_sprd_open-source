@@ -2276,6 +2276,7 @@ LOCAL uint32_t _ov5670_StreamOff(uint32_t param)
 	SENSOR_PRINT("SENSOR_OV5670: StreamOff");
 
 	Sensor_WriteReg(0x0100, 0x00);
+	usleep(80*1000);
 
 	return 0;
 }

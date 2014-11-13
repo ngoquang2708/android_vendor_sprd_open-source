@@ -3491,6 +3491,7 @@ int SprdCameraHardware::releasePreviewFrame()
 			}
 		}
 	}
+
 	return ret;
 }
 
@@ -3580,6 +3581,7 @@ bool SprdCameraHardware::allocatePreviewMemByGraphics()
 	} else {
 		LOGI(" allocatePreviewMemByGraphics X.\n");
 	}
+
 	return 0;
 }
 
@@ -3590,81 +3592,13 @@ bool SprdCameraHardware::allocatePreviewMem()
 	} else {
 		LOGI(" allocatePreviewMem E.\n");
 	}
-#if 0
-	uint32_t i = 0, j = 0, buffer_start_id = 0, buffer_end_id = 0;
-	uint32_t buffer_size = camera_get_size_align_page(mPreviewHeapSize);
 
-	mPreviewHeapNum = kPreviewBufferCount;
-	if (camera_get_rot_set()) {
-		/* allocate more buffer for rotation */
-		mPreviewHeapNum += kPreviewRotBufferCount;
-		LOGI("initPreview: rotation, increase buffer: %d \n", mPreviewHeapNum);
-	}
-
-	if (allocatePreviewMemByGraphics()) {
-		canclePreviewMem();
-		return false;
-	}
-
-	if (PREVIEW_BUFFER_USAGE_DCAM == mPreviewBufferUsage) {
-		mPreviewDcamAllocBufferCnt = mPreviewHeapNum;
-		buffer_start_id = 0;
-		buffer_end_id = mPreviewHeapNum;
-	} else {
-		mPreviewDcamAllocBufferCnt = 0;
-		buffer_start_id = kPreviewBufferCount;
-		buffer_end_id = buffer_start_id;
-
-		if (camera_get_rot_set()) {
-			mPreviewDcamAllocBufferCnt = kPreviewRotBufferCount;
-			buffer_end_id = kPreviewBufferCount + kPreviewRotBufferCount;
-		}
-
-		/*add one node, specially used for mData_cb when receive preview frame*/
-		mPreviewDcamAllocBufferCnt += 1;
-		buffer_end_id += 1;
-	}
-
-	if (mPreviewDcamAllocBufferCnt > 0 && NULL == mPreviewHeapArray) {
-		mPreviewHeapArray = (sprd_camera_memory_t**)malloc(mPreviewDcamAllocBufferCnt * sizeof(sprd_camera_memory_t*));
-		if (mPreviewHeapArray == NULL) {
-			return false;
-		} else {
-			memset(&mPreviewHeapArray[0], 0, mPreviewDcamAllocBufferCnt * sizeof(sprd_camera_memory_t*));
-		}
-
-		for (i = buffer_start_id; i < buffer_end_id; i++) {
-			sprd_camera_memory_t* PreviewHeap = allocCameraMem(buffer_size, true);
-			if (NULL == PreviewHeap) {
-				LOGE("allocatePreviewMem: error PreviewHeap is null, index=%d", i);
-				return false;
-			}
-
-			if (NULL == PreviewHeap->handle) {
-				LOGE("allocatePreviewMem: error handle is null, index=%d", i);
-				freeCameraMem(PreviewHeap);
-				freePreviewMem();
-				return false;
-			}
-
-			if (PreviewHeap->phys_addr & 0xFF) {
-				LOGE("allocatePreviewMem: error mPreviewHeap is not 256 bytes aligned, index=%d", i);
-				freeCameraMem(PreviewHeap);
-				freePreviewMem();
-				return false;
-			}
-
-			mPreviewHeapArray[j++] = PreviewHeap;
-			mPreviewHeapArray_phy[i] = PreviewHeap->phys_addr;
-			mPreviewHeapArray_vir[i] = (uint32_t)PreviewHeap->data;
-		}
-	}
-#endif
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" allocatePreviewMem X.\n");
 	} else {
 		LOGI("allocatePreviewMem X.\n");
 	}
+
 	return true;
 }
 
@@ -3783,42 +3717,7 @@ bool SprdCameraHardware::initPreview()
 	}
 
 	LOGI("initPreview: preview size=%dx%d", mPreviewWidth, mPreviewHeight);
-#if 0
-	switch (mPreviewFormat) {
-	case 0:
-		case 1:/*yuv420*/
-		if (mIsDvPreview) {
-			mPreviewHeapSize = SIZE_ALIGN(mPreviewWidth) * SIZE_ALIGN(mPreviewHeight) * 3 / 2;
-		} else {
-			mPreviewHeapSize = mPreviewWidth * mPreviewHeight * 3 / 2;
-#if defined(CONFIG_CAMERA_PREVIEW_YV12)
-			if (mIsYuv420p) {
-				if (mPreviewWidth % 32) {
-					mPreviewHeapSize = (mPreviewWidth + SIZE_ALIGN(mPreviewWidth/2))* mPreviewHeight; /*yuv420p*/
-				}
-				if (mYV12Buf == NULL) {
-					mYV12Buf = (void *) malloc(mPreviewWidth * mPreviewHeight/2);
-				}
-			}
-#endif
-		}
-		break;
 
-	default:
-		return false;
-	}
-
-	if (!allocatePreviewMem()) {
-		freePreviewMem();
-		return false;
-	}
-
-	if (camera_set_preview_mem((uint32_t)mPreviewHeapArray_phy,
-		(uint32_t)mPreviewHeapArray_vir,
-		camera_get_size_align_page(mPreviewHeapSize),
-		(uint32_t)mPreviewHeapNum))
-		return false;
-#endif
 	if (mIsPerformanceTestable) {
 		sprd_stopPerfTracking(" initPreview X.\n");
 	} else {

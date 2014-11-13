@@ -519,7 +519,6 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 				//setting_sn_ctrl(cpt, item->sn_cmd, parm);
 			}
 
-
 			skip_mode = IMG_SKIP_SW;
 			is_check_night_mode = 0;
 			if (SETTING_GENERAL_SENSOR_ROTATION == type){
@@ -817,9 +816,12 @@ static cmr_int setting_set_antibanding(struct setting_component *cpt,
 static cmr_int setting_set_iso(struct setting_component *cpt,
 			                   struct setting_cmd_parameter *parm)
 {
-	cmr_int ret = 0;
+	cmr_int ret = 0, force_set_bak;
 
+	force_set_bak = cpt->force_set;
+	cpt->force_set = 1;
 	ret = setting_set_general(cpt, SETTING_GENERAL_ISO, parm);
+	cpt->force_set = force_set_bak;
 
 	return ret;
 }
