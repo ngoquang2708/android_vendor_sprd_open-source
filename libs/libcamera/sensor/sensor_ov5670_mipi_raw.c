@@ -450,8 +450,8 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov5670_resolution_Tab_RAW[] = {
 
 LOCAL SENSOR_TRIM_T s_ov5670_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
-	{0, 0, 1296, 972, 163, 560, 2045, {0, 0, 1296, 972}},//sysclk*10
-	{0, 0, 2592, 1944, 163, 900, 2045, {0, 0, 2592, 1944}},//sysclk*10
+	{0, 0, 1296, 972, 163, 960, 2045, {0, 0, 1296, 972}},//sysclk*10
+	{0, 0, 2592, 1944, 163, 960, 2045, {0, 0, 2592, 1944}},//sysclk*10
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -652,7 +652,7 @@ SENSOR_INFO_T g_ov5670_mipi_raw_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1200MV,	// dvdd
 	1,			// skip frame num before preview
-	2,			// skip frame num before capture
+	0,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -664,8 +664,8 @@ SENSOR_INFO_T g_ov5670_mipi_raw_info = {
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 	s_ov5670_video_info,
 	3,			// skip frame num while change setting
-	48,			// horizontal view angle
-	48,			// vertical view angle
+	48, 		// horizontal view angle
+	48, 		// vertical view angle
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
@@ -1980,11 +1980,6 @@ LOCAL uint32_t _ov5670_write_gain(uint32_t param)
 
 	SENSOR_PRINT("SENSOR_OV5670: real_gain:0x%x, param: 0x%x", real_gain, param);
 
-	value = real_gain&0xff;
-	ret_value = Sensor_WriteReg(0x350b, value);/*0-7*/
-	value = (real_gain>>0x08)&0x03;
-	ret_value = Sensor_WriteReg(0x350a, value);/*8*/
-
 	ret_value = _ov5670_set_gain(real_gain);
 
 	return ret_value;
@@ -2058,6 +2053,7 @@ LOCAL uint32_t _ov5670_get_gain(void)
 
 LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 {
+#if 0
 	// write gain, 128 = 1x
 	uint32_t temp;
 	gain128 = gain128 & 0x1fff;
@@ -2081,6 +2077,47 @@ LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 		// 1x =< gain < 2x
 		Sensor_WriteReg(0x366a, 0x00);
 	}
+#endif
+	// write gain, 128 = 1x
+	uint32_t temp;
+	gain128 = gain128 & 0x1fff;
+	
+	Sensor_WriteReg(0x301d, 0xf0);
+	Sensor_WriteReg(0x3209, 0x00);
+	Sensor_WriteReg(0x320a, 0x01);
+	
+	//group write  hold
+	//group 0:delay 0x366a for one frame
+	Sensor_WriteReg(0x3208, 0x00);
+	if(gain128>=1024) {
+		// gain >= 8x
+		Sensor_WriteReg(0x366a, 0x07);
+	}
+	else if(gain128>=512){
+		// 4x =< gain < 8x 
+		Sensor_WriteReg(0x366a, 0x03);
+	}
+	else if(gain128>=256){
+		// 2x =< gain < 4x 
+		Sensor_WriteReg(0x366a, 0x01);
+	}
+	else{
+		// 1x =< gain < 2x
+		Sensor_WriteReg(0x366a, 0x00);
+	}
+	Sensor_WriteReg(0x3208, 0x10);
+	
+	//group 1:all other registers( gain)
+	Sensor_WriteReg(0x3208, 0x01);
+	temp = gain128 & 0xff;
+	Sensor_WriteReg(0x3509, temp);
+	temp = gain128>>8;
+	Sensor_WriteReg(0x3508, temp);
+	Sensor_WriteReg(0x3208, 0x11);
+	
+	//group launch
+	Sensor_WriteReg(0x320B, 0x15);
+	Sensor_WriteReg(0x3208, 0xA1);
 
 	return 0;
 }
