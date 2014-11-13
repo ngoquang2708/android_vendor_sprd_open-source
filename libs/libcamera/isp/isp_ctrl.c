@@ -115,6 +115,12 @@ static int32_t _ispAwbCorrect(uint32_t handler_id);
 static int _isp_proc_msg_post(struct isp_msg *message);
 static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr);
 static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param_ptr);
+int32_t _ispBilAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
+int32_t _ispYDenoiseAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
+int32_t _ispUVDenoiseAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
+int32_t _ispGammaAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
+int32_t _ispCMCAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
+int32_t _ispEdgeAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr);
 
 /**---------------------------------------------------------------------------*
 **				Local Variables 					*
@@ -876,6 +882,7 @@ static int32_t _ispIoCtrlInit(uint32_t handler_id)
 	isp_tune_ptr->hdr = ISP_UEB;
 	isp_tune_ptr->global_gain = ISP_UEB;
 	isp_tune_ptr->chn_gain = ISP_UEB;
+	isp_tune_ptr->pre_wave= ISP_EB;
 	isp_context_ptr->wb_trim_conter=ISP_AWB_SKIP_FOREVER;
 	isp_context_ptr->awb_win_conter = ISP_AWB_SKIP_FOREVER;
 	isp_context_ptr->af.end_handler_flag = ISP_EB;
@@ -1184,9 +1191,13 @@ static uint32_t _ispAeTouchZone(uint32_t handler_id, struct isp_pos_rect* param_
 	uint32_t bord = 0x06;
 	uint32_t half_bord = bord/2;
 
-	if((isp_context_ptr->src.w <= param_ptr->start_x)
+	if((ISP_ZERO > param_ptr->start_x)
+		|| (isp_context_ptr->src.w <= param_ptr->start_x)
+		|| (ISP_ZERO > param_ptr->start_y)
 		|| (isp_context_ptr->src.h <= param_ptr->start_y)
+		|| (ISP_ZERO > param_ptr->end_x)
 		|| (isp_context_ptr->src.w <= param_ptr->end_x)
+		|| (ISP_ZERO > param_ptr->end_y)
 		|| (isp_context_ptr->src.h <= param_ptr->end_y)) {
 
 		ISP_LOG("w:%d, h:%d error \n", param_ptr->end_x, param_ptr->end_y);
@@ -1471,8 +1482,8 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 		rtn = isp_af_init(handler_id);
 		ISP_TRACE_IF_FAIL(rtn, ("isp_af_init error"));
 
-		auto_adjust_init(handler_id, (void*)&isp_context_ptr->auto_adjust, NULL);
-//		ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_init error"));
+		rtn = auto_adjust_init(handler_id, (void*)&isp_context_ptr->auto_adjust, NULL);
+		ISP_TRACE_IF_FAIL(rtn, ("auto_adjust_init error"));
 
 	}
 
@@ -1887,7 +1898,7 @@ static int32_t _ispAfTrigerStart(uint32_t handler_id)
 		memcpy((void*)&param, (void*)&isp_context_ptr->denoise, sizeof(param));
 		denoise_lv = isp_context_ptr->af.denoise_lv;
 		if (isp_context_ptr->ae.cur_index == isp_context_ptr->ae.max_index) {
-			denoise_lv = 60;		
+			denoise_lv = 60;
 		}
 		isp_get_denoise_tab_diswei(denoise_lv*2-1,&diswei);
 		isp_get_denoise_tab_ranwei(denoise_lv-1,&ranwei);
@@ -2208,10 +2219,35 @@ static int32_t _ispSetSmartParam(struct isp_ae_param *ae_param_ptr, struct isp_s
 	ae_param_ptr->smart_wave_max = smart_ae_ptr->smart_wave_max;
 	ae_param_ptr->smart_pref_min = smart_ae_ptr->smart_pref_min;
 	ae_param_ptr->smart_pref_max = smart_ae_ptr->smart_pref_max;
+	ae_param_ptr->smart_pref_y_outdoor = smart_ae_ptr->smart_pref_y_outdoor;
+	ae_param_ptr->smart_pref_y_min = smart_ae_ptr->smart_pref_y_min;
+	ae_param_ptr->smart_pref_y_mid = smart_ae_ptr->smart_pref_y_mid;
+	ae_param_ptr->smart_pref_y_max = smart_ae_ptr->smart_pref_y_max;
+	ae_param_ptr->smart_pref_uv_outdoor = smart_ae_ptr->smart_pref_uv_outdoor;
+	ae_param_ptr->smart_pref_uv_min = smart_ae_ptr->smart_pref_uv_min;
+	ae_param_ptr->smart_pref_uv_mid = smart_ae_ptr->smart_pref_uv_mid;
+	ae_param_ptr->smart_pref_uv_max = smart_ae_ptr->smart_pref_uv_max;
 	ae_param_ptr->smart_denoise_min_index = smart_ae_ptr->smart_denoise_min_index;
+	ae_param_ptr->smart_denoise_mid_index = smart_ae_ptr->smart_denoise_mid_index;
 	ae_param_ptr->smart_denoise_max_index = smart_ae_ptr->smart_denoise_max_index;
 	ae_param_ptr->smart_edge_min_index = smart_ae_ptr->smart_edge_min_index;
 	ae_param_ptr->smart_edge_max_index = smart_ae_ptr->smart_edge_max_index;
+	ae_param_ptr->smart_denoise_diswei_outdoor_index = smart_ae_ptr->smart_denoise_diswei_outdoor_index;
+	ae_param_ptr->smart_denoise_diswei_min_index = smart_ae_ptr->smart_denoise_diswei_min_index;
+	ae_param_ptr->smart_denoise_diswei_mid_index = smart_ae_ptr->smart_denoise_diswei_mid_index;
+	ae_param_ptr->smart_denoise_diswei_max_index = smart_ae_ptr->smart_denoise_diswei_max_index;
+	ae_param_ptr->smart_denoise_ranwei_outdoor_index = smart_ae_ptr->smart_denoise_ranwei_outdoor_index;
+	ae_param_ptr->smart_denoise_ranwei_min_index = smart_ae_ptr->smart_denoise_ranwei_min_index;
+	ae_param_ptr->smart_denoise_ranwei_mid_index = smart_ae_ptr->smart_denoise_ranwei_mid_index;
+	ae_param_ptr->smart_denoise_ranwei_max_index = smart_ae_ptr->smart_denoise_ranwei_max_index;
+	ae_param_ptr->smart_denoise_soft_y_outdoor_index = smart_ae_ptr->smart_denoise_soft_y_outdoor_index;
+	ae_param_ptr->smart_denoise_soft_y_min_index = smart_ae_ptr->smart_denoise_soft_y_min_index;
+	ae_param_ptr->smart_denoise_soft_y_mid_index = smart_ae_ptr->smart_denoise_soft_y_mid_index;
+	ae_param_ptr->smart_denoise_soft_y_max_index = smart_ae_ptr->smart_denoise_soft_y_max_index;
+	ae_param_ptr->smart_denoise_soft_uv_outdoor_index = smart_ae_ptr->smart_denoise_soft_uv_outdoor_index;
+	ae_param_ptr->smart_denoise_soft_uv_min_index = smart_ae_ptr->smart_denoise_soft_uv_min_index;
+	ae_param_ptr->smart_denoise_soft_uv_mid_index = smart_ae_ptr->smart_denoise_soft_uv_mid_index;
+	ae_param_ptr->smart_denoise_soft_uv_max_index = smart_ae_ptr->smart_denoise_soft_uv_max_index;
 	ae_param_ptr->smart_sta_start_index = smart_ae_ptr->smart_sta_start_index;
 	ae_param_ptr->smart_sta_low_thr = smart_ae_ptr->smart_sta_low_thr;
 	ae_param_ptr->smart_sta_ratio1 = smart_ae_ptr->smart_sta_ratio1;
@@ -2952,7 +2988,7 @@ static int32_t _ispCfgCmc(uint32_t handler_id, struct isp_cmc_param* param_ptr)
 */
 static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_ptr)
 {
-	int32_t rtn=ISP_SUCCESS;	
+	int32_t rtn=ISP_SUCCESS;
 	uint32_t isp_id=IspGetId();
 
 	if((SC8830_ISP_ID == isp_id)||(SC8825_ISP_ID == isp_id))
@@ -3259,13 +3295,13 @@ static int32_t _ispCfgAf(uint32_t handler_id, struct isp_af_param* param_ptr)
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	uint32_t temp;
 	struct timespec          ts;
-	
+
 	if (clock_gettime(CLOCK_MONOTONIC, &ts)) {
 		ISP_LOG("giet time fail!!!");
 	} else {
 		param_ptr->start_time = ts.tv_sec*1000 + ts.tv_nsec/1000000;
 	}
-	
+
 	rtn = ispSetAFMShift(handler_id, 0x00);
 	ISP_RETURN_IF_FAIL(rtn, ("ispSetAFMShift error"));
 
@@ -3492,6 +3528,22 @@ static int32_t _ispCfgChnGain(uint32_t handler_id, struct isp_chn_gain_param* pa
 
 	return rtn;
 }
+
+/* _ispCfgDenoise --
+*@
+*@
+*@ return:
+*/
+static int32_t _ispCfgPreWaveDenoise(uint32_t handler_id, struct isp_pre_wave_denoise_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+
+	ispPreWDenoiseThrd(handler_id, param_ptr->thrs0, param_ptr->thrs1);
+	ispPreWDenoiseBypass(handler_id, param_ptr->bypass);
+
+	return rtn;
+}
+
 
 /* _isp_clear_slice_info --
 *@
@@ -3980,12 +4032,12 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	memcpy((void*)&isp_context_ptr->auto_adjust.gamma, (void*)&raw_tune_ptr->auto_adjust.gamma, sizeof(struct auto_adjust));
 	memcpy((void*)&isp_context_ptr->auto_adjust.edge, (void*)&raw_tune_ptr->auto_adjust.edge, sizeof(struct auto_adjust));
 
-	isp_context_ptr->auto_adjust.bil_fun;
-	isp_context_ptr->auto_adjust.y_denoise_fun;
-	isp_context_ptr->auto_adjust.uv_denoise_fun;
-	isp_context_ptr->auto_adjust.gamma_fun;
-	isp_context_ptr->auto_adjust.cmc_fun;
-	isp_context_ptr->auto_adjust.edge_fun;
+	isp_context_ptr->auto_adjust.bil_fun = _ispBilAdjust;
+	isp_context_ptr->auto_adjust.y_denoise_fun = _ispYDenoiseAdjust;
+	isp_context_ptr->auto_adjust.uv_denoise_fun = _ispUVDenoiseAdjust;
+	isp_context_ptr->auto_adjust.gamma_fun = _ispGammaAdjust;
+	isp_context_ptr->auto_adjust.cmc_fun = _ispCMCAdjust;
+	isp_context_ptr->auto_adjust.edge_fun = _ispEdgeAdjust;
 
 	memcpy((void*)isp_context_ptr->reserved, (void*)raw_tune_ptr->reserved, 4*256);
 
@@ -4001,6 +4053,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	default:
 		break;
 	}
+
 	return rtn;
 }
 
@@ -5009,6 +5062,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->hdr.bypass=ISP_EB;
 	isp_context_ptr->global.bypass=raw_tune_ptr->glb_gain_bypass;
 	isp_context_ptr->chn.bypass=raw_tune_ptr->chn_gain_bypass;
+	isp_context_ptr->pre_wave_denoise.bypass=raw_tune_ptr->pre_wave_bypass;
 
 	//blc
 	isp_context_ptr->blc.mode=raw_tune_ptr->blc.mode;
@@ -5472,6 +5526,9 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 			dst_func->weight_func.samples[i].x = src_func->weight_func.samples[i].x;
 			dst_func->weight_func.samples[i].y = src_func->weight_func.samples[i].y;
 		}
+
+		/*do not enable weight of ct function now*/
+		dst_func->weight_func.num = 0;
 	}
 
 	/*value range*/
@@ -5522,6 +5579,10 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	memcpy((void*)&isp_context_ptr->denoise.ranwei, (void*)&raw_tune_ptr->denoise.ranwei, 31);
 	memcpy((void*)&isp_context_ptr->denoise_bak,(void*)&isp_context_ptr->denoise,sizeof(isp_context_ptr->denoise));
 	isp_ae_set_denosie_level(handler_id, 0);
+
+	/*pre wavelet denoise*/
+	isp_context_ptr->pre_wave_denoise.thrs0 = raw_tune_ptr->pre_wave_denoise.thrs0;
+	isp_context_ptr->pre_wave_denoise.thrs1 = raw_tune_ptr->pre_wave_denoise.thrs1;
 
 	/*grgb*/
 	isp_context_ptr->grgb.edge_thr=raw_tune_ptr->grgb.edge_thr;
@@ -6158,7 +6219,7 @@ static int32_t _ispAwbCorrect(uint32_t handler_id)
 	{
 		isp_context_ptr->awbc.r_gain=isp_context_ptr->awb.cur_gain.r;
 		isp_context_ptr->awbc.g_gain=isp_context_ptr->awb.cur_gain.g;
-		isp_context_ptr->awbc.b_gain=isp_context_ptr->awb.cur_gain.b;		
+		isp_context_ptr->awbc.b_gain=isp_context_ptr->awb.cur_gain.b;
 		_ispCfgAwbc(handler_id, &isp_context_ptr->awbc);
 		awb_param_ptr->monitor_bypass=ISP_UEB;
 	}
@@ -6366,6 +6427,7 @@ static int32_t _ispCfg(uint32_t handler_id)
 	rtn=_ispCfgChnGain(handler_id, &isp_context_ptr->chn);
 	rtn=_ispCfgHue(handler_id, (struct isp_hue_param*)&isp_context_ptr->hue);
 	//rtn=_ispCfgPreGlobalGain(handler_id, &isp_context_ptr->pre_global); //new feature pre global gain
+	rtn= _ispCfgPreWaveDenoise(handler_id, &isp_context_ptr->pre_wave_denoise);
 
 	return rtn;
 }
@@ -6671,9 +6733,13 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		}
 		isp_context_ptr->tune.denoise=ISP_UEB;
 	}
-	if(ISP_EB==isp_context_ptr->tune.pref) {
+	if(ISP_EB==isp_context_ptr->tune.pref_y) {
 		_ispCfgPref(handler_id, &isp_context_ptr->pref);
-		isp_context_ptr->tune.pref=ISP_UEB;
+		isp_context_ptr->tune.pref_y=ISP_UEB;
+	}
+	if(ISP_EB==isp_context_ptr->tune.pref_uv) {
+		_ispCfgPref(handler_id, &isp_context_ptr->pref);
+		isp_context_ptr->tune.pref_uv=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.edge) {
 		_ispCfgEdge(handler_id, &isp_context_ptr->edge);
@@ -6695,6 +6761,11 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		_ispCfgGamma(handler_id, &isp_context_ptr->gamma);
 		isp_context_ptr->tune.gamma=ISP_UEB;
 	}
+	if(ISP_EB==isp_context_ptr->tune.pre_wave)
+	{
+		_ispCfgPreWaveDenoise(handler_id, &isp_context_ptr->pre_wave_denoise);
+		isp_context_ptr->tune.pre_wave=ISP_UEB;
+	}
 
 	rtn=ispShadow(handler_id, ISP_ONE);
 
@@ -6703,6 +6774,109 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 	if ( PNULL != isp_context_ptr->cfg.self_callback) {
 		isp_context_ptr->cfg.self_callback(handler_id, ISP_SOF_CALLBACK, NULL, ISP_ZERO);
 	}
+
+	return rtn;
+}
+
+/* _ispBilAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispBilAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+
+	_ispSetDenoise(&isp_context_ptr->denoise, (struct isp_denoise_param_tab*)in_param_ptr);
+	isp_context_ptr->tune.denoise=ISP_EB;
+
+	return rtn;
+}
+
+/* _ispYDenoiseAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispYDenoiseAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	struct y_denoise_param* y_param_ptr = (struct y_denoise_param*)in_param_ptr;
+
+	isp_context_ptr->pref.y_thr = y_param_ptr->y_thr;
+	isp_context_ptr->tune.pref_y = ISP_EB;
+
+	return rtn;
+}
+
+/* _ispUVDenoiseAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispUVDenoiseAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	struct uv_denoise_param* uv_param_ptr = (struct uv_denoise_param*)in_param_ptr;
+
+	isp_context_ptr->pref.u_thr = uv_param_ptr->u_thr;
+	isp_context_ptr->pref.v_thr = uv_param_ptr->v_thr;
+	isp_context_ptr->tune.pref_uv = ISP_EB;
+
+	return rtn;
+}
+
+/* _ispCMCAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispCMCAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+
+	memcpy((void*)&isp_context_ptr->cmc.matrix, (void*)in_param_ptr, sizeof(uint16_t)*9);
+	isp_context_ptr->tune.cmc= ISP_EB;
+
+	return rtn;
+}
+
+/* _ispGammaAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispGammaAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	struct gamma_param* gamma_ptr=(struct gamma_param*)in_param_ptr;
+
+	isp_set_gamma(&isp_context_ptr->gamma, (struct isp_gamma_tab*)in_param_ptr);
+	isp_context_ptr->tune.gamma= ISP_EB;
+
+	return rtn;
+}
+
+/* _ispEdgeAdjust --
+*@
+*@
+*@ return:
+*/
+int32_t _ispEdgeAdjust(uint32_t handler_id, void* in_param_ptr, void* out_param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	struct edge_param* edge_param_ptr = (struct edge_param*)in_param_ptr;
+
+	isp_context_ptr->edge.detail_thr = edge_param_ptr->detail_thr;
+	isp_context_ptr->edge.smooth_thr = edge_param_ptr->smooth_thr;
+	isp_context_ptr->edge.strength = edge_param_ptr->strength;
+	isp_context_ptr->tune.edge= ISP_EB;
 
 	return rtn;
 }
@@ -6779,6 +6953,8 @@ static int32_t _ispGetExifInfo(uint32_t handler_id, void *exif_info_ptr)
 	exif_isp_info_ptr->ae.exposure = isp_context_ptr->ae.cur_exposure;
 	exif_isp_info_ptr->ae.gain = isp_context_ptr->ae.cur_gain;
 	exif_isp_info_ptr->ae.cur_lum = isp_context_ptr->ae.cur_lum;
+	exif_isp_info_ptr->ae.cur_index = isp_context_ptr->ae.cur_index;
+	exif_isp_info_ptr->ae.max_index = isp_context_ptr->ae.max_index;
 
 	exif_isp_info_ptr->awb.alg_id = isp_context_ptr->awb.alg_id;
 	exif_isp_info_ptr->awb.r_gain = isp_context_ptr->awb.cur_rgb.r;
@@ -6899,7 +7075,6 @@ static int32_t _ispGetExifInfo(uint32_t handler_id, void *exif_info_ptr)
 	}
 	memcpy((void*)&exif_isp_info_ptr->af.value, (void*)&isp_context_ptr->af.af_value, sizeof(exif_isp_info_ptr->af.value));
 	memcpy((void*)&exif_isp_info_ptr->af.win, (void*)&isp_context_ptr->af.win, sizeof(exif_isp_info_ptr->af.win));
-	
 
 	exif_isp_info_ptr->edge.detail_thr = isp_context_ptr->edge.detail_thr;
 	exif_isp_info_ptr->edge.smooth_thr = isp_context_ptr->edge.smooth_thr;
@@ -6928,6 +7103,65 @@ static int32_t _ispGetExifInfo(uint32_t handler_id, void *exif_info_ptr)
 	exif_isp_info_ptr->flash.g_ratio= isp_context_ptr->flash.g_ratio;
 	exif_isp_info_ptr->flash.b_ratio= isp_context_ptr->flash.b_ratio;
 
+	exif_isp_info_ptr->smart_adjust.smart = isp_context_ptr->ae.smart;
+	exif_isp_info_ptr->smart_adjust.smart_base_gain = isp_context_ptr->ae.smart_base_gain;
+
+	exif_isp_info_ptr->smart_adjust.denoise_lum_thr = isp_context_ptr->ae.denoise_lum_thr;
+	exif_isp_info_ptr->smart_adjust.denoise_start_index = isp_context_ptr->ae.denoise_start_index;
+	exif_isp_info_ptr->smart_adjust.denoise_start_zone = isp_context_ptr->ae.denoise_start_zone;
+	exif_isp_info_ptr->smart_adjust.smart_pref_y_outdoor_index = isp_context_ptr->ae.smart_pref_y_outdoor;
+	exif_isp_info_ptr->smart_adjust.smart_pref_y_min_index = isp_context_ptr->ae.smart_pref_y_min;
+	exif_isp_info_ptr->smart_adjust.smart_pref_y_mid_index = isp_context_ptr->ae.smart_pref_y_mid;
+	exif_isp_info_ptr->smart_adjust.smart_pref_y_max_index = isp_context_ptr->ae.smart_pref_y_max;
+	exif_isp_info_ptr->smart_adjust.smart_pref_y_cur = isp_context_ptr->pref.y_thr;
+	exif_isp_info_ptr->smart_adjust.smart_pref_uv_outdoor_index = isp_context_ptr->ae.smart_pref_uv_outdoor;
+	exif_isp_info_ptr->smart_adjust.smart_pref_uv_min_index = isp_context_ptr->ae.smart_pref_uv_min;
+	exif_isp_info_ptr->smart_adjust.smart_pref_uv_mid_index = isp_context_ptr->ae.smart_pref_uv_mid;
+	exif_isp_info_ptr->smart_adjust.smart_pref_uv_max_index = isp_context_ptr->ae.smart_pref_uv_max;
+	exif_isp_info_ptr->smart_adjust.smart_pref_uv_cur = isp_context_ptr->pref.u_thr;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_diswei_outdoor_index = isp_context_ptr->ae.smart_denoise_diswei_outdoor_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_diswei_min_index = isp_context_ptr->ae.smart_denoise_diswei_min_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_diswei_mid_index = isp_context_ptr->ae.smart_denoise_diswei_mid_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_diswei_max_index = isp_context_ptr->ae.smart_denoise_diswei_max_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_diswei_cur = isp_context_ptr->ae.cur_denoise_diswei_level;
+
+	exif_isp_info_ptr->smart_adjust.smart_denoise_ranwei_outdoor_index = isp_context_ptr->ae.smart_denoise_ranwei_outdoor_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_ranwei_min_index = isp_context_ptr->ae.smart_denoise_ranwei_min_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_ranwei_mid_index = isp_context_ptr->ae.smart_denoise_ranwei_mid_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_ranwei_max_index = isp_context_ptr->ae.smart_denoise_ranwei_max_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_ranwei_cur = isp_context_ptr->ae.cur_denoise_ranwei_level;
+
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_y_outdoor_index = isp_context_ptr->ae.smart_denoise_soft_y_outdoor_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_y_min_index = isp_context_ptr->ae.smart_denoise_soft_y_min_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_y_mid_index = isp_context_ptr->ae.smart_denoise_soft_y_mid_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_y_max_index = isp_context_ptr->ae.smart_denoise_soft_y_max_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_y_cur = isp_context_ptr->ae.prv_noise_info.y_level;
+
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_uv_outdoor_index = isp_context_ptr->ae.smart_denoise_soft_uv_outdoor_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_uv_min_index = isp_context_ptr->ae.smart_denoise_soft_uv_min_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_uv_mid_index = isp_context_ptr->ae.smart_denoise_soft_uv_mid_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_uv_max_index = isp_context_ptr->ae.smart_denoise_soft_uv_max_index;
+	exif_isp_info_ptr->smart_adjust.smart_denoise_soft_uv_cur = isp_context_ptr->ae.prv_noise_info.uv_level;
+
+	exif_isp_info_ptr->smart_adjust.gamma_num = isp_context_ptr->ae.gamma_num;
+	exif_isp_info_ptr->smart_adjust.gamma_zone = isp_context_ptr->ae.gamma_zone;
+	for (i = 0; i < exif_isp_info_ptr->smart_adjust.gamma_num; ++i) {
+		exif_isp_info_ptr->smart_adjust.gamma_thr[i] = isp_context_ptr->ae.gamma_thr[i];
+	}
+
+	exif_isp_info_ptr->smart_adjust.gamma_lum_thr = isp_context_ptr->ae.gamma_lum_thr;
+	exif_isp_info_ptr->smart_adjust.smart_edge_max_index = isp_context_ptr->ae.smart_edge_min_index;
+	exif_isp_info_ptr->smart_adjust.smart_edge_min_index = isp_context_ptr->ae.smart_edge_max_index;
+	exif_isp_info_ptr->smart_adjust.smart_edge_cur = isp_context_ptr->edge.strength;
+
+	exif_isp_info_ptr->smart_adjust.smart_sta_start_index = isp_context_ptr->ae.smart_sta_start_index;
+	exif_isp_info_ptr->smart_adjust.smart_sta_low_thr = isp_context_ptr->ae.smart_sta_low_thr;
+	exif_isp_info_ptr->smart_adjust.smart_sta_ratio1 = isp_context_ptr->ae.smart_sta_ratio1;
+	exif_isp_info_ptr->smart_adjust.smart_sta_ratio = isp_context_ptr->ae.smart_sta_ratio;
+
+	exif_isp_info_ptr->smart_adjust.lum_cali_index = isp_context_ptr->ae.lum_cali_index;
+	exif_isp_info_ptr->smart_adjust.lum_cali_lux = isp_context_ptr->ae.lum_cali_lux;
+
 	return rtn;
 }
 
@@ -6954,11 +7188,13 @@ static int32_t _ispGetExifInfoIOCtrl(uint32_t handler_id, void* param_ptr, int(*
 static int32_t _ispAfStopIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 {
 	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
 	ISP_MSG_INIT(isp_proc_msg);
 
 	ISP_LOG("--IOCtrl--AF_STOP--");
 	isp_proc_msg.handler_id = handler_id;
 	isp_proc_msg.msg_type = ISP_PROC_EVT_AF_STOP;
+	isp_context_ptr->af.continue_status=ISP_END_FLAG;
 	rtn = _isp_proc_msg_post(&isp_proc_msg);
 
 	return rtn;
@@ -7433,7 +7669,7 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 	raw_info_ptr=(struct sensor_raw_info*)param_ptr->setting_param_ptr;
 	version_info_ptr=(struct sensor_version_info*)raw_info_ptr->version_info;
 	raw_tune_ptr=(struct sensor_raw_tune_info*)raw_info_ptr->tune_ptr;
-#if 0
+
 	if((version_info_ptr->version_id & 0xffff0000)!=(param_ptr->isp_id & 0xffff0000)){
 		rtn=ISP_PARAM_ERROR;
 		ISP_RETURN_IF_FAIL(rtn, ("check isp id chip_id:0x%08x, isp_id:0x%08x  error", param_ptr->isp_id, version_info_ptr->version_id));
@@ -7454,7 +7690,7 @@ static int32_t _isp_check_init_param(uint32_t handler_id, struct isp_init_param*
 		rtn=ISP_CALLBACK_NULL;
 		ISP_RETURN_IF_FAIL(rtn, ("ctrl callback null error"));
 	}
-#endif
+
 	return rtn;
 }
 
@@ -7728,12 +7964,12 @@ static int _isp_deinit(uint32_t handler_id)
 	int rtn=0x00;
 
 	rtn=_ispUncfg(handler_id);
-	ISP_TRACE_IF_FAIL(rtn, ("isp uncfg error"));
+	ISP_RETURN_IF_FAIL(rtn, ("isp uncfg error"));
 
 	rtn = ispStop(handler_id);
-	ISP_TRACE_IF_FAIL(rtn, ("isp stop error"));
+	ISP_RETURN_IF_FAIL(rtn, ("isp stop error"));
 
-	return ISP_SUCCESS;
+	return rtn;
 }
 
 /* _isp_video_start --
@@ -8249,7 +8485,7 @@ static void *_isp_ctrl_routine(void *client_data)
 
 			case ISP_CTRL_EVT_STOP:
 				isp_system_ptr->ctrl_status=ISP_CLOSE;
-				ispOpenDev(handler_id, ISP_ZERO);
+				rtn = ispOpenDev(handler_id, ISP_ZERO);
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 				rtn=pthread_cond_signal(&isp_system_ptr->thread_common_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
@@ -9278,6 +9514,9 @@ int32_t _ispAdjustCCE(uint32_t handler_id, void* param_ptr1, void* param_ptr2)
 			return ISP_ERROR;
 		}
 
+		isp_context_ptr->cce_matrix.y_shift = isp_context_ptr->cce_tab[cce_matrix_mode].y_shift;
+		isp_context_ptr->cce_matrix.u_shift = isp_context_ptr->cce_tab[cce_matrix_mode].u_shift;
+		isp_context_ptr->cce_matrix.v_shift = isp_context_ptr->cce_tab[cce_matrix_mode].v_shift;
 		isp_context_ptr->cce_coef[0] = coef[0];
 		isp_context_ptr->cce_coef[1] = coef[1];
 		isp_context_ptr->cce_coef[2] = coef[2];

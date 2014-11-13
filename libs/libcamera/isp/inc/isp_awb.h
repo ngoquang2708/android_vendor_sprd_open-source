@@ -21,6 +21,19 @@
 #ifndef WIN32
 #include <linux/types.h>
 #else
+#include "sci_types.h"
+
+struct isp_size{
+	uint32_t w;
+	uint32_t h;
+};
+
+struct isp_awb_statistic_info{
+	uint32_t r_info[1024];
+	uint32_t g_info[1024];
+	uint32_t b_info[1024];
+};
+
 #endif
 /*------------------------------------------------------------------------------*
 *				Compiler Flag					*
@@ -184,9 +197,9 @@ struct isp_awb_calc_result {
 	struct isp_awb_scene_info scene_info[ISP_AWB_SCENE_NUM];
 };
 
-struct isp_awb_result {
-	struct isp_awb_gain gain;
-	uint32_t ct;
+struct isp_awb_detail_info {
+	uint16_t *coord_img;
+	uint8_t *mask_img;
 };
 
 

@@ -3645,7 +3645,7 @@ union _isp_com_shadow_type_v0002_tag {
         volatile unsigned int denoise   :2;
         volatile unsigned int bpc       :2;
         volatile unsigned int blc       :2;
-        volatile unsigned int reserved2 :2;
+        volatile unsigned int pre_wave_denoise :2;
     }mBits ;
     volatile unsigned int dwValue ;
 };

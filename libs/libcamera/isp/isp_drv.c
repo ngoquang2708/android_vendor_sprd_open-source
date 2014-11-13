@@ -445,7 +445,9 @@ struct isp_reg{
 
 	/*PRE GAIN GLB */
 	//uint32_t PRE_GLB_GAIN_PARAM;
-
+	//Pre Wavelet
+	uint32_t PRE_WAVE_STATUS;
+	uint32_t PRE_WAVE_PARAM;
 };
 
 struct isp_drv_context{
@@ -2942,6 +2944,96 @@ int32_t ispWDenoiseRanwei(uint32_t handler_id, uint8_t* ranwei_ptr)
 	return _isp_write((uint32_t *)&write_param);
 }
 
+/*Pre Wave denoise */
+/*	--
+*@
+*@
+*/
+int32_t ispGetPreWDenoiseStatus(uint32_t handler_id, uint32_t* status)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_pre_wave_status_v0002_tag* reg_s_ptr=(union _isp_pre_wave_status_v0002_tag*)&isp_reg_ptr->PRE_WAVE_STATUS;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param read_param;
+	uint32_t isp_id=_isp_GetIspId();
+
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+		reg_config.reg_addr = ISP_PRE_WAVELET_STATUS - ISP_BASE_ADDR;
+		read_param.reg_param = (uint32_t)&reg_config;
+		read_param.counts = 1;
+
+		if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param)) {
+			reg_s_ptr->dwValue = reg_config.reg_value;
+			*status = reg_s_ptr->dwValue;
+		}
+	}
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispPreWDenoiseBypass(uint32_t handler_id, uint8_t bypass)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_pre_wave_param_v0002_tag* reg_s_ptr=(union _isp_pre_wave_param_v0002_tag*)&isp_reg_ptr->PRE_WAVE_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+	uint32_t isp_id=_isp_GetIspId();
+
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+		reg_s_ptr->mBits.bypass=bypass;
+		reg_config.reg_addr = ISP_PRE_WAVELET_PARAM - ISP_BASE_ADDR;
+		reg_config.reg_value = isp_reg_ptr->PRE_WAVE_PARAM;
+
+		write_param.reg_param = (uint32_t)&reg_config;
+		write_param.counts = 1;
+
+		return _isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+
+/*Pre wavelet para */
+/*	--
+*@
+*@
+*/
+int32_t ispPreWDenoiseThrd(uint32_t handler_id, uint16_t thrs0, uint16_t thrs1)
+{
+/*	union _isp_wave_thrd_v0000_tag* reg_ptr=(union _isp_wave_thrd_v0000_tag*)ISP_AWBC_THRD;*/
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_pre_wave_param_v0002_tag* reg_s_ptr=(union _isp_pre_wave_param_v0002_tag*)&isp_reg_ptr->PRE_WAVE_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+	uint32_t isp_id=_isp_GetIspId();
+
+	if(SC9630_ISP_ID==isp_id)
+	{
+		ISP_CHECK_FD;
+
+		reg_s_ptr->mBits.thrs0=thrs0;
+		reg_s_ptr->mBits.thrs1=thrs1;
+		reg_config.reg_addr = ISP_PRE_WAVELET_PARAM - ISP_BASE_ADDR;
+		reg_config.reg_value = isp_reg_ptr->PRE_WAVE_PARAM;
+
+		write_param.reg_param = (uint32_t)&reg_config;
+		write_param.counts = 1;
+
+		return _isp_write((uint32_t *)&write_param);
+	}
+
+	return ISP_SUCCESS;
+}
+
 /*GrGb C */
 /*	--
 *@
@@ -5273,8 +5365,9 @@ int32_t ispSetPrefThrd(uint32_t handler_id, uint8_t y_thr, uint8_t u_thr, uint8_
 	ISP_CHECK_FD;
 
 	reg_s_ptr->mBits.y_thrd=y_thr;
-	reg_s_ptr->mBits.u_thrd=u_thr;
-	reg_s_ptr->mBits.v_thrd=v_thr;
+	/*must be set to 0 or the image will be a little purplish*/
+	reg_s_ptr->mBits.u_thrd=0;//u_thr;
+	reg_s_ptr->mBits.v_thrd=0;//v_thr;
 /*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
 	reg_config.reg_addr = ISP_PREF_THRD - ISP_BASE_ADDR;
 	reg_config.reg_value = isp_reg_ptr->PREF_THRD;
@@ -9000,7 +9093,6 @@ int32_t ispSetGlbGain(uint32_t handler_id, uint32_t gain)
 
 	return _isp_write((uint32_t *)&write_param);
 }
-
 
 /*	--
 *@

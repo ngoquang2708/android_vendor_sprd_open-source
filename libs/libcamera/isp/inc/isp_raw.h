@@ -641,6 +641,13 @@ struct isp_hdr{
 	uint32_t hdr_bypass;
 };
 
+struct isp_pre_wave_denoise{
+	uint32_t pre_wave_bypass;
+	uint8_t thrs0;
+	uint8_t thrs1;
+	uint8_t resered1;
+	uint8_t reserved0;
+};
 
 struct isp_auto_adjust{
 	uint32_t enable;
@@ -749,7 +756,8 @@ struct isp_raw_tune_info{
 	struct isp_auto_adjust_info auto_adjust;
 	struct isp_caf_info caf;
 	struct isp_af_multi_win_param af_multi_win;
-	uint32_t ext[256];
+	struct isp_pre_wave_denoise pre_wave_denoise;
+	uint32_t ext[254];
 };
 
 struct isp_raw_fix_info{
