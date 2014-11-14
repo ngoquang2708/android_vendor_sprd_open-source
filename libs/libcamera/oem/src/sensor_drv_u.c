@@ -2063,6 +2063,7 @@ cmr_int sns_ctrl_thread_proc(struct cmr_msg *message, void *p_data)
 	case SENSOR_CTRL_EVT_STREAM_CTRL:
 		on_off = (cmr_u32)message->sub_msg_type;
 		sns_stream_ctrl_common(sensor_cxt, on_off);
+		break;
 
 	case SENSOR_CTRL_EVT_EXIT:
 		/*common control info clear*/
