@@ -30,7 +30,10 @@ if [ "$1" = "-u" ]; then
 		iptables -I FORWARD 1 -i $ifname -d $pcv4addr -j ACCEPT
 		iptables -A FORWARD -i rndis0 -o $ifname -j ACCEPT
 		iptables -t nat -A POSTROUTING -s $pcv4addr -j SNAT --to-source $localip
-	fi
+                iptables –I OUTPUT –o $ifname –p all ! –d $pcv4addr/24 –j DROP
+
+                echo 1 > proc/sys/net/ipv6/conf/$ifname/disable_ipv6
+       fi
 
 	setprop sys.ifconfig.up done
 	setprop sys.data.noarp done
