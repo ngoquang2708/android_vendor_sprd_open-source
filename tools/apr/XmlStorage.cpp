@@ -205,7 +205,7 @@ int XmlStorage::_fileIsExist()
 	int retval;
 	// If directory is not exist, make dir
 	if (access(m_dir, F_OK) < 0) {
-		retval = mkdir(m_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		retval = mkdir(m_dir, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (retval < 0) {
 			APR_LOGE("mkdir %s fail, error:%s\n", m_dir, strerror(errno));
 			exit(1);
