@@ -4039,7 +4039,7 @@ static int32_t _ispSetParam(uint32_t handler_id, struct isp_cfg_param* param_ptr
 	isp_context_ptr->auto_adjust.cmc_fun = _ispCMCAdjust;
 	isp_context_ptr->auto_adjust.edge_fun = _ispEdgeAdjust;
 
-	memcpy((void*)isp_context_ptr->reserved, (void*)raw_tune_ptr->reserved, 4*256);
+	memcpy((void*)isp_context_ptr->reserved, (void*)raw_tune_ptr->reserved, sizeof(isp_context_ptr->reserved));
 
 	switch (version_id[0]) {
 	case _ISP_VERSION_00000000_ID:
