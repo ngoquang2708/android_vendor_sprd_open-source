@@ -350,7 +350,9 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 			break;
 		}
 
-		if ((CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) && af_get_focusmove_flag(af_handle)) {
+		if (((CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) ||
+			(CAMERA_FOCUS_MODE_CAF_VIDEO== af_cxt->af_mode)) &&
+			af_get_focusmove_flag(af_handle)) {
 			/*caf move done, return directly*/
 			CMR_LOGI("CAF move done already isp_af_win_val=%d ", af_cxt->isp_af_win_val);
 
@@ -395,7 +397,8 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 		}
 
 		if (PREVIEWING == af_cxt->ops.get_preview_status(af_cxt->oem_handle)
-		    && CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode ) {
+		    && ((CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) ||
+				(CAMERA_FOCUS_MODE_CAF_VIDEO == af_cxt->af_mode))) {
 			/*YUV sensor caf process, app need move and move done status*/
 			CMR_LOGI("CMR_SENSOR_FOCUS_MOVE");
 
@@ -417,7 +420,8 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 		}
 
 		if (PREVIEWING == af_cxt->ops.get_preview_status(af_cxt->oem_handle)
-		    && CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode ) {
+		    && ((CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) ||
+				(CAMERA_FOCUS_MODE_CAF_VIDEO == af_cxt->af_mode))) {
 			CMR_LOGI("CMR_EVT_CAF_MOVE_START");
 
 			af_cxt->evt_cb(AF_CB_FOCUS_MOVE, 1, af_cxt->oem_handle);
@@ -432,7 +436,8 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 		}
 
 		if (PREVIEWING == af_cxt->ops.get_preview_status(af_cxt->oem_handle)
-		    && CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode ) {
+		    && ((CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) ||
+				(CAMERA_FOCUS_MODE_CAF_VIDEO == af_cxt->af_mode))) {
 			CMR_LOGI("CMR_EVT_CAF_MOVE_STOP");
 
 			af_cxt->evt_cb(AF_CB_FOCUS_MOVE, 0, af_cxt->oem_handle);
@@ -470,6 +475,7 @@ cmr_int cmr_focus_isp_handle(cmr_handle af_handle, cmr_u32 evt_type, cmr_u32 cam
 {
 	cmr_int                     ret       = CMR_MSG_SUCCESS;
 	struct af_context           *af_cxt   = (struct af_context *)af_handle;
+	cmr_int is_caf_mode;
 
 	if (!af_cxt) {
 		CMR_LOGE("handle param invalid");
@@ -481,11 +487,11 @@ cmr_int cmr_focus_isp_handle(cmr_handle af_handle, cmr_u32 evt_type, cmr_u32 cam
 	switch (evt_type) {
 	case FOCUS_EVT_ISP_AF_NOTICE:
 		CMR_LOGI("af_mode %d, af_busy %d", af_cxt->af_mode, af_cxt->af_busy);
-
-		 if ((CAMERA_FOCUS_MODE_CAF != af_cxt->af_mode) || af_cxt->af_busy) {
-
+		is_caf_mode = (CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) ||
+					(CAMERA_FOCUS_MODE_CAF_VIDEO == af_cxt->af_mode);
+		 if (!is_caf_mode || af_cxt->af_busy) {
 			ret = af_isp_done(af_handle, data);
-		 } else if (CAMERA_FOCUS_MODE_CAF == af_cxt->af_mode) {
+		 } else if (is_caf_mode) {
 		 	struct isp_af_notice *isp_af = (struct isp_af_notice*)data;
 
 			if (ISP_FOCUS_MOVE_START == isp_af->mode) {
@@ -1267,6 +1273,7 @@ cmr_int focus_rect_parse(cmr_handle af_handle, SENSOR_EXT_FUN_PARAM_T_PTR p_focu
 		break;
 
 	case CAMERA_FOCUS_MODE_CAF:
+	case CAMERA_FOCUS_MODE_CAF_VIDEO:
 		af_param.cmd      = SENSOR_EXT_FOCUS_START;
 		af_param.param    = SENSOR_EXT_FOCUS_CAF;
 		af_param.zone_cnt = 0;
@@ -1274,7 +1281,6 @@ cmr_int focus_rect_parse(cmr_handle af_handle, SENSOR_EXT_FUN_PARAM_T_PTR p_focu
 		break;
 
 	case CAMERA_FOCUS_MODE_INFINITY:
-	case CAMERA_FOCUS_MODE_CAF_VIDEO:
 	default:
 		break;
 

@@ -1760,7 +1760,7 @@ LOCAL uint32_t Sensor_ov8825_InitRawTuneInfo(void)
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x01;
-
+	sensor_ptr->caf.enable = 0x00;
 
 #if 0
 	sensor_ptr->auto_adjust.bil_denoise.enable=0x00;
