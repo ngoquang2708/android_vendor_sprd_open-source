@@ -15,8 +15,9 @@ LOCAL_SRC_FILES += Observer.cpp
 LOCAL_SRC_FILES += AprData.cpp
 LOCAL_SRC_FILES += XmlStorage.cpp
 LOCAL_SRC_FILES += Thread.cpp
-LOCAL_SRC_FILES += AnrThread.cpp
+LOCAL_SRC_FILES += InotifyThread.cpp
 LOCAL_SRC_FILES += ModemThread.cpp
+LOCAL_SRC_FILES += LoggerThread.cpp
 LOCAL_SRC_FILES += common.c
 
 LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -llog -lpthread -lxml
