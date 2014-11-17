@@ -275,7 +275,7 @@ static cmr_int prev_pre_set(struct prev_handle *handle, cmr_u32 camera_id);
 
 static cmr_int prev_post_set(struct prev_handle *handle, cmr_u32 camera_id);
 
-static cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_restart);
+static cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_restart, cmr_u32 is_sn_reopen);
 
 static cmr_int prev_stop(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_restart);
 
@@ -1290,7 +1290,7 @@ cmr_int prev_thread_proc(struct cmr_msg *message, void *p_data)
 		camera_id = (cmr_u32)message->data;
 
 		prev_recovery_reset(handle, camera_id);
-		ret = prev_start(handle, camera_id, 0);
+		ret = prev_start(handle, camera_id, 0, 0);
 		break;
 
 
@@ -1803,7 +1803,7 @@ cmr_int prev_error_handle(struct prev_handle *handle, cmr_u32 camera_id, cmr_uin
 	}
 	cmr_bzero(&cb_data_info, sizeof(struct prev_cb_info));
 
-	CMR_LOGI("error type 0x%lx, camera_id", evt_type, camera_id);
+	CMR_LOGI("error type 0x%lx, camera_id %d", evt_type, camera_id);
 
 	prev_cxt = &handle->prev_cxt[camera_id];
 
@@ -1876,11 +1876,21 @@ cmr_int prev_error_handle(struct prev_handle *handle, cmr_u32 camera_id, cmr_uin
 
 exit:
 	if (ret) {
-		CMR_LOGE("Call cb to notice the upper layer something error blocked preview");
-		cb_data_info.cb_type    = PREVIEW_EXIT_CB_FAILED;
-		cb_data_info.func_type  = PREVIEW_FUNC_START_PREVIEW;
-		cb_data_info.frame_data = NULL;
-		prev_cb_start(handle, &cb_data_info);
+		if (prev_cxt->prev_param.preview_eb) {
+			CMR_LOGE("Call cb to notice the upper layer something error blocked preview");
+			cb_data_info.cb_type    = PREVIEW_EXIT_CB_FAILED;
+			cb_data_info.func_type  = PREVIEW_FUNC_START_PREVIEW;
+			cb_data_info.frame_data = NULL;
+			prev_cb_start(handle, &cb_data_info);
+		}
+
+		if (prev_cxt->prev_param.snapshot_eb) {
+			CMR_LOGE("Call cb to notice the upper layer something error blocked capture");
+			cb_data_info.cb_type    = PREVIEW_EXIT_CB_FAILED;
+			cb_data_info.func_type  = PREVIEW_FUNC_START_CAPTURE;
+			cb_data_info.frame_data = NULL;
+			prev_cb_start(handle, &cb_data_info);
+		}
 	}
 
 	return 0;
@@ -1945,7 +1955,7 @@ cmr_int prev_recovery_post_proc(struct prev_handle *handle, cmr_u32 camera_id, e
 			return ret;
 		}
 
-		ret = prev_start(handle, camera_id, 1);
+		ret = prev_start(handle, camera_id, 1, 1);
 
 		break;
 
@@ -2035,7 +2045,7 @@ cmr_int prev_post_set(struct prev_handle *handle, cmr_u32 camera_id)
 }
 
 
-cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_restart)
+cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_restart, cmr_u32 is_sn_reopen)
 {
 	cmr_int                     ret = CMR_CAMERA_SUCCESS;
 	struct prev_context         *prev_cxt = NULL;
@@ -2093,7 +2103,8 @@ cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_res
 						camera_id,
 						prev_cxt->prev_mode,
 						prev_cxt->cap_mode,
-						is_restart);
+						is_restart,
+						is_sn_reopen);
 		} else {
 			CMR_LOGE("err,capture_pre_proc is null");
 			ret = CMR_CAMERA_INVALID_PARAM;
@@ -4703,7 +4714,7 @@ cmr_int prev_restart_cap_channel(struct prev_handle *handle,
 		CMR_LOGI("cap chn id is %ld", prev_cxt->cap_channel_id );
 		prev_cxt->cap_channel_status = PREV_CHN_BUSY;
 
-		ret = prev_start(handle, camera_id, 1);
+		ret = prev_start(handle, camera_id, 1, 0);
 		if (ret) {
 			CMR_LOGE("prev start failed");
 			goto exit;
