@@ -93,6 +93,7 @@ struct rotation_context {
 struct ipm_context {
 	cmr_handle               ipm_handle;
 	cmr_handle               hdr_handle;
+	cmr_handle               uvde_handle;
 	cmr_u32                  inited;
 	cmr_u32                  frm_num;
 	cmr_u32                  hdr_num;

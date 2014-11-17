@@ -5172,7 +5172,7 @@ void SprdCameraHardware::cpu_hotplug_disable(uint8_t is_disable)
 {
 #define DISABLE_CPU_HOTPLUG	"1"
 #define ENABLE_CPU_HOTPLUG	"0"
-	const char* const hotplug = "/sys/devices/system/cpu/cpuhotplug/cpu_hotplug_disable";
+	const char* const hotplug = "/sys/devices/system/cpu/cpufreq/sprdemand/cpu_hotplug_disable";
 	const char* cmd_str  = DISABLE_CPU_HOTPLUG;
 	uint8_t org_flag = 0;
 
@@ -5199,7 +5199,7 @@ void SprdCameraHardware::cpu_dvfs_disable(uint8_t is_disable)
 {
 #define DISABLE_CPU_DVFS	"10"
 #define ENABLE_CPU_DVFS	    "95"
-	const char* const dvfs = "/sys/devices/system/cpu/cpuhotplug/up_threshold";
+	const char* const dvfs = "/sys/devices/system/cpu/cpufreq/sprdemand/up_threshold";
 	const char* cmd_str  = DISABLE_CPU_DVFS;
 	uint8_t org_flag = 0;
 

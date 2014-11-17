@@ -20,6 +20,7 @@
 #include "cmr_msg.h"
 #include "isp_video.h"
 #include "cmr_ipm.h"
+#include "cmr_oem.h"
 #include "cutils/properties.h"
 
 
@@ -303,6 +304,10 @@ static cmr_int snp_proc_hdr_src(cmr_handle snp_handle, void *data);
 static void snp_jpeg_enc_err_handle(cmr_handle snp_handle);
 static void snp_jpeg_dec_err_handle(cmr_handle snp_handle);
 static void snp_autotest_proc(cmr_handle snp_handle, void *data);
+
+static cmr_int camera_open_uvde(struct camera_context *cxt, struct ipm_open_in *in_ptr, struct ipm_open_out *out_ptr);
+static cmr_int camera_close_uvde(struct camera_context *cxt);
+static cmr_int camera_start_uvde(struct camera_context *cxt, struct img_frm *src);
 
 cmr_int snp_main_thread_proc(struct cmr_msg *message, void* p_data)
 {
@@ -813,6 +818,17 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 								jpeg_in_ptr->src.size.height,
 								&jpeg_in_ptr->src.addr_vir);
 		}
+
+#ifdef CONFIG_CAPTURE_DENOISE
+	struct camera_context          *cxt = (struct camera_context*)snp_cxt->oem_handle;
+	if (cxt->camera_id == 0) {
+		ret = camera_start_uvde(cxt, &jpeg_in_ptr->src);
+		if (ret != CMR_CAMERA_SUCCESS) {
+			CMR_LOGE("camera_start_uvde fail");
+			goto exit;
+		}
+	}
+#endif
 		camera_take_snapshot_step(CMR_STEP_JPG_ENC_S);
 		ret = snp_cxt->ops.start_encode(snp_cxt->oem_handle, snp_handle, &jpeg_in_ptr->src,
 										&jpeg_in_ptr->dst, &jpeg_in_ptr->mean);
@@ -3997,5 +4013,61 @@ cmr_int cmr_snapshot_memory_flush(cmr_handle snapshot_handle)
 
 	ret = snp_send_msg_notify_thr(snapshot_handle, SNAPSHOT_FUNC_TAKE_PICTURE, SNAPSHOT_EVT_CB_FLUSH, NULL, 0);
 	CMR_LOGI("done %ld", ret);
+	return ret;
+}
+
+cmr_int camera_open_uvde(struct camera_context *cxt, struct ipm_open_in *in_ptr, struct ipm_open_out *out_ptr)
+{
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+	if ((NULL == cxt) || (NULL == cxt->ipm_cxt.ipm_handle)) {
+		CMR_LOGE("param invalid");
+		return CMR_CAMERA_INVALID_PARAM;
+	}
+	ret = cmr_ipm_open(cxt->ipm_cxt.ipm_handle, IPM_TYPE_UVDE, in_ptr, out_ptr, &cxt->ipm_cxt.uvde_handle);
+	return ret;
+}
+
+cmr_int camera_close_uvde(struct camera_context *cxt)
+{
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+
+	if (cxt->ipm_cxt.uvde_handle) {
+		ret = cmr_ipm_close(cxt->ipm_cxt.uvde_handle);
+		cxt->ipm_cxt.uvde_handle = 0;
+	}
+	return ret;
+}
+
+cmr_int camera_start_uvde(struct camera_context *cxt, struct img_frm *src)
+{
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+	struct ipm_frame_in           ipm_in_param;
+
+	CMR_LOGI("uvdenoise start");
+	if ((NULL == cxt) && (NULL == src)) {
+		CMR_LOGE("param invalid");
+		return CMR_CAMERA_INVALID_PARAM;
+	}
+	camera_take_snapshot_step(CMR_STEP_UVDENOISE_S);
+	ret = camera_open_uvde(cxt, NULL, NULL);
+	if (ret) {
+		CMR_LOGE("failed to open uvdenoise %ld", ret);
+		return ret;
+	}
+
+	ipm_in_param.src_frame = *src;
+	ret = ipm_transfer_frame(cxt->ipm_cxt.uvde_handle, &ipm_in_param, NULL);
+	if (ret) {
+		CMR_LOGE("failed to transfer frame to ipm %ld", ret);
+		return ret;
+	}
+
+	ret = camera_close_uvde(cxt);
+	if (ret) {
+		CMR_LOGE("fail to close uvdenoise %ld", ret);
+		return ret;
+	}
+	camera_take_snapshot_step(CMR_STEP_UVDENOISE_E);
+	CMR_LOGI("uvdenoise end");
 	return ret;
 }

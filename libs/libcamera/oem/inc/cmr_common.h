@@ -585,10 +585,12 @@ struct snp_proc_param {
 
 /*************************** ipm data type **************************/
 
+
 enum ipm_class_type {
 	IPM_TYPE_NONE = 0x0,
 	IPM_TYPE_HDR = 0x00000001,
 	IPM_TYPE_FD = 0x00000002,
+	IPM_TYPE_UVDE = 0x00000004,
 };
 
 enum img_fmt {
@@ -659,6 +661,8 @@ enum CAMERA_TAKEPIC_STEP {
 		CMR_STEP_JPG_DEC_E,
 		CMR_STEP_SC_S,
 		CMR_STEP_SC_E,
+		CMR_STEP_UVDENOISE_S,
+		CMR_STEP_UVDENOISE_E,
 		CMR_STEP_JPG_ENC_S,
 		CMR_STEP_JPG_ENC_E,
 		CMR_STEP_CVT_THUMB_S,

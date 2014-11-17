@@ -32,6 +32,8 @@ struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
 		{"jpeg dec end",       0, 0, 0},
 		{"scaling start",      0, 0, 0},
 		{"scaling end",        0, 0, 0},
+		{"uv denoise start",   0, 0, 0},
+		{"uv denoise end",     0, 0, 0},
 		{"jpeg enc start",     0, 0, 0},
 		{"jpeg enc end",       0, 0, 0},
 		{"cvt thumb start",    0, 0, 0},

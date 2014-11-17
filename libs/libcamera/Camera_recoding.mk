@@ -23,8 +23,6 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/oem/inc \
 	$(LOCAL_PATH)/oem/isp_calibration/inc \
 	$(LOCAL_PATH)/isp/inc \
-	$(LOCAL_PATH)/isp/uv_denoise \
-	$(LOCAL_PATH)/isp/uv_denoise/inc \
 	$(LOCAL_PATH)/mtrace \
 	external/skia/include/images \
 	external/skia/include/core\
@@ -56,6 +54,7 @@ LOCAL_SRC_FILES:= \
 	oem/src/cmr_ipm.c \
 	oem/src/cmr_hdr.c \
 	oem/src/cmr_fd.c \
+	oem/src/cmr_uvdenoise.c \
 	oem/src/cmr_focus.c \
 	oem/src/sensor_drv_u.c \
 	sensor/sensor_ov8825_mipi_raw.c \
@@ -133,7 +132,6 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_file_update.c \
 	isp/isp_stub_proc.c \
 	isp/isp_stub_msg.c \
-	isp/uv_denoise/denoise_app.c \
 	oem/isp_calibration/src/isp_calibration.c \
 	oem/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \
