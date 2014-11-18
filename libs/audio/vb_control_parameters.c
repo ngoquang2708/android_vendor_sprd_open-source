@@ -655,7 +655,7 @@ static int SetAudio_PaConfig_by_devices(struct tiny_audio_device *adev, pga_gain
         ALOGE("%s pga_gain_nv NULL",__func__);
         return -1;
     }
-    if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM){
+    if(adev->fm_open){
         ALOGI("%s fm device ",__func__);
         if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
                         pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE){
@@ -691,7 +691,7 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         ALOGE("%s pga_gain_nv NULL",__func__);
         return -1;
     }
-    if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_FM){
+    if(adev->fm_open){
         ALOGI("%s,fm device",__func__);
         if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
                         pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE){

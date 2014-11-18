@@ -2873,7 +2873,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     }
     else {
-        if(adev->out_devices & AUDIO_DEVICE_OUT_FM){
+        if(adev->fm_open){
             in->config = pcm_config_fm_ul;
             if(in->config.channels != in->requested_channels) {
               in->config.channels = in->requested_channels;
