@@ -161,9 +161,9 @@ static int at_cmd_route(struct tiny_audio_device *adev)
                     st_vbc_ctrl_thread_para->adev->cp_type, android_sim_num,adev);
 
         if (adev->bluetooth_nrec) {
-            at_cmd = "AT+SSAM=6";
-        } else {
             at_cmd = "AT+SSAM=5";
+        } else {
+            at_cmd = "AT+SSAM=6";
         }
     } else if (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
         at_cmd = "AT+SSAM=1";
