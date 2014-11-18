@@ -135,7 +135,7 @@ static cmr_int camera_start_scale(cmr_handle oem_handle, cmr_handle caller_handl
 static cmr_int camera_start_rot(cmr_handle oem_handle, cmr_handle caller_handle, struct img_frm *src,
                                          struct img_frm *dst, struct cmr_op_mean *mean);
 static cmr_int camera_ipm_pre_proc(cmr_handle oem_handle, void * private_data);
-static cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_mode, cmr_u32 capture_mode, cmr_u32 is_restart);
+static cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_mode, cmr_u32 capture_mode, cmr_u32 is_restart, cmr_u32 is_sn_reopen);
 static cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id);
 static cmr_int camera_open_sensor(cmr_handle oem_handle, cmr_u32 camera_id);
 static cmr_int camera_close_sensor(cmr_handle oem_handle, cmr_u32 camera_id);
@@ -729,6 +729,8 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 		oem_func = CAMERA_FUNC_START_PREVIEW;
 	} else if (PREVIEW_FUNC_STOP_PREVIEW == func) {
 		oem_func = CAMERA_FUNC_STOP_PREVIEW;
+	} else if (PREVIEW_FUNC_START_CAPTURE == func) {
+		oem_func = CAMERA_FUNC_TAKE_PICTURE;
 	} else {
 		CMR_LOGE("err, %d", func);
 		goto exit;
@@ -2658,7 +2660,7 @@ exit:
 	return ret;
 }
 
-cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_mode, cmr_u32 capture_mode, cmr_u32 is_restart)
+cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_mode, cmr_u32 capture_mode, cmr_u32 is_restart, cmr_u32 is_sn_reopen)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
@@ -2672,8 +2674,8 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 	}
 	snp_cxt = &cxt->snp_cxt;
 
-	CMR_LOGI("camera id %d, capture mode %d preview mode %d is_restart %d snapshot_sn_mode %d",
-			camera_id, capture_mode, preview_mode, is_restart, snp_cxt->snp_mode);
+	CMR_LOGI("camera id %d, capture mode %d preview mode %d,  is_restart %d is_sn_reopen %d, snapshot_sn_mode %d",
+			camera_id, capture_mode, preview_mode, is_restart, is_sn_reopen, snp_cxt->snp_mode);
 
 	if ((CAMERA_ZSL_MODE != snp_cxt->snp_mode) && (!is_restart) && (1 != camera_get_hdr_flag(cxt))) {
 		/*open flash*/
@@ -2686,7 +2688,7 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 			CMR_LOGE("failed to open flash");
 		}
 	}
-	if ((CAMERA_ZSL_MODE != snp_cxt->snp_mode) && (!is_restart)) {
+	if ((CAMERA_ZSL_MODE != snp_cxt->snp_mode) && (!is_restart || is_sn_reopen)) {
 		snp_cxt = &cxt->snp_cxt;
 		snp_cxt->snapshot_sn_mode = capture_mode;
 		cxt->prev_cxt.preview_sn_mode = preview_mode;

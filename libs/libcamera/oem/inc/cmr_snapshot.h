@@ -117,7 +117,7 @@ struct snapshot_md_ops {
 						   struct cmr_op_mean *mean);
 	cmr_int (*start_rot)(cmr_handle oem_handle, cmr_handle caller_handle, struct img_frm *src, struct img_frm *dst,
 						 struct cmr_op_mean *mean);
-	cmr_int (*capture_pre_proc)(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_sn_mode, cmr_u32 capture_sn_mode, cmr_u32 is_restart);
+	cmr_int (*capture_pre_proc)(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_sn_mode, cmr_u32 capture_sn_mode, cmr_u32 is_restart, cmr_u32 is_sn_reopen);
 	cmr_int (*capture_post_proc)(cmr_handle oem_handle, cmr_u32 camera_id);
 	cmr_int (*raw_proc)(cmr_handle oem_handle, cmr_handle caller_handle, struct raw_proc_param *param_ptr);
 	cmr_int (*isp_start_video)(cmr_handle oem_handle, struct video_start_param *param_ptr);

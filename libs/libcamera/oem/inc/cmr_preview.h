@@ -26,6 +26,7 @@ extern "C"
 enum preview_func_type {
 	PREVIEW_FUNC_START_PREVIEW = 0,
 	PREVIEW_FUNC_STOP_PREVIEW,
+	PREVIEW_FUNC_START_CAPTURE,
 	PREVIEW_FUNC_MAX
 };
 
@@ -63,7 +64,7 @@ struct preview_md_ops {
 				         struct img_frm *dst, struct cmr_op_mean *mean);
 	cmr_int (*preview_pre_proc)(cmr_handle  oem_handle, cmr_u32 camera_id, cmr_u32 preview_sn_mode);
 	cmr_int (*preview_post_proc)(cmr_handle oem_handle, cmr_u32 camera_id);
-	cmr_int (*capture_pre_proc)(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_sn_mode, cmr_u32 capture_sn_mode, cmr_u32 is_restart);
+	cmr_int (*capture_pre_proc)(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u32 preview_sn_mode, cmr_u32 capture_sn_mode, cmr_u32 is_restart, cmr_u32 is_sn_reopen);
 	cmr_int (*capture_post_proc)(cmr_handle oem_handle, cmr_u32 camera_id);
 	cmr_int (*get_sensor_info)(cmr_handle oem_handle, cmr_uint sensor_id, struct sensor_exp_info *sensor_info);
 	cmr_int (*get_sensor_autotest_mode)(cmr_handle oem_handle, cmr_uint sensor_id, cmr_uint *is_autotest);
