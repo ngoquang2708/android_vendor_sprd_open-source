@@ -2995,7 +2995,7 @@ int SprdCameraHardware::Callback_PreviewMalloc(cmr_u32 size, cmr_u32 sum, cmr_ui
 		buffer_end_id = buffer_start_id;
 
 		if (sum > (cmr_u32)kPreviewBufferCount) {
-			mPreviewDcamAllocBufferCnt = sum - kPreviewBufferCount; //kPreviewRotBufferCount;
+			mPreviewDcamAllocBufferCnt = sum - kPreviewBufferCount;
 			buffer_start_id = kPreviewBufferCount;
 			buffer_end_id = sum;
 		}

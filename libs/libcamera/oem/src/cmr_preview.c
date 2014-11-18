@@ -30,7 +30,7 @@
 /**************************MCARO DEFINITION********************************************************************/
 #define PREV_ID_BASE                    0x1000
 #define PREV_FRM_CNT                    V4L2_BUF_MAX
-#define PREV_ROT_FRM_CNT                4
+#define PREV_ROT_FRM_CNT                8
 #define PREV_MSG_QUEUE_SIZE             50
 #define PREV_RECOVERY_CNT               3
 
@@ -797,7 +797,8 @@ cmr_int cmr_preview_release_frame(cmr_handle preview_handle, cmr_u32 camera_id, 
 			CMR_LOGE("wrong index, 0x%lx ", index);
 		}
 	} else {
-		prev_cxt->prev_rot_frm_is_lock[(index - prev_cxt->prev_mem_num) % PREV_ROT_FRM_CNT] = 0;
+		CMR_LOGI("[prev_rot] unlock %ld", (index % PREV_ROT_FRM_CNT));
+		prev_cxt->prev_rot_frm_is_lock[index % PREV_ROT_FRM_CNT] = 0;
 	}
 
 	return ret;
@@ -3207,6 +3208,7 @@ cmr_int prev_construct_frame(struct prev_handle *handle,
 			frame_type->y_vir_addr   = prev_cxt->prev_rot_frm[frm_id].addr_vir.addr_y;
 			frame_type->y_phy_addr   = prev_cxt->prev_rot_frm[frm_id].addr_phy.addr_y;
 
+			CMR_LOGE("[prev_rot] lock %d", frm_id);
 			prev_cxt->prev_rot_frm_is_lock[frm_id] = 1;
 		} else {
 			frm_id = info->frame_id - PREV_ID_BASE;
@@ -4429,9 +4431,10 @@ cmr_uint prev_search_rot_buffer(struct prev_context *prev_cxt)
 		if (0 == prev_cxt->prev_rot_frm_is_lock[search_index]) {
 			ret = CMR_CAMERA_SUCCESS;
 			prev_cxt->prev_rot_index = search_index;
+			CMR_LOGI("[prev_rot] find %d", search_index);
 			break;
 		} else {
-			CMR_LOGW("rot buffer %ld is locked", search_index);
+			CMR_LOGW("[prev_rot] rot buffer %ld is locked", search_index);
 		}
 	}
 
