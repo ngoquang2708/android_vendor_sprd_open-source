@@ -99,11 +99,11 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
         char cp_time[MAX_NAME_LEN];
 
         memset(cp_time, '0', MAX_NAME_LEN);
-        if (!strncmp(info->name, "cp0", 3)) {
+        if (!strncmp(info->name, "cp_wcdma", 8)) {
                 strcpy(cp_time, W_TIME);
-        } else if (!strncmp(info->name, "cp1", 3)) {
+        } else if (!strncmp(info->name, "cp_td-cdma", 8)) {
                 strcpy(cp_time, TD_TIME);
-        } else if (!strncmp(info->name, "cp3", 3)) {
+        } else if (!strncmp(info->name, "cp_td-lte", 8)) {
                 strcpy(cp_time, L_TIME);
         } else
                 return;

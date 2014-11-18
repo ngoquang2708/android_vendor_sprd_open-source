@@ -12,10 +12,12 @@ stream	main	on	0	3
 stream	events	on	0	0
 stream	system	on	0	0
 stream	radio	on	0	0
-stream	cp0	off	0	5
-stream	cp1	off	0	5
-stream	cp2	off	0	5
-stream	cp3	off	0	5
+stream	cp_wcdma	off	0	5
+stream	cp_td-cdma	off	0	5
+stream	cp_wcn		off	0	5
+stream	cp_td-lte	off	0	5
+stream	cp_tdd-lte	off	0	5
+stream	cp_fdd-lte	off	0	5
 stream	bt	off	0	7
 stream	tcp	off	0	7
 stream	kmemleak	off	0	7

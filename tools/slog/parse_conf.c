@@ -190,22 +190,17 @@ int parse_5_entries(char *type)
 	if(!strncmp(type, "stream", 6)) {
 		info->type = SLOG_TYPE_STREAM;
 		info->name = strdup(name);
-		if(!strncmp(info->name, "kernel", 6)) {
-			info->log_path = strdup("kernel");
-		} else if(!strncmp(info->name, "cp0", 3)) {
-			info->log_path = strdup("cp0");
-		} else if(!strncmp(info->name, "cp1", 3)) {
-			info->log_path = strdup("cp1");
-		} else if(!strncmp(info->name, "cp2", 3)) {
-			info->log_path = strdup("cp2");
-		} else if(!strncmp(info->name, "cp3", 3)) {
-			info->log_path = strdup("cp3");
-		} else if(!strncmp(info->name, "bt", 2)) {
-			info->log_path = strdup("bt");
-		} else if(!strncmp(info->name, "tcp", 3)) {
-			info->log_path = strdup("tcp");
-		} else if(!strncmp(info->name, "kmemleak", 8)) {
-			info->log_path = strdup("kmemleak");
+		if(!strncmp(info->name, "kernel", 6) ||
+			!strncmp(info->name, "cp_wcdma", 8) ||
+			!strncmp(info->name, "cp_td-cdma", 8) ||
+			!strncmp(info->name, "cp_wcn", 6) ||
+			!strncmp(info->name, "cp_td-lte", 8) ||
+			!strncmp(info->name, "cp_tdd-lte", 8) ||
+			!strncmp(info->name, "cp_fdd-lte", 8) ||
+			!strncmp(info->name, "bt", 2) ||
+			!strncmp(info->name, "tcp", 3) ||
+			!strncmp(info->name, "kmemleak", 8)) {
+			info->log_path = strdup(info->name);
 		} else {
 			info->log_path = strdup("android");
 		}
