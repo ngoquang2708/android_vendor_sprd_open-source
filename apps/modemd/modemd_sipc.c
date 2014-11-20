@@ -140,6 +140,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
 
    strcpy(persist_prop,PERSIST_MODEM_CHAR);
+   system("echo 1 >/sys/power/wake_lock");
 
     if(modem == TD_MODEM) {
         sipc_modem_size = TD_MODEM_SIZE;
@@ -160,6 +161,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
+              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
               return 0;
          }
@@ -198,6 +200,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
+              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
               return 0;
          }
@@ -248,6 +251,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
+              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
               return 0;
          }
@@ -304,6 +308,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
+              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
               return 0;
          }
@@ -330,10 +335,10 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
     }
     stop_service(modem, 0);
-
+    
     /* write 1 to start*/
     write_proc_file(modem_start, 0, "1");
-
+    system("echo 1 >/sys/power/wake_unlock");
 
     if(modem == TD_MODEM) {
         strcpy(alive_info, "TD Modem Alive");
@@ -396,7 +401,6 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
 
     start_service(modem, 0, 1);
-
     if(modem == TD_MODEM) {
             pthread_mutex_lock(&td_state_mutex);
             td_modem_state = MODEM_READY;
