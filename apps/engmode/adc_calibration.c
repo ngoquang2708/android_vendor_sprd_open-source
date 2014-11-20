@@ -86,7 +86,7 @@ void	initialize_ctrl_file(void)
         fd = open(CALI_CTRL_FILE_PATH,O_RDWR|O_CREAT, 0664);
     }
     if(fd < 0){
-        ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
         return;
     }
     ret = chmod(CALI_CTRL_FILE_PATH,S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
@@ -99,7 +99,7 @@ void	initialize_ctrl_file(void)
 
     ret = read(fd,&cali_info,sizeof(cali_info));
     if(ret < 0){
-        ALOGE(" %s read failed...\n",__func__);
+        ENG_LOG(" %s read failed...\n",__func__);
         close(fd);
         return;
     }
@@ -126,7 +126,7 @@ void	disable_calibration(void)
     int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
     if(fd < 0){
-        ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
         return;
     }
     read(fd,&cali_info,sizeof(cali_info));
@@ -145,7 +145,7 @@ void	enable_calibration(void)
     int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
     if(fd < 0){
-        ALOGE("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
         return;
     }
 
@@ -162,7 +162,7 @@ void adc_get_result(char* chan)
 {
     int fd = open(ADC_CHAN_FILE_PATH,O_RDWR);
     if(fd < 0){
-        ALOGE("%s open %s failed\n",__func__,ADC_CHAN_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,ADC_CHAN_FILE_PATH);
         return 0;
     }
     write(fd, chan, strlen(chan));
@@ -259,13 +259,14 @@ static int get_fgu_current_adc(int *value)
         if(read_len > 0)
             *value = strtol(buffer,&endptr,0);
         close(fd);
-        ALOGE("%s %s value = %d\n",__func__,FGU_VOL_ADC_FILE_PATH, *value);
+        ENG_LOG("%s %s value = %d\n",__func__,FGU_VOL_ADC_FILE_PATH, *value);
     }
     else{
-        ALOGE("%s open %s failed\n",__func__,FGU_CURRENT_ADC_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,FGU_CURRENT_ADC_FILE_PATH);
     }
     return read_len;
 }
+
 static int get_fgu_vol_adc(int *value)
 {
     int fd = -1;
@@ -280,10 +281,10 @@ static int get_fgu_vol_adc(int *value)
         if(read_len > 0)
             *value = strtol(buffer,&endptr,0);
         close(fd);
-        ALOGE("%s %s value = %d, read_len = %d \n",__func__,FGU_VOL_ADC_FILE_PATH, *value, read_len);
+        ENG_LOG("%s %s value = %d, read_len = %d \n",__func__,FGU_VOL_ADC_FILE_PATH, *value, read_len);
     }
     else{
-        ALOGE("%s open %s failed\n",__func__,FGU_VOL_ADC_FILE_PATH);
+        ENG_LOG("%s open %s failed\n",__func__,FGU_VOL_ADC_FILE_PATH);
     }
     return read_len;
 }
@@ -311,6 +312,80 @@ static void ap_get_fgu_vol_adc(MSG_AP_ADC_CNF *pMsgADC)
 
     if(read_len>0){
         pMsgADC->ap_adc_req.parameters[0] = vol_adc;
+        pMsgADC->diag_ap_cnf.status = 0;
+    }
+    else{
+        pMsgADC->diag_ap_cnf.status = 1;
+    }
+}
+
+static int get_fgu_current_real(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+
+    fd = open(FGU_CURRENT_FILE_PATH,O_RDONLY);
+
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+            *value = strtol(buffer,&endptr,0);
+        close(fd);
+        ENG_LOG("%s %s value = %d\n",__func__,FGU_CURRENT_FILE_PATH, *value);
+    }
+    else{
+        ENG_LOG("%s open %s failed\n",__func__,FGU_CURRENT_FILE_PATH);
+    }
+    return read_len;
+}
+
+static int get_fgu_vol_real(int *value)
+{
+    int fd = -1;
+    int read_len = 0;
+    char buffer[16]={0};
+    char *endptr;
+
+    fd = open(FGU_VOL_FILE_PATH,O_RDONLY);
+
+    if(fd >= 0){
+        read_len = read(fd,buffer,sizeof(buffer));
+        if(read_len > 0)
+            *value = strtol(buffer,&endptr,0);
+        close(fd);
+        ENG_LOG("%s %s value = %d, read_len = %d \n",__func__,FGU_VOL_FILE_PATH, *value, read_len);
+    }
+    else{
+        ENG_LOG("%s open %s failed\n",__func__,FGU_VOL_FILE_PATH);
+    }
+    return read_len;
+}
+
+static void ap_get_fgu_current_real(MSG_AP_ADC_CNF *pMsgADC)
+{
+    int	real_current = 0;
+    int      read_len = 0;
+
+    read_len = get_fgu_current_real(&real_current);
+    if(read_len>0){
+        pMsgADC->ap_adc_req.parameters[0] = real_current;
+        pMsgADC->diag_ap_cnf.status = 0;
+    }
+    else{
+        pMsgADC->diag_ap_cnf.status = 1;
+    }
+}
+
+static void ap_get_fgu_vol_real(MSG_AP_ADC_CNF *pMsgADC)
+{
+    int	real_vol = 0;
+    int      read_len = 0;
+    read_len = get_fgu_vol_real(&real_vol);
+
+    if(read_len>0){
+        pMsgADC->ap_adc_req.parameters[0] = real_vol ;
         pMsgADC->diag_ap_cnf.status = 0;
     }
     else{
@@ -414,6 +489,10 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
                         return AP_GET_FGU_CURRENT_ADC;
                     else if (lpAPADCReq->operate == 5)
                         return AP_GET_FGU_TYPE;
+                    else if (lpAPADCReq->operate == 6)
+                        return AP_GET_FGU_VOL_REAL;
+                    else if (lpAPADCReq->operate == 7)
+                        return AP_GET_FGU_CURRENT_REAL;
                     else
                         return 0;
                 }
@@ -569,6 +648,11 @@ int  ap_adc_process(int adc_cmd, char * src, int size, MSG_AP_ADC_CNF * pMsgADC)
         case AP_GET_FGU_TYPE:
             ap_get_fgu_type(pMsgADC);
             break;
+        case AP_GET_FGU_VOL_REAL:
+            ap_get_fgu_vol_real(pMsgADC);
+            break;
+        case AP_GET_FGU_CURRENT_REAL:
+            ap_get_fgu_current_real(pMsgADC);
         default:
             return 0;
     }
@@ -640,14 +724,14 @@ static int get_other_ch_adc_value(int channel, int scale)
 
    fd = open(ADC_CHANNEL_PATH, O_WRONLY);
    if(fd < 0){
-       ALOGE("%s: open %s failed, err: %s\n", __func__,ADC_CHANNEL_PATH,strerror(errno));
+       ENG_LOG("%s: open %s failed, err: %s\n", __func__,ADC_CHANNEL_PATH,strerror(errno));
        return -1;
    }
 
    sprintf(ch, "%d", channel);
    len = write(fd, ch, strlen(ch));
    if(len <= 0){
-       ALOGE("%s: write %s failed, err: %s\n", __func__,ADC_CHANNEL_PATH,strerror(errno));
+       ENG_LOG("%s: write %s failed, err: %s\n", __func__,ADC_CHANNEL_PATH,strerror(errno));
        close(fd);
        return -1;
    }
@@ -655,14 +739,14 @@ static int get_other_ch_adc_value(int channel, int scale)
 
    fd = open(ADC_SCALE_PATH, O_WRONLY);
    if(fd < 0){
-       ALOGE("%s: open %s failed, err: %s\n", __func__,ADC_SCALE_PATH,strerror(errno));
+       ENG_LOG("%s: open %s failed, err: %s\n", __func__,ADC_SCALE_PATH,strerror(errno));
        return -1;
    }
 
    sprintf(ch, "%d", scale);
    len = write(fd, ch, strlen(ch));
    if(len <= 0){
-       ALOGE("%s: write %s failed, err: %s\n", __func__,ADC_SCALE_PATH,strerror(errno));
+       ENG_LOG("%s: write %s failed, err: %s\n", __func__,ADC_SCALE_PATH,strerror(errno));
        close(fd);
        return -1;
    }
@@ -671,13 +755,13 @@ static int get_other_ch_adc_value(int channel, int scale)
    for(i = 0; i < 16; i ++){
        fd = open(ADC_DATA_RAW_PATH, O_RDONLY);
        if(fd < 0){
-           ALOGE("%s: open %s failed, err: %s\n", __func__,ADC_DATA_RAW_PATH,strerror(errno));
+           ENG_LOG("%s: open %s failed, err: %s\n", __func__,ADC_DATA_RAW_PATH,strerror(errno));
            return -1;
        }
 
        len = read(fd, data_buf, sizeof(data_buf));
        if(len < 0){
-           ALOGE("%s: read %s failed, err: %s\n", __func__,ADC_DATA_RAW_PATH,strerror(errno));
+           ENG_LOG("%s: read %s failed, err: %s\n", __func__,ADC_DATA_RAW_PATH,strerror(errno));
            close(fd);
            return -1;
        }
