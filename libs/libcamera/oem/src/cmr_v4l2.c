@@ -846,9 +846,9 @@ static void* cmr_v4l2_thread_proc(void* data)
 				// stopped , to do release resource
 				CMR_LOGI("TX Stopped, exit thread");
 				break;
-			} else if (V4L2_SYS_BUSY == buf.flags) {
+			} else if (V4L2_SYS_BUSY == buf.flags || V4L2_TX_CLEAR == buf.flags) {
 				usleep(10000);
-				CMR_LOGI("continue.");
+				CMR_LOGI("continue. flag %d", buf.flags);
 				continue;
 			} else {
 				// normal irq
@@ -856,6 +856,13 @@ static void* cmr_v4l2_thread_proc(void* data)
 				if (CMR_V4L2_MAX == evt_id) {
 					continue;
 				}
+
+				pthread_mutex_lock(&p_v4l2->path_mutex[buf.type]);
+				if (CHN_IDLE == p_v4l2->chn_status[buf.type]) {
+					pthread_mutex_unlock(&p_v4l2->path_mutex[buf.type]);
+					continue;
+				}
+				pthread_mutex_unlock(&p_v4l2->path_mutex[buf.type]);
 
 				frame.channel_id = buf.type;
 				frm_num = p_v4l2->chn_frm_num[buf.type];
