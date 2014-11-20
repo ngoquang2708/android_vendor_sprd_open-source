@@ -19,8 +19,9 @@
 #include <sys/stat.h>
 #include <sys/statfs.h>
 // GMS push <-
-
+#include <cutils/properties.h>
 #include "slog.h"
+
 
 int send_socket(int sockfd, void* buffer, int size)
 {
@@ -320,14 +321,19 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
 	} else if(!strncmp(argv[1], "low_power", 8)) {
 		update_conf("low_power", NULL);
+                property_set("debug.slog.enabled", "1");
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
 #endif
 	} else if(!strncmp(argv[1], "enable", 6)) {
 		update_conf("enable", NULL);
+                property_set("debug.slog.enabled", "1");
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
 	} else if(!strncmp(argv[1], "disable", 7)) {
 		update_conf("disable", NULL);
+                property_set("debug.slog.enabled", "0");
 		cmd.type = CTRL_CMD_TYPE_RELOAD;
+               // The daemon will be destroyed, do not send any commands
+                return 0;
 	} else if(!strncmp(argv[1], "android", 7)) {
 		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("android", argv[2]);
