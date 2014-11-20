@@ -361,7 +361,7 @@ private:
 	changes.
 	*/
 	static const int                kPreviewBufferCount    = 8;
-	static const int                kPreviewRotBufferCount = 4;
+	static const int                kPreviewRotBufferCount = 8;
 	static const int                kRawBufferCount        = 1;
 	static const int                kJpegBufferCount       = 1;
 	static const int                kRawFrameHeaderSize    = 0x0;
