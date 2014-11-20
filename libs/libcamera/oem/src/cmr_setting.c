@@ -1902,10 +1902,8 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 
 			if (setting_is_need_flash(cpt, parm)) {
 				if (IMG_DATA_TYPE_RAW == image_format) {
-					struct sensor_flash_level flash_level;
 					struct common_sn_cmd_param   sn_param;
 
-					memset(&flash_level, 0, sizeof(flash_level));
 					sn_param.camera_id = parm->camera_id;
 					if (init_in->setting_sn_ioctl) {
 						if ((*init_in->setting_sn_ioctl)(oem_handle, COM_SN_GET_FLASH_LEVEL, &sn_param)) {
@@ -1918,7 +1916,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 
 					/*camera_isp_alg_wait();*/
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-					setting_isp_flash_ratio(&flash_level);
+					setting_isp_flash_ratio(&(sn_param.flash_level));
 				}
 			}
 			if (setting_is_need_flash(cpt, parm)) {
@@ -2204,10 +2202,8 @@ static cmr_int setting_set_pre_flash (struct setting_component *cpt,
 	if (setting_is_need_flash(cpt, parm)) {
 		if (IMG_DATA_TYPE_RAW == image_format) {
 
-			struct sensor_flash_level flash_level;
 			struct common_sn_cmd_param  sn_param;
 
-			memset(&flash_level, 0, sizeof(flash_level));
 			sn_param.camera_id = parm->camera_id;
 			if (init_in->setting_sn_ioctl) {
 				if ((*init_in->setting_sn_ioctl)(oem_handle, COM_SN_GET_FLASH_LEVEL, &sn_param)) {
@@ -2220,7 +2216,7 @@ static cmr_int setting_set_pre_flash (struct setting_component *cpt,
 
 			cmr_setting_isp_alg_wait(oem_handle);
 			setting_set_flashdevice(cpt, parm, (uint32_t)FLASH_OPEN);
-			setting_isp_flash_ratio(&flash_level);
+			setting_isp_flash_ratio(&(sn_param.flash_level));
 		}
 	}
 
