@@ -11,6 +11,11 @@ LOCAL_SRC_FILES := slog.c \
 				snap.c \
 				tcp.c \
 				bt.c
+
+ifeq ($(strip $(SPRD_EXTERNAL_WCN)),true)
+LOCAL_CFLAGS += -DEXTERNAL_WCN
+endif
+
 LOCAL_MODULE := slog
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
