@@ -1012,7 +1012,8 @@ ret);
         ALOGI("Not to change mute: %d", adev->cache_mute);
     } else {
         /* mute codec PA */
-        if(adev->master_mute && adev->pcm_fm_dl != NULL){
+        if(adev->master_mute && (adev->pcm_fm_dl != NULL
+                                && adev->fm_volume != 0)){
             ALOGD("%s,fm is open so do not mute codec",__func__);
         }else{
             set_codec_mute(adev,adev->master_mute);
@@ -1166,7 +1167,8 @@ static void do_select_devices(struct tiny_audio_device *adev)
         ALOGI("Not to change mute: %d", adev->cache_mute);
     } else {
         /* mute codec PA */
-        if(adev->master_mute && adev->pcm_fm_dl != NULL){
+        if(adev->master_mute && (adev->pcm_fm_dl != NULL
+                                && adev->fm_volume != 0)){
             ALOGD("%s,fm is open so do not mute codec",__func__);
         }else{
             set_codec_mute(adev,adev->master_mute);
@@ -1303,7 +1305,7 @@ out:
 static void select_devices_signal(struct tiny_audio_device *adev)
 {
     ALOGE("select_devices_signal starting... adev->out_devices 0x%x adev->in_devices 0x%x",adev->out_devices,adev->in_devices);
-    if((AUDIO_DEVICE_OUT_FM & adev->out_devices) && adev->pcm_fm_dl == NULL){
+    if(adev->fm_open && adev->pcm_fm_dl == NULL){
         ALOGE("xxselect_devices_signal");
         do_select_devices_static(adev);} else
         sem_post(&adev->routing_mgr.device_switch_sem);
@@ -2005,6 +2007,10 @@ static int do_output_standby(struct tiny_stream_out *out)
         out->standby = 1;
     }
     adev->active_output = NULL;
+    if(adev->fm_open && adev->fm_volume == 0){
+        adev->master_mute = true;
+        set_codec_mute(adev,true);
+    }
     ALOGD("do_output_standby in out");
     return 0;
 }
@@ -3658,10 +3664,21 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
         if(checkvalid && val != adev->fm_volume)
         {
-	        adev->fm_volume = val;
-	        gain |=fm_volume_tbl[val-1];
-	        gain |=fm_volume_tbl[val-1]<<16;
-	        SetAudio_gain_fmradio(adev,gain);
+            pthread_mutex_lock(&adev->device_lock);
+            pthread_mutex_lock(&adev->lock);
+            adev->fm_volume = val;
+            if(val == 0 && adev->active_output == NULL){
+                adev->master_mute = true;
+                set_codec_mute(adev,true);
+            }else if(adev->master_mute){
+                adev->master_mute = false;
+                set_codec_mute(adev,false);
+            }
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&adev->device_lock);
+            gain |=fm_volume_tbl[val-1];
+            gain |=fm_volume_tbl[val-1]<<16;
+            SetAudio_gain_fmradio(adev,gain);
         }
         ALOGE("adev_set_parameters fm volume :%d",val);
     }
