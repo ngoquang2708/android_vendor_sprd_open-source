@@ -1,6 +1,6 @@
-#include <sys/stat.h>   
-#include <unistd.h>   
-#include <stdio.h> 
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -17,10 +17,12 @@
 #define _FILE_PARSE_DEBUG_
 #define  CMD_ITEM_TABLE(ITEM, MEM_OFFSET, TYPE)    { ITEM,   (unsigned int)( &(  ((BT_PSKEY_CONFIG_T *)(0))->MEM_OFFSET )),   TYPE }
 
+#define PSKEY_PATH  "/system/etc/connectivity_configure.ini"
+
 typedef struct
 {
 	char item[64];
-	int  par[32];
+	uint32  par[32];
 	int  num;
 }cmd_par;
 
@@ -33,50 +35,62 @@ typedef struct
 
 static cmd_par_table g_pskey_table[] =
 {
-	CMD_ITEM_TABLE("pskey_cmd", pskey_cmd, 1),
+	CMD_ITEM_TABLE("pskey_cmd", pskey_cmd, 4),
+
 	CMD_ITEM_TABLE("g_dbg_source_sink_syn_test_data", g_dbg_source_sink_syn_test_data, 1),
 	CMD_ITEM_TABLE("g_sys_sleep_in_standby_supported", g_sys_sleep_in_standby_supported, 1),
 	CMD_ITEM_TABLE("g_sys_sleep_master_supported", g_sys_sleep_master_supported, 1),
 	CMD_ITEM_TABLE("g_sys_sleep_slave_supported", g_sys_sleep_slave_supported, 1),
+
 	CMD_ITEM_TABLE("default_ahb_clk", default_ahb_clk, 4),
 	CMD_ITEM_TABLE("device_class", device_class, 4),
 	CMD_ITEM_TABLE("win_ext", win_ext, 4),
+
 	CMD_ITEM_TABLE("g_aGainValue", g_aGainValue, 4),
 	CMD_ITEM_TABLE("g_aPowerValue", g_aPowerValue, 4),
+
 	CMD_ITEM_TABLE("feature_set", feature_set, 1),
 	CMD_ITEM_TABLE("device_addr", device_addr, 1),
-	CMD_ITEM_TABLE("g_sys_sco_transmit_mode", g_sys_sco_transmit_mode, 1),
-	CMD_ITEM_TABLE("g_sys_uart0_communication_supported", g_sys_uart0_communication_supported, 1),
+
+	CMD_ITEM_TABLE("g_sys_sco_transmit_mode", g_sys_sco_transmit_mode, 1), //true tramsmit by uart, otherwise by share memory
+	CMD_ITEM_TABLE("g_sys_uart0_communication_supported", g_sys_uart0_communication_supported, 1), //true use uart0, otherwise use uart1 for debug
 	CMD_ITEM_TABLE("edr_tx_edr_delay", edr_tx_edr_delay, 1),
 	CMD_ITEM_TABLE("edr_rx_edr_delay", edr_rx_edr_delay, 1),
+
+	CMD_ITEM_TABLE("g_wbs_nv_117", g_wbs_nv_117, 2),
+
+
+	CMD_ITEM_TABLE("is_wdg_supported", is_wdg_supported, 4),
+
+	CMD_ITEM_TABLE("share_memo_rx_base_addr", share_memo_rx_base_addr, 4),
+	//CMD_ITEM_TABLE("share_memo_tx_base_addr", share_memo_tx_base_addr, 4),
+
+	CMD_ITEM_TABLE("g_wbs_nv_118", g_wbs_nv_118, 2),
+	CMD_ITEM_TABLE("g_nbv_nv_117", g_nbv_nv_117, 2),
+
+
+	CMD_ITEM_TABLE("share_memo_tx_packet_num_addr", share_memo_tx_packet_num_addr, 4),
+	CMD_ITEM_TABLE("share_memo_tx_data_base_addr", share_memo_tx_data_base_addr, 4),
+
 	CMD_ITEM_TABLE("g_PrintLevel", g_PrintLevel, 4),
+
+	CMD_ITEM_TABLE("share_memo_tx_block_length", share_memo_tx_block_length, 2),
+	CMD_ITEM_TABLE("share_memo_rx_block_length", share_memo_rx_block_length, 2),
+	CMD_ITEM_TABLE("share_memo_tx_water_mark", share_memo_tx_water_mark, 2),
+	//CMD_ITEM_TABLE("share_memo_tx_timeout_value", share_memo_tx_timeout_value, 2),
+	CMD_ITEM_TABLE("g_nbv_nv_118", g_nbv_nv_118, 2),
+
 	CMD_ITEM_TABLE("uart_rx_watermark", uart_rx_watermark, 2),
 	CMD_ITEM_TABLE("uart_flow_control_thld", uart_flow_control_thld, 2),
 	CMD_ITEM_TABLE("comp_id", comp_id, 4),
 	CMD_ITEM_TABLE("pcm_clk_divd", pcm_clk_divd, 2),
-	CMD_ITEM_TABLE("half_word_reserved", half_word_reserved, 2),
-	CMD_ITEM_TABLE("pcm_config", pcm_config, 4),
-	CMD_ITEM_TABLE("ref_clk", ref_clk, 1),
-	CMD_ITEM_TABLE("FEM_status", FEM_status, 1),
-	CMD_ITEM_TABLE("gpio_cfg", gpio_cfg, 1),
-	CMD_ITEM_TABLE("gpio_PA_en", gpio_PA_en, 1),
-	CMD_ITEM_TABLE("wifi_tx", wifi_tx, 1),
-	CMD_ITEM_TABLE("bt_tx", bt_tx, 1),
-	CMD_ITEM_TABLE("wifi_rx", wifi_rx, 1),
-	CMD_ITEM_TABLE("bt_rx", bt_rx, 1),
-	CMD_ITEM_TABLE("wb_lna_bypass", wb_lna_bypass, 1),
-	CMD_ITEM_TABLE("gain_LNA", gain_LNA, 1),
-	CMD_ITEM_TABLE("IL_wb_lna_bypass", IL_wb_lna_bypass, 1),
-	CMD_ITEM_TABLE("Rx_adaptive", Rx_adaptive, 1),
-	CMD_ITEM_TABLE("up_bypass_switching_point0", up_bypass_switching_point0, 1),
-	CMD_ITEM_TABLE("low_bypass_switching_point0", low_bypass_switching_point0, 1),
-	
-	CMD_ITEM_TABLE("bt_reserved", reserved[0], 4),
-	
+
+
+	CMD_ITEM_TABLE("bt_reserved", reserved, 4)
 };
 
-static int bt_getFileSize(char *file)    
-{   
+static int bt_getFileSize(char *file)
+{
     struct stat temp;
     stat(file, &temp);
     return temp.st_size;
@@ -137,8 +151,14 @@ static void bt_getCmdOneline(unsigned char *str, cmd_par *cmd)
 			}
 			else
 			{
-				cmd->par[cmd->num] = atoi(tmp);
-				cmd->num++;
+				/* compatible with  HEX */
+				if (tmp[0] == '0' && (tmp[1] == 'x' || tmp[1] == 'X')) {
+					cmd->par[cmd->num] = strtoul(tmp, 0, 16) & 0xFFFFFFFF;
+					cmd->num++;
+				} else {
+					cmd->par[cmd->num] = strtoul(tmp, 0, 10) & 0xFFFFFFFF;
+					cmd->num++;
+				}
 			}
 			bufType = -1;
 			j = 0;
@@ -233,95 +253,62 @@ static int bt_getDataFromBuf(void *pData, unsigned char *pBuf, int file_len)
 
 static int bt_dumpPskey(BT_PSKEY_CONFIG_T *p)
 {
-	int i;
-	char tmp[BT_PSKEY_TRACE_BUF_SIZE];
-	char string[16];
+    ALOGI("pskey_cmd: 0x%08X", p->pskey_cmd);
 
-	ALOGI("pskey_cmd:0x%x\n", p->pskey_cmd);
-	ALOGI("g_dbg_source_sink_syn_test_data:0x%x\n", p->g_dbg_source_sink_syn_test_data);
-	ALOGI("g_sys_sleep_in_standby_supported:0x%x\n", p->g_sys_sleep_in_standby_supported);
-	ALOGI("g_sys_sleep_master_supported:0x%x\n", p->g_sys_sleep_master_supported);
-	ALOGI("g_sys_sleep_slave_supported:0x%x\n", p->g_sys_sleep_slave_supported);
-	ALOGI("default_ahb_clk:0x%x\n",  p->default_ahb_clk);
-	ALOGI("device_class:0x%x\n", p->device_class);
-	ALOGI("win_ext:0x%x\n", p->win_ext);
-	memset(tmp,0, BT_PSKEY_TRACE_BUF_SIZE);
-	memset(string,0,16);
-	sprintf(tmp, "g_aGainValue: ");
-	for(i=0; i<6; i++)
-	{
-		sprintf(string, "0x%x, ", p->g_aGainValue[i]);
-		strcat(tmp, string);
-	}
-	ALOGI("%s\n", tmp);
+    ALOGI("g_dbg_source_sink_syn_test_data: 0x%02X", p->g_dbg_source_sink_syn_test_data);
+    ALOGI("g_sys_sleep_in_standby_supported: 0x%02X", p->g_sys_sleep_in_standby_supported);
+    ALOGI("g_sys_sleep_master_supported: 0x%02X", p->g_sys_sleep_master_supported);
+    ALOGI("g_sys_sleep_slave_supported: 0x%02X", p->g_sys_sleep_slave_supported);
 
-	memset(tmp,0, BT_PSKEY_TRACE_BUF_SIZE);
-	memset(string,0,16);
-	sprintf(tmp, "g_aPowerValue: ");
-	for(i=0; i<5; i++)
-	{
-		sprintf(string, "0x%x, ", p->g_aPowerValue[i]);
-		strcat(tmp, string);
-	}
-	ALOGI("%s\n", tmp);
-      memset(tmp,0, BT_PSKEY_TRACE_BUF_SIZE);
-	memset(string,0,16);
-	sprintf(tmp, "feature_set: ");
-	for(i=0; i<16; i++)
-	{
-		sprintf(string, "0x%x, ", p->feature_set[i]);
-		strcat(tmp, string);
-	}
-	ALOGI("%s\n", tmp);
+    ALOGI("default_ahb_clk: %d", p->default_ahb_clk);
+    ALOGI("device_class: 0x%08X", p->device_class);
+    ALOGI("win_ext: 0x%08X", p->win_ext);
 
-	memset(tmp,0, BT_PSKEY_TRACE_BUF_SIZE);
-	memset(string,0,16);
-	sprintf(tmp, "device_addr: ");
-	for(i=0; i<6; i++)
-	{
-		sprintf(string, "0x%x, ", p->device_addr[i]);
-		strcat(tmp, string);
-	}
-	ALOGI("%s\n", tmp);
-	
-	ALOGI("g_sys_sco_transmit_mode:0x%x\n", p->g_sys_sco_transmit_mode);
-	ALOGI("g_sys_uart0_communication_supported:0x%x\n",  p->g_sys_uart0_communication_supported);
-	ALOGI("edr_tx_edr_delay:0x%x\n", p->edr_tx_edr_delay);
-	ALOGI("edr_rx_edr_delay:0x%x\n", p->edr_rx_edr_delay);
-	ALOGI("g_PrintLevel:0x%x\n", p->g_PrintLevel);
-	ALOGI("uart_rx_watermark:0x%x\n", p->uart_rx_watermark);
-	ALOGI("uart_flow_control_thld:0x%x\n", p->uart_flow_control_thld);
-	ALOGI("comp_id:0x%x\n", p->comp_id);
-	ALOGI("pcm_clk_divd:0x%x\n", p->pcm_clk_divd);
-	ALOGI("half_word_reserved:0x%x\n", p->half_word_reserved);
-	ALOGI("pcm_config:0x%x\n", p->pcm_config);
+    ALOGI("g_aGainValue: 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X", p->g_aGainValue[0], p->g_aGainValue[1], p->g_aGainValue[2], p->g_aGainValue[3], p->g_aGainValue[4], p->g_aGainValue[5]);
+    ALOGI("g_aPowerValue: 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X", p->g_aPowerValue[0], p->g_aPowerValue[1], p->g_aPowerValue[2], p->g_aPowerValue[3], p->g_aPowerValue[4]);
 
-	ALOGI("ref_clk:0x%x\n", p->ref_clk);
-	ALOGI("FEM_status:0x%x\n", p->FEM_status);
-	ALOGI("gpio_cfg:0x%x\n", p->gpio_cfg);
-	ALOGI("gpio_PA_en:0x%x\n", p->gpio_PA_en);
-	ALOGI("wifi_tx:0x%x\n", p->wifi_tx);
-	ALOGI("bt_tx:0x%x\n", p->bt_tx);
-	ALOGI("wifi_rx:0x%x\n", p->wifi_rx);
-	ALOGI("bt_rx:0x%x\n", p->bt_rx);
-	ALOGI("wb_lna_bypass:0x%x\n", p->wb_lna_bypass);
-	ALOGI("gain_LNA:0x%x\n", p->gain_LNA);
-	ALOGI("IL_wb_lna_bypass:0x%x\n", p->IL_wb_lna_bypass);
-	ALOGI("Rx_adaptive:0x%x\n", p->Rx_adaptive);
-	ALOGI("up_bypass_switching_point0:0x%x\n", p->up_bypass_switching_point0);
-	ALOGI("low_bypass_switching_point0:0x%x\n", p->low_bypass_switching_point0);
-	
-	memset(tmp,0, BT_PSKEY_TRACE_BUF_SIZE);
-	memset(string,0,16);
-	sprintf(tmp, "reserved: ");
-	for(i=0; i<4; i++)
-	{
-		sprintf(string, "0x%x, ", p->reserved[i]);
-		strcat(tmp, string);
-	}
-	ALOGI("%s\n", tmp);
-	
-	return 0;
+
+    ALOGI("feature_set(0~7): 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X", p->feature_set[0], p->feature_set[1], p->feature_set[2], 
+		p->feature_set[3], p->feature_set[4], p->feature_set[5], p->feature_set[6], p->feature_set[7]);
+    ALOGI("feature_set(8~15): 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X", p->feature_set[8], p->feature_set[9], p->feature_set[10], 
+		p->feature_set[11], p->feature_set[12], p->feature_set[13], p->feature_set[14], p->feature_set[15]);
+    ALOGI("device_addr: 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X", p->device_addr[0], p->device_addr[1], p->device_addr[2], p->device_addr[3], p->device_addr[4], p->device_addr[5]);
+
+    ALOGI("g_sys_sco_transmit_mode: 0x%02X", p->g_sys_sco_transmit_mode);
+    ALOGI("g_sys_uart0_communication_supported: 0x%02X", p->g_sys_uart0_communication_supported);
+    ALOGI("edr_tx_edr_delay: %d", p->edr_tx_edr_delay);
+    ALOGI("edr_rx_edr_delay: %d", p->edr_rx_edr_delay);
+
+    ALOGI("g_wbs_nv_117 : 0x%04X", p->g_wbs_nv_117 );
+
+    ALOGI("is_wdg_supported: 0x%08X", p->is_wdg_supported);
+
+    ALOGI("share_memo_rx_base_addr: 0x%08X", p->share_memo_rx_base_addr);
+    //ALOGI("share_memo_tx_base_addr: 0x%08X", p->share_memo_tx_base_addr);
+    ALOGI("g_wbs_nv_118 : 0x%04X", p->g_wbs_nv_118 );
+    ALOGI("g_nbv_nv_117 : 0x%04X", p->g_nbv_nv_117 );
+
+
+    ALOGI("share_memo_tx_packet_num_addr: 0x%08X", p->share_memo_tx_packet_num_addr);
+    ALOGI("share_memo_tx_data_base_addr: 0x%08X", p->share_memo_tx_data_base_addr);
+
+    ALOGI("g_PrintLevel: 0x%08X", p->g_PrintLevel);
+
+    ALOGI("share_memo_tx_block_length: 0x%04X", p->share_memo_tx_block_length);
+    ALOGI("share_memo_rx_block_length: 0x%04X", p->share_memo_rx_block_length);
+    ALOGI("share_memo_tx_water_mark: 0x%04X", p->share_memo_tx_water_mark);
+    //ALOGI("share_memo_tx_timeout_value: 0x%04X", p->share_memo_tx_timeout_value);
+    ALOGI("g_nbv_nv_118 : 0x%04X", p->g_nbv_nv_118 );
+
+    ALOGI("uart_rx_watermark: %d", p->uart_rx_watermark);
+    ALOGI("uart_flow_control_thld: %d", p->uart_flow_control_thld);
+    ALOGI("comp_id: 0x%08X", p->comp_id);
+    ALOGI("pcm_clk_divd : 0x%04X", p->pcm_clk_divd );
+
+
+    ALOGI("reserved(0~7): 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X", p->reserved[0], p->reserved[1], p->reserved[2], 
+		p->reserved[3], p->reserved[4], p->reserved[5], p->reserved[6], p->reserved[7]);
+    return 0;
 }
 
 static int bt_get_config_ver(unsigned char *pBuf, int len)
@@ -357,64 +344,17 @@ int bt_getPskeyFromFile(void *pData)
     unsigned char *pBuf = NULL;
     int len;
     int board_type=0;
-    char ssp_property[16] = {0};
 
-#ifdef HW_ADC_ADAPT_SUPPORT
-    char *CFG_2351_PATH[] = {
-        "/system/etc/connectivity_configure_hw100.ini",
-        "/system/etc/connectivity_configure_hw102.ini",
-        "/system/etc/connectivity_configure_hw104.ini"
-    };
-#else
-    char *CFG_2351_PATH[] = {
-        "/system/etc/connectivity_configure.ini"
-    };
-#endif
-
-
-#ifdef HW_ADC_ADAPT_SUPPORT
-
-    char *BOARD_TYPE_PATH = "/dev/board_type";
-    int fd_board_type;
-    char board_type_str[MAX_BOARD_TYPE_LEN] = {0};
-
-    fd_board_type = open(BOARD_TYPE_PATH, O_RDONLY);
-    if (fd_board_type<0)
-    {
-        ALOGI("#### %s file open %s err ####\n", __FUNCTION__, BOARD_TYPE_PATH);
-        board_type = 2; // default is 1.0.4
-    }
-    else
-    {
-        len = read(fd_board_type, board_type_str, MAX_BOARD_TYPE_LEN);
-        if (strstr(board_type_str, "1.0.0"))
-        {
-            board_type = 0;
-        }
-        else if (strstr(board_type_str, "1.0.2"))
-        {
-            board_type = 1;
-        }
-        else
-        {
-            board_type = 2; // default is 1.0.4
-        }
-        ALOGI("#### %s get board type len %d %s type %d ####\n", __FUNCTION__, len, board_type_str, board_type);
-
-        close(fd_board_type);
-    }
-#endif
-
-    ALOGI("begin to bt_getPskeyFromFile");  
-    fd = open(CFG_2351_PATH[board_type], O_RDONLY, 0644);
+    ALOGI("begin to bt_getPskeyFromFile");
+    fd = open(PSKEY_PATH, O_RDONLY, 0644);
     if(-1 != fd)
     {
-        len = bt_getFileSize(CFG_2351_PATH[board_type]);
+        len = bt_getFileSize(PSKEY_PATH);
         pBuf = (unsigned char *)malloc(len);
         ret = read(fd, pBuf, len);
         if(-1 == ret)
         {
-            ALOGE("%s read %s ret:%d\n", __FUNCTION__, CFG_2351_PATH[board_type], ret);
+            ALOGE("%s read %s ret:%d\n", __FUNCTION__, PSKEY_PATH, ret);
             free(pBuf);
             close(fd);
             return -1;
@@ -423,7 +363,7 @@ int bt_getPskeyFromFile(void *pData)
     }
     else
     {
-        ALOGE("%s open %s ret:%d\n", __FUNCTION__, CFG_2351_PATH[board_type], fd);
+        ALOGE("%s open %s ret:%d\n", __FUNCTION__, PSKEY_PATH, fd);
         return -1;
     }
 
@@ -433,15 +373,6 @@ int bt_getPskeyFromFile(void *pData)
         free(pBuf);
         return -1;
     }
-
-    ALOGI("SSP setting from pskey: 0x%x", ((BT_PSKEY_CONFIG_T *)pData)->feature_set[6]);
-
-    ret = property_get("persist.sys.bt.non.ssp", ssp_property, "close");
-    if(ret >= 0 && !strcmp(ssp_property, "open")) {
-        ALOGI("### disable BT SSP function due to property setting ###");
-        ((BT_PSKEY_CONFIG_T *)pData)->feature_set[6] &= 0xF7;
-    }
-
     ALOGI("begin to dumpPskey");
     bt_dumpPskey((BT_PSKEY_CONFIG_T *)pData);
     free(pBuf);

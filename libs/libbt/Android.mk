@@ -10,7 +10,7 @@ LOCAL_SRC_FILES := \
         src/bt_vendor_sprd.c \
         src/hardware.c \
         src/userial_vendor.c \
-	src/pskey_get.c
+        src/pskey_get.c
 
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/include \
@@ -19,6 +19,11 @@ LOCAL_C_INCLUDES += \
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog
+
+ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD),true)
+      LOCAL_CFLAGS += -DHAS_BLUETOOTH_SPRD
+endif
+
 ifneq ($(findstring 8830gea,$(TARGET_BOOTLOADER_BOARD_NAME)),8830gea)
 ifeq ($(findstring 8830,$(TARGET_BOOTLOADER_BOARD_NAME)),8830)
       LOCAL_CFLAGS += -DHW_ADC_ADAPT_SUPPORT

@@ -60,18 +60,22 @@ bt_hci_transport_device_type bt_hci_set_transport()
 }
 #endif
 
-
-static char s_bt_dev_smd[] =  "/dev/sttybt0";
-
+/*sipc*/
+//static char s_bt_dev_smd[] =  "/dev/sttybt0";
+/*uart*/
+static char s_bt_dev_smd[] =  "/dev/ttyS0";
 
 int bt_hci_init_transport (int *bt_fd)
 {
   struct termios   term;
+  uint32_t baud;
   int fd = -1;
   int retry = 0;
 
-  fd = open("/dev/sttybt0", (O_RDWR | O_NOCTTY));
-
+  //fd = open("/dev/sttybt0", (O_RDWR | O_NOCTTY));
+  fd = open("/dev/ttyS0", (O_RDWR | O_NOCTTY));
+  ALOGE("open /dev/ttyS0");
+  baud = B3000000;
   /*while ((-1 == fd) && (retry < 7)) {
     ALOGE("init_transport: Cannot open %s: %s\n. Retry after 2 seconds",
         bt_hci_transport_device.name, strerror(errno));
@@ -114,7 +118,8 @@ int bt_hci_init_transport (int *bt_fd)
    * disable it?
    */
   term.c_cflag |= (CRTSCTS | CLOCAL);
-
+  term.c_cflag |= (CREAD | CLOCAL);
+  term.c_iflag &= ~(IXOFF);
   if (tcsetattr(fd, TCSANOW, &term) < 0)
   {
     ALOGE("init_uart: Error while getting attributes\n");
@@ -122,6 +127,15 @@ int bt_hci_init_transport (int *bt_fd)
     return -1;
   }
 
+  /* set input/output baudrate */
+  cfsetospeed(&term, baud);
+  cfsetispeed(&term, baud);
+  if (tcsetattr(fd, TCSANOW, &term) < 0)
+  {
+    ALOGE("init_uart: Error while setting attributes baud \n");
+    close(fd);
+    return -1;
+  }
   ALOGI("Done intiailizing UART\n");
 
   *bt_fd = fd;
