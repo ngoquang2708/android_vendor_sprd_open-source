@@ -67,6 +67,10 @@ else
 LOCAL_SRC_FILES     += gps_eut.c
 endif
 
+ifeq ($(strip $(SPRD_EXTERNAL_WCN)),true)
+LOCAL_CFLAGS += -DEXTERNAL_WCN
+endif
+
 ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
 	LOCAL_SRC_FILES     += eng_controllerbqbtest.c

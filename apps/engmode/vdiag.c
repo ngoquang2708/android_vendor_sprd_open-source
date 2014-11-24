@@ -388,3 +388,316 @@ void *eng_vdiag_wthread(void *x)
     close(ser_fd);
     return 0;
 }
+
+
+//below were additional thread & functions for marlin sdio debug system.
+//by fan.kou@spreadtrum.com
+
+static void eng_marlin_print_mem(char* buf, int len)
+{
+       int i,j;
+       if((NULL == buf) || (0 == len)){
+               return;
+       }
+       printf("\n*********************************************\n");
+       printf("      00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n0000: ");
+       i = 0;
+       j = 0;
+       for(; i < len; i++){
+               printf("%.2x ",buf[i]);
+               if(0xf == (i &0xf)){
+                       printf("\n%.3x0: ",++j);
+               }
+       }
+       printf("\n*********************************************\n");
+}
+
+
+#define ENG_MLOCK_GET 0
+#define ENG_MLOCK_PUT 1
+static int eng_marlin_file_lock = 0;
+
+static void eng_mlock_op(int op)
+{
+    switch(op){
+        case ENG_MLOCK_GET:{
+            while(eng_marlin_file_lock){
+                usleep(10000);
+            }
+            eng_marlin_file_lock = 1;
+        }break;
+
+        case ENG_MLOCK_PUT:{
+            eng_marlin_file_lock = 0;
+        }break;
+
+        default:{
+            ENG_LOG("UNKNOW OP!");
+        }
+    }
+    return;
+}
+static int eng_marlin_read_file(const char *pfile_path, char *pbuf, int buf_size)
+{
+    int read_len = 0;
+    int fd = 0;
+    eng_mlock_op(ENG_MLOCK_GET);
+    fd = open(pfile_path, O_RDONLY);
+    if(fd < 0) {
+        ENG_LOG("cannot open reason: %s", strerror(errno));
+        eng_mlock_op(ENG_MLOCK_PUT);
+        return (0);
+    }
+    read_len = read(fd, pbuf, buf_size);
+    close(fd);
+    eng_mlock_op(ENG_MLOCK_PUT);
+    return (read_len);
+}
+
+static int eng_marlin_write_file(const char *pfile_path, char *pbuf, int buf_size)
+{
+    int writen_len = 0;
+    int fd = 0;
+    eng_mlock_op(ENG_MLOCK_GET);
+    fd = open(pfile_path, O_WRONLY);
+    if(fd < 0) {
+        ENG_LOG("cannot open reason: %s", strerror(errno));
+        eng_mlock_op(ENG_MLOCK_PUT);
+        return (0);
+    }
+    writen_len = write(fd, pbuf, buf_size);
+    close(fd);
+    eng_mlock_op(ENG_MLOCK_PUT);
+    return (writen_len);
+}
+
+
+void *eng_marlin_diag_wthread(void *x)
+{
+    int modem_fd;
+    int ser_fd;
+    int r_cnt, w_cnt, offset;
+    int has_processed = 0;
+    int audio_fd;
+    int wait_cnt = 0;
+    int type;
+    int ret=0;
+    eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
+
+    /*open usb/usart*/
+    ENG_LOG("host:%s",dev_info->host_int.dev_diag);
+    ENG_LOG("modem:%s",dev_info->modem_int.diag_chan);
+    ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_RDONLY);
+    if(ser_fd < 0){
+        ENG_LOG("cannot open general serial\n");
+        return NULL;
+    }
+
+    if(dev_info->host_int.dev_type == CONNECT_UART){
+        set_raw_data_speed(ser_fd, 115200);
+    }
+
+
+    // initialize extra data buffer
+    init_user_diag_buf();
+
+    while(1) {
+        memset(log_data, 0, sizeof(log_data));
+        r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE/2);
+        if (r_cnt == DATA_BUF_SIZE/2) {
+            r_cnt += read(ser_fd, log_data+r_cnt, DATA_BUF_SIZE/2);
+        }
+
+        if (r_cnt <= 0) {
+            ENG_LOG("read log data error  from serial: %s\n", strerror(errno));
+            close(ser_fd);
+
+            wait_cnt = 0; //reset wait count
+            do {
+                ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_RDONLY);
+                if(ser_fd < 0) {
+                    ENG_LOG("cannot open vendor serial: %s, error: %s\n",
+                            dev_info->host_int.dev_diag, strerror(errno));
+                    sleep(1);
+                }else {
+                    ENG_LOG("reopen serial port success.\n");
+                    break;
+                }
+
+                if((++wait_cnt) > MAX_OPEN_TIMES) {
+                    ENG_LOG("serial port open times exceed the max open times !!!\n");
+                    close(modem_fd);
+                    return NULL;
+                }
+            } while(ser_fd < 0);
+
+            continue; // nothing has been read
+        }
+        
+       eng_marlin_print_mem(log_data, r_cnt);
+       eng_marlin_write_file("/dev/mdbg", log_data, r_cnt);
+       continue;
+        has_processed = 0; // reset the process flag
+        ENG_LOG("g_diag_status=%d",g_diag_status);
+        switch(g_diag_status) {
+            case ENG_DIAG_RECV_TO_CP:
+                memcpy(backup_data_buf,log_data,r_cnt);
+                backup_data_len = r_cnt;
+                if(0x7E == log_data[r_cnt - 1]){
+                    g_diag_status = ENG_DIAG_RECV_TO_AP;
+                }else{
+                    g_diag_status = ENG_DIAG_RECV_TO_CP;
+                }
+                break;
+            case ENG_DIAG_RECV_TO_AP:
+            ENG_LOG("ext_buf_len = %d",ext_buf_len);
+                if(get_user_diag_buf(log_data,r_cnt)){
+                    g_diag_status = ENG_DIAG_RECV_TO_AP;
+                    memcpy(backup_data_buf,ext_data_buf,ext_buf_len);
+                    backup_data_len = ext_buf_len;
+                   has_processed = eng_diag(ext_data_buf,ext_buf_len);
+                    init_user_diag_buf(); // complete diag framer, so AP decide the following oper
+                }else if(0 == ext_buf_len){
+                    g_diag_status = ENG_DIAG_RECV_TO_AP;
+                    memcpy(backup_data_buf,log_data,r_cnt);
+                    backup_data_len = r_cnt; // not a diag framer, so send data to CP
+                }else if(DATA_EXT_DIAG_SIZE/2 <= ext_buf_len){
+                        ENG_LOG("%s: Current data is not a complete diag framer,but buffer is full\n", __FUNCTION__);
+                        type = eng_diag_parse(ext_data_buf, ext_buf_len);
+                        if(type != CMD_COMMON){
+                            g_diag_status = ENG_DIAG_RECV_TO_AP;
+                            ENG_LOG("%s: Buffer is full, so AP will not process the next package\n", __FUNCTION__);
+                            has_processed = 1; // continue to receive the diag_framer
+                        }else{
+                            memcpy(backup_data_buf,ext_data_buf,ext_buf_len);
+                            backup_data_len = ext_buf_len;
+                            init_user_diag_buf();
+                            g_diag_status = ENG_DIAG_RECV_TO_CP; // send diag framer to CP
+                        }
+                } else {
+                    g_diag_status = ENG_DIAG_RECV_TO_AP;
+                    has_processed = 1; // continue to receive the diag framer
+                }
+                break;
+            default:
+                ENG_LOG("%s: ERROR STATUS: %d!!!\n", __FUNCTION__, g_diag_status);
+                break;
+        }
+
+        if(1 == has_processed){// Data has been processed & should not send to modem
+            backup_data_len = 0;
+            continue;
+        }
+
+        if(g_assert_cmd) {
+            for(offset=0; offset < r_cnt; offset++){
+                ENG_LOG("%s: diag cmd: %d\n", __FUNCTION__, log_data[offset]);
+            }
+        }
+
+        if(2 == r_cnt && log_data[1] == 0xa){
+            ENG_LOG("start to dump memory");
+            g_ass_start = 1;
+        }
+
+        offset = 0; // reset offset value
+        do {
+            w_cnt = eng_marlin_write_file("/dev/mdbg", ext_data_buf, ext_buf_len);
+            //w_cnt = write(modem_fd, backup_data_buf + offset, backup_data_len);
+            if (w_cnt < 0) {
+                ENG_LOG("no log data write:%d ,%s\n", w_cnt, strerror(errno));
+                continue;
+            }else{
+                backup_data_len -= w_cnt;
+                offset += w_cnt;
+            }
+            ENG_LOG("rcnt:%d, w_cnt:%d, offset:%d\n", r_cnt, w_cnt, offset);
+        }while(backup_data_len >0);
+    }
+    close(modem_fd);
+    close(ser_fd);
+    return 0;
+}
+
+
+void *eng_marlin_diag_rthread(void *x)
+{
+    int ser_fd;
+    int r_cnt, w_cnt, offset;
+    int retry_num = 0;
+    int dumpmemlen = 0;
+    eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
+    
+    ENG_LOG("thread start");
+    ENG_LOG("host:%s",dev_info->host_int.dev_diag);
+    ENG_LOG("modem:%s",dev_info->modem_int.diag_chan);
+    /*open usb/uart*/
+    ENG_LOG("open serial...:%s\n",dev_info->host_int.dev_diag);
+    ser_fd = eng_open_dev(dev_info->host_int.dev_diag, O_WRONLY);
+    if(ser_fd < 0) {
+        ENG_LOG("open serial failed, error: %s\n", strerror(errno));
+        return NULL;
+    }
+    
+    while(1) {
+        int split_flag = 0;
+        memset(log_data, 0, sizeof(log_data));
+        
+        r_cnt = eng_marlin_read_file("/dev/mdbg",log_data,DATA_BUF_SIZE);
+        if (r_cnt <= 0) {
+            sleep(1);
+            ENG_LOG("read NO log data : r_cnt=%d, %s",  r_cnt, strerror(errno));
+            continue;
+        }
+        ENG_LOG("read log data : r_cnt=%d",  r_cnt);
+        //eng_print_mem(log_data,r_cnt);
+        offset = 0; //reset the offset
+        
+        if((r_cnt%64==0) && dev_info->host_int.cali_flag && (dev_info->host_int.dev_type == CONNECT_USB)){
+            split_flag = 1;
+            ENG_LOG("split_flag=%d",  split_flag);
+        }
+        do {
+            if(split_flag){
+                w_cnt = write(ser_fd, log_data + offset, r_cnt-32);
+            }else{
+                w_cnt = write(ser_fd, log_data + offset, r_cnt);
+            }
+            if (w_cnt < 0) {
+                    if(errno == EBUSY){
+                    ENG_LOG("Goto sleep 59000!");
+                    usleep(59000);
+                }else {
+                    ENG_LOG("no log data write:%d ,%s\n", w_cnt, strerror(errno));
+                    
+                    // FIX ME: retry to open
+                    retry_num = 0; //reset the try number.
+                    while (-1 == restart_gser(&ser_fd, dev_info->host_int.dev_diag)) {
+                        ENG_LOG("open gser port failed\n");
+                        sleep(1);
+                        retry_num ++;
+                        if(retry_num > MAX_OPEN_TIMES) {
+                            ENG_LOG("vlog thread stop for gser error !");
+                            return 0;
+                        }
+                    }
+                }
+            } else {
+                r_cnt -= w_cnt;
+                offset += w_cnt;
+                split_flag = 0;
+                ENG_LOG("r_cnt: %d, w_cnt: %d, offset: %d", r_cnt, w_cnt, offset);
+            }
+        } while(r_cnt > 0);
+    }
+    
+    out:
+    ENG_LOG("thread end\n");
+    close(ser_fd);
+    
+    return NULL;
+}
+
+
+
+

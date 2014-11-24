@@ -246,6 +246,8 @@ int eng_diag_writeimei(char *req, char *rsp);
 void *eng_vlog_thread(void *x);
 void *eng_vdiag_wthread(void *x);
 void *eng_vdiag_rthread(void *x);
+void *eng_marlin_diag_wthread(void *x);
+void *eng_marlin_diag_rthread(void *x);
 void * eng_sd_log(void * args);
 void *eng_gps_log_thread(void *x);
 #endif

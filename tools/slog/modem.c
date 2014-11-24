@@ -97,7 +97,13 @@ static void handle_dump_shark_sipc_info()
 
 #define MODEMRESET_PROPERTY "persist.sys.sprd.modemreset"
 #define MODEM_SOCKET_NAME       "modemd"
+#ifdef EXTERNAL_WCN
+#define WCN_SOCKET_NAME       "external_wcn"
+#else
 #define WCN_SOCKET_NAME       "wcnd"
+#endif
+
+
 #define MODEM_SOCKET_BUFFER_SIZE 128
 
 static int modem_assert_flag = 0;
@@ -331,6 +337,29 @@ void handle_socket_modem(char *buffer)
 
 }
 
+#ifdef EXTERNAL_WCN
+void handle_socket_wcn(char *buffer)
+{
+	struct slog_info *log_info;
+
+	if(strstr(buffer, "WCN-EXTERNAL-ALIVE") != NULL) {
+		if (handle_correspond_modem(buffer) == 1){
+			log_info = stream_log_head;
+			while(log_info){
+				if (!strncmp(log_info->name, "cp_wcn", 6)){
+					if(log_info->state == SLOG_STATE_OFF)
+					{
+						log_info->state = SLOG_STATE_ON;
+						modem_alive_flag = 1;
+					}
+					break;
+				}
+			log_info = log_info->next;
+			}
+		}
+	}
+}
+#else
 void handle_socket_wcn(char *buffer)
 {
 	int dump = 0, reset = 0;
@@ -361,6 +390,7 @@ void handle_socket_wcn(char *buffer)
 			modem_alive_flag = 1;
 	}
 }
+#endif
 
 void *handle_modem_state_monitor(void *arg)
 {
@@ -424,7 +454,11 @@ void *handle_modem_state_monitor(void *arg)
 				FD_CLR(fd_wcn, &readset_tmp);
 				close(fd_wcn);
 				sleep(10);
+				#ifdef EXTERNAL_WCN
+				fd_wcn = connect_socket_server(WCN_SOCKET_NAME);
+				#else
 				fd_wcn = connect_socket_server(MODEM_SOCKET_NAME);
+				#endif
 				if(fd_wcn > 0) {
 					max = fd_wcn > max ? fd_wcn : max;
 					FD_SET(fd_wcn, &readset_tmp);
