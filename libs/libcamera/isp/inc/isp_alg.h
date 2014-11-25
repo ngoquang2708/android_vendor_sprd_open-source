@@ -124,7 +124,7 @@ struct isp_slice_param{
 struct isp_lnc_map{
 	uint32_t grid_mode;
 	uint32_t grid_pitch;
-	uint32_t param_addr;
+	unsigned long param_addr;
 	uint32_t len;
 };
 

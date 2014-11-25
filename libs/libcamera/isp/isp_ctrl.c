@@ -9534,8 +9534,8 @@ static int32_t _isp_change_lnc_param(uint32_t handler_id)
 	struct isp_lnc_map *lnc_tab = NULL;
 	struct isp_lnc_param *lnc_param = NULL;
 	struct isp_awb_adjust *cur_lnc = NULL;
-	uint32_t lnc_addr0 = 0;
-	uint32_t lnc_addr1 = 0;
+	unsigned long lnc_addr0 = 0;
+	unsigned long lnc_addr1 = 0;
 	uint32_t lnc_len = 0;
 	uint32_t alpha = 0;
 	uint32_t dec_ratio = 0;
@@ -9612,9 +9612,9 @@ static int32_t _isp_change_lnc_param(uint32_t handler_id)
 		}
 	}
 
-	ISP_LOG("lnc_ptr = 0x%x, lnc_len=%d", (uint32_t)lnc_param->lnc_ptr, lnc_len);
+	ISP_LOG("lnc_ptr = %p, lnc_len=%d", lnc_param->lnc_ptr, lnc_len);
 
-	rtn = ispSetLncParam(handler_id, (uint32_t)lnc_param->lnc_ptr, lnc_len);
+	rtn = ispSetLncParam(handler_id, (unsigned long)lnc_param->lnc_ptr, lnc_len);
 	if (ISP_SUCCESS != rtn) {
 		ISP_LOG("ispSetLncParam failed = %d", rtn);
 		return ISP_ERROR;
