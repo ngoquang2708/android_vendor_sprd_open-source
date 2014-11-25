@@ -1799,48 +1799,55 @@ static cmr_int setting_is_need_flash(struct setting_component *cpt,
 	return is_need;
 }
 
-static cmr_int setting_isp_awb_bypass(enum isp_alg_mode awb_mode)
+static cmr_int setting_isp_alg_bypass(struct setting_component *cpt,
+										enum isp_alg_mode isp_mode)
 {
+	struct setting_init_in             *init_in = &cpt->init_in;
+	struct common_isp_cmd_param        isp_param;
 	cmr_int            ret = 0;
-	struct isp_alg     wb_param;
 
-	wb_param.mode = awb_mode;
-	ret = isp_ioctl(ISP_CTRL_ALG, (void*)&wb_param);
+	isp_param.alg_param.mode = isp_mode;
+	switch (isp_mode) {
+	case ISP_AWB_BYPASS:
+		break;
+	case ISP_AE_BYPASS:
+		isp_param.alg_param.flash_eb = 0x01;
+		break;
+	default:
+		CMR_LOGE("Invalid ISP mode type");
+		ret = -1;
+		return ret;
+	}
+
+	if (init_in->setting_isp_ioctl) {
+		ret = (*init_in->setting_isp_ioctl)(init_in->oem_handle, COM_ISP_SET_BYPASS_MODE, &isp_param);
+	}
+
 	if (ret) {
-		CMR_LOGE("ISP_CTRL_ALG error.");
+		CMR_LOGE("setting bypass mode error.");
 	}
 
 	return ret;
 }
 
-static cmr_int setting_isp_ae_bypass(enum isp_alg_mode ae_mode)
+static cmr_int setting_isp_flash_ratio(struct setting_component *cpt,
+									struct sensor_flash_level *flash_level)
 {
+	struct setting_init_in              *init_in = &cpt->init_in;
+	struct common_isp_cmd_param        isp_param;
 	cmr_int            ret = 0;
-	struct isp_alg     ae_param;
 
-	ae_param.mode = ae_mode;
-	ae_param.flash_eb = 0x01;
-	ret = isp_ioctl(ISP_CTRL_ALG, (void*)&ae_param);
-	if (ret) {
-		CMR_LOGE("ISP_AE_BYPASS error.");
-	}
-
-	return ret;
-}
-
-static cmr_int setting_isp_flash_ratio(struct sensor_flash_level *flash_level)
-{
-	cmr_int            ret = 0;
-	struct isp_alg     flash_param;
-
-	flash_param.mode = ISP_ALG_FAST;
-	flash_param.flash_eb = 0x01;
-	/*flash_param.flash_ratio=flash_level.high_light*256/flash_level.low_light;*/
+	isp_param.alg_param.mode = ISP_ALG_FAST;
+	isp_param.alg_param.flash_eb = 0x01;
 	/*because hardware issue high equal to low, so use hight div high */
-	flash_param.flash_ratio = flash_level->high_light * 256 / flash_level->high_light;
-	ret = isp_ioctl(ISP_CTRL_ALG, (void*)&flash_param);
+	isp_param.alg_param.flash_ratio = flash_level->high_light * 256 / flash_level->high_light;
+
+	if (init_in->setting_isp_ioctl) {
+		ret = (*init_in->setting_isp_ioctl)(init_in->oem_handle, COM_ISP_SET_FLASH_LEVEL, &isp_param);
+	}
+
 	if (ret) {
-		CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+		CMR_LOGE("setting flash level error.");
 	}
 
 	return ret;
@@ -1911,12 +1918,12 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 						}
 					}
 
-					setting_isp_awb_bypass(ISP_AWB_BYPASS);
-					setting_isp_ae_bypass(ISP_AE_BYPASS);
+					setting_isp_alg_bypass(cpt, ISP_AWB_BYPASS);
+					setting_isp_alg_bypass(cpt, ISP_AE_BYPASS);
 
 					/*camera_isp_alg_wait();*/
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-					setting_isp_flash_ratio(&(sn_param.flash_level));
+					setting_isp_flash_ratio(cpt, &(sn_param.flash_level));
 				}
 			}
 			if (setting_is_need_flash(cpt, parm)) {
@@ -2211,12 +2218,12 @@ static cmr_int setting_set_pre_flash (struct setting_component *cpt,
 				}
 			}
 
-			setting_isp_awb_bypass(ISP_AWB_BYPASS);
-			setting_isp_ae_bypass(ISP_AE_BYPASS);
+			setting_isp_alg_bypass(cpt, ISP_AWB_BYPASS);
+			setting_isp_alg_bypass(cpt, ISP_AE_BYPASS);
 
 			cmr_setting_isp_alg_wait(oem_handle);
 			setting_set_flashdevice(cpt, parm, (uint32_t)FLASH_OPEN);
-			setting_isp_flash_ratio(&(sn_param.flash_level));
+			setting_isp_flash_ratio(cpt, &(sn_param.flash_level));
 		}
 	}
 

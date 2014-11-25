@@ -3538,6 +3538,13 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 			CMR_LOGE("Failed to read isp capability ret = %ld", ret);
 		}
 		return ret;
+	case COM_ISP_SET_BYPASS_MODE:
+	case COM_ISP_SET_FLASH_LEVEL:
+		isp_cmd = ISP_CTRL_ALG;
+		ptr_flag = 1;
+		isp_param_ptr = (void*)&param_ptr->alg_param;
+		CMR_LOGI("isp_cmd = %d, mode = %d", isp_cmd, param_ptr->alg_param.mode);
+		break;
 	default:
 		CMR_LOGE("don't support cmd %ld", cmd_type);
 		ret = CMR_CAMERA_NO_SUPPORT;
