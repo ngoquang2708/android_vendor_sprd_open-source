@@ -498,13 +498,13 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"whitebalance-values", "auto,incandescent,fluorescent,daylight,cloudy-daylight"},
 	{"whitebalance", "auto"},
 #if defined(CONFIG_CAMERA_SUPPORT_13M)
-	{"picture-size-values", "4208x3120,4000x3000,3264x2448,2592x1944,2048x1536,1600x1200,1280x960,640x480"},
-	{"video-picture-size-values", "2592x1944,2592x1944,2592x1944,2592x1944,2592x1944"},
+	{"picture-size-values", "4208x3120,4000x3000,3264x2448,2592x1952,2048x1536,1600x1200,1280x960,640x480"},
+	{"video-picture-size-values", "2592x1952,2592x1952,2592x1952,2592x1952,2592x1952"},
 #elif defined(CONFIG_CAMERA_SUPPORT_8M)
-	{"picture-size-values", "3264x2448,2592x1944,2048x1536,1600x1200,1280x960,640x480"},
+	{"picture-size-values", "3264x2448,2592x1952,2048x1536,1600x1200,1280x960,640x480"},
 	{"video-picture-size-values", "1600x1200,1600x1200,1600x1200,1600x1200,1600x1200"},
 #elif defined(CONFIG_CAMERA_SUPPORT_5M)
-	{"picture-size-values", "2592x1944,2048x1536,1600x1200,1280x960,640x480"},
+	{"picture-size-values", "2592x1952,2048x1536,1600x1200,1280x960,640x480"},
 	{"video-picture-size-values", "1600x1200,1600x1200,1600x1200,1600x1200,1600x1200"},
 #elif defined(CONFIG_CAMERA_SUPPORT_3M)
 	{"picture-size-values", "2048x1536,1600x1200,1280x960,640x480"},
@@ -513,7 +513,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"picture-size-values", "1920x1088,1600x1200,1280x960,640x480"},
 	{"video-picture-size-values", "1280x960,1280x960,1280x960,1280x960,1280x960"},
 #else
-	{"picture-size-values", "3264x2448,2592x1944,2048x1536,1600x1200,1280x960,640x480"},
+	{"picture-size-values", "3264x2448,2592x1952,2048x1536,1600x1200,1280x960,640x480"},
 	{"video-picture-size-values", "1280x960,1280x960,1280x960,1280x960,1280x960"},
 #endif
 	{"picture-size", "640x480"},
