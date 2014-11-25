@@ -122,7 +122,7 @@ struct isp_reg{
 	/* Lens C */
 	uint32_t LENS_STATUS;
 	uint32_t LENS_PARAM;
-	uint32_t LENS_PARAM_ADDR;
+	unsigned long LENS_PARAM_ADDR;
 	uint32_t LENS_SLICE_POS;
 	uint32_t LENS_LOADER_EB;
 	uint32_t LENS_GRID_PITCH;
@@ -1828,7 +1828,7 @@ int32_t ispLensBufSel(uint32_t handler_id, uint8_t buf_mode)
 *@
 *@
 */
-int32_t ispLensParamAddr(uint32_t handler_id, uint32_t param_addr)
+int32_t ispLensParamAddr(uint32_t handler_id, unsigned long param_addr)
 {
 /*	union _isp_lens_param_addr_tag* reg_ptr=(union _isp_lens_param_addr_tag*)ISP_LENS_PARAM_ADDR;*/
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
@@ -1878,7 +1878,7 @@ int32_t ispSetLensSliceStart(uint32_t handler_id, uint16_t x, uint16_t y)
 *@
 *@
 */
-int32_t ispSetLensLoaderEnable(uint32_t handler_id, uint32_t param_addr)
+int32_t ispSetLensLoaderEnable(uint32_t handler_id, unsigned long param_addr)
 {
 /*	union _isp_lens_loader_eb_tag* reg_ptr=(union _isp_lens_loader_eb_tag*)ISP_LENS_LOADER_ENABLE;*/
 	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
@@ -1890,10 +1890,10 @@ int32_t ispSetLensLoaderEnable(uint32_t handler_id, uint32_t param_addr)
 
 	ISP_CHECK_FD;
 
-	reg0_s_ptr->mBits.grid_addr=param_addr;
+	//reg0_s_ptr->mBits.grid_addr=param_addr;
 /*	reg0_ptr->dwValue=reg0_s_ptr->dwValue;*/
 	reg_config[0].reg_addr = ISP_LENS_PARAM_ADDR - ISP_BASE_ADDR;
-	reg_config[0].reg_value = isp_reg_ptr->LENS_PARAM_ADDR;
+	reg_config[0].reg_value = isp_reg_ptr->LENS_PARAM_ADDR = param_addr;
 
 	reg1_s_ptr->mBits.eb=ISP_ONE;
 /*	reg1_ptr->dwValue=reg1_s_ptr->dwValue;*/
@@ -9574,7 +9574,7 @@ int32_t ispCfgDcamIRQ(uint32_t handler_id, uint32_t param)
 *@
 *@
 */
-int32_t ispSetLncParam(uint32_t handler_id, uint32_t addr, uint32_t len)
+int32_t ispSetLncParam(uint32_t handler_id, unsigned long addr, uint32_t len)
 {
 	int32_t ret = ISP_SUCCESS;
 	struct isp_reg_param write_param;
