@@ -952,7 +952,7 @@ void camera_snapshot_channel_handle(struct camera_context *cxt, void* param)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct frm_info                 frame;
-	struct camera_jpeg_param        *jpeg_param_ptr = (struct camera_jpeg_param*)param;
+	struct camera_jpeg_param        *jpeg_param_ptr = &((struct camera_frame_type *)param)->jpeg_param;
 	cmr_uint                        i;
 	cmr_uint                        is_need_resume = 0;;
 #ifdef CAMERA_PATH_SHARE
@@ -1040,7 +1040,7 @@ void camera_snapshot_state_handle(cmr_handle oem_handle, enum snapshot_cb_type c
 	//		camera_snapshot_channel_handle(cxt);
 			break;
 		case SNAPSHOT_EVT_STATE:
-			cxt->snp_cxt.status = *((cmr_u32*)param);
+			cxt->snp_cxt.status = ((struct camera_frame_type *)param)->status;
 			CMR_LOGI("snapshot state is %d", cxt->snp_cxt.status);
 			break;
 		default:
@@ -1101,6 +1101,7 @@ void camera_snapshot_cb(cmr_handle oem_handle, enum snapshot_cb_type cb, enum sn
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	cmr_uint                        oem_func;
 	cmr_uint                        oem_cb_type;
+	struct camera_jpeg_param        enc_param;
 
 	if (!oem_handle) {
 		CMR_LOGE("error handle");
@@ -1109,7 +1110,7 @@ void camera_snapshot_cb(cmr_handle oem_handle, enum snapshot_cb_type cb, enum sn
 	CMR_LOGI("func %d", func);
 	if (SNAPSHOT_FUNC_TAKE_PICTURE == func || SNAPSHOT_FUNC_ENCODE_PICTURE == func) {
 		if ((SNAPSHOT_FUNC_ENCODE_PICTURE == func) && (SNAPSHOT_EXIT_CB_DONE == cb) && param) {
-			struct camera_jpeg_param enc_param = *(struct camera_jpeg_param*)param;
+			enc_param = ((struct camera_frame_type *)param)->jpeg_param;
 			if (enc_param.need_free) {
 				camera_set_snp_req(oem_handle, TAKE_PICTURE_NO);
 				camera_set_discard_frame(cxt, 0);

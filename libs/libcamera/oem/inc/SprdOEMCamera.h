@@ -199,19 +199,29 @@ struct camera_face_info {
 	cmr_u32                  padding;
 };
 
+struct camera_jpeg_param {
+	void                     *outPtr;
+	cmr_u32                  size;
+	cmr_u32                  need_free;
+	cmr_u32                  index;
+	cmr_u32                  reserved;
+};
+
 struct camera_frame_type {
 	cmr_u32                  format;
 	cmr_u32                  width;
 	cmr_u32                  height;
-	cmr_uint                 y_phy_addr;
-	cmr_uint                 y_vir_addr;
-	cmr_uint		         uv_phy_addr;
-	cmr_uint                 uv_vir_addr;
 	cmr_u32                  buf_id;
 	cmr_u32                  order_buf_id;
 	cmr_u32                  face_num;
+	cmr_uint                 y_phy_addr;
+	cmr_uint                 y_vir_addr;
+	cmr_uint                 uv_phy_addr;
+	cmr_uint                 uv_vir_addr;
 	cmr_s64                  timestamp;
+	cmr_int                  status;
 	struct camera_face_info  face_info[FACE_DETECT_NUM];
+	struct camera_jpeg_param jpeg_param;
 };
 /*
 struct camera_cap_frm_info {
@@ -222,14 +232,6 @@ struct camera_cap_frm_info {
 	cmr_s64                  timestamp;
 	struct frm_info          frame_info;
 };*/
-
-struct camera_jpeg_param {
-	void                     *outPtr;
-	cmr_u32                  size;
-	cmr_u32                  need_free;
-	cmr_u32                  index;
-	cmr_u32                  reserved;
-};
 
 struct camera_position_type {
 	long                     timestamp;

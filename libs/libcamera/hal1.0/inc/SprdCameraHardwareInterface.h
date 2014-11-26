@@ -208,11 +208,11 @@ private:
 	void                  sendPreviewFrameToVideo(struct camera_frame_type *frame);
 	void                  yuvConvertFormat(struct camera_frame_type *frame);
 	void                  notifyShutter();
-	void                  receiveJpegPictureFragment(struct camera_jpeg_param *encInfo);
+//	void                  receiveJpegPictureFragment(struct camera_jpeg_param *encInfo);
 	void                  receiveJpegPosPicture(void);
 	void                  receivePostLpmRawPicture(struct camera_frame_type *frame);
 	void                  receiveRawPicture(struct camera_frame_type *frame);
-	void                  receiveJpegPicture(struct camera_jpeg_param *encInfo);
+	void                  receiveJpegPicture(struct camera_frame_type *frame_type);
 	void                  receivePreviewFrame(struct camera_frame_type *frame);
 	void                  receivePreviewFDFrame(struct camera_frame_type *frame);
 	void                  receiveCameraExitError(void);

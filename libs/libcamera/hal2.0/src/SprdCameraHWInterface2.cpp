@@ -1923,7 +1923,7 @@ void SprdCameraHWInterface2::HandleEncode(camera_cb_type cb, void *parm4)
 				struct camera_jpeg_param *tmpCBpara = NULL;
 				int64_t timeStamp = 0;
 				int res = 0;
-				tmpCBpara = (struct camera_jpeg_param *)parm4;
+				tmpCBpara = &((struct camera_frame_type *)parm4)->jpeg_param;
 				if (NULL == tmpCBpara) {
 					HAL_LOGE("error:parm4 is NULL");
 					break;
