@@ -152,6 +152,12 @@ struct isp_awb_scene_info {
 	struct isp_awb_gain gain;
 };
 
+struct isp_awb_ref_param {
+	struct isp_awb_gain gain;
+	uint32_t ct;
+	uint32_t enable;
+};
+
 struct isp_awb_init_param {
 	/*common parameters*/
 	/*awb alg id*/
@@ -183,23 +189,26 @@ struct isp_awb_init_param {
 	uint32_t debug_level;
 	struct isp_awb_weight_lut weight_of_pos_lut;
 	uint32_t scene_factor[ISP_AWB_SCENE_NUM];
+#if 1 // ref_gain
+	struct isp_awb_ref_param ref_param[ISP_AWB_ENVI_NUM];
+#endif
 };
 
 struct isp_awb_calc_param {
 	struct isp_awb_statistic_info *awb_stat;
-	enum isp_awb_envi_id envi_id;
+	enum isp_awb_envi_id envi_id[2];
+	uint16_t envi_weight[2];
 	uint32_t quick_mode;
 };
 
 struct isp_awb_calc_result {
 	struct isp_awb_gain gain;
 	uint32_t ct;
-	struct isp_awb_scene_info scene_info[ISP_AWB_SCENE_NUM];
 };
 
 struct isp_awb_detail_info {
 	uint16_t *coord_img;
-	uint8_t *mask_img;
+	uint8_t *mask_img[2];
 };
 
 

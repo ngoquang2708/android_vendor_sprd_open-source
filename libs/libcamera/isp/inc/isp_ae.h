@@ -237,6 +237,7 @@ struct isp_ae_param
 	uint8_t gamma_lum_thr;
 
 	uint32_t stab_conter;
+	uint32_t stab;
 	uint32_t auto_eb;
 	int32_t ev;
 	uint8_t* weight_ptr[ISP_AE_WEIGHT_TAB_NUM];
@@ -327,6 +328,7 @@ int32_t isp_ae_set_iso(uint32_t handler_id, uint32_t iso);
 int32_t isp_ae_get_iso(uint32_t handler_id, uint32_t* iso);
 int32_t isp_ae_set_fast_stab(uint32_t handler_id, uint32_t eb);
 int32_t isp_ae_set_stab(uint32_t handler_id, uint32_t eb);
+int32_t isp_ae_get_stab(uint32_t handler_id, uint32_t* stab);
 int32_t isp_ae_set_change(uint32_t handler_id, uint32_t eb);
 int32_t isp_ae_set_param_index(uint32_t handler_id, uint32_t index);
 int32_t isp_ae_ctrl_set(uint32_t handler_id, void* param_ptr);

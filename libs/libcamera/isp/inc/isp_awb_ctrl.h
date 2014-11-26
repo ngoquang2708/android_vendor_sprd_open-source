@@ -122,12 +122,14 @@ struct isp_awb_param{
 	struct isp_awb_range value_range[ISP_AWB_ENVI_NUM];
 	struct isp_awb_gain init_gain;
 	uint16_t init_ct;
+	struct isp_awb_ref_param ref_param[ISP_AWB_ENVI_NUM];
 	struct isp_awb_statistic_info *awb_stat;
 	struct isp_awb_init_param init_param;
 	struct isp_awb_calc_param calc_param;
 	struct isp_awb_calc_result calc_result;
 	uint32_t bright_value;
-	enum  smart_light_envi_id envi_id;
+	enum  isp_awb_envi_id envi_id[2];
+	uint32_t envi_weight[2];
 	uint32_t green_factor;
 	uint32_t skin_factor;
 	uint32_t debug_file;
