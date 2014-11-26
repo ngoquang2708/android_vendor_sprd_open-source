@@ -45,8 +45,8 @@ static sprd_iq_params g_iq_params = {
 };
 
 typedef struct {
-	uint32_t wr_rd_flag;	// Write/Read flag
-	char iq_file_name[SPRD_IQ_FILE_NAME_LEN];	// IQ data file
+	volatile uint32_t wr_rd_flag;	// Write/Read flag
+	volatile char iq_file_name[SPRD_IQ_FILE_NAME_LEN];	// IQ data file
 } sprd_iq_jnjection_header;
 
 /* Write IQ data form file to buffer */
@@ -151,6 +151,7 @@ static void sprd_iq_thread(sprd_iq_params * params)
 				strcpy(file_name, params->file_name);
 				strncpy(iq_file, header->iq_file_name,
 					SPRD_IQ_FILE_NAME_LEN);
+				strcat(file_name, "/");
 				strncat(file_name, iq_file,
 					SPRD_IQ_FILE_NAME_LEN);
 				ALOGI("IQ_AP_WRITE_CONTINUE get file %s\n",

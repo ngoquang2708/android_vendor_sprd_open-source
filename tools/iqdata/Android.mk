@@ -8,3 +8,5 @@ LOCAL_STATIC_LIBRARIES := libcutils liblog
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
+
+CUSTOM_MODULES += iqdata_daemon
