@@ -5728,6 +5728,7 @@ void SprdCameraHardware::receivePostLpmRawPicture(camera_frame_type *frame)
 	}
 }
 
+#if 0
 void SprdCameraHardware::receiveJpegPictureFragment(struct camera_jpeg_param *encInfo)
 {
 	if (mIsPerformanceTestable) {
@@ -5761,8 +5762,9 @@ void SprdCameraHardware::receiveJpegPictureFragment(struct camera_jpeg_param *en
 		LOGI("receiveJpegPictureFragment X.");
 	}
 }
+#endif
 
-void SprdCameraHardware::receiveJpegPicture(struct camera_jpeg_param *encInfo)
+void SprdCameraHardware::receiveJpegPicture(struct camera_frame_type *frame_type)
 {
 	GET_END_TIME;
 	GET_USE_TIME;
@@ -5776,6 +5778,8 @@ void SprdCameraHardware::receiveJpegPicture(struct camera_jpeg_param *encInfo)
 	Mutex::Autolock cbLock(&mCaptureCbLock);
 
 	int index = 0;
+	struct camera_jpeg_param *encInfo = &frame_type->jpeg_param;
+
 	mJpegSize = encInfo->size;
 	if (mData_cb) {
 		LOGI("receiveJpegPicture: mData_cb.");
@@ -6172,7 +6176,7 @@ void SprdCameraHardware::HandleEncode(enum camera_cb_type cb, void* parm4)
 		if ((SPRD_WAITING_JPEG == getCaptureState())) {
 			Sprd_camera_state tmpCapState= SPRD_WAITING_JPEG;
 			if (checkPreviewStateForCapture()) {
-				receiveJpegPicture((struct camera_jpeg_param *)parm4);
+				receiveJpegPicture((struct camera_frame_type*)parm4);
 			} else {
 				LOGE("HandleEncode: drop current jpgPicture");
 			}
@@ -6180,7 +6184,7 @@ void SprdCameraHardware::HandleEncode(enum camera_cb_type cb, void* parm4)
 			tmpCapState = getCaptureState();
 			if ((SPRD_WAITING_JPEG == tmpCapState)
 				|| (SPRD_INTERNAL_CAPTURE_STOPPING == tmpCapState)) {
-				if (((struct camera_jpeg_param *)parm4)->need_free) {
+				if (((struct camera_frame_type *)parm4)->jpeg_param.need_free) {
 					setCameraState(SPRD_IDLE,
 						STATE_CAPTURE);
 					if (1 != mParameters.getInt("zsl"))

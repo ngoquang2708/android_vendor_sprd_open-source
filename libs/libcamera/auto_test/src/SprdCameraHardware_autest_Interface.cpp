@@ -1202,7 +1202,7 @@ static void auto_test_dcam_cap_cb(camera_cb_type cb,
 		case CAMERA_EXIT_CB_DONE:
 			{
 				INFO("debug %s %d X \n",__func__,__LINE__);
-				struct camera_jpeg_param *encInfo = (camera_jpeg_param *)parm4;
+				struct camera_jpeg_param *encInfo = &((struct camera_frame_type *)parm4)->jpeg_param;
 				cmr_cxt_ptr->jpg_size = encInfo->size;
 				cmr_cxt_ptr->jpg_buffer = encInfo->outPtr;
 				sem_post(&(cmr_cxt_ptr->sem_cap_jpg_done));
