@@ -4928,16 +4928,28 @@ void SprdCameraHardware::receivePreviewFDFrame(struct camera_frame_type *frame)
 	camera_frame_metadata_t metadata;
 	camera_face_t face_info[FACE_DETECT_NUM];
 	int32_t k = 0;
+	int32_t sx = 0;
+	int32_t sy = 0;
+	int32_t ex = 0;
+	int32_t ey = 0;
 
 	LOGI("receive face_num %d.",frame->face_num);
 	metadata.number_of_faces = frame->face_num <= FACE_DETECT_NUM ? frame->face_num:FACE_DETECT_NUM;
 	if (0 != metadata.number_of_faces) {
 		for(k=0 ; k< metadata.number_of_faces ; k++) {
 			face_info[k].id = k;
-			face_info[k].rect[0] = (frame->face_info[k].sx*2000/mPreviewWidth)-1000;
-			face_info[k].rect[1] = (frame->face_info[k].sy*2000/mPreviewHeight)-1000;
-			face_info[k].rect[2] = (frame->face_info[k].ex*2000/mPreviewWidth)-1000;
-			face_info[k].rect[3] = (frame->face_info[k].ey*2000/mPreviewHeight)-1000;
+			sx = MIN(MIN(frame->face_info[k].sx, frame->face_info[k].srx),
+					MIN(frame->face_info[k].ex, frame->face_info[k].elx));
+			sy = MIN(MIN(frame->face_info[k].sy, frame->face_info[k].sry),
+					MIN(frame->face_info[k].ey, frame->face_info[k].ely));
+			ex = MAX(MAX(frame->face_info[k].sx, frame->face_info[k].srx),
+					MAX(frame->face_info[k].ex, frame->face_info[k].elx));
+			ey = MAX(MAX(frame->face_info[k].sy, frame->face_info[k].sry),
+					MAX(frame->face_info[k].ey, frame->face_info[k].ely));
+			face_info[k].rect[0] = (sx*2000/mPreviewWidth)-1000;
+			face_info[k].rect[1] = (sy*2000/mPreviewHeight)-1000;
+			face_info[k].rect[2] = (ex*2000/mPreviewWidth)-1000;
+			face_info[k].rect[3] = (ey*2000/mPreviewHeight)-1000;
 			LOGI("smile level %d.\n",frame->face_info[k].smile_level);
 			face_info[k].score = frame->face_info[k].smile_level;
 		}
