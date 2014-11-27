@@ -122,7 +122,7 @@ struct smart_light_range_l {
 };
 
 struct smart_light_envi_result {
-	enum smart_light_envi_id envi_id;
+	enum smart_light_envi_id envi_id[SMART_WEIGHT_NUM];
 	uint16_t weight[SMART_WEIGHT_NUM];
 	uint32_t update;
 };
@@ -226,6 +226,7 @@ struct smart_light_calc_param {
 	struct smart_light_gain gain;
 	uint32_t quick_mode;
 };
+
 
 struct smart_light_calc_result {
 	struct smart_light_envi_result envi;

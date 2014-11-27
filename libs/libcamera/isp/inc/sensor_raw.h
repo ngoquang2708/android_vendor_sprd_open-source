@@ -229,7 +229,7 @@ struct sensor_ae_param{
 	uint8_t smart_pref_y_mid;
 	uint8_t smart_pref_uv_outdoor;
 	uint8_t smart_pref_uv_mid;
-	
+
 	uint32_t reserved[25];
 };
 

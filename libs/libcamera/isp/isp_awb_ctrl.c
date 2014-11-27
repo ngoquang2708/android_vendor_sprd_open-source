@@ -50,6 +50,11 @@
 *-------------------------------------------------------------------------------*/
 static nsecs_t s_begin_time;
 static nsecs_t s_end_time;
+
+/*------------------------------------------------------------------------------*
+*				local functions					*
+*-------------------------------------------------------------------------------*/
+enum isp_awb_envi_id _envi_id_convert(enum smart_light_envi_id envi_id);
 /*------------------------------------------------------------------------------*
 *					functions				*
 *-------------------------------------------------------------------------------*/
@@ -73,9 +78,13 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 	struct isp_awb_calc_result *calc_result = &awb_param->calc_result;
 	uint32_t i = 0;
 
-	awb_param->envi_id = smart_result->envi.envi_id;
+	awb_param->envi_id[0] = _envi_id_convert(smart_result->envi.envi_id[0]);
+	awb_param->envi_id[1] = _envi_id_convert(smart_result->envi.envi_id[1]);
+	awb_param->envi_weight[0] = smart_result->envi.weight[0];
+	awb_param->envi_weight[1] = smart_result->envi.weight[1];
 
-	ISP_LOGV("envi_id = %d", awb_param->envi_id);
+	ISP_LOGV("envi_id = (%d, %d), weight=(%d, %d)", awb_param->envi_id[0], awb_param->envi_id[1],
+					awb_param->envi_weight[0], awb_param->envi_weight[1]);
 
 	/*the lsc and cmc should set the same index now*/
 	if (0 != smart_result->cmc.update || 0 != smart_result->lsc.update
@@ -139,20 +148,6 @@ static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_para
 		hue_sat_gain.r = smart_result->hue_saturation.r_gain;
 		hue_sat_gain.g = smart_result->hue_saturation.g_gain;
 		hue_sat_gain.b = smart_result->hue_saturation.b_gain;
-	}
-
-	/*set gain of scene adjust to cce module*/
-	for (i=0; i<ISP_AWB_SCENE_NUM; i++) {
-
-		struct isp_awb_scene_info *scene_info = &calc_result->scene_info[i];
-
-		if (scene_info->ratio > 0 && scene_info->gain.r > 0
-			&& scene_info->gain.g > 0 && scene_info->gain.b > 0) {
-
-			hue_sat_gain.r = hue_sat_gain.r * scene_info->gain.r / ISP_AWB_GAIN_UNIT;
-			hue_sat_gain.g = hue_sat_gain.g * scene_info->gain.g / ISP_AWB_GAIN_UNIT;
-			hue_sat_gain.b = hue_sat_gain.b * scene_info->gain.b / ISP_AWB_GAIN_UNIT;
-		}
 	}
 
 	if (!((SMART_HUE_SAT_GAIN_UNIT == hue_sat_gain.r)
@@ -227,7 +222,11 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 
 	memcpy(init_param->value_range, awb_param->value_range,
 			sizeof(struct isp_awb_range) * ISP_AWB_ENVI_NUM);
-
+#if 1 //ref_gain
+	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+		init_param->ref_param[i] = awb_param->ref_param[i];
+	}
+#endif
 	memcpy(init_param->win, awb_param->win,
 			sizeof(struct isp_awb_coord) * ISP_AWB_TEMPERATRE_NUM);
 
@@ -264,6 +263,12 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
 		ISP_LOGI("[%d] = (%d, %d)", i, init_param->value_range[i].min,
 				init_param->value_range[i].max);
+#if 1 //ref_gain
+		ISP_LOGI("[%d]: ref gain enable=%d, ct=%d, gain=(%d, %d, %d)",
+					i, init_param->ref_param[i].enable, init_param->ref_param[i].ct,
+					init_param->ref_param[i].gain.r, init_param->ref_param[i].gain.g,
+					init_param->ref_param[i].gain.b);
+#endif
 	}
 
 	ISP_LOGI("scene factor: green = %d, skin=%d", init_param->scene_factor[ISP_AWB_SCENE_GREEN],
@@ -291,18 +296,6 @@ enum isp_awb_envi_id _envi_id_convert(enum smart_light_envi_id envi_id)
 
 	case SMART_ENVI_OUTDOOR_NORMAL:
 		return ISP_AWB_ENVI_OUTDOOR_LOW;
-
-	case SMART_ENVI_MIX_LOW_LIGHT_INDOOR:
-		return ISP_AWB_ENVI_MIX_LOW_LIGHT_INDOOR;
-
-	case SMART_ENVI_MIX_INDOOR_OUTDOOR:
-		return ISP_AWB_ENVI_MIX_INDOOR_OUTDOOR;
-
-	case SMART_ENVI_MIX_OUTDOOR_NORMAL_MIDDLE:
-		return ISP_AWB_ENVI_MIX_OUTDOOR_NORMAL_MIDDLE;
-
-	case SMART_ENVI_MIX_OUTDOOR_MIDDLE_HIGH:
-		return ISP_AWB_ENVI_MIX_OUTDOOR_MIDDLE_HIGH;
 
 	default:
 		return ISP_AWB_ENVI_COMMON;
@@ -337,6 +330,14 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id)
 	struct isp_awb_init_param *init_param = &awb_param->init_param;
 	uint32_t i=0x00;
 
+	if (ISP_EB == awb_param->init) {
+
+		ISP_LOGI("AWB_TAG: awb already init!");
+		return ISP_SUCCESS;
+	} else {
+		ISP_LOGI("AWB_TAG: need init");
+	}
+
 	ISP_LOGI("init awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
 
@@ -349,7 +350,9 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id)
 	awb_param->win_size = isp_cxt->awbm.win_size;
 	awb_param->quick_mode_enable = 1;
 
-	ISP_LOGI("smart = 0x%d, envi=%d", smart_light_param->smart, awb_param->envi_id);
+	ISP_LOGI("smart = 0x%d, envi=(%d, %d), weight=(%d, %d)", 
+			smart_light_param->smart, awb_param->envi_id[0], awb_param->envi_id[1],
+			awb_param->envi_weight[0], awb_param->envi_weight[1]);
 
 	/*disable weight of ct function*/
 	memset(&awb_param->weight_of_ct_func, 0, sizeof(awb_param->weight_of_ct_func));
@@ -405,7 +408,7 @@ uint32_t isp_awb_ctrl_deinit(uint32_t handler_id)
 	smart_light_param->init_param.init_gain = smart_light_param->calc_result.gain;
 	smart_light_param->init_param.init_hue_sat = smart_light_param->calc_result.hue_saturation;
 
-	ISP_LOGI("deinit awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
+	ISP_LOGI("AWB_TAG: deinit awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
 
 	return rtn;
@@ -451,10 +454,12 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 	}
 
 	calc_param->awb_stat = &isp_cxt->awb_stat;
-	calc_param->envi_id = _envi_id_convert(awb_param->envi_id);
 	calc_param->quick_mode = _get_quick_mode(awb_param);
-
-	ISP_LOGV("envi_id smart=%d, awb=%d", awb_param->envi_id, calc_param->envi_id);
+	
+	calc_param->envi_id[0] = awb_param->envi_id[0];
+	calc_param->envi_id[1] = awb_param->envi_id[1];
+	calc_param->envi_weight[0] = awb_param->envi_weight[0];
+	calc_param->envi_weight[1] = awb_param->envi_weight[1];
 
 	rtn = isp_awb_calculation(handler_id, calc_param, calc_result);
 	gain = calc_result->gain;
@@ -505,7 +510,7 @@ uint32_t isp_awb_ctrl_calculation(uint32_t handler_id)
 
 	time = _timer_end();
 	ISP_LOGI("awb calc time = %d", time);
-	ISP_LOGI("SHAN: calc awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
+	ISP_LOGI("calc awb gain = (%d, %d, %d)", awb_param->cur_gain.r,
 			awb_param->cur_gain.g, awb_param->cur_gain.b);
 
 EXIT:

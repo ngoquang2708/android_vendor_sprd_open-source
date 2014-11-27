@@ -1497,16 +1497,10 @@ static uint32_t _isp3AInit(uint32_t handler_id)
 */
 static uint32_t _isp3ADeInit(uint32_t handler_id)
 {
-	struct isp_system* isp_system_ptr = ispGetSystem();
 	int32_t rtn=ISP_SUCCESS;
 
 	rtn = isp_ae_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_ae_deinit error"));
-
-	pthread_mutex_lock(&isp_system_ptr->ctrl_3a_mutex);
-	rtn = isp_awb_ctrl_deinit(handler_id);
-	pthread_mutex_unlock(&isp_system_ptr->ctrl_3a_mutex);
-	ISP_TRACE_IF_FAIL(rtn, ("isp_awb_deinit error"));
 
 	rtn = isp_af_deinit(handler_id);
 	ISP_TRACE_IF_FAIL(rtn, ("isp_af_deinit error"));
@@ -5537,6 +5531,16 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		isp_context_ptr->awb.value_range[i].max = raw_tune_ptr->awb.value_range[i].max;
 	}
 
+	/*ref gain*/
+	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+
+		isp_context_ptr->awb.ref_param[i].enable= ISP_EB;
+		isp_context_ptr->awb.ref_param[i].ct = raw_tune_ptr->awb.init_ct;
+		isp_context_ptr->awb.ref_param[i].gain.r = raw_tune_ptr->awb.init_gain.r;
+		isp_context_ptr->awb.ref_param[i].gain.g = raw_tune_ptr->awb.init_gain.g;
+		isp_context_ptr->awb.ref_param[i].gain.b = raw_tune_ptr->awb.init_gain.b;
+	}
+
 	isp_context_ptr->awb.weight_of_pos_lut.weight = raw_fix_ptr->awb_weight.addr;
 	isp_context_ptr->awb.weight_of_pos_lut.w = raw_fix_ptr->awb_weight.width;
 	isp_context_ptr->awb.weight_of_pos_lut.h = raw_fix_ptr->awb_weight.height;
@@ -7962,12 +7966,19 @@ static int _isp_init(uint32_t handler_id, struct isp_init_param* ptr)
 static int _isp_deinit(uint32_t handler_id)
 {
 	int rtn=0x00;
-
+	struct isp_system* isp_system_ptr = ispGetSystem();
 	rtn=_ispUncfg(handler_id);
 	ISP_RETURN_IF_FAIL(rtn, ("isp uncfg error"));
 
 	rtn = ispStop(handler_id);
 	ISP_RETURN_IF_FAIL(rtn, ("isp stop error"));
+
+
+	pthread_mutex_lock(&isp_system_ptr->ctrl_3a_mutex);
+	rtn = isp_awb_ctrl_deinit(handler_id);
+	pthread_mutex_unlock(&isp_system_ptr->ctrl_3a_mutex);
+	ISP_TRACE_IF_FAIL(rtn, ("isp_awb_deinit error"));
+
 
 	return rtn;
 }
