@@ -12,6 +12,8 @@
 #define	FGU_VOL_ADC_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_vol_adc"
 #define	CHARGING_CURRENT_FILE_PATH   "sys/class/power_supply/battery/real_time_current" //charging current
 #define	BATTERY_CURRENT_FILE_PATH   "sys/class/power_supply/sprdfgu/fgu_current"      //battery current
+#define	FGU_CURRENT_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_current"
+#define	FGU_VOL_FILE_PATH	"/sys/class/power_supply/sprdfgu/fgu_vol"
 
 #define	BATTER_CALI_CONFIG_FILE	CALI_CTRL_FILE_PATH
 typedef enum
@@ -34,7 +36,8 @@ typedef enum
 #define AP_GET_FGU_VOL_ADC	6
 #define AP_GET_FGU_CURRENT_ADC	7
 #define AP_GET_FGU_TYPE	8
-
+#define AP_GET_FGU_VOL_REAL 9
+#define AP_GET_FGU_CURRENT_REAL 10
 
 #define	CALI_MAGIC	(0x49424143) //CALI
 #define	CALI_COMP	(0x504D4F43) //COMP
