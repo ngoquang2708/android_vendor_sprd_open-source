@@ -24,6 +24,8 @@
 
 #include "nlnpi.h"
 #include "iwnpi.h"
+#include <android/log.h>
+#include <utils/Log.h>
 
 static const char *argv0 = "iwnpi";
 int iwnpi_debug = 0;
@@ -33,305 +35,368 @@ static int cmd_size;
 extern struct cmd __start___cmd;
 extern struct cmd __stop___cmd;
 
-#define CMD_LNA_STATUS "lna_status"
+#ifdef LOG_TAG
+#undef  LOG_TAG
+#endif
+
+#define LOG_TAG "IWNPI_ENG"
+
+#define CMD_LNA_STATUS  "lna_status"
+#define CMD_RX_GET_OK   "get_rx_ok"
+#define CMD_GET_REG     "get_reg"
 
 #define CMD_RESULT_BUFFER_LEN (128)
 
-#define for_each_cmd(_cmd)						\
-	for (_cmd = &__start___cmd; _cmd < &__stop___cmd;		\
-		_cmd = (const struct cmd *)((char *)_cmd + cmd_size))
+#define for_each_cmd(_cmd)                      \
+    for (_cmd = &__start___cmd; _cmd < &__stop___cmd;       \
+        _cmd = (const struct cmd *)((char *)_cmd + cmd_size))
+
+#define WIFI_EUT_COMMAND_MAX_LEN            (128)
+#define TMP_BUF_SIZE                        (128)
+
+#define IWNPI_EXEC_TMP_FILE                 ("/data/iwnpi_exec_data.log")
+#define STR_RET_REG_VALUE                   ("ret: reg value:")
+#define STR_RET_END                         (":end")
+#define STR_RET_RET                         ("ret: ")
+
 
 static void __usage_cmd(const struct cmd *cmd, char *indent, bool full)
 {
-	const char *start, *lend, *end;
+    const char *start, *lend, *end;
 
-	printf("%s", indent);
-	printf("%s", cmd->name);
+    printf("%s", indent);
+    printf("%s", cmd->name);
 
-	if (cmd->args) {
-		/* print line by line */
-		start = cmd->args;
-		end = strchr(start, '\0');
-		printf(" ");
-		do {
-			lend = strchr(start, '\n');
-			if (!lend)
-				lend = end;
-			if (start != cmd->args) {
-				printf("\t");
-				printf("%s ", cmd->name);
-			}
-			printf("%.*s\n", (int)(lend - start), start);
-			start = lend + 1;
-		} while (end != lend);
-	} else
-		printf("\n");
+    if (cmd->args) {
+        /* print line by line */
+        start = cmd->args;
+        end = strchr(start, '\0');
+        printf(" ");
+        do {
+            lend = strchr(start, '\n');
+            if (!lend)
+                lend = end;
+            if (start != cmd->args) {
+                printf("\t");
+                printf("%s ", cmd->name);
+            }
+            printf("%.*s\n", (int)(lend - start), start);
+            start = lend + 1;
+        } while (end != lend);
+    } else
+        printf("\n");
 
-	if (!full || !cmd->help)
-		return;
+    if (!full || !cmd->help)
+        return;
 
-	/* hack */
-	if (strlen(indent))
-		indent = "\t\t";
-	else
-		printf("\n");
+    /* hack */
+    if (strlen(indent))
+        indent = "\t\t";
+    else
+        printf("\n");
 
-	/* print line by line */
-	start = cmd->help;
-	end = strchr(start, '\0');
-	do {
-		lend = strchr(start, '\n');
-		if (!lend)
-			lend = end;
-		printf("%s", indent);
-		printf("%.*s\n", (int)(lend - start), start);
-		start = lend + 1;
-	} while (end != lend);
+    /* print line by line */
+    start = cmd->help;
+    end = strchr(start, '\0');
+    do {
+        lend = strchr(start, '\n');
+        if (!lend)
+            lend = end;
+        printf("%s", indent);
+        printf("%.*s\n", (int)(lend - start), start);
+        start = lend + 1;
+    } while (end != lend);
 
-	printf("\n");
+    printf("\n");
 }
 
 static void usage_options(void)
 {
-	printf("Options:\n");
-	printf("\t--debug\t\tenable netlink debugging\n");
+    printf("Options:\n");
+    printf("\t--debug\t\tenable netlink debugging\n");
 }
 
 static void usage(int argc, char **argv)
 {
-	const struct cmd *cmd;
-	bool full = argc >= 0;
-	const char *sect_filt = NULL;
-	const char *cmd_filt = NULL;
+    const struct cmd *cmd;
+    bool full = argc >= 0;
+    const char *sect_filt = NULL;
+    const char *cmd_filt = NULL;
 
-	if (argc > 0)
-		sect_filt = argv[0];
+    if (argc > 0)
+        sect_filt = argv[0];
 
-	if (argc > 1)
-		cmd_filt = argv[1];
+    if (argc > 1)
+        cmd_filt = argv[1];
 
-	printf("Usage:\t%s [wlanX] command\n", argv0);
-	usage_options();
-	printf("Commands:\n");
-	for_each_cmd(cmd) {
-		if (sect_filt && strcmp(cmd->name, sect_filt))
-			continue;
+    printf("Usage:\t%s [wlanX] command\n", argv0);
+    usage_options();
+    printf("Commands:\n");
+    for_each_cmd(cmd) {
+        if (sect_filt && strcmp(cmd->name, sect_filt))
+            continue;
 
-		if (cmd->handler)
-			__usage_cmd(cmd, "\t", full);
-	}
+        if (cmd->handler)
+            __usage_cmd(cmd, "\t", full);
+    }
 }
 
 static void usage_cmd(const struct cmd *cmd)
 {
-	printf("Usage:\t%s [options] ", argv0);
-	__usage_cmd(cmd, "", true);
-	usage_options();
+    printf("Usage:\t%s [options] ", argv0);
+    __usage_cmd(cmd, "", true);
+    usage_options();
 }
 
-#if 0
-/* Callback Handler */
-void nl_socket_set_cb(struct nl_sock *sk, struct nl_cb *cb)
+static int handle_reply_int_data(char *result_buf)
 {
-	nl_cb_put(sk->s_cb);
-	sk->s_cb = nl_cb_get(cb);
+    int ret = -1;
+    FILE *fp = NULL;
+    char *str1 = NULL;
+    char *str2 = NULL;
+    char buf[TMP_BUF_SIZE] = {0};
+    unsigned char ret_cnt = 0;
+
+    ALOGD("ADL entry %s()", __func__);
+    if(NULL == (fp = fopen(IWNPI_EXEC_TMP_FILE, "r+")))
+    {
+        ALOGD("no %s\n", IWNPI_EXEC_TMP_FILE);
+        return ret;
+    }
+
+    while(!feof(fp))
+    {
+        fgets(buf, TMP_BUF_SIZE, fp);
+        str1 = strstr(buf, STR_RET_RET);
+        str2 = strstr(buf, STR_RET_END);
+
+        ALOGD("ADL %s(), buf = %s, str1 = %s, str2 = %s", __func__, buf, str1, str2);
+
+        if((NULL != str1) && (NULL != str2))
+        {
+            ret_cnt = sscanf(buf, "ret: %d: end", &ret); /* must be match MARCO STR_RET_RET STR_RET_END */
+            ALOGD("ADL %s(), ret_cnt = %d", __func__, ret_cnt);
+            if (ret_cnt > 0)
+            {
+                ALOGD("ADL %s(), ret = %d, break", __func__, ret);
+                break; 
+            }
+        }
+        memset(buf, 0, TMP_BUF_SIZE);
+    }
+    fclose(fp);
+
+    ret = ret_cnt;
+
+    if(result_buf) 
+    {
+        snprintf(result_buf, CMD_RESULT_BUFFER_LEN, "retult: %d", ret);
+    }
+
+    ALOGD("ADL leaving %s(), ret = %d, result_buf = %s", __func__, ret, result_buf);
+    return ret;
 }
+
+/********************************************************************
+*   name   handle_reply_rx_ok_data 
+*   ---------------------------
+*   descrition: handle reply data of get_rx_ok CMD
+*   ----------------------------
+*   para        IN/OUT      type                note
+*   msg         IN          struct nl_msg *     msg
+*   arg         IN          void *              argument
+*   ----------------------------------------------------
+*   return
+*   0:exec successful
+*   other:fail
+*   ------------------
+*   other:
+*
+********************************************************************/
+static int handle_reply_rx_ok_data(char *result_buf)
+{
+    FILE *fp = NULL;
+    char *str1 = NULL;
+    char *str2 = NULL;
+    int ret = -100;
+    int len;
+    char buf[TMP_BUF_SIZE] = {0};
+    char tmp[128] = {0} ;
+
+    ALOGD("ADL entry %s()", __func__);
+    if(NULL == (fp = fopen(IWNPI_EXEC_TMP_FILE, "r+")) )
+    {
+        ALOGD("no %s\n", IWNPI_EXEC_TMP_FILE);
+        return ret;
+    }
+
+    len = strlen(STR_RET_REG_VALUE);
+    while( !feof(fp) )
+    {
+        fgets(buf, TMP_BUF_SIZE, fp);
+        str1 = strstr(buf, STR_RET_REG_VALUE);
+        str2 = strstr(buf, STR_RET_END);
+
+        if( (NULL != str1) && (NULL != str2) )
+        {
+            strncpy(result_buf, buf, CMD_RESULT_BUFFER_LEN);
+            ret = 0;
+            break;
+
+        }
+        memset(buf, 0, TMP_BUF_SIZE);
+    }
+    fclose(fp);
+
+    ALOGD("ADL leveling %s(), result_buf = %s", __func__, result_buf);
+    return ret;
+
+}
+
+/********************************************************************
+*   name   handle_reply_get_reg_data 
+*   ---------------------------
+*   descrition: handle reply data of get_reg command
+*   ----------------------------
+*   para        IN/OUT      type                note
+*   msg         IN          struct nl_msg *     msg
+*   arg         IN          void *              argument
+*   ----------------------------------------------------
+*   return
+*   0:exec successful
+*   other:fail
+*   ------------------
+*   other:
+*
+********************************************************************/
+static int handle_reply_get_reg_data(char *result_buf)
+{
+    FILE *fp = NULL;
+    int ret = -1;
+    char buf[TMP_BUF_SIZE] = {0};
+
+    ALOGD("ADL entry %s()", __func__);
+    if(NULL == (fp = fopen(IWNPI_EXEC_TMP_FILE, "r+")) )
+    {
+        ALOGD("no %s\n", IWNPI_EXEC_TMP_FILE);
+        return ret;
+    }
+
+    while(!feof(fp))
+    {
+        fgets(buf, TMP_BUF_SIZE, fp);
+        strcat(result_buf, buf);
+    }
+
+    ALOGD("ADL leaving %s(), result_buf = %s", __func__, result_buf);
+    return 0;
+}
+
+static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const struct cmd **cmdout, char *result_buf)
+{
+    int err;
+    char command[WIFI_EUT_COMMAND_MAX_LEN+1] = {0x00};
+
+    ALOGD("ADL entry %s(), line = %d, argc = %d", __func__, __LINE__, argc);
+#if 0 /* debug, print all paramters */
+    {
+        char i = 0;
+        while (NULL != argv[i])
+        {
+            ALOGD("ADL %s(), line = %d, argv[%d] = %s", __func__, __LINE__, i, argv[i]);
+            i++;
+        }
+    }
 #endif
 
-static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
-			 void *arg)
-{
-	int *ret = arg;
-	*ret = err->error;
+    if (argc < 1)
+    {
+        return 1;
+    }
 
-	return NL_STOP;
-}
+    {
+        char i = 0;
+        char cmd_str[WIFI_EUT_COMMAND_MAX_LEN+1] = {"iwnpi "};
 
-static int finish_handler(struct nl_msg *msg, void *arg)
-{
-	int *ret = arg;
-	*ret = 0;
+        while (NULL != argv[i])
+        {
+            strcat(cmd_str, argv[i]);
+            strcat(cmd_str, " "); /* add a space */
+            i++;
+        }
 
-	return NL_SKIP;
-}
+        snprintf(command, WIFI_EUT_COMMAND_MAX_LEN, "%s", cmd_str);
+        err = system(command);
+        ALOGD("ADL %s(), called system(%s), err = %d", __func__, command, err);
+    }
 
-static int ack_handler(struct nl_msg *msg, void *arg)
-{
-	int *ret = arg;
-	*ret = 0;
+    //for lna_status cmd
+    ALOGD("ADL %s(), command = %s", __func__, command);
+    if (strstr(command, CMD_LNA_STATUS) > 0)
+    {
+        if(result_buf)
+        {
+            ALOGD("ADL %s(), call handle_reply_int_data()", __func__);
+            handle_reply_int_data(result_buf);
+        }
+    }
+    else if (strstr(command, CMD_RX_GET_OK) > 0)
+    {
+        if(result_buf)
+        {
+            ALOGD("ADL %s(), call handle_reply_rx_ok_data()", __func__);
+            handle_reply_rx_ok_data(result_buf);
+        }
+    }
+    else if (strstr(command, CMD_GET_REG) > 0)
+    {
+        if(result_buf)
+        {
+            ALOGD("ADL %s(), call handle_reply_get_reg_data()", __func__);
+            handle_reply_get_reg_data(result_buf);
+        }
+    }
 
-	return NL_STOP;
-}
-
-
-static int handle_reply_int_data(struct nl_msg *msg, void *arg)
-{
-	struct nlattr *tb_msg[NLNPI_ATTR_MAX + 1];
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	char *buf = (char*)arg;
-
-	nla_parse(tb_msg, NLNPI_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-		  genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (tb_msg[NLNPI_ATTR_REPLY_DATA]) {
-		if (nla_len(tb_msg[NLNPI_ATTR_REPLY_DATA]) == 4) {
-			printf("retult: %d :end\n", *(unsigned int *)
-			       nla_data(tb_msg[NLNPI_ATTR_REPLY_DATA]));
-			if(buf) {
-				snprintf(buf, CMD_RESULT_BUFFER_LEN, "retult: %d", *(unsigned int *)
-				       nla_data(tb_msg[NLNPI_ATTR_REPLY_DATA]));
-			}
-		} else
-			printf("retult: Invild len %d :end\n",
-			       nla_len(tb_msg[NLNPI_ATTR_REPLY_DATA]));
-	} else {
-		printf("Failed to get result! :end\n");
-	}
-
-	return NL_SKIP;
-}
-
-static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv,
-			const struct cmd **cmdout, char *result_buf)
-{
-	const struct cmd *cmd, *match = NULL;
-	struct nl_cb *cb;
-	struct nl_cb *s_cb;
-	struct nl_msg *msg;
-	int err, o_argc;
-	const char *command;
-	char **o_argv;
-	signed long long devidx = 0;
-
-	if (argc < 1)
-		return 1;
-
-	o_argc = argc;
-	o_argv = argv;
-
-	devidx = if_nametoindex(*argv);
-	if (devidx == 0)
-		devidx = -1;
-	argc--;
-	argv++;
-
-	command = *argv;
-	argc--;
-	argv++;
-
-	for_each_cmd(cmd) {
-		if (match)
-			continue;
-		if (strcmp(cmd->name, command) == 0)
-			match = cmd;
-	}
-
-	cmd = match;
-	if (!cmd)
-		return 1;
-	if (argc && !cmd->args)
-		return 1;
-	if (!cmd->handler)
-		return 1;
-
-	if (cmdout)
-		*cmdout = cmd;
-
-	if (!cmd->cmd) {
-		argc = o_argc;
-		argv = o_argv;
-		return cmd->handler(state, NULL, NULL, argc, argv);
-	}
-
-	msg = nlmsg_alloc();
-	if (!msg) {
-		fprintf(stderr, "failed to allocate netlink message\n");
-		return 2;
-	}
-
-	cb = nl_cb_alloc(iwnpi_debug ? NL_CB_DEBUG : NL_CB_DEFAULT);
-	s_cb = nl_cb_alloc(iwnpi_debug ? NL_CB_DEBUG : NL_CB_DEFAULT);
-	if (!cb || !s_cb) {
-		fprintf(stderr, "failed to allocate netlink callbacks\n");
-		err = 2;
-		goto out_free_msg;
-	}
-
-	genlmsg_put(msg, 0, 0, state->nlnpi_id, 0,
-		    cmd->nl_msg_flags, cmd->cmd, 0);
-	NLA_PUT_U32(msg, NLNPI_ATTR_IFINDEX, devidx);
-
-	err = cmd->handler(state, cb, msg, argc, argv);
-	if (err)
-		goto out;
-
-	nl_socket_set_cb(state->nl_sock, s_cb);
-
-	err = nl_send_auto_complete(state->nl_sock, msg);
-	if (err < 0)
-		goto out;
-
-	err = 1;
-
-	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
-	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
-	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
-
-	//for lna_status cmd
-	if (strcmp(CMD_LNA_STATUS, command) == 0)
-	{
-		if(result_buf)
-			nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, handle_reply_int_data, result_buf);
-	}
-
-	while (err > 0)
-		nl_recvmsgs(state->nl_sock, cb);
-out:
-	nl_cb_put(cb);
-out_free_msg:
-	nlmsg_free(msg);
-	return err;
-nla_put_failure:
-	fprintf(stderr, "building message failed\n");
-	return 2;
+    ALOGD("ADL leaving %s(), line = %d, return %d", __func__, __LINE__, err);
+    return err;
 }
 
 static int nlnpi_init(struct nlnpi_state *state)
 {
-	int err;
+    int err;
 
-	state->nl_sock = nl_socket_alloc();
-	if (!state->nl_sock) {
-		fprintf(stderr, "Failed to allocate netlink socket.\n");
-		return -ENOMEM;
-	}
+    state->nl_sock = nl_socket_alloc();
+    if (!state->nl_sock) {
+        fprintf(stderr, "Failed to allocate netlink socket.\n");
+        return -ENOMEM;
+    }
 
-	nl_socket_set_buffer_size(state->nl_sock, 4096, 4096);
+    nl_socket_set_buffer_size(state->nl_sock, 4096, 4096);
 
-	if (genl_connect(state->nl_sock)) {
-		fprintf(stderr, "Failed to connect to generic netlink.\n");
-		err = -ENOLINK;
-		goto out_handle_destroy;
-	}
-	/* Android does not support genl_strl_resolve */
-/*	state->nlnpi_id = genl_ctrl_resolve(state->nl_sock, "nlnpi");*/
-	state->nlnpi_id = NL_GENERAL_NPI_ID;
-	if (state->nlnpi_id < 0) {
-		fprintf(stderr, "nlnpi not found.\n");
-		err = -ENOENT;
-		goto out_handle_destroy;
-	}
+    if (genl_connect(state->nl_sock)) {
+        fprintf(stderr, "Failed to connect to generic netlink.\n");
+        err = -ENOLINK;
+        goto out_handle_destroy;
+    }
+    /* Android does not support genl_strl_resolve */
+/*  state->nlnpi_id = genl_ctrl_resolve(state->nl_sock, "nlnpi");*/
+    state->nlnpi_id = NL_GENERAL_NPI_ID;
+    if (state->nlnpi_id < 0) {
+        fprintf(stderr, "nlnpi not found.\n");
+        err = -ENOENT;
+        goto out_handle_destroy;
+    }
 
-	return 0;
+    return 0;
 
 out_handle_destroy:
-	nl_socket_free(state->nl_sock);
-	return err;
+    nl_socket_free(state->nl_sock);
+    return err;
 }
 
 static void nlnpi_cleanup(struct nlnpi_state *state)
 {
-	nl_socket_free(state->nl_sock);
+    nl_socket_free(state->nl_sock);
 }
 
 
@@ -343,34 +408,34 @@ static void nlnpi_cleanup(struct nlnpi_state *state)
 
 static int send_back_cmd_result(int client_fd, char *str, int isOK)
 {
-	char buffer[255];
+    char buffer[255];
 
-	if(client_fd < 0)
-	{
-		fprintf(stderr, "write %s to invalid fd \n", str);
+    if(client_fd < 0)
+    {
+        fprintf(stderr, "write %s to invalid fd \n", str);
 
-		return -1;
-	}
-	
-	memset(buffer, 0, sizeof(buffer));
+        return -1;
+    }
+    
+    memset(buffer, 0, sizeof(buffer));
 
-	if(!str)
-	{
-		snprintf(buffer, 255, "%s",  (isOK?OK_STR:FAIL_STR));
-	}
-	else
-	{
-		snprintf(buffer, 255, "%s %s", (isOK?OK_STR:FAIL_STR), str);
-	}
+    if(!str)
+    {
+        snprintf(buffer, 255, "%s",  (isOK?OK_STR:FAIL_STR));
+    }
+    else
+    {
+        snprintf(buffer, 255, "%s %s", (isOK?OK_STR:FAIL_STR), str);
+    }
 
-	int ret = write(client_fd, buffer, strlen(buffer)+1);
-	if(ret < 0)
-	{
-		fprintf(stderr, "write %s to client_fd:%d fail (error:%s)", buffer, client_fd, strerror(errno));
-		return -1;
-	}
+    int ret = write(client_fd, buffer, strlen(buffer)+1);
+    if(ret < 0)
+    {
+        fprintf(stderr, "write %s to client_fd:%d fail (error:%s)", buffer, client_fd, strerror(errno));
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 /**
@@ -378,61 +443,66 @@ static int send_back_cmd_result(int client_fd, char *str, int isOK)
 */
 int iwnpi_runcommand(int client_fd, int argc, char **argv)
 {
-	struct nlnpi_state nlstate;
-	int err;
-	const struct cmd *cmd = NULL;
+    struct nlnpi_state nlstate;
+    int err;
+    const struct cmd *cmd = NULL;
 
-	/* calculate command size including padding */
-	cmd_size = abs((long)&__section_set - (long)&__section_get);
+    /* calculate command size including padding */
+    cmd_size = abs((long)&__section_set - (long)&__section_get);
 
-	if (argc > 0 && strcmp(*argv, "--debug") == 0) {
-		iwnpi_debug = 1;
-		argc--;
-		argv++;
-	}
+    if (argc > 0 && strcmp(*argv, "--debug") == 0) {
+        iwnpi_debug = 1;
+        argc--;
+        argv++;
+    }
 
-	/* need to treat "help" command specially so it works w/o nl80211 */
-	if (argc == 0 || strcmp(*argv, "help") == 0) {
-		usage(argc - 1, argv + 1);
-		return 0;
-	}
+    /* need to treat "help" command specially so it works w/o nl80211 */
+    if (argc == 0 || strcmp(*argv, "help") == 0) {
+        usage(argc - 1, argv + 1);
+        return 0;
+    }
 
-	err = nlnpi_init(&nlstate);
-	if (err)
-		return 1;
+    err = nlnpi_init(&nlstate);
+    if (err)
+        return 1;
 
-	char result_buf[CMD_RESULT_BUFFER_LEN];
-	memset(result_buf, 0, sizeof(result_buf));
-	if (strncmp(*argv, "wlan", 4) == 0 && argc > 1) {
-		err = __handle_cmd(&nlstate, argc, argv, &cmd, result_buf);
-	} else {
-		fprintf(stderr, "wireless dev start with wlan\n");
-		err = 1;
-	}
+    char result_buf[CMD_RESULT_BUFFER_LEN];
+    memset(result_buf, 0, sizeof(result_buf));
+    if (strncmp(*argv, "wlan", 4) == 0 && argc > 1) 
+    {
+        err = __handle_cmd(&nlstate, argc, argv, &cmd, result_buf);
+    } 
+    else 
+    {
+        fprintf(stderr, "wireless dev start with wlan\n");
+        err = 1;
+    }
 
-	if (err == 1) {
-		send_back_cmd_result(client_fd, "invalid cmd or cmd format", 0);
-	} else if (err < 0)
-	{
-		char buf[128];
-		memset(buf, 0, sizeof(buf));
-		snprintf(buf, 128, "command failed return value: %d",  err);
+    if (err == 1)
+    {
+        send_back_cmd_result(client_fd, "invalid cmd or cmd format", 0);
+    }
+    else if (err < 0)
+    {
+        char buf[128];
+        memset(buf, 0, sizeof(buf));
+        snprintf(buf, 128, "command failed return value: %d",  err);
 
-		send_back_cmd_result(client_fd, buf, 0);
-	}
-	else
-	{
-		char buf[128];
-		memset(buf, 0, sizeof(buf));
-		if(strlen(result_buf))
-			snprintf(buf, 128, "%s",  result_buf);
-		else
-			snprintf(buf, 128, "return value: %d",  err);
+        send_back_cmd_result(client_fd, buf, 0);
+    }
+    else
+    {
+        char buf[128];
+        memset(buf, 0, sizeof(buf));
+        if(strlen(result_buf))
+            snprintf(buf, 128, "%s",  result_buf);
+        else
+            snprintf(buf, 128, "return value: %d",  err);
 
-		send_back_cmd_result(client_fd, buf, 1);
-	}
+        send_back_cmd_result(client_fd, buf, 1);
+    }
 
-	nlnpi_cleanup(&nlstate);
+    nlnpi_cleanup(&nlstate);
 
-	return err;
+    return err;
 }

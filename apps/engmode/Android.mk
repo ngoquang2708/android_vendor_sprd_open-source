@@ -28,6 +28,7 @@ LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
 endif
 
 ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
+LOCAL_CFLAGS += -DHAS_BLUETOOTH_SPRD
 ifeq ($(USE_SPRD_BQBTEST),true)
 	LOCAL_CFLAGS += -DCONFIG_BQBTEST
 endif
@@ -43,6 +44,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       vlog.c \
 		       vdiag.c \
 		       bt_eut.c \
+		       wifi_eut_shark.c \
 		       eng_productdata.c \
 		       adc_calibration.c\
 		       crc16.c \
@@ -86,7 +88,7 @@ ifdef WIFI_DRIVER_FW_PATH_MFG
 LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_MFG=\"$(WIFI_DRIVER_FW_PATH_MFG)\"
 endif
 else
-LOCAL_SRC_FILES     += wifi_eut_shark.c
+#LOCAL_SRC_FILES     += wifi_eut_shark.c
 endif
 
 LOCAL_MODULE := engpc

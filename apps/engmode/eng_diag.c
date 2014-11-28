@@ -33,6 +33,9 @@
 #include "string_exchange_bin.h"
 #include "calibration.h"
 #include "eng_cmd4linuxhdlr.h"
+
+#include "wifi_eut_shark.h"
+#include "bt_eut.h"
 #include "gps_pc_mode.h"
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
@@ -112,7 +115,9 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len);
 int is_rm_cali_nv_need_to_handle(char *buf,int len);
 int eng_diag_factorymode(char *buf,int len, char *rsp);
 int eng_diag_mmicit_read(char *buf,int len, char *rsp, int rsplen);
-int get_sub_str(char *buf,char **revdata, char a, char b);
+
+int get_sub_str(const char *buf, char **revdata, char a, char *delim, unsigned char count, unsigned char substr_max_len);
+
 int get_cmd_index(char *buf);
 int eng_diag_decode7d7e(char *buf,int len);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
@@ -186,32 +191,137 @@ static struct eng_autotestcmd_str eng_autotestcmd[] = {
     {CMD_AUTOTEST_GPS,             eng_autotest_gps},
 };
 
-struct eut_cmd eut_cmds[]={
+struct eut_cmd eut_cmds[] =
+{
     {EUT_REQ_INDEX,ENG_EUT_REQ},
     {EUT_INDEX,ENG_EUT},
     {GPSSEARCH_REQ_INDEX,ENG_GPSSEARCH_REQ},
     {GPSSEARCH_INDEX,ENG_GPSSEARCH},
     {WIFICH_REQ_INDEX,ENG_WIFICH_REQ},
     {WIFICH_INDEX,ENG_WIFICH},
-    {WIFIMODE_INDEX,ENG_WIFIMODE},
+
     {WIFIRATIO_REQ_INDEX,ENG_WIFIRATIO_REQ},
     {WIFIRATIO_INDEX,ENG_WIFIRATIO},
+
+    /* Tx Power Level */
+    {WIFITXPWRLV_REQ_INDEX, ENG_WIFITXPWRLV_REQ},
+    {WIFITXPWRLV_INDEX, ENG_WIFITXPWRLV},
+
+    /* Tx FAC */
     {WIFITX_FACTOR_REQ_INDEX,ENG_WIFITX_FACTOR_REQ},
     {WIFITX_FACTOR_INDEX,ENG_WIFITX_FACTOR},
+
+    /* TX Mode */
+    {WIFITXMODE_REQ_INDEX, ENG_WIFITXMODE_REQ},
+    {WIFITXMODE_INDEX, ENG_WIFITXMODE},
+
+    /* TX Gain */
     {ENG_WIFITXGAININDEX_REQ_INDEX, ENG_WIFITXGAININDEX_REQ},
     {ENG_WIFITXGAININDEX_INDEX, ENG_WIFITXGAININDEX},
-    {WIFITX_REQ_INDEX,ENG_WIFITX_REQ},
-    {WIFITX_INDEX,ENG_WIFITX},
+
+    /* TX */
+    {TX_REQ_INDEX, ENG_TX_REQ},
+    {TX_INDEX, ENG_TX},
+
+    /* RX */
+    {RX_REQ_INDEX, ENG_RX_REQ},
+    {RX_INDEX, ENG_RX},
+
+    /* Mode, is not TX Mode*/
+    {WIFIMODE_INDEX, ENG_WIFIMODE},
+
     {WIFIRX_PACKCOUNT_INDEX,ENG_WIFIRX_PACKCOUNT},
     {WIFICLRRXPACKCOUNT_INDEX,ENG_WIFI_CLRRXPACKCOUNT},
-    {WIFIRX_REQ_INDEX,ENG_WIFIRX_REQ},
-    {WIFIRX_INDEX,ENG_WIFIRX},
     {GPSPRNSTATE_REQ_INDEX,ENG_GPSPRNSTATE_REQ},
     {GPSSNR_REQ_INDEX,ENG_GPSSNR_REQ},
     {GPSPRN_INDEX,ENG_GPSPRN},
     {ENG_WIFIRATE_REQ_INDEX, ENG_WIFIRATE_REQ},
     {ENG_WIFIRATE_INDEX,ENG_WIFIRATE},
-    {ENG_WIFIRSSI_REQ_INDEX, ENG_WIFIRSSI_REQ},  
+    {ENG_WIFIRSSI_REQ_INDEX, ENG_WIFIRSSI_REQ},
+
+    /* LNA */
+    {WIFILNA_REQ_INDEX, ENG_WIFILNA_REQ},
+    {WIFILNA_INDEX, ENG_WIFILNA},
+
+    /* Band */
+    {WIFIBAND_REQ_INDEX, ENG_WIFIBAND_REQ},
+    {WIFIBAND_INDEX, ENG_WIFIBAND},
+
+    /* Band Width */
+    {WIFIBANDWIDTH_REQ_INDEX, ENG_WIFIBANDWIDTH_REQ},
+    {WIFIBANDWIDTH_INDEX, ENG_WIFIBANDWIDTH},
+
+
+    /* Pkt Length */
+    {WIFIPKTLEN_REQ_INDEX, ENG_WIFIPKTLEN_REQ},
+    {WIFIPKTLEN_INDEX, ENG_WIFIPKTLEN},
+
+
+    /* Preamble */
+    {WIFIPREAMBLE_REQ_INDEX, ENG_WIFIPREAMBLE_REQ},
+    {WIFIPREAMBLE_INDEX, ENG_WIFIPREAMBLE},
+
+    /* Payload */
+    {WIFIPAYLOAD_REQ_INDEX, ENG_WIFIPAYLOAD_REQ},
+    {WIFIPAYLOAD_INDEX, ENG_WIFIPAYLOAD},
+
+    /* Guard Interval */
+    {WIFIGUARDINTERVAL_REQ_INDEX, ENG_GUARDINTERVAL_REQ},
+    {WIFIGUARDINTERVAL_INDEX, ENG_GUARDINTERVAL},
+
+    /* MAC Filter */
+    {WIFIMACFILTER_REQ_INDEX, ENG_MACFILTER_REQ},
+    {WIFIMACFILTER_INDEX, ENG_MACFILTER},
+
+
+    //以下是BT的
+    /* BT TXCH*/
+    {BT_TXCH_REQ_INDEX, ENG_BT_TXCH_REQ},
+    {BT_TXCH_INDEX, ENG_BT_TXCH},
+
+    /* BT RXCH*/
+    {BT_RXCH_REQ_INDEX, ENG_BT_RXCH_REQ},
+    {BT_RXCH_INDEX, ENG_BT_RXCH},
+
+    /* BT TX PATTERN */
+    {BT_TXPATTERN_REQ_INDEX, ENG_BT_TXPATTERN_REQ},
+    {BT_TXPATTERN_INDEX, ENG_BT_TXPATTERN},
+
+    /* BT RX PATTERN */
+    {BT_RXPATTERN_REQ_INDEX, ENG_BT_RXPATTERN_REQ},
+    {BT_RXPATTERN_INDEX,ENG_BT_RXPATTERN},
+
+    /* TXPKTTYPE */
+    {BT_TXPKTTYPE_REQ_INDEX, ENG_BT_TXPKTTYPE_REQ},
+    {BT_TXPKTTYPE_INDEX, ENG_BT_TXPKTTYPE},
+
+    /* RXPKTTYPE */
+    {BT_RXPKTTYPE_REQ_INDEX, ENG_BT_RXPKTTYPE_REQ},
+    {BT_RXPKTTYPE_INDEX, ENG_BT_RXPKTTYPE},
+
+    /* TXPKTLEN */
+    {BT_TXPKTLEN_REQ_INDEX, ENG_BT_TXPKTLEN_REQ},
+    {BT_TXPKTLEN_INDEX, ENG_BT_TXPKTLEN},
+
+    /* TXPWR */
+    {BT_TXPWR_REQ_INDEX, ENG_BT_TXPWR_REQ},
+    {BT_TXPWR_INDEX, ENG_BT_TXPWR},
+
+    /* RX Gain */
+    {BT_RXGAIN_REQ_INDEX, ENG_BT_RXGAIN_REQ},
+    {BT_RXGAIN_INDEX, ENG_BT_RXGAIN},
+
+    /* ADDRESS */
+    {BT_ADDRESS_REQ_INDEX, ENG_BT_ADDRESS_REQ},
+    {BT_ADDRESS_INDEX, ENG_BT_ADDRESS},
+
+    /* RXDATA */
+    {BT_RXDATA_REQ_INDEX, ENG_BT_RXDATA_REQ},
+
+    /* TESTMODE */
+    {BT_TESTMODE_REQ_INDEX, ENG_BT_TESTMODE_REQ},
+    {BT_TESTMODE_INDEX, ENG_BT_TESTMODE},
+
 };
 
 static int eng_diag_write2pc(unsigned char* buf, unsigned int len)
@@ -244,10 +354,14 @@ static void print_log(char* log_data,int cnt)
         cnt = ENG_DIAG_SIZE;
 
     ENG_LOG("vser receive:\n");
-    for(i = 0; i < cnt; i++) {
-        if (isalnum(log_data[i])){
+    for(i = 0; i < cnt; i++) 
+    {
+        if (isalnum(log_data[i]))
+        {
             ENG_LOG("%c ", log_data[i]);
-        }else{
+        }
+        else
+        {
             ENG_LOG("%2x ", log_data[i]);
         }
     }
@@ -636,150 +750,176 @@ int eng_hex2ascii(char *input, char *output, int length)
         strcat(output, tmp);
     }
 
-    ENG_LOG("%s: %s",__FUNCTION__, output);
+    ENG_LOG("%s: %s", __func__, output);
     return strlen(output);
 }
 
-int eng_atdiag_euthdlr(char * buf, int len, char * rsp,int module_index)
+int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
 {
-    char args0[15] = {0};
-    char args1[15] = {0};
-    char *data[2] = {args0,args1};
+    char args0[32+1] = {0x00};
+    char args1[32+1] = {0x00};
+    char args2[32+1] = {0x00};
+    char args3[32+1] = {0x00};
+
+    char *data[4] = {args0, args1, args2, args3};
     int cmd_index = -1;
-    get_sub_str(buf,data ,'=' ,',');
-    cmd_index = get_cmd_index(buf);
+
     ENG_LOG("\r\n");
-    ENG_LOG("eng_atdiag_euthdlr(), args0 =%s, args1=%s, cmd_index=%d\n",args0,args1,cmd_index);
-    switch(cmd_index){
+    ENG_LOG("ADL entry %s(), buf = %s", __func__, buf);
+
+    get_sub_str(buf, data, '=', ",", 4, 32);
+    cmd_index = get_cmd_index(buf);
+    ENG_LOG("ADL %s(), args0 = %s, args1 = %s, args2 = %s, args3 = %s cmd_index = %d, module_index = %d", __func__, args0, args1, args2, args3, cmd_index, module_index);
+
+    switch(cmd_index)
+    {
         case EUT_REQ_INDEX:
-            if(module_index == BT_MODULE_INDEX){
-                ALOGD("case BT_EUT_REQ_INDEX");
-                bt_eutops.bteut_req(rsp);
-            }
-            else if(module_index == WIFI_MODULE_INDEX){
+            if(module_index == WIFI_MODULE_INDEX)
+            {
                 ENG_LOG("case WIFIEUT_INDEX");
-                //wifi_eut_get(rsp);
-                if (wifi_eutops.wifieut_req != NULL)
-                    wifi_eutops.wifieut_req(rsp);
-                else
-                    ALOGE("wifi_eutops.wifieut_req not support!");
+                wifi_eut_get(rsp);
             }
-            else {
+            else
+            {
                 ALOGD("case GPS_INDEX");
                 gps_eutops.gpseut_req(rsp);
             }
             break;
+
         case EUT_INDEX:
-            if(module_index == BT_MODULE_INDEX){
-                ALOGD("case BTEUT_INDEX");
-                bt_eutops.bteut(atoi(data[1]),rsp);
-            }
-            else if(module_index == WIFI_MODULE_INDEX){
+            if(module_index == WIFI_MODULE_INDEX)
+            {
                 ENG_LOG("case WIFIEUT_INDEX");
-                //wifi_eut_set(atoi(data[1]), rsp);
-                if (wifi_eutops.wifieut != NULL)
-                    wifi_eutops.wifieut(atoi(data[1]), rsp);
-                else
-                    ALOGE("wifi_eutops.wifieut not support!");
+                wifi_eut_set(atoi(data[1]), rsp);
             }
-            else {
+            else
+            {
                 ALOGD("case GPS_INDEX");
                 gps_eutops.gpseut(atoi(data[1]),rsp);
             }
             break;
         case WIFICH_REQ_INDEX:
-            ENG_LOG("case WIFIEUT_INDEX");
-            //wifi_channel_get(rsp);
-            if (wifi_eutops.wifi_ch_req != NULL)
-                wifi_eutops.wifi_ch_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_ch_req not support!");
+            wifi_channel_get(rsp);
             break;
         case WIFICH_INDEX:
-            //wifi_channel_set(atoi(data[1]),rsp);
-            if (wifi_eutops.set_wifi_ch != NULL)
-                wifi_eutops.set_wifi_ch(atoi(data[1]),rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_ch not support!");
+            ENG_LOG("case WIFICH_INDEX   %d",WIFICH_INDEX);
+            wifi_channel_set(atoi(data[1]),rsp);
             break;
         case WIFIMODE_INDEX:
             //wifi_eutops.set_wifi_mode(data[1],rsp);
-            if (wifi_eutops.set_wifi_mode != NULL)
-                wifi_eutops.set_wifi_mode(data[1],rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_mode not support!");
             break;
         case WIFIRATIO_INDEX:
             ALOGD("case WIFIRATIO_INDEX   %d",WIFIRATIO_INDEX);
             //wifi_eutops.set_wifi_ratio(atof(data[1]),rsp);
-            if (wifi_eutops.set_wifi_ratio != NULL)
-                wifi_eutops.set_wifi_ratio(atof(data[1]),rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_ratio not support!");
             break;
         case WIFITX_FACTOR_INDEX:
             //wifi_eutops.set_wifi_tx_factor(atol(data[1]),rsp);
-            if (wifi_eutops.set_wifi_tx_factor != NULL)
-                wifi_eutops.set_wifi_tx_factor(atol(data[1]),rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_tx_factor not support!");
             break;
-        case WIFITX_INDEX:
-            ENG_LOG("case WIFITX_INDEX   %d",WIFITX_INDEX);
-            //wifi_tx_set(atoi(data[1]),rsp);
-            if (wifi_eutops.wifi_tx != NULL)
-                wifi_eutops.wifi_tx(atoi(data[1]),rsp);
+
+        case TX_INDEX:
+        {
+            ENG_LOG("ADL %s(), case TX_INDEX, module_index = %d", __func__, module_index);
+
+            if(BT_MODULE_INDEX == module_index || BLE_MODULE_INDEX == module_index)
+            {
+                int pktcnt = 0;
+
+                if (0 != strlen(data[3]))
+                {
+                    pktcnt = atoi(data[3]);
+                }
+
+                ENG_LOG("ADL %s(), case TX_INDEX, call bt_tx_set(), pktcnt = %d", __func__, pktcnt);
+                bt_tx_set(atoi(data[1]), atoi(data[2]), pktcnt, rsp);
+            }
+            else if(module_index == WIFI_MODULE_INDEX)
+            {
+                ENG_LOG("ADL %s(), case TX_INDEX, call wifi_tx_set()", __func__);
+                wifi_tx_set(atoi(data[1]), atoi(data[2]), atoi(data[3]), rsp);
+            }
             else
-                ALOGE("wifi_eutops.wifi_tx not support!");
-            break;
-        case WIFIRX_INDEX:
-            //wifi_rx_set(atoi(data[1]),rsp);
-            if (wifi_eutops.wifi_rx != NULL)
-                wifi_eutops.wifi_rx(atoi(data[1]),rsp);
+            {
+                ENG_LOG("ADL %s(), case TX_INDEX, module_index is ERROR", __func__);
+            }
+        }
+        break;
+
+        case RX_INDEX:
+        {
+            ENG_LOG("ADL %s(), case RX_INDEX, module_index = %d", __func__, module_index);
+
+            if(BT_MODULE_INDEX == module_index || BLE_MODULE_INDEX == module_index)
+            {
+                ENG_LOG("ADL %s(), case RX_INDEX, call bt_rx_set()", __func__);
+                bt_rx_set(atoi(data[1]), rsp);
+            }
+            else if(module_index == WIFI_MODULE_INDEX)
+            {
+                ENG_LOG("ADL %s(), case RX_INDEX, call wifi_rx_set()", __func__);
+                wifi_rx_set(atoi(data[1]), rsp);
+            }
             else
-                ALOGE("wifi_eutops.wifi_rx not support!");
-            break;
-        case WIFITX_REQ_INDEX:
-            //wifi_tx_get(rsp);
-            if (wifi_eutops.wifi_tx_req != NULL)
-                wifi_eutops.wifi_tx_req(rsp);
+            {
+                ENG_LOG("ADL %s(), case RX_INDEX, module_index is ERROR", __func__);
+            }
+        }
+        break;
+
+        case TX_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case TX_REQ_INDEX, module_index = %d", __func__, module_index);
+
+            if (BT_MODULE_INDEX == module_index || BLE_MODULE_INDEX == module_index)
+            {
+                ENG_LOG("ADL %s(), case TX_REQ_INDEX, call bt_tx_get()", __func__);
+                bt_tx_get(rsp);
+            }
+            else if (WIFI_MODULE_INDEX == module_index)
+            {
+                ENG_LOG("ADL %s(), case TX_REQ_INDEX, call wifi_tx_get()", __func__);
+                wifi_tx_get(rsp);
+            }
             else
-                ALOGE("wifi_eutops.wifi_tx_req not support!");
-            break;
-        case WIFIRX_REQ_INDEX:
-            //wifi_rx_get(rsp);
-            if (wifi_eutops.wifi_rx_req != NULL)
-                wifi_eutops.wifi_rx_req(rsp);
+            {
+                ENG_LOG("ADL %s(), case TX_REQ_INDEX, module_index is ERROR", __func__);
+            }
+        }
+        break;
+
+        case RX_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case RX_REQ_INDEX, module_index = %d", __func__, module_index);
+
+            if (BT_MODULE_INDEX == module_index || BLE_MODULE_INDEX == module_index)
+            {
+                ENG_LOG("ADL %s(), case RX_REQ_INDEX, call bt_rx_get()", __func__);
+                bt_rx_get(rsp);
+            }
+            else if (WIFI_MODULE_INDEX == module_index)
+            {
+                ENG_LOG("ADL %s(), case RX_REQ_INDEX, call wifi_rx_get()", __func__);
+                wifi_rx_get(rsp);
+            }
             else
-                ALOGE("wifi_eutops.wifi_rx_req not support!");
-            break;
+            {
+                ENG_LOG("ADL %s(), case RX_REQ_INDEX, module_index is ERROR", __func__);
+            }
+        }
+        break;
+
         case WIFITX_FACTOR_REQ_INDEX:
             //wifi_eutops.wifi_tx_factor_req(rsp);
-            if (wifi_eutops.wifi_tx_factor_req != NULL)
-                wifi_eutops.wifi_tx_factor_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_tx_factor_req not support!");
+            
             break;
         case WIFIRATIO_REQ_INDEX:
             //wifi_eutops.wifi_ratio_req(rsp);
-            if (wifi_eutops.wifi_ratio_req != NULL)
-                wifi_eutops.wifi_ratio_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_ratio_req not support!");
+            
             break;
         case WIFIRX_PACKCOUNT_INDEX:
-            //wifi_rxpktcnt_get(rsp);
-            if (wifi_eutops.wifi_rxpackcount != NULL)
-                wifi_eutops.wifi_rxpackcount(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_rxpackcount not support!");
+            wifi_rxpktcnt_get(rsp);
             break;
         case WIFICLRRXPACKCOUNT_INDEX:
             //wifi_eutops.wifi_clr_rxpackcount(rsp);
-            if (wifi_eutops.wifi_clr_rxpackcount != NULL)
-                wifi_eutops.wifi_clr_rxpackcount(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_clr_rxpackcount not support!");
             break;
         case GPSSEARCH_REQ_INDEX:
             gps_eutops.gps_search_req(rsp);
@@ -799,45 +939,366 @@ int eng_atdiag_euthdlr(char * buf, int len, char * rsp,int module_index)
             //-----------------------------------------------------
         case ENG_WIFIRATE_INDEX:
             ENG_LOG("%s(), case:ENG_WIFIRATE_INDEX\n", __FUNCTION__);
-            //wifi_rate_set(data[1], rsp);
-            if (wifi_eutops.set_wifi_rate != NULL)
-                wifi_eutops.set_wifi_rate(data[1], rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_rate not support!");
+            wifi_rate_set(data[1], rsp);
             break;
         case ENG_WIFIRATE_REQ_INDEX:
             ENG_LOG("%s(), case:ENG_WIFIRATE_REQ_INDEX\n", __FUNCTION__);
-            //wifi_rate_get(rsp);
-            if (wifi_eutops.wifi_rate_req != NULL)
-                wifi_eutops.wifi_rate_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_rate_req not support!");
+            wifi_rate_get(rsp);
             break;
         case ENG_WIFITXGAININDEX_INDEX:
             ENG_LOG("%s(), case:ENG_WIFITXGAININDEX_INDEX\n", __FUNCTION__);
-            //wifi_txgainindex_set(atoi(data[1]),rsp);
-            if (wifi_eutops.set_wifi_txgainindex != NULL)
-                wifi_eutops.set_wifi_txgainindex(atoi(data[1]),rsp);
-            else
-                ALOGE("wifi_eutops.set_wifi_txgainindex not support!");
+            wifi_txgainindex_set(atoi(data[1]),rsp);
             break;
         case ENG_WIFITXGAININDEX_REQ_INDEX:
             ENG_LOG("%s(), case:ENG_WIFITXGAININDEX_REQ_INDEX\n", __FUNCTION__);
-            //wifi_txgainindex_get(rsp);
-            if (wifi_eutops.wifi_txgainindex_req != NULL)
-                wifi_eutops.wifi_txgainindex_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_txgainindex_req not support!");
+            wifi_txgainindex_get(rsp);
             break;
         case ENG_WIFIRSSI_REQ_INDEX:
             ENG_LOG("%s(), case:ENG_WIFIRSSI_REQ_INDEX\n", __FUNCTION__);
-            //wifi_rssi_get(rsp);
-            if (wifi_eutops.wifi_rssi_req != NULL)
-                wifi_eutops.wifi_rssi_req(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_rssi_req not support!");
+            wifi_rssi_get(rsp);
             break;
-            //-----------------------------------------------------
+
+        /* lna */
+        case WIFILNA_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFILNA_REQ_INDEX", __func__);
+            wifi_lna_get(rsp);
+        }
+        break;
+
+        case WIFILNA_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFILNA_INDEX", __func__);
+            wifi_lna_set(atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Band */
+        case WIFIBAND_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIBAND_REQ_INDEX", __func__);
+            wifi_band_get(rsp);
+        }
+        break;
+
+        case WIFIBAND_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIBAND_INDEX", __func__);
+            wifi_band_set((wifi_band)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Band Width */
+        case WIFIBANDWIDTH_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIBANDWIDTH_REQ_INDEX", __func__);
+            wifi_bandwidth_get(rsp);
+        }
+        break;
+
+        case WIFIBANDWIDTH_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIBANDWIDTH_INDEX", __func__);
+            wifi_bandwidth_set((wifi_bandwidth)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Tx Power Level */
+        case WIFITXPWRLV_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFITXPWRLV_REQ_INDEX", __func__);
+            wifi_tx_power_level_get(rsp);
+        }
+        break;
+
+        case WIFITXPWRLV_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFITXPWRLV_INDEX", __func__);
+            wifi_tx_power_level_set(atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Pkt Length */
+        case WIFIPKTLEN_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPKTLEN_REQ_INDEX", __func__);
+            wifi_pkt_length_get(rsp);
+        }
+        break;
+
+        case WIFIPKTLEN_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPKTLEN_INDEX", __func__);
+            wifi_pkt_length_set(atoi(data[1]), rsp);
+        }
+        break;
+
+        /* TX Mode */
+        case WIFITXMODE_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFITXMODE_REQ_INDEX", __func__);
+            wifi_tx_mode_get(rsp);
+        }
+        break;
+
+        case WIFITXMODE_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPKTLEN_INDEX", __func__);
+            wifi_tx_mode_set((wifi_tx_mode)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Preamble */
+        case WIFIPREAMBLE_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPREAMBLE_REQ_INDEX", __func__);
+            wifi_preamble_get(rsp);
+        }
+        break;
+
+        case WIFIPREAMBLE_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPREAMBLE_INDEX", __func__);
+            wifi_preamble_set((wifi_tx_mode)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Payload */
+        case WIFIPAYLOAD_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPAYLOAD_REQ_INDEX", __func__);
+            wifi_payload_get(rsp);
+        }
+        break;
+
+        case WIFIPAYLOAD_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIPAYLOAD_INDEX", __func__);
+            wifi_payload_set((wifi_payload)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Payload */
+        case WIFIGUARDINTERVAL_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIGUARDINTERVAL_REQ_INDEX", __func__);
+            wifi_guardinterval_get(rsp);
+        }
+        break;
+
+        case WIFIGUARDINTERVAL_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIGUARDINTERVAL_INDEX", __func__);
+            wifi_guardinterval_set((wifi_guard_interval)atoi(data[1]), rsp);
+        }
+        break;
+
+        /* MAC Filter */
+        case WIFIMACFILTER_REQ_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIMACFILTER_REQ_INDEX", __func__);
+            wifi_mac_filter_get(rsp);
+        }
+        break;
+
+        case WIFIMACFILTER_INDEX:
+        {
+            ENG_LOG("%s(), case:WIFIMACFILTER_INDEX", __func__);
+            wifi_mac_filter_set(atoi(data[1]), data[2], rsp);
+        }
+        break;
+
+        
+        //以下为BT
+        /* TX Channel */
+        case BT_TXCH_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXCH_REQ_INDEX", __func__);
+            bt_channel_get(BTEUT_CMD_TYPE_TX, rsp);
+        }
+        break;
+        
+        case BT_TXCH_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXCH_INDEX", __func__);
+            bt_channel_set(BTEUT_CMD_TYPE_TX, atoi(data[1]), rsp);
+        }
+        break;
+
+        /* RX Channel */
+        case BT_RXCH_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXCH_REQ_INDEX", __func__);
+            bt_channel_get(BTEUT_CMD_TYPE_RX, rsp);
+        }
+        break;
+
+        case BT_RXCH_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXCH_INDEX", __func__);
+            bt_channel_set(BTEUT_CMD_TYPE_RX, atoi(data[1]), rsp);
+        }
+        break;
+
+        /* Pattern */
+        case BT_TXPATTERN_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPATTERN_REQ_INDEX", __func__);
+            bt_pattern_get(BTEUT_CMD_TYPE_TX, rsp);
+        }
+        break;
+
+        case BT_TXPATTERN_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPATTERN_INDEX", __func__);
+            bt_pattern_set(BTEUT_CMD_TYPE_TX, atoi(data[1]), rsp);
+        }
+        break;
+
+        case BT_RXPATTERN_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXPATTERN_REQ_INDEX", __func__);
+            bt_pattern_get(BTEUT_CMD_TYPE_RX, rsp);
+        }
+        break;
+
+        case BT_RXPATTERN_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXPATTERN_INDEX", __func__);
+            bt_pattern_set(BTEUT_CMD_TYPE_RX, atoi(data[1]), rsp);
+        }
+        break;
+
+        /* PKT Type */
+        case BT_TXPKTTYPE_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPKTTYPE_REQ_INDEX", __func__);
+            bt_pkttype_get(BTEUT_CMD_TYPE_TX, rsp);
+        }
+        break;
+
+        case BT_TXPKTTYPE_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPATTERN_INDEX", __func__);
+            bt_pkttype_set(BTEUT_CMD_TYPE_TX, atoi(data[1]), rsp);
+        }
+        break;
+
+        case BT_RXPKTTYPE_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXPATTERN_REQ_INDEX", __func__);
+            bt_pkttype_get(BTEUT_CMD_TYPE_RX, rsp);
+        }
+        break;
+
+        case BT_RXPKTTYPE_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXPATTERN_INDEX", __func__);
+            bt_pkttype_set(BTEUT_CMD_TYPE_RX, atoi(data[1]), rsp);
+        }
+        break;
+
+        /* PKT Length */
+        case BT_TXPKTLEN_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPKTLEN_REQ_INDEX", __func__);
+            bt_txpktlen_get(rsp);
+        }
+        break;
+
+        case BT_TXPKTLEN_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPKTLEN_INDEX", __func__);
+            bt_txpktlen_set(atoi(data[1]), rsp);
+        }
+        break;
+
+        /* TX Power */
+        case BT_TXPWR_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPKTLEN_REQ_INDEX", __func__);
+            bt_txpwr_get(rsp);
+        }
+        break;
+
+        case BT_TXPWR_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TXPKTLEN_INDEX", __func__);
+            bt_txpwr_set(atoi(data[1]), atoi(data[2]), rsp);
+        }
+        break;
+
+        /* RX Gain */
+        case BT_RXGAIN_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXGAIN_REQ_INDEX", __func__);
+            bt_rxgain_get(rsp);
+        }
+        break;
+
+        case BT_RXGAIN_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXGAIN_INDEX", __func__);
+            bt_rxgain_set(atoi(data[1]), atoi(data[2]), rsp);
+        }
+        break;
+
+        /* ADDRESS */
+        case BT_ADDRESS_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_ADDRESS_REQ_INDEX", __func__);
+            bt_address_get(rsp);
+        }
+        break;
+
+        case BT_ADDRESS_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_ADDRESS_INDEX", __func__);
+            bt_address_set(data[1], rsp);
+        }
+        break;
+
+        /* RX received data */
+        case BT_RXDATA_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_RXDATA_REQ_INDEX", __func__);
+            bt_rxdata_get(rsp);
+        }
+        break;
+
+        /* Testmode */
+        case BT_TESTMODE_REQ_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TESTMODE_REQ_INDEX", __func__);
+
+            if (BT_MODULE_INDEX == module_index)
+            {
+                bt_testmode_get(BTEUT_BT_MODE_CLASSIC, rsp);
+            }
+            else if (BLE_MODULE_INDEX == module_index)
+            {
+                bt_testmode_get(BTEUT_BT_MODE_BLE, rsp);
+            }
+        }
+        break;
+
+        /* Testmode */
+        case BT_TESTMODE_INDEX:
+        {
+            ENG_LOG("ADL %s(), case BT_TESTMODE_INDEX, module_index = %d", __func__, module_index);
+            if (BT_MODULE_INDEX == module_index)
+            {
+                bt_testmode_set(BTEUT_BT_MODE_CLASSIC, atoi(data[1]), rsp);
+            }
+            else if (BLE_MODULE_INDEX == module_index)
+            {
+                bt_testmode_set(BTEUT_BT_MODE_BLE, atoi(data[1]), rsp);
+            }
+        }
+        break;
+
+
+        //-----------------------------------------------------
         default:
             strcpy(rsp,"can not match the at command");
             return 0;
@@ -850,44 +1311,125 @@ int eng_atdiag_euthdlr(char * buf, int len, char * rsp,int module_index)
 
     return 0;
 }
-int get_sub_str(char *buf,char **revdata, char a, char b)
+
+/********************************************************************
+*   name   get_sub_str 
+*   ---------------------------
+*   description: delimeter sub string from command string user inputed by AT Command
+*   ----------------------------
+*   para        IN/OUT      type            note  
+*   buf         IN          char *          user inputed command string
+*   revdata     OUT         char **         receive delimeted sub string
+*   a           IN          char            get command name by this parameter
+*   delim       IN          char *          delimter sub string by this parameter
+*   count       IN          unsigned char   revdata can stored count.
+*   substr_max_len  IN      unsigned char   sub string's max length
+*   ----------------------------------------------------
+*   return
+*   0:exec successful
+*   other:error
+*   ------------------
+*   other:
+*
+********************************************************************/
+int get_sub_str(const char *buf, char **revdata, char a, char *delim, unsigned char count, unsigned char substr_max_len)
 {
-    int len,len1;
-    char *start;
-    char *current;
+    int len, len1, len2;
+    char *start = NULL;
+    char *substr = NULL;
     char *end = buf;
-    start = strchr(buf,a);
-    current = strchr(buf,b);
-    ALOGD("get_sub_str ----->>  %d",(int)current);
-    if(!current){
+    int str_len = strlen(buf);
+
+    start = strchr(buf, a);
+    substr = strstr(buf, delim);
+    
+    if(!substr)
+    {
+        /* if current1 not exist, return this function.*/
         return 0;
     }
+
     while (end && *end != '\0')
+    {
         end++;
-    if((start != NULL) & (end !=NULL)){
-        start++;
-        current++;
-        len = current-start-1;
-        len1 = end-current;
-        ALOGD("get_sub_str  len1= %d",len1);
-        memcpy(revdata[0],start,len);
-        memcpy(revdata[1],current,len1);
     }
+
+    if((NULL != start) && (NULL != end))
+    {
+        char *tokenPtr = NULL;
+        unsigned int index = 1; /*must be inited by 1, because data[0] is command name */
+
+        start++;
+        substr++;
+        len = substr - start - 1;
+
+        /* get cmd name */
+        memcpy(revdata[0], start, len);
+
+        /* get sub str by delimeter */
+        tokenPtr = strtok(substr, delim);
+        while(NULL != tokenPtr && index < count) 
+        {
+            strncpy(revdata[index++], tokenPtr, substr_max_len);
+
+            /* next */
+            tokenPtr = strtok(NULL, delim);
+        }
+    }
+
     return 0;
 }
+
+
 int get_cmd_index(char *buf)
 {
+    int i = 0;
     int index = -1;
-    int i;
-    for(i=0;i<(int)NUM_ELEMS(eut_cmds);i++){
-        if(strstr(buf,eut_cmds[i].name) != NULL)
+    char *start = NULL;
+    char *cur = NULL;
+    int str_len = 0;
+    char name_str[64+1] = {0x00};
+
+    start = strchr(buf, '=');
+    if (NULL == start)
+    {
+        ENG_LOG("ADL leaving %s(), start is NULL, buf = %s", __func__, buf);
+        return -1;
+    }
+
+    /* search ',' '?' '\r' */
+    /* skip '=' */
+    start++;
+
+    if (NULL != (cur = strchr(buf, '?')))
+    {
+        cur++; /* include '?' to name_str */
+        str_len = cur - start;
+        strncpy(name_str, (char *)start, str_len);
+    }
+    else if (NULL != (cur = strchr(buf, ',')) || NULL != (cur = strchr(buf, '\r')))
+    {
+        str_len = cur - start;
+        strncpy(name_str, (char *)start, str_len);
+    }
+    else
+    {
+        ENG_LOG("ADL leaving %s(), cmd is error, buf = %s", __func__, buf);
+        return -1;
+    }
+
+    for (i = 0; i < (int)NUM_ELEMS(eut_cmds); i++)
+    {
+        if (0 == strcmp(name_str, eut_cmds[i].name))
         {
             index = eut_cmds[i].index;
             break;
         }
     }
+
     return index;
 }
+
 
 int eng_autotest_dummy(char *req, char *rsp)
 {

@@ -11,14 +11,16 @@ IWNPI_CFLAGS += -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-ali
 INCLUDES += external/libnl-headers
 
 #Build iwnpi tool
-include $(CLEAR_VARS)
-LOCAL_MODULE := iwnpi
-LOCAL_MODULE_TAGS := debug 
-LOCAL_CFLAGS = $(IWNPI_CFLAGS)
-LOCAL_SRC_FILES = $(IWNPI_OBJS)
-LOCAL_C_INCLUDES = $(INCLUDES)
-LOCAL_STATIC_LIBRARIES += libnl_2
-include $(BUILD_EXECUTABLE)
+#include $(CLEAR_VARS)
+#LOCAL_MODULE := iwnpi
+#LOCAL_MODULE_TAGS := debug 
+#LOCAL_CFLAGS = $(IWNPI_CFLAGS)
+#LOCAL_SRC_FILES = $(IWNPI_OBJS)
+#LOCAL_C_INCLUDES = $(INCLUDES)
+#LOCAL_STATIC_LIBRARIES += libnl_2
+LOCAL_SHARED_LIBRARIES += libcutils   \
+                          libutils
+#include $(BUILD_EXECUTABLE)
 
 
 #Build libiwnpi
@@ -33,6 +35,9 @@ LIBIWNPI_CFLAGS ?= -O2 -g
 LIBIWNPI_CFLAGS += -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -DCONFIG_LIBNL20
 #include dirs
 INCLUDES += external/libnl-headers
+
+LOCAL_SHARED_LIBRARIES += libcutils   \
+                          libutils
 
 LOCAL_MODULE := libiwnpi
 LOCAL_MODULE_TAGS := debug

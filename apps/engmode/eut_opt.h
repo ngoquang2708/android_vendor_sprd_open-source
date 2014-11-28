@@ -3,42 +3,48 @@
 #include <utils/Log.h>
 
 #ifndef LOG_TAG
-#define LOG_TAG	"SPRDENG"
+#define LOG_TAG "SPRDENG"
 #endif
 
-#define EUT_BT_OK	"+SPBTTEST:OK"
-#define EUT_BT_ERROR	"+SPBTTEST:ERR="
-#define EUT_BT_REQ	"+SPBTTEST:EUT="
+#define EUT_BT_OK                   ("+SPBTTEST:OK")
+#define EUT_BT_ERROR                ("+SPBTTEST:ERR=")
+#define EUT_BT_REQ                  ("+SPBTTEST:EUT=")
+//BLE
+#define EUT_BLE_OK                  ("+SPBLETEST:OK")
+#define EUT_BLE_ERROR               ("+SPBLETEST:ERR=")
+#define EUT_BLE_REQ                 ("+SPBLETEST:EUT=")
 
-#define EUT_WIFI_OK	"+SPWIFITEST:OK"
-#define EUT_WIFI_ERROR	"+SPWIFITEST:ERR="
-#define EUT_WIFI_REQ	"+SPWIFITEST:EUT="
-#define EUT_WIFI_TX_REQ	"+SPWIFITEST:TX="
-#define EUT_WIFI_RX_REQ	"+SPWIFITEST:RX="
-#define EUT_WIFI_CH_REQ	"+SPWIFITEST:CH="
-#define EUT_WIFI_RATIO_REQ	"+SPWIFITEST:RATIO="
-#define EUT_WIFI_TXFAC_REQ	"+SPWIFITEST:TXFAC="
-#define EUT_WIFI_RXPACKCOUNT_REQ	"+SPWIFITEST:RXPACKCOUNT="
 
-#define EUT_GPS_OK	"+SPGPSTEST:OK"
-#define EUT_GPS_ERROR	"+SPGPSTEST:ERR="
-#define EUT_GPS_REQ	"+SPGPSTEST:EUT="
-#define EUT_GPS_PRN_REQ	"+SPGPSTEST:PRN="
-#define EUT_GPS_SNR_REQ	"+SPGPSTEST:SNR="
-#define EUT_GPS_SEARCH_REQ	"+SPGPSTEST:SEARCH="
+#define EUT_WIFI_OK                 ("+SPWIFITEST:OK")
+#define EUT_WIFI_ERROR              ("+SPWIFITEST:ERR=")
+#define EUT_WIFI_REQ                ("+SPWIFITEST:EUT=")
+#define EUT_WIFI_TX_REQ             ("+SPWIFITEST:TX=")
+#define EUT_WIFI_RX_REQ             ("+SPWIFITEST:RX=")
+#define EUT_WIFI_CH_REQ             ("+SPWIFITEST:CH=")
+#define EUT_WIFI_RATIO_REQ          ("+SPWIFITEST:RATIO=")
+#define EUT_WIFI_TXFAC_REQ          ("+SPWIFITEST:TXFAC=")
+#define EUT_WIFI_RXPACKCOUNT_REQ    ("+SPWIFITEST:RXPACCOUNT=")
+
+#define EUT_GPS_OK  "+SPGPSTEST:OK"
+#define EUT_GPS_ERROR   "+SPGPSTEST:ERR="
+#define EUT_GPS_REQ "+SPGPSTEST:EUT="
+#define EUT_GPS_PRN_REQ "+SPGPSTEST:PRN="
+#define EUT_GPS_SNR_REQ "+SPGPSTEST:SNR="
+#define EUT_GPS_SEARCH_REQ  "+SPGPSTEST:SEARCH="
 #define EUT_GPS_SNR_NO_EXIST "NO_EXIST"
 #define EUT_GPS_NO_FOUND_STAELITE "NO_FOUND_SATELLITE"
 #define EUT_GPS_SV_ID "SV_ID="
 #define EUT_GPS_SV_NUMS "SV_NUM="
 
-#define EUT_WIFIERR_RATIO 150
-#define EUT_WIFIERR_TXFAC 151
-#define EUT_WIFIERR_TXFAC_SETRATIOFIRST 152
-#define EUT_GPSERR_SEARCH 153
-#define EUT_GPSERR_PRNSTATE 154
-#define EUT_GPSERR_PRNSEARCH 155
+#define EUT_WIFIERR_RATIO                   (150)
+#define EUT_WIFIERR_TXFAC                   (151)
+#define EUT_WIFIERR_TXFAC_SETRATIOFIRST     (152)
+#define EUT_GPSERR_SEARCH                   (153)
+#define EUT_GPSERR_PRNSTATE                 (154)
+#define EUT_GPSERR_PRNSEARCH                (155)
 
-typedef enum{
+typedef enum
+{
     WIFI_MODE_11B=1,
     WIFI_MODE_11G,
     WIFI_MODE_11N,
@@ -51,7 +57,7 @@ struct eng_bt_eutops{
 
 struct eng_wifi_eutops{
     int (*wifieut)(int,char *);
-    int	(*wifieut_req)(char *);
+    int (*wifieut_req)(char *);
     int (*wifi_tx)(int,char *);
     int (*set_wifi_tx_factor)(long ,char *);
     int (*wifi_rx)(int,char *);
