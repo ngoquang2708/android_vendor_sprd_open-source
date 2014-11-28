@@ -2053,39 +2053,14 @@ LOCAL uint32_t _ov5670_get_gain(void)
 
 LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 {
-#if 0
 	// write gain, 128 = 1x
 	uint32_t temp;
 	gain128 = gain128 & 0x1fff;
-	temp = gain128 & 0xff;
-	Sensor_WriteReg(0x3509, temp);
-	temp = gain128>>8;
-	Sensor_WriteReg(0x3508, temp);
-	if(gain128>=1024) {
-		// gain >= 8x
-		Sensor_WriteReg(0x366a, 0x07);
-	}
-	else if(gain128>=512){
-		// 4x =< gain < 8x 
-		Sensor_WriteReg(0x366a, 0x03);
-	}
-	else if(gain128>=256){
-		// 2x =< gain < 4x 
-		Sensor_WriteReg(0x366a, 0x01);
-	}
-	else{
-		// 1x =< gain < 2x
-		Sensor_WriteReg(0x366a, 0x00);
-	}
-#endif
-	// write gain, 128 = 1x
-	uint32_t temp;
-	gain128 = gain128 & 0x1fff;
-	
+
 	Sensor_WriteReg(0x301d, 0xf0);
 	Sensor_WriteReg(0x3209, 0x00);
 	Sensor_WriteReg(0x320a, 0x01);
-	
+
 	//group write  hold
 	//group 0:delay 0x366a for one frame
 	Sensor_WriteReg(0x3208, 0x00);
@@ -2094,11 +2069,11 @@ LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 		Sensor_WriteReg(0x366a, 0x07);
 	}
 	else if(gain128>=512){
-		// 4x =< gain < 8x 
+		// 4x =< gain < 8x
 		Sensor_WriteReg(0x366a, 0x03);
 	}
 	else if(gain128>=256){
-		// 2x =< gain < 4x 
+		// 2x =< gain < 4x
 		Sensor_WriteReg(0x366a, 0x01);
 	}
 	else{
@@ -2106,7 +2081,7 @@ LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 		Sensor_WriteReg(0x366a, 0x00);
 	}
 	Sensor_WriteReg(0x3208, 0x10);
-	
+
 	//group 1:all other registers( gain)
 	Sensor_WriteReg(0x3208, 0x01);
 	temp = gain128 & 0xff;
@@ -2114,7 +2089,7 @@ LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 	temp = gain128>>8;
 	Sensor_WriteReg(0x3508, temp);
 	Sensor_WriteReg(0x3208, 0x11);
-	
+
 	//group launch
 	Sensor_WriteReg(0x320B, 0x15);
 	Sensor_WriteReg(0x3208, 0xA1);
@@ -2336,6 +2311,7 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 
 		case 2:
 		{
+#if 0
 			cmd_val[0] = 0xec;
 			cmd_val[1] = 0xa3;
 			cmd_val[2] = 0xf2;
@@ -2344,6 +2320,26 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 			cmd_val[5] = 0x51;
 			cmd_len = 6;
 			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+#endif
+			cmd_len = 2;
+			cmd_val[0] = 0xec;
+			cmd_val[1] = 0xa3;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_OV5670: _dw9714_SRCInit fail!1");
+			}
+			cmd_val[0] = 0xf2;
+			cmd_val[1] = 0x00;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_OV5670: _dw9714_SRCInit fail!2");
+			}
+			cmd_val[0] = 0xdc;
+			cmd_val[1] = 0x51;
+			ret_value = Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+			if(ret_value){
+				SENSOR_PRINT("SENSOR_OV5670: _dw9714_SRCInit fail!3");
+			}
 		}
 		break;
 
