@@ -338,8 +338,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     
     /* write 1 to start*/
     write_proc_file(modem_start, 0, "1");
-    system("echo 1 >/sys/power/wake_unlock");
-
+    
     if(modem == TD_MODEM) {
         strcpy(alive_info, "TD Modem Alive");
     } else if(modem == W_MODEM) {
@@ -422,7 +421,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
             pthread_cond_signal(&tl_cond);
             pthread_mutex_unlock(&tl_state_mutex);
      }
-
+    system("echo 1 >/sys/power/wake_unlock");
     return 0;
 }
 
