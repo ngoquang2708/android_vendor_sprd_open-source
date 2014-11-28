@@ -4519,7 +4519,11 @@ status_t SprdCameraHardware::setCameraParameters()
 	if (mParameters.get_Iso() == NULL) {
 		SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, 6); /*6 = CAMERA_ISO_MAX*/
 	} else {
-		SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, mParameters.getIso());
+		if (mIsDvPreview) {
+			SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, 5); /* dv1600 */
+		} else {
+			SET_PARM(mCameraHandle, CAMERA_PARAM_ISO, mParameters.getIso());
+		}
 	}
 /*	SET_PARM(CAMERA_PARM_DCDV_MODE, mParameters.getRecordingHint());*/
 
