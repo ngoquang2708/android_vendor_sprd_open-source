@@ -10,6 +10,7 @@
 #undef LOG_TAG
 #define LOG_TAG  "RF_PARA"
 #include <cutils/log.h>
+#include <cutils/properties.h>
 
 #define _WLAN_CALI_DEBUG_
 #ifndef FALSE
@@ -34,6 +35,7 @@ typedef struct
 
 static char *WIFI_CONFIG_FILE = "/system/etc/connectivity_configure.ini";
 static char *WIFI_CALI_FILE = "/productinfo/connectivity_calibration.ini";
+static char *WIFI_CALI_FILE_EXT = "/system/etc/connectivity_calibration.ini";
 
 //static char *WIFI_CONFIG_FILE = "connectivity_configure.ini";
 //static char *WIFI_CALI_FILE = "connectivity_calibration.ini";
@@ -437,6 +439,8 @@ int wlan_save_cali_data_to_file(wifi_cali_cp_t *data_cp)
     char *p = buf;
     int i,j;
     int ret;
+    char calibrating[128];
+    int is_calibrated;
 
     wifi_cali_t *data = &data_cp->wifi_cali;
 
@@ -450,11 +454,18 @@ int wlan_save_cali_data_to_file(wifi_cali_cp_t *data_cp)
     p += sprintf(p,"cali_version = %d\n\n",data->cali_version);
 
     cali_config_t *cc = &data->cali_config;
+    property_get("debug.connectivity.calibrating", calibrating, "false");
+    if(!strncmp(calibrating,"true",4)){
+        is_calibrated = 0;
+    }else{
+        is_calibrated = cc->is_calibrated;
+    }
+
     p += sprintf(p,"[SETCTION 1]\n");
     p += sprintf(p,"#-----------------------------------------------------------------\n");
     p += sprintf(p,"# Calibration Config\n");
     p += sprintf(p,"#-----------------------------------------------------------------\n");
-    p += sprintf(p,"is_calibrated   = %d\n",1/*cc->is_calibrated*/);
+    p += sprintf(p,"is_calibrated   = %d\n",is_calibrated/*cc->is_calibrated*/);
     p += sprintf(p,"rc_cali_en      = %d\n",cc->rc_cali_en);
     p += sprintf(p,"dcoc_cali_en    = %d\n",cc->dcoc_cali_en);
     p += sprintf(p,"txiq_cali_en    = %d\n",cc->txiq_cali_en);
@@ -634,6 +645,9 @@ int get_connectivity_config_param(wifi_config_t* p)
 {
     int ret = 0;
 
+    if(p == NULL)
+        return -1;
+
     ret = wifi_nvm_parse(WIFI_CONFIG_FILE, 1, (void *)p);
     if(0 != ret){
         RFDBG("%s(),parse:%s, err!\n", __func__, WIFI_CONFIG_FILE);
@@ -646,10 +660,19 @@ int get_connectivity_cali_param(wifi_cali_t* p)
 {
     int ret = 0;
 
-    ret = wifi_nvm_parse(WIFI_CALI_FILE, 2, (void *)p);
-    if(0 != ret){
-        RFDBG("%s(),parse:%s, err!\n", __func__, WIFI_CALI_FILE);
+    if(p == NULL)
         return -1;
+
+    p->cali_config.is_calibrated = 0xFF;
+    ret = wifi_nvm_parse(WIFI_CALI_FILE, 2, (void *)p);
+    if(ret < 0 || p->cali_config.is_calibrated == 0xFF){
+        RFDBG("%s(),parse %s err[%d] or out of date, get again from etc\n", __func__, WIFI_CALI_FILE, ret);
+        memset(p,0,sizeof(wifi_cali_t));
+        ret = wifi_nvm_parse(WIFI_CALI_FILE_EXT, 2, (void *)p);
+        if(ret < 0){
+            RFDBG("%s(),parse:%s, err!\n", __func__, WIFI_CALI_FILE_EXT);
+            return -2;
+        }
     }
     return 0;
 }
