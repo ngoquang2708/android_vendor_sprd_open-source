@@ -2789,12 +2789,25 @@ cmr_int sensor_set_exif_common(struct sensor_drv_context *sensor_cxt,
 	case SENSOR_EXIF_CTRL_SPECTRALSENSITIVITY:
 		break;
 	case SENSOR_EXIF_CTRL_ISOSPEEDRATINGS:
+#if 0
 		if (param == 6) {
 			/*6 = CAMERA_ISO_MAX*/
 			sensor_exif_info_ptr->valid.ISOSpeedRatings = 0;
 		} else {
 			sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
 		}
+#endif
+		sensor_exif_info_ptr->valid.ISOSpeedRatings = 1;
+	#ifdef CONFIG_BACK_CAMERA_ISO_NOT_SUPPORT
+		if (sensor_cxt->is_main_sensor) {
+			sensor_exif_info_ptr->valid.ISOSpeedRatings = 0;
+		}
+	#endif
+	#ifdef CONFIG_FRONT_CAMERA_ISO_NOT_SUPPORT
+		if (!sensor_cxt->is_main_sensor) {
+			sensor_exif_info_ptr->valid.ISOSpeedRatings = 0;
+		}
+	#endif
 		sensor_exif_info_ptr->ISOSpeedRatings.count = 1;
 		sensor_exif_info_ptr->ISOSpeedRatings.type  = EXIF_SHORT;
 		sensor_exif_info_ptr->ISOSpeedRatings.size  = 2;

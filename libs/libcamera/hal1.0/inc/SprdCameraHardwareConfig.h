@@ -619,7 +619,7 @@ struct config_element sprd_back_camera_hardware_config[] = {
 #else
         {"max-num-detected-faces-hw", "0"},
 #endif
-#ifdef CONFIG_CAMERA_ISO_NOT_SUPPORT
+#ifdef CONFIG_BACK_CAMERA_ISO_NOT_SUPPORT
 	{"iso-supported", "false"},
 	{"max-iso", "1"},
 	{"iso-values", "auto"},
