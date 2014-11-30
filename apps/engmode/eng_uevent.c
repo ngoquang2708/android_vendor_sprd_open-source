@@ -11,6 +11,7 @@
 
 extern sem_t g_armlog_sem;
 int g_armlog_enable = 0;
+extern int eng_usb_state(void);
 
 struct uevent {
     const char *action;
@@ -91,6 +92,10 @@ void* eng_uevt_thread(void *x)
     if(-1 == sock){
         ENG_LOG("%s: socket init failed !\n", __FUNCTION__);
         return 0;
+    }
+    if(eng_usb_state()) {
+        g_armlog_enable = 1;
+	sem_post(&g_armlog_sem);
     }
 
     ufd.events = POLLIN;
