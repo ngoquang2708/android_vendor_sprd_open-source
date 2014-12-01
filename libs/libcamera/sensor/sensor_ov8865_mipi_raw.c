@@ -1875,23 +1875,23 @@ LOCAL uint32_t _ov8865_Identify(uint32_t param)
 LOCAL uint32_t _ov8865_write_exposure(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
-	uint16_t expsure_line=0x00;
-	uint16_t dummy_line=0x00;
-	uint16_t size_index=0x00;
-	uint16_t frame_len=0x00;
-	uint16_t frame_len_cur=0x00;
-	uint16_t max_frame_len=0x00;
-	uint16_t value=0x00;
+	uint16_t expsure_line = 0x00;
+	uint16_t dummy_line = 0x00;
+	uint16_t size_index = 0x00;
+	uint16_t frame_len = 0x00;
+	uint16_t frame_len_cur = 0x00;
+	uint16_t max_frame_len = 0x00;
+	uint16_t value = 0x00;
 
-	expsure_line=param&0xffff;
-	dummy_line=(param>>0x10)&0x0fff;
-	size_index=(param>>0x1c)&0x0f;
+	expsure_line = param&0xffff;
+	dummy_line = (param>>0x10)&0x0fff;
+	size_index = (param>>0x1c)&0x0f;
 
 	SENSOR_PRINT("SENSOR_ov8865: write_exposure line:%d, dummy:%d, size_index:%d", expsure_line, dummy_line, size_index);
 
-	max_frame_len=_ov8865_GetMaxFrameLine(size_index);
+	max_frame_len = _ov8865_GetMaxFrameLine(size_index);
 
-	if(0x00!=max_frame_len)
+	if(0x00 != max_frame_len)
 	{
 		frame_len = ((expsure_line+4)> max_frame_len) ? (expsure_line+4) : max_frame_len;
 
@@ -1904,22 +1904,43 @@ LOCAL uint32_t _ov8865_write_exposure(uint32_t param)
 			frame_len = ((frame_len + 1)>>1)<<1;
 			value=(frame_len)&0xff;
 			ret_value = Sensor_WriteReg(0x380f, value);
-			value=(frame_len>>0x08)&0xff;
+			if (ret_value) {
+				SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+				goto exit;
+			}
+			value = (frame_len>>0x08)&0xff;
 			ret_value = Sensor_WriteReg(0x380e, value);
+			if (ret_value) {
+				SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+				goto exit;
+			}
 		}
 	}
 
 	value = (expsure_line & 0xf);
 	value = value<<0x04;
 	ret_value = Sensor_WriteReg(0x3502, value);
+	if (ret_value) {
+		SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+		goto exit;
+	}
 
 	value = expsure_line & 0xfff;
 	value = value >> 4;
 	ret_value = Sensor_WriteReg(0x3501, value);
+	if (ret_value) {
+		SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+		goto exit;
+	}
 
 	value = expsure_line>>12;
 	ret_value = Sensor_WriteReg(0x3500, value);
+	if (ret_value) {
+		SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+		goto exit;
+	}
 
+exit:
 	return ret_value;
 }
 

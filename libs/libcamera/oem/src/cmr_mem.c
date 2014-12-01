@@ -941,7 +941,6 @@ int arrange_yuv_buf(struct cmr_cap_2_frm *cap_2_frm,
 		yy_to_y = channel_size - tmp;
 	} else {
 		/*means scaling down*/
-		offset = (tmp * 3) >> 1;
 		cap_mem->cap_yuv.addr_phy.addr_y = cap_2_frm->mem_frm.addr_phy.addr_y;
 		cap_mem->cap_yuv.addr_vir.addr_y = cap_2_frm->mem_frm.addr_vir.addr_y;
 		cap_mem->cap_yuv.addr_phy.addr_u = cap_mem->cap_yuv.addr_phy.addr_y + tmp;

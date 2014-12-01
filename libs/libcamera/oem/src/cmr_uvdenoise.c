@@ -297,7 +297,7 @@ static cmr_int uvde_transfer_frame(cmr_handle class_handle, struct ipm_frame_in 
 		uv_param_ptr->task_no = 4;
 
 		for (thread_id = 0; thread_id < THREAD_UVDE; thread_id++) {
-			uvde_start(uvde_handle,thread_id,uv_proc_func_neon0,uv_proc_cb,(void*)&uv_params[thread_id]);
+			uvde_start(uvde_handle, thread_id, uv_proc_func_neon0, uv_proc_cb, (void*)&uv_params[thread_id]);
 		}
 
 	} else if(1 == uv_denoise_alg) {
@@ -364,7 +364,7 @@ static cmr_int uvde_transfer_frame(cmr_handle class_handle, struct ipm_frame_in 
 		uv_param_ptr->task_no = 4;
 
 		for (thread_id = 0; thread_id < THREAD_UVDE; thread_id++) {
-			uvde_start(uvde_handle,thread_id,uv_proc_func_neon1,uv_proc_cb,(void*)&uv_params[thread_id]);
+			uvde_start(uvde_handle, thread_id, uv_proc_func_neon1, uv_proc_cb, (void*)&uv_params[thread_id]);
 		}
 
 	} else if (2 == uv_denoise_alg) {
@@ -431,7 +431,7 @@ static cmr_int uvde_transfer_frame(cmr_handle class_handle, struct ipm_frame_in 
 		uv_param_ptr->task_no = 4;
 
 		for (thread_id = 0; thread_id < THREAD_UVDE; thread_id++) {
-			uvde_start(uvde_handle,thread_id,uv_proc_func_neon2,uv_proc_cb,(void*)&uv_params[thread_id]);
+			uvde_start(uvde_handle, thread_id, uv_proc_func_neon2, uv_proc_cb, (void*)&uv_params[thread_id]);
 		}
 	} else {
 		goto EXIT;

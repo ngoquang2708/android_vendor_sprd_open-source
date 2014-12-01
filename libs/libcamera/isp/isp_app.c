@@ -1077,10 +1077,9 @@ int isp_init(struct isp_init_param* ptr)
 	pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 	ISP_APP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	EXIT:
+EXIT:
 
-	rtn = _isp_AppUnlock();
-	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
+	ISP_APP_RETURN_IF_FAIL(_isp_AppUnlock(), ("app unlock error"));
 
 	ISP_LOG("---isp_app_init-- end");
 
@@ -1135,10 +1134,10 @@ int isp_deinit(void)
 		ISP_APP_RETURN_IF_FAIL(rtn, ("_isp_app_release_resource error"));
 	}
 
-	EXIT:
+EXIT:
 
-	rtn = _isp_AppUnlock();
-	ISP_APP_RETURN_IF_FAIL(rtn, ("app unlock error"));
+//	rtn = _isp_AppUnlock();
+	ISP_APP_RETURN_IF_FAIL(_isp_AppUnlock(), ("app unlock error"));
 
 	ISP_LOG("--isp_app_deinit-- end");
 

@@ -8563,18 +8563,18 @@ static void *_isp_ctrl_routine(void *client_data)
 				break;
 
 			case ISP_CTRL_EVT_IOCTRL:
-				res_ptr=map_res_ptr;
+				res_ptr = map_res_ptr;
 				rtn = _ispTuneIOCtrl(handler_id, sub_type, param_ptr,NULL);
 				res_ptr->rtn = rtn;
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
-				rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
+				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
 			case ISP_CTRL_EVT_CTRL_SYNC:
 
 				pthread_mutex_lock(&isp_system_ptr->cond_mutex);
-				rtn=pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
+				rtn = pthread_cond_signal(&isp_system_ptr->ioctrl_cond);
 				pthread_mutex_unlock(&isp_system_ptr->cond_mutex);
 				break;
 
@@ -8593,7 +8593,7 @@ static void *_isp_ctrl_routine(void *client_data)
 
 			case ISP_CTRL_EVT_AE:
 				//ISP_LOG("tim_ae _isp_ctrl_routine --- ae");
-				rtn=_ispCfgAemInfo(handler_id, &isp_context_ptr->ae_stat);
+				rtn = _ispCfgAemInfo(handler_id, &isp_context_ptr->ae_stat);
 				isp_proc_msg.handler_id = handler_id;
 				isp_proc_msg.msg_type = ISP_PROC_EVT_AE;
 				rtn = _isp_proc_msg_post(&isp_proc_msg);
@@ -9097,11 +9097,9 @@ int isp_ctrl_init(uint32_t handler_id, struct isp_init_param* ptr)
 
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
-	EXIT :
+EXIT :
 
-	rtn = _isp_CtrlUnlock();
-	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
-
+	ISP_RETURN_IF_FAIL(_isp_CtrlUnlock(), ("ctrl unlock error"));
 	ISP_LOG("---isp_init-- end");
 
 	return rtn;
@@ -9159,8 +9157,7 @@ int isp_ctrl_deinit(uint32_t handler_id)
 
 	EXIT:
 
-	rtn = _isp_CtrlUnlock();
-	ISP_RETURN_IF_FAIL(rtn, ("ctrl unlock error"));
+	ISP_RETURN_IF_FAIL(_isp_CtrlUnlock(), ("ctrl unlock error"));
 
 	ISP_LOG("---isp_deinit------- end");
 
@@ -9232,25 +9229,25 @@ int isp_ctrl_capability(uint32_t handler_id, enum isp_capbility_cmd cmd, void* p
 */
 int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 {
-	int rtn=ISP_SUCCESS;
+	int rtn = ISP_SUCCESS;
 	struct isp_respond respond;
 	struct isp_context* isp_context_ptr = ispGetContext(handler_id);
 	struct isp_system* isp_system_ptr = ispGetSystem();
 	ISP_MSG_INIT(isp_msg);
-	uint32_t callback_flag=cmd&0x80000000;
+	uint32_t callback_flag = cmd&0x80000000;
 
 	ISP_LOG("--isp_ioctl--cmd:0x%x", cmd);
 
 	rtn = _isp_CtrlLock();
 	ISP_RETURN_IF_FAIL(rtn, ("ctrl lock error"));
 
-	respond.rtn=ISP_SUCCESS;
+	respond.rtn = ISP_SUCCESS;
 	isp_msg.handler_id = handler_id;
 	isp_msg.msg_type = ISP_CTRL_EVT_IOCTRL;
 	isp_msg.sub_msg_type = cmd;
-	isp_msg.data=(void*)param_ptr;
-	isp_msg.alloc_flag=0x00;
-	isp_msg.respond=(void*)&respond;
+	isp_msg.data = (void*)param_ptr;
+	isp_msg.alloc_flag = 0x00;
+	isp_msg.respond = (void*)&respond;
 
 	pthread_mutex_lock(&isp_system_ptr->cond_mutex);
 	rtn = _isp_ctrl_msg_post(&isp_msg);
@@ -9265,13 +9262,11 @@ int isp_ctrl_ioctl(uint32_t handler_id, enum isp_ctrl_cmd cmd, void* param_ptr)
 	ISP_RETURN_IF_FAIL(rtn, ("pthread_cond_wait error"));
 
 	if((0x00==callback_flag)
-		&&(PNULL!=isp_context_ptr->cfg.callback))
-	{
+		&&(PNULL!=isp_context_ptr->cfg.callback)) {
 		isp_context_ptr->cfg.callback(handler_id, ISP_CALLBACK_EVT|ISP_CTRL_CALLBAC|cmd, NULL, ISP_ZERO);
 	}
-	else
-	{/*isp tuning tool callback*/
-		rtn=respond.rtn;
+	else {/*isp tuning tool callback*/
+		rtn = respond.rtn;
 	}
 
 	rtn = _isp_CtrlUnlock();

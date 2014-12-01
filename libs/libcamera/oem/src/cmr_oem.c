@@ -2100,6 +2100,7 @@ cmr_int camera_create_snp_thread(cmr_handle oem_handle)
 	if (CMR_MSG_SUCCESS != ret) {
 		CMR_LOGE("failed to create snapshot thread %ld", ret);
 		ret = -CMR_CAMERA_NO_SUPPORT;
+		goto exit;
 	}
 	ret = cmr_thread_create(&cxt->snp_secondary_thr_handle, SNAPSHOT_MSG_QUEUE_SIZE,
 							camera_snapshot_secondary_thread_proc, (void*)oem_handle);
@@ -4272,6 +4273,10 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 
 	if (CAMERA_ZSL_MODE != mode) {
 		ret = camera_set_preview_param(oem_handle, mode, is_snapshot);
+		if (ret) {
+			CMR_LOGE("failed to set preview param %ld", ret);
+			goto exit;
+		}
 	} else {
 		camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->camera_id);
 	}

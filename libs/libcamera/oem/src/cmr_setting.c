@@ -513,6 +513,10 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 					isoParm.cmd_type_value = 5;
 					if (setting_is_rawrgb_format(cpt, &isoParm)) {
 						ret = setting_isp_ctrl(cpt, COM_ISP_SET_ISO, &isoParm);
+						if (ret) {
+							CMR_LOGE("failed %ld", ret);
+							goto setting_out;
+						}
 					}
 				}
 				//always do
@@ -530,6 +534,10 @@ static cmr_int setting_set_general(struct setting_component *cpt,
 			after_cb_param.skip_number = skip_number;
 			after_cb_param.timestamp = systemTime(CLOCK_MONOTONIC);
 			ret =  setting_after_set_ctrl(cpt, &after_cb_param);
+			if (ret) {
+				CMR_LOGE("failed %ld", ret);
+				goto setting_out;
+			}
 		}
 		*item->cmd_type_value = type_val;
 	}

@@ -2109,6 +2109,7 @@ cmr_int prev_start(struct prev_handle *handle, cmr_u32 camera_id, cmr_u32 is_res
 		} else {
 			CMR_LOGE("err,capture_pre_proc is null");
 			ret = CMR_CAMERA_INVALID_PARAM;
+			goto exit;
 		}
 	}
 
@@ -3144,11 +3145,6 @@ cmr_int prev_get_cap_max_size(struct prev_handle *handle,
 			|| cap_size->width <= sc_threshold) {
 			/*if the out size is smaller than the in size, try to use scaler on the fly*/
 			if (cap_size->width > tmp_width) {
-				if (tmp_width > sc_capability) {
-					img_sz.width = sc_capability;
-				} else {
-					img_sz.width = tmp_width;
-				}
 				img_sz.width = (cmr_u32)(img_rc.height * sc_factor);
 			} else {
 				/*just use scaler on the fly*/

@@ -3848,28 +3848,28 @@ LOCAL uint32_t _hi544_Identify(uint32_t param)
 LOCAL uint32_t _hi544_write_exposure(uint32_t param)
 {
 	uint32_t ret_value = SENSOR_SUCCESS;
-	uint16_t expsure_line=0x00;
-	uint16_t dummy_line=0x00;
-	uint16_t size_index=0x00;
-	uint16_t frame_len=0x00;
-	uint16_t frame_len_cur=0x00;
-	uint16_t max_frame_len=0x00;
+	uint16_t expsure_line = 0x00;
+	uint16_t dummy_line = 0x00;
+	uint16_t size_index = 0x00;
+	uint16_t frame_len = 0x00;
+	uint16_t frame_len_cur = 0x00;
+	uint16_t max_frame_len = 0x00;
 	uint16_t line_length = 0x00;
-	uint16_t value=0x00;
-	uint16_t value0=0x00;
-	uint16_t value1=0x00;
-	uint16_t value2=0x00;
+	uint16_t value = 0x00;
+	uint16_t value0 = 0x00;
+	uint16_t value1 = 0x00;
+	uint16_t value2 = 0x00;
 
-	expsure_line=param&0xffff;
-	dummy_line=(param>>0x10)&0x0fff;
-	size_index=(param>>0x1c)&0x0f;
+	expsure_line = param&0xffff;
+	dummy_line = (param>>0x10)&0x0fff;
+	size_index = (param>>0x1c)&0x0f;
 
 	SENSOR_PRINT("SENSOR_hi544: write_exposure line:%d, dummy:%d, size_index:%d", expsure_line, dummy_line, size_index);
 
 	line_length = Sensor_ReadReg(0x0008);
-	max_frame_len=_hi544_GetMaxFrameLine(size_index);
+	max_frame_len = _hi544_GetMaxFrameLine(size_index);
 
-	if(0x00!=max_frame_len)
+	if(0x00 != max_frame_len)
 	{
 		frame_len = ((expsure_line+4)> max_frame_len) ? (expsure_line+4) : max_frame_len;
 		frame_len = (frame_len+1)>>1<<1;
@@ -3878,14 +3878,27 @@ LOCAL uint32_t _hi544_write_exposure(uint32_t param)
 
 		if(frame_len_cur != frame_len){
 			ret_value = Sensor_WriteReg(0x0006, frame_len);
+			if (ret_value) {
+				SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+				goto exit;
+			}
 		}
 	}
 
 	value = expsure_line;
 	SENSOR_PRINT("SENSOR_hi544:line_length = %d  coarse = %d\n", line_length, value);
 	ret_value = Sensor_WriteReg(0x0046, 0x01);
+	if (ret_value) {
+		SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+		goto exit;
+	}
 	ret_value = Sensor_WriteReg(0x0004, value);
+	if (ret_value) {
+		SENSOR_PRINT_ERR("Sensor_WriteReg error %d", ret_value);
+		goto exit;
+	}
 
+exit:
 	return ret_value;
 }
 

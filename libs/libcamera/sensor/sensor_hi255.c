@@ -2169,17 +2169,17 @@ LOCAL const SENSOR_REG_T HI255_saturation_tab[][4]=
 };
 LOCAL uint32_t _HI255_set_saturation(uint32_t level)
 {
-	uint16_t i=0x00;
+	uint16_t i = 0x00;
+	uint32_t num_array = sizeof(HI255_saturation_tab)/sizeof(HI255_saturation_tab[0]);
 
-	if(level>7)
+	if(level >= num_array)
 	return 0;
 
-	SENSOR_REG_T_PTR sensor_reg_ptr=(SENSOR_REG_T_PTR)HI255_saturation_tab[level];
+	SENSOR_REG_T_PTR sensor_reg_ptr = (SENSOR_REG_T_PTR)HI255_saturation_tab[level];
 
 	//    SCI_ASSERT(PNULL!=sensor_reg_ptr);
 
-	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff != sensor_reg_ptr[i].reg_value); i++)
-	{
+	for(i=0x00; (0xff!=sensor_reg_ptr[i].reg_addr)||(0xff != sensor_reg_ptr[i].reg_value); i++) {
 		Sensor_WriteReg_8bits(sensor_reg_ptr[i].reg_addr, sensor_reg_ptr[i].reg_value);
 	}
 	SENSOR_PRINT("sensor: terry HI255_set_saturation = 0x%02x.\n", level);

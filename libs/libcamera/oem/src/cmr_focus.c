@@ -757,6 +757,7 @@ cmr_int af_set_mode(cmr_handle af_handle, cmr_u32 came_id, cmr_u32 af_mode)
 		CMR_LOGE("param invalid, set af mode to AUTO");
 		af_cxt->af_mode = CAMERA_FOCUS_MODE_AUTO;
 		ret = CMR_CAMERA_INVALID_PARAM;
+		goto exit;
 	}
 
 	ret = af_cxt->ops.get_sensor_info(af_cxt->oem_handle, came_id, &sensor_info);

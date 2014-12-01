@@ -1221,6 +1221,7 @@ cmr_int snp_start_isp_next_proc(cmr_handle snp_handle, void *data)
 		CMR_LOGI("post proc has been cancel");
 		snp_set_status(snp_handle, IDLE);
 		ret = CMR_CAMERA_NORNAL_EXIT;
+		return ret;
 	}
 	cmr_copy((void*)&isp_in_param, (void*)&chn_param_ptr->isp_proc_in[index], sizeof(struct raw_proc_param));
 	process_ptr = &chn_param_ptr->isp_process[index];
@@ -4025,7 +4026,7 @@ cmr_int camera_start_uvde(struct camera_context *cxt, struct img_frm *src)
 	struct ipm_frame_in           ipm_in_param;
 
 	CMR_LOGI("uvdenoise start");
-	if ((NULL == cxt) && (NULL == src)) {
+	if ((NULL == cxt) || (NULL == src)) {
 		CMR_LOGE("param invalid");
 		return CMR_CAMERA_INVALID_PARAM;
 	}
