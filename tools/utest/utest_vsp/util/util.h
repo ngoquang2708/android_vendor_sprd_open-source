@@ -3,14 +3,36 @@
 
 #include <stdio.h>
 
-//#define SPRD_ION_WITH_MMU  "/dev/sprd_iommu_mm"
-#define SPRD_ION_WITH_MMU "/dev/ion"
-#define SPRD_ION_NO_MMU      "/dev/ion"
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#define ERR(x...)	fprintf(stderr, ##x)
+#define INFO(x...)	fprintf(stdout, ##x)
+
+#define CLIP_16(x)	(((x) + 15) & (~15))
+
+/*standard*/
+typedef enum {
+    ITU_H263 = 0,
+    MPEG4,
+    JPEG,
+    FLV_V1,
+    H264,
+    VP8,
+    VP9,
+    FORMAT_MAX
+}
+VIDEO_STANDARD_E;
+
+typedef unsigned char		BOOLEAN;
+typedef unsigned char		uint8;
+typedef unsigned short		uint16;
+typedef unsigned int		uint32;
+typedef signed char			int8;
+typedef signed short		int16;
+typedef signed int			int32;
 
 void* vsp_malloc(unsigned int size, unsigned char alignment);
 void vsp_free(void *mem_ptr);
@@ -26,14 +48,15 @@ void yuv420sp_to_yuv420p_opt(unsigned int* py_src, unsigned int* puv_src, unsign
 
 /* to find a frame in buffer, if found return the length or return 0 */
 unsigned int find_frame(unsigned char* pbuffer, unsigned int size, unsigned int startcode, unsigned int maskcode);
-
-
-
 int read_yuv_frame(unsigned char* py, unsigned char* pu, unsigned char* pv, unsigned int width, unsigned int height, FILE* fp_yuv);
-
 int write_yuv_frame(unsigned char* py, unsigned char* pu, unsigned char* pv, unsigned int width, unsigned int height, FILE* fp_yuv);
 
+extern const unsigned int table_startcode1[];
+extern const unsigned int table_maskcode1[];
+extern const unsigned int table_startcode2[];
+extern const unsigned int table_maskcode2[];
 
+const char* format2str(int format);
 
 #ifdef __cplusplus
 }

@@ -26,9 +26,6 @@ extern   "C"
 {
 #endif
 
-#define VP8_DECODER_INTERNAL_BUFFER_SIZE  (0x200000) //(MP4DEC_OR_RUN_SIZE+MP4DEC_OR_INTER_MALLOC_SIZE)  
-#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-
 typedef unsigned char		BOOLEAN;
 //typedef unsigned char		Bool;
 typedef unsigned char		uint8;
@@ -39,17 +36,6 @@ typedef unsigned int		uint32;
 typedef signed char			int8;
 typedef signed short		int16;
 typedef signed int			int32;
-
-/*standard*/
-typedef enum {
-    ITU_H263 = 0,
-    MPEG4,
-    JPEG,
-    FLV_V1,
-    H264,
-    RV8,
-    RV9
-} VIDEO_STANDARD_E;
 
 typedef enum
 {
@@ -66,6 +52,14 @@ typedef enum
     MMDEC_MEMORY_ALLOCED = -10
 } MMDecRet;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
 // decoder video format structure
 typedef struct
 {
@@ -74,19 +68,16 @@ typedef struct
     int32	frame_height;
     int32	i_extra;
     void 	*p_extra;
-//#ifdef _VSP_LINUX_
     void *p_extra_phy;
-//#endif
-    int32	uv_interleaved;				//tmp add
+    //int32	uv_interleaved;				//tmp add
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
 typedef struct
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-//#ifdef _VSP_LINUX_
-    void *common_buffer_ptr_phy;
-//#endif
+    uint32 common_buffer_ptr_phy;
     uint32	size;            		// Number of bytes decoding buffer
 
     int32 	frameBfr_num;			//YUV frame buffer number
@@ -109,7 +100,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded. Virtual address.
-    uint8		*pStream_phy;          	// Pointer to stream to be decoded. Physical address.
+    uint32		pStream_phy;          	// Pointer to stream to be decoded. Physical address.
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 
@@ -138,14 +129,11 @@ typedef struct
     int32	frameEffective;
 
     int32	err_MB_num;		//error MB number
-//#ifdef _VSP_LINUX_
     void *pBufferHeader;
     int VopPredType;
-//#endif
 } MMDecOutput;
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-//typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height);
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
@@ -162,29 +150,21 @@ typedef struct tagVPXHandle
 #ifdef PV_MEMORY_POOL
     int32 size;
 #endif
-//    int nLayers;
-    /* pointers to VOL data for frame-based decoding. */
-//    uint8 *volbuf[2];           /* maximum of 2 layers for now */
-//    int32 volbuf_size[2];
 
     void *userdata;
 
     FunctionType_BufCB VSP_bindCb;
     FunctionType_BufCB VSP_unbindCb;
-//        FunctionType_MemAllocCB VSP_extMemCb;
-//	void *g_user_data;
-
-
 } VPXHandle;
 
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
-//void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle);
-//int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput);
+void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height);
+MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
-//void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY);
+int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput);
 
 /*****************************************************************************/
 //  Description: Init vpx decoder
@@ -192,9 +172,7 @@ void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer * pBuffer);
-
-MMDecRet VP8DecHeader(VPXHandle *vpxHandle, MMDecVideoFormat *pVideoFormat);
+MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMDecVideoFormat *pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Decode one vop
@@ -212,34 +190,14 @@ MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *pInput, MMDecOutput *pOu
 /*****************************************************************************/
 MMDecRet VP8DecRelease(VPXHandle *vpxHandle);
 
-/*****************************************************************************/
-//  Description: check whether VSP can used for video decoding or not
-//	Global resource dependence:
-//  Author:
-//	Note: return VSP status:
-//        1: dcam is idle and can be used for vsp   0: dcam is used by isp
-/*****************************************************************************/
-BOOLEAN VPXDEC_VSP_Available (void);
-
-/*****************************************************************************/
-//  Description: for display, return one frame for display
-//	Global resource dependence:
-//  Author:
-//	Note:  the transposed type is passed from MMI "req_transposed"
-//         req_transposed£º 1£ºtranposed  0: normal
-/*****************************************************************************/
-void vpxdec_GetOneDspFrm (VPXHandle *vpxHandle, MMDecOutput * pOutput, int req_transposed, int is_last_frame);
-
-//typedef int (*FT_VPXDecGetLastDspFrm)(MP4Handle *mp4Handle,void **pOutput);
+typedef void (*FT_VPXGetBufferDimensions)(VPXHandle *vpxHandle, int32 *width, int32 *height);
+typedef MMDecRet (*FT_VPXGetCodecCapability)(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 typedef void (*FT_VPXDecSetCurRecPic)(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
-//typedef void (*FT_VPXDecSetReferenceYUV)(VPXHandle *vpxHandle, uint8 *pFrameY);
-typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer * pBuffer);
+typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMDecVideoFormat *pVideoFormat);
 typedef MMDecRet (*FT_VPXDecDecode)(VPXHandle *vpxHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_VPXDecRelease)(VPXHandle *vpxHandle);
-
-//typedef BOOLEAN (*FT_VPXDEC_VSP_Available) (void);
-
-//typedef void (*FT_mpeg4dec_GetOneDspFrm) (MP4Handle *mp4Handle, MMDecOutput * pOutput, int req_transposed, int is_last_frame);
+typedef void (* FT_VPXDecReleaseRefBuffers)(VPXHandle *vpxHandle);
+typedef int (* FT_VPXDecGetLastDspFrm)(VPXHandle *vpxHandle,void **pOutput);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
@@ -248,5 +206,5 @@ typedef MMDecRet (*FT_VPXDecRelease)(VPXHandle *vpxHandle);
 }
 #endif
 /**---------------------------------------------------------------------------*/
-#endif
+#endif //_VP8_DEC_H_
 // End

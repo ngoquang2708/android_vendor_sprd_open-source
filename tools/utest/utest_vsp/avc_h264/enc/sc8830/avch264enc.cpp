@@ -15,29 +15,14 @@
 #include "ion_sprd.h"
 using namespace android;
 
-
-//#include "h264enc.h"
 #include "avc_enc_api.h"
-
-
 #include "util.h"
 
 //#define CALCULATE_PSNR
+#define H264ENC_INTERNAL_BUFFER_SIZE  (0x200000)
+#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)
 
-#define ERR(x...)	fprintf(stderr, ##x)
-#define INFO(x...)	fprintf(stdout, ##x)
-
-
-#define CLIP_16(x)	(((x) + 15) & (~15))
-
-
-#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-
-
-
-
-static void usage()
-{
+static void usage() {
     INFO("usage:\n");
     INFO("utest_vsp_h264enc -i filename_yuv -w width -h height -o filename_bitstream [OPTIONS]\n");
     INFO("-i                string : input yuv filename\n");
@@ -52,10 +37,11 @@ static void usage()
     INFO("-qp               integer: qp[1...31] if vbr, default is 8\n");
     INFO("-frames           integer: number of frames to encode, default is 0(all frames)\n");
     INFO("-help                    : show this help message\n");
-    INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
+    INFO("Built on %s %s, Written by XiaoweiLuo(xiaowei.luo@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
-void* mLibHandle;
+void *mLibHandle;
+FT_H264EncPreInit        mH264EncPreInit;
 FT_H264EncInit        mH264EncInit;
 FT_H264EncSetConf        mH264EncSetConf;
 FT_H264EncGetConf        mH264EncGetConf;
@@ -64,11 +50,10 @@ FT_H264EncGenHeader        mH264EncGenHeader;
 FT_H264EncRelease        mH264EncRelease;
 static bool mIOMMUEnabled = false;
 
-static int enc_init(AVCHandle *mHandle, unsigned int width, unsigned int height, int format,
-                    unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter,
-                    unsigned char* pbuf_extra, unsigned char* pbuf_extra_phy, unsigned int size_extra,
-                    unsigned char* pbuf_stream, unsigned char* pbuf_stream_phy, unsigned int size_stream)
-{
+static int32 enc_init(AVCHandle *mHandle, uint32 width, uint32 height, int32 format,
+                      uint8 *pbuf_inter, uint32 pbuf_inter_phy, uint32 size_inter,
+                      uint8 *pbuf_extra, uint32 pbuf_extra_phy, uint32 size_extra,
+                      uint8 *pbuf_stream, uint32 pbuf_stream_phy, uint32 size_stream) {
     MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
     MMCodecBuffer StreamMemBfr;
@@ -79,6 +64,10 @@ static int enc_init(AVCHandle *mHandle, unsigned int width, unsigned int height,
     InterMemBfr.common_buffer_ptr = pbuf_inter;
     InterMemBfr.common_buffer_ptr_phy = pbuf_inter_phy;
     InterMemBfr.size = size_inter;
+    if ((*mH264EncPreInit)(mHandle, &InterMemBfr) != MMENC_OK) {
+        ERR ("mH264EncPreInit error.\n ");
+        return -1;
+    }
 
     ExtraMemBfr.common_buffer_ptr = pbuf_extra;
     ExtraMemBfr.common_buffer_ptr_phy = pbuf_extra_phy;
@@ -91,18 +80,29 @@ static int enc_init(AVCHandle *mHandle, unsigned int width, unsigned int height,
 //	encInfo.is_h263 = (format == 0) ? 1 : 0;
     encInfo.frame_width = width;
     encInfo.frame_height = height;
-    encInfo.uv_interleaved = 1;
+    encInfo.yuv_format = MMENC_YUV420SP_NV21;
     encInfo.time_scale = 1000;
+    encInfo.b_anti_shake = 0;
+    encInfo.cabac_en = 0;
+    if ((*mH264EncInit)(mHandle,  &ExtraMemBfr,&StreamMemBfr, &encInfo) != MMENC_OK) {
+        ERR ("mH264EncInit error.\n ");
+        return -1;
+    }
 
-    return (*mH264EncInit)(mHandle, &InterMemBfr, &ExtraMemBfr,&StreamMemBfr, &encInfo);
+    INFO("enc_init OUT\n");
+
+    return 0;
+
 }
 
-static void enc_set_parameter(AVCHandle *mHandle, int format, int framerate, int cbr, int bitrate, int qp)
-{
+static int32 enc_set_parameter(AVCHandle *mHandle, int format, int framerate, int cbr, int bitrate, int qp) {
     MMEncConfig encConfig;
-    INFO("enc_set_parameter 0\n");
+    INFO("enc_set_parameter IN\n");
 
-    (*mH264EncGetConf)(mHandle, &encConfig);
+    if ((*mH264EncGetConf)(mHandle, &encConfig) != MMENC_OK) {
+        ERR ("mH264EncGetConf error.\n ");
+        return -1;
+    }
 
     encConfig.h263En = (format == 0) ? 1 : 0;
     encConfig.RateCtrlEnable = cbr;
@@ -112,21 +112,22 @@ static void enc_set_parameter(AVCHandle *mHandle, int format, int framerate, int
     encConfig.QP_PVOP = qp;
     encConfig.vbv_buf_size = bitrate/2;
     encConfig.profileAndLevel = 1;
+    if ((*mH264EncSetConf)(mHandle, &encConfig) != MMENC_OK) {
+        ERR ("mH264EncSetConf error.\n ");
+        return -1;
+    }
 
-    (*mH264EncSetConf)(mHandle, &encConfig);
+    INFO("enc_set_parameter OUT\n");
 
-    INFO("enc_set_parameter 1\n");
-
+    return 0;
 }
 
 #if 0
-static int enc_get_header(unsigned char* pheader, unsigned int* size)
-{
+static int enc_get_header(uint8* pheader, uint32* size) {
     MMEncOut encOut;
     H264EncGenHeader(&encOut);
 
-    if ((encOut.strmSize > (int)(*size)) || (encOut.strmSize <= 0))
-    {
+    if ((encOut.strmSize > (int)(*size)) || (encOut.strmSize <= 0)) {
         return -1;
     }
 
@@ -137,11 +138,10 @@ static int enc_get_header(unsigned char* pheader, unsigned int* size)
 }
 #endif
 
-static int enc_encode_frame(AVCHandle *mHandle, unsigned char* py, unsigned char* py_phy, unsigned char* puv, unsigned char* puv_phy, unsigned char* pframe, unsigned int* size, unsigned char**pyuv_rec, unsigned int timestamp, int* type, int bs_remain_len = 0)
-{
+static int32 enc_encode_frame(AVCHandle *mHandle, uint8* py, uint32 py_phy, uint8* puv, uint32 puv_phy,
+                              uint8 *pframe, uint32 *size, uint8 **pyuv_rec, uint32 timestamp, int32 *type, int32 bs_remain_len = 0) {
     MMEncIn vid_in;
     MMEncOut vid_out;
-    int ret;
 
     vid_in.time_stamp = timestamp;
     vid_in.vopType = *type;
@@ -150,13 +150,15 @@ static int enc_encode_frame(AVCHandle *mHandle, unsigned char* py, unsigned char
     vid_in.p_src_y = py;
     vid_in.p_src_u = puv;
     vid_in.p_src_v = 0;
-    vid_in.p_src_y_phy = py_phy;
-    vid_in.p_src_u_phy = puv_phy;
+    vid_in.p_src_y_phy = (uint8 *)py_phy;
+    vid_in.p_src_u_phy = (uint8 *)puv_phy;
     vid_in.p_src_v_phy = 0;
-
-    ret = (*mH264EncStrmEncode)(mHandle, &vid_in, &vid_out);
-    if ((vid_out.strmSize > ONEFRAME_BITSTREAM_BFR_SIZE) || (vid_out.strmSize <= 0))
-    {
+    if ((*mH264EncStrmEncode)(mHandle, &vid_in, &vid_out) != MMENC_OK) {
+        ERR("mH264EncStrmEncode err.\n");
+        return -1;
+    }
+    if ((vid_out.strmSize > ONEFRAME_BITSTREAM_BFR_SIZE) || (vid_out.strmSize <= 0)) {
+        ERR("vid_out.strmSize err.\n");
         return -1;
     }
 
@@ -167,64 +169,44 @@ static int enc_encode_frame(AVCHandle *mHandle, unsigned char* py, unsigned char
 
     *type = vid_in.vopType;
 
-    return ret;
+    return 0;
 }
 
-
-static void enc_release(AVCHandle *mHandle)
-{
-    (*mH264EncRelease)(mHandle);
-}
-
-static const char* format2str(int format)
-{
-    if (format == 0)
-    {
-        return "H263";
+static int32 enc_release(AVCHandle *mHandle) {
+    if ((*mH264EncRelease)(mHandle) != MMENC_OK) {
+        ERR("mH264EncRelease err.\n");
+        return -1;
     }
-    else
-    {
-        return "MPEG4";
-    }
+    return 0;
 }
 
-static const char* type2str(int type)
-{
-    if (type == 0)
-    {
+static const char* type2str(int type) {
+    if (type == 0) {
         return "I";
-    }
-    else if (type == 1)
-    {
+    } else if (type == 1) {
         return "P";
-    }
-    else if (type == 2)
-    {
+    } else if (type == 2) {
         return "B";
-    }
-    else
-    {
+    } else {
         return "S";
     }
 }
 
 #if defined(CALCULATE_PSNR)
-static float psnr(unsigned char* pframe_org, unsigned char* pframe_rec, unsigned int width, unsigned int height)
-{
-    unsigned int sse = 0;
-    for (unsigned int i=0; i<width*height; i++)
-    {
-        int dif = (*pframe_org ++) - (*pframe_rec ++);
+static float psnr(uint8* pframe_org, uint8* pframe_rec, uint32 width, uint32 height) {
+    uint32 sse = 0;
+    for (uint32 i=0; i<width*height; i++) {
+        int32 dif = (*pframe_org ++) - (*pframe_rec ++);
         sse += dif * dif;
     }
     return (sse == 0) ? 99.9f : (48.131f - 10.0f * log10f((float)sse / (float)(width*height)));
 }
 #endif
 
-bool openEncoder(const char* libName)
-{
+static int32 openEncoder(const char* libName) {
     if(mLibHandle) {
         dlclose(mLibHandle);
+        mLibHandle = NULL;
     }
 
     INFO("openEncoder, lib: %s",libName);
@@ -232,7 +214,15 @@ bool openEncoder(const char* libName)
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
         ERR("openEncoder, can't open lib: %s",libName);
-        return false;
+        return -1;
+    }
+
+    mH264EncPreInit = (FT_H264EncPreInit)dlsym(mLibHandle, "H264EncPreInit");
+    if(mH264EncPreInit == NULL) {
+        ERR("Can't find H264EncPreInit in %s",libName);
+        dlclose(mLibHandle);
+        mLibHandle = NULL;
+        return -1;
     }
 
     mH264EncInit = (FT_H264EncInit)dlsym(mLibHandle, "H264EncInit");
@@ -240,7 +230,7 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncInit in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mH264EncSetConf = (FT_H264EncSetConf)dlsym(mLibHandle, "H264EncSetConf");
@@ -248,7 +238,7 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncSetConf in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mH264EncGetConf = (FT_H264EncGetConf)dlsym(mLibHandle, "H264EncGetConf");
@@ -256,7 +246,7 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncGetConf in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mH264EncStrmEncode = (FT_H264EncStrmEncode)dlsym(mLibHandle, "H264EncStrmEncode");
@@ -264,7 +254,7 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncStrmEncode in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mH264EncGenHeader = (FT_H264EncGenHeader)dlsym(mLibHandle, "H264EncGenHeader");
@@ -272,7 +262,7 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncGenHeader in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mH264EncRelease = (FT_H264EncRelease)dlsym(mLibHandle, "H264EncRelease");
@@ -280,46 +270,48 @@ bool openEncoder(const char* libName)
         ERR("Can't find H264EncRelease in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
+        return -1;
     }
 
-    return true;
+    return 0;
 }
 
-int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned int height, int format, unsigned int framerate, unsigned int max_key_interval, int cbr, unsigned int bitrate, unsigned int qp, unsigned int frames = 0)
-{
+int vsp_enc(char* filename_yuv, char* filename_bs, uint32 width, uint32 height, int32 format,
+            uint32 framerate, uint32 max_key_interval, int32 cbr, uint32 bitrate, uint32 qp, uint32 frames = 0) {
     // yuv file and bs file
-    FILE* fp_yuv = NULL;
-    FILE* fp_bs = NULL;
+    FILE *fp_yuv = NULL;
+    FILE *fp_bs = NULL;
 
     // yuv420p buffer, read from yuv file
-    unsigned char* py = NULL;
-    unsigned char* pu = NULL;
-    unsigned char* pv = NULL;
+    uint8 *py = NULL;
+    uint8 *pu = NULL;
+    uint8 *pv = NULL;
 
     // yuv420p buffer, rec frame
-    unsigned char* py_rec = NULL;
-    unsigned char* pu_rec = NULL;
-    unsigned char* pv_rec = NULL;
+    uint8 *py_rec = NULL;
+    uint8 *pu_rec = NULL;
+    uint8 *pv_rec = NULL;
 
     // yuv420sp buffer, transform from yuv420p and to encode
     sp<MemoryHeapIon> pmem_yuv420sp = NULL;
-    unsigned char* pyuv = NULL;
-    unsigned char* pyuv_phy = NULL;
+    int32 size_yuv = 0;
+    uint8 *pyuv = NULL;
+    uint32 pyuv_phy = 0;
 
     // yuv420sp buffer, rec frame
-    unsigned char* pyuv_rec = NULL;
+    uint8* pyuv_rec = NULL;
 
     // bitstream buffer, encode from yuv420sp and write to bs file
-    unsigned char header_buffer[32];
-    unsigned int header_size = 32;
-    unsigned char frame_buffer[ONEFRAME_BITSTREAM_BFR_SIZE];
-    unsigned int frame_size = ONEFRAME_BITSTREAM_BFR_SIZE;
+    uint8 header_buffer[32];
+    uint32 header_size = 32;
+    uint8 frame_buffer[ONEFRAME_BITSTREAM_BFR_SIZE];
+    uint32 frame_size = ONEFRAME_BITSTREAM_BFR_SIZE;
 
-    unsigned int framenum_yuv = 0;
-    unsigned int framenum_bs = 0;
-    unsigned int bs_total_len = 0;
-    unsigned int time_total_ms = 0;
-    int bs_remain_len = bitrate/2;
+    uint32 framenum_yuv = 0;
+    uint32 framenum_bs = 0;
+    uint32 bs_total_len = 0;
+    uint32 time_total_ms = 0;
+    int32 bs_remain_len = bitrate/2;
 #if defined(CALCULATE_PSNR)
     float psnr_total[3] = {.0f, .0f, .0f};
     float psnr_y = .0f;
@@ -327,79 +319,64 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     float psnr_v = .0f;
 #endif
 
-    AVCHandle *mHandle;
+    AVCHandle *mHandle = NULL;
 
     // VSP buffer
-//	unsigned char* pbuf_inter = NULL;
-//	unsigned int size_inter = 0;
     sp<MemoryHeapIon> pmem_extra = NULL;
-    unsigned char* pbuf_extra = NULL;
-    unsigned char* pbuf_extra_phy = NULL;
+    uint8 *pbuf_extra = NULL;
+    uint32 pbuf_extra_phy = 0;
+    uint32 size_extra = 0;
 
-    sp<MemoryHeapIon> pmem_inter = NULL;
-    unsigned char* pbuf_inter = NULL;
-    unsigned char* pbuf_inter_phy = NULL;
+    uint8 *pbuf_inter = NULL;
+    uint32 size_inter = 0;
 
     sp<MemoryHeapIon> pmem_stream = NULL;
-    unsigned char* pbuf_stream = NULL;
-    unsigned char* pbuf_stream_phy = NULL;
+    uint8 *pbuf_stream = NULL;
+    uint32 pbuf_stream_phy = 0;
+    uint32 size_stream = 0;
 
-    unsigned int size_extra = 0;
-    unsigned int size_inter = 0;
-    unsigned int size_stream = 0;
-
-    int phy_addr = 0;
-    int size = 0;
-
+    int32 phy_addr = 0;
+    int32 size = 0;
 
     fp_yuv = fopen(filename_yuv, "rb");
-    if (fp_yuv == NULL)
-    {
+    if (fp_yuv == NULL) {
         ERR("Failed to open file %s\n", filename_yuv);
         goto err;
     }
     fp_bs = fopen(filename_bs, "wb");
-    if (fp_bs == NULL)
-    {
+    if (fp_bs == NULL) {
         ERR("Failed to open file %s\n", filename_bs);
         goto err;
     }
 
-
     /* yuv420p buffer */
-    py = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    if (py == NULL)
-    {
+    py = (uint8 *)vsp_malloc(width * height * sizeof(uint8), 4);
+    if (py == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-    pu = (unsigned char*)malloc(width/2 * height/2 * sizeof(unsigned char));
-    if (pu == NULL)
-    {
+    pu = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pu == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-    pv = (unsigned char*)malloc(width/2 * height/2 * sizeof(unsigned char));
-    if (pv == NULL)
-    {
+    pv = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pv == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-    py_rec = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    if (py_rec == NULL)
-    {
+    py_rec = (uint8 *)vsp_malloc(width * height * sizeof(uint8), 4);
+    if (py_rec == NULL) {
         ERR("Failed to alloc yuv rec buffer\n");
         goto err;
     }
-    pu_rec = (unsigned char*)malloc(width/2 * height/2 * sizeof(unsigned char));
-    if (pu_rec == NULL)
-    {
+    pu_rec = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pu_rec == NULL) {
         ERR("Failed to alloc yuv rec buffer\n");
         goto err;
     }
-    pv_rec = (unsigned char*)malloc(width/2 * height/2 * sizeof(unsigned char));
-    if (pv_rec == NULL)
-    {
+    pv_rec = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pv_rec == NULL) {
         ERR("Failed to alloc yuv rec buffer\n");
         goto err;
     }
@@ -414,83 +391,77 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     } else {
         pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width * height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
+    if (pmem_yuv420sp->getHeapID() < 0) {
+        ERR("Failed to alloc yuv pmem buffer\n");
+        goto err;
+    }
+
     if (mIOMMUEnabled) {
         pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
     } else {
         pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
     }
-    pyuv = (unsigned char*)pmem_yuv420sp->base();
-    pyuv_phy = (unsigned char*)phy_addr;
-    if (pyuv == NULL)
-    {
+    pyuv = (uint8 *)pmem_yuv420sp->base();
+    pyuv_phy = (uint32)phy_addr;
+    size_yuv = size;
+    if (pyuv == NULL) {
         ERR("Failed to alloc yuv pmem buffer\n");
         goto err;
     }
 
-
-
-
     INFO("Try to encode %s[%dx%d] to %s, format = H264", filename_yuv, width, height, filename_bs);
-    if (cbr)
-    {
+    if (cbr) {
         INFO(", framerate = %d, bitrate = %dkbps\n", framerate, bitrate/1000);
-    }
-    else
-    {
+    } else {
         INFO(", framerate = %d, QP = %d\n", framerate, qp);
     }
 
-    mHandle = (AVCHandle *)malloc(sizeof(AVCHandle));
+    mHandle = (AVCHandle *)vsp_malloc(sizeof(AVCHandle), 4);
+    if (mHandle == NULL) {
+        ERR("Failed to alloc mHandle\n");
+        goto err;
+    }
     memset(mHandle, 0, sizeof(AVCHandle));
 
-    openEncoder("libomx_avcenc_hw_sprd.so");
-
-
-    /* step 1 - init vsp */
-    size_inter = H264ENC_INTERNAL_BUFFER_SIZE;
-    if (mIOMMUEnabled) {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-    } else {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-    }
-    if (mIOMMUEnabled) {
-        pmem_inter->get_mm_iova(&phy_addr, &size);
-    } else {
-        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
-    }
-    pbuf_inter = (unsigned char*)pmem_inter->base();
-    pbuf_inter_phy = (unsigned char*)phy_addr;
-    if (pbuf_inter == NULL)
-    {
-        ERR("Failed to alloc inter memory\n");
+    if (openEncoder("libomx_avcenc_hw_sprd.so") < 0) {
+        ERR("Failed to open encoder");
         goto err;
     }
 
-    INFO("pbuf_inter: %x\n", pbuf_inter);
+    /* step 1 - init vsp */
+    size_inter = H264ENC_INTERNAL_BUFFER_SIZE;
+    pbuf_inter = (uint8 *)vsp_malloc(size_inter, 4);
+    if (pbuf_inter == NULL) {
+        ERR("Failed to alloc inter memory\n");
+        goto err;
+    }
+    INFO("pbuf_inter: 0x%p\n", pbuf_inter);
 
     size_extra = width * height * 3/2 * 2;
-
     size_extra += (406*2*sizeof(uint32));
     size_extra += 1024;
-
     if (mIOMMUEnabled) {
         pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
     } else {
         pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
+    if (pmem_extra->getHeapID() < 0) {
+        ERR("Failed to alloc extra memory\n");
+        goto err;
+    }
+
     if (mIOMMUEnabled) {
         pmem_extra->get_mm_iova(&phy_addr, &size);
     } else {
         pmem_extra->get_phy_addr_from_ion(&phy_addr, &size);
     }
-    pbuf_extra = (unsigned char*)pmem_extra->base();
-    pbuf_extra_phy = (unsigned char*)phy_addr;
-    if (pbuf_extra == NULL)
-    {
+    pbuf_extra = (uint8 *)pmem_extra->base();
+    pbuf_extra_phy = (uint32)phy_addr;
+    if (pbuf_extra == NULL) {
         ERR("Failed to alloc extra memory\n");
         goto err;
     }
-    INFO("pbuf_inter: %x\n", pbuf_extra);
+    INFO("pbuf_extra: 0x%p\n", pbuf_extra);
 
     size_stream = ONEFRAME_BITSTREAM_BFR_SIZE;
     if (mIOMMUEnabled) {
@@ -503,113 +474,90 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
     } else {
         pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
     }
-    pbuf_stream = (unsigned char*)pmem_stream->base();
-    pbuf_stream_phy = (unsigned char*)phy_addr;
-    if (pbuf_stream == NULL)
-    {
+    pbuf_stream = (uint8 *)pmem_stream->base();
+    pbuf_stream_phy = (uint32)phy_addr;
+    if (pbuf_stream == NULL) {
         ERR("Failed to alloc stream memory\n");
         goto err;
     }
+    INFO("pbuf_stream: 0x%p\n", pbuf_stream);
 
-    INFO("pbuf_stream: %x\n", pbuf_stream);
-
-    if (enc_init(mHandle, width, height, format, pbuf_inter, pbuf_inter_phy, size_inter, pbuf_extra, pbuf_extra_phy, size_extra, pbuf_stream, pbuf_stream_phy, size_stream) != 0)
-    {
+    if (enc_init(mHandle, width, height, format, pbuf_inter, 0, size_inter, pbuf_extra, pbuf_extra_phy, size_extra, pbuf_stream, pbuf_stream_phy, size_stream) < 0) {
         ERR("Failed to init VSP\n");
         goto err;
     }
-
     INFO("enc_init end\n");
 
     /* step 2 - set vsp  and get header */
-    enc_set_parameter(mHandle, format, framerate, cbr, bitrate, qp);
-//	if (format)	// m4v
-//	{
-//		if (enc_get_header(header_buffer, &header_size) < 0)
-//		{
-//			ERR("Failed to get header\n");
-//			goto err;
-//		}
-//		INFO("header: size = %d\n", header_size);
-//	}
-    MMEncOut sps_header, pps_header;
-    int   header_ret;
-
-    memset(&sps_header, 0, sizeof(MMEncOut));
-    memset(&pps_header, 0, sizeof(MMEncOut));
+    if (enc_set_parameter(mHandle, format, framerate, cbr, bitrate, qp) < 0) {
+        ERR("Failed to set parameter\n");
+        goto err;
+    }
 
     //sps
-    header_ret = (*mH264EncGenHeader)(mHandle, &sps_header, 1);
-    if (fwrite(sps_header.pOutBuf, sizeof(unsigned char), sps_header.strmSize, fp_bs) != sps_header.strmSize)
-    {
-        ERR("Failed to encode sps %d\n", header_ret);
+    MMEncOut sps_header;
+    memset(&sps_header, 0, sizeof(MMEncOut));
+    if ((*mH264EncGenHeader)(mHandle, &sps_header, 1) < 0) {
+        ERR("Failed to generate sps header\n");
+        goto err;
+    }
+    if (fwrite(sps_header.pOutBuf, sizeof(uint8), sps_header.strmSize, fp_bs) != sps_header.strmSize) {
+        ERR("Failed to write sps header\n");
         goto err;
     }
     bs_total_len += sps_header.strmSize;
 
     //pps
-    header_ret = (*mH264EncGenHeader)(mHandle, &pps_header, 0);
-    if (fwrite(pps_header.pOutBuf, sizeof(unsigned char), pps_header.strmSize, fp_bs) != pps_header.strmSize)
-    {
-        ERR("Failed to encode pps %d\n", header_ret);
+    MMEncOut pps_header;
+    memset(&pps_header, 0, sizeof(MMEncOut));
+    if((*mH264EncGenHeader)(mHandle, &pps_header, 0) < 0) {
+        ERR("Failed to generate pps header\n");
+        goto err;
+    }
+    if (fwrite(pps_header.pOutBuf, sizeof(uint8), pps_header.strmSize, fp_bs) != pps_header.strmSize) {
+        ERR("Failed to write pps header\n");
         goto err;
     }
     bs_total_len += pps_header.strmSize;
 
     /* step 3 - encode with vsp */
-    while (!feof(fp_yuv))
-    {
+    while (!feof(fp_yuv)) {
         // judge vop type
         int type = 0;
-        if (max_key_interval == 0)
-        {
-            if (framenum_bs > 0)
-            {
+        if (max_key_interval == 0) {
+            if (framenum_bs > 0) {
                 type = 1;
             }
-        }
-        else
-        {
-            if ((framenum_bs % max_key_interval) != 0)
-            {
+        } else {
+            if ((framenum_bs % max_key_interval) != 0) {
                 type = 1;
             }
         }
 
         // read yuv420p
-        if (read_yuv_frame(py, pu, pv, width, height, fp_yuv) != 0)
-        {
+        if (read_yuv_frame(py, pu, pv, width, height, fp_yuv) < 0) {
             break;
         }
         framenum_yuv ++;
 
-
-
         // yuv420p to yuv420sp
         yuv420p_to_yvu420sp(py, pu, pv, pyuv, pyuv+width*height, width, height);
 
-
         // encode yuv420sp to bitstream
         int64_t start = systemTime();
-        int ret = enc_encode_frame(mHandle, pyuv, pyuv_phy, pyuv+width*height, pyuv_phy+width*height, frame_buffer, &frame_size, &pyuv_rec, framenum_bs*1000/framerate, &type, bs_remain_len);
-        if (ret != 0)
-        {
-            ERR("Failed to encode frame %d\n", ret);
+        if (enc_encode_frame(mHandle, pyuv, pyuv_phy, pyuv+width*height, pyuv_phy+width*height, frame_buffer, &frame_size, &pyuv_rec, framenum_bs*1000/framerate, &type, bs_remain_len) < 0) {
+            ERR("Failed to encode frame\n");
             break;
         }
         int64_t end = systemTime();
         bs_remain_len += (frame_size << 3);
         bs_remain_len -= bitrate / framerate;
-        if (bs_remain_len > (int)bitrate)
-        {
+        if (bs_remain_len > (int)bitrate) {
             bs_remain_len = bitrate;
-        }
-        else if (bs_remain_len < 0)
-        {
+        } else if (bs_remain_len < 0) {
             bs_remain_len = 0;
         }
-        unsigned int duration = (unsigned int)((end-start) / 1000000L);
-
+        uint32 duration = (uint32)((end-start) / 1000000L);
 
         // psnr
 #if defined(CALCULATE_PSNR)
@@ -622,28 +570,13 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
         psnr_total[2] += psnr_v;
 #endif
 
-        // write header if key frame for MPEG4
-#if 0
-        if (format && (type == 0))
-        {
-            if (fwrite(header_buffer, sizeof(unsigned char), header_size, fp_bs) != header_size)
-            {
-                break;
-            }
-            bs_total_len += header_size;
-        }
-#endif
-
         // write frame
-        if (fwrite(frame_buffer, sizeof(unsigned char), frame_size, fp_bs) != frame_size)
-        {
+        if (fwrite(frame_buffer, sizeof(uint8), frame_size, fp_bs) != frame_size) {
             break;
         }
         bs_total_len += frame_size;
         time_total_ms += duration;
         framenum_bs ++;
-
-
 
         INFO("frame %d: time = %dms, type = %s, size = %d ", framenum_bs, duration, type2str(type), frame_size);
 #if defined(CALCULATE_PSNR)
@@ -651,107 +584,80 @@ int vsp_enc(char* filename_yuv, char* filename_bs, unsigned int width, unsigned 
 #endif
         INFO("\n");
 
-
-        if (frames != 0)
-        {
-            if (framenum_bs >= frames)
-            {
+        if (frames != 0) {
+            if (framenum_bs >= frames) {
                 break;
             }
         }
     }
 
-
     /* step 4 - release vsp */
-    enc_release(mHandle);
-
+    if (enc_release(mHandle) < 0) {
+        ERR("enc_release err\n");
+        goto err;
+    }
 
     INFO("\nFinish encoding %s[%dx%d] to %s(%s, size = %d)\n", filename_yuv, width, height, filename_bs, "H.264", bs_total_len);
-    if (framenum_bs > 0)
-    {
+    if (framenum_bs > 0) {
         INFO("average time = %dms, average bitrate = %dkbps", time_total_ms/framenum_bs, bs_total_len*8*framerate/framenum_bs/1000);
 
 #if defined(CALCULATE_PSNR)
         INFO(", average psnr (%2.2f %2.2f %2.2f)", psnr_total[0]/framenum_bs, psnr_total[1]/framenum_bs, psnr_total[2]/framenum_bs);
 #endif
         INFO("\n");
-
     }
 
-
-
 err:
-    if(mLibHandle)
-    {
+    if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
     }
 
-    if (mHandle != NULL)
-    {
-        free (mHandle);
-    }
+    vsp_free (mHandle);
+    vsp_free(pbuf_inter);
 
-    if (pbuf_extra != NULL)
-    {
+    if (pbuf_extra != NULL) {
+        if (mIOMMUEnabled) {
+            pmem_extra->free_mm_iova((int32)pbuf_extra_phy, size_extra);
+        }
         pmem_extra.clear();
         pbuf_extra = NULL;
-    }
-    if (pbuf_inter != NULL)
-    {
-        pmem_inter.clear();
-        pbuf_inter = NULL;
+        pbuf_extra_phy = 0;
+        size_extra = 0;
     }
 
-    if (pbuf_stream != NULL)
-    {
+    if (pbuf_stream != NULL) {
+        if (mIOMMUEnabled) {
+            pmem_stream->free_mm_iova((int32)pbuf_stream_phy, size_stream);
+        }
         pmem_stream.clear();
         pbuf_stream = NULL;
+        pbuf_stream_phy = 0;
+        size_stream = 0;
     }
 
-    if (pyuv != NULL)
-    {
+    if (pyuv != NULL) {
+        if (mIOMMUEnabled) {
+            pmem_yuv420sp->free_mm_iova((int32)pyuv_phy, size_yuv);
+        }
         pmem_yuv420sp.clear();
         pyuv = NULL;
-    }
-    if (py_rec != NULL)
-    {
-        free(py_rec);
-        py_rec = NULL;
-    }
-    if (pu_rec != NULL)
-    {
-        free(pu_rec);
-        pu_rec = NULL;
-    }
-    if (pv_rec != NULL)
-    {
-        free(pv_rec);
-        pv_rec = NULL;
-    }
-    if (py != NULL)
-    {
-        free(py);
-        py = NULL;
-    }
-    if (pu != NULL)
-    {
-        free(pu);
-        pu = NULL;
-    }
-    if (pv != NULL)
-    {
-        free(pv);
-        pv = NULL;
+        pyuv_phy = 0;
+        size_yuv = 0;
     }
 
-    if (fp_yuv != NULL)
-    {
+    vsp_free(py_rec);
+    vsp_free(pu_rec);
+    vsp_free(pv_rec);
+    vsp_free(py);
+    vsp_free(pu);
+    vsp_free(pv);
+
+    if (fp_yuv != NULL) {
         fclose(fp_yuv);
         fp_yuv = NULL;
     }
-    if (fp_bs != NULL)
-    {
+    if (fp_bs != NULL) {
         fclose(fp_bs);
         fp_bs = NULL;
     }
@@ -759,100 +665,68 @@ err:
     return 0;
 }
 
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     char* filename_yuv = NULL;
     char* filename_bs = NULL;
-    unsigned int width = 0;
-    unsigned int height = 0;
-    int format = 1;
-    unsigned int framerate = 25;
-    unsigned int max_key_interval = 30;
-    int cbr = 1;
-    unsigned int bitrate = 512;
-    unsigned int qp = 8;
-    unsigned int frames = 0;
-    int i;
+    uint32 width = 0;
+    uint32 height = 0;
+    int32 format = H264;
+    uint32 framerate = 25;
+    uint32 max_key_interval = 30;
+    int32 cbr = 1;
+    uint32 bitrate = 512;
+    uint32 qp = 8;
+    uint32 frames = 0;
+    int32 i;
 
     /* parse argument */
-
-    if (argc < 9)
-    {
+    if (argc < 9) {
         usage();
         return -1;
     }
 
-    for (i=1; i<argc; i++)
-    {
-        if (strcmp(argv[i], "-i") == 0 && (i < argc-1))
-        {
+    for (i=1; i<argc; i++) {
+        if (strcmp(argv[i], "-i") == 0 && (i < argc-1)) {
             filename_yuv = argv[++i];
-        }
-        else if (strcmp(argv[i], "-o") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-o") == 0 && (i < argc-1)) {
             filename_bs = argv[++i];
-        }
-        else if (strcmp(argv[i], "-w") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-w") == 0 && (i < argc-1)) {
             width = CLIP_16(atoi(argv[++i]));
-        }
-        else if (strcmp(argv[i], "-h") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-h") == 0 && (i < argc-1)) {
             height = CLIP_16(atoi(argv[++i]));
-        }
-//		else if (strcmp(argv[i], "-format") == 0 && (i < argc-1))
-//		{
-//			format = atoi(argv[++i]);
-//		}
-        else if (strcmp(argv[i], "-framerate") == 0 && (i < argc-1))
-        {
+        }/*else if (strcmp(argv[i], "-format") == 0 && (i < argc-1))
+		{
+			format = atoi(argv[++i]);
+		}*/else if (strcmp(argv[i], "-framerate") == 0 && (i < argc-1)) {
             framerate = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-max_key_interval") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-max_key_interval") == 0 && (i < argc-1)) {
             max_key_interval = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-bitrate") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-bitrate") == 0 && (i < argc-1)) {
             cbr = 1;
             bitrate = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-qp") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-qp") == 0 && (i < argc-1)) {
             cbr = 0;
             qp = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-frames") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-frames") == 0 && (i < argc-1)) {
             frames = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-help") == 0)
-        {
+        } else if (strcmp(argv[i], "-help") == 0) {
             usage();
             return 0;
-        }
-        else
-        {
+        } else {
             usage();
             return -1;
         }
     }
 
-
     /* check argument */
-    if ((filename_yuv == NULL) || (filename_bs == NULL))
-    {
+    if ((filename_yuv == NULL) || (filename_bs == NULL)) {
         usage();
         return -1;
     }
-    if ((width == 0) || (height == 0) || (framerate == 0))
-    {
+    if ((width == 0) || (height == 0) || (framerate == 0)) {
         usage();
         return -1;
     }
-
-
 
     return vsp_enc(filename_yuv, filename_bs, width, height, format, framerate, max_key_interval, cbr, bitrate*1000, qp, frames);
 }

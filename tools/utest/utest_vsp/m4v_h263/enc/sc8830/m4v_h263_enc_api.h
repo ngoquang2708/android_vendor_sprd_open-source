@@ -17,7 +17,6 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-//#include "mmcodec.h"
 
 /**---------------------------------------------------------------------------*
  **                             Compiler Flag                                 *
@@ -27,32 +26,20 @@ extern   "C"
 {
 #endif
 
-#define _VSP_LINUX_
-
-#define MP4ENC_INTERNAL_BUFFER_SIZE  (0x200000)  //(MP4ENC_OR_RUN_SIZE+MP4ENC_OR_INTER_MALLOC_SIZE)  
-#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-
 typedef unsigned char		BOOLEAN;
-//typedef unsigned char		Bool;
 typedef unsigned char		uint8;
 typedef unsigned short		uint16;
 typedef unsigned int		uint32;
-//typedef unsigned int		uint;
-
 typedef signed char			int8;
 typedef signed short		int16;
 typedef signed int			int32;
 
-/*standard*/
-typedef enum {
-    ITU_H263 = 0,
-    MPEG4,
-    JPEG,
-    FLV_V1,
-    H264,
-    RV8,
-    RV9
-} VIDEO_STANDARD_E;
+// Encoder video capability structure
+typedef struct
+{
+    int32 max_width;
+    int32 max_height;
+} MMEncCapability;
 
 typedef enum
 {
@@ -69,9 +56,7 @@ typedef enum
 typedef struct
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-#ifdef _VSP_LINUX_
-    void *common_buffer_ptr_phy;
-#endif
+    uint32 common_buffer_ptr_phy;
     uint32	size;            		// Number of bytes decoding buffer
 
     int32 	frameBfr_num;			//YUV frame buffer number
@@ -82,6 +67,14 @@ typedef struct
 
 typedef MMCodecBuffer MMEncBuffer;
 
+typedef enum
+{
+    MMENC_YUV420P_YU12 = 0,
+    MMENC_YUV420P_YV12 = 1,
+    MMENC_YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    MMENC_YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MMENC_YUV_FORMAT_E;
+
 // Encoder video format structure
 typedef struct
 {
@@ -89,7 +82,9 @@ typedef struct
     int32	frame_width;				//frame width
     int32	frame_height;				//frame Height
     int32	time_scale;
-    int32	uv_interleaved;				//tmp add
+//    int32	uv_interleaved;				//tmp add
+    int32    yuv_format;
+    int32    b_anti_shake;
 } MMEncVideoInfo;
 
 // Encoder config structure
@@ -115,15 +110,19 @@ typedef struct
     uint8   *p_src_y;
     uint8   *p_src_u;
     uint8   *p_src_v;
-#ifdef _VSP_LINUX_
+
     uint8   *p_src_y_phy;
     uint8   *p_src_u_phy;
     uint8   *p_src_v_phy;
-#endif
+
     int32	vopType;					//vopµÄÀàÐÍ  0 - I Frame    1 - P frame
     int32	time_stamp;					//time stamp
     int32   bs_remain_len;				//remained bitstream length
     int32 	channel_quality;			//0: good, 1: ok, 2: poor
+    int32    org_img_width;
+    int32    org_img_height;
+    int32    crop_x;
+    int32    crop_y;
 } MMEncIn;
 
 // Encoder output structure
@@ -145,6 +144,21 @@ typedef struct tagMP4Handle
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
+/*****************************************************************************/
+//  Description:   Get capability of MPEG4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capability);
+
+/*****************************************************************************/
+//  Description:   Pre-Init mpeg4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr);
 
 /*****************************************************************************/
 //  Description:   Init mpeg4 encoder
@@ -152,7 +166,7 @@ typedef struct tagMP4Handle
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
@@ -194,7 +208,9 @@ MMEncRet MP4EncStrmEncode (MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOut
 /*****************************************************************************/
 MMEncRet MP4EncRelease(MP4Handle *mp4Handle);
 
-typedef MMEncRet (*FT_MP4EncInit)(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+typedef MMEncRet (*FT_MP4EncGetCodecCapability)(MP4Handle *mp4Handle, MMEncCapability *Capability);
+typedef MMEncRet (*FT_MP4EncPreInit)(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr);
+typedef MMEncRet (*FT_MP4EncInit)(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 typedef MMEncRet (*FT_MP4EncSetConf)(MP4Handle *mp4Handle, MMEncConfig *pConf);
 typedef MMEncRet (*FT_MP4EncGetConf)(MP4Handle *mp4Handle, MMEncConfig *pConf);
 typedef MMEncRet (*FT_MP4EncStrmEncode) (MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutput);
