@@ -42,6 +42,15 @@ static int wcn_process_btwificmd(int client_fd, char* cmd_str, WcndManager *pWcn
 
 #endif
 
+	//if not use our own wcn, just return
+	if(!pWcndManger->is_wcn_modem_enabled)
+	{
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+		return 0;
+	}
+
+
 	WcndMessage message;
 
 	message.event = 0;
@@ -74,12 +83,7 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 
 
 	//First check if wcn modem is enabled or not, if not, the at cmd is not supported
-	char value[PROPERTY_VALUE_MAX] = {'\0'};
-
-	property_get(WCND_MODEM_ENABLE_PROP_KEY, value, "1");
-	int is_enabled = atoi(value);
-
-	if(!is_enabled)
+	if(!pWcndManger->is_wcn_modem_enabled)
 	{
 		wcnd_send_back_cmd_result(client_fd, ":WCN Disabled", 0);
 		return 0;
@@ -241,7 +245,7 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		//tell the client the reset cmd is executed
 		wcnd_send_back_cmd_result(client_fd, NULL, 1);
 
-		wcnd_do_cp2_reset_process(pWcndManger);
+		wcnd_do_wcn_reset_process(pWcndManger);
 	}
 	else if(!strcmp(argv[0], "test"))
 	{
@@ -323,6 +327,14 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 
 #endif
 
+		//if not use our own wcn, just return
+		if(!pWcndManger->is_wcn_modem_enabled)
+		{
+			wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+			return 0;
+		}
+
 		message.event = WCND_EVENT_CP2POWERON_REQ;
 		message.replyto_fd = client_fd;
 		wcnd_sm_step(pWcndManger, &message);
@@ -351,6 +363,14 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		return 0;
 
 #endif
+
+		//if not use our own wcn, just return
+		if(!pWcndManger->is_wcn_modem_enabled)
+		{
+			wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+
+			return 0;
+		}
 
 		message.event = WCND_EVENT_CP2POWEROFF_REQ;
 		message.replyto_fd = client_fd;

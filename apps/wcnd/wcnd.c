@@ -24,14 +24,12 @@
 //Macro to control if polling cp2 assert/watdog interface
 #define CP2_WATCHER_ENABLE
 
-//for unit test
-//#define FOR_UNIT_TEST
-
 //Macro to control if polling cp2 loop interface every 5 seconds
 #define LOOP_CHECK
 
 //Macro to enable the Wifi Engineer Mode
 #define WIFI_ENGINEER_ENABLE
+
 
 bool is_zero_ether_addr(const unsigned char *mac)
 {
@@ -186,6 +184,7 @@ void generate_bt_mac()
 * pre-define static API.
 */
 static int send_back_cmd_result(int client_fd, char *str, int isOK);
+static int config_cp2_bootup(WcndManager *pWcndManger);
 
 /**
 * static variables
@@ -257,7 +256,7 @@ int wcnd_send_back_cmd_result(int client_fd, char *str, int isOK)
 
 int wcnd_send_selfcmd(WcndManager *pWcndManger, char *cmd)
 {
-        return TEMP_FAILURE_RETRY(write(pWcndManger->selfcmd_sockets[0], cmd, strlen(cmd)));
+	return TEMP_FAILURE_RETRY(write(pWcndManger->selfcmd_sockets[0], cmd, strlen(cmd)));
 }
 
 
@@ -293,6 +292,7 @@ static int send_back_cmd_result(int client_fd, char *str, int isOK)
 
 	return 0;
 }
+
 
 /**
 * cmd format:
@@ -551,6 +551,7 @@ int wcnd_woker_handle(void *worker)
 	return 0;
 }
 
+////////////////command handler related code end/////////////////////
 
 
 /**
@@ -563,60 +564,6 @@ static void pre_send_cp2_exception_notify(void)
     property_set(WCND_SLOG_RESULT_PROP_KEY, "0");
 }
 
-
-/**
-* check "persist.sys.sprd.wcnlog" and "persist.sys.sprd.wcnlog.result"
-* 1. if wcnlog == 0, just return.
-* 2. if wcnlog == 1, wait until wcnlog.result == 1.
-*/
-#define WAIT_ONE_TIME (200)   /* wait for 200ms at a time */
-                                  /* when polling for property values */
-static void wait_for_dump_logs(void)
-{
-	const char *desired_status = "1";
-	char value[PROPERTY_VALUE_MAX] = {'\0'};
-
-	property_get(WCND_SLOG_ENABLE_PROP_KEY, value, "0");
-	int slog_enable = atoi(value);
-	if(!slog_enable)
-		return;
-
-	int maxwait = 300; // wait max 300 s for slog dump cp2 log
-	int maxnaps = (maxwait * 1000) / WAIT_ONE_TIME;
-
-	if (maxnaps < 1)
-	{
-		maxnaps = 1;
-	}
-
-	memset(value, 0, sizeof(value));
-
-	while (maxnaps-- > 0)
-	{
-		usleep(WAIT_ONE_TIME * 1000);
-		if (property_get(WCND_SLOG_RESULT_PROP_KEY, value, NULL))
-		{
-			if (strcmp(value, desired_status) == 0)
-			{
-				return;
-			}
-		}
-	}
-}
-
-/**
-* check "persist.sys.sprd.wcnreset" property to see if reset cp2 or not.
-* return non-zero for true.
-*/
-static int check_if_reset_enable(void)
-{
-	char value[PROPERTY_VALUE_MAX] = {'\0'};
-
-	property_get(WCND_RESET_PROP_KEY, value, "0");
-	int is_reset = atoi(value);
-
-	return is_reset;
-}
 
 /**
 * check "ro.modem.wcn.enable" property to see if cp2 enabled or not.
@@ -958,198 +905,6 @@ int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int not
 	return 0;
 }
 
-
-#define min(x,y) (((x) < (y)) ? (x) : (y))
-
-/**
-* write image file pointed by the src_fd to the destination pointed by the dst_fd
-* return -1 for fail
-*/
-static int write_image(int  src_fd, int src_offset, int dst_fd, int dst_offset, int size)
-{
-	if(src_fd < 0 || dst_fd < 0) return -1;
-
-	int  bufsize, rsize, rrsize, wsize;
-	char buf[8192];
-	int buf_size = sizeof(buf);
-
-	if (lseek(src_fd, src_offset, SEEK_SET) != src_offset)
-	{
-		WCND_LOGE("failed to lseek %d in fd: %d", src_offset, src_fd);
-		return -1;
-	}
-
-	if (lseek(dst_fd, dst_offset, SEEK_SET) != dst_offset)
-	{
-		WCND_LOGE("failed to lseek %d in fd:%d", dst_offset, dst_fd);
-		return -1;
-	}
-
-	int totalsize = 0;
-	while(size > 0)
-	{
-		rsize = min(size, buf_size);
-		rrsize = read(src_fd, buf, rsize);
-		totalsize += rrsize;
-
-		if(rrsize == 0)
-		{
-			WCND_LOGE("At the end of the file (totalsize: %d)", totalsize);
-			break;
-		}
-
-		if (rrsize < 0  || rrsize > rsize)
-		{
-			WCND_LOGE("failed to read fd: %d (ret = %d)", src_fd, rrsize);
-			return -1;
-		}
-
-		wsize = write(dst_fd, buf, rrsize);
-		if (wsize != rrsize)
-		{
-			WCND_LOGE("failed to write fd: %d [wsize = %d  rrsize = %d  remain = %d]",
-					dst_fd, wsize, rrsize, size);
-			return -1;
-		}
-		size -= rrsize;
-	}
-
-	return 0;
-}
-
-#define LOOP_TEST_CHAR "hi"
-#define WATI_FOR_CP2_READY_TIME_MSECS (100)
-#define MAX_LOOP_TEST_COUNT (50)
-#define LOOP_TEST_INTERVAL_MSECS (100)
-#define RESET_FAIL_RETRY_COUNT (3)
-#define RESET_RETRY_INTERVAL_MSECS (2000)
-
-/**
-* reset the cp2:
-* 1. stop cp2: echo "1"  > /proc/cpwcn/stop
-* 2. download image: cat /dev/block/platform/sprd-sdhci.3/by-name/wcnmodem > /proc/cpwcn/modem
-* 3. start cp2: echo "1" > /proc/cpwcn/start
-* 4. polling /dev/spipe_wcn0, do write and read testing.
-*/
-
-//stop cp2: echo "1"  > /proc/cpwcn/stop
-static inline int stop_cp2(WcndManager *pWcndManger)
-{
-	int stop_fd = -1;
-	int len = 0;
-
-	stop_fd = open(pWcndManger->wcn_stop_iface_name, O_RDWR);
-	WCND_LOGD("%s: open stop interface: %s, fd = %d", __func__, pWcndManger->wcn_stop_iface_name, stop_fd);
-	if (stop_fd < 0)
-	{
-		WCND_LOGE("open %s failed, error: %s", pWcndManger->wcn_stop_iface_name, strerror(errno));
-		return -1;
-	}
-
-	//Stop cp2, write '1' to wcn_stop_iface
-	len = write(stop_fd, "1", 1);
-	if (len != 1)
-	{
-		WCND_LOGE("write 1 to %s to stop CP2 failed!!", pWcndManger->wcn_stop_iface_name);
-
-		close(stop_fd);
-		return -1;
-	}
-	close(stop_fd);
-
-	WCND_LOGD("%s:%s is OK", __func__, pWcndManger->wcn_stop_iface_name);
-
-	return 0;
-}
-
-//start cp2: echo "1" > /proc/cpwcn/start
-static inline int start_cp2(WcndManager *pWcndManger)
-{
-	int start_fd = -1;
-	int len = 0;
-
-	//Start cp2
-	start_fd = open( pWcndManger->wcn_start_iface_name, O_RDWR);
-	WCND_LOGD("%s: open start interface: %s, fd = %d", __func__, pWcndManger->wcn_start_iface_name, start_fd);
-	if (start_fd < 0)
-	{
-		WCND_LOGE("open %s failed, error: %s", pWcndManger->wcn_start_iface_name, strerror(errno));
-		return -1;
-	}
-
-	len = write(start_fd, "1", 1);
-	if (len != 1)
-	{
-		WCND_LOGE("write 1 to %s to stop CP2 failed!!", pWcndManger->wcn_stop_iface_name);
-
-		close(start_fd);
-		return -1;
-	}
-	close(start_fd);
-
-	WCND_LOGD("%s:%s is OK", __func__, pWcndManger->wcn_start_iface_name);
-
-	return 0;
-}
-
-//download image: cat /dev/block/platform/sprd-sdhci.3/by-name/wcnmodem > /proc/cpwcn/modem
-static inline int download_image_to_cp2(WcndManager *pWcndManger)
-{
-	int download_fd = -1;
-	int image_fd = -1;
-
-	download_fd = open( pWcndManger->wcn_download_iface_name, O_RDWR);
-	WCND_LOGD("%s: open download interface: %s, fd = %d", __func__, pWcndManger->wcn_download_iface_name, download_fd);
-	if (download_fd < 0)
-	{
-		WCND_LOGE("open %s failed, error: %s", pWcndManger->wcn_download_iface_name, strerror(errno));
-		return -1;
-	}
-
-
-	char image_file[256];
-
-	memset(image_file, 0, sizeof(image_file));
-	if ( -1 == property_get(PARTITION_PATH_PROP_KEY, image_file, "") )
-	{
-		WCND_LOGE("%s: get partitionpath fail",__func__);
-		close(download_fd);
-		return -1;
-	}
-
-	strcat(image_file, pWcndManger->wcn_image_file_name);
-
-	image_fd = open( image_file, O_RDONLY);
-	WCND_LOGD("%s: image file: %s, fd = %d", __func__, image_file, image_fd);
-	if (image_fd < 0)
-	{
-		WCND_LOGE("open %s failed, error: %s", image_file, strerror(errno));
-
-		close(download_fd);
-		return -1;
-	}
-
-
-	WCND_LOGD("Loading %s in bank %s:%d %d", image_file, pWcndManger->wcn_download_iface_name,
-		0, pWcndManger->wcn_image_file_size);
-
-	//start downloading  image
-	if(write_image(image_fd, 0, download_fd, 0, pWcndManger->wcn_image_file_size) < 0)
-	{
-		WCND_LOGE("Download IMAGE TO CP2  failed");
-		close(image_fd);
-		close(download_fd);
-		return -1;
-	}
-
-	close(image_fd);
-	close(download_fd);
-
-	WCND_LOGD("%s:%s is OK", __func__, pWcndManger->wcn_download_iface_name);
-
-	return 0;
-}
-
 /*
 * polling /dev/spipe_wcn0, do write and read testing.
 * is_loopcheck: if true use select.
@@ -1175,7 +930,7 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 		return -1;
 	}
 
-	len = write(loop_fd, LOOP_TEST_CHAR, strlen(LOOP_TEST_CHAR));
+	len = write(loop_fd, LOOP_TEST_STR, strlen(LOOP_TEST_STR));
 	if(len < 0)
 	{
 		WCND_LOGE("%s: write %s failed, error:%s", __func__, pWcndManger->wcn_loop_iface_name, strerror(errno));
@@ -1195,7 +950,7 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 			len = read(loop_fd, buffer, sizeof(buffer));
 		} while(len < 0 && errno == EINTR);
 
-		if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
+		if ((len <= 0) || !strstr(buffer,LOOP_TEST_ACK_STR))
 		{
 			WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
 			close(loop_fd);
@@ -1248,7 +1003,7 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 			len = read(loop_fd, buffer, sizeof(buffer));
 		} while(len < 0 && errno == EINTR);
 
-		if ((len <= 0) || !strstr(buffer,LOOP_TEST_CHAR))
+		if ((len <= 0) || !strstr(buffer,LOOP_TEST_ACK_STR))
 		{
 			WCND_LOGE("%s: read %d return %d, buffer:%s,  errno = %s", __func__, loop_fd , len, buffer, strerror(errno));
 			close(loop_fd);
@@ -1264,41 +1019,18 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 }
 
 
-static int reset_cp2(WcndManager *pWcndManger)
+#define WATI_FOR_CP2_READY_TIME_MSECS (100)
+#define MAX_LOOP_TEST_COUNT (50)
+#define LOOP_TEST_INTERVAL_MSECS (100)
+#define RESET_FAIL_RETRY_COUNT (3)
+#define RESET_RETRY_INTERVAL_MSECS (2000)
+
+/**
+* Return 0: for polling test OK.
+* -1: for fail
+*/
+static int polling_test_after_reset(WcndManager *pWcndManger)
 {
-	if(!pWcndManger)
-	{
-		WCND_LOGD("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
-		return -1;
-	}
-
-	WCND_LOGD("reset_cp2");
-
-	if(stop_cp2(pWcndManger) < 0)
-	{
-		WCND_LOGE("Stop CP2 failed!!");
-		return -1;
-	}
-
-	//usleep(100*1000);
-
-	if(download_image_to_cp2(pWcndManger) < 0)
-	{
-		WCND_LOGE("Download image TO CP2 failed!!");
-		return -1;
-	}
-
-	//usleep(100*1000);
-
-	if(start_cp2(pWcndManger) < 0)
-	{
-		WCND_LOGE("Start CP2 failed!!");
-		return -1;
-	}
-
-	//wait for a moment
-	//usleep(WATI_FOR_CP2_READY_TIME_MSECS*1000);
-
 	int loop_test_count = 0;
 
 polling_test:
@@ -1316,8 +1048,11 @@ polling_test:
 		goto polling_test;
 
 	}
+
 	return 0;
+
 }
+
 
 /**
 * do cp2 reset processtrue:
@@ -1325,7 +1060,7 @@ polling_test:
 * 2. reset cp2
 * 3. notify connected clients "cp2 reset end"
 */
-int wcnd_do_cp2_reset_process(WcndManager *pWcndManger)
+int wcnd_do_wcn_reset_process(WcndManager *pWcndManger)
 {
 	WcndMessage message;
 
@@ -1337,21 +1072,11 @@ int wcnd_do_cp2_reset_process(WcndManager *pWcndManger)
 
 	int is_alive_ok = 1;
 
-	if(!check_if_reset_enable())
+	if(wcnd_before_reset(pWcndManger) < 0)
 	{
 		WCND_LOGD("%s: wcn reset disabled, do not do reset!", __FUNCTION__);
 		return 0;
 	}
-
-	//set doing_reset flag
-	pWcndManger->doing_reset = 1;
-
-	WCND_LOGD("wait_for_dump_logs");
-
-	//wait slog may dump log.
-	wait_for_dump_logs();
-
-	WCND_LOGD("wait_for_dump_logs end");
 
 	int reset_count = 0;
 
@@ -1372,15 +1097,28 @@ do_cp2reset:
 
 #ifdef CP2_RESET_READY
 	//begin reseting CP2
-	if(reset_cp2(pWcndManger) < 0)
-	{
-		WCND_LOGD("%s: reset Fail !", __FUNCTION__);
-		is_alive_ok = 0;
-	}
-#endif
+	int ret = wcnd_reboot_cp2(pWcndManger);
 
 	//Notify client reset completed.
 	wcnd_send_notify_to_client(pWcndManger, WCND_CP2_RESET_END_STRING, WCND_CLIENT_TYPE_NOTIFY);
+
+	if(ret < 0)
+	{
+		WCND_LOGD("%s: reboot CP2 Fail !", __FUNCTION__);
+		is_alive_ok = 0;
+	}
+	else
+	{
+		//wait for a moment
+		//usleep(WATI_FOR_CP2_READY_TIME_MSECS*1000);
+
+		if(polling_test_after_reset(pWcndManger) < 0)
+		{
+			is_alive_ok = 0;
+		}
+
+	}
+#endif
 
 	//Notify CP2 alive again
 	if(is_alive_ok)
@@ -1410,6 +1148,12 @@ out:
 	}
 
 	wcnd_sm_step(pWcndManger, &message);
+
+	if(is_alive_ok)
+	{
+		WCND_LOGD("%s: config CP2 bootup after reset OK!!", __FUNCTION__);
+		config_cp2_bootup(pWcndManger);
+	}
 
 	return 0;
 }
@@ -1450,10 +1194,20 @@ do_cp2reset:
 
 #ifdef CP2_RESET_READY
 	//begin reseting CP2
-	if(reset_cp2(pWcndManger) < 0)
+	int ret = wcnd_reboot_cp2(pWcndManger);
+	if( ret < 0)
 	{
 		WCND_LOGD("%s: reset Fail !", __FUNCTION__);
 		is_alive_ok = 0;
+	}
+	else
+	{
+		//wait for a moment
+		//usleep(WATI_FOR_CP2_READY_TIME_MSECS*1000);
+		if(polling_test_after_reset(pWcndManger) < 0)
+		{
+			is_alive_ok = 0;
+		}
 	}
 #endif
 
@@ -1508,7 +1262,7 @@ int wcnd_close_cp2(WcndManager *pWcndManger)
 		goto out;
 	}
 
-	if(stop_cp2(pWcndManger) < 0)
+	if(wcnd_stop_cp2(pWcndManger) < 0)
 	{
 		WCND_LOGE("%s: Stop CP2 failed!!", __FUNCTION__);
 		//return -1;
@@ -1742,7 +1496,7 @@ static int start_cp2_listener(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
-	if(!check_if_wcnmodem_enable()) return 0;
+	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
 	pthread_t thread_id;
 
@@ -1819,10 +1573,26 @@ static int init(WcndManager *pWcndManger)
 	//start engineer worker thread
 	wcnd_worker_init(pWcndManger);
 
+	// to get the wcn modem state
+	pWcndManger->is_wcn_modem_enabled = check_if_wcnmodem_enable();
+
+	// to get build type
+	property_get(BUILD_TYPE_PROP_KEY, value, USER_DEBUG_VERSION_STR);
+	if(strstr(value, USER_DEBUG_VERSION_STR))
+	{
+		pWcndManger->is_in_userdebug = 1;
+		WCND_LOGD("userdebug version: %s!!!", value);
+	}
+
 	pWcndManger->inited = 1;
 
 	return 0;
 }
+
+
+////////////////////////////////////////////////////////////////////////////
+
+/// below is the loop check related code /////
 
 #ifdef LOOP_CHECK
 /**
@@ -1944,7 +1714,7 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 	if(!pWcndManger) return -1;
 
 	//if wcn modem is not enabled, just return
-	if(!check_if_wcnmodem_enable()) return 0;
+	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
 	pthread_t thread_id;
 
@@ -1959,15 +1729,19 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 }
 #endif
 
+/// loop check related code end /////
+
+
+///////////////////////////////////////////////////////////////////////////
 
 /**
 * Start engineer service , such as for get CP2 log from PC.
 * return -1 fail;
 */
-static int start_engineer_service(void)
+static int start_engineer_service(WcndManager *pWcndManger)
 {
 
-	if(!check_if_wcnmodem_enable()) return 0;
+	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
 	char prop[PROPERTY_VALUE_MAX] = {'\0'};
 	WCND_LOGD("start engservice!");
@@ -1984,34 +1758,25 @@ static int start_engineer_service(void)
 	return 0;
 }
 
-//To get the build type
-#define BUILD_TYPE_PROP_KEY "ro.build.type"
-#define USER_DEBUG_VERSION_STR "userdebug"
-#define DISABLE_CP2_LOG_CMD "AT+ARMLOG=0\r"
+
+///below is the related code for setting/getting of CP2 ///////////////////
+
 /**
 * Disable the CP2 log, if it is a user version
 */
 static int check_disable_cp2_log(WcndManager *pWcndManger)
 {
-	char value[PROPERTY_VALUE_MAX] = {'\0'};
+	if(!pWcndManger) return -1;
 
-	property_get(BUILD_TYPE_PROP_KEY, value, USER_DEBUG_VERSION_STR);
+	//in user debug version just return
+	if(pWcndManger->is_in_userdebug) return 0;
 
-	if(strstr(value, USER_DEBUG_VERSION_STR))
-	{
-		if(pWcndManger)	pWcndManger->is_in_userdebug = 1;
-		WCND_LOGD("userdebug version: %s, do not need to disable cp2 log!!!", value);
-		return 0;
-	}
+	WCND_LOGD("in user version, need to disable cp2 log!!!");
 
-	WCND_LOGD("in user version: %s, need to disable cp2 log!!!", value);
-
-	return wcnd_process_atcmd(-1, DISABLE_CP2_LOG_CMD, pWcndManger);
+	return wcnd_process_atcmd(-1, WCND_ATCMD_CP2_DISABLE_LOG, pWcndManger);
 }
 
 
-
-#define GET_CP2_VERSION_INFO_ATCMD "at+spatgetcp2info\r"
 
 /**
 * Store the CP2 Version info, used when startup
@@ -2027,6 +1792,10 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 	return 0;
 
 #endif
+
+	//if not use our own wcn, just return
+	if(!pWcndManger->is_wcn_modem_enabled) return 0;
+
 
 	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
 
@@ -2045,13 +1814,8 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 		return -1;
 	}
 
-//#ifdef WCND_CP2_POWER_ONOFF_DISABLED
 
-//	return 0;
-
-//#endif
-
-	wcnd_process_atcmd(-1, GET_CP2_VERSION_INFO_ATCMD, pWcndManger);
+	wcnd_process_atcmd(-1, WCND_ATCMD_CP2_GET_VERSION_INFO, pWcndManger);
 
 	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_STOP_CP2);
 
@@ -2059,7 +1823,29 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 }
 
 
-#ifndef FOR_UNIT_TEST
+/**
+* Config CP2 one time after CP2 has just started. (such as system boot up, CP2 recovery after reset)
+* return 0 for success, -1 for fail.
+*/
+static int config_cp2_bootup(WcndManager *pWcndManger)
+{
+	if(!pWcndManger) return -1;
+
+	//in user version, config CP2 to enter user mode
+	if(!pWcndManger->is_in_userdebug)
+	{
+		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_ENTER_USER, pWcndManger);
+	}
+
+	// Disable the CP2 log, if it is a user version
+	check_disable_cp2_log(pWcndManger);
+
+	return 0;
+}
+
+///the related code for setting/getting of CP2  end///////////////////
+
+
 
 #ifdef WIFI_ENGINEER_ENABLE
 //external cmd executer declare here.
@@ -2100,15 +1886,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#ifdef LOOP_CHECK
-	if(start_cp2_loop_check(pWcndManger) < 0)
-	{
-		WCND_LOGE("Start CP2loop_check Fail!!!");
-	}
-#endif
-
 	//Start engineer service , such as for get CP2 log from PC.
-	start_engineer_service();
+	start_engineer_service(pWcndManger);
 
 	//register builin cmd executer
 	wcnd_register_cmdexecuter(pWcndManger, &wcn_cmdexecuter);
@@ -2118,8 +1897,47 @@ int main(int argc, char *argv[])
 	wcnd_register_cmdexecuter(pWcndManger, &wcn_eng_cmdexecuter);
 #endif
 
-	// Disable the CP2 log, if it is a user version
-	check_disable_cp2_log(pWcndManger);
+
+	//first check if CP2 alive, then config cp2 at bootup
+	if(pWcndManger->state == WCND_STATE_CP2_STARTED)
+	{
+		int count = 2;
+		int need_config_cp2 = 0;
+
+		while(count-- > 0)
+		{
+			if(is_cp2_alive_ok(pWcndManger, 1) < 0)
+			{
+				if(pWcndManger->is_cp2_error ||
+					(pWcndManger->state != WCND_STATE_CP2_STARTED))//during loop checking, cp2 exception happens just continue
+				{
+					break;
+				}
+			}
+			else
+			{
+				need_config_cp2 = 1;
+				break;
+			}
+		}
+
+		if(need_config_cp2)
+		{
+			config_cp2_bootup(pWcndManger);
+		}
+		else
+		{
+			WCND_LOGE("loop_check Fail when startup: (pWcndManger->state:%d) !!!", pWcndManger->state);
+		}
+	}
+
+
+#ifdef LOOP_CHECK
+	if(start_cp2_loop_check(pWcndManger) < 0)
+	{
+		WCND_LOGE("Start CP2loop_check Fail!!!");
+	}
+#endif
 
 
 	//get CP2 version and save it
@@ -2133,171 +1951,4 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-#else
-
-//##########################################################################################################
-//For Test start
-//###########################################################################################################
-
-#define TEST_STOP "stop"
-#define TEST_START "start"
-#define TEST_DOWNLOAD "download"
-#define TEST_RESET "reset"
-#define TEST_POLLING "poll"
-#define TEST_ENG_CMD "eng"
-#define TEST_WCN_CMD "wcn"
-
-static void * test_client_thread(void *arg)
-{
-	int client_fd = -1;
-	client_fd = socket_local_client( WCND_SOCKET_NAME,
-		ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-
-	while(client_fd < 0)
-	{
-		WCND_LOGD("%s: Unable bind server %s, waiting...\n",__func__, WCND_SOCKET_NAME);
-		usleep(100*1000);
-		client_fd = socket_local_client( WCND_SOCKET_NAME,
-			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-	}
-
-	for(;;)
-	{
-		char buffer[128];
-		int n = 0;
-		memset(buffer, 0, 128);
-		WCND_LOGD("%s: waiting for server %s\n",__func__, WCND_SOCKET_NAME);
-		n = read(client_fd, buffer, 128);
-		WCND_LOGD("%s: get %d bytes %s\n", __func__, n, buffer);
-	}
-
-	return NULL;
-}
-
-#ifdef WIFI_ENGINEER_ENABLE
-extern WcnCmdExecuter wcn_eng_cmdexecuter;
-#endif
-
-int main(int argc, char *argv[])
-{
-	blockSigpipe();
-
-	WcndManager *pWcndManger = wcnd_get_default_manager();
-	if(!pWcndManger)
-	{
-		WCND_LOGE("Malloc mem for pWcnManager Fail!!!");
-		return -1;
-	}
-
-	if(init(pWcndManger) < 0)
-	{
-		WCND_LOGE("Init pWcnManager Fail!!!");
-		return -1;
-	}
-
-	if(start_client_listener(pWcndManger) < 0)
-	{
-		WCND_LOGE("Start client listener Fail!!!");
-		return -1;
-	}
-
-#ifdef CP2_WATCHER_ENABLE
-	if(start_cp2_listener(pWcndManger) < 0)
-	{
-		WCND_LOGE("Start CP2 listener Fail!!!");
-		return -1;
-	}
-#endif
-
-	pthread_t test_thread_id;
-
-	if (pthread_create(&test_thread_id, NULL, test_client_thread, pWcndManger))
-	{
-		WCND_LOGE("tes_client_thread: pthread_create (%s)", strerror(errno));
-		return -1;
-	}
-
-	//register builin cmd executer
-	wcnd_register_cmdexecuter(pWcndManger, &wcn_cmdexecuter);
-
-#ifdef WIFI_ENGINEER_ENABLE
-	//register external cmd executer such eng mode
-	wcnd_register_cmdexecuter(pWcndManger, &wcn_eng_cmdexecuter);
-#endif
-
-	if(argc > 1)
-	{
-		if(!strncasecmp(argv[1], TEST_STOP, strlen(TEST_STOP)))
-		{
-			stop_cp2(pWcndManger);
-		}
-		else if(!strncasecmp(argv[1], TEST_START, strlen(TEST_START)))
-		{
-			start_cp2(pWcndManger);
-		}
-		else if(!strncasecmp(argv[1], TEST_DOWNLOAD, strlen(TEST_DOWNLOAD)))
-		{
-			download_image_to_cp2(pWcndManger);
-		}
-		else if(!strncasecmp(argv[1], TEST_RESET, strlen(TEST_RESET)))
-		{
-			reset_cp2(pWcndManger);
-		}
-		else if(!strncasecmp(argv[1], TEST_POLLING, strlen(TEST_POLLING)))
-		{
-			int loop_test_count = 0;
-
-		polling_test2:
-			//polling loop interface to check if CP2 is boot up complete.
-			if(loop_test_count++ > MAX_LOOP_TEST_COUNT)
-			{
-				WCND_LOGE("%s: write test for %d counts, still failed return!!!!!", __func__, MAX_LOOP_TEST_COUNT);
-				return -1;
-			}
-
-			if(is_cp2_alive_ok(pWcndManger, 1)<0)
-			{
-				//wait a moment, and go on.
-				usleep(LOOP_TEST_INTERVAL_MSECS*1000);
-				goto polling_test2;
-
-			}
-		}
-		else if((!strncasecmp(argv[1], TEST_ENG_CMD, strlen(TEST_ENG_CMD)) && argc > 2) ||
-			(!strncasecmp(argv[1], TEST_WCN_CMD, strlen(TEST_WCN_CMD)) && argc > 2))
-		{
-			cmd_handler handler = NULL;
-			int i = 0;
-			pthread_mutex_lock(&pWcndManger->cmdexecuter_list_lock);
-			for (i = 0; i <WCND_MAX_CMD_EXECUTER_NUM; ++i)
-			{
-				if (pWcndManger->cmdexecuter_list[i] && pWcndManger->cmdexecuter_list[i]->name &&
-					(!strcmp(argv[1], pWcndManger->cmdexecuter_list[i]->name)))
-				{
-					handler = pWcndManger->cmdexecuter_list[i]->runcommand;
-					break;
-				}
-			}
-			pthread_mutex_unlock(&pWcndManger->cmdexecuter_list_lock);
-
-			if(!handler)
-			{
-				WCND_LOGE( "Command not recognized");
-			}
-
-			handler(-1, argc-2, &argv[2]);
-		}
-
-	}
-	else
-	{
-		while(1)sleep(20);
-	}
-	return 0;
-}
-
-#endif
-//##########################################################################################################
-//For Test stop
-//##########################################################################################################
 

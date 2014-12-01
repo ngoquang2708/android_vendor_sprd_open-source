@@ -26,6 +26,49 @@
     _rc; })
 #endif
 
+
+#ifdef USE_MARLIN
+
+//the CP2(WIFI/BT/FM) device node
+#define WCN_DEV				"NOT-USED"
+
+//when what to read is that has been to write, then it indicate the CP2(WIFI/BT/FM) is OK
+#define WCN_LOOP_IFACE		"/proc/mdbg/loopcheck"
+
+//when assert happens, related information will write to this interface
+#define WCN_ASSERT_IFACE		"/proc/mdbg/assert"
+
+//The interface to communicate with slog
+#define WCN_SLOG_IFACE		"NOT-USED"
+
+//write '1' to this interface, the CP2(WIFI/BT/FM) will stop
+#define WCN_STOP_IFACE		"NOT-USED"
+
+//write '1' to this interface, the CP2(WIFI/BT/FM) will start to boot up
+#define WCN_START_IFACE		"NOT-USED"
+
+//write image file to this interface, then the image will be download to CP2(WIFI/BT/FM)
+#define WCN_DOWNLOAD_IFACE	"NOT-USED"
+
+//read from this interface, the memory infor will be read from CP2(WIFI/BT/FM)
+#define WCN_DUMP_IFACE		"NOT-USED"
+
+//when an exception of watdog happens, related infor will write to this interface
+#define WCN_WATCHDOG_IFACE	"/proc/mdbg/wdtirq"
+
+//can read the status infor from this interface
+#define WCN_STATUS_IFACE		"NOT-USED"
+
+
+//send at cmd to this interface
+#define WCN_ATCMD_IFACE		"/proc/mdbg/at_cmd"
+
+
+#define LOOP_TEST_STR "at+loopcheck"
+#define LOOP_TEST_ACK_STR "loopcheck_ack"
+
+#else
+
 //the CP2(WIFI/BT/FM) device node
 #define WCN_DEV				"/dev/cpwcn"
 
@@ -61,9 +104,24 @@
 #define WCN_ATCMD_IFACE		"/dev/spipe_wcn5"
 
 
+#define LOOP_TEST_STR "hi"
+#define LOOP_TEST_ACK_STR "hi"
+
+
+#endif
+
+
+
+
+
+#define USER_DEBUG_VERSION_STR "userdebug"
+
 
 //the key used by property_get() to get partition path
 #define PARTITION_PATH_PROP_KEY	"ro.product.partitionpath"
+
+//the key used to get the build type
+#define BUILD_TYPE_PROP_KEY "ro.build.type"
 
 #define WCND_MODEM_ENABLE_PROP_KEY "ro.modem.wcn.enable"
 
@@ -197,12 +255,19 @@ typedef struct structWcndManager
 	//engineer mode cmds queue
 	WcndWorker *eng_cmd_queue;
 
+	//to identify if the wcn modem (CP2) is enabled or not.
+	//to check property "ro.modem.wcn.enable"
+	int is_wcn_modem_enabled;
+
 }WcndManager;
 
 
 //CP2 AT Cmds
 #define WCND_ATCMD_CP2_SLEEP "at+cp2sleep\r"
-
+#define WCND_ATCMD_CP2_DISABLE_LOG "AT+ARMLOG=0\r"
+#define WCND_ATCMD_CP2_GET_VERSION_INFO "at+spatgetcp2info\r"
+#define WCND_ATCMD_CP2_ENTER_USER "at+cp2_enter_user=1\r"
+#define WCND_ATCMD_CP2_EXIT_USER "at+cp2_enter_user=0\r"
 
 
 //export API
@@ -210,10 +275,18 @@ WcndManager* wcnd_get_default_manager(void);
 int wcnd_register_cmdexecuter(WcndManager *pWcndManger, const WcnCmdExecuter *pCmdExecuter);
 int wcnd_send_back_cmd_result(int client_fd, char *str, int isOK);
 int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int notify_type);
-int wcnd_do_cp2_reset_process(WcndManager *pWcndManger);
+int wcnd_do_wcn_reset_process(WcndManager *pWcndManger);
 int wcnd_runcommand(int client_fd, int argc, char* argv[]);
 int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger);
 int wcnd_send_selfcmd(WcndManager *pWcndManger, char *cmd);
+
+
+int wcnd_reboot_cp2(WcndManager *pWcndManger);
+int wcnd_stop_cp2(WcndManager *pWcndManger);
+int wcnd_start_cp2(WcndManager *pWcndManger);
+int wcnd_before_reset(WcndManager *pWcndManger);
+
+
 int wcnd_open_cp2(WcndManager *pWcndManger);
 int wcnd_close_cp2(WcndManager *pWcndManger);
 
