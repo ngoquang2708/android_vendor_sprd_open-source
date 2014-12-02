@@ -97,7 +97,7 @@ extern "C"
 #define CMR_RTN_IF_ERR(n)                                              \
 		do {                                                   \
 			if (n) {                                       \
-				CMR_LOGW("ret %d", n);                 \
+				CMR_LOGW("ret %ld", n);                 \
 				goto exit;                             \
 			}                                              \
 		} while(0)

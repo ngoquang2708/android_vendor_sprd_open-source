@@ -252,7 +252,7 @@ void camera_snapshot_step_statisic(struct img_size *image_size)
 
 		if (1 == cap_stp[i].valid) {
 			time_delta = (int)((cap_stp[i].timestamp - cap_stp[CMR_STEP_TAKE_PIC].timestamp)/1000000);
-			ALOGE("%20s, %10d",
+			ALOGE("%20s, %10ld",
 				cap_stp[i].step_name,
 				time_delta);
 		}

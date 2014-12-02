@@ -936,7 +936,7 @@ int JPEGCODEC_Open(void)
 	jpeg_fw_enc->jpg_addr = jpg_addr;
 	jpeg_fw_dec->fd = jpg_fd;
 	jpeg_fw_dec->jpg_addr = jpg_addr;
-	SCI_TRACE_LOW("jpeg dev fd %d, reg addr 0x%x", jpeg_fw_enc->fd, jpeg_fw_enc->jpg_addr);
+	SCI_TRACE_LOW("jpeg dev fd %d, reg addr 0x%p", jpeg_fw_enc->fd, jpeg_fw_enc->jpg_addr);
 	return 0;
 }
 
@@ -986,7 +986,7 @@ int JPEGENC_Slice_Start(JPEGENC_PARAMS_T *jpegenc_params, JPEGENC_SLICE_OUT_T *o
 
 	jpg_fd = jpeg_fw_codec->fd;
 	jpg_addr = jpeg_fw_codec->jpg_addr;
-	SCI_TRACE_LOW("JPEGENC_Slice_Start, fd %d jpg_addr 0x%x", jpg_fd, jpg_addr);
+	SCI_TRACE_LOW("JPEGENC_Slice_Start, fd %d jpg_addr 0x%p", jpg_fd, jpg_addr);
 	if ((jpg_fd < 0) || (NULL == jpg_addr)) {
 		SCI_TRACE_LOW("JPEGENC_Slice_Start, param err %d", jpg_fd);
 		return -1;

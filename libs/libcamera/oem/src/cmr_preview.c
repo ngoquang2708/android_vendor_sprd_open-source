@@ -2344,8 +2344,8 @@ cmr_int prev_alloc_prev_buf(struct prev_handle *handle, cmr_u32 camera_id, struc
 
 	mem_ops->alloc_mem(CAMERA_PREVIEW,
 			   handle->oem_handle,
-			   &prev_cxt->prev_mem_size,
-			   &prev_cxt->prev_mem_num,
+			   (cmr_u32 *)&prev_cxt->prev_mem_size,
+			   (cmr_u32 *)&prev_cxt->prev_mem_num,
 			   prev_cxt->prev_phys_addr_array,
 			   prev_cxt->prev_virt_addr_array);
 
@@ -4428,7 +4428,7 @@ cmr_uint prev_search_rot_buffer(struct prev_context *prev_cxt)
 		if (0 == prev_cxt->prev_rot_frm_is_lock[search_index]) {
 			ret = CMR_CAMERA_SUCCESS;
 			prev_cxt->prev_rot_index = search_index;
-			CMR_LOGI("[prev_rot] find %d", search_index);
+			CMR_LOGI("[prev_rot] find %ld", search_index);
 			break;
 		} else {
 			CMR_LOGW("[prev_rot] rot buffer %ld is locked", search_index);

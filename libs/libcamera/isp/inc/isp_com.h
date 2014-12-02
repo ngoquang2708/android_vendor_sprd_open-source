@@ -669,6 +669,8 @@ int32_t ispCfgAwbm(uint32_t handler_id,struct isp_awbm_param* param_ptr);
 int32_t ispAwbmEb_immediately(uint32_t handler_id);
 struct isp_context* ispGetAlgContext(uint32_t handler_id);
 void isp_perror(const char *prefix);
+int32_t ispPreWDenoiseThrd(uint32_t handler_id, uint16_t thrs0, uint16_t thrs1);
+int32_t ispPreWDenoiseBypass(uint32_t handler_id, uint8_t bypass);
 
 /**----------------------------------------------------------------------------*
 **						   Compiler Flag									  **

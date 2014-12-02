@@ -16,11 +16,12 @@
 #ifndef _CMR_IPM_H_
 #define _CMR_IPM_H_
 
+#define BYTE unsigned char
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
+int HDR_Function(BYTE *Y0, BYTE *Y1, BYTE *Y2, BYTE* output, int height, int width, char *format);
 #include "cmr_common.h"
 
 struct ipm_class_tab {

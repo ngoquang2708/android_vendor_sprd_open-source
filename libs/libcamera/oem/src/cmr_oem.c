@@ -3335,7 +3335,7 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		if (ret) {
 			CMR_LOGE("sn get flash level failed!");
 		}
-		CMR_LOGI("flash level low_light = %ld, high_light = %ld",
+		CMR_LOGI("flash level low_light = %d, high_light = %d",
 				 param_ptr->flash_level.low_light, param_ptr->flash_level.high_light);
 		return ret;
 	default:

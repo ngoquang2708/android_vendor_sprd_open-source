@@ -670,7 +670,7 @@ static cmr_int setting_flash_handle(struct setting_component *cpt,
 
 
 	status = setting_flash_mode_to_status(cpt, parm, flash_mode);
-	CMR_LOGD("status = %ld,flash_param->flash_status = %d", status, flash_param->flash_status);
+	CMR_LOGD("status = %ld,flash_param->flash_status = %ld", status, flash_param->flash_status);
 	if (status != flash_param->flash_status) {
 		if (FLASH_CLOSE == status || FLASH_TORCH == status)
 			ret = setting_set_flashdevice(cpt, parm, status);
@@ -799,7 +799,7 @@ static cmr_int setting_set_scene_mode(struct setting_component *cpt,
 	cmr_int                      ret = 0;
 	struct setting_hal_param     *hal_param = get_hal_param(cpt, parm->camera_id);
 
-	CMR_LOGI("set scene mode %d",parm->cmd_type_value);
+	CMR_LOGI("set scene mode %ld",parm->cmd_type_value);
 	if (CAMERA_SCENE_MODE_HDR == parm->cmd_type_value) {
 		hal_param->is_hdr = 1;
 	} else {
@@ -1377,7 +1377,7 @@ static cmr_int setting_get_video_mode(struct setting_component *cpt,
 	setting_get_preview_mode(cpt, parm);
 	frame_rate = hal_param->hal_common.frame_rate;
 	sensor_mode = parm->preview_fps_param.video_mode;
-	sensor_ae_info = &local_param->sensor_static_info.video_info[sensor_mode].ae_info[0];
+	sensor_ae_info = (SENSOR_AE_INFO_T *)&local_param->sensor_static_info.video_info[sensor_mode].ae_info[0];
 
 	parm->preview_fps_param.video_mode = 0;
 	for (i = 0 ; i < SENSOR_VIDEO_MODE_MAX; i++) {
@@ -1515,7 +1515,7 @@ static cmr_int setting_set_preview_format(struct setting_component *cpt,
 	struct setting_hal_param    *hal_param = get_hal_param(cpt, parm->camera_id);
 
 	hal_param->preview_format = get_image_format_from_param(parm->cmd_type_value);
-	CMR_LOGD("format=%d", hal_param->preview_format);
+	CMR_LOGD("format=%ld", hal_param->preview_format);
 	return ret;
 }
 
@@ -1537,7 +1537,7 @@ static cmr_int setting_set_capture_format(struct setting_component *cpt,
 
 	hal_param->capture_format = get_image_format_from_param(parm->cmd_type_value);
 
-	CMR_LOGD("format=%d", hal_param->capture_format);
+	CMR_LOGD("format=%ld", hal_param->capture_format);
 	return ret;
 }
 
@@ -1779,7 +1779,7 @@ static cmr_int setting_get_hdr(struct setting_component *cpt,
 
 
 	parm->cmd_type_value = hal_param->is_hdr;
-	CMR_LOGI("get hdr %d",parm->cmd_type_value);
+	CMR_LOGI("get hdr %ld",parm->cmd_type_value);
 
 	return ret;
 }

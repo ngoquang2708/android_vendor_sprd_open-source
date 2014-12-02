@@ -609,7 +609,7 @@ cmr_int cmr_sensor_get_flash_info (cmr_handle sensor_handle, cmr_u32 sensor_id, 
 	}
 
 exit:
-	CMR_LOGI("ret= %d", ret);
+	CMR_LOGI("ret= %ld", ret);
 	return ret;
 }
 

@@ -37,6 +37,7 @@ extern   "C"
 /**---------------------------------------------------------------------------*
 *				Data Prototype					*
 **----------------------------------------------------------------------------*/
+extern int camera_set_flashdevice(uint32_t param);
 
 int32_t ispFlashCtrl(enum isp_flash_ctrl mode)
 {

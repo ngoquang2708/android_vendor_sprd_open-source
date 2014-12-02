@@ -569,7 +569,7 @@ static int32_t _isp_set_app_init_param(uint32_t handler_id, struct isp_init_para
 	ptr->self_callback = _isp_AppCallBack;
 	isp_context_ptr->ctrl_callback = ptr->ctrl_callback;
 	ptr->ctrl_callback = _isp_AppCtrlCallback;
-	isp_context_ptr->oem_handle = ptr->oem_handle;
+	isp_context_ptr->oem_handle = (uint32_t)ptr->oem_handle;
 	ISP_LOG("isp_context_ptr->oem_handle =0x%x",(uint32_t)(isp_context_ptr->oem_handle));
 
 	return rtn;

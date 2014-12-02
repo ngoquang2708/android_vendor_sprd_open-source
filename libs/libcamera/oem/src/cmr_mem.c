@@ -396,7 +396,7 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 	size_pixel = channel_size;
 	mem_res = cap_2_frm->mem_frm.buf_size;
 
-	CMR_LOGI("Mem frame, 0x%x 0x%x, 0x%x",
+	CMR_LOGI("Mem frame, 0x%lx 0x%lx, 0x%x",
 		cap_2_frm->mem_frm.addr_phy.addr_y,
 		cap_2_frm->mem_frm.addr_vir.addr_y,
 		cap_2_frm->mem_frm.buf_size);
@@ -479,21 +479,21 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 		}
 	}
 
-	CMR_LOGD("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_raw, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 		cap_mem->cap_raw.addr_phy.addr_y,
 		cap_mem->cap_raw.addr_phy.addr_u,
 		cap_mem->cap_raw.addr_vir.addr_y,
 		cap_mem->cap_raw.addr_vir.addr_u,
 		cap_mem->cap_raw.buf_size);
 
-	CMR_LOGD("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("target_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 		cap_mem->target_yuv.addr_phy.addr_y,
 		cap_mem->target_yuv.addr_phy.addr_u,
 		cap_mem->target_yuv.addr_vir.addr_y,
 		cap_mem->target_yuv.addr_vir.addr_u,
 		cap_mem->target_yuv.buf_size);
 
-	CMR_LOGD("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 		cap_mem->cap_yuv.addr_phy.addr_y,
 		cap_mem->cap_yuv.addr_phy.addr_u,
 		cap_mem->cap_yuv.addr_vir.addr_y,
@@ -545,7 +545,7 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->target_jpeg.addr_vir.addr_y = cap_mem->target_jpeg.addr_vir.addr_y + JPEG_EXIF_SIZE;
 	cap_mem->target_jpeg.buf_size = cap_mem->target_jpeg.buf_size - JPEG_EXIF_SIZE;
 
-	CMR_LOGD("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("target_jpeg, phy 0x%lx, vir 0x%lx, size 0x%x",
 	cap_mem->target_jpeg.addr_phy.addr_y,
 	cap_mem->target_jpeg.addr_vir.addr_y,
 	cap_mem->target_jpeg.buf_size);
@@ -592,45 +592,45 @@ int camera_arrange_capture_buf(struct cmr_cap_2_frm *cap_2_frm,
 			sizeof(struct img_frm));
 
 		CMR_LOGD("Image ID %d", i);
-		CMR_LOGD("cap_raw, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("cap_raw, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 			capture_mem[i].cap_raw.addr_phy.addr_y,
 			capture_mem[i].cap_raw.addr_phy.addr_u,
 			capture_mem[i].cap_raw.addr_vir.addr_y,
 			capture_mem[i].cap_raw.addr_vir.addr_u,
 			capture_mem[i].cap_raw.buf_size);
 
-		CMR_LOGD("target_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("target_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 			capture_mem[i].target_yuv.addr_phy.addr_y,
 			capture_mem[i].target_yuv.addr_phy.addr_u,
 			capture_mem[i].target_yuv.addr_vir.addr_y,
 			capture_mem[i].target_yuv.addr_vir.addr_u,
 			capture_mem[i].target_yuv.buf_size);
 
-		CMR_LOGD("cap_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("cap_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 			capture_mem[i].cap_yuv.addr_phy.addr_y,
 			capture_mem[i].cap_yuv.addr_phy.addr_u,
 			capture_mem[i].cap_yuv.addr_vir.addr_y,
 			capture_mem[i].cap_yuv.addr_vir.addr_u,
 			capture_mem[i].cap_yuv.buf_size);
 
-		CMR_LOGD("target_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("target_jpeg, phy 0x%lx, vir 0x%lx, size 0x%x",
 			capture_mem[i].target_jpeg.addr_phy.addr_y,
 			capture_mem[i].target_jpeg.addr_vir.addr_y,
 			capture_mem[i].target_jpeg.buf_size);
 
-		CMR_LOGD("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+		CMR_LOGD("thum_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 			capture_mem[i].thum_yuv.addr_phy.addr_y,
 			capture_mem[i].thum_yuv.addr_phy.addr_u,
 			capture_mem[i].thum_yuv.addr_vir.addr_y,
 			capture_mem[i].thum_yuv.addr_vir.addr_u,
 			capture_mem[i].thum_yuv.buf_size);
 
-		CMR_LOGD("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("thum_jpeg, phy 0x%lx, vir 0x%lx, size 0x%x",
 			capture_mem[i].thum_jpeg.addr_phy.addr_y,
 			capture_mem[i].thum_jpeg.addr_vir.addr_y,
 			capture_mem[i].thum_jpeg.buf_size);
 
-		CMR_LOGD("scale_tmp, phy 0x%x, vir 0x%x, size 0x%x",
+		CMR_LOGD("scale_tmp, phy 0x%lx, vir 0x%lx, size 0x%x",
 			capture_mem[i].scale_tmp.addr_phy.addr_y,
 			capture_mem[i].scale_tmp.addr_vir.addr_y,
 			capture_mem[i].scale_tmp.buf_size);
@@ -1066,7 +1066,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->thum_yuv.addr_vir.addr_u = img_frame[THUM_YUV].addr_vir.addr_u;
 	cap_mem->thum_yuv.size.width = thum_size->width;
 	cap_mem->thum_yuv.size.height = thum_size->height;
-	CMR_LOGD("thum_yuv, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("thum_yuv, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 		img_frame[THUM_YUV].addr_phy.addr_y,
 		img_frame[THUM_YUV].addr_phy.addr_u,
 		img_frame[THUM_YUV].addr_vir.addr_y,
@@ -1076,7 +1076,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->thum_jpeg.buf_size = img_frame[THUM_JPEG].buf_size;
 	cap_mem->thum_jpeg.addr_phy.addr_y = img_frame[THUM_JPEG].addr_phy.addr_y;
 	cap_mem->thum_jpeg.addr_vir.addr_y = img_frame[THUM_JPEG].addr_vir.addr_y;
-	CMR_LOGD("thum_jpeg, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("thum_jpeg, phy 0x%lx, vir 0x%lx, size 0x%x",
 		img_frame[THUM_JPEG].addr_phy.addr_y,
 		img_frame[THUM_JPEG].addr_vir.addr_y,
 		img_frame[THUM_JPEG].buf_size);
@@ -1085,7 +1085,7 @@ int arrange_misc_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->jpeg_tmp.buf_size = cap_mem->cap_yuv.buf_size;
 	cap_mem->jpeg_tmp.addr_phy.addr_y = cap_mem->cap_yuv.addr_phy.addr_u;
 	cap_mem->jpeg_tmp.addr_vir.addr_y = cap_mem->cap_yuv.addr_vir.addr_u;
-	CMR_LOGD("jpeg_tmp, phy 0x%x, vir 0x%x, size 0x%x",
+	CMR_LOGD("jpeg_tmp, phy 0x%lx, vir 0x%lx, size 0x%x",
 		cap_mem->jpeg_tmp.addr_phy.addr_y,
 		cap_mem->jpeg_tmp.addr_vir.addr_y,
 		cap_mem->jpeg_tmp.buf_size);
@@ -1193,7 +1193,7 @@ int arrange_rot_buf(struct cmr_cap_2_frm *cap_2_frm,
 	cap_mem->target_jpeg.addr_phy.addr_y = cap_mem->cap_yuv_rot.addr_phy.addr_y;
 	cap_mem->target_jpeg.addr_vir.addr_y = cap_mem->cap_yuv_rot.addr_vir.addr_y;
 
-	CMR_LOGD("cap_yuv_rot, phy 0x%x 0x%x, vir 0x%x 0x%x, size 0x%x",
+	CMR_LOGD("cap_yuv_rot, phy 0x%lx 0x%lx, vir 0x%lx 0x%lx, size 0x%x",
 		cap_mem->cap_yuv_rot.addr_phy.addr_y,
 		cap_mem->cap_yuv_rot.addr_phy.addr_u,
 		cap_mem->cap_yuv_rot.addr_vir.addr_y,

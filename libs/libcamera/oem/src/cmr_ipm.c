@@ -93,7 +93,7 @@ cmr_int cmr_ipm_open(cmr_handle ipm_handle, cmr_uint class_type,struct ipm_open_
 			break;
 	}
 	if ((index == 0) || (index >= class_type_max)) {
-		CMR_LOGE("index = %d class_type does't has relevant info", index);
+		CMR_LOGE("index = %ld class_type does't has relevant info", index);
 		return CMR_CAMERA_INVALID_PARAM;
 	}
 	if (!class_type_tab[index].hdr_tab_info->ops->open) {

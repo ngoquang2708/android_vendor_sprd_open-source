@@ -205,7 +205,7 @@ SENSOR_INFO_T ** Sensor_GetInforTab(struct sensor_drv_context *sensor_cxt, SENSO
 	SENSOR_INFO_T * sensor_infor_tab_ptr=NULL;
 
 	cmr_int at_flag = sensor_cxt->is_autotest;
-	CMR_LOGE("%s autotest_camera_flag= %d  line=  %d ",__func__,at_flag,__LINE__);
+	CMR_LOGE("%s autotest_camera_flag= %ld  line=  %d ",__func__,at_flag,__LINE__);
 
 	if (AUTO_TEST_CAMERA == at_flag) {
 		switch ( sensor_id) {
@@ -220,7 +220,7 @@ SENSOR_INFO_T ** Sensor_GetInforTab(struct sensor_drv_context *sensor_cxt, SENSO
 					break;
 			default:
 				break;
-				CMR_LOGE("%s s_autotest_flag= %d  line= %d ",__func__,at_flag,__LINE__);
+				CMR_LOGE("%s s_autotest_flag= %ld  line= %d ",__func__,at_flag,__LINE__);
 		}
 		return (SENSOR_INFO_T **)sensor_infor_tab_ptr;
 
