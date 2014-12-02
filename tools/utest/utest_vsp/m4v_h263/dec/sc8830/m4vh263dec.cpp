@@ -14,95 +14,34 @@
 #include "ion_sprd.h"
 using namespace android;
 
-
-//#include "mpeg4dec.h"
 #include "m4v_h263_dec_api.h"
-
-
 #include "util.h"
 
-
-
-#define ERR(x...)	fprintf(stderr, ##x)
-#define INFO(x...)	fprintf(stdout, ##x)
-
-
-
-
+#define MP4DEC_INTERNAL_BUFFER_SIZE  (0x200000) //(MP4DEC_OR_RUN_SIZE+MP4DEC_OR_INTER_MALLOC_SIZE)  
 #define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
 #define DEC_YUV_BUFFER_NUM   3
 
-
-#define	STARTCODE_H263_PSC	0x00008000
-#define STARTCODE_MP4V_VO	0x000001b0
-#define STARTCODE_MP4V_VOP	0x000001b6
-#define	STARTCODE_MJPG_SOI	0xffd80000
-#define	STARTCODE_FLV1_PSC	0x00008400
-#define STARTCODE_H264_NAL1	0x00000100
-#define STARTCODE_H264_NAL2	0x00000101
-
-
-static const unsigned int table_startcode1[] =
-{
-    STARTCODE_H263_PSC,
-    STARTCODE_MP4V_VO,
-    STARTCODE_MJPG_SOI,
-    STARTCODE_FLV1_PSC,
-    STARTCODE_H264_NAL1
-};
-
-static const unsigned int table_maskcode1[] =
-{
-    0x000073ff,
-    0x00000005,
-    0x0000ffff,
-    0x000073ff,
-    0x0000007f
-};
-
-static const unsigned int table_startcode2[] =
-{
-    STARTCODE_H263_PSC,
-    STARTCODE_MP4V_VOP,
-    STARTCODE_MJPG_SOI,
-    STARTCODE_FLV1_PSC,
-    STARTCODE_H264_NAL2
-};
-
-static const unsigned int table_maskcode2[] =
-{
-    0x000073ff,
-    0x00000005,
-    0x0000ffff,
-    0x000073ff,
-    0x00000074
-};
-
-typedef enum
-{
+typedef enum {
     H263_MODE = 0,MPEG4_MODE,
     FLV_MODE,
     UNKNOWN_MODE
 } MP4DecodingMode;
 
-
-static void usage()
-{
+static void usage() {
     INFO("usage:\n");
     INFO("utest_vsp_dec -i filename_bitstream -o filename_yuv [OPTIONS]\n");
     INFO("-i       string: input bitstream filename\n");
     INFO("[OPTIONS]:\n");
     INFO("-o       string: output yuv filename\n");
-    INFO("-format integer: video format(0:H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264), auto detection if default\n");
+    INFO("-format integer: video format(0:ITU_H263 / 1:MPEG4 / 2:MJPG / 3:FLVH263 / 4:H264 / 5:VP8 / 6: VP9), auto detection if default\n");
     INFO("-frames integer: number of frames to decode, default is 0 means all frames\n");
     INFO("-help          : show this help message\n");
-    INFO("Built on %s %s, Written by JamesXiong(james.xiong@spreadtrum.com)\n", __DATE__, __TIME__);
+    INFO("Built on %s %s, Written by XiaoweiLuo(xiaowei.luo@spreadtrum.com)\n", __DATE__, __TIME__);
 }
 
-void* mLibHandle;
+void *mLibHandle = NULL;
 
 FT_MP4DecSetCurRecPic mMP4DecSetCurRecPic;
-FT_MP4DecMemCacheInit mMP4DecMemCacheInit;
 FT_MP4DecInit mMP4DecInit;
 FT_MP4DecVolHeader mMP4DecVolHeader;
 FT_MP4DecMemInit mMP4DecMemInit;
@@ -112,59 +51,56 @@ FT_Mp4GetVideoDimensions mMp4GetVideoDimensions;
 FT_Mp4GetBufferDimensions mMp4GetBufferDimensions;
 FT_MP4DecReleaseRefBuffers mMP4DecReleaseRefBuffers;
 
-unsigned int framenum_bs = 0;
+uint32 framenum_bs = 0;
 
-sp<MemoryHeapIon> iDecExtPmemHeap;
-void*  iDecExtVAddr =NULL;
-uint32 iDecExtPhyAddr =NULL;
+sp<MemoryHeapIon> s_pmem_extra;
+uint8 *s_pbuf_extra_v;
+uint32 s_pbuf_extra_p;
+uint32 s_pbuf_extra_size;
 static bool mIOMMUEnabled = false;
 
-int extMemoryAlloc(void *  mHandle,unsigned int extra_mem_size) {
+int32 extMemoryAlloc(void *  mHandle, uint32 extra_mem_size) {
 
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
 
-    {
+    if (mIOMMUEnabled) {
+        s_pmem_extra = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
+    } else {
+        s_pmem_extra = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+    }
+    int32 fd = s_pmem_extra->getHeapID();
+    if(fd >= 0) {
+        int32 ret,phy_addr, buffer_size;
         if (mIOMMUEnabled) {
-            iDecExtPmemHeap = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-
+            ret = s_pmem_extra->get_mm_iova(&phy_addr, &buffer_size);
         } else {
-            iDecExtPmemHeap = new MemoryHeapIon("/dev/ion", extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
+            ret = s_pmem_extra->get_phy_addr_from_ion(&phy_addr, &buffer_size);
         }
-        int fd = iDecExtPmemHeap->getHeapID();
-        if(fd>=0)
-        {
-
-            int ret,phy_addr, buffer_size;
-            if (mIOMMUEnabled) {
-                ret = iDecExtPmemHeap->get_mm_iova(&phy_addr, &buffer_size);
-            } else {
-                ret = iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-            }
-            if(ret)
-            {
-                ERR ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
-            }
-
-            iDecExtPhyAddr =(uint32)phy_addr;
-            iDecExtVAddr = (void *)iDecExtPmemHeap->base();
-            extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) iDecExtVAddr;
-            extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)iDecExtPhyAddr;
-            extra_mem[HW_NO_CACHABLE].size = extra_mem_size;
+        if((ret < 0) || (buffer_size < extra_mem_size)) {
+            ERR ("s_pmem_extra: get phy addr fail, ret: %d, buffer_size: %d, extra_mem_size: %d\n", ret, buffer_size, extra_mem_size);
         }
+
+        s_pbuf_extra_p =(uint32)phy_addr;
+        s_pbuf_extra_v = (uint8 *)s_pmem_extra->base();
+        s_pbuf_extra_size = extra_mem_size;
+        extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) s_pbuf_extra_v;
+        extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = s_pbuf_extra_p;
+        extra_mem[HW_NO_CACHABLE].size = extra_mem_size;
     }
 
-    (*mMP4DecMemInit)((MP4Handle *)mHandle, extra_mem);
+    if ((*mMP4DecMemInit)((MP4Handle *)mHandle, extra_mem) != MMDEC_OK) {
+        ERR("mMP4DecMemInit err\n");
+        return -1;
+    }
 
-    return 1;
+    return 0;
 }
 
-static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffer, unsigned int header_size,
-                    unsigned char* pbuf_inter, unsigned char* pbuf_inter_phy, unsigned int size_inter)
-{
+static int32 dec_init(MP4Handle *mHandle, int32 format, uint8 *pheader_buffer, uint32 header_size,
+                      uint8 *pbuf_inter, uint32 pbuf_inter_phy, uint32 size_inter) {
     MMCodecBuffer InterMemBfr;
     MMCodecBuffer ExtraMemBfr;
     MMDecVideoFormat video_format;
-    int ret;
 
     INFO("dec_init IN\n");
 
@@ -177,17 +113,19 @@ static int dec_init(MP4Handle *mHandle, int format, unsigned char* pheader_buffe
     video_format.p_extra = pheader_buffer;
     video_format.frame_width = 0;
     video_format.frame_height = 0;
-
-    ret = (*mMP4DecInit)(mHandle, &InterMemBfr);
+    if((*mMP4DecInit)(mHandle, &InterMemBfr) != MMDEC_OK) {
+        ERR("mMP4DecInit err.\n");
+        return -1;
+    }
 
     INFO("dec_init OUT\n");
 
-    return ret;
+    return 0;
 }
 
-static int dec_decode_frame(MP4Handle *mHandle, unsigned char* pframe, unsigned char* pframe_y, unsigned int size, MMDecOutput *dec_out) {
+static int32 dec_decode_frame(MP4Handle *mHandle, uint8 *pframe, uint32 pframe_y, uint32 size, MMDecOutput *dec_out) {
     MMDecInput dec_in;
-    int ret;
+    MMDecRet ret;
 
     do {
         dec_in.pStream= pframe;
@@ -202,138 +140,62 @@ static int dec_decode_frame(MP4Handle *mHandle, unsigned char* pframe, unsigned 
         dec_out->frameEffective = 0;
 
         ret = (*mMP4DecDecode)(mHandle, &dec_in, dec_out);
-        if (ret == MMDEC_ERROR)
-        {
-            return ret;
+        if (ret == MMDEC_ERROR) {
+            ERR("mMP4DecDecode err\n");
+            return -1;
         }
     } while (framenum_bs == 1 && ret == MMDEC_MEMORY_ALLOCED);
 
-    return ret;
+    return 0;
 }
 
-
-static void dec_release(MP4Handle *mHandle)
-{
+static int32 dec_release(MP4Handle *mHandle) {
     (*mMP4DecReleaseRefBuffers)(mHandle);
 
-    (*mMP4DecRelease)(mHandle);
-}
-
-
-
-static int sniff_format(unsigned char* pbuffer, unsigned int size, unsigned int startcode, unsigned int maskcode)
-{
-    int confidence = 0;
-
-    unsigned int code = (pbuffer[0] << 24) | (pbuffer[1] << 16) | (pbuffer[2] << 8) | pbuffer[3];
-    if ((code & (~maskcode)) == (startcode & (~maskcode)))
-    {
-        confidence = size;
+    if ((*mMP4DecRelease)(mHandle) != MMDEC_OK) {
+        ERR("mMP4DecRelease err\n");
+        return -1;
     }
 
-    for (unsigned int i=1; i<=size-4; i++)
-    {
-        unsigned int code = (pbuffer[i] << 24) | (pbuffer[i+1] << 16) | (pbuffer[i+2] << 8) | pbuffer[i+3];
-        if ((code & (~maskcode)) == (startcode & (~maskcode)))
-        {
-            confidence ++;
+    return 0;
+}
+
+static int32 detect_format(uint8 *pbuffer, uint32 size) {
+    if((pbuffer[0] == 0x00) && (pbuffer[1] == 0x00)) {
+        if((pbuffer[2]&0xFC) == 0x80) {
+            return ITU_H263;
+        } else if((pbuffer[2]&0xF8) == 0x80) {
+            return FLV_V1;
         }
     }
 
-    return confidence;
+    return MPEG4;
 }
 
-static int detect_format(unsigned char* pbuffer, unsigned int size)
-{
-    int format = 0;
-
-    int confidence[5];
-    int i;
-
-    INFO("size: %d, pbuffer:%0x, %0x, %0x, %0x, %0x, %0x, %0x, %0x\n", size, pbuffer[0], pbuffer[1], pbuffer[2], pbuffer[3], pbuffer[4], pbuffer[5], pbuffer[6], pbuffer[7]);
-
-    for (i=0; i<5; i++)
-    {
-        confidence[i] = sniff_format(pbuffer, size, table_startcode1[i], table_maskcode1[i]);
-    }
-
-    int max_confidence = 0;
-    for (i=0; i<5; i++)
-    {
-        if (max_confidence < confidence[i])
-        {
-            max_confidence = confidence[i];
-            format = i;
-        }
-    }
-
-    return format;
-}
-
-
-
-
-
-static const char* format2str(int format)
-{
-    if (format == 0)
-    {
-        return "H263";
-    }
-    else if (format == 1)
-    {
-        return "MPEG4";
-    }
-    else if (format == 2)
-    {
-        return "MJPG";
-    }
-    else if (format == 3)
-    {
-        return "FLVH263";
-    }
-    else if (format == 4)
-    {
-        return "H264";
-    }
-    else
-    {
-        return "UnKnown";
-    }
-}
-
-static const char* type2str(int type)
-{
-    if (type == 0)
-    {
+static const char* type2str(int type) {
+    if (type == 0) {
         return "I";
-    }
-    else if (type == 1)
-    {
+    } else if (type == 1) {
         return "P";
-    }
-    else if (type == 2)
-    {
+    } else if (type == 2) {
         return "B";
-    }
-    else
-    {
+    } else {
         return "N";
     }
 }
 
-bool openDecoder(const char* libName)
-{
+static int32 openDecoder(const char* libName) {
     if(mLibHandle) {
         dlclose(mLibHandle);
+        mLibHandle = NULL;
     }
 
-    INFO("openDecoder, lib: %s",libName);
+    INFO("openDecoder, lib: %s\n",libName);
 
     mLibHandle = dlopen(libName, RTLD_NOW);
     if(mLibHandle == NULL) {
         ERR("openDecoder, can't open lib: %s",libName);
-        return false;
+        return -1;
     }
 
     mMP4DecSetCurRecPic = (FT_MP4DecSetCurRecPic)dlsym(mLibHandle, "MP4DecSetCurRecPic");
@@ -341,23 +203,15 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecSetCurRecPic in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
-
-//    mMP4DecMemCacheInit = (FT_MP4DecMemCacheInit)dlsym(mLibHandle, "MP4DecMemCacheInit");
-//    if(mMP4DecMemCacheInit == NULL){
-//        LOGE("Can't find MP4DecMemCacheInit in %s",libName);
-//        dlclose(mLibHandle);
-//        mLibHandle = NULL;
-//        return false;
-//    }
 
     mMP4DecInit = (FT_MP4DecInit)dlsym(mLibHandle, "MP4DecInit");
     if(mMP4DecInit == NULL) {
         ERR("Can't find MP4DecInit in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMP4DecVolHeader = (FT_MP4DecVolHeader)dlsym(mLibHandle, "MP4DecVolHeader");
@@ -365,7 +219,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecVolHeader in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMP4DecMemInit = (FT_MP4DecMemInit)dlsym(mLibHandle, "MP4DecMemInit");
@@ -373,7 +227,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecMemInit in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMP4DecDecode = (FT_MP4DecDecode)dlsym(mLibHandle, "MP4DecDecode");
@@ -381,7 +235,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecDecode in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMP4DecRelease = (FT_MP4DecRelease)dlsym(mLibHandle, "MP4DecRelease");
@@ -389,6 +243,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecRelease in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
+        return -1;
     }
 
     mMp4GetVideoDimensions = (FT_Mp4GetVideoDimensions)dlsym(mLibHandle, "Mp4GetVideoDimensions");
@@ -396,7 +251,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find Mp4GetVideoDimensions in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMp4GetBufferDimensions = (FT_Mp4GetBufferDimensions)dlsym(mLibHandle, "Mp4GetBufferDimensions");
@@ -404,7 +259,7 @@ bool openDecoder(const char* libName)
         ERR("Can't find Mp4GetBufferDimensions in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
     mMP4DecReleaseRefBuffers = (FT_MP4DecReleaseRefBuffers)dlsym(mLibHandle, "MP4DecReleaseRefBuffers");
@@ -412,144 +267,113 @@ bool openDecoder(const char* libName)
         ERR("Can't find MP4DecReleaseRefBuffers in %s",libName);
         dlclose(mLibHandle);
         mLibHandle = NULL;
-        return false;
+        return -1;
     }
 
-    return true;
+    return 0;
 }
 
-sp<MemoryHeapIon> pmem_extra = NULL;
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     char* filename_bs = NULL;
     FILE* fp_bs = NULL;
     char* filename_yuv = NULL;
     FILE* fp_yuv = NULL;
-    int format = -1;
-    unsigned int frames = 0;
-    unsigned int width = 1280;
-    unsigned int height = 720;
+    int32 format = MPEG4;
+    uint32 frames = 0;
+    uint32 width = 352;
+    uint32 height = 288;
 
-    unsigned int startcode = 0;
-    unsigned int maskcode = 0;
-    int i;
+    uint32 startcode = 0;
+    uint32 maskcode = 0;
+    int32 i;
 
-    MP4Handle *mHandle;
+    MP4Handle *mHandle = NULL;
+    MP4DecodingMode mode;
+    MMDecVideoFormat video_format;
 
     // bitstream buffer, read from bs file
-    unsigned char buffer_data[ONEFRAME_BITSTREAM_BFR_SIZE];
-    int buffer_size = 0;
+    uint8 buffer_data[ONEFRAME_BITSTREAM_BFR_SIZE];
+    int32 buffer_size = 0;
 
     // yuv420sp buffer, decode from bs buffer
-    sp<MemoryHeapIon> pmem_yuv420sp = NULL;
-    unsigned char* pyuv[DEC_YUV_BUFFER_NUM] = {NULL};
-    unsigned char* pyuv_phy[DEC_YUV_BUFFER_NUM] = {NULL};
-    sp<MemoryHeapIon> pmem_yuv420sp_num[DEC_YUV_BUFFER_NUM] = {NULL};
+    sp<MemoryHeapIon> pmem_yuv420sp[DEC_YUV_BUFFER_NUM] = {NULL};
+    int32 size_yuv[DEC_YUV_BUFFER_NUM]  = {0};
+    uint8 *pyuv[DEC_YUV_BUFFER_NUM] = {NULL};
+    uint32 pyuv_phy[DEC_YUV_BUFFER_NUM] = {0};
     // yuv420p buffer, transform from yuv420sp and write to yuv file
-    unsigned char* py = NULL;
-    unsigned char* pu = NULL;
-    unsigned char* pv = NULL;
+    uint8 *py = NULL;
+    uint8 *pu = NULL;
+    uint8 *pv = NULL;
 
-    //unsigned int framenum_bs = 0;
-    unsigned int framenum_err = 0;
-    unsigned int framenum_yuv = 0;
-    unsigned int time_total_ms = 0;
-
+    uint32 framenum_err = 0;
+    uint32 framenum_yuv = 0;
+    uint32 time_total_ms = 0;
 
     // VSP buffer
-    sp<MemoryHeapIon> pmem_extra = NULL;
-    unsigned char* pbuf_extra = NULL;
-    unsigned char* pbuf_extra_phy = NULL;
-
-    sp<MemoryHeapIon> pmem_inter = NULL;
-    unsigned char* pbuf_inter = NULL;
-    unsigned char* pbuf_inter_phy = NULL;
+    uint8 *pbuf_inter = NULL;
+    uint32 size_inter = 0;
 
     sp<MemoryHeapIon> pmem_stream = NULL;
-    unsigned char* pbuf_stream = NULL;
-    unsigned char* pbuf_stream_phy = NULL;
+    uint8 *pbuf_stream = NULL;
+    uint32 pbuf_stream_phy = 0;
+    uint32 size_stream = 0;
 
-    unsigned int size_extra = 0;
-    unsigned int size_inter = 0;
-    unsigned int size_stream = 0;
+    uint32 size_extra = 0;
 
-    int phy_addr = 0;
-    int size = 0;
+    int32 phy_addr = 0;
+    int32 size = 0;
+
     framenum_bs = 0;
 
     /* parse argument */
-
-    if (argc < 3)
-    {
+    if (argc < 3) {
         usage();
         return -1;
     }
 
-    for (i=1; i<argc; i++)
-    {
-        if (strcmp(argv[i], "-i") == 0 && (i < argc-1))
-        {
+    for (i=1; i<argc; i++) {
+        if (strcmp(argv[i], "-i") == 0 && (i < argc-1)) {
             filename_bs = argv[++i];
-        }
-        else if (strcmp(argv[i], "-o") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-o") == 0 && (i < argc-1)) {
             filename_yuv = argv[++i];
-        }
-        else if (strcmp(argv[i], "-format") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-format") == 0 && (i < argc-1)) {
             format = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-frames") == 0 && (i < argc-1))
-        {
+        } else if (strcmp(argv[i], "-frames") == 0 && (i < argc-1)) {
             frames = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-help") == 0)
-        {
+        } else if (strcmp(argv[i], "-help") == 0) {
             usage();
             return 0;
-        }
-        else
-        {
+        } else {
             usage();
             return -1;
         }
     }
 
-
     /* check argument */
-    if (filename_bs == NULL)
-    {
+    if (filename_bs == NULL) {
         usage();
         return -1;
     }
 
-
-
     fp_bs = fopen(filename_bs, "rb");
-    if (fp_bs == NULL)
-    {
+    if (fp_bs == NULL) {
         ERR("Failed to open file %s\n", filename_bs);
         goto err;
     }
-    if (filename_yuv != NULL)
-    {
+
+    if (filename_yuv != NULL) {
         fp_yuv = fopen(filename_yuv, "wb");
-        if (fp_yuv == NULL)
-        {
+        if (fp_yuv == NULL) {
             ERR("Failed to open file %s\n", filename_yuv);
             goto err;
         }
     }
 
-
-    if ((format < 0) || (format > 4))
-    {
+    if ((format < 0) || (format >= FORMAT_MAX)) {
         // detect bistream format
-        unsigned char header_data[64];
-        int header_size = fread(header_data, 1, 64, fp_bs);
-        if (header_size <= 0)
-        {
+        uint8 header_data[64];
+        int32 header_size = fread(header_data, 1, 64, fp_bs);
+        if (header_size <= 0) {
             ERR("Failed to read file %s\n", filename_bs);
             goto err;
         }
@@ -557,11 +381,9 @@ int main(int argc, char **argv)
         format = detect_format(header_data, header_size);
     }
 
-
     /*MMU Enable or not enable.  shark:not enable;dophin:enable */
     mIOMMUEnabled = MemoryHeapIon::Mm_iommu_is_enabled();
     INFO("IOMMU enabled: %d\n", mIOMMUEnabled);
-
 
     /* bs buffer */
     if (mIOMMUEnabled) {
@@ -569,8 +391,7 @@ int main(int argc, char **argv)
     } else {
         pmem_stream = new MemoryHeapIon("/dev/ion", ONEFRAME_BITSTREAM_BFR_SIZE, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
     }
-    if (pmem_stream->getHeapID() < 0)
-    {
+    if (pmem_stream->getHeapID() < 0) {
         ERR("Failed to alloc bitstream pmem buffer\n");
         goto err;
     }
@@ -579,248 +400,171 @@ int main(int argc, char **argv)
     } else {
         pmem_stream->get_phy_addr_from_ion(&phy_addr, &size);
     }
-    pbuf_stream = (unsigned char*)pmem_stream->base();
-    pbuf_stream_phy = (unsigned char*)phy_addr;
-    INFO("pbuf_stream_phy = %08x, pbuf_stream = %08x \n", pbuf_stream_phy, pbuf_stream);
-    if (pbuf_stream == NULL)
-    {
+    pbuf_stream = (uint8 *)pmem_stream->base();
+    pbuf_stream_phy = (uint32)phy_addr;
+    if (pbuf_stream == NULL) {
         ERR("Failed to alloc bitstream pmem buffer\n");
         goto err;
     }
 
     /* yuv420sp buffer */
-    /*    if (mIOMMUEnabled) {
-            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-        } else {
-            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-        }
-        if (pmem_yuv420sp->getHeapID() < 0)
-        {
-            ERR("Failed to alloc yuv pmem buffer\n");
-            goto err;
-        }
+    for (i=0; i<DEC_YUV_BUFFER_NUM; i++) {
         if (mIOMMUEnabled) {
-            pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
+            pmem_yuv420sp[i] = new MemoryHeapIon("/dev/ion", width*height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
         } else {
-            pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
+            pmem_yuv420sp[i] = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
         }
-        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
-        {
-            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
-            pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
-        }
-        if (pyuv[0] == NULL)
-        {
+
+        if (pmem_yuv420sp[i]->getHeapID() < 0) {
             ERR("Failed to alloc yuv pmem buffer\n");
             goto err;
-        }*/
-
-    if (mIOMMUEnabled) {
-        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
-        {
-            pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-            pmem_yuv420sp->get_mm_iova(&phy_addr, &size);
-
-            if (pmem_yuv420sp->getHeapID() < 0)
-            {
-                ERR("Failed to alloc yuv pmem buffer\n");
-                goto err;
-            }
-            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) ;//+ width*height*3/2 * i;
-            pyuv_phy[i] = ((unsigned char*)phy_addr) ;//+ width*height*3/2 * i;
-            pmem_yuv420sp_num[i] = pmem_yuv420sp;
-            INFO("pyuv_phy[%d] = %08x, pyuv[%d] = %08x \n", i, pyuv_phy[i], i, pyuv[i]);
         }
 
-    } else {
-        pmem_yuv420sp = new MemoryHeapIon("/dev/ion", width*height*3/2 * DEC_YUV_BUFFER_NUM, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-        pmem_yuv420sp->get_phy_addr_from_ion(&phy_addr, &size);
-        for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
-        {
-            pyuv[i] = ((unsigned char*)pmem_yuv420sp->base()) + width*height*3/2 * i;
-            pyuv_phy[i] = ((unsigned char*)phy_addr) + width*height*3/2 * i;
+        if (mIOMMUEnabled) {
+            pmem_yuv420sp[i]->get_mm_iova(&phy_addr, &(size_yuv[i]));
+        } else {
+            pmem_yuv420sp[i]->get_phy_addr_from_ion(&phy_addr, &(size_yuv[i]));
+        }
+        pyuv[i] = (uint8 *)(pmem_yuv420sp[i]->base());
+        pyuv_phy[i] = (uint32)phy_addr;
+        if (pyuv[i] == NULL) {
+            ERR("Failed to alloc yuv pmem buffer\n");
+            goto err;
         }
     }
 
-    if (pyuv[0] == NULL)
-    {
-        ERR("Failed to alloc yuv pmem buffer\n");
-    }
     /* yuv420p buffer */
-    py = (unsigned char*)vsp_malloc(width * height * sizeof(unsigned char), 4);
-    if (py == NULL)
-    {
+    py = (uint8 *)vsp_malloc(width * height * sizeof(uint8), 4);
+    if (py == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-    pu = (unsigned char*)vsp_malloc(width/2 * height/2 * sizeof(unsigned char), 4);
-    if (pu == NULL)
-    {
+    pu = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pu == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-    pv = (unsigned char*)vsp_malloc(width/2 * height/2 * sizeof(unsigned char), 4);
-    if (pv == NULL)
-    {
+    pv = (uint8 *)vsp_malloc(width/2 * height/2 * sizeof(uint8), 4);
+    if (pv == NULL) {
         ERR("Failed to alloc yuv buffer\n");
         goto err;
     }
-
-
-
 
     INFO("Try to decode %s to %s, format = %s\n", filename_bs, filename_yuv, format2str(format));
 
-
-    mHandle = (MP4Handle *)malloc(sizeof(MP4Handle));
+    mHandle = (MP4Handle *)vsp_malloc(sizeof(MP4Handle), 4);
+    if (mHandle == NULL) {
+        ERR("Failed to alloc mHandle\n");
+        goto err;
+    }
     memset(mHandle, 0, sizeof(tagMP4Handle));
-
     mHandle->userdata = (void *)mHandle;
     mHandle->VSP_extMemCb = extMemoryAlloc;
     mHandle->VSP_bindCb = NULL;
     mHandle->VSP_unbindCb = NULL;
 
-    openDecoder("libomx_m4vh263dec_hw_sprd.so");
+    if (openDecoder("libomx_m4vh263dec_hw_sprd.so") < 0) {
+        ERR("Failed to open library.\n");
+        goto err;
+    }
 
     /* step 1 - init vsp */
     size_inter = MP4DEC_INTERNAL_BUFFER_SIZE;
-    if (mIOMMUEnabled) {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
-    } else {
-        pmem_inter = new MemoryHeapIon("/dev/ion", size_inter, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_MM);
-    }
-    if (pmem_inter->getHeapID() == NULL)
-    {
+    pbuf_inter = (uint8 *)vsp_malloc(size_inter, 4);
+    if (pbuf_inter == NULL) {
         ERR("Failed to alloc inter memory\n");
         goto err;
     }
 
-    if (mIOMMUEnabled) {
-        pmem_inter->get_mm_iova(&phy_addr, &size);
-    } else {
-        pmem_inter->get_phy_addr_from_ion(&phy_addr, &size);
-    }
-    INFO("hl size = %d, size_inter = %d\n", size, size_inter);
-    pbuf_inter = (unsigned char*)pmem_inter->base();
-    pbuf_inter_phy = (unsigned char*)phy_addr;
-    if (pbuf_inter == NULL)
-    {
-        ERR("Failed to alloc inter memory\n");
-        goto err;
-    }
-
-
-    if (dec_init(mHandle, format, NULL, 0, pbuf_inter, pbuf_inter_phy, size_inter) != 0)
-    {
+    if (dec_init(mHandle, format, NULL, 0, pbuf_inter, 0, size_inter) < 0) {
         ERR("Failed to init VSP\n");
         goto err;
     }
     startcode = table_startcode2[format];
     maskcode = table_maskcode2[format];
-    {
-        MP4DecodingMode mode = (format== MPEG4_MODE) ? MPEG4_MODE : H263_MODE;
-        MMDecVideoFormat video_format;
 
-        if (mode == MPEG4_MODE)
-        {
-            int read_size = fread(buffer_data, 1, ONEFRAME_BITSTREAM_BFR_SIZE, fp_bs);
-            if (read_size <= 0)
-            {
-                goto err;
-            }
-
-            // search a frame
-            unsigned char* ptmp = buffer_data;
-            unsigned int frame_size = 0;
-            buffer_size = read_size;
-            frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
-            video_format.i_extra = frame_size;
-
-            if( video_format.i_extra > 0)
-            {
-                memcpy(pbuf_stream, buffer_data,read_size);
-                video_format.p_extra = pbuf_stream;
-                video_format.p_extra_phy = pbuf_stream_phy;
-            } else {
-                video_format.p_extra = NULL;
-                video_format.p_extra_phy = NULL;
-            }
-
-            video_format.video_std = MPEG4;
-            video_format.frame_width = 0;
-            video_format.frame_height = 0;
-            video_format.uv_interleaved = 1;
-
-            MMDecRet ret = (*mMP4DecVolHeader)(mHandle, &video_format);
-            INFO("width = %d, height = %d",video_format.frame_width, video_format.frame_height);
-            if (MMDEC_OK != ret)
-            {
-                ERR("Failed to decode Vol Header\n");
-                goto err;
-            }
-
-            buffer_size = 0;
-            fseek(fp_bs, 0, SEEK_SET);
+    mode = (format== MPEG4_MODE) ? MPEG4_MODE : H263_MODE;
+    if (mode == MPEG4_MODE) {
+        int read_size = fread(buffer_data, 1, ONEFRAME_BITSTREAM_BFR_SIZE, fp_bs);
+        if (read_size <= 0) {
+            ERR("Failed to read stream.\n");
+            goto err;
         }
+
+        // search a frame
+        uint8 *ptmp = buffer_data;
+        uint32 frame_size = 0;
+        buffer_size = read_size;
+        frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
+        video_format.i_extra = frame_size;
+        if( video_format.i_extra > 0) {
+            memcpy(pbuf_stream, buffer_data,read_size);
+            video_format.p_extra = pbuf_stream;
+            video_format.p_extra_phy = (uint32)pbuf_stream_phy;
+        } else {
+            video_format.p_extra = NULL;
+            video_format.p_extra_phy = 0;
+        }
+
+        video_format.video_std = MPEG4;
+        video_format.frame_width = 0;
+        video_format.frame_height = 0;
+        video_format.yuv_format = YUV420SP_NV12;
+        if (MMDEC_OK != (*mMP4DecVolHeader)(mHandle, &video_format)) {
+            ERR("Failed to decode Vol Header\n");
+            goto err;
+        }
+        INFO("MP4DecVolHeader: width = %d, height = %d\n",video_format.frame_width, video_format.frame_height);
+
+        buffer_size = 0;
+        fseek(fp_bs, video_format.i_extra, SEEK_SET);
     }
+
     /* step 2 - decode with vsp */
     startcode = table_startcode2[format];
     maskcode = table_maskcode2[format];
-    while (!feof(fp_bs))
-    {
-        int read_size = fread(buffer_data+buffer_size, 1, ONEFRAME_BITSTREAM_BFR_SIZE-buffer_size, fp_bs);
-        if (read_size <= 0)
-        {
+    while (!feof(fp_bs)) {
+        int32 read_size = fread(buffer_data+buffer_size, 1, ONEFRAME_BITSTREAM_BFR_SIZE-buffer_size, fp_bs);
+        if (read_size <= 0) {
             break;
         }
         buffer_size += read_size;
 
-
-
-        unsigned char* ptmp = buffer_data;
-        unsigned int frame_size = 0;
-        while (buffer_size > 0)
-        {
+        uint8 *ptmp = buffer_data;
+        uint32 frame_size = 0;
+        while (buffer_size > 0) {
             // search a frame
             frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
-            if (frame_size == 0)
-            {
-                if ((ptmp == buffer_data) || feof(fp_bs))
-                {
+            if (frame_size == 0) {
+                if ((ptmp == buffer_data) || feof(fp_bs)) {
                     frame_size = buffer_size;
-                }
-                else
-                {
+                } else {
                     break;
                 }
             }
 
             // read a bitstream frame
             memcpy(pbuf_stream, ptmp, frame_size);
-
             ptmp += frame_size;
             buffer_size -= frame_size;
 
-
             // decode bitstream to yuv420sp
-            unsigned char* pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
-            unsigned char* pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-            (*mMP4DecSetCurRecPic)(mHandle, pyuv420sp, pyuv420sp_phy, NULL);
-            framenum_bs ++;
+            uint8 *pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
+            uint32 pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
+            (*mMP4DecSetCurRecPic)(mHandle, pyuv420sp, (uint8 *)pyuv420sp_phy, NULL);
+            framenum_bs++;
             int64_t start = systemTime();
             MMDecOutput dec_out;
             dec_out.frameEffective = 0;
-            int ret = dec_decode_frame(mHandle, pbuf_stream, pbuf_stream_phy, frame_size, &dec_out);
+            if (dec_decode_frame(mHandle, pbuf_stream, pbuf_stream_phy, frame_size, &dec_out) < 0) {
+                ERR("Failed to decode frame.\n");
+                goto err;
+            }
             int64_t end = systemTime();
-            unsigned int duration = (unsigned int)((end-start) / 1000000L);
+            uint32 duration = (uint32)((end-start) / 1000000L);
             time_total_ms += duration;
-            if (duration < 40)
+            if (duration < 40) {
                 usleep((40 - duration)*1000);
-
-            if (ret != 0) {
-                framenum_err ++;
-                ERR("frame %d: time = %dms, size = %d, type = %s, failed(%d)\n", framenum_bs, duration, frame_size, type2str(dec_out.VopPredType), ret);
-                continue;
             }
 
             INFO("frame %d[%dx%d]: time = %dms, size = %d, type = %s, effective(%d)\n",
@@ -838,123 +582,98 @@ int main(int argc, char **argv)
                 framenum_yuv ++;
             }
 
-            if (frames != 0)
-            {
-                if (framenum_yuv >= frames)
-                {
+            if (frames != 0) {
+                if (framenum_yuv >= frames) {
                     goto  early_terminate;
                 }
             }
         }
 
-        if (buffer_size > 0)
-        {
+        if (buffer_size > 0) {
             memmove(buffer_data, ptmp, buffer_size);
         }
     }
 
 early_terminate:
     /* step 3 - release vsp */
-    dec_release(mHandle);
-
+    if (dec_release(mHandle) < 0) {
+        ERR ("Failed to release decoder\n");
+        goto err;
+    }
 
     INFO("Finish decoding %s(%s, %d frames) to %s(%d frames)", filename_bs, format2str(format), framenum_bs, filename_yuv, framenum_yuv);
-    if (framenum_err > 0)
-    {
+    if (framenum_err > 0) {
         INFO(", %d frames failed", framenum_err);
     }
-    if (framenum_bs > 0)
-    {
+    if (framenum_bs > 0) {
         INFO(", average time = %dms", time_total_ms/framenum_bs);
     }
     INFO("\n");
 
-
-
 err:
-    if(mLibHandle)
-    {
+    if(mLibHandle) {
         dlclose(mLibHandle);
         mLibHandle = NULL;
     }
 
-    if (mHandle != NULL)
-    {
-        free (mHandle);
+    vsp_free (mHandle);
+    vsp_free(pbuf_inter);
+
+    if(s_pbuf_extra_v) {
+        if (mIOMMUEnabled) {
+            s_pmem_extra->free_mm_iova((int32)s_pbuf_extra_p, s_pbuf_extra_size);
+        }
+
+        s_pmem_extra.clear();
+        s_pbuf_extra_v = NULL;
+        s_pbuf_extra_p = 0;
+        s_pbuf_extra_size = 0;
     }
 
-    if(iDecExtVAddr)
-    {
-        iDecExtPmemHeap.clear();
-        iDecExtVAddr = NULL;
-    }
-    if (pbuf_extra != NULL)
-    {
-        pmem_extra.clear();
-        pbuf_extra = NULL;
-    }
-
-    if (pbuf_inter != NULL)
-    {
-        pmem_inter.clear();
-        pbuf_inter = NULL;
-    }
-
-    if (pbuf_stream != NULL)
-    {
+    if (pbuf_stream != NULL) {
+        if (mIOMMUEnabled) {
+            pmem_stream->free_mm_iova((int32)pbuf_stream_phy, size_stream);
+        }
         pmem_stream.clear();
         pbuf_stream = NULL;
+        pbuf_stream_phy = 0;
+        size_stream = 0;
     }
 
-    if (pyuv[0] != NULL)
-    {
-        if (mIOMMUEnabled)
-        {
-            for (i=0; i<DEC_YUV_BUFFER_NUM; i++)
-            {
-                pmem_yuv420sp_num[i].clear();
-                pyuv[i] = NULL;
+    for (i=0; i<DEC_YUV_BUFFER_NUM; i++) {
+        if (pyuv[i] != NULL) {
+            if (mIOMMUEnabled) {
+                pmem_yuv420sp[i]->free_mm_iova((int32)pyuv_phy[i], size_yuv[i]);
             }
+            pmem_yuv420sp[i].clear();
+            pyuv[i] = NULL;
+            pyuv_phy[i] = 0;
+            size_yuv[i] = 0;
         }
-        else
-        {
-            pmem_yuv420sp.clear();
-            pyuv[0] = NULL;
-        }
-
     }
-    /*
-    if (pyuv[0] != NULL)
-    {
-        pmem_yuv420sp.clear();
-        pyuv[0] = NULL;
-    }*/
-    if (py != NULL)
-    {
+
+    if (py != NULL) {
         vsp_free(py);
         py = NULL;
     }
-    if (pu != NULL)
-    {
+    if (pu != NULL) {
         vsp_free(pu);
         pu = NULL;
     }
-    if (pv != NULL)
-    {
+    if (pv != NULL) {
         vsp_free(pv);
         pv = NULL;
     }
 
-    if (fp_yuv != NULL)
-    {
+    if (fp_yuv != NULL) {
         fclose(fp_yuv);
         fp_yuv = NULL;
     }
-    if (fp_bs != NULL)
-    {
+    if (fp_bs != NULL) {
         fclose(fp_bs);
         fp_bs = NULL;
     }
 
     return 0;
 }
+

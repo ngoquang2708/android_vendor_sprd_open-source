@@ -11,8 +11,9 @@ LOCAL_SRC_FILES := vpxdec.cpp \
 		../../../util/util.c
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH) \
-		$(LOCAL_PATH)/../../../util
-						
+		$(LOCAL_PATH)/../../../util\
+		$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video
+
 LOCAL_SHARED_LIBRARIES := libutils libbinder libdl
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)

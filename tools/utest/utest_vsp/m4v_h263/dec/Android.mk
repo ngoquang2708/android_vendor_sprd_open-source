@@ -3,11 +3,13 @@ include $(CLEAR_VARS)
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
 include $(LOCAL_PATH)/sc8825/Android.mk
-else
+endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 include $(LOCAL_PATH)/sc8830/Android.mk
 endif
 
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+include $(LOCAL_PATH)/sc8830/Android.mk
 endif
 
