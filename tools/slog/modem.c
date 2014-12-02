@@ -121,7 +121,7 @@ static void handle_init_modem_state(struct slog_info *info)
 	if (!strncmp(info->name, "cp_wcdma", 8)) {
 		property_get(MODEM_W_DEVICE_PROPERTY, modem_property, "");
 		ret = atoi(modem_property);
-	} else if (!strncmp(info->name, "cp_td-cdma", 9)) {
+	} else if (!strncmp(info->name, "cp_td-scdma", 9)) {
 		property_get(MODEM_TD_DEVICE_PROPERTY, modem_property, "");
 		ret = atoi(modem_property);
 	} else if (!strncmp(info->name, "cp_wcn", 6)) {
@@ -154,7 +154,7 @@ static void handle_open_modem_device(struct slog_info *info)
 		info->fd_dump_cp = info->fd_device;
 		if(info->fd_device < 0)
 			info->state = SLOG_STATE_OFF;
-	} else if (!strncmp(info->name, "cp_td-cdma", 8)) {
+	} else if (!strncmp(info->name, "cp_td-scdma", 8)) {
 		property_get(MODEM_TD_LOG_PROPERTY, modem_property, "not_find");
 		info->fd_device = open_device(info, modem_property);
 		if(info->fd_device < 0) {
@@ -225,7 +225,7 @@ static void handle_dump_modem_memory_from_proc(struct slog_info *info)
 		sprintf(buffer, "cat /proc/cpw/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log",
 			current_log_path, top_logdir, info->name, info->name,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	} else if(!strncmp(info->name, "cp_td-cdma", 8)) {
+	} else if(!strncmp(info->name, "cp_td-scdma", 8)) {
 		sprintf(buffer, "cat /proc/cpt/mem > %s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log",
 			current_log_path, top_logdir, info->name, info->name,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
@@ -260,7 +260,7 @@ static int handle_correspond_modem(char *buffer)
 	if(!strncmp(buffer, "WCN", 3)) {
 		strcpy(modem_buffer, "cp_wcn");
 	} else if (!strncmp(buffer, "TD Modem Assert", 15) || !strncmp(buffer, "_TD Modem Assert", 15)) {
-		strcpy(modem_buffer, "cp_td-cdma");
+		strcpy(modem_buffer, "cp_td-scdma");
 	} else if (!strncmp(buffer, "W ", 2)) {
 		strcpy(modem_buffer, "cp_wcdma");
 	} else if (!strncmp(buffer, "LTE", 3)) {
@@ -584,7 +584,7 @@ void *modem_log_handler(void *arg)
 		}
 
 		if (!strncmp(info->name, "cp_wcdma", 8) ||
-			!strncmp(info->name, "cp_td-cdma", 8) ||
+			!strncmp(info->name, "cp_td-scdma", 8) ||
 			!strncmp(info->name, "cp_wcn", 6) ||
 			!strncmp(info->name, "cp_td-lte", 8) ||
 			!strncmp(info->name, "cp_tdd-lte", 8) ||
@@ -693,7 +693,7 @@ void *modem_log_handler(void *arg)
 			}
 
 			if (!strncmp(info->name, "cp_wcdma", 8) ||
-				!strncmp(info->name, "cp_td-cdma", 8) ||
+				!strncmp(info->name, "cp_td-scdma", 8) ||
 				!strncmp(info->name, "cp_wcn", 6) ||
 				!strncmp(info->name, "cp_td-lte", 8) ||
 				!strncmp(info->name, "cp_tdd-lte", 8) ||

@@ -192,7 +192,7 @@ int parse_5_entries(char *type)
 		info->name = strdup(name);
 		if(!strncmp(info->name, "kernel", 6) ||
 			!strncmp(info->name, "cp_wcdma", 8) ||
-			!strncmp(info->name, "cp_td-cdma", 8) ||
+			!strncmp(info->name, "cp_td-scdma", 8) ||
 			!strncmp(info->name, "cp_wcn", 6) ||
 			!strncmp(info->name, "cp_td-lte", 8) ||
 			!strncmp(info->name, "cp_tdd-lte", 8) ||
