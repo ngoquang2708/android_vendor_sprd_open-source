@@ -60,6 +60,7 @@ static int eng_linuxcmd_infactorymode(char *req, char *rsp);
 static int eng_linuxcmd_fastdeepsleep(char *req, char *rsp);
 static int eng_linuxcmd_chargertest(char *req, char *rsp);
 static int eng_linuxcmd_bteutmode(char *req,char *rsp);
+static int eng_linuxcmd_bleeutmode(char *req, char *rsp);
 static int eng_linuxcmd_wifieutmode(char *req,char *rsp);
 static int eng_linuxcmd_gpseutmode(char *req,char *rsp);
 static int eng_linuxcmd_batttest(char *req,char *rsp);
@@ -71,32 +72,33 @@ static int eng_linuxcmd_rtctest(char *req,char *rsp);
 
 
 static struct eng_linuxcmd_str eng_linuxcmd[] = {
-    {CMD_SENDKEY,        CMD_TO_AP,   	"AT+SENDKEY",		eng_linuxcmd_keypad},
-    {CMD_GETICH,         CMD_TO_AP,	    "AT+GETICH?",		eng_linuxcmd_getich},
-    {CMD_ETSRESET,       CMD_TO_AP, 	"AT+ETSRESET",		eng_linuxcmd_factoryreset},
-    {CMD_RPOWERON,       CMD_TO_AP,   	"AT+RPOWERON",		eng_linuxcmd_rpoweron},
-    {CMD_GETVBAT,        CMD_TO_AP, 	"AT+GETVBAT",		eng_linuxcmd_vbat},
-    {CMD_STOPCHG,        CMD_TO_AP, 	"AT+STOPCHG",		eng_linuxcmd_stopchg},
-    {CMD_TESTMMI,        CMD_TO_AP, 	"AT+TESTMMI",		eng_linuxcmd_mmitest},
-    {CMD_BTTESTMODE,     CMD_TO_AP,	    "AT+BTTESTMODE",	eng_linuxcmd_bttest},
-    {CMD_GETBTADDR,      CMD_TO_AP, 	"AT+GETBTADDR",		eng_linuxcmd_getbtaddr},
-    {CMD_SETBTADDR,      CMD_TO_AP, 	"AT+SETBTADDR",		eng_linuxcmd_setbtaddr},
-    {CMD_GSNR,           CMD_TO_AP, 	"AT+GSNR",		    eng_linuxcmd_gsnr},
-    {CMD_GSNW,           CMD_TO_AP, 	"AT+GSNW",	     	eng_linuxcmd_gsnw},
-    {CMD_GETWIFIADDR,    CMD_TO_AP, 	"AT+GETWIFIADDR",	eng_linuxcmd_getwifiaddr},
-    {CMD_SETWIFIADDR,    CMD_TO_AP, 	"AT+SETWIFIADDR",	eng_linuxcmd_setwifiaddr},
-    {CMD_ETSCHECKRESET,  CMD_TO_AP,	    "AT+ETSCHECKRESET",	eng_linuxcmd_getfactoryreset},
-    {CMD_SIMCHK,         CMD_TO_AP,	    "AT+SIMCHK",		eng_linuxcmd_simchk},
-    {CMD_INFACTORYMODE,  CMD_TO_AP,	    "AT+FACTORYMODE",	eng_linuxcmd_infactorymode},
-    {CMD_FASTDEEPSLEEP,  CMD_TO_APCP,	"AT+SYSSLEEP",	eng_linuxcmd_fastdeepsleep},
-    {CMD_CHARGERTEST,    CMD_TO_AP,	    "AT+CHARGERTEST",	eng_linuxcmd_chargertest},
-    {CMD_SPBTTEST,       CMD_TO_AP,	    "AT+SPBTTEST",		eng_linuxcmd_bteutmode},
-    {CMD_SPWIFITEST,     CMD_TO_AP,	    "AT+SPWIFITEST",	eng_linuxcmd_wifieutmode},
-    {CMD_SPGPSTEST,      CMD_TO_AP,	    "AT+SPGPSTEST",		eng_linuxcmd_gpseutmode},
-    {CMD_ATDIAG,         CMD_TO_AP,	    "+SPBTWIFICALI",	eng_linuxcmd_atdiag},
+    {CMD_SENDKEY,        CMD_TO_AP,     "AT+SENDKEY",       eng_linuxcmd_keypad},
+    {CMD_GETICH,         CMD_TO_AP,     "AT+GETICH?",       eng_linuxcmd_getich},
+    {CMD_ETSRESET,       CMD_TO_AP,     "AT+ETSRESET",      eng_linuxcmd_factoryreset},
+    {CMD_RPOWERON,       CMD_TO_AP,     "AT+RPOWERON",      eng_linuxcmd_rpoweron},
+    {CMD_GETVBAT,        CMD_TO_AP,     "AT+GETVBAT",       eng_linuxcmd_vbat},
+    {CMD_STOPCHG,        CMD_TO_AP,     "AT+STOPCHG",       eng_linuxcmd_stopchg},
+    {CMD_TESTMMI,        CMD_TO_AP,     "AT+TESTMMI",       eng_linuxcmd_mmitest},
+    {CMD_BTTESTMODE,     CMD_TO_AP,     "AT+BTTESTMODE",    eng_linuxcmd_bttest},
+    {CMD_GETBTADDR,      CMD_TO_AP,     "AT+GETBTADDR",     eng_linuxcmd_getbtaddr},
+    {CMD_SETBTADDR,      CMD_TO_AP,     "AT+SETBTADDR",     eng_linuxcmd_setbtaddr},
+    {CMD_GSNR,           CMD_TO_AP,     "AT+GSNR",          eng_linuxcmd_gsnr},
+    {CMD_GSNW,           CMD_TO_AP,     "AT+GSNW",          eng_linuxcmd_gsnw},
+    {CMD_GETWIFIADDR,    CMD_TO_AP,     "AT+GETWIFIADDR",   eng_linuxcmd_getwifiaddr},
+    {CMD_SETWIFIADDR,    CMD_TO_AP,     "AT+SETWIFIADDR",   eng_linuxcmd_setwifiaddr},
+    {CMD_ETSCHECKRESET,  CMD_TO_AP,     "AT+ETSCHECKRESET", eng_linuxcmd_getfactoryreset},
+    {CMD_SIMCHK,         CMD_TO_AP,     "AT+SIMCHK",        eng_linuxcmd_simchk},
+    {CMD_INFACTORYMODE,  CMD_TO_AP,     "AT+FACTORYMODE",   eng_linuxcmd_infactorymode},
+    {CMD_FASTDEEPSLEEP,  CMD_TO_APCP,   "AT+SYSSLEEP",      eng_linuxcmd_fastdeepsleep},
+    {CMD_CHARGERTEST,    CMD_TO_AP,     "AT+CHARGERTEST",   eng_linuxcmd_chargertest},
+    {CMD_SPBTTEST,       CMD_TO_AP,     "AT+SPBTTEST",      eng_linuxcmd_bteutmode},
+    {CMD_SPBTTEST,       CMD_TO_AP,     "AT+SPBLETEST",     eng_linuxcmd_bleeutmode},
+    {CMD_SPWIFITEST,     CMD_TO_AP,     "AT+SPWIFITEST",    eng_linuxcmd_wifieutmode},
+    {CMD_SPGPSTEST,      CMD_TO_AP,     "AT+SPGPSTEST",     eng_linuxcmd_gpseutmode},
+    {CMD_ATDIAG,         CMD_TO_AP,     "+SPBTWIFICALI",    eng_linuxcmd_atdiag},
     {CMD_BATTTEST,       CMD_TO_AP,     "AT+BATTTEST",      eng_linuxcmd_batttest},
     {CMD_TEMPTEST,       CMD_TO_AP,     "AT+TEMPTEST",      eng_linuxcmd_temptest},
-    {CMD_RTCTEST,        CMD_TO_AP,     "AT+RTCCTEST",       eng_linuxcmd_rtctest},
+    {CMD_RTCTEST,        CMD_TO_AP,     "AT+RTCCTEST",      eng_linuxcmd_rtctest},
 };
 
 /** returns 1 if line starts with prefix, 0 if it does not */
@@ -749,24 +751,40 @@ int eng_linuxcmd_atdiag(char *req, char *rsp)
 
 int eng_linuxcmd_bteutmode(char *req, char *rsp)
 {
-    int ret,len;
-    ALOGI("Call %s     Command is  %s",__FUNCTION__,req);
+    int ret = -1;
+    int len = 0;
+
+    ENG_LOG("%s(), cmd = %s", __func__,req);
     ret = eng_atdiag_euthdlr(req,len,rsp,BT_MODULE_INDEX);
+    return ret;
+}
+
+static int eng_linuxcmd_bleeutmode(char *req, char *rsp)
+{
+    int ret = -1;
+    int len = 0;
+
+    ENG_LOG("%s(), cmd = %s", __func__, req);
+    ret = eng_atdiag_euthdlr(req, len, rsp, BLE_MODULE_INDEX);
     return ret;
 }
 
 int eng_linuxcmd_wifieutmode(char * req, char * rsp)
 {
-    int ret,len;
-    ENG_LOG("Call %s     Command is  %s\n",__FUNCTION__,req);
-    ret = eng_atdiag_euthdlr(req,len,rsp,WIFI_MODULE_INDEX);
+    int ret = -1;
+    int len = 0;
+
+    ENG_LOG("%s(), cmd = %s", __func__,req);
+    ret = eng_atdiag_euthdlr(req, len, rsp, WIFI_MODULE_INDEX);
     return ret;
 }
 
 int eng_linuxcmd_gpseutmode(char * req, char * rsp)
 {
-    int ret,len;
-    ALOGI("Call %s     Command is  %s",__FUNCTION__,req);
+    int ret = -1;
+    int len = 0;
+
+    ENG_LOG("Call %s     Command is  %s",__FUNCTION__,req);
     ret = eng_atdiag_euthdlr(req,len,rsp,GPS_MODULE_INDEX);
     return ret;
 }
