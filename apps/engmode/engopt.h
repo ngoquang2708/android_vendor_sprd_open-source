@@ -271,6 +271,11 @@ typedef enum
         ENG_DIAG_RECV_TO_CP,
     }eng_diag_state;
 
+    typedef enum{
+	ENG_LOG_NO_WAIT,
+	ENG_LOG_WAIT_END,
+    }eng_log_state;
+
     struct eng_param{
         int califlag;
         int engtest;

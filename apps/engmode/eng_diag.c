@@ -119,7 +119,6 @@ int eng_diag_mmicit_read(char *buf,int len, char *rsp, int rsplen);
 int get_sub_str(const char *buf, char **revdata, char a, char *delim, unsigned char count, unsigned char substr_max_len);
 
 int get_cmd_index(char *buf);
-int eng_diag_decode7d7e(char *buf,int len);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
 static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen);

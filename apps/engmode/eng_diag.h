@@ -243,6 +243,7 @@ typedef struct
 
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);
+int eng_diag_decode7d7e(char *buf,int len);
 void *eng_vlog_thread(void *x);
 void *eng_vdiag_wthread(void *x);
 void *eng_vdiag_rthread(void *x);
