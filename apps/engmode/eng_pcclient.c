@@ -305,7 +305,7 @@ void eng_usb_enable(void)
     }
 }
 
-static int eng_usb_state(void)
+int eng_usb_state(void)
 {
     int fd = -1;
     int ret = 0;
@@ -428,9 +428,6 @@ int main (int argc, char** argv)
 
     // Semaphore & log state initialization
     sem_init(&g_armlog_sem, 0, 0);
-    if(eng_usb_state()) {
-        g_armlog_enable = 1;
-    }
 
     fd = eng_file_lock();
     if(fd >= 0){
