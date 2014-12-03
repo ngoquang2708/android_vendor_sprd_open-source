@@ -3658,7 +3658,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         bool checkvalid = false;
         val = atoi(value);
-        if(0 < val && val <= FM_VOLUME_MAX)
+        if(0 <= val && val <= FM_VOLUME_MAX)
         {
             checkvalid = true;
         }
