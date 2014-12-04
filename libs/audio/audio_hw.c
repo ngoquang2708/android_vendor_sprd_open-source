@@ -1063,8 +1063,6 @@ ret);
 	    && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
         if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl == NULL){
             ALOGE("%s:open FM device",__func__);
-
-            i2s_pin_mux_sel(adev, FM_IIS);
             adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
             if (!pcm_is_ready(adev->pcm_fm_dl)) {
             ALOGE("%s:AUDIO_DEVICE_OUT_FM cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
@@ -1083,6 +1081,11 @@ ret);
         }
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
+
+            //first open fm path and then switch iis
+            if(cur_out & AUDIO_DEVICE_OUT_FM){
+                i2s_pin_mux_sel(adev,FM_IIS);
+            }
     }
 
     if (((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
@@ -1224,7 +1227,6 @@ static void do_select_devices(struct tiny_audio_device *adev)
             ALOGE("%s:open FM device",__func__);
             pthread_mutex_lock(&adev->lock);
             //force_all_standby(adev);
-            i2s_pin_mux_sel(adev, FM_IIS);
             adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
             if (!pcm_is_ready(adev->pcm_fm_dl)) {
             ALOGE("%s:cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
@@ -1243,6 +1245,11 @@ static void do_select_devices(struct tiny_audio_device *adev)
         }
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
+            //first open fm path and then switch iis
+            if(cur_out & AUDIO_DEVICE_OUT_FM){
+                i2s_pin_mux_sel(adev,FM_IIS);
+            }
+
     }
 
     if (((cur_in & ~AUDIO_DEVICE_BIT_IN) & adev->dev_cfgs[i].mask)
