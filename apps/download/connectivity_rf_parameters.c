@@ -34,8 +34,7 @@ typedef struct
 } nvm_cali_cmd;
 
 static char *WIFI_CONFIG_FILE = "/system/etc/connectivity_configure.ini";
-static char *WIFI_CALI_FILE = "/productinfo/connectivity_calibration.ini";
-static char *WIFI_CALI_FILE_EXT = "/system/etc/connectivity_calibration.ini";
+static char *WIFI_CALI_FILE = "/system/etc/connectivity_calibration.ini";
 
 //static char *WIFI_CONFIG_FILE = "connectivity_configure.ini";
 //static char *WIFI_CALI_FILE = "connectivity_calibration.ini";
@@ -650,7 +649,7 @@ int get_connectivity_config_param(wifi_config_t* p)
 
     ret = wifi_nvm_parse(WIFI_CONFIG_FILE, 1, (void *)p);
     if(0 != ret){
-        RFDBG("%s(),parse:%s, err!\n", __func__, WIFI_CONFIG_FILE);
+        RFDBG("%s(),parse:%s, err[%d]\n", __func__, WIFI_CONFIG_FILE,ret);
         return -1;
     }
     return 0;
@@ -663,16 +662,10 @@ int get_connectivity_cali_param(wifi_cali_t* p)
     if(p == NULL)
         return -1;
 
-    p->cali_config.is_calibrated = 0xFF;
     ret = wifi_nvm_parse(WIFI_CALI_FILE, 2, (void *)p);
-    if(ret < 0 || p->cali_config.is_calibrated == 0xFF){
-        RFDBG("%s(),parse %s err[%d] or out of date, get again from etc\n", __func__, WIFI_CALI_FILE, ret);
-        memset(p,0,sizeof(wifi_cali_t));
-        ret = wifi_nvm_parse(WIFI_CALI_FILE_EXT, 2, (void *)p);
-        if(ret < 0){
-            RFDBG("%s(),parse:%s, err!\n", __func__, WIFI_CALI_FILE_EXT);
-            return -2;
-        }
+    if(0 != ret){
+        RFDBG("%s(),parse %s err[%d]\n", __func__, WIFI_CALI_FILE, ret);
+        return -1;
     }
     return 0;
 }
