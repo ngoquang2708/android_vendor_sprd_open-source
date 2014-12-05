@@ -495,6 +495,13 @@ M,/tlfixnv,tlnvitem.bin,/tlfixnv1,/tlfixnv2,,tl,
 #### WCN ####
 M,/wcnmodem,wcnmodem.bin,,,,,
 M,/wcnfixnv,wcnnvitem.bin,/wcnfixnv1,/wcnfixnv2,,wcn,
+### WL ####
+M,/wlmodem,wlmodem.bin,,,,,
+M,/wlwarm,wlwarm,,,,,
+M,/wlgdsp,wlgdsp,,,,,
+M,/wlldsp,wlldsp,,,,,
+M,/wcnfdl,wcnfdl.bin,,,,,
+M,/wlfixnv,wlnvitem.bin,/wlfixnv1,/wlfixnv2,,wl,
 #### other ####
 M,/pmsys,pmsys.bin,,,,,
 """
