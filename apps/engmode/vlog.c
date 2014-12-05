@@ -474,7 +474,7 @@ int eng_write_usb(char* diag_data, int r_cnt, int ser_fd)
 
 		// FIX ME: retry to open
 		retry_num = 0; //reset the try number.
-		while (-1 == restart_gser(&ser_fd, s_dev_info->host_int.dev_at)) {
+		while (-1 == restart_gser(&ser_fd, s_dev_info->host_int.dev_diag)) {
 		    ENG_LOG("eng_vdiag_r open gser port failed\n");
 		    sleep(1);
 		    retry_num ++;
@@ -483,8 +483,6 @@ int eng_write_usb(char* diag_data, int r_cnt, int ser_fd)
 			return 0;
 		    }
 		}
-		if (s_ser_diag_fd > 0)
-		    close(s_ser_diag_fd);
 		s_ser_diag_fd = ser_fd;
 	    }
 	 } else {
