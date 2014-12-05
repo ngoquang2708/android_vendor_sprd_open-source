@@ -1047,7 +1047,7 @@ jpeg_init_end:
 		}
 		*jpeg_handle = 0;
 	} else {
-		sem_init(&jcontext->access_sem, 0, 1);
+		cmr_sem_init(&jcontext->access_sem, 0, 1);
 		jcontext->oem_handle = oem_handle;
 	}
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
@@ -1179,7 +1179,7 @@ cmr_int jpeg_enc_start(struct jpeg_enc_in_param *in_parm_ptr)
 		return JPEG_CODEC_PARAM_ERR;
 	}
 
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	if (jcontext->active_handle) {
 		CMR_LOGE("jpeg:param error");
 		ret = JPEG_CODEC_PARAM_ERR;
@@ -1223,7 +1223,7 @@ enc_start_end:
 			jcontext->active_handle = 0;
 		}
 	}
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
 	return JPEG_CODEC_SUCCESS;
 }
@@ -1243,7 +1243,7 @@ cmr_int jpeg_enc_next(struct jpeg_enc_next_param *param_ptr)
 
 	CMR_LOGV("jpeg:start,handle 0x%x.",param_ptr->jpeg_handle);
 	jcontext = (struct jpeg_codec_context*)param_ptr->jpeg_handle;
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	enc_cxt_ptr = (struct jpeg_enc *)jcontext->active_handle;
 	if (!enc_cxt_ptr) {
 		CMR_LOGE("jpeg:param error");
@@ -1283,7 +1283,7 @@ enc_next_end:
 			free(data_ptr);
 		}
 	}
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
 	return ret;
 }
@@ -1301,7 +1301,7 @@ cmr_int jpeg_dec_start(struct jpeg_dec_in_param *in_parm_ptr)
 		return JPEG_CODEC_PARAM_ERR;
 	}
 	jcontext = (struct jpeg_codec_context*)in_parm_ptr->jpeg_handle;
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	if (jcontext->active_handle) {
 		CMR_LOGE("jpeg:param error");
 		ret = JPEG_CODEC_PARAM_ERR;
@@ -1340,7 +1340,7 @@ dec_start_end:
 			jcontext->active_handle = 0;
 		}
 	}
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
 	return ret;
 }
@@ -1360,7 +1360,7 @@ cmr_int jpeg_dec_next(struct jpeg_dec_next_param *param_ptr)
 	}
 	CMR_LOGV("jpeg:start,handle 0x%x", (cmr_u32)param_ptr->jpeg_handle);
 	jcontext = (struct jpeg_codec_context*)param_ptr->jpeg_handle;
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	if (!jcontext->active_handle) {
 		CMR_LOGE("jpeg:param error");
 		ret = JPEG_CODEC_PARAM_ERR;
@@ -1402,7 +1402,7 @@ dec_next_end:
 			data_ptr = NULL;
 		}
 	}
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
 	return ret;
 }
@@ -1420,7 +1420,7 @@ cmr_int jpeg_dec_start_sync(struct jpeg_dec_in_param *in_parm_ptr,
 		return JPEG_CODEC_PARAM_ERR;
 	}
 	jcontext = (struct jpeg_codec_context*)in_parm_ptr->jpeg_handle;
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	if (jcontext->active_handle) {
 		CMR_LOGE("jpeg:param error");
 		ret = JPEG_CODEC_PARAM_ERR;
@@ -1462,7 +1462,7 @@ dec_start_sync_end:
 	}
 	ret = jcontext->err_code;
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	return ret;
 }
 
@@ -1477,7 +1477,7 @@ cmr_int jpeg_stop(cmr_handle jpeg_handle)
 		CMR_LOGE("jpeg:param error");
 		return JPEG_CODEC_PARAM_ERR;
 	}
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	if (!jcontext->active_handle) {
 		CMR_LOGE("don't need handle");
 		goto stop_end;
@@ -1500,7 +1500,7 @@ cmr_int jpeg_stop(cmr_handle jpeg_handle)
 	jcontext->is_stop = 0;
 	jcontext->active_handle = 0;
 stop_end:
-	sem_post(&jcontext->access_sem);
+	cmr_sem_post(&jcontext->access_sem);
 	CMR_LOGV("jpeg:end ret %d", (cmr_u32)ret);
 	return ret;
 }
@@ -1515,7 +1515,7 @@ cmr_int jpeg_deinit(cmr_handle jpeg_handle)
 		CMR_LOGE("jpeg:param error");
 		return JPEG_CODEC_PARAM_ERR;
 	}
-	sem_wait(&jcontext->access_sem);
+	cmr_sem_wait(&jcontext->access_sem);
 	message.msg_type  = JPEG_EVT_KILL;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
 	CMR_LOGV("jpeg:start");
@@ -1533,14 +1533,14 @@ cmr_int jpeg_deinit(cmr_handle jpeg_handle)
 		free(jcontext->fw_decode_buf);
 		jcontext->fw_decode_buf = PNULL;
 	}
-	sem_destroy(&jcontext->access_sem);
+	cmr_sem_destroy(&jcontext->access_sem);
 	free(jcontext);
 	jcontext = NULL;
 deinit_end:
 	JPEGCODEC_Close();
 	CMR_LOGV("jpeg:ret %d", (cmr_u32)ret);
 	if (ret) {
-		sem_post(&jcontext->access_sem);
+		cmr_sem_post(&jcontext->access_sem);
 	}
 	return ret;
 }

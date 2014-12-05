@@ -1989,7 +1989,7 @@ cmr_int sns_create_ctrl_thread(struct sensor_drv_context *sensor_cxt)
 
 	if (!sensor_cxt->ctrl_thread_cxt.is_inited) {
 		pthread_mutex_init(&sensor_cxt->ctrl_thread_cxt.sensor_mutex, NULL);
-		sem_init(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem, 0, 0);
+		cmr_sem_init(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem, 0, 0);
 
 		ret = cmr_thread_create(&sensor_cxt->ctrl_thread_cxt.thread_handle,
 					SENSOR_CTRL_MSG_QUEUE_SIZE,
@@ -2015,7 +2015,7 @@ cmr_int sns_create_ctrl_thread(struct sensor_drv_context *sensor_cxt)
 
 end:
 	if (ret) {
-		sem_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem);
+		cmr_sem_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem);
 		pthread_mutex_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_mutex);
 		sensor_cxt->ctrl_thread_cxt.is_inited = 0;
 	}
@@ -2098,7 +2098,7 @@ cmr_int sns_destroy_ctrl_thread(struct sensor_drv_context *sensor_cxt)
 		ret = cmr_thread_destroy(sensor_cxt->ctrl_thread_cxt.thread_handle);
 		sensor_cxt->ctrl_thread_cxt.thread_handle = 0;
 
-		sem_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem);
+		cmr_sem_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_sync_sem);
 		pthread_mutex_destroy(&sensor_cxt->ctrl_thread_cxt.sensor_mutex);
 		sensor_cxt->ctrl_thread_cxt.is_inited = 0;
 	}

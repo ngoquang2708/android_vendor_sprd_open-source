@@ -165,10 +165,10 @@ static int auto_test_dcam_param_set(int maincmd ,int subcmd,int cameraid,int wid
 
 	INFO("debug %d \n",__LINE__);
 
-	if (sem_init(&(cmr_cxt_ptr->sem_cap_raw_done), 0, 0))
+	if (cmr_sem_init(&(cmr_cxt_ptr->sem_cap_raw_done), 0, 0))
 		return -1;
 
-	if (sem_init(&(cmr_cxt_ptr->sem_cap_jpg_done), 0, 0))
+	if (cmr_sem_init(&(cmr_cxt_ptr->sem_cap_jpg_done), 0, 0))
 		return -1;
 
 	INFO("debug %s %d X \n",__func__,__LINE__);
@@ -184,7 +184,7 @@ static int auto_test_dcam_param_set(int maincmd ,int subcmd,int cameraid,int wid
 
 	camera_isp_ae_stab_set(1);
 
-	sem_wait(&cxt->cmr_set.isp_ae_stab_sem);
+	cmr_sem_wait(&cxt->cmr_set.isp_ae_stab_sem);
 }*/
 
 static void auto_test_dcam_preview_mem_release(void)
@@ -1102,7 +1102,7 @@ static int32_t auto_test_dcam_preview_flash_dis(void)
 	if (AUTO_TEST_CALIBRATION_FLASHLIGHT == cmr_cxt_ptr->cmd) {
 		struct camera_context *cxt = camera_get_cxt();
 
-		sem_wait(&cxt->cmr_set.isp_alg_sem);
+		cmr_sem_wait(&cxt->cmr_set.isp_alg_sem);
 
 		if (camera_set_flashdevice((uint32_t)FLASH_CLOSE_AFTER_OPEN))
 			return -1;
@@ -1288,14 +1288,14 @@ static int32_t auto_test_dcam_capture(void)
 	ts.tv_sec += 6;
 	INFO("debug %s	line=%d  \n",__func__,__LINE__);
 	if ((AUTO_TEST_CALIBRATION_CAP_JPG == cmr_cxt_ptr->cmd)) {
-		if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_jpg_done), &ts)) {
+		if (cmr_sem_timedwait(&(cmr_cxt_ptr->sem_cap_jpg_done), &ts)) {
 			rtn = -1;
 			INFO("debug %s cmr_cxt_ptr->cmd=%d  line=%d E \n",__func__,cmr_cxt_ptr->cmd,__LINE__);
 			goto cap_exit;
 		}
 	} else {
 		INFO("debug %s cmr_cxt_ptr->cmd=%d  line=%d E \n",__func__,cmr_cxt_ptr->cmd,__LINE__);
-		if (sem_timedwait(&(cmr_cxt_ptr->sem_cap_raw_done), &ts)) {
+		if (cmr_sem_timedwait(&(cmr_cxt_ptr->sem_cap_raw_done), &ts)) {
 			rtn = -1;
 			INFO("debug %s Error!!!\n ",__func__);
 			goto cap_exit;

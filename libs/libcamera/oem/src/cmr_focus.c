@@ -152,7 +152,7 @@ cmr_int cmr_focus_init(struct af_init_param *parm_ptr, cmr_u32 camera_id, cmr_ha
 	/*local init*/
 	pthread_mutex_init(&af_cxt->af_isp_caf_mutex, NULL);
 	pthread_mutex_init(&af_cxt->set_af_cancel_mutex, NULL);
-	sem_init(&af_cxt->isp_af_sem, 0, 0);
+	cmr_sem_init(&af_cxt->isp_af_sem, 0, 0);
 
 	/*send init msg*/
 	message.msg_type   = CMR_EVT_AF_INIT;
@@ -185,7 +185,7 @@ af_init_end:
 			message.data = NULL;
 		}
 
-		sem_destroy(&af_cxt->isp_af_sem);
+		cmr_sem_destroy(&af_cxt->isp_af_sem);
 		pthread_mutex_destroy(&af_cxt->set_af_cancel_mutex);
 		pthread_mutex_destroy(&af_cxt->af_isp_caf_mutex);
 	}
@@ -222,7 +222,7 @@ cmr_int cmr_focus_deinit(cmr_handle af_handle)
 	}
 
 	/*local deinit*/
-	sem_destroy(&af_cxt->isp_af_sem);
+	cmr_sem_destroy(&af_cxt->isp_af_sem);
 	pthread_mutex_destroy(&af_cxt->set_af_cancel_mutex);
 	pthread_mutex_destroy(&af_cxt->af_isp_caf_mutex);
 
@@ -680,8 +680,8 @@ cmr_int af_isp_done(cmr_handle af_handle, void *data)
 		isp_af->valid_win, af_cxt->isp_af_timeout);
 	af_cxt->isp_af_win_val = isp_af->valid_win;
 	if (af_cxt->isp_af_timeout == 0) {
-		sem_post(&af_cxt->isp_af_sem);
-		CMR_LOGI("sem_post : isp_af_sem");
+		cmr_sem_post(&af_cxt->isp_af_sem);
+		CMR_LOGI("cmr_sem_post : isp_af_sem");
 	}
 	pthread_mutex_unlock(&af_cxt->af_isp_caf_mutex);
 
@@ -1352,7 +1352,7 @@ cmr_int wait_isp_focus_result(cmr_handle af_handle, cmr_u32 camera_id, cmr_u32 i
 			ts.tv_nsec += ISP_PROCESS_NSEC_TIMEOUT;
 		}
 
-		ret = sem_timedwait(&af_cxt->isp_af_sem, &ts);
+		ret = cmr_sem_timedwait(&af_cxt->isp_af_sem, &ts);
 		if (ret) {
 			CMR_LOGE("isp af timeout");
 			pthread_mutex_lock(&af_cxt->af_isp_caf_mutex);

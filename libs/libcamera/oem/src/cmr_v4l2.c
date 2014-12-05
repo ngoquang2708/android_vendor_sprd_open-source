@@ -484,7 +484,7 @@ cmr_int cmr_v4l2_buff_cfg (cmr_handle v4l2_handle, struct buffer_cfg *buf_cfg)
 	struct v4l2_streamparm   stream_parm;
 	struct cmr_v4l2          *p_v4l2;
 
-	if (NULL == buf_cfg || buf_cfg->count > V4L2_BUF_MAX)
+	if (NULL == buf_cfg || buf_cfg->count > CMR_BUF_MAX)
 		return -1;
 	p_v4l2 = (struct cmr_v4l2*)v4l2_handle;
 
