@@ -512,24 +512,6 @@ reboot_device:
 	fsync(uart_fd);
     close(uart_fd);
 
-insmod_sdio:
-	/*insmod sdio module*/
-	ret = system("insmod /system/lib/modules/sdiodevhal.ko");
-	if(ret != 0)
-	{
-		DOWNLOAD_LOGE("insmod /system/lib/modules/sdiodevhal.ko err\n");
-		 goto insmod_sdio;
-	}
-
-insmod_download:
-	/*insmod download module*/
-	ret = system("insmod /system/lib/modules/sprd_download.ko ");
-	if(ret != 0)
-	{
-		DOWNLOAD_LOGE("insmod /system/lib/modules/sprd_download.ko err\n");
-		goto insmod_download;
-	}
-	DOWNLOAD_LOGE("insmod ret:%d\n",ret);
     download_fd = open(DLOADER_PATH, O_RDWR);
     if(download_fd < 0){
 	DOWNLOAD_LOGD("open dloader device failed retry ......\n");
@@ -670,7 +652,7 @@ static int socket_init(pmanager_t *pmanager)
 	pthread_t thread_id;
 	int i = 0;
 
-	memset(pmanager, 0, sizeof(pmanager));
+	memset(pmanager, 0, sizeof(struct pmanager));
 
 	for(i=0; i<WCN_MAX_CLIENT_NUM; i++)
 		pmanager->client_fds[i] = -1;
@@ -732,15 +714,12 @@ static int send_notify_to_client(pmanager_t *pmanager, char *info_str)
 static void download_signal_handler(int sig)
 {
 	DOWNLOAD_LOGD("sig:%d\n",sig);
-	system("rmmod mdbgdrv.ko ");
-	system("rmmod sprd_download.ko ");
-	system("rmmod sdiodevhal.ko ");
 	exit(0);
 }
 
 #endif
 
-int main(int argc, char *argv[])
+int main(void)
 { 
 	int ret=0;
 #ifdef REBOOT_DBG
@@ -757,14 +736,6 @@ int main(int argc, char *argv[])
 			if(download_entry() == 0)
 			{
 				download_state = DOWNLOAD_BOOTCOMP;
-			insmod_mdbg:	
-					/*insmod download module*/
-				ret = system("insmod /system/lib/modules/mdbgdrv.ko ");
-				if(ret != 0)
-				{
-					DOWNLOAD_LOGE("insmod /system/lib/modules/mdbgdrv.ko err\n");
-					goto insmod_mdbg;
-				}
 			}
 		}
 

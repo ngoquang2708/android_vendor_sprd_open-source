@@ -32,7 +32,6 @@ enum {
     ENG_RUN_TYPE_TD,
     ENG_RUN_TYPE_WCN,
     ENG_RUN_TYPE_LTE,
-    ENG_RUN_TYPE_MARLIN,
     ENG_RUN_TYPE_MAX
 };
 

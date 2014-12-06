@@ -247,8 +247,6 @@ int eng_diag_decode7d7e(char *buf,int len);
 void *eng_vlog_thread(void *x);
 void *eng_vdiag_wthread(void *x);
 void *eng_vdiag_rthread(void *x);
-void *eng_marlin_diag_wthread(void *x);
-void *eng_marlin_diag_rthread(void *x);
 void * eng_sd_log(void * args);
 void *eng_gps_log_thread(void *x);
 #endif
