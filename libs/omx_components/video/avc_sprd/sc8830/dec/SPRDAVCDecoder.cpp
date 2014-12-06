@@ -1260,6 +1260,7 @@ bool SPRDAVCDecoder::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
         if (info->numRefFrames > def->nBufferCountActual-(2+1+info->has_b_frames)) {
             ALOGI("%s, %d, info->numRefFrames: %d, info->has_b_frames: %d, def->nBufferCountActual: %d", __FUNCTION__, __LINE__, info->numRefFrames, info->has_b_frames, def->nBufferCountActual);
             def->nBufferCountActual = info->numRefFrames + (2+1+info->has_b_frames);
+            def->bPopulated = OMX_FALSE;
         }
 
         updatePortDefinitions();
