@@ -467,6 +467,7 @@ char *add_ring_file_time(void)
 	tm = localtime(&abs_secs);
 	day = (tm->tm_wday == 0)?6:(tm->tm_wday - 1);
 	secs = day*24*3600 + tm->tm_hour*3600 + tm->tm_min*60 + tm->tm_sec;
+	LOGD("%s: line: %d secs=%d\n", __func__, __LINE__, secs);
 	while(p_sec != NULL)
 	{
 		if(p_sec->secs == secs)
@@ -604,7 +605,7 @@ int  main(int argc, char **argv)
 	LOGD("alarm_prop: %s\n", alarm_prop);
 	if(!alarm_prop[0] || strncmp(alarm_prop, "alarm", 5)){
 		LOGE("not power off alarm\n");
-		return EXIT_SUCCESS;
+		goto end;
 	}
 	sleep(5);
 
@@ -612,7 +613,7 @@ int  main(int argc, char **argv)
 	{
 		gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
 		LOGE("alarm init failed\n");
-		return ERR_BOOT_ALARM_NOT_ALARM_ITEM;
+		goto end;
 	}
 	//wait untill  alarm time
 LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
@@ -623,20 +624,20 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 			gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
 			LOGE("alarm expire: %d\n", next_alarm_time);
 			boot_alarm_exit();
-			return 0;
+			goto end;
 		}
 	}
 	if(pthread_create(&t,NULL, refreshen_screen, NULL))
 	{
 		gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
 		LOGE("refreshen_screen thread creat fail\n");
-		return -1;
+		goto end;
 	}
 	if(pthread_create(&button_t,NULL,get_input_event , NULL))
 	{
 		gs_boot_state.alarm_state = BOOT_ALARM_EXIT;
 		LOGE("get_input_event thread creat fail\n");
-		return -1;
+		goto end;
 	}
 
 	musicProcess(g_alarm_ring_path,1);
@@ -774,6 +775,7 @@ LOGD("%s: line: %d &fire_alarm %p\n", __func__, __LINE__, &fire_alarm);
 		}
 		usleep(5000);
 	}
+end:
 	system_poweron();
 	return 0;
 }
@@ -1282,6 +1284,7 @@ int get_latest_alarm_time(struct alarm_sec **fire_alarm)
 	static int first_alarm = 0;
 
 	cur_time = get_secs_in_weeks(LOCALTIME_WEEKDAY_SECS);
+	LOGD("alarm get_latest_alarm_time, cur_time=%d\n",cur_time);
 	struct alarm_sec *p = g_alarm_sec_list;
 	if(p == NULL)
 	{
