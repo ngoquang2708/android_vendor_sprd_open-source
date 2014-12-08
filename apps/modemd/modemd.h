@@ -83,12 +83,12 @@
 #define TD_DSP_SIZE                 (5*1024*1024)
 #define W_MODEM_SIZE                (10*1024*1024)
 #define W_DSP_SIZE                  (5*1024*1024)
-#define LF_MODEM_SIZE                (8*1024*1024)
-#define LF_TGDSP_SIZE                  (0x2e0000)
-#define LF_LDSP_SIZE                  (0x1c0000)
-#define TL_MODEM_SIZE                (8*1024*1024)
-#define TL_TGDSP_SIZE                  (0x2e0000)
-#define TL_LDSP_SIZE                  (0x1c0000)
+#define LF_MODEM_SIZE               (0x9b0000)
+#define LF_TGDSP_SIZE               (0x2e0000)
+#define LF_LDSP_SIZE                (0x1c0000)
+#define TL_MODEM_SIZE               (0x8b0000)
+#define TL_TGDSP_SIZE               (0x2e0000)
+#define TL_LDSP_SIZE                (0x1c0000)
 
 /* detect assert/hangup interface */
 #define TD_ASSERT_PROP               "ro.modem.t.assert"
@@ -97,37 +97,37 @@
 #define TD_LOOP_PROP                 "ro.modem.t.loop"
 #define W_LOOP_PROP                  "ro.modem.w.loop"
 #define TL_ASSERT_PROP               "ro.modem.tl.assert"
-#define LF_ASSERT_PROP              "ro.modem.lf.assert"
+#define LF_ASSERT_PROP               "ro.modem.lf.assert"
 #define TL_LOOP_PROP                 "ro.modem.tl.loop"
-#define LF_LOOP_PROP                "ro.modem.lf.loop"
+#define LF_LOOP_PROP                 "ro.modem.lf.loop"
 
 #define L_LOOP_PROP                  "ro.modem.l.loop"
 
 
 /* default value for detect assert/hangup interface */
-#define DEFAULT_TD_ASSERT_DEV         "/dev/spipe_td2"
+#define DEFAULT_TD_ASSERT_DEV        "/dev/spipe_td2"
 #define DEFAULT_W_ASSERT_DEV         "/dev/spipe_w2"
 
 /*two spipe_lte2?? */
-#define DEFAULT_TL_ASSERT_DEV         "/dev/spipe_lte2"
-#define DEFAULT_LF_ASSERT_DEV         "/dev/spipe_lte2"
+#define DEFAULT_TL_ASSERT_DEV        "/dev/spipe_lte2"
+#define DEFAULT_LF_ASSERT_DEV        "/dev/spipe_lte2"
 #define DEFAULT_L_ASSERT_DEV         "/dev/spipe_lte2"
 
-#define DEFAULT_TD_LOOP_DEV         "/dev/spipe_td0"
-#define DEFAULT_W_LOOP_DEV         "/dev/spipe_w0"
+#define DEFAULT_TD_LOOP_DEV          "/dev/spipe_td0"
+#define DEFAULT_W_LOOP_DEV           "/dev/spipe_w0"
 /*two spipe_lte0?? */
-#define DEFAULT_TL_LOOP_DEV         "/dev/spipe_lte0"
-#define DEFAULT_LF_LOOP_DEV         "/dev/spipe_lte0"
-#define DEFAULT_L_LOOP_DEV         "/dev/spipe_l0"
+#define DEFAULT_TL_LOOP_DEV          "/dev/spipe_lte0"
+#define DEFAULT_LF_LOOP_DEV          "/dev/spipe_lte0"
+#define DEFAULT_L_LOOP_DEV           "/dev/spipe_l0"
 
 #define TD_WATCHDOG_DEV              "/proc/cpt/wdtirq"
 #define W_WATCHDOG_DEV               "/proc/cpw/wdtirq"
 #define TL_WATCHDOG_DEV              "/proc/cptl/wdtirq"
-#define LF_WATCHDOG_DEV               "/proc/cptl/wdtirq"
+#define LF_WATCHDOG_DEV              "/proc/cptl/wdtirq"
 #define L_WATCHDOG_DEV               "/proc/cpl/wdtirq"
 
-#define TTY_DEV_PROP             "persist.ttydev"
-#define PHONE_APP_PROP             "sys.phone.app"
+#define TTY_DEV_PROP                 "persist.ttydev"
+#define PHONE_APP_PROP               "sys.phone.app"
 #define MODEMRESET_PROPERTY          "persist.sys.sprd.modemreset"
 #define MODEM_RESET_PROP             MODEMRESET_PROPERTY
 #define LTE_MODEM_START_PROP         "ril.service.l.enable"
@@ -135,15 +135,15 @@
 #define SSDA_TESTMODE_PROP           "persist.radio.ssda.testmode"
 #define SVLTE_MODE                   "svlte"
 
-#define PHONE_APP             "com.android.phone"
+#define PHONE_APP                 "com.android.phone"
 #define MODEM_SOCKET_NAME         "modemd"
 #define PHSTD_SOCKET_NAME         "phstd"
 #define PHSW_SOCKET_NAME          "phsw"
 #define PHSLTE_SOCKET_NAME        "phsl"
 #define PHSTL_SOCKET_NAME         "phstl"
 #define PHSLF_SOCKET_NAME         "phslf"
-#define MODEM_ENGCTRL_NAME           "modemd_engpc"
-#define MODEM_ENGCTRL_PRO            "persist.sys.engpc.disable"
+#define MODEM_ENGCTRL_NAME        "modemd_engpc"
+#define MODEM_ENGCTRL_PRO         "persist.sys.engpc.disable"
 
 #define ENGPC_REQUSETY_OPEN          "0"
 #define ENGPC_REQUSETY_CLOSE         "1"
