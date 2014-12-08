@@ -468,25 +468,12 @@ int main (int argc, char** argv)
 
     // Create vdiag thread for reading diag data from PC, some data will be
     // processed by ENG/AP, and some will be pass to modem transparently.
-    #ifdef EXTERNAL_WCN
-    if(strcmp(run_type,"wcn") == 0){
-        if (0 != eng_thread_create( &t2, eng_marlin_diag_wthread, &dev_info)){
-            ENG_LOG("Marlin diag wthread start error");
-        }
+    if (0 != eng_thread_create( &t2, eng_vdiag_wthread, &dev_info)){
+        ENG_LOG("vdiag wthread start error");
+    }
 
-        if (0 != eng_thread_create( &t3, eng_marlin_diag_rthread, &dev_info)){
-            ENG_LOG("Marlin diag rthread start error");
-        }
-    }else
-	#endif
-	{
-
-        if (0 != eng_thread_create( &t2, eng_vdiag_wthread, &dev_info)){
-                ENG_LOG("vdiag wthread start error");
-        }
-        if (0 != eng_thread_create( &t3, eng_vdiag_rthread, &dev_info)){
-            ENG_LOG("vdiag rthread start error");
-        }
+    if (0 != eng_thread_create( &t3, eng_vdiag_rthread, &dev_info)){
+        ENG_LOG("vdiag rthread start error");
     }
 
     if(cmdparam.califlag != 1 || cmdparam.nativeflag != 1){
