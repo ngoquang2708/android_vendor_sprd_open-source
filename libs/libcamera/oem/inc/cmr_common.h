@@ -72,8 +72,8 @@ extern "C"
 #define CMR_SLICE_HEIGHT                   256
 #define CMR_SHARK_SCALING_TH               2048
 #define CMR_DOLPHIN_SCALING_TH             1280
-#define V4L2_BUF_MAX                       8
-#define V4L2_CHANNEL_MAX                   6
+#define CMR_BUF_MAX                        8
+#define CMR_CHANNEL_MAX                    6
 #define SESNOR_NAME_LEN                    40
 #define CMR_CAPTURE_MEM_SUM                4
 #define CAMERA_PIXEL_ALIGNED               8
@@ -409,8 +409,8 @@ struct buffer_cfg {
 	cmr_u32                             length;
 	cmr_u32                             slice_height;
 	cmr_u32                             start_buf_id;
-	cmr_u32                             index[V4L2_BUF_MAX];
-	struct img_addr                     addr[V4L2_BUF_MAX];
+	cmr_u32                             index[CMR_BUF_MAX];
+	struct img_addr                     addr[CMR_BUF_MAX];
 };
 
 struct cap_cfg {
@@ -576,7 +576,6 @@ enum cmr_zoom_mode {
 
 struct snp_proc_param {
 	cmr_uint                            rot_angle;
-	cmr_uint                            channel_zoom_mode;
 	struct img_size                     actual_snp_size;
 	struct img_size                     snp_size;
 	cmr_uint                            is_need_scaling;

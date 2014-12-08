@@ -29,7 +29,7 @@
 
 /**************************MCARO DEFINITION********************************************************************/
 #define PREV_ID_BASE                    0x1000
-#define PREV_FRM_CNT                    V4L2_BUF_MAX
+#define PREV_FRM_CNT                    CMR_BUF_MAX
 #define PREV_ROT_FRM_CNT                8
 #define PREV_MSG_QUEUE_SIZE             50
 #define PREV_RECOVERY_CNT               3
@@ -1070,7 +1070,7 @@ cmr_int prev_create_thread(struct prev_handle *handle)
 
 	if (!handle->thread_cxt.is_inited) {
 		pthread_mutex_init(&handle->thread_cxt.prev_mutex, NULL);
-		sem_init(&handle->thread_cxt.prev_sync_sem, 0, 0);
+		cmr_sem_init(&handle->thread_cxt.prev_sync_sem, 0, 0);
 
 		ret = cmr_thread_create(&handle->thread_cxt.thread_handle,
 					PREV_MSG_QUEUE_SIZE,
@@ -1096,7 +1096,7 @@ cmr_int prev_create_thread(struct prev_handle *handle)
 
 end:
 	if (ret) {
-		sem_destroy(&handle->thread_cxt.prev_sync_sem);
+		cmr_sem_destroy(&handle->thread_cxt.prev_sync_sem);
 		pthread_mutex_destroy(&handle->thread_cxt.prev_mutex);
 		handle->thread_cxt.is_inited = 0;
 	}
@@ -1125,7 +1125,7 @@ cmr_int prev_destroy_thread(struct prev_handle *handle)
 		ret = cmr_thread_destroy(handle->thread_cxt.thread_handle);
 		handle->thread_cxt.thread_handle = 0;
 
-		sem_destroy(&handle->thread_cxt.prev_sync_sem);
+		cmr_sem_destroy(&handle->thread_cxt.prev_sync_sem);
 		pthread_mutex_destroy(&handle->thread_cxt.prev_mutex);
 		handle->thread_cxt.is_inited = 0;
 	}
@@ -3619,7 +3619,8 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 	sensor_info      = &prev_cxt->sensor_info;
 	sensor_mode_info = &sensor_info->mode_info[prev_cxt->cap_mode];
 	zoom_param       = &prev_cxt->prev_param.zoom_setting;
-
+
+
 	if (!is_restart) {
 		prev_cxt->cap_frm_cnt  = 0;
 	}
@@ -4554,7 +4555,6 @@ cmr_int prev_get_cap_post_proc_param(struct prev_handle *handle,
 	}
 
 	out_param_ptr->rot_angle         = cap_rot;
-	out_param_ptr->channel_zoom_mode = prev_cxt->cap_zoom_mode;
 	out_param_ptr->snp_size          = prev_cxt->aligned_pic_size;
 	out_param_ptr->actual_snp_size   = prev_cxt->actual_pic_size;
 
@@ -4562,9 +4562,8 @@ cmr_int prev_get_cap_post_proc_param(struct prev_handle *handle,
 
 	cmr_copy(&out_param_ptr->mem[0], &prev_cxt->cap_mem[0], CMR_CAPTURE_MEM_SUM * sizeof(struct cmr_cap_mem));
 
-	CMR_LOGI("rot_angle %ld, channel_zoom_mode %ld, is_need_scaling %ld",
+	CMR_LOGI("rot_angle %ld, is_need_scaling %ld",
 		out_param_ptr->rot_angle,
-		out_param_ptr->channel_zoom_mode,
 		out_param_ptr->is_need_scaling);
 
 	CMR_LOGI("cap_org_size %d, %d", prev_cxt->cap_org_size.width, prev_cxt->cap_org_size.height);
@@ -4894,7 +4893,8 @@ cmr_int prev_fd_cb(cmr_u32 class_type, struct ipm_frame_out *cb_param)
 		frame_type.face_info[i].blink_level = cb_param->face_area.range[i].blink_level;
 	}
 
-	/*notify fd info directly*/
+	/*notify fd info directly*/
+
 	cb_data_info.cb_type    = PREVIEW_EVT_CB_FD;
 	cb_data_info.func_type  = PREVIEW_FUNC_START_PREVIEW;
 	cb_data_info.frame_data = &frame_type;

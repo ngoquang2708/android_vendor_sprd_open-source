@@ -112,7 +112,7 @@ static cmr_int uvde_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct i
 	uvde_handle->common.ipm_cxt = (struct ipm_context_t*)ipm_handle;
 	uvde_handle->common.class_type = IPM_TYPE_UVDE;
 	uvde_handle->common.ops = &uvde_ops_tab_info;
-	sem_init(&uvde_handle->denoise_sem_lock, 0, 0);
+	cmr_sem_init(&uvde_handle->denoise_sem_lock, 0, 0);
 	ret = uvde_thread_create(uvde_handle);
 	if (ret) {
 		CMR_LOGE("HDR error: create thread.");
@@ -437,10 +437,10 @@ static cmr_int uvde_transfer_frame(cmr_handle class_handle, struct ipm_frame_in 
 		goto EXIT;
 	}
 
-	sem_wait(&uvde_handle->denoise_sem_lock);
-	sem_wait(&uvde_handle->denoise_sem_lock);
-	sem_wait(&uvde_handle->denoise_sem_lock);
-	sem_wait(&uvde_handle->denoise_sem_lock);
+	cmr_sem_wait(&uvde_handle->denoise_sem_lock);
+	cmr_sem_wait(&uvde_handle->denoise_sem_lock);
+	cmr_sem_wait(&uvde_handle->denoise_sem_lock);
+	cmr_sem_wait(&uvde_handle->denoise_sem_lock);
 	memcpy((void*)denoise_in->InputAddr, (void*)cnr_out,
 				(denoise_in->InputHeight*denoise_in->InputWidth)>>1);
 
@@ -628,7 +628,7 @@ static void uv_proc_cb(cmr_handle class_handle, void* param)
 {
 	struct class_uvde          *uvde_handle  = (struct class_uvde *)class_handle;
 	CMR_LOGI("uv_proc_cb called! release sem lock");
-	sem_post(&uvde_handle->denoise_sem_lock);
+	cmr_sem_post(&uvde_handle->denoise_sem_lock);
 }
 
 void add_border_uv(cmr_u8 *dst, cmr_u8 *src, cmr_u32 w, cmr_u32 h, cmr_u32 border_w, cmr_u32 border_h)

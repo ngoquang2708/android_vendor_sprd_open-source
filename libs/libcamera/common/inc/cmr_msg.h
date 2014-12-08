@@ -89,6 +89,20 @@ cmr_int cmr_thread_destroy(cmr_handle thread_handle);
 
 cmr_int cmr_thread_msg_send(cmr_handle thread_handle, struct cmr_msg *message);
 
+cmr_int cmr_sem_init(sem_t *sem, cmr_int pshared, cmr_uint value);
+
+cmr_int cmr_sem_destroy(sem_t *sem);
+
+cmr_int cmr_sem_wait(sem_t *sem);
+
+cmr_int cmr_sem_trywait(sem_t *sem);
+
+cmr_int cmr_sem_timedwait(sem_t *sem, const struct timespec *abs_timeout);
+
+cmr_int cmr_sem_post(sem_t *sem);
+
+cmr_int cmr_sem_getvalue(sem_t *sem, cmr_int *valp);
+
 #ifdef __cplusplus
 }
 #endif

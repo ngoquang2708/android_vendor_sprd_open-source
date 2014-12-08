@@ -2162,7 +2162,7 @@ static cmr_int cmr_setting_isp_alg_wait (cmr_handle  setting_handle)
 	} else {
 		ts.tv_sec += ISP_ALG_TIMEOUT;
 		pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
-		if (sem_timedwait((&cxt->cmr_set.isp_alg_sem), &ts)) {
+		if (cmr_sem_timedwait((&cxt->cmr_set.isp_alg_sem), &ts)) {
 			pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 			rtn = -1;
 			cxt->cmr_set.isp_alg_timeout = 1;
@@ -2188,7 +2188,7 @@ cmr_int cmr_setting_isp_alg_done (cmr_handle setting_handle, void *data)
 	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
 	CMR_LOGI("isp ALG done.");
 	if (0 == cxt->cmr_set.isp_alg_timeout) {
-		sem_post(&cxt->cmr_set.isp_alg_sem);
+		cmr_sem_post(&cxt->cmr_set.isp_alg_sem);
 	}
 	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
 	return 0;

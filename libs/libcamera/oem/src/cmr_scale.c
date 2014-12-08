@@ -131,7 +131,7 @@ static cmr_int cmr_scale_thread_proc(struct cmr_msg *message, void *private_data
 				file->err_code = CMR_CAMERA_INVALID_PARAM;
 			}
 			if (cfg_params->scale_cb) {
-				sem_post(&file->sync_sem);
+				cmr_sem_post(&file->sync_sem);
 			}
 			if (CMR_CAMERA_SUCCESS == ret) {
 				ret = ioctl(file->handle, SCALE_IO_DONE, frame_params);
@@ -308,7 +308,7 @@ cmr_int cmr_scale_open(cmr_handle *scale_handle)
 		CMR_LOGE("scale error: create thread");
 		goto free_cb;
 	}
-	sem_init(&file->sync_sem, 0, 0);
+	cmr_sem_init(&file->sync_sem, 0, 0);
 
 	*scale_handle = (cmr_handle)file;
 
@@ -402,7 +402,7 @@ cmr_int cmr_scale_start(cmr_handle scale_handle, struct img_frm *src_img,
 	}
 
 	if (cmr_event_cb) {
-		sem_wait(&file->sync_sem);
+		cmr_sem_wait(&file->sync_sem);
 	}
 
 	ret = file->err_code;
@@ -444,7 +444,7 @@ cmr_int cmr_scale_close(cmr_handle scale_handle)
 	} else {
 		CMR_LOGE("scale error: handle is invalid");
 	}
-	sem_destroy(&file->sync_sem);
+	cmr_sem_destroy(&file->sync_sem);
 	free(file);
 
 exit:

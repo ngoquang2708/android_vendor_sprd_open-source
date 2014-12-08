@@ -45,8 +45,8 @@ extern "C"
 struct v4l2_context {
 	cmr_handle               v4l2_handle;
 /*	struct process_status    proc_status;*/
-	cmr_handle               caller_handle[V4L2_CHANNEL_MAX];
-	cmr_u32                  skip_number[V4L2_CHANNEL_MAX];
+	cmr_handle               caller_handle[CMR_CHANNEL_MAX];
+	cmr_u32                  skip_number[CMR_CHANNEL_MAX];
 	cmr_u32                  inited;
 };
 

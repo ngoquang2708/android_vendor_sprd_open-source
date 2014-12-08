@@ -42,7 +42,7 @@ int cmr_dma_copy_init(void)
 		CMR_LOGI("OK to open dma copy device.");
 	}
 
-	sem_init(&dma_copy_sem, 0, 1);
+	cmr_sem_init(&dma_copy_sem, 0, 1);
 
 	return ret;
 }
@@ -58,10 +58,10 @@ int cmr_dma_copy_deinit(void)
 		return -ENODEV;
 	}
 
-	sem_wait(&dma_copy_sem);
-	sem_post(&dma_copy_sem);
+	cmr_sem_wait(&dma_copy_sem);
+	cmr_sem_post(&dma_copy_sem);
 
-	sem_destroy(&dma_copy_sem);
+	cmr_sem_destroy(&dma_copy_sem);
 
 	if (-1 == close(dma_copy_fd)) {
 		exit(EXIT_FAILURE);
@@ -98,11 +98,11 @@ int cmr_dma_cpy(struct _dma_copy_cfg_tag dma_copy_cfg)
 		return -EINVAL;
 	}
 
-	sem_wait(&dma_copy_sem);
+	cmr_sem_wait(&dma_copy_sem);
 
 	ret = ioctl(dma_copy_fd, 0, &dma_copy_cfg);
 
-	sem_post(&dma_copy_sem);
+	cmr_sem_post(&dma_copy_sem);
 
 	return ret;
 }

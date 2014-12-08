@@ -3840,8 +3840,8 @@ bool SprdCameraHardware::allocateCaptureMem(bool isPreAllocCapMem, uint32_t mem_
 		rtn = allocateCapMem(mem_size);
 	} else {
 		LOGI("allocateCaptureMem: is pre alloc done:%d", mIsPreAllocCapMemDone);
-		sem_wait(&mPreAllocCapMemSemDone);
-		sem_post(&mPreAllocCapMemSemDone);
+		cmr_sem_wait(&mPreAllocCapMemSemDone);
+		cmr_sem_post(&mPreAllocCapMemSemDone);
 		if (0 == mIsPreAllocCapMemDone) {
 			rtn = allocateCapMem(mem_size);
 		}
@@ -6390,7 +6390,7 @@ int SprdCameraHardware::switch_monitor_thread_init(void *p_data)
 			LOGE("NO Memory, Failed to create switch monitor message queue\n");
 			return ret;
 		}
-		sem_init(&obj->mSwitchMonitorSyncSem, 0, 0);
+		cmr_sem_init(&obj->mSwitchMonitorSyncSem, 0, 0);
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 		ret = pthread_create(&obj->mSwitchMonitorThread,
@@ -6404,7 +6404,7 @@ int SprdCameraHardware::switch_monitor_thread_init(void *p_data)
 		if (ret) {
 			LOGE("switch_monitor_thread_init Fail to send one msg!");
 		}
-		sem_wait(&obj->mSwitchMonitorSyncSem);
+		cmr_sem_wait(&obj->mSwitchMonitorSyncSem);
 	}
 	return ret;
 }
@@ -6423,8 +6423,8 @@ int SprdCameraHardware::switch_monitor_thread_deinit(void *p_data)
 		if (ret) {
 			LOGE("Fail to send one msg to camera callback thread");
 		}
-		sem_wait(&obj->mSwitchMonitorSyncSem);
-		sem_destroy(&obj->mSwitchMonitorSyncSem);
+		cmr_sem_wait(&obj->mSwitchMonitorSyncSem);
+		cmr_sem_destroy(&obj->mSwitchMonitorSyncSem);
 		cmr_msg_queue_destroy((cmr_handle)obj->mSwitchMonitorMsgQueHandle);
 		obj->mSwitchMonitorMsgQueHandle = 0;
 		obj->mSwitchMonitorInited = 0;
@@ -6476,7 +6476,7 @@ void * SprdCameraHardware::switch_monitor_thread_proc(void *p_data)
 			case CMR_EVT_SW_MON_INIT:
 				LOGI("switch monitor thread msg INITED!");
 				obj->setCameraState(SPRD_IDLE, STATE_SET_PARAMS);
-				sem_post(&obj->mSwitchMonitorSyncSem);
+				cmr_sem_post(&obj->mSwitchMonitorSyncSem);
 				break;
 
 			case CMR_EVT_SW_MON_SET_PARA:
@@ -6489,7 +6489,7 @@ void * SprdCameraHardware::switch_monitor_thread_proc(void *p_data)
 			case CMR_EVT_SW_MON_EXIT:
 				LOGI("switch monitor thread msg EXIT!\n");
 				exit_flag = 1;
-				sem_post(&obj->mSwitchMonitorSyncSem);
+				cmr_sem_post(&obj->mSwitchMonitorSyncSem);
 				CMR_PRINT_TIME;
 				break;
 
@@ -6539,7 +6539,7 @@ int SprdCameraHardware::pre_alloc_cap_mem_thread_init(void *p_data)
 	if (!obj->mPreAllocCapMemInited) {
 		obj->mPreAllocCapMemInited = 1;
 		obj->mIsPreAllocCapMemDone = 0;
-		sem_init(&obj->mPreAllocCapMemSemDone, 0, 0);
+		cmr_sem_init(&obj->mPreAllocCapMemSemDone, 0, 0);
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 		ret = pthread_create(&obj->mPreAllocCapMemThread,
@@ -6548,7 +6548,7 @@ int SprdCameraHardware::pre_alloc_cap_mem_thread_init(void *p_data)
 							(void *)obj);
 		if (ret) {
 			obj->mPreAllocCapMemInited = 0;
-			sem_destroy(&obj->mPreAllocCapMemSemDone);
+			cmr_sem_destroy(&obj->mPreAllocCapMemSemDone);
 			LOGE("pre_alloc_cap_mem_thread_init: fail to send init msg");
 		}
 	}
@@ -6569,8 +6569,8 @@ int SprdCameraHardware::pre_alloc_cap_mem_thread_deinit(void *p_data)
 	LOGI("pre_alloc_cap_mem_thread_deinit: inited=%d", obj->mPreAllocCapMemInited);
 
 	if (obj->mPreAllocCapMemInited) {
-		sem_wait(&obj->mPreAllocCapMemSemDone);
-		sem_destroy(&obj->mPreAllocCapMemSemDone);
+		cmr_sem_wait(&obj->mPreAllocCapMemSemDone);
+		cmr_sem_destroy(&obj->mPreAllocCapMemSemDone);
 		obj->mPreAllocCapMemInited = 0;
 		obj->mIsPreAllocCapMemDone = 0;
 	}
@@ -6609,7 +6609,7 @@ void * SprdCameraHardware::pre_alloc_cap_mem_thread_proc(void *p_data)
 		}
 	}
 
-	sem_post(&obj->mPreAllocCapMemSemDone);
+	cmr_sem_post(&obj->mPreAllocCapMemSemDone);
 
 	return NULL;
 }
