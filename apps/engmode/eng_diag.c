@@ -377,7 +377,7 @@ int eng_diag_parse(char *buf,int len)
     int i;
     int ret = CMD_COMMON;
     MSG_HEAD_T *head_ptr=NULL;
-    eng_diag_decode7d7e((char *)(buf + 1), (len - 1));
+    eng_diag_decode7d7e((char *)(buf + 1), (len - 2));
     head_ptr =(MSG_HEAD_T *)(buf+1);
 
     ENG_LOG("%s: cmd=0x%x; subcmd=0x%x\n",__FUNCTION__, head_ptr->type, head_ptr->subtype);
