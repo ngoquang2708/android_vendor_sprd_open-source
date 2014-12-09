@@ -309,7 +309,31 @@ inline long long timeval_diff(struct timeval big, struct timeval small)
 {
 	return (long long)(big.tv_sec-small.tv_sec)*1000000 + big.tv_usec - small.tv_usec;
 }
+#define POWER_KEY_STATUS  "/sys/kernel/sprd_eic_button/status"
+static int powerkey_status_get(void)
+{
+	int fd;
+	int ret;
+	char buffer[8];
+	int powerkey_status= -1;
+	fd = open(POWER_KEY_STATUS, O_RDWR);
 
+	if(fd < 0) {
+		LOGE("%s: open %s fail",__func__, POWER_KEY_STATUS);
+		return -1;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
+	ret = read(fd, buffer, 8);
+	if(ret < 0) {
+		LOGE("%s: read %s fail",__func__, POWER_KEY_STATUS);
+	} else
+		powerkey_status = atoi(buffer);
+	close(fd);
+	LOGE("powerkey status: %d \n", powerkey_status);
+
+	return powerkey_status;
+}
 void backlight_init(void);
 void backlight_on(void);
 void backlight_off(void);
@@ -432,11 +456,15 @@ rechk_pwr_key:
 				LOGD(" %s: %d, %s\n", __func__, __LINE__,"alarm reboot failed");
 				break;
 			}else if(ev.code == pwr_key){
+				usleep(500000);
+				if(powerkey_status_get() == 0){
 				LOGD(" %s: %d %s\n", __func__, __LINE__, "power key up found");
 				usleep(500000);
 				cmd = BACKLIGHT_ON_CMD;
 				write(cmd_fd, &cmd, sizeof(char));
 				continue;
+				}else
+				goto rechk_pwr_key;
 			}else{
 				while(gettimeofday(&now_time, (struct timezone *)0)<0);
 				time_diff_temp = timeval_diff(now_time, start_time);
