@@ -3843,11 +3843,12 @@ static int adev_set_master_mute(struct audio_hw_device *dev, bool mute)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
 
-    ALOGD("%s, mute=%d, master_mute=%d", __func__, mute, adev->master_mute);
+
     if (adev->master_mute == mute)
         return 0;
     if (!adev->master_mute && adev->mode == AUDIO_MODE_IN_CALL)
-	return 0;
+        return 0;
+    ALOGD("%s, mute=%d, master_mute=%d", __func__, mute, adev->master_mute);
     pthread_mutex_lock(&adev->device_lock);
     pthread_mutex_lock(&adev->lock);
     adev->master_mute = mute;
