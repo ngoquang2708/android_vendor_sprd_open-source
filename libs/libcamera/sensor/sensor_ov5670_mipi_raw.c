@@ -2064,22 +2064,9 @@ LOCAL uint32_t _ov5670_set_gain(uint32_t gain128)
 	//group write  hold
 	//group 0:delay 0x366a for one frame
 	Sensor_WriteReg(0x3208, 0x00);
-	if(gain128>=1024) {
-		// gain >= 8x
-		Sensor_WriteReg(0x366a, 0x07);
-	}
-	else if(gain128>=512){
-		// 4x =< gain < 8x
-		Sensor_WriteReg(0x366a, 0x03);
-	}
-	else if(gain128>=256){
-		// 2x =< gain < 4x
-		Sensor_WriteReg(0x366a, 0x01);
-	}
-	else{
-		// 1x =< gain < 2x
-		Sensor_WriteReg(0x366a, 0x00);
-	}
+
+	Sensor_WriteReg(0x366a, 0x07);
+
 	Sensor_WriteReg(0x3208, 0x10);
 
 	//group 1:all other registers( gain)
