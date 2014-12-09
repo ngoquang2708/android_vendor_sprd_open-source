@@ -1543,6 +1543,7 @@ cmr_int prev_preview_frame_handle(struct prev_handle *handle, cmr_u32 camera_id,
 
 	if (!IS_PREVIEW(handle, camera_id)) {
 		CMR_LOGE("preview stopped, skip this frame");
+		ret = CMR_CAMERA_INVALID_STATE;
 		return ret;
 	}
 

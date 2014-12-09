@@ -3260,8 +3260,10 @@ cmr_int camera_sensor_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct com
 		sensor_param = param_ptr->cmd_value;
 		break;
 	case COM_SN_SET_PREVIEW_MODE:
+		cmd = SENSOR_SCENE;
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_SCENECAPTURETYPE;
+		sensor_param = param_ptr->cmd_value;
 		break;
 	case COM_SN_SET_ANTI_BANDING:
 		cmd = SENSOR_FLIP;
@@ -3431,7 +3433,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_SCENECAPTURETYPE;
 		isp_param = param_ptr->cmd_value;
-		if (ISP_AE_MODE_MAX == isp_param) {
+		if (isp_param >= ISP_AE_MODE_MAX) {
 			set_isp_flag = 0;
 		}
 		CMR_LOGI("ae mode %d", param_ptr->cmd_value);
