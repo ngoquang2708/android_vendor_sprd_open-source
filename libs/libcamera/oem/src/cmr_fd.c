@@ -156,6 +156,7 @@ static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm
 	}
 
 	fd_size = &in->frame_size;
+	CMR_LOGI("fd_size height = %d, width = %d", fd_size->height, fd_size->width);
 	ret = fd_call_init(fd_handle, fd_size);
 	if (ret) {
 		CMR_LOGE("failed to init fd");
@@ -500,6 +501,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 					face_rect_ptr++;
 					continue;
 				}
+				CMR_LOGI("face detect sx = %d, sy = %d, ex = %d, ey = %d",
+				face_rect_ptr->sx, face_rect_ptr->sy, face_rect_ptr->ex, face_rect_ptr->ey);
 				class_handle->frame_out.face_area.range[k]      = *face_rect_ptr;
 				face_rect_ptr++;
 			}

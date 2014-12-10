@@ -265,6 +265,7 @@ enum common_isp_cmd_type {
 	COM_ISP_GET_LOW_LUX_EB,/*capability*/
 	COM_ISP_SET_BYPASS_MODE,
 	COM_ISP_SET_FLASH_LEVEL,
+	COM_ISP_SET_FACE_AREA,
 	COM_ISP_TYPE_MAX
 };
 
@@ -551,6 +552,7 @@ struct common_isp_cmd_param {
 		struct exif_spec_pic_taking_cond_tag    exif_pic_info;
 		struct cmr_win_area                     win_area;
 		struct isp_alg                          alg_param;
+		struct isp_face_area                    fd_param;
 	};
 };
 

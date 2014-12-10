@@ -292,6 +292,7 @@ enum isp_ctrl_cmd{
 	ISP_CTRL_AF_CTRL, // for isp tool
 	ISP_CTRL_REG_CTRL, // for isp tool
 	ISP_CTRL_AF_END_INFO, // for isp tool
+	ISP_CTRL_AF_FACE_AREA,
 	ISP_CTRL_MAX
 };
 
@@ -458,6 +459,18 @@ struct isp_img_frm{
 	struct isp_size img_size;
 	struct isp_addr img_addr_phy;
 	struct isp_addr img_addr_vir;
+};
+
+struct isp_face_info {
+	uint32_t   sx;
+	uint32_t   sy;
+	uint32_t   ex;
+	uint32_t   ey;
+};
+
+struct isp_face_area {
+	uint16_t face_num;
+	struct isp_face_info face_info[10];
 };
 
 struct isp_init_param{

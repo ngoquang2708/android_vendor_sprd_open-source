@@ -7597,6 +7597,7 @@ struct isp_io_ctrl_fun _s_isp_io_ctrl_fun_tab[]=
 	{ISP_CTRL_AF_CTRL,                  _ispAfInfoIOCtrl}, // for tool cali
 	{ISP_CTRL_REG_CTRL,                _ispRegIOCtrl}, // for tool cali
 	{ISP_CTRL_AF_END_INFO,           _ispRegIOCtrl}, // for tool cali
+	{ISP_CTRL_AF_FACE_AREA,          NULL},
 	{ISP_CTRL_MAX, PNULL}
 };
 

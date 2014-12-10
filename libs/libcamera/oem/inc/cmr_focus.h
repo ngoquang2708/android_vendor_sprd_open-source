@@ -75,6 +75,8 @@ cmr_int cmr_focus_stop(cmr_handle af_handle, cmr_u32 came_id, cmr_u32 is_need_ab
 
 cmr_int cmr_focus_set_param(cmr_handle af_handle, cmr_u32 came_id , enum camera_param_type id, void* param);
 
+enum cmr_focus_mode cmr_focus_get_mode (cmr_handle af_handle, cmr_u32 came_id);
+
 #ifdef __cplusplus
 }
 #endif
