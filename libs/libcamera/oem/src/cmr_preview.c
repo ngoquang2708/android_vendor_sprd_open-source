@@ -4546,6 +4546,9 @@ cmr_int prev_get_cap_post_proc_param(struct prev_handle *handle,
 			tmp_req_rot -= IMG_ANGLE_MIRROR;
 		}
 		cap_rot = prev_get_rot_enum(tmp_req_rot);
+	} else {
+		prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.width;
+		prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
 	}
 
 	CMR_LOGI("now cap_rot %d", cap_rot);
