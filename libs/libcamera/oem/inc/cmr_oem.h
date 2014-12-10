@@ -145,7 +145,8 @@ struct setting_context {
     cmr_handle               setting_handle;
     cmr_u32                  inited;
     cmr_u32                  is_active;
-	cmr_u32                  is_auto_iso;
+    cmr_u32                  is_auto_iso;
+    cmr_uint                 iso_value;
 };
 
 struct camera_settings {

@@ -4245,7 +4245,7 @@ cmr_int camera_local_stop_preview(cmr_handle oem_handle)
 			}
 		}
 	}
-	camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->camera_id);
+	camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->setting_cxt.iso_value);
 
 	prev_ret = cmr_preview_stop(cxt->prev_cxt.preview_handle, cxt->camera_id);
 	if (ret) {
@@ -4280,7 +4280,8 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 			goto exit;
 		}
 	} else {
-		camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->camera_id);
+		CMR_LOGI("saved iso value %ld", cxt->setting_cxt.iso_value);
+		camera_set_setting(oem_handle, CAMERA_PARAM_ISO, cxt->setting_cxt.iso_value);
 	}
 
 	ret = camera_get_snapshot_param(oem_handle, &snp_param);
@@ -4528,6 +4529,10 @@ cmr_int camera_local_set_param(cmr_handle oem_handle, enum camera_param_type id,
 		if (ret) {
 			CMR_LOGE("failed to update zoom %ld", ret);
 		}
+		ret = camera_set_setting(oem_handle, id, param);
+		break;
+	case CAMERA_PARAM_ISO:
+		cxt->setting_cxt.iso_value = param;
 		ret = camera_set_setting(oem_handle, id, param);
 		break;
 	default:
