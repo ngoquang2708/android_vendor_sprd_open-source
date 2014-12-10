@@ -182,6 +182,9 @@ static cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * da
 static void camera_snapshot_started(cmr_handle oem_handle);
 static cmr_uint camera_param_to_isp(cmr_uint cmd, struct common_isp_cmd_param *parm);
 static cmr_int camera_restart_rot(cmr_handle oem_handle);
+static cmr_int camera_convert_face_area(struct isp_face_area *face_area, cmr_u32 prev_width, cmr_u32 prev_height,
+						struct img_rect *prev_rect, cmr_int orientation, cmr_int mirror);
+static cmr_int camera_update_face_focus_zone(cmr_handle oem_handle, void *param);
 /**********************************************************************************************/
 
 void camera_malloc(cmr_u32 mem_type, cmr_handle oem_handle, cmr_u32 *size_ptr,
@@ -441,6 +444,129 @@ cmr_int camera_check_cap_time(cmr_handle snp_handle, struct frm_info * data)
 		}
 	}
 	cmr_sem_post(&cxt->access_sm);
+	return ret;
+}
+
+cmr_int camera_convert_face_area (struct isp_face_area *face_area, cmr_u32 prev_width, cmr_u32 prev_height,
+						struct img_rect *prev_rect, cmr_int orientation, cmr_int mirror)
+{
+	int i, temp_x, temp_y, rot_val;
+	int ret = 0;
+
+	CMR_LOGI("before convert: prev_width = %d, prev_height = %d, preview_rect x = %d, y = %d, width = %d, height = %d",
+			prev_width, prev_height, prev_rect->start_x,prev_rect->start_y,prev_rect->width,prev_rect->height);
+
+	if (!face_area || !prev_rect) {
+		CMR_LOGE("invalid parameter");
+		ret = CMR_CAMERA_INVALID_PARAM;
+		goto exit;
+	}
+
+	/*move to cap image coordinate*/
+	for (i = 0; i <  face_area->face_num; i++) {
+		CMR_LOGI("before convert: face_num = %d, sx =%d, sy = %d, ex = %d, ey = %d",
+			i+1, face_area->face_info[i].sx, face_area->face_info[i].sy,
+			face_area->face_info[i].ex, face_area->face_info[i].ey);
+
+		temp_x = face_area->face_info[i].sx;
+		temp_y = face_area->face_info[i].sy;
+		face_area->face_info[i].sx = temp_x * prev_rect->width / prev_width;
+		face_area->face_info[i].sy = temp_y * prev_rect->height / prev_height;
+
+		temp_x = face_area->face_info[i].ex;
+		temp_y = face_area->face_info[i].ey;
+		face_area->face_info[i].ex = temp_x * prev_rect->width / prev_width;
+		face_area->face_info[i].ey = temp_y * prev_rect->height / prev_height;
+
+		if ((IMG_ANGLE_90 == orientation) || (IMG_ANGLE_270 == orientation)) {
+			rot_val = face_area->face_info[i].sx;
+			face_area->face_info[i].sx = face_area->face_info[i].sy;
+			face_area->face_info[i].sy = rot_val;
+
+			rot_val = face_area->face_info[i].ex;
+			face_area->face_info[i].ex = face_area->face_info[i].ey;
+			face_area->face_info[i].ey = rot_val;
+		}
+
+		face_area->face_info[i].sx += prev_rect->start_x;
+		face_area->face_info[i].sy += prev_rect->start_y;
+		face_area->face_info[i].ex += prev_rect->start_x;
+		face_area->face_info[i].ey += prev_rect->start_y;
+
+		CMR_LOGI("after convert: face_num = %d, sx =%d, sy = %d, ex = %d, ey = %d",
+			i+1, face_area->face_info[i].sx, face_area->face_info[i].sy,
+			face_area->face_info[i].ex, face_area->face_info[i].sx);
+	}
+
+exit:
+	return ret;
+}
+
+cmr_int camera_update_face_focus_zone (cmr_handle oem_handle, void *param)
+{
+	cmr_int                         ret = CMR_CAMERA_SUCCESS;
+#if defined(CONFIG_CAMERA_CAF)
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	enum cmr_focus_mode focus_mode = cmr_focus_get_mode(cxt->focus_cxt.focus_handle, cxt->camera_id);
+
+	if (param && ((CAMERA_FOCUS_MODE_CAF == focus_mode) || (CAMERA_FOCUS_MODE_CAF_VIDEO == focus_mode))) {
+		struct camera_frame_type *face_param = (struct camera_frame_type*)param;
+		struct isp_face_area face_area;
+		struct img_rect param_rect;
+		struct img_size prev_size;
+		int k;
+
+		face_area.face_num = face_param->face_num > FACE_DETECT_NUM ? FACE_DETECT_NUM : face_param->face_num;
+		for (k = 0; k < face_area.face_num; k++) {
+			face_area.face_info[k].sx = MIN(face_param->face_info[k].sx, face_param->face_info[k].ex);
+			face_area.face_info[k].sy = MIN(face_param->face_info[k].sy, face_param->face_info[k].ey);
+			face_area.face_info[k].ex = MAX(face_param->face_info[k].sx, face_param->face_info[k].ex);
+			face_area.face_info[k].ey = MAX(face_param->face_info[k].sy, face_param->face_info[k].ey);
+			CMR_LOGI("New face detect sx = %d, sy = %d, ex = %d, ey = %d",
+				face_area.face_info[k].sx, face_area.face_info[k].sy,
+				face_area.face_info[k].ex, face_area.face_info[k].ey);
+		}
+
+		ret = camera_local_get_prev_rect(oem_handle, &param_rect);
+		if (ret) {
+			CMR_LOGI("failed to get preview rect");
+			goto exit;
+		}
+
+		/*get prev size*/
+		prev_size = cxt->prev_cxt.size;
+		camera_convert_face_area(&face_area, prev_size.width, prev_size.height,
+								&param_rect, 0, 0);
+
+		if (face_area.face_num > 0) {
+			struct sensor_exp_info		sensor_info;
+			camera_get_sensor_info(oem_handle, cxt->camera_id, &sensor_info);
+			if (IMG_DATA_TYPE_RAW == sensor_info.image_format) {
+				struct common_isp_cmd_param param;
+				param.fd_param = face_area;
+				camera_isp_ioctl(oem_handle, COM_ISP_SET_FACE_AREA, &param);
+			} else {
+				static int focus_frame = 0;
+				struct cmr_focus_param focus_param;
+				focus_param.zone_cnt = face_area.face_num > FOCUS_ZONE_CNT_MAX ? FOCUS_ZONE_CNT_MAX : face_area.face_num;
+				for (k = 0; k < focus_param.zone_cnt; k++) {
+					focus_param.zone[k].start_x = face_area.face_info[k].sx;
+					focus_param.zone[k].start_y = face_area.face_info[k].sy;
+					focus_param.zone[k].width = abs(face_area.face_info[k].ex - face_area.face_info[k].sx);
+					focus_param.zone[k].height = abs(face_area.face_info[k].ey - face_area.face_info[k].sy);
+					CMR_LOGI("yuv sensor zone_cnt = %d, start_x = %d, start_y = %d, width = %d, height = %d",
+						focus_param.zone_cnt, focus_param.zone[k].start_x, focus_param.zone[k].start_y,
+						focus_param.zone[k].width, focus_param.zone[k].height);
+				}
+
+				cmr_focus_set_param(cxt->focus_cxt.focus_handle, cxt->camera_id, CAMERA_PARAM_FOCUS_RECT, (void *)&focus_param);
+			}
+		}
+	}
+
+exit:
+	CMR_LOGD("out ret %ld", ret);
+#endif
 	return ret;
 }
 
@@ -778,6 +904,7 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 		message.alloc_flag = 1;
 		memcpy(message.data, param, sizeof(struct camera_frame_type));
 	}
+
 	message.msg_type = oem_func;
 	message.sub_msg_type = oem_cb_type;
 	message.sync_flag  = CMR_MSG_SYNC_NONE;
@@ -786,6 +913,11 @@ cmr_int camera_preview_cb(cmr_handle oem_handle, enum preview_cb_type cb_type, e
 		CMR_LOGE("failed to send msg, ret %ld", ret);
 		free(message.data);
 	}
+
+	if (CAMERA_EVT_CB_FD == oem_cb_type) {
+		camera_update_face_focus_zone(oem_handle, param);
+	}
+
 exit:
 	CMR_LOGD("out ret %ld", ret);
 	return ret;
@@ -3549,6 +3681,12 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		isp_param_ptr = (void*)&param_ptr->alg_param;
 		CMR_LOGI("isp_cmd = %d, mode = %d", isp_cmd, param_ptr->alg_param.mode);
 		break;
+	case COM_ISP_SET_FACE_AREA:
+		isp_cmd = ISP_CTRL_AF_FACE_AREA;
+		ptr_flag = 1;
+		isp_param_ptr = (void*)&param_ptr->fd_param;
+		CMR_LOGI("isp_cmd = %d, face_num = %d", isp_cmd, param_ptr->fd_param.face_num);
+		break;
 	default:
 		CMR_LOGE("don't support cmd %ld", cmd_type);
 		ret = CMR_CAMERA_NO_SUPPORT;
@@ -4353,7 +4491,8 @@ cmr_int camera_local_get_prev_rect(cmr_handle oem_handle, struct img_rect *param
 		goto exit;
 	}
 	ret = cmr_preview_get_prev_rect(cxt->prev_cxt.preview_handle, cxt->camera_id, param_ptr);
-	CMR_LOGI("%d %d %d %d", param_ptr->start_x, param_ptr->start_y, param_ptr->width, param_ptr->height);
+	CMR_LOGI("start_x = %d, start_y = %d, width = %d, height = %d",
+		param_ptr->start_x, param_ptr->start_y, param_ptr->width, param_ptr->height);
 exit:
 	return ret;
 }

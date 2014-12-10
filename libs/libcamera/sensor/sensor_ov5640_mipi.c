@@ -24,7 +24,7 @@
 #define FOCUS_ZONE_W 80
 #define FOCUS_ZONE_H 60
 #define AUTOFOCUS_TIMEOUT (280)
-#define FOCUS_MOVE_GAIN_CHECK 10000
+#define FOCUS_MOVE_GAIN_CHECK 1000
 #ifndef ABS
 #define ABS(x)  (((x) < 0) ? (-(x)):(x))
 #endif
@@ -2824,7 +2824,7 @@ LOCAL uint32_t _ov5640_CheckAFGain(SENSOR_EXT_FUN_PARAM_T_PTR param_ptr)
 
 	cur_af_gain = _ov5640_get_cur_af_gain();
 	delta_gain = ABS((int32_t)cur_af_gain - (int32_t)s_af_gain);
-	SENSOR_PRINT("delta_gain %d, s_is_dv_mode %d", delta_gain, s_is_dv_mode);
+	SENSOR_PRINT("s_af_gain %d, delta_gain %d, s_is_dv_mode %d", s_af_gain, delta_gain, s_is_dv_mode);
 	if ((delta_gain > FOCUS_MOVE_GAIN_CHECK)
 		&& (0 != s_af_gain)
 		&& (0 == s_is_dv_mode)) {

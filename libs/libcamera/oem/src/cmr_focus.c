@@ -925,19 +925,20 @@ cmr_int af_start_lightly(cmr_handle af_handle, cmr_u32 camera_id)
 	cmr_bzero(&af_param, sizeof(af_param));
 
 	if (IMG_DATA_TYPE_RAW != sensor_info.image_format) {
-		af_param.cmd        = SENSOR_EXT_FOCUS_START;
-		af_param.param      = SENSOR_EXT_FOCUS_TRIG;
-		af_param.zone_cnt   = 0;
+		/*focus preprocess for af zone parameter*/
+		focus_rect_parse(af_handle, &af_param);
 
 		yuv_sn_param.yuv_sn_af_param.cmd      = af_param.cmd;
 		yuv_sn_param.yuv_sn_af_param.param    = af_param.param;
 		yuv_sn_param.yuv_sn_af_param.zone_cnt = af_param.zone_cnt;
 
-		for (i = 0; i < 1; i++) {
+		for (i = 0; i < af_param.zone_cnt; i++) {
 			yuv_sn_param.yuv_sn_af_param.zone[i].start_x = af_param.zone[i].x;
 			yuv_sn_param.yuv_sn_af_param.zone[i].start_y = af_param.zone[i].y;
 			yuv_sn_param.yuv_sn_af_param.zone[i].width   = af_param.zone[i].w;
 			yuv_sn_param.yuv_sn_af_param.zone[i].height  = af_param.zone[i].h;
+			CMR_LOGD("Get zone cnt= %d, start_x = %d, start_y = %d, width = %d, height = %d",
+				af_param.zone_cnt, af_param.zone[i].x, af_param.zone[i].y, af_param.zone[i].w, af_param.zone[i].h);
 		}
 
 		ret = af_cxt->ops.af_sensor_ioctrl(af_cxt->oem_handle, COM_SN_SET_FOCUS, &yuv_sn_param);
@@ -1194,6 +1195,8 @@ cmr_int focus_rect_parse(cmr_handle af_handle, SENSOR_EXT_FUN_PARAM_T_PTR p_focu
 		break;
 
 	case CAMERA_FOCUS_MODE_AUTO_MULTI:
+	case CAMERA_FOCUS_MODE_CAF:
+	case CAMERA_FOCUS_MODE_CAF_VIDEO:
 		if ( 0 == zone_cnt) {
 			af_param.cmd       = SENSOR_EXT_FOCUS_START;
 			af_param.param     = SENSOR_EXT_FOCUS_TRIG;
@@ -1271,14 +1274,6 @@ cmr_int focus_rect_parse(cmr_handle af_handle, SENSOR_EXT_FUN_PARAM_T_PTR p_focu
 			af_param.zone_cnt = 0;
 			CMR_LOGE("af_check_area af_param.zone_cnt=%d",af_param.zone_cnt);
 		}
-		break;
-
-	case CAMERA_FOCUS_MODE_CAF:
-	case CAMERA_FOCUS_MODE_CAF_VIDEO:
-		af_param.cmd      = SENSOR_EXT_FOCUS_START;
-		af_param.param    = SENSOR_EXT_FOCUS_CAF;
-		af_param.zone_cnt = 0;
-
 		break;
 
 	case CAMERA_FOCUS_MODE_INFINITY:
@@ -1372,4 +1367,11 @@ exit:
 
 	CMR_LOGI("ret= %ld", ret);
 	return ret;
+}
+
+enum cmr_focus_mode cmr_focus_get_mode (cmr_handle af_handle, cmr_u32 came_id)
+{
+	struct af_context       *af_cxt     = (struct af_context *)af_handle;
+
+	return (af_cxt->af_mode);
 }
