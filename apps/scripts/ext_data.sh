@@ -52,4 +52,17 @@ elif [ "$1" = "-d" ]; then
 		setprop sys.gsps.eth.localip ""
 		setprop sys.gsps.eth.peerip ""
 	fi
+
+elif [ "$1" = "-e" ]; then
+        iptables -A FORWARD -p udp --dport 53 -j DROP
+        iptables -A INPUT -p udp --dport 53 -j DROP
+        iptables -A OUTPUT -p udp --dport 53 -j DROP
+
+
+elif [ "$1" = "-c" ]; then
+        iptables -D FORWARD -p udp --dport 53 -j DROP
+        iptables -D INPUT -p udp --dport 53 -j DROP
+        iptables -D OUTPUT -p udp --dport 53 -j DROP
+
+
 fi
