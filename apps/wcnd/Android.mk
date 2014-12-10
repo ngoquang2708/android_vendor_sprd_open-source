@@ -1,9 +1,9 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-ifeq ($(BOARD_WLAN_DEVICE), sc2331)
-#LOCAL_CFLAGS += -DUSE_MARLIN
-endif
+#ifeq ($(BOARD_WLAN_DEVICE), sc2331)
+LOCAL_CFLAGS += -DUSE_MARLIN
+#endif
 
 LOCAL_SRC_FILES:= \
 	wcnd.c \
