@@ -501,7 +501,7 @@ M,/wlwarm,wlwarm,,,,,
 M,/wlgdsp,wlgdsp,,,,,
 M,/wlldsp,wlldsp,,,,,
 M,/wcnfdl,wcnfdl.bin,,,,,
-M,/wlfixnv,wlnvitem.bin,/wlfixnv1,/wlfixnv2,,wl,
+M,/wlfixnv,wlnvitem.bin,/wlfixnv1,/wlfixnv2,,lf,
 #### other ####
 M,/pmsys,pmsys.bin,,,,,
 """
