@@ -491,12 +491,38 @@ int wlnpi_cmd_get_reg(int argc, char **argv,  unsigned char *s_buf, int *s_len )
     {
         return -1;
     }
+
     *addr =   strtol(argv[1], err, 16);
     if(err)
+    {
         return -1;
-    *count =  strtol(argv[2], err, 16);
-    if(err)
-        return -1;
+    }
+
+    ENG_LOG("ADL %s(), argv[2] addr = %p", __func__, argv[2]);
+    if (NULL == argv[2] || 0 == strlen(argv[2]))
+    {
+        /* if argv[2] is NULL or null string, set count to default value, which value is 1 */
+        ENG_LOG("ADL %s(), argv[2] is null, set count to 1", __func__);
+        *count = 1;
+    }
+    else
+    {
+        *count =  strtol(argv[2], err, 10);
+        if(err)
+        {
+            /* if exec strtol function is error, set count to default value, which value is 1 */
+            ENG_LOG("ADL %s(), exec strtol(argv[2]) is error, set count to 1", __func__);
+            *count = 1;
+        }
+    }
+
+    if (*count >= 5)
+    {
+        ENG_LOG("ADL %s(), *count is too large, *count = %d, set count to 5", __func__, *count);
+        *count = 5;
+    }
+    ENG_LOG("ADL %s(), *count = %d", __func__, *count);
+
     *s_len = 9;
     return 0;
 }
@@ -662,7 +688,7 @@ int wlnpi_show_get_reg(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int r_len)
     unsigned char str[256] = {0};
     char ret_buf[WLNPI_RESULT_BUF_LEN] = {0x00};
 
-    ENG_LOG("ADL entry %s(), r_eln = %d", __func__);
+    ENG_LOG("ADL entry %s(), r_len = %d", __func__, r_len);
 
     for(i=0, p =0; (i < r_len/4) && (i < WLNPI_GET_REG_MAX_COUNT); i++)
     {
