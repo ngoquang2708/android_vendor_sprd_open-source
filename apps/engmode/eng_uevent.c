@@ -53,7 +53,7 @@ static void parse_event(const char *msg, struct uevent *uevent)
 
 static void handle_device_event(struct uevent *uevent)
 {
-    if(0 == strncmp(uevent->usb_connect, "CONNECTED", 9)) {
+    if(0 == strncmp(uevent->usb_connect, "CONFIGURED", 10)) {
         // start cp log
         ENG_LOG("%s: enable arm log\n", __FUNCTION__);
         g_armlog_enable = 1;
