@@ -311,6 +311,7 @@ static cmr_int _enc_start(cmr_handle handle, struct jpeg_codec_context *jcontext
 	/*start jpeg enc for both slice and frame*/
 	if (0 != JPEGENC_Slice_Start(jenc_parm_ptr, &slice_out)) {
 		ret = JPEG_CODEC_ERROR;
+		CMR_LOGI("JPEGENC_Slice_Start error");
 		goto enc_start_end;
 	}
 	enc_cxt_ptr->cur_line_num = jenc_parm_ptr->set_slice_height;
@@ -400,9 +401,12 @@ static void _enc_start_post(cmr_handle handle, struct jpeg_codec_context  *jcont
 			}
 		}
 	} else {
+
+		struct jpeg_enc_cb_param   param = {0};
 		if (JPEG_CODEC_STOP != ret) {
 			if (NULL != jcontext->event_cb) {
-				jcontext->event_cb(CMR_JPEG_ENC_ERR, NULL , (void*)jcontext->oem_handle);
+				CMR_LOGI("notify CMR_JPEG_ENC_ERR");
+				jcontext->event_cb(CMR_JPEG_ENC_ERR, &param , (void*)jcontext->oem_handle);
 			} else {
 				CMR_LOGE("jpeg:even cb is NULL.");
 			}

@@ -247,6 +247,8 @@ PUBLIC void JpegEnc_HwSubModuleCfg(void)
 
 	SCI_ASSERT(jpeg_fw_codec != PNULL);
 
+	SCI_TRACE_LOW("stream buf len %d", jpeg_fw_codec->pingpang_buf_len);
+
 	//BSM Module cfg
 	cmd = (jpeg_fw_codec->pingpang_buf_len+3)>>2;
 	if(cmd > 0x1FFFFF) {

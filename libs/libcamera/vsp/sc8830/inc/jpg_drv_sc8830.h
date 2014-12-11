@@ -65,7 +65,7 @@ extern "C"
 #define INTS_VLC 1
 #define INTS_BSM 0
 
-#define TIME_OUT_CLK			0xfffffff
+#define TIME_OUT_CLK			0xfffff
 
 #define IS_TIME_OUT				1
 #define NOT_TIME_OUT			0

@@ -2652,6 +2652,7 @@ cmr_int snp_set_post_proc_param(cmr_handle snp_handle, struct snapshot_param *pa
 	cmr_s32                         sm_val = 0;
 
 	cxt->cap_cnt = 0;
+	cxt->chn_param.is_rot = 0;
 	cxt->req_param = *param_ptr;
 	CMR_LOGI("chn %d total num %d", cxt->req_param.channel_id, cxt->req_param.total_num);
 	ret = cxt->ops.get_sensor_info(cxt->oem_handle, cxt->req_param.camera_id, &cxt->sensor_info);
