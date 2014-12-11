@@ -36,6 +36,51 @@ static int wakealarm_fd = -1;
  ** sipc interface begin
  *
  *****************************************************/
+enum sci_bm_cmd_index {
+	BM_STATE = 0x0,
+	BM_CHANNELS,
+	BM_AXI_DEBUG_SET,
+	BM_AHB_DEBUG_SET,
+	BM_PERFORM_SET,
+	BM_PERFORM_UNSET,
+	BM_OCCUR,
+	BM_CONTINUE_SET,
+	BM_CONTINUE_UNSET,
+	BM_DFS_SET,
+	BM_DFS_UNSET,
+	BM_PANIC_SET,
+	BM_PANIC_UNSET,
+	BM_BW_CNT_START,
+	BM_BW_CNT_STOP,
+	BM_BW_CNT_RESUME,
+	BM_BW_CNT,
+	BM_BW_CNT_CLR,
+	BM_DBG_INT_CLR,
+	BM_DBG_INT_SET,
+	BM_CMD_MAX,
+};
+
+#define BM_DEV "/dev/sprd_bm"
+
+static void modemd_enable_busmonitor(bool bEnable)
+{
+	int fd;
+	int param;
+	int cmd;
+
+	fd = open(BM_DEV, O_RDWR);
+	if (fd < 0) {
+		MODEMD_LOGD("modemd_enable_busmonitor %s failed, error: %s", BM_DEV, strerror(errno));
+		return;
+	}
+
+	cmd = bEnable ? BM_DBG_INT_SET : BM_DBG_INT_CLR;
+	ioctl(fd, cmd, &param);
+
+	MODEMD_LOGD("modemd_enable_busmonitor bEnable = %d, cmd = %d", bEnable, cmd);
+	close(fd);
+}
+
 
 int loop_info_sockclients(const char* buf, const int len)
 {
@@ -66,6 +111,7 @@ static int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, i
     int buf_size = sizeof(buf);
 
     MODEMD_LOGD("Loading %s in bank %s:%d %d", fin, fout, offsetout, size);
+    modemd_enable_busmonitor(false);
 
     fdin = open(fin, O_RDONLY, 0);
     fdout = open(fout, O_RDWR, 0);
@@ -74,11 +120,13 @@ static int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, i
             close(fdout);
 
         MODEMD_LOGE("failed to open %s", fin);
+        modemd_enable_busmonitor(true);
         return -1;
     }
     if (fdout < 0) {
         close(fdin);
         MODEMD_LOGE("failed to open %s, error: %s", fout, strerror(errno));
+        modemd_enable_busmonitor(true);
         return -1;
     }
 
@@ -110,6 +158,7 @@ static int load_sipc_image(char *fin, int offsetin, char *fout, int offsetout, i
 
     res = 0;
 leave:
+    modemd_enable_busmonitor(true);
     close(fdin);
     close(fdout);
     return res;
@@ -139,8 +188,8 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         return -1;
     }
 
-   strcpy(persist_prop,PERSIST_MODEM_CHAR);
-   system("echo 1 >/sys/power/wake_lock");
+    strcpy(persist_prop,PERSIST_MODEM_CHAR);
+    system("echo 1 >/sys/power/wake_lock");
 
     if(modem == TD_MODEM) {
         sipc_modem_size = TD_MODEM_SIZE;
