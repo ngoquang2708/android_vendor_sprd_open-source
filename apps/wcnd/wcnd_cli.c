@@ -73,6 +73,24 @@ typedef struct wl_ioctl {
 
 
 static int
+bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint buflen)
+{
+	uint len;
+
+	len = strlen(name) + 1;
+	if ((len + datalen) > buflen)
+		return 0;
+
+	strncpy(buf, name, buflen);
+
+	/* append data onto the end of the name string */
+	memcpy(&buf[len], data, datalen);
+	len += datalen;
+
+	return len;
+}
+
+static int
 wl_ioctl(struct ifreq *ifr, int cmd, void *buf, int len, bool set)
 {
 	wl_ioctl_t ioc;
@@ -99,6 +117,66 @@ wl_ioctl(struct ifreq *ifr, int cmd, void *buf, int len, bool set)
 	close(s);
 	return ret;
 }
+
+
+/**
+* on: 1 for on
+* 	 0 for off
+*/
+static int set_wifi_mpc_on(int on)
+{
+	char buf[256];
+	int cmd_op = 0;
+
+	int data = 0;
+
+	struct ifreq ifr;
+	int ret;
+
+	sprintf(ifr.ifr_name, "%s", WLAN_IFNAME);
+
+	data = on;
+	cmd_op = WLC_SET_VAR;
+
+	bcm_mkiovar("mpc", (char*)&data, 4, buf, 255);
+
+	ret =  wl_ioctl(&ifr, cmd_op, buf, 255, 1);
+
+	printf("%s: get wl reply: %s, ret = %d \n",__func__, buf, ret);
+
+	return 0;
+}
+
+
+
+/**
+* off: 1 for off
+* 	 0 for on
+*/
+static int set_wifi_roam_off(int off)
+{
+	char buf[256];
+	int cmd_op = 0;
+
+	int data = 0;
+
+	struct ifreq ifr;
+	int ret;
+
+	sprintf(ifr.ifr_name, "%s", WLAN_IFNAME);
+
+	data = off;
+	cmd_op = WLC_SET_VAR;
+
+	bcm_mkiovar("roam_off", (char*)&data, 4, buf, 255);
+
+	ret =  wl_ioctl(&ifr, cmd_op, buf, 255, 1);
+
+	printf("%s: get wl reply: %s, ret = %d \n",__func__, buf, ret);
+
+	return 0;
+}
+
 
 static int set_wifi_power_mode(int power_mode)
 {
@@ -162,17 +240,39 @@ int main(int argc, char *argv[])
 
 	if(argc > 2)
 	{
-		if(!strcmp(argv[1], "pm"))
+		if(!strcmp(argv[1], "sleepmode"))
 		{
-			int power_mode = atoi(argv[2]);
+			int sleep_mode = atoi(argv[2]);
 
-			printf("set power_mod = %d\n", power_mode);
+			printf("set sleep_mode = %d\n", sleep_mode);
 
-			return set_wifi_power_mode(power_mode);
+			//disable sleep
+			if(!sleep_mode)
+			{
+				//set to active "wl PM 0"
+				set_wifi_power_mode(0);
+
+				//disable mpc "wl mpc 0"
+				set_wifi_mpc_on(0);
+
+				//disable roam "wl roam_off 1"
+				set_wifi_roam_off(1);
+
+				//disable changing mode
+				set_wifi_power_mode(4);
+			}
+			else
+			{
+				//enable changing mode
+				set_wifi_power_mode(5);
+			}
+
+			return 0;
+
 		}
-			
+
 	}
-	else if( (argc == 2) && (!strcmp(argv[1], "pm")))
+	else if( (argc == 2) && (!strcmp(argv[1], "sleepmode")))
 	{
 		int power_mode = get_wifi_power_mode();
 
@@ -214,6 +314,7 @@ int main(int argc, char *argv[])
 		if(n >= 0) break;
 	}	
 
+	close(client_fd);
 	return 0;
 }
 

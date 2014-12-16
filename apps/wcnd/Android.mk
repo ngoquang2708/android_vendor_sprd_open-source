@@ -1,7 +1,7 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-#ifeq ($(BOARD_WLAN_DEVICE), sc2331)
+#ifeq ($(BOARD_WLAN_DEVICE), sprdwl)
 LOCAL_CFLAGS += -DUSE_MARLIN
 #endif
 
@@ -18,9 +18,19 @@ LOCAL_SHARED_LIBRARIES := \
 	libiwnpi \
 	libengbt
 
+
+#ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
+LOCAL_CFLAGS += -DHAVE_SLEEPMODE_CONFIG
+#endif
+
+LOCAL_SRC_FILES += wcnd_eng_wifi_priv.c
+
+
 LOCAL_MODULE := wcnd
 
 LOCAL_MODULE_TAGS := optional
+
+LOCAL_REQUIRED_MODULES := wcnd_cli
 
 include $(BUILD_EXECUTABLE)
 
