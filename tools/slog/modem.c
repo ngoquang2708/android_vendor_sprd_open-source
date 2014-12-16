@@ -615,7 +615,8 @@ void *modem_log_handler(void *arg)
 	if(max == 0) {
 		err_log("modem all disabled!");
 #ifdef LOW_POWER_MODE
-		free(ring_buffer_start);
+		if(slog_enable == SLOG_LOW_POWER)
+			free(ring_buffer_start);
 #endif
 		return NULL;
 	}
