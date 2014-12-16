@@ -396,7 +396,7 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 	if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12
 		|| format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED
 	/* HAL_PIXEL_FORMAT_YCbCr_420_SP, HAL_PIXEL_FORMAT_YCbCr_420_P, HAL_PIXEL_FORMAT_YCbCr_422_I are not defined in Android.
- 	 * To enable Mali DDK EGLImage support for those formats, firstly, you have to add them in Android system/core/include/system/graphics.h.
+ 	 * To enable Mali DDK EGLImage support for those formfats, firstly, you have to add them in Android system/core/include/system/graphics.h.
  	 * Then, define SUPPORT_LEGACY_FORMAT in the same header file(Mali DDK will also check this definition).
 	 */
 		|| format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCbCr_420_P || format == HAL_PIXEL_FORMAT_YCbCr_422_I
@@ -406,16 +406,20 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 		{
 			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 			case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-			case HAL_PIXEL_FORMAT_YV12:
 			case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
-			case HAL_PIXEL_FORMAT_YCbCr_420_P:
-				stride = GRALLOC_ALIGN(w, 16);
-				size = h * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				stride = w;
+				// mali GPU hardware requires uv-plane 64byte-alignment
+				size = GRALLOC_ALIGN(h * stride, 64) + h * GRALLOC_ALIGN(stride/2,16);
 				break;
-
-			case HAL_PIXEL_FORMAT_YCbCr_422_I:
+			case HAL_PIXEL_FORMAT_YCbCr_420_P:
+				stride = w;
+				// mali GPU hardware requires u/v-plane 64byte-alignment
+				size = GRALLOC_ALIGN(h * stride, 64) + GRALLOC_ALIGN(h/2 * GRALLOC_ALIGN(stride/2,16), 64) + h/2 * GRALLOC_ALIGN(stride/2,16);
+				break;
+			case HAL_PIXEL_FORMAT_YV12:
 				stride = GRALLOC_ALIGN(w, 16);
-				size = h * stride * 2;
+				// mali GPU hardware requires u/v-plane 64byte-alignment
+				size = GRALLOC_ALIGN(h * stride, 64) + GRALLOC_ALIGN(h/2 * GRALLOC_ALIGN(stride/2,16), 64) + h/2 * GRALLOC_ALIGN(stride/2,16);
 				break;
 			default:
 				return -EINVAL;
