@@ -21,9 +21,11 @@
 
 #define IWNPI_SUBMODULE "iwnpi"
 #define BT_SUBMODULE "bt"
+#define WIFI_SUBMODULE "wifi"
 
 extern int iwnpi_runcommand(int client_fd, int argc, char **argv);
 extern int bt_runcommand(int client_fd, int argc, char **argv);
+extern int wifi_runcommand(int client_fd, int argc, char **argv);
 
 /**
 * pre-define static API.
@@ -70,7 +72,7 @@ static int eng_runcommand(int client_fd, int argc, char* argv[])
 		iwnpi_runcommand(client_fd, argc-1, &argv[1]);
 	}
 	else if(!strcmp(argv[0], BT_SUBMODULE))
-        {
+	{
 		if(argc < 2)
 		{
 			wcnd_send_back_cmd_result(client_fd, "Missing argument", 0);
@@ -80,7 +82,19 @@ static int eng_runcommand(int client_fd, int argc, char* argv[])
 		//TODO: call bt run command
 		WCND_LOGD("%s: CALL BT CMD = '%s'", __FUNCTION__, argv[1]);
 		bt_runcommand(client_fd, argc-1, &argv[1]);
-        }
+	}
+	else if(!strcmp(argv[0], WIFI_SUBMODULE))
+	{
+		if(argc < 2)
+		{
+			wcnd_send_back_cmd_result(client_fd, "Missing argument", 0);
+			return 0;
+		}
+
+		//TODO: call wifi run command
+		WCND_LOGD("%s: CALL WIFI CMD = '%s'", __FUNCTION__, argv[1]);
+		wifi_runcommand(client_fd, argc-1, &argv[1]);
+	}
 	else
 		wcnd_send_back_cmd_result(client_fd, "Not support cmd", 0);
 

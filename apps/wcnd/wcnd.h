@@ -1,6 +1,9 @@
 #ifndef __WCND_H__
 #define __WCND_H__
 
+
+#include "wcnd_config.h"
+
 #define WCND_DEBUG
 #define WCND_WIFI_CONFIG_FILE_PATH "/data/misc/wifi/wifimac.txt"
 #define WCND_WIFI_FACTORY_CONFIG_FILE_PATH "/productinfo/wifimac.txt"

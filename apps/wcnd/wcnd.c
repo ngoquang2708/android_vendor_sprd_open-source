@@ -16,19 +16,12 @@
 #include <utils/Log.h>
 #include <signal.h>
 
+#include <sys/capability.h>
+#include <linux/prctl.h>
+#include <private/android_filesystem_config.h>
+
 #include "wcnd.h"
 #include "wcnd_sm.h"
-
-//#define CP2_RESET_READY
-
-//Macro to control if polling cp2 assert/watdog interface
-//#define CP2_WATCHER_ENABLE
-
-//Macro to control if polling cp2 loop interface every 5 seconds
-//#define LOOP_CHECK
-
-//Macro to enable the Wifi Engineer Mode
-#define WIFI_ENGINEER_ENABLE
 
 
 bool is_zero_ether_addr(const unsigned char *mac)
@@ -1850,6 +1843,46 @@ static int config_cp2_bootup(WcndManager *pWcndManger)
 ///the related code for setting/getting of CP2  end///////////////////
 
 
+/**
+* to switch to system user and set the cap
+*/
+static int os_process_init(void)
+{
+	struct __user_cap_header_struct header;
+	struct __user_cap_data_struct cap;
+
+	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+
+	setuid(AID_SYSTEM);
+
+	header.version = _LINUX_CAPABILITY_VERSION;
+	header.pid = 0;
+	cap.effective = cap.permitted =
+		(1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW);
+	cap.inheritable = 0;
+	capset(&header, &cap);
+
+
+	//for debug
+	gid_t list[64];
+	int n, max;
+
+	max = getgroups(64, list);
+	if (max < 0) max = 0;
+
+	WCND_LOGD("uid: %d,", getuid());
+
+	WCND_LOGD("gid: %d,", getgid());
+	if (max)
+	{
+		for(n = 0; n < max; n++)
+			WCND_LOGD("group id %d: %d,", n, list[n]);
+	}
+	//for debug end
+
+	return 0;
+}
+
 
 #ifdef WIFI_ENGINEER_ENABLE
 //external cmd executer declare here.
@@ -1858,6 +1891,8 @@ extern WcnCmdExecuter wcn_eng_cmdexecuter;
 
 int main(int argc, char *argv[])
 {
+	os_process_init();
+
 	generate_wifi_mac();
 	generate_bt_mac();
 
