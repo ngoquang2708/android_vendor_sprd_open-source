@@ -35,6 +35,7 @@ typedef struct
 
 static char *WIFI_CONFIG_FILE = "/system/etc/connectivity_configure.ini";
 static char *WIFI_CALI_FILE = "/system/etc/connectivity_calibration.ini";
+static char *WIFI_CALI_FILE_WRITE_BACK ="/productinfo/connectivity_calibration.back.ini";
 
 //static char *WIFI_CONFIG_FILE = "connectivity_configure.ini";
 //static char *WIFI_CALI_FILE = "connectivity_calibration.ini";
@@ -417,14 +418,14 @@ static int add_to_file(char *buf, int len)
 {
     int fd,ret;
 
-    fd = open(WIFI_CALI_FILE,O_CREAT|O_WRONLY|O_TRUNC, 0666);
+    fd = open(WIFI_CALI_FILE_WRITE_BACK,O_CREAT|O_WRONLY|O_TRUNC, 0666);
     if(fd < 0) {
-        RFDBG("open %s fail[%d]\n",WIFI_CALI_FILE,fd);
+        RFDBG("open %s fail[%d]\n",WIFI_CALI_FILE_WRITE_BACK,fd);
         return -1;
     }
     ret = write(fd,buf,len);
     if(ret < 0) {
-        RFDBG("write %s fail[%d]\n",WIFI_CALI_FILE,ret);
+        RFDBG("write %s fail[%d]\n",WIFI_CALI_FILE_WRITE_BACK,ret);
         return -1;
     }
     return 0;
