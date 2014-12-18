@@ -140,6 +140,15 @@ static int op(bt_vendor_opcode_t opcode, void *param)
                 BT_PSKEY_CONFIG_T pskey;
                 sprd_get_pskey(&pskey);
                 hw_pskey_send(&pskey);
+                if (btsleep_fd >= 0){
+                    buffer = '2';
+                    ALOGI("%s BT_VND_OP_LPM_WAKE_SET_STATE %d", __func__, buffer);
+                    if (write(btsleep_fd, &buffer, 1) < 0)
+                    {
+                        ALOGE("%s write(%s) failed: %s (%d)", __func__,
+                                VENDOR_BTWRITE_PROC_NODE, strerror(errno),errno);
+                    }
+                }
             }
             break;
 
@@ -243,38 +252,37 @@ static int op(bt_vendor_opcode_t opcode, void *param)
             break;
 
         case BT_VND_OP_LPM_WAKE_SET_STATE:
-            ALOGI("%s BT_VND_OP_LPM_WAKE_SET_STATE %d", __func__, (uint8_t *)param);
-
-	   uint8_t *state = (uint8_t *) param;
-           uint8_t wake_assert = (*state == BT_VND_LPM_WAKE_ASSERT) ? \
+            {
+	        uint8_t *state = (uint8_t *) param;
+                uint8_t wake_assert = (*state == BT_VND_LPM_WAKE_ASSERT) ? \
                                         TRUE : FALSE;
-	    if(btsleep_fd >= 0)
-	    {
-                if(wake_assert == TRUE)
-                      buffer = '1';// wakeup
-                else
-                      buffer = '2';// can sleep
-                if((wake_assert == TRUE)&&(btsleep_gpio_state == 1)){
-                    break;
-                }
-                if((wake_assert != TRUE)&&(btsleep_gpio_state != 1))
-                    break;
-                if (write(btsleep_fd, &buffer, 1) < 0)
-                {
-                    ALOGE("bt_vendor : write(%s) failed: %s (%d)",
-                        VENDOR_BTWRITE_PROC_NODE, strerror(errno),errno);
-                }
-		else
-                {
-                     if(wake_assert == TRUE){
-                         btsleep_gpio_state = 1;
-                     }else{
-                         btsleep_gpio_state = 0;
-                     }
-                     ALOGI("bt-vendor : BT_VND_OP_LPM_WAKE_SET_STATE %d",buffer);
-                }
-	    }
-
+	        if(btsleep_fd >= 0)
+	        {
+                    if(wake_assert == TRUE)
+                          buffer = '1';// wakeup
+                    else
+                          buffer = '2';// can sleep
+                    if((wake_assert == TRUE)&&(btsleep_gpio_state == 1)){
+                        break;
+                    }
+                    if((wake_assert != TRUE)&&(btsleep_gpio_state != 1))
+                        break;
+                    if (write(btsleep_fd, &buffer, 1) < 0)
+                    {
+                        ALOGE("bt_vendor : write(%s) failed: %s (%d)",
+                            VENDOR_BTWRITE_PROC_NODE, strerror(errno),errno);
+                    }
+		    else
+                    {
+                         if(wake_assert == TRUE){
+                             btsleep_gpio_state = 1;
+                         }else{
+                             btsleep_gpio_state = 0;
+                         }
+                         ALOGI("bt-vendor : BT_VND_OP_LPM_WAKE_SET_STATE %d",buffer);
+                    }
+	        }
+            }
             break;
         case BT_VND_OP_EPILOG:
             {
