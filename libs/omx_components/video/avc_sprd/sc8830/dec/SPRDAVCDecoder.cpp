@@ -549,7 +549,9 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalGetParameter(
 
         for (index = 0; index < size; index++) {
             if (ConversionTable[index].avcLevel > mCapability.level) {
-                index--;
+		if(index > 0){
+			index--;
+		}
                 break;
             }
         }
