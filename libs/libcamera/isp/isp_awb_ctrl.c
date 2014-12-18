@@ -72,6 +72,30 @@ static uint32_t _timer_end()
 	return time;
 }
 
+static void _init_smartlight_param(struct isp_context *context, struct isp_smart_light_param *smartlight_param)
+{
+	smartlight_param->init_param.lsc_init.index[0] = context->lnc.cur_lnc.index0;
+	smartlight_param->init_param.lsc_init.index[1] = context->lnc.cur_lnc.index1;
+	smartlight_param->init_param.lsc_init.weight[1] = (context->lnc.cur_lnc.alpha / 1024) * 256;
+	smartlight_param->init_param.lsc_init.weight[0] = 256 - smartlight_param->init_param.lsc_init.weight[1];
+
+	ISP_LOGI("lnc index0 = %d, index1 = %d, weight[0] = %d, weight[1] = %d", smartlight_param->init_param.lsc_init.index[0], smartlight_param->init_param.lsc_init.index[1], smartlight_param->init_param.lsc_init.weight[0], smartlight_param->init_param.lsc_init.weight[1]);
+
+	smartlight_param->init_param.cmc_init.index[0] = context->cmc.cur_cmc.index0;
+	smartlight_param->init_param.cmc_init.index[1] = context->cmc.cur_cmc.index1;
+	smartlight_param->init_param.cmc_init.weight[1] = (context->cmc.cur_cmc.alpha / 1024) * 256;
+	smartlight_param->init_param.cmc_init.weight[0] = 256- smartlight_param->init_param.cmc_init.weight[1];
+
+	ISP_LOGI("cmc index0 = %d, index1 = %d, weight[0] = %d, weight[1] = %d", smartlight_param->init_param.cmc_init.index[0], smartlight_param->init_param.cmc_init.index[1], smartlight_param->init_param.cmc_init.weight[0], smartlight_param->init_param.cmc_init.weight[1]);
+
+	smartlight_param->init_param.init_hue_sat.r_gain = context->cce_coef[0];
+	smartlight_param->init_param.init_hue_sat.g_gain = context->cce_coef[1];
+	smartlight_param->init_param.init_hue_sat.b_gain = context->cce_coef[2];
+
+	ISP_LOGI("init_hue_sat_gain r_gain = %d, g_gain = %d, b_gain = %d", context->cce_coef[0], context->cce_coef[1], context->cce_coef[2]);
+
+}
+
 static void _set_smart_param(uint32_t handler_id, struct isp_awb_param *awb_param, struct smart_light_calc_result *smart_result)
 {
 	struct isp_awb_gain hue_sat_gain = {0x00};
@@ -211,10 +235,22 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 	init_param->target_zone = awb_param->target_zone;
 	init_param->ct_info = awb_param->ct_info;
 	init_param->weight_of_count_func = awb_param->weight_of_count_func;
-	init_param->weight_of_ct_func = awb_param->weight_of_ct_func;
-	init_param->weight_of_pos_lut = awb_param->weight_of_pos_lut;
 
-	init_param->weight_of_ct_func.weight_func.num = 0;
+	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+		uint32_t j = 0;
+		init_param->weight_of_ct_func[i] = awb_param->weight_of_ct_func[i];
+
+		if (init_param->weight_of_ct_func[i].weight_func.num > ISP_AWB_PIECEWISE_SAMPLE_NUM)
+			init_param->weight_of_ct_func[i].weight_func.num = ISP_AWB_PIECEWISE_SAMPLE_NUM;
+
+		ISP_LOGI("weight of ct func [%d]-----------", i);
+		for (j=0; j<init_param->weight_of_ct_func[i].weight_func.num; j++) {
+			ISP_LOGI("[%d] = (%d, %d)", j, init_param->weight_of_ct_func[i].weight_func.samples[j].x,
+					init_param->weight_of_ct_func[i].weight_func.samples[j].y);
+		}
+	}
+
+	init_param->weight_of_pos_lut = awb_param->weight_of_pos_lut;
 	init_param->quick_mode = awb_param->quick_mode;
 
 	init_param->scene_factor[ISP_AWB_SCENE_GREEN] = awb_param->green_factor;
@@ -248,13 +284,6 @@ static void _set_init_param(struct isp_awb_param* awb_param, struct isp_awb_init
 			init_param->weight_of_count_func.weight_func.samples[0].y,
 			init_param->weight_of_count_func.weight_func.samples[1].x,
 			init_param->weight_of_count_func.weight_func.samples[1].y);
-
-	ISP_LOGI("ct func.num = %d, 0=(%d, %d), 1=(%d, %d)",
-			init_param->weight_of_ct_func.weight_func.num,
-			init_param->weight_of_ct_func.weight_func.samples[0].x,
-			init_param->weight_of_ct_func.weight_func.samples[0].y,
-			init_param->weight_of_ct_func.weight_func.samples[1].x,
-			init_param->weight_of_ct_func.weight_func.samples[1].y);
 
 	ISP_LOGI("pos lut = 0x%x, w=%d, h=%d",
 			(uint32_t)init_param->weight_of_pos_lut.weight, init_param->weight_of_pos_lut.w,
@@ -354,11 +383,9 @@ uint32_t isp_awb_ctrl_init(uint32_t handler_id)
 			smart_light_param->smart, awb_param->envi_id[0], awb_param->envi_id[1],
 			awb_param->envi_weight[0], awb_param->envi_weight[1]);
 
-	/*disable weight of ct function*/
-	memset(&awb_param->weight_of_ct_func, 0, sizeof(awb_param->weight_of_ct_func));
-
 	/*disable smart for alg_id 0*/
 	if (awb_param->alg_id > 0) {
+		_init_smartlight_param(isp_cxt, smart_light_param);
 		rtn = smart_light_init(handler_id, (void *)&smart_light_param->init_param, NULL);
 		if (ISP_SUCCESS == rtn)
 			smart_light_param->init = ISP_EB;

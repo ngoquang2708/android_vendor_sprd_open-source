@@ -4749,6 +4749,10 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->cmc_tab[8][7]=raw_tune_ptr->cmc.matrix[8][7];
 	isp_context_ptr->cmc_tab[8][8]=raw_tune_ptr->cmc.matrix[8][8];
 
+	isp_context_ptr->cmc.cur_cmc.index0 = ISP_ZERO;
+	isp_context_ptr->cmc.cur_cmc.index1 = ISP_ZERO;
+	isp_context_ptr->cmc.cur_cmc.alpha = ISP_ZERO;
+
 	/*yiq*/
 	isp_context_ptr->ygamma.bypass = ISP_ONE;
 
@@ -5579,7 +5583,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 	/*weight of ct function*/
 	{
-		struct isp_awb_weight_of_ct_func *dst_func = &isp_context_ptr->awb.weight_of_ct_func;
+		struct isp_awb_weight_of_ct_func *dst_func = &isp_context_ptr->awb.weight_of_ct_func[ISP_AWB_ENVI_INDOOR];
 		struct sensor_awb_weight_of_ct_func *src_func = &raw_tune_ptr->awb.weight_of_ct_func;
 
 		dst_func->weight_func.num = src_func->weight_func.num;
@@ -5589,7 +5593,8 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		}
 
 		/*do not enable weight of ct function now*/
-		dst_func->weight_func.num = 0;
+		memset(isp_context_ptr->awb.weight_of_ct_func, 0,
+				sizeof(isp_context_ptr->awb.weight_of_ct_func));
 	}
 
 	/*value range*/
@@ -9827,6 +9832,7 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 		{
 			uint16_t *cmc_tab[2] = {NULL, NULL};
 			struct isp_awb_adjust* adjust_param = (struct isp_awb_adjust*)param;
+			struct isp_cmc_param *cmc_param = &isp_context_ptr->cmc;
 			uint8_t is_update_cmc = ISP_UEB;
 
 			if (NULL != adjust_param) {
@@ -9843,6 +9849,10 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 								(uint16_t*)isp_context_ptr->cmc_awb, isp_context_ptr->cmc_percent,
 								(uint8_t*)&is_update_cmc);
 					isp_context_ptr->tune.cmc=is_update_cmc;
+					cmc_param->cur_cmc.index0 = adjust_param->index0;
+					cmc_param->cur_cmc.index1 = adjust_param->index1;
+					cmc_param->cur_cmc.alpha = adjust_param->alpha;
+
 				}
 			}
 			break;

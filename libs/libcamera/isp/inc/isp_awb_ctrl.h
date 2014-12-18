@@ -116,7 +116,7 @@ struct isp_awb_param{
 	struct isp_awb_map map_data;
 	uint32_t debug_level;
 	struct isp_awb_weight_of_count_func weight_of_count_func;
-	struct isp_awb_weight_of_ct_func weight_of_ct_func;
+	struct isp_awb_weight_of_ct_func weight_of_ct_func[ISP_AWB_ENVI_NUM];
 	struct isp_awb_weight_lut weight_of_pos_lut;
 	struct isp_awb_ct_info ct_info;
 	struct isp_awb_range value_range[ISP_AWB_ENVI_NUM];
