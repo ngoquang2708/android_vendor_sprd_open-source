@@ -256,6 +256,32 @@ struct isp_bpc_param{
 	uint32_t map_addr;
 };
 
+struct isp_nbpc_param{
+	uint8_t bypass_pvd;
+	uint8_t nbpc_mode;
+	uint8_t mask_mode;
+	uint8_t kmin;
+	uint8_t kmax;
+	uint8_t cntr_theshold;
+	uint8_t hwfifo_clr_en;
+	uint8_t ktimes;
+	uint8_t map_fifo_clr;
+	uint8_t delt34;
+	uint8_t flat_factor;
+	uint8_t safe_factor;
+	uint8_t spike_coeff;
+	uint8_t dead_coeff;
+	uint8_t map_done_sel;
+	uint8_t new_old_sel;
+	uint16_t bad_pixel_num;
+	uint16_t reserved;
+	uint16_t interrupt_b[8];
+	uint16_t slope_k[8];
+	uint16_t lut_level[8];
+	uint32_t map_addr;
+	uint32_t bypass;
+};
+
 struct isp_denoise_param_tab {
 	uint8_t diswei[19];
 	uint8_t reserved2;
@@ -618,6 +644,7 @@ struct isp_context{
 	struct isp_resolution_info input_size_trim[ISP_INPUT_SIZE_NUM_MAX];
 
 	uint32_t isp_callback_bypass;
+	struct isp_nbpc_param nbpc;
 
 };
 

@@ -153,6 +153,24 @@ struct isp_reg{
 	uint32_t BPC_MAP_ADDR;
 	uint32_t BPC_PIXEL_NUM;
 
+	/* NBPC */
+	uint32_t NBPC_STATUS;
+	uint32_t NBPC_PARAM;
+	uint32_t NBPC_CFG;
+	uint32_t NBPC_PIXEL_NUM;
+	uint32_t NBPC_FACTOR;
+	uint32_t NBPC_COEFF;
+	uint32_t NBPC_LUTWORD0;
+	uint32_t NBPC_LUTWORD1;
+	uint32_t NBPC_LUTWORD2;
+	uint32_t NBPC_LUTWORD3;
+	uint32_t NBPC_LUTWORD4;
+	uint32_t NBPC_LUTWORD5;
+	uint32_t NBPC_LUTWORD6;
+	uint32_t NBPC_LUTWORD7;
+	uint32_t NBPC_NEW_OLD_SEL;
+	uint32_t NBPC_MAP_ADDR;
+
 	/* wave denoise */
 	uint32_t WAVE_STATUS;
 	uint32_t WAVE_PARAM;
@@ -2621,6 +2639,453 @@ int32_t ispBpcPixelNum(uint32_t handler_id, uint32_t pixel_num)
 /*	reg_ptr->dwValue=reg_s_ptr->dwValue;*/
 	reg_config.reg_addr = ISP_BPC_PIXEL_NUM - ISP_BASE_ADDR;
 	reg_config.reg_value = isp_reg_ptr->BPC_PIXEL_NUM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*NBPC */
+/*	--
+*@
+*@
+*/
+int32_t ispGetNBpcStatus(uint32_t handler_id, uint32_t* status)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_status_v0002_tag* reg_s_ptr=(union _isp_nbpc_status_v0002_tag*)&isp_reg_ptr->NBPC_STATUS;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param read_param;
+
+	ISP_CHECK_FD;
+
+	reg_config.reg_addr = ISP_NBPC_STATUS_V0002 - ISP_BASE_ADDR;
+	read_param.reg_param = (uint32_t)&reg_config;
+	read_param.counts = 1;
+
+/*	reg_s_ptr->dwValue=reg_ptr->dwValue;*/
+	if(ISP_SUCCESS == _isp_read((uint32_t *)&read_param)) {
+		reg_s_ptr->dwValue = reg_config.reg_value;
+		*status = reg_s_ptr->dwValue;
+	}
+	return ISP_SUCCESS;
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpcBypass(uint32_t handler_id, uint8_t bypass)
+{
+	struct isp_reg* isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_param_v0002_tag* reg_s_ptr=(union _isp_nbpc_param_v0002_tag*)&isp_reg_ptr->NBPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.bypass = bypass;
+	reg_config.reg_addr = ISP_NBPC_PARAM_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpcPvdBypass(uint32_t handler_id, uint8_t bypass)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_param_v0002_tag* reg_s_ptr=(union _isp_nbpc_param_v0002_tag*)&isp_reg_ptr->NBPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.bypass_pvd = bypass;
+	reg_config.reg_addr = ISP_NBPC_PARAM_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcMode(uint32_t handler_id, uint8_t mode)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_param_v0002_tag* reg_s_ptr=(union _isp_nbpc_param_v0002_tag*)&isp_reg_ptr->NBPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.mode = mode;
+	reg_config.reg_addr = ISP_NBPC_PARAM_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcMaskMode(uint32_t handler_id, uint8_t mode)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_param_v0002_tag* reg_s_ptr=(union _isp_nbpc_param_v0002_tag*)&isp_reg_ptr->NBPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.mask_mode = mode;
+	reg_config.reg_addr = ISP_NBPC_PARAM_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcKThr(uint32_t handler_id, uint8_t kmix, uint8_t kmax)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_param_v0002_tag* reg_s_ptr=(union _isp_nbpc_param_v0002_tag*)&isp_reg_ptr->NBPC_PARAM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.kmin = kmix;
+	reg_s_ptr->mBits.kmax = kmax;
+	reg_config.reg_addr = ISP_NBPC_PARAM_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PARAM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcThrd(uint32_t handler_id, uint8_t cntr_thr)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr=(union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_CFG;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.cntr_theshold = cntr_thr;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_CFG;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcHWClrEn(uint32_t handler_id, uint8_t hw_fifo_en)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr=(union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_CFG;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.map_hw_fifo_clr_en = hw_fifo_en;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_CFG;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcEstimate14(uint32_t handler_id, uint8_t ktimes)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr=(union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_CFG;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.ktimes = ktimes;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_CFG;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcFifoClr(uint32_t handler_id, uint8_t fifoclr)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr=(union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_CFG;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.map_fifo_clr = fifoclr;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_CFG;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispSetNBpcDelt34(uint32_t handler_id, uint8_t delt34)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr=(union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_CFG;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.delt34 = delt34;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_CFG;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpcPixelNum(uint32_t handler_id, uint32_t pixel_num)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_cfg_v0002_tag* reg_s_ptr = (union _isp_nbpc_cfg_v0002_tag*)&isp_reg_ptr->NBPC_PIXEL_NUM;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.bad_pixel_num = pixel_num;
+	reg_config.reg_addr = ISP_NBPC_CFG_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_PIXEL_NUM;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpcFactor(uint32_t handler_id,  uint8_t flat_fct, uint8_t safe_fct)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_factor_v0002_tag* reg_s_ptr = (union _isp_nbpc_factor_v0002_tag*)&isp_reg_ptr->NBPC_FACTOR;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.safe_factor = safe_fct;
+	reg_s_ptr->mBits.flat_factor = flat_fct;
+	reg_config.reg_addr = ISP_NBPC_FACTOR_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_FACTOR;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpCoeff(uint32_t handler_id, uint8_t spike_coeff, uint8_t dead_coeff)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_coeff_v0002_tag* reg_s_ptr = (union _isp_nbpc_coeff_v0002_tag*)&isp_reg_ptr->NBPC_COEFF;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.dead_coeff = dead_coeff;
+	reg_s_ptr->mBits.spike_coeff = spike_coeff;
+	reg_config.reg_addr = ISP_NBPC_COEFF_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_COEFF;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+
+int32_t ispNBpCLutword(uint32_t handler_id, uint16_t *intercept_b, uint16_t *slope_k, uint16_t *lut_level)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_lut0_v0002_tag* reg_s_ptr0 = (union _isp_nbpc_lut0_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD0;
+	union _isp_nbpc_lut1_v0002_tag* reg_s_ptr1 = (union _isp_nbpc_lut1_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD1;
+	union _isp_nbpc_lut2_v0002_tag* reg_s_ptr2 = (union _isp_nbpc_lut2_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD2;
+	union _isp_nbpc_lut3_v0002_tag* reg_s_ptr3 = (union _isp_nbpc_lut3_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD3;
+	union _isp_nbpc_lut4_v0002_tag* reg_s_ptr4 = (union _isp_nbpc_lut4_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD4;
+	union _isp_nbpc_lut5_v0002_tag* reg_s_ptr5 = (union _isp_nbpc_lut5_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD5;
+	union _isp_nbpc_lut6_v0002_tag* reg_s_ptr6 = (union _isp_nbpc_lut6_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD6;
+	union _isp_nbpc_lut7_v0002_tag* reg_s_ptr7 = (union _isp_nbpc_lut7_v0002_tag*)&isp_reg_ptr->NBPC_LUTWORD7;
+	struct isp_reg_param write_param;
+	struct isp_reg_bits reg_config[8];
+	ISP_CHECK_FD;
+
+	reg_s_ptr0->mBits.intercept_b0 = intercept_b[0];
+	reg_s_ptr0->mBits.slope_k0 = slope_k[0];
+	reg_s_ptr0->mBits.lut_level0 = lut_level[0];
+	reg_s_ptr1->mBits.intercept_b1 = intercept_b[1];
+	reg_s_ptr1->mBits.slope_k1 = slope_k[1];
+	reg_s_ptr1->mBits.lut_level1 = lut_level[1];
+	reg_s_ptr2->mBits.intercept_b2 = intercept_b[2];
+	reg_s_ptr2->mBits.slope_k2 = slope_k[2];
+	reg_s_ptr2->mBits.lut_level2 = lut_level[2];
+	reg_s_ptr3->mBits.intercept_b3 = intercept_b[3];
+	reg_s_ptr3->mBits.slope_k3 = slope_k[3];
+	reg_s_ptr3->mBits.lut_level3 = lut_level[3];
+	reg_s_ptr4->mBits.intercept_b4 = intercept_b[4];
+	reg_s_ptr4->mBits.slope_k4 = slope_k[4];
+	reg_s_ptr4->mBits.lut_level4 = lut_level[4];
+	reg_s_ptr5->mBits.intercept_b5 = intercept_b[5];
+	reg_s_ptr5->mBits.slope_k5 = slope_k[5];
+	reg_s_ptr5->mBits.lut_level5 = lut_level[5];
+	reg_s_ptr6->mBits.intercept_b6 =intercept_b[6];
+	reg_s_ptr6->mBits.slope_k6 = slope_k[6];
+	reg_s_ptr6->mBits.lut_level6 = lut_level[6];
+	reg_s_ptr7->mBits.intercept_b7 = intercept_b[7];
+	reg_s_ptr7->mBits.slope_k7 = slope_k[7];
+	reg_s_ptr7->mBits.lut_level7 = lut_level[7];
+	reg_config[0].reg_addr = ISP_NBPC_LUT0_V0002 - ISP_BASE_ADDR;
+	reg_config[0].reg_value = isp_reg_ptr->NBPC_LUTWORD0;
+	reg_config[1].reg_addr = ISP_NBPC_LUT1_V0002 - ISP_BASE_ADDR;
+	reg_config[1].reg_value = isp_reg_ptr->NBPC_LUTWORD1;
+	reg_config[2].reg_addr = ISP_NBPC_LUT2_V0002 - ISP_BASE_ADDR;
+	reg_config[2].reg_value = isp_reg_ptr->NBPC_LUTWORD2;
+	reg_config[3].reg_addr = ISP_NBPC_LUT3_V0002 - ISP_BASE_ADDR;
+	reg_config[3].reg_value = isp_reg_ptr->NBPC_LUTWORD3;
+	reg_config[4].reg_addr = ISP_NBPC_LUT4_V0002 - ISP_BASE_ADDR;
+	reg_config[4].reg_value = isp_reg_ptr->NBPC_LUTWORD4;
+	reg_config[5].reg_addr = ISP_NBPC_LUT5_V0002 - ISP_BASE_ADDR;
+	reg_config[5].reg_value = isp_reg_ptr->NBPC_LUTWORD5;
+	reg_config[6].reg_addr = ISP_NBPC_LUT6_V0002 - ISP_BASE_ADDR;
+	reg_config[6].reg_value = isp_reg_ptr->NBPC_LUTWORD6;
+	reg_config[7].reg_addr = ISP_NBPC_LUT7_V0002 - ISP_BASE_ADDR;
+	reg_config[7].reg_value = isp_reg_ptr->NBPC_LUTWORD7;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 8;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBPCMapDownSel(uint32_t handler_id, uint8_t mapsel)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_bpc_new_old_sel_tag* reg_s_ptr = (union _isp_bpc_new_old_sel_tag*)&isp_reg_ptr->NBPC_NEW_OLD_SEL;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.map_down_sel = mapsel;
+	reg_config.reg_addr = ISP_NBPC_SEL_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_NEW_OLD_SEL;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBPCSel(uint32_t handler_id, uint8_t select)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_bpc_new_old_sel_tag* reg_s_ptr = (union _isp_bpc_new_old_sel_tag*)&isp_reg_ptr->NBPC_NEW_OLD_SEL;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.new_old_sel = select;
+	reg_config.reg_addr = ISP_NBPC_SEL_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_NEW_OLD_SEL;
+	write_param.reg_param = (uint32_t)&reg_config;
+	write_param.counts = 1;
+
+	return _isp_write((uint32_t *)&write_param);
+}
+
+/*	--
+*@
+*@
+*/
+int32_t ispNBpcMapAddr(uint32_t handler_id, uint32_t map_addr)
+{
+	struct isp_reg*isp_reg_ptr = _isp_GetRegPtr(handler_id);
+	union _isp_nbpc_map_addr_tag* reg_s_ptr=(union _isp_nbpc_map_addr_tag*)&isp_reg_ptr->NBPC_MAP_ADDR;
+	struct isp_reg_bits reg_config;
+	struct isp_reg_param write_param;
+
+	ISP_CHECK_FD;
+
+	reg_s_ptr->mBits.map_addr=map_addr;
+	reg_config.reg_addr = ISP_NBPC_MAP_ADDR_V0002 - ISP_BASE_ADDR;
+	reg_config.reg_value = isp_reg_ptr->NBPC_MAP_ADDR;
 	write_param.reg_param = (uint32_t)&reg_config;
 	write_param.counts = 1;
 

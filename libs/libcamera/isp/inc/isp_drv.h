@@ -144,6 +144,26 @@ int32_t ispSetBpcThrd(uint32_t handler_id, uint16_t flat_thr, uint16_t std_thr, 
 int32_t ispBpcMapAddr(uint32_t handler_id, uint32_t map_addr);
 int32_t ispBpcPixelNum(uint32_t handler_id, uint32_t pixel_num);
 
+//NBPC
+int32_t ispGetNBpcStatus(uint32_t handler_id, uint32_t* status);
+int32_t ispNBpcBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispNBpcPvdBypass(uint32_t handler_id, uint8_t bypass);
+int32_t ispSetNBpcMode(uint32_t handler_id, uint8_t mode);
+int32_t ispSetNBpcMaskMode(uint32_t handler_id, uint8_t mode);
+int32_t ispSetNBpcKThr(uint32_t handler_id, uint8_t kmix, uint8_t kmax);
+int32_t ispSetNBpcThrd(uint32_t handler_id, uint8_t cntr_thr);
+int32_t ispSetNBpcHWClrEn(uint32_t handler_id, uint8_t hw_fifo_en);
+int32_t ispSetNBpcEstimate14(uint32_t handler_id, uint8_t ktimes);
+int32_t ispSetNBpcFifoClr(uint32_t handler_id, uint8_t fifoclr);
+int32_t ispSetNBpcDelt34(uint32_t handler_id, uint8_t delt34);
+int32_t ispNBpcPixelNum(uint32_t handler_id, uint32_t pixel_num);
+int32_t ispNBpcFactor(uint32_t handler_id,  uint8_t flat_fct, uint8_t safe_fct);
+int32_t ispNBpCoeff(uint32_t handler_id, uint8_t spike_coeff, uint8_t dead_coeff);
+int32_t ispNBpCLutword(uint32_t handler_id, uint16_t *interrept_b, uint16_t *slope_k, uint16_t *lut_level);
+int32_t ispNBPCMapDownSel(uint32_t handler_id, uint8_t mapsel);
+int32_t ispNBPCSel(uint32_t handler_id, uint8_t select);
+int32_t ispNBpcMapAddr(uint32_t handler_id, uint32_t map_addr);
+
 //Wave denoise
 int32_t ispGetWDenoiseStatus(uint32_t handler_id, uint32_t* status);
 int32_t ispWDenoiseBypass(uint32_t handler_id, uint8_t bypass);
