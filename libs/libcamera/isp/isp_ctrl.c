@@ -2894,6 +2894,76 @@ static int32_t _ispCfgBPC(uint32_t handler_id, struct isp_bpc_param* param_ptr)
 	return rtn;
 }
 
+/* _ispCfgNBPC --
+*@
+*@
+*@ return:
+*/
+
+static int32_t _ispCfgNBPC(uint32_t handler_id, struct isp_nbpc_param* param_ptr)
+{
+	int32_t rtn=ISP_SUCCESS;
+
+	rtn = ispNBpcBypass(handler_id, param_ptr->bypass);
+	ISP_RETURN_IF_FAIL(rtn, ("ispBpcBypass error"));
+
+	if (param_ptr->bypass != 0) {
+		rtn = ispNBPCSel(handler_id, 0);
+		ISP_RETURN_IF_FAIL(rtn, ("ispNBPCSel error"));
+		return rtn;
+	}
+
+	rtn = ispNBpcPvdBypass(handler_id, param_ptr->bypass_pvd);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpcPvdBypass error"));
+
+	rtn = ispSetNBpcMode(handler_id, param_ptr->nbpc_mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcMode error"));
+
+	rtn = ispSetNBpcMaskMode(handler_id, param_ptr->mask_mode);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcMaskMode error"));
+
+	rtn = ispSetNBpcKThr(handler_id, param_ptr->kmin, param_ptr->kmax);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcKThr error"));
+
+	rtn = ispSetNBpcThrd(handler_id, param_ptr->cntr_theshold);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcThrd error"));
+
+	rtn = ispSetNBpcHWClrEn(handler_id, param_ptr->hwfifo_clr_en);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcHWClrEn error"));
+
+	rtn = ispSetNBpcEstimate14(handler_id, param_ptr->ktimes);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcEstimate14 error"));
+
+	rtn = ispSetNBpcFifoClr(handler_id, param_ptr->map_fifo_clr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcFifoClr error"));
+
+	rtn = ispSetNBpcDelt34(handler_id, param_ptr->delt34);
+	ISP_RETURN_IF_FAIL(rtn, ("ispSetNBpcDelt34 error"));
+
+	rtn = ispNBpcPixelNum(handler_id, param_ptr->bad_pixel_num);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpcPixelNum error"));
+
+	rtn = ispNBpcFactor(handler_id, param_ptr->flat_factor, param_ptr->safe_factor);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpcFactor error"));
+
+	rtn = ispNBpCoeff(handler_id, param_ptr->spike_coeff, param_ptr->dead_coeff);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpCoeff error"));
+
+	rtn = ispNBpCLutword(handler_id, param_ptr->interrupt_b, param_ptr->slope_k, param_ptr->lut_level);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpCLutword error"));
+
+	rtn = ispNBPCMapDownSel(handler_id, param_ptr->map_done_sel);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBPCMapDownSel error"));
+
+	rtn = ispNBPCSel(handler_id, param_ptr->new_old_sel);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBPCSel error"));
+
+	rtn = ispNBpcMapAddr(handler_id, param_ptr->map_addr);
+	ISP_RETURN_IF_FAIL(rtn, ("ispNBpcMapAddr error"));
+
+	return rtn;
+}
+
 /* _ispCfgDenoise --
 *@
 *@
@@ -5030,6 +5100,7 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.bypass=raw_tune_ptr->ae_bypass;
 	isp_context_ptr->ae.back_bypass=raw_tune_ptr->ae_bypass;
 	isp_context_ptr->bpc.bypass=raw_tune_ptr->bpc_bypass;
+	isp_context_ptr->nbpc.bypass=raw_tune_ptr->nbpc_bypass;
 	isp_context_ptr->denoise.bypass=raw_tune_ptr->denoise_bypass;
 	isp_context_ptr->grgb.bypass=raw_tune_ptr->grgb_bypass;
 	isp_context_ptr->cmc.bypass=raw_tune_ptr->cmc_bypass;
@@ -5565,6 +5636,52 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->bpc.flat_thr=raw_tune_ptr->bpc.flat_thr;
 	isp_context_ptr->bpc.std_thr=raw_tune_ptr->bpc.std_thr;
 	isp_context_ptr->bpc.texture_thr=raw_tune_ptr->bpc.texture_thr;
+
+	/*nbpc*/
+	//low
+	isp_context_ptr->nbpc.kmax = raw_tune_ptr->nbpc.kmax;
+	isp_context_ptr->nbpc.kmin = raw_tune_ptr->nbpc.kmin;
+	isp_context_ptr->nbpc.mask_mode = raw_tune_ptr->nbpc.mask_mode;
+	isp_context_ptr->nbpc.nbpc_mode = raw_tune_ptr->nbpc.nbpc_mode;
+	isp_context_ptr->nbpc.bypass_pvd = raw_tune_ptr->nbpc.bypass_pvd;
+	isp_context_ptr->nbpc.bad_pixel_num = raw_tune_ptr->nbpc.bad_pixel_num;
+	isp_context_ptr->nbpc.delt34 = raw_tune_ptr->nbpc.delt34;
+	isp_context_ptr->nbpc.map_fifo_clr = raw_tune_ptr->nbpc.map_fifo_clr;
+	isp_context_ptr->nbpc.ktimes = raw_tune_ptr->nbpc.ktimes;
+	isp_context_ptr->nbpc.hwfifo_clr_en = raw_tune_ptr->nbpc.hwfifo_clr_en;
+	isp_context_ptr->nbpc.cntr_theshold = raw_tune_ptr->nbpc.cntr_theshold;
+	isp_context_ptr->nbpc.safe_factor = raw_tune_ptr->nbpc.safe_factor;
+	isp_context_ptr->nbpc.flat_factor = raw_tune_ptr->nbpc.flat_factor;
+	isp_context_ptr->nbpc.dead_coeff = raw_tune_ptr->nbpc.dead_coeff;
+	isp_context_ptr->nbpc.spike_coeff = raw_tune_ptr->nbpc.spike_coeff;
+
+	isp_context_ptr->nbpc.lut_level[0] = raw_tune_ptr->nbpc.lut_level[0];
+	isp_context_ptr->nbpc.lut_level[1] = raw_tune_ptr->nbpc.lut_level[1];
+	isp_context_ptr->nbpc.lut_level[2] = raw_tune_ptr->nbpc.lut_level[2];
+	isp_context_ptr->nbpc.lut_level[3] = raw_tune_ptr->nbpc.lut_level[3];
+	isp_context_ptr->nbpc.lut_level[4] = raw_tune_ptr->nbpc.lut_level[4];
+	isp_context_ptr->nbpc.lut_level[5] = raw_tune_ptr->nbpc.lut_level[5];
+	isp_context_ptr->nbpc.lut_level[6] = raw_tune_ptr->nbpc.lut_level[6];
+	isp_context_ptr->nbpc.lut_level[7] = raw_tune_ptr->nbpc.lut_level[7];
+	isp_context_ptr->nbpc.slope_k[0] = raw_tune_ptr->nbpc.slope_k[0];
+	isp_context_ptr->nbpc.slope_k[1] = raw_tune_ptr->nbpc.slope_k[1];
+	isp_context_ptr->nbpc.slope_k[2] = raw_tune_ptr->nbpc.slope_k[2];
+	isp_context_ptr->nbpc.slope_k[3] = raw_tune_ptr->nbpc.slope_k[3];
+	isp_context_ptr->nbpc.slope_k[4] = raw_tune_ptr->nbpc.slope_k[4];
+	isp_context_ptr->nbpc.slope_k[5] = raw_tune_ptr->nbpc.slope_k[5];
+	isp_context_ptr->nbpc.slope_k[6] = raw_tune_ptr->nbpc.slope_k[6];
+	isp_context_ptr->nbpc.slope_k[7] = raw_tune_ptr->nbpc.slope_k[7];
+	isp_context_ptr->nbpc.interrupt_b[0] = raw_tune_ptr->nbpc.interrupt_b[0];
+	isp_context_ptr->nbpc.interrupt_b[1] = raw_tune_ptr->nbpc.interrupt_b[1];
+	isp_context_ptr->nbpc.interrupt_b[2] = raw_tune_ptr->nbpc.interrupt_b[2];
+	isp_context_ptr->nbpc.interrupt_b[3] = raw_tune_ptr->nbpc.interrupt_b[3];
+	isp_context_ptr->nbpc.interrupt_b[4] = raw_tune_ptr->nbpc.interrupt_b[4];
+	isp_context_ptr->nbpc.interrupt_b[5] = raw_tune_ptr->nbpc.interrupt_b[5];
+	isp_context_ptr->nbpc.interrupt_b[6] = raw_tune_ptr->nbpc.interrupt_b[6];
+	isp_context_ptr->nbpc.interrupt_b[7] = raw_tune_ptr->nbpc.interrupt_b[7];
+	isp_context_ptr->nbpc.map_done_sel = raw_tune_ptr->nbpc.map_done_sel;
+	isp_context_ptr->nbpc.new_old_sel = raw_tune_ptr->nbpc.new_old_sel;
+	isp_context_ptr->nbpc.map_addr = raw_tune_ptr->nbpc.map_addr;
 
 	/*denoise*/
 	isp_context_ptr->denoise.write_back=raw_tune_ptr->denoise.write_back;
@@ -6400,6 +6517,7 @@ static int32_t _ispCfg(uint32_t handler_id)
 	rtn=_ispCfgAwbm(handler_id, &isp_context_ptr->awbm);
 	rtn=_ispCfgAwbc(handler_id, &isp_context_ptr->awbc);
 	rtn=_ispCfgBPC(handler_id, &isp_context_ptr->bpc);
+	rtn=_ispCfgNBPC(handler_id, &isp_context_ptr->nbpc);
 	rtn=_ispCfgDenoise(handler_id, &isp_context_ptr->denoise);
 	rtn=_ispCfgGrGb(handler_id, &isp_context_ptr->grgb);
 	rtn=_ispCfgCfa(handler_id, &isp_context_ptr->cfa);

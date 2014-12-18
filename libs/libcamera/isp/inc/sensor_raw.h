@@ -383,6 +383,32 @@ struct sensor_bpc_param{
 	uint16_t reserved;
 };
 
+struct sensor_nbpc_param{
+	uint8_t bypass_pvd;
+	uint8_t nbpc_mode;
+	uint8_t mask_mode;
+	uint8_t kmin;
+	uint8_t kmax;
+	uint8_t cntr_theshold;
+	uint8_t hwfifo_clr_en;
+	uint8_t ktimes;
+	uint8_t map_fifo_clr;
+	uint8_t delt34;
+	uint8_t flat_factor;
+	uint8_t safe_factor;
+	uint8_t spike_coeff;
+	uint8_t dead_coeff;
+	uint8_t map_done_sel;
+	uint8_t new_old_sel;
+	uint16_t bad_pixel_num;
+	uint16_t reserved1;
+	uint16_t interrupt_b[8];
+	uint16_t slope_k[8];
+	uint16_t lut_level[8];
+	uint32_t map_addr;
+	uint32_t reserved2;
+};
+
 struct sensor_denoise_tab {
 	uint8_t diswei[19];
 	uint8_t reserved1;
@@ -684,7 +710,7 @@ struct sensor_raw_tune_info{
 	uint32_t glb_gain_bypass;
 	uint32_t chn_gain_bypass;
 	uint32_t pre_wave_bypass;
-	uint32_t reserve8;
+	uint32_t nbpc_bypass;
 	uint32_t reserve7;
 	uint32_t reserve6;
 	uint32_t reserve5;
@@ -726,7 +752,8 @@ struct sensor_raw_tune_info{
 	struct sensor_caf_info caf;
 	struct sensor_af_multi_win_param af_multi_win;
 	struct sensor_pre_wave_denoise_param pre_wave_denoise;
-	uint32_t reserved[255];
+	struct sensor_nbpc_param nbpc;
+	uint32_t reserved[236];
 };
 
 struct sensor_raw_fix_info{

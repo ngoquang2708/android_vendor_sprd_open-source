@@ -1771,6 +1771,22 @@ union _isp_nbpc_lut7_v0002_tag {
     volatile unsigned int dwValue ;
 };
 
+union _isp_bpc_new_old_sel_tag {
+    struct _isp_bpc_new_old_sel_map {
+        volatile unsigned int new_old_sel     :1;
+	 volatile unsigned int map_down_sel  :1;
+	 volatile unsigned int reserved           :30;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
+union _isp_nbpc_map_addr_tag {
+    struct _isp_nbpc_map_addr_map {
+        volatile unsigned int map_addr      :32;
+    }mBits ;
+    volatile unsigned int dwValue ;
+};
+
 // PRE wavelet
 union _isp_pre_wave_status_v0002_tag {
     struct _isp_pre_wave_status_v0002_map {
