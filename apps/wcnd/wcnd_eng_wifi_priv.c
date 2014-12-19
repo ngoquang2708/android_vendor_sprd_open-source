@@ -221,71 +221,95 @@ static int connect_netd(void)
 	return client_fd;
 }
 
-static int wait_for_netd(int sock, int stop_after_cmd) {
-    char buffer[256];
+static int wait_for_netd(int sock, int stop_after_cmd, char *resp_buffer, int buffer_size)
+{
+	char temp_buffer[256];
+	char *buffer;
+	int size = sizeof(temp_buffer);
 
-    if (!stop_after_cmd)
-        WCND_LOGD("[Connected to Netd]\n");
+	if(!resp_buffer)
+	{
+		buffer = temp_buffer;
+	}
+	else
+	{
+		buffer = resp_buffer;
+		size = buffer_size;
+	}
 
-    while(1) {
-        fd_set read_fds;
-        struct timeval to;
-        int rc = 0;
+	if (!stop_after_cmd)
+		WCND_LOGD("[Connected to Netd]\n");
 
-        to.tv_sec = 10;
-        to.tv_usec = 0;
+	while(1)
+	{
+		fd_set read_fds;
+		struct timeval to;
+		int rc = 0;
 
-        FD_ZERO(&read_fds);
-        FD_SET(sock, &read_fds);
+		to.tv_sec = 10;
+		to.tv_usec = 0;
 
-        if ((rc = select(sock +1, &read_fds, NULL, NULL, &to)) < 0) {
-            int res = errno;
-            WCND_LOGD("Error in select (%s)\n", strerror(errno));
-            return res;
-        } else if (!rc) {
-            //continue;
-            WCND_LOGD("[TIMEOUT]\n");
-            return ETIMEDOUT;
-        } else if (FD_ISSET(sock, &read_fds)) {
-            memset(buffer, 0, sizeof(buffer));
-            if ((rc = read(sock, buffer, sizeof(buffer)-1)) <= 0) {
-                int res = errno;
-                if (rc == 0)
-                    WCND_LOGD("Lost connection to Netd - did it crash?\n");
-                else
-                    WCND_LOGD("Error reading data (%s)\n", strerror(errno));
+		FD_ZERO(&read_fds);
+		FD_SET(sock, &read_fds);
 
-                if (rc == 0)
-                    return ECONNRESET;
-                return res;
-            }
+		if ((rc = select(sock +1, &read_fds, NULL, NULL, &to)) < 0)
+		{
+			int res = errno;
+			WCND_LOGD("Error in select (%s)\n", strerror(errno));
+			return res;
+		}
+		else if (!rc)
+		{
+			//continue;
+			WCND_LOGD("[TIMEOUT]\n");
+			return ETIMEDOUT;
+		}
+		else if (FD_ISSET(sock, &read_fds))
+		{
+			memset(buffer, 0, size);
+			if ((rc = read(sock, buffer, size-1)) <= 0)
+			{
+				int res = errno;
+				if (rc == 0)
+					WCND_LOGD("Lost connection to Netd - did it crash?\n");
+				else
+					WCND_LOGD("Error reading data (%s)\n", strerror(errno));
 
-            int offset = 0;
-            int i = 0;
+				if (rc == 0) return ECONNRESET;
 
-            for (i = 0; i < rc; i++) {
-                if (buffer[i] == '\0') {
-                    int code;
-                    char tmp[4];
+				return res;
+			}
 
-                    strncpy(tmp, buffer + offset, 3);
-                    tmp[3] = '\0';
-                    code = atoi(tmp);
+			int offset = 0;
+			int i = 0;
 
-                    WCND_LOGD("%s\n", buffer + offset);
-                    if (stop_after_cmd) {
-                        if (code >= 200 && code < 600)
-                            return 0;
-                    }
-                    offset = i + 1;
-                }
-            }
-        }
-    }
-    return 0;
+			for (i = 0; i < rc; i++)
+			{
+				if (buffer[i] == '\0')
+				{
+					int code;
+					char tmp[4];
+
+					strncpy(tmp, buffer + offset, 3);
+					tmp[3] = '\0';
+					code = atoi(tmp);
+
+					WCND_LOGD("%s\n", buffer + offset);
+					if (stop_after_cmd)
+					{
+						if (code >= 200 && code < 600)
+						return 0;
+					}
+					offset = i + 1;
+				}
+			}
+		}
+	}
+	return 0;
 }
 
-static int send_cmd_for_netd(char *cmd)
+
+static int send_cmd_for_netd(char *cmd, int wait_resp, char *resp_buffer, int buffer_size)
 {
 	if (!cmd) return -1;
 
@@ -294,11 +318,11 @@ static int send_cmd_for_netd(char *cmd)
 	int client_fd = connect_netd();
 
 	if(client_fd < 0) return -1;
-	
 
 	TEMP_FAILURE_RETRY(write(client_fd, cmd, strlen(cmd)+1));
 
-	wait_for_netd(client_fd, 1);
+	if(wait_resp)
+		wait_for_netd(client_fd, 1, resp_buffer, buffer_size);
 
 	if(client_fd > 0) close(client_fd);
 
@@ -308,7 +332,8 @@ static int send_cmd_for_netd(char *cmd)
 
 /**
 * "softap setchan default" //to disable fixed channel
-* "softap setchan fix 6" //to set the softap channel fixed on 6 
+* "softap setchan fix 6" //to set the softap channel fixed on 6
+* "softap setchan mode" //return the current setchan mode , "fixed" or "auto"
 */
 
 static int handle_softap_cmd(int client_fd, int argc, char **argv)
@@ -342,7 +367,7 @@ static int handle_softap_cmd(int client_fd, int argc, char **argv)
 			//remove the last ' '
 			cmd[strlen(cmd)-1] = '\0';
 
-			send_cmd_for_netd(cmd);
+			send_cmd_for_netd(cmd, 1, NULL, 0);
 
 			wcnd_send_back_cmd_result(client_fd, NULL, 1);
 
@@ -356,7 +381,7 @@ static int handle_softap_cmd(int client_fd, int argc, char **argv)
 				return -1;
 			}
 
-			//set chan default
+			//set chan fix in channel
 			int i = 0, offset = 0;
 
 			snprintf(cmd+offset, 254-offset, "0 softap ");
@@ -369,9 +394,26 @@ static int handle_softap_cmd(int client_fd, int argc, char **argv)
 			//remove the last ' '
 			cmd[strlen(cmd)-1] = '\0';
 
-			send_cmd_for_netd(cmd);
+			send_cmd_for_netd(cmd, 1, NULL, 0);
 
 			wcnd_send_back_cmd_result(client_fd, NULL, 1);
+		}
+		else if(!strcmp(argv[1], "mode"))
+		{
+			//get set chan mode
+			char resp[256];
+			char *ptr_chanmode = NULL;
+
+			snprintf(cmd, 254, "0 softap setchan mode");
+
+			send_cmd_for_netd(cmd, 1, resp, 256);
+
+			ptr_chanmode = strstr(resp, "CHANMODE");
+
+			if(!ptr_chanmode)
+				wcnd_send_back_cmd_result(client_fd, "CHANMODE=auto", 1);
+			else
+				wcnd_send_back_cmd_result(client_fd, ptr_chanmode, 1);
 		}
 		else
 			wcnd_send_back_cmd_result(client_fd, "Unknown cmd", 0);
@@ -397,7 +439,7 @@ int wifi_runcommand(int client_fd, int argc, char **argv)
 
 	if(!strcmp(argv[0], "softap"))
 	{
-		return handle_softap_cmd(client_fd, argc-1, &argv[1]);	
+		return handle_softap_cmd(client_fd, argc-1, &argv[1]);
 	}
 
 #ifdef HAVE_SLEEPMODE_CONFIG
@@ -448,7 +490,6 @@ int wifi_runcommand(int client_fd, int argc, char **argv)
 	else
 		wcnd_send_back_cmd_result(client_fd, "Unknown cmd", 0);
 
-	
 	return 0;
 }
 
