@@ -43,8 +43,6 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       eng_diag.c \
 		       vlog.c \
 		       vdiag.c \
-		       bt_eut.c \
-		       wifi_eut_shark.c \
 		       eng_productdata.c \
 		       adc_calibration.c\
 		       crc16.c \
@@ -76,7 +74,9 @@ endif
 endif
 
 ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
-LOCAL_SRC_FILES     += wifi_eut.c
+LOCAL_CFLAGS += -DENGMODE_EUT_BCM
+LOCAL_SRC_FILES     += wifi_eut.c \
+				bt_eut.c
 ifdef WIFI_DRIVER_FW_PATH_PARAM
 LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_PARAM=\"$(WIFI_DRIVER_FW_PATH_PARAM)\"
 endif
@@ -84,7 +84,9 @@ ifdef WIFI_DRIVER_FW_PATH_MFG
 LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_MFG=\"$(WIFI_DRIVER_FW_PATH_MFG)\"
 endif
 else
-#LOCAL_SRC_FILES     += wifi_eut_shark.c
+LOCAL_CFLAGS += -DENGMODE_EUT_SPRD
+LOCAL_SRC_FILES     += wifi_eut_shark.c \
+			bt_eut_shark.c
 endif
 
 LOCAL_MODULE := engpc
