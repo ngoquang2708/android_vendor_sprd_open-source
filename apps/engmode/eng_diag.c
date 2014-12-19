@@ -115,9 +115,11 @@ int is_audio_at_cmd_need_to_handle(char *buf,int len);
 int is_rm_cali_nv_need_to_handle(char *buf,int len);
 int eng_diag_factorymode(char *buf,int len, char *rsp);
 int eng_diag_mmicit_read(char *buf,int len, char *rsp, int rsplen);
-
+#if defined(ENGMODE_EUT_BCM)
+int get_sub_str(char *buf,char **revdata, char a, char b);
+#elif defined(ENGMODE_EUT_SPRD)
 int get_sub_str(const char *buf, char **revdata, char a, char *delim, unsigned char count, unsigned char substr_max_len);
-
+#endif
 int get_cmd_index(char *buf);
 int eng_diag_adc(char *buf, int * Irsp); //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
 void At_cmd_back_sig(void);//add by kenyliu on 2013 07 15 for set calibration enable or disable  bug 189696
@@ -189,7 +191,35 @@ static struct eng_autotestcmd_str eng_autotestcmd[] = {
 	//-- ]]
     {CMD_AUTOTEST_GPS,             eng_autotest_gps},
 };
-
+#if defined(ENGMODE_EUT_BCM)
+struct eut_cmd eut_cmds[]={
+    {EUT_REQ_INDEX,ENG_EUT_REQ},
+    {EUT_INDEX,ENG_EUT},
+    {GPSSEARCH_REQ_INDEX,ENG_GPSSEARCH_REQ},
+    {GPSSEARCH_INDEX,ENG_GPSSEARCH},
+    {WIFICH_REQ_INDEX,ENG_WIFICH_REQ},
+    {WIFICH_INDEX,ENG_WIFICH},
+    {WIFIMODE_INDEX,ENG_WIFIMODE},
+    {WIFIRATIO_REQ_INDEX,ENG_WIFIRATIO_REQ},
+    {WIFIRATIO_INDEX,ENG_WIFIRATIO},
+    {WIFITX_FACTOR_REQ_INDEX,ENG_WIFITX_FACTOR_REQ},
+    {WIFITX_FACTOR_INDEX,ENG_WIFITX_FACTOR},
+    {ENG_WIFITXGAININDEX_REQ_INDEX, ENG_WIFITXGAININDEX_REQ},
+    {ENG_WIFITXGAININDEX_INDEX, ENG_WIFITXGAININDEX},
+    {WIFITX_REQ_INDEX,ENG_WIFITX_REQ},
+    {WIFITX_INDEX,ENG_WIFITX},
+    {WIFIRX_PACKCOUNT_INDEX,ENG_WIFIRX_PACKCOUNT},
+    {WIFICLRRXPACKCOUNT_INDEX,ENG_WIFI_CLRRXPACKCOUNT},
+    {WIFIRX_REQ_INDEX,ENG_WIFIRX_REQ},
+    {WIFIRX_INDEX,ENG_WIFIRX},
+    {GPSPRNSTATE_REQ_INDEX,ENG_GPSPRNSTATE_REQ},
+    {GPSSNR_REQ_INDEX,ENG_GPSSNR_REQ},
+    {GPSPRN_INDEX,ENG_GPSPRN},
+    {ENG_WIFIRATE_REQ_INDEX, ENG_WIFIRATE_REQ},
+    {ENG_WIFIRATE_INDEX,ENG_WIFIRATE},
+    {ENG_WIFIRSSI_REQ_INDEX, ENG_WIFIRSSI_REQ},  
+};
+#elif defined(ENGMODE_EUT_SPRD)
 struct eut_cmd eut_cmds[] =
 {
     {EUT_REQ_INDEX,ENG_EUT_REQ},
@@ -320,9 +350,8 @@ struct eut_cmd eut_cmds[] =
     /* TESTMODE */
     {BT_TESTMODE_REQ_INDEX, ENG_BT_TESTMODE_REQ},
     {BT_TESTMODE_INDEX, ENG_BT_TESTMODE},
-
 };
-
+#endif
 static int eng_diag_write2pc(unsigned char* buf, unsigned int len)
 {
     int ret;
@@ -753,8 +782,275 @@ int eng_hex2ascii(char *input, char *output, int length)
     return strlen(output);
 }
 
+/********************************************************************
+*   name   eng_atdiag_euthdlr 
+*   ---------------------------
+*   description: 入口函数.
+*   ----------------------------
+*   para        IN/OUT      type            note      
+*   ----------------------------------------------------
+*   return
+*   ------------------
+*   other:
+*   注意,这里包含2套方案.
+*   ENGMODE_EUT_BCM是BRCM的方案,
+*   ENGMODE_EUT_SPRD是SPRD方案,在engmode的mk中控制编译
+********************************************************************/
+#if defined(ENGMODE_EUT_BCM)
 int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
 {
+    //brcm 
+    char args0[15] = {0};
+    char args1[15] = {0};
+    char *data[2] = {args0,args1};
+    int cmd_index = -1;
+    get_sub_str(buf,data ,'=' ,',');
+    cmd_index = get_cmd_index(buf);
+    ENG_LOG("\r\n");
+    ENG_LOG("eng_atdiag_euthdlr(), args0 =%s, args1=%s, cmd_index=%d\n",args0,args1,cmd_index);
+    switch(cmd_index){
+        case EUT_REQ_INDEX:
+            if(module_index == BT_MODULE_INDEX){
+                ALOGD("case BT_EUT_REQ_INDEX");
+                bt_eutops.bteut_req(rsp);
+            }
+            else if(module_index == WIFI_MODULE_INDEX){
+                ENG_LOG("case WIFIEUT_INDEX");
+                //wifi_eut_get(rsp);
+                if (wifi_eutops.wifieut_req != NULL)
+                    wifi_eutops.wifieut_req(rsp);
+                else
+                    ALOGE("wifi_eutops.wifieut_req not support!");
+            }
+            else {
+                ALOGD("case GPS_INDEX");
+                gps_eutops.gpseut_req(rsp);
+            }
+            break;
+        case EUT_INDEX:
+            if(module_index == BT_MODULE_INDEX){
+                ALOGD("case BTEUT_INDEX");
+                bt_eutops.bteut(atoi(data[1]),rsp);
+            }
+            else if(module_index == WIFI_MODULE_INDEX){
+                ENG_LOG("case WIFIEUT_INDEX");
+                //wifi_eut_set(atoi(data[1]), rsp);
+                if (wifi_eutops.wifieut != NULL)
+                    wifi_eutops.wifieut(atoi(data[1]), rsp);
+                else
+                    ALOGE("wifi_eutops.wifieut not support!");
+            }
+            else {
+                ALOGD("case GPS_INDEX");
+                gps_eutops.gpseut(atoi(data[1]),rsp);
+            }
+            break;
+        case WIFICH_REQ_INDEX:
+            ENG_LOG("case WIFIEUT_INDEX");
+            //wifi_channel_get(rsp);
+            if (wifi_eutops.wifi_ch_req != NULL)
+                wifi_eutops.wifi_ch_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_ch_req not support!");
+            break;
+        case WIFICH_INDEX:
+            //wifi_channel_set(atoi(data[1]),rsp);
+            if (wifi_eutops.set_wifi_ch != NULL)
+                wifi_eutops.set_wifi_ch(atoi(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_ch not support!");
+            break;
+        case WIFIMODE_INDEX:
+            //wifi_eutops.set_wifi_mode(data[1],rsp);
+            if (wifi_eutops.set_wifi_mode != NULL)
+                wifi_eutops.set_wifi_mode(data[1],rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_mode not support!");
+            break;
+        case WIFIRATIO_INDEX:
+            ALOGD("case WIFIRATIO_INDEX   %d",WIFIRATIO_INDEX);
+            //wifi_eutops.set_wifi_ratio(atof(data[1]),rsp);
+            if (wifi_eutops.set_wifi_ratio != NULL)
+                wifi_eutops.set_wifi_ratio(atof(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_ratio not support!");
+            break;
+        case WIFITX_FACTOR_INDEX:
+            //wifi_eutops.set_wifi_tx_factor(atol(data[1]),rsp);
+            if (wifi_eutops.set_wifi_tx_factor != NULL)
+                wifi_eutops.set_wifi_tx_factor(atol(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_tx_factor not support!");
+            break;
+        case WIFITX_INDEX:
+            ENG_LOG("case WIFITX_INDEX   %d",WIFITX_INDEX);
+            //wifi_tx_set(atoi(data[1]),rsp);
+            if (wifi_eutops.wifi_tx != NULL)
+                wifi_eutops.wifi_tx(atoi(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.wifi_tx not support!");
+            break;
+        case WIFIRX_INDEX:
+            //wifi_rx_set(atoi(data[1]),rsp);
+            if (wifi_eutops.wifi_rx != NULL)
+                wifi_eutops.wifi_rx(atoi(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.wifi_rx not support!");
+            break;
+        case WIFITX_REQ_INDEX:
+            //wifi_tx_get(rsp);
+            if (wifi_eutops.wifi_tx_req != NULL)
+                wifi_eutops.wifi_tx_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_tx_req not support!");
+            break;
+        case WIFIRX_REQ_INDEX:
+            //wifi_rx_get(rsp);
+            if (wifi_eutops.wifi_rx_req != NULL)
+                wifi_eutops.wifi_rx_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_rx_req not support!");
+            break;
+        case WIFITX_FACTOR_REQ_INDEX:
+            //wifi_eutops.wifi_tx_factor_req(rsp);
+            if (wifi_eutops.wifi_tx_factor_req != NULL)
+                wifi_eutops.wifi_tx_factor_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_tx_factor_req not support!");
+            break;
+        case WIFIRATIO_REQ_INDEX:
+            //wifi_eutops.wifi_ratio_req(rsp);
+            if (wifi_eutops.wifi_ratio_req != NULL)
+                wifi_eutops.wifi_ratio_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_ratio_req not support!");
+            break;
+        case WIFIRX_PACKCOUNT_INDEX:
+            //wifi_rxpktcnt_get(rsp);
+            if (wifi_eutops.wifi_rxpackcount != NULL)
+                wifi_eutops.wifi_rxpackcount(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_rxpackcount not support!");
+            break;
+        case WIFICLRRXPACKCOUNT_INDEX:
+            //wifi_eutops.wifi_clr_rxpackcount(rsp);
+            if (wifi_eutops.wifi_clr_rxpackcount != NULL)
+                wifi_eutops.wifi_clr_rxpackcount(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_clr_rxpackcount not support!");
+            break;
+        case GPSSEARCH_REQ_INDEX:
+            gps_eutops.gps_search_req(rsp);
+            break;
+        case GPSSEARCH_INDEX:
+            gps_eutops.gps_search(atoi(data[1]),rsp);
+            break;
+        case GPSPRNSTATE_REQ_INDEX:
+            gps_eutops.gps_prnstate_req(rsp);
+            break;
+        case GPSSNR_REQ_INDEX:
+            gps_eutops.gps_snr_req(rsp);
+            break;
+        case GPSPRN_INDEX:
+            gps_eutops.gps_setprn(atoi(data[1]),rsp);
+            break;
+            //-----------------------------------------------------
+        case ENG_WIFIRATE_INDEX:
+            ENG_LOG("%s(), case:ENG_WIFIRATE_INDEX\n", __FUNCTION__);
+            //wifi_rate_set(data[1], rsp);
+            if (wifi_eutops.set_wifi_rate != NULL)
+                wifi_eutops.set_wifi_rate(data[1], rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_rate not support!");
+            break;
+        case ENG_WIFIRATE_REQ_INDEX:
+            ENG_LOG("%s(), case:ENG_WIFIRATE_REQ_INDEX\n", __FUNCTION__);
+            //wifi_rate_get(rsp);
+            if (wifi_eutops.wifi_rate_req != NULL)
+                wifi_eutops.wifi_rate_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_rate_req not support!");
+            break;
+        case ENG_WIFITXGAININDEX_INDEX:
+            ENG_LOG("%s(), case:ENG_WIFITXGAININDEX_INDEX\n", __FUNCTION__);
+            //wifi_txgainindex_set(atoi(data[1]),rsp);
+            if (wifi_eutops.set_wifi_txgainindex != NULL)
+                wifi_eutops.set_wifi_txgainindex(atoi(data[1]),rsp);
+            else
+                ALOGE("wifi_eutops.set_wifi_txgainindex not support!");
+            break;
+        case ENG_WIFITXGAININDEX_REQ_INDEX:
+            ENG_LOG("%s(), case:ENG_WIFITXGAININDEX_REQ_INDEX\n", __FUNCTION__);
+            //wifi_txgainindex_get(rsp);
+            if (wifi_eutops.wifi_txgainindex_req != NULL)
+                wifi_eutops.wifi_txgainindex_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_txgainindex_req not support!");
+            break;
+        case ENG_WIFIRSSI_REQ_INDEX:
+            ENG_LOG("%s(), case:ENG_WIFIRSSI_REQ_INDEX\n", __FUNCTION__);
+            //wifi_rssi_get(rsp);
+            if (wifi_eutops.wifi_rssi_req != NULL)
+                wifi_eutops.wifi_rssi_req(rsp);
+            else
+                ALOGE("wifi_eutops.wifi_rssi_req not support!");
+            break;
+            //-----------------------------------------------------
+        default:
+            strcpy(rsp,"can not match the at command");
+            return 0;
+    }
+
+    // @alvin:
+    // Here: I think it will response to pc directly outside
+    // this function and should not send to modem again.
+    ALOGD(" eng_atdiag_rsp   %s",rsp);
+
+    return 0;
+}
+int get_sub_str(char *buf,char **revdata, char a, char b)
+{
+    int len,len1;
+    char *start;
+    char *current;
+    char *end = buf;
+    start = strchr(buf,a);
+    current = strchr(buf,b);
+    ALOGD("get_sub_str ----->>  %d",(int)current);
+    if(!current){
+        return 0;
+    }
+    while (end && *end != '\0')
+        end++;
+    if((start != NULL) & (end !=NULL)){
+        start++;
+        current++;
+        len = current-start-1;
+        len1 = end-current;
+        ALOGD("get_sub_str  len1= %d",len1);
+        memcpy(revdata[0],start,len);
+        memcpy(revdata[1],current,len1);
+    }
+    return 0;
+}
+int get_cmd_index(char *buf)
+{
+    int index = -1;
+    int i;
+    for(i=0;i<(int)NUM_ELEMS(eut_cmds);i++){
+        if(strstr(buf,eut_cmds[i].name) != NULL)
+        {
+            index = eut_cmds[i].index;
+            break;
+        }
+    }
+    return index;
+}
+
+#elif defined(ENGMODE_EUT_SPRD)
+int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
+{
+    //spreadtrum
     char args0[32+1] = {0x00};
     char args1[32+1] = {0x00};
     char args2[32+1] = {0x00};
@@ -1303,6 +1599,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
             return 0;
     }
 
+
     // @alvin:
     // Here: I think it will response to pc directly outside
     // this function and should not send to modem again.
@@ -1428,7 +1725,7 @@ int get_cmd_index(char *buf)
 
     return index;
 }
-
+#endif
 
 int eng_autotest_dummy(char *req, char *rsp)
 {
