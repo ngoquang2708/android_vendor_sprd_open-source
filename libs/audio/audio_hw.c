@@ -317,7 +317,7 @@ struct pcm_config pcm_config_btscocapture = {
 
 struct pcm_config pcm_config_fm_dl = {
     .channels = 2,
-    .rate = DEFAULT_FM_SRC_SAMPLING_RATE,
+    .rate = DEFAULT_OUT_SAMPLING_RATE,
     .period_size = LONG_PERIOD_SIZE,
     .period_count = PLAYBACK_LONG_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
@@ -625,9 +625,9 @@ static const dev_names_para_t dev_names_digitalfm[] = {
     { AUDIO_DEVICE_IN_LINE_IN, "line"},
     //{ "linein-capture"},
 };
-#define FM_VOLUME_MAX 15
+#define FM_VOLUME_MAX 16
 static const int fm_volume_tbl[FM_VOLUME_MAX] = {
-    47,45,43,41,39,37,35,33,31,29,27,25,23,21,19};
+    99,47,45,43,41,39,37,35,33,31,29,27,25,23,21,20};
 static dev_names_para_t *dev_names = NULL;
 
 /* this enum is for use-case type processed in cp side */
@@ -987,6 +987,7 @@ static int set_route_by_array(struct mixer *mixer, struct route_setting *route,
 
     return 0;
 }
+
 
 static void do_select_devices_static(struct tiny_audio_device *adev)
 {
@@ -3665,7 +3666,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         bool checkvalid = false;
         val = atoi(value);
-        if(0 <= val && val <= FM_VOLUME_MAX)
+        if(0 <= val && val < FM_VOLUME_MAX)
         {
             checkvalid = true;
         }
@@ -3683,11 +3684,11 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             }
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&adev->device_lock);
-            gain |=fm_volume_tbl[val-1];
-            gain |=fm_volume_tbl[val-1]<<16;
+            gain |=fm_volume_tbl[val];
+            gain |=fm_volume_tbl[val]<<16;
             SetAudio_gain_fmradio(adev,gain);
         }
-        ALOGE("adev_set_parameters fm volume :%d",val);
+        ALOGE("adev_set_parameters fm volume :%d fm_volume_tbl[val] %d",val,fm_volume_tbl[val]);
     }
     ret = str_parms_get_str(parms, "line_in", value, sizeof(value));
     if(ret >= 0){
