@@ -183,7 +183,7 @@ struct isp_awb_init_param {
 	struct isp_awb_map map_data;
 	struct isp_awb_range value_range[ISP_AWB_ENVI_NUM];
 	struct isp_awb_weight_of_count_func weight_of_count_func;
-	struct isp_awb_weight_of_ct_func weight_of_ct_func;
+	struct isp_awb_weight_of_ct_func weight_of_ct_func[ISP_AWB_ENVI_NUM];
 	struct isp_awb_ct_info ct_info;
 	uint32_t steady_speed;
 	uint32_t debug_level;

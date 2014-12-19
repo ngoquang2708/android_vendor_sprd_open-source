@@ -216,6 +216,8 @@ struct smart_light_init_param {
 	struct smart_light_denoise_param denoise;
 	struct smart_light_gain_result init_gain;
 	struct smart_light_hue_saturation_result init_hue_sat;
+	struct smart_light_lsc_result lsc_init;
+	struct smart_light_cmc_result cmc_init;
 	uint32_t steady_speed;
 };
 

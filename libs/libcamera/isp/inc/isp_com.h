@@ -329,6 +329,7 @@ struct isp_cmc_param
 	uint32_t bypass;
 	uint16_t matrix[9];
 	uint16_t reserved;
+	struct isp_awb_adjust cur_cmc;
 };
 
 struct isp_special_effect{
