@@ -48,7 +48,8 @@ enum preview_op_evt {
 typedef cmr_int (*preview_cb_func)(cmr_handle oem_handle, enum preview_cb_type cb_type, enum preview_func_type func_type, void *parm);
 
 struct preview_md_ops {
-	cmr_int (*channel_cfg)(cmr_handle oem_handle, cmr_handle caller_handle, cmr_u32 camera_id, struct channel_start_param *param_ptr, cmr_u32 *channel_id);
+	cmr_int (*channel_cfg)(cmr_handle oem_handle, cmr_handle caller_handle, cmr_u32 camera_id, struct channel_start_param *param_ptr,
+						cmr_u32 *channel_id, struct img_data_end *endian);
 	cmr_int (*channel_start)(cmr_handle oem_handle, cmr_u32 channel_bits, cmr_uint skip_bumber);
 	cmr_int (*channel_pause)(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32 reconfig_flag);
 	cmr_int (*channel_resume)(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32 skip_number, cmr_u32 deci_factor, cmr_u32 frm_num);
@@ -112,10 +113,13 @@ struct preview_param {
 struct preview_out_param {
 	cmr_u32                  preview_chn_bits;
 	cmr_u32                  preview_sn_mode;
+	struct img_data_end      preview_data_endian;
 	cmr_u32                  snapshot_chn_bits;
 	cmr_u32                  snapshot_sn_mode;
+	struct img_data_end      snapshot_data_endian;
 	cmr_u32                  video_chn_bits;
 	cmr_u32                  video_sn_mode;
+	struct img_data_end      video_data_endian;
 	struct snp_proc_param    post_proc_setting;
 };
 

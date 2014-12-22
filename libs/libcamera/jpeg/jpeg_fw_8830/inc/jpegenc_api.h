@@ -74,6 +74,7 @@ typedef struct jpegenc_params
 	uint32_t stream_size;
 	JPEGENC_QUALITY_E quality;
 	jpegenc_callback read_callback;
+	uint32_t y_interleaved;
 	uint32_t uv_interleaved ;/*0: 3 plane;  1: 2 plane uvuv;  2: 2 plane vuvu*/
 
 #if 0

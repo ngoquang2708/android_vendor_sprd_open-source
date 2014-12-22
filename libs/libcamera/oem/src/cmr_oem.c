@@ -143,7 +143,7 @@ static cmr_int camera_raw_proc(cmr_handle oem_handle, cmr_handle caller_handle, 
 static cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *param_ptr);
 static cmr_int camera_isp_stop_video(cmr_handle oem_handle);
 static cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_u32 camera_id,
-											  struct channel_start_param *param_ptr, cmr_u32 *channel_id);
+											  struct channel_start_param *param_ptr, cmr_u32 *channel_id, struct img_data_end *endian);
 static cmr_int camera_channel_start(cmr_handle oem_handle, cmr_u32 channel_bits, cmr_uint skip_number);
 static cmr_int camera_channel_pause(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32 reconfig_flag);
 static cmr_int camera_channel_resume(cmr_handle oem_handle, cmr_uint channel_id, cmr_u32 skip_number,
@@ -296,7 +296,6 @@ void camera_send_channel_data(cmr_handle oem_handle, cmr_handle receiver_handle,
 		ret = cmr_preview_receive_data(cxt->prev_cxt.preview_handle, cxt->camera_id, evt, data);
 	}
 	if (cxt->snp_cxt.channel_bits & chn_bit) {
-		cxt->snp_cxt.cur_frm_info.data_endian = frm_ptr->data_endian;
 		if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt)) {
 			ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_CHANNEL_DONE, data);
 #ifdef CAMERA_PATH_SHARE
@@ -3035,7 +3034,7 @@ exit:
 }
 
 cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_u32 camera_id,
-										struct channel_start_param *param_ptr, cmr_u32 *channel_id)
+										struct channel_start_param *param_ptr, cmr_u32 *channel_id, struct img_data_end *endian)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
@@ -3044,9 +3043,9 @@ cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_
 	struct sensor_mode_info        *sensor_mode_info;
 	struct sn_cfg                  sensor_cfg;
 
-	if (!oem_handle || !caller_handle || !param_ptr || !channel_id) {
-		CMR_LOGE("in parm error 0x%lx 0x%lx 0x%lx 0x%lx", (cmr_uint)oem_handle, (cmr_uint)caller_handle,
-				(cmr_uint)param_ptr, (cmr_uint)channel_id);
+	if (!oem_handle || !caller_handle || !param_ptr || !channel_id || !endian) {
+		CMR_LOGE("in parm error 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx", (cmr_uint)oem_handle, (cmr_uint)caller_handle,
+				(cmr_uint)param_ptr, (cmr_uint)channel_id, (cmr_uint)endian);
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
@@ -3091,7 +3090,7 @@ cmr_int camera_channel_cfg(cmr_handle oem_handle, cmr_handle caller_handle, cmr_
 		CMR_LOGI("prev rect %d %d %d %d", cxt->prev_cxt.rect.start_x, cxt->prev_cxt.rect.start_y,
 				  cxt->prev_cxt.rect.width, cxt->prev_cxt.rect.height);
 	}
-	ret = cmr_v4l2_cap_cfg(cxt->v4l2_cxt.v4l2_handle, &param_ptr->cap_inf_cfg, channel_id);
+	ret = cmr_v4l2_cap_cfg(cxt->v4l2_cxt.v4l2_handle, &param_ptr->cap_inf_cfg, channel_id, endian);
 	if (ret) {
 		CMR_LOGE("failed to cap cfg %ld", ret);
 		goto exit;
@@ -4002,9 +4001,11 @@ cmr_int camera_set_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	prev_cxt->channel_bits = preview_out.preview_chn_bits;
 	prev_cxt->video_sn_mode = preview_out.video_sn_mode;
 	prev_cxt->video_channel_bits = preview_out.video_chn_bits;
+	prev_cxt->data_endian = preview_out.preview_data_endian;
 	snp_cxt->snapshot_sn_mode = preview_out.snapshot_sn_mode;
 	snp_cxt->channel_bits = preview_out.snapshot_chn_bits;
 	snp_cxt->post_proc_setting = preview_out.post_proc_setting;
+	snp_cxt->data_endian = preview_out.snapshot_data_endian;
 	cmr_copy((void*)&snp_cxt->post_proc_setting, (void*)&preview_out.post_proc_setting, sizeof(snp_cxt->post_proc_setting));
 	CMR_LOGI("prev mode %d prev chn %d snp mode %d snp chn %d",
 		      prev_cxt->preview_sn_mode, prev_cxt->channel_bits, snp_cxt->snapshot_sn_mode, snp_cxt->channel_bits);
@@ -4028,6 +4029,7 @@ cmr_int camera_get_snapshot_param(cmr_handle oem_handle, struct snapshot_param *
 	out_ptr->rot_angle = 0;
 	out_ptr->hdr_handle = cxt->ipm_cxt.hdr_handle;
 	out_ptr->hdr_need_frm_num = cxt->ipm_cxt.hdr_num;
+	out_ptr->post_proc_setting.data_endian = cxt->snp_cxt.data_endian;
 	setting_param.camera_id = cxt->camera_id;
 	ret = cmr_setting_ioctl(setting_cxt->setting_handle, SETTING_GET_HDR, &setting_param);
 	if (ret) {
@@ -4553,7 +4555,7 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 	src_img.size.width = input_width;
 	src_img.size.height = input_height;
 	src_img.fmt = IMG_DATA_TYPE_YUV420;
-	cmr_v4l2_get_dcam_endian(&cxt->snp_cxt.cur_frm_info.data_endian, &src_img.data_end);
+	cmr_v4l2_get_dcam_endian(&cxt->snp_cxt.data_endian, &src_img.data_end);
 	src_img.addr_phy.addr_y = input_addr_y;
 	src_img.addr_phy.addr_u = input_addr_uv;
 	if (IMG_ANGLE_90 == cxt->snp_cxt.cfg_cap_rot || IMG_ANGLE_270 == cxt->snp_cxt.cfg_cap_rot) {
@@ -4574,8 +4576,8 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 	}
 	dst_img.addr_phy.addr_v = 0;
 	dst_img.fmt = IMG_DATA_TYPE_YUV420;
-	cmr_v4l2_get_dcam_endian(&cxt->snp_cxt.cur_frm_info.data_endian, &dst_img.data_end);
-	CMR_LOGI("data_end %d %d", cxt->snp_cxt.cur_frm_info.data_endian.y_endian, cxt->snp_cxt.cur_frm_info.data_endian.uv_endian);
+	cmr_v4l2_get_dcam_endian(&cxt->snp_cxt.data_endian, &dst_img.data_end);
+	CMR_LOGI("data_end %d %d", cxt->snp_cxt.data_endian.y_endian, cxt->snp_cxt.data_endian.uv_endian);
 	rect.start_x = 0;
 	rect.start_y = 0;
 	rect.width = input_width;
@@ -4612,10 +4614,10 @@ cmr_int camera_local_redisplay_data(cmr_handle oem_handle, cmr_uint output_addr,
 		src_img.size.width = dst_img.size.width;
 		src_img.size.height = dst_img.size.height;
 		src_img.fmt = IMG_DATA_TYPE_YUV420;
-		src_img.data_end = cxt->snp_cxt.cur_frm_info.data_endian;
+		src_img.data_end = cxt->snp_cxt.data_endian;
 		dst_img.addr_phy.addr_y = output_addr;
 		dst_img.addr_phy.addr_u = dst_img.addr_phy.addr_y + img_len;
-		dst_img.data_end = cxt->snp_cxt.cur_frm_info.data_endian;
+		dst_img.data_end = cxt->snp_cxt.data_endian;
 
 		rot_param.handle = cxt->rot_cxt.rotation_handle;
 		rot_param.angle = angle;

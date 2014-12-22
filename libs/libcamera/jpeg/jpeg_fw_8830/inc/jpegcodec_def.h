@@ -227,6 +227,7 @@ typedef struct jpeg_codec_tag
 
 	YUV_FORMAT_T	YUV_Info_0;
 	YUV_FORMAT_T	YUV_Info_1;
+	int32		y_interleaved;
 	int32		uv_interleaved;
 
 	JINF_READ_FILE_FUNC read;

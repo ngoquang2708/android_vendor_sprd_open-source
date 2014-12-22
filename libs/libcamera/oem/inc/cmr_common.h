@@ -580,6 +580,7 @@ struct snp_proc_param {
 	cmr_uint                            rot_angle;
 	struct img_size                     actual_snp_size;
 	struct img_size                     snp_size;
+	struct img_data_end                 data_endian;
 	cmr_uint                            is_need_scaling;
 	struct img_rect                     scaler_src_rect[CMR_CAPTURE_MEM_SUM];
 	struct img_frm                      chn_out_frm[CMR_CAPTURE_MEM_SUM];

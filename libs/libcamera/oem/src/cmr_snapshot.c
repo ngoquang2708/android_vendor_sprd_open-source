@@ -785,7 +785,7 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 	CMR_PRINT_TIME;
 	snp_cxt->index = index;
 	jpeg_in_ptr = &chn_param_ptr->jpeg_in[index];
-	jpeg_in_ptr->src.data_end = frm_ptr->data_endian;
+	jpeg_in_ptr->src.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
 	if (snp_cxt->ops.start_encode) {
 		cmr_s8 value[PROPERTY_VALUE_MAX];
 		property_get("debug.camera.save.snpfile", value, "0");
@@ -848,8 +848,8 @@ cmr_int snp_start_encode_thumb(cmr_handle snp_handle)
 	}
 	camera_take_snapshot_step(CMR_STEP_THUM_ENC_S);
 	jpeg_in_ptr = &chn_param_ptr->thumb_in[index];
-	jpeg_in_ptr->src.data_end = snp_cxt->cur_frame_info.data_endian;
-	jpeg_in_ptr->dst.data_end = snp_cxt->cur_frame_info.data_endian;
+	jpeg_in_ptr->src.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
+	jpeg_in_ptr->dst.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
 	if (snp_cxt->ops.start_encode) {
 		ret = snp_cxt->ops.start_encode(snp_cxt->oem_handle, snp_handle, &jpeg_in_ptr->src,
 										&jpeg_in_ptr->dst, &jpeg_in_ptr->mean);
@@ -974,8 +974,8 @@ cmr_int snp_start_rot(cmr_handle snp_handle, void *data)
 	if (snp_cxt->ops.start_rot) {
 		src = chn_param_ptr->rot[index].src_img;
 		dst = chn_param_ptr->rot[index].dst_img;
-		src.data_end = frm_ptr->data_endian;
-		dst.data_end = frm_ptr->data_endian;
+		src.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
+		dst.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
 		mean.rot = chn_param_ptr->rot[index].angle;
 		ret = snp_cxt->ops.start_rot(snp_cxt->oem_handle, snp_handle, &src, &dst, &mean);
 	} else {
@@ -1016,7 +1016,7 @@ cmr_int snp_start_scale(cmr_handle snp_handle, void *data)
 		dst = chn_param_ptr->scale[index].dst_img;
 		mean.slice_height = chn_param_ptr->scale[index].slice_height;
 		mean.is_sync = 0;
-		src.data_end = frm_ptr->data_endian;
+		src.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
 		dst.data_end = src.data_end;
 		ret = snp_cxt->ops.start_scale(snp_cxt->oem_handle, snp_handle, &src, &dst, &mean);
 	} else {
@@ -1053,7 +1053,7 @@ cmr_int snp_start_convet_thumb(cmr_handle snp_handle, void *data)
 		dst = chn_param_ptr->convert_thumb[index].dst_img;
 		mean.slice_height = chn_param_ptr->convert_thumb[index].slice_height;
 		mean.is_sync = 1;
-		src.data_end = frm_ptr->data_endian;
+		src.data_end = snp_cxt->req_param.post_proc_setting.data_endian;
 		dst.data_end = src.data_end;
 		camera_take_snapshot_step(CMR_STEP_CVT_THUMB_S);
 		if ((src.size.width != dst.size.width) || (src.size.height != dst.size.height)) {
@@ -2118,10 +2118,8 @@ cmr_int snp_set_channel_out_param(cmr_handle snp_handle)
 			} else {
 				if (CAMERA_AUTOTEST_MODE != cxt->req_param.mode) {
 					for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
-						if (ISP_DATA_YUV420_2FRAME == cxt->chn_param.isp_proc_in[i].dst_frame.fmt) {
-							cxt->chn_param.isp_proc_in[i].dst_frame.fmt = IMG_DATA_TYPE_YUV420;
-						}
 						cxt->chn_param.chn_frm[i] = cxt->chn_param.isp_proc_in[i].dst_frame;
+						cxt->chn_param.chn_frm[i].fmt = IMG_DATA_TYPE_YUV420;
 					}
 				} else {
 					cmr_copy((void*)&cxt->chn_param.chn_frm[0], (void*)chn_out_frm_ptr, CMR_CAPTURE_MEM_SUM*sizeof(cxt->chn_param.chn_frm));
@@ -2175,8 +2173,8 @@ cmr_int snp_set_scale_param(cmr_handle snp_handle)
 		chn_param_ptr->scale[i].slice_height = rect[i].height;
 		chn_param_ptr->scale[i].src_img.fmt = IMG_DATA_TYPE_YUV420;
 		chn_param_ptr->scale[i].dst_img.fmt = IMG_DATA_TYPE_YUV420;
-		chn_param_ptr->scale[i].src_img.data_end = req_param_ptr->post_proc_setting.chn_out_frm[i].data_end;
-		chn_param_ptr->scale[i].dst_img.data_end = chn_param_ptr->scale[i].src_img.data_end;
+		chn_param_ptr->scale[i].src_img.data_end = req_param_ptr->post_proc_setting.data_endian;
+		chn_param_ptr->scale[i].dst_img.data_end = req_param_ptr->post_proc_setting.data_endian;
 		chn_param_ptr->scale[i].dst_img.data_end.uv_endian = 1;
 		chn_param_ptr->scale[i].src_img.rect = rect[i];
 		chn_param_ptr->scale[i].dst_img.size = req_param_ptr->post_proc_setting.actual_snp_size;
@@ -2244,10 +2242,8 @@ cmr_int snp_set_convert_thumb_param(cmr_handle snp_handle)
 		thumb_ptr->src_img.rect.start_y = 0;
 		thumb_ptr->src_img.rect.width = thumb_ptr->src_img.size.width;
 		thumb_ptr->src_img.rect.height = thumb_ptr->src_img.size.height;
-		thumb_ptr->src_img.data_end.y_endian = 1;
-		thumb_ptr->src_img.data_end.uv_endian = 1;
-		thumb_ptr->dst_img.data_end.y_endian = 1;
-		thumb_ptr->dst_img.data_end.uv_endian = 1;
+		thumb_ptr->src_img.data_end = req_param_ptr->post_proc_setting.data_endian;
+		thumb_ptr->dst_img.data_end = req_param_ptr->post_proc_setting.data_endian;
 		thumb_ptr->src_img.fmt = IMG_DATA_TYPE_YUV420;
 		thumb_ptr->dst_img.fmt = IMG_DATA_TYPE_YUV420;
 		thumb_ptr++;
@@ -2516,8 +2512,7 @@ cmr_int snp_set_jpeg_dec_param(cmr_handle snp_handle)
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
 		dec_in_ptr->dst.size = req_param_ptr->post_proc_setting.chn_out_frm[i].size;
 		dec_in_ptr->dst.fmt = IMG_DATA_TYPE_YUV420;
-		dec_in_ptr->dst.data_end.y_endian = 1;
-		dec_in_ptr->dst.data_end.uv_endian = 2;
+		dec_in_ptr->dst.data_end = cxt->req_param.post_proc_setting.data_endian;
 		dec_in_ptr->mean.slice_mode = JPEG_YUV_SLICE_ONE_BUF;
 		dec_in_ptr->mean.slice_num = 1;
 		dec_in_ptr->mean.slice_height = dec_in_ptr->dst.size.height;
@@ -2543,6 +2538,7 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 
 	cmr_bzero(chn_param_ptr->isp_proc_in, sizeof(chn_param_ptr->isp_proc_in));
 	cmr_bzero(chn_param_ptr->isp_process, sizeof(chn_param_ptr->isp_process));
+	cxt->chn_param.is_scaling = cxt->req_param.post_proc_setting.is_need_scaling;
 	if (IMG_ANGLE_0 == req_param_ptr->post_proc_setting.rot_angle) {
 		if (!chn_param_ptr->is_scaling) {
 			for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
@@ -2564,8 +2560,8 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 	}
 
 	for (i=0 ; i<CMR_CAPTURE_MEM_SUM ; i++) {
-		chn_param_ptr->isp_proc_in[i].dst_frame.size = req_param_ptr->post_proc_setting.snp_size;
 		chn_param_ptr->isp_proc_in[i].src_frame = req_param_ptr->post_proc_setting.mem[i].cap_raw;
+		chn_param_ptr->isp_proc_in[i].dst_frame.size = chn_param_ptr->isp_proc_in[i].src_frame.size;
 		chn_param_ptr->isp_proc_in[i].src_avail_height = req_param_ptr->post_proc_setting.mem[i].cap_raw.size.height;
 #if 1
 		chn_param_ptr->isp_proc_in[i].src_slice_height = chn_param_ptr->isp_proc_in[i].src_avail_height;
@@ -2577,7 +2573,11 @@ cmr_int snp_set_isp_proc_param(cmr_handle snp_handle)
 		chn_param_ptr->isp_process[i].slice_height_in = CMR_SLICE_HEIGHT;
 #endif
 //		chn_param_ptr->isp_process[i].slice_height_out = CMR_SLICE_HEIGHT;
-		chn_param_ptr->isp_proc_in[i].dst_frame.fmt = ISP_DATA_YUV420_2FRAME;
+		if (CAMERA_ISP_TUNING_MODE == cxt->req_param.mode) {
+			chn_param_ptr->isp_proc_in[i].dst_frame.fmt = ISP_DATA_YVU420_2FRAME;
+		} else {
+			chn_param_ptr->isp_proc_in[i].dst_frame.fmt = ISP_DATA_YUV420_2FRAME;
+		}
 		chn_param_ptr->isp_proc_in[i].src_frame.fmt = ISP_DATA_CSI2_RAW10;
 	}
 

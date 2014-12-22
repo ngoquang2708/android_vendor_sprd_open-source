@@ -98,6 +98,7 @@ LOCAL void JPEGENC_init_fw_param(JPEGENC_PARAMS_T *jpegenc_params,
 	enc_fw_info_ptr->stream_buf0 = (uint8_t *)jpegenc_params->stream_phy_buf[0];
 	enc_fw_info_ptr->stream_buf1 =(uint8_t *)jpegenc_params->stream_virt_buf[0];//enc_fw_info_ptr->stream_buf0+enc_fw_info_ptr->bitstream_buf_len;
 	jpeg_fw_codec->g_stream_buf_ptr = (uint8_t *)jpegenc_params->stream_virt_buf[0];
+	enc_fw_info_ptr->y_interleaved = jpegenc_params->y_interleaved;
 	enc_fw_info_ptr->uv_interleaved = jpegenc_params->uv_interleaved;
 	enc_fw_info_ptr->enc_buf.buf_size = 0;
 	enc_fw_info_ptr->enc_buf.buf_ptr = NULL;

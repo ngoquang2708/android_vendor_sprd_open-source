@@ -178,6 +178,7 @@ PUBLIC void JpegEnc_HwTopRegCfg(void)
 	
 	//VSP_CFG1
     //jpeg_fw_codec->uv_interleaved = (jpeg_fw_codec->YUV_Info_0.v_data_ptr == NULL)?1:0;//1: uv_interleaved, two plane, 0: three plane
+	ALOGI("JpegEnc_HwTopRegCfg y %d uv %d", jpeg_fw_codec->y_interleaved, jpeg_fw_codec->uv_interleaved);
 	cmd = ((jpeg_fw_codec->uv_interleaved - 1)<<28)|(((jpeg_fw_codec->uv_interleaved == 0? 1:0) << 27)) | (jpeg_fw_codec->input_mcu_info << 24) | ((jpeg_fw_codec->mcu_num_y & 0x3ff) << 12) | (jpeg_fw_codec->mcu_num_x & 0x3ff);
 	JPG_WRITE_REG(JPG_GLB_REG_BASE+MB_CFG_OFFSET, cmd, "uv_interleaved, input mcu infor, mcu max number x and y");
 	
@@ -375,6 +376,7 @@ PUBLIC JPEG_RET_E JpegEnc_InitParam(JPEG_ENC_INPUT_PARA_T *input_para_ptr)
 	SCI_MEMSET(jpeg_fw_codec, 0, (sizeof(JPEG_CODEC_T)));
 	jpeg_fw_codec->fd = fd;
 	jpeg_fw_codec->jpg_addr = jpg_addr;
+	jpeg_fw_codec->y_interleaved = input_para_ptr->y_interleaved;
 	jpeg_fw_codec->uv_interleaved = input_para_ptr->uv_interleaved;
 	jpeg_fw_codec->RST_Count = M_RST0;
 	jpeg_fw_codec->mbio_bfr0_valid = TRUE;

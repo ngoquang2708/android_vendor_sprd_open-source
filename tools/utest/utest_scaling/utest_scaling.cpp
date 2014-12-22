@@ -36,7 +36,7 @@
 using namespace android;
 
 #define UTEST_SCALING_COUNTER 0xFFFFFFFF
-#define SAVE_SCALING_OUTPUT_DATA 0
+#define SAVE_SCALING_OUTPUT_DATA 1
 #define ERR(x...) fprintf(stderr, x)
 #define INFO(x...) fprintf(stdout, x)
 
@@ -144,6 +144,16 @@ static int utest_do_scaling(int fd,
 		ret = -1;
 	} else {
 		ret = 0;
+	}
+
+	if (0 == ret) {
+		ret = ioctl(fd, SCALE_IO_DONE, &frame_params);
+		if (ret) {
+			ERR("utes_scaling scale done error");
+			ret = -1;
+		} else {
+			ret = 0;
+		}
 	}
 
 	return ret;
@@ -454,7 +464,7 @@ int main(int argc, char **argv)
 	if (utest_scaling_src_cfg())
 		goto err;
 
-		for (i = 0; i < UTEST_SCALING_COUNTER; i++) {
+		for (i = 0; i < scaling_cxt_ptr->cnt; i++) {
 
 			fd = open("/dev/sprd_scale", O_RDONLY);
 

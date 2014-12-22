@@ -154,6 +154,7 @@ struct prev_context {
 	cmr_uint                        prev_skip_num;
 	cmr_uint                        prev_channel_id;
 	cmr_uint                        prev_channel_status;
+	struct img_data_end             prev_data_endian;
 	cmr_uint                        prev_frm_cnt;
 	struct rot_param                rot_param;
 	cmr_s64                         restart_timestamp;
@@ -181,6 +182,7 @@ struct prev_context {
 	struct channel_start_param      restart_chn_param;
 	cmr_uint                        cap_channel_id;
 	cmr_uint                        cap_channel_status;
+	struct img_data_end             cap_data_endian;
 	cmr_uint                        cap_frm_cnt;
 	cmr_uint                        cap_skip_num;
 	cmr_uint                        cap_org_fmt;
@@ -3322,6 +3324,7 @@ cmr_int prev_set_prev_param(struct prev_handle *handle, cmr_u32 camera_id, struc
 	cmr_u32                     channel_id = 0;
 	struct channel_start_param  chn_param;
 	struct video_start_param    video_param;
+	struct img_data_end         endian;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -3435,7 +3438,7 @@ cmr_int prev_set_prev_param(struct prev_handle *handle, cmr_u32 camera_id, struc
 		goto exit;
 	}
 	/*config channel*/
-	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id);
+	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id, &endian);
 	if (ret) {
 		CMR_LOGE("channel config failed");
 		ret = CMR_CAMERA_FAIL;
@@ -3444,6 +3447,7 @@ cmr_int prev_set_prev_param(struct prev_handle *handle, cmr_u32 camera_id, struc
 	prev_cxt->prev_channel_id = channel_id;
 	CMR_LOGI("prev chn id is %ld", prev_cxt->prev_channel_id);
 	prev_cxt->prev_channel_status = PREV_CHN_BUSY;
+	prev_cxt->prev_data_endian = endian;
 
 	/*start isp*/
 	CMR_LOGI("need_isp %d, isp_status %ld", chn_param.cap_inf_cfg.cfg.need_isp, prev_cxt->isp_status);
@@ -3476,6 +3480,7 @@ cmr_int prev_set_prev_param(struct prev_handle *handle, cmr_u32 camera_id, struc
 	if (out_param_ptr) {
 		out_param_ptr->preview_chn_bits = 1 << prev_cxt->prev_channel_id;
 		out_param_ptr->preview_sn_mode  = chn_param.sensor_mode;
+		out_param_ptr->preview_data_endian = prev_cxt->prev_data_endian;
 	}
 
 exit:
@@ -3496,6 +3501,7 @@ cmr_int prev_set_prev_param_lightly(struct prev_handle *handle, cmr_u32 camera_i
 	struct cmr_zoom_param         *zoom_param = NULL;
 	cmr_u32                       channel_id = 0;
 	struct channel_start_param    chn_param;
+	struct img_data_end           endian;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -3585,7 +3591,7 @@ cmr_int prev_set_prev_param_lightly(struct prev_handle *handle, cmr_u32 camera_i
 		goto exit;
 	}
 	channel_id = prev_cxt->prev_channel_id;
-	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id);
+	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id, &endian);
 	if (ret) {
 		CMR_LOGE("channel config failed");
 		ret = CMR_CAMERA_FAIL;
@@ -3609,6 +3615,7 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 	cmr_u32                     channel_id = 0;
 	struct channel_start_param  chn_param;
 	struct video_start_param    video_param;
+	struct img_data_end         endian;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -3690,7 +3697,7 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 		goto exit;
 	}
 
-	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id);
+	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id, &endian);
 	if (ret) {
 		CMR_LOGE("channel config failed");
 		ret = CMR_CAMERA_FAIL;
@@ -3699,6 +3706,7 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 	prev_cxt->cap_channel_id = channel_id;
 	CMR_LOGI("cap chn id is %ld", prev_cxt->cap_channel_id );
 	prev_cxt->cap_channel_status = PREV_CHN_BUSY;
+	prev_cxt->cap_data_endian = endian;
 
 	/*save channel start param for restart*/
 	cmr_copy(&prev_cxt->restart_chn_param, &chn_param, sizeof(struct channel_start_param));
@@ -3713,6 +3721,7 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 		out_param_ptr->snapshot_chn_bits                   = 1 << prev_cxt->cap_channel_id;
 		out_param_ptr->preview_sn_mode                     = prev_cxt->prev_mode;
 		out_param_ptr->snapshot_sn_mode                    = prev_cxt->cap_mode;
+		out_param_ptr->snapshot_data_endian                = prev_cxt->cap_data_endian;
 
 		CMR_LOGD("chn_bits 0x%x, prev_mode %d, cap_mode %d",
 			out_param_ptr->snapshot_chn_bits,
@@ -3738,15 +3747,16 @@ cmr_int prev_set_cap_param_raw(struct prev_handle *handle,
 				cmr_u32 is_restart,
 				struct preview_out_param *out_param_ptr)
 {
-	cmr_int 		    ret = CMR_CAMERA_SUCCESS;
+	cmr_int                     ret = CMR_CAMERA_SUCCESS;
 	struct sensor_exp_info	    *sensor_info = NULL;
 	struct sensor_mode_info     *sensor_mode_info = NULL;
-	struct prev_context	    *prev_cxt = NULL;
+	struct prev_context	        *prev_cxt = NULL;
 	struct cmr_zoom_param	    *zoom_param = NULL;
-	cmr_u32 		    channel_id = 0;
+	cmr_u32                     channel_id = 0;
 	struct channel_start_param  chn_param;
 	struct video_start_param    video_param;
-	cmr_uint is_autotest = 0;
+	cmr_uint                    is_autotest = 0;
+	struct img_data_end         endian;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -3830,7 +3840,7 @@ cmr_int prev_set_cap_param_raw(struct prev_handle *handle,
 		goto exit;
 	}
 
-	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id);
+	ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &chn_param, &channel_id, &endian);
 	if (ret) {
 		CMR_LOGE("channel config failed");
 		ret = CMR_CAMERA_FAIL;
@@ -3839,6 +3849,11 @@ cmr_int prev_set_cap_param_raw(struct prev_handle *handle,
 	prev_cxt->cap_channel_id = channel_id;
 	CMR_LOGI("cap chn id is %ld", prev_cxt->cap_channel_id );
 	prev_cxt->cap_channel_status = PREV_CHN_BUSY;
+	if (prev_cxt->prev_param.tool_eb) {
+		prev_cxt->cap_data_endian = prev_cxt->prev_data_endian;
+	} else {
+		prev_cxt->cap_data_endian = endian;
+	}
 
 	/*save channel start param for restart*/
 	cmr_copy(&prev_cxt->restart_chn_param, &chn_param, sizeof(struct channel_start_param));
@@ -3850,9 +3865,10 @@ cmr_int prev_set_cap_param_raw(struct prev_handle *handle,
 
 	/*return capture out params*/
 	if (out_param_ptr) {
-		out_param_ptr->snapshot_chn_bits		   = 1 << prev_cxt->cap_channel_id;
-		out_param_ptr->preview_sn_mode			   = prev_cxt->prev_mode;
-		out_param_ptr->snapshot_sn_mode 		   = prev_cxt->cap_mode;
+		out_param_ptr->snapshot_chn_bits           = 1 << prev_cxt->cap_channel_id;
+		out_param_ptr->preview_sn_mode             = prev_cxt->prev_mode;
+		out_param_ptr->snapshot_sn_mode            = prev_cxt->cap_mode;
+		out_param_ptr->snapshot_data_endian        = prev_cxt->cap_data_endian;
 
 		CMR_LOGD("chn_bits 0x%x, prev_mode %d, cap_mode %d",
 			out_param_ptr->snapshot_chn_bits,
@@ -4464,8 +4480,8 @@ cmr_int prev_start_rotate(struct prev_handle *handle, cmr_u32 camera_id, struct 
 		rot_param.angle   = prev_cxt->prev_param.prev_rot;
 		rot_param.src_img = &prev_cxt->prev_frm[frm_id];
 		rot_param.dst_img = &prev_cxt->prev_rot_frm[rot_frm_id];
-		rot_param.src_img->data_end = data->data_endian;
-		rot_param.dst_img->data_end = data->data_endian;
+		rot_param.src_img->data_end = prev_cxt->prev_data_endian;
+		rot_param.dst_img->data_end = prev_cxt->prev_data_endian;
 
 		op_mean.rot       = rot_param.angle;
 
@@ -4688,6 +4704,7 @@ cmr_int prev_restart_cap_channel(struct prev_handle *handle,
 	cmr_u32                     channel_id = 0;
 	struct video_start_param    video_param;
 	struct sensor_mode_info     *sensor_mode_info = NULL;
+	struct img_data_end         endian;
 
 	CHECK_HANDLE_VALID(handle);
 	CHECK_CAMERA_ID(camera_id);
@@ -4707,7 +4724,7 @@ cmr_int prev_restart_cap_channel(struct prev_handle *handle,
 	if (snapshot_enable && (data->channel_id == prev_cxt->cap_channel_id)) {
 
 		/*reconfig the channel with the params saved before*/
-		ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &prev_cxt->restart_chn_param, &channel_id);
+		ret = handle->ops.channel_cfg(handle->oem_handle, handle, camera_id, &prev_cxt->restart_chn_param, &channel_id, &endian);
 		if (ret) {
 			CMR_LOGE("channel config failed");
 			ret = CMR_CAMERA_FAIL;
