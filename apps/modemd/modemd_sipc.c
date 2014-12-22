@@ -384,10 +384,10 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
     }
     stop_service(modem, 0);
-    
+
     /* write 1 to start*/
     write_proc_file(modem_start, 0, "1");
-    
+
     if(modem == TD_MODEM) {
         strcpy(alive_info, "TD Modem Alive");
     } else if(modem == W_MODEM) {
@@ -693,17 +693,19 @@ raw_reset:
     close(soc_fd);
     return (void*) NULL;
 }
+static const char s_reset_cmd[2] = {0x7a, 0x0a};
+static char diag_chan[256], mkbuf[256];
 
 /* loop detect sipc modem state */
 void* detect_sipc_modem(void *param)
 {
     char assert_dev[256] = {0};
     char watchdog_dev[256] = {0};
-    int i, ret, assert_fd, watchdog_fd, max_fd, fd = -1;
+    int i, ret, assert_fd, watchdog_fd, max_fd,diag_fd,fd = -1;
     fd_set rfds;
     int is_reset, modem = -1;
     char buf[256], prop[256];
-    int numRead;
+    int numRead,w_cnt;
     int is_assert = 0;
 
     if(param != NULL)
@@ -712,18 +714,31 @@ void* detect_sipc_modem(void *param)
     if(modem == TD_MODEM) {
         property_get(TD_ASSERT_PROP, assert_dev, DEFAULT_TD_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", TD_WATCHDOG_DEV);
+        property_get("ro.modem.t.diag", diag_chan, "not_find");
+        MODEMD_LOGD("%s diag_chan:%s", __FUNCTION__,diag_chan);
     } else if(modem == W_MODEM) {
         property_get(W_ASSERT_PROP, assert_dev, DEFAULT_W_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", W_WATCHDOG_DEV);
+        property_get("ro.modem.w.diag", diag_chan, "not_find");
+        MODEMD_LOGD("%s diag_chan:%s", __FUNCTION__,diag_chan);
     } else if(modem == TL_MODEM) {
         property_get(TL_ASSERT_PROP, assert_dev, DEFAULT_TL_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", TL_WATCHDOG_DEV);
+        property_get("ro.modem.tl.diag", diag_chan, "not_find");
+        MODEMD_LOGD("%s diag_chan:%s", __FUNCTION__,diag_chan);
+
     } else if(modem == LF_MODEM) {
         property_get(LF_ASSERT_PROP, assert_dev, DEFAULT_LF_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", LF_WATCHDOG_DEV);
+        property_get("ro.modem.lf.diag", diag_chan, "not_find");
+        MODEMD_LOGD("%s diag_chan:%s", __FUNCTION__,diag_chan);
+
     } else if(modem == LTE_MODEM) {
         property_get(L_ASSERT_PROP, assert_dev, DEFAULT_L_ASSERT_DEV);
         snprintf(watchdog_dev, sizeof(watchdog_dev), "%s", L_WATCHDOG_DEV);
+        property_get("ro.modem.l.diag", diag_chan, "not_find");
+        MODEMD_LOGD("%s diag_chan:%s", __FUNCTION__,diag_chan);
+
     } else {
         MODEMD_LOGE("%s: input wrong modem type!", __func__);
                 return NULL;
@@ -852,8 +867,35 @@ void* detect_sipc_modem(void *param)
                 is_reset = atoi(prop);
                 if(is_reset) {
                     MODEMD_LOGD("modem reset is enabled, reload modem...");
-                    load_sipc_modem_img(modem, is_assert);
-                    is_assert = 0;
+                    property_get("ro.debuggable", mkbuf, "");
+                    if (strcmp(mkbuf, "1") != 0) {
+                        /*add slient reset at user version branch*/
+                        diag_fd= open(diag_chan, O_RDWR);
+                        if(diag_fd < 0) {
+                            MODEMD_LOGD("MODEMD cannot open %s\n", diag_chan);
+                            continue;
+                        }
+                        else
+                        {
+                            w_cnt = read(diag_fd, buf, sizeof(buf));
+                            if(w_cnt > 0){
+                                MODEMD_LOGD("MODEMD read diag_chan:%s\n", buf);
+                                memset(buf,0, sizeof(buf));
+                            }
+                            else{
+                                MODEMD_LOGD("MODEMD read diag_chan:%d ,%s\n", w_cnt, strerror(errno));
+                            }
+                            w_cnt = write(diag_fd, s_reset_cmd, sizeof(s_reset_cmd));
+                            MODEMD_LOGD("MODEMD write diag_chan:%d ,%s\n", w_cnt, strerror(errno));
+                            continue;
+                        }
+
+                    }
+                    else{
+                        /*user debug version branch,reset modem directly*/
+                        load_sipc_modem_img(modem, is_assert);
+                        is_assert = 0;
+                    }
                 } else {
                     MODEMD_LOGD("modem reset is not enabled , will not reset");
                 }
