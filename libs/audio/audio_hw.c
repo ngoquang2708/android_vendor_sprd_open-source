@@ -716,6 +716,7 @@ static void voice_command_manager_close(struct tiny_audio_device *adev);
 
 static int audio_bt_sco_duplicate_start(struct tiny_audio_device *adev, bool enable);
 static int audiopara_get_compensate_phoneinfo(void* pmsg);
+static void codec_lowpower_open(struct tiny_audio_device *adev,bool on);
 /*
  * NOTE: audio stream(playback, capture) dump just for debug.
  */
@@ -1017,7 +1018,7 @@ ret);
                                 && adev->fm_volume != 0)){
             ALOGD("%s,fm is open so do not mute codec",__func__);
         }else{
-            set_codec_mute(adev,adev->master_mute);
+            codec_lowpower_open(adev,adev->master_mute);
         }
     }
     if(adev->call_start == 1){
@@ -1075,7 +1076,7 @@ ret);
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
-                  set_codec_mute(adev,false);
+                  codec_lowpower_open(adev,false);
               }
             }
 
@@ -1125,7 +1126,7 @@ ret);
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
-                set_codec_mute(adev,true);
+               codec_lowpower_open(adev,true);
             }
 
         }
@@ -1145,6 +1146,74 @@ out:
     pthread_mutex_unlock(&adev->device_lock);
     ALOGI("do_select_devices_static X");
 }
+
+#define OUT_KCONTROL_NUM 4
+static void out_dac_switch(struct tiny_audio_device *adev,bool on){
+    int index = 0;
+    char *daclname = "DACL Switch";
+    char *dacrname = "DACR Switch";
+    struct mixer_ctl *dacl= NULL;
+    struct mixer_ctl *dacr= NULL;
+    int mixernum = OUT_KCONTROL_NUM;
+    struct mixer_ctl *ctl[OUT_KCONTROL_NUM] = {0};
+    int old[OUT_KCONTROL_NUM] = {0};
+    char *mixername[OUT_KCONTROL_NUM] = {
+        "HPLCGL Switch",
+        "HPRCGR Switch",
+        "DACLSPKL Enable",
+        "DACRSPKL Enable",
+    };
+    int waitms = 40;
+    //get the mixer ctrl and save the mixer state.
+    for(index = 0;index < mixernum;index++){
+        ctl[index] = mixer_get_ctl_by_name(adev->mixer,mixername[index]);
+        if(!ctl[index]){
+            ALOGE("Unknown control '%s'\n", mixername[index]);
+            return;
+        }
+        old[index] = mixer_ctl_get_value(ctl[index], 0);
+    }
+
+    //close the mixer for pop noise
+    for(index = 0;index < mixernum;index++){
+        if(old[index] == 1){
+            ALOGE("%s turn off'%s'\n", __func__,mixername[index]);
+          mixer_ctl_set_value(ctl[index], 0, 0);
+        }
+    }
+
+    dacl = mixer_get_ctl_by_name(adev->mixer,daclname);
+    if (!dacl){
+            ALOGE("Unknown control '%s'\n", daclname);
+            return;
+    }
+    mixer_ctl_set_value(dacl, 0, on);
+    dacr = mixer_get_ctl_by_name(adev->mixer,dacrname);
+    if (!dacr){
+        ALOGE("Unknown control '%s'\n", dacrname);
+        return;
+    }
+    mixer_ctl_set_value(dacr, 0, on);
+
+    //restore the mixer pre state
+    for(index = 0;index < mixernum;index++){
+        if(old[index] == 1){
+          ALOGE("%s turn on '%s'\n", __func__,mixername[index]);
+          mixer_ctl_set_value(ctl[index], 0, 1);
+        }
+    }
+}
+static void codec_lowpower_open(struct tiny_audio_device *adev,bool on){
+    ALOGI("%s :%s",__func__,on?"on":"off");
+    if(on){
+        set_codec_mute(adev,true);
+        out_dac_switch(adev,0);
+    } else {
+        out_dac_switch(adev,1);
+        set_codec_mute(adev,false);
+    }
+}
+
 static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
@@ -1175,7 +1244,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
                                 && adev->fm_volume != 0)){
             ALOGD("%s,fm is open so do not mute codec",__func__);
         }else{
-            set_codec_mute(adev,adev->master_mute);
+            codec_lowpower_open(adev,adev->master_mute);
         }
     }
 
@@ -1239,7 +1308,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
               }
               if(adev->master_mute){
                   ALOGV("open FM and set codec unmute");
-                  set_codec_mute(adev,false);
+                  codec_lowpower_open(adev,false);
               }
             }
             pthread_mutex_unlock(&adev->lock);
@@ -1289,7 +1358,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
-                set_codec_mute(adev,true);
+                codec_lowpower_open(adev,true);
             }
             pthread_mutex_unlock(&adev->lock);
         }
@@ -2017,7 +2086,7 @@ static int do_output_standby(struct tiny_stream_out *out)
     adev->active_output = NULL;
     if(adev->fm_open && adev->fm_volume == 0){
         adev->master_mute = true;
-        set_codec_mute(adev,true);
+        codec_lowpower_open(adev,true);
     }
     ALOGD("do_output_standby in out");
     return 0;
@@ -3677,10 +3746,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->fm_volume = val;
             if(val == 0 && adev->active_output == NULL){
                 adev->master_mute = true;
-                set_codec_mute(adev,true);
+                codec_lowpower_open(adev,true);
             }else if(adev->master_mute){
                 adev->master_mute = false;
-                set_codec_mute(adev,false);
+                codec_lowpower_open(adev,false);
             }
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&adev->device_lock);
