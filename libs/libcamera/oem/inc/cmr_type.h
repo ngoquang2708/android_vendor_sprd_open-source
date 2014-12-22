@@ -120,7 +120,6 @@ struct frm_info {
 	cmr_u32                             height;
 	cmr_uint                            sec;
 	cmr_uint                            usec;
-	struct img_data_end                 data_endian;
 	cmr_u32                             length;
 	cmr_u32                             free;
 	cmr_u32                             base;

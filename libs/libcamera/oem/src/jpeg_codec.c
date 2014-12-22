@@ -279,7 +279,9 @@ static cmr_int _enc_start(cmr_handle handle, struct jpeg_codec_context *jcontext
 	jenc_parm_ptr->yuv_u_phy_buf = enc_cxt_ptr->src_addr_phy.addr_u;
 	jenc_parm_ptr->yuv_v_virt_buf = (void*)0;
 	jenc_parm_ptr->yuv_v_phy_buf = 0;
+	jenc_parm_ptr->y_interleaved = enc_cxt_ptr->src_endian.y_endian;
 	jenc_parm_ptr->uv_interleaved = enc_cxt_ptr->src_endian.uv_endian;
+	CMR_LOGI("uv endian, %d y endian %d", enc_cxt_ptr->src_endian.uv_endian, enc_cxt_ptr->src_endian.y_endian);
 
 #ifdef JPEG_CODE_DEBUG
 	CMR_LOGV("jpeg:enc yuv phy addr,0x%x 0x%x 0x%x,slice height %d.",

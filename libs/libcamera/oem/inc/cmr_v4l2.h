@@ -80,7 +80,7 @@ void cmr_v4l2_evt_reg(cmr_handle v4l2_handle, cmr_evt_cb  v4l2_event_cb);
 cmr_int cmr_v4l2_if_cfg(cmr_handle v4l2_handle, struct sensor_if *sn_if);
 cmr_int cmr_v4l2_if_decfg(cmr_handle v4l2_handle, struct sensor_if *sn_if);
 cmr_int cmr_v4l2_sn_cfg(cmr_handle v4l2_handle, struct sn_cfg *config);
-cmr_int cmr_v4l2_cap_cfg(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 *channel_id);
+cmr_int cmr_v4l2_cap_cfg(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 *channel_id, struct img_data_end *endian);
 cmr_int cmr_v4l2_cap_cfg_lightly(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 channel_id);
 cmr_int cmr_v4l2_buff_cfg(cmr_handle v4l2_handle, struct buffer_cfg *buf_cfg);
 cmr_int cmr_v4l2_cap_start(cmr_handle v4l2_handle, cmr_u32 skip_num);

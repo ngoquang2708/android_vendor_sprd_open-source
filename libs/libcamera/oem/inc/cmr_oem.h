@@ -112,6 +112,7 @@ struct preview_context {
 	struct img_size          size;
 	struct img_size          video_size;
 	struct img_rect          rect;
+	struct img_data_end      data_endian;
 };
 
 struct snapshot_context {
@@ -133,6 +134,7 @@ struct snapshot_context {
 	struct img_size          actual_capture_size;
 	struct frm_info          cur_frm_info;
 	struct snp_proc_param    post_proc_setting;
+	struct img_data_end      data_endian;
 };
 
 struct focus_context {

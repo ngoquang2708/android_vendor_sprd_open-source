@@ -314,7 +314,7 @@ exit:
 
 }
 
-static cmr_int cmr_v4l2_cap_cfg_common(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 channel_id)
+static cmr_int cmr_v4l2_cap_cfg_common(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 channel_id, struct img_data_end *endian)
 {
 	cmr_int                  ret = 0;
 	struct v4l2_crop         crop;
@@ -326,6 +326,7 @@ static cmr_int cmr_v4l2_cap_cfg_common(cmr_handle v4l2_handle, struct cap_cfg *c
 	enum v4l2_buf_type       buf_type;
 	struct v4l2_streamparm   stream_parm;
 	struct cmr_v4l2          *p_v4l2;
+	struct img_data_end      data_endian;
 
 	if (NULL == config)
 		return -1;
@@ -411,6 +412,10 @@ static cmr_int cmr_v4l2_cap_cfg_common(cmr_handle v4l2_handle, struct cap_cfg *c
 			CMR_LOGI("need restart");
 			ret = CMR_V4L2_RET_RESTART;
 		}
+		if (NULL != endian){
+			memcpy((void*)&data_endian,  (void*)&format.fmt.pix.field, sizeof(struct img_data_end));
+			cmr_v4l2_get_data_endian(&data_endian, endian);
+		}
 		pthread_mutex_unlock(&p_v4l2->path_mutex[cfg_id]);
 	} else {
 		CMR_LOGI("fourcc not founded dst_img_fmt=0x%x \n", config->cfg.dst_img_fmt);
@@ -421,7 +426,7 @@ exit:
 	return ret;
 }
 
-cmr_int cmr_v4l2_cap_cfg(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 *channel_id)
+cmr_int cmr_v4l2_cap_cfg(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32 *channel_id, struct img_data_end *endian)
 {
 	cmr_int                  ret = 0;
 	cmr_u32                  pxl_fmt;
@@ -452,7 +457,7 @@ cmr_int cmr_v4l2_cap_cfg(cmr_handle v4l2_handle, struct cap_cfg *config, cmr_u32
 	CMR_RTN_IF_ERR(ret);
 
 	*channel_id = stream_parm.parm.capture.extendedmode;
-	ret = cmr_v4l2_cap_cfg_common(v4l2_handle, config, *channel_id);
+	ret = cmr_v4l2_cap_cfg_common(v4l2_handle, config, *channel_id, endian);
 
 exit:
 	CMR_LOGI("ret %ld", ret);
@@ -473,7 +478,7 @@ cmr_int cmr_v4l2_cap_cfg_lightly(cmr_handle v4l2_handle, struct cap_cfg *config,
 
 	CMR_LOGI("frm_num %d dst width %d dst height %d.", config->frm_num, config->cfg.dst_img_size.width, config->cfg.dst_img_size.height);
 
-	return cmr_v4l2_cap_cfg_common(v4l2_handle, config, channel_id);
+	return cmr_v4l2_cap_cfg_common(v4l2_handle, config, channel_id, NULL);
 }
 
 cmr_int cmr_v4l2_buff_cfg (cmr_handle v4l2_handle, struct buffer_cfg *buf_cfg)
@@ -907,10 +912,6 @@ static void* cmr_v4l2_thread_proc(void* data)
 				frame.length          = buf.sequence;
 				frame.base            = buf.length;
 				frame.fmt             = cmr_v4l2_get_img_type(buf.memory);
-				memcpy((void*)&endian,
-					(void*)&buf.bytesused,
-					sizeof(struct img_data_end));
-				cmr_v4l2_get_data_endian(&endian, &frame.data_endian);
 				pthread_mutex_lock(&p_v4l2->status_mutex);
 				on_flag = p_v4l2->is_on;
 				pthread_mutex_unlock(&p_v4l2->status_mutex);
