@@ -166,7 +166,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_gc2235_mipi_resolution_Tab_RAW[] = {
 
 LOCAL SENSOR_TRIM_T s_gc2235_mipi_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
-	{0, 0, 1600, 1200, 254, 48,1226, {0, 0, 1600, 1200}},//sysclk*10
+	{0, 0, 1600, 1200, 254, 420,1226, {0, 0, 1600, 1200}},//sysclk*10
 
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -356,7 +356,7 @@ SENSOR_INFO_T g_gc2235_mipi_raw_info = {
 	SENSOR_AVDD_1800MV,	// iovdd
 	SENSOR_AVDD_1800MV,	// dvdd
 	4,			// skip frame num before preview
-	3,			// skip frame num before capture
+	1,			// skip frame num before capture
 	0,			// deci frame num during preview
 	0,			// deci frame num during video preview
 
@@ -1787,6 +1787,7 @@ LOCAL uint32_t _gc2235_mipi_BeforeSnapshot(uint32_t param)
 {
 	SENSOR_PRINT("SENSOR_gc2235_mipi: BeforeSnapshot moe: %d",param);
 	Sensor_SetMode(1);
+	Sensor_SetMode_WaitDone();
 	//Sensor_StreamOff();
 		//Sensor_WriteReg(0xfa, 0x11);
 #if 0

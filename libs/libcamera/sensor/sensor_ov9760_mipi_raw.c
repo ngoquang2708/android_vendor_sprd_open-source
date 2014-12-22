@@ -309,7 +309,7 @@ LOCAL SENSOR_REG_TAB_INFO_T s_ov9760_resolution_Tab_RAW[] = {
 
 LOCAL SENSOR_TRIM_T s_ov9760_Resolution_Trim_Tab[] = {
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
-	{0, 0, 1280, 960, 272, 408, 1116, {0, 0, 1280, 960}},
+	{0, 0, 1280, 960, 272, 920, 1116, {0, 0, 1280, 960}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
 	{0, 0, 0, 0, 0, 0, 0, {0, 0, 0, 0}},
@@ -525,16 +525,11 @@ LOCAL uint32_t Sensor_ov9760_InitRawTuneInfo(void)
 	struct sensor_raw_info* raw_sensor_ptr=Sensor_GetContext();
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
-#if 0
-	raw_sensor_ptr->version_info->version_id=0x00010000;
-	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
-	//bypass
-	sensor_ptr->version_id=0x00010000;
 	sensor_ptr->blc_bypass=0x00;
 	sensor_ptr->nlc_bypass=0x01;
 	sensor_ptr->lnc_bypass=0x01;
-	sensor_ptr->ae_bypass=0x00;
+	sensor_ptr->ae_bypass=0x01;
 	sensor_ptr->awb_bypass=0x00;
 	sensor_ptr->bpc_bypass=0x01;
 	sensor_ptr->denoise_bypass=0x01;
@@ -555,7 +550,7 @@ LOCAL uint32_t Sensor_ov9760_InitRawTuneInfo(void)
 	sensor_ptr->hdr_bypass=0x01;
 	sensor_ptr->glb_gain_bypass=0x01;
 	sensor_ptr->chn_gain_bypass=0x01;
-
+#if 0
 	//blc
 	sensor_ptr->blc.mode=0x00;
 	sensor_ptr->blc.offset[0].r=0x0f;

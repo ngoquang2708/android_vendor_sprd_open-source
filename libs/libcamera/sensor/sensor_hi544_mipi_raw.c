@@ -2446,7 +2446,6 @@ LOCAL uint32_t Sensor_hi544_InitRawTuneInfo(void)
 	struct sensor_raw_tune_info* sensor_ptr=raw_sensor_ptr->tune_ptr;
 	struct sensor_raw_cali_info* cali_ptr=raw_sensor_ptr->cali_ptr;
 
-	raw_sensor_ptr->version_info->version_id=0x00010000;
 	raw_sensor_ptr->version_info->srtuct_size=sizeof(struct sensor_raw_info);
 
 	//sensor_ptr->cmc_bypass=0x00;
