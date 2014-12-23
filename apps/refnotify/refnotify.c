@@ -112,11 +112,56 @@ struct time_sync
 	char *path;
 };
 
+enum sci_bm_cmd_index {
+	BM_STATE = 0x0,
+	BM_CHANNELS,
+	BM_AXI_DEBUG_SET,
+	BM_AHB_DEBUG_SET,
+	BM_PERFORM_SET,
+	BM_PERFORM_UNSET,
+	BM_OCCUR,
+	BM_CONTINUE_SET,
+	BM_CONTINUE_UNSET,
+	BM_DFS_SET,
+	BM_DFS_UNSET,
+	BM_PANIC_SET,
+	BM_PANIC_UNSET,
+	BM_BW_CNT_START,
+	BM_BW_CNT_STOP,
+	BM_BW_CNT_RESUME,
+	BM_BW_CNT,
+	BM_BW_CNT_CLR,
+	BM_DBG_INT_CLR,
+	BM_DBG_INT_SET,
+	BM_CMD_MAX,
+};
+
+#define BM_DEV "/dev/sprd_bm"
+
 static struct time_sync time_info;
 
 static char *g_fifopath = NULL;
 
 static pthread_t g_timetid = -1;
+
+static void refnotify_enable_busmonitor(uint8_t bEnable)
+{
+	int fd;
+	int param;
+	int cmd;
+
+	fd = open(BM_DEV, O_RDWR);
+	if (fd < 0) {
+		REF_LOGD("refnotify_enable_busmonitor %s failed, error: %s", BM_DEV, strerror(errno));
+		return;
+	}
+
+	cmd = bEnable ? BM_DBG_INT_SET : BM_DBG_INT_CLR;
+	ioctl(fd, cmd, &param);
+
+	REF_LOGD("refnotify_enable_busmonitor bEnable = %d, cmd = %d", bEnable, cmd);
+	close(fd);
+}
 
 static void usage(void)
 {
@@ -323,6 +368,9 @@ static void RefNotify_DoGetIqInfo(int fd, struct refnotify_cmd *cmd)
 	piq->base = base;
 	piq->length = 128*1024*1024;
 	ret = write(fd, pcmd, length);
+
+	refnotify_enable_busmonitor(0);
+
 	if(ret != length) {
 		REF_LOGE("RefNotify write %d return %d, errno = %s", length , ret, strerror(errno));
 	}
