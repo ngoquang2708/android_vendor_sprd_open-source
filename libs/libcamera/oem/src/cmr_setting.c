@@ -1848,7 +1848,7 @@ static cmr_int setting_isp_flash_ratio(struct setting_component *cpt,
 	isp_param.alg_param.mode = ISP_ALG_FAST;
 	isp_param.alg_param.flash_eb = 0x01;
 	/*because hardware issue high equal to low, so use hight div high */
-	isp_param.alg_param.flash_ratio = flash_level->high_light * 256 / flash_level->high_light;
+	isp_param.alg_param.flash_ratio = flash_level->high_light * 256 / flash_level->low_light;
 
 	if (init_in->setting_isp_ioctl) {
 		ret = (*init_in->setting_isp_ioctl)(init_in->oem_handle, COM_ISP_SET_FLASH_LEVEL, &isp_param);
@@ -1894,7 +1894,6 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 	cmr_uint                       image_format = 0;
 	struct setting_init_in         *init_in = &cpt->init_in;
 	cmr_handle                     oem_handle = init_in->oem_handle;
-	cmr_uint                       is_pre = 1;
 	enum cmr_flash_status          ctrl_flash_status = 0;
 	cmr_uint                       exif_flash = 0;
 
@@ -1909,55 +1908,27 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 
 	ctrl_flash_status = parm->ctrl_flash.flash_type;
 	if (is_active) {
-		/*pre flash or focus*/
-		if (is_pre) {
-			if (CAMERA_FLASH_MODE_AUTO == flash_mode) {
-				ret = setting_flash_handle(cpt, parm, flash_mode);
-			}
+		if (CAMERA_FLASH_MODE_AUTO == flash_mode) {
+			ret = setting_flash_handle(cpt, parm, flash_mode);
+		}
 
-			if (setting_is_need_flash(cpt, parm)) {
-				if (IMG_DATA_TYPE_RAW == image_format) {
-					struct common_sn_cmd_param   sn_param;
+		if (setting_is_need_flash(cpt, parm)) {
+			if (IMG_DATA_TYPE_RAW == image_format) {
+				struct common_isp_cmd_param   isp_param;
 
-					sn_param.camera_id = parm->camera_id;
-					if (init_in->setting_sn_ioctl) {
-						if ((*init_in->setting_sn_ioctl)(oem_handle, COM_SN_GET_FLASH_LEVEL, &sn_param)) {
-							CMR_LOGE("get flash level error.");
-						}
-					}
-
-					setting_isp_alg_bypass(cpt, ISP_AWB_BYPASS);
-					setting_isp_alg_bypass(cpt, ISP_AE_BYPASS);
-
-					/*camera_isp_alg_wait();*/
-					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-					setting_isp_flash_ratio(cpt, &(sn_param.flash_level));
+				isp_param.camera_id = parm->camera_id;
+				isp_param.cmd_value = 0;
+				ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EG,&isp_param);
+				if (ret) {
+					CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 				}
-			}
-			if (setting_is_need_flash(cpt, parm)) {
+
+				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
+			} else {
 				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 			}
-		}else {
-			if ((CAMERA_ZSL_MODE == capture_mode) || (CAMERA_ISP_TUNING_MODE == capture_mode)) {
-				if (setting_is_need_flash(cpt, parm)) {
-					/*open flash*/
-					if (IMG_DATA_TYPE_RAW == image_format) {
-						struct common_isp_cmd_param   isp_param;
-
-						isp_param.camera_id = parm->camera_id;
-						isp_param.cmd_value = 0;
-						ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EG,&isp_param);
-						if (ret) {
-							CMR_LOGE("ISP_CTRL_FLASH_EG error.");
-						}
-					}
-					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-				} else if ((CAMERA_FLASH_MODE_AUTO == flash_mode)
-					&& ((uint32_t)FLASH_OPEN == *p_auto_flash_status)) {
-					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-				}
-			}
 		}
+
 		if ((ctrl_flash_status == FLASH_HIGH_LIGHT) || (ctrl_flash_status == FLASH_OPEN)) {
 			exif_flash = 1;
 		} else {
