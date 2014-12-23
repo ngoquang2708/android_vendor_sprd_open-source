@@ -506,7 +506,7 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
     if (ret != length) {
         MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
         close(stty_fd);
-        exit(-1);
+        exit_modemd();
     }
 
     for (;;) {
@@ -522,7 +522,7 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
                 continue;
             else {
                 close(stty_fd);
-                exit(-1);
+                exit_modemd();
 			}
         } else if (ret == 0) {
             MODEMD_LOGE("select timeout");
@@ -542,7 +542,7 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
             } else if (strstr(buffer, "ERROR")) {
                 MODEMD_LOGD("wrong modem state, exit!");
                 close(stty_fd);
-                exit(-1);
+                exit_modemd();
             }
         }
     }
@@ -613,7 +613,7 @@ void send_imei(int stty_fd, char *path)
         sprintf(at_str, "AT+SPIMEI=%d,\"%s\"\r", i-1, imeistr);
         if (send_atcmd(stty_fd, at_str, path) != 1) {
             close(stty_fd);
-            exit(-1);
+            exit_modemd();
         }
     }
 }
@@ -714,13 +714,13 @@ int start_service(int modem, int is_vlx, int restart)
             strcpy(at_str, "AT\r");
         if (send_atcmd(stty_fd, at_str, path) != 1) {
             close(stty_fd);
-            exit(-1);
+            exit_modemd();
         }
 
         strcpy(at_str, "AT+CMUX=0\r");
         if (send_atcmd(stty_fd, at_str, path) != 1) {
             close(stty_fd);
-            exit(-1);
+            exit_modemd();
         }
         /* Send IMEI */
         send_imei(stty_fd, path);
@@ -762,7 +762,7 @@ static void *modemd_listenaccept_thread(void *par)
             ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
     if (sfd < 0) {
         MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
-        exit(-1);
+        exit_modemd();
     }
 
     for(;;){
@@ -790,6 +790,7 @@ static void *modemd_listenaccept_thread(void *par)
             }
         }
     }
+    return NULL;
 }
 
 static void control_engservice(int  open)
@@ -929,7 +930,8 @@ static void *modemd_engcontrol_listen(void *par)
         }
     }
     close(notifypipe[0]);
-    exit(-1);
+    exit_modemd();
+    return NULL;
 }
 
 static void *modemd_engcontrol_thread(void *par)
@@ -947,7 +949,7 @@ static void *modemd_engcontrol_thread(void *par)
       ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
       if (sfd < 0) {
           MODEMD_LOGE("%s: cannot create local socket server", __FUNCTION__);
-          exit(-1);
+          exit_modemd();
       }
     pthread_create(&tid, NULL, (void*)modemd_engcontrol_listen, NULL);
     for(; ;){
@@ -977,6 +979,7 @@ static void *modemd_engcontrol_thread(void *par)
         }
         }
     close(notifypipe[1]);
+    return NULL;
 }
 
 void start_modem(int *param)
@@ -1128,7 +1131,7 @@ int main(int argc, char *argv[])
     ret = sigaction (SIGPIPE, &action, NULL);
     if (ret < 0) {
         MODEMD_LOGE("sigaction() failed!");
-        exit(1);
+        exit_modemd();
     }
 
     if (pthread_create(&tid, NULL, (void*)modemd_listenaccept_thread, NULL) < 0){

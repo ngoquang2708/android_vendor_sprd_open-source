@@ -31,6 +31,8 @@ pthread_cond_t lte_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t w_cond = PTHREAD_COND_INITIALIZER;
 static int epollfd = -1;
 static int wakealarm_fd = -1;
+static bool g_b_wake_locking = false;
+
 /******************************************************
  *
  ** sipc interface begin
@@ -81,6 +83,16 @@ static void modemd_enable_busmonitor(bool bEnable)
 	close(fd);
 }
 
+extern void exit_modemd(void)
+{
+	MODEMD_LOGD("exit_modemd!!!");
+	if(g_b_wake_locking)
+	{
+		system("echo load_modem_img >/sys/power/wake_unlock");
+		g_b_wake_locking = false;
+	}
+	exit(-1);
+}
 
 int loop_info_sockclients(const char* buf, const int len)
 {
@@ -189,7 +201,8 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
 
     strcpy(persist_prop,PERSIST_MODEM_CHAR);
-    system("echo 1 >/sys/power/wake_lock");
+    system("echo load_modem_img >/sys/power/wake_lock");
+    g_b_wake_locking = true;
 
     if(modem == TD_MODEM) {
         sipc_modem_size = TD_MODEM_SIZE;
@@ -210,9 +223,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
-              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              return 0;
+              ret = 0;
+              goto unlock_wake_and_exit;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -249,9 +262,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
-              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              return 0;
+              ret = 0;
+              goto unlock_wake_and_exit;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -300,9 +313,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
-              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              return 0;
+              ret = 0;
+              goto unlock_wake_and_exit;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -357,9 +370,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
 
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
-              system("echo 1 >/sys/power/wake_unlock");
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              return 0;
+              ret = 0;
+              goto unlock_wake_and_exit;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -408,20 +421,23 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
           wakealarm_fd = timerfd_create(CLOCK_BOOTTIME_ALARM, TFD_NONBLOCK);
       if (wakealarm_fd == -1) {
           MODEMD_LOGE("wakealarm_init: timerfd_create failed\n");
-          return -1;
+          ret = -1;
+          goto unlock_wake_and_exit;
       }
       if(epollfd < 0)
       {
           epollfd = epoll_create(1);
           if (epollfd == -1) {
               MODEMD_LOGE("healthd_mainloop: epoll_create failed; errno=%d\n", errno);
-              return -1;
+              ret = -1;
+              goto unlock_wake_and_exit;
           }
           ev.events = EPOLLIN | EPOLLWAKEUP;
           if (epoll_ctl(epollfd, EPOLL_CTL_ADD, wakealarm_fd, &ev) == -1)
           {
               MODEMD_LOGD("load_sipc_modem_img: epoll_ctl for wakealarm_fd failed; errno=%d\n", errno);
-              return -1;
+              ret = -1;
+              goto unlock_wake_and_exit;
           }
       }
       itval.it_interval.tv_sec = 20;
@@ -439,7 +455,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
               MODEMD_LOGE("load_sipc_modem_img: epoll_wait failed\n");
               break;
           }
-         break ;
+         break;
       }while(1) ;
     // sleep(20);
     if(is_modem_assert) {
@@ -469,9 +485,13 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
             tl_modem_state = MODEM_READY;
             pthread_cond_signal(&tl_cond);
             pthread_mutex_unlock(&tl_state_mutex);
-     }
-    system("echo 1 >/sys/power/wake_unlock");
-    return 0;
+    }
+
+    ret = 0;
+unlock_wake_and_exit:
+    system("echo load_modem_img >/sys/power/wake_unlock");
+    g_b_wake_locking = false;
+    return ret;
 }
 
 void *detect_modem_blocked(void *par)
