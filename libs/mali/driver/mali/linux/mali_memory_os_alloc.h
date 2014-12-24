@@ -43,5 +43,9 @@ void mali_mem_os_release_table_page(mali_dma_addr phys, void *virt);
 _mali_osk_errcode_t mali_mem_os_init(void);
 void mali_mem_os_term(void);
 u32 mali_mem_os_stat(void);
+u32 mali_mem_os_free_stat(void);
+u32 mali_mem_page_table_stat(void);
+
+
 
 #endif /* __MALI_MEMORY_OS_ALLOC_H__ */

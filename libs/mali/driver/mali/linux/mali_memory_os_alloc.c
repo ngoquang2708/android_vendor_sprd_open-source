@@ -335,6 +335,7 @@ static struct {
 	.count = 0,
 	.lock = __SPIN_LOCK_UNLOCKED(pool_lock),
 };
+size_t mali_mem_page_table_page_count = 0;
 
 _mali_osk_errcode_t mali_mem_os_get_table_page(mali_dma_addr *phys, mali_io_address *mapping)
 {
@@ -362,6 +363,7 @@ _mali_osk_errcode_t mali_mem_os_get_table_page(mali_dma_addr *phys, mali_io_addr
 #endif
 		if (NULL != *mapping) {
 			ret = _MALI_OSK_ERR_OK;
+			++mali_mem_page_table_page_count;
 
 #if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
 			/* Verify that the "physical" address is 32-bit and
@@ -399,6 +401,7 @@ void mali_mem_os_release_table_page(mali_dma_addr phys, void *virt)
 		dma_free_writecombine(&mali_platform_device->dev,
 				      _MALI_OSK_MALI_PAGE_SIZE, virt, phys);
 #endif
+		--mali_mem_page_table_page_count;
 	}
 }
 
@@ -452,6 +455,8 @@ static void mali_mem_os_page_table_pool_free(size_t nr_to_free)
 				      virt_arr[i], (dma_addr_t)phys_arr[i]);
 #endif
 	}
+
+	mali_mem_page_table_page_count -= nr_to_free;
 }
 
 static void mali_mem_os_trim_page_table_page_pool(void)
@@ -642,4 +647,14 @@ _mali_osk_errcode_t mali_memory_core_resource_os_memory(u32 size)
 u32 mali_mem_os_stat(void)
 {
 	return atomic_read(&mali_mem_os_allocator.allocated_pages) * _MALI_OSK_MALI_PAGE_SIZE;
+}
+
+u32 mali_mem_os_free_stat(void)
+{
+	return mali_mem_os_allocator.pool_count * _MALI_OSK_MALI_PAGE_SIZE;
+}
+
+u32 mali_mem_page_table_stat(void)
+{
+	return mali_mem_page_table_page_count * _MALI_OSK_MALI_PAGE_SIZE;
 }

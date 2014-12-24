@@ -427,8 +427,15 @@ u32 _mali_kernel_memory_dump_state(char* buf, u32 size)
 
 		_mali_osk_mutex_signal(session->memory_lock);
 
-		n += _mali_osk_snprintf(buf + n, size - n, "%8d\t0x%08x\n", session->pid, sum_gl);
+		n += _mali_osk_snprintf(buf + n, size - n, "%8d \t0x%08x\n", session->pid, sum_gl);
 	}
+
+	//os alloc + free pool
+	n += _mali_osk_snprintf(buf + n, size - n, "Mali mem os\t0x%08x\n", mali_mem_os_stat() + mali_mem_os_free_stat());
+
+	//page table
+	n += _mali_osk_snprintf(buf + n, size - n, "Mali mem page\t0x%08x\n", mali_mem_page_table_stat());
+
 	mali_session_unlock();
 
 	return n;
