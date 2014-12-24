@@ -179,5 +179,6 @@ void start_modem(int *param);
 void* detect_sipc_modem(void *param);
 void* detect_modem_blocked(void *param);
 
+extern void exit_modemd(void);
 
 #endif

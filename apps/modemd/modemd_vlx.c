@@ -41,8 +41,14 @@
 #define DATA_BUF_SIZE (128)
 
 #define MODEM_IMAGE_OFFSET  0
+#ifdef MODEM_BANK
+#undef MODEM_BANK
+#endif
 #define MODEM_BANK          "guestOS_2_bank"
 #define DSP_IMAGE_OFFSET    0
+#ifdef DSP_BANK
+#undef DSP_BANK
+#endif
 #define DSP_BANK            "dsp_bank"
 
 #ifndef CONFIG_EMMC
@@ -454,14 +460,14 @@ int vlx_reboot_init(void)
     ret = pthread_mutex_init(&reset_mutex, NULL);
     if (ret) {
         MODEMD_LOGE("Failed to init reset_mutex : %d", ret);
-        exit(-1);
+        exit_modemd();
     }
     pthread_cond_init(&reset_cond, NULL);
 
     ret = pthread_mutex_init(&read_mutex, NULL);
     if (ret) {
         MODEMD_LOGE("Failed to init read_mutex : %d", ret);
-        exit(-1);
+        exit_modemd();
     }
     pthread_cond_init(&read_cond, NULL);
 
@@ -590,7 +596,7 @@ void *vlx_reset_thread(void *par)
     if (reset_fd < 0) {
         MODEMD_LOGE("%s<%d>: open vpipe0 failed, error: %s",
                 __func__, __LINE__, strerror(errno));
-        exit(-1);
+        exit_modemd();
     }
 
     for(;;) {
@@ -677,7 +683,7 @@ int detect_vlx_modem(int modem)
     assert_fd = open(VLX_ASSERT_DEV, O_RDONLY);
     if (assert_fd < 0) {
         MODEMD_LOGE("open %s failed, error: %s", VLX_ASSERT_DEV, strerror(errno));
-        exit(-1);
+        exit_modemd();
     }
 
     for(;;) {
@@ -704,7 +710,7 @@ int detect_vlx_modem(int modem)
             assert_fd = open(VLX_ASSERT_DEV, O_RDONLY);
             if (assert_fd < 0){
                 MODEMD_LOGE("open %s failed, error: %s", VLX_ASSERT_DEV, strerror(errno));
-                exit(-1);
+                exit_modemd();
             }
             continue;
         } else if (numRead < 0) {
