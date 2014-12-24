@@ -2812,7 +2812,7 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 
 	if ((CAMERA_ZSL_MODE != snp_cxt->snp_mode) && (!is_restart) && (1 != camera_get_hdr_flag(cxt))) {
 		/*open flash*/
-		setting_param.ctrl_flash.capture_mode.capture_mode= capture_mode;
+		setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snp_mode;
 		setting_param.camera_id = camera_id;
 		setting_param.ctrl_flash.is_active = 1;
 		setting_param.ctrl_flash.flash_type = FLASH_HIGH_LIGHT;
@@ -2860,7 +2860,7 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 	snp_cxt = &cxt->snp_cxt;
 	/*close flash*/
 	setting_param.camera_id = camera_id;
-	setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snapshot_sn_mode;
+	setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snp_mode;
 	setting_param.ctrl_flash.is_active = 0;
 	setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 	ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);

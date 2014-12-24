@@ -1923,10 +1923,9 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 					CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 				}
 
-				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
-			} else {
-				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 			}
+
+			setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 		}
 
 		if ((ctrl_flash_status == FLASH_HIGH_LIGHT) || (ctrl_flash_status == FLASH_OPEN)) {
