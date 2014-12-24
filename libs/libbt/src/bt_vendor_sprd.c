@@ -233,6 +233,8 @@ static int op(bt_vendor_opcode_t opcode, void *param)
                         ALOGE("%s write(%s) failed: %s (%d)", __func__,
                                 MARLIN_PA_DISABLE_VALUE, strerror(errno),errno);
                     }
+                    close(pa_enable_fd);
+                    pa_enable_fd = -1;
                 }
             }
             break;
@@ -436,16 +438,19 @@ static int read_mac_address(char *file_name, uint8 *addr) {
     }
     if (read(fd, buf, MAC_ADDR_BUF_LEN) < 0) {
         ALOGI("%s read %s error reason: %s", __func__, file_name, strerror(errno));
-        return -1;
+        goto done;
     }
     if (sscanf(buf, "%02X:%02X:%02X:%02X:%02X:%02X", &addr_t[0], &addr_t[1], &addr_t[2], &addr_t[3], &addr_t[4], &addr_t[5]) < 0) {
         ALOGI("%s sscanf %s error reason: %s", __func__, file_name, strerror(errno));
-        return -1;
+        goto done;
     }
     for (i = 0; i < MAC_ADDR_LEN; i++) {
         addr[i] = addr_t[i] & 0xFF;
     }
     ALOGI("%s %s addr: [%02X:%02X:%02X:%02X:%02X:%02X]", __func__, file_name, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+
+done:
+    close(fd);
     return 0;
 }
 
