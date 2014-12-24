@@ -83,7 +83,7 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 
 
 	//First check if wcn modem is enabled or not, if not, the at cmd is not supported
-	if(!pWcndManger->is_wcn_modem_enabled)
+	if(pWcndManger && !pWcndManger->is_wcn_modem_enabled)
 	{
 		wcnd_send_back_cmd_result(client_fd, ":WCN Disabled", 0);
 		return 0;
@@ -124,6 +124,17 @@ int wcnd_process_atcmd(int client_fd, char *atcmd_str, WcndManager *pWcndManger)
 
 		goto out;
 	}
+
+	//for other command, if CP2 is assert, return FAIL message
+	if(pWcndManger->is_cp2_error)
+	{
+		WCND_LOGD("%s: CP2 is assert, at cmd FAIL", __func__);
+		wcnd_send_back_cmd_result(client_fd, ":WCN Assert", 0);
+		return 0;
+	}
+
+
+	//Below send at command to CP2
 
 	snprintf(buffer, 255, "%s", atcmd_str);
 

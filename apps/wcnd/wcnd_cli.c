@@ -211,16 +211,23 @@ static int get_wifi_power_mode(void)
 }
 
 
-static void connect_wcnd(void)
+static void connect_wcnd(int eng_mode)
 {
-	client_fd = socket_local_client( WCND_SOCKET_NAME,
+	char *socket_name = WCND_SOCKET_NAME;
+
+	if(eng_mode)
+	{
+		socket_name = WCND_ENG_SOCKET_NAME;
+	}
+
+	client_fd = socket_local_client( socket_name,
 		ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 
 	while(client_fd < 0)
 	{
-		printf("%s: Unable bind server %s, waiting...\n",__func__, WCND_SOCKET_NAME);
+		printf("%s: Unable bind server %s, waiting...\n",__func__, socket_name);
 		usleep(100*1000);
-		client_fd = socket_local_client( WCND_SOCKET_NAME,
+		client_fd = socket_local_client( socket_name,
 			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	}
 
@@ -281,8 +288,12 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	int engmode = 0;
 
-	connect_wcnd();
+	if(!strcmp(argv[1], "eng")) engmode = 1;
+
+
+	connect_wcnd(engmode);
 
 	char cmd[255];
 	int i = 0, length = 0, offset = 0;

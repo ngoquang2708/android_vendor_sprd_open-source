@@ -140,6 +140,8 @@
 #define WCN_IMAGE_SIZE	(1*1024*1024)	//max size is 1M
 
 #define WCND_SOCKET_NAME	"wcnd"
+#define WCND_ENG_SOCKET_NAME	"wcnd_eng"
+
 
 
 #define WCND_CP2_EXCEPTION_STRING "WCN-CP2-EXCEPTION"
@@ -261,6 +263,9 @@ typedef struct structWcndManager
 	//to identify if the wcn modem (CP2) is enabled or not.
 	//to check property "ro.modem.wcn.enable"
 	int is_wcn_modem_enabled;
+
+	//to identify if only for engineer mode, if yes, then the CP2 listen/loop check will be disabled
+	int is_eng_mode_only;
 
 }WcndManager;
 

@@ -1493,6 +1493,8 @@ static int start_cp2_listener(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
+	if(pWcndManger->is_eng_mode_only) return 0;
+
 	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
 	pthread_t thread_id;
@@ -1510,7 +1512,7 @@ static int start_cp2_listener(WcndManager *pWcndManger)
 * Initial the wcnd manager struct.
 * return -1 for fail;
 */
-static int init(WcndManager *pWcndManger)
+static int init(WcndManager *pWcndManger, int is_eng_only)
 {
 	if(!pWcndManger) return -1;
 
@@ -1524,10 +1526,24 @@ static int init(WcndManager *pWcndManger)
 	for(i=0; i<WCND_MAX_CLIENT_NUM; i++)
 		pWcndManger->clients[i].sockfd = -1;
 
-	pWcndManger->listen_fd = socket_local_server(WCND_SOCKET_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-	if (pWcndManger->listen_fd < 0) {
-		WCND_LOGE("%s: cannot create local socket server", __FUNCTION__);
-		return -1;
+	pWcndManger->is_eng_mode_only = is_eng_only;
+	if(pWcndManger->is_eng_mode_only)
+	{
+		WCND_LOGE("%s: ONLY for engineer mode!!", __FUNCTION__);
+
+		pWcndManger->listen_fd = socket_local_server(WCND_ENG_SOCKET_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+		if (pWcndManger->listen_fd < 0) {
+			WCND_LOGE("%s: cannot create local socket server", __FUNCTION__);
+			return -1;
+		}
+	}
+	else
+	{
+		pWcndManger->listen_fd = socket_local_server(WCND_SOCKET_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+		if (pWcndManger->listen_fd < 0) {
+			WCND_LOGE("%s: cannot create local socket server", __FUNCTION__);
+			return -1;
+		}
 	}
 
 	snprintf(pWcndManger->wcn_assert_iface_name, WCND_MAX_IFACE_NAME_SIZE, "%s", WCN_ASSERT_IFACE);
@@ -1652,6 +1668,29 @@ static void *cp2_loop_check_thread(void *arg)
 		exit(-1);
 	}
 
+	//First wait for 20 seconds for CP2 to be ready, and then start doing LOOP CHECK
+	sleep(20);
+
+
+	//special handle for the case that an assert/watchdog assert happens when system up
+	//before WcnManagerService is ready. At this time need to notify assert again
+	if(pWcndManger->is_cp2_error && !pWcndManger->doing_reset)
+	{
+		char value[PROPERTY_VALUE_MAX] = {'\0'};
+
+		property_get(WCND_RESET_PROP_KEY, value, "0");
+		int is_reset = atoi(value);
+		if(is_reset)
+		{
+			WCND_LOGD("%s: CP2 assert/watchdog assert, and reset is enabled, but does not doing reset."
+				"So notify loop fail again!!", __FUNCTION__);
+
+			handle_cp2_loop_check_fail(pWcndManger);
+			//wait 20 seconds for reset
+			sleep(20);
+		}
+	}
+
 	while(1)
 	{
 		usleep(LOOP_CHECK_INTERVAL_MSECS*1000);
@@ -1710,6 +1749,8 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
+	if(pWcndManger->is_eng_mode_only) return 0;
+
 	//if wcn modem is not enabled, just return
 	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
@@ -1737,6 +1778,8 @@ static int start_cp2_loop_check(WcndManager *pWcndManger)
 */
 static int start_engineer_service(WcndManager *pWcndManger)
 {
+
+	if(pWcndManger->is_eng_mode_only) return 0;
 
 	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
@@ -1789,6 +1832,8 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 	return 0;
 
 #endif
+
+	if(pWcndManger->is_eng_mode_only) return 0;
 
 	//if not use our own wcn, just return
 	if(!pWcndManger->is_wcn_modem_enabled) return 0;
@@ -1891,10 +1936,32 @@ extern WcnCmdExecuter wcn_eng_cmdexecuter;
 
 int main(int argc, char *argv[])
 {
-	os_process_init();
+	//parse arg first
+	int c;
+	int is_eng_only = 0;
 
-	generate_wifi_mac();
-	generate_bt_mac();
+	for (;;)
+	{
+		c = getopt(argc, argv, "G");
+		if (c < 0) break;
+		switch (c)
+		{
+			case 'G': //-G is engineer mode only
+				is_eng_only = 1;
+				break;
+			default:
+				break;
+		}
+	}
+
+	if(!is_eng_only)
+	{
+		//if it is not an engineer mode only, then need to switch the user/group
+		os_process_init();
+
+		generate_wifi_mac();
+		generate_bt_mac();
+	}
 
 	blockSigpipe();
 
@@ -1905,7 +1972,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if(init(pWcndManger) < 0)
+	if(init(pWcndManger, is_eng_only) < 0)
 	{
 		WCND_LOGE("Init pWcnManager Fail!!!");
 		return -1;
@@ -1938,7 +2005,7 @@ int main(int argc, char *argv[])
 
 
 	//first check if CP2 alive, then config cp2 at bootup
-	if(pWcndManger->state == WCND_STATE_CP2_STARTED)
+	if(!pWcndManger->is_eng_mode_only && pWcndManger->state == WCND_STATE_CP2_STARTED)
 	{
 		int count = 2;
 		int need_config_cp2 = 0;
