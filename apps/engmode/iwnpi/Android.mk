@@ -30,9 +30,15 @@ include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE := false
 
 LIBIWNPI_OBJS	  += iwnpi_cmd_executer.c util.c cmd.c
+ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
+LIBIWNPI_OBJS	  += eng_bcmd_test.c ../wifi_eut.c
+endif
 #cflags
 LIBIWNPI_CFLAGS ?= -O2 -g
 LIBIWNPI_CFLAGS += -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -DCONFIG_LIBNL20
+ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
+LIBIWNPI_CFLAGS += -DBCM
+endif
 #include dirs
 INCLUDES += external/libnl-headers
 

@@ -24,6 +24,7 @@
 
 #include "nlnpi.h"
 #include "iwnpi.h"
+#include "eng_bcmd_test.h"
 #include <android/log.h>
 #include <utils/Log.h>
 
@@ -296,6 +297,7 @@ static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const 
 {
     int err;
     char command[WIFI_EUT_COMMAND_MAX_LEN+1] = {0x00};
+	char retstr[64] = {0};
 
     ALOGD("ADL entry %s(), line = %d, argc = %d", __func__, __LINE__, argc);
 #if 0 /* debug, print all paramters */
@@ -324,9 +326,12 @@ static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const 
             strcat(cmd_str, " "); /* add a space */
             i++;
         }
-
         snprintf(command, WIFI_EUT_COMMAND_MAX_LEN, "%s", cmd_str);
-        err = system(command);
+#ifdef BCM
+	err = hardware_sprd_wifi_test(command,retstr);
+#else
+	err = system(command);
+#endif
         ALOGD("ADL %s(), called system(%s), err = %d", __func__, command, err);
     }
 
@@ -337,7 +342,11 @@ static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const 
         if(result_buf)
         {
             ALOGD("ADL %s(), call handle_reply_int_data()", __func__);
-            handle_reply_int_data(result_buf);
+#ifdef BCM
+		sprintf(result_buf,"%s",retstr);
+#else
+		handle_reply_int_data(result_buf);
+#endif
         }
     }
     else if (strstr(command, CMD_RX_GET_OK) > 0)
@@ -345,7 +354,11 @@ static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const 
         if(result_buf)
         {
             ALOGD("ADL %s(), call handle_reply_rx_ok_data()", __func__);
-            handle_reply_rx_ok_data(result_buf);
+#ifdef BCM
+		sprintf(result_buf,"%s",retstr);
+#else
+		handle_reply_rx_ok_data(result_buf);
+#endif
         }
     }
     else if (strstr(command, CMD_GET_REG) > 0)
@@ -353,7 +366,12 @@ static int __handle_cmd(struct nlnpi_state *state, int argc, char **argv, const 
         if(result_buf)
         {
             ALOGD("ADL %s(), call handle_reply_get_reg_data()", __func__);
+#ifdef BCM
+		sprintf(result_buf,"%s","unsuppot");
+		err=-1;
+#else
             handle_reply_get_reg_data(result_buf);
+#endif
         }
     }
 
@@ -386,7 +404,6 @@ static int nlnpi_init(struct nlnpi_state *state)
         err = -ENOENT;
         goto out_handle_destroy;
     }
-
     return 0;
 
 out_handle_destroy:
