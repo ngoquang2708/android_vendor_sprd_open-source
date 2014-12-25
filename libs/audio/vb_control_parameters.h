@@ -147,6 +147,7 @@ typedef struct
 {
     int num;
     i2s_ctl_t *i2s_ctl_info;
+    int   cpu_index;
 }i2s_bt_t;
 
 

@@ -783,17 +783,17 @@ int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 		ALOGE("i2s_pin_mux_sel ERROR return");
 		return -1;
 	}
-	//vbc_ctrl_pipe_info->cpu_index = 0;
+	i2s_btcall_info->cpu_index = vbc_ctrl_pipe_info->cpu_index ;
    }
    else
-   {
-	vbc_ctrl_pipe_info += AP_TYPE;
-	vbc_ctrl_pipe_info->cpu_index = AP_TYPE;
-   }
+	i2s_btcall_info->cpu_index = AP_TYPE;
 
-	i2s_ctl_info =  i2s_btcall_info->i2s_ctl_info + vbc_ctrl_pipe_info->cpu_index;;
+	if(type >= CP_MAX)
+		i2s_btcall_info->cpu_index = AP_TYPE;
 
- ALOGW("-----in  cpu_index  is %d ", vbc_ctrl_pipe_info->cpu_index);
+	i2s_ctl_info =  i2s_btcall_info->i2s_ctl_info +i2s_btcall_info->cpu_index;
+
+ ALOGW("-----in  cpu_index  is %d ", i2s_btcall_info->cpu_index);
 	p_ctlr_node = i2s_ctl_info->p_ctlr_node_head ;
 			  ALOGW("i2s_pin_mux_sel in type i----------i2s_ctl_info->is_switch = %d " ,i2s_ctl_info->is_switch );
         if(adev->out_devices & AUDIO_DEVICE_OUT_ALL_SCO)
