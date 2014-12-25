@@ -180,5 +180,6 @@ void* detect_sipc_modem(void *param);
 void* detect_modem_blocked(void *param);
 
 extern void exit_modemd(void);
-
+int open_modem_dev(char *path);
+int wait_for_alive(int modem, int is_assert);
 #endif
