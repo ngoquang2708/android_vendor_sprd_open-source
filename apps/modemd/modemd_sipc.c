@@ -32,6 +32,7 @@ static pthread_cond_t w_cond = PTHREAD_COND_INITIALIZER;
 static int epollfd = -1;
 static int wakealarm_fd = -1;
 static bool g_b_wake_locking = false;
+static int assert_fd = 0;
 
 /******************************************************
  *
@@ -183,7 +184,6 @@ char modem_bank[128];
 char dsp_bank[128];
 char modem_stop[128];
 char modem_start[128];
-
 
 static int load_sipc_modem_img(int modem, int is_modem_assert)
 {
@@ -412,6 +412,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     } else {
         MODEMD_LOGE("error unkown modem  alive_info");
     }
+    int alive=0;
+    alive = wait_for_alive(modem,is_modem_assert);
+    if(alive == 0){
     MODEMD_LOGD("wait for 20s\n");
       struct itimerspec itval;
       struct epoll_event events[1];
@@ -457,13 +460,15 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
           }
          break;
       }while(1) ;
+    }
     // sleep(20);
-    if(is_modem_assert) {
+    
+    if(is_modem_assert && alive) {
         /* info socket clients that modem is reset */
         MODEMD_LOGD("Info all the sock clients that modem is alive");
         loop_info_sockclients(alive_info, strlen(alive_info)+1);
     }
-
+    
     start_service(modem, 0, 1);
     if(modem == TD_MODEM) {
             pthread_mutex_lock(&td_state_mutex);
@@ -721,7 +726,7 @@ void* detect_sipc_modem(void *param)
 {
     char assert_dev[256] = {0};
     char watchdog_dev[256] = {0};
-    int i, ret, assert_fd, watchdog_fd, max_fd,diag_fd,fd = -1;
+    int i, ret, watchdog_fd, max_fd,diag_fd,fd = -1;
     fd_set rfds;
     int is_reset, modem = -1;
     char buf[256], prop[256];
@@ -922,6 +927,34 @@ void* detect_sipc_modem(void *param)
             }
         }
     }
+}
+
+int wait_for_alive(int modem, int is_assert){
+
+   char buf[256] = {0};
+   int ret=0;
+   int count = 0;
+   
+   if(!is_assert || (assert_fd<0))
+       return ret;
+
+   MODEMD_LOGD("wait for alive info from : %d", assert_fd);
+
+   for(;;){
+      // usleep(400*1000);
+       count = read(assert_fd, buf, sizeof(buf));
+       if (count <= 0) {
+           MODEMD_LOGE("read %d return %d, error: %s", assert_fd, count, strerror(errno));
+           continue;
+       }
+       MODEMD_LOGD("read response %s from %d", buf,assert_fd);
+       if (strstr(buf, "Alive")) {
+           ret = 1;
+           break;
+       } 
+   }
+   return ret;
+
 }
 /******************************************************
  *
