@@ -435,7 +435,7 @@ status_t SPRDAVCDecoder::initDecoder() {
 
 void SPRDAVCDecoder::releaseDecoder() {
     if( mH264DecRelease!=NULL )
-           (*mH264DecRelease)(mHandle);
+        (*mH264DecRelease)(mHandle);
 
     if (mCodecInterBuffer != NULL) {
         free(mCodecInterBuffer);
@@ -549,9 +549,9 @@ OMX_ERRORTYPE SPRDAVCDecoder::internalGetParameter(
 
         for (index = 0; index < size; index++) {
             if (ConversionTable[index].avcLevel > mCapability.level) {
-		if(index > 0){
-			index--;
-		}
+                if(index > 0) {
+                    index--;
+                }
                 break;
             }
         }
@@ -907,31 +907,31 @@ OMX_ERRORTYPE SPRDAVCDecoder::getConfig(
 OMX_ERRORTYPE SPRDAVCDecoder::setConfig(
     OMX_INDEXTYPE index, const OMX_PTR params) {
     switch (index) {
-        case OMX_IndexConfigThumbnailMode:
-        {
-            OMX_BOOL *pEnable = (OMX_BOOL *)params;
+    case OMX_IndexConfigThumbnailMode:
+    {
+        OMX_BOOL *pEnable = (OMX_BOOL *)params;
 
-            if (*pEnable == OMX_TRUE) {
-                mThumbnailMode = OMX_TRUE;
-            }
-
-            ALOGI("setConfig, mThumbnailMode = %d", mThumbnailMode);
-
-            if (mThumbnailMode) {
-                PortInfo *pInPort = editPortInfo(OMX_DirInput);
-                PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
-                pInPort->mDef.nBufferCountActual = 2;
-                pOutPort->mDef.nBufferCountActual = 2;
-                pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
-                if(!mDecoderSwFlag) {
-                    mChangeToSwDec = true;
-                }
-            }
-            return OMX_ErrorNone;
+        if (*pEnable == OMX_TRUE) {
+            mThumbnailMode = OMX_TRUE;
         }
 
-        default:
-            return SprdSimpleOMXComponent::setConfig(index, params);
+        ALOGI("setConfig, mThumbnailMode = %d", mThumbnailMode);
+
+        if (mThumbnailMode) {
+            PortInfo *pInPort = editPortInfo(OMX_DirInput);
+            PortInfo *pOutPort = editPortInfo(OMX_DirOutput);
+            pInPort->mDef.nBufferCountActual = 2;
+            pOutPort->mDef.nBufferCountActual = 2;
+            pOutPort->mDef.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+            if(!mDecoderSwFlag) {
+                mChangeToSwDec = true;
+            }
+        }
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return SprdSimpleOMXComponent::setConfig(index, params);
     }
 }
 
@@ -961,7 +961,7 @@ void SPRDAVCDecoder::onQueueFilled(OMX_U32 portIndex) {
         mChangeToSwDec = false;
 
         ALOGI("%s, %d, change to sw decoder, mThumbnailMode: %d",
-            __FUNCTION__, __LINE__, mThumbnailMode);
+              __FUNCTION__, __LINE__, mThumbnailMode);
 
         releaseDecoder();
 
@@ -1237,7 +1237,7 @@ bool SPRDAVCDecoder::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
 //    ALOGI("%s, %d, mWidth: %d, mHeight: %d,  info->picWidth: %d,info->picHeight:%d, mPictureSize:%d ",
 //                __FUNCTION__, __LINE__,mWidth, mHeight,  info->picWidth, info->picHeight, mPictureSize);
 
-#if 1
+#if 0
     if(!mDecoderSwFlag) {
         ALOGI("%s, %d, picWidth: %d, picHeight: %d, numRef: %d, profile: 0x%x",
               __FUNCTION__, __LINE__,info->picWidth, info->picHeight, info->numRefFrames, info->profile);
@@ -1397,8 +1397,8 @@ void SPRDAVCDecoder::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
 
 void SPRDAVCDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
     if(portIndex == OMX_DirOutput) {
-          if( NULL!=mH264Dec_ReleaseRefBuffers )
-              (*mH264Dec_ReleaseRefBuffers)(mHandle);
+        if( NULL!=mH264Dec_ReleaseRefBuffers )
+            (*mH264Dec_ReleaseRefBuffers)(mHandle);
     }
 }
 
@@ -1440,6 +1440,13 @@ int32_t SPRDAVCDecoder::UnbindFrameWrapper(void *aUserData, void *pHeader) {
 int SPRDAVCDecoder::VSP_malloc_cb(unsigned int size_extra) {
 
     ALOGI("%s, %d, mDecoderSwFlag: %d, mPictureSize: %d, size_extra: %d", __FUNCTION__, __LINE__, mDecoderSwFlag, mPictureSize, size_extra);
+
+    int32_t picId;
+    void* pBufferHeader;
+    while (MMDEC_OK == (*mH264Dec_GetLastDspFrm)(mHandle, &pBufferHeader, &picId)) {
+        drainOneOutputBuffer(picId, pBufferHeader);
+    }
+
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
 
     if (mDecoderSwFlag) {
