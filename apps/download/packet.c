@@ -147,6 +147,22 @@ int setup_packet(CMD_TYPE msg,char *buffer,int offset,int data_size,int flag,int
 				total_size = data_size + 8;
 			}
 		break;
+		case BSL_CMD_DUMP_MEM:
+                        if(flag==BSL_UART_PACKET){
+                                head->type = cpu2be16((unsigned short)msg);
+                                head->length = cpu2be16((unsigned short)data_size);
+                                crc16 = crc_16_l_calc((char *)head,length);
+                                *((unsigned short *)&buffer[length+4]) = cpu2be16(crc16);
+				total_size = length + 2;
+			}else{
+
+				*((unsigned short *)&buffer[0]) =  data_size;
+				*((unsigned short *)&buffer[2]) = (unsigned short)msg;
+				*((unsigned short *)&buffer[4]) = boot_checksum((const unsigned char *)buffer+offset,data_size);
+				*((unsigned short *)&buffer[6]) = boot_checksum((const unsigned char *)buffer,6);
+				total_size = data_size + 8;
+			}
+		break;
 		case BSL_CMD_MIDST_DATA:
                         if(flag==BSL_UART_PACKET){
                                 head->type = cpu2be16((unsigned short)msg);
@@ -552,3 +568,22 @@ int  send_exec_message(int fd,unsigned long addr,int flag)
 	return -1;
 }
 
+/******************************************************************************
+**  Description:    This function setup dump start message
+**  Author:         xiaodong.bi
+**  parameter:      size : size of image to be sent
+**                  addr : address where image to be saved in MODEM
+******************************************************************************/
+int  send_dump_mem_message(int fd,int size,unsigned long addr,int flag)
+{
+	char raw_buffer[32] = {0};
+	int retval;
+
+	*(unsigned long *)&raw_buffer[8] = cpu2be32(addr);
+	*(unsigned long *)&raw_buffer[12] = cpu2be32(size);
+	size = setup_packet(BSL_CMD_DUMP_MEM,raw_buffer,8,8,flag,0);
+
+	retval = write(fd,raw_buffer,size);
+	DOWNLOAD_LOGD("send_dump_mem_message write retval = %d\n", retval);
+	return -1;
+}

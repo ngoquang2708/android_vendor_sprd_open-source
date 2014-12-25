@@ -10,6 +10,7 @@
 #include <utils/Log.h>
 #include <cutils/sockets.h>
 #include <time.h>
+#include <cutils/properties.h>
 
 #include "packet.h"
 #include "connectivity_rf_parameters.h"
@@ -24,15 +25,45 @@
 #define DOWNLOAD_POWER_OFF	_IO(DOWNLOAD_IOCTL_BASE, 0x02)
 #define DOWNLOAD_POWER_RST	_IO(DOWNLOAD_IOCTL_BASE, 0x03)
 
-#define WCN_SOCKET_NAME       "external_wcn"
+#define WCN_SOCKET_NAME			"external_wcn"
+#define WCN_SOCKET_SLOG_NAME	"external_wcn_slog"
+
 #define WCN_MAX_CLIENT_NUM		(10)
-#define EXTERNAL_WCN_ALIVE "WCN-EXTERNAL-ALIVE"
+
+
+#define WCN_SOCKET_TYPE_SLOG		1
+#define WCN_SOCKET_TYPE_WCND		2
+/*slog*/
+#define EXTERNAL_WCN_ALIVE		"WCN-EXTERNAL-ALIVE"
+#define WCN_CMD_START_DUMP_WCN	"WCN-EXTERNAL-DUMP"
+#define WCN_DUMP_LOG_COMPLETE 	"persist.sys.sprd.wcnlog.result"
+
+/*wcn*/
+#define WCN_CMD_REBOOT_WCN		"rebootwcn"
+#define WCN_CMD_DUMP_WCN		"dumpwcn"
+#define WCN_CMD_START_WCN		"startwcn"
+#define WCN_CMD_STOP_WCN		"stopwcn"
+#define WCN_RESP_REBOOT_WCN		"rebootwcn-ok"
+#define WCN_RESP_DUMP_WCN		"dumpwcn-ok"
+#define WCN_RESP_START_WCN		"startwcn-ok"
+#define WCN_RESP_STOP_WCN		"stopwcn-ok"
+#define SOCKET_BUFFER_SIZE 		(128)
+
+typedef struct structWcnClient{
+	int sockfd;
+	int type;
+}WcnClient;
 
 typedef struct pmanager {
 	pthread_mutex_t client_fds_lock;
-	int client_fds[WCN_MAX_CLIENT_NUM];
+	WcnClient client_fds[WCN_MAX_CLIENT_NUM];
 	int listen_fd;
+	int listen_slog_fd;
 	bool flag_connect;
+	bool flag_reboot;
+	bool flag_start;
+	bool flag_stop;
+	bool flag_dump;
 }pmanager_t;
 
 pmanager_t pmanager;
@@ -140,7 +171,7 @@ void set_raw_data_speed(int fd, int speed)
            // Opt.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
             Opt.c_oflag &= ~OPOST;
             Opt.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-            Opt.c_cflag &= ~(CSIZE | PARENB);
+            Opt.c_cflag &= ~(CSIZE | PARENB | CRTSCTS);
             Opt.c_cflag |= CS8;
 
 	    //Opt.c_iflag = ~(ICANON|ECHO|ECHOE|ISIG);
@@ -477,11 +508,53 @@ static void download_wifi_calibration(int download_fd)
 	DOWNLOAD_LOGD("end download calibration\n");
 }
 
+static int send_notify_to_client(pmanager_t *pmanager, char *info_str,int type)
+{
+	int i, ret;
+	char *buf;
+	int len;
+
+	if(!pmanager || !info_str) return -1;
+
+	DOWNLOAD_LOGD("send_notify_to_client:%s",info_str);
+
+	pthread_mutex_lock(&pmanager->client_fds_lock);
+
+	/* info socket clients that WCN with str info */
+	for(i = 0; i < WCN_MAX_CLIENT_NUM; i++)
+	{
+		DOWNLOAD_LOGD("client_fds[%d].sockfd=%d\n",i, pmanager->client_fds[i].sockfd);
+
+		if((pmanager->client_fds[i].type == type) && (pmanager->client_fds[i].sockfd >= 0)){
+			buf = info_str;
+			len = strlen(buf) + 1;
+
+			ret = write(pmanager->client_fds[i].sockfd, buf, len);
+			if(ret < 0){
+				DOWNLOAD_LOGE("reset client_fds[%d]=-1",i);
+				close(pmanager->client_fds[i].sockfd);
+				pmanager->client_fds[i].sockfd = -1;
+			}
+
+			if(pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND){
+				DOWNLOAD_LOGE("close wcnd client_fds[%d]=-1",i);
+				close(pmanager->client_fds[i].sockfd);
+				pmanager->client_fds[i].sockfd = -1;
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&pmanager->client_fds_lock);
+
+	return 0;
+}
+
 int download_entry(void)
 {
 	int uart_fd;
 	int download_fd = -1;
 	int ret=0;
+	char value[PROPERTY_VALUE_MAX] = {'\0'};
 
 	DOWNLOAD_LOGD("download_entry\n");
 	download_power_on(1);
@@ -514,7 +587,7 @@ reboot_device:
 
     download_fd = open(DLOADER_PATH, O_RDWR);
     if(download_fd < 0){
-	DOWNLOAD_LOGD("open dloader device failed retry ......\n");
+		DOWNLOAD_LOGD("open dloader device failed retry ......\n");
         for(;;) {
             download_fd = open(DLOADER_PATH, O_RDWR);
             if(download_fd>=0) {
@@ -525,21 +598,61 @@ reboot_device:
             }
         }
     }
-    DOWNLOAD_LOGD("open dloader device successfully ... \n");
-    ret = download_images(download_fd);
-    DOWNLOAD_LOGD("download finished ......\n");
+	DOWNLOAD_LOGD("open dloader device successfully ... \n");
 
-	download_wifi_calibration(download_fd);
-    close(download_fd);
-	if(ret == DL_FAILURE){
-		sleep(1);
-		goto reboot_device;
+	if(pmanager.flag_dump){
+		/*send dump cmmd and do dump*/
+		DOWNLOAD_LOGD("start dump mem\n");
+		property_set(WCN_DUMP_LOG_COMPLETE, "0");
+		ret = send_notify_to_client(&pmanager, WCN_CMD_START_DUMP_WCN,WCN_SOCKET_TYPE_SLOG);
+		send_dump_mem_message(download_fd,0,0,1);
+		close(download_fd);
+
+		while (1)
+		{
+			sleep(1);
+			if (property_get(WCN_DUMP_LOG_COMPLETE, value, NULL))
+			{
+				if (strcmp(value, "1") == 0)
+				{
+					break;
+				}
+			}
+		}
+		DOWNLOAD_LOGD("end dump mem\n");
+	}else{
+	    ret = download_images(download_fd);
+	    DOWNLOAD_LOGD("download finished ......\n");
+
+	    download_wifi_calibration(download_fd);
+	    close(download_fd);
+		if(ret == DL_FAILURE){
+			sleep(1);
+			goto reboot_device;
+		}
 	}
-	
+
+
+	if(pmanager.flag_dump){
+		ret = send_notify_to_client(&pmanager, WCN_RESP_DUMP_WCN,WCN_SOCKET_TYPE_WCND);
+		pmanager.flag_dump = 0;
+	}
+
+	if(pmanager.flag_reboot){
+		sleep(2);
+		ret = send_notify_to_client(&pmanager, WCN_RESP_REBOOT_WCN,WCN_SOCKET_TYPE_WCND);
+		pmanager.flag_reboot = 0;
+	}
+
+	if(pmanager.flag_start){
+		ret = send_notify_to_client(&pmanager, WCN_RESP_START_WCN,WCN_SOCKET_TYPE_WCND);
+		pmanager.flag_start = 0;
+	}
+
     return 0;
 }
 
-static void store_client_fd(int client_fds[], int fd)
+static void store_client_fd(WcnClient client_fds[], int fd,int type)
 {
 	if(!client_fds) return;
 
@@ -547,12 +660,13 @@ static void store_client_fd(int client_fds[], int fd)
 
 	for (i = 0; i < WCN_MAX_CLIENT_NUM; i++)
 	{
-		if(client_fds[i] == -1) //invalid fd
+		if(client_fds[i].sockfd == -1) //invalid fd
 		{
-			client_fds[i] = fd;
+			client_fds[i].sockfd = fd;
+			client_fds[i].type = type;
 			return;
 		}
-		else if(client_fds[i] == fd)
+		else if(client_fds[i].sockfd == fd)
 		{
 			DOWNLOAD_LOGD("%s: Somethine error happens. restore the same fd:%d", __FUNCTION__, fd);
 			return;
@@ -562,7 +676,8 @@ static void store_client_fd(int client_fds[], int fd)
 	if(i == WCN_MAX_CLIENT_NUM)
 	{
 		DOWNLOAD_LOGD("ERRORR::%s: client_fds is FULL", __FUNCTION__);
-		client_fds[i-1] = fd;
+		client_fds[i-1].sockfd = fd;
+		client_fds[i].type = type;
 		return;
 	}
 }
@@ -584,78 +699,133 @@ static void *client_listen_thread(void *arg)
 		fd_set read_fds;
 		int rc = 0;
 		int max = -1;
+		struct sockaddr addr;
+		socklen_t alen;
+		int c;
 
 		FD_ZERO(&read_fds);
 
 		max = pmanager->listen_fd;
 		FD_SET(pmanager->listen_fd, &read_fds);
+		FD_SET(pmanager->listen_slog_fd, &read_fds);
+		if (pmanager->listen_slog_fd > max)
+			max = pmanager->listen_slog_fd;
 
-		//if need to deal with the cmd sent from client, here add them to read_fds
-		pthread_mutex_lock(&pmanager->client_fds_lock);
-		for (i = 0; i < WCN_MAX_CLIENT_NUM; i++)
-		{
-			int fd = pmanager->client_fds[i];
-			if(fd != -1) //valid fd
-			{
-				FD_SET(fd, &read_fds);
-				if (fd > max)
-					max = fd;
-			}
-		}
-		pthread_mutex_unlock(&pmanager->client_fds_lock);
-
-		//DOWNLOAD_LOGD("listen_fd = %d, max=%d", pmanager->listen_fd, max);
-		if ((rc = select(max + 1, &read_fds, NULL, NULL, NULL)) < 0)
-		{
+		if ((rc = select(max + 1, &read_fds, NULL, NULL, NULL)) < 0){
 			if (errno == EINTR)
 				continue;
 
-			//DOWNLOAD_LOGD("select failed (%s) listen_fd = %d, max=%d", strerror(errno), pmanager->listen_fd, max);
 			sleep(1);
 			continue;
-		}
-		else if (!rc)
+		}else if (!rc)
 			continue;
 
-		if (FD_ISSET(pmanager->listen_fd, &read_fds))
-		{
-			struct sockaddr addr;
-			socklen_t alen;
-			int c;
+		if (FD_ISSET(pmanager->listen_slog_fd, &read_fds)){
+			do {
+				alen = sizeof(addr);
+				c = accept(pmanager->listen_slog_fd, &addr, &alen);
+				DOWNLOAD_LOGD("%s got %d from accept", WCN_SOCKET_SLOG_NAME, c);
+			} while (c < 0 && errno == EINTR);
 
-			//accept the client connection
+			if (c < 0){
+				DOWNLOAD_LOGE("accept %s failed (%s)", WCN_SOCKET_SLOG_NAME,strerror(errno));
+				sleep(1);
+				continue;
+			}
+
+			pmanager->flag_connect = 1;
+			store_client_fd(pmanager->client_fds, c,WCN_SOCKET_TYPE_SLOG);
+		}else if(FD_ISSET(pmanager->listen_fd, &read_fds)) {
 			do {
 				alen = sizeof(addr);
 				c = accept(pmanager->listen_fd, &addr, &alen);
 				DOWNLOAD_LOGD("%s got %d from accept", WCN_SOCKET_NAME, c);
 			} while (c < 0 && errno == EINTR);
 
-			if (c < 0)
-			{
-				DOWNLOAD_LOGE("accept failed (%s)", strerror(errno));
+			if (c < 0){
+				DOWNLOAD_LOGE("accept %s failed (%s)", WCN_SOCKET_NAME,strerror(errno));
 				sleep(1);
 				continue;
 			}
-			pmanager->flag_connect = 1;
 
-			pthread_mutex_lock(&pmanager->client_fds_lock);
-			store_client_fd(pmanager->client_fds, c);
-			pthread_mutex_unlock(&pmanager->client_fds_lock);
+			store_client_fd(pmanager->client_fds, c,WCN_SOCKET_TYPE_WCND);
+		}
+	}
+}
+
+static void *wcn_exception_listen(void *arg)
+{
+	int  ret,i;
+	char buffer[SOCKET_BUFFER_SIZE];
+	fd_set readset;
+	int result, max = 0;
+	struct timeval timeout;
+	pmanager_t *pmanager = (pmanager_t *)arg;
+
+	if(!pmanager)
+	{
+		DOWNLOAD_LOGE("%s: unexcept NULL pmanager", __FUNCTION__);
+		exit(-1);
+	}
+
+	while(1){
+		timeout.tv_sec = 3;
+		timeout.tv_usec = 0;
+		FD_ZERO(&readset);
+
+		for(i = 0; i < WCN_MAX_CLIENT_NUM; i++){
+			if(pmanager->client_fds[i].sockfd >= 0){
+				max = pmanager->client_fds[i].sockfd> max ? pmanager->client_fds[i].sockfd : max;
+				FD_SET(pmanager->client_fds[i].sockfd, &readset);
+			}
+		}
+
+		result = select(max + 1, &readset, NULL, NULL, &timeout);
+		if(result == 0)
+			continue;
+
+		if(result < 0){
+			sleep(1);
+			continue;
+		}
+
+		memset(buffer, 0, SOCKET_BUFFER_SIZE);
+		for(i = 0; i < WCN_MAX_CLIENT_NUM; i++){
+			if(FD_ISSET(pmanager->client_fds[i].sockfd, &readset)){
+				if(pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND){
+					ret = read(pmanager->client_fds[i].sockfd, buffer, SOCKET_BUFFER_SIZE);
+					//DOWNLOAD_LOGD("sockfd get %d %d bytes %s", pmanager->client_fds[i].sockfd,ret, buffer);
+
+					if(strcmp(buffer,WCN_CMD_REBOOT_WCN) == 0){
+						pmanager->flag_reboot = 1;
+						download_state = DOWNLOAD_START;
+					}else if(strcmp(buffer,WCN_CMD_DUMP_WCN) == 0){
+						pmanager->flag_dump = 1;
+						download_state = DOWNLOAD_START;
+					}else if(strcmp(buffer,WCN_CMD_START_WCN) == 0){
+						pmanager->flag_start = 1;
+						download_state = DOWNLOAD_START;
+					}else if(strcmp(buffer,WCN_CMD_STOP_WCN) == 0){
+						pmanager->flag_stop = 1;
+					}
+				}
+			}
 		}
 	}
 
+	return NULL;
 }
 
 
 static int socket_init(pmanager_t *pmanager)
 {
-	pthread_t thread_id;
+	pthread_t thread_client_id,thread_exception_id;
 	int i = 0;
 
 	memset(pmanager, 0, sizeof(struct pmanager));
 
 	for(i=0; i<WCN_MAX_CLIENT_NUM; i++)
-		pmanager->client_fds[i] = -1;
+		pmanager->client_fds[i].sockfd = -1;
 
 	pmanager->listen_fd = socket_local_server(WCN_SOCKET_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 	if(pmanager->listen_fd < 0) {
@@ -663,48 +833,23 @@ static int socket_init(pmanager_t *pmanager)
 		return -1;
 	}
 
-	if (pthread_create(&thread_id, NULL, client_listen_thread, pmanager))
+	pmanager->listen_slog_fd = socket_local_server(WCN_SOCKET_SLOG_NAME, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+	if(pmanager->listen_slog_fd < 0) {
+		DOWNLOAD_LOGE("%s: cannot create local socket server", __FUNCTION__);
+		return -1;
+	}
+
+	if (pthread_create(&thread_client_id, NULL, client_listen_thread, pmanager))
 	{
 		DOWNLOAD_LOGE("start_client_listener: pthread_create (%s)", strerror(errno));
 		return -1;
 	}
-	return 0;
-}
 
-static int send_notify_to_client(pmanager_t *pmanager, char *info_str)
-{
-	int i, ret;
-	char *buf;
-	int len;
-
-	if(!pmanager || !info_str) return -1;
-
-	DOWNLOAD_LOGD("send_notify_to_client");
-
-	pthread_mutex_lock(&pmanager->client_fds_lock);
-
-	/* info socket clients that WCN with str info */
-	for(i = 0; i < WCN_MAX_CLIENT_NUM; i++)
+	if (pthread_create(&thread_exception_id, NULL, wcn_exception_listen, pmanager))
 	{
-		int fd = pmanager->client_fds[i];
-		DOWNLOAD_LOGD("client_fds[%d]=%d\n",i, fd);
-
-		if(fd >= 0)
-		{
-			buf = info_str;
-			len = strlen(buf) + 1;
-
-			ret = write(fd, buf, len);
-			if(ret < 0)
-			{
-				DOWNLOAD_LOGE("reset client_fds[%d]=-1",i);
-				close(fd);
-				pmanager->client_fds[i] = -1;
-			}
-		}
+		DOWNLOAD_LOGE("start_wcn_exception: pthread_create (%s)", strerror(errno));
+		return -1;
 	}
-
-	pthread_mutex_unlock(&pmanager->client_fds_lock);
 
 	return 0;
 }
@@ -733,15 +878,20 @@ int main(void)
 	download_state = DOWNLOAD_START;
 	do{
 		if(download_state == DOWNLOAD_START){
-			if(download_entry() == 0)
-			{
+			if(download_entry() == 0){
 				download_state = DOWNLOAD_BOOTCOMP;
 			}
 		}
 
 		if(pmanager.flag_connect){
-			ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE);
+			ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
 			pmanager.flag_connect = 0;
+		}
+
+		if(pmanager.flag_stop){
+			download_power_on(0);
+			ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
+			pmanager.flag_stop = 0;
 		}
 		sleep(1);
 	}while(1);
