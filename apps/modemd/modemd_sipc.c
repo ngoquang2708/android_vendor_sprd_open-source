@@ -463,7 +463,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
     // sleep(20);
     
-    if(is_modem_assert && alive) {
+    if(is_modem_assert ) {
         /* info socket clients that modem is reset */
         MODEMD_LOGD("Info all the sock clients that modem is alive");
         loop_info_sockclients(alive_info, strlen(alive_info)+1);
@@ -934,25 +934,64 @@ int wait_for_alive(int modem, int is_assert){
    char buf[256] = {0};
    int ret=0;
    int count = 0;
-   
-   if(!is_assert || (assert_fd<0))
-       return ret;
+   int fd =0;
+   char assert_dev[256] = {0};
+   struct timeval timeout;
+   fd_set rfds;
 
-   MODEMD_LOGD("wait for alive info from : %d", assert_fd);
+   if(modem == TD_MODEM) {
+       property_get(TD_ASSERT_PROP, assert_dev, DEFAULT_TD_ASSERT_DEV);
+   } else if(modem == W_MODEM) {
+       property_get(W_ASSERT_PROP, assert_dev, DEFAULT_W_ASSERT_DEV);
+   } else if(modem == TL_MODEM) {
+       property_get(TL_ASSERT_PROP, assert_dev, DEFAULT_TL_ASSERT_DEV);
+   } else if(modem == LF_MODEM) {
+       property_get(LF_ASSERT_PROP, assert_dev, DEFAULT_LF_ASSERT_DEV);
+   } else if(modem == LTE_MODEM) {
+       property_get(L_ASSERT_PROP, assert_dev, DEFAULT_L_ASSERT_DEV);
+   } else {
+       MODEMD_LOGE("input wrong modem type!");
+       return ret;
+   }
+
+   fd = open(assert_dev, O_RDWR);
+   MODEMD_LOGD("open assert dev: %s, fd = %d",assert_dev, fd);
+
+   if(fd<=0){
+	   MODEMD_LOGD("open assert dev fail.");
+	   return ret;
+   }
+   FD_ZERO(&rfds);
+   FD_SET(fd, &rfds);
+   MODEMD_LOGD("wait for alive info from : %d", fd);
 
    for(;;){
-      // usleep(400*1000);
-       count = read(assert_fd, buf, sizeof(buf));
-       if (count <= 0) {
-           MODEMD_LOGE("read %d return %d, error: %s", assert_fd, count, strerror(errno));
-           continue;
+	   timeout.tv_sec=20;
+	   timeout.tv_usec=0;
+       do {
+           ret = select(fd+1, &rfds, NULL, NULL, &timeout);
+       } while(ret == -1 && errno == EINTR);
+       if(ret < 0){
+    	   MODEMD_LOGE("select error: %s", strerror(errno));
+    	   continue;
+       }else if(ret == 0){
+    	   MODEMD_LOGE("select timeout");
+    	   system("echo \"c\" > /proc/sysrq-trigger");
+    	   break;
+       }else{
+           count = read(fd, buf, sizeof(buf));
+           if (count <= 0) {
+               MODEMD_LOGE("read %d return %d, error: %s", fd, count, strerror(errno));
+               continue;
+           }
+           MODEMD_LOGD("read response %s from %d", buf,fd);
+           if (strstr(buf, "Alive")) {
+               ret = 1;
+               break;
+           }
        }
-       MODEMD_LOGD("read response %s from %d", buf,assert_fd);
-       if (strstr(buf, "Alive")) {
-           ret = 1;
-           break;
-       } 
    }
+   close(fd);
    return ret;
 
 }
