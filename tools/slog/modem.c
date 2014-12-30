@@ -98,7 +98,7 @@ static void handle_dump_shark_sipc_info()
 #define MODEMRESET_PROPERTY "persist.sys.sprd.modemreset"
 #define MODEM_SOCKET_NAME       "modemd"
 #ifdef EXTERNAL_WCN
-#define WCN_SOCKET_NAME       "external_wcn"
+#define WCN_SOCKET_NAME       "external_wcn_slog"
 #else
 #define WCN_SOCKET_NAME       "wcnd"
 #endif
@@ -169,7 +169,11 @@ static void handle_open_modem_device(struct slog_info *info)
 		}
 	} else if (!strncmp(info->name, "cp_wcn", 6)) {
 		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
+		#ifdef EXTERNAL_WCN
+		info->fd_device = open(modem_property, O_RDWR|O_NONBLOCK);
+		#else
 		info->fd_device = open_device(info, modem_property);
+		#endif
 		info->fd_dump_cp = info->fd_device;
 		if(info->fd_device < 0)
 			info->state = SLOG_STATE_OFF;
@@ -338,6 +342,60 @@ void handle_socket_modem(char *buffer)
 }
 
 #ifdef EXTERNAL_WCN
+static void handle_dump_external_wcn(struct slog_info *info)
+{
+	FILE *file_p;
+	int fd_dev;
+	int n,dump_size;
+	char buffer[BUFFER_SIZE];
+	char new_path[MAX_NAME_LEN];
+	char modem_property[MAX_NAME_LEN];
+	time_t t;
+	struct tm tm;
+
+	if(info->fd_dump_cp < 0) {
+		err_log("open dump dev failed");
+	}
+	/* add timestamp */
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	sprintf(new_path, "%s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log", current_log_path, top_logdir, info->name, info->name,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	file_p = fopen(new_path, "a+b");
+	if (file_p == NULL) {
+		err_log("open modem memory file failed!");
+		return;
+	}
+
+	property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
+	fd_dev = open_device(info, modem_property);
+
+	close(info->fd_device);
+	info->fd_device = -1;
+
+	err_log("wcn start dump");
+	dump_size = 0;
+	do{
+		n = read(fd_dev, buffer, BUFFER_SIZE);
+		if(n>0 && n < 4096)
+		{
+			err_log("%s",buffer);
+			if(strncmp(buffer,"marlin_memdump_finish",21) == 0)
+				break;
+		}
+
+		if (n < 0){
+			err_log("info->fd_dump_cp=%d read %d is lower than 0",fd_dev, n);
+			sleep(1);
+		}else{
+			fwrite(buffer, n, 1, file_p);
+		}
+		dump_size += n;
+	}while(1);
+
+	err_log("wcn finish dump_size:%d",dump_size);
+}
+
 void handle_socket_wcn(char *buffer)
 {
 	struct slog_info *log_info;
@@ -352,6 +410,21 @@ void handle_socket_wcn(char *buffer)
 						log_info->state = SLOG_STATE_ON;
 						modem_alive_flag = 1;
 					}
+					break;
+				}
+			log_info = log_info->next;
+			}
+		}
+	}else if(strstr(buffer, "WCN-EXTERNAL-DUMP") != NULL) {
+		if (handle_correspond_modem(buffer) == 1){
+			log_info = stream_log_head;
+			while(log_info){
+				if (!strncmp(log_info->name, "cp_wcn", 6)){
+					if(log_info->state == SLOG_STATE_ON){
+						log_info->state = SLOG_STATE_OFF;
+					}
+					handle_dump_external_wcn(log_info);
+					property_set(MODEM_WCN_DUMP_LOG_COMPLETE, "1");
 					break;
 				}
 			log_info = log_info->next;
