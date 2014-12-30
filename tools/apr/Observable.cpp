@@ -12,7 +12,6 @@ Observable::Observable()
 
 Observable::~Observable()
 {
-	// initialize
 }
 
 void Observable::addObserver(Observer *o)

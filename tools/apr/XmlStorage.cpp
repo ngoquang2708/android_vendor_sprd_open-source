@@ -1,6 +1,8 @@
 
 #include "common.h"
 #include "XmlStorage.h"
+#include "AprData.h"
+#include <string>
 
 #define MY_ENCODING "utf-8"
 
@@ -12,7 +14,6 @@ XmlStorage::XmlStorage(Observable *o, char* pdir, char* pfname):Observer(o)
 	strcat(m_pathname, "/");
 	strcat(m_pathname, pfname);
 
-	m_sTime = 0;
 	m_doc = NULL;
 	m_rootNode = NULL;
 	m_aprNode = NULL;
@@ -37,10 +38,10 @@ void XmlStorage::init()
 {
 	APR_LOGD("XmlStorage::init()\n");
 	int ret;
-	char value[PROPERTY_VALUE_MAX];
+	AprData* aprData = static_cast<AprData *>(m_observable);
 	char *default_value = (char*)"unknown";
+	string v;
 
-	m_sTime = getdate(value, sizeof(value), "%s");
 	// file exist
 	if (_fileIsExist())
 	{
@@ -52,8 +53,8 @@ void XmlStorage::init()
 		}
 		m_rootNode = xmlDocGetRootElement(m_doc);
 		// sysdump ??
-		property_get("ro.boot.mode", value, default_value);
-		if (strcmp(value, default_value))
+		v = aprData->getBootMode();
+		if (strcmp(v.c_str(), default_value))
 		{
 			xmlNodePtr aprNode = _xmlGetContentByName(m_rootNode, NULL, NULL);
 			if (aprNode != NULL)
@@ -67,21 +68,11 @@ void XmlStorage::init()
 				_xmlGetContentByName(aprNode, (char*)"endTime", strbuf);
 				// add <entry>...<entry> to m_exceptionsNode
 				xmlNodePtr entryNode;
-				createEntryNode(&entryNode, strbuf, value);
+				createEntryNode(&entryNode, strbuf, v.c_str());
 				xmlAddChild(excepNode, entryNode);
 			}
 		}
 
-		// add <apr>...</apr> to m_rNode
-		createAprNode(&m_aprNode);
-		xmlAddChild(m_rootNode, m_aprNode);
-
-		ret = xmlSaveFormatFileEnc(m_pathname, m_doc, MY_ENCODING, 1);
-		if (ret != -1) {
-			APR_LOGD ("%s file is created\n", m_pathname);
-		} else {
-			APR_LOGE ("xmlSaveFormatFile failed\n");
-		}
 	} else
 	{
 		// document pointer
@@ -89,62 +80,54 @@ void XmlStorage::init()
 		// root node pointer
 		m_rootNode = xmlNewNode(NULL, BAD_CAST"aprs");
 		xmlDocSetRootElement(m_doc, m_rootNode);
+	}
 
-		// add <apr>...</apr> to m_rNode
-		createAprNode(&m_aprNode);
-		xmlAddChild(m_rootNode, m_aprNode);
+	// add <apr>...</apr> to m_rNode
+	createAprNode(&m_aprNode);
+	xmlAddChild(m_rootNode, m_aprNode);
 
-		ret = xmlSaveFormatFileEnc(m_pathname, m_doc, MY_ENCODING, 1);
-		if (ret != -1) {
-			APR_LOGD("%s file is created\n", m_pathname);
-		} else {
-			APR_LOGE("xmlSaveFormatFile failed\n");
-		}
+	ret = xmlSaveFormatFileEnc(m_pathname, m_doc, MY_ENCODING, 1);
+	if (ret != -1) {
+		APR_LOGD("%s file is created\n", m_pathname);
+	} else {
+		APR_LOGE("xmlSaveFormatFile failed\n");
 	}
 }
 
 int XmlStorage::createAprNode(xmlNodePtr *node)
 {
+	string v;
 	char value[PROPERTY_VALUE_MAX];
-	char *default_value = (char*)"unknown";
-	int iter;
+	AprData* aprData = static_cast<AprData *>(m_observable);
 
 	// <apr>
 	xmlNodePtr aprNode = xmlNewNode(NULL,BAD_CAST"apr");
 	//     <hardwareVersion> </hardwareVersion>
-	property_get("ro.product.hardware", value, default_value);
-	xmlNewTextChild(aprNode, NULL, BAD_CAST "hardwareVersion", BAD_CAST value);
+	v = aprData->getHardwareVersion();
+	xmlNewTextChild(aprNode, NULL, BAD_CAST "hardwareVersion", BAD_CAST v.c_str());
 	//     <SN> </SN>
-	property_get("ro.boot.serialno", value, default_value);
-	xmlNewTextChild(aprNode, NULL, BAD_CAST "SN", BAD_CAST value);
+	v = aprData->getSN();
+	xmlNewTextChild(aprNode, NULL, BAD_CAST "SN", BAD_CAST v.c_str());
 	//     <buildNumber> </buildNumber>
-	property_get("ro.build.description", value, default_value);
-	xmlNewTextChild(aprNode, NULL, BAD_CAST "buildNumber", BAD_CAST value);
+	v = aprData->getBuildNumber();
+	xmlNewTextChild(aprNode, NULL, BAD_CAST "buildNumber", BAD_CAST v.c_str());
 	//     <CPVersion> </CPVersion>
-	for(iter=1; iter <= 10; iter++)
-	{
-		property_get("gsm.version.baseband", value, default_value);
-		if (strcmp(value, default_value))
-			break;
-		sleep(5);
-	}
-	xmlNewTextChild(aprNode, NULL, BAD_CAST "CPVersion", BAD_CAST value);
+	v = aprData->getCPVersion();
+	xmlNewTextChild(aprNode, NULL, BAD_CAST "CPVersion", BAD_CAST v.c_str());
 	//     <startTime> </startTime>
-	_getCurTime(value);
-	xmlNewTextChild(aprNode, NULL, BAD_CAST "startTime", BAD_CAST value);
 	//     <endTime> </endTime>
-	//     first time, endTime = startTime
+	aprData->getTime(value);
+	xmlNewTextChild(aprNode, NULL, BAD_CAST "startTime", BAD_CAST value);
 	m_etNode = xmlNewTextChild(aprNode, NULL, BAD_CAST "endTime", BAD_CAST value);
 	//     <exceptions> </exceptions>
 	m_exceptionsNode = NULL;
-//	m_exceptionsNode = xmlNewNode(NULL, BAD_CAST"exceptions");
-//	xmlAddChild(aprNode, m_eNode);
 	// </apr>
 	*node = aprNode;
+
 	return 0;
 }
 
-int XmlStorage::createEntryNode(xmlNodePtr *node, char* ts, char* type)
+int XmlStorage::createEntryNode(xmlNodePtr *node, const char* ts, const char* type)
 {
 	// <entry>
 	xmlNodePtr entryNode = xmlNewNode(NULL, BAD_CAST "entry");
@@ -167,6 +150,7 @@ void XmlStorage::handleEvent(void* arg)
 	APR_LOGD("XmlStorage::handleEvent()\n");
 	int ret;
 	char value[PROPERTY_VALUE_MAX];
+	AprData* aprData = static_cast<AprData *>(m_observable);
 
 	// lock
 	pthread_mutex_lock(&m_mutex);
@@ -191,18 +175,19 @@ void XmlStorage::handleEvent(void* arg)
 	}
 
 	//     <endTime> </endTime>
-	_getCurTime(value);
+	aprData->getTime(value);
 	xmlNodeSetContent(m_etNode, (const xmlChar*)value);
 
-	if (NULL == m_exceptionsNode ) {
-		m_exceptionsNode = xmlNewNode(NULL, BAD_CAST"exceptions");
-		xmlAddChild(m_aprNode, m_exceptionsNode);
+	if (arg) {
+		if (NULL == m_exceptionsNode ) {
+			m_exceptionsNode = xmlNewNode(NULL, BAD_CAST"exceptions");
+			xmlAddChild(m_aprNode, m_exceptionsNode);
+		}
+		// add <entry>...<entry> to m_exceptionsNode
+		xmlNodePtr entryNode;
+		createEntryNode(&entryNode, value, (char*)arg);
+		xmlAddChild(m_exceptionsNode, entryNode);
 	}
-	// add <entry>...<entry> to m_exceptionsNode
-	xmlNodePtr entryNode;
-	_getCurTime(value);
-	createEntryNode(&entryNode, value, (char*)arg);
-	xmlAddChild(m_exceptionsNode, entryNode);
 
 	ret = xmlSaveFormatFileEnc(m_pathname, m_doc, MY_ENCODING, 1);
 	if (ret != -1) {
@@ -215,63 +200,16 @@ void XmlStorage::handleEvent(void* arg)
 	pthread_mutex_unlock(&m_mutex);
 }
 
-void XmlStorage::UpdateEndTime()
-{
-	int ret;
-	char value[PROPERTY_VALUE_MAX];
-
-	// lock
-	pthread_mutex_lock(&m_mutex);
-
-	if (!_fileIsExist()) {
-		APR_LOGD("%s isn't exist!\n", m_pathname);
-		xmlFreeDoc(m_doc);
-		m_doc = NULL;
-		m_rootNode = NULL;
-		m_aprNode = NULL;
-		m_exceptionsNode = NULL;
-
-		// document pointer
-		m_doc = xmlNewDoc(BAD_CAST"1.0");
-		// root node pointer
-		m_rootNode = xmlNewNode(NULL, BAD_CAST"aprs");
-		xmlDocSetRootElement(m_doc, m_rootNode);
-
-		// add <apr>...</apr> to m_rNode
-		createAprNode(&m_aprNode);
-		xmlAddChild(m_rootNode, m_aprNode);
-	}
-	//     <endTime> </endTime>
-	_getCurTime(value);
-	xmlNodeSetContent(m_etNode, (const xmlChar*)value);
-
-	ret = xmlSaveFormatFileEnc(m_pathname, m_doc, MY_ENCODING, 1);
-	if (ret != -1) {
-		APR_LOGD("%s file is created\n", m_pathname);
-	} else {
-		APR_LOGD("xmlSaveFormatFile failed\n");
-	}
-	// unlock
-	pthread_mutex_unlock(&m_mutex);
-}
-
-int XmlStorage::_getCurTime(char* strbuf)
-{
-	int64_t elapsed;
-	int64_t eTime;
-
-	elapsed = elapsedRealtime(NULL);
-	eTime = m_sTime + elapsed;
-	sprintf(strbuf, "%lld", eTime);
-
-	return 0;
-}
-
 int XmlStorage::_fileIsExist()
 {
+	int retval;
 	// If directory is not exist, make dir
 	if (access(m_dir, F_OK) < 0) {
-		mkdir(m_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		retval = mkdir(m_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (retval < 0) {
+			APR_LOGE("mkdir %s fail, error:%s\n", m_dir, strerror(errno));
+			exit(1);
+		}
 	}
 
 	// file not exist

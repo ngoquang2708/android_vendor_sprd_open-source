@@ -29,7 +29,7 @@ int64_t elapsedRealtime(char* strbuf)
 	close(fd);
 
 	if (result == 0) {
-		if (NULL  == strbuf) {
+		if (strbuf) {
 			sprintf(strbuf, "%d", ts.tv_sec);
 		}
 		return ts.tv_sec;

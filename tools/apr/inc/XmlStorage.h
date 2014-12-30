@@ -23,8 +23,7 @@ public:
 protected:
 	xmlNodePtr _xmlGetContentByName(xmlNodePtr rNode, char* name, char* value);
 	int createAprNode(xmlNodePtr *node);
-	int createEntryNode(xmlNodePtr *node, char* ts, char* type);
-	int _getCurTime(char* strbuf);
+	int createEntryNode(xmlNodePtr *node, const char* ts, const char* type);
 	int _fileIsExist();
 
 private:
@@ -35,7 +34,6 @@ private:
 
 	xmlNodePtr m_etNode;
 
-	int64_t m_sTime;
 	char m_dir[32];
 	char m_pathname[48];
 	pthread_mutex_t m_mutex;

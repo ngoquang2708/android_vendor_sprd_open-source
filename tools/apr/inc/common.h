@@ -6,6 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <log/logger.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>

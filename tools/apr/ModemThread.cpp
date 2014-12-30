@@ -5,6 +5,16 @@
 
 #define MODEM_SOCKET_NAME         "modemd"
 
+ModemThread::ModemThread(AprData* aprData)
+{
+	m_aprData = aprData;
+}
+
+ModemThread::~ModemThread()
+{
+	m_aprData = NULL;
+}
+
 void ModemThread::Setup()
 {
 	APR_LOGD("ModemThread::Setup()\n");
@@ -16,7 +26,6 @@ void ModemThread::Execute(void* arg)
 	int cfd = -1;
 	char buf[256];
 	int numRead;
-	AprData *aprData = static_cast<AprData *>(arg);
 
 reconnect:
 	cfd = socket_local_client(MODEM_SOCKET_NAME,
@@ -45,11 +54,11 @@ reconnect:
 
 		APR_LOGD("receive \"%s\"\n", buf);
 		if (strstr(buf, "Modem Blocked") != NULL) {
-			aprData->setChanged();
-			aprData->notifyObservers((char*)"modem blocked");
+			m_aprData->setChanged();
+			m_aprData->notifyObservers((char*)"modem blocked");
 		} else if (strstr(buf, "Assert") != NULL) {
-			aprData->setChanged();
-			aprData->notifyObservers((char*)"modem assert");
+			m_aprData->setChanged();
+			m_aprData->notifyObservers((char*)"modem assert");
 		} else if (strstr(buf, "Modem Alive") != NULL) {
 		} else {
 			continue;
