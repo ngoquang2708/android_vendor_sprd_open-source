@@ -453,6 +453,7 @@ private:
 	bool                            mIsStoreMetaData;
 	bool                            mIsFreqChanged;
 	int32_t                         mCameraId;
+	int32_t                         mFlashMode;
 	volatile camera_state           mCameraState;
 	int                             miSPreviewFirstFrame;
 	takepicture_mode                mCaptureMode;

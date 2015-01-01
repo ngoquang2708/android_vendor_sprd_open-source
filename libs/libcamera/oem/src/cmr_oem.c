@@ -1301,7 +1301,6 @@ cmr_int camera_focus_pre_proc(cmr_handle oem_handle)
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct setting_cmd_parameter    setting_param;
-
 	/*open flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
 		setting_param.ctrl_flash.is_active = 1;
@@ -1320,7 +1319,6 @@ cmr_int camera_focus_post_proc(cmr_handle oem_handle)
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
 	struct setting_cmd_parameter    setting_param;
-
 	/*close flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
 		setting_param.ctrl_flash.is_active = 0;
@@ -2789,6 +2787,30 @@ exit:
 cmr_int camera_preview_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 {
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
+	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	struct setting_cmd_parameter    setting_param;
+	cmr_int                        flash_status;
+
+	if(camera_id == 0) {
+		setting_param.camera_id = camera_id;
+		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_GET_FLASH_STATUS, &setting_param);
+		if (ret) {
+			CMR_LOGE("failed to get flash mode %ld", ret);
+			goto exit;
+		}
+		flash_status = setting_param.cmd_type_value;
+		CMR_LOGI("flash_status=%d", flash_status);
+		/*close flash*/
+		if ((CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) && (FLASH_OPEN == flash_status)) {
+			setting_param.ctrl_flash.is_active = 0;
+			setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
+			ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
+			if (ret) {
+				CMR_LOGE("failed to open flash %ld", ret);
+			}
+		}
+	}
+
 exit:
 	return ret;
 }

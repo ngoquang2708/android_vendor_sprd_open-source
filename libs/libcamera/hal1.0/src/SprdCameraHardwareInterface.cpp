@@ -4492,7 +4492,11 @@ status_t SprdCameraHardware::setCameraParameters()
 		if ((NULL != mParameters.get("flash-mode-supported"))
 			&& (0 == strcmp(mParameters.get("flash-mode-supported"),"true"))
 			&& (false == mFlashMask)) {
-			SET_PARM(mCameraHandle, CAMERA_PARAM_FLASH, mParameters.getFlashMode());
+			if(mParameters.getFlashMode() != mFlashMode) {
+				mFlashMode = mParameters.getFlashMode();
+				SET_PARM(mCameraHandle, CAMERA_PARAM_FLASH, mParameters.getFlashMode());
+			}
+
 		} else {
 			SET_PARM(mCameraHandle, CAMERA_PARAM_FLASH, CAMERA_FLASH_MODE_OFF);
 		}
