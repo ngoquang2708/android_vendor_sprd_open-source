@@ -242,7 +242,7 @@ static int op(bt_vendor_opcode_t opcode, void *param)
         case BT_VND_OP_GET_LPM_IDLE_TIMEOUT:
             {
                 uint32_t *timeout_ms = (uint32_t *) param;
-                *timeout_ms = 30000;//3s
+                *timeout_ms = 2000;/**2s**/
             }
             break;
 
