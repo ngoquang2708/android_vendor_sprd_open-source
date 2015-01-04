@@ -5432,6 +5432,10 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.flash_cali.rdm_cali.gr_sum = cali_ptr->flashlight.cali_info.gr_sum;
 	isp_context_ptr->ae.flash_cali.rdm_cali.gb_sum = cali_ptr->flashlight.cali_info.gb_sum;
 
+	isp_context_ptr->ae.flash.r_ratio=raw_tune_ptr->flash.r_ratio;
+	isp_context_ptr->ae.flash.g_ratio=raw_tune_ptr->flash.g_ratio;
+	isp_context_ptr->ae.flash.b_ratio=raw_tune_ptr->flash.b_ratio;
+
 	isp_context_ptr->ae.callback = param_ptr->callback;
 	isp_context_ptr->ae.self_callback = param_ptr->self_callback;
 	isp_context_ptr->ae.awbm_skip = ispAwbmSkip;

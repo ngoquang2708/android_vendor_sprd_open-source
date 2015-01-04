@@ -38,6 +38,7 @@ static int s_ov5648_capture_VTS = 0;
 
 #define OV5648_RAW_PARAM_Truly     0x02
 #define OV5648_RAW_PARAM_Sunny    0x01
+#define OV5648_RAW_PARAM_Seasons 0x10
 
 static uint16_t RG_Ratio_Typical = 0x17d;
 static uint16_t BG_Ratio_Typical = 0x164;
@@ -56,6 +57,7 @@ struct otp_struct {
 LOCAL uint32_t update_otp(void* param_ptr);
 LOCAL uint32_t _ov5648_Truly_Identify_otp(void* param_ptr);
 LOCAL uint32_t _ov5648_Sunny_Identify_otp(void* param_ptr);
+LOCAL uint32_t _ov5648_Seasons_Identify_otp(void* param_ptr);
 LOCAL uint32_t _ov5648_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5648_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov5648_Identify(uint32_t param);
@@ -78,6 +80,7 @@ LOCAL uint32_t _ov5648_cfg_otp(uint32_t  param);
 LOCAL const struct raw_param_info_tab s_ov5648_raw_param_tab[]={
 	//{OV5648_RAW_PARAM_Sunny, &s_ov5648_mipi_raw_info, _ov5648_Sunny_Identify_otp, update_otp},
 	//{OV5648_RAW_PARAM_Truly, &s_ov5648_mipi_raw_info, _ov5648_Truly_Identify_otp, update_otp},
+	{OV5648_RAW_PARAM_Seasons, &s_ov5648_mipi_raw_info, _ov5648_Seasons_Identify_otp, update_otp},
 	{OV5648_RAW_PARAM_COM, &s_ov5648_mipi_raw_info, _ov5648_com_Identify_otp, PNULL},
 	{RAW_INFO_END_ID, PNULL, PNULL, PNULL}
 };
@@ -553,7 +556,7 @@ SENSOR_INFO_T g_ov5648_mipi_raw_info = {
 	&s_ov5648_mipi_raw_info_ptr,		// information and table about Rawrgb sensor
 	NULL,			//&g_ov5648_ext_info,                // extend information about sensor
 	SENSOR_AVDD_1800MV,	// iovdd
-	SENSOR_AVDD_1500MV,	// dvdd
+	SENSOR_AVDD_CLOSED, // use internal  dvdd //SENSOR_AVDD_1500MV,	// dvdd
 	3,			// skip frame num before preview
 	3,			// skip frame num before capture
 	0,			// deci frame num during preview
@@ -1687,11 +1690,13 @@ LOCAL uint32_t _ov5648_PowerOn(uint32_t power_on)
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
 		// Open power
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		_dw9174_SRCInit(2);
-		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(1*1000);
+		Sensor_SetAvddVoltage(avdd_val);
+		usleep(10*1000); // > 5 ms		
 		Sensor_PowerDown(!power_down);
+		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
+		_dw9174_SRCInit(2);
 		usleep(10*1000);
 		// Reset sensor
 		Sensor_Reset(reset_level);
@@ -1699,7 +1704,8 @@ LOCAL uint32_t _ov5648_PowerOn(uint32_t power_on)
 	} else {
 		Sensor_PowerDown(power_down);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
 		_dw9174_SRCDeinit();
 	}
 	SENSOR_PRINT("SENSOR_OV5648: _ov5648_Power_On(1:on, 0:off): %d", power_on);
@@ -2093,6 +2099,26 @@ LOCAL uint32_t _ov5648_Sunny_Identify_otp(void* param_ptr)
 		SENSOR_PRINT("SENSOR_OV5648: This is Sunny module!!\n");
 		RG_Ratio_Typical = 386;
 		BG_Ratio_Typical = 367;
+		rtn=SENSOR_SUCCESS;
+	}
+
+	return rtn;
+}
+
+LOCAL uint32_t _ov5648_Seasons_Identify_otp(void* param_ptr)
+{
+	uint32_t rtn=SENSOR_FAIL;
+	uint32_t param_id;
+
+	SENSOR_PRINT("SENSOR_OV5648: _ov5648_Seasons_Identify_otp");
+
+	/*read param id from sensor omap*/
+	param_id=ov5648_check_otp_module_id();
+
+	if(OV5648_RAW_PARAM_Seasons==param_id){
+		SENSOR_PRINT("SENSOR_OV5648: This is Seasons module!!\n");
+		RG_Ratio_Typical = 0x160;
+		BG_Ratio_Typical = 0x161;
 		rtn=SENSOR_SUCCESS;
 	}
 
@@ -2580,7 +2606,7 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 	slave_addr = DW9714_VCM_SLAVE_ADDR;
 
 	Sensor_SetMonitorVoltage(SENSOR_AVDD_2800MV);
-	usleep(10*1000);
+	usleep(20*1000);// >12 ms
 
 	switch (mode) {
 		case 1:
@@ -2590,11 +2616,22 @@ LOCAL uint32_t _dw9174_SRCInit(uint32_t mode)
 		{
 			cmd_val[0] = 0xec;
 			cmd_val[1] = 0xa3;
-			cmd_val[2] = 0xf2;
-			cmd_val[3] = 0x00;
-			cmd_val[4] = 0xdc;
-			cmd_val[5] = 0x51;
-			cmd_len = 6;
+			cmd_len = 2;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+
+			cmd_val[0] = 0xa1;
+			cmd_val[1] = 0x0d;
+			cmd_len = 2;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+
+			cmd_val[0] = 0xf2;
+			cmd_val[1] = 0x10;
+			cmd_len = 2;
+			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
+
+			cmd_val[0] = 0xdc;
+			cmd_val[1] = 0x51;
+			cmd_len = 2;
 			Sensor_WriteI2C(slave_addr,(uint8_t*)&cmd_val[0], cmd_len);
 		}
 		break;
