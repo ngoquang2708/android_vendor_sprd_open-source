@@ -963,17 +963,17 @@ cmr_int cmr_sns_get_ioctl_cmd(SENSOR_IOCTL_CMD_E *sns_cmd, enum sensor_cmd in_cm
 			*sns_cmd = SENSOR_IOCTL_VMIRROR_ENABLE;
 			break;
 
-		case SENSOR_MODE:
+		case SENSOR_MONITOR:
 			/*this function is not used yet, use a dummy function for instead*/
 			*sns_cmd = SENSOR_IOCTL_GET_STATUS;
 			break;
 
 		default:
-			CMR_LOGE("invalid cmd! %d",in_cmd);
+			CMR_LOGE("invalid cmd! %d", in_cmd);
 			ret = CMR_CAMERA_INVALID_PARAM;
 			break;
 	}
-	return CMR_CAMERA_SUCCESS;
+	return ret;
 }
 
 cmr_int cmr_sns_ioctl(struct sensor_drv_context *sensor_cxt, cmr_u32 cmd, cmr_u32 arg)
@@ -1050,7 +1050,7 @@ static void cmr_sns_check_err(struct cmr_sensor_handle *sensor_handle, cmr_u32 c
 
 	if (sensor_handle->sensor_cxt[camera_id].stream_on) {
 		ret = cmr_sns_ioctl(&sensor_handle->sensor_cxt[camera_id],
-			SENSOR_IOCTL_GET_STATUS,
+			SENSOR_MONITOR,
 			(cmr_u32)&param);
 
 		if (ret) {

@@ -370,7 +370,7 @@ void camera_sensor_evt_cb(cmr_int evt, void* data, void* privdata)
 		CMR_LOGE("error param, handle 0x%lx data 0x%lx evt 0x%lx" , (cmr_uint)cxt, (cmr_uint)data, evt);
 		goto exit;
 	}
-	CMR_LOGI("evt %ld, handle 0x%lx", evt, (cmr_uint)privdata);
+	CMR_LOGI("evt 0x%lx, handle 0x%lx", evt, (cmr_uint)privdata);
 	switch (evt) {
 	case CMR_SENSOR_FOCUS_MOVE:
 		if (1 == cxt->focus_cxt.inited) {
@@ -1284,13 +1284,23 @@ cmr_int camera_after_set(cmr_handle oem_handle, struct after_set_cb_param *param
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
 	struct camera_context           *cxt = (struct camera_context*)oem_handle;
+	cmr_u32                         skip_num = 0;
 
 	if (!oem_handle) {
 		CMR_LOGE("error handle");
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	ret = cmr_preview_after_set_param(cxt->prev_cxt.preview_handle, cxt->camera_id, param->re_mode, param->skip_mode, param->skip_number);
+
+	if (PREVIEWING == cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id) &&
+		(IMG_DATA_TYPE_RAW == cxt->sn_cxt.sensor_info.image_format)) {
+		skip_num = 0;
+	} else {
+		skip_num = param->skip_number;
+	}
+	CMR_LOGI("sensor fmt %d, skip num %d", cxt->sn_cxt.sensor_info.image_format, skip_num);
+
+	ret = cmr_preview_after_set_param(cxt->prev_cxt.preview_handle, cxt->camera_id, param->re_mode, param->skip_mode, skip_num);
 exit:
 	CMR_LOGI("done %ld", ret);
 	return ret;
@@ -1412,7 +1422,7 @@ cmr_int camera_sensor_deinit(cmr_handle  oem_handle)
 	}
 	sensor_handle = sn_cxt->sensor_handle;
 	cmr_sensor_close(sensor_handle, (1 << cxt->camera_id));
-    cmr_sensor_deinit(sensor_handle);
+	cmr_sensor_deinit(sensor_handle);
 	cmr_bzero(sn_cxt,sizeof(*sn_cxt));
 
 exit:
@@ -2482,6 +2492,10 @@ cmr_int camera_deinit_internal(cmr_handle  oem_handle)
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 
 	CMR_PRINT_TIME;
+	camera_v4l2_deinit(oem_handle);
+
+	camera_sensor_deinit(oem_handle);
+
 	camera_snapshot_deinit(oem_handle);
 
 	camera_preview_deinit(oem_handle);
@@ -2491,10 +2505,6 @@ cmr_int camera_deinit_internal(cmr_handle  oem_handle)
 	camera_rotation_deinit(oem_handle);
 
 	camera_scaler_deinit(oem_handle);
-
-	camera_v4l2_deinit(oem_handle);
-
-	camera_sensor_deinit(oem_handle);
 
 	camera_jpeg_deinit(oem_handle);
 

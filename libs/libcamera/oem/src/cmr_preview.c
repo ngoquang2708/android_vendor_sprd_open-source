@@ -213,6 +213,7 @@ struct prev_thread_cxt {
 
 	/*callback thread*/
 	cmr_handle                      cb_thread_handle;
+	cmr_handle                      assist_thread_handle;
 };
 
 struct prev_handle {
@@ -248,6 +249,8 @@ static cmr_int prev_destroy_thread(struct prev_handle *handle);
 static cmr_int prev_create_cb_thread(struct prev_handle *handle);
 
 static cmr_int prev_destroy_cb_thread(struct prev_handle *handle);
+
+static cmr_int prev_assist_thread_proc(struct cmr_msg *message, void *p_data);
 
 static cmr_int prev_thread_proc(struct cmr_msg *message, void *p_data);
 
@@ -655,6 +658,7 @@ cmr_int cmr_preview_receive_data(cmr_handle preview_handle, cmr_u32 camera_id, c
 	struct prev_handle     *handle = (struct prev_handle*)preview_handle;
 	struct frm_info        *frm_data = NULL;
 	struct internal_param  *inter_param = NULL;
+	cmr_handle             thread = 0;
 
 	CMR_LOGI("handle 0x%p camera id %d evt 0x%lx", preview_handle, camera_id, evt);
 
@@ -685,11 +689,16 @@ cmr_int cmr_preview_receive_data(cmr_handle preview_handle, cmr_u32 camera_id, c
 	inter_param->param2 = (void*)evt;
 	inter_param->param3 = (void*)frm_data;
 
+	if (CMR_V4L2_TX_DONE == evt) {
+		thread = handle->thread_cxt.assist_thread_handle;
+	} else {
+		thread = handle->thread_cxt.thread_handle;
+	}
 	message.msg_type   = PREV_EVT_RECEIVE_DATA;
 	message.sync_flag  = CMR_MSG_SYNC_NONE;
 	message.data       = (void*)inter_param;
 	message.alloc_flag = 1;
-	ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
+	ret = cmr_thread_msg_send(thread, &message);
 	if (ret) {
 		CMR_LOGE("send msg failed!");
 		goto exit;
@@ -828,7 +837,7 @@ cmr_int cmr_preview_ctrl_facedetect(cmr_handle preview_handle, cmr_u32 camera_id
 	inter_param->param2 = (void*)on_off;
 
 	message.msg_type   = PREV_EVT_FD_CTRL;
-	message.sync_flag  = CMR_MSG_SYNC_PROCESSED;
+	message.sync_flag  = CMR_MSG_SYNC_NONE;
 	message.data	   = (void*)inter_param;
 	message.alloc_flag = 1;
 	ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
@@ -1073,6 +1082,15 @@ cmr_int prev_create_thread(struct prev_handle *handle)
 	if (!handle->thread_cxt.is_inited) {
 		pthread_mutex_init(&handle->thread_cxt.prev_mutex, NULL);
 		cmr_sem_init(&handle->thread_cxt.prev_sync_sem, 0, 0);
+		ret = cmr_thread_create(&handle->thread_cxt.assist_thread_handle,
+					PREV_MSG_QUEUE_SIZE,
+					prev_assist_thread_proc,
+					(void*)handle);
+		if (ret) {
+			CMR_LOGE("send msg failed!");
+			ret = CMR_CAMERA_FAIL;
+			goto end;
+		}
 
 		ret = cmr_thread_create(&handle->thread_cxt.thread_handle,
 					PREV_MSG_QUEUE_SIZE,
@@ -1094,6 +1112,7 @@ cmr_int prev_create_thread(struct prev_handle *handle)
 			ret = CMR_CAMERA_FAIL;
 			goto end;
 		}
+
 	}
 
 end:
@@ -1126,6 +1145,9 @@ cmr_int prev_destroy_thread(struct prev_handle *handle)
 
 		ret = cmr_thread_destroy(handle->thread_cxt.thread_handle);
 		handle->thread_cxt.thread_handle = 0;
+
+		ret = cmr_thread_destroy(handle->thread_cxt.assist_thread_handle);
+		handle->thread_cxt.assist_thread_handle = 0;
 
 		cmr_sem_destroy(&handle->thread_cxt.prev_sync_sem);
 		pthread_mutex_destroy(&handle->thread_cxt.prev_mutex);
@@ -1193,6 +1215,43 @@ cmr_int prev_destroy_cb_thread(struct prev_handle *handle)
 	return ret ;
 }
 
+cmr_int prev_assist_thread_proc(struct cmr_msg *message, void *p_data)
+{
+	cmr_int                   ret = CMR_CAMERA_SUCCESS;
+	cmr_u32                   msg_type = 0;
+	cmr_uint                  evt = 0;
+	cmr_u32                   camera_id = CAMERA_ID_MAX;
+	struct internal_param     *inter_param = NULL;
+	struct frm_info           *frm_data = NULL;
+	struct prev_handle        *handle = (struct prev_handle*)p_data;
+
+	if (!message || !p_data) {
+		return CMR_CAMERA_INVALID_PARAM;
+	}
+
+	msg_type = (cmr_u32)message->msg_type;
+	CMR_LOGI("msg_type 0x%x", msg_type);
+	CMR_PRINT_TIME;
+	switch(msg_type) {
+	case PREV_EVT_RECEIVE_DATA:
+		inter_param = (struct internal_param*)message->data;
+		camera_id   = (cmr_u32)inter_param->param1;
+		evt         = (cmr_uint)inter_param->param2;
+		frm_data    = (struct frm_info*)inter_param->param3;
+
+		ret = prev_receive_data(handle, camera_id, evt, frm_data);
+		if (frm_data) {
+			free(frm_data);
+			frm_data = NULL;
+		}
+		break;
+	default:
+		CMR_LOGE("unknown message");
+		break;
+	}
+
+	return ret;
+}
 
 cmr_int prev_thread_proc(struct cmr_msg *message, void *p_data)
 {
@@ -1463,6 +1522,7 @@ cmr_int prev_receive_data(struct prev_handle *handle,
 	case CMR_V4L2_TX_NO_MEM:
 	case CMR_V4L2_CSI2_ERR:
 	case CMR_V4L2_TIME_OUT:
+	case CMR_SENSOR_ERROR:
 		ret = prev_error_handle(handle, camera_id, evt);
 		break;
 
