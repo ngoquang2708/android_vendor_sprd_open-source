@@ -28,6 +28,7 @@ extern int  send_start_message(int fd,int size,unsigned long addr,int flag);
 extern int  send_end_message(int fd,int flag);
 extern int  send_data_message(int fd,char *buffer,int data_size,int flag,int image_size,int image_fd);
 extern int  send_exec_message(int fd,unsigned long addr,int flag);
+extern int  send_dump_mem_message(int fd,int size,unsigned long addr,int flag);
 extern unsigned short frm_chk (const unsigned short *src, int len);
 extern unsigned short boot_checksum (const unsigned char *src, int len);
 unsigned short calculate_crc (unsigned short crc, char const *buffer, int len);

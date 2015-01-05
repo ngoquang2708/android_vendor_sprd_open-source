@@ -57,6 +57,7 @@ typedef struct structWcnClient{
 typedef struct pmanager {
 	pthread_mutex_t client_fds_lock;
 	WcnClient client_fds[WCN_MAX_CLIENT_NUM];
+	int selfcmd_sockets[2];
 	int listen_fd;
 	int listen_slog_fd;
 	bool flag_connect;
@@ -487,19 +488,19 @@ static void download_wifi_calibration(int download_fd)
 	DOWNLOAD_LOGD("start download calibration\n");
 
 	ret = write(download_fd,"start_calibration",17);
-	DOWNLOAD_LOGD("wifi_rf_t size:%d\n",sizeof(wifi_data.wifi_rf_cali));
-	DOWNLOAD_LOGD("wifi_cali_cp_t size:%d\n",sizeof(wifi_data.wifi_cali_cp));
+	//DOWNLOAD_LOGD("wifi_rf_t size:%d\n",sizeof(wifi_data.wifi_rf_cali));
+	//DOWNLOAD_LOGD("wifi_cali_cp_t size:%d\n",sizeof(wifi_data.wifi_cali_cp));
 
 	/* start calibration*/
 	get_connectivity_rf_param(&wifi_data.wifi_rf_cali);
 	ret = write(download_fd,&wifi_data.wifi_rf_cali,sizeof(wifi_data.wifi_rf_cali));
 
-	if(!wifi_data.wifi_rf_cali.wifi_cali.cali_config.is_calibrated){
-		do{
-			ret = read(download_fd,&wifi_data.wifi_cali_cp,sizeof(wifi_data.wifi_cali_cp));
-			sleep(1);
-		}while(ret <=0);
+	do{
+		ret = read(download_fd,&wifi_data.wifi_cali_cp,sizeof(wifi_data.wifi_cali_cp));
+		//sleep(1);
+	}while(ret <=0);
 
+	if(!wifi_data.wifi_rf_cali.wifi_cali.cali_config.is_calibrated){
 		wlan_save_cali_data_to_file(&wifi_data.wifi_cali_cp);
 	}
 
@@ -639,7 +640,6 @@ reboot_device:
 	}
 
 	if(pmanager.flag_reboot){
-		sleep(2);
 		ret = send_notify_to_client(&pmanager, WCN_RESP_REBOOT_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_reboot = 0;
 	}
@@ -647,6 +647,11 @@ reboot_device:
 	if(pmanager.flag_start){
 		ret = send_notify_to_client(&pmanager, WCN_RESP_START_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_start = 0;
+	}
+
+	if(pmanager.flag_connect){
+		ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
+		//pmanager.flag_connect = 0;
 	}
 
     return 0;
@@ -749,6 +754,7 @@ static void *client_listen_thread(void *arg)
 			}
 
 			store_client_fd(pmanager->client_fds, c,WCN_SOCKET_TYPE_WCND);
+			write(pmanager->selfcmd_sockets[0], "new_self_cmd", 12);
 		}
 	}
 }
@@ -773,8 +779,11 @@ static void *wcn_exception_listen(void *arg)
 		timeout.tv_usec = 0;
 		FD_ZERO(&readset);
 
+		FD_SET(pmanager->selfcmd_sockets[1], &readset);
+		max = pmanager->selfcmd_sockets[1];
+
 		for(i = 0; i < WCN_MAX_CLIENT_NUM; i++){
-			if(pmanager->client_fds[i].sockfd >= 0){
+			if((pmanager->client_fds[i].sockfd >= 0) && (pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND)){
 				max = pmanager->client_fds[i].sockfd> max ? pmanager->client_fds[i].sockfd : max;
 				FD_SET(pmanager->client_fds[i].sockfd, &readset);
 			}
@@ -790,6 +799,13 @@ static void *wcn_exception_listen(void *arg)
 		}
 
 		memset(buffer, 0, SOCKET_BUFFER_SIZE);
+
+		if (FD_ISSET(pmanager->selfcmd_sockets[1], &readset)) {
+			ret = read(pmanager->selfcmd_sockets[1], buffer, SOCKET_BUFFER_SIZE);
+			//DOWNLOAD_LOGD("sockfd get %d %d bytes %s", pmanager->selfcmd_sockets[1],ret, buffer);
+			continue;
+		}
+
 		for(i = 0; i < WCN_MAX_CLIENT_NUM; i++){
 			if(FD_ISSET(pmanager->client_fds[i].sockfd, &readset)){
 				if(pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND){
@@ -799,12 +815,15 @@ static void *wcn_exception_listen(void *arg)
 					if(strcmp(buffer,WCN_CMD_REBOOT_WCN) == 0){
 						pmanager->flag_reboot = 1;
 						download_state = DOWNLOAD_START;
+						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_DUMP_WCN) == 0){
 						pmanager->flag_dump = 1;
 						download_state = DOWNLOAD_START;
+						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_START_WCN) == 0){
 						pmanager->flag_start = 1;
 						download_state = DOWNLOAD_START;
+						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_STOP_WCN) == 0){
 						pmanager->flag_stop = 1;
 					}
@@ -838,6 +857,12 @@ static int socket_init(pmanager_t *pmanager)
 		DOWNLOAD_LOGE("%s: cannot create local socket server", __FUNCTION__);
 		return -1;
 	}
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, pmanager->selfcmd_sockets) == -1) {
+
+        DOWNLOAD_LOGE("%s: cannot create socketpair for self cmd socket", __FUNCTION__);
+        return -1;
+    }
 
 	if (pthread_create(&thread_client_id, NULL, client_listen_thread, pmanager))
 	{
@@ -875,18 +900,20 @@ int main(void)
 #endif
 	ret = socket_init(&pmanager);
 
-	download_state = DOWNLOAD_START;
+	//download_state = DOWNLOAD_START;
 	do{
+		#if 0
 		if(download_state == DOWNLOAD_START){
 			if(download_entry() == 0){
 				download_state = DOWNLOAD_BOOTCOMP;
 			}
-		}
 
-		if(pmanager.flag_connect){
-			ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
-			pmanager.flag_connect = 0;
+			if(pmanager.flag_connect){
+				ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
+				//pmanager.flag_connect = 0;
+			}
 		}
+		#endif
 
 		if(pmanager.flag_stop){
 			download_power_on(0);
