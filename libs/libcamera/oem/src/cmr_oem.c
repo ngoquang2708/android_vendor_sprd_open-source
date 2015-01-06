@@ -2809,7 +2809,7 @@ cmr_int camera_preview_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 			goto exit;
 		}
 		flash_status = setting_param.cmd_type_value;
-		CMR_LOGI("flash_status=%d", flash_status);
+		CMR_LOGI("flash_status=%ld", flash_status);
 		/*close flash*/
 		if ((CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) && (FLASH_OPEN == flash_status)) {
 			setting_param.ctrl_flash.is_active = 0;
@@ -3017,6 +3017,11 @@ cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *
 	struct camera_context          *cxt = (struct camera_context*)oem_handle;
 	struct isp_context             *isp_cxt = &cxt->isp_cxt;
 	struct isp_video_start         isp_param;
+	struct isp_ae_info             isp_ae_info;
+	struct sensor_ae_info          *ae_info;
+	struct isp_trim_size           wb_trim;
+	struct sensor_mode_info        *sensor_mode_info;
+	cmr_uint                        sn_mode = 0;
 
 	if (!param_ptr || !oem_handle) {
 		CMR_LOGE("in parm error");
@@ -3028,6 +3033,24 @@ cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *
 	isp_param.format = ISP_DATA_NORMAL_RAW10;
 	isp_param.mode = param_ptr->video_mode;
 
+	ret = cmr_sensor_get_mode(cxt->sn_cxt.sensor_handle, cxt->camera_id, &sn_mode);
+	ae_info = &cxt->sn_cxt.sensor_info.video_info[sn_mode].ae_info[0];
+	isp_ae_info.gain = ae_info->gain;
+	isp_ae_info.line_time = ae_info->line_time;
+	isp_ae_info.min_fps = ae_info->min_frate;
+	isp_ae_info.max_fps = ae_info->max_frate;
+	CMR_LOGI("line time %d sn_mode %ld", isp_ae_info.line_time, sn_mode);
+	isp_ioctl(ISP_CTRL_AE_INFO, (void*)&isp_ae_info);
+
+	sensor_mode_info = &cxt->sn_cxt.sensor_info.mode_info[sn_mode];
+	wb_trim.x = 0;
+	wb_trim.y = 0;
+	wb_trim.w = sensor_mode_info->trim_width;
+	wb_trim.h = sensor_mode_info->trim_height;
+	ret = isp_ioctl(ISP_CTRL_WB_TRIM,(void*)&wb_trim);
+	if (ret) {
+		CMR_LOGE("set wb trim information error.");
+	}
 	CMR_LOGI("isp w h, %d %d", isp_param.size.w, isp_param.size.h);
 	ret = isp_video_start(&isp_param);
 	if (!ret) {
