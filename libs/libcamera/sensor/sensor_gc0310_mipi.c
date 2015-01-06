@@ -601,20 +601,26 @@ static uint32_t GC0310_MIPI_PowerOn(uint32_t power_on)
 	BOOLEAN reset_level = g_GC0310_MIPI_yuv_info.reset_pulse_level;
 
 	if (SENSOR_TRUE == power_on) {
-		Sensor_PowerDown(power_down);
-		// Open power
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		usleep(10*1000);
-		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
 		Sensor_PowerDown(!power_down);
-		// Reset sensor
-		Sensor_Reset(reset_level);
+		usleep(1000);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(2000);
+		Sensor_SetAvddVoltage(avdd_val);
+		usleep(1000);
+		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
+		usleep(1000);
+		Sensor_PowerDown(power_down);
+		usleep(1000);
+		Sensor_PowerDown(!power_down);
 	} else {
 		Sensor_PowerDown(power_down);
+		usleep(1000);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED,
-					SENSOR_AVDD_CLOSED);
+		usleep(1000);
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(1000);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(1000);
 	}
 	return SENSOR_SUCCESS;
 }
