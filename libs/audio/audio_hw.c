@@ -15,6 +15,13 @@
  */
 #define LOG_TAG "audio_hw_primary"
 /*#define LOG_NDEBUG 0*/
+volatile int log_level = 4;
+#define LOG_V(...)  ALOGV_IF(log_level >= 5,__VA_ARGS__);
+#define LOG_D(...)  ALOGD_IF(log_level >= 4,__VA_ARGS__);
+#define LOG_I(...)  ALOGI_IF(log_level >= 3,__VA_ARGS__);
+#define LOG_W(...)  ALOGW_IF(log_level >= 2,__VA_ARGS__);
+#define LOG_E(...)  ALOGE_IF(log_level >= 1,__VA_ARGS__);
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -450,6 +457,36 @@ typedef struct{
    int    routeDev;
 }T_AT_CMD;
 
+#ifdef AUDIO_DEBUG
+typedef struct{
+    void* cache_buffer;
+    size_t buffer_length;
+    size_t write_flag;
+    size_t total_length;
+    bool more_one;
+    long sampleRate;
+    long channels;
+    int wav_fd;
+    FILE* dump_fd;
+} out_dump_t;
+
+typedef struct{
+    bool dump_to_cache;
+    bool dump_as_wav;
+    bool dump_sco;
+    bool dump_bt_sco;
+    bool dump_vaudio;
+    bool dump_music;
+    out_dump_t* out_sco;
+    out_dump_t* out_bt_sco;
+    out_dump_t* out_vaudio;
+    out_dump_t* out_music;
+}dump_info_t;
+
+typedef struct{
+    dump_info_t* dump_info;
+}ext_contrl_t;
+#endif
 struct tiny_audio_device {
     struct audio_hw_device hw_device;
 
@@ -501,7 +538,9 @@ struct tiny_private_ctl private_ctl;
 
     struct stream_routing_manager  routing_mgr;
     struct stream_routing_manager  voice_command_mgr;
-
+#ifdef AUDIO_DEBUG
+    ext_contrl_t* ext_contrl;
+#endif
     int voip_state;
     int voip_start;
     bool master_mute;
@@ -739,6 +778,11 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
 #endif
 #include "at_commands_generic.c"
 #include "mmi_audio_loop.c"
+#ifdef AUDIO_DEBUG
+#include "ext_control.c"
+#endif
+#define LOG_TAG "audio_hw_primary"
+
 static long getCurrentTimeUs()
 {
    struct timeval tv;
@@ -2259,6 +2303,8 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
+    struct tiny_audio_device *adev = out->dev;
+
     frame_size = audio_stream_frame_size(&out->stream.common);
     in_frames = bytes / frame_size;
     out_frames = RESAMPLER_BUFFER_SIZE / frame_size;
@@ -2290,6 +2336,12 @@ static ssize_t out_write_vaudio(struct tiny_stream_out *out, const void* buffer,
     dump_info.dump_switch_info = DUMP_MUSIC_HWL_MIX_VAUDIO;
     dump_data(dump_info);
 #endif
+#ifdef AUDIO_DEBUG
+        if(adev->ext_contrl->dump_info->dump_vaudio){
+            do_dump(adev->ext_contrl->dump_info,
+                            (void*)buf,out_frames*frame_size);
+        }
+#endif
     }
     else
         usleep(out_frames*1000*1000/out->config.rate);
@@ -2306,6 +2358,8 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
+    struct tiny_audio_device *adev = out->dev;
+
 
     frame_size = audio_stream_frame_size((const struct audio_stream *)(&out->stream.common));
     in_frames = bytes / frame_size;
@@ -2337,6 +2391,12 @@ static ssize_t out_write_sco(struct tiny_stream_out *out, const void* buffer,
     dump_info.dump_switch_info = DUMP_MUSIC_HWL_VOIP_WRITE;
     dump_data(dump_info);
 #endif
+#ifdef AUDIO_DEBUG
+        if(adev->ext_contrl->dump_info->dump_sco){
+            do_dump(adev->ext_contrl->dump_info,
+                            (void*)buf,out_frames*frame_size/2);
+        }
+#endif
         }
     }
     else
@@ -2354,6 +2414,7 @@ static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
     size_t frame_size = 0;
     size_t in_frames = 0;
     size_t out_frames =0;
+    struct tiny_audio_device *adev = out->dev;
 
     frame_size = audio_stream_frame_size(&out->stream.common);
     in_frames = bytes / frame_size;
@@ -2374,7 +2435,12 @@ static ssize_t out_write_bt_sco(struct tiny_stream_out *out, const void* buffer,
 #ifdef AUDIO_DUMP
        out_dump_doing(out->out_dump_fd, (void *)buf, out_frames*frame_size/2);
 #endif
-
+#ifdef AUDIO_DEBUG
+       if(adev->ext_contrl->dump_info->dump_bt_sco){
+            do_dump(adev->ext_contrl->dump_info,
+                            (void*) buf,out_frames*frame_size/2);
+       }
+#endif
         BLUE_TRACE("voip:out_write_bt_sco");
         ret = pcm_mmap_write(out->pcm_bt_sco, (void *)buf, out_frames*frame_size/2);
 #ifdef AUDIO_DUMP_EX
@@ -2415,7 +2481,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * on the output stream mutex - e.g. executing select_mode() while holding the hw device
      * mutex
      */
-    //ALOGD("out_write1: out->devices %x,start: out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
+    LOG_V("out_write1: out->devices %x,start: out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
     if (0==out->standby) {//in playing
@@ -2476,7 +2542,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         }
     }
 
-    //ALOGD("into out_write 2: start:out->devices %x,out->is_voip is %d, voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
+    LOG_V("into out_write 2: start:out->devices %x,out->is_voip is %d, voip_state is %d,adev->voip_start is %d",out->devices,out->is_voip,adev->voip_state,adev->voip_start);
     if((!out->is_voip) && adev->voip_state) {
         ALOGE("out_write: drop data and sleep,out->is_voip is %d, adev->voip_state is %d,adev->voip_start is %d",out->is_voip,adev->voip_state,adev->voip_start);
         pthread_mutex_unlock(&out->lock);
@@ -2499,7 +2565,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     }
     low_power = adev->low_power && !adev->active_input;
     pthread_mutex_unlock(&adev->lock);
-    //ALOGD("into out_write 3: start: out->is_bt_sco is %d, out->devices is %x,out->is_voip is %d, voip_state is %d,adev->voip_start is %d",out->is_bt_sco,out->devices,out->is_voip,adev->voip_state,adev->voip_start);
+    LOG_V("into out_write 3: start: out->is_bt_sco is %d, out->devices is %x,out->is_voip is %d, voip_state is %d,adev->voip_start is %d",out->is_bt_sco,out->devices,out->is_voip,adev->voip_state,adev->voip_start);
 
     if(out->is_voip){
         //BLUE_TRACE("sco playback out_write call_start(%d) call_connected(%d) ...in....",adev->call_start,adev->call_connected);
@@ -2556,6 +2622,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 
 #ifdef AUDIO_DUMP
     out_dump_doing(out->out_dump_fd, (void *)buf, out_frames * frame_size);
+#endif
+#ifdef AUDIO_DEBUG
+    if(adev->ext_contrl->dump_info->dump_music){
+         do_dump(adev->ext_contrl->dump_info,
+                         (void*)buf,out_frames * frame_size);
+    }
 #endif
 #ifdef AUDIO_DUMP_EX
     dump_info.buf = buf;
@@ -4182,6 +4254,27 @@ static int adev_close(hw_device_t *device)
     free(adev->cp->i2s_fm);
     free(adev->cp);
     free(adev->pga_gain_nv);
+    //free ext_contrl
+#ifdef AUDIO_DEBUG
+    if(adev->ext_contrl->dump_info->out_bt_sco){
+        free(adev->ext_contrl->dump_info->out_bt_sco);
+    }
+    if(adev->ext_contrl->dump_info->out_sco){
+        free(adev->ext_contrl->dump_info->out_sco);
+    }
+    if(adev->ext_contrl->dump_info->out_vaudio){
+        free(adev->ext_contrl->dump_info->out_vaudio);
+    }
+    if(adev->ext_contrl->dump_info->out_music){
+        free(adev->ext_contrl->dump_info->out_music);
+    }
+    if(adev->ext_contrl->dump_info){
+        free(adev->ext_contrl->dump_info);
+    }
+    if(adev->ext_contrl){
+        free(adev->ext_contrl);
+    }
+#endif
 
     adev_free_audmode();
     mixer_close(adev->mixer);
@@ -5634,7 +5727,25 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
     adev->realCall = false;
-
+    //init ext_contrl
+#ifdef AUDIO_DEBUG
+    adev->ext_contrl = (ext_contrl_t*)malloc(sizeof(ext_contrl_t));
+    adev->ext_contrl->dump_info = (dump_info_t*)malloc(sizeof(dump_info_t));
+    adev->ext_contrl->dump_info->out_music = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->out_sco  = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->out_bt_sco  = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->out_vaudio  = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->dump_to_cache = false;
+    adev->ext_contrl->dump_info->dump_as_wav = false;
+    adev->ext_contrl->dump_info->dump_music = false;
+    adev->ext_contrl->dump_info->dump_bt_sco = false;
+    adev->ext_contrl->dump_info->dump_sco = false;
+    adev->ext_contrl->dump_info->dump_vaudio = false;
+    adev->ext_contrl->dump_info->out_bt_sco->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->out_sco->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->out_vaudio->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->out_music->buffer_length = DefaultBufferLength;
+#endif
     pthread_mutex_lock(&adev->lock);
     ret = adev_modem_parse(adev);
     pthread_mutex_unlock(&adev->lock);
@@ -5754,9 +5865,10 @@ vb_ctl_modem_monitor_open (adev);
 /*
 this is used to loopback test.
 */
-    ret = mmi_audio_loop_open();
-    if (ret)  ALOGW("Warning: audio loop can NOT work.");
-
+#ifdef AUDIO_DEBUG
+    ret = ext_control_open(adev);
+    if (ret)  ALOGW("Warning: audio ext_contrl can NOT work.");
+#endif
     ret =audiopara_tuning_manager_create(adev);
     if (ret)  ALOGW("Warning: audio tuning can NOT work.");
 

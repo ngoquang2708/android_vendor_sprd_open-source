@@ -34,6 +34,10 @@ LOCAL_CFLAGS += -DAUDIO_SPIPE_TD
 LOCAL_CFLAGS += -D_LPA_IRAM
 endif
 
+ifeq ($(TARGET_BUILD_VARIANT),userdebug)
+LOCAL_CFLAGS += -DAUDIO_DEBUG
+endif
+
 ifneq ($(filter scx35_sc9620referphone scx35_sc9620openphone scx35_sc9620openphone_zt, $(TARGET_BOARD)),)
 LOCAL_CFLAGS += -DVB_CONTROL_PARAMETER_V2
 endif
