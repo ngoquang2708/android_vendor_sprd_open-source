@@ -107,7 +107,9 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
                 strcpy(cp_time, L_TIME);
         } else if (!strncmp(info->name, "cp_tdd-lte", 8)) {
                 strcpy(cp_time, L_TIME);
-		} else
+	 } else if (!strncmp(info->name, "cp_fdd-lte", 8)) {
+                strcpy(cp_time, L_TIME);
+	} else
                 return;
 
 	mts = calloc(1, sizeof(struct modem_timestamp));
