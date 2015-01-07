@@ -43,8 +43,8 @@ static int wifieut_state=0;
 static int wifiwork_mode;
 static float ratio_p;
 static int channel_p;
-static int tx_power_factor;
-static long tx_power_factor_p;
+static int tx_power_factor=17;//17dbm=50mW
+static long tx_power_factor_p=32767;//same as tx_power_factor=17
 static int tx_state;
 
 static int tx_pkt_ipg=800;
@@ -59,27 +59,37 @@ static int rx_power;
 static long rx_packcount;
 static long rxmfrmocast_priv;
 static long rxmfrmocast_next;
-static long rxdfrmocast;
+static long rx_errphypack=0;//rx_errphypack no use any more
+static long rxbyte_priv;
+static long rxbyte_next;
+static long rx_errpack;
+static long rxerror_priv;
+static long rxerror_next;
 
-char cmd_set_ratio[20];
-char counter_respon[COUNTER_BUF_SIZE];
-
-
-
+static char cmd_set_ratio[20];
+static char counter_respon[COUNTER_BUF_SIZE];
 
 struct wifi_ratio2mode{
     int mode;
     float ratios[10];
 };
 
-struct wifi_ratio2mode mode_list[]={
+static struct wifi_ratio2mode mode_list[]={
     {WIFI_MODE_11B,{1, 2, 5.5, 11}},
     {WIFI_MODE_11G,{6,9,12,18,24,36,48,54}},
     {WIFI_MODE_11N,{6.5,13,19.5,26,39,52,58.5,65}}
 };
 
-static int get_reflect_factor(int factor,int mode);
-static long parse_packcount(char *filename);
+static int get_reflect_factor_pc(int factor,int mode);
+static int wifi_clr_rxpackcount_pc(char * result);
+static long parse_packcount_pc(char *filename, char *keywordstart, char *keywordend, int *error);
+static int start_wifieut_pc(char *result);
+static int end_wifieut_pc(char *result);
+static int start_wifi_tx_pc(char *result);
+static int end_wifi_tx_pc(char *result);
+static int start_wifi_rx_pc(char *result);
+static int end_wifi_rx_pc(char *result);
+static int reflect_factor_pc(int start,int end,int factor);
 
 typedef struct
 {
@@ -111,7 +121,7 @@ static WIFI_RATE g_wifi_rate_table[] =
 	{65, "MCS-7"},
 };
 
-static float mattch_rate_table_str(char *string)
+static float mattch_rate_table_str_pc(char *string)
 {
 	int i;
 	float ret = 0;
@@ -126,13 +136,13 @@ static float mattch_rate_table_str(char *string)
 	return ret;
 }
 
-static char *mattch_rate_table_index(float rate)
+static char *mattch_rate_table_index_pc(float rate)
 {
 	int i;
 	char *p = NULL;
 	for( i = 0; i < (int)NUM_ELEMS(g_wifi_rate_table); i++)
 	{
-		if((int)(rate*1000) == (int)(g_wifi_rate_table[i].rate))
+		if((int)(rate*1000) == (int)(g_wifi_rate_table[i].rate*1000))
 		{
 			p = g_wifi_rate_table[i].name;
 			break;
@@ -141,22 +151,22 @@ static char *mattch_rate_table_index(float rate)
 	return p;
 }
 
-int wifieut(int command_code,char *rsp)
+static int wifieut_pc(int command_code,char *rsp)
 {
     ALOGI("wifieut");
     if(command_code == 1)
-        start_wifieut(rsp);
+        start_wifieut_pc(rsp);
     else if(command_code == 0)
-        end_wifieut(rsp);
+        end_wifieut_pc(rsp);
     return 0;
 }
-int wifieut_req(char *rsp)
+static int wifieut_req_pc(char *rsp)
 {
     sprintf(rsp,"%s%d",EUT_WIFI_REQ,wifieut_state);
     return 0;
 }
 
-int wifi_tx_pktcount(int count)
+static int wifi_tx_pktcount_pc(int count)
 {
 	if(count>0)
 	{
@@ -165,7 +175,7 @@ int wifi_tx_pktcount(int count)
 	return 0;
 }
 
-int wifi_tx_pktlen(int len)
+static int wifi_tx_pktlen_pc(int len)
 {
 	if(len>0)
 	{
@@ -174,7 +184,7 @@ int wifi_tx_pktlen(int len)
 	return 0;
 }
 
-int wifi_tx_ipg(int ipg)
+static int wifi_tx_ipg_pc(int ipg)
 {
 	if(ipg>0)
 	{
@@ -183,22 +193,26 @@ int wifi_tx_ipg(int ipg)
 	return 0;
 }
 
-int wifi_tx(int command_code,char *rsp)
+static int wifi_tx_pc(int command_code,char *rsp)
 {
     ALOGI("wifi_tx");
     if(command_code == 1)
-        start_wifi_tx(rsp);
+        start_wifi_tx_pc(rsp);
     else if(command_code == 0)
-        end_wifi_tx(rsp);
+        end_wifi_tx_pc(rsp);
     return 0;
 }
-int wifi_rx(int command_code,char *rsp)
+
+static int wifi_rx_pc(int command_code,char *rsp)
 {
     ALOGI("wifi_rx");
-    if(command_code == 1)
-        start_wifi_rx(rsp);
+    if(command_code == 1){
+        start_wifi_rx_pc(rsp);
+        if (rx_state == 1)//(!strcmp(rsp,EUT_WIFI_OK)) 
+            wifi_clr_rxpackcount_pc(rsp);
+    }
     else if(command_code == 0)
-        end_wifi_rx(rsp);
+        end_wifi_rx_pc(rsp);
     return 0;
 }
 
@@ -209,7 +223,7 @@ PM    set driver power management mode:
         1: PS  (power-save)
         2: FAST PS mode
 */
-int wifi_pm(int command_code,char *result)
+static int wifi_pm_pc(int command_code,char *result)
 {
     ALOGI("wifi_pm");
     int error =-1;
@@ -249,12 +263,12 @@ int wifi_pm(int command_code,char *result)
     return 0;
 }
 
-int wifi_pm_sta()
+static int wifi_pm_sta_pc()
 {
 	return PM_stat;
 }
 
-int wifi_cw(char *result)
+static int wifi_cw_pc(char *result)
 {
     ALOGI("wifi_rx");
     int error = system("wl mpc 0");
@@ -297,7 +311,7 @@ int wifi_cw(char *result)
     return 0;
 }
 
-int start_wifieut(char *result)
+static int start_wifieut_pc(char *result)
 {
     ALOGI("start_wifieut----------------------");
     int error = system("ifconfig wlan0 down");
@@ -329,7 +343,7 @@ int start_wifieut(char *result)
 }
 
 
-int end_wifieut(char *result)
+static int end_wifieut_pc(char *result)
 {
     int error = system("ifconfig wlan0 down");
     if(error == -1 || error ==127){
@@ -342,7 +356,7 @@ int end_wifieut(char *result)
     return 0;
 }
 
-int start_wifi_tx(char *result)
+static int start_wifi_tx_pc(char *result)
 {
     ALOGI("start_wifi_tx-----------------");
     char cmd_set_channel[20]={0};
@@ -350,7 +364,7 @@ int start_wifi_tx(char *result)
 	char cmd_tx[64]={0};
 
     sprintf(cmd_set_channel,"wl channel %d",channel_p);
-    tx_power_factor = get_reflect_factor(tx_power_factor_p,wifiwork_mode);
+    tx_power_factor = get_reflect_factor_pc(tx_power_factor_p,wifiwork_mode);
     sprintf(cmd_set_factor,"wl txpwr1 -o -d %d",tx_power_factor);
 
     int error =system("wl down");
@@ -436,7 +450,7 @@ int start_wifi_tx(char *result)
     return 0;
 }
 
-int end_wifi_tx(char *result)
+static int end_wifi_tx_pc(char *result)
 {
     int error = system("wl down");
     ALOGI("end_wifi_tx");
@@ -451,7 +465,7 @@ int end_wifi_tx(char *result)
     return 0;
 }
 
-int start_wifi_rx(char *result)
+static int start_wifi_rx_pc(char *result)
 {
     ALOGI("start_wifi_rx-----------------");
     char cmd_set_channel[20]={0};
@@ -525,7 +539,7 @@ int start_wifi_rx(char *result)
 
     return 0;
 }
-int end_wifi_rx(char *result)
+static int end_wifi_rx_pc(char *result)
 {
     int error = system("wl down");
     ALOGI("end_wifi_rx");
@@ -539,7 +553,7 @@ int end_wifi_rx(char *result)
     }
     return 0;
 }
-int set_wifi_ratio(float ratio,char *result)
+static int set_wifi_ratio_pc(float ratio,char *result)
 {
     ratio_p = ratio;
     ALOGI("=== set_wifi_ratio----> %f === %f",ratio_p,ratio);
@@ -581,7 +595,7 @@ int set_wifi_ratio(float ratio,char *result)
 fun_out:
     return 0;
 }
-int set_wifi_ch(int ch,char *result)
+static int set_wifi_ch_pc(int ch,char *result)
 {
     channel_p = ch;
     ALOGI("=== set_wifi_ch ----> %d ===\n",channel_p);
@@ -590,7 +604,7 @@ int set_wifi_ch(int ch,char *result)
 }
 
 // for *#*#83780#*#*
-int  set_wifi_tx_factor_83780(int factor,char *result)
+static int  set_wifi_tx_factor_83780_pc(int factor,char *result)
 {
     tx_power_factor = factor;
     ALOGI("=== set_wifi_tx_factor----> %d===\n",tx_power_factor);
@@ -603,10 +617,10 @@ int  set_wifi_tx_factor_83780(int factor,char *result)
     return 0;
 }
 
-int  set_wifi_tx_factor(long factor,char *result)
+static int  set_wifi_tx_factor_pc(long factor,char *result)
 {
     if((factor>=1)&&(factor<=32767)){
-        tx_power_factor = get_reflect_factor(factor,wifiwork_mode);
+        tx_power_factor = get_reflect_factor_pc(factor,wifiwork_mode);
         tx_power_factor_p = factor;
         ALOGI("=== set_wifi_tx_factor----> %d===\n",tx_power_factor);
         if(tx_power_factor){
@@ -619,61 +633,62 @@ int  set_wifi_tx_factor(long factor,char *result)
     }
     return 0;
 }
-static int get_reflect_factor(int factor,int mode)
+static int get_reflect_factor_pc(int factor,int mode)
 {
     int reflect_factor_p;
     ALOGI("get_reflect_factor factor=%d mode=%d",factor,mode);
     switch(mode){
         case WIFI_MODE_11B:
-            reflect_factor_p=reflect_factor(6,16,factor);
+            reflect_factor_p=reflect_factor_pc(6,16,factor);
             break;
         case WIFI_MODE_11G:
-            reflect_factor_p=reflect_factor(6,10,factor);
+            reflect_factor_p=reflect_factor_pc(6,10,factor);
             break;
         case WIFI_MODE_11N:
-            reflect_factor_p=reflect_factor(6,15,factor);
+            reflect_factor_p=reflect_factor_pc(6,15,factor);
             break;
         default:
             return -1;
     }
     return reflect_factor_p;
 }
-static int reflect_factor(int start,int end,int factor)
+static int reflect_factor_pc(int start,int end,int factor)
 {
     int n = end-start+1;
     return  (factor/32767)*n+start;
 }
 
-int set_wifi_mode(char * mode, char * result)
+static int set_wifi_mode_pc(char * mode, char * result)
 {
     return 0;
 }
-static int wifi_tx_req(char *result)
+static int wifi_tx_req_pc(char *result)
 {
     sprintf(result,"%s%d",EUT_WIFI_TX_REQ,tx_state);
     return 0;
 }
-static int wifi_tx_factor_req(char *result)
+static int wifi_tx_factor_req_pc(char *result)
 {
     sprintf(result,"%s%d",EUT_WIFI_TXFAC_REQ,tx_power_factor_p);
     return 0;
 }
-static int wifi_rx_req(char *result)
+static int wifi_rx_req_pc(char *result)
 {
     sprintf(result,"%s%d",EUT_WIFI_RX_REQ,rx_state);
     return 0;
 }
-static int wifi_ratio_req(char *result)
+static int wifi_ratio_req_pc(char *result)
 {
     sprintf(result,"%s%f",EUT_WIFI_RATIO_REQ,ratio_p);
     return 0;
 }
-static int wifi_ch_req(char *result)
+static int wifi_ch_req_pc(char *result)
 {
     sprintf(result,"%s%d",EUT_WIFI_CH_REQ,channel_p);
     return 0;
 }
-long wifi_rxpackcount(char * result)
+
+static long wifi_rxpackcount_pc(char * result)
 {
     int error = system("wl counters > /data/data/wlancounters.txt");
     ALOGI("wifi_rxpackcount");
@@ -683,15 +698,28 @@ long wifi_rxpackcount(char * result)
     }else{
         ALOGI("=== wifi_rxpackcount! ===\n");
         strcpy(result,EUT_WIFI_OK);
-        rxmfrmocast_next=parse_packcount("/data/data/wlancounters.txt");
+        rxmfrmocast_next=parse_packcount_pc("/data/data/wlancounters.txt", "pktengrxdmcast", "txmpdu_sgi", &error);
+        if (0 != error){
+            sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+            return 0;
+        }
         rx_packcount = rxmfrmocast_next-rxmfrmocast_priv;
+        rxerror_next=parse_packcount_pc(NULL, "rxerror", "txprshort", &error);
+        if (0 != error){
+            sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+            return 0;
+        }
+        ALOGI("rxpackcount rxmfrmocast_next=%ld, rxerror_next=%ld",rxmfrmocast_next, rxerror_next);
+        //rx_errpack no use too. but we still provide it
+        rx_errpack = rxerror_next - rxerror_priv;
         //system("rm /data/data/wlancounters.txt");
-        sprintf(result,"%s:rx_end_count=%ld:end",EUT_WIFI_RXPACKCOUNT_REQ,rx_packcount);
+        sprintf(result,"%s%ld,%ld,%ld",EUT_WIFI_RXPACKCOUNT_PC_REQ,rx_packcount,rx_errphypack,rx_errpack);
         ALOGI("resutl=%s",result);
     }
     return rx_packcount;
 }
-int wifi_clr_rxpackcount(char * result)
+
+static int wifi_clr_rxpackcount_pc(char * result)
 {
     rx_packcount = 0;
     int error=system("wl counters > /data/data/wlancounters.txt");
@@ -699,40 +727,58 @@ int wifi_clr_rxpackcount(char * result)
     if(error == -1 || error == 127){
         ALOGE("=== start_wifi_rx test failed on cmd : wl counters===\n");
         sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+        return error;
     }else{
-        rxmfrmocast_priv=parse_packcount("/data/data/wlancounters.txt");
+        rxmfrmocast_priv=parse_packcount_pc("/data/data/wlancounters.txt", "pktengrxdmcast", "txmpdu_sgi", &error);
+        if (0 != error){
+            sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+            return error;
+        }
+        rxerror_priv=parse_packcount_pc(NULL, "rxerror", "txprshort", &error);
+        if (0 != error){
+            sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+            return error;
+        }
+        ALOGI("rxpackcount rxmfrmocast_priv=%ld, rxerror_priv=%ld",rxmfrmocast_priv, rxerror_priv);
     }
     strcpy(result,EUT_WIFI_OK);
     return 0;
 }
-static long parse_packcount(char * filename)
+static long parse_packcount_pc(char *filename, char *keywordstart, char *keywordend, int *error)
 {
     int fd,n,len;
+    char *p,*q,*s;
     char packcount[20];
-    memset(counter_respon,0,COUNTER_BUF_SIZE);
-    fd = open(filename, O_RDWR|O_NONBLOCK);
-    if(fd < 0){
-        ALOGE("=== open file  %s error===\n",filename);
-    }else{
-        n = read(fd,counter_respon,COUNTER_BUF_SIZE);
-        close(fd);
+    if (filename != NULL)
+    {
+        memset(counter_respon,0,COUNTER_BUF_SIZE);
+        fd = open(filename, O_RDWR|O_NONBLOCK);
+        if(fd < 0){
+            ALOGE("=== open file  %s error===\n",filename);
+            *error = fd;
+            return 0;
+        }else{
+            n = read(fd,counter_respon,COUNTER_BUF_SIZE);
+            close(fd);
+        }
     }
-    char *p=strstr(counter_respon,"pktengrxdmcast");
+    p=strstr(counter_respon, keywordstart);
     if(p != NULL){
-        char *q=strstr(p," ");
-        char *s=strstr(q,"txmpdu_sgi");
-		ALOGE("=== open file parse_packcount entry s= %s\n",s);
+        q=strstr(p," ");
+        s=strstr(q, keywordend);
+//        ALOGE("=== open file parse_packcount entry s= %s\n",s);
         len= s-q-1;
        memcpy(packcount,q+1,len);
-      // return 0 ;
+        *error = 0;
         return atol(packcount);
     }else{
-    ALOGE("=== dirty file  %s error===\n",filename);
+    ALOGE("=== dirty file  %s no find %s ===\n",filename, keywordstart);
+        *error = 1;
         return 0;
     }
 }
 
-int set_wifi_rate(char *string, char *rsp)
+static int set_wifi_rate_pc(char *string, char *rsp)
 {
 	float rate = -1;
 	if(0 == wifieut_state)
@@ -741,13 +787,11 @@ int set_wifi_rate(char *string, char *rsp)
 		sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
 		return -1;
 	}
-	/*the engmodeapp send the rate  directly ,no need to match;yaxun.chen*/
-	//rate = mattch_rate_table_str(string);
-       rate = atof(string);
-	return set_wifi_ratio(rate, rsp);
+	rate = mattch_rate_table_str_pc(string);
+	return set_wifi_ratio_pc(rate, rsp);
 }
 
-int wifi_rate_req(char *rsp)
+static int wifi_rate_req_pc(char *rsp)
 {
 	int ret = -1;
 	char *str = NULL;
@@ -757,7 +801,7 @@ int wifi_rate_req(char *rsp)
 		ALOGE("%s(), ratio_p is 0", __FUNCTION__);
 		goto err;
 	}
-	str = mattch_rate_table_index(ratio_p);
+	str = mattch_rate_table_index_pc(ratio_p);
 	if(NULL == str)
 	{
 		ALOGE("%s(), don't mattch rate", __FUNCTION__);
@@ -771,7 +815,7 @@ err:
 	return -1;
 }
 
-int set_wifi_txgainindex(int index, char *rsp)
+static int set_wifi_txgainindex_pc(int index, char *rsp)
 {
 	if(0 == wifieut_state)
 	{
@@ -779,14 +823,14 @@ int set_wifi_txgainindex(int index, char *rsp)
 		goto err;
 	}		
 	ALOGI("%s(), index:%d\n",  __FUNCTION__, index);
-	return set_wifi_tx_factor_83780(index, rsp);
+	return set_wifi_tx_factor_83780_pc(index, rsp);
 
 err:
 	sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
 	return -1;
 }
 
-int wifi_txgainindex_req(char *rsp)
+static int wifi_txgainindex_req_pc(char *rsp)
 {
 	if(0 == wifieut_state)
 	{
@@ -801,7 +845,7 @@ err:
 	return -1;
 }
 
-int wifi_rssi_req(char *rsp)
+static int wifi_rssi_req_pc(char *rsp)
 {
 	char buf[100]={0};
 	FILE *fp;
@@ -840,3 +884,28 @@ err:
 	sprintf(rsp, "%s%s", EUT_WIFI_ERROR, "error");
 	return -1;
 }
+
+
+struct eng_wifi_eutops wifi_eutops ={   wifieut_pc,
+    wifieut_req_pc,
+    wifi_tx_pc,
+    set_wifi_tx_factor_pc,
+    wifi_rx_pc,
+    set_wifi_mode_pc,
+    set_wifi_ratio_pc,
+    set_wifi_ch_pc,
+    wifi_tx_req_pc,
+    wifi_tx_factor_req_pc,
+    wifi_rx_req_pc,
+    wifi_ratio_req_pc,
+    wifi_ch_req_pc,
+    wifi_rxpackcount_pc,
+//    wifi_clr_rxpackcount,
+    set_wifi_rate_pc,				//int (*set_wifi_rate)(char *, char *);
+    wifi_rate_req_pc,				//int (*wifi_rate_req)(char *);
+    set_wifi_txgainindex_pc,		//int (*set_wifi_txgainindex)(int , char *);
+    wifi_txgainindex_req_pc,		//int (*wifi_txgainindex_req)(char *);
+    wifi_rssi_req_pc,				//int (*wifi_rssi_req)(char *);
+    wifi_tx_pktlen_pc
+};
+

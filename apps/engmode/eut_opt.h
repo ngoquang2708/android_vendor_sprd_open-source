@@ -24,6 +24,7 @@
 #define EUT_WIFI_RATIO_REQ          ("+SPWIFITEST:RATIO=")
 #define EUT_WIFI_TXFAC_REQ          ("+SPWIFITEST:TXFAC=")
 #define EUT_WIFI_RXPACKCOUNT_REQ    ("+SPWIFITEST:RXPACCOUNT=")
+#define EUT_WIFI_RXPACKCOUNT_PC_REQ    ("+SPWIFITEST:RXPACKCOUNT=")
 
 #define EUT_GPS_OK  "+SPGPSTEST:OK"
 #define EUT_GPS_ERROR   "+SPGPSTEST:ERR="
@@ -70,7 +71,7 @@ struct eng_wifi_eutops{
     int (*wifi_ratio_req)(char *);
     int (*wifi_ch_req)(char *);
     long (*wifi_rxpackcount)(char *);
-    int (*wifi_clr_rxpackcount)(char *);
+//    int (*wifi_clr_rxpackcount)(char *);
     int (*set_wifi_rate)(char *, char *);
     int (*wifi_rate_req)(char *);
     int (*set_wifi_txgainindex)(int , char *);

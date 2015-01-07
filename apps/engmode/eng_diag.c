@@ -934,10 +934,10 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
             break;
         case WIFICLRRXPACKCOUNT_INDEX:
             //wifi_eutops.wifi_clr_rxpackcount(rsp);
-            if (wifi_eutops.wifi_clr_rxpackcount != NULL)
-                wifi_eutops.wifi_clr_rxpackcount(rsp);
-            else
-                ALOGE("wifi_eutops.wifi_clr_rxpackcount not support!");
+//            if (wifi_eutops.wifi_clr_rxpackcount != NULL)
+//                wifi_eutops.wifi_clr_rxpackcount(rsp);
+//            else
+//                ALOGE("wifi_eutops.wifi_clr_rxpackcount not support!");
             break;
         case GPSSEARCH_REQ_INDEX:
             gps_eutops.gps_search_req(rsp);

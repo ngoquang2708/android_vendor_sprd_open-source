@@ -76,6 +76,7 @@ endif
 ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
 LOCAL_CFLAGS += -DENGMODE_EUT_BCM
 LOCAL_SRC_FILES     += wifi_eut.c \
+                       wifi_eut_pc.c \
 				bt_eut.c
 ifdef WIFI_DRIVER_FW_PATH_PARAM
 LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_PARAM=\"$(WIFI_DRIVER_FW_PATH_PARAM)\"
