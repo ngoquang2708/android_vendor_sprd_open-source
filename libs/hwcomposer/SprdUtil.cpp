@@ -1261,7 +1261,7 @@ int SprdUtil::gsp_process_va_copy2_pa(GSP_CONFIG_INFO_T *pgsp_cfg_info)
             }
         } else {
             ALOGI_IF(mDebugFlag,"util[%04d] copy:osd is pallet, don't need copy",__LINE__);
-            return -1;
+            return 0;
         }
     }
 
@@ -1554,7 +1554,10 @@ int SprdUtil::gsp_image_layer_config(SprdHWLayer *layer,
             gsp_cfg_info.layer0_info.clip_rect.rect_h = srcRect->h;
 
             gsp_cfg_info.layer0_info.alpha = hwcLayer->planeAlpha;
-            gsp_cfg_info.layer0_info.pmargb_mod = ((hwcLayer->blending&HWC_BLENDING_PREMULT) == HWC_BLENDING_PREMULT);
+            if(hwcLayer->blending == HWC_BLENDING_PREMULT) {
+                ALOGI_IF(mDebugFlag,"util[%04d] err:L0 blending flag:%x!",__LINE__,hwcLayer->blending);
+            }
+            gsp_cfg_info.layer0_info.pmargb_mod = 1;
             gsp_cfg_info.layer0_info.rot_angle = rotationType_convert(hwcLayer->transform);
 
             gsp_cfg_info.layer0_info.des_rect.st_x = dstRect->x;
@@ -1760,7 +1763,13 @@ int SprdUtil::gsp_osd_layer_config(SprdHWLayer *layer, GSP_CONFIG_INFO_T &gsp_cf
 
 
             gsp_cfg_info.layer1_info.alpha = hwcLayer->planeAlpha;
-            gsp_cfg_info.layer1_info.pmargb_mod = ((hwcLayer->blending&HWC_BLENDING_PREMULT) == HWC_BLENDING_PREMULT);
+            //gsp_cfg_info.layer1_info.pmargb_mod = ((hwcLayer->blending&HWC_BLENDING_PREMULT) == HWC_BLENDING_PREMULT);
+            if(hwcLayer->blending == HWC_BLENDING_PREMULT/*have already pre-multiply*/
+               ||hwcLayer->blending == HWC_BLENDING_COVERAGE/*coverage the dst layer*/) {
+                gsp_cfg_info.layer1_info.pmargb_mod = 1;
+            } else {
+                ALOGE("util[%04d] err:L1 blending flag:%x!",__LINE__,hwcLayer->blending);
+            }
 
             ALOGI_IF((private_h->width != private_h->stride),"util[%04d] warning: osdLayer width %d, stride %d, not equal!",__LINE__, private_h->width, private_h->stride);
             //gsp_cfg_info.layer1_info.pitch = private_h->width;
@@ -2099,10 +2108,11 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
     layer_total = videoLayerCount+osdLayerCount;
 
     /*params check*/
-    if(mGsp_cap.magic != CAPABILITY_MAGIC_NUMBER
-       ||layer_total > mGsp_cap.max_layer_cnt
-       ||layer_total == 0
-       ||videoLayerCount > mGsp_cap.max_videoLayer_cnt
+    if((mGsp_cap.magic != CAPABILITY_MAGIC_NUMBER)
+       ||(layer_total == 0)
+       ||(videoLayerCount==0 && layer_total>mGsp_cap.max_layer_cnt)
+       ||(videoLayerCount>0 && layer_total>mGsp_cap.max_layer_cnt_with_video)
+       ||(videoLayerCount > mGsp_cap.max_videoLayer_cnt)
        ||((videoLayerCount>0 && osdLayerCount>0) && (mGsp_cap.blend_video_with_OSD==0))
        ||(videoLayerCount>0 && (videoLayerList==NULL || buffer1 == NULL))
        ||(osdLayerCount>0 && osdLayerList==NULL)
