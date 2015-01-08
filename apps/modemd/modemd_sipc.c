@@ -396,7 +396,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcat(dsp_partition,"ldsp");
         load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
     }
-    stop_service(modem, 0);
+    //stop_service(modem, 0);
 
     /* write 1 to start*/
     write_proc_file(modem_start, 0, "1");
@@ -703,6 +703,7 @@ raw_reset:
         memset(prop, 0, sizeof(prop));
         property_get(MODEM_RESET_PROP, prop, "0");
         is_reset = atoi(prop);
+        stop_service(modem, 0);
         if(is_reset) {
             MODEMD_LOGD("%s: reset is enabled, reload modem...", __func__);
             if (is_external_modem()) {
@@ -839,6 +840,7 @@ void* detect_sipc_modem(void *param)
                 MODEMD_LOGE("Info all the sock clients that modem is reset");
                 loop_info_sockclients(buf, numRead);
                 is_assert = 1;
+                stop_service(modem, 0);
                 load_sipc_modem_img(modem, is_assert);
                 is_assert = 0;
             } else if(strstr(buf, "Modem Assert") || strstr(buf, "wdtirq")) {
@@ -885,7 +887,7 @@ void* detect_sipc_modem(void *param)
                 /* info socket clients that modem is assert or hangup */
                 MODEMD_LOGE("Info all the sock clients that modem is assert/hangup");
                 loop_info_sockclients(buf, numRead);
-
+                stop_service(modem, 0);
                 /* reset or not according to property */
                 memset(prop, 0, sizeof(prop));
                 property_get(MODEM_RESET_PROP, prop, "0");
