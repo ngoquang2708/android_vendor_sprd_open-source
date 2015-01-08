@@ -1292,12 +1292,13 @@ cmr_int camera_after_set(cmr_handle oem_handle, struct after_set_cb_param *param
 	}
 
 	if (PREVIEWING == cmr_preview_get_status(cxt->prev_cxt.preview_handle, cxt->camera_id) &&
-		(IMG_DATA_TYPE_RAW == cxt->sn_cxt.sensor_info.image_format)) {
+		(IMG_DATA_TYPE_RAW == cxt->sn_cxt.sensor_info.image_format) &&
+		(cxt->is_video)) {
 		skip_num = 0;
 	} else {
 		skip_num = param->skip_number;
 	}
-	CMR_LOGI("sensor fmt %d, skip num %d", cxt->sn_cxt.sensor_info.image_format, skip_num);
+	CMR_LOGI("sensor fmt %d, param->skip_number= %d skip num %d", cxt->sn_cxt.sensor_info.image_format, param->skip_number, skip_num);
 
 	ret = cmr_preview_after_set_param(cxt->prev_cxt.preview_handle, cxt->camera_id, param->re_mode, param->skip_mode, skip_num);
 exit:
@@ -4212,6 +4213,7 @@ cmr_int camera_set_setting(cmr_handle oem_handle, enum camera_param_type id, cmr
 	case CAMERA_PARAM_PREVIEW_FPS:
 		if (param) {
 			setting_param.preview_fps_param = *(struct cmr_preview_fps_param*)param;
+			cxt->is_video = setting_param.preview_fps_param.video_mode;
 			ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, id, &setting_param);
 		} else {
 			CMR_LOGE("err, fps param is null");

@@ -237,6 +237,7 @@ struct camera_context {
 	cmr_u32                  is_support_fd;
 	cmr_u32                  fd_on_off;
 	cmr_u32                  is_android_zsl;
+	cmr_u32                  is_video;
 
 	/*memory func*/
 	camera_cb_of_malloc      hal_malloc;
