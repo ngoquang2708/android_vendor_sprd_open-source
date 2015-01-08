@@ -20,6 +20,7 @@ int test_receiver_start(void)
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	t_mode.finished = 1;
 	pthread_join(t1, NULL); /* wait "handle key" thread exit. */
+	save_result(CASE_TEST_RECEIVER,ret);
 	return ret;
 }
 

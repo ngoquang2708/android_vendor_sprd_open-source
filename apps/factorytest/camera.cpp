@@ -49,6 +49,7 @@ static int musage;
 static int mwidth;
 static int mheight;
 static int mformat;
+static int front_back=0;
 
 static int ml,mr,mt,mb;
 
@@ -92,6 +93,8 @@ struct frame_buffer_t {
 #define SPRD_MAX_PREVIEW_BUF 		ENGTEST_PREVIEW_BUF_NUM
 static struct frame_buffer_t fb_buf[SPRD_MAX_PREVIEW_BUF+1];
 static uint8_t tmpbuf[SPRD_LCD_WIDTH*SPRD_LCD_HEIGHT*4];
+static uint8_t tmpbuf1[SPRD_LCD_WIDTH*SPRD_LCD_HEIGHT*4];
+
 static uint32_t post_preview_buf[ENGTEST_PREVIEW_WIDTH*ENGTEST_PREVIEW_WIDTH*2];
 static uint32_t rot_buf[ENGTEST_PREVIEW_WIDTH*ENGTEST_PREVIEW_WIDTH*2];
 
@@ -260,6 +263,40 @@ static void __notify_cb(int32_t msg_type, int32_t ext1,
     LOGD("mmitest %s msg_type %d\r\n", __FUNCTION__,msg_type);
 }
 
+
+
+static void data_mirror(uint8_t *des,uint8_t *src,int width,int height, int bits)
+{
+	if ((!des)||(!src))
+	{
+		return;
+	}
+	LOGD("mmitest width=%d,height=%d",width,height);
+
+	int n = 0;
+	int linesize;
+	int i,j;
+	int num;
+	int lineunm;
+	int m = bits/8;
+
+	linesize = width*m;
+
+	for(j=0;j<height;j++)
+	{
+
+			for(i= 0;i< width;i++)
+			{
+
+					memcpy(&des[n],&src[linesize-(i+1)*m+j*linesize],m);
+					n+=m;
+
+			}
+	}
+
+	LOGD("mmitest out of mirror");
+}
+
 static void __data_cb(int32_t msg_type,
                           const camera_memory_t *data, unsigned int index,
                           camera_frame_metadata_t *metadata,
@@ -269,17 +306,35 @@ static void __data_cb(int32_t msg_type,
 	unsigned char* tmp=(unsigned char*)data->data;
 	yuv420_to_rgb(ENGTEST_PREVIEW_WIDTH,ENGTEST_PREVIEW_HEIGHT, tmp+index*cb_buffer_size, \
 					post_preview_buf);
-	StretchColors((void *)(fb_buf[2].virt_addr), var.yres, var.xres, var.bits_per_pixel, \
-					post_preview_buf, ENGTEST_PREVIEW_WIDTH, ENGTEST_PREVIEW_HEIGHT, var.bits_per_pixel);
+	if(front_back==1)
+	{
+		LOGD("mmitest I am back camra");
+		StretchColors((void *)(fb_buf[2].virt_addr), var.yres, var.xres, var.bits_per_pixel, \
+						post_preview_buf, ENGTEST_PREVIEW_WIDTH, ENGTEST_PREVIEW_HEIGHT, var.bits_per_pixel);
 
-	RGBRotate90_anticlockwise((uint8_t *)(fb_buf[cb_buffer_index].virt_addr), (uint8_t *)(fb_buf[2].virt_addr),
-					var.yres, var.xres, var.bits_per_pixel);
+		RGBRotate90_anticlockwise((uint8_t *)(fb_buf[cb_buffer_index].virt_addr), (uint8_t *)(fb_buf[2].virt_addr),
+						var.yres, var.xres, var.bits_per_pixel);
+	}
+	else
+	{
+		LOGD("mmitest I am front camra");
+		StretchColors((void *)(fb_buf[3].virt_addr), var.yres, var.xres, var.bits_per_pixel, \
+						post_preview_buf, ENGTEST_PREVIEW_WIDTH, ENGTEST_PREVIEW_HEIGHT, var.bits_per_pixel);
+
+		data_mirror((uint8_t *)(fb_buf[2].virt_addr), (uint8_t *)(fb_buf[3].virt_addr),
+						 var.yres,var.xres, var.bits_per_pixel);
+		RGBRotate90_anticlockwise((uint8_t *)(fb_buf[cb_buffer_index].virt_addr), (uint8_t *)(fb_buf[2].virt_addr),
+								 var.yres,var.xres, var.bits_per_pixel);
+	}
 	eng_test_fb_update(cb_buffer_index);
 	cb_buffer_index++;
 	if(cb_buffer_index==2)
 		cb_buffer_index=0;
 
 }
+
+
+
 
 static void __data_cb_timestamp(nsecs_t timestamp, int32_t msg_type,
                              const camera_memory_t *data, unsigned index,
@@ -423,8 +478,7 @@ static int __lock_buffer(struct preview_stream_ops* w,
 	mwidth=width;
 	mheight=height;
 	mformat=format;
-	//LOGD("mmitest out set buffers geometry");
-  	return 0;
+    return 0;
     }
 
     static int __set_crop(struct preview_stream_ops *w,
@@ -539,6 +593,8 @@ static int eng_test_fb_open(void)
     fb_buf[2].virt_addr = (uint32_t)tmpbuf;
 	fb_buf[2].length = var.yres * var.xres * (var.bits_per_pixel/8);
 
+	fb_buf[3].virt_addr = (uint32_t)tmpbuf1;
+	fb_buf[3].length = var.yres * var.xres * (var.bits_per_pixel/8);
 
 	for(i=0; i<3; i++){
 		LOGD("DCAM: buf[%d] virt_addr=0x%x, phys_addr=0x%x, length=%d\r\n", \
@@ -568,13 +624,13 @@ int test_fcamera_start(void)
    static camera_device_t *mDevice;
    static hw_module_t *module;
    mGrallocBufferIndex=0;
-
+   front_back=0;
    ui_clear_rows(0,20);
    ui_set_color(CL_GREEN);//++++++++++
 
    if(BT_STATE==BT_STATE_OFF)
    {
-   ui_show_text(0, 0, CAMERA_START);//++++++
+   //ui_show_text(0, 0, CAMERA_START);//++++++
 	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
    gr_flip();
    sleep(2);
@@ -686,15 +742,17 @@ int test_fcamera_start(void)
     module = NULL;
 
 }
-   else
-   	{
+else
+{
         ui_show_text(1, 0, BT_BACK_TEST);//++++++
         ui_show_text(2, 0, INFECT_TIPS);//++++++
         ui_show_text(3, 0, PLEASE_WAITE);//++++++
         gr_flip();
         ret=RL_NA;
         sleep(1);
-    }
+}
+
+	save_result(CASE_TEST_FCAMERA,ret);
 	return ret;
 }
 
@@ -707,6 +765,8 @@ int test_bcamera_start(void)
 {
    int i,rc;
    int ret=0;
+   int flash_ret=0;
+   front_back=1;
    hw_module_t *fmodule;
    camera_module_t *mModule;
    camera_device_t *mDevice;
@@ -715,9 +775,10 @@ int test_bcamera_start(void)
 
     ui_clear_rows(0,20);
 	ui_set_color(CL_GREEN);//++++++++++
-	ui_show_text(0, 0, CAMERA_START);//++++++
+	//ui_show_text(0, 0, CAMERA_START);//++++++
 	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
 	gr_flip();
+	flash_ret=flash_start();
 	sleep(2);
 
    if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
@@ -825,6 +886,9 @@ int test_bcamera_start(void)
     }
     module = NULL;
 	LOGD("mmitest after close\r\n");
+
+	save_result(CASE_TEST_BCAMERA,ret);
+	save_result(CASE_TEST_FLASH,flash_ret);
 	return ret;
 }
 
@@ -835,6 +899,44 @@ static void test_flash(void)
 {
 
 }
+
+
+int flash_start(void)
+{
+	int ret=0;
+	int fd;
+    char buf[32];
+	//int cur_row=2;
+	//ui_fill_locked();
+	//ui_show_title(MENU_TEST_FLASH);
+	//ui_set_color(CL_WHITE);
+	//gr_flip();
+
+	memset(buf, 0, sizeof(buf));
+	fd=open(FLASH_SUPPORT,O_RDWR);
+	read(fd, buf, sizeof(buf));
+	LOGD("mmitest the buff=%s",buf);
+	LOGD("mmitest the buff=%d",sizeof(FLASH_YES_NO));
+	if(strncmp(buf, FLASH_YES_NO,(sizeof(FLASH_YES_NO)-1)) == 0)
+		{
+			ret=RL_NS;
+			//ui_set_color(CL_BLUE);
+			//cur_row = ui_show_text(cur_row, 0, TEXT_NOT_SUPPORT_FLASH);
+		}
+	else
+		{
+			//ui_set_color(CL_GREEN);
+			//cur_row = ui_show_text(cur_row, 0, TEXT_START_FLASH);
+			//test_flash();
+			ret=RL_PASS;
+		}
+	//gr_flip();
+	//sleep(2);
+	close(fd);
+
+	return ret;
+}
+
 
 
 int test_flash_start(void)
@@ -864,7 +966,7 @@ int test_flash_start(void)
 			ui_set_color(CL_GREEN);
 			cur_row = ui_show_text(cur_row, 0, TEXT_START_FLASH);
 			test_flash();
-			ret=2;
+			ret=RL_PASS;
 		}
 	gr_flip();
 	sleep(2);
@@ -872,6 +974,7 @@ int test_flash_start(void)
 
 	return ret;
 }
+
 
 
 

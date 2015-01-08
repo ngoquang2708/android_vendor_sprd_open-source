@@ -14,7 +14,7 @@ struct pcm_config eng_fm_dl = {
 
 int get_card_num_by_name(const char * dest_name){
 
-	char s[101], name[101]; 
+	char s[101], name[101];
 	int   index = -1;
 	int   len;
 
@@ -67,14 +67,14 @@ void* playback_thread(void* t_mode){
 		sprintf(cmd+strlen(cmd),"tinymix -D %d 97 1;",card_num);
 	}
 	else{
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 99 1;",card_num);	
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 99 1;",card_num);
 		sprintf(cmd+strlen(cmd), "%s %s -D %d","tinyplay", SPRD_AUDIO_FILE,card_num);
 		LOGD("mmitestsound:cmd= %s\n",cmd);
 	}
 	while(mode->finished != 1){
 
 		//SPRD_DBG("[%s]:cmd=%s\n", __func__, cmd);
-		status = system(cmd);	
+		status = system(cmd);
 
 		if(status<0) {
 			SPRD_DBG("%s: Error[%d] [%s]", __func__, status, strerror(errno));

@@ -138,7 +138,7 @@ static char *btaddr2str(const bt_bdaddr_t *bdaddr, bdstr_t *bdstr)
     return (char *)bdstr;
 }
 
-static void create_mac_rand(char *btmac)
+void create_mac_rand(char *btmac)
 {
     int i=0, j=0;
     unsigned int randseed;
@@ -159,7 +159,7 @@ static void create_mac_rand(char *btmac)
             (unsigned char)((j>>16)&0xFF));
 }
 
-static int read_local_bt_mac(const char * file_path,  char * mac)
+int read_local_bt_mac(const char * file_path,  char * mac)
 {
     int fd_btaddr=0;
     char bt_mac[BT_MAC_STR_LEN+1] = {0};
@@ -640,10 +640,14 @@ int eng_bt_display(void)
  ************************************************************************************/
 int test_bt_pretest(void)
 {
+	int ret;
 	if(remote_bt_num > 0)
-		return RL_PASS;
+		ret= RL_PASS;
 	else
-		return RL_FAIL;
+		ret= RL_FAIL;
+
+	save_result(CASE_TEST_BT,ret);
+	return ret;
 }
 
 int test_bt_start(void)
@@ -682,5 +686,7 @@ int test_bt_start(void)
 	}
     //eng_bt_clear_list();
     sleep(1);
+
+	save_result(CASE_TEST_BT,ret);
     return ret;
 }

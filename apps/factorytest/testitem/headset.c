@@ -39,6 +39,7 @@ void* headset_check_thread(void)
 	char str[128];
 	struct timeval timeout;
 	struct input_event event;
+	int headset_key_count=0;
 	int first_row = 3;
 	int last_row = 4;
 	int key_row = 4;
@@ -131,12 +132,14 @@ void* headset_check_thread(void)
 								ui_clear_rows(key_row, 1);
 								ui_set_color(CL_WHITE);
 								ui_show_text(key_row, 0, str);
+								headset_key_count++;
 								break;
 							case 1:
 								sprintf(str, "%s%s", TEXT_HD_KEY_STATE, TEXT_HD_KEY_PRESSED);
 								ui_clear_rows(key_row, 1);
 								ui_set_color(CL_WHITE);
 								ui_show_text(key_row, 0, str);
+								headset_key_count++;
 								break;
 						}
 						gr_flip();
@@ -153,6 +156,7 @@ void* headset_check_thread(void)
 			}
 			usleep(200*1000);
 		}
+		if(headset_key_count>=3)break;
 
 		//show
 		//headset_show();
@@ -162,6 +166,7 @@ err:
 	at_cmd_audio_loop(0,0,0,0,0,0);
 	if(fd > 0) close(fd);
 	if(input_fd > 0) close(input_fd);
+	ui_push_result(RL_PASS);
 	return NULL;
 }
 
@@ -209,7 +214,7 @@ int test_headset_start(void)
 	pthread_join(t1, NULL); /* wait "handle key" thread exit. */
 	pthread_join(t2, NULL); /* wait "handle key" thread exit. */
 
-
+	save_result(CASE_TEST_HEADSET,ret);
 	return ret;
 }
 

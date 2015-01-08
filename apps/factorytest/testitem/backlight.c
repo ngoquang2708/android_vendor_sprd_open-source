@@ -149,5 +149,8 @@ int test_vb_bl_start(void)
 	en_lcd_backlight(lcd_max);
 	en_key_backlight(0);
 	ret = ui_handle_button(NULL,NULL);//, TEXT_GOBACK
+
+	save_result(CASE_TEST_BACKLIGHT,ret);
+	save_result(CASE_TEST_VIBRATOR,ret);
 	return ret;
 }

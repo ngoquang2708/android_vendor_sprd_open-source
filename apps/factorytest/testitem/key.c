@@ -15,10 +15,10 @@ struct test_key test_key_info[] = {
 	{KEY_VOLUMEDOWN, 0,  TEXT_KEY_VOLUMEDOWN},
 	{KEY_VOLUMEUP,	 0,  TEXT_KEY_VOLUMEUP},
 	{KEY_POWER,		 0,  TEXT_KEY_POWER},
-	{KEY_MENU,		 0,  TEXT_KEY_MENU},	
+	{KEY_MENU,		 0,  TEXT_KEY_MENU},
 	{KEY_BACK,		 0,  TEXT_KEY_BACK},
 	{KEY_HOMEPAGE,	 0,  TEXT_KEY_HOMEPAGE},
-	{KEY_CAMERA,	 0,  TEXT_KEY_CAMERA},
+	//{KEY_CAMERA,	 0,  TEXT_KEY_CAMERA},
 };
 
 int test_key_start(void)
@@ -36,15 +36,7 @@ int test_key_start(void)
 	LOGD("mmitest [%s]: start\n", __FUNCTION__);
 	ui_fill_locked();
 	ui_show_title(MENU_TEST_KEY);
-	ui_set_color(CL_WHITE);
-	cur_row=ui_show_text(cur_row, 0, TEXT_CAMERA_KEY_YES_NO);
 
-	gr_flip();
-
-	ret=ui_handle_button(NULL,NULL);
-
-	if(ret==RL_FAIL)
-		test_cnt-=1;
     ui_set_color(CL_GREEN);
 	cur_row=ui_show_text(cur_row, 0, TEXT_KEY_ILLUSTRATE);
 
@@ -85,7 +77,7 @@ int test_key_start(void)
 		ui_show_text(cur_row+2, 0, TEXT_TEST_FAIL);
 		gr_flip();
 		sleep(1);
-		return RL_FAIL;
+		ret=RL_FAIL;
 	}
 	else                              //+++++++++++++++
 	{
@@ -93,6 +85,9 @@ int test_key_start(void)
 		ui_show_text(cur_row+2, 0, TEXT_TEST_PASS);
 		gr_flip();
 		sleep(1);
-		return RL_PASS;
+		ret=RL_PASS;
+
 	}
+	save_result(CASE_TEST_KEY,ret);
+	return ret;
 }

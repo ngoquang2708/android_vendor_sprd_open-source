@@ -242,7 +242,7 @@ static void msensor_thread(void *param)
 
 	do_read();
 	LOGD("mmitestsensor here mlast");
-	return;		
+	return;
 }
 
 

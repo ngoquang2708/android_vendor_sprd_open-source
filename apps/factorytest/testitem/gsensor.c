@@ -176,6 +176,8 @@ int test_gsensor_start(void)
 	}
 	gr_flip();//+++++++++++++++++++++++
 	sleep(1);//++++++++++++++++++++
+
+	save_result(CASE_TEST_GSENSOR,gsensor_result);
 	return gsensor_result;//++++++++++++++++
 }
 

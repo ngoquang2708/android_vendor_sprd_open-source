@@ -70,7 +70,7 @@ static void btfmSearchCompleteCallback(int status, int rssi, int snr, int freq)
 				fm_fre=freq;
 				fm_rssi=rssi;
 				fm_snr=snr;
-			}	
+			}
 	}
 static void btfmAudioModeCallback(int status, int audioMode){ LOGD("Audio mode change callback, status: %d, audioMode: %d", status, audioMode); }
 static void btfmAudioPathCallback(int status, int audioPath){ LOGD("Audio path change callback, status: %d, audioPath: %d", status, audioPath); }
@@ -325,7 +325,7 @@ static int fm_open(void)
 	 }
 
   LOGD("mmitest hal load success");
-  return err; 
+  return err;
 }
 
 
@@ -353,11 +353,11 @@ static int fm_search(void)
 static int fm_close(void)
 {
     int counter = 0;
-    if (sBtFmInterface) 
+    if (sBtFmInterface)
 		sBtFmInterface->disable();
 	else
 		return -1;
-	
+
 	while (counter++ < 3 && FM_STATE_DISABLED != sFmStatus) sleep(1);
 	if (FM_STATE_DISABLED != sFmStatus) return -1;
 	sBtFmInterface->cleanup();
@@ -370,7 +370,7 @@ static int fm_close(void)
 		}
 		sFmStatus = FM_STATE_DISABLED;
 
-		if( NULL != s_hwDev && NULL != s_hwDev->common.close ) 
+		if( NULL != s_hwDev && NULL != s_hwDev->common.close )
 		{
 			s_hwDev->common.close( &(s_hwDev->common) );
 		}
@@ -488,6 +488,8 @@ int test_fm_start(void)
 		LOGD("mmitest fm failed");	
 	}	
     fm_close();
+
+	save_result(CASE_TEST_FM,result);
     return result;
 }
 
