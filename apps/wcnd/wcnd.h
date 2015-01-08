@@ -67,7 +67,7 @@
 #define WCN_ATCMD_IFACE		"/proc/mdbg/at_cmd"
 
 
-#define LOOP_TEST_STR "at+loopcheck"
+#define LOOP_TEST_STR "at+loopcheck\r"
 #define LOOP_TEST_ACK_STR "loopcheck_ack"
 
 #else

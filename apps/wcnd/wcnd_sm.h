@@ -58,10 +58,14 @@
 
 
 //WCND CLIENT TYPE
-#define WCND_CLIENT_TYPE_SLEEP			-1
-#define WCND_CLIENT_TYPE_NOTIFY			0
-#define WCND_CLIENT_TYPE_CMD				1
-#define WCND_CLIENT_TYPE_CMD_PENDING	2
+#define WCND_CLIENT_TYPE_SLEEP			0x30
+#define WCND_CLIENT_TYPE_NOTIFY			0x00
+#define WCND_CLIENT_TYPE_CMD				0x10
+#define WCND_CLIENT_TYPE_CMD_PENDING	0x20
+#define WCND_CLIENT_TYPE_CMD_SUBTYPE_CLOSE		0x11
+#define WCND_CLIENT_TYPE_CMD_SUBTYPE_OPEN		0x12
+
+#define WCND_CLIENT_TYPE_CMD_MASK 0xF0
 
 int wcnd_sm_init(WcndManager *pWcndManger);
 int wcnd_sm_step(WcndManager *pWcndManger, WcndMessage *pMessage);

@@ -257,6 +257,8 @@ static void wcn_state_cp2_started(WcndManager *pWcndManger, WcndMessage *pMessag
 
 static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage)
 {
+	int i = 0;
+
 	if(!pWcndManger || !pMessage) return;
 
 	pWcndManger->notify_enabled = 1;
@@ -277,7 +279,20 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 				pWcndManger->saved_btwifi_state &= (~WCND_BTWIFI_STATE_WIFI_ON);
 		}
 
-		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
+		pthread_mutex_lock(&pWcndManger->clients_lock);
+
+		//save the pending message
+		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
+		{
+			 if(pWcndManger->clients[i].sockfd == pMessage->replyto_fd)
+			{
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_CMD_SUBTYPE_CLOSE;
+				break;
+			}
+		}
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
+		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD_SUBTYPE_CLOSE);
 		break;
 
 	case WCND_EVENT_BT_OPEN:
@@ -288,6 +303,20 @@ static void wcn_state_cp2_assert(WcndManager *pWcndManger, WcndMessage *pMessage
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_BT_ON;
 		else if(pMessage->event == WCND_EVENT_WIFI_OPEN)
 			pWcndManger->btwifi_state |= WCND_BTWIFI_STATE_WIFI_ON;
+
+		pthread_mutex_lock(&pWcndManger->clients_lock);
+
+		//save the pending message
+		for (i = 0; i < WCND_MAX_CLIENT_NUM; i++)
+		{
+			 if(pWcndManger->clients[i].sockfd == pMessage->replyto_fd)
+			{
+				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_CMD_SUBTYPE_OPEN;
+				break;
+			}
+		}
+		pthread_mutex_unlock(&pWcndManger->clients_lock);
+
 
 		break;
 
@@ -388,7 +417,7 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 int wcnd_sm_step(WcndManager *pWcndManger, WcndMessage *pMessage)
 {
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+#ifdef WCND_STATE_MACHINE_DISABLED
 
 	return 0;
 
@@ -461,9 +490,20 @@ int wcnd_sm_init(WcndManager *pWcndManger)
 	}
 	else
 	{
+
+#ifdef WCND_STATE_MACHINE_DISABLED
+
+		pWcndManger->state = WCND_STATE_CP2_STARTED;
+		pWcndManger->notify_enabled = 1;
+
+		pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
+
+#else
 		pWcndManger->state = WCND_STATE_CP2_STOPPED;
 		pWcndManger->notify_enabled = 0;
 		//pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
+#endif
+
 	}
 
 #endif

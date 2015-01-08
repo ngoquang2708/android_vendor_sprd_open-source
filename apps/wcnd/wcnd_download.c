@@ -46,16 +46,21 @@ static int check_if_reset_enable(void)
 
 #define WCN_DOWNLOAD_SOCKET_NAME "external_wcn"
 
-#define WCN_DOWNLOAD_CMD_REBOOT_WCN "rebootwcn" //to do a reset of wcn
-#define WCN_DOWNLOAD_CMD_START_WCN "startwcn"
-#define WCN_DOWNLOAD_CMD_STOP_WCN "stopwcn"
+#define WCN_DOWNLOAD_CMD_REBOOT_WCN "rebootwcn" //to do a reset of wcn, need to bootup the cp2 again
+#define WCN_DOWNLOAD_CMD_DUMP_WCN "dumpwcn" //to dump wcn mem only
+#define WCN_DOWNLOAD_CMD_START_WCN "startwcn" //to bootup the cp2, use in power on CP2
+#define WCN_DOWNLOAD_CMD_STOP_WCN "stopwcn" //used in power off CP2
 
 #define WCN_DOWNLOAD_RESP_REBOOT_WCN "rebootwcn-ok" //the response of the reset cmd
+#define WCN_DOWNLOAD_RESP_DUMP_WCN "dumpwcn-ok"
 #define WCN_DOWNLOAD_RESP_START_WCN "startwcn-ok"
 #define WCN_DOWNLOAD_RESP_STOP_WCN "stopwcn-ok"
 
+#define WCN_DOWNLOAD_TIMEOUT (10) //seconds
+
 enum {
 	WCN_DOWNLOAD_CMDID_REBOOT_WCN = 1,
+	WCN_DOWNLOAD_CMDID_DUMP_WCN,
 	WCN_DOWNLOAD_CMDID_START_WCN,
 	WCN_DOWNLOAD_CMDID_STOP_WCN,
 };
@@ -80,7 +85,7 @@ static int connect_download(void)
 
 	if(client_fd > 0)
 	{
-		rcv_timeout.tv_sec = 3;
+		rcv_timeout.tv_sec = WCN_DOWNLOAD_TIMEOUT;
 		rcv_timeout.tv_usec = 0;
 		if(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcv_timeout, sizeof(rcv_timeout)) < 0)
 		{
@@ -110,6 +115,11 @@ static int do_download_cmd(int cmd_id)
 		case WCN_DOWNLOAD_CMDID_REBOOT_WCN:
 			cmd_str = WCN_DOWNLOAD_CMD_REBOOT_WCN;
 			expect_resp_str = WCN_DOWNLOAD_RESP_REBOOT_WCN;
+			break;
+
+		case WCN_DOWNLOAD_CMDID_DUMP_WCN:
+			cmd_str = WCN_DOWNLOAD_CMD_DUMP_WCN;
+			expect_resp_str = WCN_DOWNLOAD_RESP_DUMP_WCN;
 			break;
 
 		case WCN_DOWNLOAD_CMDID_START_WCN:
@@ -182,13 +192,29 @@ int wcnd_reboot_cp2(WcndManager *pWcndManger)
 */
 int wcnd_stop_cp2(WcndManager *pWcndManger)
 {
-	return 0;
+	if(!pWcndManger)
+	{
+		WCND_LOGD("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
+		return -1;
+	}
+
+	WCND_LOGD("wcnd_stop_cp2");
+
+	return do_download_cmd(WCN_DOWNLOAD_CMDID_STOP_WCN);
 }
 
 
 int wcnd_start_cp2(WcndManager *pWcndManger)
 {
-	return 0;
+	if(!pWcndManger)
+	{
+		WCND_LOGD("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
+		return -1;
+	}
+
+	WCND_LOGD("wcnd_start_cp2");
+
+	return do_download_cmd(WCN_DOWNLOAD_CMDID_START_WCN);
 }
 
 
@@ -207,8 +233,14 @@ int wcnd_before_reset(WcndManager *pWcndManger)
 		WCND_LOGD("%s: in userdebug or reset disabled, do not do reset process!"
 			"but for MARLIN need to do reset for dump mem!!", __FUNCTION__);
 
-		do_download_cmd(WCN_DOWNLOAD_CMDID_REBOOT_WCN);
+		do_download_cmd(WCN_DOWNLOAD_CMDID_DUMP_WCN);
 
+		//return -1; //do not exit here, also need to check if need to reset.
+	}
+
+	if(!check_if_reset_enable())
+	{
+		WCND_LOGD("%s: wcn reset disabled, do not do reset!", __FUNCTION__);
 		return -1;
 	}
 
@@ -497,7 +529,7 @@ int wcnd_stop_cp2(WcndManager *pWcndManger)
 
 int wcnd_start_cp2(WcndManager *pWcndManger)
 {
-	return start_cp2(pWcndManger);
+	return wcnd_reboot_cp2(pWcndManger);
 }
 
 

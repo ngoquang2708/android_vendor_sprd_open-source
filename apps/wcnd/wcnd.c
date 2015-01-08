@@ -879,7 +879,9 @@ int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int not
 		int type = pWcndManger->clients[i].type;
 		WCND_LOGD("clients[%d].sockfd = %d, type = %d\n",i, fd, type);
 
-		if(fd >= 0 && type == notify_type)
+		if(fd >= 0 && ((type == notify_type)
+			|| ((notify_type == WCND_CLIENT_TYPE_CMD) && ((type & WCND_CLIENT_TYPE_CMD_MASK) == notify_type)))
+			)
 		{
 			ret = send_msg(pWcndManger, fd, info_str);
 			if(RDWR_FD_FAIL == ret)
@@ -889,7 +891,8 @@ int wcnd_send_notify_to_client(WcndManager *pWcndManger, char *info_str, int not
 				pWcndManger->clients[i].sockfd = -1;
 				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_NOTIFY;
 			}
-			else if(notify_type == WCND_CLIENT_TYPE_CMD || notify_type == WCND_CLIENT_TYPE_CMD_PENDING)
+			else if(notify_type == WCND_CLIENT_TYPE_CMD || notify_type == WCND_CLIENT_TYPE_CMD_PENDING
+				|| (notify_type & WCND_CLIENT_TYPE_CMD_MASK) == WCND_CLIENT_TYPE_CMD)
 			{
 				pWcndManger->clients[i].type = WCND_CLIENT_TYPE_SLEEP;
 			}
@@ -938,6 +941,8 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
        //if it is not loop check, use select instead
 	if(!is_loopcheck)
 	{
+		//WCND_LOGD("nonblock loop check");
+
 		//wait
 		usleep(100*1000);
 
@@ -960,6 +965,8 @@ static int is_cp2_alive_ok(WcndManager *pWcndManger, int is_loopcheck)
 		int rc = 0;
 		int max = -1;
 		struct timeval timeout;
+
+		//WCND_LOGD("select loop check");
 
 		FD_ZERO(&read_fds);
 
@@ -1170,6 +1177,18 @@ int wcnd_open_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	message.event = WCND_EVENT_CP2_OK;
+	message.replyto_fd = -1;
+	pWcndManger->is_cp2_error = 0;
+
+	wcnd_sm_step(pWcndManger, &message);
+
+	return 0;
+
+#endif
+
 	int is_alive_ok = 1;
 
 	//set doing_reset flag
@@ -1190,11 +1209,11 @@ do_cp2reset:
 
 
 #ifdef CP2_RESET_READY
-	//begin reseting CP2
-	int ret = wcnd_reboot_cp2(pWcndManger);
+	//begin open CP2
+	int ret = wcnd_start_cp2(pWcndManger);
 	if( ret < 0)
 	{
-		WCND_LOGD("%s: reset Fail !", __FUNCTION__);
+		WCND_LOGD("%s: open Fail !", __FUNCTION__);
 		is_alive_ok = 0;
 	}
 	else
@@ -1251,6 +1270,18 @@ int wcnd_close_cp2(WcndManager *pWcndManger)
 		WCND_LOGE("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
 		return -1;
 	}
+
+#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+
+	message.event = WCND_EVENT_CP2_DOWN;
+	message.replyto_fd = -1;
+
+	wcnd_sm_step(pWcndManger, &message);
+
+	return 0;
+
+#endif
+
 
 	//Tell CP2 to Sleep
 	if(wcnd_process_atcmd(-1, WCND_ATCMD_CP2_SLEEP, pWcndManger) < 0)
@@ -1578,13 +1609,6 @@ static int init(WcndManager *pWcndManger, int is_eng_only)
 		return -1;
 	}
 
-	wcnd_sm_init(pWcndManger);
-
-	memcpy(pWcndManger->cp2_version_info, WCND_CP2_DEFAULT_CP2_VERSION_INFO, sizeof(WCND_CP2_DEFAULT_CP2_VERSION_INFO));
-
-
-	//start engineer worker thread
-	wcnd_worker_init(pWcndManger);
 
 	// to get the wcn modem state
 	pWcndManger->is_wcn_modem_enabled = check_if_wcnmodem_enable();
@@ -1596,6 +1620,15 @@ static int init(WcndManager *pWcndManger, int is_eng_only)
 		pWcndManger->is_in_userdebug = 1;
 		WCND_LOGD("userdebug version: %s!!!", value);
 	}
+
+
+	wcnd_sm_init(pWcndManger);
+
+	memcpy(pWcndManger->cp2_version_info, WCND_CP2_DEFAULT_CP2_VERSION_INFO, sizeof(WCND_CP2_DEFAULT_CP2_VERSION_INFO));
+
+
+	//start engineer worker thread
+	wcnd_worker_init(pWcndManger);
 
 	pWcndManger->inited = 1;
 
@@ -1712,7 +1745,11 @@ static void *cp2_loop_check_thread(void *arg)
 		count = 2;
 		while(count-- > 0)
 		{
+#ifdef USE_MARLIN
+			if(is_cp2_alive_ok(pWcndManger, 0) < 0) //marlin cannot support select, so use non-block mode
+#else
 			if(is_cp2_alive_ok(pWcndManger, 1) < 0)
+#endif
 			{
 				if(pWcndManger->is_cp2_error ||
 					(pWcndManger->state != WCND_STATE_CP2_STARTED))//during loop checking, cp2 exception happens just continue

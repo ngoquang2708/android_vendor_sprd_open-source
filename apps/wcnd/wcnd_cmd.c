@@ -34,7 +34,7 @@ static int wcn_process_btwificmd(int client_fd, char* cmd_str, WcndManager *pWcn
 {
 	if(!pWcndManger || !cmd_str) return -1;
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+#ifdef WCND_STATE_MACHINE_DISABLED
 
 	wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
@@ -329,8 +329,7 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		}
 		pthread_mutex_unlock(&pWcndManger->clients_lock);
 
-
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+#ifdef WCND_STATE_MACHINE_DISABLED
 
 		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
@@ -367,7 +366,7 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		}
 		pthread_mutex_unlock(&pWcndManger->clients_lock);
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+#ifdef WCND_STATE_MACHINE_DISABLED
 
 		wcnd_send_notify_to_client(pWcndManger, WCND_CMD_RESPONSE_STRING" OK", WCND_CLIENT_TYPE_CMD);
 
