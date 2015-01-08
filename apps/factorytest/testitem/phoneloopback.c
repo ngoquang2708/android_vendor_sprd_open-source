@@ -39,7 +39,9 @@ int test_mainloopback_start(void)
 	at_cmd_audio_loop(1,1,8,2,3,0);
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	at_cmd_audio_loop(0,0,0,0,0,0);
-	return ret;	
+
+	save_result(CASE_TEST_MAINLOOP,ret);
+	return ret;
 }
 
 
@@ -56,9 +58,10 @@ int test_assisloopback_start(void)
 	gr_flip();
 	at_cmd_audio_loop(0,0,0,0,0,0);
 	usleep(500*1000);
-	at_cmd_audio_loop(1,0,8,2,3,0);    
+	at_cmd_audio_loop(1,0,8,2,3,0);
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	at_cmd_audio_loop(0,0,0,0,0,0);
+	save_result(CASE_TEST_ASSISLOOP,ret);
 	return ret;
 }
 

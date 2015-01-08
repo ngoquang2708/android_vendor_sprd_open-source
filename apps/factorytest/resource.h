@@ -7,15 +7,10 @@
 
 #include "./res/menu_root.h"
 
-#include "./res/menu_phone_loop.h"
 #include "./res/menu_phone_test.h"
 #include "./res/menu_auto_test.h"
-#include "./res/menu_sensor_test.h"
 #include "./res/menu_pcba_test.h"
-#include "./res/menu_voice_test.h"
-#include "./res/menu_vb_bl_test.h"
-#include "./res/menu_bc_fl_test.h"
-#include "./res/menu_bt_wifi_gps_test.h"
+#include "./res/menu_phone_info.h"
 
 
 

@@ -101,7 +101,7 @@ static int tp_handle_event(struct input_event *event)
 				LOGD("mmitesthhlY:%d\n", event->value);
 				break;
 		}
-	
+
 		if(firstdraw == 0) {
 			firstdraw = 1;
 			last_pos.x = cur_pos.x;
@@ -119,7 +119,7 @@ static int tp_handle_event(struct input_event *event)
 					LOGD("mmitesthhl %d-%d\n", cur_pos.x, cur_pos.y);
 				}
 				}
-		}	
+		}
 	}
 	else if(event->type == EV_SYN) {
 		switch(event->code) {
@@ -400,6 +400,8 @@ int test_tp_start(void)
 	ret = ui_handle_button(NULL, NULL);// NULL,
 	thread_run=0;
 	pthread_join(t, NULL); /* wait "handle key" thread exit. */
+
+	save_result(CASE_TEST_TP,ret);
 
 	return ret;
 }

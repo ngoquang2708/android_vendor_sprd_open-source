@@ -13,11 +13,27 @@
 #define MENU_BOARD_SINGLETEST  	"- PCBA单项测试"
 #define MENU_PHONE_AUTOTEST		"- 整机自动测试"
 #define MENU_PHONE_SINGLETEST	"- 整机单项测试"
-#define MENU_BOARD_REPORT       "- PCBA测试信息"
-#define MENU_PHONE_REPORT       "- 整机测试信息"
+#define MENU_BOARD_REPORT       "- PCBA测试结果"
+#define MENU_PHONE_REPORT       "- 整机测试结果"
 #define MENU_VERSION			"- 软件版本信息"
+
+#define MENU_PHONE_INFO_TEST    "- 手机信息测试"
+#define TEXT_IMEI               "IMEI号:"
+#define TEXT_SN                 "SN号:"
+#define TEXT_INVALIDSN1         "Invalid sn1"
+#define TEXT_INVALIDSN2         "Invalid sn2"
+#define TEXT_WIFI_ADDR          "WIFI 地址："
+#define TEXT_PHASE_CHECK        "PHASE CHECK:"
+#define TEXT_PHASE_CHECK_RESULT "PHASECHECK RESULT:"
+#define TEXT_INVALID            "Invalid"
+#define TEXT_VALID              "Valid"
+#define TEXT_PHASE_PASS         "PASS"
+#define TEXT_PHASE_FAILED       "FAILED"
+#define TEXT_PHASE_NOTTEST      "NOT TEST"
+
 #define TEST_REPORT             "- 测试信息"
 #define MENU_CALI_INFO			"- RF CALI测试"
+#define MENU_PHONE_INFO         "- 手机信息"
 #define MEUN_FACTORY_RESET      "< 恢复出厂设置"
 
 
@@ -45,8 +61,8 @@
 #define MENU_TEST_FCAMERA			"- 前置摄像头"
 #define MENU_TEST_BCAMERA_FLASH		"- 后置摄像头"
 #define MENU_TEST_BCAMERA_RESULT    "后置摄像头" //用于测试结果显示
-#define MENU_TEST_BCAMERA           "- 仅摄像头"
-#define MENU_TEST_FLASH             "- 仅闪光灯"
+#define MENU_TEST_BCAMERA           "- 后置摄像头"
+#define MENU_TEST_FLASH             "- 闪光灯"
 #define TEXT_NOT_SUPPORT_FLASH      "不支持闪光灯"
 #define TEXT_START_FLASH            "闪光灯测试开始"
 #define MENU_TEST_CHARGE			"- 充电"
@@ -102,7 +118,7 @@
 #define TEXT_BL_OVER                "亮度变化结束！！"
 
 #define TEXT_LB_MICSPEAKER			"麦克风与扬声器回路测试中..."
-#define TEXT_LB_MICRECEIVER			"麦克风与听筒回路测试中..."
+#define TEXT_LB_MICRECEIVER			"麦克风与SPK回路测试中..."
 #define TEXT_LB_NEXT				"按电源键进行下一项测试！"
 
 #define TEXT_SD_START				"存储卡测试开始："

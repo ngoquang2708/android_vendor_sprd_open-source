@@ -352,10 +352,14 @@ pthread_t create_thread_callback(const char* name, void (*start)(void *), void* 
 
 int test_gps_pretest(void)
 {
+	int ret;
 	if(sPreTest >= 1)
-		return RL_PASS;
+		ret= RL_PASS;
 	else
-		return RL_FAIL;
+		ret= RL_FAIL;
+
+	save_result(CASE_TEST_GPS,ret);
+	return ret;
 }
 
 int test_gps_start(void)
@@ -380,6 +384,8 @@ int test_gps_start(void)
 	pthread_join(t1,NULL);
 	gpsStop();
 	gpsClose();
+
+	save_result(CASE_TEST_GPS,ret);
 	return ret;
 }
 

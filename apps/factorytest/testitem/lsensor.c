@@ -147,6 +147,7 @@ int test_lsensor_start(void)
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	thread_run = 0;
 	pthread_join(thread, NULL); /* wait "handle key" thread exit. */
+	save_result(CASE_TEST_LSENSOR,ret);
 	return ret;
 }
 

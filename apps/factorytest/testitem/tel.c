@@ -22,6 +22,7 @@ int test_tel_start(void)
 	if(fd<0)
 	{
 		LOGD("mmitest tel test is faild");
+		save_result(CASE_TEST_TEL,RL_FAIL);
 		return RL_FAIL;
 	}
 
@@ -42,5 +43,7 @@ int test_tel_start(void)
 	ret = ui_handle_button(NULL, NULL);
 	tel_send_at(fd,"ATH",NULL,0, 0);
 	close(fd);
+
+	save_result(CASE_TEST_TEL,ret);
 	return ret;
 }

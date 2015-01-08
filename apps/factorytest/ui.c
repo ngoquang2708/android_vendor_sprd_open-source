@@ -69,7 +69,7 @@ static int gPagesIdentical = 0;
 
 // Log text overlay, displayed when a magic key is pressed
 static char text[MAX_ROWS][MAX_COLS];
-static int text_cols = 0, text_rows = 0;
+int text_cols = 0, text_rows = 0;
 static int text_col = 0, text_row = 0, text_top = 0;
 static int show_text = 0;
 
@@ -77,6 +77,9 @@ static char menu[MAX_ROWS][MAX_COLS];
 static char menu_title[MAX_ROWS];
 static int show_menu = 0;
 static int menu_top = 0, menu_items = 0, menu_sel = 0;
+unsigned char menu_change=0;
+static unsigned char menu_change_last=0;
+
 
 // Key event input queue
 static pthread_mutex_t key_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -86,7 +89,8 @@ static volatile char key_pressed[KEY_MAX + 1];
 
 static int _utf8_strlen(const char* str);
 static int _utf8_to_clen(const char* str, int len);
-int ui_start_menu(char* title, char** items, int sel);
+int ui_start_menu(char* title, char** items, int sel,int itemnum);
+
 // Clear the screen and draw the currently selected background icon (if any).
 // Should only be called with gUpdateMutex locked.
 void draw_background_locked(gr_surface icon)
@@ -153,23 +157,27 @@ static void draw_screen_locked(void)
 {
     draw_background_locked(gCurrentIcon);
     draw_progress_locked();
-
+	int menu_sel_tmp;
     if (show_text) {
         //gr_color(0, 0, 0, 160);
 		ui_set_color(CL_SCREEN_BG);
         gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 
+		if(menu_sel>=(text_rows-2))
+			menu_sel_tmp=menu_sel-text_rows+2;
+		else
+			menu_sel_tmp=menu_sel;
         int i = 0;
         if (show_menu) {
             //gr_color(64, 96, 255, 255);
 			ui_show_title(menu_title);
 			ui_set_color(CL_MENU_HL_BG);
-            gr_fill(0, (menu_top+menu_sel) * CHAR_HEIGHT,
-                    gr_fb_width(), (menu_top+menu_sel+1)*CHAR_HEIGHT+1);
+            gr_fill(0, (menu_top+menu_sel_tmp) * CHAR_HEIGHT,
+                    gr_fb_width(), (menu_top+menu_sel_tmp+1)*CHAR_HEIGHT+1);
 
 			ui_set_color(CL_SCREEN_FG);
             for (; i < menu_top + menu_items; ++i) {
-                if (i == menu_top + menu_sel) {
+                if (i == menu_top + menu_sel_tmp) {
                     //gr_color(255, 255, 255, 255);
 					ui_set_color(CL_MENU_HL_FG);
                     draw_text_line(i, menu[i]);
@@ -462,7 +470,7 @@ void ui_start_menu(char** headers, char** items) {
     }
     pthread_mutex_unlock(&gUpdateMutex);
 }
-#else
+
 int ui_start_menu(char* title, char** items, int sel) {
     int i;
     pthread_mutex_lock(&gUpdateMutex);
@@ -480,6 +488,7 @@ int ui_start_menu(char* title, char** items, int sel) {
             menu[i][text_cols-1] = '\0';
         }
         menu_items = i - menu_top;
+		LOGD("uishow menu_items=%d text_rows=%d",menu_items, text_rows);
         show_menu = 1;
 		if(sel >= 0 && sel <= menu_items)
 			menu_sel = sel;
@@ -493,6 +502,60 @@ int ui_start_menu(char* title, char** items, int sel) {
 	return menu_sel;
 }
 #endif
+
+
+int ui_start_menu(char* title, char** items, int sel,int itemnum) {
+    int i;
+    pthread_mutex_lock(&gUpdateMutex);
+    if (text_rows > 0 && text_cols > 0) {
+        for (i = 0; i < 2; ++i) {
+            menu[i][0] = '\0';
+        }
+		memset(menu_title, 0, sizeof(menu_title));
+		strncpy(menu_title, title, text_cols-1);
+		menu_title[text_cols-1] = '\0';
+        menu_top = i;
+		if(menu_change==0||menu_change==1)
+			for (i=2; i < text_rows; ++i) {
+	            if (items[i-menu_top] == NULL) break;
+	            strncpy(menu[i], items[i-menu_top], text_cols-1);
+	            menu[i][text_cols-1] = '\0';
+	        }
+		else if(menu_change==2)
+			for (i=2; i < itemnum+4-text_rows; ++i) {
+	            //if (items[i-menu_top] == NULL) break;
+	            strncpy(menu[i], items[itemnum+i-3], text_cols-1);
+	            menu[i][text_cols-1] = '\0';
+				LOGD("uishow itemnum=%d,text_rows=%d,i=%d",itemnum,text_rows,i);
+	        }
+        menu_items = i - menu_top;
+		LOGD("uishow menu_items=%d text_rows=%d",menu_items, text_rows);
+
+		show_menu = 1;
+		if(itemnum>(text_rows-2))
+		{
+			if(sel >= 0 )//&& sel <= menu_items
+				menu_sel = sel;
+			else
+				menu_sel = 0;
+		}
+		else
+		{
+			if(sel >= 0 && sel <= menu_items)//
+				menu_sel = sel;
+			else
+				menu_sel = 0;
+		}
+        update_screen_locked();
+        //ui_show_title(menu_title);
+        //gr_flip();
+    }
+    pthread_mutex_unlock(&gUpdateMutex);
+	return menu_sel;
+}
+
+
+
 
 int ui_menu_select(int sel) {
     int old_sel;
@@ -510,15 +573,22 @@ int ui_menu_select(int sel) {
     return sel;
 }
 
-int ui_update_menu(int sel) {
+int ui_update_menu(int sel,int itemnum) {
     int old_sel;
 	LOGD("%s: %d\n",__FUNCTION__, sel);
     pthread_mutex_lock(&gUpdateMutex);
     if (show_menu > 0) {
         old_sel = menu_sel;
         menu_sel = sel;
-        if (menu_sel < 0) menu_sel = menu_items-1;
-        if (menu_sel >= menu_items) menu_sel = 0;
+		if(itemnum>(text_rows-2))
+		{
+			menu_sel=menu_sel;
+		}
+		else
+		{
+	        if (menu_sel < 0) menu_sel = menu_items-1;
+	        if (menu_sel >= menu_items) menu_sel = 0;
+		}
         sel = menu_sel;
         if (menu_sel != old_sel) {
 			update_screen_locked();
@@ -655,10 +725,11 @@ int get_menu_selection(char** headers, char** items, int menu_only) {
     ui_end_menu();
     return chosen_item;
 }
-#endif
+
 
 int ui_show_menu(char* title, char** items, int is_root, int sel) {
-    int selected = 0;
+	int selectedtmp=0;
+	int selected = 0;
     int chosen_item = -1;
     ui_clear_key_queue();
     selected = ui_start_menu(title, items, sel);
@@ -676,6 +747,7 @@ int ui_show_menu(char* title, char** items, int is_root, int sel) {
 					LOGD("mmitest HIGHLIGHT_DOWN\n");
                     ++selected;
                     selected = ui_update_menu(selected);
+					LOGD("uishow selected=%d\n",selected);
                     break;
                 case SELECT_ITEM:
 					LOGD("mmitest SELECT_ITEM\n");
@@ -702,6 +774,102 @@ end:
     ui_end_menu();
     return chosen_item;
 }
+#endif
+
+
+
+int ui_show_menu(char* title, char** items, int is_root, int sel,int itemnum)
+{
+	int selectedtmp=0;
+	int selected = 0;
+    int chosen_item = -1;
+    ui_clear_key_queue();
+	//menu_change=0;
+	LOGD("uishow menu_change=%d\n",menu_change);
+    selected = ui_start_menu(title, items, sel,itemnum);
+
+    while (chosen_item < 0) {
+        int key = ui_wait_key(NULL);
+		LOGD("mmitest ui_wait_key is %d\n",key);
+
+        int visible = ui_text_visible();
+        int action = device_handle_key(key, visible);
+		LOGD("mmitest device_handle_key %d\n",action);
+        if (action < 0) {
+            switch (action) {
+                case HIGHLIGHT_DOWN:
+					LOGD("mmitest HIGHLIGHT_DOWN\n");
+                    ++selected;
+					if(itemnum>(text_rows-2))
+					{
+						if(selected>=itemnum)
+						{
+							selected=0;
+							selectedtmp=selected;
+							menu_change=1;
+							LOGD("uishow here1");
+						}
+						else if(selected>=text_rows-2)
+						{
+							selectedtmp=selected-text_rows+2;
+							menu_change=2;
+							LOGD("uishow here2");
+	                    }
+						else
+						{
+							selectedtmp=selected;
+							menu_change=0;
+							LOGD("uishow here3");
+						}
+						if(menu_change!=0&&menu_change!=menu_change_last)
+						{
+							ui_start_menu(title, items, sel,itemnum);
+							LOGD("uishow here5");
+							selectedtmp = ui_update_menu(selectedtmp,itemnum);
+						}
+						else
+						{
+							selectedtmp = ui_update_menu(selectedtmp,itemnum);
+							LOGD("uishow here6");
+						}
+						menu_change_last=menu_change;
+					}
+					else
+					{
+						menu_change=0;
+						LOGD("uishow here4");
+						selected = ui_update_menu(selected,itemnum);
+					}
+					LOGD("uishow select=%d \n",selected);
+                    break;
+                case SELECT_ITEM:
+					LOGD("mmitest SELECT_ITEM\n");
+                    chosen_item = selected;
+                    break;
+                case GO_BACK:
+					LOGD("mmitest GO_BACK\n");
+					if(is_root) { break; }
+					else {
+						chosen_item = -1;
+						goto end;
+					}
+                case NO_ACTION:
+					LOGD("mmitest NO_ACTION");
+                    break;
+            }
+        } /*else if (!menu_only) {
+            chosen_item = action;
+        }
+		*/
+    }
+
+end:
+    ui_end_menu();
+    return chosen_item;
+}
+
+
+
 
 void ui_show_title(const char* title)
 {

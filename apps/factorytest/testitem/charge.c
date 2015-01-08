@@ -265,7 +265,7 @@ int test_charge_start(void)
 	thread_run=0;
 	pthread_join(thead, NULL);
 	LOGD("%s end", __FUNCTION__);
-
+	save_result(CASE_TEST_CHARGE,ret);
 	return ret;
 }
 

@@ -15,7 +15,7 @@ int test_otg_start(void)
 	{
 		fp=open(OTG_FILE_PATH,O_RDONLY);
 		read(fp,&support,sizeof(char));
-		close(fp);	
+		close(fp);
 		LOGD("mmitest cat result=%d",support);
 		if(support=='1')
 		{
@@ -28,7 +28,7 @@ int test_otg_start(void)
 			ret=RL_NS;
 			ui_set_color(CL_BLUE);
 			cur_row = ui_show_text(cur_row, 0, OTG_NOT_SUPPORT);
-		}	
+		}
     }
 	else
 	{
@@ -38,6 +38,7 @@ int test_otg_start(void)
 	}
 	gr_flip();
 	sleep(1);
-	return ret;	
+	save_result(CASE_TEST_OTG,ret);
+	return ret;
 }
 

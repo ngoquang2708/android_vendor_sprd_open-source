@@ -34,12 +34,11 @@ LOCAL_STATIC_LIBRARIES += libftminui libpixelflinger_static libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libz liblog
 LOCAL_SHARED_LIBRARIES := libsqlite  libbinder libutils libtinyalsa libhardware libdl\
 						  libhardware_legacy \
-						  libbt-vendor 
+						  libbt-vendor
 
 #libasound libeng_audio_mode
 LOCAL_SRC_FILES := factorytest.c  \
 		eng_tok.c \
-		../engmode/eng_sqlite.c \
 		ui.c \
 		ui_touch.c \
 		camera.cpp

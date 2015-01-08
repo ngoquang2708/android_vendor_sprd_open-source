@@ -43,14 +43,18 @@ RW_END:
 int test_sdcard_pretest(void)
 {
 	int fd;
+	int ret;
 	system(SPRD_MOUNT_DEV);
 	fd = open(SPRD_SD_DEV, O_RDWR);
 	if(fd < 0) {
-		return RL_FAIL;
+		ret= RL_FAIL;
 	} else {
 		close(fd);
-		return RL_PASS;
+		ret= RL_PASS;
 	}
+
+	save_result(CASE_TEST_SDCARD,ret);
+	return ret;
 }
 
 int check_file_exit(void)
@@ -87,7 +91,7 @@ int sdcard_read_fm(int *rd)
 		}
 	LOGD("mmitest opensdcard file is ok");
 	lseek(fd, 0, SEEK_SET);
-	ret=read(fd, rd, sizeof(int));	
+	ret=read(fd, rd, sizeof(int));
 	LOGD("mmitest read file is=%d",*rd);
 	close(fd);
 	system(SPRD_UNMOUNT_DEV);
@@ -183,5 +187,7 @@ TEST_END:
 	}
 	gr_flip();
 	sleep(1);
+
+	save_result(CASE_TEST_SDCARD,ret);
 	return ret;
 }

@@ -38,6 +38,10 @@ enum {
 	RL_NS = 3,
 };
 
+
+
+
+
 #define SPRD_AUDIO_FILE	"/system/media/engtest_sample.wav"
 typedef enum{
 	SPEAKER,
@@ -56,14 +60,23 @@ typedef struct eng_mode{
 	}u;
 }eng_audio_mode;
 
+
+/*************************/
+int read_local_bt_mac(const char * file_path,  char * mac);
+void create_mac_rand(char *btmac);
+
+
+/************************/
+void save_result(char id,char key_result);
 int test_lcd_start(void);
 int test_msensor_start(void);
 int test_key_start(void);
 int test_vibrator_start(void);
 int test_version_show(void);
+int test_phone_info_show(void);
 int test_cali_info(void);
 int test_backlight_start(void);
-//int test_vb_bl_start(void);
+int test_vb_bl_start(void);
 int test_tp_start(void);
 int test_mainloopback_start(void);//+++++++++
 int test_assisloopback_start(void);//++++++++++++
@@ -75,6 +88,8 @@ int test_gsensor_start(void);
 int test_lsensor_start(void);
 int test_bcamera_start(void);
 int test_flash_start(void);
+int flash_start(void);
+
 int test_fcamera_start(void);
 int test_charge_start(void);
 int test_headset_start(void);
