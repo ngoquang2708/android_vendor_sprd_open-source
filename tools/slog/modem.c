@@ -454,9 +454,10 @@ void handle_socket_wcn(char *buffer)
 				handle_dump_shark_sipc_info();
 			}
 		} else if(reset != 0) {
-			if (handle_correspond_modem(buffer) == 1)
+			if (handle_correspond_modem(buffer) == 1) {
 				modem_reset_flag =1;
 				err_log("waiting for Modem Alive.");
+			}
 		}
 	} else if(strstr(buffer, "WCN-CP2-ALIVE") != NULL) {
 		if (handle_correspond_modem(buffer) == 1)

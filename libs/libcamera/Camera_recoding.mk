@@ -130,8 +130,6 @@ LOCAL_SRC_FILES:= \
 	isp/isp_param_tune_v0001.c \
 	isp/isp_param_size.c \
 	isp/isp_param_file_update.c \
-	isp/isp_stub_proc.c \
-	isp/isp_stub_msg.c \
 	oem/isp_calibration/src/isp_calibration.c \
 	oem/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \

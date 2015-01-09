@@ -568,7 +568,7 @@ static cmr_int uvde_start(cmr_handle class_handle, cmr_uint thread_id, proc_func
 	uvde_start_ptr->func_ptr = func_ptr;
 	uvde_start_ptr->param = param;
 	uvde_start_ptr->cb = cb;
-	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
+	message.sync_flag = CMR_MSG_SYNC_NONE;
 	message.msg_type   = CMR_EVT_UVDE_START;
 	message.alloc_flag = 1;
 	message.data 	   = uvde_start_ptr;
