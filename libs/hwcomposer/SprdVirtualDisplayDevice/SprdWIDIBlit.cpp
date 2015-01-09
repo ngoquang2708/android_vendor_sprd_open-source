@@ -158,6 +158,7 @@ bool SprdWIDIBlit:: threadLoop()
     if (DisplayHandle == NULL)
     {
         ALOGE("SprdWIDIBlit:: threadLoop DisplayHanle is NULL");
+        sem_post(&doneSem);
         return true;
     }
 
@@ -167,6 +168,7 @@ bool SprdWIDIBlit:: threadLoop()
     if (mFBInfo == NULL)
     {
         ALOGE("SprdWIDIBlit:: threadLoop mFBInfo is NULL");
+        sem_post(&doneSem);
         return true;
     }
 
@@ -181,6 +183,7 @@ bool SprdWIDIBlit:: threadLoop()
     if (SprdHWSourceLayer == NULL)
     {
         ALOGE("SprdWIDIBlit:: threadLoop SprdHWSourceLayer is NULL");
+        sem_post(&doneSem);
         return true;
     }
 
@@ -188,12 +191,14 @@ bool SprdWIDIBlit:: threadLoop()
     if (AndroidLayer == NULL)
     {
         ALOGE("SprdWIDIBlit:: threadLoop FBTLayer is NULL");
+        sem_post(&doneSem);
         return true;
     }
     struct private_handle_t *privateH = (struct private_handle_t *)AndroidLayer->handle;
     if (privateH == NULL)
     {
         ALOGE("SprdWIDIBlit:: threadLoop private handle is NULL");
+        sem_post(&doneSem);
         return true;
     }
 
@@ -226,6 +231,7 @@ bool SprdWIDIBlit:: threadLoop()
         {
             ALOGE("SprdWIDIBlit:: threadLoop Source virtual address: %p or Dest virtual addr: %p is NULL",
                   (void *)(privateH->base), (void *)(DisplayHandle->base));
+            sem_post(&doneSem);
             return true;
         }
 
@@ -269,7 +275,6 @@ bool SprdWIDIBlit:: threadLoop()
     if (ret != 0)
     {
         ALOGE("SprdWIDIBlit:: threadLoop Accelerator composerLayers failed");
-        //return true;
     }
 
     mDisplayPlane->queueBuffer();
