@@ -99,7 +99,7 @@ private:
     int32_t  mVideoFrameRate;
     int32_t  mVideoBitRate;
     int32_t  mVideoColorFormat;
-    int32_t  mIDRFrameRefreshIntervalInSec;
+    OMX_U32 mPFrames;
 
     int64_t  mNumInputFrames;
     bool     mStarted;

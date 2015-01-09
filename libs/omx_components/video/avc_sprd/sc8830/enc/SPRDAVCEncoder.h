@@ -168,9 +168,9 @@ private:
     int32_t  mVideoFrameRate;
     int32_t  mVideoBitRate;
     int32_t  mVideoColorFormat;
-    int32_t  mIDRFrameRefreshIntervalInSec;
     AVCProfile mAVCEncProfile;
     AVCLevel   mAVCEncLevel;
+	OMX_U32 mPFrames;
     uint8_t  header[100];
     int      spssize;
     int      ppssize;
