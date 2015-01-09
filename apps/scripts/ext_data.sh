@@ -2,10 +2,10 @@
 
 if [ "$1" = "-u" ]; then
         temp=`getprop sys.data.IPV6.disable`
-        #ifname=`getprop sys.data.net.addr`
-        for var in seth_lte0 seth_lte1 seth_lte2 seth_lte3 seth_lte4 seth_lte5; do
-        `echo ${temp} > /proc/sys/net/ipv6/conf/$var/disable_ipv6`
-        done
+        ifname=`getprop sys.data.net.addr`
+        #for var in seth_lte0 seth_lte1 seth_lte2 seth_lte3 seth_lte4 seth_lte5; do
+        `echo ${temp} > /proc/sys/net/ipv6/conf/$ifname/disable_ipv6`
+        #done
 	ifname=`getprop sys.data.setip`
 	ip $ifname
 	ifname=`getprop sys.data.setmtu`
