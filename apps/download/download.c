@@ -222,11 +222,12 @@ static int try_to_connect_device(int uart_fd)
 	}
 
 	for(;;){
-		int try_count=0;
 		if(-1 == clock_gettime(CLOCK_MONOTONIC, &tm_end)){
 			DOWNLOAD_LOGE("get tm_end error \n");
 			return -1;
 		}
+		#if 0
+		int try_count=0;
 		ms_delta = delta_miliseconds(&tm_begin, &tm_end);
 		if(ms_delta > FDL_CP_UART_TIMEOUT){
 			loopcount++;
@@ -240,16 +241,18 @@ static int try_to_connect_device(int uart_fd)
 				return -1;
 			}
 		}
+		#endif
 		hand_shake = 0x7E7E7E7E;
 		ret = write(uart_fd,&hand_shake,3);
 		if(ret < 0){
-			DOWNLOAD_LOGD("UART Send HandShake(%d) %s %d\n",try_count,strerror(errno),uart_fd);
+			DOWNLOAD_LOGD("UART Send HandShake %s %d\n",strerror(errno),uart_fd);
 			fsync(uart_fd);
 			close(uart_fd);
-			uart_fd = open_uart_device(1,115200);
-			continue;
+			//uart_fd = open_uart_device(1,115200);
+			//continue;
+			return -1;
 		}
-		try_count ++;
+		//try_count ++;
 		write(uart_fd,&hand_shake,3);
 		data = version_string;
 		ret = read(uart_fd,version_string,1);
@@ -558,8 +561,9 @@ int download_entry(void)
 	char value[PROPERTY_VALUE_MAX] = {'\0'};
 
 	DOWNLOAD_LOGD("download_entry\n");
-	download_power_on(1);
 reboot_device:
+	download_power_on(0);
+	download_power_on(1);
 	download_hw_rst();
     uart_fd = open_uart_device(1,115200);
     if(uart_fd < 0)
