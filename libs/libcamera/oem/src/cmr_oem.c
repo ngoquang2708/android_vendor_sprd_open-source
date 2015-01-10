@@ -452,15 +452,14 @@ cmr_int camera_convert_face_area (struct isp_face_area *face_area, cmr_u32 prev_
 	int i, temp_x, temp_y, rot_val;
 	int ret = 0;
 
-	CMR_LOGI("before convert: prev_width = %d, prev_height = %d, preview_rect x = %d, y = %d, width = %d, height = %d",
-			prev_width, prev_height, prev_rect->start_x,prev_rect->start_y,prev_rect->width,prev_rect->height);
-
 	if (!face_area || !prev_rect) {
 		CMR_LOGE("invalid parameter");
 		ret = CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
 
+	CMR_LOGI("before convert: prev_width = %d, prev_height = %d, preview_rect x = %d, y = %d, width = %d, height = %d",
+			prev_width, prev_height, prev_rect->start_x,prev_rect->start_y,prev_rect->width,prev_rect->height);
 	/*move to cap image coordinate*/
 	for (i = 0; i <  face_area->face_num; i++) {
 		CMR_LOGI("before convert: face_num = %d, sx =%d, sy = %d, ex = %d, ey = %d",
