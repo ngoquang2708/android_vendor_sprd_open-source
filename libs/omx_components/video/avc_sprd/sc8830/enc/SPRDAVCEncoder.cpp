@@ -793,6 +793,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncConfig->QP_PVOP = 28;
     mEncConfig->vbv_buf_size = mVideoBitRate/2;
     mEncConfig->profileAndLevel = 1;
+    mEncConfig->PrependSPSPPSEnalbe = ((mPrependSPSPPS == OMX_FALSE) ? 0 : 1);
 
     if ((*mH264EncSetConf)(mHandle, mEncConfig)) {
         ALOGE("Failed to set default encoding parameters");
@@ -1531,7 +1532,6 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
         OMX_BUFFERHEADERTYPE *inHeader = inInfo->mHeader;
         BufferInfo *outInfo = *outQueue.begin();
         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
-        uint8_t *Ptr = header;
 
         outHeader->nTimeStamp = 0;
         outHeader->nFlags = 0;
@@ -1574,11 +1574,6 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
             memcpy(outPtr, sps_header.pOutBuf, sps_header.strmSize);
             outPtr+= sps_header.strmSize;
-            if (mPrependSPSPPS) {
-                spssize=sps_header.strmSize;
-                memcpy(Ptr, sps_header.pOutBuf, sps_header.strmSize);
-                Ptr+= sps_header.strmSize;
-            }
             ++mNumInputFrames;
             ret = (*mH264EncGenHeader)(mHandle, &pps_header, 0);
             ALOGI("%s, %d, pps_header.strmSize: %d", __FUNCTION__, __LINE__, pps_header.strmSize);
@@ -1600,10 +1595,6 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
             outHeader->nFilledLen += pps_header.strmSize;
             memcpy(outPtr, pps_header.pOutBuf, pps_header.strmSize);
-            if (mPrependSPSPPS) {
-                memcpy(Ptr, pps_header.pOutBuf, pps_header.strmSize);
-                ppssize=  pps_header.strmSize;
-            }
             mSpsPpsHeaderReceived = true;
             CHECK_EQ(0, mNumInputFrames);  // 1st video frame is 0
             outHeader->nFlags = OMX_BUFFERFLAG_CODECCONFIG;
@@ -1853,17 +1844,7 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
 
             if(vid_out.strmSize > 0) {
                 dataLength = vid_out.strmSize;
-                if (mPrependSPSPPS && (mNumInputFrames % (mVideoFrameRate)) == 0) {
-                   //ALOGI("wfd: send sps+pps. mNumInputFrames:%lld,mVideoFrameRate:%d\n",mNumInputFrames,mVideoFrameRate);
-                   memcpy(outPtr, header, spssize+ppssize);
-                   outPtr += spssize+ppssize;
-                }
-
                 memcpy(outPtr, vid_out.pOutBuf, dataLength);
-
-                if (mPrependSPSPPS && (mNumInputFrames % (mVideoFrameRate) )== 0) {
-                   dataLength += spssize+ppssize;
-                 }
 
                 if (vid_out.vopType == 0) { //I VOP
                     mKeyFrameRequested = false;

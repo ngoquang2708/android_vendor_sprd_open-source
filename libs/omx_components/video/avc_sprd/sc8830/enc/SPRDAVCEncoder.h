@@ -170,10 +170,7 @@ private:
     int32_t  mVideoColorFormat;
     AVCProfile mAVCEncProfile;
     AVCLevel   mAVCEncLevel;
-	OMX_U32 mPFrames;
-    uint8_t  header[100];
-    int      spssize;
-    int      ppssize;
+    OMX_U32 mPFrames;
     int64_t  mNumInputFrames;
     int64_t  mPrevTimestampUs;
     bool     mStarted;
