@@ -3631,7 +3631,8 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		break;
 	case COM_ISP_SET_AE_METERING_AREA:
 		isp_cmd = ISP_CTRL_AE_TOUCH;
-		isp_param = param_ptr->cmd_value;
+		ptr_flag = 1;
+		isp_param_ptr = (void*)&param_ptr->win_area.rect[0];
 		break;
 	case COM_ISP_SET_BRIGHTNESS:
 		isp_cmd = ISP_CTRL_BRIGHTNESS;
