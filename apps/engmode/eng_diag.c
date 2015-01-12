@@ -128,6 +128,7 @@ static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen);
 static int eng_diag_get_charge_current(char *buf, int len, char *rsp, int rsplen);
 static int get_charging_current(int *value);
 static int get_battery_current(int *value);
+static int eng_diag_get_modem_mode(char *buf, int len, char *rsp, int rsplen);
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -691,6 +692,10 @@ int eng_diag_user_handle(int type, char *buf,int len)
             return 0;
 	case CMD_USER_GET_CHARGE_CURRENT:
 	    rlen = eng_diag_get_charge_current(buf, len, rsp, sizeof(rsp));
+	    eng_diag_write2pc(rsp, rlen);
+	    return 0;
+	case CMD_USER_GET_MODEM_MODE:
+	    rlen = eng_diag_get_modem_mode(buf, len, rsp, sizeof(rsp));
 	    eng_diag_write2pc(rsp, rlen);
 	    return 0;
         default:
@@ -3280,6 +3285,8 @@ static int eng_diag_ap_req(char *buf, int len)
 	ret = CMD_USER_ENABLE_CHARGE_ONOFF;
     }else if(DIAG_AP_CMD_READ_CURRENT == apcmd->cmd){
         ret = CMD_USER_GET_CHARGE_CURRENT;
+    }else if(DIAG_AP_CMD_GET_MODEM_MODE == apcmd->cmd){
+        ret = CMD_USER_GET_MODEM_MODE;
     }else{
         ret = CMD_USER_APCALI;
     }
@@ -3826,4 +3833,47 @@ static int get_battery_current(int *value)
         ENG_LOG("%s open %s failed\n",__FUNCTION__,BATTERY_CURRENT_FILE_PATH);
     }
     return read_len;
+}
+
+static int eng_diag_get_modem_mode(char *buf, int len, char *rsp, int rsplen)
+{
+    int ret = 0;
+    char property_info[PROPERTY_VALUE_MAX]={0};
+    char *rsp_ptr;
+    MSG_HEAD_T* msg_head_ptr;
+    TOOLS_DIAG_AP_CNF_T* aprsp;
+    TOOLS_DIAG_AP_MODULE_T*modem_mode;
+
+    if(NULL == buf){
+	ENG_LOG("%s,null pointer",__FUNCTION__);
+	return 0;
+    }
+
+    msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(TOOLS_DIAG_AP_MODULE_T)+ sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+    aprsp = (TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T));
+    modem_mode = (TOOLS_DIAG_AP_MODULE_T*)(rsp_ptr + sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T));
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    aprsp->status = 0x01;
+
+    property_get("ro.product.modem.mode",property_info,"not_find");
+    if(0 == strcmp(property_info, "not_find") ){
+	ENG_LOG("%s: read ro.product.modem.mode failed !!!%s\n", __FUNCTION__,strerror(errno));
+	goto out;
+    }
+
+    aprsp->length= strlen(property_info);
+    memcpy(modem_mode,property_info,strlen(property_info));
+    aprsp->status = 0x00;
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
 }

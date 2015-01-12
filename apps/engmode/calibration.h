@@ -24,6 +24,7 @@ typedef enum
     DIAG_AP_CMD_SWITCH_CP,
     DIAG_AP_CMD_CHANGE = 0x0010,
     DIAG_AP_CMD_READ_CURRENT= 0x0011,
+    DIAG_AP_CMD_GET_MODEM_MODE= 0x0012,
     MAX_DIAG_AP_CMD
 } DIAG_AP_CMD_E;
 
@@ -87,6 +88,11 @@ typedef struct
 {
     unsigned int on_off; //1:0n    0:offf
 }TOOLS_DIAG_AP_CHARGE_T;
+
+typedef struct
+{
+    char modem_mode[64];
+}TOOLS_DIAG_AP_MODULE_T;
 
 void initialize_ctrl_file(void);
 
