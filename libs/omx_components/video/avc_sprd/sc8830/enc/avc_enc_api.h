@@ -239,6 +239,8 @@ typedef struct
     uint32	h263En;            			// 1 : H.263, 0 : MP4
 
     uint32	profileAndLevel;
+
+    uint32 PrependSPSPPSEnalbe;	// 0: disable, 1: disable
 } MMEncConfig;
 
 // Encoder input structure
