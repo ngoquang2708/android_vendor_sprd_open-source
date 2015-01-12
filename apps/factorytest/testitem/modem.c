@@ -10,6 +10,7 @@ static int s_modem_count = 0;
 
 char s_modem_ver[1024];
 char s_cali_info[1024];
+char s_cali_info1[1024];
 int s_sim_state = 2;
 char imei_buf1[128];
 char imei_buf2[128];
@@ -367,10 +368,15 @@ modem_init_func(void *arg)
 
 	if((pos = modem_send_at(modem_fd[0], "AT+SGMR=0,0,3", s_cali_info, sizeof(s_cali_info), 0)) < 0) return NULL;
 
-	s_cali_info[pos] = '\0';
+    strcat(s_cali_info,"BIT");
+	s_cali_info[pos+3] = '\0';
 	LOGD("get cali info[%d]: %s\n", strlen(s_cali_info), s_cali_info);
 
+    if((pos = modem_send_at(modem_fd[0], "AT+SGMR=0,0,3,3", s_cali_info1, sizeof(s_cali_info1), 0)) < 0) return NULL;
 
+    strcat(s_cali_info1,"BIT");
+    s_cali_info1[pos+3] = '\0';
+    LOGD("get cali info1[%d]: %s\n", strlen(s_cali_info1), s_cali_info1);
 
 	if((pos = modem_send_at(modem_fd[0], "AT+CGSN", imei_buf1, sizeof(imei_buf1), 0)) < 0) return NULL;
 

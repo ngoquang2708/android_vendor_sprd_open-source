@@ -77,22 +77,30 @@ int str_replace(char *p_result,char* p_source,char* p_seach,char *p_repstr)
 
 
 extern int text_rows;
+extern char s_cali_info1[1024];
 int test_cali_info(void)
 {
 	int ret = 0;
 	int i;
 	int row = 2;
-	char tmp[512][23];
-	char tmp2[512][23];
+	char tmp[64][27];
+	char tmp2[64][27];
+	char tmp3[64][27];
+	char tmp4[64][27];
 	char* pcur;
 	char* pos1;
 	char* pos2;
 	int len;
 	int testlen;
 	int row_num=0;
+	int row_num1=0;
 	int cali_size=0;
 	unsigned char chang_page=0;
 	unsigned char change=1;
+    memset(tmp,0,sizeof(tmp));
+    memset(tmp2,0,sizeof(tmp2));
+	memset(tmp3,0,sizeof(tmp3));
+    memset(tmp4,0,sizeof(tmp4));
 	ui_fill_locked();
 	ui_show_title(MENU_CALI_INFO);
 	pcur = test_modem_get_caliinfo();
@@ -113,14 +121,37 @@ int test_cali_info(void)
 			len -= (pos2 - pcur);
 			pcur = pos2;
 		}
-		testlen=str_replace(tmp2[row_num],tmp[row_num],"calibrated","cali");
+        testlen=str_replace(tmp2[row_num],tmp[row_num],"calibrated","cali");
+        LOGD("mmitest test=%s   %p\n",tmp2[row_num],tmp2[row_num]);
 		row_num++;
+		//row = ui_show_text(row, 0, tmp2);
+	}
+
+	pcur = s_cali_info1;
+	len = strlen(pcur);
+	while(len > 0) {
+		pos1 = strchr(pcur, ':');
+		if(pos1 == NULL) break;
+		pos1++;
+		pos2 = strstr(pos1, "BIT");
+		if(pos2 == NULL) {
+			strcpy(tmp3, pos1);
+			len = 0;
+		} else {
+			memcpy(tmp3[row_num1], pos1, (pos2-pos1));
+			tmp3[pos2-pos1][row_num] = '\0';
+			len -= (pos2 - pcur);
+			pcur = pos2;
+		}
+        testlen=str_replace(tmp4[row_num1],tmp3[row_num1],"calibrated","cali");
+        LOGD("mmitest test=%s\n",tmp4[row_num1]);
+		row_num1++;
 		//row = ui_show_text(row, 0, tmp2);
 	}
 
 	if(cali_size<=(text_rows-2))
 	{
-		for(i=0;i<cali_size;i++)
+		for(i=0;i<row_num;i++)
 			row = ui_show_text(row, 0, tmp2[i]);
 			gr_flip();
 		while(ui_handle_button(NULL,NULL)!=RL_FAIL);
@@ -144,7 +175,8 @@ int test_cali_info(void)
 				row=2;
 				for(i = 0; i < text_rows-2; i++){  
 					row = ui_show_text(row, 0, tmp2[i]);
-					gr_flip();
+					LOGD("mmitest test1=%s   %p\n",tmp2[i],tmp2[i]);
+                    gr_flip();
 				}
 			}
 
@@ -155,10 +187,13 @@ int test_cali_info(void)
         	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(MENU_CALI_INFO);
-			for(i = 0; i < cali_size+2-text_rows; i++){
-				row = ui_show_text(row, 0, tmp2[text_rows-2+i]);
-				gr_flip();
-			}
+			for(i=0;i<row_num+2-text_rows;i++)
+			row = ui_show_text(row, 0, tmp2[text_rows-2+i]);
+			for(i=0;i<row_num1;i++)
+				{
+					row = ui_show_text(row, 0, tmp4[i]);
+				}
+            gr_flip();
 			}
 		}while((chang_page=ui_handle_button(NULL,NULL))!=RL_FAIL);
 	}

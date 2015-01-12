@@ -146,14 +146,14 @@ static void getTestsAndResult(void ) {
 		if (phrash_valid == 0) {
             strcpy(testResult,TEXT_PHASE_NOTTEST);
 			LOGD("mmitest out of Result1");
-			ui_show_text(15, 0, testResult);
+			ui_show_text(13, 0, testResult);
 			return;
         }
 
         if (!isAscii(phrase[STATION_START_INDEX])) {
             strcpy(testResult,TEXT_PHASE_NOTTEST);
 			LOGD("mmitest out of Result2");
-			ui_show_text(15, 0, testResult);
+			ui_show_text(13, 0, testResult);
 			return;
         }
 
@@ -173,7 +173,7 @@ static void getTestsAndResult(void ) {
                 sprintf(testResult,"%s %s\n",testname,TEXT_PHASE_FAILED);
             }
             flag = flag << 1;
-			ui_show_text(15+i, 0, testResult);
+			ui_show_text(13+i, 0, testResult);
         }
 		return;
     }
@@ -261,12 +261,7 @@ int test_phone_info_show(void)
 	ui_show_text(11, 0, wifi_addre);
 
 	ui_set_color(CL_WHITE);
-	ui_show_text(12, 0, TEXT_PHASE_CHECK);
-	ui_set_color(CL_GREEN);
-	ui_show_text(13, 0, phase_check);
-
-	ui_set_color(CL_WHITE);
-	ui_show_text(14, 0, TEXT_PHASE_CHECK_RESULT);
+	ui_show_text(12, 0, TEXT_PHASE_CHECK_RESULT);
 	ui_set_color(CL_GREEN);
 	getTestsAndResult();
 
