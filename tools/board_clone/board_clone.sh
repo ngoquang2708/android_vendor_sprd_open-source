@@ -466,6 +466,7 @@ function add_to_file_e()
 function board_for_kernel()
 {
 	DEBUG_S=debug
+	FIND_NATIVE_DEFCONFIG=1
 	if [ $# -gt 0 ];then
 		echo "$1" | grep "$DEBUG_S"
 		if [ $? -eq 0 ];then
@@ -484,7 +485,7 @@ function board_for_kernel()
 	cd "kernel/arch/arm/configs"
 
 	TEMP=$BOARD_NAME_R"-native_defconfig"
-	echo $TEMP
+	#echo $TEMP
 	TEMP1=$BOARD_NAME_N"-native_defconfig"
 	if [  -f $TEMP ];then
 		cp $TEMP $TEMP1
@@ -495,54 +496,64 @@ function board_for_kernel()
 		if [  -f $TEMP ];then
 			cp $TEMP $TEMP1
 		else
-			echo -e $BOARD_NAME_R"***_defconfig not exist,configure kernel fail!!!!"
-			exit 0
+			echo -e $BOARD_NAME_R"_defconfig and "$BOARD_NAME_R"-native_defconfig not exist!!!!"
+			FIND_NATIVE_DEFCONFIG=0
+			#exit 0
 		fi
 	fi
 
-	file=$TEMP1
-
-	TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
-	TEMP2=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
-	if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ]
-	then
-		#在defconfig文件里未找到宏的那个字符串
-		echo -e "CONFIG_MACH_""$TEMP1"" is not defined in ""$TEMP""!!!"
-		echo -e "must input board macro that is defined in ""$TEMP"
-		g_count=0
-
-		BOARD_MACRO_IN_KERNLE=
-		while true
-		do
-			input_board_macro_for_kernel
-			g_count=$g_count+1
-			#echo $BOARD_MACRO_IN_KERNLE
-			#须转换成小写
-			BOARD_MACRO_IN_KERNLE=`tr '[A-Z]' '[a-z]' <<<"$BOARD_MACRO_IN_KERNLE"`
-			TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
-			#echo $TEMP1
-			if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ];then
-				echo -e "do not find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
-				if [ $g_count -gt 3 ];then
-					echo -e "input times have exceed 3,configure kernel fail and exit!!"
-					exit 0
+	if [ $FIND_NATIVE_DEFCONFIG = 1 ];then
+		file=$TEMP1
+	
+		TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		TEMP2=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
+		if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ]
+		then
+			#在defconfig文件里未找到宏的那个字符串
+			echo -e "CONFIG_MACH_""$TEMP1"" is not defined in ""$TEMP""!!!"
+			echo -e "must input board macro that is defined in ""$TEMP"
+			g_count=0
+	
+			BOARD_MACRO_IN_KERNLE=
+			while true
+			do
+				input_board_macro_for_kernel
+				g_count=$g_count+1
+				#echo $BOARD_MACRO_IN_KERNLE
+				#须转换成小写
+				BOARD_MACRO_IN_KERNLE=`tr '[A-Z]' '[a-z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+				TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_MACRO_IN_KERNLE"`
+				#echo $TEMP1
+				if [ -z "`grep -Hrn --include="$TEMP" $TEMP1 ./`" ];then
+					echo -e "do not find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
+					if [ $g_count -gt 3 ];then
+						echo -e "input times have exceed 3,configure kernel fail and exit!!"
+						exit 0
+					fi
+					echo -e "please input again"
+				else
+					TEMP1="CONFIG_MACH_""$TEMP1""=y"
+					TEMP2="CONFIG_MACH_""$TEMP2""=y"
+					sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+					USE_INPUT_BOARD_MACRO=1
+					echo -e "find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
+					echo -e "input ok,continue configure kernel"
+					break
 				fi
-				echo -e "please input again"
-			else
-				TEMP1="CONFIG_MACH_""$TEMP1""=y"
-				TEMP2="CONFIG_MACH_""$TEMP2""=y"
-				sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
-				USE_INPUT_BOARD_MACRO=1
-				echo -e "find ""CONFIG_MACH_""$TEMP1"" in ""$TEMP"
-				echo -e "input ok,continue configure kernel"
-				break
-			fi
-		done
-	else
-		#echo "find $TEMP1"
+			done
+		else
+			#echo "find $TEMP1"
+			TEMP1="CONFIG_MACH_""$TEMP1""=y"
+			TEMP2="CONFIG_MACH_""$TEMP2""=y"
+			sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+		fi
+	fi
+
+	if [ $FIND_NATIVE_DEFCONFIG = 0 ];then
+		TEMP1=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_R"`
+		TEMP2=`tr '[a-z]' '[A-Z]' <<<"$BOARD_NAME_N"`
 		TEMP1="CONFIG_MACH_""$TEMP1""=y"
 		TEMP2="CONFIG_MACH_""$TEMP2""=y"
-		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 
 	#clone dt_defconfig
@@ -553,6 +564,10 @@ function board_for_kernel()
 		cp $TEMP_ $TEMP_1
 		have_dt_board=1
 		file=$TEMP_1
+		if [ -z "`grep -Hrn --include="$file" $TEMP1 ./`" ];then
+			echo $TEMP1" do not find in "$file",config kernel fail,please check board Macro name!!"
+			exit 0
+		fi
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
 	fi
 
@@ -564,7 +579,18 @@ function board_for_kernel()
 		cp $TEMP_ $TEMP_1
 		have_dt_board=1
 		file=$TEMP_1
+		if [ -z "`grep -Hrn --include="$file" $TEMP1 ./`" ];then
+			echo $TEMP1" do not find in "$file",config kernel fail,please check board Macro name!!"
+			exit 0
+		fi
 		sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="$file" ./`
+	else
+		if [ $FIND_NATIVE_DEFCONFIG = 0 ];then
+			if [ $have_dt_board = 0 ];then
+				echo -e $BOARD_NAME_R"***_defconfig not exist,configure kernel fail!!!!"
+				exit 0
+			fi
+		fi
 	fi
 	#---------产生*native_defconfig文件 end-------
 	
@@ -710,7 +736,7 @@ function board_for_kernel()
 	else
 		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
 		#sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --exclude-dir=".git" --include="*.*" ./`
 		echo "===========================notice========================================"
 		echo "===========================notice========================================"
 		echo "maybe add \""$addstring"\" words!"
@@ -733,7 +759,7 @@ function board_for_kernel()
 	else
 		#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
 		#sed -i s/$TEMP1/$TEMP2/g `grep $TEMP1 -rl --include="*.*" ./`
-		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+		sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --exclude-dir=".git" --include="*.*" ./`
 		echo "===========================notice========================================"
 		echo "===========================notice========================================"
 		echo "maybe add \""$addstring"\" words!"
@@ -825,8 +851,7 @@ function board_for_uboot()
 		then
 			echo "NULL"
 		else
-			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --exclude-dir=".git" --include="*.*" ./`
 			echo "===========================notice========================================"
 			echo "===========================notice========================================"
 			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
@@ -914,7 +939,7 @@ function board_for_chipram()
 			echo "NULL"
 		else
 			#sed -i "/$substring/s/$/$addstring/;" `grep $substring -rl --include="*.*" ./`
-			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --include="*.*" ./`
+			sed -i s/"$substring"/"$replacestring"/g `grep $substring -rl --exclude-dir=".git" --include="*.*" ./`
 			echo "===========================notice========================================"
 			echo "===========================notice========================================"
 			echo "maybe add \"|| defined(CONFIG_$BOARD_NAME_N_b)\" words!"
