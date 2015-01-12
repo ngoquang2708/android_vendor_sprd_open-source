@@ -127,7 +127,7 @@ SPRDMPEG4Encoder::SPRDMPEG4Encoder(
       mVideoFrameRate(30),
       mVideoBitRate(192000),
       mVideoColorFormat(OMX_SPRD_COLOR_FormatYVU420SemiPlanar),
-      mIDRFrameRefreshIntervalInSec(1),
+      mPFrames(29),
       mNumInputFrames(-1),
       mStarted(false),
       mSawInputEOS(false),
@@ -349,6 +349,7 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::initEncParams() {
     mEncConfig->RateCtrlEnable = 1;
     mEncConfig->targetBitRate = mVideoBitRate;
     mEncConfig->FrameRate = mVideoFrameRate;
+    mEncConfig->PFrames = mPFrames;
     mEncConfig->QP_IVOP = 4;
     mEncConfig->QP_PVOP = 4;
     mEncConfig->vbv_buf_size = mVideoBitRate/2;
@@ -776,6 +777,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
             return OMX_ErrorUndefined;
         }
 
+        mPFrames = h263type->nPFrames;
+        ALOGI("%s, H263 mPFrames: %d",__FUNCTION__,mPFrames);
+
         if (h263type->eProfile != OMX_VIDEO_H263ProfileBaseline ||
                 h263type->eLevel != OMX_VIDEO_H263Level45 ||
                 (h263type->nAllowedPictureTypes & OMX_VIDEO_PictureTypeB) ||
@@ -797,6 +801,9 @@ OMX_ERRORTYPE SPRDMPEG4Encoder::internalSetParameter(
         if (mpeg4type->nPortIndex != 1) {
             return OMX_ErrorUndefined;
         }
+
+        mPFrames = mpeg4type->nPFrames;
+        ALOGI("%s, Mpeg4 mPFrames: %d",__FUNCTION__,mPFrames);
 
         if (mpeg4type->eProfile != OMX_VIDEO_MPEG4ProfileCore ||
                 mpeg4type->eLevel != OMX_VIDEO_MPEG4Level2 ||
@@ -1046,13 +1053,10 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
             vid_in.time_stamp = (inHeader->nTimeStamp + 500) / 1000;  // in ms;
             vid_in.channel_quality = 1;
 
-            if (mKeyFrameRequested) {
-                vid_in.vopType = 0;    // I frame
+            vid_in.needIVOP = false;    // default P frame
+            if (mKeyFrameRequested || (mNumInputFrames == 0)) {
+                vid_in.needIVOP = true;    // I frame
                 ALOGI("Request an IDR frame");
-                mKeyFrameRequested = false;
-            }
-            else {
-                vid_in.vopType = (mNumInputFrames % mVideoFrameRate) ? 1 : 0;
             }
 
             vid_in.p_src_y = py;
@@ -1079,9 +1083,9 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
             int64_t start_encode = systemTime();
             int ret = (*mMP4EncStrmEncode)(mHandle, &vid_in, &vid_out);
             int64_t end_encode = systemTime();
-            ALOGI("MP4EncStrmEncode[%lld] %dms, in {%p-%p, %dx%d}, out {%p-%d}, wh{%d, %d}, xy{%d, %d}",
+            ALOGI("MP4EncStrmEncode[%lld] %dms, in {%p-%p, %dx%d}, out {%p-%d, %d}, wh{%d, %d}, xy{%d, %d}",
                   mNumInputFrames, (unsigned int)((end_encode-start_encode) / 1000000L), py, py_phy,
-                  mVideoWidth, mVideoHeight, vid_out.pOutBuf, vid_out.strmSize, width, height, x, y);
+                  mVideoWidth, mVideoHeight, vid_out.pOutBuf, vid_out.strmSize, vid_out.vopType, width, height, x, y);
             if ((vid_out.strmSize < 0) || (ret != MMENC_OK)) {
                 ALOGE("Failed to encode frame %lld, ret=%d", mNumInputFrames, ret);
                 mSignalledError = true;
@@ -1097,14 +1101,14 @@ void SPRDMPEG4Encoder::onQueueFilled(OMX_U32 portIndex) {
             if(vid_out.strmSize > 0) {
                 dataLength = vid_out.strmSize;
                 memcpy(outPtr, vid_out.pOutBuf, dataLength);
-                if (vid_in.vopType == 0) {
+                if (vid_out.vopType == 0) { //I VOP
+                    mKeyFrameRequested = false;
                     outHeader->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
                 }
+                ++mNumInputFrames;
             } else {
                 dataLength = 0;
             }
-
-            ++mNumInputFrames;
         } else {
             dataLength = 0;
         }

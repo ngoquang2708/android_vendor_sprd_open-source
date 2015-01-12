@@ -25,6 +25,7 @@
 #include <media/stagefright/MediaErrors.h>
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/Utils.h>
+#include <media/IOMX.h>
 
 #include <MetadataBufferType.h>
 #include <HardwareAPI.h>
@@ -51,6 +52,60 @@
 #define VIDEOENC_CURRENT_OPT
 
 namespace android {
+
+static const CodecProfileLevel kProfileLevels[] = {
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel1  },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel1b },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel11 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel12 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel13 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel2  },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel21 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel22 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel3  },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel31 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel32 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel4  },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel41 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel42 },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel5  },
+    { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel51 },
+
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel1  },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel1b },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel11 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel12 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel13 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel2  },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel21 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel22 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel3  },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel31 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel32 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel4  },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel41 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel42 },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel5  },
+    { OMX_VIDEO_AVCProfileMain, OMX_VIDEO_AVCLevel51 },
+
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel1  },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel1b },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel11 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel12 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel13 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel2  },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel21 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel22 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel3  },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel31 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel32 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel4  },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel41 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel42 },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel5  },
+    { OMX_VIDEO_AVCProfileHigh, OMX_VIDEO_AVCLevel51 },
+};
+
 
 template<class T>
 static void InitOMXParams(T *params) {
@@ -418,9 +473,9 @@ SPRDAVCEncoder::SPRDAVCEncoder(
       mVideoFrameRate(30),
       mVideoBitRate(192000),
       mVideoColorFormat(OMX_SPRD_COLOR_FormatYVU420SemiPlanar),
-      mIDRFrameRefreshIntervalInSec(1),
       mAVCEncProfile(AVC_BASELINE),
       mAVCEncLevel(AVC_LEVEL2),
+      mPFrames(29),
       mNumInputFrames(-1),
       mPrevTimestampUs(-1),
       mStarted(false),
@@ -733,6 +788,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncConfig->RateCtrlEnable = 1;
     mEncConfig->targetBitRate = mVideoBitRate;
     mEncConfig->FrameRate = mVideoFrameRate;
+    mEncConfig->PFrames = mPFrames;
     mEncConfig->QP_IVOP = 28;
     mEncConfig->QP_PVOP = 28;
     mEncConfig->vbv_buf_size = mVideoBitRate/2;
@@ -748,16 +804,6 @@ OMX_ERRORTYPE SPRDAVCEncoder::initEncParams() {
     mEncParams->bitrate = mVideoBitRate;
     mEncParams->frame_rate = 1000 * mVideoFrameRate;  // In frames/ms!
     mEncParams->CPB_size = (uint32_t) (mVideoBitRate >> 1);
-
-    // Set IDR frame refresh interval
-    if (mIDRFrameRefreshIntervalInSec < 0) {
-        mEncParams->idr_period = -1;
-    } else if (mIDRFrameRefreshIntervalInSec == 0) {
-        mEncParams->idr_period = 1;  // All I frames
-    } else {
-        mEncParams->idr_period =
-            (mIDRFrameRefreshIntervalInSec * mVideoFrameRate);
-    }
 
     // Set profile and level
     mEncParams->profile = mAVCEncProfile;
@@ -1006,27 +1052,40 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalGetParameter(
             return OMX_ErrorUndefined;
         }
 
-        const size_t size =
-            sizeof(ConversionTable) / sizeof(ConversionTable[0]);
-
-        if (profileLevel->nProfileIndex >= size) {
+        size_t index = profileLevel->nProfileIndex;
+        size_t nProfileLevels =
+            sizeof(kProfileLevels) / sizeof(kProfileLevels[0]);
+        if (index >= nProfileLevels) {
             return OMX_ErrorNoMore;
         }
 
-        if (mCapability.profile == AVC_BASELINE) {
-            profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
-        } else if (mCapability.profile == AVC_MAIN) {
-            profileLevel->eProfile = OMX_VIDEO_AVCProfileMain;
-        } else if (mCapability.profile == AVC_HIGH) {
-            profileLevel->eProfile = OMX_VIDEO_AVCProfileHigh;
-        } else {
-            profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+        profileLevel->eProfile = kProfileLevels[index].mProfile;
+        profileLevel->eLevel = kProfileLevels[index].mLevel;
+
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileHigh) {
+            if (mCapability.profile < AVC_HIGH) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileMain;
+            }
         }
 
-        if (ConversionTable[profileLevel->nProfileIndex].avcLevel > mCapability.level) {
-            return OMX_ErrorUnsupportedIndex;
-        } else {
-            profileLevel->eLevel = ConversionTable[profileLevel->nProfileIndex].omxLevel;
+        if (profileLevel->eProfile == OMX_VIDEO_AVCProfileMain) {
+            if (mCapability.profile < AVC_MAIN) {
+                profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+            }
+        }
+
+        const size_t size =
+            sizeof(ConversionTable) / sizeof(ConversionTable[0]);
+
+        for (index = 0; index < size; index++) {
+            if (ConversionTable[index].avcLevel > mCapability.level) {
+                index--;
+                break;
+            }
+        }
+
+        if (profileLevel->eLevel > ConversionTable[index].omxLevel) {
+            profileLevel->eLevel = ConversionTable[index].omxLevel;
         }
         //ALOGI("Query supported profile level = %d, %d",profileLevel->eProfile, profileLevel->eLevel);
         return OMX_ErrorNone;
@@ -1174,6 +1233,9 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
             return OMX_ErrorUndefined;
         }
 
+        mPFrames = avcType->nPFrames;
+        ALOGI("%s, mPFrames: %d",__FUNCTION__,mPFrames);
+#if 0
         // PV's AVC encoder only supports baseline profile
         if (avcType->eProfile != OMX_VIDEO_AVCProfileBaseline ||
                 avcType->nRefFrames != 1 ||
@@ -1190,7 +1252,7 @@ OMX_ERRORTYPE SPRDAVCEncoder::internalSetParameter(
                 avcType->nCabacInitIdc != 0) {
             return OMX_ErrorUndefined;
         }
-
+#endif
         if (OK != ConvertOmxAvcLevelToAvcSpecLevel(avcType->eLevel, &mAVCEncLevel)) {
             return OMX_ErrorUndefined;
         }
@@ -1729,13 +1791,10 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
             vid_in.time_stamp = (inHeader->nTimeStamp + 500) / 1000;  // in ms;
             vid_in.channel_quality = 1;
 
-            if (mKeyFrameRequested) {
-                vid_in.vopType = 0;    // I frame
+            vid_in.needIVOP = false;    // default P frame
+            if (mKeyFrameRequested || (mNumInputFrames == 0)) {
+                vid_in.needIVOP = true;    // I frame
                 ALOGI("Request an IDR frame");
-                mKeyFrameRequested = false;
-            }
-            else {
-                vid_in.vopType = (mNumInputFrames % mVideoFrameRate) ? 1 : 0;
             }
 
             vid_in.p_src_y = py;
@@ -1763,9 +1822,9 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
             int64_t start_encode = systemTime();
             int ret = (*mH264EncStrmEncode)(mHandle, &vid_in, &vid_out);
             int64_t end_encode = systemTime();
-            ALOGI("H264EncStrmEncode[%lld] %dms, in {%p-%p, %dx%d}, out {%p-%d}, wh{%d, %d}, xy{%d, %d}",
+            ALOGI("H264EncStrmEncode[%lld] %dms, in {%p-%p, %dx%d}, out {%p-%d, %d}, wh{%d, %d}, xy{%d, %d}",
                   mNumInputFrames, (unsigned int)((end_encode-start_encode) / 1000000L), py, py_phy,
-                  mVideoWidth, mVideoHeight, vid_out.pOutBuf, vid_out.strmSize, width, height, x, y);
+                  mVideoWidth, mVideoHeight, vid_out.pOutBuf, vid_out.strmSize,vid_out.vopType, width, height, x, y);
             if ((vid_out.strmSize < 0) || (ret != MMENC_OK)) {
                 ALOGE("Failed to encode frame %lld, ret=%d", mNumInputFrames, ret);
 #if 0  //removed by xiaowei, 20131017, for cr224544              
@@ -1806,13 +1865,14 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                    dataLength += spssize+ppssize;
                  }
 
-                if (vid_in.vopType == 0) {
+                if (vid_out.vopType == 0) { //I VOP
+                    mKeyFrameRequested = false;
                     outHeader->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
                 }
+                ++mNumInputFrames;
             } else {
                 dataLength = 0;
             }
-            ++mNumInputFrames;
         } else {
             dataLength = 0;
         }
