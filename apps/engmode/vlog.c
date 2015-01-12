@@ -44,6 +44,7 @@ char external_path[MAX_NAME_LEN];
 char top_logdir[MAX_NAME_LEN];
 
 extern void eng_usb_enable(void);
+extern void set_raw_data_speed(int fd, int speed);
 
 static void dump_mem_len_print(int r_cnt, int* dumplen)
 {
@@ -223,6 +224,11 @@ void *eng_vdiag_rthread(void *x)
         ENG_LOG("eng_vdiag_r open serial failed, error: %s\n", strerror(errno));
         return NULL;
     }
+
+    if(s_dev_info->host_int.dev_type == CONNECT_UART){
+        set_raw_data_speed(ser_fd, 115200);
+    }
+
     s_ser_diag_fd = ser_fd;
 
     /*open vbpipe/spipe*/

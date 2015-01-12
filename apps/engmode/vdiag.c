@@ -188,7 +188,7 @@ int ensure_audio_para_file_exists(char *config_file)
     return 0;
 }
 
-static void set_raw_data_speed(int fd, int speed)
+void set_raw_data_speed(int fd, int speed)
 {
     unsigned long i = 0;
     int   status = 0;
