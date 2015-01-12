@@ -46,11 +46,15 @@ typedef signed int			int32;
 #define RAMNV_NUM					15		// max number of ramdisk, can not >= 15.
 #define RAMNV_SECT_SIZE			512		// sect size of ramdisk
 #define NV_PATH_MAX_LEN           100
+#define TRUE           1
+#define FALSE          0
 //-------------------------------------------------
 //				Config: can be changed if nessarry
 //-------------------------------------------------
 #define RAMNV_DIRTYTABLE_MAXSIZE	32		// max sect number is (RAMNV_DIRTYTABLE_MAXSIZE << 5), 32 means 512k ramdisk
 
+unsigned short calc_Checksum(unsigned char *dat, unsigned long len);
+BOOLEAN ChkNVEcc(uint8 * buf, uint32 size, uint16 checksum);
 
 #endif
 

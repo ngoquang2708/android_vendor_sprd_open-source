@@ -13,7 +13,8 @@ LOCAL_SRC_FILES:= \
 	nvitem_packet.c \
 	nvitem_server.c \
 	nvitem_sync.c \
-	nvitem_channe_spipe.c
+	nvitem_channe_spipe.c \
+	nvitem_common.c
 
 LOCAL_CFLAGS += -Wall
 

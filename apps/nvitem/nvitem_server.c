@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
 #ifndef WIN32
 	pthread_t pTheadHandle;
 #endif
+	NVITEM_PRINT("nvitemd start\n");
 	if(3 != argc)
 	{
 		NVITEM_PRINT("Usage:\n");
