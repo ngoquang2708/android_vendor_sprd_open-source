@@ -815,7 +815,7 @@ static void *wcn_exception_listen(void *arg)
 				if(pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND){
 					ret = read(pmanager->client_fds[i].sockfd, buffer, SOCKET_BUFFER_SIZE);
 					//DOWNLOAD_LOGD("sockfd get %d %d bytes %s", pmanager->client_fds[i].sockfd,ret, buffer);
-
+					#if 0
 					if(strcmp(buffer,WCN_CMD_REBOOT_WCN) == 0){
 						pmanager->flag_reboot = 1;
 						download_state = DOWNLOAD_START;
@@ -831,6 +831,7 @@ static void *wcn_exception_listen(void *arg)
 					}else if(strcmp(buffer,WCN_CMD_STOP_WCN) == 0){
 						pmanager->flag_stop = 1;
 					}
+					#endif
 				}
 			}
 		}
@@ -904,18 +905,18 @@ int main(void)
 #endif
 	ret = socket_init(&pmanager);
 
-	//download_state = DOWNLOAD_START;
+	download_state = DOWNLOAD_START;
 	do{
-		#if 0
+		#if 1
 		if(download_state == DOWNLOAD_START){
 			if(download_entry() == 0){
 				download_state = DOWNLOAD_BOOTCOMP;
 			}
 
-			if(pmanager.flag_connect){
-				ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
-				//pmanager.flag_connect = 0;
-			}
+			//if(pmanager.flag_connect){
+			//	ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
+			//	pmanager.flag_connect = 0;
+			//}
 		}
 		#endif
 
