@@ -119,6 +119,11 @@
 #define PRIVATE_AUD_LOOP_VBC  "Aud Loop in VBC Switch"
 #define PRIVATE_AUD1_LOOP_VBC  "Aud1 Loop in VBC Switch"
 #define PRIVATE_AUD_CODEC_INFO	"Aud Codec Info"
+
+/*FM da0/da1 mux*/
+#define PRIVATE_FM_DA0_MUX  "fm da0 mux"
+#define PRIVATE_FM_DA1_MUX  "fm da1 mux"
+
 /* ALSA cards for sprd */
 #define CARD_SPRDPHONE "sprdphone"
 #define CARD_VAUDIO    "VIRTUAL AUDIO"
@@ -372,6 +377,8 @@ struct tiny_private_ctl {
     struct mixer_ctl *ad1_fm_loop_vbc;
     struct mixer_ctl *internal_hp_pa_delay;
     struct mixer_ctl *aud_codec_info;
+    struct mixer_ctl *fm_da0_mux;
+    struct mixer_ctl *fm_da1_mux;
 };
 
 struct stream_routing_manager {
@@ -1318,6 +1325,18 @@ static void do_select_devices(struct tiny_audio_device *adev)
             //first open fm path and then switch iis
             if(cur_out & AUDIO_DEVICE_OUT_FM){
                 i2s_pin_mux_sel(adev,FM_IIS);
+		 ALOGE("do_select_devices, fm_volume: %d",adev->fm_volume);
+                if(adev->fm_volume !=0){
+                    if (adev->private_ctl.fm_da0_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 1);
+                    if (adev->private_ctl.fm_da1_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 1);
+                } else {
+                    if (adev->private_ctl.fm_da0_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 0);
+                    if (adev->private_ctl.fm_da1_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 0);
+                }
             }
 
     }
@@ -3751,6 +3770,21 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->master_mute = false;
                 codec_lowpower_open(adev,false);
             }
+
+            ALOGE("adev_set_parameters fm volume,fm_open: %d, fm_volume: %d",adev->fm_open,val);
+            if((adev->fm_open)){
+                if(val !=0){
+                    if (adev->private_ctl.fm_da0_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 1);
+                    if (adev->private_ctl.fm_da1_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 1);
+                } else {
+                    if (adev->private_ctl.fm_da0_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 0);
+                    if (adev->private_ctl.fm_da1_mux)
+                        mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 0);
+                }
+            }
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&adev->device_lock);
             gain |=fm_volume_tbl[val];
@@ -4208,6 +4242,14 @@ static void adev_config_parse_private(struct config_parse_state *s, const XML_Ch
             s->adev->private_ctl.mic_bias_switch =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
             CTL_TRACE(s->adev->private_ctl.mic_bias_switch);
+        } else if (strcmp(s->private_name, PRIVATE_FM_DA0_MUX) == 0) {
+            s->adev->private_ctl.fm_da0_mux =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.fm_da0_mux);
+        } else if (strcmp(s->private_name, PRIVATE_FM_DA1_MUX) == 0) {
+            s->adev->private_ctl.fm_da1_mux =
+                mixer_get_ctl_by_name(s->adev->mixer, name);
+            CTL_TRACE(s->adev->private_ctl.fm_da1_mux);
         } else if (strcmp(s->private_name, PRIVATE_INTERNAL_PA) == 0) {
             s->adev->private_ctl.internal_pa =
                 mixer_get_ctl_by_name(s->adev->mixer, name);
