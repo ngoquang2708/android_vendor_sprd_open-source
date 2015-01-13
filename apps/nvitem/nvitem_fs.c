@@ -361,7 +361,7 @@ BOOLEAN ramDisk_Write(RAMDISK_HANDLE handle, uint8 * buf, uint32 size)
 	header_ptr->magic = NV_HEAD_MAGIC;
 	header_ptr->len = size;
 	header_ptr->version = NV_VERSION;
-	header_ptr->checksum = (uint32) calc_checksum(buf, size);
+	header_ptr->checksum = (uint32) calc_Checksum(buf, size);
 
 // 1 get Ecc
 

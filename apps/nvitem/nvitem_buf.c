@@ -9,6 +9,7 @@ typedef struct
 {
 	uint8*	diskbuf;								// ramdisk buf
 	uint32	dirty[RAMNV_DIRTYTABLE_MAXSIZE];	// dirty bits, one bits indicate one sect
+	uint16  checksum;
 }_RAMNV_BUF_CTRL;
 
 typedef struct
@@ -85,8 +86,13 @@ void initBuf(void)
 			config++;
 			continue;
 		}
+		ramNvCtl.part[i].fromChannel.checksum = calc_Checksum(ramNvCtl.part[i].fromChannel.diskbuf,config->image_size);
+
 		memcpy(ramNvCtl.part[i].backup.diskbuf,ramNvCtl.part[i].fromChannel.diskbuf,config->image_size+4);
+		ramNvCtl.part[i].backup.checksum = calc_Checksum(ramNvCtl.part[i].backup.diskbuf,config->image_size);
+
 		memcpy(ramNvCtl.part[i].toDisk.diskbuf,ramNvCtl.part[i].fromChannel.diskbuf,config->image_size+4);
+		ramNvCtl.part[i].toDisk.checksum = calc_Checksum(ramNvCtl.part[i].toDisk.diskbuf,config->image_size);
 //		backupData(i);
 		ramNvCtl.partNum++;
 		i++;
@@ -175,15 +181,34 @@ static BOOLEAN __ifHasDirty(uint32 id)
 }
 #undef _DIRTY_TABLE
 
+BOOLEAN ChkNVBufEcc(uint8 * buf, uint32 size, uint16 checksum)
+{
+	NVITEM_PRINT("ChkNVBufEcc enter\n");
+
+	if(!ChkNVEcc(buf, size, checksum))
+	{
+		system("echo c > /proc/sysrq-trigger");
+		return FALSE;
+	}
+	NVITEM_PRINT("buf ecc ok\n");
+	return TRUE;
+}
+
 //----------------------------
 // to "fromChannel" buffer
 // unit is bytes
 //----------------------------
 void writeData(uint32 id,  uint32 start, uint32 bytesLen, uint8* buf)
 {
+	NVITEM_PRINT("writeData enter\n");
 	if(bytesLen)
 	{
-		memcpy(&ramNvCtl.part[id].fromChannel.diskbuf[start], buf, bytesLen);
+        //check fromchannel-buf ECC before every writing to it
+		if (ChkNVBufEcc(ramNvCtl.part[id].fromChannel.diskbuf,RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum,ramNvCtl.part[id].fromChannel.checksum))
+		{
+			memcpy(&ramNvCtl.part[id].fromChannel.diskbuf[start], buf, bytesLen);
+			ramNvCtl.part[id].fromChannel.checksum = calc_Checksum(ramNvCtl.part[id].fromChannel.diskbuf,RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		}
 	}
 }
 
@@ -196,11 +221,16 @@ BOOLEAN backupData(uint32 id)
 
 	getMutex();
 
-         NVITEM_PRINT("backupData is_cali_mode 0x%x\n",is_cali_mode);
-	memcpy(ramNvCtl.part[id].backup.diskbuf, ramNvCtl.part[id].fromChannel.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
-	for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
+	NVITEM_PRINT("backupData is_cali_mode 0x%x\n",is_cali_mode);
+	//check fromchannel-buf ECC before store its whole data to backup-buf
+	if (ChkNVBufEcc(ramNvCtl.part[id].fromChannel.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum, ramNvCtl.part[id].fromChannel.checksum))
 	{
-		ramNvCtl.part[id].backup.dirty[i] |= ramNvCtl.part[id].fromChannel.dirty[i] ;
+		memcpy(ramNvCtl.part[id].backup.diskbuf, ramNvCtl.part[id].fromChannel.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		ramNvCtl.part[id].backup.checksum = calc_Checksum(ramNvCtl.part[id].backup.diskbuf,RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
+		{
+			ramNvCtl.part[id].backup.dirty[i] |= ramNvCtl.part[id].fromChannel.dirty[i] ;
+		}
 	}
 
 	putMutex();
@@ -225,10 +255,17 @@ BOOLEAN backupData(uint32 id)
 //----------------------------
 void restoreData(uint32 id)
 {
+	NVITEM_PRINT("restoreData enter\n");
+
 	getMutex();
 
-	memcpy(ramNvCtl.part[id].fromChannel.diskbuf, ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
-	memcpy(ramNvCtl.part[id].fromChannel.dirty, ramNvCtl.part[id].backup.dirty, RAMNV_DIRTYTABLE_MAXSIZE*sizeof(uint32));
+	//check backup-buf  ECC before restore its whole data to fromchannel-buf
+	if (ChkNVBufEcc(ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum, ramNvCtl.part[id].backup.checksum))
+	{
+		memcpy(ramNvCtl.part[id].fromChannel.diskbuf, ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		ramNvCtl.part[id].fromChannel.checksum = calc_Checksum(ramNvCtl.part[id].fromChannel.diskbuf,RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		memcpy(ramNvCtl.part[id].fromChannel.dirty, ramNvCtl.part[id].backup.dirty, RAMNV_DIRTYTABLE_MAXSIZE*sizeof(uint32));
+	}
 
 	putMutex();
 	return;
@@ -241,13 +278,20 @@ void __getData(uint32 id)
 {
 	uint32 i;
 
+	NVITEM_PRINT("__getData enter\n");
+
 	getMutex();
 
-	memcpy(ramNvCtl.part[id].toDisk.diskbuf, ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
-	for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
+	//check backup-buf  ECC before store its whole data to todisk-buf
+	if (ChkNVBufEcc(ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum, ramNvCtl.part[id].backup.checksum))
 	{
-		ramNvCtl.part[id].toDisk.dirty[i] |= ramNvCtl.part[id].backup.dirty[i] ;
-		ramNvCtl.part[id].backup.dirty[i]  = 0;
+		memcpy(ramNvCtl.part[id].toDisk.diskbuf, ramNvCtl.part[id].backup.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		ramNvCtl.part[id].toDisk.checksum = calc_Checksum(ramNvCtl.part[id].toDisk.diskbuf,RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum);
+		for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
+		{
+			ramNvCtl.part[id].toDisk.dirty[i] |= ramNvCtl.part[id].backup.dirty[i] ;
+			ramNvCtl.part[id].backup.dirty[i]  = 0;
+		}
 	}
 
 	putMutex();
@@ -263,13 +307,17 @@ void saveToDisk(void)
 		if(__ifHasDirty(id))
 		{
 			__getData(id);
-			if(ramDisk_Write(ramNvCtl.part[id].fdhandle, ramNvCtl.part[id].toDisk.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum))
+
+			if (ChkNVBufEcc(ramNvCtl.part[id].toDisk.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum, ramNvCtl.part[id].toDisk.checksum))
 			{
-				// clean dirty bit of toDiskBuf
+				if(ramDisk_Write(ramNvCtl.part[id].fdhandle, ramNvCtl.part[id].toDisk.diskbuf, RAMNV_SECT_SIZE*ramNvCtl.part[id].sctNum))
+				{
+					// clean dirty bit of toDiskBuf
 					for(i = 0; i < RAMNV_DIRTYTABLE_MAXSIZE; i++)
 					{
 						ramNvCtl.part[id].toDisk.dirty[i]  = 0;
 					}
+				}
 			}
 		}
 	}
