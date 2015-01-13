@@ -3606,6 +3606,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	cmr_uint                       set_exif_flag = 0;
 	cmr_uint                       set_isp_flag = 1;
 	SENSOR_EXIF_CTRL_E             exif_cmd = SENSOR_EXIF_CTRL_MAX;
+	struct isp_pos_rect            trim;
 
 	if (!oem_handle || !param_ptr) {
 		CMR_LOGE("in parm error");
@@ -3631,8 +3632,12 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		break;
 	case COM_ISP_SET_AE_METERING_AREA:
 		isp_cmd = ISP_CTRL_AE_TOUCH;
+		trim.start_x = param_ptr->win_area.rect[0].start_x;
+		trim.start_y = param_ptr->win_area.rect[0].start_y;
+		trim.end_x = param_ptr->win_area.rect[0].start_x + param_ptr->win_area.rect[0].width -1;
+		trim.end_y = param_ptr->win_area.rect[0].start_y + param_ptr->win_area.rect[0].height -1;
 		ptr_flag = 1;
-		isp_param_ptr = (void*)&param_ptr->win_area.rect[0];
+		isp_param_ptr = (void *)&trim;
 		break;
 	case COM_ISP_SET_BRIGHTNESS:
 		isp_cmd = ISP_CTRL_BRIGHTNESS;
