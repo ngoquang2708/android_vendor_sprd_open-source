@@ -77,7 +77,7 @@ static int connect_download(void)
 	while(client_fd < 0 && retry_count > 0)
 	{
 		retry_count--;
-		WCND_LOGD("%s: Unable bind server %s, waiting...\n",__func__, WCN_DOWNLOAD_SOCKET_NAME);
+		WCND_LOGD("%s: Unable bind server %s, waiting (error:%s)...\n",__func__, WCN_DOWNLOAD_SOCKET_NAME, strerror(errno));
 		usleep(100*1000);
 		client_fd = socket_local_client( WCN_DOWNLOAD_SOCKET_NAME,
 			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);

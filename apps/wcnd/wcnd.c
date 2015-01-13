@@ -1177,17 +1177,7 @@ int wcnd_open_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
-
-	message.event = WCND_EVENT_CP2_OK;
-	message.replyto_fd = -1;
-	pWcndManger->is_cp2_error = 0;
-
-	wcnd_sm_step(pWcndManger, &message);
-
-	return 0;
-
-#endif
+#ifdef WCND_CP2_POWER_ONOFF_ENABLE
 
 	int is_alive_ok = 1;
 
@@ -1253,7 +1243,25 @@ out:
 		message.replyto_fd = -1;
 	}
 
+#else
+
+	int is_alive_ok = 0;
+
+	message.event = WCND_EVENT_CP2_OK;
+	message.replyto_fd = -1;
+	pWcndManger->is_cp2_error = 0;
+
+#endif //WCND_CP2_POWER_ONOFF_ENABLE
+
 	wcnd_sm_step(pWcndManger, &message);
+
+
+	if(is_alive_ok)
+	{
+		WCND_LOGD("%s: config CP2 bootup after open CP2 !!", __FUNCTION__);
+		config_cp2_bootup(pWcndManger);
+	}
+
 
 	return 0;
 }
@@ -1271,17 +1279,19 @@ int wcnd_close_cp2(WcndManager *pWcndManger)
 		return -1;
 	}
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
+#ifdef WCND_CP2_POWER_ONOFF_ENABLE
 
-	message.event = WCND_EVENT_CP2_DOWN;
-	message.replyto_fd = -1;
+#ifdef USE_MARLIN
 
-	wcnd_sm_step(pWcndManger, &message);
+	//marlin do not need to send sleep cmd
 
-	return 0;
+	if(wcnd_stop_cp2(pWcndManger) < 0)
+	{
+		WCND_LOGE("%s: Stop CP2 failed!!", __FUNCTION__);
+		//return -1;
+	}
 
-#endif
-
+#else
 
 	//Tell CP2 to Sleep
 	if(wcnd_process_atcmd(-1, WCND_ATCMD_CP2_SLEEP, pWcndManger) < 0)
@@ -1297,11 +1307,25 @@ int wcnd_close_cp2(WcndManager *pWcndManger)
 	}
 
 out:
+
+#endif //USE_MARLIN
+
+#endif
+
 	message.event = WCND_EVENT_CP2_DOWN;
 	message.replyto_fd = -1;
 	wcnd_sm_step(pWcndManger, &message);
 
 	return 0;
+}
+
+
+/**
+* do some config for cp2 when cp2 power on
+*/
+int wcnd_config_cp2_bootup(WcndManager *pWcndManger)
+{
+	return config_cp2_bootup(pWcndManger);
 }
 
 
@@ -1839,36 +1863,42 @@ static int start_engineer_service(WcndManager *pWcndManger)
 ///below is the related code for setting/getting of CP2 ///////////////////
 
 /**
-* Disable the CP2 log, if it is a user version
+* Do some CP2 config, if it is a user version
 */
-static int check_disable_cp2_log(WcndManager *pWcndManger)
+static int config_cp2_for_user_version(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
 	//in user debug version just return
 	if(pWcndManger->is_in_userdebug) return 0;
 
-	WCND_LOGD("in user version, need to disable cp2 log!!!");
+#ifndef USE_MARLIN
+	//in user version, config CP2 to enter user mode
+	WCND_LOGD("in user version, need to config CP2 to enter user mode!!!");
+	wcnd_process_atcmd(-1, WCND_ATCMD_CP2_ENTER_USER, pWcndManger);
+#endif
 
-	return wcnd_process_atcmd(-1, WCND_ATCMD_CP2_DISABLE_LOG, pWcndManger);
+#if 0
+	// Disable the CP2 log, if it is a user version
+	WCND_LOGD("in user version, need to disable cp2 log!!!");
+	wcnd_process_atcmd(-1, WCND_ATCMD_CP2_DISABLE_LOG, pWcndManger);
+#endif
+
+	return 0;
 }
 
 
 
 /**
-* Store the CP2 Version info, used when startup
+* Store the CP2 Version info, used when system startup
 */
 static int store_cp2_version_info(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
+#ifdef WCND_CP2_POWER_ONOFF_ENABLE
+
 	int count = 100;
-
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
-
-	return 0;
-
-#endif
 
 	if(pWcndManger->is_eng_mode_only) return 0;
 
@@ -1876,7 +1906,7 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 	if(!pWcndManger->is_wcn_modem_enabled) return 0;
 
 
-	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_START_CP2);
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_CMD_CP2_POWER_ON);
 
 	//wait CP2 started, wait 10s at most
 	while(count-- > 0)
@@ -1894,9 +1924,23 @@ static int store_cp2_version_info(WcndManager *pWcndManger)
 	}
 
 
-	wcnd_process_atcmd(-1, WCND_ATCMD_CP2_GET_VERSION_INFO, pWcndManger);
+	//wcnd_process_atcmd(-1, WCND_ATCMD_CP2_GET_VERSION, pWcndManger);
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_CP2_VERSION);
 
-	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_STOP_CP2);
+
+	count = 100;
+	//wait get cp2 version complete, wait 10s at most
+	while(count-- > 0)
+	{
+		if(pWcndManger->store_cp2_versin_done)
+			break;
+
+		usleep(100*1000);
+	}
+
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_CMD_CP2_POWER_OFF);
+
+#endif
 
 	return 0;
 }
@@ -1910,14 +1954,19 @@ static int config_cp2_bootup(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
-	//in user version, config CP2 to enter user mode
-	if(!pWcndManger->is_in_userdebug)
-	{
-		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_ENTER_USER, pWcndManger);
-	}
+	// Do some CP2 config, if it is a user version
+	config_cp2_for_user_version(pWcndManger);
 
-	// Disable the CP2 log, if it is a user version
-	check_disable_cp2_log(pWcndManger);
+
+	// Reset the cp2 log, since after power on cp2, it will reset to default
+	if(pWcndManger->is_cp2log_opened)
+	{
+		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_ENABLE_LOG, pWcndManger);
+	}
+	else
+	{
+		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_DISABLE_LOG, pWcndManger);
+	}
 
 	return 0;
 }
@@ -2066,7 +2115,9 @@ int main(int argc, char *argv[])
 
 		if(need_config_cp2)
 		{
-			config_cp2_bootup(pWcndManger);
+			//config_cp2_bootup(pWcndManger);
+			wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_CMD_CONFIG_CP2);
+
 		}
 		else
 		{

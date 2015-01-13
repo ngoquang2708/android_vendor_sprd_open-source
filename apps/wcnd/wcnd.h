@@ -148,6 +148,7 @@
 #define WCND_CP2_RESET_START_STRING "WCN-CP2-RESET-START"
 #define WCND_CP2_RESET_END_STRING "WCN-CP2-RESET-END"
 #define WCND_CP2_ALIVE_STRING "WCN-CP2-ALIVE"
+#define WCND_CP2_CLOSED_STRING "WCN-CP2-CLOSED"
 
 
 #define WCND_CP2_DEFAULT_CP2_VERSION_INFO "Fail: UNKNOW VERSION"
@@ -252,6 +253,7 @@ typedef struct structWcndManager
 
 	//save the cp2 version info
 	char cp2_version_info[256];
+	int store_cp2_versin_done;
 
 
 	pthread_mutex_t worker_lock;
@@ -267,16 +269,25 @@ typedef struct structWcndManager
 	//to identify if only for engineer mode, if yes, then the CP2 listen/loop check will be disabled
 	int is_eng_mode_only;
 
+	//to saved the cp2 log state
+	int is_cp2log_opened;
+
 }WcndManager;
 
 
 //CP2 AT Cmds
 #define WCND_ATCMD_CP2_SLEEP "at+cp2sleep\r"
 #define WCND_ATCMD_CP2_DISABLE_LOG "AT+ARMLOG=0\r"
-#define WCND_ATCMD_CP2_GET_VERSION_INFO "at+spatgetcp2info\r"
+#define WCND_ATCMD_CP2_ENABLE_LOG "AT+ARMLOG=1\r"
+#define WCND_ATCMD_CP2_GET_VERSION "at+spatgetcp2info\r"
 #define WCND_ATCMD_CP2_ENTER_USER "at+cp2_enter_user=1\r"
 #define WCND_ATCMD_CP2_EXIT_USER "at+cp2_enter_user=0\r"
 
+
+//cmd id to identify the cmds that the wcnd care about
+#define WCND_ATCMD_CMDID_OTHERS (0)
+#define WCND_ATCMD_CMDID_GET_VERSION (1)
+#define WCND_ATCMD_CMDID_SLEEP (2)
 
 //export API
 WcndManager* wcnd_get_default_manager(void);
@@ -297,6 +308,7 @@ int wcnd_before_reset(WcndManager *pWcndManger);
 
 int wcnd_open_cp2(WcndManager *pWcndManger);
 int wcnd_close_cp2(WcndManager *pWcndManger);
+int wcnd_config_cp2_bootup(WcndManager *pWcndManger);
 
 
 int wcnd_worker_init(WcndManager *pWcndManger);

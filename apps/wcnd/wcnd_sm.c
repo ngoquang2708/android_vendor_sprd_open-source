@@ -417,13 +417,9 @@ static void wcn_state_cp2_stopping(WcndManager *pWcndManger, WcndMessage *pMessa
 int wcnd_sm_step(WcndManager *pWcndManger, WcndMessage *pMessage)
 {
 
-#ifdef WCND_STATE_MACHINE_DISABLED
-
-	return 0;
-
-#endif
-
 	if(!pWcndManger || !pMessage) return -1;
+
+#ifdef WCND_STATE_MACHINE_ENABLE
 
 	//if not use our own wcn, just return
 	if(!pWcndManger->is_wcn_modem_enabled)
@@ -463,6 +459,8 @@ int wcnd_sm_step(WcndManager *pWcndManger, WcndMessage *pMessage)
 
 	}
 
+#endif
+
 	return 0;
 }
 
@@ -470,15 +468,7 @@ int wcnd_sm_init(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
-#ifdef WCND_CP2_POWER_ONOFF_DISABLED
-
-	pWcndManger->state = WCND_STATE_CP2_STARTED;
-	pWcndManger->notify_enabled = 1;
-
-	pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
-
-#else
-
+#ifdef WCND_STATE_MACHINE_ENABLE
 
 	//if not use our own wcn, just return
 	if(!pWcndManger->is_wcn_modem_enabled)
@@ -491,20 +481,20 @@ int wcnd_sm_init(WcndManager *pWcndManger)
 	else
 	{
 
-#ifdef WCND_STATE_MACHINE_DISABLED
-
-		pWcndManger->state = WCND_STATE_CP2_STARTED;
-		pWcndManger->notify_enabled = 1;
-
-		pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
-
-#else
 		pWcndManger->state = WCND_STATE_CP2_STOPPED;
 		pWcndManger->notify_enabled = 0;
 		//pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
-#endif
-
 	}
+
+#else
+
+
+	pWcndManger->state = WCND_STATE_CP2_STARTED;
+	pWcndManger->notify_enabled = 1;
+
+	pWcndManger->btwifi_state |= (WCND_BTWIFI_STATE_BT_ON |WCND_BTWIFI_STATE_WIFI_ON);
+
+
 
 #endif
 

@@ -50,6 +50,11 @@
 #define WCND_SELF_CMD_START_CP2		"startcp2"
 #define WCND_SELF_CMD_STOP_CP2		"stopcp2"
 #define WCND_SELF_CMD_PENDINGEVENT	"pendingevent"
+#define WCND_SELF_CMD_CONFIG_CP2 	"configcp2"
+#define WCND_SELF_CMD_CP2_VERSION	"getcp2version"
+
+
+
 
 #define WCND_SELF_EVENT_CP2_ASSERT	"cp2assert"
 
