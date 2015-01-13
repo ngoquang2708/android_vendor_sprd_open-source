@@ -36,6 +36,7 @@ static void usage() {
     INFO("-bitrate          integer: target bitrate in kbps if cbr(default), default is 512\n");
     INFO("-qp               integer: qp[1...31] if vbr, default is 8\n");
     INFO("-frames           integer: number of frames to encode, default is 0(all frames)\n");
+    INFO("-prependSpsPps           integer: prepend SPS and PPS header to IDR or not, default is 0\n");
     INFO("-help                    : show this help message\n");
     INFO("Built on %s %s, Written by XiaoweiLuo(xiaowei.luo@spreadtrum.com)\n", __DATE__, __TIME__);
 }
@@ -95,7 +96,7 @@ static int32 enc_init(AVCHandle *mHandle, uint32 width, uint32 height, int32 for
 
 }
 
-static int32 enc_set_parameter(AVCHandle *mHandle, int format, int framerate, int cbr, int bitrate, int qp) {
+static int32 enc_set_parameter(AVCHandle *mHandle, int format, int framerate, int cbr, int bitrate, int qp, int prependSpsPps) {
     MMEncConfig encConfig;
     INFO("enc_set_parameter IN\n");
 
@@ -112,6 +113,7 @@ static int32 enc_set_parameter(AVCHandle *mHandle, int format, int framerate, in
     encConfig.QP_PVOP = qp;
     encConfig.vbv_buf_size = bitrate/2;
     encConfig.profileAndLevel = 1;
+    encConfig.PrependSPSPPSEnalbe = prependSpsPps;
     if ((*mH264EncSetConf)(mHandle, &encConfig) != MMENC_OK) {
         ERR ("mH264EncSetConf error.\n ");
         return -1;
@@ -139,12 +141,12 @@ static int enc_get_header(uint8* pheader, uint32* size) {
 #endif
 
 static int32 enc_encode_frame(AVCHandle *mHandle, uint8* py, uint32 py_phy, uint8* puv, uint32 puv_phy,
-                              uint8 *pframe, uint32 *size, uint8 **pyuv_rec, uint32 timestamp, int32 *type, int32 bs_remain_len = 0) {
+                              uint8 *pframe, uint32 *size, uint8 **pyuv_rec, uint32 timestamp, int32 *type, int32 needIVOP, int32 bs_remain_len = 0) {
     MMEncIn vid_in;
     MMEncOut vid_out;
 
     vid_in.time_stamp = timestamp;
-    vid_in.vopType = *type;
+    vid_in.needIVOP = needIVOP;
     vid_in.bs_remain_len = bs_remain_len;
     vid_in.channel_quality = 1;
     vid_in.p_src_y = py;
@@ -167,7 +169,9 @@ static int32 enc_encode_frame(AVCHandle *mHandle, uint8* py, uint32 py_phy, uint
 
 //	*pyuv_rec = vid_out.pRecYUV;
 
-    *type = vid_in.vopType;
+    *type = vid_out.vopType;
+
+    INFO("needIVOP: %d, type: %d\n", needIVOP, *type);
 
     return 0;
 }
@@ -277,7 +281,7 @@ static int32 openEncoder(const char* libName) {
 }
 
 int vsp_enc(char* filename_yuv, char* filename_bs, uint32 width, uint32 height, int32 format,
-            uint32 framerate, uint32 max_key_interval, int32 cbr, uint32 bitrate, uint32 qp, uint32 frames = 0) {
+            uint32 framerate, uint32 max_key_interval, int32 cbr, uint32 bitrate, uint32 qp, uint32 prependSpsPps, uint32 frames = 0) {
     // yuv file and bs file
     FILE *fp_yuv = NULL;
     FILE *fp_bs = NULL;
@@ -489,7 +493,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, uint32 width, uint32 height, 
     INFO("enc_init end\n");
 
     /* step 2 - set vsp  and get header */
-    if (enc_set_parameter(mHandle, format, framerate, cbr, bitrate, qp) < 0) {
+    if (enc_set_parameter(mHandle, format, framerate, cbr, bitrate, qp, prependSpsPps) < 0) {
         ERR("Failed to set parameter\n");
         goto err;
     }
@@ -524,13 +528,14 @@ int vsp_enc(char* filename_yuv, char* filename_bs, uint32 width, uint32 height, 
     while (!feof(fp_yuv)) {
         // judge vop type
         int type = 0;
+        int32 needIVOP = 0;
         if (max_key_interval == 0) {
             if (framenum_bs > 0) {
                 type = 1;
             }
         } else {
-            if ((framenum_bs % max_key_interval) != 0) {
-                type = 1;
+            if ((framenum_bs % max_key_interval) == 0) {
+                needIVOP = 1;
             }
         }
 
@@ -545,7 +550,7 @@ int vsp_enc(char* filename_yuv, char* filename_bs, uint32 width, uint32 height, 
 
         // encode yuv420sp to bitstream
         int64_t start = systemTime();
-        if (enc_encode_frame(mHandle, pyuv, pyuv_phy, pyuv+width*height, pyuv_phy+width*height, frame_buffer, &frame_size, &pyuv_rec, framenum_bs*1000/framerate, &type, bs_remain_len) < 0) {
+        if (enc_encode_frame(mHandle, pyuv, pyuv_phy, pyuv+width*height, pyuv_phy+width*height, frame_buffer, &frame_size, &pyuv_rec, framenum_bs*1000/framerate, &type, needIVOP, bs_remain_len) < 0) {
             ERR("Failed to encode frame\n");
             break;
         }
@@ -675,8 +680,9 @@ int main(int argc, char **argv) {
     uint32 max_key_interval = 30;
     int32 cbr = 1;
     uint32 bitrate = 512;
-    uint32 qp = 8;
+    uint32 qp = 28;
     uint32 frames = 0;
+    uint32 prependSpsPps = 0;
     int32 i;
 
     /* parse argument */
@@ -709,6 +715,8 @@ int main(int argc, char **argv) {
             qp = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-frames") == 0 && (i < argc-1)) {
             frames = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "-prependSpsPps") == 0 && (i < argc-1)) {
+            prependSpsPps = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-help") == 0) {
             usage();
             return 0;
@@ -728,6 +736,6 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    return vsp_enc(filename_yuv, filename_bs, width, height, format, framerate, max_key_interval, cbr, bitrate*1000, qp, frames);
+    return vsp_enc(filename_yuv, filename_bs, width, height, format, framerate, max_key_interval, cbr, bitrate*1000, qp, prependSpsPps, frames);
 }
 
