@@ -494,7 +494,6 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		WCND_LOGD("%s: store the cp2 version info", __FUNCTION__);
 		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_GET_VERSION, pWcndManger);
 		pWcndManger->store_cp2_versin_done = 1;
-		
 	}
 	else
 		wcnd_send_back_cmd_result(client_fd, "Not support cmd", 0);
