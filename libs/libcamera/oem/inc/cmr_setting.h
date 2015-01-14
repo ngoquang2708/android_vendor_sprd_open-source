@@ -87,6 +87,7 @@ struct setting_ctrl_flash_param {
 	struct setting_capture_mode_param    capture_mode;
 	cmr_uint                             is_active;
 	cmr_uint                             flash_type;
+	cmr_uint                             is_notify_isp;
 };
 
 struct setting_cmd_parameter {
