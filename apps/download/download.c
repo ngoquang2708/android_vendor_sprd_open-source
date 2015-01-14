@@ -903,6 +903,8 @@ int main(void)
 	signal(SIGKILL, download_signal_handler);
 	signal(SIGTERM, download_signal_handler);
 #endif
+	signal(SIGPIPE, SIG_IGN);
+
 	ret = socket_init(&pmanager);
 
 	download_state = DOWNLOAD_START;
