@@ -1954,6 +1954,11 @@ static int config_cp2_bootup(WcndManager *pWcndManger)
 {
 	if(!pWcndManger) return -1;
 
+	if(pWcndManger->is_eng_mode_only) return 0;
+
+	//if not use our own wcn, just return
+	if(!pWcndManger->is_wcn_modem_enabled) return 0;
+
 	// Do some CP2 config, if it is a user version
 	config_cp2_for_user_version(pWcndManger);
 
@@ -2091,7 +2096,8 @@ int main(int argc, char *argv[])
 
 
 	//first check if CP2 alive, then config cp2 at bootup
-	if(!pWcndManger->is_eng_mode_only && pWcndManger->state == WCND_STATE_CP2_STARTED)
+	if(!pWcndManger->is_eng_mode_only && pWcndManger->state == WCND_STATE_CP2_STARTED
+		&& pWcndManger->is_wcn_modem_enabled) //only our own wcn need to do this
 	{
 		int count = 2;
 		int need_config_cp2 = 0;
