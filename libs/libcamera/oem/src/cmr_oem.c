@@ -2496,9 +2496,6 @@ cmr_int camera_deinit_internal(cmr_handle  oem_handle)
 	cmr_int                        ret = CMR_CAMERA_SUCCESS;
 
 	CMR_PRINT_TIME;
-	camera_v4l2_deinit(oem_handle);
-
-	camera_sensor_deinit(oem_handle);
 
 	camera_snapshot_deinit(oem_handle);
 
@@ -2506,15 +2503,19 @@ cmr_int camera_deinit_internal(cmr_handle  oem_handle)
 
 	camera_isp_deinit(oem_handle);
 
-	camera_rotation_deinit(oem_handle);
-
-	camera_scaler_deinit(oem_handle);
-
 	camera_jpeg_deinit(oem_handle);
 
 	camera_focus_deinit(oem_handle);
 
 	camera_setting_deinit(oem_handle);
+
+	camera_v4l2_deinit(oem_handle);
+
+	camera_sensor_deinit(oem_handle);
+
+	camera_rotation_deinit(oem_handle);
+
+	camera_scaler_deinit(oem_handle);
 
 	camera_ipm_deinit(oem_handle);
 
