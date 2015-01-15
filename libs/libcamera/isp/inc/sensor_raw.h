@@ -52,6 +52,7 @@
 #define SENSOR_ENVI_NUM 0x8
 #define SENSOR_PIECEWISE_SAMPLE_NUM 0x10
 #define SENSOR_CT_INFO_NUM 0x8
+#define SENSOR_AWB_V01_VERIFY	0xff617762
 
 #define RAW_INFO_END_ID 0x71717567
 
@@ -290,6 +291,10 @@ struct sensor_awb_weight_of_count_func {
 	uint32_t base;
 };
 
+struct sensor_awb_ref_param {
+	uint16_t ct;
+	struct sensor_rgb_gain gain;
+};
 struct sensor_awb_param{
 	struct sensor_pos win_start;
 	struct sensor_size win_size;
@@ -318,6 +323,14 @@ struct sensor_awb_param{
 	uint8_t reserved3;
 	struct sensor_range value_range[SENSOR_ENVI_NUM];
 	uint32_t reserved;
+};
+
+struct sensor_awb_param_v01 {
+	uint32_t verify;
+	uint32_t version;
+	struct sensor_awb_weight_of_ct_func weight_of_ct_func[SENSOR_ENVI_NUM];
+	struct sensor_awb_ref_param ref_param[SENSOR_ENVI_NUM];
+	uint32_t reserved[256];
 };
 
 struct sensor_smart_light_envi_param {
@@ -677,7 +690,7 @@ struct sensor_lnc_param{
 	uint32_t reserved[31];
 };
 
-struct sensor_pre_wave_denoise_param{
+struct sensor_pre_wave_denoise_param {
 	uint8_t thrs0;
 	uint8_t thrs1;
 	uint8_t reserved1;
@@ -754,7 +767,8 @@ struct sensor_raw_tune_info{
 	struct sensor_af_multi_win_param af_multi_win;
 	struct sensor_pre_wave_denoise_param pre_wave_denoise;
 	struct sensor_nbpc_param nbpc;
-	uint32_t reserved[236];
+	struct sensor_awb_param_v01 awb_v01;
+	uint32_t reserved[256];
 };
 
 struct sensor_raw_fix_info{
