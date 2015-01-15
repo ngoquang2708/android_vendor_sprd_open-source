@@ -41,6 +41,8 @@ typedef struct process_info {
 int p_cnt = 0;
 int monkey_pid = -1;
 
+static void create_log_dir();
+
 /* read cmdline for process's name */
 static int read_cmdline(char *name,char *process_name)
 {
@@ -212,6 +214,9 @@ static void for_each_proc(p_info pinfo[])
 	p_info real_info;
 	int i;
 	int ret;
+
+	/** create DIR_LOG in case of script clear slog dir */
+	create_log_dir();
 
 	if( (procd = opendir("/proc"))== NULL){
 		ALOGE("cant access /proc\n");
