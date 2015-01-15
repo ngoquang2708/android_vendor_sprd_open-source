@@ -26,7 +26,7 @@
 
 #define isdigit(c) ((c) > '0' && (c) <= '9')
 #define MONITOR_CONFIG_FILE "/system/etc/monitor.conf"
-#define LOG_DIR "/data/sprd_res_monitor"
+#define LOG_DIR "/data/slog/sprd_res_monitor"
 #define USERPROC_PATH "/sys/kernel/debug/sprd_debug/mem/userprocmem"
 #define MONITOR_PROP "monitor.ctrl"
 
@@ -160,7 +160,7 @@ static void lsof(struct tm tm, int pid)
 				tm.tm_sec);
         print_header(fp);
         lsof_dumpinfo(pid,fp);
-	close(fp);
+	fclose(fp);
 } 
 
 /* Send signal && save logs */
@@ -174,20 +174,20 @@ static void handle_info(p_info pinfo, p_info real)
         ptm = localtime(&now);
 
 	if(pinfo.fd_cnt != 0 && pinfo.fd_cnt < real.fd_cnt) { 
-		ALOGI("Monitor detect FD leak\n");
+		ALOGI("Monitor detect FD leak(Process: %s): fd_cnt = %d\n", real.name, real.fd_cnt);
 		leak_info |= LS_FD_LEAK;
 		lsof(*ptm,real.pid);
 	}	
 
 	if(pinfo.thread_cnt != 0 && pinfo.thread_cnt < real.thread_cnt) { 
-		ALOGI("Monitor detect THREAD leak\n");
+		ALOGI("Monitor detect THREAD leak(Process: %s): thread_cnt = %d\n", real.name, real.thread_cnt);
 		leak_info |= LS_THREAD_LEAK;
 		sprintf(cmd,"ps -t|grep %d > %s/thread_%d_%02d%02d%02d.log",real.pid,LOG_DIR,real.pid,ptm->tm_hour,ptm->tm_min,ptm->tm_sec);
 		system(cmd);
 	}
 
 	if(pinfo.pss != 0 && pinfo.pss < real.pss) { 
-		ALOGI("Monitor detect PSS leak\n");
+		ALOGI("Monitor detect PSS leak(Process: %s): real.pss = %d\n", real.name, real.pss);
 		leak_info |= LS_PSS_LEAK;
 		kill(real.pid,SIGTSTP);
 	}
@@ -196,6 +196,7 @@ static void handle_info(p_info pinfo, p_info real)
 		if(monkey_pid > 0)
 			kill(monkey_pid,SIGKILL);
 	} else if(leak_info > 0) {
+		ALOGD("Now sprd_res_monitor will kill pid = %d(Process: %s)", real.pid, real.name);
 		kill(real.pid,SIGKILL);
 		if(monkey_pid > 0)
 			kill(monkey_pid,SIGKILL);
