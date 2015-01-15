@@ -600,9 +600,9 @@ int clear_all_log()
 #endif
 	slog_enable = SLOG_DISABLE;
 	sleep(4);
-	sprintf(cmd, "rm -r %s", INTERNAL_LOG_PATH);
+	sprintf(cmd, "rm -r %s/*", INTERNAL_LOG_PATH);
 	system(cmd);
-	sprintf(cmd, "rm -r %s", external_storage);
+	sprintf(cmd, "rm -r %s/*", external_storage);
 	system(cmd);
 	reload(0);
 	return 0;
