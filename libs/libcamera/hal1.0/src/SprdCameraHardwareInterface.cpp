@@ -556,6 +556,11 @@ void SprdCameraHardware::stopPreview()
 	}
 	Mutex::Autolock l(&mLock);
 
+	if (SPRD_IDLE == getPreviewState()) {
+		LOGI("camera no in preview, directly return");
+		return;
+	}
+
 	waitSetParamsOK();
 
 	if(NULL == mParameters.get("video-size-values")) {
