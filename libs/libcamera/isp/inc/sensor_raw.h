@@ -445,7 +445,7 @@ struct sensor_cfa_param{
 
 struct sensor_cmc_param{
 	uint16_t matrix[SENSOR_AWB_CALI_NUM][9];
-	uint16_t reserved;
+	uint16_t flash_index;
 };
 
 struct sensor_cce_parm{
@@ -673,7 +673,8 @@ struct sensor_version_info{
 
 struct sensor_lnc_param{
 	uint32_t start_index;
-	uint32_t reserved[32];
+	uint32_t flash_index;
+	uint32_t reserved[31];
 };
 
 struct sensor_pre_wave_denoise_param{

@@ -1904,10 +1904,14 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 	cmr_handle                     oem_handle = init_in->oem_handle;
 	enum cmr_flash_status          ctrl_flash_status = 0;
 	cmr_uint                       exif_flash = 0;
+	struct common_isp_cmd_param    isp_param;
+	cmr_uint                       is_notify = 0;
+	cmr_uint                       is_to_isp = 0;
+
 
 	capture_mode = (enum takepicture_mode)parm->ctrl_flash.capture_mode.capture_mode;
 	is_active = parm->ctrl_flash.is_active;
-
+	is_notify = parm->ctrl_flash.is_notify_isp;
 	image_format = local_param->sensor_static_info.image_format;
 
 	flash_mode = hal_param->flash_param.flash_mode;
@@ -1924,7 +1928,6 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 		if (setting_is_need_flash(cpt, parm)) {
 			if (IMG_DATA_TYPE_RAW == image_format) {
 				if(ctrl_flash_status == FLASH_HIGH_LIGHT) { //high flash
-					struct common_isp_cmd_param   isp_param;
 					isp_param.camera_id = parm->camera_id;
 					isp_param.cmd_value = 0;
 					ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EG,&isp_param);
@@ -1950,6 +1953,14 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 					cmr_setting_isp_alg_wait(oem_handle);
 				}
 
+				if (is_notify && init_in->setting_isp_ioctl) {
+					isp_param.camera_id = parm->camera_id;
+					isp_param.cmd_value = 1;
+					ret = (*init_in->setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH, &isp_param);
+					if (ret) {
+						CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+					}
+				}
 			}else {
 				setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 			}
@@ -1965,13 +1976,29 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 		/*disable*/
 		if (setting_is_need_flash(cpt, parm)) {
 			/*open flash*/
-			if ((uint32_t)CAMERA_FLASH_MODE_TORCH != flash_status) {
+			if ((uint32_t)CAMERA_FLASH_MODE_TORCH != flash_mode) {
 				setting_set_flashdevice(cpt, parm, FLASH_CLOSE_AFTER_OPEN);
+			}
+			if (IMG_DATA_TYPE_RAW == image_format) {
+				is_to_isp = 1;
 			}
 		} else if (((uint32_t)CAMERA_FLASH_MODE_AUTO == flash_mode)
 			&& ((uint32_t)FLASH_OPEN == *p_auto_flash_status)) {
 			setting_set_flashdevice(cpt, parm, FLASH_CLOSE_AFTER_OPEN);
 			*p_auto_flash_status = FLASH_CLOSE;
+
+			if (IMG_DATA_TYPE_RAW == image_format) {
+				is_to_isp = 1;
+			}
+		}
+		if (is_notify && is_to_isp
+			&& init_in->setting_isp_ioctl) {
+			isp_param.camera_id = parm->camera_id;
+			isp_param.cmd_value = 0;
+			ret = (*init_in->setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH, &isp_param);
+			if (ret) {
+				CMR_LOGE("ISP_CTRL_FLASH_EG error.");
+			}
 		}
 	}
 

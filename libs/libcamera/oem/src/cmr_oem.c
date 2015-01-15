@@ -1313,6 +1313,8 @@ cmr_int camera_focus_pre_proc(cmr_handle oem_handle)
 	struct setting_cmd_parameter    setting_param;
 	/*open flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
+		memset(&setting_param, 0, sizeof(setting_param));
+		setting_param.camera_id = cxt->camera_id;
 		setting_param.ctrl_flash.is_active = 1;
 		setting_param.ctrl_flash.flash_type = FLASH_OPEN;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
@@ -1331,6 +1333,8 @@ cmr_int camera_focus_post_proc(cmr_handle oem_handle)
 	struct setting_cmd_parameter    setting_param;
 	/*close flash*/
 	if (CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) {
+		memset(&setting_param, 0, sizeof(setting_param));
+		setting_param.camera_id = cxt->camera_id;
 		setting_param.ctrl_flash.is_active = 0;
 		setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
@@ -2812,6 +2816,8 @@ cmr_int camera_preview_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 		CMR_LOGI("flash_status=%ld", flash_status);
 		/*close flash*/
 		if ((CAMERA_ZSL_MODE != cxt->snp_cxt.snp_mode) && (FLASH_OPEN == flash_status)) {
+			memset(&setting_param, 0, sizeof(setting_param));
+			setting_param.camera_id = camera_id;
 			setting_param.ctrl_flash.is_active = 0;
 			setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 			ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
@@ -2844,9 +2850,11 @@ cmr_int camera_capture_pre_proc(cmr_handle oem_handle, cmr_u32 camera_id, cmr_u3
 
 	if ((CAMERA_ZSL_MODE != snp_cxt->snp_mode) && (!is_restart) && (1 != camera_get_hdr_flag(cxt))) {
 		/*open flash*/
+		memset(&setting_param, 0, sizeof(setting_param));
 		setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snp_mode;
 		setting_param.camera_id = camera_id;
 		setting_param.ctrl_flash.is_active = 1;
+		setting_param.ctrl_flash.is_notify_isp = 1;
 		setting_param.ctrl_flash.flash_type = FLASH_HIGH_LIGHT;
 		ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 		if (ret) {
@@ -2891,9 +2899,11 @@ cmr_int camera_capture_post_proc(cmr_handle oem_handle, cmr_u32 camera_id)
 	CMR_LOGI("start");
 	snp_cxt = &cxt->snp_cxt;
 	/*close flash*/
+	memset(&setting_param, 0, sizeof(setting_param));
 	setting_param.camera_id = camera_id;
 	setting_param.ctrl_flash.capture_mode.capture_mode= snp_cxt->snp_mode;
 	setting_param.ctrl_flash.is_active = 0;
+	setting_param.ctrl_flash.is_notify_isp = 1;
 	setting_param.ctrl_flash.flash_type = FLASH_CLOSE_AFTER_OPEN;
 	ret = cmr_setting_ioctl(cxt->setting_cxt.setting_handle, SETTING_CTRL_FLASH, &setting_param);
 	if (ret) {
@@ -3746,6 +3756,10 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		ptr_flag = 1;
 		isp_param_ptr = (void*)&param_ptr->fd_param;
 		CMR_LOGI("isp_cmd = %d, face_num = %d", isp_cmd, param_ptr->fd_param.face_num);
+		break;
+	case COM_ISP_SET_FLASH:
+		isp_cmd = ISP_CTRL_FLASH_CTRL;
+		isp_param = param_ptr->cmd_value;
 		break;
 	default:
 		CMR_LOGE("don't support cmd %ld", cmd_type);

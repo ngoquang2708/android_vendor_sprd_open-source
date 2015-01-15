@@ -647,6 +647,9 @@ struct isp_context{
 	uint32_t isp_callback_bypass;
 	struct isp_nbpc_param nbpc;
 
+	int32_t  is_flash_eb;
+	uint32_t flash_cmc_index;
+	uint32_t flash_lnc_index;
 };
 
 struct isp_system{

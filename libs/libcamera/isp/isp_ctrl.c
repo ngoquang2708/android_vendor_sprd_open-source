@@ -64,9 +64,10 @@
 #define ISP_PROC_EVT_CONTINUE_AF	(1 << 6)
 #define ISP_PROC_EVT_CONTINUE_AF_STOP	(1 << 7)
 #define ISP_PROC_EVT_STOP_HANDLER	(1 << 8)
+#define ISP_PROC_EVT_FLASH_ADJUST    (1 << 9)
 #define ISP_PROC_EVT_MASK	(uint32_t)(ISP_PROC_EVT_START | ISP_PROC_EVT_STOP | ISP_PROC_EVT_AE | ISP_PROC_EVT_AWB \
 					| ISP_PROC_EVT_AF | ISP_PROC_EVT_AF_STOP | ISP_PROC_EVT_CONTINUE_AF \
-					| ISP_PROC_EVT_CONTINUE_AF_STOP | ISP_PROC_EVT_STOP_HANDLER)
+					| ISP_PROC_EVT_CONTINUE_AF_STOP | ISP_PROC_EVT_STOP_HANDLER | ISP_PROC_EVT_FLASH_ADJUST)
 
 #define ISP_MONITOR_EVT_START	(1 << 0)
 #define ISP_MONITOR_EVT_STOP	ISP_INT_STOP
@@ -886,6 +887,7 @@ static int32_t _ispIoCtrlInit(uint32_t handler_id)
 	isp_context_ptr->wb_trim_conter=ISP_AWB_SKIP_FOREVER;
 	isp_context_ptr->awb_win_conter = ISP_AWB_SKIP_FOREVER;
 	isp_context_ptr->af.end_handler_flag = ISP_EB;
+	isp_context_ptr->is_flash_eb = 0;
 
 	return rtn;
 }
@@ -5448,6 +5450,8 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->flash.r_ratio=raw_tune_ptr->flash.r_ratio;
 	isp_context_ptr->flash.g_ratio=raw_tune_ptr->flash.g_ratio;
 	isp_context_ptr->flash.b_ratio=raw_tune_ptr->flash.b_ratio;
+	isp_context_ptr->flash_lnc_index = raw_tune_ptr->lnc.flash_index;
+	isp_context_ptr->flash_cmc_index = raw_tune_ptr->cmc.flash_index;
 
 	/*awb*/
 	isp_context_ptr->awbm.win_start.x=raw_tune_ptr->awb.win_start.x;
@@ -7679,6 +7683,32 @@ int32_t _ispRegIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
 	return rtn;
 }
 
+int32_t _ispFlashAdjustIOCtrl(uint32_t handler_id, void* param_ptr, int(*call_back)())
+{
+	int32_t rtn=ISP_SUCCESS;
+	struct isp_context* isp_context_ptr = ispGetAlgContext(handler_id);
+	int32_t is_flash_eb = 0;
+	ISP_MSG_INIT(isp_proc_msg);
+
+
+	if (0 != isp_context_ptr->flash_lnc_index
+		|| 0 != isp_context_ptr->flash_cmc_index) {
+		if (NULL != param_ptr) {
+			is_flash_eb = *(int32_t*)param_ptr;
+		}
+		isp_context_ptr->is_flash_eb = is_flash_eb;
+
+		ISP_LOG("is_flash_eb=%d", is_flash_eb);
+		isp_proc_msg.handler_id = handler_id;
+		isp_proc_msg.msg_type = ISP_PROC_EVT_FLASH_ADJUST;
+		rtn = _isp_proc_msg_post(&isp_proc_msg);
+	} else {
+		isp_context_ptr->is_flash_eb = 0;
+	}
+
+	return rtn;
+}
+
 struct isp_io_ctrl_fun _s_isp_io_ctrl_fun_tab[]=
 {
 	{ISP_CTRL_AWB_MODE,              _ispAwbModeIOCtrl},
@@ -7719,7 +7749,7 @@ struct isp_io_ctrl_fun _s_isp_io_ctrl_fun_tab[]=
 	{ISP_CTRL_SMART_AE,               _ispSmartAeIOCtrl},
 	{ISP_CTRL_CONTINUE_AF,          _ispContinueAfIOCtrl},
 	{ISP_CTRL_AF_DENOISE,            _ispAfDenoiseIOCtrl},
-	{ISP_CTRL_FLASH_CTRL,            PNULL}, // for tool cali
+	{ISP_CTRL_FLASH_CTRL,            _ispFlashAdjustIOCtrl},
 	{ISP_CTRL_AE_CTRL,                  _ispAeIOCtrl}, // for tool cali
 	{ISP_CTRL_AF_CTRL,                  _ispAfInfoIOCtrl}, // for tool cali
 	{ISP_CTRL_REG_CTRL,                _ispRegIOCtrl}, // for tool cali
@@ -8979,6 +9009,10 @@ static void *_isp_proc_routine(void *client_data)
 			case ISP_PROC_EVT_STOP_HANDLER:
 				rtn=_isp_StopCallbackHandler(handler_id);
 				break;
+			case ISP_PROC_EVT_FLASH_ADJUST:
+				isp_change_param(handler_id, ISP_CHANGE_LNC, &isp_context_ptr->lnc.cur_lnc);
+				isp_change_param(handler_id, ISP_CHANGE_CMC, &isp_context_ptr->cmc.cur_cmc);
+				break;
 			default:
 				break;
 		}
@@ -9711,6 +9745,21 @@ static int32_t _isp_change_lnc_param(uint32_t handler_id)
 		return ISP_ERROR;
 	}
 
+	if (isp_context->is_flash_eb && 0 != isp_context->flash_lnc_index
+		&& isp_context->flash_lnc_index < ISP_COLOR_TEMPRATURE_NUM) {
+		lnc_addr1 = lnc_tab[isp_context->flash_lnc_index].param_addr;
+		lnc_len = lnc_tab[isp_context->flash_lnc_index].len;
+		alpha = isp_context->ae.flash.effect;
+
+		rtn = _ispGetLncCurrectParam((void*)lnc_param->lnc_ptr, (void*)lnc_addr1,
+									lnc_len, alpha,	(void*)lnc_param->lnc_ptr);
+		if (ISP_SUCCESS != rtn) {
+			ISP_LOG("_ispGetLncCurrectParam failed = %d", rtn);
+			return ISP_ERROR;
+		}
+	}
+
+
 	if (dec_ratio > 0 && dec_ratio < SMART_MAX_LSC_DEC_RATIO) {
 		struct isp_lsc_dec_gain_param lsc_dec_param;
 		uint32_t img_width = isp_context->src.w;
@@ -9849,6 +9898,16 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 
 					isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb,
 								(uint16_t**)cmc_tab, adjust_param->alpha);
+
+					if (isp_context_ptr->is_flash_eb && 0 != isp_context_ptr->flash_cmc_index
+						&& isp_context_ptr->flash_cmc_index < ISP_CMC_NUM) {
+						cmc_tab[0] = (uint16_t*)isp_context_ptr->cmc_awb;
+						cmc_tab[1] = isp_context_ptr->cmc_tab[isp_context_ptr->flash_cmc_index];
+
+						isp_InterplateCMC(handler_id, (uint16_t*)isp_context_ptr->cmc_awb,
+								(uint16_t**)cmc_tab, isp_context_ptr->ae.flash.effect);
+					}
+
 					isp_SetCMC_By_Reduce(handler_id, (uint16_t*)(isp_context_ptr->cmc.matrix),\
 								(uint16_t*)isp_context_ptr->cmc_awb, isp_context_ptr->cmc_percent,
 								(uint8_t*)&is_update_cmc);
