@@ -571,8 +571,8 @@ SENSOR_INFO_T g_GC0310_MIPI_yuv_info =
 
 	s_GC0310_video_info,
 	3,								// skip frame num while change setting
-	48,								// horizontal view angle
-	48,								// vertical view angle
+	54,								// horizontal view angle
+	54,								// vertical view angle
 };
 
 static void GC0310_MIPI_WriteReg( uint8_t  subaddr, uint8_t data)

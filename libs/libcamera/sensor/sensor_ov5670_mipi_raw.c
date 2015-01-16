@@ -664,8 +664,8 @@ SENSOR_INFO_T g_ov5670_mipi_raw_info = {
 	{SENSOR_INTERFACE_TYPE_CSI2, 2, 10, 0},
 	s_ov5670_video_info,
 	3,			// skip frame num while change setting
-	48, 		// horizontal view angle
-	48, 		// vertical view angle
+	60, 		// horizontal view angle
+	60, 		// vertical view angle
 };
 
 LOCAL struct sensor_raw_info* Sensor_GetContext(void)
