@@ -26,12 +26,15 @@
 #define EUT_WIFI_TXSTOP  "TXSTOP"
 #define EUT_WIFI_RXPKTCNT "RXPKTCNT"
 
+#ifndef WIFI_DRIVER_MODULE_PATH
+#define WIFI_DRIVER_MODULE_PATH     "/system/lib/modules/bcmdhd.ko"
+#endif
 #ifndef WIFI_DRIVER_FW_PATH_PARAM
 #define WIFI_DRIVER_FW_PATH_PARAM	"/sys/module/bcmdhd/parameters/firmware_path"
 #endif
 #ifndef WIFI_DRIVER_FW_PATH_MFG
 //#define WIFI_DRIVER_FW_PATH_MFG "system/vendor/firmware/fw_bcmdhd_mfg.bin"
-#define WIFI_DRIVER_FW_PATH_MFG "/vendor/firmware/fw_bcmdhd_mfg.bin"
+#define WIFI_DRIVER_FW_PATH_MFG "/system/vendor/firmware/fw_bcmdhd_mfg.bin"
 #endif
 
 #ifdef STR(str)
@@ -314,30 +317,32 @@ static int wifi_cw_pc(char *result)
 static int start_wifieut_pc(char *result)
 {
     ALOGI("start_wifieut----------------------");
-    int error = system("ifconfig wlan0 down");
+    int error = system("insmod "STR(WIFI_DRIVER_MODULE_PATH)" firmware_path="STR(WIFI_DRIVER_FW_PATH_MFG)" nvram_path=/system/etc/wifi/bcmdhd.cal");
     if(error == -1 || error ==127){
-        ALOGE("=== start_wifieut test failed on cmd : ifconfig wlan0 down ===\n");
+        ALOGE("=== start_wifieut test failed on cmd : insmod "STR(WIFI_DRIVER_MODULE_PATH)" firmware_path="STR(WIFI_DRIVER_FW_PATH_MFG)" nvram_path=system/etc/wifi/bcmdhd.cal""====\n");
         sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
     }else{
-        //error = system("echo -n /system/etc/wifi/sdio-g-mfgtest.bin > /sys/module/bcmdhd/parameters/firmware_path");
-        error = system("echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM));
+        error = system("ifconfig wlan0 down");
         if(error == -1 || error ==127){
-            //ALOGE("=== start_wifieut test failed on cmd : echo -n \"/system/etc/sdio-g-mfgtest.bin\" > /sys/module/bcmdhd/parameters/firmware_path ===\n");
-            ALOGE("=== start_wifieut test failed on cmd : echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM)"\n");
+            ALOGE("=== start_wifieut test failed on cmd : ifconfig wlan0 down ===\n");
             sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
         }else{
-            error = system("ifconfig wlan0 up");
+            error = system("echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM));
             if(error == -1 || error ==127){
-                ALOGE("=== start_wifieut test failed on cmd : ifconfig wlan0 down ===\n");
+                ALOGE("=== start_wifieut test failed on cmd : echo -n "STR(WIFI_DRIVER_FW_PATH_MFG)" > "STR(WIFI_DRIVER_FW_PATH_PARAM)"===\n");
                 sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
             }else{
-                ALOGI("=== WIFIEUT test succeed! ===\n");
-                wifieut_state=1;
-                strcpy(result,EUT_WIFI_OK);
+                error = system("ifconfig wlan0 up");
+                if(error == -1 || error ==127){
+                    ALOGE("=== start_wifieut test failed on cmd : ifconfig wlan0 down ===\n");
+                    sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
+                }else{
+                    ALOGI("=== WIFIEUT test succeed! ===\n");
+                    wifieut_state=1;
+                    strcpy(result,EUT_WIFI_OK);
+                }
             }
         }
-
-
     }
     return 0;
 }
@@ -410,7 +415,7 @@ static int start_wifi_tx_pc(char *result)
                                 sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
                             }else{
                                 error = system(cmd_set_ratio);
-                                ALOGI("wl rate  %s %f",cmd_set_ratio,ratio_p);
+                                ALOGI("%s",cmd_set_ratio);
                                 if(error == -1 || error == 127){
                                     ALOGE("=== start_wifi_tx test failed on cmd : wl rate===\n");
                                     sprintf(result,"%s=%d",EUT_WIFI_ERROR,error);
@@ -423,12 +428,13 @@ static int start_wifi_tx_pc(char *result)
                                     }else{
 					sprintf(cmd_tx, "wl pkteng_start 00:11:22:33:44:55 tx %d %d %d" ,tx_pkt_ipg ,tx_pkt_len, tx_pkt_count);
                                         error=system(cmd_tx);
-                                        ALOGE("=== cmd_tx: %s\n",cmd_tx);
+                                        ALOGI("%s",cmd_tx);
                                         if(error == -1 || error == 127){
                                             ALOGE("=== start_wifi_tx test failed on cmd : wl pkteng_start 00:11:22:33:44:55 tx 100 1500 0===\n");
                                             sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
                                         }else{
                                             error = system("wl phy_forcecal 1");
+                                            ALOGI("wl phy_forcecal 1");
                                             if(error == -1 || error == 127){
                                                 ALOGE("=== start_wifi_tx test failed on cmd : wl phy_forcecal 1===\n");
                                                 sprintf(result,"%s%d",EUT_WIFI_ERROR,error);
