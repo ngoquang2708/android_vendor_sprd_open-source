@@ -1839,7 +1839,9 @@ RESTART:
         pthread_mutex_lock(&adev->device_lock);
 		pthread_mutex_lock(&adev->lock);
 		ALOGW("voice:VBC_CMD_HAL_OPEN, got lock");
-
+		if(adev->pcm_fm_dl) {
+			out_device_disable(adev,AUDIO_DEVICE_OUT_FM);
+		}
 		force_all_standby(adev);    /*should standby because MODE_IN_CALL is later than call_start*/
 		adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx);
 		if (!pcm_is_ready(adev->pcm_modem_dl)) {
@@ -1881,7 +1883,7 @@ RESTART:
 		voip_forbid(adev, true);
 		adev->call_start = 1;
 		pthread_mutex_unlock(&adev->lock);
-        pthread_mutex_unlock(&adev->device_lock);
+		pthread_mutex_unlock(&adev->device_lock);
 
 		ALOGD("i2s_ctl is %x",i2s_ctl);
 		parameters_head_t write_common_head = {0};
@@ -1922,7 +1924,13 @@ RESTART:
 		if(ret < 0){
 		    ALOGE("voice:VBC_CMD_RSP_CLOSE: write2 cmd VBC_CMD_RSP_CLOSE error(%d).",ret);
 		}
+		pthread_mutex_lock(&adev->lock);
 		adev->call_prestop = 0;
+		if(adev->fm_open){
+			adev->device_force_set = 1;
+			select_devices_signal_asyn(adev);
+		}
+		pthread_mutex_unlock(&adev->lock);
 		MY_TRACE("voice:VBC_CMD_RSP_CLOSE OUT.");
 	    }
 	    break;

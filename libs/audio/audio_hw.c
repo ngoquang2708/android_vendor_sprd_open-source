@@ -553,6 +553,7 @@ struct tiny_private_ctl private_ctl;
     T_AT_CMD  *at_cmd_vectors;
     voip_timer_t voip_timer; //for forbid voip
     pthread_mutex_t               device_lock;
+    int  device_force_set;
 };
 
 struct tiny_stream_out {
@@ -731,6 +732,8 @@ static dump_data_info_t dump_info;
 extern int get_snd_card_number(const char *card_name);
 int set_call_route(struct tiny_audio_device *adev, int device, int on);
 static void select_devices_signal(struct tiny_audio_device *adev);
+static void select_devices_signal_asyn(struct tiny_audio_device *adev);
+static int out_device_disable(struct tiny_audio_device *adev,int out_dev);
 static void do_select_devices(struct tiny_audio_device *adev);
 static int set_route_by_array(struct mixer *mixer, struct route_setting *route,unsigned int len);
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume);
@@ -1049,6 +1052,7 @@ static void do_select_devices_static(struct tiny_audio_device *adev)
     int cur_in = 0;
     int pre_out = 0;
     int pre_in = 0;
+    int force_set = 0;
     ALOGI("do_select_devices_static E");
     if(adev->voip_state) {
         ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
@@ -1080,6 +1084,8 @@ ret);
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
     pre_out = adev->prev_out_devices;
+    force_set = adev->device_force_set;
+    adev->device_force_set = 0;
     if(adev->fm_open){
         cur_out |= AUDIO_DEVICE_OUT_FM;
     }else{
@@ -1090,7 +1096,7 @@ ret);
 
 
     if (pre_out == cur_out
-            &&  pre_in == cur_in) {
+            &&  pre_in == cur_in && (!force_set)) {
         ALOGI("Not to change devices: OUT=0x%08x, IN=0x%08x",
                 pre_out, pre_in);
        goto out;
@@ -1265,6 +1271,24 @@ static void codec_lowpower_open(struct tiny_audio_device *adev,bool on){
     }
 }
 
+static int out_device_disable(struct tiny_audio_device *adev,int out_dev)
+{
+    int i = 0;
+    for (i = 0; i < adev->num_dev_cfgs; i++) {
+        if ((out_dev & adev->dev_cfgs[i].mask)
+            && !(adev->dev_cfgs[i].mask & AUDIO_DEVICE_BIT_IN)) {
+            set_route_by_array(adev->mixer, adev->dev_cfgs[i].off,
+            adev->dev_cfgs[i].off_len);
+            if(AUDIO_DEVICE_OUT_FM == adev->dev_cfgs[i].mask && adev->pcm_fm_dl != NULL) {
+                ALOGE("%s:close FM device",__func__);
+                pcm_close(adev->pcm_fm_dl);
+                adev->pcm_fm_dl= NULL;
+            }
+        }
+    }
+    return 0;
+}
+
 static void do_select_devices(struct tiny_audio_device *adev)
 {
     unsigned int i;
@@ -1274,6 +1298,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
     int pre_out = 0;
     int pre_in = 0;
     bool voip_route_ops = false;
+    int  force_set = 0;
     ALOGI("do_select_devices E");
     pthread_mutex_lock(&adev->lock);
     if(adev->voip_state) {
@@ -1309,6 +1334,8 @@ static void do_select_devices(struct tiny_audio_device *adev)
     cur_out = adev->out_devices;
     pre_in = adev->prev_in_devices;
     pre_out = adev->prev_out_devices;
+    force_set = adev->device_force_set;
+    adev->device_force_set = 0;
     if(adev->fm_open){
         cur_out |= AUDIO_DEVICE_OUT_FM;
     }else{
@@ -1320,7 +1347,7 @@ static void do_select_devices(struct tiny_audio_device *adev)
     pthread_mutex_unlock(&adev->lock);
 
     if (pre_out == cur_out
-            &&  pre_in == cur_in) {
+            &&  pre_in == cur_in && (!force_set)) {
         ALOGI("Not to change devices: OUT=0x%08x, IN=0x%08x",
                 pre_out, pre_in);
        goto out;
@@ -1450,6 +1477,13 @@ static void select_devices_signal(struct tiny_audio_device *adev)
         do_select_devices_static(adev);} else
         sem_post(&adev->routing_mgr.device_switch_sem);
     ALOGI("select_devices_signal finished.");
+}
+
+static void select_devices_signal_asyn(struct tiny_audio_device *adev)
+{
+    ALOGE("select_devices_signal_asyn starting... adev->out_devices 0x%x adev->in_devices 0x%x",adev->out_devices,adev->in_devices);
+    sem_post(&adev->routing_mgr.device_switch_sem);
+    ALOGI("select_devices_signal_asyn finished.");
 }
 
 static int start_call(struct tiny_audio_device *adev)
@@ -1611,6 +1645,9 @@ error:
 static int open_voip_codec_pcm(struct tiny_audio_device *adev)
 {
     ALOGD("voip:%s in adev->voip_state is %x", __func__, adev->voip_state);
+       if(adev->pcm_fm_dl) {
+           out_device_disable(adev,AUDIO_DEVICE_OUT_FM);
+       }
        if(!adev->pcm_modem_dl) {
            adev->pcm_modem_dl= pcm_open(s_tinycard, PORT_MODEM, PCM_OUT, &pcm_config_vx_voip);
            if (!pcm_is_ready(adev->pcm_modem_dl)) {
@@ -1655,6 +1692,10 @@ static int  close_voip_codec_pcm(struct tiny_audio_device *adev)
        if(adev->pcm_modem_dl) {
            pcm_close(adev->pcm_modem_dl);
            adev->pcm_modem_dl = NULL;
+       }
+       if(adev->fm_open){
+           adev->device_force_set = 1;
+           select_devices_signal_asyn(adev);
        }
     }
     ALOGD("voip:close voip codec pcm out");
