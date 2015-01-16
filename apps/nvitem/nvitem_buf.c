@@ -200,7 +200,7 @@ BOOLEAN ChkNVBufEcc(uint8 * buf, uint32 size, uint16 checksum)
 //----------------------------
 void writeData(uint32 id,  uint32 start, uint32 bytesLen, uint8* buf)
 {
-	NVITEM_PRINT("writeData enter\n");
+	NVITEM_PRINT("writeData enter start=0x%x, byteslen=%d\n", start, bytesLen);
 	if(bytesLen)
 	{
         //check fromchannel-buf ECC before every writing to it
