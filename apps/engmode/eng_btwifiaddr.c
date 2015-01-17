@@ -73,7 +73,7 @@ static void mac_rand(char *btmac, char *wifimac)
 {
     int fd=0,i, j, k;
     off_t pos;
-    char buf[80];
+    char buf[80] = {0};
     char *ptr;
     int ret = 0;
     unsigned int randseed;
@@ -93,6 +93,7 @@ static void mac_rand(char *btmac, char *wifimac)
         if(fd>=0) {
 	    ret = read(fd, buf, sizeof(buf)-1);
 	    if(ret > 0){
+		buf[ret] = '\0';
 		ALOGD("%s: read %s %s",__FUNCTION__, MAC_RAND_FILE, buf);
 		ptr = strchr(buf, ';');
 		if(ptr != NULL) {
@@ -171,6 +172,7 @@ static int write_mac2file(char *wifimac, char *btmac)
         close(fd);
     }else{
         ret = -1;
+        return ret;
     }
 
     //bt mac
@@ -264,7 +266,7 @@ int eng_btwifimac_read(char* mac, MacType type)
         {
             ret = -1;
         }
-
+        mac[rcount] = '\0';
         ENG_LOG("%s: mac=%s",__FUNCTION__, mac);
         close(fd);
     }else{

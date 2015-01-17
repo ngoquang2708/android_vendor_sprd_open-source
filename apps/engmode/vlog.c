@@ -204,7 +204,7 @@ out:
 
 void *eng_vdiag_rthread(void *x)
 {
-    int ser_fd, modem_fd,test_fd = -1;
+    int ser_fd, modem_fd,test_fd;
     int r_cnt, w_cnt, offset;
     int retry_num = 0;
     int dumpmemlen = 0;
@@ -288,8 +288,7 @@ void *eng_vdiag_rthread(void *x)
 	    // printf dump memory len
 	    dump_mem_len_print(r_cnt, &dumpmemlen);
 	    if( 0 == eng_write_usb(diag_data, r_cnt, ser_fd)){
-		close(modem_fd);
-		return 0;
+		    goto out;
 	    }
 	}
     }

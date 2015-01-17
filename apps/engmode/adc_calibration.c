@@ -22,7 +22,7 @@
 #define ADC_CAL_TYPE_FILE "/sys/class/power_supply/sprdfgu/fgu_cal_from_type"
 
 static int vbus_charger_disconnect = 0;
-static int get_other_ch_adc_value(int channel, int scale);
+static unsigned int get_other_ch_adc_value(int channel, int scale);
 
 int	disconnect_vbus_charger(void)
 {
@@ -122,6 +122,7 @@ void	initialize_ctrl_file(void)
 void	disable_calibration(void)
 {
     CALI_INFO_DATA_T        cali_info;
+    int ret = 0;
 
     int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
@@ -129,7 +130,12 @@ void	disable_calibration(void)
         ENG_LOG("%s open %s failed\n",__func__,CALI_CTRL_FILE_PATH);
         return;
     }
-    read(fd,&cali_info,sizeof(cali_info));
+    ret = read(fd,&cali_info,sizeof(cali_info));
+    if(ret <= 0){
+        ENG_LOG(" %s read failed...\n",__func__);
+        close(fd);
+        return;
+    }
     cali_info.magic = CALI_MAGIC;
     cali_info.cali_flag = CALI_COMP;
 
@@ -141,6 +147,7 @@ void	disable_calibration(void)
 void	enable_calibration(void)
 {
     CALI_INFO_DATA_T        cali_info;
+    int ret = 0;
 
     int fd = open(CALI_CTRL_FILE_PATH,O_RDWR);
 
@@ -149,7 +156,12 @@ void	enable_calibration(void)
         return;
     }
 
-    read(fd,&cali_info,sizeof(cali_info));
+    ret = read(fd,&cali_info,sizeof(cali_info));
+    if(ret <= 0){
+        ENG_LOG(" %s read failed...\n",__func__);
+        close(fd);
+        return;
+    }
     cali_info.magic = 0xFFFFFFFF;
     cali_info.cali_flag = 0xFFFFFFFF;
 
@@ -160,6 +172,7 @@ void	enable_calibration(void)
 
 void adc_get_result(char* chan)
 {
+    int ret =0;
     int fd = open(ADC_CHAN_FILE_PATH,O_RDWR);
     if(fd < 0){
         ENG_LOG("%s open %s failed\n",__func__,ADC_CHAN_FILE_PATH);
@@ -168,7 +181,12 @@ void adc_get_result(char* chan)
     write(fd, chan, strlen(chan));
     lseek(fd,SEEK_SET,0);
     memset(chan, 0, 8);
-    read(fd, chan , 8);
+    ret = read(fd, chan , 8);
+    if(ret <= 0){
+        ENG_LOG(" %s read failed...\n",__func__);
+        close(fd);
+        return;
+    }
     close(fd);
 }
 static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
@@ -210,12 +228,12 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 
     return ret;
 }
-static int get_battery_voltage(void)
+static unsigned  int get_battery_voltage(void)
 {
     int fd = -1;
     int read_len = 0;
     char buffer[16]={0};
-    int value =0;
+    unsigned int value =0;
 
     fd = open(BATTERY_VOL_PATH,O_RDONLY);
 
@@ -227,13 +245,13 @@ static int get_battery_voltage(void)
     }
     return value;
 }
-static int get_battery_adc_value(void)
+static unsigned  int get_battery_adc_value(void)
 {
     int fd = -1;
     int read_len = 0;
     char buffer[16]={0};
     char *endptr;
-    int  value = 0;
+    unsigned int  value = 0;
 
     fd = open(BATTERY_ADC_PATH,O_RDONLY);
 
@@ -245,7 +263,7 @@ static int get_battery_adc_value(void)
     }
     return value;
 }
-static int get_fgu_current_adc(int *value)
+static int get_fgu_current_adc(unsigned int *value)
 {
     int fd = -1;
     int read_len = 0;
@@ -267,7 +285,7 @@ static int get_fgu_current_adc(int *value)
     return read_len;
 }
 
-static int get_fgu_vol_adc(int *value)
+static int get_fgu_vol_adc(unsigned int *value)
 {
     int fd = -1;
     int read_len = 0;
@@ -291,7 +309,7 @@ static int get_fgu_vol_adc(int *value)
 
 static void ap_get_fgu_current_adc(MSG_AP_ADC_CNF *pMsgADC)
 {
-    int	current_adc = 0;
+    unsigned int	current_adc = 0;
     int      read_len = 0;
 
     read_len = get_fgu_current_adc(&current_adc);
@@ -306,7 +324,7 @@ static void ap_get_fgu_current_adc(MSG_AP_ADC_CNF *pMsgADC)
 
 static void ap_get_fgu_vol_adc(MSG_AP_ADC_CNF *pMsgADC)
 {
-    int	vol_adc = 0;
+    unsigned int	vol_adc = 0;
     int      read_len = 0;
     read_len = get_fgu_vol_adc(&vol_adc);
 
@@ -319,7 +337,7 @@ static void ap_get_fgu_vol_adc(MSG_AP_ADC_CNF *pMsgADC)
     }
 }
 
-static int get_fgu_current_real(int *value)
+static int get_fgu_current_real(unsigned int *value)
 {
     int fd = -1;
     int read_len = 0;
@@ -365,7 +383,7 @@ static int get_fgu_vol_real(int *value)
 
 static void ap_get_fgu_current_real(MSG_AP_ADC_CNF *pMsgADC)
 {
-    int	real_current = 0;
+    unsigned int	real_current = 0;
     int      read_len = 0;
 
     read_len = get_fgu_current_real(&real_current);
@@ -380,7 +398,7 @@ static void ap_get_fgu_current_real(MSG_AP_ADC_CNF *pMsgADC)
 
 static void ap_get_fgu_vol_real(MSG_AP_ADC_CNF *pMsgADC)
 {
-    int	real_vol = 0;
+    unsigned int	real_vol = 0;
     int      read_len = 0;
     read_len = get_fgu_vol_real(&real_vol);
 
@@ -510,11 +528,11 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
     return 0;
 }
 
-static int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
+static unsigned int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
 {
     int channel = pMsgADC->ap_adc_req.parameters[0] - 1;
-    int adc_value = 0;
-    int adc_result = 0;
+    unsigned int adc_value = 0;
+    unsigned int adc_result = 0;
     int i = 0;
 
     pMsgADC->diag_ap_cnf.status = 0;
@@ -559,10 +577,10 @@ static int ap_adc_load(MSG_AP_ADC_CNF *pMsgADC)
 
     return ret;
 }
-static int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
+static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
 {
-    int	voltage = 0;
-    int  	*para=NULL;
+    unsigned int	voltage = 0;
+    unsigned int  	*para=NULL;
     int 	i = 0;
     MSG_HEAD_T *Msg = (MSG_HEAD_T *)pMsgADC;
 
@@ -570,15 +588,15 @@ static int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
         voltage += get_battery_voltage();
     voltage >>= 4;
 
-    para = (int *)(Msg +1);
+    para = (unsigned int *)(Msg +1);
     //        *para = (voltage/10);
     if (voltage > MAX_VOLTAGE)
     {
-        *para = (PRECISION_10MV | ((voltage/10) & MAX_VOLTAGE));
+        *para =  (unsigned int )(PRECISION_10MV | ((voltage/10) & MAX_VOLTAGE));
     }
     else
     {
-        *para = (PRECISION_1MV | (voltage & MAX_VOLTAGE));
+        *para =  (unsigned int )(PRECISION_1MV | (voltage & MAX_VOLTAGE));
     }
     pMsgADC->msg_head.len = 12;
 
@@ -714,10 +732,10 @@ int eng_battery_calibration(char *data,int count,char *out_msg,int out_len)
     return ret;
 }
 
-static int get_other_ch_adc_value(int channel, int scale)
+static unsigned int get_other_ch_adc_value(int channel, int scale)
 {
-   int adc_value  = 0;
-   int adc_result = 0;
+   unsigned int adc_value  = 0;
+   unsigned int adc_result = 0;
    int i = 0, len = 0, fd = -1;
    char data_buf[16] = {0};
    char ch[8] = {0};
