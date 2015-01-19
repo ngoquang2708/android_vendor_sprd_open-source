@@ -15,8 +15,19 @@ fi
 TOPDIR=`pwd`
 
 PLATFORM=$1
-BOARD=$2
+PROJECT=$2
 OUTDIR=`readlink -f $3`
+BOARD=""
+if [ -d "$TOPDIR/device/sprd" ]; then
+  cd $TOPDIR/device/sprd
+  BOARD=$(find . -type f -name "$PROJECT.mk"|grep -Po "/(.*)/"|sed 's/\///g')
+  if [ -z "$BOARD" ]; then
+    echo "The board $BOARD does not exist."
+    exit 1
+  fi
+fi
+  
+
 
 cd $TOPDIR/out/target/product
 mkdir -p $PLATFORM
