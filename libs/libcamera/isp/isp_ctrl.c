@@ -5589,21 +5589,6 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 		}
 	}
 
-	/*weight of ct function*/
-	{
-		struct isp_awb_weight_of_ct_func *dst_func = &isp_context_ptr->awb.weight_of_ct_func[ISP_AWB_ENVI_INDOOR];
-		struct sensor_awb_weight_of_ct_func *src_func = &raw_tune_ptr->awb.weight_of_ct_func;
-
-		dst_func->weight_func.num = src_func->weight_func.num;
-		for (i=0; i<ISP_AWB_PIECEWISE_SAMPLE_NUM; i++) {
-			dst_func->weight_func.samples[i].x = src_func->weight_func.samples[i].x;
-			dst_func->weight_func.samples[i].y = src_func->weight_func.samples[i].y;
-		}
-
-		/*do not enable weight of ct function now*/
-		memset(isp_context_ptr->awb.weight_of_ct_func, 0,
-				sizeof(isp_context_ptr->awb.weight_of_ct_func));
-	}
 
 	/*value range*/
 	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
@@ -5612,13 +5597,46 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	}
 
 	/*ref gain*/
-	for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+	if (SENSOR_AWB_V01_VERIFY == raw_tune_ptr->awb_v01.verify) {
 
-		isp_context_ptr->awb.ref_param[i].enable= ISP_EB;
-		isp_context_ptr->awb.ref_param[i].ct = raw_tune_ptr->awb.init_ct;
-		isp_context_ptr->awb.ref_param[i].gain.r = raw_tune_ptr->awb.init_gain.r;
-		isp_context_ptr->awb.ref_param[i].gain.g = raw_tune_ptr->awb.init_gain.g;
-		isp_context_ptr->awb.ref_param[i].gain.b = raw_tune_ptr->awb.init_gain.b;
+		for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+			isp_context_ptr->awb.ref_param[i].enable= ISP_EB;
+			isp_context_ptr->awb.ref_param[i].ct = raw_tune_ptr->awb_v01.ref_param[i].ct;
+			isp_context_ptr->awb.ref_param[i].gain.r = raw_tune_ptr->awb_v01.ref_param[i].gain.r_gain;
+			isp_context_ptr->awb.ref_param[i].gain.g = raw_tune_ptr->awb_v01.ref_param[i].gain.g_gain;
+			isp_context_ptr->awb.ref_param[i].gain.b = raw_tune_ptr->awb_v01.ref_param[i].gain.b_gain;
+
+			isp_context_ptr->awb.weight_of_ct_func[i].weight_func.num = raw_tune_ptr->awb_v01.weight_of_ct_func[i].weight_func.num;
+			for (j=0; j<ISP_AWB_PIECEWISE_SAMPLE_NUM; j++) {
+				isp_context_ptr->awb.weight_of_ct_func[i].weight_func.samples[j].x = raw_tune_ptr->awb_v01.weight_of_ct_func[i].weight_func.samples[j].x;
+				isp_context_ptr->awb.weight_of_ct_func[i].weight_func.samples[j].y = raw_tune_ptr->awb_v01.weight_of_ct_func[i].weight_func.samples[j].y;
+			}
+		}
+	} else {
+
+		for (i=0; i<ISP_AWB_ENVI_NUM; i++) {
+			isp_context_ptr->awb.ref_param[i].enable= ISP_EB;
+			isp_context_ptr->awb.ref_param[i].ct = raw_tune_ptr->awb.init_ct;
+			isp_context_ptr->awb.ref_param[i].gain.r = raw_tune_ptr->awb.init_gain.r;
+			isp_context_ptr->awb.ref_param[i].gain.g = raw_tune_ptr->awb.init_gain.g;
+			isp_context_ptr->awb.ref_param[i].gain.b = raw_tune_ptr->awb.init_gain.b;
+		}
+		/*weight of ct function*/
+		{
+			struct isp_awb_weight_of_ct_func *dst_func = &isp_context_ptr->awb.weight_of_ct_func[ISP_AWB_ENVI_INDOOR];
+			struct sensor_awb_weight_of_ct_func *src_func = &raw_tune_ptr->awb.weight_of_ct_func;
+
+			dst_func->weight_func.num = src_func->weight_func.num;
+			for (i=0; i<ISP_AWB_PIECEWISE_SAMPLE_NUM; i++) {
+				dst_func->weight_func.samples[i].x = src_func->weight_func.samples[i].x;
+				dst_func->weight_func.samples[i].y = src_func->weight_func.samples[i].y;
+			}
+
+			/*do not enable weight of ct function now*/
+			memset(isp_context_ptr->awb.weight_of_ct_func, 0,
+				sizeof(isp_context_ptr->awb.weight_of_ct_func));
+		}
+
 	}
 
 	isp_context_ptr->awb.weight_of_pos_lut.weight = raw_fix_ptr->awb_weight.addr;
