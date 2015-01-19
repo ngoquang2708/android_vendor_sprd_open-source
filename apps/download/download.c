@@ -561,6 +561,14 @@ int download_entry(void)
 	char value[PROPERTY_VALUE_MAX] = {'\0'};
 
 	DOWNLOAD_LOGD("download_entry\n");
+
+	if(pmanager.flag_stop){
+		download_power_on(0);
+		ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
+		pmanager.flag_stop = 0;
+		return 0;
+	}
+
 reboot_device:
 	download_power_on(0);
 	download_power_on(1);
@@ -591,19 +599,7 @@ reboot_device:
     close(uart_fd);
 
     download_fd = open(DLOADER_PATH, O_RDWR);
-    if(download_fd < 0){
-		DOWNLOAD_LOGD("open dloader device failed retry ......\n");
-        for(;;) {
-            download_fd = open(DLOADER_PATH, O_RDWR);
-            if(download_fd>=0) {
-                break;
-            } else {
-                DOWNLOAD_LOGD("open dloader device failed retry ......\n");
-                sleep(1);
-            }
-        }
-    }
-	DOWNLOAD_LOGD("open dloader device successfully ... \n");
+    DOWNLOAD_LOGD("open dloader device successfully ... \n");
 
 	if(pmanager.flag_dump){
 		/*send dump cmmd and do dump*/
@@ -652,12 +648,12 @@ reboot_device:
 		ret = send_notify_to_client(&pmanager, WCN_RESP_START_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_start = 0;
 	}
-
+	#if 0
 	if(pmanager.flag_connect){
 		ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
-		//pmanager.flag_connect = 0;
+		pmanager.flag_connect = 0;
 	}
-
+	#endif
     return 0;
 }
 
@@ -811,27 +807,26 @@ static void *wcn_exception_listen(void *arg)
 		}
 
 		for(i = 0; i < WCN_MAX_CLIENT_NUM; i++){
-			if(FD_ISSET(pmanager->client_fds[i].sockfd, &readset)){
+			if((pmanager->client_fds[i].sockfd >= 0) && FD_ISSET(pmanager->client_fds[i].sockfd, &readset)){
 				if(pmanager->client_fds[i].type == WCN_SOCKET_TYPE_WCND){
 					ret = read(pmanager->client_fds[i].sockfd, buffer, SOCKET_BUFFER_SIZE);
 					//DOWNLOAD_LOGD("sockfd get %d %d bytes %s", pmanager->client_fds[i].sockfd,ret, buffer);
-					#if 0
 					if(strcmp(buffer,WCN_CMD_REBOOT_WCN) == 0){
 						pmanager->flag_reboot = 1;
-						download_state = DOWNLOAD_START;
+						//download_state = DOWNLOAD_START;
 						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_DUMP_WCN) == 0){
 						pmanager->flag_dump = 1;
-						download_state = DOWNLOAD_START;
+						//download_state = DOWNLOAD_START;
 						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_START_WCN) == 0){
 						pmanager->flag_start = 1;
-						download_state = DOWNLOAD_START;
+						//download_state = DOWNLOAD_START;
 						download_entry();
 					}else if(strcmp(buffer,WCN_CMD_STOP_WCN) == 0){
 						pmanager->flag_stop = 1;
+						download_entry();
 					}
-					#endif
 				}
 			}
 		}
@@ -920,13 +915,13 @@ int main(void)
 			//	pmanager.flag_connect = 0;
 			//}
 		}
-		#endif
 
 		if(pmanager.flag_stop){
 			download_power_on(0);
 			ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
 			pmanager.flag_stop = 0;
 		}
+		#endif
 		sleep(1);
 	}while(1);
 
