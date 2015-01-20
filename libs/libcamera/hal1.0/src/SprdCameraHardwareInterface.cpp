@@ -1863,7 +1863,7 @@ status_t SprdCameraHardware::setParameters(const SprdCameraParameters& params)
 	message.msg_type = CMR_EVT_SW_MON_SET_PARA;
 	message.data = NULL;
 
-	ret = cmr_msg_post((cmr_handle)mSwitchMonitorMsgQueHandle, &message, 1);
+	ret = cmr_msg_post((cmr_handle)mSwitchMonitorMsgQueHandle, &message, 0);
 	if (ret) {
 		LOGE("setParameters Fail to send one msg!");
 		mParamLock.unlock();
@@ -6415,7 +6415,7 @@ int SprdCameraHardware::switch_monitor_thread_init(void *p_data)
 		obj->mSwitchMonitorInited = 1;
 		message.msg_type = CMR_EVT_SW_MON_INIT;
 		message.data = NULL;
-		ret = cmr_msg_post((cmr_handle)obj->mSwitchMonitorMsgQueHandle, &message, 1);
+		ret = cmr_msg_post((cmr_handle)obj->mSwitchMonitorMsgQueHandle, &message, 0);
 		if (ret) {
 			LOGE("switch_monitor_thread_init Fail to send one msg!");
 		}
@@ -6434,7 +6434,7 @@ int SprdCameraHardware::switch_monitor_thread_deinit(void *p_data)
 
 	if (obj->mSwitchMonitorInited) {
 		message.msg_type = CMR_EVT_SW_MON_EXIT;
-		ret = cmr_msg_post((cmr_handle)obj->mSwitchMonitorMsgQueHandle, &message, 1);
+		ret = cmr_msg_post((cmr_handle)obj->mSwitchMonitorMsgQueHandle, &message, 0);
 		if (ret) {
 			LOGE("Fail to send one msg to camera callback thread");
 		}

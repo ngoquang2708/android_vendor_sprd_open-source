@@ -101,7 +101,7 @@ cmr_int cmr_msg_queue_create(cmr_u32 count, cmr_handle *queue_handle)
 		msg_cur++;
 	}
 	*queue_handle = (cmr_handle)msg_cxt;
-	CMR_LOGD("queue_handle 0x%lx", (cmr_uint)*queue_handle);
+	CMR_LOGV("queue_handle 0x%lx", (cmr_uint)*queue_handle);
 
 	return CMR_MSG_SUCCESS;
 }
@@ -228,7 +228,7 @@ cmr_int cmr_msg_timedget(cmr_handle queue_handle, struct cmr_msg *message)
 			sem_post(&msg_cur->sem);
 		}
 	}
-	CMR_LOGD("queue_handle 0x%lx, msg type 0x%x num %d cnt %d",
+	CMR_LOGV("queue_handle 0x%lx, msg type 0x%x num %d cnt %d",
 		(cmr_uint)queue_handle,
 		message->msg_type,
 		msg_cxt->msg_number,
@@ -301,7 +301,7 @@ cmr_int cmr_msg_queue_destroy(cmr_handle queue_handle)
 {
 	struct cmr_msg_cxt       *msg_cxt = (struct cmr_msg_cxt*)queue_handle;
 
-	CMR_LOGD("queue_handle 0x%lx", (cmr_uint)queue_handle);
+	CMR_LOGV("queue_handle 0x%lx", (cmr_uint)queue_handle);
 
 	if (0 == queue_handle) {
 		CMR_LOGE("zero queue_handle");
@@ -339,7 +339,7 @@ static void *cmr_common_routine(void *client_data)
 	thread = (struct cmr_thread*)client_data;
 	msg_cxt = (struct cmr_msg_cxt*)thread->queue_handle;
 	while (1) {
-		ret = cmr_msg_get(thread->queue_handle, &message, 1);
+		ret = cmr_msg_get(thread->queue_handle, &message, 0);
 		if (ret) {
 			CMR_LOGE("Message queue destroied");
 			break;
@@ -425,7 +425,7 @@ cmr_int cmr_thread_create(cmr_handle *thread_handle, cmr_u32 queue_length, msg_p
 	}
 	message.msg_type = CMR_THREAD_INIT_EVT;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-	rtn = cmr_msg_post(thread->queue_handle, &message, 1);
+	rtn = cmr_msg_post(thread->queue_handle, &message, 0);
 	if (rtn) {
 		CMR_LOGE("Fail to send INIT message to thread");
 		free((void*)thread->queue_handle);
@@ -466,7 +466,7 @@ cmr_int cmr_thread_msg_send(cmr_handle thread_handle, struct cmr_msg *message)
 	}
 
 	thread = (struct cmr_thread*)thread_handle;
-	ret = cmr_msg_post(thread->queue_handle, message, 1);
+	ret = cmr_msg_post(thread->queue_handle, message, 0);
 	return ret;
 }
 
