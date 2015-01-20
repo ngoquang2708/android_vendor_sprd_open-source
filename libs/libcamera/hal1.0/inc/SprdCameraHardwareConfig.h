@@ -60,6 +60,14 @@ enum {
 	CAMERA_ZOOM_6X,
 	CAMERA_ZOOM_7X,
 	CAMERA_ZOOM_8X,
+	CAMERA_ZOOM_9X,
+	CAMERA_ZOOM_10X,
+	CAMERA_ZOOM_11X,
+	CAMERA_ZOOM_12X,
+	CAMERA_ZOOM_13X,
+	CAMERA_ZOOM_14X,
+	CAMERA_ZOOM_15X,
+	CAMERA_ZOOM_16X,
 	CAMERA_ZOOM_MAX
 };
 
@@ -249,7 +257,15 @@ const struct str_map zoom_map[] = {
 	{"5",               CAMERA_ZOOM_6X},
 	{"6",               CAMERA_ZOOM_7X},
 	{"7",               CAMERA_ZOOM_8X},
-	{"8",               CAMERA_ZOOM_MAX},
+	{"8",               CAMERA_ZOOM_9X},
+	{"9",               CAMERA_ZOOM_10X},
+	{"10",              CAMERA_ZOOM_11X},
+	{"11",              CAMERA_ZOOM_12X},
+	{"12",              CAMERA_ZOOM_13X},
+	{"13",              CAMERA_ZOOM_14X},
+	{"14",              CAMERA_ZOOM_15X},
+	{"15",              CAMERA_ZOOM_16X},
+	{"16",              CAMERA_ZOOM_MAX},
 	{NULL,              0}
 };
 
@@ -430,8 +446,8 @@ struct config_element sprd_front_camera_hardware_config[] = {
 	{"cameraid", "front_camera"},
 	{"zoom-supported", "true"},
 	{"smooth-zoom-supported", "false"},
-	{"max-zoom", "7"},
-	{"zoom-ratios", "100,120,140,170,200,230,260,300"},
+	{"max-zoom", "15"},
+	{"zoom-ratios", "100,110,120,130,140,150,160,170,180,190,200,220,240,260,280,300"},
 	//{"zoom", "100"},
 	{"zoom", "0"},
 	{"brightness-supported", "true"},
@@ -555,8 +571,8 @@ struct config_element sprd_back_camera_hardware_config[] = {
 	{"cameraid","back_camera"},
 	{"zoom-supported", "true"},
 	{"smooth-zoom-supported", "false"},
-	{"max-zoom", "7"},
-	{"zoom-ratios", "100,120,140,170,200,230,260,300"},
+	{"max-zoom", "15"},
+	{"zoom-ratios", "100,110,120,130,140,150,160,170,180,190,200,220,240,260,280,300"},
 	{"zoom", "0"},
 	{"brightness-supported", "true"},
 	{"smooth-brightness-supported", "false"},

@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include "cmr_common.h"
 
-#define CAMERA_ZOOM_LEVEL_MAX                 8
+#define CAMERA_ZOOM_LEVEL_MAX                 16
 #define ZOOM_STEP(x)                          (((x) - (x) / CMR_ZOOM_FACTOR) / CAMERA_ZOOM_LEVEL_MAX)
 
 struct CAMERA_TAKEPIC_STAT cap_stp[CMR_STEP_MAX] ={
