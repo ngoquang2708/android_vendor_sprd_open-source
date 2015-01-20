@@ -277,10 +277,7 @@ void *eng_vdiag_wthread(void *x)
 
     while(1) {
         memset(log_data, 0, sizeof(log_data));
-        r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE/2);
-        if (r_cnt == DATA_BUF_SIZE/2) {
-            r_cnt += read(ser_fd, log_data+r_cnt, DATA_BUF_SIZE/2);
-        }
+        r_cnt = read(ser_fd, log_data, DATA_BUF_SIZE);
 
         if (r_cnt <= 0) {
             ENG_LOG("eng_vdiag read log data error  from serial: %s\n", strerror(errno));
@@ -372,19 +369,23 @@ void *eng_vdiag_wthread(void *x)
         }
 
         offset = 0; // reset offset value
-        do {
-            w_cnt = write(modem_fd, backup_data_buf + offset, backup_data_len);
-            if (w_cnt < 0) {
-                ENG_LOG("eng_vdiag no log data write:%d ,%s\n", w_cnt, strerror(errno));
-                continue;
-            }else{
-                backup_data_len -= w_cnt;
-                offset += w_cnt;
-            }
-            ENG_LOG("eng_vdiag: rcnt:%d, w_cnt:%d, offset:%d\n", r_cnt, w_cnt, offset);
-        }while(backup_data_len >0);
+        if(modem_fd > 0){
+            do {
+                w_cnt = write(modem_fd, backup_data_buf + offset, backup_data_len);
+                if (w_cnt < 0) {
+                    ENG_LOG("eng_vdiag no log data write:%d ,%s\n", w_cnt, strerror(errno));
+                    continue;
+                }else{
+                    backup_data_len -= w_cnt;
+                    offset += w_cnt;
+                }
+                ENG_LOG("eng_vdiag: rcnt:%d, w_cnt:%d, offset:%d\n", r_cnt, w_cnt, offset);
+            }while(backup_data_len >0);
+        }
     }
-    close(modem_fd);
+
+    if(modem_fd > 0)
+        close(modem_fd);
     close(ser_fd);
     return 0;
 }

@@ -288,7 +288,7 @@ int eng_linuxcmd_keypad(char *req, char *rsp)
 
 int eng_linuxcmd_vbat(char *req, char *rsp)
 {
-    int fd, ret = 1;
+    int fd, ret = 1, len = 0;
     int voltage;
     float vol;
     char buffer[16];
@@ -301,12 +301,15 @@ int eng_linuxcmd_vbat(char *req, char *rsp)
 
     if(ret==1) {
         memset(buffer, 0, sizeof(buffer));
-        read(fd, buffer, sizeof(buffer));
-        voltage = atoi(buffer);
-        ENG_LOG("%s: buffer=%s; voltage=%d\n",__FUNCTION__, buffer, voltage);
-        vol = ((float) voltage) * 0.001;
-        sprintf(rsp, "%.3g%s%s%s", vol, ENG_STREND, SPRDENG_OK, ENG_STREND);
-
+        len = read(fd, buffer, sizeof(buffer));
+        if(len > 0){
+            voltage = atoi(buffer);
+            ENG_LOG("%s: buffer=%s; voltage=%d\n",__FUNCTION__, buffer, voltage);
+            vol = ((float) voltage) * 0.001;
+            sprintf(rsp, "%.3g%s%s%s", vol, ENG_STREND, SPRDENG_OK, ENG_STREND);
+        }else {
+            sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
+        }
     } else {
         sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
     }
@@ -325,6 +328,7 @@ int eng_linuxcmd_batttest(char *req,char *rsp)
 	float vol=0;
 	int fd, voltage=0,ret=1,chg_sts=0;
 	char buffer[16];
+	int len = 0;
 
 	req = strchr(req, '=');
 	req++;
@@ -343,11 +347,18 @@ int eng_linuxcmd_batttest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			voltage = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; voltage=%d\n",__FUNCTION__, buffer, voltage);
-			vol = ((float) voltage) * 0.001/1000;
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+				voltage = atoi(buffer);
+				ENG_LOG("%s: buffer=%s; voltage=%d\n",__FUNCTION__, buffer, voltage);
+				vol = ((float) voltage) * 0.001/1000;
 			} else {
+				sprintf(rsp, "+BATTTEST:1,2 NA");
+				if(fd >= 0)
+				    close(fd);
+				return 0;
+			}
+		} else {
 			sprintf(rsp, "+BATTTEST:1,2 NA");
 			if(fd >= 0)
 				close(fd);
@@ -453,7 +464,7 @@ int eng_linuxcmd_bttest(char *req, char *rsp)
 
 int eng_linuxcmd_setbtaddr(char *req, char *rsp)
 {
-    char address[64];
+    char address[64] = {0};
     char wifiaddr[32] = {0};
     char *ptr=NULL;
     char *endptr=NULL;
@@ -567,7 +578,7 @@ int eng_linuxcmd_getwifiaddr(char *req, char *rsp)
 
 int eng_linuxcmd_setwifiaddr(char *req, char *rsp)
 {
-    char address[64];
+    char address[64] = {0};
     char btaddr[32] = {0};
     char *ptr=NULL;
     char *endptr=NULL;
@@ -614,6 +625,7 @@ int eng_linuxcmd_getich(char *req, char *rsp)
     int fd, ret = 1;
     int current;
     char buffer[16];
+    int len = 0;
 
     fd = open(ENG_CURRENT, O_RDONLY);
     if(fd < 0){
@@ -623,11 +635,15 @@ int eng_linuxcmd_getich(char *req, char *rsp)
 
     if(ret==1) {
         memset(buffer, 0, sizeof(buffer));
-        read(fd, buffer, sizeof(buffer));
-        current = atoi(buffer);
-        ENG_LOG("%s: buffer=%s; current=%d\n",__FUNCTION__, buffer, current);
-        sprintf(rsp, "%dmA%s%s%s", current, ENG_STREND, SPRDENG_OK, ENG_STREND);
-
+        len = read(fd, buffer, sizeof(buffer));
+        if(len > 0){
+            current = atoi(buffer);
+            ENG_LOG("%s: buffer=%s; current=%d\n",__FUNCTION__, buffer, current);
+            sprintf(rsp, "%dmA%s%s%s", current, ENG_STREND, SPRDENG_OK, ENG_STREND);
+        }else {
+            ENG_LOG("%s: ERROR\n",__FUNCTION__);
+            sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
+        }
     } else {
         ENG_LOG("%s: ERROR\n",__FUNCTION__);
         sprintf(rsp, "%s%s", SPRDENG_ERROR, ENG_STREND);
@@ -923,7 +939,7 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 	char ptr_parm2[1];
 	char ptr_parm3[1];
 	float vol=0;
-	int fd, temp_val=0,ret=1;
+	int fd, temp_val=0,ret=1,len=0;
 	char buffer[16];
 
 	req = strchr(req, '=');
@@ -996,9 +1012,16 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			temp_val = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+				temp_val = atoi(buffer);
+				ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			} else {
+				sprintf(rsp, "+CME Error:NG");
+				if(fd >= 0)
+				    close(fd);
+				return 0;
+			}
 		} else {
 			sprintf(rsp, "+CME Error:NG");
 			if(fd >= 0)

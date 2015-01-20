@@ -1959,7 +1959,7 @@ write_again:
             if (ret <= 0) {
                 fd = get_ser_diag_fd();
                 restart_gser(&fd, get_ser_diag_path());
-                update_ser_diag_fd();
+                update_ser_diag_fd(fd);
                 if((++retry_time) <= 10){
                     goto write_again; // try 10 times.
                 }
