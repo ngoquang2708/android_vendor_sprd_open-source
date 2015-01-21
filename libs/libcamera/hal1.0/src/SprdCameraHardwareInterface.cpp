@@ -3472,7 +3472,7 @@ int SprdCameraHardware::releasePreviewFrame()
 		uint32_t free_buffer_id = 0xFFFFFFFF;
 		buffer_handle_t *buffer_handle;
 
-		LOGI("Before dequeue");
+		LOGI("releasePreviewFrame In");
 		if (0 != mPreviewWindow->dequeue_buffer(mPreviewWindow, &buffer_handle, &stride)) {
 			ret = -1;
 			LOGE("releasePreviewFrame fail: Could not dequeue gralloc buffer!\n");
@@ -3488,7 +3488,6 @@ int SprdCameraHardware::releasePreviewFrame()
 				} else {
 					mGraphBufferCount[free_buffer_id] = 0;
 				}
-				LOGI("After dequeue");
 				LOGV("releasePreviewFrame 0x%x count %d", free_buffer_id, mGraphBufferCount[free_buffer_id]);
 				if (0 == mGraphBufferCount[free_buffer_id]) {
 					if (CMR_CAMERA_SUCCESS != camera_release_frame(mCameraHandle, CAMERA_PREVIEW_DATA, free_buffer_id)) {
@@ -4893,7 +4892,6 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 			releasePreviewFrame();
 
-			LOGI("displayOneFrame, before lock");
 			if (mIsDvPreview) {
 				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
 							0, 0, SIZE_ALIGN(width), SIZE_ALIGN(height), &vaddr);
@@ -4901,14 +4899,14 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 				ret = mGrallocHal->lock(mGrallocHal, *mPreviewBufferHandle[id], GRALLOC_USAGE_SW_WRITE_OFTEN,
 							0, 0, width, height, &vaddr);
 			}
-			LOGI("displayOneFrame, after lock");
+
 			if (0 != ret || NULL == vaddr) {
 				LOGE("%s: failed to lock buffer ret=%d, vaddr=0x%x id=%d",
 					__func__,ret,(int)vaddr, id);
 				return false;
 			}
 			mGrallocHal->unlock(mGrallocHal, *mPreviewBufferHandle[id]);
-			LOGI("displayOneFrame, after unlock");
+			LOGI("displayOneFrame, enqueue_buffer.");
 			if (0 != mPreviewWindow->enqueue_buffer(mPreviewWindow, mPreviewBufferHandle[id])) {
 				LOGE("displayOneFrame fail: Could not enqueue gralloc buffer!\n");
 
@@ -4918,11 +4916,9 @@ bool SprdCameraHardware::displayOneFrame(uint32_t width, uint32_t height, uint32
 
 				return false;
 			}
-			LOGI("displayOneFrame, enqueue");
 			mGraphBufCntLock.lock();
 			mGraphBufferCount[id]++;
 			mGraphBufCntLock.unlock();
-			LOGI("displayOneFrame, return");
 			mCancelBufferEb[id] = 0;
 		}
 	}

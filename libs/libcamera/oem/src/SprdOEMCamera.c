@@ -69,7 +69,7 @@ cmr_int camera_release_frame(cmr_handle camera_handle, enum camera_data data, cm
 		ret = -CMR_CAMERA_INVALID_PARAM;
 		goto exit;
 	}
-	CMR_LOGI("release data % index %ld", data, index);
+	CMR_LOGI("release data %d index %ld", data, index);
 	switch (data) {
 	case CAMERA_PREVIEW_DATA:
 	case CAMERA_VIDEO_DATA:
