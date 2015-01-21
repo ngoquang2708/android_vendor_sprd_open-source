@@ -289,6 +289,8 @@ static int handle_reply_get_reg_data(char *result_buf)
         strcat(result_buf, buf);
     }
 
+	fclose(fp);
+
     ALOGD("ADL leaving %s(), result_buf = %s", __func__, result_buf);
     return 0;
 }

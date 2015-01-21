@@ -62,7 +62,7 @@ static long rxmfrmocast_next;
 static long rxdfrmocast;
 
 char cmd_set_ratio[20];
-char counter_respon[COUNTER_BUF_SIZE];
+char counter_respon[COUNTER_BUF_SIZE+1];
 
 
 
@@ -719,13 +719,20 @@ static long parse_packcount(char * filename)
     }
     char *p=strstr(counter_respon,"pktengrxdmcast");
     if(p != NULL){
-        char *q=strstr(p," ");
-        char *s=strstr(q,"txmpdu_sgi");
-		ALOGE("=== open file parse_packcount entry s= %s\n",s);
-        len= s-q-1;
-       memcpy(packcount,q+1,len);
-      // return 0 ;
-        return atol(packcount);
+        char *q = strstr(p, " ");
+        if (NULL != q)
+        {
+			char *s = strstr(q, "txmpdu_sgi");
+			if (NULL != s)
+			{
+				ALOGE("=== open file parse_packcount entry s= %s\n",s);
+				len= s-q-1;
+				memcpy(packcount,q+1,len);
+				// return 0 ;
+				return atol(packcount);
+			}
+        }
+
     }else{
     ALOGE("=== dirty file  %s error===\n",filename);
         return 0;
