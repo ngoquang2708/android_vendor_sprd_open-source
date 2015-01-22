@@ -823,9 +823,7 @@ void Sensor_SetExportInfo(struct sensor_drv_context *sensor_cxt)
 			exp_info_ptr->sensor_image_type = SENSOR_IMAGE_FORMAT_JPEG;
 		}
 
-		if ((PNULL != resolution_info_ptr->sensor_reg_tab_ptr)
-		    || ((0x00 != resolution_info_ptr->width)
-			&& (0x00 != resolution_info_ptr->width))) {
+		if (PNULL != resolution_info_ptr->sensor_reg_tab_ptr) {
 			exp_info_ptr->sensor_mode_info[i].mode = i;
 			exp_info_ptr->sensor_mode_info[i].width =
 			    resolution_info_ptr->width;
