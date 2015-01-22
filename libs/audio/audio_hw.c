@@ -146,6 +146,8 @@ volatile int log_level = 4;
 #define PORT_FM 4
 #define PORT_MM_C 2
 
+#define FMMODE 4 //AUDIO PARAM mode index for FM
+
 
 /* constraint imposed by VBC: all period sizes must be multiples of 160 */
 #define VBC_BASE_FRAME_COUNT 160
@@ -673,8 +675,9 @@ static const dev_names_para_t dev_names_digitalfm[] = {
     //{ "linein-capture"},
 };
 #define FM_VOLUME_MAX 16
-static const int fm_volume_tbl[FM_VOLUME_MAX] = {
+int fm_volume_tbl[FM_VOLUME_MAX] = {
     99,47,45,43,41,39,37,35,33,31,29,27,25,23,21,20};
+
 static dev_names_para_t *dev_names = NULL;
 
 /* this enum is for use-case type processed in cp side */
@@ -4730,6 +4733,44 @@ static void aud_vb_effect_stop(struct tiny_audio_device *adev)
     }
 }
 
+
+
+int load_fm_volume(struct tiny_audio_device *adev)
+{
+    AUDIO_TOTAL_T * aud_params_ptr = NULL;
+    char * dev_name = NULL;
+
+    if (adev_get_audiomodenum4eng() != 5) {
+        ALOGW("the FM mode audiopara is not available, use default param");
+        return -1;
+    }
+
+    aud_params_ptr = &adev->audio_para[FMMODE];
+
+    AUDIO_NV_ARM_MODE_STRUCT_T *ptArmModeStruct = NULL;
+
+    ptArmModeStruct = (AUDIO_NV_ARM_MODE_STRUCT_T *)(&(aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct));
+
+    int i;
+    for (i = 0; i < FM_VOLUME_MAX; i++) {
+        fm_volume_tbl[i] = ptArmModeStruct->reserve[i];
+        ALOGD("fm volume index %d vol = %d", i, fm_volume_tbl[i]);
+    }
+    return 0;
+}
+
+int apply_fm_volume(struct tiny_audio_device *adev) {
+    uint32_t gain = 0;
+    load_fm_volume(adev);
+    if (adev->fm_open) {
+        int val = adev->fm_volume;
+        gain |=fm_volume_tbl[val];
+        gain |=fm_volume_tbl[val]<<16;
+        SetAudio_gain_fmradio(adev,gain);
+    }
+    return 0;
+}
+
 /*
  * Read audproc params from nv and config.
  * return value: TRUE:success, FALSE:failed
@@ -5591,6 +5632,9 @@ static void *audiopara_tuning_thread_entry(void * param)
                 result = read(fd_aud,&ram_from_eng,sizeof(AUDIO_TOTAL_T));
                 ALOGE("%s read audio FIFO result %d,mode_index:%d,size:%d\n",__FUNCTION__,result,mode_index,sizeof(AUDIO_TOTAL_T));
                 adev->audio_para[mode_index] = ram_from_eng;
+                if (mode_index == FMMODE) {
+                    apply_fm_volume(adev);
+                }
             }
             //2、mandatory to set PGA GAIN
             if(ENG_PGA_OPS & ops_bit) {
@@ -5930,6 +5974,8 @@ this is used to loopback test.
         ALOGE("Unable to create voice_command_manager_create, aborting.");
         goto ERROR;
     }
+
+    load_fm_volume(adev);
 
 
     return 0;
