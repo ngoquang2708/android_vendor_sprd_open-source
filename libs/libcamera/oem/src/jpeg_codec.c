@@ -786,7 +786,6 @@ static void _dec_next_post(cmr_handle handle, struct jpeg_codec_context  *jconte
 static cmr_int _jpeg_stop(cmr_handle jpeg_handle)
 {
 	struct jpeg_codec_context                *jcontext = (struct jpeg_codec_context*)jpeg_handle;
-	CMR_LOGV("jpeg:start");
 
 	if (!jcontext || !jcontext->active_handle) {
 		CMR_LOGE("jpeg:jpeg is deinited");

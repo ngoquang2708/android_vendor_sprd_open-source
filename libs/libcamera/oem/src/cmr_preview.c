@@ -1261,10 +1261,10 @@ cmr_int prev_assist_thread_proc(struct cmr_msg *message, void *p_data)
 		frm_data    = (struct frm_info*)inter_param->param3;
 		if (handle->frame_active == 1) {
 			ret = prev_receive_data(handle, camera_id, evt, frm_data);
-			if (frm_data) {
-				free(frm_data);
-				frm_data = NULL;
-			}
+		}
+		if (frm_data) {
+			free(frm_data);
+			frm_data = NULL;
 		}
 		break;
 	case PREV_EVT_FD_CTRL:
