@@ -61,7 +61,7 @@ struct uvde_start_param {
 	proc_func                             func_ptr;
 	proc_cb                               cb;
 	cmr_handle                            caller_handle;
-	void                                 *param;
+	struct uv_denoise_param0              param;
 };
 
 static cmr_int uvde_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm_open_out *out,
@@ -566,7 +566,7 @@ static cmr_int uvde_start(cmr_handle class_handle, cmr_uint thread_id, proc_func
 	memset(uvde_start_ptr, 0, sizeof(struct uvde_start_param));
 	cur_handle_ptr = &uvde_handle->thread_handles[thread_id];
 	uvde_start_ptr->func_ptr = func_ptr;
-	uvde_start_ptr->param = param;
+	cmr_copy((void*)&uvde_start_ptr->param, param, sizeof(struct uv_denoise_param0));
 	uvde_start_ptr->cb = cb;
 	message.sync_flag = CMR_MSG_SYNC_NONE;
 	message.msg_type   = CMR_EVT_UVDE_START;
@@ -605,10 +605,10 @@ static cmr_int uvde_thread_proc(struct cmr_msg *message, void *private_data)
 
 	case CMR_EVT_UVDE_START:
 		uvde_start_ptr = (struct uvde_start_param *)message->data;
-		if (uvde_start_ptr->func_ptr && (NULL != uvde_start_ptr->param)) {
-			ret = uvde_start_ptr->func_ptr(uvde_start_ptr->param);
+		if (uvde_start_ptr->func_ptr) {
+			ret = uvde_start_ptr->func_ptr(&(uvde_start_ptr->param));
 			if (uvde_start_ptr->cb) {
-				uvde_start_ptr->cb(class_handle, (void *)uvde_start_ptr->param);
+				uvde_start_ptr->cb(class_handle, (void *)&(uvde_start_ptr->param));
 			}
 		}
 		break;
