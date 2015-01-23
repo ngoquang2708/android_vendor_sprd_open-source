@@ -423,7 +423,6 @@ static void *control_audio_loop_process(void *arg){
         if(count < 0){
             LOG_E("read data err");
             empty_command_pipe(pipe_fd);
-            free(data);
             continue;
         }
         LOG_E("data:%s ",data);
