@@ -19,6 +19,22 @@
 
 #define FILE_PATH_HAL_INFO  "data/local/media/audio_hw_info.txt"
 #define FILE_PATH_HELP  "data/local/media/help.txt"
+#define FILE_PATH_CP_RAM_PRE  "data/local/media/voicepoint"
+#define MAX_FILE_LENGTH 255
+#define FILE_PATH_CP_ENABLE_POINT_INFO  "data/local/media/cppoint.txt"
+
+#define CP_DUMP_DATA "dumpvoice"
+#define CP_DUMP_POINTSIZE "getfilledsize"
+#define CP_DUMP_DURATION "setduration"
+#define CP_DUMP_POINT_GETDUARTION "getduration"//"whichpoint"
+#define CP_DUMP_POINT_ENABLE "setpointon"
+#define CP_DUMP_POINT_DISABLE "setpointoff"
+#define CP_DUMP_POINT_DISPLAY "getpoint"//"whichpoint"
+#define CP_MAX_POINT 30
+#define CP_MAX_DURATION 60
+#define NB_SAMPLE_RATE 8000
+#define VOICE_FRAME_SIZE 2
+
 pthread_t control_audio_loop;
 
 static void *control_audio_loop_process(void *arg);
@@ -210,7 +226,7 @@ size_t dump_to_buffer(out_dump_t *out_dump, void* buf, size_t size)
  ***********************************************/
 int dump_to_file(FILE *out_fd ,void* buffer, size_t size)
 {
-    LOG_I("%s ",__func__);
+    LOG_D("%s ,%p,%p,%d",__func__,out_fd,buffer,size);
     int ret = 0;
     if(out_fd){
         ret = fwrite((uint8_t *)buffer,size, 1, out_fd);
@@ -375,6 +391,345 @@ void dump_hal_info(struct tiny_audio_device * adev){
 
     fclose(fd);
     return;
+}
+
+int sendandrecv(char* pipe,char*cmdstring,struct timeval* timeout,void* buffer,int size){
+    int ret = 0;
+    int max_fd_dump;
+    int pipe_dump;
+    int left = size;
+    LOG_D("%s : %s",__func__,cmdstring);
+    pipe_dump = open(pipe, O_RDWR);
+    if(pipe_dump < 0){
+        LOG_E("%s, open %s error!! ",__func__,pipe);
+        return -1;
+    } else {
+        if((fcntl(pipe_dump,F_SETFL,O_NONBLOCK))<0)
+        {
+            ALOGD("cat set pipe_dump nonblock error!");
+        }
+        ret = write_nonblock(pipe_dump,cmdstring,strlen(cmdstring));
+        if(ret < 0){
+            LOG_E("wrrite noblock error ");
+            goto exit;
+        }
+        fd_set fds_read_dump;
+        max_fd_dump = pipe_dump + 1;
+        while(left > 0) {
+            FD_ZERO(&fds_read_dump);
+            FD_SET(pipe_dump,&fds_read_dump);
+            ret = select(max_fd_dump,&fds_read_dump,NULL,NULL,timeout);
+            if(ret < 0){
+                LOG_E("cat select error ");
+                goto exit;
+            }
+            if(FD_ISSET(pipe_dump,&fds_read_dump) <= 0 ){
+                ret = -1;
+                LOG_E("cat SELECT OK BUT NO fd is set");
+                goto exit;
+            }
+            ret = read_noblock_l(pipe_dump,buffer,size);
+            if(ret < 0){
+                LOG_E("cat read data err");
+                goto exit;
+            }
+            left -= ret;
+        }
+    }
+exit:
+    close(pipe_dump);
+    return ret;
+}
+
+
+static int set_duration(char* pipe,char* value){
+    char *curindx = NULL;
+    char *preindx = NULL;
+    char data[32]= {0};
+    int duration = 0;//s
+    int rsp = 0;
+    int ret,result;
+    struct timeval timeout = {5,0};
+    if(strlen(value) != 0){
+        duration = atoi(value);
+        if( 0 < duration && duration <= CP_MAX_DURATION){
+            sprintf(data,"%s=%d",CP_DUMP_DURATION,duration);
+            ret = sendandrecv(pipe,data,&timeout,&rsp,sizeof(int));
+            LOG_D("set duration %d sucess. ",rsp);
+        } else {
+            LOG_D("Because of ARM precious resource.the required duration %d bigger than the MAX duration %d must be fail.",duration,CP_MAX_DURATION);
+        }
+    }
+exit:
+    return ret;
+}
+static int string2intarray(char* string,int* pointarray,int arraysize){
+    char *firstnum= NULL;
+    char *preindx = NULL;
+    char *curindx = NULL;
+    bool isnum = 0;
+    char substr[32] = {0};
+    int ret = 0;
+    int point = 0;
+    int pointnum = 0;
+    if(string == NULL || pointarray == NULL){
+        LOG_D(" NULL pointer.",__func__);
+        return -1;
+    }
+    LOG_D("%s command:%s.",__func__,string);
+    if(strlen(string) != 0){
+        firstnum = string;
+        while((firstnum - string) < sizeof(string)){
+            char c = *firstnum;
+            if(c <='9'&& c >= '0'){
+                isnum = 1;
+                break;
+            }
+            firstnum++;
+        }
+        preindx = firstnum;
+        LOG_V("parse from:%d character",(firstnum-string)+1);
+
+        while((preindx != NULL) && isnum) {
+            bool illegal_zero = 0;
+            curindx = strstr(preindx,",");
+            if(curindx == NULL){
+                memcpy(substr,preindx,strlen(preindx));
+            } else {
+                memcpy(substr,preindx,curindx-preindx);
+            }
+            point = atoi(substr);
+            if( (point==0) && (*substr !='0')){
+                illegal_zero = 1 ;// atio("abcd") return 0
+            }
+
+            if(point >=0 && point < arraysize && !illegal_zero){
+                LOG_D("set point:%s,int:%d",substr,point);
+                pointarray[pointnum] = point;
+                pointnum++;
+            } else {
+                if(illegal_zero){
+                    LOG_D("fail: illegal string %s ",substr);
+                } else {
+                    LOG_D("fail: the point %s: reach the MAX NUM supported in cp",substr);
+                }
+            }
+            preindx = (curindx == NULL) ? NULL:(curindx+1);
+            memset(substr,0x00,sizeof(substr));
+        }
+    }
+    return pointnum;
+}
+
+static int set_point(char *pipe,char* value,int enable)
+{
+    char *curindx = NULL;
+    char *preindx = NULL;
+    char *firstnum= NULL;
+    bool isnum = 0;
+    char cmd[32] = {0};
+    int ret = 0;
+    int point = 0;
+    int pointarray[32] = {0};
+    int pointnum = 0;
+    struct timeval timeout = {5,0};
+    int cur = 0;
+    int rsp = 0;
+    pointnum  = string2intarray(value,pointarray,sizeof(pointarray));
+    if(pointnum <= 0){
+        return -1;
+    }
+    while(cur < pointnum){
+        sprintf(cmd,"%s=%d",(enable ? CP_DUMP_POINT_ENABLE : CP_DUMP_POINT_DISABLE),pointarray[cur]);
+        ret = sendandrecv(pipe,cmd,&timeout,&rsp,sizeof(int));
+        if(ret < 0){
+            LOG_E("read data err");
+            return -1;
+        }
+        LOG_D("%s point:%d suceess.",(enable ? "enable":"disable"),rsp);
+        cur++;
+    }
+    return ret;
+}
+static int get_duration(char *pipe){
+    int ret = 0;
+    struct timeval timeout = {5,0};
+    int duration = 0;
+    ret = sendandrecv(pipe,CP_DUMP_POINT_GETDUARTION,&timeout,&duration,sizeof(int));
+    if(ret  < -1){
+        return -1;
+    }
+    LOG_D("%s,ret:%d,duration:0x%x",__func__,ret,duration);
+    return duration;
+}
+
+static int get_enablepoint(char *pipe){
+    int ret = 0;
+    struct timeval timeout = {5,0};
+    int enablebits = 0;
+    ret = sendandrecv(pipe,CP_DUMP_POINT_DISPLAY,&timeout,&enablebits,sizeof(int));
+    if(ret  < -1){
+        return -1;
+    }
+    LOG_D("%s,ret:%d,enablebits:0x%x",__func__,ret,enablebits);
+    return enablebits;
+}
+
+static  int get_pointinfo(char *pipe,bool savefile) {
+    LOG_V("cat cppoint start f");
+    int ret,result;
+    struct timeval timeout = {5,0};
+    char buffer[32] = {0};
+    FILE* dump_fd = NULL;
+    int enablebits = 0;
+    int temp = 0;
+    int point[CP_MAX_POINT]= {0};
+    int tzero = 0;
+    int duration = 0;
+    int indx = 0;
+    enablebits = get_enablepoint(pipe);
+    if(enablebits < -1){
+        return -1;
+    }
+
+    LOG_D("cat enablebits,ret:%d,enablebits:0x%x,enablenumber:%d",ret,enablebits,__builtin_popcount(enablebits));
+    if(__builtin_popcount(enablebits) == 0){
+        LOG_E(" No enable point");
+    }
+    //parse the enable point from int
+    temp = enablebits;
+    while(tzero < CP_MAX_POINT){
+        tzero = __builtin_ctz(temp);
+        if(tzero < CP_MAX_POINT){
+            point[tzero] = 1;
+            LOG_E("The enable point %d .",tzero);
+        }
+        temp &= ~(1 << tzero);
+    }
+
+    duration = get_duration(pipe);
+    if(duration < -1){
+        goto exit;
+    }
+    LOG_D("cat duration,ret:%d,duration:0x%x",ret,duration);
+
+    if(savefile){
+        dump_fd = fopen(FILE_PATH_CP_ENABLE_POINT_INFO,"wb");
+        if(dump_fd == NULL){
+            LOG_E("cat fopen %s err",FILE_PATH_CP_ENABLE_POINT_INFO);
+            goto exit;
+        }
+        ret = dump_to_file(dump_fd,"enable point: ",strlen("enable point:"));
+        for(indx = 0;indx < CP_MAX_POINT;indx++){
+            if(enablebits & (1<<indx)){
+                memset(buffer,0x00,sizeof(buffer));
+                sprintf(buffer,"%d  ",indx);
+                ret = dump_to_file(dump_fd,buffer,strlen(buffer));
+                if(ret < 0){
+                    fclose(dump_fd);
+                    LOG_E("cat dump read data err");
+                    goto exit;
+                }
+            }
+        }
+        ret = dump_to_file(dump_fd,"\n",strlen("\n"));
+
+        memset(buffer,0x00,sizeof(buffer));
+        sprintf(buffer,"duration: %d",duration);
+        ret = dump_to_file(dump_fd,buffer,strlen(buffer));
+        if(ret < 0){
+            LOG_E("cat dump read data err");
+            fclose(dump_fd);
+            goto exit;
+        }
+        ret = dump_to_file(dump_fd,"\n",strlen("\n"));
+        fclose(dump_fd);
+    }
+exit:
+    return ret;
+}
+
+void  savememory2file(void*buffer,int size,int point){
+    char filepath[MAX_FILE_LENGTH] = {0};
+    FILE* dump_fd = NULL;
+    int ret = 0;
+    sprintf(filepath,"%s%d%s",FILE_PATH_CP_RAM_PRE,point,".pcm");
+    LOG_E("%s %s",__func__,filepath);
+    dump_fd = fopen(filepath,"wb");
+    if(dump_fd == NULL){
+        LOG_E("cat fopen data err:%s",filepath);
+        return -1;
+    }
+    ret = dump_to_file(dump_fd,buffer,size);
+    if(ret < 0){
+        LOG_E("cat dump read data err");
+        fclose(dump_fd);
+        return -1;
+    }
+    fclose(dump_fd);
+    return 0;
+}
+
+static int dump_voice(char* value,char* pipe)
+{
+    LOG_V("ramdump start.");
+    int ret;
+    struct timeval timeout = {5,0};
+    void *buffer = NULL;
+    int length = 0;
+    int enablebits = 0;
+    int cur = 0;
+    int duration = 0;
+    char cmd[32] = {0};
+    int pointarray[32] = {0};
+    int pointnum = 0;
+    enablebits = get_enablepoint(pipe);
+    if(enablebits <= 0){
+        return -1;
+    }
+    pointnum  = string2intarray(value,pointarray,sizeof(pointarray));
+    while(cur < pointnum){
+        LOG_D("%s %d poind%d,%d",__func__,pointnum, cur,pointarray[cur]);
+        cur++;
+    }
+
+    if(0 == strncmp(value,"all",strlen("all"))){
+        pointnum = CP_MAX_POINT; //dump all point
+        for(cur=0;cur < sizeof(pointarray)/sizeof(pointarray[0]);cur++){
+            pointarray[cur] = cur;
+        }
+    }
+
+    if(pointnum > 0){
+        for(cur=0;cur<pointnum;cur++){
+            if(enablebits & (1 << pointarray[cur])){
+                sprintf(cmd,"%s=%d",CP_DUMP_POINTSIZE,pointarray[cur]);
+                ret = sendandrecv(pipe,cmd,&timeout,&length,sizeof(int));
+                LOG_D("%s,point:%d,length:%d",__func__,pointarray[cur],length);
+                if(ret < 0 || (length == 0)){
+                    LOG_D("%s,ret:%d,length:%d",__func__,ret,length);
+                    continue;
+                }
+                buffer = malloc(length);
+                if(buffer == NULL){
+                    return -1;
+                }
+                sprintf(cmd,"%s=%d",CP_DUMP_DATA,pointarray[cur]);
+                ret = sendandrecv(pipe,cmd,&timeout,buffer,length);
+                if(ret < 0){
+                    break;
+                }
+                savememory2file(buffer,length,pointarray[cur]);
+                free(buffer);
+                buffer = NULL;
+            }
+        }
+    }
+    if(buffer != NULL){
+        free(buffer);
+        buffer = NULL;
+    }
+    return ret;
 }
 
 static void *control_audio_loop_process(void *arg){
@@ -608,8 +963,40 @@ static void *control_audio_loop_process(void *arg){
             dump_hal_info(adev);
         }
 
-        str_parms_destroy(parms);
+        //echo setpointon=17,5 > dev/pipe/mmi.audio.ctrl
+        ret = str_parms_get_str(parms,CP_DUMP_POINT_ENABLE,value,sizeof(value));
+        if(ret >= 0){
+            LOG_V("enable dump point:%s,pipe:%s",value,adev->cp_nbio_pipe);
+            ret = set_point(adev->cp_nbio_pipe,value,1);
+        }
 
+        //echo setpointoff=17 > dev/pipe/mmi.audio.ctrl
+        ret = str_parms_get_str(parms,CP_DUMP_POINT_DISABLE,value,sizeof(value));
+        if(ret >= 0){
+            LOG_V("disable dump point:%s,pipe:%s",value,adev->cp_nbio_pipe);
+            ret = set_point(adev->cp_nbio_pipe,value,0);
+        }
+
+        //echo getpointinfo=1 > dev/pipe/mmi.audio.ctrl
+        ret = str_parms_get_str(parms,CP_DUMP_POINT_DISPLAY,value,sizeof(value));
+        if(ret >= 0){
+            LOG_V("get enabled point:%s.pipe:%s",value,adev->cp_nbio_pipe);
+            ret = get_pointinfo(adev->cp_nbio_pipe,1);
+        }
+
+        //echo dumpvoice=1,2,17 > dev/pipe/mmi.audio.ctrl
+        ret = str_parms_get_str(parms,CP_DUMP_DATA,value,sizeof(value));
+        if(ret >= 0){
+            ret = dump_voice(value,adev->cp_nbio_pipe);
+        }
+
+        //echo setduration=15> dev/pipe/mmi.audio.ctrl
+        ret = str_parms_get_str(parms,CP_DUMP_DURATION,value,sizeof(value));
+        if(ret >= 0){
+            ret = set_duration(adev->cp_nbio_pipe,value);
+        }
+        str_parms_destroy(parms);
+        memset(value,0x00,sizeof(value));
     }
     free(data);
     return NULL;
