@@ -987,7 +987,7 @@ int SprdHWLayerList::prepareForGXP(SprdHWLayer *l)
     /*
      *  If yuv_xywh_even == 0, GXP do not support odd source layer.
      * */
-    if (pGXPPara->yuv_xywh_even == 0)
+    if (pGXPPara->yuv_xywh_even == 1)
     {
         if ((srcRect->x % 2)
             || (srcRect->y % 2)
