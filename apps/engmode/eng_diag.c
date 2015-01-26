@@ -2208,7 +2208,8 @@ static int eng_diag_btwifiimei(char *buf,int len, char *rsp, int rsplen)
             if((cmd_mask & DIAG_CMD_BTBIT) || (cmd_mask & DIAG_CMD_WIFIBIT)){
                 //write bt address
                 if((head_ptr->subtype&DIAG_CMD_BTBIT)>0) {
-                    sprintf(btaddr, "%s:%02x:%02x:%02x",SPRD_MAC,\
+                    sprintf(btaddr, "%02x:%02x:%02x:%02x:%02x:%02x",\
+                            direct->btaddr[5],direct->btaddr[4],direct->btaddr[3], \
                             direct->btaddr[2],direct->btaddr[1],direct->btaddr[0]);
                     pBtAddr = btaddr;
                     ENG_LOG("%s: BTADDR:%s\n",__func__, btaddr);
@@ -2216,7 +2217,8 @@ static int eng_diag_btwifiimei(char *buf,int len, char *rsp, int rsplen)
 
                 //write wifi address
                 if((head_ptr->subtype&DIAG_CMD_WIFIBIT)>0) {
-                    sprintf(wifiaddr, "%s:%02x:%02x:%02x",SPRD_MAC,\
+                    sprintf(wifiaddr, "%02x:%02x:%02x:%02x:%02x:%02x",\
+                            direct->wifiaddr[0],direct->wifiaddr[1],direct->wifiaddr[2], \
                             direct->wifiaddr[3],direct->wifiaddr[4],direct->wifiaddr[5]);
                     pWifiAddr = wifiaddr;
                     ENG_LOG("%s: WIFIADDR:%s\n",__func__,wifiaddr);
