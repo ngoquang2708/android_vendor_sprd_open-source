@@ -820,6 +820,8 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
         {
             ALOGE("failed to decode video frame, unsupported");
             notify(OMX_EventError, OMX_ErrorUnsupportedSetting, 0, NULL);
+            mSignalledError = true;
+            return;
         } else
         {
             ALOGE("now, we don't take care of the decoder return: %d", decRet);
