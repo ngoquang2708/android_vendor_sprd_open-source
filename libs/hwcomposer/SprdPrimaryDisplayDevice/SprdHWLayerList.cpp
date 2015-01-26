@@ -985,8 +985,9 @@ int SprdHWLayerList::prepareForGXP(SprdHWLayer *l)
     GSP_CAPABILITY_T *pGXPPara = static_cast<GSP_CAPABILITY_T *>(mPData);
 
     /*
-     *  If yuv_xywh_even == 0, GXP do not support odd source layer.
+     * If yuv_xywh_even == 1, GXP do not support odd source layer.
      * */
+
     if (pGXPPara->yuv_xywh_even == 1)
     {
         if ((srcRect->x % 2)
