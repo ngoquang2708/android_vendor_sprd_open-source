@@ -97,6 +97,7 @@ struct ipm_context {
 	cmr_u32                  inited;
 	cmr_u32                  frm_num;
 	cmr_u32                  hdr_num;
+	cmr_u32                  is_hdr_open;
 	cmr_u32                  padding;
 };
 

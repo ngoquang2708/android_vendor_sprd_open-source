@@ -1139,8 +1139,13 @@ void camera_snapshot_state_handle(cmr_handle oem_handle, enum snapshot_cb_type c
 			break;
 		case SNAPSHOT_EVT_ENC_DONE:
 			CMR_LOGI("close hdr before jpeg enc done");
-			if (1 == camera_get_hdr_flag(cxt)) {
+			if (1 == cxt->ipm_cxt.is_hdr_open) {
 				ret = camera_close_hdr(cxt);
+				if (ret) {
+					CMR_LOGE("camera_close_hdr fail");
+				} else {
+					cxt->ipm_cxt.is_hdr_open = 0;
+				}
 			}
 			CMR_LOGI("jpeg enc done");
 			break;
@@ -4004,10 +4009,12 @@ cmr_int camera_get_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 		ret = camera_open_hdr(cxt, &in_param, &out_param);
 		if (ret) {
 			CMR_LOGE("failed to open hdr %ld", ret);
+			cxt->ipm_cxt.is_hdr_open = 0;
 			goto exit;
 		} else {
 			cxt->ipm_cxt.hdr_num = out_param.total_frame_number;
 			CMR_LOGI("get hdr num %d", cxt->ipm_cxt.hdr_num);
+			cxt->ipm_cxt.is_hdr_open = 1;
 		}
 	}
 	if (CAMERA_ZSL_MODE == mode) {
@@ -4543,7 +4550,7 @@ cmr_int camera_local_stop_snapshot(cmr_handle oem_handle)
 		CMR_LOGE("failed to stop snp %ld", ret);
 		goto exit;
 	}
-	if (camera_get_hdr_flag(cxt)) {
+	if (1 == cxt->ipm_cxt.is_hdr_open) {
 #ifdef OEM_HANDLE_HDR
 		if (0 != cxt->ipm_cxt.frm_num) {
 			cxt->ipm_cxt.frm_num = 0;
@@ -4551,6 +4558,12 @@ cmr_int camera_local_stop_snapshot(cmr_handle oem_handle)
 		}
 #endif
 		ret = camera_close_hdr(cxt);
+		if (ret) {
+			CMR_LOGE("camera_close_hdr fail");
+			goto exit;
+		} else {
+			cxt->ipm_cxt.is_hdr_open = 0;
+		}
 	}
 	cxt->snp_cxt.status = IDLE;
 
