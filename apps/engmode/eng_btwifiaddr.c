@@ -136,20 +136,24 @@ static void mac_rand(char *btmac, char *wifimac)
     ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, btmac, BT_MAC_FILE, fd);
 
     //FOR BT
-    i=rand();
-    ALOGD("%s:  rand i=0x%x",__FUNCTION__, i);
-    sprintf(btmac, "%s:%02x:%02x:%02x", SPRD_MAC,\
-            (unsigned char)((i)&0xFF), \
+    i=rand(); j=rand();
+    ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
+    sprintf(btmac, "00:%02x:%02x:%02x:%02x:%02x", \
             (unsigned char)((i>>8)&0xFF), \
-            (unsigned char)((i>>16)&0xFF));
+            (unsigned char)((i>>16)&0xFF), \
+            (unsigned char)((j)&0xFF), \
+            (unsigned char)((j>>8)&0xFF), \
+            (unsigned char)((j>>16)&0xFF));
 
     //FOR WIFI
-    i=rand();
-    ALOGD("%s:  rand i=0x%x",__FUNCTION__, i);
-    sprintf(wifimac, "%s:%02x:%02x:%02x",SPRD_MAC, \
-            (unsigned char)((i)&0xFF), \
+    i=rand(); j=rand();
+    ALOGD("%s:  rand i=0x%x, j=0x%x",__FUNCTION__, i,j);
+    sprintf(wifimac, "00:%02x:%02x:%02x:%02x:%02x", \
             (unsigned char)((i>>8)&0xFF), \
-            (unsigned char)((i>>16)&0xFF));
+            (unsigned char)((i>>16)&0xFF), \
+            (unsigned char)((j)&0xFF), \
+            (unsigned char)((j>>8)&0xFF), \
+            (unsigned char)((j>>16)&0xFF));
 
     ALOGD("%s: bt mac=%s, wifi mac=%s",__FUNCTION__, btmac, wifimac);
 
