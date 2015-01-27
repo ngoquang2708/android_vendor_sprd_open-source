@@ -22,7 +22,7 @@
 #define ADC_CAL_TYPE_FILE "/sys/class/power_supply/sprdfgu/fgu_cal_from_type"
 
 static int vbus_charger_disconnect = 0;
-static unsigned int get_other_ch_adc_value(int channel, int scale);
+static int get_other_ch_adc_value(int channel, int scale);
 
 int	disconnect_vbus_charger(void)
 {
@@ -98,7 +98,7 @@ void	initialize_ctrl_file(void)
     sync();
 
     ret = read(fd,&cali_info,sizeof(cali_info));
-    if(ret < 0){
+    if(ret <= 0){
         ENG_LOG(" %s read failed...\n",__func__);
         close(fd);
         return;
@@ -228,7 +228,7 @@ static int AccessADCDataFile(unsigned char flag, char *lpBuff, int size)
 
     return ret;
 }
-static unsigned  int get_battery_voltage(void)
+static  int get_battery_voltage(void)
 {
     int fd = -1;
     int read_len = 0;
@@ -245,13 +245,13 @@ static unsigned  int get_battery_voltage(void)
     }
     return value;
 }
-static unsigned  int get_battery_adc_value(void)
+static  int get_battery_adc_value(void)
 {
     int fd = -1;
     int read_len = 0;
     char buffer[16]={0};
     char *endptr;
-    unsigned int  value = 0;
+    int  value = 0;
 
     fd = open(BATTERY_ADC_PATH,O_RDONLY);
 
@@ -528,11 +528,10 @@ static int is_adc_calibration(char *dest, int destSize, char *src,int srcSize)
     return 0;
 }
 
-static unsigned int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
+static int ap_adc_calibration( MSG_AP_ADC_CNF *pMsgADC)
 {
     int channel = pMsgADC->ap_adc_req.parameters[0] - 1;
-    unsigned int adc_value = 0;
-    unsigned int adc_result = 0;
+    int adc_result = 0;
     int i = 0;
 
     pMsgADC->diag_ap_cnf.status = 0;
@@ -577,10 +576,10 @@ static int ap_adc_load(MSG_AP_ADC_CNF *pMsgADC)
 
     return ret;
 }
-static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
+static int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
 {
-    unsigned int	voltage = 0;
-    unsigned int  	*para=NULL;
+    int	voltage = 0;
+    int  	*para=NULL;
     int 	i = 0;
     MSG_HEAD_T *Msg = (MSG_HEAD_T *)pMsgADC;
 
@@ -588,15 +587,15 @@ static unsigned int ap_get_voltage(MSG_AP_ADC_CNF *pMsgADC)
         voltage += get_battery_voltage();
     voltage >>= 4;
 
-    para = (unsigned int *)(Msg +1);
+    para = (int *)(Msg +1);
     //        *para = (voltage/10);
     if (voltage > MAX_VOLTAGE)
     {
-        *para =  (unsigned int )(PRECISION_10MV | ((voltage/10) & MAX_VOLTAGE));
+        *para =  (PRECISION_10MV | ((voltage/10) & MAX_VOLTAGE));
     }
     else
     {
-        *para =  (unsigned int )(PRECISION_1MV | (voltage & MAX_VOLTAGE));
+        *para =  (PRECISION_1MV | (voltage & MAX_VOLTAGE));
     }
     pMsgADC->msg_head.len = 12;
 
@@ -732,10 +731,10 @@ int eng_battery_calibration(char *data,int count,char *out_msg,int out_len)
     return ret;
 }
 
-static unsigned int get_other_ch_adc_value(int channel, int scale)
+static int get_other_ch_adc_value(int channel, int scale)
 {
-   unsigned int adc_value  = 0;
-   unsigned int adc_result = 0;
+   int adc_value  = 0;
+   int adc_result = 0;
    int i = 0, len = 0, fd = -1;
    char data_buf[16] = {0};
    char ch[8] = {0};

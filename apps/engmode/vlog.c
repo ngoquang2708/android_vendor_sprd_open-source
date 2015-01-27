@@ -204,7 +204,7 @@ out:
 
 void *eng_vdiag_rthread(void *x)
 {
-    int ser_fd, modem_fd,test_fd;
+    int ser_fd = -1, modem_fd = -1,test_fd = -1;
     int r_cnt, w_cnt, offset;
     int retry_num = 0;
     int dumpmemlen = 0;
@@ -440,7 +440,9 @@ int eng_is_send_to_usb(char *buf,int len)
 
     if(*tmp == 0x7e){
 	while(*(++tmp) == 0x7e) i++;
-	if(i)tmp--;
+	if(i){
+	    ENG_LOG("%s: before diag decode7d7e *tmp=0x%x\n",__FUNCTION__, *tmp);
+	}
     }
 
     memcpy(diag_header, tmp, 20);
@@ -518,6 +520,10 @@ void eng_filter_calibration_log_diag(char* diag_data,int r_cnt,int ser_fd)
 	    ext_log_data_buf[ext_log_buf_len++] = *tmp;
 	    tmp++;			// skip header 0x7e
 	}
+
+        // All the left bytes are 0x7E,so don't wait end byte.
+        if((int)(tmp - diag_data) == r_cnt)
+            break;
 
 	while(*tmp != 0x7e){
 	    remainlen = (int)(tmp - diag_data);

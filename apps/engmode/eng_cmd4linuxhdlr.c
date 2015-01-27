@@ -380,10 +380,18 @@ int eng_linuxcmd_batttest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			chg_sts = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; chg_sts=%d\n",__FUNCTION__, buffer, chg_sts);
-			} else {
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+			    chg_sts = atoi(buffer);
+			    ENG_LOG("%s: buffer=%s; chg_sts=%d\n",__FUNCTION__, buffer, chg_sts);
+			}else {
+			    if(chg_sts ==1 )
+				sprintf(rsp, "+BATTTEST:1,CHAR");
+			    if(fd >= 0)
+				    close(fd);
+			    return 0;
+		    }
+		} else {
 			if(chg_sts ==1 )
 				sprintf(rsp, "+BATTTEST:1,CHAR");
 			if(fd >= 0)
@@ -662,6 +670,7 @@ static int eng_simtest_checksim_euicc(int type)
     char simstatus;
     char cmd[32];
     char* atchannel, *atrsp;
+    int len;
 
     ENG_LOG("%s: type=%d\n",__FUNCTION__, type);
 
@@ -676,9 +685,15 @@ static int eng_simtest_checksim_euicc(int type)
     do{
         memset(cmd, 0, sizeof(cmd));
         strcpy(cmd, "at+euicc?\r");
-        write(fd, cmd, strlen(cmd));
+        len = write(fd, cmd, strlen(cmd));
+        if(len <= 0){
+            continue;
+        }
         memset(cmd, 0, sizeof(cmd));
-        read(fd, cmd, sizeof(cmd));
+        len = read(fd, cmd, sizeof(cmd));
+        if(len <= 0){
+            continue;
+        }
         ENG_LOG("%s: response=%s\n", __FUNCTION__, cmd);
     }while(strstr(cmd, "err")!=NULL);
 
@@ -962,9 +977,16 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			temp_val = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+			    temp_val = atoi(buffer);
+			    ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			}else {
+			    sprintf(rsp, "+CME Error:NG");
+			    if(fd >= 0)
+				close(fd);
+			    return 0;
+		    }
 		} else {
 			sprintf(rsp, "+CME Error:NG");
 			if(fd >= 0)
@@ -987,9 +1009,16 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			temp_val = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+			    temp_val = atoi(buffer);
+			    ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			}else {
+			    sprintf(rsp, "+CME Error:NG");
+			    if(fd >= 0)
+				close(fd);
+			    return 0;
+		    }
 		} else {
 			sprintf(rsp, "+CME Error:NG");
 			if(fd >= 0)
@@ -1044,9 +1073,16 @@ int eng_linuxcmd_temptest(char *req,char *rsp)
 
 		if(ret==1) {
 			memset(buffer, 0, sizeof(buffer));
-			read(fd, buffer, sizeof(buffer));
-			temp_val = atoi(buffer);
-			ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			len = read(fd, buffer, sizeof(buffer));
+			if(len > 0){
+			    temp_val = atoi(buffer);
+			    ENG_LOG("%s: buffer=%s; temp_val=%d\n",__FUNCTION__, buffer, temp_val);
+			} else {
+			    sprintf(rsp, "+CME Error:NG");
+			    if(fd >= 0)
+				    close(fd);
+			    return 0;
+		    }
 		} else {
 			sprintf(rsp, "+CME Error:NG");
 			if(fd >= 0)
