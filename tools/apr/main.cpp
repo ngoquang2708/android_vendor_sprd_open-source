@@ -11,14 +11,14 @@ int main(int argc, char *argv[])
 	AprData aprData;
 	ModemThread modemThread(&aprData);
 	InotifyThread inotifyThread(&aprData);
-	LoggerThread loggerThread(&aprData);
+//	LoggerThread loggerThread(&aprData);
 
 	XmlStorage xmlStorage(&aprData, (char*)"/data/sprdinfo", (char*)"apr.xml");
 	aprData.addObserver(&xmlStorage);
 
 	modemThread.Start(NULL);
 	inotifyThread.Start(NULL);
-	loggerThread.Start(NULL);
+//	loggerThread.Start(NULL);
 	while(1)
 	{
 		// waiting 60 seconds.

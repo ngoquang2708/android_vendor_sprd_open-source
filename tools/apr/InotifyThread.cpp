@@ -186,7 +186,7 @@ int InotifyThread::native_inotify_handle_event2(struct inotify_event* event)
 			&& strstr(event->name, "tombstone_0"))
 	{
 		if (event->mask & IN_CLOSE_WRITE) {
-			// anr
+			// native crash
 			m_aprData->setChanged();
 			m_aprData->notifyObservers((void*)"native crash");
 		}

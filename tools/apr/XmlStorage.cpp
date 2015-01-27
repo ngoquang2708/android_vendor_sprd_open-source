@@ -203,6 +203,8 @@ void XmlStorage::handleEvent(void* arg)
 int XmlStorage::_fileIsExist()
 {
 	int retval;
+	/* clear the umask */
+	umask(0);
 	// If directory is not exist, make dir
 	if (access(m_dir, F_OK) < 0) {
 		retval = mkdir(m_dir, S_IRWXU | S_IRWXG | S_IRWXO);

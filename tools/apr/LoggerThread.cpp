@@ -3,9 +3,6 @@
 #include "LoggerThread.h"
 #include "AprData.h"
 
-
-#define JAVA_CRASH_KEY_WORDS "Force-killing crashed app"
-
 struct queued_entry_t {
 	union {
 		unsigned char buf[LOGGER_ENTRY_MAX_LEN + 1] __attribute__((aligned(4)));
@@ -76,13 +73,15 @@ LoggerThread::~LoggerThread()
 void LoggerThread::Setup()
 {
 	APR_LOGD("LoggerThread::Setup()\n");
+	m_devices = new log_device_t(strdup("/dev/"LOGGER_LOG_MAIN), false, 'm');
+	m_devCount = 1;
 	int accessmode =
 		(m_mode & O_RDONLY) ? R_OK : 0
 		| (m_mode & O_WRONLY) ? W_OK : 0;
 	// only add this if it's available
 	if (0 == access("/dev/"LOGGER_LOG_SYSTEM, accessmode)) {
-		m_devices = new log_device_t(strdup("/dev/"LOGGER_LOG_SYSTEM), false, 's');
-		m_devCount = 1;
+		m_devices->next = new log_device_t(strdup("/dev/"LOGGER_LOG_SYSTEM), false, 's');
+		m_devCount++;
 	}
 
 	log_device_t* dev = m_devices;
@@ -141,15 +140,15 @@ void LoggerThread::Execute(void* arg)
 							delete entry;
 							break;
 						}
-						perror("logcat read");
+						APR_LOGE("logcat read\n");
 						exit(EXIT_FAILURE);
 					}
 					else if (!ret) {
-						fprintf(stderr, "read: Unexpected EOF!\n");
+						APR_LOGE("read: Unexpected EOF!\n");
 						exit(EXIT_FAILURE);
 					}
 					else if (entry->entry.len != ret - sizeof(struct logger_entry)) {
-						fprintf(stderr, "read: unexpected length. Expected %d, got %d\n",
+						APR_LOGE("read: unexpected length. Expected %d, got %d\n",
 								entry->entry.len, ret - sizeof(struct logger_entry));
 						exit(EXIT_FAILURE);
 					}
@@ -219,6 +218,8 @@ void LoggerThread::skipNextEntry(log_device_t* dev)
 
 void LoggerThread::processBuffer(log_device_t* dev, struct logger_entry *buf)
 {
+	static int32_t pid = 0;
+
 	if (dev->binary) {
 
 	} else {
@@ -236,7 +237,7 @@ void LoggerThread::processBuffer(log_device_t* dev, struct logger_entry *buf)
 		if (buf->len < 3) {
 			// An well-formed entry must consist of at least a priority
 			// and two null characters
-			fprintf(stderr, "+++ LOG: entry too small\n");
+			APR_LOGE("+++ LOG: entry too small\n");
 			return;
 		}
 		int msgStart = -1;
@@ -254,7 +255,7 @@ void LoggerThread::processBuffer(log_device_t* dev, struct logger_entry *buf)
 		}
 
 		if (msgStart == -1) {
-			fprintf(stderr, "+++ LOG: malformed log message\n");
+			APR_LOGE("+++ LOG: malformed log message\n");
 			return;
 		}
 		if (msgEnd == -1) {
@@ -262,10 +263,28 @@ void LoggerThread::processBuffer(log_device_t* dev, struct logger_entry *buf)
 			msgEnd = buf->len - 1;
 			buf->msg[msgEnd] = '\0';
 		}
-		if(strstr(buf->msg + msgStart, JAVA_CRASH_KEY_WORDS)) {
-			// JavaCrash
-			m_aprData->setChanged();
-			m_aprData->notifyObservers((void*)"java crash");
+
+
+		if (strstr(buf->msg+1, "AndroidRuntime")) {
+			//printf("tag:%s,", buf->msg+1);
+			//printf("pid:%d,", buf->pid);
+			//printf("msg:%s\n", buf->msg+msgStart);
+
+			if (pid == 0) {
+				if (strstr(buf->msg+msgStart, "Shutting down VM")) {
+					pid = buf->pid;
+				}
+			} else {
+				if (buf->pid == pid) {
+					if (strstr(buf->msg+msgStart, "FATAL EXCEPTION:")) {
+						m_aprData->setChanged();
+						m_aprData->notifyObservers((void*)"java crash");
+						pid = 0;
+					}
+				} else {
+					pid = 0;
+				}
+			}
 		}
 	}
 }
