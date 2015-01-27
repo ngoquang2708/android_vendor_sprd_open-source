@@ -1152,6 +1152,8 @@ cmr_int snp_start_isp_proc(cmr_handle snp_handle, void *data)
 	cmr_u32                        index = frm_ptr->frame_id - frm_ptr->base;
 
 	if (snp_cxt->ops.raw_proc) {
+		chn_param_ptr->isp_proc_in[index].dst_frame.size.width  = chn_param_ptr->isp_proc_in[index].src_frame.size.width;
+		chn_param_ptr->isp_proc_in[index].dst_frame.size.height = chn_param_ptr->isp_proc_in[index].src_frame.size.height;
 		isp_in_param = chn_param_ptr->isp_proc_in[index];
 		isp_in_param.slice_num = 1;
 		chn_param_ptr->isp_process[index].slice_num = 1;
