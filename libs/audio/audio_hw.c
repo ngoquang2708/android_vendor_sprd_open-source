@@ -556,6 +556,7 @@ struct tiny_private_ctl private_ctl;
     voip_timer_t voip_timer; //for forbid voip
     pthread_mutex_t               device_lock;
     int  device_force_set;
+    char* cp_nbio_pipe;
 };
 
 struct tiny_stream_out {
@@ -4988,6 +4989,26 @@ static  vbc_ctrl_pipe_para_t *adev_modem_create(audio_modem_t  *modem, const cha
 }
 
 
+static  char *set_nbio_pipename(const char *name)
+{
+    char *pipename = NULL;
+    int len = strlen(name)+1;
+    pipename = malloc(len);
+    if (pipename == NULL) {
+        ALOGE("Unable to allocate mem for set_nbio_pipename");
+        return NULL;
+    }
+    else
+    {
+        /* initialise the new profile */
+        memset(pipename,0x00,len);
+    }
+
+    strncpy(pipename,name,len);
+    ALOGD("nbio_pipe name %s",pipename);
+    return pipename;
+}
+
 static  i2s_ctl_t *adev_I2S_create(i2s_bt_t  *i2s_btcall_info, const char *num)
 {
 //    vbc_ctrl_pipe_para_t *a;
@@ -5094,7 +5115,18 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             ALOGE("error profile!");
         }
     }
-     else if (strcmp(tag_name, "i2s_for_btcall") == 0)
+     else if (strcmp(tag_name, "cp_nbio_dump") == 0)
+	{
+
+           ALOGE("The cp_nbio_dump is %s = '%s'", attr[0] ,attr[1]);
+        if (strcmp(attr[0], "spipe") == 0) {
+            ALOGE("nbio pipe name is '%s'", attr[1]);
+            state->cp_nbio_pipe =   set_nbio_pipename(attr[1]);
+        } else {
+            ALOGE("no nbio_pipe!");
+        }
+    }
+   else if (strcmp(tag_name, "i2s_for_btcall") == 0)
 	{
         /* Obtain the modem num */
            ALOGE("The i2s_for_btcall num is %s = '%s'", attr[0] ,attr[1]);
@@ -5524,6 +5556,8 @@ state.i2s_btcall_info = i2s_btcall_info;
 
     adev->cp = modem;
 	adev->i2s_btcall_info = i2s_btcall_info;
+    adev->cp_nbio_pipe =   state.cp_nbio_pipe;
+    ALOGE("adev->cp_nbio_pipe (%s)", adev->cp_nbio_pipe);
     XML_ParserFree(parser);
     fclose(file);
     return ret;
