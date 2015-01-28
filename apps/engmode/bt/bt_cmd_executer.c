@@ -252,7 +252,9 @@ static bt_callbacks_t bt_callbacks = {
 #else
         NULL,
 #endif
+#ifdef HAS_BLUETOOTH_SPRD
         bteng_nonsig_test_rx_recv
+#endif
 };
 
 /*******************************************************************************
@@ -667,6 +669,7 @@ static BT_ENG_ERROR_E bteng_bt_off(void)
     return BT_ENG_NONE_ERROR;
 }
 
+#ifdef HAS_BLUETOOTH_SPRD
 static BT_ENG_ERROR_E bteng_set_nonsig_recv_data(uint16_t le)
 {
     int err = BT_ENG_RX_TEST_RECV_DATA_ERROR;
@@ -884,7 +887,7 @@ static BT_ENG_ERROR_E bteng_set_nonsig_tx_testmode(uint32_t *data)
 
     return BT_ENG_NONE_ERROR;
 }
-
+#endif
 
 
 /**
@@ -962,6 +965,7 @@ int bt_runcommand(int client_fd, int argc, char **argv)
 
         err = BT_ENG_NONE_ERROR;
     }
+#ifdef HAS_BLUETOOTH_SPRD
     else if(strncmp(*argv, BLE_TEST_MODE_FUNCTION, BLE_TEST_MODE_SIZE) == 0)
     {
         argv++;
@@ -1022,7 +1026,8 @@ int bt_runcommand(int client_fd, int argc, char **argv)
         bt_mode_testing = BT_MODE_SET_NOSIG_RECV_DATA;
 
         err = bteng_set_nonsig_recv_data(1);
-	}
+    }
+#endif
     else if(strncmp(*argv, "set_nosig_rx_recv_data", 22) == 0)
     {
         BTENG_LOGD("recv set_nosig_rx_recv_data_classic.");
