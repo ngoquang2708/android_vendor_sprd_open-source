@@ -731,6 +731,14 @@ static long parse_packcount(char * filename)
 				// return 0 ;
 				return atol(packcount);
 			}
+			else
+			{
+				return 0;
+			}
+        }
+        else
+        {
+            return 0;
         }
 
     }else{
