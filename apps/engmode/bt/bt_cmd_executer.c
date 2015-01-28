@@ -1027,14 +1027,14 @@ int bt_runcommand(int client_fd, int argc, char **argv)
 
         err = bteng_set_nonsig_recv_data(1);
     }
-#endif
     else if(strncmp(*argv, "set_nosig_rx_recv_data", 22) == 0)
     {
         BTENG_LOGD("recv set_nosig_rx_recv_data_classic.");
         bt_mode_testing = BT_MODE_SET_NOSIG_RECV_DATA;
 
         err = bteng_set_nonsig_recv_data(0);
-	}
+    }
+#endif
     else
     {
         bt_mode_testing = BT_MODE_INVALID;
