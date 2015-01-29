@@ -304,7 +304,7 @@ struct eut_cmd eut_cmds[] =
     {WIFIMACFILTER_INDEX, ENG_MACFILTER},
 
 
-    //ÒÔÏÂÊÇBTµÄ
+    //ä»¥ä¸‹æ˜¯BTçš„
     /* BT TXCH*/
     {BT_TXCH_REQ_INDEX, ENG_BT_TXCH_REQ},
     {BT_TXCH_INDEX, ENG_BT_TXCH},
@@ -790,16 +790,16 @@ int eng_hex2ascii(char *input, char *output, int length)
 /********************************************************************
 *   name   eng_atdiag_euthdlr 
 *   ---------------------------
-*   description: Èë¿Úº¯Êý.
+*   description: å…¥å£å‡½æ•°.
 *   ----------------------------
 *   para        IN/OUT      type            note      
 *   ----------------------------------------------------
 *   return
 *   ------------------
-*   other:
-*   ×¢Òâ,ÕâÀï°üº¬2Ì×·½°¸.
-*   ENGMODE_EUT_BCMÊÇBRCMµÄ·½°¸,
-*   ENGMODE_EUT_SPRDÊÇSPRD·½°¸,ÔÚengmodeµÄmkÖÐ¿ØÖÆ±àÒë
+*   other:	
+*   æ³¨æ„,è¿™é‡ŒåŒ…å«2å¥—æ–¹æ¡ˆ
+*   ENGMODE_EUT_BCMæ˜¯BRCMçš„æ–¹æ¡ˆ,
+*   ENGMODE_EUT_SPRDæ˜¯SPRDæ–¹æ¡ˆ,åœ¨engmodeçš„mkä¸­æŽ§åˆ¶ç¼–è¯‘
 ********************************************************************/
 #if defined(ENGMODE_EUT_BCM)
 int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
@@ -1409,7 +1409,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
         break;
 
         
-        //ÒÔÏÂÎªBT
+        //ä»¥ä¸‹ä¸ºBT
         /* TX Channel */
         case BT_TXCH_REQ_INDEX:
         {
@@ -3633,7 +3633,7 @@ static void eng_diag_cft_switch_hdlr(char *buf,int len, char *rsp, int rsplen)
 
 static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
 {
-    int ret = 0;
+    int ret = 0,init_mode = 0,stop_mode = 0;
     char tmpbuf[ENG_DIAG_SIZE] = {0};
     static int init = 0;
     MSG_HEAD_T* msg_head = (MSG_HEAD_T*)(buf + 1);
@@ -3644,37 +3644,27 @@ static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
     rsp_head->len = sizeof(MSG_HEAD_T) + strlen("\r\nOK\r\n");
 
     ENG_LOG("%s: msg_head->subtype: %d\n", __FUNCTION__, msg_head->subtype);
-    switch(msg_head->subtype){
-        case 0: // Hot start
-            set_gps_mode(ENG_HOT_START);
-            ret = 1;
-            break;
-        case 1: // Warm start
-            set_gps_mode(ENG_WARM_START);
-            ret = 1;
-            break;
-        case 2: // Cold start
-            set_gps_mode(ENG_COLD_START);
-            ret = 1;
-            break;
-        case 3:
-            gps_export_stop();
-            g_gps_log_enable = 0;
-            break;
-        case 7:
-            set_pc_mode(1);
-            if(0 == init) {
-                sem_init(&g_gps_sem, 0, 0);
-                if (0 != eng_thread_create(&gps_thread_hdlr, eng_gps_log_thread, 0)){
-                    ENG_LOG("gps log thread start error");
-                }
-                init = 1;
-            }
-            break;
-        default:
-            ENG_LOG("%s: ERROR Subtype !!!", __FUNCTION__);
-            break;
+
+    init_mode = get_init_mode();
+    if(init_mode == msg_head->subtype)
+    {
+        set_pc_mode(1);
+	if(0 == init) {
+	    sem_init(&g_gps_sem, 0, 0);
+	    if (0 != eng_thread_create(&gps_thread_hdlr, eng_gps_log_thread, 0)){
+		 ENG_LOG("gps log thread start error");
+	    }
+	    init = 1;
+	}
     }
+
+    stop_mode = get_stop_mode();
+    if(stop_mode == msg_head->subtype)
+    {
+        gps_export_stop();
+        g_gps_log_enable = 0;
+    }
+    ret = set_gps_mode(msg_head->subtype);
 
     if(ret == 1){
         ENG_LOG("%s: gps_export_start \n", __FUNCTION__);
@@ -3695,6 +3685,7 @@ static int eng_diag_gps_autotest_hdlr(char *buf, int len, char *rsp, int rsplen)
 
     return ret;
 }
+
 
 static int eng_diag_enable_charge(char *buf, int len, char *rsp, int rsplen)
 {
