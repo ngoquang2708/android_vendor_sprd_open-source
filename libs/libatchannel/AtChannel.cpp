@@ -69,7 +69,7 @@ static String16 getServiceName(int modemId, int simId)
     property_get(MSMS_PHONE_COUNT_PROP, phoneCount, "1");
 
     if (atoi(phoneCount) > 1){
-        snprintf(serviceName, MAX_SERVICE_NAME - 1, "atchannel%d", getPhoneId(modemId, simId));
+        snprintf(serviceName, MAX_SERVICE_NAME - 1, "atchannel%d", simId);
     } else {
         strcpy(serviceName,  "atchannel");
     }
