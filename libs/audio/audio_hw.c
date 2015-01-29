@@ -202,8 +202,8 @@ volatile int log_level = 4;
 struct pcm_config pcm_config_mm = {
     .channels = 2,
     .rate = DEFAULT_OUT_SAMPLING_RATE,
-    .period_size = LONG_PERIOD_SIZE,
-    .period_count = PLAYBACK_LONG_PERIOD_COUNT,
+    .period_size = SHORT_PERIOD_SIZE,
+    .period_count = PLAYBACK_SHORT_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = SHORT_PERIOD_SIZE,
     .avail_min = SHORT_PERIOD_SIZE,
@@ -212,8 +212,8 @@ struct pcm_config pcm_config_mm = {
 struct pcm_config pcm_config_mm_fast = {
     .channels = 2,
     .rate = DEFAULT_OUT_SAMPLING_RATE,
-    .period_size = LONG_PERIOD_SIZE,
-    .period_count = PLAYBACK_LONG_PERIOD_COUNT,
+    .period_size = SHORT_PERIOD_SIZE,
+    .period_count = PLAYBACK_SHORT_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = SHORT_PERIOD_SIZE,
     .avail_min = SHORT_PERIOD_SIZE,
@@ -2629,7 +2629,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 
         if ((low_power != out->low_power) /*&& (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER)*/) {
             if (low_power) {
-                out->config.avail_min = (out->config.period_size*out->config.period_count * 3) / 4;
+                out->config.avail_min = (out->config.period_size*out->config.period_count * 1) / 2;
                 ALOGW("low_power out->write_threshold=%d, config.avail_min=%d, start_threshold=%d",
                         out->write_threshold,out->config.avail_min, out->config.start_threshold);
             } else {
