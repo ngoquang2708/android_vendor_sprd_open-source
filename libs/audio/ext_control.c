@@ -393,7 +393,7 @@ void dump_hal_info(struct tiny_audio_device * adev){
     return;
 }
 
-int sendandrecv(char* pipe,char*cmdstring,struct timeval* timeout,void* buffer,int size){
+static int sendandrecv(char* pipe,char*cmdstring,struct timeval* timeout,void* buffer,int size){
     int ret = 0;
     int max_fd_dump;
     int pipe_dump;
@@ -428,7 +428,7 @@ int sendandrecv(char* pipe,char*cmdstring,struct timeval* timeout,void* buffer,i
                 LOG_E("cat SELECT OK BUT NO fd is set");
                 goto exit;
             }
-            ret = read_noblock_l(pipe_dump,buffer,size);
+            ret = read_noblock_l(pipe_dump,buffer+(size-left),left);
             if(ret < 0){
                 LOG_E("cat read data err");
                 goto exit;
@@ -635,7 +635,7 @@ static  int get_pointinfo(char *pipe,bool savefile) {
         ret = dump_to_file(dump_fd,"\n",strlen("\n"));
 
         memset(buffer,0x00,sizeof(buffer));
-        sprintf(buffer,"duration: %d",duration);
+        sprintf(buffer,"duration: %ds",duration);
         ret = dump_to_file(dump_fd,buffer,strlen(buffer));
         if(ret < 0){
             LOG_E("cat dump read data err");
