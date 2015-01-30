@@ -65,6 +65,7 @@
 #define DSP_BANK                 "dsp"
 #define TGDSP_BANK               "tgdsp"
 #define LDSP_BANK                "ldsp"
+#define WARM_BANK                "warm"
 #define MODEM_START              "start"
 #define MODEM_STOP               "stop"
 
@@ -86,6 +87,7 @@
 #define LF_MODEM_SIZE               (0x9b0000)
 #define LF_TGDSP_SIZE               (0x2e0000)
 #define LF_LDSP_SIZE                (0x1c0000)
+#define LF_WARM_SIZE                  (0x280000)
 #define TL_MODEM_SIZE               (0x8b0000)
 #define TL_TGDSP_SIZE               (0x2e0000)
 #define TL_LDSP_SIZE                (0x1c0000)

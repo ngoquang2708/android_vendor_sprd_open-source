@@ -285,12 +285,15 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     } else if(modem == LF_MODEM) {
         char tgdsp_bank[128];
         char ldsp_bank[128];
+        char warm_bank[128];
         uint sipc_ldsp_size = 0;
+        uint sipc_warm_size = 0;
         uint sipc_tgdsp_size = 0;
 
         sipc_modem_size = LF_MODEM_SIZE;
         sipc_tgdsp_size = LF_TGDSP_SIZE;
         sipc_ldsp_size = LF_LDSP_SIZE;
+        sipc_warm_size = LF_WARM_SIZE;
         strcat(persist_prop, "lf.nvp");
         property_get(LF_PROC_PROP, proc_prop, "");
         /* write 1 to stop*/
@@ -308,6 +311,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcpy(ldsp_bank, proc_prop);
         strcat(ldsp_bank, LDSP_BANK);
 
+        /*handle ldsp image*/
+        strcpy(warm_bank, proc_prop);
+        strcat(warm_bank, WARM_BANK);
         strcpy(modem_start, proc_prop);
         strcat(modem_start, MODEM_START);
 
@@ -339,6 +345,9 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcat(dsp_partition,"ldsp");
         load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
 
+        strcpy(dsp_partition,path);
+        strcat(dsp_partition,"warm");
+        load_sipc_image(dsp_partition, 0,  warm_bank, 0, sipc_warm_size);
     } else if(modem == TL_MODEM) {
         char tgdsp_bank[128];
         char ldsp_bank[128];
