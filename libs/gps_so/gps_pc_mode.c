@@ -36,6 +36,11 @@
 #include <semaphore.h>
 #include "gps_pc_mode.h"
 
+//==================gps pc mode set begin==============
+#define INIT_MODE  0x07
+#define STOP_MODE  0x03
+
+//==================gps pc mode set end================
 
 #define open_flag  1
 #define close_flag 0
@@ -242,6 +247,7 @@ void do_gps_mode(unsigned int mode)
 			break;
 		}
 	}
+       set_mode = 0;
 
 }
 
@@ -283,9 +289,28 @@ int gps_export_stop(void)
 	E("gps_export_stop ret is %d\n",ret);
 	return ret;
 }
- void set_gps_mode(unsigned int mode)
+ int set_gps_mode(unsigned int mode)
  {
-	set_mode = mode;
+      int ret = 0;
+      switch(mode)
+      {
+        case 0: // Hot start
+            set_mode = HOT_START;
+            ret = 1;
+            break;
+        case 1: // Warm start
+            set_mode = WARM_START;
+            ret = 1;
+            break;
+        case 2: // Cold start
+            set_mode = COLD_START;
+            ret = 1;
+            break;
+        default:
+            break;
+      }
+
+      return ret;
  }
 
 int get_nmea_data(char *nbuff)
@@ -305,107 +330,14 @@ int get_nmea_data(char *nbuff)
 	return ret;
 }
 
-/*====================== add for pc at interface end= ====================*/
-
-/*========================== this is for test =======================*/
-#if 0
-char ndata[32] = {0};
-pthread_t  thread;
-sem_t nmea_sem;
-FILE *nmea_fp = NULL;
-char run_status = 0;
-void save_nmea_file(void)
+int get_init_mode(void)
 {
-	struct stat temp;
-	if(access("/data/cg/online/nmea.log",0) == -1)
-	temp.st_size = 0;
-	else
-	stat("/data/cg/online/nmea.log", &temp);
-
-	if(temp.st_size >= 2000000)
-	{
-		if(nmea_fp != NULL){ 
-			fclose(nmea_fp);
-			nmea_fp = NULL;
-		}
-	}
-	else if(nmea_fp == NULL){
-		//E("create nmea log file now\n");
-		nmea_fp = fopen("/data/cg/online/nmea.log","a+");   //apend open
-	}
-	if(nmea_fp != NULL)
-	{
-		fwrite(ndata,1,strlen(ndata),nmea_fp);
-		fclose(nmea_fp);
-		nmea_fp = NULL;
-	}
+    return INIT_MODE;
 }
-void *nmea_thread(void *arg)
+int get_stop_mode(void)
 {
-	E("this thread is for read and save nmea log\n");
-	sem_wait(&nmea_sem);
-	E("=============>>>>>>>>>now we will enter while\n");
-	while(run_status)
-	{
-	memset(ndata,0,32);
-	get_nmea_data(ndata);
-	save_nmea_file();
-	}
-	E("this thread is over\n");
-	return ((void*)2);
+    return STOP_MODE;
 }
-int main(void)
-{
-	int cmd = 0;
-	unsigned int mode = 0;
-	char time = 0;
-	void *dummy;
-
-	sem_init(&nmea_sem, 0, 0);
-	if ( pthread_create( &thread, NULL, nmea_thread, NULL) != 0 )
-	E("create gps thread is fail\n");
-	while(cmd != 5)
-	{
-		E("\n");
-		E("now enter gps commad:\n");
-		E("1:gps set start mode\n");
-		E("2:gps start\n");
-		E("3:gps stop\n");
-		E("4:get nmea log,10 logs\n");
-		E("5:exit this function\n");
-		scanf("%d",&cmd);
-		if(cmd == 1){
-			E("enter start mode:1-warm start,125-cold start,1024-hot start\n");
-			scanf("%d",&mode);
-			set_gps_mode(mode);
-			mode = 0;
-			//now begin send mode to engine
-			gps_export_stop();
-			gps_export_start();
-			continue;
-		}
-		if(cmd == 2){
-			gps_export_start();
-			continue;
-		}
-		if(cmd == 3){
-			gps_export_stop();
-			continue;
-		}
-		if(cmd == 4){
-			run_status = 1;
-			sem_post(&nmea_sem);
-			continue;
-		}
-		
-	}
-	run_status = 0;
-	pthread_join(thread, &dummy);
-	return 0;
-
-}
-#endif
-
-
+/*====================== add for pc at interface end======================*/
 
 

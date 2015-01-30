@@ -5,7 +5,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel
+LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel libgpspc
 
 ifeq ($(BOARD_HAVE_BLUETOOTH_SPRD), true)
 ifeq ($(USE_SPRD_BQBTEST),true)
@@ -38,6 +38,7 @@ LOCAL_C_INCLUDES    +=  external/sqlite/dist/
 LOCAL_C_INCLUDES    +=  vendor/sprd/open-source/libs/libatchannel/
 LOCAL_C_INCLUDES    +=  vendor/sprd/open-source/libs/audio/nv_exchange/
 LOCAL_C_INCLUDES    +=  vendor/sprd/open-source/libs/audio/
+LOCAL_C_INCLUDES    +=  vendor/sprd/open-source/libs/gps_so/
 LOCAL_C_INCLUDES    +=  $(TARGET_OUT_INTERMEDIATES)/KERNEL/source/include/uapi/mtd/
 LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       eng_diag.c \
@@ -56,7 +57,6 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
                power.c \
                backlight.c \
                eng_util.c \
-	       gps_pc_mode.c\
 	       eng_autotest.c \
                eng_uevent.c\
                eng_debug.c
