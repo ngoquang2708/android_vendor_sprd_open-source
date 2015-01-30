@@ -4197,6 +4197,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     if(in->requested_rate) {
         in->pop_mute_bytes = RECORD_POP_MIN_TIME*in->requested_rate/1000*audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common));
     }
+    ALOGE("requested_rate %d,pop_mute_bytes %d frame_size %d",in->requested_rate,in->pop_mute_bytes,audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common)));
     in->dev = ladev;
     in->standby = 1;
     in->device = devices;
