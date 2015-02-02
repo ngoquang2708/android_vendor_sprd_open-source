@@ -1155,6 +1155,7 @@ static uint32_t GC0310_MIPI_StreamOff(uint32_t param)
 	GC0310_MIPI_WriteReg(0xfe, 0x03);
 	GC0310_MIPI_WriteReg(0x10, 0x84);
 	GC0310_MIPI_WriteReg(0xfe, 0x00);
+	usleep(50*1000);
 
 	return 0;
 }
