@@ -2506,11 +2506,11 @@ cmr_int camera_deinit_internal(cmr_handle  oem_handle)
 
 	camera_preview_deinit(oem_handle);
 
+	camera_focus_deinit(oem_handle);
+
 	camera_isp_deinit(oem_handle);
 
 	camera_jpeg_deinit(oem_handle);
-
-	camera_focus_deinit(oem_handle);
 
 	camera_setting_deinit(oem_handle);
 
