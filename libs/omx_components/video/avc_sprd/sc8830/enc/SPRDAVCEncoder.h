@@ -30,10 +30,8 @@ namespace android {
 //#define SPRD_DUMP_YUV
 //#define SPRD_DUMP_BS
 
-#ifdef FORCE_HWC_COPY_FOR_VIRTUAL_DISPLAYS
-#define SURFACEFLINGER_TRANSFORM_RGB2YUV
-#else
-//get rgb data from surfaceflinger
+#if 0
+//in wifidisplay case .get rgb data from surfaceflinger
 #define CONVERT_THREAD
 #endif
 
