@@ -673,6 +673,7 @@ reconnect:
         } else if(modem == LTE_MODEM) {
             property_get(L_LOOP_PROP, loop_dev, DEFAULT_L_LOOP_DEV);
         } else {
+            close(soc_fd);
             MODEMD_LOGE("%s: invalid modem type, exit", __func__);
             return NULL;
         }
