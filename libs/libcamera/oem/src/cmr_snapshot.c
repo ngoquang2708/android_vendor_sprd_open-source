@@ -60,7 +60,6 @@
 														} \
 													 } while(0)
 
-#define IS_CAP_FRM(id, v)                            ((((id) & (v)) == (v)) && (((id) - (v)) < CMR_CAPTURE_MEM_SUM))
 #define SRC_MIPI_RAW                                 "/data/isptool_src_mipi_raw_file.raw"
 
 #define SNP_CHN_OUT_DATA    		                 8000 /*debug.camera.save.snpfile 1*/

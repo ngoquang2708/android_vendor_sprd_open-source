@@ -296,6 +296,10 @@ void camera_send_channel_data(cmr_handle oem_handle, cmr_handle receiver_handle,
 		ret = cmr_preview_receive_data(cxt->prev_cxt.preview_handle, cxt->camera_id, evt, data);
 	}
 	if (cxt->snp_cxt.channel_bits & chn_bit) {
+		if (!IS_CAP_FRM(frm_ptr->frame_id, frm_ptr->base)) {
+			CMR_LOGE("frame index error");
+			goto exit;
+		}
 		if (TAKE_PICTURE_NEEDED == camera_get_snp_req((cmr_handle)cxt)) {
 			ret = cmr_snapshot_receive_data(cxt->snp_cxt.snapshot_handle, SNAPSHOT_EVT_CHANNEL_DONE, data);
 #ifdef CAMERA_PATH_SHARE
@@ -1954,6 +1958,14 @@ cmr_int camera_ipm_deinit(cmr_handle  oem_handle)
 		goto exit;
 	}
 	CMR_PRINT_TIME;
+	if (1 == cxt->ipm_cxt.is_hdr_open) {
+		ret = camera_close_hdr(cxt);
+		if (ret) {
+			CMR_LOGE("camera_close_hdr fail");
+		} else {
+			cxt->ipm_cxt.is_hdr_open = 0;
+		}
+	}
 	ret = cmr_ipm_deinit(ipm_cxt->ipm_handle);
 	if (ret) {
 		CMR_LOGE("failed to de-init ipm %ld", ret);
@@ -3996,7 +4008,7 @@ cmr_int camera_get_preview_param(cmr_handle oem_handle, enum takepicture_mode mo
 	}
 	cxt->snp_cxt.total_num = setting_param.cmd_type_value;
 
-	if (1 == camera_get_hdr_flag(cxt)) {
+	if (1 == camera_get_hdr_flag(cxt) && (CAMERA_ZSL_MODE != mode)) {
 		struct ipm_open_in  in_param;
 		struct ipm_open_out out_param;
 		in_param.frame_size.width = CAMERA_ALIGNED_16(cxt->snp_cxt.request_size.width);

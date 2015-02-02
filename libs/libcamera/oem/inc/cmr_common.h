@@ -94,6 +94,7 @@ extern "C"
 					                                  CMR_EVT_SETTING_BASE | CMR_EVT_IPM_BASE | \
 					                                  CMR_EVT_FOCUS_BASE)
 
+#define IS_CAP_FRM(id, v)                            ((((id) & (v)) == (v)) && (((id) - (v)) < CMR_CAPTURE_MEM_SUM))
 #define CMR_RTN_IF_ERR(n)                                              \
 		do {                                                   \
 			if (n) {                                       \
