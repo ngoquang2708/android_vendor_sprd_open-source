@@ -1029,10 +1029,6 @@ status_t SprdCameraHardware::autoFocus()
 	}
 	Mutex::Autolock l(&mLock);
 
-	if (mParameters.getFocusMode() == CAMERA_FOCUS_MODE_INFINITY) {
-		LOGI("does support autoFocus, return");
-		return NO_ERROR;
-	}
 	mPreviewLock.lock();
 	if (!isPreviewing()) {
 		LOGE("autoFocus: not previewing");
