@@ -751,6 +751,7 @@ static void *control_audio_loop_process(void *arg){
     pipe_fd = open("/dev/pipe/mmi.audio.ctrl", O_RDWR);
     if(pipe_fd < 0){
         LOG_E("%s, open pipe error!! ",__func__);
+        return NULL;
     }
     max_fd = pipe_fd + 1;
     if((fcntl(pipe_fd,F_SETFL,O_NONBLOCK)) <0){
@@ -761,6 +762,7 @@ static void *control_audio_loop_process(void *arg){
         LOG_E("malloc data err");
         return NULL;
     }
+    LOG_I("begin to receive audio control message");
     while(1){
         FD_ZERO(&fds_read);
         FD_SET(pipe_fd,&fds_read);
