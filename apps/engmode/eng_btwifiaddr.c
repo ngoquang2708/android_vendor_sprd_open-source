@@ -24,6 +24,7 @@
 #define WIFI_MAC_FILE		"/productinfo/wifimac.txt"
 #define WIFI_ROOT_MAC_FILE	"/data/misc/wifi/wifimac.txt"
 #define BT_MAC_FILE		"/productinfo/bluetooth/bt_mac.txt"
+#define BT_MAC_DIR	         "/productinfo/bluetooth"
 #define BT_ROOT_MAC_FILE	"/data/misc/bluedroid/bt_mac.txt"
 #define MAC_RAND_FILE		"/productinfo/rand_mac.txt"
 
@@ -168,10 +169,10 @@ static int write_mac2file(char *wifimac, char *btmac)
 
     //wifi mac
     fd = open(WIFI_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
-    ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, wifimac, WIFI_MAC_FILE, fd);
+    ENG_LOG("%s: mac=%s, fd[%s]=%d,errno=%d, errstr=%s",__FUNCTION__, wifimac, WIFI_MAC_FILE, fd,errno, strerror(errno));
     if(fd >= 0) {
         if(-1 == chmod(WIFI_MAC_FILE, 0666))
-	    ALOGD("%s chmod failed",__FUNCTION__);
+	    ENG_LOG("%s chmod failed",__FUNCTION__);
         ret = write(fd, wifimac, strlen(wifimac));
         close(fd);
     }else{
@@ -180,11 +181,18 @@ static int write_mac2file(char *wifimac, char *btmac)
     }
 
     //bt mac
+    if (0 != access(BT_MAC_DIR, F_OK) ){
+        ret = mkdir(BT_MAC_DIR, S_IRWXU | S_IRWXG | S_IRWXO);
+        if (-1 == ret && (errno != EEXIST)) {
+            ENG_LOG("mkdir %s failed.",BT_MAC_DIR);
+            return ret;
+        }
+    }
     fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
-    ALOGD("%s: mac=%s, fd[%s]=%d",__FUNCTION__, btmac, BT_MAC_FILE, fd);
+    ENG_LOG("%s: mac=%s, fd[%s]=%d,errno=%d, errstr=%s",__FUNCTION__, btmac, BT_MAC_FILE, fd,errno, strerror(errno));
     if(fd >= 0) {
         if(-1 == chmod(BT_MAC_FILE, 0666))
-	    ALOGD("%s chmod failed",__FUNCTION__);
+	    ENG_LOG("%s chmod failed",__FUNCTION__);
         ret = write(fd, btmac, strlen(btmac));
         close(fd);
         if (0 == access(BT_ROOT_MAC_FILE,F_OK)){
