@@ -32,6 +32,7 @@ static pthread_t ntid_bqb = (pthread_t)(-1);
 extern int eng_controller2tester(char * controller_buf, unsigned int data_len);
 extern int bt_hci_init_transport (int *bt_fd);
 extern int sprd_config_init(int fd, char *bdaddr, struct termios *ti);
+extern void lpm_wake_up(void);
 static void thread_exit_handler(int sig)
 {
     ENG_LOG("receive signal %d , eng_receive_data_thread exit\n", sig);
@@ -96,7 +97,6 @@ int eng_controller_bqb_start(void)
     ENG_LOG(" bqb test test eng_controller_bqb_start");
 
     bt_hci_init_transport(&bt_fd);
-    sprd_config_init(bt_fd, NULL,NULL);
 
     ret = pthread_create(&ntid_bqb, NULL, (void *)eng_receive_data_thread, NULL);   /*create thread*/
     if(ret== -1)  {
@@ -114,7 +114,7 @@ int eng_controller_bqb_stop(void)
         ENG_LOG("pthread_kill BQB test receive data thread error\n");
         return -1;
     }
-
+    pthread_join(ntid_bqb, NULL);
     return 0;
 }
 
@@ -142,6 +142,7 @@ void eng_send_data(char * data, int data_len)
 
     while(count)
     {
+        lpm_wake_up();
         nWritten = write(bt_fd, data, data_len);
         count -= nWritten;
         data_ptr  += nWritten;
