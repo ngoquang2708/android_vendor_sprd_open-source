@@ -6,6 +6,7 @@ if [ "$1" = "-u" ]; then
         #for var in seth_lte0 seth_lte1 seth_lte2 seth_lte3 seth_lte4 seth_lte5; do
         `echo ${temp} > /proc/sys/net/ipv6/conf/$ifname/disable_ipv6`
         #done
+        `echo -1 > /proc/sys/net/ipv6/conf/$ifname/accept_dad`
 	ifname=`getprop sys.data.setip`
 	ip $ifname
 	ifname=`getprop sys.data.setmtu`
@@ -14,6 +15,8 @@ if [ "$1" = "-u" ]; then
 	ip $ifname
 	ifname=`getprop sys.data.noarp`
 	ip $ifname
+        ifname=`getprop sys.data.noarp.ipv6`
+        ip $ifname
 
 ##For Auto Test
 	ethup=`getprop ril.gsps.eth.up`
@@ -57,12 +60,16 @@ elif [ "$1" = "-e" ]; then
         iptables -A FORWARD -p udp --dport 53 -j DROP
         iptables -A INPUT -p udp --dport 53 -j DROP
         iptables -A OUTPUT -p udp --dport 53 -j DROP
-
+        ip6tables -A FORWARD -p udp --dport 53 -j DROP
+        ip6tables -A INPUT -p udp --dport 53 -j DROP
+        ip6tables -A OUTPUT -p udp --dport 53 -j DROP
 
 elif [ "$1" = "-c" ]; then
         iptables -D FORWARD -p udp --dport 53 -j DROP
         iptables -D INPUT -p udp --dport 53 -j DROP
         iptables -D OUTPUT -p udp --dport 53 -j DROP
-
+        ip6tables -D FORWARD -p udp --dport 53 -j DROP
+        ip6tables -D INPUT -p udp --dport 53 -j DROP
+        ip6tables -D OUTPUT -p udp --dport 53 -j DROP
 
 fi
