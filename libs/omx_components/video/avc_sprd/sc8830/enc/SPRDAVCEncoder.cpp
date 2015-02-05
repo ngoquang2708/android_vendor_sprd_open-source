@@ -1698,7 +1698,11 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                         ConvertYUV420PlanarToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight,
                                                               (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                     } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-#ifdef SURFACEFLINGER_TRANSFORM_RGB2YUV
+                        struct private_handle_t *pH = (struct private_handle_t *)buf;
+                        private_handle_t* pBuf = (private_handle_t* )buf;
+                        ALOGI("OMX_COLOR_FormatAndroidOpaque.pBuf->format:%d",pBuf->format);
+                        ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                    } else if(mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                         struct private_handle_t *pH = (struct private_handle_t *)buf;
                         int64_t start_queue = systemTime();
                         int size = 0;
@@ -1713,16 +1717,12 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                             py_phy = (uint8_t*)(pBuf->phyaddr);
                             py = (uint8_t*)vaddr;
                             int64_t end_queue = systemTime();
-                            ALOGI("wfd: get yuv data directly. queue yuv buffer time: %d ms",(unsigned int)((end_queue-start_queue) / 1000000L));
+                            ALOGI("wfd: get yuv data directly. OMX_COLOR_FormatYUV420SemiPlanar.color format:%d,queue yuv buffer time: %d ms",pBuf->format,(unsigned int)((end_queue-start_queue) / 1000000L));
                         }else{
-                            ALOGI("wfd:get rgb data in SURFACEFLINGER_TRANSFORM_RGB2YUV");
-                            ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
+                            ALOGI("wfd:color not match.OMX_COLOR_FormatYUV420SemiPlanar,we need HAL_PIXEL_FORMAT_YCbCr_420_SP.but get color format:%d",pBuf->format);
                         }
- #else
-                         //ConvertARGB888ToYVU420SemiPlanar((uint8_t*)vaddr, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
-			ConvertARGB888ToYVU420SemiPlanar_neon((uint8_t*)vaddr, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
- #endif
-                    } else {
+                    }
+                    else {
                         memcpy(py, vaddr, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                     }
 
@@ -1768,12 +1768,8 @@ void SPRDAVCEncoder::onQueueFilled(OMX_U32 portIndex) {
                     ConvertYUV420PlanarToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight,
                                                           (mVideoWidth + 15) & (~15), (mVideoHeight + 15) & (~15));
                 } else if(mVideoColorFormat == OMX_COLOR_FormatAndroidOpaque) {
-#ifdef SURFACEFLINGER_TRANSFORM_RGB2YUV
-                    memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
-#else
                     //ConvertARGB888ToYVU420SemiPlanar(inputData, py, mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
                     ConvertARGB888ToYVU420SemiPlanar_neon(inputData, py, py+(((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15))),mVideoWidth, mVideoHeight, (mVideoWidth+15)&(~15), (mVideoHeight+15)&(~15));
-#endif
                 } else {
                     memcpy(py, inputData, ((mVideoWidth+15)&(~15)) * ((mVideoHeight+15)&(~15)) * 3/2);
                 }
