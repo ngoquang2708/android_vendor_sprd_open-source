@@ -487,7 +487,7 @@ static void download_hw_rst(void)
 static void download_wifi_calibration(int download_fd)
 {
 	int ret=0;
-
+	int retry_cnt = 0;
 	DOWNLOAD_LOGD("start download calibration\n");
 
 	ret = write(download_fd,"start_calibration",17);
@@ -497,11 +497,14 @@ static void download_wifi_calibration(int download_fd)
 	/* start calibration*/
 	get_connectivity_rf_param(&wifi_data.wifi_rf_cali);
 	ret = write(download_fd,&wifi_data.wifi_rf_cali,sizeof(wifi_data.wifi_rf_cali));
-
 	do{
-		ret = read(download_fd,&wifi_data.wifi_cali_cp,sizeof(wifi_data.wifi_cali_cp));
-		//sleep(1);
-	}while(ret <=0);
+                ret = read(download_fd,&wifi_data.wifi_cali_cp,sizeof(wifi_data.wifi_cali_cp));
+                usleep(1000);
+                retry_cnt++;
+        }while((ret <= 0) && (retry_cnt <= 2000));
+        
+	if(ret <= 0)
+                DOWNLOAD_LOGD("wait cali fail!!!!\n");
 
 	if(!wifi_data.wifi_rf_cali.wifi_cali.cali_config.is_calibrated){
 		wlan_save_cali_data_to_file(&wifi_data.wifi_cali_cp);
