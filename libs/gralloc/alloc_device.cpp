@@ -404,8 +404,14 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 	{
 		switch (format)
 		{
-			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 			case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+				stride = GRALLOC_ALIGN(w, 16);
+				size = GRALLOC_ALIGN(h, 16) * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				break;
+			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+				stride = GRALLOC_ALIGN(w, 16);
+				size = GRALLOC_ALIGN(h, 16) * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				break;
 			case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
 				stride = w;
 				// mali GPU hardware requires uv-plane 64byte-alignment
@@ -422,6 +428,7 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 				size = GRALLOC_ALIGN(h * stride, 64) + GRALLOC_ALIGN(h/2 * GRALLOC_ALIGN(stride/2,16), 64) + h/2 * GRALLOC_ALIGN(stride/2,16);
 				break;
 			default:
+				ALOGE("alloc_device_alloc find not support format: 0x%x", format);
 				return -EINVAL;
 		}
 	}
