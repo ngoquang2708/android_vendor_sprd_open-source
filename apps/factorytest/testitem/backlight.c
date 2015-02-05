@@ -145,7 +145,9 @@ int test_vb_bl_start(void)
 		en_key_backlight(key_max>>i);
 		usleep(500*1000);
 	}
-	row = ui_show_text(row, 0, TEXT_VIB_FINISH);
+	ui_set_color(CL_GREEN);
+        row = ui_show_text(row, 0, TEXT_VIB_FINISH);
+        gr_flip();
 	en_lcd_backlight(lcd_max);
 	en_key_backlight(0);
 	ret = ui_handle_button(NULL,NULL);//, TEXT_GOBACK

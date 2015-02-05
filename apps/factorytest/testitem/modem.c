@@ -357,9 +357,6 @@ modem_init_func(void *arg)
 	}
 
 
-	for(i = 0; i < s_modem_count; i++) {
-		if(modem_send_at(modem_fd[i], "AT+SFUN=2", NULL, 0, 0) < 0) return NULL;
-	}
 
 	if((pos = modem_send_at(modem_fd[0], "AT+CGMR", s_modem_ver, sizeof(s_modem_ver), 0)) < 0) return NULL;
 
@@ -484,8 +481,31 @@ void* sim_check_thread(void* param)
 
 int test_sim_pretest(void)
 {
-	int ret;
-	if(s_sim_state == 2) {
+	int i;
+	char tmp[512];
+	char* ptmp = NULL;
+	int sim_state;
+	int test_result = 0;
+	int ret = RL_FAIL;
+
+	for(i = 0; i < s_modem_count; i++) {
+		if(modem_send_at(modem_fd[i], "AT+EUICC?", tmp, sizeof(tmp), 0) < 0) {
+			sim_state = -1;
+		} else {
+			ptmp = tmp;
+			eng_tok_start(&ptmp);
+			eng_tok_nextint(&ptmp, &sim_state);
+		}
+		LOGD("get sim%d, state=%d\n", i, sim_state);
+		if(sim_state == 0) {
+			test_result++;
+		} else {
+			test_result=0;
+		}
+	}
+	s_sim_state = test_result;
+
+	if(s_sim_state < 2) {
 		ret= RL_FAIL;
 	} else {
 		ret= RL_PASS;
