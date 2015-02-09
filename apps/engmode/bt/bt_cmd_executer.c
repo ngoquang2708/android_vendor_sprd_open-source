@@ -716,20 +716,35 @@ static BT_ENG_ERROR_E bteng_set_nonsig_rx_testmode(uint32_t *data, char *paddr)
 
     if(enable)
     {
-	    if(pattern != 7)
-	    {
-	        BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
-
-            return err;
-	    }
-
-        if(channel > 78)
+        if(is_le)
         {
-            BTENG_LOGD("%s, channel invalid err: %d", __FUNCTION__, err);
-
-            return err;
+            if(pattern > 7)
+            {
+                BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
+                return err;
+            }
+            if(channel > 39 || channel < 0)
+            {
+                BTENG_LOGD("%s, channel invalid err: %d", __FUNCTION__, err);
+                return err;
+            }
         }
+        else
+        {
+            if(pattern != 7)
+            {
+                BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
 
+                return err;
+            }
+
+            if(channel > 78)
+            {
+                BTENG_LOGD("%s, channel invalid err: %d", __FUNCTION__, err);
+
+                return err;
+            }
+        }
 
         if(rx_gain > 32)
         {
@@ -796,18 +811,34 @@ static BT_ENG_ERROR_E bteng_set_nonsig_tx_testmode(uint32_t *data)
 
     if(enable)
     {
-        if((pattern != 1) && (pattern != 2) && (pattern != 3) && (pattern != 4) && (pattern != 9))
+        if(is_le)
         {
-            BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
-
-            return err;
+            if(pattern > 7|| pattern < 0)
+            {
+                BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
+                return err;
+            }
+            if(channel > 39 || channel < 0)
+            {
+                BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
+                return err;
+            }
         }
-
-        if(!(((channel >= 0) && (channel <= 78)) || (channel == 255)))
+        else
         {
-            BTENG_LOGD("%s, channel invalid err: %d", __FUNCTION__, err);
+            if((pattern != 1) && (pattern != 2) && (pattern != 3) && (pattern != 4) && (pattern != 9))
+            {
+                BTENG_LOGD("%s, pattern invalid err: %d", __FUNCTION__, err);
 
-            return err;
+                return err;
+            }
+
+            if(!(((channel >= 0) && (channel <= 78)) || (channel == 255)))
+            {
+                BTENG_LOGD("%s, channel invalid err: %d", __FUNCTION__, err);
+
+                return err;
+            }
         }
 
 	if(!(((pac_type >= 0) && (pac_type <= 16)) || ((pac_type >= 20) && (pac_type <= 31))))
