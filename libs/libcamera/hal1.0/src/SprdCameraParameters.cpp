@@ -1480,8 +1480,8 @@ static void coordinate_struct_convert(int *rect_arr,int arr_size)
 		top = rect_arr[i*4+1];
 		right = rect_arr[i*4+2];
 		bottom = rect_arr[i*4+3];
-		width = (((right-left+3) >> 2)<<2);
-		height =(((bottom-top+3) >> 2)<<2);
+		width = right-left;
+		height = bottom-top;
 		rect_arr[i*4+2] = width;
 		rect_arr[i*4+3] = height;
 		LOGD("test:zone: left=%d,top=%d,right=%d,bottom=%d, w=%d, h=%d \n", left, top, right, bottom, width, height);

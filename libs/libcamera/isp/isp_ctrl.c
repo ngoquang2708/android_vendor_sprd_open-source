@@ -330,6 +330,7 @@ static uint16_t cce_matrix[][12]=
 static struct isp_param* s_isp_param_ptr=NULL;
 static pthread_mutex_t s_ctrl_mutex={0x00};
 
+
 static struct isp_caf_cal_cfg ctn_af_cal_cfg[2][2] =
 {
 	{//Preview CAF
@@ -1193,12 +1194,15 @@ static uint32_t _ispAeTouchZone(uint32_t handler_id, struct isp_pos_rect* param_
 	uint32_t bord = 0x06;
 	uint32_t half_bord = bord/2;
 
-	if((isp_context_ptr->src.w <= param_ptr->start_x)
+	ISP_LOG("x:%d y:%d end_x:%d end_y:%d", start_x,start_y, end_x,end_y);
+	if(((ISP_ZERO==param_ptr->end_x)
+		&& (ISP_ZERO==param_ptr->end_y) )
+		|| ( isp_context_ptr->src.w <= param_ptr->start_x)
 		|| (isp_context_ptr->src.h <= param_ptr->start_y)
-		|| (isp_context_ptr->src.w <= param_ptr->end_x)
-		|| (isp_context_ptr->src.h <= param_ptr->end_y)) {
-
-		ISP_LOG("w:%d, h:%d error \n", param_ptr->end_x, param_ptr->end_y);
+		|| (isp_context_ptr->src.w < end_x)
+		|| (isp_context_ptr->src.h < end_y)) {
+		ISP_LOG("x:%d y:%d end_x:%d, end_y:%d error \n",
+			param_ptr->start_x, param_ptr->start_y, param_ptr->end_x, param_ptr->end_y);
 		rtn=ISP_PARAM_ERROR;
 		return rtn;
 	}

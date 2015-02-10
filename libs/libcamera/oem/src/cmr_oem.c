@@ -3662,8 +3662,8 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		isp_cmd = ISP_CTRL_AE_TOUCH;
 		trim.start_x = param_ptr->win_area.rect[0].start_x;
 		trim.start_y = param_ptr->win_area.rect[0].start_y;
-		trim.end_x = param_ptr->win_area.rect[0].start_x + param_ptr->win_area.rect[0].width -1;
-		trim.end_y = param_ptr->win_area.rect[0].start_y + param_ptr->win_area.rect[0].height -1;
+		trim.end_x = param_ptr->win_area.rect[0].start_x + param_ptr->win_area.rect[0].width;
+		trim.end_y = param_ptr->win_area.rect[0].start_y + param_ptr->win_area.rect[0].height;
 		ptr_flag = 1;
 		isp_param_ptr = (void *)&trim;
 		break;
