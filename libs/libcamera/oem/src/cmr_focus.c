@@ -333,6 +333,13 @@ cmr_int af_thread_proc(struct cmr_msg *message, void* data)
 			break;
 		}
 
+		if (CAMERA_FOCUS_MODE_INFINITY == af_cxt->af_mode) {
+			CMR_LOGI("CAMERA_FOCUS_MODE_INFINITY AF_CB_FAILED return");
+			cb_type = AF_CB_FAILED;
+			af_cxt->evt_cb(cb_type, 0, af_cxt->oem_handle);
+			break;
+		}
+
 		camera_id = (cmr_u32)message->data;
 
 		if (PREVIEWING != af_cxt->ops.get_preview_status(af_cxt->oem_handle)) {
