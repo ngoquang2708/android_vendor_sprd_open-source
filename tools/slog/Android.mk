@@ -7,7 +7,6 @@ LOCAL_SRC_FILES := slog.c \
 				parse_conf.c \
 				screenshot.c \
 				android.c \
-				modem.c \
 				snap.c \
 				tcp.c \
 				bt.c
