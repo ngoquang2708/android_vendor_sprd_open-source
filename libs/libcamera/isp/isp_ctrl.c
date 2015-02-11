@@ -4429,8 +4429,8 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->ae.stat_b_ptr=(uint32_t*)&isp_context_ptr->awb_stat.b_info;
 	isp_context_ptr->ae.stat_y_ptr=(uint32_t*)&isp_context_ptr->ae_stat.y;
 
-	isp_context_ptr->ae.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_center;
-	isp_context_ptr->ae.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->ae.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->ae.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
 	isp_context_ptr->ae.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_spot;
 	isp_context_ptr->ae.weight_ptr[3]=raw_fix_ptr->ae.weight_tab;
 	isp_context_ptr->ae.weight_id=ISP_ONE;
@@ -4550,9 +4550,9 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	}
 	/*isp_context_ptr->awb.mode=raw_tune_ptr->awb.mode;
 	isp_context_ptr->awb.weight=raw_tune_ptr->awb.weight;*/
-	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_center;
-	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_avrg;
-	isp_context_ptr->awb.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->awb.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_spot;
 
 	for (i=0x00; i<20; i++) {
 		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win_x[i];
@@ -5376,8 +5376,8 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.stat_b_ptr=(uint32_t*)&isp_context_ptr->awb_stat.b_info;
 	isp_context_ptr->ae.stat_y_ptr=(uint32_t*)&isp_context_ptr->ae_stat.y;
 
-	isp_context_ptr->ae.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_center;
-	isp_context_ptr->ae.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->ae.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->ae.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
 	isp_context_ptr->ae.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_spot;
 	isp_context_ptr->ae.weight_ptr[3]=raw_fix_ptr->ae.weight_tab;
 	isp_context_ptr->ae.weight_id=ISP_ONE;
@@ -5504,9 +5504,9 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 	/*isp_context_ptr->awb.mode=raw_tune_ptr->awb.mode;
 	isp_context_ptr->awb.weight=raw_tune_ptr->awb.weight;*/
-	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_center;
-	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_avrg;
-	isp_context_ptr->awb.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->awb.weight_ptr[0]=(uint8_t*)ISP_AEAWB_weight_avrg;
+	isp_context_ptr->awb.weight_ptr[1]=(uint8_t*)ISP_AEAWB_weight_center;
+	isp_context_ptr->awb.weight_ptr[2]=(uint8_t*)ISP_AEAWB_weight_spot;
 
 	for (i=0x00; i<20; i++) {
 		isp_context_ptr->awb.win[i].x=raw_tune_ptr->awb.win[i].x;
