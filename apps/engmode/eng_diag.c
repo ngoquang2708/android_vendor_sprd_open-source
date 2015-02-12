@@ -69,6 +69,7 @@ extern void  nvstruct2stringfile(char* filename,void *para_ptr, int lenbytes);
 extern char* get_ser_diag_path(void);
 extern int	disconnect_vbus_charger(void);
 extern int	connect_vbus_charger(void);
+extern int  start_fm_test(char *,int);
 
 
 extern  struct eng_bt_eutops bt_eutops;
@@ -446,6 +447,9 @@ int eng_diag_parse(char *buf,int len)
             ret =CMD_USER_ADC;
             break;
 #endif
+	case DIAG_FM_TEST_F:
+		ret=CMD_USER_FM;
+		break;
         case DIAG_CMD_AT:
             if(is_audio_at_cmd_need_to_handle(buf,len)){
                 ENG_LOG("%s: Handle DIAG_CMD_AUDIO\n",__FUNCTION__);
@@ -603,6 +607,12 @@ int eng_diag_user_handle(int type, char *buf,int len)
         case CMD_USER_ADC:
             rlen=eng_diag_adc(buf, adc_rsp);
             break;
+/* add FM pandora for marlin */
+	case CMD_USER_FM:
+	    rlen=start_fm_test(buf,len);
+	    eng_diag_write2pc(buf,len);
+	    return 0;
+	    break;
 	case CMD_USER_AUTOTEST:
 	    memset(eng_diag_buf, 0, sizeof(eng_diag_buf));
 	    rlen=eng_diag_attest(buf, len, eng_diag_buf);

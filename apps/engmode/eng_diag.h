@@ -54,6 +54,7 @@ typedef enum
 #define DIAG_CMD_APCALI		0x62
 #define DIAG_CMD_FACTORYMODE	0x0D
 #define DIAG_CMD_ADC_F		0x0F  //add by kenyliu on 2013 07 12 for get ADCV  bug 188809
+#define DIAG_FM_TEST_F          0x41  //FM pandora
 #define DIAG_CMD_AT 		0x68
 #define DIAG_CMD_CHANGEMODE     DIAG_CHANGE_MODE_F
 
@@ -92,6 +93,7 @@ typedef enum
     CMD_USER_APCALI,
     CMD_USER_APCMD,
     CMD_USER_ADC,
+    CMD_USER_FM,
     CMD_USER_PRODUCT_CTRL,
     CMD_USER_DIRECT_PHSCHK,
     CMD_USER_MMICIT_READ,

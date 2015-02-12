@@ -5,7 +5,8 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel libgpspc
+LOCAL_SHARED_LIBRARIES  := libcutils libsqlite libhardware libhardware_legacy libvbeffect libvbpga libnvexchange libatchannel libgpspc \
+	                       libeng-audio  libbt-utils 
 
 LOCAL_STATIC_LIBRARIES  :=
 LOCAL_LDLIBS        += -Idl
@@ -20,6 +21,15 @@ endif
 ifeq ($(USE_BOOT_AT_DIAG),true)
 LOCAL_CFLAGS += -DUSE_BOOT_AT_DIAG
 endif
+LOCAL_C_INCLUDES    += system/bluetooth/bluedroid/include \
+					   hardware/libhardware/include \
+					   hardware/libhardware_legacy/include \
+                       external/bluetooth/bluedroid/btif/include \
+					   system/core/include \
+					   external/bluetooth/bluedroid/gki/ulinux \
+					   external/bluetooth/bluedroid/stack/include \
+					   external/bluetooth/bluedroid/stack/btm \
+
 
 LOCAL_C_INCLUDES    +=  external/sqlite/dist/
 LOCAL_C_INCLUDES    +=  vendor/sprd/open-source/libs/libatchannel/
@@ -33,6 +43,7 @@ LOCAL_SRC_FILES     := eng_pcclient.c  \
 		       vdiag.c \
 		       eng_productdata.c \
 		       adc_calibration.c\
+			   fm_eut.c \
 		       crc16.c \
 		       eng_attok.c \
 		       engopt.c \
