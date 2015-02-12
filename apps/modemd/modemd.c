@@ -502,15 +502,17 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
     MODEMD_LOGD("write %s to %s", at_str, path);
 
     length = strlen(at_str);
-    ret = write(stty_fd, at_str, length);
-    if (ret != length) {
-        MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
-        close(stty_fd);
-        exit_modemd();
-    }
 
     for (;;) {
-        timeout.tv_sec=5;
+        ret = write(stty_fd, at_str, length);
+        if (ret != length) {
+            MODEMD_LOGE("write error length = %d  ret = %d\n", length, ret);
+            close(stty_fd);
+            exit_modemd();
+        }
+
+WAIT_RESPOSE_DATA:
+        timeout.tv_sec=1;
         timeout.tv_usec=0;
         FD_ZERO(&rfds);
         FD_SET(stty_fd, &rfds);
@@ -526,8 +528,7 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
 			}
         } else if (ret == 0) {
             MODEMD_LOGE("select timeout");
-            ret = -1;
-            break;
+            continue;
         } else {
             memset(buffer, 0, sizeof(buffer));
             count = read(stty_fd, buffer, sizeof(buffer));
@@ -543,6 +544,12 @@ int send_atcmd(int stty_fd, char *at_str, char *path)
                 MODEMD_LOGD("wrong modem state, exit!");
                 close(stty_fd);
                 exit_modemd();
+            }
+            else
+            {
+                //go on wait
+                MODEMD_LOGD("do nothing, go on wait!");
+                goto WAIT_RESPOSE_DATA;
             }
         }
     }
@@ -698,6 +705,9 @@ int start_service(int modem, int is_vlx, int restart)
             property_get(LF_TTY_DEV_PROP, modem_dev, "");
             property_get(LF_SIM_NUM_PROP, phoneCount, "");
          }
+
+        /*first wait modem alive */
+        wait_for_modem_alive(modem);
 
         /* For TD & W modem              */
         /* Open modem dev to send at cmd */
