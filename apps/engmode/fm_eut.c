@@ -33,7 +33,23 @@ FM_STATE_ENABLED,
 FM_STATE_PLAYING,
 FM_STATE_STOPED,
 FM_STATE_PANIC,
+FM_STATE_ERR,
 };
+typedef struct _FM_SIGNAL_PARAM_T
+{
+    unsigned char  nOperInd; 	// 	Tune: 	0: tune successful;
+  			     		//			1: tune failure
+						//	Seek: 	0: seek out valid channel successful
+	                    //			1: seek out valid channel failure	
+    unsigned short  nStereoInd;			// 	0: Stereo; Other: Mono;		
+    unsigned int 	nRssi;  			// 	RSSI Value
+    unsigned int	nFreqValue; 		// 	Frequency, Unit:KHz
+    unsigned int	nPwrIndicator; 	    // 	Power indicator
+    unsigned int	nFreqOffset; 		// 	Frequency offset 
+    unsigned int	nPilotDet; 			// 	pilot_det
+    unsigned int	nNoDacLpf; 			// 	no_dac_lpf
+			
+} FM_SIGNAL_PARAM_T;
 
 typedef enum {
 	   AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
@@ -83,23 +99,136 @@ typedef enum {
 #define AUDIO_DEVICE_OUT_FM_SPEAKER 0x2000000
 #endif
 
+#ifndef BTA_FM_OK
+#define BTA_FM_OK 0
+#endif
+#ifndef BTA_FM_SCAN_ABORT
+#define	BTA_FM_SCAN_ABORT 3
+#endif
+#define SEARCH_DIRECTION_UP  128
+
+#define SEARCH_DIRECTION_DOWN 0
+
 static hw_module_t * s_hwModule = NULL;
 static hw_device_t * s_hwDev    = NULL;
+
+static int mMinFreq = 70000;
+static int mMaxFreq = 108000;
 
 static bluetooth_device_t* sBtDevice = NULL;
 static const bt_interface_t* sBtInterface = NULL;
 static const btfm_interface_t* sFmInterface = NULL;
 static int sFmStatus = FM_STATE_PANIC;
+static int sFmSearchStatus = FM_STATE_PANIC;
+static int sFmTuneStatus = FM_STATE_PANIC;
+static int sFmMuteStatus = FM_STATE_PANIC;
+static int sFmVolumeStatus = FM_STATE_PANIC;
 
-void btfmEnableCallback (int status)  {  if (status == BT_STATUS_SUCCESS) sFmStatus = FM_STATE_ENABLED; ALOGI("Enable callback, status: %d", sFmStatus); }
-void btfmDisableCallback (int status) { if (status == BT_STATUS_SUCCESS) sFmStatus = FM_STATE_DISABLED;   ALOGI("Disable callback, status: %d", sFmStatus); }
-void btfmtuneCallback (int status, int rssi, int snr, int freq) { ALOGI("Tune callback, status: %d, freq: %d", status, freq); }
-void btfmMuteCallback (int status, BOOLEAN isMute){ ALOGI("Mute callback, status: %d, isMute: %d", status, isMute); }
-void btfmSearchCallback (int status, int rssi, int snr, int freq){ ALOGI("Search callback, status: %d", status); }
-void btfmSearchCompleteCallback(int status, int rssi, int snr, int freq){ ALOGI("Search complete callback"); }
-void btfmAudioModeCallback(int status, int audioMode){ ALOGI("Audio mode change callback, status: %d, audioMode: %d", status, audioMode); }
-void btfmAudioPathCallback(int status, int audioPath){ ALOGI("Audio path change callback, status: %d, audioPath: %d", status, audioPath); }
-void btfmVolumeCallback(int status, int volume){ ALOGI("Volume change callback, status: %d, volume: %d", status, volume); }
+static int mFmTune = 69500;
+static FM_SIGNAL_PARAM_T mFmSignalParm;
+int fmClose( void );
+int fmOpen();
+int fmPlay( uint freq );
+int fmstop();
+void btfmEnableCallback (int status)  
+{  
+    if (status == BT_STATUS_SUCCESS)
+    {
+		sFmStatus = FM_STATE_ENABLED;
+    }
+
+    ALOGI("Enable callback, status: %d", sFmStatus); 
+}
+
+void btfmDisableCallback (int status)
+{ 
+	if (status == BT_STATUS_SUCCESS) sFmStatus = FM_STATE_DISABLED;  
+	ALOGI("Disable callback, status: %d", sFmStatus); 
+}
+
+void btfmtuneCallback (int status, int rssi, int snr, int freq) 
+{ 
+   if(status == BTA_FM_OK)
+   {
+   		mFmSignalParm.nOperInd = FM_SUCCESS;
+		mFmSignalParm.nRssi = rssi;
+		mFmSignalParm.nFreqValue = freq;
+    	sFmTuneStatus = FM_STATE_ENABLED;
+   }
+   else 
+   {
+		mFmSignalParm.nOperInd = FM_FAILURE;
+		sFmTuneStatus = FM_STATE_ERR;
+   }
+	ALOGI("Tune callback, status: %d, freq: %d rssi: %d", status, freq,rssi); 
+}
+
+void btfmMuteCallback (int status, BOOLEAN isMute)
+{ 
+	if(status == BTA_FM_OK)
+	{
+
+		 sFmMuteStatus = FM_STATE_ENABLED;
+	}
+	else 
+	{
+		 sFmTuneStatus = FM_STATE_ERR;
+	}
+
+	ALOGI("Mute callback, status: %d, isMute: %d", status, isMute); 
+}
+
+void btfmSearchCallback (int status, int rssi, int snr, int freq)
+{ 
+	ALOGI("Search callback, status: %d", status); 
+}
+
+void btfmSearchCompleteCallback(int status, int rssi, int snr, int freq)
+{ 
+   if(status == BTA_FM_OK)
+   {
+   		mFmSignalParm.nOperInd = FM_SUCCESS;
+		mFmSignalParm.nRssi = rssi;
+		mFmSignalParm.nFreqValue = freq;
+    	sFmSearchStatus = FM_STATE_ENABLED;
+   }
+   else if(status == BTA_FM_SCAN_ABORT)
+   {
+        mFmSignalParm.nFreqValue = freq;
+   		sFmSearchStatus = FM_STATE_STOPED;
+   }
+   else 
+   {
+		mFmSignalParm.nOperInd = FM_FAILURE;
+		sFmSearchStatus = FM_STATE_ERR;
+   }
+	ALOGI("Search complete callback"); 
+}
+
+void btfmAudioModeCallback(int status, int audioMode)
+{ 
+	ALOGI("Audio mode change callback, status: %d, audioMode: %d", status, audioMode);
+}
+
+void btfmAudioPathCallback(int status, int audioPath)
+{ 
+	ALOGI("Audio path change callback, status: %d, audioPath: %d", status, audioPath); 
+}
+
+void btfmVolumeCallback(int status, int volume)
+{ 
+	if(status == BTA_FM_OK)
+	{
+	
+		sFmVolumeStatus = FM_STATE_ENABLED;
+	}
+	else 
+	{
+		sFmVolumeStatus = FM_STATE_ERR;
+	}
+
+	ALOGI("Volume change callback, status: %d, volume: %d", status, volume);
+}
 void btAdapterStateChangedCallback(bt_state_t state);
 
 static bt_callbacks_t btCallbacks = {
@@ -166,17 +295,205 @@ int fm_set_status(char * pdata)
    	   {
    	   		ALOGE("eut: open fm");
 			fmOpen();
-			fmPlay(1077);
+			fmPlay(mFmTune);
 			*pdata=0;
    	    }
    	else if(*pdata==0)
    		{
    			ALOGE("eut: close fm");
-			fmStopEx();
-			fmCloseEx();
+			fmStop();
+			fmClose();
 			
    		}
 	return 0;
+}
+
+int CallbackStatus(int status,char *p)
+{
+         if(status == FM_STATE_ENABLED)
+        {
+        	ALOGE("%s return FM_STATE_ENABLED",p);
+        	return FM_SUCCESS;
+        }
+		else if(FM_STATE_ERR == status)
+		{
+			ALOGE("%s return FM_STATE_ERR",p);
+			return FM_FAILURE;
+		}
+		else 
+		{
+		   ALOGE("%s timeout ....",p);
+			return FM_FAILURE;
+		}
+		return FM_FAILURE;
+}
+int fm_set_volume(unsigned char pdata)
+{
+    int status;
+	int counter = 0;
+	ALOGE("sFmStatus, status: %d", sFmStatus);
+ 	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{
+ 		sFmVolumeStatus = FM_STATE_PANIC;
+ 		if ((status = sFmInterface->set_volume((int)pdata)) != BT_STATUS_SUCCESS) {
+            ALOGE("Failed FM setFMVolumeNative, status: %d", status);
+			return FM_FAILURE;
+        }
+		while (counter++ < 3 && FM_STATE_ENABLED != sFmVolumeStatus && FM_STATE_ERR != sFmVolumeStatus) sleep(1);
+
+		return CallbackStatus(sFmVolumeStatus,"sFmVolumeStatus");
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+	return FM_FAILURE;
+}
+int fm_set_mute()
+{
+	 int status;
+	 int counter = 0;
+	 ALOGE("sFmStatus, status: %d", sFmStatus);
+ 	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{
+
+		sFmMuteStatus = FM_STATE_PANIC;
+ 		if ((status = sFmInterface->mute(1)) != BT_STATUS_SUCCESS) {
+            ALOGE("Failed FM setFMmuteNative, status: %d", status);
+			return FM_FAILURE;
+        }
+		while (counter++ < 3 && FM_STATE_ENABLED != sFmMuteStatus && FM_STATE_ERR != sFmMuteStatus) sleep(1);
+
+		return CallbackStatus(sFmMuteStatus,"sFmMuteStatus");
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+	return FM_FAILURE;
+}
+
+int fm_set_seek(unsigned int startFreq,char mode)
+{
+	 int status;
+	 int counter = 0;
+	 int diffFreq= 0;
+	 int direction;
+	 memset(&mFmSignalParm,0,sizeof(FM_SIGNAL_PARAM_T));
+	 mFmSignalParm.nOperInd = FM_FAILURE;
+	 ALOGE("sFmStatus, status: %d", sFmStatus);
+ 	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{	
+ 	    if(mode == 0)
+ 	    {
+ 	    	diffFreq = 0 -10;
+			direction = SEARCH_DIRECTION_UP;
+ 	    }
+		else if(mode == 1)
+		{
+			diffFreq =  10;
+			direction = SEARCH_DIRECTION_DOWN;
+		}
+ 		sFmSearchStatus = FM_STATE_PANIC;
+		if ((status = sFmInterface->combo_search(startFreq,startFreq+diffFreq,105,direction,0,0,0,0)) != BT_STATUS_SUCCESS) {
+				ALOGE("Failed FM Tune, status: %d", status);
+				return FM_FAILURE;
+		}
+ 		while (counter++ < 10 && FM_STATE_ENABLED != sFmSearchStatus && FM_STATE_ERR != sFmSearchStatus) 
+ 		{
+ 			if(sFmSearchStatus == FM_STATE_STOPED)
+ 			{
+ 			   
+ 			   if ((status = sFmInterface->combo_search(mFmSignalParm.nFreqValue,mFmSignalParm.nFreqValue+diffFreq,105,direction,0,0,0,0)) != BT_STATUS_SUCCESS) {
+					ALOGE("Failed FM Tune, status: %d", status);
+					return FM_FAILURE;
+		        }
+ 			}
+			sleep(1);
+ 		}
+
+		return CallbackStatus(sFmSearchStatus,"sFmSearchStatus");
+
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+	return FM_FAILURE;
+
+}
+
+int fm_get_tune(int frq)
+{
+	int status;
+	int counter = 0;
+	memset(&mFmSignalParm,0,sizeof(FM_SIGNAL_PARAM_T));
+	mFmSignalParm.nOperInd = FM_FAILURE;
+	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{	
+ 		sFmTuneStatus = FM_STATE_PANIC;
+		if ((status = sFmInterface->tune(frq)) != BT_STATUS_SUCCESS) {
+				ALOGE("Failed FM Tune, status: %d", status);
+				return FM_FAILURE;
+			}
+ 		while (counter++ < 10 && FM_STATE_ENABLED != sFmTuneStatus && FM_STATE_ERR != sFmTuneStatus) sleep(1);
+
+		return CallbackStatus(sFmTuneStatus,"sFmTuneStatus");
+
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+	return FM_FAILURE;
+}
+
+unsigned int fm_read_reg(unsigned int addr)
+{
+	 int status;
+	 int counter = 0;
+	 ALOGE("sFmStatus, status: %d", sFmStatus);
+ 	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{
+
+ 		if ((status = sFmInterface->read_reg(addr)) != BT_STATUS_SUCCESS) {
+            ALOGE("Failed FM fm_read_reg, status: %d", status);
+			return FM_FAILURE;
+        }
+         //needd return in callback.
+
+		 
+		return FM_SUCCESS;
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+
+}
+int fm_write_reg(unsigned int addr,int value)
+{
+	 int status;
+	 int counter = 0;
+	 ALOGE("sFmStatus, status: %d", sFmStatus);
+ 	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
+ 	{
+
+ 		if ((status = sFmInterface->write_reg(addr,value)) != BT_STATUS_SUCCESS) {
+            ALOGE("Failed FM fm_write_reg, status: %d", status);
+			return FM_FAILURE;
+        }
+         //needd return in callback.
+
+		 
+		return FM_SUCCESS;
+    }
+	else 
+	{
+		return FM_FAILURE;
+    }
+	return FM_FAILURE;
+
 }
 
 //for Pandora tool  ( Mobiletest)
@@ -184,6 +501,7 @@ int start_fm_test(unsigned char * buf,int len)
 {
     int fd;
     int i;
+	int ret = 0;
     char *pdata=NULL;
     MSG_HEAD_T *head_ptr=NULL;
     unsigned char temp[11];
@@ -193,19 +511,19 @@ int start_fm_test(unsigned char * buf,int len)
 	switch(head_ptr->subtype)
 		 {
 		 case FM_CMD_STATE: 
-			 fm_set_status(pdata); 
+			 ret =fm_set_status(pdata); 
 			 break;
 		 case FM_CMD_VOLUME:
-			 //fm_set_volum(pdata);
+			 ret = fm_set_volume(pdata);
 			 break;
 		 case FM_CMD_MUTE:
-			 //fm_set_mute(pdata);
+			 ret = fm_set_mute();
 			 break;
 		 case FM_CMD_TUNE:
-			 //fm_get_tune(pdata);
+			 ret = fm_get_tune(93000);
 			 break;
 		 case FM_CMD_SEEK:
-			 //fm_set_seek(pdata);
+			 ret = fm_set_seek(93000,0);
 			 break;
 		 case FM_CMD_READ_REG:
 			 //fm_read_reg(pdata);
@@ -216,7 +534,7 @@ int start_fm_test(unsigned char * buf,int len)
 		 default:
 			 break;
 		 }
-   return 0;
+   return ret;
 }
 
 
@@ -289,7 +607,7 @@ int fmPlay( uint freq )
 {
     if( NULL == s_hwDev ) {
         ALOGI("not opened!\n");
-        return -1;
+        return 1;
     }
 
     int  status;
@@ -299,10 +617,10 @@ int fmPlay( uint freq )
 
     if (sFmStatus != FM_STATE_ENABLED) {
          ALOGI("fm service has not enabled, status: %d", sFmStatus);
-         return -1;
+         return 1;
     }
-    sFmInterface->tune(freq * 10);
-
+    sFmInterface->tune(freq);
+	sleep(1);
     sFmInterface->set_audio_path(0x02);
     sleep(1);
     sFmInterface->set_volume(32);
@@ -321,7 +639,7 @@ int fmPlay( uint freq )
 }
 
 //------------------------------------------------------------------------------
-int fmStopEx( void )
+int fmStop( void )
 {
     if( NULL != s_hwDev ) {
         setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
@@ -334,23 +652,21 @@ int fmStopEx( void )
     return 0;
 }
 
-int fmCloseEx( void )
+int fmClose( void )
 {
     int counter = 0;
 
     if (sFmInterface)
         sFmInterface->disable();
     else
-        return -1;
+        return 1;
 
     while (counter++ < 3 && FM_STATE_DISABLED != sFmStatus) sleep(1);
-    if (FM_STATE_DISABLED != sFmStatus) return -1;
+    if (FM_STATE_DISABLED != sFmStatus) return 1;
 
     if (sFmInterface) sFmInterface->cleanup();
     if (sBtInterface) {
          sBtInterface->disableRadio();
-		 sleep(2);
-		 sBtInterface->cleanup();
     }
 
     sFmStatus = FM_STATE_DISABLED;
