@@ -51,6 +51,7 @@ ext_modem_ops_t *get_ext_modem_if(void);
 void  start_ext_modem(void);
 
 int   is_external_modem(void);
+int wait_for_modem_alive(int modem);
 
 #endif
 

@@ -201,8 +201,6 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
 
     strcpy(persist_prop,PERSIST_MODEM_CHAR);
-    system("echo load_modem_img >/sys/power/wake_lock");
-    g_b_wake_locking = true;
 
     if(modem == TD_MODEM) {
         sipc_modem_size = TD_MODEM_SIZE;
@@ -224,8 +222,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              ret = 0;
-              goto unlock_wake_and_exit;
+              return 0;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -263,8 +260,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              ret = 0;
-              goto unlock_wake_and_exit;
+              return 0;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -320,8 +316,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              ret = 0;
-              goto unlock_wake_and_exit;
+              return 0;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -380,8 +375,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         property_get(persist_prop,path_char,"");
         if(0 == strlen(path_char)){
               MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
-              ret = 0;
-              goto unlock_wake_and_exit;
+              return 0;
          }
         MODEMD_LOGD("modem path_char %s \n",path_char);
         strcat(path,path_char);
@@ -422,7 +416,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         MODEMD_LOGE("error unkown modem  alive_info");
     }
     int alive=0;
-    alive = wait_for_alive(modem,is_modem_assert);
+    alive = wait_for_modem_alive(modem);
     if(alive == 0){
     MODEMD_LOGD("wait for 20s\n");
       struct itimerspec itval;
@@ -433,23 +427,20 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
           wakealarm_fd = timerfd_create(CLOCK_BOOTTIME_ALARM, TFD_NONBLOCK);
       if (wakealarm_fd == -1) {
           MODEMD_LOGE("wakealarm_init: timerfd_create failed\n");
-          ret = -1;
-          goto unlock_wake_and_exit;
+          return -1;
       }
       if(epollfd < 0)
       {
           epollfd = epoll_create(1);
           if (epollfd == -1) {
               MODEMD_LOGE("healthd_mainloop: epoll_create failed; errno=%d\n", errno);
-              ret = -1;
-              goto unlock_wake_and_exit;
+              return -1;
           }
           ev.events = EPOLLIN | EPOLLWAKEUP;
           if (epoll_ctl(epollfd, EPOLL_CTL_ADD, wakealarm_fd, &ev) == -1)
           {
               MODEMD_LOGD("load_sipc_modem_img: epoll_ctl for wakealarm_fd failed; errno=%d\n", errno);
-              ret = -1;
-              goto unlock_wake_and_exit;
+              return -1;
           }
       }
       itval.it_interval.tv_sec = 20;
@@ -471,14 +462,15 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
       }while(1) ;
     }
     // sleep(20);
-    
+
     if(is_modem_assert ) {
         /* info socket clients that modem is reset */
         MODEMD_LOGD("Info all the sock clients that modem is alive");
         loop_info_sockclients(alive_info, strlen(alive_info)+1);
     }
-    
+
     start_service(modem, 0, 1);
+    sleep(20);
     if(modem == TD_MODEM) {
             pthread_mutex_lock(&td_state_mutex);
             td_modem_state = MODEM_READY;
@@ -502,9 +494,6 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     }
 
     ret = 0;
-unlock_wake_and_exit:
-    system("echo load_modem_img >/sys/power/wake_unlock");
-    g_b_wake_locking = false;
     return ret;
 }
 
@@ -705,6 +694,8 @@ reconnect:
         close(loop_fd);
 
 raw_reset:
+        system("echo load_modem_img >/sys/power/wake_lock");
+        g_b_wake_locking = true;
         /* info socket clients that modem is blocked */
         MODEMD_LOGE("Info all the sock clients that modem is blocked");
         loop_info_sockclients(buf, numRead);
@@ -725,6 +716,8 @@ raw_reset:
         } else {
             MODEMD_LOGD("%s: reset is not enabled , not reset", __func__);
         }
+        system("echo load_modem_img >/sys/power/wake_unlock");
+        g_b_wake_locking = false;
     }
     close(soc_fd);
     return (void*) NULL;
@@ -817,7 +810,13 @@ void* detect_sipc_modem(void *param)
                 sleep(1);
                 continue;
             }
+
+            system("echo load_modem_img >/sys/power/wake_lock");
+            g_b_wake_locking = true;
+
             memset(buf, 0, sizeof(buf));
+            MODEMD_LOGD("enter read ...");
+
             numRead = read(fd, buf, sizeof(buf));
             if (numRead <= 0) {
                 MODEMD_LOGE("read %d return %d, errno = %s", fd , numRead, strerror(errno));
@@ -937,40 +936,43 @@ void* detect_sipc_modem(void *param)
                     MODEMD_LOGD("modem reset is not enabled , will not reset");
                 }
             }
+            system("echo load_modem_img >/sys/power/wake_unlock");
+            g_b_wake_locking = false;
         }
     }
 }
 
-int wait_for_alive(int modem, int is_assert){
+int wait_for_modem_alive(int modem){
 
    char buf[256] = {0};
    int ret=0;
    int count = 0;
    int fd =0;
-   char assert_dev[256] = {0};
+   char tty_dev[256] = {0}, path[256]={0};
    struct timeval timeout;
    fd_set rfds;
 
    if(modem == TD_MODEM) {
-       property_get(TD_ASSERT_PROP, assert_dev, DEFAULT_TD_ASSERT_DEV);
+       property_get(TD_TTY_DEV_PROP, tty_dev, "");
    } else if(modem == W_MODEM) {
-       property_get(W_ASSERT_PROP, assert_dev, DEFAULT_W_ASSERT_DEV);
+       property_get(W_TTY_DEV_PROP, tty_dev, "");
    } else if(modem == TL_MODEM) {
-       property_get(TL_ASSERT_PROP, assert_dev, DEFAULT_TL_ASSERT_DEV);
+       property_get(TL_TTY_DEV_PROP, tty_dev, "");
    } else if(modem == LF_MODEM) {
-       property_get(LF_ASSERT_PROP, assert_dev, DEFAULT_LF_ASSERT_DEV);
+       property_get(LF_TTY_DEV_PROP, tty_dev, "");
    } else if(modem == LTE_MODEM) {
-       property_get(L_ASSERT_PROP, assert_dev, DEFAULT_L_ASSERT_DEV);
+       property_get(LTE_TTY_DEV_PROP, tty_dev, "");
    } else {
        MODEMD_LOGE("input wrong modem type!");
        return ret;
    }
 
-   fd = open(assert_dev, O_RDWR);
-   MODEMD_LOGD("open assert dev: %s, fd = %d",assert_dev, fd);
+   sprintf(path, "%s0", tty_dev);
+   fd = open_modem_dev(path);
+   MODEMD_LOGD("open tty dev: %s, fd = %d",path, fd);
 
    if(fd<=0){
-	   MODEMD_LOGD("open assert dev fail.");
+	   MODEMD_LOGD("open tty dev fail.");
 	   return ret;
    }
    FD_ZERO(&rfds);
@@ -984,12 +986,12 @@ int wait_for_alive(int modem, int is_assert){
            ret = select(fd+1, &rfds, NULL, NULL, &timeout);
        } while(ret == -1 && errno == EINTR);
        if(ret < 0){
-    	   MODEMD_LOGE("select error: %s", strerror(errno));
-    	   continue;
+           MODEMD_LOGE("select error: %s", strerror(errno));
+           continue;
        }else if(ret == 0){
-    	   MODEMD_LOGE("select timeout");
-    	   system("echo \"c\" > /proc/sysrq-trigger");
-    	   break;
+           MODEMD_LOGE(" wait alive select timeout, will panic!");
+           system("echo \"c\" > /proc/sysrq-trigger");
+           break;
        }else{
            count = read(fd, buf, sizeof(buf));
            if (count <= 0) {
