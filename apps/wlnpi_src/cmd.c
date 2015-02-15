@@ -120,6 +120,17 @@ int wlnpi_cmd_set_tx_count(int argc, char **argv,  unsigned char *s_buf, int *s_
     return 0;
 }
 
+int wlnpi_cmd_set_wlan_cap(int argc, char **argv,  unsigned char *s_buf, int *s_len )
+{
+    char **err = NULL;
+    if(1 != argc)
+        return -1;
+	*(unsigned int *)s_buf = strtol(argv[0], err, 10);
+    *s_len = 4;
+    if(err)
+        return -1;
+    return 0;
+}
 int wlnpi_cmd_set_mac(int argc, char **argv,  unsigned char *s_buf, int *s_len )
 {
     if(1 != argc)
@@ -680,6 +691,27 @@ int wlnpi_show_get_lna_status(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int
     return 0;   
 }
 
+int wlnpi_show_get_wlan_cap(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int r_len)
+{
+    unsigned int cap = 0;
+
+    ENG_LOG("ADL entry %s(), r_len = %d", __func__, r_len);
+
+    if(4 != r_len)
+    {
+        printf("get_rssi err\n");
+        ENG_LOG("ADL leaving %s(), r_len is ERROR, return -1", __func__);
+
+        return -1;
+    }
+
+    cap = *(unsigned int *)r_buf;
+    printf("ret: %d:end\n", cap );
+
+    ENG_LOG("ADL leaving %s(), cap = %d, return 0", __func__, cap);
+
+    return 0;
+}
 #define WLNPI_GET_REG_MAX_COUNT            (20)
 int wlnpi_show_get_reg(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int r_len)
 {
@@ -1302,7 +1334,20 @@ struct wlnpi_cmd_t g_cmd_table[] =
         .parse = wlnpi_cmd_no_argv,
         .show  = wlnpi_show_get_macfilter,
     },  
-
+    {
+        .id    = WLNPI_CMD_SET_WLAN_CAP,
+        .name  = "set_wlan_cap",
+        .help  = "set_wlan_cap <NUM>",
+        .parse = wlnpi_cmd_set_wlan_cap,
+        .show  = wlnpi_show_only_status,
+    },
+    {
+        .id    = WLNPI_CMD_GET_WLAN_CAP,
+        .name  = "get_wlan_cap",
+        .help  = "get_wlan_cap",
+        .parse = wlnpi_cmd_no_argv,
+        .show  = wlnpi_show_get_wlan_cap,
+    },
 };
 
 struct wlnpi_cmd_t *match_cmd_table(char *name)
