@@ -16,7 +16,8 @@ PRODUCT_PACKAGES += \
         libiwnpi \
 	SystemUpdate \
         Caldav-Sync.apk\
-        libsprd_agps_agent
+        libsprd_agps_agent \
+        cts_shortcut
 #	libsprddm \
 
 ifneq (none,$(strip $(PRODUCT_VIDEO_WALLPAPERS)))
