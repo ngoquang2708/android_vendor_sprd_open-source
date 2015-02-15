@@ -706,9 +706,6 @@ int start_service(int modem, int is_vlx, int restart)
             property_get(LF_SIM_NUM_PROP, phoneCount, "");
          }
 
-        /*first wait modem alive */
-        wait_for_modem_alive(modem);
-
         /* For TD & W modem              */
         /* Open modem dev to send at cmd */
         sprintf(path, "%s0", modem_dev);
