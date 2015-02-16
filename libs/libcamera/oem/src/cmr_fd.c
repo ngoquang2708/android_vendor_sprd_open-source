@@ -114,6 +114,9 @@ struct class_tab_t fd_tab_info = {
 		} \
 	} while(0)
 
+#define FD_PTR_NUB  200
+static void* fd_ptr[FD_PTR_NUB] = {NULL};
+
 static cmr_int fd_open(cmr_handle ipm_handle, struct ipm_open_in *in, struct ipm_open_out *out,
 				cmr_handle *out_class_handle)
 {
@@ -337,6 +340,67 @@ static cmr_uint check_size_data_invalid(struct img_size *fd_size)
 	return ret;
 }
 
+static void* fd_malloc(cmr_s32 size)
+{
+	void*                   ptr = NULL;
+	cmr_uint i = 0;
+
+	if (size) {
+	   ptr = malloc(size);
+	}
+	for (i = 0; i <  FD_PTR_NUB; i++) {
+		if (fd_ptr[i] == NULL) {
+			fd_ptr[i] = ptr;
+			break;
+		}
+	}
+
+	//CMR_LOGI("fd_mm, malloc 0x%x byts0, ptr %p %x", size, ptr, fd_ptr[i]);
+
+	if (i == FD_PTR_NUB) {
+		CMR_LOGE("fd_malloc ERR %ld", i);
+	}
+
+	return ptr;
+}
+
+static void  fd_free(void* ptr)
+{
+	cmr_uint i = 0;
+
+	if (ptr) {
+		//CMR_LOGI("fd_mm, free ptr 0x%lx", (cmr_uint)ptr);
+		for (i = 0; i <  FD_PTR_NUB; i++) {
+			if (fd_ptr[i] == ptr) {
+				free(ptr);
+				ptr = NULL;
+				fd_ptr[i] = NULL;
+				break;
+			}
+		}
+		if (i == FD_PTR_NUB) {
+			CMR_LOGE("fd_free ERR %p", ptr);
+		}
+	}
+
+	return;
+}
+
+static void  fd_freeall(void)
+{
+	cmr_uint i = 0;
+
+	for (i = 0; i <  FD_PTR_NUB; i++) {
+		if (NULL != fd_ptr[i]) {
+			//CMR_LOGI("fd_mm,fd_ptr%d free ptr 0x%lx", i, (cmr_uint)fd_ptr[i]);
+			free(fd_ptr[i]);
+			fd_ptr[i] = NULL;
+		}
+	}
+
+	return;
+}
+
 static cmr_int fd_call_init(struct class_fd *class_handle, const struct img_size *fd_size)
 {
 	cmr_int              ret = CMR_CAMERA_SUCCESS;
@@ -427,8 +491,8 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	cmr_uint                  mem_size      = 0;
 	void                      *addr         = 0;
 	cmr_int                   facesolid_ret = 0;
-	MallocFun                 Mfp = NULL;
-	FreeFun                   Ffp = NULL;
+	MallocFun                 Mfp = fd_malloc;
+	FreeFun                   Ffp = fd_free;
 	struct face_finder_data   *face_rect_ptr = NULL;
 	cmr_int                   face_num = 0;
 	cmr_int                   k,min_fd;
@@ -444,7 +508,6 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 	switch (evt) {
 	case CMR_EVT_FD_INIT: {
 			struct img_size *fd_size = message->data;
-
 			if (!check_size_data_invalid(fd_size)) {
 				if (fd_face_finder_ops.init && (fd_size->width * fd_size->height >= CMR_FD_LIMIT_SIZE)) {
 					CMR_LOGI("[FD] w/h %d %d", fd_size->width, fd_size->height);
@@ -527,6 +590,7 @@ static cmr_int fd_thread_proc(struct cmr_msg *message, void *private_data)
 			} else {
 				CMR_LOGI("[FD] deinit done");
 			}
+			fd_freeall();
 		}
 		class_handle->ops_init_ret = 0;
 		break;
