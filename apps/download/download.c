@@ -566,14 +566,17 @@ int download_entry(void)
 	DOWNLOAD_LOGD("download_entry\n");
 
 	if(pmanager.flag_stop){
-		download_power_on(0);
+		//download_power_on(0);
 		ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_stop = 0;
 		return 0;
 	}
 
+	if(pmanager.flag_reboot){
+		download_power_on(0);
+	}
+
 reboot_device:
-	download_power_on(0);
 	download_power_on(1);
 	download_hw_rst();
     uart_fd = open_uart_device(1,115200);
@@ -912,17 +915,6 @@ int main(void)
 			if(download_entry() == 0){
 				download_state = DOWNLOAD_BOOTCOMP;
 			}
-
-			//if(pmanager.flag_connect){
-			//	ret = send_notify_to_client(&pmanager, EXTERNAL_WCN_ALIVE,WCN_SOCKET_TYPE_SLOG);
-			//	pmanager.flag_connect = 0;
-			//}
-		}
-
-		if(pmanager.flag_stop){
-			download_power_on(0);
-			ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
-			pmanager.flag_stop = 0;
 		}
 		#endif
 		sleep(1);

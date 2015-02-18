@@ -3,13 +3,13 @@
 
 
 //Macro to control if doing reset
-//#define CP2_RESET_READY
+#define CP2_RESET_READY
 
 //Macro to control if polling cp2 assert/watdog interface
 #define CP2_WATCHER_ENABLE
 
 //Macro to control if polling cp2 loop interface every 5 seconds
-//#define LOOP_CHECK
+#define LOOP_CHECK
 
 //Macro to enable the Wifi Engineer Mode
 #define WIFI_ENGINEER_ENABLE
