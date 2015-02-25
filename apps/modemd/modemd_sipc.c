@@ -906,7 +906,8 @@ void* detect_sipc_modem(void *param)
                     property_get("ro.debuggable", mkbuf, "");
                     if (strcmp(mkbuf, "1") != 0) {
                         /*add slient reset at user version branch*/
-                        diag_fd= open(diag_chan, O_RDWR);
+                        MODEMD_LOGD("open diag_chan = %s!", diag_chan);
+                        diag_fd= open(diag_chan, O_RDWR | O_NONBLOCK);
                         if(diag_fd < 0) {
                             MODEMD_LOGD("MODEMD cannot open %s\n", diag_chan);
                             continue;
@@ -921,6 +922,7 @@ void* detect_sipc_modem(void *param)
                             else{
                                 MODEMD_LOGD("MODEMD read diag_chan:%d ,%s\n", w_cnt, strerror(errno));
                             }
+                            MODEMD_LOGD("ready write diag cmd = %s!", s_reset_cmd);
                             w_cnt = write(diag_fd, s_reset_cmd, sizeof(s_reset_cmd));
                             MODEMD_LOGD("MODEMD write diag_chan:%d ,%s\n", w_cnt, strerror(errno));
                             continue;
