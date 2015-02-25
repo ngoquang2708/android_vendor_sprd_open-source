@@ -62,7 +62,9 @@ void hw_pskey_send(BT_PSKEY_CONFIG_T * bt_par);
 #ifndef VENDOR_BTWRITE_PROC_NODE
 #define VENDOR_BTWRITE_PROC_NODE "/proc/bluetooth/sleep/btwrite"
 #endif
-
+#ifndef UART_INFO_PATH
+#define UART_INFO_PATH "/sys/devices/f5360000.uart/uart_conf"
+#endif
 #define MARLIN_PA_ENABLE_PATH "/sys/devices/platform/sprd_wcn.0/pa_enable"
 #define MARLIN_PA_ENABLE_VALUE "1"
 #define MARLIN_PA_DISABLE_VALUE "0"
@@ -231,6 +233,7 @@ static int op(bt_vendor_opcode_t opcode, void *param)
     int retval = 0;
     int nCnt = 0;
     int nState = -1;
+    int uart_fd = -1;
     char buffer;
 
     ALOGI("%s for %d", __func__, opcode);
@@ -263,6 +266,18 @@ static int op(bt_vendor_opcode_t opcode, void *param)
         case BT_VND_OP_FW_CFG:
             {
                 ALOGI("%s BT_VND_OP_FW_CFG", __func__);
+                uart_fd = open(UART_INFO_PATH, O_WRONLY);
+                ALOGI("open uart_conf fd %d", uart_fd);
+                if(uart_fd > 0)
+                {
+                    buffer = '2';
+                    if (write(uart_fd, &buffer, 1) < 0)
+                    {
+                        ALOGI("%s write(%s) failed: %s (%d) 2", __func__,
+                        UART_INFO_PATH, strerror(errno),errno);
+                    }
+                    close(uart_fd);
+                }
                 BT_PSKEY_CONFIG_T pskey;
                 sprd_get_pskey(&pskey);
                 hw_pskey_send(&pskey);
