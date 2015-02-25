@@ -201,6 +201,7 @@ SprdUtil::~SprdUtil()
 #endif
 }
 
+#ifdef TRANSFORM_USE_DCAM
 bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
                               private_handle_t* buffer1, private_handle_t* buffer2)
 {
@@ -218,7 +219,7 @@ bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
 #ifdef SCAL_ROT_TMP_BUF
         if (tmpDCAMBuffer == NULL) {
             int stride;
-            int size;
+            size_t size;
 
             GraphicBufferAllocator::get().alloc(mFBInfo->fb_width, mFBInfo->fb_height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpDCAMBuffer, &stride);
 
@@ -279,6 +280,9 @@ bool SprdUtil::transformLayer(SprdHWLayer *l1, SprdHWLayer *l2,
 
     return true;
 }
+
+#endif
+
 
 #ifdef PROCESS_VIDEO_USE_GSP
 
@@ -346,7 +350,7 @@ void SprdUtil::test_gen_color_block(char* base,uint16_t pitch_w,uint16_t pitch_h
     uint32_t r = 0,c = 0;
 
     //params check
-    if(base == NULL|| (uint32_t)base & 0x3 ||pitch_w < 90||rect == NULL) {
+    if(base == NULL|| (unsigned long)base & 0x3 ||pitch_w < 90||rect == NULL) {
         return;
     }
 
@@ -1111,6 +1115,11 @@ int SprdUtil:: acquireTmpBuffer(int width, int height, int format, private_handl
     return 0;
 
 AllocGFXBuffer:
+	if (tmpBuffer != NULL) {
+        ALOGE("util[%04d]  alloc tmpBuffer only once for saving memory, never release!",__LINE__);
+        return 0;
+    }
+
     if(mGsp_cap.buf_type_support == GSP_ADDR_TYPE_PHYSICAL) {
         GraphicBufferAllocator::get().alloc(width, height, format, GRALLOC_USAGE_OVERLAY_BUFFER, (buffer_handle_t*)&tmpBuffer, &stride);
     } else if(mGsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL) {
@@ -1160,7 +1169,8 @@ int SprdUtil::getGSPCapability(GSP_CAPABILITY_T *pGsp_cap)
                 pGsp_cap->buf_type_support = mGsp_cap.buf_type_support;
             }
             //if it's a perfect chipset, like tshark v2, can process multi-layers, we adjusting it's capability adapt to fb size.
-            //pGsp_cap->max_layer_cnt = 4;
+
+
             if(pGsp_cap->max_layer_cnt > 3) {
                 int fb_pixel = mFBInfo->fb_width * mFBInfo->fb_height;
 
@@ -1407,6 +1417,7 @@ int SprdUtil::scalingup_twice(GSP_CONFIG_INFO_T &gsp_cfg_info, private_handle_t*
         gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = (uint32_t)outBufferPhy;
     } else {
         gsp_cfg_info_phase1.layer_des_info.mem_info.share_fd = tmpBuffer->share_fd;
+		gsp_cfg_info_phase1.layer_des_info.src_addr.addr_y = 0;
         gsp_cfg_info_phase1.layer_des_info.mem_info.uv_offset = mFBInfo->fb_width * mFBInfo->fb_height;
         gsp_cfg_info_phase1.layer_des_info.mem_info.v_offset = gsp_cfg_info_phase1.layer_des_info.mem_info.uv_offset;
     }
@@ -1458,6 +1469,8 @@ int SprdUtil::scalingup_twice(GSP_CONFIG_INFO_T &gsp_cfg_info, private_handle_t*
     gsp_cfg_info.layer0_info.src_addr = gsp_cfg_info_phase1.layer_des_info.src_addr;
     gsp_cfg_info.layer0_info.endian_mode = gsp_cfg_info_phase1.layer_des_info.endian_mode;
     gsp_cfg_info.layer0_info.mem_info = gsp_cfg_info_phase1.layer_des_info.mem_info;
+	if (gsp_cfg_info_phase1.layer_des_info.mem_info.share_fd != 0)
+		gsp_cfg_info.layer0_info.src_addr.addr_y = 0;
 
     ALOGI_IF(mDebugFlag,"util[%04d] up2:phase 2,src_addr_y:0x%08x,des_addr_y:0x%08x",__LINE__,
              gsp_cfg_info.layer0_info.src_addr.addr_y,
@@ -1851,19 +1864,20 @@ int SprdUtil::gsp_dst_layer_config(GSP_CONFIG_INFO_T &gsp_cfg_info,
     }
     ALOGI_IF(mDebugFlag,"util[%04d] des.y_addr:0x%08x, size:%d",__LINE__,gsp_cfg_info.layer_des_info.src_addr.addr_y,dst_buffer->size);
 
-
 #if 1
     //when scaling need, all xywh should be even to make sure GSP won't busy hung up
-    if((((gsp_cfg_info.layer0_info.rot_angle&0x1) == 1)
-        &&(gsp_cfg_info.layer0_info.clip_rect.rect_h != gsp_cfg_info.layer0_info.des_rect.rect_w
-           ||gsp_cfg_info.layer0_info.clip_rect.rect_w != gsp_cfg_info.layer0_info.des_rect.rect_h))
-       ||(((gsp_cfg_info.layer0_info.rot_angle&0x1) == 0)
-          &&(gsp_cfg_info.layer0_info.clip_rect.rect_h != gsp_cfg_info.layer0_info.des_rect.rect_h
-             ||gsp_cfg_info.layer0_info.clip_rect.rect_w != gsp_cfg_info.layer0_info.des_rect.rect_w))) {
+    if((GSP_SRC_FMT_YUV420_2P<=gsp_cfg_info.layer0_info.img_format &&  gsp_cfg_info.layer0_info.img_format<=GSP_SRC_FMT_YUV422_2P)
+       && ((((gsp_cfg_info.layer0_info.rot_angle&0x1) == 1)
+            &&(gsp_cfg_info.layer0_info.clip_rect.rect_h != gsp_cfg_info.layer0_info.des_rect.rect_w
+               ||gsp_cfg_info.layer0_info.clip_rect.rect_w != gsp_cfg_info.layer0_info.des_rect.rect_h))
+           ||(((gsp_cfg_info.layer0_info.rot_angle&0x1) == 0)
+              &&(gsp_cfg_info.layer0_info.clip_rect.rect_h != gsp_cfg_info.layer0_info.des_rect.rect_h
+                 ||gsp_cfg_info.layer0_info.clip_rect.rect_w != gsp_cfg_info.layer0_info.des_rect.rect_w)))) {
         gsp_cfg_info.layer0_info.clip_rect.st_x &= 0xfffe;
         gsp_cfg_info.layer0_info.clip_rect.st_y &= 0xfffe;
         gsp_cfg_info.layer0_info.clip_rect.rect_w &= 0xfffe;
         gsp_cfg_info.layer0_info.clip_rect.rect_h &= 0xfffe;
+        /*
         if(gsp_cfg_info.layer0_info.des_rect.st_y & 0x1) {
             gsp_cfg_info.layer0_info.des_rect.st_y += 1;
             gsp_cfg_info.layer0_info.des_rect.rect_h -= 1;
@@ -1871,6 +1885,7 @@ int SprdUtil::gsp_dst_layer_config(GSP_CONFIG_INFO_T &gsp_cfg_info,
         gsp_cfg_info.layer0_info.des_rect.st_x &= 0xfffe;
         gsp_cfg_info.layer0_info.des_rect.rect_w &= 0xfffe;
         gsp_cfg_info.layer0_info.des_rect.rect_h &= 0xfffe;
+        */
     }
 #endif
 
@@ -2025,6 +2040,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1,
             return -1;
         }
 
+
         if(mGsp_cap.video_need_copy == 1) {
             if((mGsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL
                 && (gsp_cfg_info.layer0_info.layer_en == 1) && (gsp_cfg_info.layer0_info.img_format == GSP_SRC_FMT_YUV420_2P))
@@ -2053,6 +2069,7 @@ int SprdUtil::composerLayers(SprdHWLayer *l1,
                 }
             }
         }
+		//ALOGI_IF(mDebugFlag,"util[%04d] ",__LINE__);
 
         gsp_cfg_info.misc_info.split_pages = 0;//set to 0, to make sure system won't crash
         if(mGsp_cap.buf_type_support == GSP_ADDR_TYPE_IOVIRTUAL) {
@@ -2105,8 +2122,8 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
     int64_t start_time = 0;
     int64_t end_time = 0;
 
-    layer_total = videoLayerCount+osdLayerCount;
 
+    layer_total = videoLayerCount+osdLayerCount;
     /*params check*/
     if((mGsp_cap.magic != CAPABILITY_MAGIC_NUMBER)
        ||(layer_total == 0)
@@ -2120,9 +2137,10 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
        ||(buffer1 == NULL && buffer2 == NULL)) {
         //ALOGE("err: composerLayers() layer total count(%d+%d) > 2, GSP cant process,return!",videoLayerCount,osdLayerCount);
         ALOGE("util[%04d] composerLayerList params check err!",__LINE__);
-
         return -1;
     }
+
+
     if(mDebugFlag) {
         start_time = UtilGetSystemTime()/1000;
     }
@@ -2158,7 +2176,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
         }
         i++;
     }
-
     if(mGsp_cap.OSD_scaling == 0 && process_order == 1) {
         ALOGE("util[%04d] err:find osd layer need scaling, but GSP not support this! ",__LINE__);
         goto exit;
@@ -2173,7 +2190,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
             if(ret != 0) {
                 ALOGE("util[%04d] composerLayers() return err!",__LINE__);
             }
-            //return ret;
             goto exit;
         } else {
             int full = full_screen_check(LayerList,layer_total,mFBInfo);
@@ -2190,7 +2206,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
                     if(ret != 0) {
                         ALOGE("util[%04d] composerLayers() return err!",__LINE__);
                     }
-                    // return ret;
                     goto exit;
                 } else {
                     //dst_format = GSP_DST_FMT_ARGB888;
@@ -2199,7 +2214,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
                     if(ret != 0) {
                         ALOGE("util[%04d] composerLayers() return err!",__LINE__);
 
-                        //return ret;
                         goto exit;
                     }
                     gsp_intermedia_dump(dst_buffer);
@@ -2232,7 +2246,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
                 ret = composerLayers(LayerList[i], NULL, &gsp_cfg_info, dst_buffer,dst_format);
                 if(ret != 0) {
                     ALOGE("util[%04d] composerLayers() return err!layerlist[%d]",__LINE__,i);
-                    // return ret;
                     goto exit;
                 }
             } else {
@@ -2240,7 +2253,6 @@ int SprdUtil::composerLayerList(SprdHWLayer **videoLayerList, int videoLayerCoun
                 ret = composerLayers(NULL, LayerList[i], &gsp_cfg_info, dst_buffer,dst_format);
                 if(ret != 0) {
                     ALOGE("util[%04d] composerLayers() return err!layerlist[%d]",__LINE__,i);
-                    //return ret;
                     goto exit;
                 }
             }
