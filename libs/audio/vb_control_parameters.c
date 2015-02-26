@@ -521,6 +521,12 @@ static int  GetAudio_inpga_nv(struct tiny_audio_device *adev, AUDIO_TOTAL_T *aud
         return -1;
     }
     pga_gain_nv->adc_pga_gain_l = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.reserve[AUDIO_NV_CAPTURE_GAIN_INDEX];    //43
+    if (adev->fm_open) {
+        uint16_t fm_record_dg = aud_params_ptr->audio_nv_arm_mode_info.tAudioNvArmModeStruct.app_config_info_set.app_config_info[15].arm_volume[16]; //16 is used for fm record dg gain
+        //set fm record dg gain in bit 8~bit 14
+        pga_gain_nv->adc_pga_gain_l = ((pga_gain_nv->adc_pga_gain_l & 0x80FF) | ((fm_record_dg & 0x7F) << 8));
+        ALOGD("set fm adc_pga_gain_l=0x%x", pga_gain_nv->adc_pga_gain_l);
+    }
     pga_gain_nv->adc_pga_gain_r = pga_gain_nv->adc_pga_gain_l;
 
     ALOGW("%s, adc_pga_gain_l:0x%x device:0x%x vol_level:0x%x",
@@ -702,6 +708,10 @@ static int SetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         }else if(pga_gain_nv->out_devices & AUDIO_DEVICE_OUT_SPEAKER){
             audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_l,"linein-spk-l");
             audio_pga_apply(adev->pga,pga_gain_nv->fm_pga_gain_r,"linein-spk-r");
+        }
+        if((pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BUILTIN_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_BACK_MIC) || (pga_gain_nv->in_devices & AUDIO_DEVICE_IN_WIRED_HEADSET)){
+            audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_l,"fm-capture-l");
+            audio_pga_apply(adev->pga,pga_gain_nv->adc_pga_gain_r,"fm-capture-r");
         }
         ALOGW("%s out, out_devices:0x%x, in_devices:0x%x", __func__,pga_gain_nv->out_devices, pga_gain_nv->in_devices);
         return 0;
