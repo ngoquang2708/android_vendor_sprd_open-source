@@ -207,4 +207,5 @@
 #define BT_BACK_TEST                "蓝牙正在后台测试"
 #define INFECT_TIPS                 "可能影响本功能测试"
 #define PLEASE_WAITE                "请稍等测试"
+#define CHARGE_TIPS                 "请使用未充满电池测试"
 #endif /*__STRING_CN_H__*/
