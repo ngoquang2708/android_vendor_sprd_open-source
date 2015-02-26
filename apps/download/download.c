@@ -19,6 +19,7 @@
 #define	POWER_CTL		"/dev/power_ctl"
 #define	DLOADER_PATH		"/dev/download"
 #define	UART_DEVICE_NAME	"/dev/ttyS0"
+#define LOOP_DEV	"/proc/mdbg/loopcheck"
 
 #define DOWNLOAD_IOCTL_BASE	'z'
 #define DOWNLOAD_POWER_ON	_IO(DOWNLOAD_IOCTL_BASE, 0x01)
@@ -558,6 +559,7 @@ static int send_notify_to_client(pmanager_t *pmanager, char *info_str,int type)
 
 int download_entry(void)
 {
+	int loop_fd = -1;
 	int uart_fd;
 	int download_fd = -1;
 	int ret=0;
@@ -569,6 +571,22 @@ int download_entry(void)
 		//download_power_on(0);
 		ret = send_notify_to_client(&pmanager, WCN_RESP_STOP_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_stop = 0;
+		return 0;
+	}
+
+	if(pmanager.flag_start){
+		loop_fd = open(LOOP_DEV, O_RDWR|O_NONBLOCK);
+		ret = write(loop_fd, WCN_CMD_START_WCN, strlen(WCN_CMD_START_WCN));
+		if(ret < 0)
+		{
+			DOWNLOAD_LOGE("write %s failed, error:%s loop_fd:%d",LOOP_DEV, strerror(errno),loop_fd);
+			close(loop_fd);
+			return -1;
+		}
+		close(loop_fd);
+
+		ret = send_notify_to_client(&pmanager, WCN_RESP_START_WCN,WCN_SOCKET_TYPE_WCND);
+		pmanager.flag_start = 0;
 		return 0;
 	}
 

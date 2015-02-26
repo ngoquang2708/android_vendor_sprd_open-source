@@ -15,10 +15,10 @@
 #define WIFI_ENGINEER_ENABLE
 
 //Macro to enable CP2 power on/off
-//#define WCND_CP2_POWER_ONOFF_ENABLE
+#define WCND_CP2_POWER_ONOFF_ENABLE
 
 //Macro to enable the state machine
 //Note: if WCND_CP2_POWER_ONOFF_ENABLE is opened, WCND_STATE_MACHINE_ENABLE should also be opened.
-//#define WCND_STATE_MACHINE_ENABLE
+#define WCND_STATE_MACHINE_ENABLE
 
 #endif
