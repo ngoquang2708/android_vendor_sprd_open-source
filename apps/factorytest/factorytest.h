@@ -55,6 +55,8 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 #define ENG_CURRENT		"/sys/class/power_supply/battery/real_time_current"
 #define ENG_USBONLINE	"/sys/class/power_supply/usb/online"
 #define ENG_ACONLINE	"/sys/class/power_supply/ac/online"
+#define ENG_BATONLINE   "/sys/class/power_supply/battery/health"
+#define ENG_BATCURRENT  "/sys/class/power_supply/sprdfgu/fgu_current"
 /****************end charge*************/
 
 
