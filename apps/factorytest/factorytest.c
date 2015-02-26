@@ -864,9 +864,15 @@ static int show_pcba_test_result(void)
 
 static int phone_shutdown(void)
 {
-	sync();
-	reboot(LINUX_REBOOT_CMD_POWER_OFF);
-	return 0;
+    int fp;
+    char p[64]="--wipe_data\n--locale=zh_CN";
+    system("mkdir /cache/recovery/");
+    fp=open("/cache/recovery/command",O_WRONLY|O_CREAT,0777);
+    write(fp,p,sizeof(p));
+    close(fp);
+    sync();
+    __reboot( LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,LINUX_REBOOT_CMD_RESTART2 , "recovery");
+    return 0;
 }
 
 void eng_bt_wifi_start(void)
