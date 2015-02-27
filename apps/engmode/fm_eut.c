@@ -630,7 +630,7 @@ int fmPlay( uint freq )
     status = setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
              AUDIO_POLICY_DEVICE_STATE_AVAILABLE);
     setForceUse(AUDIO_POLICY_FORCE_FOR_MEDIA, AUDIO_POLICY_FORCE_NONE);
-
+    setParameters();
     sFmStatus = FM_STATE_PLAYING;
 
 
