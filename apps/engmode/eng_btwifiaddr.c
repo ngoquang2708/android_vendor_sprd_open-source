@@ -23,9 +23,8 @@
 #define MAC_ERROR			"FF:FF:FF:FF:FF:FF"
 #define WIFI_MAC_FILE		"/productinfo/wifimac.txt"
 #define WIFI_ROOT_MAC_FILE	"/data/misc/wifi/wifimac.txt"
-#define BT_MAC_FILE		"/productinfo/bluetooth/bt_mac.txt"
-#define BT_MAC_DIR	         "/productinfo/bluetooth"
-#define BT_ROOT_MAC_FILE	"/data/misc/bluedroid/bt_mac.txt"
+#define BT_MAC_FILE		"/productinfo/btmac.txt"
+#define BT_ROOT_MAC_FILE	"/data/misc/bluedroid/btmac.txt"
 #define MAC_RAND_FILE		"/productinfo/rand_mac.txt"
 
 
@@ -181,13 +180,6 @@ static int write_mac2file(char *wifimac, char *btmac)
     }
 
     //bt mac
-    if (0 != access(BT_MAC_DIR, F_OK) ){
-        ret = mkdir(BT_MAC_DIR, S_IRWXU | S_IRWXG | S_IRWXO);
-        if (-1 == ret && (errno != EEXIST)) {
-            ENG_LOG("mkdir %s failed.",BT_MAC_DIR);
-            return ret;
-        }
-    }
     fd = open(BT_MAC_FILE, O_CREAT|O_RDWR|O_TRUNC, 0666);
     ENG_LOG("%s: mac=%s, fd[%s]=%d,errno=%d, errstr=%s",__FUNCTION__, btmac, BT_MAC_FILE, fd,errno, strerror(errno));
     if(fd >= 0) {
