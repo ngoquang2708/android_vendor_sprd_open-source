@@ -25,6 +25,7 @@ protected:
 	int createAprNode(xmlNodePtr *node);
 	int createEntryNode(xmlNodePtr *node, const char* ts, const char* type);
 	int _fileIsExist();
+	char* _findAndReturnBadFile();
 
 private:
 	xmlDocPtr m_doc;
