@@ -186,7 +186,8 @@ volatile int log_level = 4;
 /* sampling rate when using VX port for wide band */
 #define VX_WB_SAMPLING_RATE 16000
 
-#define RECORD_POP_MIN_TIME    800   // ms
+#define RECORD_POP_MIN_TIME_CAM    800   // ms
+#define RECORD_POP_MIN_TIME_MIC    200   // ms
 
 #define BT_SCO_UPLINK_IS_STARTED        (1 << 0)
 #define BT_SCO_DOWNLINK_IS_EXIST        (1 << 1)
@@ -3362,6 +3363,14 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         ALOGE("AUDIO_PARAMETER_STREAM_INPUT_SOURCE in_set_parameters val %d",val);
+        if(in->requested_rate) {
+            if(val == AUDIO_SOURCE_CAMCORDER){
+                 in->pop_mute_bytes = RECORD_POP_MIN_TIME_CAM*in->requested_rate/1000*audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common));
+            } else {
+                 in->pop_mute_bytes = RECORD_POP_MIN_TIME_MIC*in->requested_rate/1000*audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common));
+            }
+        }
+        ALOGE("requested_rate %d,pop_mute_bytes %d frame_size %d",in->requested_rate,in->pop_mute_bytes,audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common)));
         /* no audio source uses val == 0 */
 #if 0
         if ((in->source != val) && (val != 0)) {
@@ -4202,10 +4211,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 	    goto err;
 	}
     }
-    if(in->requested_rate) {
-        in->pop_mute_bytes = RECORD_POP_MIN_TIME*in->requested_rate/1000*audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common));
-    }
-    ALOGE("requested_rate %d,pop_mute_bytes %d frame_size %d",in->requested_rate,in->pop_mute_bytes,audio_stream_frame_size((const struct audio_stream *)(&(in->stream).common)));
     in->dev = ladev;
     in->standby = 1;
     in->device = devices;
