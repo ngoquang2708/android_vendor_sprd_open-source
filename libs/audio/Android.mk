@@ -94,7 +94,7 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog libcutils libtinyalsa libaudioutils \
 	libexpat libdl \
 	libvbeffect libvbpga libnvexchange libdumpdata\
-	libatchannel
+	libatchannel libhardware_legacy
 
 LOCAL_MODULE_TAGS := optional
 

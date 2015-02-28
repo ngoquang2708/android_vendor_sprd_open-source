@@ -53,6 +53,8 @@ volatile int log_level = 4;
 #include "aud_proc.h"
 #include "vb_control_parameters.h"
 #include "string_exchange_bin.h"
+#include <hardware_legacy/power.h>
+
 
 #include "dumpdata.h"
 
@@ -197,6 +199,9 @@ volatile int log_level = 4;
 #define VOIP_PIPE_NAME_MAX    16
 
 #define MAX_STOP_THRESHOLD ((unsigned int)-1)/2-1
+
+#define  AUDIO_HAL_WAKE_LOCK_NAME "audio-hal"
+
 
 struct pcm_config pcm_config_mm = {
     .channels = 2,
@@ -800,6 +805,15 @@ static long getCurrentTimeUs()
    gettimeofday(&tv,NULL);
    return tv.tv_sec* 1000000 + tv.tv_usec;
 }
+
+static void get_partial_wakeLock() {
+    acquire_wake_lock(PARTIAL_WAKE_LOCK, AUDIO_HAL_WAKE_LOCK_NAME);
+}
+
+static void release_wakeLock() {
+    release_wake_lock(AUDIO_HAL_WAKE_LOCK_NAME);
+}
+
 
 int i2s_pin_mux_sel(struct tiny_audio_device *adev, int type)
 {
@@ -3011,7 +3025,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 #endif
 
 #ifndef VOIP_DSP_PROCESS
-        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev), in->requested_rate );
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev->in_devices), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 #endif
     }
@@ -3029,7 +3043,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             ALOGE("%s:cannot open in->pcm : %s", __func__,pcm_get_error(in->pcm));
             goto err;
         }
-        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev), in->requested_rate );
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev->in_devices), in->requested_rate );
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 
         if(in->requested_rate != in->config.rate) {
@@ -3145,7 +3159,7 @@ static int start_input_stream(struct tiny_stream_in *in)
             }
         }
         /* start to process pcm data captured, such as noise suppression.*/
-        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev),in->requested_rate);
+        in->active_rec_proc = init_rec_process(GetAudio_InMode_number_from_device(adev->in_devices),in->requested_rate);
         ALOGI("record process module created is %s.", in->active_rec_proc ? "successful" : "failed");
     }
 
@@ -5938,7 +5952,9 @@ ret = dump_parse_xml();
     if (ret != 0) {
         ALOGW("Warning: Failed to create the parameters file of vbc_eq");
     } else {
+        get_partial_wakeLock();
         ret = mixer_ctl_set_enum_by_string(adev->private_ctl.vbc_eq_update, "loading");
+        release_wakeLock();
         if (ret == 0) adev->eq_available = true;
         ALOGI("eq_loading, ret(%d), eq_available(%d)", ret, adev->eq_available);
     }
