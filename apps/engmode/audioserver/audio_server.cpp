@@ -22,4 +22,8 @@ int setDeviceConnectionState(int device, int state) {
 int setForceUse(int usage, int config) {
    return  AudioSystem::setForceUse(static_cast <audio_policy_force_use_t>(usage), static_cast <audio_policy_forced_cfg_t>(config));
 }
+int setParameters(){
+    String8 fm_volume("FM_Volume=11");
+    return AudioSystem::setParameters(audio_io_handle_t(0),fm_volume);
+}
 
