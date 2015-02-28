@@ -75,8 +75,7 @@ extern bt_vendor_callbacks_t *bt_vendor_cbacks;
 #define UINT8_TO_STREAM(p, u8)   {*(p)++ = (uint8)(u8);}
 #define UINT24_TO_STREAM(p, u24) {*(p)++ = (uint8)(u24); *(p)++ = (uint8)((u24) >> 8); *(p)++ = (uint8)((u24) >> 16);}
 
-#define PRODUCT_MAC_ADDR_PATH    "/productinfo/bluetooth/bt_mac.txt"
-#define DATMISC_MAC_ADDR_PATH    "/data/misc/bluedroid/bt_mac.txt"
+#define DATMISC_MAC_ADDR_PATH    "/data/misc/bluedroid/btmac.txt"
 #define MAC_ADDR_BUF_LEN    (strlen("FF:FF:FF:FF:FF:FF"))
 #define MAC_ADDR_FILE_LEN    25
 #define MAC_ADDR_LEN    6

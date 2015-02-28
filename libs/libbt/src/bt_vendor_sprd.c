@@ -775,32 +775,10 @@ static void get_mac_address(uint8 *addr){
     ret = access(DATMISC_MAC_ADDR_PATH, F_OK);
     if (ret != 0) {
         ALOGI("%s %s miss", __func__, DATMISC_MAC_ADDR_PATH);
-    } else {
-        goto read_misc_file;
+        return;
     }
 
-    /* check product mac file exist */
-    ret = access(PRODUCT_MAC_ADDR_PATH, F_OK);
-    if (ret != 0) {
-        ALOGI("%s %s miss", __func__, PRODUCT_MAC_ADDR_PATH);
-    } else {
-        goto copy_prdnv_file;
-    }
 
-    /* random bluetooth mac address */
-    random_mac_addr(addr_t);
-
-    /*  create product nv mac file */
-    write_mac_file(PRODUCT_MAC_ADDR_PATH, addr_t);
-
-copy_prdnv_file:
-    /* copy product nv mac file to misc dir */
-    ret = copy_mac_file(DATMISC_MAC_ADDR_PATH, PRODUCT_MAC_ADDR_PATH);
-    if (ret < 0) {
-        write_mac_file(DATMISC_MAC_ADDR_PATH, addr_t);
-    }
-
-read_misc_file:
     /* read mac file */
     read_mac_address(DATMISC_MAC_ADDR_PATH, addr_t);
 
