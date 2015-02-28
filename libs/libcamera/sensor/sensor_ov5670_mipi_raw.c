@@ -1784,20 +1784,26 @@ LOCAL uint32_t _ov5670_PowerOn(uint32_t power_on)
 	if (SENSOR_TRUE == power_on) {
 		Sensor_PowerDown(power_down);
 		// Open power
-		Sensor_SetVoltage(dvdd_val, avdd_val, iovdd_val);
-		//_dw9174_SRCInit(2);
+		usleep(1000);
+		Sensor_SetAvddVoltage(avdd_val);
+		usleep(1000);
+		Sensor_SetIovddVoltage(iovdd_val);
+		usleep(2000);
+		Sensor_SetDvddVoltage(dvdd_val);
+		usleep(1000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
 		usleep(10*1000);
 		Sensor_PowerDown(!power_down);
 		usleep(10*1000);
-		// Reset sensor
-		Sensor_Reset(reset_level);
-		usleep(20*1000);
 	} else {
 		Sensor_PowerDown(power_down);
+		usleep(1000);
+		Sensor_SetDvddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(1000);
+		Sensor_SetAvddVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetIovddVoltage(SENSOR_AVDD_CLOSED);
+		usleep(1000);
 		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
-		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
-		//_dw9174_SRCDeinit();
 	}
 	SENSOR_PRINT("SENSOR_OV5670: _ov5670_Power_On(1:on, 0:off): %d", power_on);
 	return SENSOR_SUCCESS;
