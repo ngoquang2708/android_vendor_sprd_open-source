@@ -557,9 +557,25 @@ static int send_notify_to_client(pmanager_t *pmanager, char *info_str,int type)
 	return 0;
 }
 
-int download_entry(void)
+static int send_msg_to_mdbg(char *str)
 {
 	int loop_fd = -1;
+	int ret=0;
+
+	loop_fd = open(LOOP_DEV, O_RDWR|O_NONBLOCK);
+	ret = write(loop_fd, str, strlen(str));
+	if(ret < 0)
+	{
+		DOWNLOAD_LOGE("write %s failed, error:%s loop_fd:%d",LOOP_DEV, strerror(errno),loop_fd);
+		close(loop_fd);
+		return -1;
+	}
+	close(loop_fd);
+	return 0;
+}
+
+int download_entry(void)
+{
 	int uart_fd;
 	int download_fd = -1;
 	int ret=0;
@@ -575,16 +591,7 @@ int download_entry(void)
 	}
 
 	if(pmanager.flag_start){
-		loop_fd = open(LOOP_DEV, O_RDWR|O_NONBLOCK);
-		ret = write(loop_fd, WCN_CMD_START_WCN, strlen(WCN_CMD_START_WCN));
-		if(ret < 0)
-		{
-			DOWNLOAD_LOGE("write %s failed, error:%s loop_fd:%d",LOOP_DEV, strerror(errno),loop_fd);
-			close(loop_fd);
-			return -1;
-		}
-		close(loop_fd);
-
+		send_msg_to_mdbg(WCN_CMD_START_WCN);
 		ret = send_notify_to_client(&pmanager, WCN_RESP_START_WCN,WCN_SOCKET_TYPE_WCND);
 		pmanager.flag_start = 0;
 		return 0;
@@ -628,6 +635,7 @@ reboot_device:
 	if(pmanager.flag_dump){
 		/*send dump cmmd and do dump*/
 		DOWNLOAD_LOGD("start dump mem\n");
+		send_msg_to_mdbg(WCN_CMD_DUMP_WCN);
 		property_set(WCN_DUMP_LOG_COMPLETE, "0");
 		ret = send_notify_to_client(&pmanager, WCN_CMD_START_DUMP_WCN,WCN_SOCKET_TYPE_SLOG);
 		send_dump_mem_message(download_fd,0,0,1);
