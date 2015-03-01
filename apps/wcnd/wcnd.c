@@ -22,6 +22,7 @@
 
 #include "wcnd.h"
 #include "wcnd_sm.h"
+#include "wcnd_util.h"
 
 
 bool is_zero_ether_addr(const unsigned char *mac)
@@ -182,7 +183,7 @@ void generate_bt_mac()
 */
 static int send_back_cmd_result(int client_fd, char *str, int isOK);
 static int config_cp2_bootup(WcndManager *pWcndManger);
-
+static void prepare_cp2_recovery(WcndManager *pWcnManager);
 /**
 * static variables
 */
@@ -557,8 +558,8 @@ int wcnd_woker_handle(void *worker)
 */
 static void pre_send_cp2_exception_notify(void)
 {
-    /* Erase any previous setting of the slogresult property */
-    property_set(WCND_SLOG_RESULT_PROP_KEY, "0");
+	/* Erase any previous setting of the slogresult property */
+	property_set(WCND_SLOG_RESULT_PROP_KEY, "0");
 }
 
 
@@ -1074,6 +1075,8 @@ int wcnd_do_wcn_reset_process(WcndManager *pWcndManger)
 		return -1;
 	}
 
+	prepare_cp2_recovery(pWcndManger);
+
 	int is_alive_ok = 1;
 
 	if(wcnd_before_reset(pWcndManger) < 0)
@@ -1326,6 +1329,44 @@ out:
 int wcnd_config_cp2_bootup(WcndManager *pWcndManger)
 {
 	return config_cp2_bootup(pWcndManger);
+}
+
+
+/**
+* do some prepare work, before dump/reset cp2
+*/
+static void prepare_cp2_recovery(WcndManager *pWcndManger)
+{
+	//kill supplicant
+	//property_set("ctl.stop", "wpa_supplicant");
+	//property_set("ctl.stop", "p2p_supplicant");
+	//wcnd_kill_process_by_name("/system/bin/wpa_supplicant", SIGINT);
+
+	//wcnd_wait_for_supplicant_stopped();
+
+	/* down the wifi network interface */
+	//wcnd_down_network_interface("wlan0");
+
+	//kill bluetooth
+	wcnd_kill_process_by_name("com.android.bluetooth", SIGKILL);
+
+
+	//check if bt process is killed
+	int count = 2;
+	while(count > 0)
+	{
+		if (!wcnd_find_process_by_name("com.android.bluetooth"))
+			break;
+		else
+			count--;
+		usleep(100*1000); //100ms
+	}
+
+	//kill fm??
+
+	//to do reset
+	//wcnd_send_selfcmd(pWcndManger, "wcn reset");
+
 }
 
 
@@ -1994,7 +2035,7 @@ static int os_process_init(void)
 	header.version = _LINUX_CAPABILITY_VERSION;
 	header.pid = 0;
 	cap.effective = cap.permitted =
-		(1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW);
+		(1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_KILL);
 	cap.inheritable = 0;
 	capset(&header, &cap);
 

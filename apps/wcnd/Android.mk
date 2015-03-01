@@ -11,12 +11,14 @@ LOCAL_SRC_FILES:= \
 	wcnd_worker.c \
 	wcnd_sm.c \
 	wcnd_eng_cmd_executer.c \
-	wcnd_download.c
+	wcnd_download.c \
+	wcnd_util.c
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libiwnpi \
-	libengbt
+	libengbt \
+	libnetutils
 
 
 #ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)

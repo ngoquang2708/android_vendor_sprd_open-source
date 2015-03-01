@@ -331,10 +331,14 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 
 	if (!strcmp(argv[0], "reset"))
 	{
-		//tell the client the reset cmd is executed
-		wcnd_send_back_cmd_result(client_fd, NULL, 1);
+		if(client_fd != pWcndManger->selfcmd_sockets[1])
+		{
+			//tell the client the reset cmd is executed
+			wcnd_send_back_cmd_result(client_fd, NULL, 1);
+		}
 
-		wcnd_do_wcn_reset_process(pWcndManger);
+		if(pWcndManger->is_cp2_error)
+			wcnd_do_wcn_reset_process(pWcndManger);
 	}
 	else if(!strcmp(argv[0], "test"))
 	{

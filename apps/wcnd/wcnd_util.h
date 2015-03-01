@@ -1,0 +1,18 @@
+#ifndef __WCND_UTIL_H__
+#define __WCND_UTIL_H__
+
+#include <sys/types.h>
+#include <signal.h>
+
+
+int wcnd_kill_process(pid_t pid, int signal);
+int wcnd_kill_process_by_name(const char *proc_name, int signal);
+
+int wcnd_find_process_by_name(const char *proc_name);
+
+int wcnd_down_network_interface(const char *ifname);
+int wcnd_up_network_interface(const char *ifname);
+
+void wcnd_wait_for_supplicant_stopped();
+
+#endif
