@@ -41,6 +41,7 @@ void XmlStorage::init()
 	AprData* aprData = static_cast<AprData *>(m_observable);
 	char *default_value = (char*)"unknown";
 	string v;
+	char* pbadfile;
 
 	// file exist
 	if (_fileIsExist())
@@ -50,7 +51,22 @@ void XmlStorage::init()
 		m_doc = xmlParseFile(m_pathname);//, MY_ENCODING, XML_PARSE_RECOVER);
 		if (NULL == m_doc) {
 			APR_LOGE("%s not load successfully.\n", m_pathname);
+			pbadfile = _findAndReturnBadFile();
+
+			if (pbadfile) {
+				if(rename(m_pathname, pbadfile)) {
+					APR_LOGE("we didn't rename %s to %s, so exit.\n", m_pathname, pbadfile);
+					exit(1);
+				}
+
+				free(pbadfile);
+				goto next;
+			} else {
+				APR_LOGE("we didn't find an available bad file, so exit.\n");
+				exit(1);
+			}
 		}
+
 		m_rootNode = xmlDocGetRootElement(m_doc);
 		// sysdump ??
 		v = aprData->getBootMode();
@@ -75,6 +91,7 @@ void XmlStorage::init()
 
 	} else
 	{
+next:
 		// document pointer
 		m_doc = xmlNewDoc(BAD_CAST"1.0");
 		// root node pointer
@@ -91,6 +108,7 @@ void XmlStorage::init()
 		APR_LOGD("%s file is created\n", m_pathname);
 	} else {
 		APR_LOGE("xmlSaveFormatFile failed\n");
+		exit(1);
 	}
 }
 
@@ -194,6 +212,7 @@ void XmlStorage::handleEvent(void* arg)
 		APR_LOGD("%s file is created\n", m_pathname);
 	} else {
 		APR_LOGE("xmlSaveFormatFile failed\n");
+		exit(1);
 	}
 
 	// unlock
@@ -220,6 +239,25 @@ int XmlStorage::_fileIsExist()
 	} else {
 		return true;
 	}
+}
+
+char* XmlStorage::_findAndReturnBadFile()
+{
+	struct stat sb;
+	char path[128];
+
+	for (int i = 0; i < 10; i++) {
+		snprintf(path, sizeof(path), "%s/apr_bad_%02d.xml", m_dir, i);
+
+		if (!stat(path, &sb))
+			continue;
+		if (errno != ENOENT)
+			continue;
+
+		return strdup(path);
+	}
+
+	return NULL;
 }
 
 xmlNodePtr XmlStorage::_xmlGetContentByName(xmlNodePtr rNode, char* name, char* value)
