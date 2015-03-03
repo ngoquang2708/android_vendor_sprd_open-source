@@ -585,7 +585,15 @@ static int GetAudio_gain_by_devices(struct tiny_audio_device *adev, pga_gain_nv_
         return -1;
     }
 
-    ret = GetAudio_inpga_nv(adev, &aud_params_ptr[inmode], pga_gain_nv, vol_level);
+    if (adev->fm_open) {
+        //if outmode is handset or headfree, use handsfree mode incase.
+        if (outmode == 1 || outmode == 2) {
+            outmode = 3;
+        }
+        ret = GetAudio_inpga_nv(adev, &aud_params_ptr[outmode], pga_gain_nv, vol_level);
+    } else {
+        ret = GetAudio_inpga_nv(adev, &aud_params_ptr[inmode], pga_gain_nv, vol_level);
+    }
     if(ret < 0){
         ALOGE("%s, GetAudio_inpga_nv fail",__func__);
         return -1;
