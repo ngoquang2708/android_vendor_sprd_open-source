@@ -94,6 +94,21 @@ extern void exit_modemd(void)
 	}
 	exit(-1);
 }
+void sendBroadcast(char *action,char *extraValueStat,char *extraValueInfo){
+    if(action == NULL || extraValueStat == NULL || extraValueInfo == NULL){
+        MODEMD_LOGE("Input para of sendBroadcast error");
+        exit(-1);
+    }
+    unsigned int length = 0;
+    length = strlen("am broadcast -a ") + strlen(action) + strlen(" --es \"modem_stat\" \"") +
+             strlen(extraValueStat) + strlen("\" --es \"modem_info\" \"") +
+             strlen(extraValueInfo) + strlen("\"");
+    char *systemCommand = malloc(length+1);
+    snprintf(systemCommand,length+1,"%s%s%s%s%s%s%s","am broadcast -a ",action," --es \"modem_stat\" \"",
+             extraValueStat,"\" --es \"modem_info\" \"",extraValueInfo,"\"");
+    system(systemCommand);
+    free(systemCommand);
+}
 
 int loop_info_sockclients(const char* buf, const int len)
 {
@@ -466,6 +481,7 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
     if(is_modem_assert ) {
         /* info socket clients that modem is reset */
         MODEMD_LOGD("Info all the sock clients that modem is alive");
+        sendBroadcast("com.android.modemassert.MODEM_STAT_CHANGE","modem_alive",alive_info);
         loop_info_sockclients(alive_info, strlen(alive_info)+1);
     }
 
@@ -698,6 +714,7 @@ raw_reset:
         g_b_wake_locking = true;
         /* info socket clients that modem is blocked */
         MODEMD_LOGE("Info all the sock clients that modem is blocked");
+        sendBroadcast("com.android.modemassert.MODEM_STAT_CHANGE","modem_block",buf);
         loop_info_sockclients(buf, numRead);
 
         /* reset or not according to property */
@@ -857,6 +874,7 @@ void* detect_sipc_modem(void *param)
 
                 /* info socket clients that modem is reset */
                 MODEMD_LOGE("Info all the sock clients that modem is reset");
+                sendBroadcast("com.android.modemassert.MODEM_STAT_CHANGE","modem_reset",buf);
                 loop_info_sockclients(buf, numRead);
                 is_assert = 1;
                 stop_service(modem, 0);
@@ -899,7 +917,8 @@ void* detect_sipc_modem(void *param)
                         numRead = sizeof("LF Modem Hang");
                     }
                 } else {
-                    MODEMD_LOGD("modem assert happen");
+                    MODEMD_LOGD("modem assert happen com.android.modemassert.MODEM_STAT_CHANGE");
+                    sendBroadcast("com.android.modemassert.MODEM_STAT_CHANGE","modem_assert",buf);
                 }
                 is_assert = 1;
 
