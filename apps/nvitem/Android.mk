@@ -33,7 +33,7 @@ ifeq ($(strip $(TARGET_USERIMAGES_USE_UBIFS)),true)
 LOCAL_CFLAGS := -DCONFIG_NAND_UBI_VOL
 endif
 
-LOCAL_MODULE := nvitemd
+LOCAL_MODULE := cp_diskserver
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 endif

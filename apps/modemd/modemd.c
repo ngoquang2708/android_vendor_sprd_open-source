@@ -94,24 +94,24 @@ static int stop_nvitemd(int modem)
     switch(modem) {
     case W_MODEM:
         MODEMD_LOGD("stop w nvitemd!");
-        property_set("ctl.stop", "nvitemd_w");
+        property_set("ctl.stop", "cp_diskserver_w");
         break;
     case LTE_MODEM:
         MODEMD_LOGD("stop lte nvitemd!");
-        property_set("ctl.stop", "nvitemd_l");
+        property_set("ctl.stop", "cp_diskserver_l");
         break;
     case TL_MODEM:
         MODEMD_LOGD("stop tl nvitemd!");
-        property_set("ctl.stop", "nvitemd_tl");
+        property_set("ctl.stop", "cp_diskserver_tl");
         break;
     case LF_MODEM:
         MODEMD_LOGD("stop lf nvitemd!");
-        property_set("ctl.stop", "nvitemd_lf");
+        property_set("ctl.stop", "cp_diskserver_lf");
         break;
     case TD_MODEM:
     default:
         MODEMD_LOGD("stop td nvitemd!");
-        property_set("ctl.stop", "nvitemd_td");
+        property_set("ctl.stop", "cp_diskserver_td");
         break;
     }
     return 0;
@@ -122,24 +122,24 @@ static int start_nvitemd(int modem)
     switch(modem) {
     case W_MODEM:
         MODEMD_LOGD("start nvitemd!");
-        property_set("ctl.start", "nvitemd_w");
+        property_set("ctl.start", "cp_diskserver_w");
         break;
     case LTE_MODEM:
         MODEMD_LOGD("start lte nvitemd!");
-        property_set("ctl.start", "nvitemd_l");
+        property_set("ctl.start", "cp_diskserver_l");
         break;
     case TL_MODEM:
         MODEMD_LOGD("start tl nvitemd!");
-        property_set("ctl.start", "nvitemd_tl");
+        property_set("ctl.start", "cp_diskserver_tl");
         break;
     case LF_MODEM:
         MODEMD_LOGD("start lf nvitemd!");
-        property_set("ctl.start", "nvitemd_lf");
+        property_set("ctl.start", "cp_diskserver_lf");
         break;
     case TD_MODEM:
     default:
         MODEMD_LOGD("start td nvitemd!");
-        property_set("ctl.start", "nvitemd_td");
+        property_set("ctl.start", "cp_diskserver_td");
         break;
     }
     return 0;
