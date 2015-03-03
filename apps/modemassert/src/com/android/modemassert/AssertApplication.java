@@ -45,8 +45,6 @@ public class AssertApplication extends Application {
 
     private static final int BUF_SIZE = 128;
 
-    private final Object mObjectLock = new Object();
-    private Handler mAssertHandler;
     private HandlerThread mAssertThread;
     @Override
     public void onCreate() {
@@ -54,9 +52,6 @@ public class AssertApplication extends Application {
         Log.d(MTAG, "onCreate()...");
         mAssertThread = new HandlerThread("assertHandlerThread");
         mAssertThread.start();
-        mAssertHandler = new assertHandler(mAssertThread.getLooper());
-        mAssertHandler.sendEmptyMessage(0);
-
         /* a receiver to receive wcnd assert info */
         IntentFilter filter = new IntentFilter();
         filter.addAction(WCND_CP2_STATE_CHANGED_ACTION);
@@ -64,107 +59,6 @@ public class AssertApplication extends Application {
         filter.addAction(SLOG_DUMP_END_ACTION);
         registerReceiver(mReceiver, filter);
     }
-
-    private class assertHandler extends Handler {
-        public assertHandler(Looper looper) {
-            super(looper);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            try {
-                LocalSocket socket = new LocalSocket();
-                LocalSocketAddress socketAddr = new LocalSocketAddress(MODEM_SOCKET_NAME,
-                        LocalSocketAddress.Namespace.ABSTRACT);
-                runSocket(socket, socketAddr);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    private void connectToSocket(LocalSocket socket, LocalSocketAddress socketAddr) {
-        for (;;) {
-            try {
-                socket.connect(socketAddr);
-                break;
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-                SystemClock.sleep(10000);
-                continue;
-            }
-        }
-    }
-
-    private void runSocket(LocalSocket socket, LocalSocketAddress socketAddr) {
-        byte[] buf = new byte[BUF_SIZE];
-        connectToSocket(socket, socketAddr);
-
-        Log.d(MTAG, " -runSocket");
-        synchronized (mObjectLock) {
-            for (;;) {
-                int cnt = 0;
-                InputStream is = null;
-                try {
-                    // mBinder.wait(endtime - System.currentTimeMillis());
-                    is = socket.getInputStream();
-                    cnt = is.read(buf, 0, BUF_SIZE);
-                    Log.d(MTAG, "read " + cnt + " bytes from socket: \n" );
-                } catch (IOException e) {
-                    Log.w(MTAG, "read exception\n");
-                }
-                if (cnt > 0) {
-                    String info = "";
-                    try {
-                        info = new String(buf, 0, cnt, "US-ASCII");
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    } catch (StringIndexOutOfBoundsException e) {
-                        e.printStackTrace();
-                    }
-                    Log.d(MTAG, "read something: "+ info);
-                    if (TextUtils.isEmpty(info)) {
-                        continue;
-                    }
-                    if (info.contains("Modem Alive")) {
-                        //SPRD: add modem assert reason for PhoneInfo feature
-                        sendModemStatBroadcast(MODEM_ALIVE,info);
-                        hideNotification(MODEM_ASSERT_ID);
-                        hideNotification(MODEM_BLOCK_ID);
-                    } else if (info.contains("Modem Assert")) {
-                        String value = SystemProperties.get("persist.sys.sprd.modemreset", "default");
-                        Log.d(MTAG, " modemreset ? : " + value);
-                        if(!value.equals("1")){
-                            showNotification(MODEM_ASSERT_ID,"modem assert",info);
-                        }
-                        /* SPRD:Bug#311987 After modem assert,the lte signal still displayed@{ */
-                        Intent intent = new Intent("android.intent.action.ACTION_LTE_READY");
-                        intent.putExtra("lte", false);
-                        Log.i(MTAG,"modem assert Send ACTION_LTE_READY  false");
-                        sendBroadcast(intent);
-                        /* @} */
-                        //SPRD: add modem assert reason for PhoneInfo feature
-                        sendModemStatBroadcast(MODEM_ASSERT,info);
-                    } else if (info.contains("Modem Blocked")) {
-                        showNotification(MODEM_BLOCK_ID,"modem block",info);
-                    } else {
-                        Log.d(MTAG, "do nothing with info :" + info);
-                    }
-                    continue;
-                } else if (cnt < 0) {
-                    try {
-                        is.close();
-                        socket.close();
-                    } catch (IOException e) {
-                        Log.w(MTAG, "close exception\n");
-                    }
-                    socket = new LocalSocket();
-                    connectToSocket(socket, socketAddr);
-                }
-            }
-        }
-    }
-
     /**
      * Broadcast intent action indicating that CP2 status has been assert,
      * alive,
@@ -177,7 +71,6 @@ public class AssertApplication extends Application {
      * The lookup key for an {@code boolean} giving if CP2 is OK.
      */
     private static final String EXTRA_IS_CP2_OK = "isCP2OK";
-
     /**
      * The lookup key for an {@code String} giving the CP2 assert info.
      */
@@ -256,4 +149,5 @@ public class AssertApplication extends Application {
        intent.putExtra("closeFlag", false);
        startActivity(intent);
     }
+
 }
