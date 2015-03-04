@@ -23,6 +23,7 @@ static hw_module_t * s_hwModule = NULL;
 static int test_result = -1;
 static int fm_fd = -1;
 extern char sdcard_fm_state;
+static int thread_run;
 
 enum fmStatus {
 FM_STATE_DISABLED,
@@ -47,31 +48,31 @@ static void btfmEnableCallback (int status)  {  if (status == BT_STATUS_SUCCESS)
 static void btfmDisableCallback (int status) { if (status == BT_STATUS_SUCCESS) sFmStatus = FM_STATE_DISABLED;   LOGD("Disable callback, status: %d", sFmStatus); }
 static void btfmtuneCallback (int status, int rssi, int snr, int freq)
 {
-	LOGD("mmitest Tune callback, status: %d,rssi=%d, snr=%d, freq: %d", status,rssi,snr, freq);
-	sFmtuneStatus=status;
-	if(sFmtuneStatus== BT_STATUS_SUCCESS)
-		{
-			fm_fre=freq;
-			fm_rssi=rssi;
-			fm_snr=snr;
-		}
+    LOGD("mmitest Tune callback, status: %d,rssi=%d, snr=%d, freq: %d", status,rssi,snr, freq);
+    sFmtuneStatus=status;
+    if(sFmtuneStatus== BT_STATUS_SUCCESS)
+        {
+            fm_fre=freq;
+            fm_rssi=rssi;
+            fm_snr=snr;
+        }
 }
 static void btfmMuteCallback (int status, BOOLEAN isMute){ LOGD("Mute callback, status: %d, isMute: %d", status, isMute); }
 static void btfmSearchCallback (int status, int rssi, int snr, int freq)
 {
-	LOGD("mmitest Search callback, status=%d rssi=%d snr=%d freq=%d", status,rssi,snr,freq);
+    LOGD("mmitest Search callback, status=%d rssi=%d snr=%d freq=%d", status,rssi,snr,freq);
 }
 static void btfmSearchCompleteCallback(int status, int rssi, int snr, int freq)
-	{
-		LOGD("mmitest Search complete callback status=%d rssi=%d snr=%d freq=%d", status,rssi,snr,freq);
-		sFmsearchStatus=status;
-		if(sFmsearchStatus==BT_STATUS_SUCCESS)
-			{
-				fm_fre=freq;
-				fm_rssi=rssi;
-				fm_snr=snr;
-			}
-	}
+    {
+        LOGD("mmitest Search complete callback status=%d rssi=%d snr=%d freq=%d", status,rssi,snr,freq);
+        sFmsearchStatus=status;
+        if(sFmsearchStatus==BT_STATUS_SUCCESS)
+            {
+                fm_fre=freq;
+                fm_rssi=rssi;
+                fm_snr=snr;
+            }
+    }
 static void btfmAudioModeCallback(int status, int audioMode){ LOGD("Audio mode change callback, status: %d, audioMode: %d", status, audioMode); }
 static void btfmAudioPathCallback(int status, int audioPath){ LOGD("Audio path change callback, status: %d, audioPath: %d", status, audioPath); }
 static void btfmVolumeCallback(int status, int volume){ LOGD("Volume change callback, status: %d, volume: %d", status, volume); }
@@ -109,33 +110,33 @@ static bt_callbacks_t bt_callbacks = {
 
 static btfm_callbacks_t btfm_callbacks = {
     sizeof (btfm_callbacks_t),
-    btfmEnableCallback,				// btfm_enable_callback
-    btfmDisableCallback,				// btfm_disable_callback
-    btfmtuneCallback,				// btfm_tune_callback
-    btfmMuteCallback,				// btfm_mute_callback
-    btfmSearchCallback,				// btfm_search_callback
-    btfmSearchCompleteCallback,		// btfm_search_complete_callback
-    NULL,							// btfm_af_jump_callback
-    btfmAudioModeCallback,			// btfm_audio_mode_callback
-    btfmAudioPathCallback,			// btfm_audio_path_callback
-    NULL,							// btfm_audio_data_callback
-    NULL,							// btfm_rds_mode_callback
-    NULL,							// btfm_rds_type_callback
-    NULL,							// btfm_deemphasis_callback
-    NULL,							// btfm_scan_step_callback
-    NULL,							// btfm_region_callback
-    NULL,							// btfm_nfl_callback
-    btfmVolumeCallback,				//btfm_volume_callback
-    NULL,							// btfm_rds_data_callback
-    NULL,							// btfm_rtp_data_callback
+    btfmEnableCallback,             // btfm_enable_callback
+    btfmDisableCallback,                // btfm_disable_callback
+    btfmtuneCallback,               // btfm_tune_callback
+    btfmMuteCallback,               // btfm_mute_callback
+    btfmSearchCallback,             // btfm_search_callback
+    btfmSearchCompleteCallback,     // btfm_search_complete_callback
+    NULL,                           // btfm_af_jump_callback
+    btfmAudioModeCallback,          // btfm_audio_mode_callback
+    btfmAudioPathCallback,          // btfm_audio_path_callback
+    NULL,                           // btfm_audio_data_callback
+    NULL,                           // btfm_rds_mode_callback
+    NULL,                           // btfm_rds_type_callback
+    NULL,                           // btfm_deemphasis_callback
+    NULL,                           // btfm_scan_step_callback
+    NULL,                           // btfm_region_callback
+    NULL,                           // btfm_nfl_callback
+    btfmVolumeCallback,             //btfm_volume_callback
+    NULL,                           // btfm_rds_data_callback
+    NULL,                           // btfm_rtp_data_callback
 
 };
 
 
 static void bt_adapter_state_changed_cb(int status)
 {
-		int retVal;
-		sBtState = status;
+        int retVal;
+        sBtState = status;
         LOGD("BT/FM Adapter State Changed: %d",status);
 
         if (status != BT_RADIO_ON) return;
@@ -159,7 +160,7 @@ static void fm_show_play_stat(int freq, int inpw)
 {
     int row = 4;
     char text[128] = {0};
-	inpw=-inpw;
+    inpw=-inpw;
     ui_set_color(CL_GREEN);
     memset(text, 0, sizeof(text));
     sprintf(text, "%s:%d.%dMHz", TEXT_FM_FREQ, freq / 100, freq % 100);           /*show channel*/
@@ -281,48 +282,48 @@ static int fm_check_headset(int cmd, int* headset_state)
 static int fm_open(void)
 {
    int retVal ;
-	if( NULL != s_hwDev ) {
-		LOGD("mmitest already opened.\n");
-		return 0;
-	}
+    if( NULL != s_hwDev ) {
+        LOGD("mmitest already opened.\n");
+        return 0;
+    }
     int err = hw_get_module(BT_HARDWARE_MODULE_ID, (hw_module_t const**)&s_hwModule);
 
     if( err || NULL == s_hwModule ) {
-		LOGD("mmitest hw_get_module: err = %d\n", err);
-		return ((err > 0) ? -err : err);
-	}
-	LOGD("mmitest hw_get_module.\n");
+        LOGD("mmitest hw_get_module: err = %d\n", err);
+        return ((err > 0) ? -err : err);
+    }
+    LOGD("mmitest hw_get_module.\n");
 
-	err = s_hwModule->methods->open(s_hwModule, BT_HARDWARE_MODULE_ID,
-					(hw_device_t**)&s_hwDev);
+    err = s_hwModule->methods->open(s_hwModule, BT_HARDWARE_MODULE_ID,
+                    (hw_device_t**)&s_hwDev);
 
     if( err || NULL == s_hwDev ) {
-		LOGD("mmitest open err = %d!\n", err);
-		return ((err > 0) ? -err : err);
-	}
-	LOGD("mmitest ->methods->open.\n");
+        LOGD("mmitest open err = %d!\n", err);
+        return ((err > 0) ? -err : err);
+    }
+    LOGD("mmitest ->methods->open.\n");
 
-	 if (err == 0)
+     if (err == 0)
      {
       bt_device = (bluetooth_device_t *)s_hwDev;
       ssBtInterface = bt_device->get_bluetooth_interface();
-	  LOGD("mmitest get_bluetooth_interface.\n");
-	  LOGD("mmitest ssBtInterface=%p\n",ssBtInterface);
-	  retVal=(bt_status_t)ssBtInterface->init(&bt_callbacks);
+      LOGD("mmitest get_bluetooth_interface.\n");
+      LOGD("mmitest ssBtInterface=%p\n",ssBtInterface);
+      retVal=(bt_status_t)ssBtInterface->init(&bt_callbacks);
 
-	  LOGD("mmitest after init.\n");
+      LOGD("mmitest after init.\n");
 
-	  if(retVal==BT_STATUS_SUCCESS)
-	  	{
-			LOGD("mmitest enable readio\n");
-			ssBtInterface->enableRadio();
-	  	}
-	  else
-	  	{
-	  		LOGD("mmitest BT init fail");
-			err=-1;
-	  	}
-	 }
+      if(retVal==BT_STATUS_SUCCESS)
+        {
+            LOGD("mmitest enable readio\n");
+            ssBtInterface->enableRadio();
+        }
+      else
+        {
+            LOGD("mmitest BT init fail");
+            err=-1;
+        }
+     }
 
   LOGD("mmitest hal load success");
   return err;
@@ -332,21 +333,21 @@ static int fm_open(void)
 static int fm_search(void)
 {
 
-	int ret;
+    int ret;
     int counter=0;
-	ret =sBtFmInterface->combo_search(START_FRQ,END_FRQ,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
-	//ret =sBtFmInterface->search(SCANMODE,THRESH_HOLD,CONTYPE,CONVALUE);
-	while (counter++ < 10 && BT_STATUS_SUCCESS != sFmsearchStatus) sleep(1);
+    ret =sBtFmInterface->combo_search(START_FRQ,END_FRQ,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
+    //ret =sBtFmInterface->search(SCANMODE,THRESH_HOLD,CONTYPE,CONVALUE);
+    while (counter++ < 10 && BT_STATUS_SUCCESS != sFmsearchStatus) sleep(1);
 
-	if(sFmsearchStatus!=BT_STATUS_SUCCESS)
-		return -1;
+    if(sFmsearchStatus!=BT_STATUS_SUCCESS)
+        return -1;
 
-	LOGD("mmitest fm search: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
+    LOGD("mmitest fm search: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
 
 
-	sdcard_write_fm(&fm_fre);
-	LOGD("mmitest new freq write=%d",fm_fre);
-	return 0;
+    sdcard_write_fm(&fm_fre);
+    LOGD("mmitest new freq write=%d",fm_fre);
+    return 0;
 
 }
 
@@ -354,33 +355,33 @@ static int fm_close(void)
 {
     int counter = 0;
     if (sBtFmInterface)
-		sBtFmInterface->disable();
-	else
-		return -1;
+        sBtFmInterface->disable();
+    else
+        return -1;
 
-	while (counter++ < 3 && FM_STATE_DISABLED != sFmStatus) sleep(1);
-	if (FM_STATE_DISABLED != sFmStatus) return -1;
-	sBtFmInterface->cleanup();
-	if (sBtFmInterface) sBtFmInterface->cleanup();
-	if (ssBtInterface)
-		{
-			 ssBtInterface->disableRadio();
-			 sleep(2);
-			 ssBtInterface->cleanup();
-		}
-		sFmStatus = FM_STATE_DISABLED;
+    while (counter++ < 3 && FM_STATE_DISABLED != sFmStatus) sleep(1);
+    if (FM_STATE_DISABLED != sFmStatus) return -1;
+    sBtFmInterface->cleanup();
+    if (sBtFmInterface) sBtFmInterface->cleanup();
+    if (ssBtInterface)
+        {
+             ssBtInterface->disableRadio();
+             sleep(2);
+             ssBtInterface->cleanup();
+        }
+        sFmStatus = FM_STATE_DISABLED;
 
-		if( NULL != s_hwDev && NULL != s_hwDev->common.close )
-		{
-			s_hwDev->common.close( &(s_hwDev->common) );
-		}
-		s_hwDev = NULL;
-		if( NULL != s_hwModule ) {
-			dlclose(s_hwModule->dso);
-			s_hwModule = NULL;
-		}
-		LOGD("Close successful.");
-		return 0;
+        if( NULL != s_hwDev && NULL != s_hwDev->common.close )
+        {
+            s_hwDev->common.close( &(s_hwDev->common) );
+        }
+        s_hwDev = NULL;
+        if( NULL != s_hwModule ) {
+            dlclose(s_hwModule->dso);
+            s_hwModule = NULL;
+        }
+        LOGD("Close successful.");
+        return 0;
 }
 
 
@@ -389,26 +390,26 @@ static int fm_close(void)
 
 
 
-
-int test_fm_start(void)
+extern int usbin_state;
+int fm_start(void)
 {
     int ret;
     int rssi;
     int headset_in = 0;
     int freq ;//= 875
-	int counter=0;
-	int result;
+    int counter=0;
+    int result;
     system("rm -f /data/misc/bluedroid/bt_config.xml");
-	system("rm -f /data/misc/bluedroid/bt_config.new");
-	system("rm -f /data/misc/bluedroid/bt_config.old");
+    system("rm -f /data/misc/bluedroid/bt_config.new");
+    system("rm -f /data/misc/bluedroid/bt_config.old");
 
-	if(sdcard_fm_state==0)
-		sdcard_read_fm(&freq);
-	else
-	    freq=990;
+    if(sdcard_fm_state==0)
+        sdcard_read_fm(&freq);
+    else
+        freq=990;
 
 
-	LOGD("mmitest freq=%d",freq);
+    LOGD("mmitest freq=%d",freq);
 
     ui_fill_locked();
     ui_show_title(MENU_TEST_FM);
@@ -421,76 +422,98 @@ int test_fm_start(void)
     }
 
     fm_check_headset(HEADSET_CHECK, &headset_in);       /*checket headset state*/
-    if (0 == headset_in) {
+    while (0 == headset_in&&thread_run==1) {
         SPRD_DBG("%s:%d headset out", __FUNCTION__, __LINE__);
 
         fm_show_headset(SPRD_HEADSETOUT);                   /*show headset state*/
-
-        fm_check_headset(HEADSET_CLOSE, NULL);    /*close headset device*/
-
-        goto FM_TEST_FAIL;;
+        fm_check_headset(HEADSET_CHECK, &headset_in);
+        usbin_state=1;
     }
+
+    if(headset_in==0)
+        {
+            fm_check_headset(HEADSET_CLOSE, NULL);
+            usbin_state=0;
+            goto FM_TEST_FAIL;
+        }
+    usbin_state=0;
 
     ret = fm_check_headset(HEADSET_CLOSE, NULL);        /*close headset device*/
-    if (0 != ret) {
-       goto FM_TEST_FAIL;
-    }
 
     SPRD_DBG("%s:%d headset in", __FUNCTION__, __LINE__);
 
     fm_show_headset(SPRD_HEADSETIN);                /*show headset state*/
     fm_show_searching(STATE_DISPLAY);
 
-	LOGD("mmitest start to open");
+    LOGD("mmitest start to open");
     ret = fm_open();
-	if(ret!=0)
-		goto FM_TEST_FAIL;
+    if(ret!=0)
+        goto FM_TEST_FAIL;
 
-	while (sFmStatus != FM_STATE_ENABLED && counter++ < 3) sleep(1);
+    while (sFmStatus != FM_STATE_ENABLED && counter++ < 3) sleep(1);
 
-	if (sFmStatus != FM_STATE_ENABLED) {
+    if (sFmStatus != FM_STATE_ENABLED) {
          LOGD("fm service has not enabled, status: %d", sFmStatus);
          //fm_close();
-		 goto FM_TEST_FAIL;
+         goto FM_TEST_FAIL;
     }
-	sBtFmInterface->tune(freq*10);
-	while (counter++ < 5 && BT_STATUS_SUCCESS != sFmtuneStatus) sleep(1);
-		if(sFmtuneStatus!=BT_STATUS_SUCCESS)
-			{
-				ret=fm_search();
-				LOGD("mmitest fm tune failed");
-			}
-		else if(fm_fre!=0&&fm_rssi<100)
-			{
-				ret=0;
-				sdcard_write_fm(&fm_fre);
-				LOGD("mmitest fm tune: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
-			}
-		else if(fm_fre==0||fm_rssi>100)
-			{
-				ret=fm_search();
-				LOGD("mmitest fm tune signal weak");
-			}
-	if(ret==0)
-	{
-		fm_show_searching(STATE_CLEAN);
-		fm_show_play_stat(fm_fre, fm_rssi); 
-		LOGD("mmitest fm success");
-		result=RL_PASS;
-	}
-	else
-	{
-		fm_show_searching(STATE_CLEAN);
-	    fm_seek_timeout();
-		FM_TEST_FAIL:
-			result=RL_FAIL;
+    sBtFmInterface->tune(freq*10);
+    while (counter++ < 5 && BT_STATUS_SUCCESS != sFmtuneStatus) sleep(1);
+        if(sFmtuneStatus!=BT_STATUS_SUCCESS)
+            {
+                ret=fm_search();
+                LOGD("mmitest fm tune failed");
+            }
+        else if(fm_fre!=0&&fm_rssi<100)
+            {
+                ret=0;
+                sdcard_write_fm(&fm_fre);
+                LOGD("mmitest fm tune: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
+            }
+        else if(fm_fre==0||fm_rssi>100)
+            {
+                ret=fm_search();
+                LOGD("mmitest fm tune signal weak");
+            }
+    if(ret==0)
+    {
+        fm_show_searching(STATE_CLEAN);
+        fm_show_play_stat(fm_fre, fm_rssi);
+        LOGD("mmitest fm success");
+        result=RL_PASS;
+        ui_push_result(RL_PASS);
+    }
+    else
+    {
+        fm_show_searching(STATE_CLEAN);
+        fm_seek_timeout();
+        FM_TEST_FAIL:
+            result=RL_FAIL;
+            ui_push_result(RL_FAIL);
+        LOGD("mmitest fm failed");  
+    }
 
-		LOGD("mmitest fm failed");	
-	}	
     fm_close();
-
-	save_result(CASE_TEST_FM,result);
-    return result;
+    return NULL;
 }
 
+ int test_fm_start(void)
+ {
+     int ret = 0;
+     pthread_t t1, t2;
+     ui_fill_locked();
+     ui_show_title(MENU_TEST_FM);
+     gr_flip();
 
+
+         thread_run=1;
+     pthread_create(&t1, NULL, (void*)fm_start, NULL);
+     ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
+         thread_run=0;
+
+         pthread_join(t1, NULL); /* wait "handle key" thread exit. */
+
+
+     save_result(CASE_TEST_FM,ret);
+     return ret;
+ }

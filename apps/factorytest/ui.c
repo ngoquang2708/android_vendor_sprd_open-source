@@ -988,6 +988,7 @@ void ui_fill_locked(void)
 	draw_progress_locked();
 }
 
+extern int usbin_state;
 int ui_handle_button(//const char* centor,
 	const char* left,
 
@@ -1004,7 +1005,12 @@ int ui_handle_button(//const char* centor,
 	for(;;) {
 		key = ui_wait_key(NULL);
 		LOGD("mmitest key=%d",key);
-		switch(key) {
+        if(usbin_state==1)
+            {
+                if(key==KEY_VOLUMEDOWN)
+                    key=-1;
+            }
+        switch(key) {
 			case KEY_VOLUMEDOWN:
 				LOGD("mmitest keyV solved");
 				return 2;

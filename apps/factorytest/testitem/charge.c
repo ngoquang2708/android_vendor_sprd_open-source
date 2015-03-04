@@ -187,6 +187,7 @@ static int battery_current(void)
     return(atoi(current));
 }
 
+int usbin_state=0;
 
 static void charge_thread(void *param)
 {
@@ -244,6 +245,8 @@ static void charge_thread(void *param)
         usbin = charge_get_usbin();
         acin = charge_get_acin();
 
+        current_sum=0;
+        count=0;
         for(i=0;i<16;i++)
         {
             usleep(200);
@@ -271,9 +274,11 @@ static void charge_thread(void *param)
 
 		//show charing
         if(chrin==1) {
+            usbin_state=0;
             ui_set_color(CL_GREEN);
             last_row = ui_show_text(last_row, 0, TEXT_CHG_RUN_Y);
         } else {
+            usbin_state=1;
             ui_set_color(CL_RED);
             last_row = ui_show_text(last_row, 0, TEXT_CHG_RUN_N);
             cnt = 0;

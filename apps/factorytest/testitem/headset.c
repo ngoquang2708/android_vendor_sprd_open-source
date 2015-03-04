@@ -30,6 +30,7 @@ static int headset_keypressed(struct input_event *event)
 /*
  * Read headset switch node
  */
+extern int usbin_state;
 void* headset_check_thread(void)
 {
 	int fd, ret, input_fd;
@@ -82,11 +83,13 @@ void* headset_check_thread(void)
 			//LOGD("[%s]: headset_status = %d\n", __func__, headset_status);
 			switch(headset_status) {
 				case 0:
+                                        usbin_state=1;
 					last_row = ui_show_text(first_row, 0, TEXT_HD_UNINSERT);
 					gr_flip();
 					at_cmd_audio_loop(0,0,0,0,0,0);
 					break;
 				case 1:
+                                        usbin_state=0;
 					last_row = ui_show_text(first_row, 0, TEXT_HD_INSERTED);
 					last_row = ui_show_text(last_row, 0, TEXT_HD_HAS_MIC);
 					last_row = ui_show_text(last_row, 0, TEXT_HD_MICHD);
@@ -97,6 +100,7 @@ void* headset_check_thread(void)
 					at_cmd_audio_loop(1,2,8,2,3,0);
 					break;
 				case 2:
+                                        usbin_state=0;
 					last_row = ui_show_text(first_row, 0, TEXT_HD_INSERTED);
 					last_row = ui_show_text(last_row, 0, TEXT_HD_NO_MIC);
 					last_row = ui_show_text(last_row, 0, TEXT_HD_MICHD);
