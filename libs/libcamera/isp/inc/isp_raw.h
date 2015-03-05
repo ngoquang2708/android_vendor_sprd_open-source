@@ -413,8 +413,8 @@ struct isp_bpc{
 struct isp_denoise{
 	uint32_t denoise_bypass;
 	uint8_t write_back;
-	uint8_t reserved4;
-	uint8_t reserved3;
+	uint8_t diswei_level;
+	uint8_t ranwei_level;
 	uint8_t reserved2;
 	uint16_t r_thr;
 	uint16_t g_thr;

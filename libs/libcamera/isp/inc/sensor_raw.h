@@ -231,7 +231,11 @@ struct sensor_ae_param{
 	uint8_t smart_pref_uv_outdoor;
 	uint8_t smart_pref_uv_mid;
 
-	uint32_t reserved[25];
+	uint8_t edge_prev_percent;
+	uint8_t denoise_prev_percent;
+	uint8_t reserved0;
+	uint8_t reserved1;
+	uint32_t reserved[24];
 };
 
 struct sensor_ae_tab{
@@ -424,15 +428,15 @@ struct sensor_nbpc_param{
 
 struct sensor_denoise_tab {
 	uint8_t diswei[19];
-	uint8_t reserved1;
+	uint8_t diswei_level;
 	uint8_t ranwei[31];
-	uint8_t reserved0;
+	uint8_t ranwei_level;
 };
 
 struct sensor_denoise_param{
 	uint8_t write_back;
-	uint8_t reserved4;
-	uint8_t reserved3;
+	uint8_t ranwei_level;
+	uint8_t diswei_level;
 	uint8_t reserved2;
 	uint16_t r_thr;
 	uint16_t g_thr;

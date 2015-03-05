@@ -47,6 +47,9 @@ extern   "C"
 #else
 /*android 4.1.0.0*/
 #define ISP_LOG(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGE(format,...) ALOGE(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGI(format,...) ALOGI(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
+#define ISP_LOGV(format,...) ALOGV(ISP_DEBUG_STR format, ISP_DEBUG_ARGS, ##__VA_ARGS__)
 #endif
 
 /*------------------------------------------------------------------------------*

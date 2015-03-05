@@ -298,6 +298,9 @@ struct isp_ae_param
 
 	proc_callback callback;
 	proc_callback self_callback;
+	uint8_t edge_preview_percent;
+	uint8_t denoise_preview_percent;
+	uint8_t is_single; //for  capture
 };
 
 /**---------------------------------------------------------------------------*
@@ -344,6 +347,8 @@ uint32_t _ispSetAeTabMaxIndex(uint32_t handler_id, uint32_t mode, uint32_t iso,u
 uint32_t _ispSetFixFrameMaxIndex(uint32_t handler_id, uint32_t mode, uint32_t iso,uint32_t fps);
 uint32_t _ispAeInfoSet(uint32_t handler_id);
 int32_t _ispGetAeIndexIsMax(uint32_t handler_id, uint32_t* eb);
+int32_t isp_ae_set_denoise_diswei(uint32_t handler_id, uint32_t level);
+int32_t isp_ae_set_denoise_ranwei(uint32_t handler_id, uint32_t level);
 
 /**----------------------------------------------------------------------------*
 **					Compiler Flag				**

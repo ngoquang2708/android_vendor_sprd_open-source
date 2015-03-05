@@ -24,6 +24,7 @@
 #include "aaa_log.h"
 #include "isp_awb_ctrl.h"
 #include "isp_lsc_proc.h"
+#define ISP_DIFFERENT_NR_EE_CLOSE
 /**---------------------------------------------------------------------------*
 **				Micro Define					*
 **----------------------------------------------------------------------------*/
@@ -4497,6 +4498,13 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->ae.awbm_bypass = ispAwbcBypass;
 	isp_context_ptr->ae.set_gamma= isp_set_gamma;
 	isp_context_ptr->ae.ae_set_eb=ISP_UEB;
+#ifndef ISP_DIFFERENT_NR_EE_CLOSE
+	isp_context_ptr->ae.edge_preview_percent = raw_tune_ptr->ae.edge_prev_percent;
+	isp_context_ptr->ae.denoise_preview_percent  raw_tune_ptr->ae.denoise_prev_percent;
+#else
+	isp_context_ptr->ae.edge_preview_percent = 64;//raw_tune_ptr->ae.edge_prev_percent;
+	isp_context_ptr->ae.denoise_preview_percent  = 64;//raw_tune_ptr->ae.denoise_prev_percent;
+#endif
 
 	/*flash*/
 	isp_context_ptr->flash.lum_ratio=raw_tune_ptr->flash.lum_ratio;
@@ -4629,10 +4637,14 @@ static int32_t _ispSetV00010001Param(uint32_t handler_id,struct isp_cfg_param* p
 	isp_context_ptr->denoise.r_thr=raw_tune_ptr->denoise.r_thr;
 	isp_context_ptr->denoise.g_thr=raw_tune_ptr->denoise.g_thr;
 	isp_context_ptr->denoise.b_thr=raw_tune_ptr->denoise.b_thr;
+	isp_context_ptr->denoise.diswei_level = raw_tune_ptr->denoise.diswei_level;
+	isp_context_ptr->denoise.ranwei_level = raw_tune_ptr->denoise.ranwei_level;
 	memcpy((void*)&isp_context_ptr->denoise.diswei, (void*)&raw_tune_ptr->denoise.tab[0].diswei, 19);
 	memcpy((void*)&isp_context_ptr->denoise.ranwei, (void*)&raw_tune_ptr->denoise.tab[0].ranwei, 31);
 	memcpy((void*)&isp_context_ptr->denoise_bak,(void*)&isp_context_ptr->denoise,sizeof(isp_context_ptr->denoise));
 	isp_ae_set_denosie_level(handler_id, 0);
+	isp_ae_set_denosie_ranwei_level(handler_id, raw_tune_ptr->denoise.ranwei_level);
+	isp_ae_set_denosie_diswei_level(handler_id, raw_tune_ptr->denoise.diswei_level);
 
 	/*grgb*/
 	isp_context_ptr->grgb.edge_thr=raw_tune_ptr->grgb.edge_thr;
@@ -5448,6 +5460,13 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->ae.awbm_bypass = ispAwbcBypass;
 	isp_context_ptr->ae.set_gamma= isp_set_gamma;
 	isp_context_ptr->ae.ae_set_eb=ISP_UEB;
+#ifndef ISP_DIFFERENT_NR_EE_CLOSE
+	isp_context_ptr->ae.edge_preview_percent = raw_tune_ptr->ae.edge_prev_percent;
+	isp_context_ptr->ae.denoise_preview_percent  raw_tune_ptr->ae.denoise_prev_percent;
+#else
+	isp_context_ptr->ae.edge_preview_percent = 64;//raw_tune_ptr->ae.edge_prev_percent;
+	isp_context_ptr->ae.denoise_preview_percent  = 64;//raw_tune_ptr->ae.denoise_prev_percent;
+#endif
 
 	/*flash*/
 	isp_context_ptr->flash.lum_ratio=raw_tune_ptr->flash.lum_ratio;
@@ -5727,10 +5746,14 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	isp_context_ptr->denoise.r_thr=raw_tune_ptr->denoise.r_thr;
 	isp_context_ptr->denoise.g_thr=raw_tune_ptr->denoise.g_thr;
 	isp_context_ptr->denoise.b_thr=raw_tune_ptr->denoise.b_thr;
+	isp_context_ptr->denoise.diswei_level = raw_tune_ptr->denoise.diswei_level;
+	isp_context_ptr->denoise.ranwei_level = raw_tune_ptr->denoise.ranwei_level;
 	memcpy((void*)&isp_context_ptr->denoise.diswei, (void*)&raw_tune_ptr->denoise.diswei, 19);
 	memcpy((void*)&isp_context_ptr->denoise.ranwei, (void*)&raw_tune_ptr->denoise.ranwei, 31);
 	memcpy((void*)&isp_context_ptr->denoise_bak,(void*)&isp_context_ptr->denoise,sizeof(isp_context_ptr->denoise));
 	isp_ae_set_denosie_level(handler_id, 0);
+	isp_ae_set_denosie_ranwei_level(handler_id, raw_tune_ptr->denoise.ranwei_level);
+	isp_ae_set_denosie_diswei_level(handler_id, raw_tune_ptr->denoise.diswei_level);
 
 	/*pre wavelet denoise*/
 	isp_context_ptr->pre_wave_denoise.thrs0 = raw_tune_ptr->pre_wave_denoise.thrs0;
@@ -6457,14 +6480,17 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	uint32_t awb_index = isp_context_ptr->awb.cur_index;
 	uint32_t lnc_addr = 0;
 	uint32_t lnc_len = ISP_ZERO;
+	int8_t   is_single = 0;
 
 	if(ISP_VIDEO_MODE_SINGLE==_ispGetVideoMode(handler_id))
 	{/*capture use video mode need bypass ae awb*/
 		ae_param_ptr->bypass=ISP_EB;
 		awb_param_ptr->bypass=ISP_EB;
+		is_single = 1;
 	} else {
 		ae_param_ptr->monitor.w=isp_context_ptr->awbm.win_size.w;
 		ae_param_ptr->monitor.h=isp_context_ptr->awbm.win_size.h;
+		is_single = 0;
 	}
 
 	/*flash on need modify awb gan*/
@@ -6482,6 +6508,7 @@ static int32_t _ispChangeVideoCfg(uint32_t handler_id)
 	_isp_change_lnc_param(handler_id);
 	_ispChangeProcBLC(handler_id);
 	_ispChangeProcAwbGain(handler_id);
+	isp_adjust_switch_denoise(handler_id, is_single);
 
 	return rtn;
 }
@@ -6498,6 +6525,7 @@ static int32_t _ispChangeProcCfg(uint32_t handler_id)
 	uint32_t awb_index=isp_context_ptr->awb.cur_index;
 	uint32_t lnc_addr = 0;
 	uint32_t lnc_len = ISP_ZERO;
+	int8_t   is_single = _ispGetVideoMode(handler_id);
 
 	/* isp param index */
 	isp_context_ptr->proc_param_index=_ispGetIspParamIndex(handler_id, &isp_context_ptr->src);
@@ -6507,6 +6535,7 @@ static int32_t _ispChangeProcCfg(uint32_t handler_id)
 	_isp_change_lnc_param(handler_id);
 	_ispChangeProcBLC(handler_id);
 	_ispChangeProcAwbGain(handler_id);
+	isp_adjust_switch_denoise(handler_id, is_single);
 
 	return rtn;
 }
@@ -7131,8 +7160,8 @@ static int32_t _ispGetExifInfo(uint32_t handler_id, void *exif_info_ptr)
 	{
 		exif_isp_info_ptr->denoise.ranwei[i] = isp_context_ptr->denoise.ranwei[i];
 	}
-	exif_isp_info_ptr->denoise.reserved1 = isp_context_ptr->denoise.reserved1;
-	exif_isp_info_ptr->denoise.reserved0 = isp_context_ptr->denoise.reserved0;
+	exif_isp_info_ptr->denoise.diswei_level = isp_context_ptr->denoise.diswei_level;
+	exif_isp_info_ptr->denoise.ranwei_level = isp_context_ptr->denoise.ranwei_level;
 
 	exif_isp_info_ptr->grgb.edge_thr = isp_context_ptr->grgb.edge_thr;
 	exif_isp_info_ptr->grgb.diff_thr = isp_context_ptr->grgb.diff_thr;
