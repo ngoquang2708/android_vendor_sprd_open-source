@@ -69,7 +69,7 @@ typedef enum
 #define DIAG_CMD_AUTOTEST       0x38
 
 #define DIAG_CMD_CURRENT_TEST       0x11
-
+#define DIAG_CMD_WIFI_TEST_F	    0x36
 #define DIAG_CMD_ASSERT         0x5
 
 #define AUDIO_NV_ARM_INDI_FLAG          0x02
@@ -80,7 +80,7 @@ typedef enum
 
 #define ENG_TESTMODE			"engtestmode"
 #define ENG_SPRD_VERS			"ro.build.description"
-
+#define ENG_SET_BACKLIGHT	        "/sys/class/backlight/sprd_backlight/brightness"
 typedef enum
 {
     CMD_COMMON=-1,
@@ -100,6 +100,11 @@ typedef enum
     CMD_USER_DEEP_SLEEP,
     CMD_USER_FILE_OPER,
     CMD_USER_CFT_SWITCH,
+    CMD_USER_BKLIGHT,
+    CMD_USER_PWMODE,
+    CMD_USER_SET_CONFIGURE_IP,
+    CMD_USER_READ_REGISTER,
+    CMD_USER_WRITE_REGISTER,
     CMD_USER_SHUT_DOWN,
     CMD_USER_GPS_AUTO_TEST,
     CMD_USER_AUTOTEST,
@@ -243,6 +248,23 @@ typedef struct
 {
     unsigned short cp_no;
 }TOOLS_DIAG_AP_SWITCH_CP_T;
+typedef struct wifi_configure_ip_t
+{
+    char szSSID[16];
+    char szIPSetting[32];
+    char szIPAddress[16];
+    char szGateway[16];
+    char szDNS[16];
+    char szSubnet[16];
+}__attribute__((packed))WIFI_CONFIGURE_IP_T;
+
+typedef struct wifi_register_req_t
+{
+    char            szType[8]; //MAC, PHY , RF
+    unsigned int    nRegAddr;
+    unsigned int    nCount;
+    unsigned int nUit; //BYTE:1, WORD:2, DWORD:4
+}__attribute__((packed))WIFI_REGISTER_REQ_T;
 
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);

@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/wait.h> //-- for system command
 #include <semaphore.h>
 #include "engopt.h"
 #include "eng_attok.h"
@@ -42,7 +43,7 @@
 #define NVITEM_ERROR_E  int
 #define NVERR_NONE 0
 #define IMEI_NUM   4
-
+#define CMD_REGISTERSTRING "regvaluesis:"
 
 // SIPC interfaces in AP linux for AT CMD
 char *at_sipc_devname[] = {
@@ -130,6 +131,13 @@ static int eng_diag_get_charge_current(char *buf, int len, char *rsp, int rsplen
 static int get_charging_current(int *value);
 static int get_battery_current(int *value);
 static int eng_diag_get_modem_mode(char *buf, int len, char *rsp, int rsplen);
+static int eng_detect_process(char *process_name);
+static int eng_open_wifi_switch();
+static int eng_diag_set_backlight(char *buf, int len, char *rsp, int rsplen);
+static int eng_diag_set_powermode(char *buf, int len, char *rsp, int rsplen);
+static int eng_diag_set_ipconfigure(char *buf, int len, char *rsp, int rsplen);
+static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen);
+static int eng_diag_write_register(char *buf, int len, char *rsp, int rsplen);
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -506,6 +514,15 @@ int eng_diag_parse(char *buf,int len)
             ENG_LOG("%s: Handle DIAG_CMD_GPS_AUTO_TEST", __FUNCTION__);
             ret = CMD_USER_GPS_AUTO_TEST;
             break;
+        case DIAG_CMD_WIFI_TEST_F:
+	    if(head_ptr->subtype== 0x10){
+		ret = CMD_USER_SET_CONFIGURE_IP;
+	    }else if(head_ptr->subtype== 0x0E){
+		ret = CMD_USER_READ_REGISTER;
+	    }else if(head_ptr->subtype== 0x0F){
+		ret = CMD_USER_WRITE_REGISTER;
+	    }
+	    break;
         case DIAG_CMD_ASSERT:
             if(head_ptr->subtype==0x4) {
                 ENG_LOG("%s: Handle DIAG_CMD_ASSERT", __FUNCTION__);
@@ -707,6 +724,35 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	case CMD_USER_GET_MODEM_MODE:
 	    rlen = eng_diag_get_modem_mode(buf, len, rsp, sizeof(rsp));
 	    eng_diag_write2pc(rsp, rlen);
+	case CMD_USER_BKLIGHT:
+	    ENG_LOG("%s: CMD_USER_BKLIGHT Req!\n", __FUNCTION__);
+	    rlen = eng_diag_set_backlight(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+	    eng_diag_len = rlen;
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+	    return 0;
+	case CMD_USER_PWMODE:
+	    ENG_LOG("%s: CMD_USER_PWMODE Req!\n", __FUNCTION__);
+	    rlen = eng_diag_set_powermode(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+	    eng_diag_len = rlen;
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+	    return 0;
+	case CMD_USER_SET_CONFIGURE_IP:
+	    ENG_LOG("%s: CMD_USER_SET_CONFIGURE_IP Req!\n", __FUNCTION__);
+	    rlen = eng_diag_set_ipconfigure(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+	    eng_diag_len = rlen;
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+	    return 0;
+	case CMD_USER_READ_REGISTER:
+	    ENG_LOG("%s: CMD_USER_READ_REGISTER Req!\n", __FUNCTION__);
+	    rlen = eng_diag_read_register(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+	    eng_diag_len = rlen;
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
+	    return 0;
+	case CMD_USER_WRITE_REGISTER:
+	    ENG_LOG("%s: CMD_USER_WRITE_REGISTER Req!\n", __FUNCTION__);
+	    rlen = eng_diag_write_register(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
+	    eng_diag_len = rlen;
+	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
 	    return 0;
         default:
             break;
@@ -3299,6 +3345,10 @@ static int eng_diag_ap_req(char *buf, int len)
         ret = CMD_USER_GET_CHARGE_CURRENT;
     }else if(DIAG_AP_CMD_GET_MODEM_MODE == apcmd->cmd){
         ret = CMD_USER_GET_MODEM_MODE;
+    }else if(DIAG_AP_CMD_BKLIGHT == apcmd->cmd) {
+	ret = CMD_USER_BKLIGHT;
+    }else if(DIAG_AP_CMD_PWMODE == apcmd->cmd) {
+	ret = CMD_USER_PWMODE;
     }else{
         ret = CMD_USER_APCALI;
     }
@@ -3837,7 +3887,6 @@ static int get_battery_current(int *value)
     }
     return read_len;
 }
-
 static int eng_diag_get_modem_mode(char *buf, int len, char *rsp, int rsplen)
 {
     int ret = 0;
@@ -3874,6 +3923,391 @@ static int eng_diag_get_modem_mode(char *buf, int len, char *rsp, int rsplen)
     aprsp->length= strlen(property_info);
     memcpy(modem_mode,property_info,strlen(property_info));
     aprsp->status = 0x00;
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_diag_set_backlight(char *buf, int len, char *rsp, int rsplen)
+{
+
+    int fd = -1;
+    char *rsp_ptr;
+    char time[32] = {0};
+    TOOLS_DIAG_AP_CNF_T* aprsp;
+
+    TOOLS_DIAG_AP_CMD_T* apcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    unsigned short backlight_time = *(unsigned short*)(apcmd + 1);
+    ENG_LOG("%s: backlight_time: %d\n", __FUNCTION__, backlight_time);
+
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(unsigned short);
+
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    aprsp = (TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    aprsp->status = 0x01;
+    aprsp->length = sizeof(unsigned short);
+    *((unsigned short*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(TOOLS_DIAG_AP_CNF_T))) = backlight_time;
+
+    fd = open(ENG_SET_BACKLIGHT, O_WRONLY);
+    if(fd < 0){
+	ENG_LOG("%s: open %s failed, err: %s\n", __func__,ENG_SET_BACKLIGHT,strerror(errno));
+	goto out;
+    }
+
+    sprintf(time, "%d", backlight_time);
+    len = write(fd,time, strlen(time));
+    if(len <= 0){
+	ENG_LOG("%s: write %s failed, err: %s\n", __func__,ENG_SET_BACKLIGHT,strerror(errno));
+	close(fd);
+	goto out;
+    }
+
+    aprsp->status = 0x00;
+    close(fd);
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_diag_set_powermode(char *buf, int len, char *rsp, int rsplen)
+{
+    int flag = 0, ret = 0, fd = -1;
+    char *rsp_ptr;
+    TOOLS_DIAG_AP_CNF_T* aprsp;
+    char* insmode_flag = NULL;
+    char cmd[1024] = {0};
+    char time[32] = {0};
+    char cmdline[ENG_CMDLINE_LEN] = {0};
+
+    TOOLS_DIAG_AP_CMD_T* apcmd = (TOOLS_DIAG_AP_CMD_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    unsigned short powermode = *(unsigned short*)(apcmd + 1);
+    ENG_LOG("%s: powermode: %d\n", __FUNCTION__, powermode);
+
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(TOOLS_DIAG_AP_CNF_T) + sizeof(unsigned short);
+
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    aprsp = (TOOLS_DIAG_AP_CNF_T*)(rsp_ptr + sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    aprsp->status = 0x01;
+    aprsp->length = sizeof(unsigned short);
+    *((unsigned short*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(TOOLS_DIAG_AP_CNF_T))) = powermode;
+
+    eng_open_wifi_switch();
+
+    flag = system("ifconfig wlan0 up");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s: ifconfig wlan0 up. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    if(1 == powermode){ //save power mode
+	flag = system("iwnpi wlan0 lna_on");
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s: flag error\n", __FUNCTION__);
+	    goto out;
+	}
+    }else if(0 == powermode){ //non-save power mode
+        flag = system("iwnpi wlan0 lna_off");
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s: flag error\n", __FUNCTION__);
+	    goto out;
+	}
+    }
+    aprsp->status = 0x00;
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    if(fd >= 0)
+	close(fd);
+    return rsplen;
+}
+
+static int eng_diag_set_ipconfigure(char *buf, int len, char *rsp, int rsplen)
+{
+    int flag = 0, ret = 0, fd = -1;
+    char *rsp_ptr,*insmode_flag = NULL;
+    char cmd[ENG_CMDLINE_LEN] = {0};
+    char cmdline[ENG_CMDLINE_LEN] = {0};
+
+    WIFI_CONFIGURE_IP_T* apcmd = (WIFI_CONFIGURE_IP_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(char);
+
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T) );
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T))) = 0;
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+
+     if( 0 == eng_open_wifi_switch()){
+        ENG_LOG("%s:open wifi function eng_open_wifi_switch failed\n", __FUNCTION__);
+        goto out;
+     }
+
+    flag = system("wpa_cli -iwlan0 IFNAME=wlan0 remove_network all");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:wpa_cli -iwlan0 IFNAME=wlan0 remove_network all. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    flag = system("wpa_cli -iwlan0 IFNAME=wlan0 add_network");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:wpa_cli -iwlan0 IFNAME=wlan0 add_network. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    sprintf(cmd,"wpa_cli -iwlan0 IFNAME=wlan0 set_network 0 ssid /%s/",apcmd->szSSID);
+    flag = system(cmd);
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s: wpa_cli -iwlan0 IFNAME=wlan0 set_network 0 ssid /CMCC/. lag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    flag = system("wpa_cli -iwlan0 IFNAME=wlan0 set_network 0 key_mgmt NONE");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:wpa_cli -iwlan0 IFNAME=wlan0 set_network 0 key_mgmt NONE. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    flag = system("wpa_cli -iwlan0 IFNAME=wlan0 select_network 0");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:wpa_cli -iwlan0 IFNAME=wlan0 select_network 0. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    sprintf(cmd,"ifconfig wlan0 %s netmask %s ",apcmd->szIPAddress,apcmd->szSubnet);
+    flag = system(cmd);
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s: ifconfig wlan0 netmask flag error. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    sprintf(cmd,"ip route add default via %s ",apcmd->szGateway);
+    flag = system(cmd);
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:ip route add default via. flag error. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	flag = system("ip route del");
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s: ip route del. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	    goto out;
+	}
+	flag = system(cmd);
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s:ip route add default via. flag error. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	    goto out;
+	}
+    }
+
+    flag = system("ndc resolver setdefaultif wlan0");
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s: ndc resolver setdefaultif wlan0. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    sprintf(cmd,"ndc resolver setifdns wlan0 "" %s ",apcmd->szDNS);
+    system(cmd);
+    if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	ENG_LOG("%s:ndc resolver setifdns wlan0 flag erro. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	goto out;
+    }
+
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T))) = 1;
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    if(fd >= 0)
+	close(fd);
+    return rsplen;
+
+}
+static int eng_open_wifi_switch()
+{
+    int flag = 0, ret = 0, fd = -1;
+    char *insmode_flag = NULL;
+    char cmd[ENG_CMDLINE_LEN] = {0};
+    char cmdline[ENG_CMDLINE_LEN] = {0};
+    char *process_name = "wpa_supplicant";
+
+    #ifdef  ENGMODE_EUT_SPRD
+    ENG_LOG("%s:sprd chip\n", __FUNCTION__);
+
+    fd = open("/proc/modules",O_RDONLY);
+    if(fd < 0){
+	ENG_LOG("%s,/proc/modules open failed",__FUNCTION__);
+	 return 0;
+    }
+
+    ret = read(fd,cmdline,sizeof(cmdline));
+    if(ret < 0){
+	ENG_LOG("%s,/proc/modules read failed",__FUNCTION__);
+	  return 0;
+    }
+
+    insmode_flag= strstr(cmdline,WIFI_DRIVER_MODULE_NAME);
+    if(insmode_flag ==NULL){
+	sprintf(cmd,"insmod %s",WIFI_DRIVER_MODULE_PATH);
+	flag = system(cmd);
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s:insmod /system/lib/modules/sprdwl.ko. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	     return 0;
+	}
+    }
+    #endif
+    if( 0 == eng_detect_process(process_name)){
+	flag = system("start wpa_supplicant");
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s: start wpa_supplicant. flag=%d,err:%s\n", __FUNCTION__,flag,strerror(errno));
+	    return 0;
+	}
+    }
+
+    sleep (5);
+    return 1;
+}
+static int eng_detect_process(char *process_name)
+{
+    FILE *ptr;
+    char buff[512], ps[128];
+    int count = -1;
+
+    sprintf(ps, "ps |grep -c %s", process_name);
+    if((ptr = popen(ps, "r")) != NULL){
+	if(fgets(buff, 512, ptr) != NULL){
+	    count = atoi(buff);
+	}
+    }
+
+    ENG_LOG("%s,count = %d",__FUNCTION__,count);
+    pclose(ptr);
+
+    return count;
+}
+static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen)
+{
+    FILE *fd;
+    int m = 0;
+    char *rsp_ptr,*temp,*end;
+    char stemp[9] = {0};
+    char AddrCount[64] = {0};
+    unsigned int pdata[64]={0};
+    char cmd[ENG_CMDLINE_LEN] = {0};
+    char regvalue[ENG_DIAG_SIZE] = {0};
+    char *value = regvalue;
+
+    WIFI_REGISTER_REQ_T* apcmd = (WIFI_REGISTER_REQ_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T) + 1;
+
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(WIFI_REGISTER_REQ_T))) = 0;
+
+    sprintf(cmd,"iwnpi wlan0 get_reg %s %x %d", apcmd->szType,apcmd->nRegAddr,apcmd->nCount);
+    fd = popen(cmd, "r" );
+    fread(regvalue, sizeof(char), sizeof(regvalue), fd);
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T) + (apcmd->nCount)*4;//for every type return 4 bytes data
+    temp = (char*)malloc(rsplen);
+    if(NULL == temp){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	free(rsp_ptr);
+	return 0;
+    }
+
+    free(rsp_ptr);
+    rsp_ptr = temp;
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T)+sizeof(WIFI_REGISTER_REQ_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+
+    while(m < apcmd->nCount){
+	if(*value == '0' && *(value + 1) == 'x'){
+	    value += 2;
+	    memcpy(stemp,value,8);
+	    pdata[m] = (unsigned int)strtoul(stemp,&end,16);
+	    value += 8;
+	    m++;
+        }else{
+	    value += 1;
+	}
+    }
+
+    memcpy(rsp_ptr + sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T),pdata,(apcmd->nCount)*4);
+
+out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    pclose(fd);
+    return rsplen;
+
+}
+
+static int eng_diag_write_register(char *buf, int len, char *rsp, int rsplen)
+{
+    int flag;
+    unsigned int i,j,ret;
+    char *rsp_ptr;
+    char RegValue[32] = {0};
+    char cmd[1024] = {0};
+
+    WIFI_REGISTER_REQ_T* apcmd = (WIFI_REGISTER_REQ_T*)(buf + 1 + sizeof(MSG_HEAD_T));
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    char *value = (char*)(apcmd + 1);
+
+    rsplen = sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T) + 1;
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T)+ sizeof(WIFI_REGISTER_REQ_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(WIFI_REGISTER_REQ_T))) = 0;
+
+    for(i = 0; i < apcmd->nCount; i++){
+	sprintf(cmd, "iwnpi wlan0 set_reg %s %x ", apcmd->szType,apcmd->nRegAddr + i*apcmd->nUit);
+	for(j = 0; j < apcmd->nUit; j++){
+	    sprintf(RegValue, "%02x", *value);
+	    strcat(cmd,RegValue);
+	    value += 1;
+	}
+
+	flag = system(cmd);
+	if(!WIFEXITED(flag) || WEXITSTATUS(flag) || -1 == flag){
+	    ENG_LOG("%s iwnpi wlan0 set_reg flag =%d\n", __FUNCTION__,flag);
+	    goto out;
+	}
+    }
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(WIFI_REGISTER_REQ_T))) = 1;
 
 out:
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);

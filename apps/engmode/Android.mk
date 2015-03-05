@@ -74,6 +74,7 @@ ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 endif
 endif
 
+
 ifeq ($(strip $(BOARD_WLAN_DEVICE)),bcmdhd)
 LOCAL_CFLAGS += -DENGMODE_EUT_BCM
 LOCAL_SRC_FILES     += wifi_eut.c \
@@ -89,6 +90,12 @@ else
 LOCAL_CFLAGS += -DENGMODE_EUT_SPRD
 LOCAL_SRC_FILES     += wifi_eut_shark.c \
 			bt_eut_shark.c
+ifdef WIFI_DRIVER_MODULE_PATH
+LOCAL_CFLAGS        += -DWIFI_DRIVER_MODULE_PATH=\"$(WIFI_DRIVER_MODULE_PATH)\"
+endif
+ifdef WIFI_DRIVER_MODULE_NAME
+LOCAL_CFLAGS        += -DWIFI_DRIVER_MODULE_NAME=\"$(WIFI_DRIVER_MODULE_NAME)\"
+endif
 endif
 
 LOCAL_MODULE := engpc
