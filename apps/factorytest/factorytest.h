@@ -61,8 +61,8 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 
 
 /***************factorytest.c************/
-#define PCBATXTPATH "/productinfo/PCBAtest.txt"
-#define PHONETXTPATH   "/productinfo/wholephonetest.txt"
+#define PCBATXTPATH "/productinfo/pcbatest"
+#define PHONETXTPATH   "/productinfo/wholephonetest"
 /****************end*****************/
 
 
@@ -302,6 +302,11 @@ typedef struct mmitest_result
 	unsigned char pass_faild;
 }mmi_result;
 
+typedef struct mmitest_result_new
+{
+	unsigned int id;
+	unsigned char pass_faild;
+}mmi_result_new;
 
 
 /**********************************************************************/

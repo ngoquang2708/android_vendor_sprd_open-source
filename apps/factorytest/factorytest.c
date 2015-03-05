@@ -67,6 +67,8 @@ static int PCBA_auto_all_test(void);
 
 static int test_result_mkdir(void);
 static void write_txt(char * pathname ,int n);
+static void write_bin(char * pathname );
+static void read_bin(void);
 
 
 static int show_pcba_test_result(void);
@@ -164,8 +166,9 @@ char pcba_phone=0;
 
 mmi_result phone_result[TOTAL_NUM];
 mmi_result pcba_result[TOTAL_NUM];
-mmi_result phone_text_result[TOTAL_NUM];
-mmi_result pcba_text_result[TOTAL_NUM];
+mmi_result_new phone_text_result[TOTAL_NUM];
+mmi_result_new pcba_text_result[TOTAL_NUM];
+
 
 
 char name[][TOTAL_NUM]=
@@ -240,37 +243,39 @@ void save_result(char id,char key_result)
 }
 
 
-static void write_txt(char * pathname ,int n)
+static void read_bin(void)
 {
-	int i;
-	int fd;
-	int ret;
-	char tmp[64];
-	char wholetmp[2048];
-	memset(wholetmp, 0, sizeof(wholetmp));
-	memset(tmp, 0, sizeof(tmp));
-	//LOGD("mmitest I am here2");
-	fd=open(pathname,O_RDWR);
-	if(fd < 0)
-	{
-		LOGD("[%s]: mmitest open %s fail", __FUNCTION__, pathname);
-		return -1;
-	}
-	for(i=0;i<n;i++)
-	{
-		memset(tmp, 0, sizeof(tmp));
-		if(pcba_phone==1)
-			sprintf(tmp, "name=%s: id=%d   result=%d \n", pcba_text_result[i].name+2,pcba_text_result[i].id,pcba_text_result[i].pass_faild);
-		else
-			sprintf(tmp, "name=%s: id=%d   result=%d \n", phone_text_result[i].name+2,phone_text_result[i].id,phone_text_result[i].pass_faild);
-		strcat(wholetmp,tmp);
-	}
-	LOGD("mmitest to ready\n");
-	write(fd,wholetmp,strlen(wholetmp));
-	close(fd);
+	FILE *fd;
+	int num;
 
-
+	fd=fopen(PCBATXTPATH,"r+");
+	fseek(fd,0,SEEK_SET);
+	num=fread(&pcba_text_result,sizeof(struct mmitest_result_new),TOTAL_NUM,fd);
+	fclose(fd);
+	LOGD("mmitest readbin1 num=%d\n");
+	fd=fopen(PHONETXTPATH,"r+");
+	fseek(fd,0,SEEK_SET);
+	num=fread(&phone_text_result,sizeof(struct mmitest_result_new),TOTAL_NUM,fd);
+	fclose(fd);
+	LOGD("mmitest readbin2 num=%d\n");
 }
+
+
+static void write_bin(char * pathname )
+{
+	FILE *fd;
+	int num;
+
+	fd=fopen(pathname,"w+");
+	fseek(fd,0,SEEK_SET);
+	if(pcba_phone==1)
+		num=fwrite(&pcba_text_result,sizeof(struct mmitest_result_new),TOTAL_NUM,fd);
+	else
+		num=fwrite(&phone_text_result,sizeof(struct mmitest_result_new),TOTAL_NUM,fd);
+	fclose(fd);
+	LOGD("mmitest writebin num=%d\n");
+}
+
 
 
 extern unsigned char menu_change;
@@ -370,7 +375,8 @@ static int show_phone_test_menu(void)
 				result = pmenu[chosen_item].func();
 				LOGD("mmitest result=%d id=0x%08x\n", result,pmenu[chosen_item].id);
 			}
-			write_txt(PHONETXTPATH,TOTAL_NUM);
+			//write_txt(PHONETXTPATH,TOTAL_NUM);
+			write_bin(PHONETXTPATH);
 		}
 		else if (chosen_item < 0)
 		{
@@ -412,7 +418,8 @@ static int show_pcba_test_menu(void)
 				LOGD("mmitest result=%d id=0x%08x\n", result,pmenu[chosen_item].id);
 			}
 			//LOGD("leon%s","i am here");
-		write_txt(PCBATXTPATH,TOTAL_NUM);
+		//write_txt(PCBATXTPATH,TOTAL_NUM);
+		write_bin(PCBATXTPATH);
 		}
 		else if (chosen_item < 0)
 		{
@@ -491,7 +498,8 @@ static int auto_all_test(void)
 	show_multi_test_result();
 	ui_handle_button(NULL,NULL);
 	LOGD("mmitest before write");
-	write_txt(PHONETXTPATH,TOTAL_NUM);
+	//write_txt(PHONETXTPATH,TOTAL_NUM);
+	write_bin(PHONETXTPATH);
 	return 0;
 }
 
@@ -524,7 +532,8 @@ static int PCBA_auto_all_test(void)
 	show_multi_test_result();
 	ui_handle_button(NULL,NULL);
 	LOGD("mmitest before write");
-	write_txt(PCBATXTPATH,TOTAL_NUM);
+	//write_txt(PCBATXTPATH,TOTAL_NUM);
+	write_bin(PCBATXTPATH);
 	return 0;
 }
 
@@ -548,19 +557,15 @@ static void test_init(void)
 	ui_init();
 	ui_set_background(BACKGROUND_ICON_NONE);
 	LOGD("=== show test result ===\n");
+	read_bin();
 	for(i = 0; i < TOTAL_NUM; i++){
 		phone_result[i].name=name[i];
 		pcba_result[i].name=name[i];
-		phone_text_result[i].name=name[i];
-		pcba_text_result[i].name=name[i];
 		phone_result[i].id=case_id[i];
 		pcba_result[i].id=case_id[i];
-		phone_text_result[i].id=case_id[i];
-		pcba_text_result[i].id=case_id[i];
-		phone_result[i].pass_faild=RL_NA;
-		pcba_result[i].pass_faild=RL_NA;
-		phone_text_result[i].pass_faild=RL_NA;
-		pcba_text_result[i].pass_faild=RL_NA;
+		phone_result[i].pass_faild=phone_text_result[i].pass_faild;
+		pcba_result[i].pass_faild=pcba_text_result[i].pass_faild;
+
 	}
 }
 
@@ -934,11 +939,22 @@ static void test_item_init(void)
 //unsigned char test_buff[]="hello world";
 static int test_result_mkdir(void)
 {
-	system("mkdir /productinfo/");
-	system("touch  /productinfo/wholephonetest.txt");
-	system("touch  /productinfo/PCBAtest.txt");
+	LOGD("mmitest make file in");
+	LOGD("mmitest make empty=%d",access(PCBATXTPATH,0));
+	if(access(PCBATXTPATH,0)==-1)
+		{
+			system("touch  /productinfo/pcbatest");
+			LOGD("mmitest make pcbatest");
+		}
+	if(access(PHONETXTPATH,0)==-1)
+		{
+			system("touch /productinfo/wholephonetest");
+			LOGD("mmitest make wholephonetest");
+		}
+	LOGD("mmitest make file out");
 	return 0;
 }
+
 
 
 
@@ -964,9 +980,9 @@ int main(int argc, char **argv)
 	char *pp;
 
 	system(SPRD_TS_MODULE);
+	test_result_mkdir();//+++++++++++++++
 	test_init();
 	test_item_init();
-	test_result_mkdir();//+++++++++++++++
 	sdcard_fm_init();
 	show_root_menu();
 
