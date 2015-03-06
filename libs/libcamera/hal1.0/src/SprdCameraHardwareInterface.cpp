@@ -3344,6 +3344,7 @@ getpmem_end:
 
 	if (0 == result) {
 		if (camera_memory) {
+			LOGI("malloc camera_memory %p", camera_memory);
 			if (0 == s_mem_method) {
 				LOGI("allocCameraMem X: phys_addr 0x%x, data: 0x%x, size: 0x%x, phys_size: 0x%x.",
 					memory->phys_addr, (uint32_t)memory->data,
@@ -3375,6 +3376,7 @@ void SprdCameraHardware::freeCameraMem(sprd_camera_memory_t* memory)
 		if (NULL == memory->camera_memory) {
 			LOGI("freeCameraMem: memory->camera_memory is null");
 		} else if (memory->camera_memory->release) {
+			LOGI("free camera_memory %p", memory->camera_memory);
 			memory->camera_memory->release(memory->camera_memory);
 			memory->camera_memory = NULL;
 		} else {
@@ -3390,6 +3392,7 @@ void SprdCameraHardware::freeCameraMem(sprd_camera_memory_t* memory)
 			memory->ion_heap = NULL;
 		}
 		free(memory);
+		memory = NULL;
 	} else {
 		LOGI("freeCameraMem: null");
 	}
