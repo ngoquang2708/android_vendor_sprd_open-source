@@ -301,6 +301,9 @@ LOCAL const SENSOR_REG_T ov5670_com_mipi_raw[] = {
 	{0x4800, 0x4c}, // MIPI conrol
 	{0x4816, 0x53}, // emb_dt
 	{0x481f, 0x40}, // clock_prepare_min
+
+	{0x4830, 0x07}, // mipi TLPX > 50ns
+
 	{0x4837, 0x11}, // clock period of pclk2x
 	{0x5000, 0x16}, // awb_gain_en, bc_en, wc_en
 	{0x5001, 0x01}, // blc_en
