@@ -2886,6 +2886,7 @@ cmr_int sensor_set_exif_common(struct sensor_drv_context *sensor_cxt,
 			break;
 		}
 	case SENSOR_EXIF_CTRL_FLASH:
+		sensor_exif_info_ptr->valid.Flash = 1;
 		sensor_exif_info_ptr->Flash = param;
 		break;
 	case SENSOR_EXIF_CTRL_FOCALLENGTH:
