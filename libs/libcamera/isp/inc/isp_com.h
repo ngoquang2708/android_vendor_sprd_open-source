@@ -298,8 +298,8 @@ struct isp_denoise_param
 	uint16_t b_thr;
 	uint8_t diswei[19];
 	uint8_t ranwei[31];
-	uint8_t reserved1;
-	uint8_t reserved0;
+	uint8_t diswei_level;
+	uint8_t ranwei_level;
 };
 
 struct isp_pre_wave_denoise_param
