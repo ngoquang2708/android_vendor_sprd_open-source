@@ -724,6 +724,7 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	case CMD_USER_GET_MODEM_MODE:
 	    rlen = eng_diag_get_modem_mode(buf, len, rsp, sizeof(rsp));
 	    eng_diag_write2pc(rsp, rlen);
+	    return 0;
 	case CMD_USER_BKLIGHT:
 	    ENG_LOG("%s: CMD_USER_BKLIGHT Req!\n", __FUNCTION__);
 	    rlen = eng_diag_set_backlight(buf, len, eng_diag_buf, sizeof(eng_diag_buf));
@@ -3490,7 +3491,10 @@ static int eng_diag_fileoper_hdlr(char *buf, int len, char *rsp)
                 fd = open(fileoper->file_name, O_WRONLY);
                 if(fd >= 0){
                     ENG_LOG("%s: File is open\n", __FUNCTION__);
-                    lseek(fd, s_cur_filepos, SEEK_SET);
+                    if(lseek(fd, s_cur_filepos, SEEK_SET) == -1){
+                        aprsp->status = 1;
+                        ENG_LOG("%s: lseek error :%s", __FUNCTION__, strerror(errno));
+                    }
                     write_size = write(fd, filedata->data, filedata->data_len);
                     if(write_size < 0){
                         aprsp->status = 1;
@@ -3983,7 +3987,7 @@ out:
 
 static int eng_diag_set_powermode(char *buf, int len, char *rsp, int rsplen)
 {
-    int flag = 0, ret = 0, fd = -1;
+    int flag = 0, ret = 0;
     char *rsp_ptr;
     TOOLS_DIAG_AP_CNF_T* aprsp;
     char* insmode_flag = NULL;
@@ -4037,14 +4041,12 @@ static int eng_diag_set_powermode(char *buf, int len, char *rsp, int rsplen)
 out:
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
     free(rsp_ptr);
-    if(fd >= 0)
-	close(fd);
     return rsplen;
 }
 
 static int eng_diag_set_ipconfigure(char *buf, int len, char *rsp, int rsplen)
 {
-    int flag = 0, ret = 0, fd = -1;
+    int flag = 0, ret = 0;
     char *rsp_ptr,*insmode_flag = NULL;
     char cmd[ENG_CMDLINE_LEN] = {0};
     char cmdline[ENG_CMDLINE_LEN] = {0};
@@ -4140,8 +4142,6 @@ static int eng_diag_set_ipconfigure(char *buf, int len, char *rsp, int rsplen)
 out:
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
     free(rsp_ptr);
-    if(fd >= 0)
-	close(fd);
     return rsplen;
 
 }
@@ -4235,13 +4235,16 @@ static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen)
 
     sprintf(cmd,"iwnpi wlan0 get_reg %s %x %d", apcmd->szType,apcmd->nRegAddr,apcmd->nCount);
     fd = popen(cmd, "r" );
+    if(NULL == fd)  {
+	ENG_LOG("%s: popen error.\n", __FUNCTION__);
+	goto out;
+    }
     fread(regvalue, sizeof(char), sizeof(regvalue), fd);
     rsplen = sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T) + (apcmd->nCount)*4;//for every type return 4 bytes data
     temp = (char*)malloc(rsplen);
     if(NULL == temp){
 	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
-	free(rsp_ptr);
-	return 0;
+	goto out;
     }
 
     free(rsp_ptr);

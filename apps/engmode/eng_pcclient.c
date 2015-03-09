@@ -97,7 +97,9 @@ void eng_check_factorymode(int normal_cali)
 
     if(fd >= 0){
         ENG_LOG("%s: status=%x\n",__func__, status);
-        chmod(ENG_FACOTRYMODE_FILE, 0660);
+        if(chmod(ENG_FACOTRYMODE_FILE, 0660) < 0){
+            ENG_LOG("%s: chmod %s to 666 failed ", __FUNCTION__, ENG_FACOTRYMODE_FILE);
+        }
         property_get("ro.build.type",build_type,"not_find");
         ENG_LOG("%s: build_type: %s", __FUNCTION__, build_type);
         property_get("persist.sys.modem.diag",modem_diag_value,"not_find");
