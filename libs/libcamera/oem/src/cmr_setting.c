@@ -1934,6 +1934,11 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 					if (ret) {
 						CMR_LOGE("ISP_CTRL_FLASH_EG error.");
 					}
+					isp_param.cmd_value = 1;
+					ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EXIF,&isp_param);
+					if (ret) {
+						CMR_LOGE("COM_ISP_SET_FLASH_EXIF error.");
+					}
 					setting_set_flashdevice(cpt, parm, ctrl_flash_status);
 				} else {//auto focus flash
 					struct common_sn_cmd_param   sn_param;
@@ -1990,7 +1995,16 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 			if (IMG_DATA_TYPE_RAW == image_format) {
 				is_to_isp = 1;
 			}
+		} else {
+			CMR_LOGI("flash does't used");
+			isp_param.camera_id = parm->camera_id;
+			isp_param.cmd_value = 0;
+			ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EXIF,&isp_param);
+			if (ret) {
+					CMR_LOGE("COM_ISP_SET_FLASH_EXIF error.");
+			}
 		}
+
 		if (is_notify && is_to_isp
 			&& init_in->setting_isp_ioctl) {
 			isp_param.camera_id = parm->camera_id;
