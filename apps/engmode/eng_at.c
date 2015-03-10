@@ -32,6 +32,8 @@ static int pc_fd=-1;
 #define TRIGGER_BQB_DISABLE "\r\n+SPBQBTEST OK: AT\r\n"
 #define UNKNOW_COMMAND "\r\n+SPBQBTEST ERROR: UNKNOW COMMAND\r\n"
 
+static current_route = ROUTE_AT;
+
 static inline int create_server_socket(const char* name)
 {
     int s = socket(AF_LOCAL, SOCK_STREAM, 0);;
@@ -110,8 +112,8 @@ static void bqb_service_disable(int pc_fd) {
     tcsetattr(pc_fd, TCSANOW, &ser_settings);
     ret = eng_controller_bqb_stop();
 }
-
 #endif
+
 static int start_gser(char* ser_path)
 {
     struct termios ser_settings;
@@ -131,8 +133,17 @@ static int start_gser(char* ser_path)
     tcgetattr(pc_fd, &ser_settings);
     cfmakeraw(&ser_settings);
 
+#ifdef CONFIG_BQBTEST
+    if (current_route == ROUTE_BQB) {
+        ser_settings.c_lflag = 0;
+    } else {
+        ser_settings.c_lflag |= (ECHO | ECHONL);
+        ser_settings.c_lflag &= ~ECHOCTL;
+    }
+#else
     ser_settings.c_lflag |= (ECHO | ECHONL);
     ser_settings.c_lflag &= ~ECHOCTL;
+#endif
 
     tcsetattr(pc_fd, TCSANOW, &ser_settings);
 
@@ -150,7 +161,7 @@ static void *eng_readpcat_thread(void *par)
     int i, offset_read, length_read, status;
     eng_dev_info_t* dev_info = (eng_dev_info_t*)par;
 #ifdef CONFIG_BQBTEST
-    int bs_fd, max_fd, ret, current_route = ROUTE_AT;
+    int bs_fd, max_fd, ret;
     fd_set read_set;
 
     /* init bqb server socket */
