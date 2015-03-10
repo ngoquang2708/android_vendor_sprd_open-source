@@ -36,7 +36,7 @@ static int s_ov5670_gain_bak = 0;
 static int s_ov5670_shutter_bak = 0;
 static int s_ov5670_capture_shutter = 0;
 static int s_ov5670_capture_VTS = 0;
-
+static int s_stream_on = 0;
 LOCAL uint32_t _ov5670_GetResolutionTrimTab(uint32_t param);
 LOCAL uint32_t _ov5670_PowerOn(uint32_t power_on);
 LOCAL uint32_t _ov5670_Identify(uint32_t param);
@@ -360,7 +360,7 @@ LOCAL const SENSOR_REG_T ov5670_com_mipi_raw[] = {
 	{0x3d85, 0x17}, // OTP power up load data enable, otp power up load setting enable, otp write register load setting 
 	//enable
 	{0x3655, 0x20},
-	//{0x0100, 0x01}, // wake up from software standby, stream on
+	{0x0100, 0x00}, // software standby
 };
 
 
@@ -399,6 +399,7 @@ LOCAL const SENSOR_REG_T ov5670_1296X972_mipi_raw[] = {
 	{0x4600, 0x00},
 	{0x4601, 0x81},
 	{0x4017, 0x10}, // BLC, offset trigger threshold
+	{0x0100, 0x00}, // software standby
 };
 
 LOCAL const SENSOR_REG_T ov5670_2592X1944_mipi_raw[] = {
@@ -436,6 +437,8 @@ LOCAL const SENSOR_REG_T ov5670_2592X1944_mipi_raw[] = {
 	{0x4600, 0x01},
 	{0x4601, 0x03},
 	{0x4017, 0x08}, // BLC, offset trigger threshold
+	{0x0100, 0x00}, // software standby
+
 };
 
 LOCAL SENSOR_REG_TAB_INFO_T s_ov5670_resolution_Tab_RAW[] = {
@@ -602,7 +605,7 @@ SENSOR_INFO_T g_ov5670_mipi_raw_info = {
 	ov5670_I2C_ADDR_W,	// salve i2c write address
 	ov5670_I2C_ADDR_R,	// salve i2c read address
 
-	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
+	SENSOR_I2C_REG_16BIT | SENSOR_I2C_REG_8BIT | SENSOR_I2C_FREQ_400,	// bit0: 0: i2c register value is 8 bit, 1: i2c register value is 16 bit
 	// bit1: 0: i2c register addr  is 8 bit, 1: i2c register addr  is 16 bit
 	// other bit: reseved
 	SENSOR_HW_SIGNAL_PCLK_N | SENSOR_HW_SIGNAL_VSYNC_N | SENSOR_HW_SIGNAL_HSYNC_P,	// bit0: 0:negative; 1:positive -> polarily of pixel clock
@@ -1795,9 +1798,9 @@ LOCAL uint32_t _ov5670_PowerOn(uint32_t power_on)
 		Sensor_SetDvddVoltage(dvdd_val);
 		usleep(1000);
 		Sensor_SetMCLK(SENSOR_DEFALUT_MCLK);
-		usleep(10*1000);
+		usleep(1000);
 		Sensor_PowerDown(!power_down);
-		usleep(10*1000);
+		usleep(1000);
 	} else {
 		Sensor_PowerDown(power_down);
 		usleep(1000);
@@ -2272,19 +2275,25 @@ LOCAL uint32_t _ov5670_after_snapshot(uint32_t param)
 
 LOCAL uint32_t _ov5670_StreamOn(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_OV5670: StreamOn");
+	SENSOR_PRINT("SENSOR_OV5670: StreamOn, %d", s_stream_on);
 
-	Sensor_WriteReg(0x0100, 0x01);
+	if (0 == s_stream_on) {
+		Sensor_WriteReg(0x0100, 0x01);
+		s_stream_on = 1;
+	}
 
 	return 0;
 }
 
 LOCAL uint32_t _ov5670_StreamOff(uint32_t param)
 {
-	SENSOR_PRINT("SENSOR_OV5670: StreamOff");
+	SENSOR_PRINT("SENSOR_OV5670: StreamOff, %d", s_stream_on);
 
-	Sensor_WriteReg(0x0100, 0x00);
-	usleep(80*1000);
+	if (s_stream_on) {
+		Sensor_WriteReg(0x0100, 0x00);
+		usleep(80*1000);
+		s_stream_on = 0;
+	}
 
 	return 0;
 }
