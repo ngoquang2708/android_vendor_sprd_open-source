@@ -3777,6 +3777,10 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		break;
 	case COM_ISP_SET_FLASH:
 		isp_cmd = ISP_CTRL_FLASH_CTRL;
+		isp_param = param_ptr->cmd_value;
+		break;
+	case COM_ISP_SET_FLASH_EXIF:
+		set_isp_flag = 0;
 		set_exif_flag = 1;
 		exif_cmd = SENSOR_EXIF_CTRL_FLASH;
 		isp_param = param_ptr->cmd_value;
