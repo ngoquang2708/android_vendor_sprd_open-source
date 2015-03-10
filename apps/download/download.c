@@ -697,7 +697,16 @@ static void store_client_fd(WcnClient client_fds[], int fd,int type)
 
 	for (i = 0; i < WCN_MAX_CLIENT_NUM; i++)
 	{
-		if(client_fds[i].sockfd == -1) //invalid fd
+		if((pmanager.flag_connect == 1) && (type == WCN_SOCKET_TYPE_SLOG))
+		{
+			if(client_fds[i].type == WCN_SOCKET_TYPE_SLOG)
+			{
+				client_fds[i].sockfd = fd;
+				client_fds[i].type = type;
+				return;
+			}
+		}
+		else if(client_fds[i].sockfd == -1) //invalid fd
 		{
 			client_fds[i].sockfd = fd;
 			client_fds[i].type = type;
@@ -714,7 +723,7 @@ static void store_client_fd(WcnClient client_fds[], int fd,int type)
 	{
 		DOWNLOAD_LOGD("ERRORR::%s: client_fds is FULL", __FUNCTION__);
 		client_fds[i-1].sockfd = fd;
-		client_fds[i].type = type;
+		client_fds[i-1].type = type;
 		return;
 	}
 }
@@ -770,8 +779,8 @@ static void *client_listen_thread(void *arg)
 				continue;
 			}
 
-			pmanager->flag_connect = 1;
 			store_client_fd(pmanager->client_fds, c,WCN_SOCKET_TYPE_SLOG);
+			pmanager->flag_connect = 1;
 		}else if(FD_ISSET(pmanager->listen_fd, &read_fds)) {
 			do {
 				alen = sizeof(addr);
