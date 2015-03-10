@@ -113,13 +113,6 @@ int main()
 			.level = 5,
 			.data_list =
 			{
-				"com.android.wallpaper.holospiral",
-				"com.android.galaxy4",
-				"com.android.magicsmoke",
-				"com.android.noisefield",
-				"com.android.musicvis",
-				"com.android.wallpaper",
-				"com.android.phasebeam"
 			}
 		},
 	};
