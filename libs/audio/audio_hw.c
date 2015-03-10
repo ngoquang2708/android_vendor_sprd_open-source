@@ -553,6 +553,7 @@ struct tiny_private_ctl private_ctl;
     bool cache_mute;
     int fm_volume;
     bool fm_open;
+    bool fm_record;
 
     int requested_channel_cnt;
     int  input_source;
@@ -1075,6 +1076,7 @@ static void do_select_devices_static(struct tiny_audio_device *adev)
     int pre_out = 0;
     int pre_in = 0;
     int force_set = 0;
+    bool fm_iis_connection = false;
     ALOGI("do_select_devices_static E");
     if(adev->voip_state) {
         ALOGI("do_select_devices  in %x,but voip is on so send at to cp in",adev->out_devices);
@@ -1164,8 +1166,9 @@ ret);
                     adev->dev_cfgs[i].on_len);
 
             //first open fm path and then switch iis
-            if(cur_out & AUDIO_DEVICE_OUT_FM){
+            if(cur_out & AUDIO_DEVICE_OUT_FM && !fm_iis_connection){
                 i2s_pin_mux_sel(adev,FM_IIS);
+                fm_iis_connection = true;
             }
     }
 
@@ -1202,6 +1205,8 @@ ret);
             freed in setting mode in vbc_ctrl_thread_linein_routine*/
                 pcm_close(adev->pcm_fm_dl);
                 adev->pcm_fm_dl= NULL;
+                fm_iis_connection = false;
+                adev->fm_record = false;
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
@@ -1321,6 +1326,8 @@ static void do_select_devices(struct tiny_audio_device *adev)
     int pre_in = 0;
     bool voip_route_ops = false;
     int  force_set = 0;
+    bool fm_iis_connection = false;
+
     ALOGI("do_select_devices E");
     pthread_mutex_lock(&adev->lock);
     if(adev->voip_state) {
@@ -1416,8 +1423,9 @@ static void do_select_devices(struct tiny_audio_device *adev)
             set_route_by_array(adev->mixer, adev->dev_cfgs[i].on,
                     adev->dev_cfgs[i].on_len);
             //first open fm path and then switch iis
-            if(cur_out & AUDIO_DEVICE_OUT_FM){
+            if(cur_out & AUDIO_DEVICE_OUT_FM && !fm_iis_connection){
                 i2s_pin_mux_sel(adev,FM_IIS);
+                fm_iis_connection = true;
 		 ALOGE("do_select_devices, fm_volume: %d",adev->fm_volume);
                 if(adev->fm_volume !=0){
                     if (adev->private_ctl.fm_da0_mux)
@@ -1467,6 +1475,8 @@ static void do_select_devices(struct tiny_audio_device *adev)
             freed in setting mode in vbc_ctrl_thread_linein_routine*/
                 pcm_close(adev->pcm_fm_dl);
                 adev->pcm_fm_dl= NULL;
+                fm_iis_connection = false;
+                adev->fm_record = false;
             }
             if(adev->master_mute){
                 ALOGV("close FM so we set codec to mute by master_mute");
@@ -3110,7 +3120,7 @@ static int start_input_stream(struct tiny_stream_in *in)
 
     }
     else {
-        if(adev->fm_open){
+        if(adev->fm_open && adev->fm_record){
             in->config = pcm_config_fm_ul;
             if(in->config.channels != in->requested_channels) {
               in->config.channels = in->requested_channels;
@@ -4010,6 +4020,19 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             pthread_mutex_unlock(&adev->lock);
         }
         select_devices_signal(adev);
+    }
+    ret = str_parms_get_str(parms,"fm_record",value,sizeof(value));
+    if(ret >= 0){
+        val = atoi(value);
+        pthread_mutex_lock(&adev->device_lock);
+        pthread_mutex_lock(&adev->lock);
+        if(val){
+            adev->fm_record = true;
+        }else{
+            adev->fm_record = false;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&adev->device_lock);
     }
 
     str_parms_destroy(parms);
@@ -5987,6 +6010,9 @@ ret = dump_parse_xml();
     adev->call_prestop = 0;
     adev->voice_volume = 1.0f;
     adev->bluetooth_nrec = false;
+    //init fm status
+    adev->fm_open = false;
+    adev->fm_record = false;
 
     adev->input_source = 0;
     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
