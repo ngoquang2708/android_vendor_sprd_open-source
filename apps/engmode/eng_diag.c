@@ -45,6 +45,12 @@
 #define IMEI_NUM   4
 #define CMD_REGISTERSTRING "regvaluesis:"
 
+
+#define CMD_SECURESTRING "securesha1="
+#define CMD_PUBLICKEYPATH "primpukpath="
+#define CMD_PUBLICKEYSTART "primpukstart="
+#define CMD_PUBLICKEYLEN "primpuklen="
+
 // SIPC interfaces in AP linux for AT CMD
 char *at_sipc_devname[] = {
     "/dev/stty_td30", // AT channel in TD mode
@@ -138,6 +144,15 @@ static int eng_diag_set_powermode(char *buf, int len, char *rsp, int rsplen);
 static int eng_diag_set_ipconfigure(char *buf, int len, char *rsp, int rsplen);
 static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen);
 static int eng_diag_write_register(char *buf, int len, char *rsp, int rsplen);
+
+static int eng_diag_read_efuse(char *buf,int len,char *rsp, int rsplen);
+static int eng_diag_write_efuse(char *buf,int len,char *rsp, int rsplen);
+static int eng_parse_hash_cmdline(unsigned char cmdvalue[]);
+static int eng_parse_publickey_cmdline(char *path,int* pos,int* len);
+static int eng_diag_read_publickey(char *buf,int len,char *rsp, int rsplen);
+static int eng_diag_enable_secure(char *buf,int len,char *rsp, int rsplen);
+static int eng_diag_read_enable_secure_bit(char *buf,int len,char *rsp, int rsplen);
+
 
 static const char *at_sadm="AT+SADM4AP";
 static const char *at_spenha="AT+SPENHA";
@@ -523,11 +538,20 @@ int eng_diag_parse(char *buf,int len)
 		ret = CMD_USER_WRITE_REGISTER;
 	    }
 	    break;
-        case DIAG_CMD_ASSERT:
+        case DIAG_SYSTEM_F:
             if(head_ptr->subtype==0x4) {
                 ENG_LOG("%s: Handle DIAG_CMD_ASSERT", __FUNCTION__);
                 g_assert_cmd = 1;
-            }
+	    }else if(head_ptr->subtype==0x20)
+                ret = CMD_USER_READ_EFUSE;
+            else if(head_ptr->subtype==0x21)
+                ret = CMD_USER_WRITE_EFUSE;
+            else if(head_ptr->subtype==0x22)
+                ret = CMD_USER_ENABLE_SECURE;
+            else if (head_ptr->subtype==0x23)
+                ret = CMD_USER_READ_PUBLICKEY;
+            else if (head_ptr->subtype==0x24)
+                ret = CMD_USER_READ_ENABLE_SECURE_BIT;
             break;
         default:
             ENG_LOG("%s: Default\n",__FUNCTION__);
@@ -755,6 +779,41 @@ int eng_diag_user_handle(int type, char *buf,int len)
 	    eng_diag_len = rlen;
 	    eng_diag_write2pc(eng_diag_buf, eng_diag_len);
 	    return 0;
+	case CMD_USER_READ_EFUSE:
+            ENG_LOG("%s: CMD_USER_READ_EFUSE Req!\n", __FUNCTION__);
+            memset(eng_diag_buf,0,sizeof(eng_diag_buf));
+            rlen = eng_diag_read_efuse(buf, len, eng_diag_buf,sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf,eng_diag_len);
+            return 0;
+        case CMD_USER_WRITE_EFUSE:
+            ENG_LOG("%s: CMD_USER_WRITE_EFUSE Req!\n", __FUNCTION__);
+            memset(eng_diag_buf,0,sizeof(eng_diag_buf));
+            rlen = eng_diag_write_efuse(buf, len, eng_diag_buf,sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf,eng_diag_len);
+            return 0;
+        case CMD_USER_READ_PUBLICKEY:
+            ENG_LOG("%s: CMD_USER_READ_PUBLICKEY Req!\n", __FUNCTION__);
+            memset(eng_diag_buf,0,sizeof(eng_diag_buf));
+            rlen = eng_diag_read_publickey(buf, len, eng_diag_buf,sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf,eng_diag_len);
+            return 0;
+        case CMD_USER_ENABLE_SECURE:
+            ENG_LOG("%s: CMD_USER_SCURE_ENABLE Req!\n", __FUNCTION__);
+            memset(eng_diag_buf,0,sizeof(eng_diag_buf));
+            rlen = eng_diag_enable_secure(buf, len, eng_diag_buf,sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf,eng_diag_len);
+            return 0;
+        case CMD_USER_READ_ENABLE_SECURE_BIT:
+            ENG_LOG("%s: CMD_USER_SCURE_ENABLE Req!\n", __FUNCTION__);
+            memset(eng_diag_buf,0,sizeof(eng_diag_buf));
+            rlen = eng_diag_read_enable_secure_bit(buf, len, eng_diag_buf,sizeof(eng_diag_buf));
+            eng_diag_len = rlen;
+            eng_diag_write2pc(eng_diag_buf,eng_diag_len);
+            return 0;
         default:
             break;
     }
@@ -4313,6 +4372,339 @@ static int eng_diag_write_register(char *buf, int len, char *rsp, int rsplen)
     *((char*)(rsp_ptr + sizeof(MSG_HEAD_T)+ sizeof(WIFI_REGISTER_REQ_T))) = 1;
 
 out:
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_diag_read_efuse(char *buf,int len,char *rsp, int rsplen)
+{
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    unsigned char data_buf[16] = {0};//FIX ME,adjusted by ronghua interfaces
+    unsigned char hash_buf[41] = {0};
+    unsigned char uid_buf[17] = {0};
+    unsigned char *str= NULL;
+    char *endptr;
+    int ret = 0;
+    char *rsp_ptr,*temp;
+    unsigned short block;
+
+    if(NULL == buf){
+        ENG_LOG("%s,null pointer",__FUNCTION__);
+        return 0;
+    }
+
+    block = *(unsigned short*)(msg_head_ptr + 1);
+
+    rsplen = sizeof(EFUSE_INFO_T_RES) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+	ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+	return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T)+2);
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    ((EFUSE_INFO_T_RES*)(rsp_ptr + sizeof(MSG_HEAD_T)))->flag = 0x00;
+
+    do{
+        ENG_LOG("%s,block = %d",__FUNCTION__,block);
+        if(0 == block || 1 == block){
+	     ret = efuse_uid_read(uid_buf, sizeof(uid_buf));
+	     if(ret < 0){
+                ENG_LOG("%s,efuse_uid_read ret = %d",__FUNCTION__,ret);
+                break;
+           }
+	     str = uid_buf;
+	     str += (block * 8);
+        }else{
+	     ret = efuse_hash_read(hash_buf, sizeof(hash_buf));
+	     if(ret < 0){
+                ENG_LOG("%s,efuse_hash_read ret = %d",__FUNCTION__,ret);
+                break;
+            }
+	     str = hash_buf;
+	     str += ((block - 2) * 8);
+        }
+
+        memcpy(data_buf,str,8);
+        data_buf[8] = '\0';
+
+        rsplen = sizeof(EFUSE_READ_INFO_T_RES) + sizeof(MSG_HEAD_T);
+        temp = (char*)malloc(rsplen);
+        if(NULL == temp){
+            ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+            return 0;
+        }
+        free(rsp_ptr);
+        rsp_ptr = temp;
+        memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T)+2);
+        ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+        ((EFUSE_READ_INFO_T_RES*)(rsp_ptr + sizeof(MSG_HEAD_T)))->data = strtoul(data_buf,&endptr,16);
+    }while(0);
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_diag_write_efuse(char *buf,int len,char *rsp, int rsplen)
+{
+    int ret, flag = -1;
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    unsigned char hashstr_buf[HASH_LEN+1] = {0};
+    unsigned char *hashstr= hashstr_buf;
+    char *rsp_ptr;
+
+    if(NULL == buf){
+	ENG_LOG("%s,null pointer",__FUNCTION__);
+        return 0;
+    }
+
+    rsplen = sizeof(char) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *(char*)(rsp_ptr + sizeof(MSG_HEAD_T)) = 0x00;
+
+    do{
+	flag = eng_parse_hash_cmdline(hashstr);
+	if(0 == flag){
+	   ENG_LOG("%s,doesn't read the hash value",__FUNCTION__);
+	   break;
+        }
+
+        ret = efuse_hash_write(hashstr, strlen(hashstr));
+        if(ret <= 0){
+	    ENG_LOG("%s,efuse_hash_write data failed. ret=%d",__FUNCTION__,ret);
+	    break;
+        }
+	*(char*)(rsp_ptr + sizeof(MSG_HEAD_T))= 0x01;
+    }while(0);
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_parse_hash_cmdline(unsigned char *cmdvalue)
+{
+    int fd = 0,ret = 0, i = 0,flag = 0;
+    char cmdline[ENG_CMDLINE_LEN] = {0};
+    char* hashstr = NULL;
+
+    fd = open("/proc/cmdline",O_RDONLY);
+    if(fd < 0){
+	ENG_LOG("%s,/proc/cmdline open failed",__FUNCTION__);
+        return 0;
+    }
+
+    ret = read(fd,cmdline,sizeof(cmdline));
+    if(ret < 0){
+	ENG_LOG("%s,/proc/cmdline read failed",__FUNCTION__);
+	close(fd);
+        return 0;
+    }
+    ENG_LOG("%s,cmdline: %s\n",__FUNCTION__,cmdline);
+    hashstr = strstr(cmdline,CMD_SECURESTRING);
+    if(hashstr !=NULL){
+	hashstr += strlen(CMD_SECURESTRING);
+	memcpy(cmdvalue, hashstr, HASH_LEN);
+	flag = 1;
+    }
+
+    ENG_LOG("%s,cmdline: %s\n",__FUNCTION__,cmdvalue);
+    return flag;
+}
+
+static int eng_parse_publickey_cmdline(char *path,int* pos,int* len)
+{
+    int fd = -1;
+    int ret = 0;
+    int strlength = 0;
+    char cmdline[ENG_CMDLINE_LEN] = {0};
+    char* buf = NULL,*ch = NULL;
+    char str[10] = {0};
+
+    fd = open("/proc/cmdline",O_RDONLY);
+    if(fd < 0){
+	ENG_LOG("%s,/proc/cmdline open failed",__FUNCTION__);
+	return 0;
+    }
+
+    ret = read(fd,cmdline,sizeof(cmdline));
+    if(ret < 0){
+	ENG_LOG("%s,/proc/cmdline read failed",__FUNCTION__);
+	close(fd);
+	return 0;
+    }
+    ENG_LOG("%s,cmdline: %s\n",__FUNCTION__,cmdline);
+
+    buf = strstr(cmdline,CMD_PUBLICKEYPATH);
+    if(buf != NULL){
+	buf += strlen(CMD_PUBLICKEYPATH);
+	ch = strchr(buf, ' ');
+	if(ch != NULL){
+	    strlength = ch - buf ;
+	    memcpy(path, buf, strlength);
+	    ENG_LOG("%s,path = %s ",__FUNCTION__,path);
+	}
+    }
+
+    buf = strstr(cmdline,CMD_PUBLICKEYSTART);
+    if(buf != NULL){
+	buf += strlen(CMD_PUBLICKEYSTART);
+	ch = strchr(buf, ' ');
+	if(ch != NULL){
+	    strlength = ch - buf ;
+	    strncpy(str, buf, strlength);
+	    *pos = atoi(str);
+	    ENG_LOG("%s,pos = %d ",__FUNCTION__,*pos);
+	}
+    }
+
+    buf = strstr(cmdline,CMD_PUBLICKEYLEN);
+    if(buf != NULL){
+	buf += strlen(CMD_PUBLICKEYLEN);
+	ch = strchr(buf, ' ');
+	if(ch != NULL){
+	    strlength = ch - buf ;
+	    strncpy(str, buf, strlength);
+	    *len = atoi(str);
+	    ENG_LOG("%s,len = %d ",__FUNCTION__,*len);
+	}
+    }
+    close(fd);
+    return 1;
+}
+
+static int eng_diag_read_publickey(char *buf,int len,char *rsp, int rsplen)
+{
+    int fd = -1;
+    int ret = 0;
+    int publickeypos = 0;
+    int publickeylen = 0;
+    char data_buf[1024] = {0};
+    char * endptr;
+    char *rsp_ptr,*temp;
+    char *publickeypath = NULL;
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+
+    if(NULL == buf){
+	ENG_LOG("%s,null pointer",__FUNCTION__);
+        return 0;
+    }
+
+    rsplen = sizeof(char) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *((char*)(rsp_ptr + sizeof(MSG_HEAD_T))) = 0x00;
+
+    publickeypath = (char*)malloc(1024);
+    eng_parse_publickey_cmdline(publickeypath,&publickeypos,&publickeylen);
+
+    do{
+        fd = open(publickeypath,O_RDONLY);
+        if(fd < 0){
+            ENG_LOG("%s,%s open failed",publickeypath,__FUNCTION__);
+            break;
+        }
+
+        if(-1 == lseek(fd,publickeypos,SEEK_SET)){
+            ENG_LOG("%s,/dev/block/mmcblk0boot0 seek failed",__FUNCTION__);
+            break;
+        }
+        ret = read(fd,data_buf,publickeylen);
+        if(ret <= 0){
+            ENG_LOG("%s,/dev/block/mmcblk0boot0 read data failed",__FUNCTION__);
+            break;
+        }
+
+        rsplen = publickeylen + sizeof(MSG_HEAD_T);
+        temp = (char*)malloc(rsplen);
+        if(NULL == temp){
+            ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+            break;
+        }
+        free(rsp_ptr);
+        rsp_ptr = temp;
+        memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+        ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+        memcpy(rsp_ptr + sizeof(MSG_HEAD_T),data_buf,publickeylen);
+    }while(0);
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    if(fd >= 0)
+	close(fd);
+    free(rsp_ptr);
+    free(publickeypath);
+    return rsplen;
+}
+
+static int eng_diag_enable_secure(char *buf,int len,char *rsp, int rsplen)
+{
+    int ret = 0;
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    char *rsp_ptr;
+
+    if(NULL == buf){
+        ENG_LOG("%s,null pointer",__FUNCTION__);
+        return 0;
+    }
+
+    rsplen = sizeof(char) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *(char*)(rsp_ptr + sizeof(MSG_HEAD_T)) = 0x00;
+
+    ret = efuse_secure_enable();
+    if(ret >= 0)
+	*(char*)(rsp_ptr + sizeof(MSG_HEAD_T)) = 0x01;
+
+    rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
+    free(rsp_ptr);
+    return rsplen;
+}
+
+static int eng_diag_read_enable_secure_bit(char *buf,int len,char *rsp, int rsplen)
+{
+    int fd = -1;
+    MSG_HEAD_T *msg_head_ptr = (MSG_HEAD_T*)(buf + 1);
+    int ret = 0;
+    char *rsp_ptr;
+
+    if(NULL == buf){
+        ENG_LOG("%s,null pointer",__FUNCTION__);
+        return 0;
+    }
+
+    rsplen = sizeof(char) + sizeof(MSG_HEAD_T);
+    rsp_ptr = (char*)malloc(rsplen);
+    if(NULL == rsp_ptr){
+        ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+        return 0;
+    }
+    memcpy(rsp_ptr,msg_head_ptr,sizeof(MSG_HEAD_T));
+    ((MSG_HEAD_T*)rsp_ptr)->len = rsplen;
+    *(char*)(rsp_ptr + sizeof(MSG_HEAD_T)) = 0x00;
+
+    ret = efuse_secure_is_enabled();
+    if(0 != ret)
+	    *(char*)(rsp_ptr + sizeof(MSG_HEAD_T)) = 0x01;
+
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
     free(rsp_ptr);
     return rsplen;
