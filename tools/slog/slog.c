@@ -36,7 +36,7 @@ int notify_log_handler_started = 0;
 int bt_log_handler_started = 0;
 int tcp_log_handler_started = 0;
 int kmemleak_handler_started = 0;
-int modem_log_handler_started = 0;
+
 
 #ifdef LOW_POWER_MODE
 int hook_modem_flag = 0;
@@ -53,8 +53,7 @@ char external_path[MAX_NAME_LEN];
 struct slog_info *stream_log_head, *snapshot_log_head;
 struct slog_info *notify_log_head, *misc_log;
 
-pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid, modem_tid, modem_state_monitor_tid,
-kmemleak_tid;
+pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, command_tid, bt_tid, tcp_tid,kmemleak_tid;
 
 static int handle_gms_push(void);
 
@@ -371,8 +370,10 @@ static void handle_low_power()
 {
 	if(slog_enable != SLOG_LOW_POWER)
 		return;
+	/*
 	if(!modem_log_handler_started)
 		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
+	*/
 }
 #endif
 
@@ -418,6 +419,7 @@ static int start_sub_threads()
 			exit(0);
 		}
 	}
+	/*
 	if(!modem_log_handler_started) {
 		ret = pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
 		if(ret < 0) {
@@ -425,6 +427,7 @@ static int start_sub_threads()
 			exit(0);
 		}
 	}
+	*/
 	if(!kmemleak_handler_started) {
 		ret = pthread_create(&kmemleak_tid, NULL, kmemleak_handler, NULL);
 		if(ret < 0) {
