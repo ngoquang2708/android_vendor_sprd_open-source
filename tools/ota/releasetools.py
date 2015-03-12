@@ -84,18 +84,23 @@ class Partition(object):
 
 class PartitionFile(object):
 
-  def __init__(self, mount_point, file_name, input_dir, bootable=False, subdir=None):
+  def __init__(self, partition, file_name, input_dir, bootable=False, subdir=None):
+    self.partition = partition
     self.file_name = file_name
     if file_name is None or input_dir is None:
-      if PartitionUpdater.IfNeedImageFile(mount_point):
+      if PartitionUpdater.IfNeedImageFile(partition.mount_point):
         raise common.ExternalError("init PartitionFile error")
 
       return
-
     self.full_name = os.path.join(input_dir, file_name)
     if os.path.exists(self.full_name):
-      self.bin = common.File(file_name, open(self.full_name).read())
-      self.size = len(self.bin.data)
+      file_data = open(self.full_name).read()
+      if OPTIONS.secure_boot:
+        if partition.secureboot:
+          file_data = common.DoSprdSign(partition.secureboot, file_name, file_data, partition.mount_point)
+
+      self.bin = common.File(file_name, file_data)
+      self.size = len(file_data)
     else:
       print ("[Warning:] no image file %s" % (self.full_name))
       self.bin = None
@@ -190,6 +195,7 @@ class PartitionUpdater(object):
       self.partition.mount_point = mount_point
       self.partition.extract = OPTIONS.cache_path
       self.partition.fs_type = "yaffs2"
+      self.partition.secureboot = None
       print ("[Warning:] auto create patition %s" % self.partition)
       self.extract = True
       self.verbatim = True
@@ -280,7 +286,13 @@ class PartitionUpdater(object):
     if extract:
       self.script_ext.UnpackPackageFile(self.target.file_name, os.path.join(mount_point, self.target.file_name))
     else:
-      self.script.WriteRawImage(mount_point, self.target.file_name)
+      if p.secureboot:
+        extract_path = os.path.join(OPTIONS.cache_path, self.target.file_name)
+        self.script_ext.UnpackPackageFile(self.target.file_name, extract_path)
+        self.script_ext.WritePartitionImage(p, extract_path, pt_dev)
+        self.script.DeleteFiles([extract_path])
+      else:
+        self.script.WriteRawImage(mount_point, self.target.file_name)
 
     if self.nv_merge:
       nvmerge_exe = os.path.join(OPTIONS.cache_path, "nvmerge")
@@ -335,6 +347,10 @@ class PartitionUpdater(object):
     # contents of the partition, and write it back to the
     # partition or some dir.
     partition_type, partition_device = common.GetTypeAndDevice(self.partition.mount_point, self.options.info_dict)
+    if (OPTIONS.secure_boot):
+      secure_boot_type = common.GetSecureBootType(self.partition.mount_point, self.options.info_dict)
+      if (secure_boot_type):
+        partition_type = "%s:%s" % (secure_boot_type, partition_type)
     self.script.Print("Patching image file %s to %s..." % (self.file_name,target))
     self.script.ApplyPatch("%s:%s:%d:%s:%d:%s"
                            % (partition_type, partition_device,
@@ -365,7 +381,7 @@ class PartitionFullUpdater(PartitionUpdater):
   def __init__(self, mount_point, file_name=None, input_dir=None, bootable=False, subdir=None, extract=False, verbatim=False, mount_point2=None, mount_point3=None, nv_merge=None, spl_merge=False):
     print "PartitionFullUpdater %s, %s" % (mount_point, file_name)
     PartitionUpdater.__init__(self, mount_point, file_name, input_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3,nv_merge=nv_merge,spl_merge=spl_merge)
-    self.input = PartitionFile(mount_point, file_name, input_dir, bootable, subdir);
+    self.input = PartitionFile(self.partition, file_name, input_dir, bootable, subdir);
     self.target = self.input
     self.update_flag = True
 
@@ -390,8 +406,8 @@ class PartitionIncrementalUpdater(PartitionUpdater):
     print "PartitionIncrementalUpdater %s, %s" % (mount_point, file_name)
     PartitionUpdater.__init__(self, mount_point, file_name, target_ver_dir, source_ver_dir, extract=extract, verbatim=verbatim, mount_point2=mount_point2, mount_point3=mount_point3,nv_merge=nv_merge,spl_merge=spl_merge)
 
-    self.source = PartitionFile(mount_point, file_name, source_ver_dir, bootable, subdir);
-    self.target = PartitionFile(mount_point, file_name, target_ver_dir, bootable, subdir);
+    self.source = PartitionFile(self.partition, file_name, source_ver_dir, bootable, subdir);
+    self.target = PartitionFile(self.partition, file_name, target_ver_dir, bootable, subdir);
 
     self.inc_flag = True
 
