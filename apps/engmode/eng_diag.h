@@ -70,7 +70,7 @@ typedef enum
 
 #define DIAG_CMD_CURRENT_TEST       0x11
 #define DIAG_CMD_WIFI_TEST_F	    0x36
-#define DIAG_CMD_ASSERT         0x5
+#define DIAG_SYSTEM_F         0x5
 
 #define AUDIO_NV_ARM_INDI_FLAG          0x02
 #define AUDIO_ENHA_EQ_INDI_FLAG         0x04
@@ -112,6 +112,11 @@ typedef enum
     CMD_USER_ENABLE_CHARGE_ONOFF,
     CMD_USER_GET_CHARGE_CURRENT,
     CMD_USER_GET_MODEM_MODE,
+    CMD_USER_READ_EFUSE,
+    CMD_USER_WRITE_EFUSE,
+    CMD_USER_READ_PUBLICKEY,
+    CMD_USER_ENABLE_SECURE,
+    CMD_USER_READ_ENABLE_SECURE_BIT,
     CMD_INVALID
 }DIAG_CMD_TYPE;
 
@@ -154,6 +159,8 @@ struct eng_autotestcmd_str{
 #define ENG_ANDROID_VER "ro.build.version.release"
 #define ENG_AUDIO       "/sys/class/vbc_param_config/vbc_param_store"
 #define ENG_FM_DEVSTAT	"/sys/class/fm_devstat_config/fm_devstat_store"
+
+#define HASH_LEN                    40
 
 #define MAX_SN_LEN                  24
 #define MAX_STATION_NUM             15
@@ -265,6 +272,16 @@ typedef struct wifi_register_req_t
     unsigned int    nCount;
     unsigned int nUit; //BYTE:1, WORD:2, DWORD:4
 }__attribute__((packed))WIFI_REGISTER_REQ_T;
+#pragma pack(1)
+typedef struct {
+   unsigned short blockid;
+   unsigned long data;
+}EFUSE_READ_INFO_T_RES;
+typedef struct{
+   unsigned short blockid;
+   unsigned char flag;
+}EFUSE_INFO_T_RES;
+#pragma pack()
 
 int eng_diag(char *buf,int len);
 int eng_diag_writeimei(char *req, char *rsp);
