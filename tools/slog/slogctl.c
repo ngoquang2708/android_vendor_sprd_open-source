@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	tv_out.tv_sec = 120;
+	tv_out.tv_sec = 3600;
 	tv_out.tv_usec = 0;
 	ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv_out, sizeof(tv_out));
 	if (ret < 0) {
