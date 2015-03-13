@@ -145,10 +145,23 @@ int bt_hci_init_transport (int *bt_fd)
 
 int bt_hci_deinit_transport(int bt_fd)
 {
-	if(bt_fd != -1)
-	{
-		close(bt_fd);
-	}		
-	
-      return TRUE;
+     struct termios   term;
+     if(bt_fd == -1)
+       return TRUE;
+     if (tcgetattr(bt_fd, &term) < 0)
+     {
+        ALOGE("close_uart: Error while getting attributes\n");
+        close(bt_fd);
+        return -1;
+     }
+     term.c_cflag &= ~(CRTSCTS);
+     if (tcsetattr(bt_fd, TCSANOW, &term) < 0)
+     {
+         ALOGE("close_uart: Error while getting attributes\n");
+         close(bt_fd);
+         return -1;
+     }
+     close(bt_fd);
+     ALOGE("UART CLOSE success \n");
+     return TRUE;
 }
