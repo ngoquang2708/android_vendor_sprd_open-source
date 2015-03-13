@@ -4262,14 +4262,14 @@ static int eng_detect_process(char *process_name)
     }
 
     ENG_LOG("%s,count = %d",__FUNCTION__,count);
-    pclose(ptr);
-
+    if(NULL != ptr)
+        pclose(ptr);
     return count;
 }
 static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen)
 {
     FILE *fd;
-    int m = 0;
+    int m = 0, ret = 0;
     char *rsp_ptr,*temp,*end;
     char stemp[9] = {0};
     char AddrCount[64] = {0};
@@ -4298,7 +4298,9 @@ static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen)
 	ENG_LOG("%s: popen error.\n", __FUNCTION__);
 	goto out;
     }
-    fread(regvalue, sizeof(char), sizeof(regvalue), fd);
+    ret = fread(regvalue, sizeof(char), sizeof(regvalue), fd);
+    if(ret <= 0)
+        goto out;
     rsplen = sizeof(MSG_HEAD_T) + sizeof(WIFI_REGISTER_REQ_T) + (apcmd->nCount)*4;//for every type return 4 bytes data
     temp = (char*)malloc(rsplen);
     if(NULL == temp){
@@ -4328,7 +4330,8 @@ static int eng_diag_read_register(char *buf, int len, char *rsp, int rsplen)
 out:
     rsplen = translate_packet(rsp,(unsigned char*)rsp_ptr,((MSG_HEAD_T*)rsp_ptr)->len);
     free(rsp_ptr);
-    pclose(fd);
+    if(NULL != fd)
+        pclose(fd);
     return rsplen;
 
 }
@@ -4433,6 +4436,7 @@ static int eng_diag_read_efuse(char *buf,int len,char *rsp, int rsplen)
         temp = (char*)malloc(rsplen);
         if(NULL == temp){
             ENG_LOG("%s: Buffer malloc failed\n", __FUNCTION__);
+            free(rsp_ptr);
             return 0;
         }
         free(rsp_ptr);
@@ -4498,7 +4502,7 @@ static int eng_parse_hash_cmdline(unsigned char *cmdvalue)
 
     fd = open("/proc/cmdline",O_RDONLY);
     if(fd < 0){
-	ENG_LOG("%s,/proc/cmdline open failed",__FUNCTION__);
+        ENG_LOG("%s,/proc/cmdline open failed",__FUNCTION__);
         return 0;
     }
 
@@ -4506,7 +4510,7 @@ static int eng_parse_hash_cmdline(unsigned char *cmdvalue)
     if(ret < 0){
 	ENG_LOG("%s,/proc/cmdline read failed",__FUNCTION__);
 	close(fd);
-        return 0;
+	return 0;
     }
     ENG_LOG("%s,cmdline: %s\n",__FUNCTION__,cmdline);
     hashstr = strstr(cmdline,CMD_SECURESTRING);
@@ -4517,6 +4521,7 @@ static int eng_parse_hash_cmdline(unsigned char *cmdvalue)
     }
 
     ENG_LOG("%s,cmdline: %s\n",__FUNCTION__,cmdvalue);
+    close(fd);
     return flag;
 }
 
