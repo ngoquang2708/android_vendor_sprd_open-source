@@ -393,8 +393,7 @@ static void eng_get_modem_int(char* type, char* at_chan, char* diag_chan, char* 
 int main (int argc, char** argv)
 {
     char cmdline[ENG_CMDLINE_LEN];
-    char run_type[32] = {0};
-    run_type[0] = 't';
+    char run_type[32] = {'t'};
     eng_thread_t t0,t1,t2,t3,t4;
     int fd;
     char set_propvalue[] = {"1"};
@@ -433,16 +432,17 @@ int main (int argc, char** argv)
     // Semaphore & log state initialization
     sem_init(&g_armlog_sem, 0, 0);
 
-    fd = eng_file_lock();
-    if(fd >= 0){
-        property_get("sys.onemodem.start.enable", get_propvalue, "not_find");
-        ENG_LOG("sys.onemodem.start.enable = %s",get_propvalue);
-        if(0 == strcmp(get_propvalue, "not_find") || 0 != strcmp(get_propvalue, set_propvalue)){
-            property_set("sys.onemodem.start.enable", set_propvalue);
-            eng_file_unlock(fd);
-            eng_sqlite_create();
-            if(cmdparam.califlag != 1){
-                if(cmdparam.normal_cali){
+    if(0 != strcmp(run_type, "wcn")){
+        fd = eng_file_lock();
+        if(fd >= 0){
+            property_get("sys.onemodem.start.enable", get_propvalue, "not_find");
+            ENG_LOG("sys.onemodem.start.enable = %s",get_propvalue);
+            if(0 == strcmp(get_propvalue, "not_find") || 0 != strcmp(get_propvalue, set_propvalue)){
+                property_set("sys.onemodem.start.enable", set_propvalue);
+                eng_file_unlock(fd);
+                eng_sqlite_create();
+                if(cmdparam.califlag != 1){
+                    if(cmdparam.normal_cali){
                     //Change gser port
                     memcpy(dev_info.host_int.dev_diag, "/dev/vser", sizeof("/dev/vser"));
                 }
@@ -450,15 +450,16 @@ int main (int argc, char** argv)
                 eng_check_factorymode(cmdparam.normal_cali);
                 if(cmdparam.normal_cali)
                     eng_autotestStart();
+                }else{
+                    // Initialize file for ADC
+                    initialize_ctrl_file();
+                }
+                if(0 != eng_thread_create(&t4, eng_printlog_thread, NULL)){
+                    ENG_LOG("printlog thread start error");
+                }
             }else{
-            // Initialize file for ADC
-                initialize_ctrl_file();
+                eng_file_unlock(fd);
             }
-            if(0 != eng_thread_create(&t4, eng_printlog_thread, NULL)){
-                ENG_LOG("printlog thread start error");
-            }
-        }else{
-            eng_file_unlock(fd);
         }
     }
     if(0 != eng_thread_create(&t0, eng_uevt_thread, NULL)){
