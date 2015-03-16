@@ -1348,11 +1348,11 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 	//wcnd_down_network_interface("wlan0");
 
 	//kill bluetooth
-	wcnd_kill_process_by_name("com.android.bluetooth", SIGKILL);
+	wcnd_kill_process_by_name("com.android.bluetooth", SIGINT);
 
 
 	//check if bt process is killed
-	int count = 2;
+	int count = 20;
 	while(count > 0)
 	{
 		if (!wcnd_find_process_by_name("com.android.bluetooth"))
@@ -1364,10 +1364,63 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 
 	//kill fm??
 
+#ifdef WCND_CHECK_DRIVER_BEFORE_RESET
+	WCND_LOGD("check WIFI driver to be unloaded\n");
+
+	wcnd_wait_for_driver_unloaded();
+#endif
+
 	//to do reset
 	//wcnd_send_selfcmd(pWcndManger, "wcn reset");
 
 }
+
+
+#ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+
+/**
+* kill related process for CP2 exception
+*/
+static void kill_process_for_cp2_excpetion(WcndManager *pWcndManger)
+{
+	WCND_LOGD("kill_process_for_cp2_excpetion");
+
+	//kill supplicant
+	//property_set("ctl.stop", "wpa_supplicant");
+	//property_set("ctl.stop", "p2p_supplicant");
+	//wcnd_kill_process_by_name("/system/bin/wpa_supplicant", SIGINT);
+
+	//wcnd_wait_for_supplicant_stopped();
+
+	/* down the wifi network interface */
+	//wcnd_down_network_interface("wlan0");
+
+	//kill bluetooth
+	wcnd_kill_process_by_name("com.android.bluetooth", SIGINT);
+
+#if 0
+	//check if bt process is killed
+	int count = 20;
+	while(count > 0)
+	{
+		if (!wcnd_find_process_by_name("com.android.bluetooth"))
+			break;
+		else
+			count--;
+		usleep(100*1000); //100ms
+	}
+#endif
+
+	//kill fm??
+
+	//to do reset
+	//wcnd_send_selfcmd(pWcndManger, "wcn reset");
+
+	WCND_LOGD("kill_process_for_cp2_excpetion end");
+
+}
+
+#endif
 
 
 /**
@@ -1406,6 +1459,10 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 	//reseting is going on just return
 	if(pWcndManger->doing_reset)
 		return 0;
+
+#ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+	kill_process_for_cp2_excpetion(pWcndManger);
+#endif
 
 	pre_send_cp2_exception_notify();
 
@@ -1459,6 +1516,10 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 	//reseting is going on just return
 	if(pWcndManger->doing_reset)
 		return 0;
+
+#ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+	kill_process_for_cp2_excpetion(pWcndManger);
+#endif
 
 	pre_send_cp2_exception_notify();
 
@@ -1731,6 +1792,10 @@ static void handle_cp2_loop_check_fail(WcndManager *pWcndManger)
 	//reseting is going on just return
 	if(pWcndManger->doing_reset)
 		return;
+
+#ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+	kill_process_for_cp2_excpetion(pWcndManger);
+#endif
 
 	pre_send_cp2_exception_notify();
 
