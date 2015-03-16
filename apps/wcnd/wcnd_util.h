@@ -14,5 +14,7 @@ int wcnd_down_network_interface(const char *ifname);
 int wcnd_up_network_interface(const char *ifname);
 
 void wcnd_wait_for_supplicant_stopped();
+void wcnd_wait_for_driver_unloaded(void);
+
 
 #endif

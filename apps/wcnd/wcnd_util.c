@@ -159,6 +159,7 @@ int wcnd_kill_process(pid_t pid, int signal)
 
 int wcnd_kill_process_by_name(const char *proc_name, int signal)
 {
+	if (!proc_name) return -1;
 
 	pid_t target_pid = wcnd_find_pid_by_name(proc_name);
 
@@ -167,6 +168,8 @@ int wcnd_kill_process_by_name(const char *proc_name, int signal)
 		WCND_LOGD("Cannot find the target pid!!");
 		return -1;
 	}
+
+	WCND_LOGD("kill %s by signal: %d\n", proc_name, signal);
 
 	return wcnd_kill_process(target_pid, signal);
 }
@@ -248,6 +251,30 @@ void wcnd_wait_for_supplicant_stopped(void)
 				return;
 			}
 		}
+	}
+}
+
+
+
+static const char WIFI_DRIVER_PROP_NAME[]    = "wlan.driver.status";
+
+void wcnd_wait_for_driver_unloaded(void)
+{
+	char driver_status[PROPERTY_VALUE_MAX];
+
+	int count = 100; /* wait at most 10 seconds for completion */
+	while (count-- > 0)
+	{
+		if (!property_get(WIFI_DRIVER_PROP_NAME, driver_status, NULL)
+			|| strcmp(driver_status, "ok") != 0) /* driver not loaded */
+		    break;
+		usleep(200000);
+		//WCND_LOGE("status: %s", driver_status);
+	}
+
+	if (count <= 0)
+	{
+		WCND_LOGE("Error Wifi driver cannot unloaded in 20 seconds");
 	}
 }
 

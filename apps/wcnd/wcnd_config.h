@@ -21,4 +21,11 @@
 //Note: if WCND_CP2_POWER_ONOFF_ENABLE is opened, WCND_STATE_MACHINE_ENABLE should also be opened.
 #define WCND_STATE_MACHINE_ENABLE
 
+//Macro to control if check wifi driver is unloaded before CP2 reset
+#define WCND_CHECK_DRIVER_BEFORE_RESET
+
+
+//Macro to control if kill process directly when cp2 exception
+#define WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+
 #endif
