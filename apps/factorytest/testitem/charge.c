@@ -187,6 +187,25 @@ static int battery_current(void)
     return(atoi(current));
 }
 
+
+
+static void bubble_sort(int a[], int n)
+{
+    int temp,i,j;
+    for (i = 0; i < n; i++)
+    {
+        for (j = i; j < n; j++)
+        {
+            if (a[i] > a[j])
+            {
+                temp = a[i];
+                a[i] = a[j];
+                a[j] = temp;
+            }
+        }
+    }
+}
+
 int usbin_state=0;
 
 static void charge_thread(void *param)
@@ -196,83 +215,72 @@ static void charge_thread(void *param)
     unsigned int cali =0;
     char buffer[64];
     char tmpbuf[32];
-    int first_row=3;
+    int current_array[50];
     int start_row = 4;
+    int first_row = 3;
     int last_row;
     int cnt = 0;
-    int i,count=0;
-    int vol_count=0;
-    unsigned char online=0;
-    unsigned int current_avr,current_sum=0;
-    unsigned int bat_cur=0;
+    int i,j,vol_count=0;
+    int current_avr;
+    int current_sum=0;
+    int bat_cur,bat_cursum;
 
-    system("echo 0 >/sys/class/power_supply/battery/stop_charge");//open charge
-    vol = charge_get_batvol();
-
-    if(vol>=4.0)
-        {
-            ui_set_color(CL_GREEN);
-            ui_show_text(first_row, 0, CHARGE_TIPS);
-            gr_flip();
-        }
-    while(vol>=4.0)
-        {
-            vol = charge_get_batvol();
-            LOGD("mmitest charge vol=%f\n",vol);
-            sleep(1);
-            vol_count++;
-            if(vol_count>=3)
-            {
-                ui_push_result(RL_FAIL);
-                ui_set_color(CL_RED);
-                ui_show_text(first_row+1, 0, TEXT_TEST_FAIL);
-                gr_flip();
-                sleep(1);
-                return ;
-            }
-        }
-
-    LOGD("mmitest charge vol=%f\n",vol);
-
-    ui_clear_rows(first_row,1);
+    if(battery_online()==0)
+        system("echo 0 >/sys/class/power_supply/battery/stop_charge");//open charge
 
     while(thread_run == 1) {
-		//get value
+        //get value
         memset(tmpbuf, 0, sizeof(tmpbuf));
-		//cali = charge_get_adccali();
         vol = charge_get_batvol();
         chrvol = charge_get_chrvol();
         usbin = charge_get_usbin();
-        acin = charge_get_acin();
-
+        acin = charge_get_acin(); 
+        for(i=0;i<50;i++)
+        {
+            usleep(10);
+            charge_get_chrcur(tmpbuf, sizeof(tmpbuf));
+            current_array[i]=atoi(tmpbuf);
+            LOGD("mmitest current before=%d  %d\n",i,current_array[i]);
+        }
+        bubble_sort(current_array,50);
+        for(i=0;i<50;i++)
+        {
+            LOGD("mmitest current after=%d   %d\n",i,current_array[i]);
+        }
         current_sum=0;
-        count=0;
-        for(i=0;i<16;i++)
+        for(i=10;i<40;i++)
+            current_sum+=current_array[i];
+        current_avr=current_sum/30;
+
+        LOGD("mmitest current after=%d\n",current_sum);
+        LOGD("mmitest current after=%d\n",current_sum);
+
+        bat_cursum=0;
+        for(i=0;i<10;i++)
         {
             usleep(200);
-            charge_get_chrcur(tmpbuf, sizeof(tmpbuf));
-            if(isdigit(tmpbuf[0])){
-                current_sum+=atoi(tmpbuf);
-                count++;
-            }
+            bat_cursum+=battery_current();
         }
+        bat_cur=bat_cursum/10;
 
-        current_avr=current_sum/count;
-        LOGD("mmitest charge current=%d\n",current_avr);
-
-		//check charger in or not
+        LOGD("mmitest charge current=%d   battery_current=%d\n",current_avr,bat_cur);
+        //check charger in or not
         if(usbin==1 || acin==1)
-            chrin = 1;
+            {
+                chrin = 1;
+            }
         else
-            chrin = 0;
+            {
+                chrin = 0;
+            }
 
         ui_set_color(CL_WHITE);
-		//show battery voltage
+        //show battery voltage
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "%s%.2f %s", TEXT_CHG_BATTER_VOL, vol, "V");
         last_row = ui_show_text(start_row, 0, buffer);
 
-		//show charing
+        //show charing
         if(chrin==1) {
             usbin_state=0;
             ui_set_color(CL_GREEN);
@@ -281,10 +289,10 @@ static void charge_thread(void *param)
             usbin_state=1;
             ui_set_color(CL_RED);
             last_row = ui_show_text(last_row, 0, TEXT_CHG_RUN_N);
+            gr_flip();
             cnt = 0;
         }
-
-		//show charger type
+        //show charger type
         memset(buffer, 0, sizeof(buffer));
         ui_set_color(CL_WHITE);
         if(usbin==1) {
@@ -292,46 +300,48 @@ static void charge_thread(void *param)
         } else if (acin==1){
             sprintf(buffer, "%s%s", TEXT_CHG_TYPE, "AC");
         } else {
+        //  sprintf(buffer, "%s", "Charger Type: NO");
         }
         last_row = ui_show_text(last_row, 0, buffer);
 
         if(usbin || acin) {
             memset(buffer, 0, sizeof(buffer));
-			//show charger voltage
+            //show charger voltage
             sprintf(buffer, "%s%.2f %s", TEXT_CHG_VOL, chrvol, "V");
             last_row = ui_show_text(last_row, 0, buffer);
 
-			//show charger current
+            //show charger current
             memset(buffer, 0, sizeof(buffer));
             sprintf(buffer, "%s%d%s", TEXT_CHG_CUR, current_avr, "mA");
             last_row = ui_show_text(last_row, 0, buffer);
 
-        if(current_avr<300&&vol<4.0)
+            if(current_avr<200)
             {
-                ui_push_result(RL_FAIL);
                 ui_set_color(CL_RED);
+                if(vol>=4.15)
+                    last_row=ui_show_text(last_row, 0, CHARGE_TIPS);
                 ui_show_text(last_row, 0, TEXT_TEST_FAIL);
+                gr_flip();
+                sleep(3);
+                ui_push_result(RL_FAIL);
+                return ;
+            }
+            else
+            {
+                ui_push_result(RL_PASS);
+                ui_set_color(CL_GREEN);
+                ui_show_text(last_row, 0, TEXT_TEST_PASS);
                 gr_flip();
                 sleep(1);
                 return ;
             }
-            else
-                cnt++;
-		}
-		//update
-		if(cnt > 2) {
-			ui_push_result(RL_PASS);
-			ui_set_color(CL_GREEN);
-			ui_show_text(last_row, 0, TEXT_TEST_PASS);
-			gr_flip();
-			sleep(1);
-			return ;
-		}
+        }
         gr_flip();
         sleep(1);
         ui_clear_rows(start_row, last_row-start_row);
-	}
+    }
 }
+
 
 
 int test_charge_start(void)
