@@ -1788,6 +1788,9 @@ LOCAL uint32_t _ov5670_PowerOn(uint32_t power_on)
 	BOOLEAN reset_level = g_ov5670_mipi_raw_info.reset_pulse_level;
 
 	if (SENSOR_TRUE == power_on) {
+		Sensor_SetMCLK(SENSOR_DISABLE_MCLK);
+		Sensor_SetMonitorVoltage(SENSOR_AVDD_CLOSED);
+		Sensor_SetVoltage(SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED, SENSOR_AVDD_CLOSED);
 		Sensor_PowerDown(power_down);
 		// Open power
 		usleep(1000);
@@ -1801,6 +1804,7 @@ LOCAL uint32_t _ov5670_PowerOn(uint32_t power_on)
 		usleep(1000);
 		Sensor_PowerDown(!power_down);
 		usleep(1000);
+		Sensor_Reset(reset_level);
 	} else {
 		Sensor_PowerDown(power_down);
 		usleep(1000);
