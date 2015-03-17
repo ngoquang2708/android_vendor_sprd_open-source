@@ -98,6 +98,13 @@ enum {
 
 #define MODEM_LOG_SOURCE		"/dev/vbpipe0"
 
+#define CLINET_NR_MAX			8
+
+struct client_conn{
+	int srv_socket;
+	int client_socket[CLINET_NR_MAX];
+	int dirty;
+};
 
 
 /* main data structure */
