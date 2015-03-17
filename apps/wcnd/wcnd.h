@@ -272,6 +272,9 @@ typedef struct structWcndManager
 	//to saved the cp2 log state
 	int is_cp2log_opened;
 
+	//to wait wifi driver unloaded before reset.
+	int wait_wifi_driver_unloaded;
+
 }WcndManager;
 
 

@@ -1367,7 +1367,10 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 #ifdef WCND_CHECK_DRIVER_BEFORE_RESET
 	WCND_LOGD("check WIFI driver to be unloaded\n");
 
-	wcnd_wait_for_driver_unloaded();
+	//if(pWcndManger && pWcndManger->wait_wifi_driver_unloaded)
+		wcnd_wait_for_driver_unloaded();
+
+	pWcndManger->wait_wifi_driver_unloaded = 0;
 #endif
 
 	//to do reset
@@ -1423,6 +1426,47 @@ static void kill_process_for_cp2_excpetion(WcndManager *pWcndManger)
 #endif
 
 
+
+static int notify_cp2_exception(WcndManager *pWcndManger, char *info_str)
+{
+	if(!pWcndManger)
+	{
+		WCND_LOGE("%s: UNEXCPET NULL WcndManager", __FUNCTION__);
+		return -1;
+	}
+
+
+	//notify wifi driver, cp2 is assert
+	if(1 == wcnd_notify_wifi_driver_cp2_state(0))
+	{
+		WCND_LOGD("need to wait wifi driver to be unloaded before resetting");
+		pWcndManger->wait_wifi_driver_unloaded = 1;
+	}
+
+
+	char buffer[255];
+
+#ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
+	kill_process_for_cp2_excpetion(pWcndManger);
+#endif
+
+	pre_send_cp2_exception_notify();
+
+	wcnd_send_selfcmd(pWcndManger, "wcn "WCND_SELF_EVENT_CP2_ASSERT);
+
+	//notify exception
+	if(info_str)
+		snprintf(buffer, 255, "%s %s", WCND_CP2_EXCEPTION_STRING, info_str);
+	else
+		snprintf(buffer, 255, "%s", WCND_CP2_EXCEPTION_STRING);
+
+	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
+
+	return 0;
+}
+
+
+
 /**
 * handle the cp2 assert
 * 1. send notify to client the cp2 assert
@@ -1443,10 +1487,10 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 	pWcndManger->is_cp2_error = 1;
 
 	char rdbuffer[200];
-	char buffer[255];
+	//char buffer[255];
 	int len;
 
-	memset(buffer, 0, sizeof(buffer));
+	//memset(buffer, 0, sizeof(buffer));
 	memset(rdbuffer, 0, sizeof(rdbuffer));
 
 	len = read(assert_fd, rdbuffer, sizeof(rdbuffer));
@@ -1460,6 +1504,7 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 	if(pWcndManger->doing_reset)
 		return 0;
 
+#if 0
 #ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
 	kill_process_for_cp2_excpetion(pWcndManger);
 #endif
@@ -1473,6 +1518,9 @@ static int handle_cp2_assert(WcndManager *pWcndManger, int assert_fd )
 	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
+#endif
+
+	notify_cp2_exception(pWcndManger, rdbuffer);
 
 	WCND_LOGD("handle_cp2_assert end!\n");
 
@@ -1500,10 +1548,10 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 	pWcndManger->is_cp2_error = 1;
 
 	char rdbuffer[200];
-	char buffer[255];
+	//char buffer[255];
 	int len;
 
-	memset(buffer, 0, sizeof(buffer));
+	//memset(buffer, 0, sizeof(buffer));
 	memset(rdbuffer, 0, sizeof(rdbuffer));
 
 	len = read(watchdog_fd, rdbuffer, sizeof(rdbuffer));
@@ -1516,6 +1564,8 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 	//reseting is going on just return
 	if(pWcndManger->doing_reset)
 		return 0;
+
+#if 0
 
 #ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
 	kill_process_for_cp2_excpetion(pWcndManger);
@@ -1530,6 +1580,9 @@ static int handle_cp2_watchdog_exception(WcndManager *pWcndManger, int watchdog_
 	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
+#endif
+
+	notify_cp2_exception(pWcndManger, rdbuffer);
 
 	WCND_LOGD("handle_cp2_watchdog_exception end\n");
 
@@ -1784,14 +1837,16 @@ static void handle_cp2_loop_check_fail(WcndManager *pWcndManger)
 	pWcndManger->is_cp2_error = 1;
 
 	char* rdbuffer = "CP2 LOOP CHECK FAIL";
-	char buffer[255];
-	int len;
+	//char buffer[255];
+	//int len;
 
-	memset(buffer, 0, sizeof(buffer));
+	//memset(buffer, 0, sizeof(buffer));
 
 	//reseting is going on just return
 	if(pWcndManger->doing_reset)
 		return;
+
+#if 0
 
 #ifdef WCND_KILL_PROCESS_WHEN_CP2_EXCEPTION
 	kill_process_for_cp2_excpetion(pWcndManger);
@@ -1806,6 +1861,10 @@ static void handle_cp2_loop_check_fail(WcndManager *pWcndManger)
 	wcnd_send_notify_to_client(pWcndManger, buffer, WCND_CLIENT_TYPE_NOTIFY);
 
 	//currently the reset is done when receive reset cmd from WcnManagerService.java
+#endif
+
+	notify_cp2_exception(pWcndManger, rdbuffer);
+
 
 	WCND_LOGD("handle_cp2_loop_check_fail end!\n");
 

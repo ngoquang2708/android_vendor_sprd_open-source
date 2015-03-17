@@ -16,5 +16,6 @@ int wcnd_up_network_interface(const char *ifname);
 void wcnd_wait_for_supplicant_stopped();
 void wcnd_wait_for_driver_unloaded(void);
 
+int wcnd_notify_wifi_driver_cp2_state(int state_ok);
 
 #endif

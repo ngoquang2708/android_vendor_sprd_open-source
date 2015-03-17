@@ -262,7 +262,7 @@ void wcnd_wait_for_driver_unloaded(void)
 {
 	char driver_status[PROPERTY_VALUE_MAX];
 
-	int count = 100; /* wait at most 10 seconds for completion */
+	int count = 100; /* wait at most 20 seconds for completion */
 	while (count-- > 0)
 	{
 		if (!property_get(WIFI_DRIVER_PROP_NAME, driver_status, NULL)
@@ -276,5 +276,61 @@ void wcnd_wait_for_driver_unloaded(void)
 	{
 		WCND_LOGE("Error Wifi driver cannot unloaded in 20 seconds");
 	}
+	else
+	{
+		WCND_LOGE("Wifi driver has been unloaded");
+	}
 }
+
+/**
+* To notify the wifi driver with the cp2 state.
+* state_ok: 0, then cp2 is assert.
+* return  0 for sucess.
+*  1 means driver is removing, wcnd need to wait driver to be unloaded
+*/
+#define WIFI_DRIVER_PRIV_CMD_SET_CP2_ASSERT (0x10)
+
+#define WIFI_DRIVER_STATE_REMOVEING (0x11)
+
+int wcnd_notify_wifi_driver_cp2_state(int state_ok)
+{
+	int fd, ret, index, len, cmd, data;
+	char buf[32] = {0};
+
+	fd = open("/proc/wlan", O_RDWR);
+	if(fd <0)
+	{
+		WCND_LOGE("[%s][open][ret:%d]\n",__func__, fd);
+		return 0;
+	}
+	cmd   = 0x10; //WIFI_DRIVER_PRIV_CMD_SET_CP2_ASSERT
+	data  = 0x00;
+	len   = 0x04;
+	index = 0x00;
+	memcpy( &buf[index],  (char *)(&len),  4);
+	index += 4;
+	memcpy( &buf[index],  (char *)(&data), 4);
+	index += 4;
+	ret = ioctl(fd, cmd, &buf[0] );
+	if(ret < 0)
+	{
+		WCND_LOGE("[%s][ioctl][ret:%d]\n",__func__, ret);
+		close(fd);
+		return 0;
+	}
+	memcpy( (char *)(&ret), &buf[0], 4);
+	if(0x11 == ret) //WIFI_DRIVER_STATE_REMOVEING
+	{
+		WCND_LOGE("marlin wifi drv removing\n");
+		return 1;
+	}
+	close(fd);
+
+	WCND_LOGD("notify marlin wifi drv cp2 assert success\n");
+
+	return 0;
+
+}
+
+
 
