@@ -814,7 +814,7 @@ int handle_modem_state_monitor(int* fd_modem,int* fd_wcn,fd_set* readset_tmp,fd_
 		}
 	} else if(*fd_wcn >=0&&FD_ISSET(*fd_wcn, readset))  {
 		err_log("slogcp:modem assert from modemd");
-		n = read(fd_wcn, buffer, MODEM_SOCKET_BUFFER_SIZE - 1);
+		n = read(*fd_wcn, buffer, MODEM_SOCKET_BUFFER_SIZE - 1);
 		if(n > 0) {
 			buffer[n]='\0';
 			err_log("slogcp:get %d bytes %s", n, buffer);
