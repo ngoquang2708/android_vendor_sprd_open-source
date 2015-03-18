@@ -64,15 +64,17 @@ static int lsensor_enable(int enable)
 	return ret;
 }
 
+time_t begin_time,over_time;
 static void *lsensor_thread(void *param)
 {
 	int fd = -1;
 	fd_set rfds;
 	int cur_row = 3;
 	time_t start_time,now_time;
-	struct input_event ev;
+        struct input_event ev;
 	struct timeval timeout;
 	int ret;
+        begin_time=time(NULL);
 
 	fd = find_input_dev(O_RDONLY, SPRD_PLS_INPUT_DEV);
 	if(fd < 0) {
@@ -99,7 +101,7 @@ static void *lsensor_thread(void *param)
 						case ABS_DISTANCE:
 							proximity_modifies++;
 							proximity_value = ev.value;
-							LOGD("P:%d\n", ev.value);
+							LOGD("mmitest lsensor P:%d\n", ev.value);
 							lsensor_show();
 							break;
 						case ABS_MISC:
@@ -114,19 +116,18 @@ static void *lsensor_thread(void *param)
 			}
 		}
 
-		if((light_pass == 1 && proximity_modifies > 2)) //||(now_time-start_time)>LSENSOR_TIMEOUT
+		if((light_pass == 1 && proximity_modifies > 1)) //||(now_time-start_time)>LSENSOR_TIMEOUT
 		{
 			ui_push_result(RL_PASS);
 			ui_set_color(CL_GREEN);
 			ui_show_text(5, 0, TEXT_TEST_PASS);
 			gr_flip();
-			sleep(1);
 			goto func_end;
 		}
 	}
 func_end:
 	lsensor_enable(0);
-	return NULL;
+        return NULL;
 }
 
 int test_lsensor_start(void)
@@ -148,6 +149,8 @@ int test_lsensor_start(void)
 	thread_run = 0;
 	pthread_join(thread, NULL); /* wait "handle key" thread exit. */
 	save_result(CASE_TEST_LSENSOR,ret);
+        over_time=time(NULL);
+        LOGD("mmitest casetime lsensor is %d s\n",(over_time-begin_time));
 	return ret;
 }
 

@@ -72,18 +72,19 @@ static int gsensor_check(int data)
 	return ret;
 }
 
-int gsensor_result=0;//++++++++++++
+int gsensor_result=0;
+static time_t begin_time,over_time;
 static void *gsensor_thread(void *param)
 {
-	time_t start_time,now_time;//++++++++++++++++++++
-	int fd;
+	time_t start_time,now_time;
+        int fd;
 	int counter;
 	int cur_row = 2;
 	int x_row, y_row, z_row;
 	int col = 5;
 	int data[3];
 	x_pass = y_pass = z_pass = 0;
-
+        begin_time=time(NULL);
 	//enable gsensor
 	fd = gsensor_open();
 	if(fd < 0) {
@@ -132,7 +133,7 @@ static void *gsensor_thread(void *param)
 			ui_show_text(z_row, col, TEXT_GS_PASS);
 			gr_flip();
 		}
-		usleep(200*1000);
+		usleep(2*1000);
 		if((now_time-start_time)>=GSENSOR_TIMEOUT) break;//++++++++++++++++++++
 	}
 
@@ -142,7 +143,7 @@ static void *gsensor_thread(void *param)
 	gsensor_result = RL_PASS;//++++++++++
 	else
 	gsensor_result = RL_FAIL;//++++++++++
-	return NULL;
+        return NULL;
 }
 
 int test_gsensor_start(void)
@@ -174,10 +175,10 @@ int test_gsensor_start(void)
 		ui_set_color(CL_WHITE);//+++++++++++
 		ui_show_text(12, 0, TEXT_TEST_NA);//+++++++++++
 	}
-	gr_flip();//+++++++++++++++++++++++
-	sleep(1);//++++++++++++++++++++
-
+	gr_flip();
 	save_result(CASE_TEST_GSENSOR,gsensor_result);
-	return gsensor_result;//++++++++++++++++
+        over_time=time(NULL);
+        LOGD("mmitest casetime gsensor is %d s\n",(over_time-begin_time));
+	return gsensor_result;
 }
 
