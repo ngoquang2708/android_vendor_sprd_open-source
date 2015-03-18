@@ -1526,6 +1526,9 @@ RESTART:
 				uint32_t i2s_ctl = ((i2s_ctl_info->is_switch << 8) | (i2s_ctl_info->i2s_index << 0) );
                 MY_TRACE("voip1:VBC_CMD_HAL_OPEN IN.");
                 SetParas_OpenHal_Incall(adev,para->vbpipe_fd); 
+#ifdef VOIP_DSP_PROCESS
+                adev->cp_type = para->cp_type;
+#endif
                 if(adev->out_devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_ALL_SCO)) {
                     if(adev->cp_type == CP_TG)
                         i2s_pin_mux_sel(adev,1);
