@@ -795,18 +795,20 @@ cmr_int snp_start_encode(cmr_handle snp_handle, void *data)
 		}
 
 #ifdef CONFIG_CAPTURE_DENOISE
-		struct camera_context          *cxt = (struct camera_context*)snp_cxt->oem_handle;
-		if (cxt->camera_id == 0) {
-			ret = camera_start_uvde(cxt, &jpeg_in_ptr->src);
-			if (ret != CMR_CAMERA_SUCCESS) {
-				CMR_LOGE("camera_start_uvde fail");
+		if(IMG_DATA_TYPE_RAW == frm_ptr->fmt){
+			struct camera_context          *cxt = (struct camera_context*)snp_cxt->oem_handle;
+			if (cxt->camera_id == 0) {
+				ret = camera_start_uvde(cxt, &jpeg_in_ptr->src);
+				if (ret != CMR_CAMERA_SUCCESS) {
+					CMR_LOGE("camera_start_uvde fail");
+					goto exit;
+				}
+			}
+			if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
+				CMR_LOGI("post proc has been cancel");
+				ret = CMR_CAMERA_NORNAL_EXIT;
 				goto exit;
 			}
-		}
-		if (CMR_CAMERA_NORNAL_EXIT == snp_checkout_exit(snp_handle)) {
-			CMR_LOGI("post proc has been cancel");
-			ret = CMR_CAMERA_NORNAL_EXIT;
-			goto exit;
 		}
 #endif
 		camera_take_snapshot_step(CMR_STEP_JPG_ENC_S);
