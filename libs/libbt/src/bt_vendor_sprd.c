@@ -249,8 +249,19 @@ static int op(bt_vendor_opcode_t opcode, void *param)
 		     start_cp2();
 		 else if (nState == BT_VND_PWR_OFF)
 		     stop_cp2();
-         }
-        break;
+
+#if 0
+                nState = *(int *) param;
+                retval = hw_config(nState);
+                if(nState == BT_VND_PWR_ON
+                        && retval == 0
+                        && is_hw_ready() == TRUE)
+                {
+                    retval = 0;
+                }
+#endif
+            }
+            break;
 
         case BT_VND_OP_FW_CFG:
             {
@@ -981,12 +992,12 @@ void sprd_pskey_response_cb(int ok) {
         if(ok)
         {
             ALOGI("Bluetooth Firmware and smd is initialized");
-            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_SUCCESS);
+            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_BT_SUCCESS);
         }
         else
         {
             ALOGE("Error : hci, smd initialization Error");
-            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_FAIL);
+            bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_BT_FAIL);
         }
     }
 }
