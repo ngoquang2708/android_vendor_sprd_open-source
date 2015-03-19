@@ -156,17 +156,19 @@ int wcnd_kill_process(pid_t pid, int signal)
 	return kill(pid, signal);
 }
 
-
+/**
+* return -2: for the target process is not exist
+*/
 int wcnd_kill_process_by_name(const char *proc_name, int signal)
 {
-	if (!proc_name) return -1;
+	if (!proc_name) return -2;
 
 	pid_t target_pid = wcnd_find_pid_by_name(proc_name);
 
 	if(target_pid == 0)
 	{
 		WCND_LOGD("Cannot find the target pid!!");
-		return -1;
+		return -2;
 	}
 
 	WCND_LOGD("kill %s by signal: %d\n", proc_name, signal);

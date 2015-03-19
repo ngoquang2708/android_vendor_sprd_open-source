@@ -1347,6 +1347,9 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 	/* down the wifi network interface */
 	//wcnd_down_network_interface("wlan0");
 
+	//move after waiting wifi driver unloaded, because wifi driver unloaded may cause too much time
+	//and make bt preload timeout, so need to restart bt
+#if 0
 	//kill bluetooth
 	wcnd_kill_process_by_name("com.android.bluetooth", SIGINT);
 
@@ -1361,6 +1364,7 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 			count--;
 		usleep(100*1000); //100ms
 	}
+#endif
 
 	//kill fm??
 
@@ -1372,6 +1376,23 @@ static void prepare_cp2_recovery(WcndManager *pWcndManger)
 
 	pWcndManger->wait_wifi_driver_unloaded = 0;
 #endif
+
+	//kill bluetooth
+	int ret = wcnd_kill_process_by_name("com.android.bluetooth", SIGINT);
+
+	if(-2 != ret) // have send sig to target process, wait it to exit
+	{
+		//check if bt process is killed
+		int count = 20;
+		while(count > 0)
+		{
+			if (!wcnd_find_process_by_name("com.android.bluetooth"))
+				break;
+			else
+				count--;
+			usleep(100*1000); //100ms
+		}
+	}
 
 	//to do reset
 	//wcnd_send_selfcmd(pWcndManger, "wcn reset");
