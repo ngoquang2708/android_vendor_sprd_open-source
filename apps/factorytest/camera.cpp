@@ -623,17 +623,18 @@ int test_fcamera_start(void)
    static camera_module_t *mModule;
    static camera_device_t *mDevice;
    static hw_module_t *module;
+   time_t begin_time,over_time;
+   begin_time=time(NULL);
    mGrallocBufferIndex=0;
    front_back=0;
    ui_clear_rows(0,20);
    ui_set_color(CL_GREEN);//++++++++++
 
-   if(BT_STATE==BT_STATE_OFF)
+   if(1)//BT_STATE==BT_STATE_OFF
    {
    //ui_show_text(0, 0, CAMERA_START);//++++++
 	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
    gr_flip();
-   sleep(2);
    if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
 	{
 		LOGD("mmitest could not load gralloc module \r\n");
@@ -742,7 +743,7 @@ int test_fcamera_start(void)
     module = NULL;
 
 }
-else
+/*else
 {
         ui_show_text(1, 0, BT_BACK_TEST);//++++++
         ui_show_text(2, 0, INFECT_TIPS);//++++++
@@ -750,9 +751,10 @@ else
         gr_flip();
         ret=RL_NA;
         sleep(1);
-}
-
+}*/
+        over_time=time(NULL);
 	save_result(CASE_TEST_FCAMERA,ret);
+        LOGD("mmitest casetime fcamera is %d s\n",(over_time-begin_time));
 	return ret;
 }
 
@@ -766,6 +768,8 @@ int test_bcamera_start(void)
    int i,rc;
    int ret=0;
    int flash_ret=0;
+   time_t begin_time,over_time;
+   begin_time=time(NULL);
    front_back=1;
    hw_module_t *fmodule;
    camera_module_t *mModule;
@@ -779,7 +783,6 @@ int test_bcamera_start(void)
 	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
 	gr_flip();
 	flash_ret=flash_start();
-	sleep(2);
 
    if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
 	{
@@ -889,6 +892,8 @@ int test_bcamera_start(void)
 
 	save_result(CASE_TEST_BCAMERA,ret);
 	save_result(CASE_TEST_FLASH,flash_ret);
+        over_time=time(NULL);
+        LOGD("mmitest casetime bcamera is %d s\n",(over_time-begin_time));
 	return ret;
 }
 

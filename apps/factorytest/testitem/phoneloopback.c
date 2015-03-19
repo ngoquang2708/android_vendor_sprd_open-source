@@ -24,7 +24,8 @@ int test_mainloopback_start(void)
 {
 	int ret = 0;
 	int row = 3;
-
+        time_t begin_time,over_time;
+        begin_time=time(NULL);
 	ui_fill_locked();
 	ui_show_title(MENU_TEST_MAINLOOP);
 	ui_set_color(CL_WHITE);
@@ -35,12 +36,14 @@ int test_mainloopback_start(void)
 	row = ui_show_text(row, 0, TEXT_LB_MICSPEAKER);
 	gr_flip();
 	at_cmd_audio_loop(0,0,0,0,0,0);
-	usleep(500*1000);
+	usleep(5*1000);
 	at_cmd_audio_loop(1,1,8,2,3,0);
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	at_cmd_audio_loop(0,0,0,0,0,0);
 
 	save_result(CASE_TEST_MAINLOOP,ret);
+        over_time=time(NULL);
+        LOGD("mmitest casetime mainloop is %d s\n",over_time-begin_time);
 	return ret;
 }
 
@@ -49,6 +52,8 @@ int test_assisloopback_start(void)
 {
 	int ret = 0;
 	int row = 3;
+        time_t begin_time,over_time;
+        begin_time=time(NULL);
 
 	ui_fill_locked();
 	ui_show_title(MENU_TEST_ASSISLOOP);
@@ -57,11 +62,13 @@ int test_assisloopback_start(void)
 	row = ui_show_text(row, 0, TEXT_LB_MICRECEIVER);
 	gr_flip();
 	at_cmd_audio_loop(0,0,0,0,0,0);
-	usleep(500*1000);
+	usleep(5*1000);
 	at_cmd_audio_loop(1,0,8,2,3,0);
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	at_cmd_audio_loop(0,0,0,0,0,0);
 	save_result(CASE_TEST_ASSISLOOP,ret);
+        over_time=time(NULL);
+        LOGD("mmitest casetime mainloop is %d s\n",over_time-begin_time);
 	return ret;
 }
 
