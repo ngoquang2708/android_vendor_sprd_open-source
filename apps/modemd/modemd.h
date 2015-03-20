@@ -157,7 +157,8 @@
 #define IMEI4_CONFIG_FILE    "/productinfo/imei4.txt"
 #define MAX_IMEI_STR_LENGTH  15
 #define IMEI_NUM             4
-
+#define MINIDUMP             1
+#define SEARCH_NETWORK       2
 #define PERSIST_MODEM_CHAR        "persist.modem."
 
 
@@ -184,4 +185,5 @@ void* detect_modem_blocked(void *param);
 extern void exit_modemd(void);
 int open_modem_dev(char *path);
 int wait_for_alive(int modem, int is_assert);
+int detect_clients_dispose_state(int cause);
 #endif

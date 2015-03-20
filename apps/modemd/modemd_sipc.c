@@ -926,6 +926,7 @@ void* detect_sipc_modem(void *param)
                 MODEMD_LOGE("Info all the sock clients that modem is assert/hangup");
                 loop_info_sockclients(buf, numRead);
                 stop_service(modem, 0);
+                detect_clients_dispose_state(MINIDUMP);  // for minidump
                 /* reset or not according to property */
                 memset(prop, 0, sizeof(prop));
                 property_get(MODEM_RESET_PROP, prop, "0");
@@ -1056,6 +1057,81 @@ int wait_for_modem_alive(int modem){
    close(fd);
    return ret;
 
+}
+
+int detect_clients_dispose_state(int cause){
+    fd_set rfds;
+    char buf[256] = {0};
+    int  i = 0;
+    int retry_times = 3;
+    int  ret =0;
+    int  max_fd = -1;
+    int  count =0;
+    int  fd =-1;
+    int  result =0;
+    struct timeval timeout;
+
+    MODEMD_LOGD("enter detect_clients_dispose_state");
+
+    for(;retry_times > 0;retry_times--){
+
+        fd = -1;
+        max_fd= -1;
+        timeout.tv_sec=2;
+        timeout.tv_usec=0;
+        FD_ZERO(&rfds);
+        for(i =0;i<MAX_CLIENT_NUM;i++){
+            if(client_fd[i] >= 0){
+                FD_SET(client_fd[i], &rfds);
+                MODEMD_LOGD("listen fd %d",client_fd[i]);
+                if(client_fd[i] > max_fd){
+                    max_fd = client_fd[i];
+                }
+            }
+        }
+        if(max_fd == -1 ){
+            return result;
+        }
+
+
+        do {
+            ret = select(max_fd+1, &rfds, NULL, NULL, &timeout);
+        } while(ret == -1 && errno == EINTR);
+
+        if(ret < 0){
+            MODEMD_LOGE("select error: %s", strerror(errno));
+            continue;
+        }else if(ret == 0){
+            MODEMD_LOGE("select timeout");
+        }else{
+            for(i =0;i<MAX_CLIENT_NUM;i++){
+                if (FD_ISSET(client_fd[i], &rfds)) {
+                    fd =client_fd[i];
+                    break;   //Just slog minidump send data to modemd
+                }
+            }
+            count = read(fd, buf, sizeof(buf)-1);
+            if (count <= 0) {
+                close(fd);
+                client_fd[i] = -1;
+                MODEMD_LOGE("read %d return %d, error: %s", fd, count, strerror(errno));
+                continue;
+            }
+            buf[count] ='\0';
+            MODEMD_LOGD("read response %s from %d", buf,fd);
+            switch (cause){
+                case MINIDUMP:  // for mini dump
+                    if (strstr(buf, "MINIDUMP")) {
+                        result = 1;
+                    }
+                    break;
+                default :
+                    result = 0;
+            }
+        }
+        break;
+    }
+    return result;
 }
 /******************************************************
  *
