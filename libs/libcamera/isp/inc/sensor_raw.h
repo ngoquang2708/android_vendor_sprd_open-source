@@ -701,6 +701,17 @@ struct sensor_pre_wave_denoise_param {
 	uint8_t reserved0;
 };
 
+struct sensor_new_gamma_tab{
+	uint16_t x_node[16];
+	uint16_t y_node[2][16];
+	int16_t brightness_factor;
+	int16_t contrast_factor;
+};
+
+struct sensor_new_gamma_param{
+	struct sensor_new_gamma_tab tab[5];
+};
+
 struct sensor_raw_tune_info{
 	uint32_t version_id;
 	uint32_t blc_bypass;
@@ -772,6 +783,7 @@ struct sensor_raw_tune_info{
 	struct sensor_pre_wave_denoise_param pre_wave_denoise;
 	struct sensor_nbpc_param nbpc;
 	struct sensor_awb_param_v01 awb_v01;
+	struct sensor_new_gamma_param new_gamma;
 	uint32_t reserved[256];
 };
 
