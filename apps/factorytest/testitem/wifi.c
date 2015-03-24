@@ -177,12 +177,6 @@ int eng_wpa_scan()
 			}
 
 	system("cp /system/etc/wifi/wpa_supplicant.conf /data/misc/wifi/");
-	system("chown system.wifi /data/misc/wifi/wpa_supplicant.conf");
-
-	fd=open("/data/misc/wifi/wpa_supplicant.conf",O_RDWR);
-
-	write(fd,wifi_config,strlen(wifi_config));
-	close(fd);
 
 	system("echo \"sta_mode\" > /data/misc/wifi/fwpath");
 	system("chown wifi.wifi /data/misc/wifi/fwpath");

@@ -70,13 +70,7 @@ int gpsOpen( void )
 	}
 	remove("data/gps_outdirfile.txt");
 	system("rm /data/gps/log/*");
-	system("rm -rf /data/cg/");
-	err = system("glgps -c /system/etc/gpsconfig.xml Factory_High_SNR > /data/gps_outdirfile.txt");
-	if(err < 0)
-	{
-		SPRD_DBG("mmitest %s system glgps config error =%d \n",__FUNCTION__,err);
-		return -1;
-	}
+
 
 	err = hw_get_module(GPS_HARDWARE_MODULE_ID, (hw_module_t const**)&module);
 	if (err == 0) {
