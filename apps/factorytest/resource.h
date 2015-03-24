@@ -11,7 +11,7 @@
 #include "./res/menu_auto_test.h"
 #include "./res/menu_pcba_test.h"
 #include "./res/menu_phone_info.h"
-
+#include "./res/menu_not_autotest.h"
 
 
 

@@ -315,10 +315,7 @@ void area_rectangle_init(void)
 void area_rectangle_check(int x, int y)
 {
 	int i = 0;
-    //int width = gr_fb_width();
-    //int height = gr_fb_height();
-    //int rect_w = width / (AREA_COL-1);
-    //int rect_h = height / (AREA_ROW-1);
+
 
 	if(x >= 0 && x <= rect_w) {
 		i = y / rect_h;
@@ -391,9 +388,7 @@ int test_tp_start(void)
 	rect_h = height / AREA_ROW;
 
 	ui_fill_locked();
-	//ui_show_title(MENU_TEST_TP);
 	area_rectangle_init();
-	//system(SPRD_TS_MODULE);
 	thread_run=1;
 
 	pthread_create(&t, NULL, (void*)tp_thread, NULL);

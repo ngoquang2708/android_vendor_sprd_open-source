@@ -51,6 +51,8 @@ typedef struct {
 
 
 static int show_phone_info_menu(void);
+static int show_not_auto_test_menu(void);
+static int show_not_auto_test_result(void);
 
 
 
@@ -130,8 +132,15 @@ menu_info menu_auto_test[] = {
 	//[K_MENU_AUTO_TEST_CNT] = {0,0,MENU_BACK, 0,},
 };
 
+menu_info menu_not_auto_test[] = {
+#define MENUTITLE(num,id,title, func) \
+	[ D_PHONE_##title ] = {num,id,MENU_##title, func, },
+#include "./res/menu_not_autotest.h"
+#undef MENUTITLE
+	//[K_MENU_AUTO_TEST_CNT] = {0,0,MENU_BACK, 0,},
+};
 
-
+/*
 result_info test_result_phone[] = {
 #define MENUTITLE(num,id,title, func) \
 	[ A_PHONE_##title ] = {id , #title, RL_NA},
@@ -157,7 +166,7 @@ new_result_info test_result_txt[] = {
 #include "./res/menu_auto_test.h"
 #undef MENUTITLE
 };
-
+*/
 
 char sdcard_fm_state;
 static int fm_freq=875;
@@ -276,6 +285,44 @@ static void write_bin(char * pathname )
 	LOGD("mmitest writebin num=%d\n");
 }
 
+static int show_not_auto_test_menu(void)
+{
+	int chosen_item = -1;
+	int i = 0;
+	char* items[K_MENU_NOT_AUTO_TEST_CNT+1];
+	int menu_cnt = K_MENU_NOT_AUTO_TEST_CNT;
+	int result = 0;
+	menu_info* pmenu = menu_not_auto_test;
+	pcba_phone=2;
+
+	for(i = 0; i < menu_cnt; i++) {
+		items[i] = pmenu[i].title;
+	}
+	items[menu_cnt] = NULL;
+
+	while(1) {
+		LOGD("mmitest back to main");
+		chosen_item = ui_show_menu(MENU_NOT_AUTO_TEST, items, 0, chosen_item,K_MENU_NOT_AUTO_TEST_CNT);
+		LOGD("mmitest [%s] chosen_item = %d\n", __FUNCTION__, chosen_item);
+		if(chosen_item >= 0 && chosen_item < menu_cnt) {
+			LOGD("mmitest [%s] select menu = <%s>\n", __FUNCTION__, pmenu[chosen_item].title);
+			if(chosen_item >= K_MENU_NOT_AUTO_TEST_CNT) {
+				return 0;
+			}
+			if(pmenu[chosen_item].func != NULL) {
+				result = pmenu[chosen_item].func();
+				LOGD("mmitest result=%d id=0x%08x\n", result,pmenu[chosen_item].id);
+			}
+			write_bin(PHONETXTPATH);
+			write_bin(PCBATXTPATH);
+		}
+		else if (chosen_item < 0)
+		{
+			return 0;
+		}
+    }
+	return 0;
+}
 
 
 extern unsigned char menu_change;
@@ -588,11 +635,11 @@ static int show_phone_test_result(void)
 	unsigned char changelast=0;
 	ui_fill_locked();
 	ui_show_title(TEST_REPORT);
-	if(TOTAL_NUM<=text_rows-2)
+	if(TOTAL_NUM-2<=text_rows-2)
 	{
 		ui_set_color(CL_SCREEN_BG);
         gr_fill(0, 0, gr_fb_width(), gr_fb_height());
-		for(i = 0; i < TOTAL_NUM; i++){
+		for(i = 0; i < TOTAL_NUM-2; i++){
 			LOGD("mmitest <%d>-%s,%d\n", i, phone_result[i].name, phone_result[i].pass_faild);
 
 			
@@ -682,7 +729,7 @@ static int show_phone_test_result(void)
         	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
-			for(i = 0; i < TOTAL_NUM+2-text_rows; i++){
+			for(i = 0; i < TOTAL_NUM+2-text_rows-2; i++){
 				LOGD("mmitest <%d>-%s,%d\n", i, phone_result[text_rows-2+i].name, phone_result[text_rows-2+i].pass_faild);
 
 				switch(phone_result[text_rows-2+i].pass_faild) {
@@ -738,9 +785,9 @@ static int show_pcba_test_result(void)
 	unsigned char changelast=0;
 	ui_fill_locked();
 	ui_show_title(TEST_REPORT);
-	if(TOTAL_NUM<=text_rows-2)
+	if(TOTAL_NUM-2<=text_rows-2)
 	{
-	for(i = 0; i < TOTAL_NUM; i++){
+	for(i = 1; i < TOTAL_NUM-1; i++){
 		LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[i].name, pcba_result[i].pass_faild);
 
 		switch(pcba_result[i].pass_faild) {
@@ -789,7 +836,7 @@ static int show_pcba_test_result(void)
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
 			row=2;
-			for(i = 0; i < text_rows-2; i++){
+			for(i = 1; i < text_rows-1; i++){
 				LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[i].name, pcba_result[i].pass_faild);
 
 				switch(pcba_result[i].pass_faild) {
@@ -828,7 +875,7 @@ static int show_pcba_test_result(void)
         	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
-			for(i = 0; i < TOTAL_NUM+2-text_rows; i++){
+			for(i = 1; i < TOTAL_NUM+2-text_rows-2; i++){
 				LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[text_rows-2+i].name, pcba_result[text_rows-2+i].pass_faild);
 
 				switch(pcba_result[text_rows-2+i].pass_faild) {
@@ -865,6 +912,58 @@ static int show_pcba_test_result(void)
 	return 0;
 }
 
+static int show_not_auto_test_result(void)
+{
+	int row = 2;
+	int i = 0;
+	char tmp[128];
+	char* rl_str;
+	char* rl_str1;
+	char* rl_str2;
+	//char* ptrpass=TEXT_PASS;
+	char* ptrfail=TEXT_FAIL;
+	char* ptrna=TEXT_NA;
+	menu_info* pmenu = menu_not_auto_test;
+	char chang_page=0;
+	unsigned char change=0;
+	unsigned char changelast=0;
+	ui_fill_locked();
+	ui_show_title(TEST_REPORT);
+	for(i = TOTAL_NUM-2; i < TOTAL_NUM; i++){
+		LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[i].name, pcba_result[i].pass_faild);
+
+		switch(pcba_result[i].pass_faild) {
+			case RL_NA:
+				ui_set_color(CL_WHITE);
+				rl_str = TEXT_NA;
+				break;
+			case RL_FAIL:
+				ui_set_color(CL_RED);
+				rl_str = TEXT_FAIL;
+				break;
+			case RL_PASS:
+				ui_set_color(CL_GREEN);
+				rl_str = TEXT_PASS;
+				break;
+			case RL_NS:
+				ui_set_color(CL_BLUE);
+				rl_str = TEXT_NS;
+				break;
+			default:
+				ui_set_color(CL_WHITE);
+				rl_str = TEXT_NA;
+				break;
+		}
+		memset(tmp, 0, sizeof(tmp));
+		sprintf(tmp, "%s:%s", (pcba_result[i].name+2), rl_str);
+		row = ui_show_text(row, 0, tmp);
+		gr_flip();
+	}
+
+	while(ui_handle_button(NULL,NULL)!=RL_FAIL);
+
+	return 0;
+}
 
 
 static int phone_shutdown(void)
