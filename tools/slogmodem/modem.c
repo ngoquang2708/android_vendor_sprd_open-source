@@ -41,7 +41,7 @@ int slog_enable = SLOG_ENABLE;
 int cplog_enable = SLOG_ENABLE;
 int minidump_enable = SLOG_ENABLE;
 
-
+struct client_conn s_cli_mgr;
 
 
 
@@ -65,6 +65,18 @@ char *parse_cp_string(char *src, char c, char *token)
 	return results;
 }
 
+static struct slog_info *find_device(char *name)
+{
+	struct slog_info *info = cp_log_head;
+
+	while(info){
+		if( !strcmp(info->name, name)){
+			break;
+		} 
+		info = info->next;
+	}
+	return info;
+}
 
 int cp_para_config_entries(char *type)
 {
@@ -84,44 +96,55 @@ int cp_para_config_entries(char *type)
 	if((pos5 = parse_cp_string(pos4, '\t', "pos5")) == NULL) return -1;
 
 	/* alloc node */
-	info = calloc(1, sizeof(struct slog_info));
-	if(info == NULL) {
-		err_log("slogcp:calloc failed!");
-		return -1;
-	}
-	/* init data structure according to type */
-	if(!strncmp(type, "stream", 6)) {
-		info->type = SLOG_TYPE_STREAM;
-		info->name = strdup(name);
-		if( !strcmp(info->name, "cp_wcn") ||
-			!strcmp(info->name, "cp_td-lte") ||
-			!strcmp(info->name, "cp_tdd-lte") ||
-			!strcmp(info->name, "cp_fdd-lte")) {
-			info->log_path = strdup(info->name);
-		} else {
-			info->log_path = strdup("android");
+	info = find_device(name);
+	if(!info){		
+		info = calloc(1, sizeof(struct slog_info));
+		if(info == NULL) {
+			err_log("slogcp:calloc failed!");
+			return -1;
 		}
-		info->log_basename = strdup(name);
+		info->fd_device = info->fd_dump_cp = -1;
+		/* init data structure according to type */
+		if(!strncmp(type, "stream", 6)) {
+			info->type = SLOG_TYPE_STREAM;
+			info->name = strdup(name);
+			if( !strcmp(info->name, "cp_wcn") ||
+				!strcmp(info->name, "cp_td-lte") ||
+				!strcmp(info->name, "cp_tdd-lte") ||
+				!strcmp(info->name, "cp_fdd-lte")) {
+				info->log_path = strdup(info->name);
+			} else {
+				info->log_path = strdup("android");
+			}
+			info->log_basename = strdup(name);
+			if(strncmp(pos3, "on", 2))
+				info->state = SLOG_STATE_OFF;
+			else
+				info->state = SLOG_STATE_ON;
+			
+			if((info->max_size = atoi(pos4))<0){
+				err_log("slogcp:info->max_size:%d is invalid",info->max_size);
+			}
+			if((info->level = atoi(pos5))<0){
+				err_log("slogcp:info->level:%d is invalid",info->level);
+			}
+			if(!cp_log_head)
+				cp_log_head = info;
+			else {
+				info->next = cp_log_head->next;
+				cp_log_head->next = info;
+			}
+			debug_log("type %lu, name %s, %d %d %d\n",
+					info->type, info->name, info->state, info->max_size, info->level);
+		}
+	}else{	
 		if(strncmp(pos3, "on", 2))
 			info->state = SLOG_STATE_OFF;
 		else
 			info->state = SLOG_STATE_ON;
-		
-		if((info->max_size = atoi(pos4))<0){
-			err_log("slogcp:info->max_size:%d is invalid",info->max_size);
-		}
-		if((info->level = atoi(pos5))<0){
-			err_log("slogcp:info->level:%d is invalid",info->level);
-		}
-		if(!cp_log_head)
-			cp_log_head = info;
-		else {
-			info->next = cp_log_head->next;
-			cp_log_head->next = info;
-		}
-		debug_log("type %lu, name %s, %d %d %d\n",
-				info->type, info->name, info->state, info->max_size, info->level);
 	}
+	
+	
 	return 0;
 }
 
@@ -207,8 +230,6 @@ int cp_parse_config()
 	}
 	return ret;
 }
-
-
 
 static void handle_dump_shark_sipc_info()
 {
@@ -519,6 +540,24 @@ static void handle_open_modem_device(struct slog_info *info)
 	}
 }
 
+static void reopen_devieces(void)
+{
+	struct slog_info *info = cp_log_head;
+
+	while(info){
+		if(!slog_enable || info->state != SLOG_STATE_ON && info->fd_device >= 0){
+			close(info->fd_device);
+			if (info->fd_dump_cp >= 0 && info->fd_dump_cp != info->fd_device){
+				close(info->fd_dump_cp);
+			}
+			info->fd_device = info->fd_dump_cp= -1;
+		}else if(slog_enable && info->state == SLOG_STATE_ON && info->fd_device == -1){
+			handle_open_modem_device(info);
+		}
+		info = info->next;
+	}
+}
+
 static void handle_dump_modem_memory_from_proc(struct slog_info *info)
 {
 	char buffer[MAX_NAME_LEN];
@@ -813,7 +852,7 @@ int handle_modem_state_monitor(int* fd_modem,int* fd_wcn,fd_set* readset_tmp,fd_
 	
 		}
 	} else if(*fd_wcn >=0&&FD_ISSET(*fd_wcn, readset))  {
-		err_log("slogcp:modem assert from modemd");
+		err_log("slogcp:modem assert from wcnd");
 		n = read(*fd_wcn, buffer, MODEM_SOCKET_BUFFER_SIZE - 1);
 		if(n > 0) {
 			buffer[n]='\0';
@@ -915,7 +954,48 @@ static int fd_set_new(int modem_fd,int wcn_fd,fd_set *read_set)
 		}	
 		info = info->next;
 	}
+	if(s_cli_mgr.srv_socket >= 0){
+		err_log("slogcp:add server %d to fdset",s_cli_mgr.srv_socket);
+		FD_SET(s_cli_mgr.srv_socket, read_set);
+		if(s_cli_mgr.srv_socket > max){
+			max = s_cli_mgr.srv_socket;
+		}
+		int i;
+		for(i = 0;i < CLINET_NR_MAX;i ++){
+			if(s_cli_mgr.client_socket[i] >= 0){
+				err_log("slogcp:add client %d to fdset",s_cli_mgr.client_socket[i]);
+				FD_SET(s_cli_mgr.client_socket[i], read_set);
+				if(s_cli_mgr.client_socket > max){
+					max = s_cli_mgr.client_socket[i];
+				}
+			}
+		}
+	}
 	return max;
+}
+
+static void proccess_data(int index)
+{
+	int fd = s_cli_mgr.client_socket[index];
+	uint8_t buf[32];
+	ssize_t nr;
+
+	nr = read(fd,buf,32);
+	if(nr >= 14){
+		err_log("slogcp:read %d bytes",nr);
+		if(!memcmp(buf,"slogctl reload",14)){
+			/* reload config file */
+			cp_parse_config();
+			reopen_devieces();
+		}else{
+			err_log("invalid cmd");
+		}
+	}else{
+		err_log("slogcp:read error %d,close fd %d",nr,fd);
+		close(fd);
+		s_cli_mgr.client_socket[index] = -1;
+		s_cli_mgr.dirty = 1;
+	}
 }
 
 void *modem_log_handler(void *arg)
@@ -933,6 +1013,7 @@ void *modem_log_handler(void *arg)
 	int fd_modem = -1;
 	int fd_wcn = -1;
 	int result;
+	ssize_t nr;
 	struct timeval timeout;
 
 	if(s_external_path) {
@@ -987,7 +1068,7 @@ void *modem_log_handler(void *arg)
 				if(fd_modem > max){
 					max=fd_modem;
 				}		
-				FD_SET(fd_modem, &readset_tmp);
+				max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
 			}
 		}
 		if(fd_wcn < 0){
@@ -996,14 +1077,35 @@ void *modem_log_handler(void *arg)
 				if(fd_wcn > max){
 					max=fd_wcn;
 				}
-				FD_SET(fd_wcn, &readset_tmp);
+				max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
 			}
+		}
+
+		if(s_cli_mgr.srv_socket < 0){
+			s_cli_mgr.srv_socket = socket_local_server("slogmodem",
+									ANDROID_SOCKET_NAMESPACE_ABSTRACT,
+									SOCK_STREAM);
+			if(s_cli_mgr.srv_socket < 0){
+				err_log("slocp:create server socket failed.");
+			}else{
+				long flags = fcntl(s_cli_mgr.srv_socket, F_GETFL);
+				int err = -1;
+				
+				flags |= O_NONBLOCK;
+				err = fcntl(s_cli_mgr.srv_socket, F_SETFL, flags);
+				max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
+			}
+		}
+
+		if(s_cli_mgr.dirty){
+			max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
+			s_cli_mgr.dirty = 0;
 		}
 
 		FD_ZERO(&readset);
 		memcpy(&readset, &readset_tmp, sizeof(readset_tmp));
 
-		if(fd_modem < 0 || fd_wcn < 0) {
+		if(fd_modem < 0 || fd_wcn < 0 || s_cli_mgr.srv_socket < 0) {
 			timeout.tv_sec =3 ;
 			timeout.tv_usec = 0;
 			result = select(max + 1, &readset, NULL, NULL, &timeout);
@@ -1020,6 +1122,44 @@ void *modem_log_handler(void *arg)
 			err_log("slogcp:select failed %s",strerror(errno));
 			sleep(1);
 			continue;
+		}
+
+		if(FD_ISSET(s_cli_mgr.srv_socket, &readset)){
+			/* add fd to client manager */
+			int socket = accept(s_cli_mgr.srv_socket,0,0);
+			int i;
+
+			if(socket >= 0){
+				long flags = fcntl(socket, F_GETFL);
+				int err = -1;
+				
+				err_log("slogcp:client %d connection established.",socket);
+				for(i = 0; i < CLINET_NR_MAX;i ++){
+					if(s_cli_mgr.client_socket[i] == -1){
+						s_cli_mgr.client_socket[i] = socket;
+						break;
+					}
+				}
+				if(i == CLINET_NR_MAX){
+					err_log("slogcp:too many client connection,refuse %d",socket);
+					close(socket);
+				}else{
+					s_cli_mgr.dirty = 1;
+
+					flags |= O_NONBLOCK;
+					err = fcntl(socket, F_SETFL, flags);
+				}
+			}
+		}
+
+		int i;
+		for(i = 0; i < CLINET_NR_MAX; i ++){
+			if(s_cli_mgr.client_socket[i] >= 0){
+				if(FD_ISSET(s_cli_mgr.client_socket[i], &readset)){
+					proccess_data(i);
+					max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
+				}
+			}
 		}
 
 		info = cp_log_head;
@@ -1043,7 +1183,7 @@ void *modem_log_handler(void *arg)
 			//{Debug
 			gettimeofday(&t1, 0);
 			//}Debug
-			ret = read(info->fd_device, cp_buffer, BUFFER_SIZE);
+			nr = read(info->fd_device, cp_buffer, BUFFER_SIZE);
 			gettimeofday(&t2, 0);
 			tdiff = (int)((t2.tv_sec - t1.tv_sec) * 1000);
 			tdiff += ((int)t2.tv_usec - (int)t1.tv_usec) / 1000;
@@ -1051,9 +1191,9 @@ void *modem_log_handler(void *arg)
 				err_log("slogcp: read too long %s time %d", info->name, tdiff);
 			}
 		
-			if(ret <= 0) {
-				if ( (ret == -1 && (errno == EINTR || (EAGAIN == errno)) )
-					 || ret == 0 ) {
+			if(nr <= 0) {
+				if ( (nr == -1 && (errno == EINTR || (EAGAIN == errno)) )
+					 || nr == 0 ) {
 					info = info->next;
 					continue;
 				}
@@ -1097,9 +1237,9 @@ void *modem_log_handler(void *arg)
 			}
 
 			if(info->fp_out){
-				totalLen = fwrite(cp_buffer, ret, 1, info->fp_out);
+				totalLen = fwrite(cp_buffer, nr, 1, info->fp_out);
 				if ( totalLen == 1 ) {
-					info->outbytecount += ret;
+					info->outbytecount += nr;
 					log_size_handler(info);
 				}
 			}
@@ -1160,6 +1300,17 @@ void init_modem_log_path()
 	creat_top_path(flag);
 }
 
+static void init_client_mgr(void)
+{
+	int i;
+	
+	s_cli_mgr.srv_socket = -1;
+	for(i = 0;i < CLINET_NR_MAX;i ++){
+		s_cli_mgr.client_socket[i] = -1;
+	}
+	s_cli_mgr.dirty = 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -1172,11 +1323,13 @@ int main(int argc, char *argv[])
 	siga.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &siga, 0);
 
+
 	cp_parse_config();
 	s_external_path = getenv("EXTERNAL_STORAGE");
 	if (1 == monitor_sdcard_status()) {
 		s_sd_mounted = 1;
 	}
+	init_client_mgr();
 	modem_log_handler(0);
 
 	return 0;
