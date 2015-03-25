@@ -5,7 +5,6 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := slog.c \
 				common.c \
 				parse_conf.c \
-				screenshot.c \
 				android.c \
 				snap.c \
 				tcp.c \
@@ -19,8 +18,7 @@ LOCAL_MODULE := slog
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS += -lpthread
-LOCAL_C_INCLUDES += external/jpeg external/zlib
-LOCAL_SHARED_LIBRARIES := liblog libz libjpeg
+LOCAL_SHARED_LIBRARIES := liblog libz
 include $(BUILD_EXECUTABLE)
 
 #slogctl
@@ -30,8 +28,7 @@ LOCAL_MODULE := slogctl
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS += -lpthread
-LOCAL_C_INCLUDES += external/jpeg external/zlib
-LOCAL_SHARED_LIBRARIES := liblog libz libjpeg
+LOCAL_SHARED_LIBRARIES := liblog libz
 include $(BUILD_EXECUTABLE)
 
 #tar

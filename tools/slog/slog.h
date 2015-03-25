@@ -161,7 +161,6 @@ extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_t
 extern int slog_enable;
 extern int cplog_enable;
 extern int internal_log_size;
-extern int screenshot_enable;
 #ifdef LOW_POWER_MODE
 extern int hook_modem_flag;
 #define HOOK_MODEM_TARGET_DIR	"/data/log"
@@ -192,9 +191,6 @@ extern int parse_config();
 /* slog.c */
 extern void exec_or_dump_content(struct slog_info *info, char *filepath);
 extern int capture_by_name(struct slog_info *head, const char *name, char *filepath);
-
-/* screenshot.c */
-extern int screen_shot(const char *name);
 
 /* command.c */
 extern int send_socket(int sockfd, void* buffer, int size);
