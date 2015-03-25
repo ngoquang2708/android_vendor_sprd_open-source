@@ -13,8 +13,10 @@
 #define MENU_BOARD_SINGLETEST  	"- PCBA单项测试"
 #define MENU_PHONE_AUTOTEST		"- 整机自动测试"
 #define MENU_PHONE_SINGLETEST	"- 整机单项测试"
+#define MENU_NOT_AUTO_TEST      "- 建议抽测项"
 #define MENU_BOARD_REPORT       "- PCBA测试结果"
 #define MENU_PHONE_REPORT       "- 整机测试结果"
+#define MENU_NOT_AUTO_REPORT    "- 抽测项结果"
 #define MENU_VERSION			"- 软件版本信息"
 
 #define MENU_PHONE_INFO_TEST    "- 手机信息测试"
@@ -165,6 +167,7 @@
 #define TEXT_CHG_TYPE				"充电器类型:"
 #define TEXT_CHG_VOL				"充电电压:"
 #define TEXT_CHG_CUR				"充电电流:"
+#define TEXT_BATTARY_CUR                "流入电池电流"
 
 #define TEXT_HD_UNINSERT			"请插入耳机!"
 #define TEXT_HD_INSERTED			"耳机已插入!"

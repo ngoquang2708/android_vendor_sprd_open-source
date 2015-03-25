@@ -152,7 +152,17 @@ int test_cali_info(void)
 	if(cali_size<=(text_rows-2))
 	{
 		for(i=0;i<row_num;i++)
+		{
+			if(strstr(tmp2[i],"Fail")!=NULL)
+				ui_set_color(CL_RED);
+			if(strstr(tmp2[i],"Pass")!=NULL)
+				ui_set_color(CL_GREEN);
+			if(strstr(tmp2[i],"Not Test")!=NULL)
+				ui_set_color(CL_WHITE);
+			if(strstr(tmp2[i],"MMI Test")!=NULL)
+			     continue;
 			row = ui_show_text(row, 0, tmp2[i]);
+		}
 			gr_flip();
 		while(ui_handle_button(NULL,NULL)!=RL_FAIL);
 	}
@@ -173,10 +183,19 @@ int test_cali_info(void)
 				ui_fill_locked();
 				ui_show_title(MENU_CALI_INFO);
 				row=2;
-				for(i = 0; i < text_rows-2; i++){  
+				for(i = 0; i < text_rows-2; i++)
+				{
+					if(strstr(tmp2[i],"Fail")!=NULL)
+						ui_set_color(CL_RED);
+					if(strstr(tmp2[i],"Pass")!=NULL)
+						ui_set_color(CL_GREEN);
+					if(strstr(tmp2[i],"Not Test")!=NULL)
+						ui_set_color(CL_WHITE);
+					if(strstr(tmp2[i],"MMI Test")!=NULL)
+					     continue;
 					row = ui_show_text(row, 0, tmp2[i]);
 					LOGD("mmitest test1=%s   %p\n",tmp2[i],tmp2[i]);
-                    gr_flip();
+					gr_flip();
 				}
 			}
 
@@ -188,9 +207,27 @@ int test_cali_info(void)
 			ui_fill_locked();
 			ui_show_title(MENU_CALI_INFO);
 			for(i=0;i<row_num+2-text_rows;i++)
-			row = ui_show_text(row, 0, tmp2[text_rows-2+i]);
+			{
+				if(strstr(tmp2[text_rows-2+i],"Fail")!=NULL)
+					ui_set_color(CL_RED);
+				if(strstr(tmp2[text_rows-2+i],"Pass")!=NULL)
+					ui_set_color(CL_GREEN);
+				if(strstr(tmp2[text_rows-2+i],"Not Test")!=NULL)
+					ui_set_color(CL_WHITE);
+				if(strstr(tmp2[text_rows-2+i],"MMI Test")!=NULL)
+				     continue;
+				row = ui_show_text(row, 0, tmp2[text_rows-2+i]);
+			}
 			for(i=0;i<row_num1;i++)
 				{
+					if(strstr(tmp4[i],"Fail")!=NULL)
+						ui_set_color(CL_RED);
+					if(strstr(tmp4[i],"Pass")!=NULL)
+						ui_set_color(CL_GREEN);
+					if(strstr(tmp4[i],"Not Test")!=NULL)
+						ui_set_color(CL_WHITE);
+					if(strstr(tmp4[i],"MMI Test")!=NULL)
+					     continue;
 					row = ui_show_text(row, 0, tmp4[i]);
 				}
             gr_flip();

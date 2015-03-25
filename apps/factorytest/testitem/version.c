@@ -79,7 +79,8 @@ int  isAscii(unsigned char b)
 
  static char * getSn1(void) {
 		char string[32];
-		if ( phrash_valid== 0) {
+		if ( phrash_valid== 0) 
+		{
             strcpy(string,TEXT_INVALIDSN1);
 			LOGD("mmitest out of sn11");
 			return string;
@@ -146,6 +147,7 @@ static void getTestsAndResult(void ) {
 		if (phrash_valid == 0) {
             strcpy(testResult,TEXT_PHASE_NOTTEST);
 			LOGD("mmitest out of Result1");
+			ui_set_color(CL_RED);
 			ui_show_text(13, 0, testResult);
 			return;
         }
@@ -153,6 +155,7 @@ static void getTestsAndResult(void ) {
         if (!isAscii(phrase[STATION_START_INDEX])) {
             strcpy(testResult,TEXT_PHASE_NOTTEST);
 			LOGD("mmitest out of Result2");
+			ui_set_color(CL_RED);
 			ui_show_text(13, 0, testResult);
 			return;
         }
@@ -167,13 +170,16 @@ static void getTestsAndResult(void ) {
                     SP09_MAX_STATION_NAME_LEN);
             if (!isStationTest(i)) {
                 sprintf(testResult,"%s %s\n",testname,TEXT_PHASE_NOTTEST);
+		ui_set_color(CL_WHITE);
             } else if (isStationPass(i)) {
                 sprintf(testResult,"%s %s\n",testname,TEXT_PHASE_PASS);
+		ui_set_color(CL_GREEN);
             } else {
                 sprintf(testResult,"%s %s\n",testname,TEXT_PHASE_FAILED);
+		ui_set_color(CL_RED);
             }
             flag = flag << 1;
-			ui_show_text(13+i, 0, testResult);
+		ui_show_text(13+i, 0, testResult);
         }
 		return;
     }
@@ -247,6 +253,9 @@ int test_phone_info_show(void)
 	ui_show_text(4, 0, TEXT_SN);
 	ui_set_color(CL_GREEN);
 	ui_show_text(5, 0, sn1);
+	if(strlen(sn2)<10)
+		sn2=TEXT_INVALIDSN2;
+	ui_set_color(CL_RED);
 	ui_show_text(6, 0, sn2);
 
 	ui_set_color(CL_WHITE);

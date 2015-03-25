@@ -23,8 +23,8 @@ enum {
 	MENUTITLE(16,22,TEST_BT, test_bt_start)
 	MENUTITLE(17,23,TEST_WIFI, test_wifi_start) 
 	MENUTITLE(18,24,TEST_GPS, test_gps_start)
-	MENUTITLE(19,27,TEST_TEL, test_tel_start)
-	MENUTITLE(20,26,TEST_OTG, test_otg_start)
+	//MENUTITLE(19,27,TEST_TEL, test_tel_start)
+	//MENUTITLE(20,26,TEST_OTG, test_otg_start)
 	//MENUTITLE(21,29,CALI_INFO, test_cali_info)
 	//MENUTITLE(22,30,VERSION, test_version_show)
 #ifdef __MAKE_MENUTITLE_ENUM__

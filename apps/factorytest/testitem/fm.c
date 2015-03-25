@@ -366,7 +366,7 @@ static int fm_close(void)
     if (ssBtInterface)
         {
              ssBtInterface->disableRadio();
-             sleep(2);
+             sleep(1);
              ssBtInterface->cleanup();
         }
         sFmStatus = FM_STATE_DISABLED;

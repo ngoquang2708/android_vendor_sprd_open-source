@@ -632,9 +632,8 @@ int test_fcamera_start(void)
 
    if(1)//BT_STATE==BT_STATE_OFF
    {
-   //ui_show_text(0, 0, CAMERA_START);//++++++
-	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
    gr_flip();
+   usleep(100*1000);
    if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
 	{
 		LOGD("mmitest could not load gralloc module \r\n");
@@ -783,7 +782,7 @@ int test_bcamera_start(void)
 	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
 	gr_flip();
 	flash_ret=flash_start();
-
+    usleep(100*1000);
    if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
 	{
 		LOGD("mmitest could not load gralloc module \r\n");
