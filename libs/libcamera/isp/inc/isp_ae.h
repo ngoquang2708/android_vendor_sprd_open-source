@@ -112,14 +112,23 @@ struct isp_ae_information {
 	uint32_t gain;
 };
 
+struct new_gamma_param{
+	uint16_t x_node[16];
+	uint16_t y_node[2][16];
+	int16_t brightness_factor;
+	int16_t contrast_factor;
+};
+
 struct isp_gamma_param{
 	uint32_t bypass;
 	uint16_t axis[2][26];
 	uint8_t index[28];
+	struct new_gamma_param new_param;
 };
 
 struct isp_gamma_tab{
 	uint16_t axis[2][26];
+	struct new_gamma_param new_param;
 };
 
 struct isp_ae_param

@@ -605,7 +605,7 @@ struct isp_context{
 	struct auto_adjust_init_info auto_adjust;
 	//struct isp_pre_global_gain_param pre_global;
 	struct isp_pre_wave_denoise_param pre_wave_denoise;
-	uint32_t reserved[254];
+	uint32_t reserved[229];
 
 	struct isp_blc_offset blc_offset[8];
 	struct isp_edge_param edge_tab[16];

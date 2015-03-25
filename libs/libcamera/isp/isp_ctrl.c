@@ -3080,10 +3080,11 @@ static int32_t _ispCfgGamma(uint32_t handler_id, struct isp_gamma_param* param_p
 	}
 	else if(SC9630_ISP_ID == isp_id)
 	{
-		rtn = ispSetGammaXNode_v002(handler_id, (uint16_t*)&param_ptr->axis[0]);
+		rtn = ispSetGammaXNode_v002(handler_id, (uint16_t*)param_ptr->new_param.x_node);
 		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaXNode_v002 error"));
 
-		rtn = ispSetGammaYNode_v002(handler_id, (uint16_t*)&param_ptr->axis[1]);
+		rtn = ispSetGammaYNode_v002(handler_id, (uint16_t*)&param_ptr->new_param.y_node[0][0],
+									(uint16_t*)&param_ptr->new_param.y_node[1][0]);
 		ISP_RETURN_IF_FAIL(rtn, ("ispSetGammaYNode_v002 error"));
 	}
 
@@ -3158,11 +3159,14 @@ static int32_t _ispCfgPref(uint32_t handler_id, struct isp_pref_param* param_ptr
 *@
 *@ return:
 */
-static int32_t _ispCfgBright(uint32_t handler_id, struct isp_bright_param* param_ptr)
+static int32_t _ispCfgBright(uint32_t handler_id, struct isp_context* isp_context_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
+	uint8_t factor;
+	struct isp_bright_param* param_ptr = &isp_context_ptr->bright;
 
-	rtn = ispSetBrightFactor(handler_id, param_ptr->factor);
+	factor = (uint8_t)(param_ptr->factor + isp_context_ptr->gamma.new_param.brightness_factor);
+	rtn = ispSetBrightFactor(handler_id, factor);
 	ISP_RETURN_IF_FAIL(rtn, ("ispSetBrightFactor error"));
 
 	rtn = ispBrightBypass(handler_id, param_ptr->bypass);
@@ -3176,11 +3180,20 @@ static int32_t _ispCfgBright(uint32_t handler_id, struct isp_bright_param* param
 *@
 *@ return:
 */
-static int32_t _ispCfgContrast(uint32_t handler_id, struct isp_contrast_param* param_ptr)
+static int32_t _ispCfgContrast(uint32_t handler_id, struct isp_context* isp_context_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
+	int16_t contrast_factor= isp_context_ptr->gamma.new_param.contrast_factor;
+	struct isp_contrast_param* param_ptr = &isp_context_ptr->contrast;
+	uint8_t factor=param_ptr->factor;
 
-	rtn = ispSetContrastFactor(handler_id, param_ptr->factor);
+	if(contrast_factor>0){
+		factor = (uint8_t)((param_ptr->factor * contrast_factor)/0x40);
+	}else{
+		ALOGI("_ispCfgContrast contrast_factor error!!!!!!");
+	}
+
+	rtn = ispSetContrastFactor(handler_id, factor);
 	ISP_RETURN_IF_FAIL(rtn, ("ispSetContrastFactor error"));
 
 	rtn = ispContrastbypass(handler_id, param_ptr->bypass);
@@ -5110,6 +5123,12 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 	struct sensor_raw_cali_info* cali_ptr = (struct sensor_raw_cali_info*)raw_info_ptr->cali_ptr;
 	uint32_t i = 0x00;
 	uint32_t j = 0x00;
+	uint32_t version_id = 0x00;
+
+
+	version_id = raw_tune_ptr->version_id;
+	ISP_LOG("param version_id :0x%08x", version_id);
+
 	// isp tune param
 	ISP_LOG("_ispSetV0001Param V0001");
 	isp_context_ptr->blc.bypass=raw_tune_ptr->blc_bypass;
@@ -5885,22 +5904,53 @@ static int32_t _ispSetV0001Param(uint32_t handler_id,struct isp_cfg_param* param
 
 	/*gamma*/
 	/*SCI_MEMCPY((void*)&isp_context_ptr->gamma.axis, (void*)&raw_tune_ptr->gamma.axis, 104);*/
-	for (i=0; i<26; i++) {
-		isp_context_ptr->gamma_tab[0].axis[0][i]=raw_tune_ptr->gamma.axis[0][i];
-		isp_context_ptr->gamma_tab[0].axis[1][i]=raw_tune_ptr->gamma.axis[1][i];
-		isp_context_ptr->gamma_tab[1].axis[0][i]=raw_tune_ptr->gamma.tab[0].axis[0][i];
-		isp_context_ptr->gamma_tab[1].axis[1][i]=raw_tune_ptr->gamma.tab[0].axis[1][i];
-		isp_context_ptr->gamma_tab[2].axis[0][i]=raw_tune_ptr->gamma.tab[1].axis[0][i];
-		isp_context_ptr->gamma_tab[2].axis[1][i]=raw_tune_ptr->gamma.tab[1].axis[1][i];
-		isp_context_ptr->gamma_tab[3].axis[0][i]=raw_tune_ptr->gamma.tab[2].axis[0][i];
-		isp_context_ptr->gamma_tab[3].axis[1][i]=raw_tune_ptr->gamma.tab[2].axis[1][i];
-		isp_context_ptr->gamma_tab[4].axis[0][i]=raw_tune_ptr->gamma.tab[3].axis[0][i];
-		isp_context_ptr->gamma_tab[4].axis[1][i]=raw_tune_ptr->gamma.tab[3].axis[1][i];
-		isp_context_ptr->gamma_tab[5].axis[0][i]=raw_tune_ptr->gamma.tab[4].axis[0][i];
-		isp_context_ptr->gamma_tab[5].axis[1][i]=raw_tune_ptr->gamma.tab[4].axis[1][i];
+
+	switch (version_id) {
+	case 0x00020000:
+		memcpy(&isp_context_ptr->gamma_tab[0].new_param,
+				&raw_tune_ptr->new_gamma.tab[0],
+				sizeof(isp_context_ptr->gamma_tab[0].new_param));
+
+		memcpy(&isp_context_ptr->gamma_tab[1].new_param,
+				&raw_tune_ptr->new_gamma.tab[1],
+				sizeof(isp_context_ptr->gamma_tab[1].new_param));
+
+		memcpy(&isp_context_ptr->gamma_tab[2].new_param,
+				&raw_tune_ptr->new_gamma.tab[2],
+				sizeof(isp_context_ptr->gamma_tab[2].new_param));
+
+		memcpy(&isp_context_ptr->gamma_tab[3].new_param,
+				&raw_tune_ptr->new_gamma.tab[3],
+				sizeof(isp_context_ptr->gamma_tab[3].new_param));
+
+		memcpy(&isp_context_ptr->gamma_tab[4].new_param,
+				&raw_tune_ptr->new_gamma.tab[4],
+				sizeof(isp_context_ptr->gamma_tab[4].new_param));
+
+		//cur gamma
+		memcpy(&isp_context_ptr->gamma.new_param,
+				&raw_tune_ptr->new_gamma.tab[isp_context_ptr->gamma_index],
+				sizeof(isp_context_ptr->gamma.new_param));
+		break;
+	default:
+		for (i=0; i<26; i++) {
+			isp_context_ptr->gamma_tab[0].axis[0][i]=raw_tune_ptr->gamma.axis[0][i];
+			isp_context_ptr->gamma_tab[0].axis[1][i]=raw_tune_ptr->gamma.axis[1][i];
+			isp_context_ptr->gamma_tab[1].axis[0][i]=raw_tune_ptr->gamma.tab[0].axis[0][i];
+			isp_context_ptr->gamma_tab[1].axis[1][i]=raw_tune_ptr->gamma.tab[0].axis[1][i];
+			isp_context_ptr->gamma_tab[2].axis[0][i]=raw_tune_ptr->gamma.tab[1].axis[0][i];
+			isp_context_ptr->gamma_tab[2].axis[1][i]=raw_tune_ptr->gamma.tab[1].axis[1][i];
+			isp_context_ptr->gamma_tab[3].axis[0][i]=raw_tune_ptr->gamma.tab[2].axis[0][i];
+			isp_context_ptr->gamma_tab[3].axis[1][i]=raw_tune_ptr->gamma.tab[2].axis[1][i];
+			isp_context_ptr->gamma_tab[4].axis[0][i]=raw_tune_ptr->gamma.tab[3].axis[0][i];
+			isp_context_ptr->gamma_tab[4].axis[1][i]=raw_tune_ptr->gamma.tab[3].axis[1][i];
+			isp_context_ptr->gamma_tab[5].axis[0][i]=raw_tune_ptr->gamma.tab[4].axis[0][i];
+			isp_context_ptr->gamma_tab[5].axis[1][i]=raw_tune_ptr->gamma.tab[4].axis[1][i];
+		}
+		isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
+		break;
 	}
 
-	isp_set_gamma(&isp_context_ptr->gamma, &isp_context_ptr->gamma_tab[isp_context_ptr->gamma_index]);
 
 	/*cce matrix*/
 	isp_context_ptr->cce_index = 0;
@@ -6593,8 +6643,8 @@ static int32_t _ispCfg(uint32_t handler_id)
 	rtn=_ispCfgCCEMatrix(handler_id, &isp_context_ptr->cce_matrix);
 	rtn=_ispCfgUVDiv(handler_id, &isp_context_ptr->uv_div);
 	rtn=_ispCfgPref(handler_id, &isp_context_ptr->pref);
-	rtn=_ispCfgBright(handler_id, &isp_context_ptr->bright);
-	rtn=_ispCfgContrast(handler_id, &isp_context_ptr->contrast);
+	rtn=_ispCfgBright(handler_id, isp_context_ptr);
+	rtn=_ispCfgContrast(handler_id, isp_context_ptr);
 	rtn=_ispCfgHist(handler_id, &isp_context_ptr->hist);
 	rtn=_ispCfgAutoContrast(handler_id, &isp_context_ptr->auto_contrast);
 	rtn=_ispCfgSaturation(handler_id, &isp_context_ptr->saturation);
@@ -6870,11 +6920,11 @@ int32_t _ispSetTuneParam(uint32_t handler_id)
 		isp_context_ptr->tune.special_effect=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.bright) {
-		_ispCfgBright(handler_id, &isp_context_ptr->bright);
+		_ispCfgBright(handler_id, isp_context_ptr);
 		isp_context_ptr->tune.bright=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.contrast) {
-		_ispCfgContrast(handler_id, &isp_context_ptr->contrast);
+		_ispCfgContrast(handler_id, isp_context_ptr);
 		isp_context_ptr->tune.contrast=ISP_UEB;
 	}
 	if(ISP_EB==isp_context_ptr->tune.hist) {
@@ -9989,86 +10039,27 @@ int isp_change_param(uint32_t handler_id, enum isp_change_cmd cmd, void *param)
 int32_t isp_set_gamma(struct isp_gamma_param* gamma, struct isp_gamma_tab* tab_ptr)
 {
 	int32_t rtn=ISP_SUCCESS;
+	uint32_t isp_id=IspGetId();
+	int i = 0;
 
-	gamma->axis[0][0]=tab_ptr->axis[0][0];
-	gamma->axis[0][1]=tab_ptr->axis[0][1];
-	gamma->axis[0][2]=tab_ptr->axis[0][2];
-	gamma->axis[0][3]=tab_ptr->axis[0][3];
-	gamma->axis[0][4]=tab_ptr->axis[0][4];
-	gamma->axis[0][5]=tab_ptr->axis[0][5];
-	gamma->axis[0][6]=tab_ptr->axis[0][6];
-	gamma->axis[0][7]=tab_ptr->axis[0][7];
-	gamma->axis[0][8]=tab_ptr->axis[0][8];
-	gamma->axis[0][9]=tab_ptr->axis[0][9];
-	gamma->axis[0][10]=tab_ptr->axis[0][10];
-	gamma->axis[0][11]=tab_ptr->axis[0][11];
-	gamma->axis[0][12]=tab_ptr->axis[0][12];
-	gamma->axis[0][13]=tab_ptr->axis[0][13];
-	gamma->axis[0][14]=tab_ptr->axis[0][14];
-	gamma->axis[0][15]=tab_ptr->axis[0][15];
-	gamma->axis[0][16]=tab_ptr->axis[0][16];
-	gamma->axis[0][17]=tab_ptr->axis[0][17];
-	gamma->axis[0][18]=tab_ptr->axis[0][18];
-	gamma->axis[0][19]=tab_ptr->axis[0][19];
-	gamma->axis[0][20]=tab_ptr->axis[0][20];
-	gamma->axis[0][21]=tab_ptr->axis[0][21];
-	gamma->axis[0][22]=tab_ptr->axis[0][22];
-	gamma->axis[0][23]=tab_ptr->axis[0][23];
-	gamma->axis[0][24]=tab_ptr->axis[0][24];
-	gamma->axis[0][25]=tab_ptr->axis[0][25];
 
-	gamma->axis[1][0]=tab_ptr->axis[1][0];
-	gamma->axis[1][1]=tab_ptr->axis[1][1];
-	gamma->axis[1][2]=tab_ptr->axis[1][2];
-	gamma->axis[1][3]=tab_ptr->axis[1][3];
-	gamma->axis[1][4]=tab_ptr->axis[1][4];
-	gamma->axis[1][5]=tab_ptr->axis[1][5];
-	gamma->axis[1][6]=tab_ptr->axis[1][6];
-	gamma->axis[1][7]=tab_ptr->axis[1][7];
-	gamma->axis[1][8]=tab_ptr->axis[1][8];
-	gamma->axis[1][9]=tab_ptr->axis[1][9];
-	gamma->axis[1][10]=tab_ptr->axis[1][10];
-	gamma->axis[1][11]=tab_ptr->axis[1][11];
-	gamma->axis[1][12]=tab_ptr->axis[1][12];
-	gamma->axis[1][13]=tab_ptr->axis[1][13];
-	gamma->axis[1][14]=tab_ptr->axis[1][14];
-	gamma->axis[1][15]=tab_ptr->axis[1][15];
-	gamma->axis[1][16]=tab_ptr->axis[1][16];
-	gamma->axis[1][17]=tab_ptr->axis[1][17];
-	gamma->axis[1][18]=tab_ptr->axis[1][18];
-	gamma->axis[1][19]=tab_ptr->axis[1][19];
-	gamma->axis[1][20]=tab_ptr->axis[1][20];
-	gamma->axis[1][21]=tab_ptr->axis[1][21];
-	gamma->axis[1][22]=tab_ptr->axis[1][22];
-	gamma->axis[1][23]=tab_ptr->axis[1][23];
-	gamma->axis[1][24]=tab_ptr->axis[1][24];
-	gamma->axis[1][25]=tab_ptr->axis[1][25];
+	if (SC9630_ISP_ID == isp_id) {
+		for (i=0; i<16; i++) {
+			gamma->new_param.x_node[i] = tab_ptr->new_param.x_node[i];
+			gamma->new_param.y_node[0][i] = tab_ptr->new_param.y_node[0][i];
+			gamma->new_param.y_node[1][i] = tab_ptr->new_param.y_node[1][i];
+		}
+	} else {
+		for (i=0; i<26; i++) {
+			gamma->axis[0][i]=tab_ptr->axis[0][i];
+			gamma->axis[1][i]=tab_ptr->axis[1][i];
+		}
 
-	gamma->index[0]=_ispLog2n(gamma->axis[0][1]-gamma->axis[0][0]);
-	gamma->index[1]=_ispLog2n(gamma->axis[0][2]-gamma->axis[0][1]);
-	gamma->index[2]=_ispLog2n(gamma->axis[0][3]-gamma->axis[0][2]);
-	gamma->index[3]=_ispLog2n(gamma->axis[0][4]-gamma->axis[0][3]);
-	gamma->index[4]=_ispLog2n(gamma->axis[0][5]-gamma->axis[0][4]);
-	gamma->index[5]=_ispLog2n(gamma->axis[0][6]-gamma->axis[0][5]);
-	gamma->index[6]=_ispLog2n(gamma->axis[0][7]-gamma->axis[0][6]);
-	gamma->index[7]=_ispLog2n(gamma->axis[0][8]-gamma->axis[0][7]);
-	gamma->index[8]=_ispLog2n(gamma->axis[0][9]-gamma->axis[0][8]);
-	gamma->index[9]=_ispLog2n(gamma->axis[0][10]-gamma->axis[0][9]);
-	gamma->index[10]=_ispLog2n(gamma->axis[0][11]-gamma->axis[0][10]);
-	gamma->index[11]=_ispLog2n(gamma->axis[0][12]-gamma->axis[0][11]);
-	gamma->index[12]=_ispLog2n(gamma->axis[0][13]-gamma->axis[0][12]);
-	gamma->index[13]=_ispLog2n(gamma->axis[0][14]-gamma->axis[0][13]);
-	gamma->index[14]=_ispLog2n(gamma->axis[0][15]-gamma->axis[0][14]);
-	gamma->index[15]=_ispLog2n(gamma->axis[0][16]-gamma->axis[0][15]);
-	gamma->index[16]=_ispLog2n(gamma->axis[0][17]-gamma->axis[0][16]);
-	gamma->index[17]=_ispLog2n(gamma->axis[0][18]-gamma->axis[0][17]);
-	gamma->index[18]=_ispLog2n(gamma->axis[0][19]-gamma->axis[0][18]);
-	gamma->index[19]=_ispLog2n(gamma->axis[0][20]-gamma->axis[0][19]);
-	gamma->index[20]=_ispLog2n(gamma->axis[0][21]-gamma->axis[0][20]);
-	gamma->index[21]=_ispLog2n(gamma->axis[0][22]-gamma->axis[0][21]);
-	gamma->index[22]=_ispLog2n(gamma->axis[0][23]-gamma->axis[0][22]);
-	gamma->index[23]=_ispLog2n(gamma->axis[0][24]-gamma->axis[0][23]);
-	gamma->index[24]=_ispLog2n(gamma->axis[0][25]-gamma->axis[0][24]+1);
+		for (i=0; i<24; i++) {
+			gamma->index[i]=_ispLog2n(gamma->axis[0][i+1]-gamma->axis[0][i]);
+		}
+		gamma->index[24]=_ispLog2n(gamma->axis[0][25]-gamma->axis[0][24]+1);
+	}
 
 	return rtn;
 }
