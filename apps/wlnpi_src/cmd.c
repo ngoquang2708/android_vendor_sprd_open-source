@@ -1061,6 +1061,42 @@ int wlnpi_show_get_macfilter(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int 
     return 0;
 }
 
+/********************************************************************
+*   name   wlnpi_show_get_mcs_index
+*   ---------------------------
+*   description:
+*   ----------------------------
+*   para        IN/OUT      type            note
+*   ----------------------------------------------------
+*   return
+*   0:exec successful
+*   -1:error
+*   ------------------
+*   other:
+*
+********************************************************************/
+int wlnpi_show_get_mcs_index(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int r_len)
+{
+    unsigned int mcs_index = 0;
+
+    ENG_LOG("ADL entry %s(), r_len = %d", __func__, r_len);
+
+    if(1 != r_len)
+    {
+        printf("get msc index err \n");
+        ENG_LOG("ADL leaving %s(), r_len is ERROR, return -1", __func__);
+
+        return -1;
+    }
+
+    mcs_index = *( (unsigned char *)(r_buf+0) ) ;
+    printf("mcs index: %d\n", mcs_index);
+
+    ENG_LOG("ADL leaving %s(), mcs_index = %d, return 0", __func__, mcs_index);
+
+    return 0;
+}
+
 int wlnpi_show_get_connected_ap_info(struct wlnpi_cmd_t *cmd, unsigned char *r_buf, int r_len)
 {
     assoc_resp resp_ies = {0x00};
@@ -2043,6 +2079,14 @@ struct wlnpi_cmd_t g_cmd_table[] =
         .help  = "get current connected ap's info",
         .parse = wlnpi_cmd_no_argv,
         .show  = wlnpi_show_get_connected_ap_info,
+    },
+    {
+        /* get current mcs index in use */
+        .id    = WLNPI_CMD_GET_MCS_INDEX,
+        .name  = WLNPI_CMD_MSC_INDEX,
+        .help  = "get mcs index in use.",
+        .parse = wlnpi_cmd_no_argv,
+        .show  = wlnpi_show_get_mcs_index,
     },
 };
 
