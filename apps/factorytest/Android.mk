@@ -7,9 +7,11 @@ commands_local_path := $(LOCAL_PATH)
 ifeq ($(strip $(BOARD_USE_EMMC)),true)
 LOCAL_CFLAGS += -DCONFIG_EMMC
 endif
-
 ifeq ($(strip $(TARGET_USERIMAGES_USE_UBIFS)),true)
 LOCAL_CFLAGS := -DCONFIG_NAND
+endif
+ifeq ($(PRODUCT_WIFI_DEVICE),bcm)
+LOCAL_CFLAGS := -DBCM
 endif
 
 LOCAL_C_INCLUDES    +=  $(LOCAL_PATH) \

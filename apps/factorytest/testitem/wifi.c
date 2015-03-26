@@ -189,6 +189,7 @@ int eng_wpa_scan()
 		SPRD_DBG("mmitest Wifi cfg file err\n");
 		return -1;
 	}
+	#ifdef BCM
 	err=system("rmmod bcmdhd");
 	if(err<0)
 		{
@@ -196,11 +197,18 @@ int eng_wpa_scan()
 			return -1;
 		}
 	err=system("insmod /system/lib/modules/bcmdhd.ko");
+	#else
+	//Attention: sleep here to ensure the download process has complete the preparation for WiFi driver.
+	sleep(2);
+	err=system("insmod /system/lib/modules/sprdwl.ko");
+	#endif
 	if(err<0)
 		{
-			SPRD_ERR("mmitest insmod bcmdhd error\n");
+			SPRD_ERR("mmitest insmod wifi driver error\n");
 			return -1;
 		}
+        //Attention: sleep here to ensure the wifi driver has loaded into system completely.
+	sleep(1);
 	err=system("wpa_supplicant -iwlan0 -Dnl80211 -C/data/misc/wifi/sockets -c/data/misc/wifi/wpa_supplicant.conf -dd &");
 	if(err<0)
 		{
@@ -436,7 +444,11 @@ int eng_wifi_scan_start(void)
 	{
 		SPRD_ERR("mmitest  wifi error: wpa_cli terminate!\n");
 	}
+	#ifdef BCM
 	if(system("rmmod bcmdhd"))
+	#else
+	if(system("rmmod sprdwl"))
+	#endif
 	{
 		SPRD_ERR("mmitest wifi error: rmmod ittiam!\n");
 	}
