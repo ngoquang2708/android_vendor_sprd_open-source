@@ -123,7 +123,21 @@ nla_put_failure:
     return 2;
 }
 
-static int get_drv_info(wlnpi_t *wlnpi)
+static int wlnpi_handle_special_cmd(struct wlnpi_cmd_t *cmd)
+{
+    ENG_LOG("ADL entry %s(), cmd = %s", __func__, cmd->name);
+    if (0 == strcmp(cmd->name, WLNPI_CMD_CONN_STATUS))
+    {
+        printf("not connected AP\n");
+        ENG_LOG("ADL leval %s(), return 1", __func__);
+
+        return 1;
+    }
+
+    ENG_LOG("ADL levaling %s()", __func__);
+    return 0;
+}
+static int get_drv_info(wlnpi_t *wlnpi, struct wlnpi_cmd_t *cmd)
 {
     int ret;
     unsigned char  s_buf[4]  ={0};
@@ -136,6 +150,12 @@ static int get_drv_info(wlnpi_t *wlnpi)
     wlnpi->nl_cmd_id = WLAN_NL_CMD_NPI;
     if(6 != r_len)
     {
+        if (1 == wlnpi_handle_special_cmd(cmd))
+        {
+            ENG_LOG("ADL levaling %s(), return -2", __func__);
+            return -2;
+        }
+
         printf("get drv info err\n");
         return -1;
     }
@@ -214,7 +234,7 @@ int main(int argc, char **argv)
     if(0 != ret)
         return -1;
 
-    ret = get_drv_info(wlnpi);
+    ret = get_drv_info(wlnpi, cmd);
     if(0 != ret)
         goto EXIT;
 
