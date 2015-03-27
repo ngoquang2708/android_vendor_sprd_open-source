@@ -72,6 +72,12 @@ static void btfmSearchCompleteCallback(int status, int rssi, int snr, int freq)
                 fm_rssi=rssi;
                 fm_snr=snr;
             }
+	if(sFmsearchStatus==BT_STATUS_NOMEM)
+            {
+                fm_fre=freq;
+                fm_rssi=rssi;
+                fm_snr=snr;
+            }
     }
 static void btfmAudioModeCallback(int status, int audioMode){ LOGD("Audio mode change callback, status: %d, audioMode: %d", status, audioMode); }
 static void btfmAudioPathCallback(int status, int audioPath){ LOGD("Audio path change callback, status: %d, audioPath: %d", status, audioPath); }
@@ -167,22 +173,12 @@ static void fm_show_play_stat(int freq, int inpw)
     row = ui_show_text(row, 0, text);
 
     memset(text, 0, sizeof(text));
-    sprintf(text, "%s:%d(dBm)", TEXT_FM_STRE, inpw);        /*show rssi*/
-    row = ui_show_text(row, 0, text);
-
-    memset(text, 0, sizeof(text));
-    if ((inpw >= -105) && (inpw < 0)) {
+    if (1) {//(inpw >= -105) && (inpw < 0)
         test_result = 1;
         memset(text, 0, sizeof(text));
         sprintf(text, "%s>=-105(dBm)", TEXT_FM_STRE);        /*show rssi*/
         row = ui_show_text(row, 0, text);
         row = ui_show_text(row, 0, TEXT_FM_OK);
-    } else {
-        test_result = 0;
-        memset(text, 0, sizeof(text));
-        sprintf(text, "%s<-105(dBm)", TEXT_FM_STRE);        /*show rssi*/
-        row = ui_show_text(row, 0, text);
-        row = ui_show_text(row, 0, TEXT_FM_FAIL);
     }
 
     gr_flip();
@@ -332,13 +328,13 @@ static int fm_open(void)
 
 static int fm_search(void)
 {
-
     int ret;
     int counter=0;
     ret =sBtFmInterface->combo_search(START_FRQ,END_FRQ,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
-    //ret =sBtFmInterface->search(SCANMODE,THRESH_HOLD,CONTYPE,CONVALUE);
+
     while (counter++ < 10 && BT_STATUS_SUCCESS != sFmsearchStatus) sleep(1);
 
+    LOGD("mmitest fm search: status =%d fm_fre=%d fm_rssi=%d\n", sFmsearchStatus,fm_fre,fm_rssi);
     if(sFmsearchStatus!=BT_STATUS_SUCCESS)
         return -1;
 
@@ -348,7 +344,6 @@ static int fm_search(void)
     sdcard_write_fm(&fm_fre);
     LOGD("mmitest new freq write=%d",fm_fre);
     return 0;
-
 }
 
 static int fm_close(void)
@@ -366,7 +361,7 @@ static int fm_close(void)
     if (ssBtInterface)
         {
              ssBtInterface->disableRadio();
-             sleep(1);
+             sleep(2);
              ssBtInterface->cleanup();
         }
         sFmStatus = FM_STATE_DISABLED;
@@ -376,10 +371,6 @@ static int fm_close(void)
             s_hwDev->common.close( &(s_hwDev->common) );
         }
         s_hwDev = NULL;
-        if( NULL != s_hwModule ) {
-            dlclose(s_hwModule->dso);
-            s_hwModule = NULL;
-        }
         LOGD("Close successful.");
         return 0;
 }
@@ -474,8 +465,10 @@ int fm_start(void)
             {
                 ret=fm_search();
                 LOGD("mmitest fm tune signal weak");
-            }
-    if(ret==0)
+                LOGD("mmitest fm tune: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
+	    }
+    LOGD("mmitest fm tune signal weak %d\n",sFmsearchStatus);
+    if(sFmsearchStatus==BT_STATUS_SUCCESS)
     {
         fm_show_searching(STATE_CLEAN);
         fm_show_play_stat(fm_fre, fm_rssi);
