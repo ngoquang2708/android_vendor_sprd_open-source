@@ -91,7 +91,7 @@ int gpsOpen( void )
 		return -1;
 	}
 
-	sGpsIntrfc->cleanup();
+//	sGpsIntrfc->cleanup();
 
 	if(sGpsIntrfc->init(&sGpsCallbacks) != 0)
 	{
