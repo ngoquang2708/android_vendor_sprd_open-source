@@ -303,59 +303,59 @@ out:
     return 0;
 }
 
-void *eng_gps_log_thread(void *x)
+static  eng_dev_info_t* vdev_info;
+void report_nmea_log(const char* nmea, int length)
 {
     int r_cnt = 0, w_cnt = 0, offset = 0;
     int retry_num = 0;
     char tmpbuf[GPS_DATA_BUF_SIZE/2] = {0};
     int ser_fd;
     MSG_HEAD_T* msg_head = (MSG_HEAD_T*)tmpbuf;
-    eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
     msg_head->type = 0x3A;
     msg_head->subtype = 0x5;
     ENG_LOG("%s: gps log thread start \n", __FUNCTION__);
-
+	
+	r_cnt = length;
     ser_fd = get_ser_diag_fd();
-    do{
-        if(g_gps_log_enable) {
-            sem_post(&g_gps_sem);
-        }
-        sem_wait(&g_gps_sem);
-        r_cnt = get_nmea_data(tmpbuf + sizeof(MSG_HEAD_T));
-        if(r_cnt > 0){
-            msg_head->len = r_cnt + sizeof(MSG_HEAD_T);
-            r_cnt = translate_packet(gps_log_data, tmpbuf, msg_head->len);
 
-            offset = 0;
-            w_cnt = 0;
-            do {
-                w_cnt = write(ser_fd, gps_log_data + offset, r_cnt);
-                if(w_cnt < 0) {
-                    if(errno == EBUSY)
-                        usleep(59000);
-                    else {
-                        retry_num = 0;
-                        while(-1 == restart_gser(&ser_fd, dev_info->host_int.dev_log)) {
-                            ENG_LOG("eng_gps_log open ser port failed\n");
-                            sleep(1);
-                            retry_num ++;
-                            if(retry_num > MAX_OPEN_TIMES){
-                                ENG_LOG("eng_gps_log: thread stop for open ser error!\n");
-                                sem_post(&g_gps_sem);
-                                return 0;
-                            }
+    if(r_cnt > 0)
+	{
+		memcpy(tmpbuf + sizeof(MSG_HEAD_T),nmea,r_cnt);
+        msg_head->len = r_cnt + sizeof(MSG_HEAD_T);
+        r_cnt = translate_packet(gps_log_data, tmpbuf, msg_head->len);
+
+        offset = 0;
+        w_cnt = 0;
+        do {
+            w_cnt = write(ser_fd, gps_log_data + offset, r_cnt);
+            if(w_cnt < 0) {
+                if(errno == EBUSY)
+                    usleep(59000);
+                else {
+                    retry_num = 0;
+                    while(-1 == restart_gser(&ser_fd, vdev_info->host_int.dev_log)) {
+                        ENG_LOG("eng_gps_log open ser port failed\n");
+                        sleep(1);
+                        retry_num ++;
+                        if(retry_num > MAX_OPEN_TIMES){
+                            ENG_LOG("eng_gps_log: thread stop for open ser error!\n");
+                            return;
                         }
                     }
-                }else{
-                    r_cnt -= w_cnt;
-                    offset += w_cnt;
                 }
-            }while(r_cnt > 0);
-        }else{
-            ENG_LOG("%s: get nmea data error : %d\n", __FUNCTION__, r_cnt);
-            sleep(1);
-        }
-    } while(1);
+            }else{
+                r_cnt -= w_cnt;
+                offset += w_cnt;
+            }
+        }while(r_cnt > 0);
+    }     
+}
+
+void *eng_gps_log_thread(void *x)
+{
+
+    vdev_info = (eng_dev_info_t*)x;
+    set_report_ptr(report_nmea_log);
 
     return 0;
 }

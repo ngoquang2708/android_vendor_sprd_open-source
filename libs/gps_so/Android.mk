@@ -18,7 +18,8 @@ LOCAL_SHARED_LIBRARIES := \
 	libc \
 	libutils \
 	libcutils \
-	liblog
+	liblog \
+	libdl
 
 
 LOCAL_PRELINK_MODULE := false
