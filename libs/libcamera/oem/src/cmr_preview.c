@@ -3750,6 +3750,10 @@ cmr_int prev_set_cap_param(struct prev_handle *handle, cmr_u32 camera_id, cmr_u3
 	chn_param.cap_inf_cfg.chn_deci_factor = 0;
 	chn_param.cap_inf_cfg.frm_num         = chn_param.frm_num;
 
+	if (prev_cxt->prev_param.preview_eb && prev_cxt->prev_param.snapshot_eb) {
+		prev_get_sensor_mode(handle, camera_id);
+	}
+
 	/*config capture ability*/
 	ret = prev_cap_ability(handle, camera_id, &prev_cxt->actual_pic_size, &chn_param.cap_inf_cfg.cfg);
 	if (ret) {
@@ -4620,34 +4624,51 @@ cmr_int prev_get_cap_post_proc_param(struct prev_handle *handle,
 		is_cfg_rot_cap,
 		cfg_cap_rot);
 
-	if ((IMG_ANGLE_0 != cap_rot) || (is_cfg_rot_cap && (IMG_ANGLE_0 != cfg_cap_rot))) {
+	if (!prev_cxt->prev_param.preview_eb && prev_cxt->prev_param.snapshot_eb) {
+		if ((IMG_ANGLE_0 != cap_rot) || (is_cfg_rot_cap && (IMG_ANGLE_0 != cfg_cap_rot))) {
+			if (IMG_ANGLE_0 != cfg_cap_rot && IMG_ANGLE_180 != cfg_cap_rot) {
+				prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.height;
+				prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.width;
+			} else if (IMG_ANGLE_0 != cap_rot || IMG_ANGLE_180 != cap_rot) {
+				prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.width;
+				prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
+			} else {
+				CMR_LOGI("default");
+			}
 
-		if (IMG_ANGLE_0 != cfg_cap_rot && IMG_ANGLE_180 != cfg_cap_rot) {
-			prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.height;
-			prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.width;
+			CMR_LOGI("now actual_pic_size %d %d",
+				prev_cxt->actual_pic_size.width,
+				prev_cxt->actual_pic_size.height);
 
-		} else if (IMG_ANGLE_0 != cap_rot || IMG_ANGLE_180 != cap_rot) {
-			prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.width;
-			prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
-
+			tmp_req_rot = prev_get_rot_val(cfg_cap_rot);
+			tmp_refer_rot = prev_get_rot_val(cap_rot);
+			tmp_req_rot += tmp_refer_rot;
+			if (tmp_req_rot >= IMG_ANGLE_MIRROR) {
+				tmp_req_rot -= IMG_ANGLE_MIRROR;
+			}
+			cap_rot = prev_get_rot_enum(tmp_req_rot);
 		} else {
-			CMR_LOGI("default");
+			prev_cxt->actual_pic_size.width = prev_cxt->aligned_pic_size.width;
+			prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
 		}
-
-		CMR_LOGI("now actual_pic_size %d %d",
-			prev_cxt->actual_pic_size.width,
-			prev_cxt->actual_pic_size.height);
-
-		tmp_req_rot = prev_get_rot_val(cfg_cap_rot);
-		tmp_refer_rot = prev_get_rot_val(cap_rot);
-		tmp_req_rot += tmp_refer_rot;
-		if (tmp_req_rot >= IMG_ANGLE_MIRROR) {
-			tmp_req_rot -= IMG_ANGLE_MIRROR;
-		}
-		cap_rot = prev_get_rot_enum(tmp_req_rot);
 	} else {
-		prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.width;
-		prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
+		if (is_cfg_rot_cap && (IMG_ANGLE_0 != cfg_cap_rot)) {
+			if (IMG_ANGLE_0 != cfg_cap_rot && IMG_ANGLE_180 != cfg_cap_rot) {
+				prev_cxt->actual_pic_size.width  = prev_cxt->aligned_pic_size.height;
+				prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.width;
+			} else {
+				prev_cxt->actual_pic_size.width = prev_cxt->aligned_pic_size.width;
+				prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
+			}
+
+			CMR_LOGI("now actual_pic_size %d %d",
+				prev_cxt->actual_pic_size.width,
+				prev_cxt->actual_pic_size.height);
+		} else {
+			prev_cxt->actual_pic_size.width = prev_cxt->aligned_pic_size.width;
+			prev_cxt->actual_pic_size.height = prev_cxt->aligned_pic_size.height;
+		}
+		cap_rot = cfg_cap_rot;
 	}
 
 	CMR_LOGI("now cap_rot %d", cap_rot);
