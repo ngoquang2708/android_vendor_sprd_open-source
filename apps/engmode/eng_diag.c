@@ -929,6 +929,12 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
     cmd_index = get_cmd_index(buf);
     ENG_LOG("\r\n");
     ENG_LOG("eng_atdiag_euthdlr(), args0 =%s, args1=%s, cmd_index=%d\n",args0,args1,cmd_index);
+
+    if(module_index == GPS_MODULE_INDEX)
+    {
+	gps_eut_parse(buf,rsp);
+	return 0;
+    }
     switch(cmd_index){
         case EUT_REQ_INDEX:
             if(module_index == BT_MODULE_INDEX){
@@ -945,7 +951,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
             }
             else {
                 ALOGD("case GPS_INDEX");
-                gps_eutops.gpseut_req(rsp);
+               // gps_eutops.gpseut_req(rsp);
             }
             break;
         case EUT_INDEX:
@@ -963,7 +969,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
             }
             else {
                 ALOGD("case GPS_INDEX");
-                gps_eutops.gpseut(atoi(data[1]),rsp);
+               // gps_eutops.gpseut(atoi(data[1]),rsp);
             }
             break;
         case WIFICH_REQ_INDEX:
@@ -1060,21 +1066,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
 //            else
 //                ALOGE("wifi_eutops.wifi_clr_rxpackcount not support!");
             break;
-        case GPSSEARCH_REQ_INDEX:
-            gps_eutops.gps_search_req(rsp);
-            break;
-        case GPSSEARCH_INDEX:
-            gps_eutops.gps_search(atoi(data[1]),rsp);
-            break;
-        case GPSPRNSTATE_REQ_INDEX:
-            gps_eutops.gps_prnstate_req(rsp);
-            break;
-        case GPSSNR_REQ_INDEX:
-            gps_eutops.gps_snr_req(rsp);
-            break;
-        case GPSPRN_INDEX:
-            gps_eutops.gps_setprn(atoi(data[1]),rsp);
-            break;
+
             //-----------------------------------------------------
         case ENG_WIFIRATE_INDEX:
             ENG_LOG("%s(), case:ENG_WIFIRATE_INDEX\n", __FUNCTION__);
@@ -1187,6 +1179,12 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
     cmd_index = get_cmd_index(buf);
     ENG_LOG("ADL %s(), args0 = %s, args1 = %s, args2 = %s, args3 = %s cmd_index = %d, module_index = %d", __func__, args0, args1, args2, args3, cmd_index, module_index);
 
+    if(module_index == GPS_MODULE_INDEX)
+    {
+	gps_eut_parse(buf,rsp);
+        return 0;
+    }
+
     switch(cmd_index)
     {
         case EUT_REQ_INDEX:
@@ -1195,11 +1193,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
                 ENG_LOG("case WIFIEUT_INDEX");
                 wifi_eut_get(rsp);
             }
-            else
-            {
-                ALOGD("case GPS_INDEX");
-                gps_eutops.gpseut_req(rsp);
-            }
+
             break;
 
         case EUT_INDEX:
@@ -1208,11 +1202,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
                 ENG_LOG("case WIFIEUT_INDEX");
                 wifi_eut_set(atoi(data[1]), rsp);
             }
-            else
-            {
-                ALOGD("case GPS_INDEX");
-                gps_eutops.gpseut(atoi(data[1]),rsp);
-            }
+
             break;
         case WIFICH_REQ_INDEX:
             wifi_channel_get(rsp);
@@ -1337,21 +1327,7 @@ int eng_atdiag_euthdlr(char *buf, int len, char *rsp, int module_index)
         case WIFICLRRXPACKCOUNT_INDEX:
             //wifi_eutops.wifi_clr_rxpackcount(rsp);
             break;
-        case GPSSEARCH_REQ_INDEX:
-            gps_eutops.gps_search_req(rsp);
-            break;
-        case GPSSEARCH_INDEX:
-            gps_eutops.gps_search(atoi(data[1]),rsp);
-            break;
-        case GPSPRNSTATE_REQ_INDEX:
-            gps_eutops.gps_prnstate_req(rsp);
-            break;
-        case GPSSNR_REQ_INDEX:
-            gps_eutops.gps_snr_req(rsp);
-            break;
-        case GPSPRN_INDEX:
-            gps_eutops.gps_setprn(atoi(data[1]),rsp);
-            break;
+       
             //-----------------------------------------------------
         case ENG_WIFIRATE_INDEX:
             ENG_LOG("%s(), case:ENG_WIFIRATE_INDEX\n", __FUNCTION__);

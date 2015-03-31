@@ -7,6 +7,24 @@
 #define FAC_START 65535
 #define LOG_ENABLE 136
 #define LOG_DISABLE 520
+//for eut
+#define EUT_GPS_OK  "+SPGPSTEST:OK"
+#define EUT_GPS_ERROR   "+SPGPSTEST:ERR="
+#define EUT_GPS_REQ "+SPGPSTEST:EUT="
+#define EUT_GPS_PRN_REQ "+SPGPSTEST:PRN="
+#define EUT_GPS_SNR_REQ "+SPGPSTEST:SNR="
+#define EUT_GPS_SEARCH_REQ  "+SPGPSTEST:SEARCH="
+#define EUT_GPS_SNR_NO_EXIST "NO_EXIST"
+#define EUT_GPS_NO_FOUND_STAELITE "NO_FOUND_SATELLITE"
+#define EUT_GPS_SV_ID "SV_ID="
+#define EUT_GPS_SV_NUMS "SV_NUM="
+#define EUT_GPSERR_SEARCH                   (153)
+#define EUT_GPSERR_PRNSTATE                 (154)
+#define EUT_GPSERR_PRNSEARCH                (155)
+
+typedef void (*report_ptr)(const char* nmea, int length);
+
+extern void set_report_ptr(report_ptr func);
 
 extern void set_pc_mode(char input_pc_mode);
 
@@ -22,4 +40,5 @@ extern int get_init_mode(void);
 
 extern int get_stop_mode(void);
 
+extern void gps_eut_parse(char *buf,char *rsp);
 #endif
