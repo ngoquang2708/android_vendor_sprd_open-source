@@ -227,7 +227,7 @@ void *eng_vdiag_wthread(void *x)
     int has_processed = 0;
     int audio_fd;
     int wait_cnt = 0;
-    int type;
+    int type,num;
     int ret=0;
     eng_dev_info_t* dev_info = (eng_dev_info_t*)x;
 
@@ -331,7 +331,7 @@ void *eng_vdiag_wthread(void *x)
                 }else if(DATA_EXT_DIAG_SIZE/2 <= ext_buf_len){
                         ENG_LOG("%s: Current data is not a complete diag framer,but buffer is full\n", __FUNCTION__);
                         memcpy(diag_header, ext_data_buf, DIAG_BUF_SIZE);
-                        type = eng_diag_parse(diag_header, DIAG_BUF_SIZE);
+                        type = eng_diag_parse(diag_header, DIAG_BUF_SIZE, &num);
                         if(type != CMD_COMMON){
                             g_diag_status = ENG_DIAG_RECV_TO_AP;
                             ENG_LOG("%s: Buffer is full, so AP will not process the next package\n", __FUNCTION__);
