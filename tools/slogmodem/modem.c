@@ -706,14 +706,23 @@ static void handle_dump_external_wcn(struct slog_info *info)
 	char modem_property[MAX_NAME_LEN];
 	time_t t;
 	struct tm tm;
+	int ret;
 
 	if(info->fd_dump_cp < 0) {
 		err_log("slogcp:open dump dev failed");
 	}
+
+	creat_top_path(monitor_sdcard_status());
+	sprintf(new_path,"%s/%s/%s",top_log_dir,current_log_dir,info->name);
+	ret=mkdir(new_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && (errno != EEXIST)) {
+	    err_log("slogcp:mkdir %s failed.error: %s\n", new_path,strerror(errno));
+		return;
+	}
 	/* add timestamp */
 	t = time(NULL);
 	localtime_r(&t, &tm);
-	sprintf(new_path, "%s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.log", top_log_dir, current_log_dir, info->name, info->name,
+	sprintf(new_path, "%s/%s/%s/%s_memory_%d%02d-%02d-%02d-%02d-%02d.dmp", top_log_dir, current_log_dir, info->name, info->name,
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	file_p = fopen(new_path, "a+b");
 	if (file_p == NULL) {
@@ -722,8 +731,19 @@ static void handle_dump_external_wcn(struct slog_info *info)
 	}
 
 	property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
-	fd_dev = open_device(info, modem_property);
 
+	int retry_count = 0;
+retry:
+	fd_dev = open(modem_property, O_RDWR);
+	if(fd_dev < 0){
+		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
+			retry_count ++;
+			sleep(1);
+			goto retry;
+		}
+		err_log("Unable to open log device '%s'.", modem_property);
+		return;
+	}
 	close(info->fd_device);
 	info->fd_device = -1;
 
@@ -733,7 +753,7 @@ static void handle_dump_external_wcn(struct slog_info *info)
 		n = read(fd_dev, buffer, BUFFER_SIZE);
 		if(n>0 && n < 4096)
 		{
-			err_log("slogcp:%s",buffer);
+			err_log("slogcp:wcn read %d",n);
 			if(strncmp(buffer,"marlin_memdump_finish",21) == 0)
 				break;
 		}
@@ -741,6 +761,9 @@ static void handle_dump_external_wcn(struct slog_info *info)
 		if (n < 0){
 			err_log("slogcp:info->fd_dump_cp=%d read %d is lower than 0",fd_dev, n);
 			sleep(1);
+		}else if(n == 0){
+			err_log("slogcp:read 0");
+			break;
 		}else{
 			fwrite(buffer, n, 1, file_p);
 		}
@@ -754,6 +777,7 @@ void handle_socket_wcn(char *buffer)
 {
 	struct slog_info *log_info;
 
+	err_log("slogcp:external wcn dump");
 	if(strstr(buffer, "WCN-EXTERNAL-ALIVE") != NULL) {
 		if (handle_correspond_modem(buffer) == 1){
 			log_info = cp_log_head;
@@ -800,7 +824,7 @@ void handle_socket_wcn(char *buffer)
 	property_get(MODME_WCN_DEVICE_RESET,  modemrst_property, "0");
 	reset = atoi(modemrst_property);
 
-
+	err_log("slogcp:internal wcn dump");
 	if(strstr(buffer, "WCN-CP2-EXCEPTION") != NULL) {
 		if(dump > 0) {
 			if (handle_correspond_modem(buffer) == 1) {
@@ -965,7 +989,7 @@ static int fd_set_new(int modem_fd,int wcn_fd,fd_set *read_set)
 			if(s_cli_mgr.client_socket[i] >= 0){
 				err_log("slogcp:add client %d to fdset",s_cli_mgr.client_socket[i]);
 				FD_SET(s_cli_mgr.client_socket[i], read_set);
-				if(s_cli_mgr.client_socket > max){
+				if(s_cli_mgr.client_socket[i] > max){
 					max = s_cli_mgr.client_socket[i];
 				}
 			}
@@ -1250,6 +1274,8 @@ void *modem_log_handler(void *arg)
 		
 		if(n <= 0){
 			continue;
+		}else{
+			max = fd_set_new(fd_modem,fd_wcn,&readset_tmp);
 		}
 		
 		if(modem_assert_flag == 1) {

@@ -1,9 +1,15 @@
 LOCAL_PATH:= $(call my-dir)
 
+
 #slogmodem
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := modem.c \
 		modem_common.c
+
+ifeq ($(strip $(SPRD_EXTERNAL_WCN)),true)
+LOCAL_CFLAGS += -DEXTERNAL_WCN
+endif
+
 LOCAL_MODULE := slogmodem
 LOCAL_STATIC_LIBRARIES := libcutils libc
 LOCAL_MODULE_TAGS := optional
