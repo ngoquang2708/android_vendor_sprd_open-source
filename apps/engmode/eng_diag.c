@@ -426,14 +426,13 @@ char* eng_diag_at_channel()
     return at_sipc_devname[g_run_mode];
 }
 
-int eng_diag_parse(char *buf,int len)
+int eng_diag_parse(char *buf,int len,int *num)
 {
     int i;
     int ret = CMD_COMMON;
     MSG_HEAD_T *head_ptr=NULL;
-    eng_diag_decode7d7e((char *)(buf + 1), (len - 2));
+    *num=eng_diag_decode7d7e((char *)(buf + 1), (len - 2));         //remove the start 0x7e and the last 0x7e
     head_ptr =(MSG_HEAD_T *)(buf+1);
-
     ENG_LOG("%s: cmd=0x%x; subcmd=0x%x\n",__FUNCTION__, head_ptr->type, head_ptr->subtype);
     //ENG_LOG("%s: cmd is:%s \n", __FUNCTION__, (buf + DIAG_HEADER_LENGTH + 1));
 
@@ -2014,7 +2013,7 @@ int eng_atdiag_hdlr(unsigned char *buf,int len, char* rsp)
 int eng_diag(char *buf,int len)
 {
     int ret = 0;
-    int type;
+    int type,num;
     int retry_time = 0;
     int ret_val = 0;
     int fd = -1;
@@ -2023,12 +2022,12 @@ int eng_diag(char *buf,int len)
 
     memset(rsp, 0, sizeof(rsp));
 
-    type = eng_diag_parse(buf,len);
+    type = eng_diag_parse(buf,len,&num);
 
-    ENG_LOG("%s:write type=%d\n",__FUNCTION__, type);
+    ENG_LOG("%s:write type=%d,num=%d\n",__FUNCTION__, type,num);
 
     if (type != CMD_COMMON){
-        ret_val = eng_diag_user_handle(type, buf, len);
+        ret_val = eng_diag_user_handle(type, buf, len-num);
 	ENG_LOG("%s:ret_val=%d\n",__FUNCTION__,ret_val);
 
         if (ret_val) {
@@ -2216,7 +2215,7 @@ static void eng_diag_char2hex(unsigned char *hexdata, char *chardata)
 
 int eng_diag_decode7d7e(char *buf,int len)
 {
-    int i,j;
+    int i,j,m=0;
     char tmp;
     ENG_LOG("%s: len=%d",__FUNCTION__, len);
     for(i=0; i<len; i++) {
@@ -2227,6 +2226,7 @@ int eng_diag_decode7d7e(char *buf,int len)
             j = i+1;
             memcpy(&buf[j], &buf[j+1],len-j);
             len--;
+            m++;
             ENG_LOG("%s AFTER:",__FUNCTION__);
             /*
                for(j=0; j<len; j++) {
@@ -2234,8 +2234,8 @@ int eng_diag_decode7d7e(char *buf,int len)
                }*/
         }
     }
-
-    return 0;
+    ENG_LOG("%s: m=%d",__FUNCTION__, m);
+    return m;
 }
 
 int eng_diag_encode7d7e(char *buf, int len,int *extra_len)
