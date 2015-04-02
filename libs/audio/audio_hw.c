@@ -1212,7 +1212,8 @@ ret);
                 ALOGV("close FM so we set codec to mute by master_mute");
                codec_lowpower_open(adev,true);
             }
-
+            //reset fm volume
+            adev->fm_volume = -1;
         }
         }
 
@@ -1482,6 +1483,8 @@ static void do_select_devices(struct tiny_audio_device *adev)
                 ALOGV("close FM so we set codec to mute by master_mute");
                 codec_lowpower_open(adev,true);
             }
+            //reset fm volume
+            adev->fm_volume = -1;
             pthread_mutex_unlock(&adev->lock);
         }
         }
@@ -6013,6 +6016,7 @@ ret = dump_parse_xml();
     //init fm status
     adev->fm_open = false;
     adev->fm_record = false;
+    adev->fm_volume = -1;
 
     adev->input_source = 0;
     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
