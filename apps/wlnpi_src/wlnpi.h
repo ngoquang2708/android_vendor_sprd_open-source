@@ -20,14 +20,7 @@
 #include <endian.h>
 #include <linux/types.h>
 
-#define ETH_ALEN 					(6)
-#define IWNPI_SSID_LEN              (32)
-#define IWNPI_ASSOC_RESP_DATA_LEN   (280)
-
-
-#define WLNPI_CMD_CONN_STATUS       ("conn_status")
-#define WLNPI_CMD_MSC_INDEX         ("mcs")
-
+#define ETH_ALEN 6
 enum wlan_nl_commands
 {
 	WLAN_NL_CMD_UNSPEC,
@@ -85,10 +78,9 @@ enum WLNPI_CMD_LIST
     WLNPI_CMD_LNA_ON,
     WLNPI_CMD_LNA_OFF,
     WLNPI_CMD_GET_LNA_STATUS,
-    WLNPI_CMD_SET_WLAN_CAP,
-    WLNPI_CMD_GET_WLAN_CAP,
-    WLNPI_CMD_GET_CONN_AP_INFO,
-    WLNPI_CMD_MAX, // 43
+	WLNPI_CMD_SET_WLAN_CAP,
+	WLNPI_CMD_GET_WLAN_CAP,
+    WLNPI_CMD_MAX, // 42
 
 };
 
@@ -131,28 +123,6 @@ enum WLNPI_CMD_TYPE
 	HOST_TO_MARLIN_CMD = 1,
 	MARLIN_TO_HOST_REPLY  ,
 };
-
-typedef struct iwnpi_rate_table_t
-{
-	int	 phy_rate;
-	char *str_rate;
-}iwnpi_rate_table;
-
-typedef struct assoc_resp_t
-{
-    char connect_status;
-    char ssid[IWNPI_SSID_LEN+1];
-    char conn_mode;
-
-    int  rssi;
-    int  snr;
-    int  noise;
-
-    char channel;
-    char bssid[ETH_ALEN];
-
-    char assoc_resp_info[IWNPI_ASSOC_RESP_DATA_LEN];
-} assoc_resp;
 
 extern wlnpi_t g_wlnpi;
 extern struct wlnpi_cmd_t *match_cmd_table(char *name);
