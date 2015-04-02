@@ -69,8 +69,8 @@ int inuse;
 }buffers[MAX_NUM_FRAME_BUFFERS],buffers2[32];
 
 #define ENGTEST_PREVIEW_BUF_NUM 2
-#define ENGTEST_PREVIEW_WIDTH 640//800
-#define ENGTEST_PREVIEW_HEIGHT 480//608
+#define ENGTEST_PREVIEW_WIDTH 	640//800
+#define ENGTEST_PREVIEW_HEIGHT 	480//608
 #define ENGTEST_MAX_MISCHEAP_NUM 10
 
 #define USE_PHYSICAL_ADD 0
@@ -103,11 +103,10 @@ static int cb_buffer_size;
 static int cb_buffer_number;
 static int cb_buffer_index;
 
-
-const char *fcamera_para="auto-exposure=0;auto-exposure-supported=0;brightness-supported=true;brightness-values=0,1,2,3,4,5,6;cameraid=front_camera;cameraid-values=back_camera,front_camera;contrast-supported=true;contrast-values=0,1,2,3,4,5,6;effect-values=none,mono,negative,sepia,cold,antique;exposure-compensation-step=0;flash-mode-supported=false;focal-length=3.75;focus-distances=2.0,2.5,Infinity;focus-mode-values=infinity;hdr=0;hdr-supported=false;horizontal-view-angle=54;jpeg-thumbnail-height=240;jpeg-thumbnail-quality=80;jpeg-thumbnail-size-values=320x240,0x0;jpeg-thumbnail-width=320;max-brightness=6;max-contrast=6;max-exposure-compensation=0;max-num-detected-faces-hw=10;max-num-metering-areas=0;max-slow-motion=3;max-zoom=7;min-exposure-compensation=0;picture-format=jpeg;picture-format-values=jpeg;picture-size-values=640x480,320x240;preferred-preview-size-for-video=;preview-env=0;preview-format=yuv420sp;preview-format-values=yuv420sp,yuv420p;preview-fps-range-values=(1000,30000);preview-frame-rate=25;preview-frame-rate-values=5,10,12,15,20,25,30;preview-size=640x480;preview-size-values=720x480,640x480,352x288,320x240,176x144;saturation-supported=true;saturation-values=0,1,2,3,4,5,6;scene-mode=auto;scene-mode-values=auto,night;slow-motion=1;slow-motion-supported=false;slow-motion-values=1;smile-snap-mode=0;smooth-brightness-supported=false;smooth-contrast-supported=false;smooth-zoom-supported=false;vertical-view-angle=54;video-frame-format=yuv420sp;video-frame-format-values=yuv420sp,yuv420p;video-picture-size-values=1280x960,1280x960,1280x960;video-size=720x480;video-size-values=;whitebalance=auto;whitebalance-values=auto,incandescent,fluorescent,daylight,cloudy-daylight;zoom-ratios=100,120,140,170,200,230,260,300;zoom-supported=true;zsl=0;zsl-supported=true;preview-fps-range=1000,30000;recording-hint=false;zoom=0;picture-size=640x480;exposure-compensation=0;focus-mode=auto;effect=none;contrast=3;jpeg-quality=95;brightness=3;saturation=3;capture-mode=1;pref_camera_ai_detect_key=off";
-const char *bcamera_para="antibanding-supported=true;antibanding-values=50hz,60hz;auto-exposure-values=frame-average,center-weighted,spot-metering;brightness-supported=true;brightness-values=0,1,2,3,4,5,6;cameraid=back_camera;cameraid-values=back_camera,front_camera;contrast-supported=true;contrast-values=0,1,2,3,4,5,6;effect-values=none,mono,negative,sepia,cold,antique;exposure-compensation-step=1;flash-mode-supported=false;focal-length=3.75;focus-distances=2.0,2.5,Infinity;focus-mode-values=infinity;hdr=0;hdr-supported=true;horizontal-view-angle=48;iso-supported=true;iso-values=auto,100,200,400,800,1600;jpeg-thumbnail-height=240;jpeg-thumbnail-quality=80;jpeg-thumbnail-size-values=320x240,0x0;jpeg-thumbnail-width=320;max-brightness=6;max-contrast=6;max-exposure-compensation=3;max-iso=5;max-num-detected-faces-hw=10;max-num-focus-areas=0;max-num-metering-areas=0;max-slow-motion=3;max-zoom=7;min-exposure-compensation=-3;picture-format=jpeg;picture-format-values=jpeg;picture-size-values=1920x1088,1600x1200,1280x960,640x480;preferred-preview-size-for-video=;preview-env=0;preview-format=yuv420sp;preview-format-values=yuv420sp,yuv420p;preview-fps-range-values=(1000,30000);preview-frame-rate=30;preview-frame-rate-values=10,15,20,25,30,31;preview-size-values=1920x1088,1280x960,1280x720,960x540,720x540,720x480,640x480,352x288,320x240,176x144;saturation-supported=true;saturation-values=0,1,2,3,4,5,6;scene-mode=auto;scene-mode-values=auto,night,portrait,landscape,action,normal,hdr;slow-motion=1;slow-motion-supported=true;slow-motion-values=1,2,3;smile-snap-mode=0;smooth-brightness-supported=false;smooth-contrast-supported=false;smooth-zoom-supported=false;vertical-view-angle=48;video-frame-format=yuv420sp;video-frame-format-values=yuv420sp,yuv420p;video-picture-size-values=1280x960,1280x960,1280x960,1280x960,1280x960;video-size=1920x1088;video-size-values=;video-snapshot-supported=true;whitebalance=auto;whitebalance-values=auto,incandescent,fluorescent,daylight,cloudy-daylight;zoom-ratios=100,120,140,170,200,230,260,300;zoom-supported=true;zsl=0;zsl-supported=true;preview-size=640x480;preview-fps-range=1000,30000;recording-hint=false;zoom=0;picture-size=1600x1200;exposure-compensation=0;focus-mode=auto;antibanding=50hz;iso=auto;effect=none;contrast=3;jpeg-quality=95;auto-exposure=frame-average;brightness=3;saturation=3;capture-mode=1;pref_camera_ai_detect_key=off";
-
-
+static char *bcamera_para=(char *)malloc(sizeof(char)*4096);
+static char *fcamera_para="auto-exposure=0;auto-exposure-supported=0;brightness=3;brightness-supported=true;brightness-values=0,1,2,3,4,5,6;cameraid=front_camera;cameraid-values=back_camera,front_camera;capture-mode=1;contrast=3;contrast-supported=true;contrast-values=0,1,2,3,4,5,6;effect=none;effect-values=none,mono,negative,sepia,cold,antique;exposure-compensation=0;exposure-compensation-step=0;flash-mode=off;flash-mode-supported=false;flash-mode-values=off;focal-length=3.75;focus-distances=2.0,2.5,Infinity;focus-mode=infinity;focus-mode-values=infinity;hdr=0;hdr-supported=false;horizontal-view-angle=54;jpeg-quality=100;jpeg-thumbnail-height=240;jpeg-thumbnail-quality=80;jpeg-thumbnail-size-values=320x240,0x0;jpeg-thumbnail-width=320;max-brightness=6;max-contrast=6;max-exposure-compensation=0;max-num-detected-faces-hw=10;max-num-metering-areas=0;max-slow-motion=3;max-zoom=15;min-exposure-compensation=0;picture-format=jpeg;picture-format-values=jpeg;picture-size=640x480;picture-size-values=640x480,320x240;preferred-preview-size-for-video=;preview-env=0;preview-format=yuv420sp;preview-format-values=yuv420sp,yuv420p;preview-fps-range=1000,30000;preview-fps-range-values=(1000,30000);preview-frame-rate=25;preview-frame-rate-values=5,10,12,15,20,25,30;preview-size=640x480;preview-size-values=864x640,720x480,640x480,352x288,320x240,176x144;saturation=3;saturation-supported=true;saturation-values=0,1,2,3,4,5,6;scene-mode=auto;scene-mode-values=auto,night;slow-motion=1;slow-motion-supported=false;slow-motion-values=1;smile-snap-mode=0;smooth-brightness-supported=false;smooth-contrast-supported=false;smooth-zoom-supported=false;vertical-view-angle=54;video-frame-format=yuv420sp;video-frame-format-values=yuv420sp,yuv420p;video-picture-size-values=1280x960,1280x960,1280x960;video-size=720x480;video-size-values=;whitebalance=auto;whitebalance-values=auto,incandescent,fluorescent,daylight,cloudy-daylight;zoom=0;zoom-ratios=100,110,120,130,140,150,160,170,180,190,200,220,240,260,280,300;zoom-supported=true;zsl=0;zsl-supported=true";
+static char *bc_para=NULL;
+static char *fc_para=NULL;
 void RGBRotate90_anticlockwise(uint8_t *des,uint8_t *src,int width,int height, int bits)
 {
 	if ((!des)||(!src))
@@ -605,44 +604,32 @@ static int eng_test_fb_open(void)
 
 }
 
-
-extern unsigned char BT_STATE;
-//extern char *rfkill_state_path;
-
-
-
+static hw_module_t *fcfmodule;
+static camera_module_t *fcmModule;
+static camera_device_t *fcmDevice;
+static hw_module_t *fcmodule;
 
 
-
-int test_fcamera_start(void)
-
+int fcamera_start(void)
 {
    int i,rc;
    int ret=0;
-   static hw_module_t *fmodule;
-   static camera_module_t *mModule;
-   static camera_device_t *mDevice;
-   static hw_module_t *module;
-   time_t begin_time,over_time;
-   begin_time=time(NULL);
    mGrallocBufferIndex=0;
    front_back=0;
    ui_clear_rows(0,20);
    ui_set_color(CL_GREEN);//++++++++++
 
-   if(1)//BT_STATE==BT_STATE_OFF
-   {
+
    gr_flip();
-   usleep(100*1000);
-   if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
-	{
-		LOGD("mmitest could not load gralloc module \r\n");
-		return 0;
-    }
+   if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fcfmodule)<0)
+   {
+	LOGD("mmitest could not load gralloc module \r\n");
+	return 0;
+   }
 
 
    LOGD("mmitest open gralloc ok\r\n");
-   rc=fmodule->methods->open(fmodule, GRALLOC_HARDWARE_GPU0, (struct hw_device_t**)&gdevice);
+   rc=fcfmodule->methods->open(fcfmodule, GRALLOC_HARDWARE_GPU0, (struct hw_device_t**)&gdevice);
 
    if(rc!=0)
    {
@@ -653,217 +640,222 @@ int test_fcamera_start(void)
 
    eng_test_fb_open();
 
-   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,(const hw_module_t **)&mModule) < 0)
+   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,(const hw_module_t **)&fcmModule) < 0)
    {
         LOGD("mmitest Could not load camera HAL module\r\n");
         mNumberOfCameras = 0;
-		return 0;
+	return 0;
    }
 
-    LOGD("mmitestLoaded \"%s\" camera module\r\n", mModule->common.name);
-    mNumberOfCameras = mModule->get_number_of_cameras();
-	LOGD("mmitest have %d cameras\r\n", mNumberOfCameras);
+    LOGD("mmitestLoaded \"%s\" camera module\r\n", fcmModule->common.name);
+    mNumberOfCameras = fcmModule->get_number_of_cameras();
 
-	for(i=0;i<mNumberOfCameras;i++)
+    LOGD("mmitest have %d cameras\r\n", mNumberOfCameras);
+
+    for(i=0;i<mNumberOfCameras;i++)
 	{
         struct camera_info info;
-        mModule->get_camera_info(i, &info);
+        fcmModule->get_camera_info(i, &info);
         LOGD("mmitest camera %d face %d ori %d version %d \r\n",info.facing,info.orientation,info.device_version);
 	}
     LOGD(" mmitest open device 1 \r\n");
-	module=&mModule->common;
+    fcmodule=&fcmModule->common;
 
-	rc = module->methods->open(module,"1",(hw_device_t **)&mDevice);
-        if (rc != 0)
-		{
-            LOGD("mmitest Could not open camera 1: %d", rc);
-            return 0;
-        }
+    rc = fcmodule->methods->open(fcmodule,"1",(hw_device_t **)&fcmDevice);
+    if (rc != 0)
+    {
+	 LOGD("mmitest Could not open camera 1: %d", rc);
+	 return 0;
+    }
+    fcamera_para=fcmDevice->ops->get_parameters(fcmDevice);
 
-	LOGD(" mmitest start  set_parameters\r\n");
-		mDevice->ops->set_parameters(mDevice,fcamera_para);
-	LOGD(" mmitest start  stop_parameters\r\n");
+    LOGD("mmitest parameter0=%s\n",fcamera_para);
+    LOGD("mmitest parameter0=%s\n",fcamera_para+512);
+    LOGD("mmitest parameter0=%s\n",fcamera_para+1024);
 
-    mDevice->ops->set_callbacks(mDevice,
+    fc_para=strstr(fcamera_para,"preview-size=");
+    strncpy(fc_para,"preview-size=640x480",20);
+
+    LOGD("mmitest parameter1=%s\n",fcamera_para);
+    LOGD("mmitest parameter1=%s\n",fcamera_para+512);
+    LOGD("mmitest parameter1=%s\n",fcamera_para+1024);
+
+    LOGD(" mmitest start  set_parameters\r\n");
+    fcmDevice->ops->set_parameters(fcmDevice,fcamera_para);
+    LOGD(" mmitest start  stop_parameters\r\n");
+    usleep(500*1000);
+    fcmDevice->ops->set_callbacks(fcmDevice,
                                    __notify_cb,
                                    __data_cb,
                                    __data_cb_timestamp,
                                    __get_memory,
                                    NULL);
-	LOGD("mmitest open device 1 ok\r\n");
-
-	//
-	initHalPreviewWindow();
-	LOGD("mmitest after inithal\r\n");
-	mDevice->ops->preview_enabled(mDevice);
-	LOGD("mmitest after enable\r\n");
-    mDevice->ops->set_preview_window(mDevice,&mHalPreviewWindow);
-	LOGD("mmitest start preview\r\n");
-    mDevice->ops->enable_msg_type(mDevice, CAMERA_MSG_PREVIEW_FRAME);
-
-	mDevice->ops->start_preview(mDevice);
-	LOGD("mmitest start to key\r\n");
-
-	ret=ui_handle_button(NULL,NULL);
+    LOGD("mmitest open device 1 ok\r\n");
 
 
-	mDevice->ops->disable_msg_type(mDevice, CAMERA_MSG_PREVIEW_FRAME);
-	LOGD("mmitest after disable msg\r\n");
-	mDevice->ops->set_callbacks(mDevice, NULL,NULL,NULL,NULL,NULL);
-	LOGD("mmitest after reset callback\r\n");
-	mDevice->ops->stop_preview(mDevice);
-	LOGD("mmitest after stop preivew\r\n");
-	mDevice->ops->release(mDevice);
-	LOGD("mmitest after release\r\n");
+    initHalPreviewWindow();
+    LOGD("mmitest after inithal\r\n");
+    fcmDevice->ops->preview_enabled(fcmDevice);
+    LOGD("mmitest after enable\r\n");
+    fcmDevice->ops->set_preview_window(fcmDevice,&mHalPreviewWindow);
+    LOGD("mmitest start preview\r\n");
+    fcmDevice->ops->enable_msg_type(fcmDevice, CAMERA_MSG_PREVIEW_FRAME);
 
-    mDevice->common.close((hw_device_t*)mDevice);
-	for(mGrallocBufferIndex=0;mGrallocBufferIndex<buffer_count;mGrallocBufferIndex++)
-		{
-			gdevice->free(gdevice,buffers2[i].handle);
-			buffers2[i].inuse=0;
-		}
-	mGrallocBufferIndex=0;
-	gdevice->common.close(&gdevice->common);
-	LOGD("mmitest after close\r\n");
+    fcmDevice->ops->start_preview(fcmDevice);
+    LOGD("mmitest start to key\r\n");
 
-	if(fb_fd>0)
-		{
-			close(fb_fd);
-			fb_fd=-1;
-		}
-	if( NULL != fmodule ) {
-        dlclose(fmodule->dso);
-    }
-    fmodule = NULL;
-
-	if( NULL != module ) {
-        dlclose(module->dso);
-    }
-    module = NULL;
-
+    return ret;
 }
-/*else
+
+
+int flashlightSetValue(int value)
 {
-        ui_show_text(1, 0, BT_BACK_TEST);//++++++
-        ui_show_text(2, 0, INFECT_TIPS);//++++++
-        ui_show_text(3, 0, PLEASE_WAITE);//++++++
-        gr_flip();
-        ret=RL_NA;
-        sleep(1);
-}*/
-        over_time=time(NULL);
-	save_result(CASE_TEST_FCAMERA,ret);
-        LOGD("mmitest casetime fcamera is %d s\n",(over_time-begin_time));
-	return ret;
+    int ret = 0;
+    char cmd[200] = " ";
+
+    FUN_ENTER;
+    sprintf(cmd, "echo 0x%02x > /sys/class/flash_test/flash_test/flash_value", value);
+    ret = system(cmd) ? -1 : 0;
+    LOGD("cmd = %s,ret = %d\n", cmd,ret);
+    FUN_EXIT;
+
+    return ret;
 }
 
 
 
+static hw_module_t *bcfmodule;
+static camera_module_t *bcmModule;
+static camera_device_t *bcmDevice;
+static hw_module_t *bcmodule;
 
+extern int usbin_state;
 
-int test_bcamera_start(void)
-
+void * bcamera_start(void)
 {
    int i,rc;
    int ret=0;
-   int flash_ret=0;
-   time_t begin_time,over_time;
-   begin_time=time(NULL);
    front_back=1;
-   hw_module_t *fmodule;
-   camera_module_t *mModule;
-   camera_device_t *mDevice;
-   hw_module_t *module;
    mGrallocBufferIndex=0;
 
-    ui_clear_rows(0,20);
-	ui_set_color(CL_GREEN);//++++++++++
-	//ui_show_text(0, 0, CAMERA_START);//++++++
-	//ui_show_text(3, 0, CAMERA_LIGHT_ON);//++++++
-	gr_flip();
-	flash_ret=flash_start();
-    usleep(100*1000);
-   if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&fmodule)<0)
-	{
-		LOGD("mmitest could not load gralloc module \r\n");
-		return 1;
-    }
+   ui_clear_rows(0,20);
+   ui_set_color(CL_GREEN);//++++++
+   gr_flip();
+
+   if(hw_get_module(GRALLOC_HARDWARE_MODULE_ID,  (const hw_module_t **)&bcfmodule)<0)
+   {
+	LOGD("mmitest could not load gralloc module \r\n");
+//	return 1;
+   }
 
    LOGD("mmitest open gralloc ok\r\n");
-   rc=fmodule->methods->open(fmodule, GRALLOC_HARDWARE_GPU0, (struct hw_device_t**)&gdevice);
+   rc=bcfmodule->methods->open(bcfmodule, GRALLOC_HARDWARE_GPU0, (struct hw_device_t**)&gdevice);
 
    if(rc!=0)
    {
 	LOGD("mmitest open gpu failed \r\n");
-	return 1;
+//	return 1;
    }
 
    eng_test_fb_open();
 
 
-   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,(const hw_module_t **)&mModule) < 0)
+   if (hw_get_module(CAMERA_HARDWARE_MODULE_ID,(const hw_module_t **)&bcmModule) < 0)
    {
         LOGD("mmitest Could not load camera HAL module\r\n");
         mNumberOfCameras = 0;
-		return 1;
+	//	return 1;
    }
 
-    LOGD("mmitestLoaded \"%s\" camera module\r\n", mModule->common.name);
-    mNumberOfCameras = mModule->get_number_of_cameras();
-	LOGD("mmitest have %d cameras\r\n", mNumberOfCameras);
+   LOGD("mmitestLoaded \"%s\" camera module\r\n", bcmModule->common.name);
+   mNumberOfCameras = bcmModule->get_number_of_cameras();
+   LOGD("mmitest have %d cameras\r\n", mNumberOfCameras);
 
-	for(i=0;i<mNumberOfCameras;i++)
+   for(i=0;i<mNumberOfCameras;i++)
 	{
 		struct camera_info info;
-        mModule->get_camera_info(i, &info);
+        bcmModule->get_camera_info(i, &info);
         LOGD("mmitest camera %d face %d ori %d version %d \r\n",info.facing,info.orientation,info.device_version);
 	}
 
-	LOGD(" mmitest open device 0 \r\n");
-	module=&mModule->common;
-	rc = module->methods->open(module,"0",(hw_device_t **)&mDevice);
-        if (rc != 0)
-		{
-            LOGD("mmitest Could not open camera 0: %d", rc);
-            return 1;
-        }
-	LOGD("mmitest open device 0 ok\r\n");
+   LOGD(" mmitest open device 0 \r\n");
+   bcmodule=&bcmModule->common;
+   rc = bcmodule->methods->open(bcmodule,"0",(hw_device_t **)&bcmDevice);
+   if (rc != 0)
+   {
+	LOGD("mmitest Could not open camera 0: %d", rc);
+	// return 1;
+    }
+   LOGD("mmitest open device 0 ok\r\n");
+   bcamera_para=bcmDevice->ops->get_parameters(bcmDevice);
 
-	//LOGD("mmitest camera 0: %s",mDevice->ops->get_parameters(mDevice));
-	LOGD(" mmitest start  set_parameters\r\n");
-		mDevice->ops->set_parameters(mDevice,bcamera_para);
-	LOGD(" mmitest start  stop_parameters\r\n");
-    mDevice->ops->set_callbacks(mDevice,
+   LOGD("mmitest parameter0=%s\n",bcamera_para);
+   LOGD("mmitest parameter0=%s\n",bcamera_para+512);
+   LOGD("mmitest parameter0=%s\n",bcamera_para+1024);
+   LOGD("mmitest parameter0=%s\n",bcamera_para+1536);
+
+   bc_para=strstr(bcamera_para,"preview-size=");
+
+
+   LOGD("mmitest parameter bcamera_para=%p\n",bcamera_para);
+
+   LOGD("mmitest parameter bc_para=%p\n",bc_para);
+
+   LOGD("mmitest parameter bc_para=%s\n",bc_para);
+
+   strncpy(bc_para,"preview-size=640x480",20);
+
+   LOGD("mmitest parameter bc_para=%s\n",bc_para);
+
+   LOGD("mmitest parameter1=%s\n",bcamera_para);
+
+   LOGD("mmitest parameter1=%s\n",bcamera_para+512);
+
+   LOGD("mmitest parameter1=%s\n",bcamera_para+1024);
+
+   LOGD("mmitest parameter1=%s\n",bcamera_para+1536);
+
+
+   LOGD(" mmitest start  set_parameters\r\n");
+   bcmDevice->ops->set_parameters(bcmDevice,bcamera_para);
+   LOGD(" mmitest start  stop_parameters\r\n");
+   usleep(500*1000);
+   bcmDevice->ops->set_callbacks(bcmDevice,
                                    __notify_cb,
                                    __data_cb,
                                    __data_cb_timestamp,
                                    __get_memory,
                                    NULL);
+   initHalPreviewWindow();
+   LOGD("mmitest after inithal\r\n");
+   bcmDevice->ops->preview_enabled(bcmDevice);
+   LOGD("mmitest after enable\r\n");
+   bcmDevice->ops->set_preview_window(bcmDevice,&mHalPreviewWindow);
+   LOGD("mmitest start preview\r\n");
+   bcmDevice->ops->enable_msg_type(bcmDevice, CAMERA_MSG_PREVIEW_FRAME);
+   bcmDevice->ops->start_preview(bcmDevice);
+   LOGD("mmitest start to key\r\n");
 
-	//LOGD("mmitest parameter %s \r\n",mDevice->ops->get_parameters(mDevice));
-	initHalPreviewWindow();
-	LOGD("mmitest after inithal\r\n");
-	mDevice->ops->preview_enabled(mDevice);
-	LOGD("mmitest after enable\r\n");
-    mDevice->ops->set_preview_window(mDevice,&mHalPreviewWindow);
-	LOGD("mmitest start preview\r\n");
-    mDevice->ops->enable_msg_type(mDevice, CAMERA_MSG_PREVIEW_FRAME);
-	mDevice->ops->start_preview(mDevice);
-	LOGD("mmitest start to key\r\n");
+   flashlightSetValue(17);
+
+   return 0;
+}
 
 
-	ret=ui_handle_button(NULL,NULL);
+static int bcamera_close(void)
+{
+	int i;
+	flashlightSetValue(16);
 
-	mDevice->ops->disable_msg_type(mDevice, CAMERA_MSG_PREVIEW_FRAME);
+	bcmDevice->ops->disable_msg_type(bcmDevice, CAMERA_MSG_PREVIEW_FRAME);
 	LOGD("mmitest after disable msg\r\n");
-	mDevice->ops->set_callbacks(mDevice, NULL,NULL,NULL,NULL,NULL);
+	bcmDevice->ops->set_callbacks(bcmDevice, NULL,NULL,NULL,NULL,NULL);
 	LOGD("mmitest after reset callback\r\n");
-	mDevice->ops->stop_preview(mDevice);
+	bcmDevice->ops->stop_preview(bcmDevice);
 	LOGD("mmitest after stop preivew\r\n");
-	mDevice->ops->release(mDevice);
+	bcmDevice->ops->release(bcmDevice);
 	LOGD("mmitest after release\r\n");
-
-    mDevice->common.close((hw_device_t*)mDevice);
+	bcmDevice->common.close((hw_device_t*)bcmDevice);
 	for(mGrallocBufferIndex=0;mGrallocBufferIndex<buffer_count;mGrallocBufferIndex++)
 		{
 			gdevice->free(gdevice,buffers2[i].handle);
@@ -878,103 +870,76 @@ int test_bcamera_start(void)
 			close(fb_fd);
 			fb_fd=-1;
 		}
-	if( NULL != fmodule ) {
-        dlclose(fmodule->dso);
-    }
-    fmodule = NULL;
+	bcfmodule = NULL;
 
-	if( NULL != module ) {
-        dlclose(module->dso);
-    }
-    module = NULL;
+	bcmodule = NULL;
 	LOGD("mmitest after close\r\n");
+	return 0;
+}
+
+static int fcamera_close(void)
+{
+	int i;
+	fcmDevice->ops->disable_msg_type(fcmDevice, CAMERA_MSG_PREVIEW_FRAME);
+	LOGD("mmitest after disable msg\r\n");
+	fcmDevice->ops->set_callbacks(fcmDevice, NULL,NULL,NULL,NULL,NULL);
+	LOGD("mmitest after reset callback\r\n");
+	fcmDevice->ops->stop_preview(fcmDevice);
+	LOGD("mmitest after stop preivew\r\n");
+	fcmDevice->ops->release(fcmDevice);
+	LOGD("mmitest after release\r\n");
+
+	fcmDevice->common.close((hw_device_t*)fcmDevice);
+	for(mGrallocBufferIndex=0;mGrallocBufferIndex<buffer_count;mGrallocBufferIndex++)
+		{
+			gdevice->free(gdevice,buffers2[i].handle);
+			buffers2[i].inuse=0;
+		}
+	mGrallocBufferIndex=0;
+	gdevice->common.close(&gdevice->common);
+	LOGD("mmitest after close\r\n");
+	if(fb_fd>0)
+		{
+			close(fb_fd);
+			fb_fd=-1;
+		}
+	fcfmodule = NULL;
+	fcmodule = NULL;
+	return 0;
+}
+
+
+
+int test_bcamera_start(void)
+{
+	pthread_t t;
+	int ret = 0;
+	usbin_state=0;
+
+	pthread_create(&t, NULL, (void*(*)(void*))bcamera_start, NULL);
+	ret = ui_handle_button(NULL, NULL);// NULL,
+	pthread_join(t, NULL); /* wait "handle key" thread exit. */
+	bcamera_close();
 
 	save_result(CASE_TEST_BCAMERA,ret);
-	save_result(CASE_TEST_FLASH,flash_ret);
-        over_time=time(NULL);
-        LOGD("mmitest casetime bcamera is %d s\n",(over_time-begin_time));
-	return ret;
-}
-
-
-
-
-static void test_flash(void)
-{
-
-}
-
-
-int flash_start(void)
-{
-	int ret=0;
-	int fd;
-    char buf[32];
-	//int cur_row=2;
-	//ui_fill_locked();
-	//ui_show_title(MENU_TEST_FLASH);
-	//ui_set_color(CL_WHITE);
-	//gr_flip();
-
-	memset(buf, 0, sizeof(buf));
-	fd=open(FLASH_SUPPORT,O_RDWR);
-	read(fd, buf, sizeof(buf));
-	LOGD("mmitest the buff=%s",buf);
-	LOGD("mmitest the buff=%d",sizeof(FLASH_YES_NO));
-	if(strncmp(buf, FLASH_YES_NO,(sizeof(FLASH_YES_NO)-1)) == 0)
-		{
-			ret=RL_NS;
-			//ui_set_color(CL_BLUE);
-			//cur_row = ui_show_text(cur_row, 0, TEXT_NOT_SUPPORT_FLASH);
-		}
-	else
-		{
-			//ui_set_color(CL_GREEN);
-			//cur_row = ui_show_text(cur_row, 0, TEXT_START_FLASH);
-			//test_flash();
-			ret=RL_PASS;
-		}
-	//gr_flip();
-	//sleep(2);
-	close(fd);
+	save_result(CASE_TEST_FLASH,ret);
 
 	return ret;
 }
 
 
-
-int test_flash_start(void)
+int test_fcamera_start(void)
 {
-	int ret=0;
-	int fd;
-    char buf[32];
-	int cur_row=2;
-	ui_fill_locked();
-	ui_show_title(MENU_TEST_FLASH);
-	ui_set_color(CL_WHITE);
-	gr_flip();
+	pthread_t t;
+	int ret = 0;
+	usbin_state=0;
 
-	memset(buf, 0, sizeof(buf));
-	fd=open(FLASH_SUPPORT,O_RDWR);
-	read(fd, buf, sizeof(buf));
-	LOGD("mmitest the buff=%s",buf);
-	LOGD("mmitest the buff=%d",sizeof(FLASH_YES_NO));
-	if(strncmp(buf, FLASH_YES_NO,(sizeof(FLASH_YES_NO)-1)) == 0)
-		{
-			ret=RL_NS;
-			ui_set_color(CL_BLUE);
-			cur_row = ui_show_text(cur_row, 0, TEXT_NOT_SUPPORT_FLASH);
-		}
-	else
-		{
-			ui_set_color(CL_GREEN);
-			cur_row = ui_show_text(cur_row, 0, TEXT_START_FLASH);
-			test_flash();
-			ret=RL_PASS;
-		}
-	gr_flip();
-	sleep(2);
-	close(fd);
+	pthread_create(&t, NULL, (void*(*)(void*))fcamera_start, NULL);
+	ret = ui_handle_button(NULL, NULL);// NULL,
+	pthread_join(t, NULL); /* wait "handle key" thread exit. */
+	fcamera_close();
+
+	save_result(CASE_TEST_FCAMERA,ret);
 
 	return ret;
 }

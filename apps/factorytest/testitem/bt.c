@@ -519,16 +519,10 @@ void eng_bt_scan_start(void)
 
     SPRD_DBG("v17 zzl  Bluedroid test app starting");
     system("rm -f /data/misc/bluedroid/bt_config.xml");
-	system("rm -f /data/misc/bluedroid/bt_config.new");
-	system("rm -f /data/misc/bluedroid/bt_config.old");
+    system("rm -f /data/misc/bluedroid/bt_config.new");
+    system("rm -f /data/misc/bluedroid/bt_config.old");
 
-	//system("mkdir /etc/bluetooth");
-	//system("chmod 0777 /etc/bluetooth");
-	//system("cp /system/etc/bluetooth/auto_pair_devlist.conf /etc/bluetooth/");
-    //system("cp /system/etc/bluetooth/bt_did.conf /etc/bluetooth/");
-	//system("cp /system/etc/bluetooth/bt_stack.conf /etc/bluetooth/");
-	//system("cp /system/etc/bluetooth/bt_vendor.conf /etc/bluetooth/");
-    //config_permissions();
+
 
     //Semaphore initialization
     sem_init(&eng_bt_sem, 0, 0);
@@ -539,7 +533,7 @@ void eng_bt_scan_start(void)
         return ;
     }
 
-	SPRD_DBG("mmtest:waiting open \n");
+    SPRD_DBG("mmtest:waiting open \n");
     sem_wait(&eng_bt_sem);
 
     SPRD_DBG(":::::::::: BT_STATE_ON  && start: eng_bt_start_discovery();:::::::::::::::::::::::::::::::::::::::::::::");
@@ -553,9 +547,10 @@ void eng_bt_scan_start(void)
 
 
     sem_wait(&eng_bt_sem);
+
     SPRD_DBG("::::::::::BT_DISCOVERY_STOPPED && start : eng_bt_disable ;::::::::::::::::::::::::::::::::::::");
 
-	eng_bt_disable();
+    eng_bt_disable();
 
 
     sem_wait(&eng_bt_sem);

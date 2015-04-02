@@ -1077,8 +1077,10 @@ int main(int argc, char **argv)
 	//while(1)  {sleep(5);LOGD("sleep Zzz\n");}
 	LOGD("==== factory test start ====\n");//}
 	char *pp;
-
+	#ifndef MSG
 	system(SPRD_TS_MODULE);
+	#endif
+
 	test_result_mkdir();//+++++++++++++++
 	test_init();
 	test_item_init();

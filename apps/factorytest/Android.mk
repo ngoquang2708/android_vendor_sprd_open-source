@@ -8,11 +8,29 @@ ifeq ($(strip $(BOARD_USE_EMMC)),true)
 LOCAL_CFLAGS += -DCONFIG_EMMC
 endif
 ifeq ($(strip $(TARGET_USERIMAGES_USE_UBIFS)),true)
-LOCAL_CFLAGS := -DCONFIG_NAND
+LOCAL_CFLAGS += -DCONFIG_NAND
 endif
 ifeq ($(PRODUCT_WIFI_DEVICE),bcm)
-LOCAL_CFLAGS := -DBCM
+LOCAL_CFLAGS += -DBCM
 endif
+
+#add for support 9830 4mod in diffrent modem 
+ifeq ($(PRODUCT_MODEM_COUNT),lf)
+LOCAL_CFLAGS += -DLF
+endif
+
+#add for support 9830 4mod in diffrent lsensor 
+$(warning $(PRODUCT_LSENSOR_2182))
+ifeq ($(PRODUCT_LSENSOR_2182),epl)
+LOCAL_CFLAGS += -DEPL
+$(warning "****************************")
+endif
+
+#add for support 9830 4mod in diffrent Tp
+ifeq ($(PRODUCT_TP_MSG2138),msg)
+LOCAL_CFLAGS += -DMSG
+endif
+
 
 LOCAL_C_INCLUDES    +=  $(LOCAL_PATH) \
 			$(LOCAL_PATH)/minui \

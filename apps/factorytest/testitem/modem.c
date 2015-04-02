@@ -165,10 +165,6 @@ modem_send_at(int fd, char* cmd, char* buf, int buf_len, int wait)
 	if(fd < 0 && modem_fd[0] > 0) {
 		fd = modem_fd[0];
 	}
-
-	//if(fd > 0 && (fd=open(TEL_DEVICE_PATH, O_RDWR)) > 0) {
-	//	LOGD("mmitest stty_w0 is work");
-	//}
 	if(NULL == cmd) {
 		LOGD("[%s], error param\n", __FUNCTION__);
 		return -1;
