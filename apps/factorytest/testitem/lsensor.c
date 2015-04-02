@@ -74,8 +74,9 @@ static void *lsensor_thread(void *param)
         struct input_event ev;
 	struct timeval timeout;
 	int ret;
+	int count=0;
         begin_time=time(NULL);
-
+	LOGD("mmitest lsensor=%s\n",SPRD_PLS_INPUT_DEV);
 	fd = find_input_dev(O_RDONLY, SPRD_PLS_INPUT_DEV);
 	if(fd < 0) {
 		ui_set_color(CL_RED);
@@ -105,10 +106,12 @@ static void *lsensor_thread(void *param)
 							lsensor_show();
 							break;
 						case ABS_MISC:
-							light_value = ev.value;
 							LOGD("L:%d\n", ev.value);
-							if(light_value >= SPRD_PLS_LIGHT_THRESHOLD)
+							if(light_value!=ev.value)
+								count++;
+							if(count>=2)
 								light_pass = 1;
+							light_value = ev.value;
 							lsensor_show();
 							break;
 					}

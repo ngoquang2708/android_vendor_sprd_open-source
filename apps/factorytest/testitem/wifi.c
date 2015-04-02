@@ -197,10 +197,12 @@ int eng_wpa_scan()
 			return -1;
 		}
 	err=system("insmod /system/lib/modules/bcmdhd.ko");
+	LOGD("mmitest bcmdhd");
 	#else
 	//Attention: sleep here to ensure the download process has complete the preparation for WiFi driver.
 	sleep(2);
 	err=system("insmod /system/lib/modules/sprdwl.ko");
+	LOGD("mmitest sprdwl");
 	#endif
 	if(err<0)
 		{

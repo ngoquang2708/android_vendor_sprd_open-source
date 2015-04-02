@@ -166,9 +166,16 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 
 
 /**************Lsensor**********/
+
+#ifndef EPL
 #define SPRD_PLS_CTL				"/dev/ltr_558als"
 #define SPRD_PLS_LIGHT_THRESHOLD	30
 #define SPRD_PLS_INPUT_DEV			"alps_pxy"
+#else
+#define SPRD_PLS_CTL				"/dev/epl2182_pls"
+#define SPRD_PLS_LIGHT_THRESHOLD	1
+#define SPRD_PLS_INPUT_DEV			"proximity"
+#endif
 
 #define LTR_IOCTL_MAGIC         0x1C
 #define LTR_IOCTL_GET_PFLAG	    _IOR(LTR_IOCTL_MAGIC, 1, int)
@@ -180,11 +187,11 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 
 
 /************modem*************/
-#if 0
-#define PROP_MODEM_W_COUNT  "ro.modem.t.count"
+#ifdef LF
+#define PROP_MODEM_W_COUNT  "ro.modem.lf.count"
 static char* modem_port[] = {
-	"/dev/stty_td1",
-	"/dev/stty_td4"
+	"/dev/stty_lte1",
+	"/dev/stty_lte4"
 };
 #else
 #define PROP_MODEM_W_COUNT  "ro.modem.tl.count"
@@ -192,8 +199,8 @@ static char* modem_port[] = {
 	"/dev/stty_lte1",
 	"/dev/stty_lte4"
 };
-
 #endif
+
 #define MAX_MODEM_COUNT 	2
 
 #define SCREEN_TEXT_LEN		40
@@ -227,9 +234,12 @@ static char* modem_port[] = {
 
 
 /*************touch pannel***************/
+#ifndef MSG 
 #define SPRD_TS_INPUT_DEV			"focaltech_ts"
-
 #define SPRD_TS_MODULE              "insmod /system/lib/modules/focaltech_ts.ko"
+#else
+#define SPRD_TS_INPUT_DEV			"msg2138_ts"
+#endif
 
 #define ABS_MT_POSITION_X			0x35	/* Center X ellipse position */
 #define ABS_MT_POSITION_Y			0x36	/* Center Y ellipse position */
@@ -287,7 +297,7 @@ static char* modem_port[] = {
 
 
 /**************telephnoy*********/
-#define TEL_DEVICE_PATH "/dev/stty_lte31"
+#define TEL_DEVICE_PATH "/dev/stty_lte1"
 /**************end tel**********/
 
 
