@@ -836,7 +836,7 @@ void * bcamera_start(void)
    bcmDevice->ops->start_preview(bcmDevice);
    LOGD("mmitest start to key\r\n");
 
-   flashlightSetValue(17);
+   flashlightSetValue(2);
 
    return 0;
 }
@@ -845,7 +845,7 @@ void * bcamera_start(void)
 static int bcamera_close(void)
 {
 	int i;
-	flashlightSetValue(16);
+	flashlightSetValue(0);
 
 	bcmDevice->ops->disable_msg_type(bcmDevice, CAMERA_MSG_PREVIEW_FRAME);
 	LOGD("mmitest after disable msg\r\n");
