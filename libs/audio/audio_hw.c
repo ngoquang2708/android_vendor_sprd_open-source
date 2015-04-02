@@ -3928,6 +3928,17 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             }
 
             ALOGE("adev_set_parameters fm volume,fm_open: %d, fm_volume: %d",adev->fm_open,val);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&adev->device_lock);
+            if (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
+                gain |=fm_speaker_volume_tbl[val];
+                gain |=fm_speaker_volume_tbl[val]<<16;
+            } else {
+                gain |=fm_headset_volume_tbl[val];
+                gain |=fm_headset_volume_tbl[val]<<16;
+            }
+            SetAudio_gain_fmradio(adev,gain);
+            usleep(10000);
             if((adev->fm_open)){
                 if(val !=0){
                     if (adev->private_ctl.fm_da0_mux)
@@ -3941,16 +3952,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                         mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 0);
                 }
             }
-            pthread_mutex_unlock(&adev->lock);
-            pthread_mutex_unlock(&adev->device_lock);
-            if (adev->out_devices & AUDIO_DEVICE_OUT_SPEAKER) {
-                gain |=fm_speaker_volume_tbl[val];
-                gain |=fm_speaker_volume_tbl[val]<<16;
-            } else {
-                gain |=fm_headset_volume_tbl[val];
-                gain |=fm_headset_volume_tbl[val]<<16;
-            }
-            SetAudio_gain_fmradio(adev,gain);
         }
         ALOGE("adev_set_parameters fm volume :%d fm_volume_tbl[val] %x",val, gain);
     }
