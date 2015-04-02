@@ -26,7 +26,6 @@
 
 int slog_enable = SLOG_ENABLE;
 int cplog_enable = SLOG_ENABLE;
-int screenshot_enable = 1;
 int slog_start_step = 0;
 int slog_reload_flag = 0;
 int slog_init_complete = 0;
@@ -964,8 +963,11 @@ void *handle_request(void *arg)
 	case CTRL_CMD_TYPE_SCREEN:
 		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
 			break;
-		if(cmd.content[0])
-			ret = screen_shot(cmd.content);
+		if(cmd.content[0]){
+			sprintf(filename, "screencap -p %s.png", cmd.content);
+			system(filename);
+			ret = 0;
+		}
 		else {
 			sprintf(filename, "%s/%s/misc", current_log_path, top_logdir);
 			ret = mkdir(filename, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -975,10 +977,11 @@ void *handle_request(void *arg)
 			}
 			t = time(NULL);
 			localtime_r(&t, &tm);
-			sprintf(filename, "%s/%s/misc/screenshot_%02d-%02d-%02d.jpg",
+			sprintf(filename, "screencap -p %s/%s/misc/screencap_%02d-%02d-%02d.png",
 					current_log_path, top_logdir,
 					tm.tm_hour, tm.tm_min, tm.tm_sec);
-			ret = screen_shot(filename);
+			system(filename);
+			ret = 0;
 		}
 		break;
 	default:
