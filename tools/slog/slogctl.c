@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <syslog.h>
+//#include <syslog.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -22,6 +22,7 @@
 #include <cutils/properties.h>
 #include "slog.h"
 
+char external_stor[MAX_NAME_LEN];
 
 int send_socket(int sockfd, void* buffer, int size)
 {
@@ -174,6 +175,66 @@ void usage(const char *name)
                "\tquery              print the current slog configuration.\n");
 	return;
 }
+
+static char* init_external_stor()
+{
+	char *p;
+	int type;
+	char value[PROPERTY_VALUE_MAX];
+
+	p = getenv("SECOND_STORAGE_TYPE");
+	if(p){
+		type = atoi(p);
+		p = NULL;
+		if(type == 0 || type == 1){
+			p = getenv("EXTERNAL_STORAGE");
+		} else if(type == 2) {
+			p = getenv("SECONDARY_STORAGE");
+		}
+
+		if(p){
+			sprintf(external_stor, "%s/slog", p);
+			err_log("the external storage 1: %s", external_stor);
+			return external_stor;
+		} else {
+			err_log("SECOND_STORAGE_TYPE is %d, but can't find the external storage environment", type);
+			exit(0);
+		}
+
+	}
+
+	property_get("persist.storage.type", value, "3");
+	type = atoi(value);
+	if( type == 0 || type == 1 || type == 2) {
+		p = NULL;
+		if(type == 0 || type == 1){
+			p = getenv("EXTERNAL_STORAGE");
+		} else if(type == 2) {
+			p = getenv("SECONDARY_STORAGE");
+		}
+
+		if(p){
+			sprintf(external_stor, "%s/slog", p);
+			err_log("the external storage 2: %s", external_stor);
+			return external_stor;
+		} else {
+			err_log("SECOND_STORAGE_TYPE is %d, but can't find the external storage environment", type);
+			exit(0);
+		}
+	}
+
+	p = getenv("SECONDARY_STORAGE");
+	if(p == NULL)
+		p = getenv("EXTERNAL_STORAGE");
+	if(p == NULL){
+		err_log("Can't find the external storage environment");
+		exit(0);
+	}
+	sprintf(external_stor, "%s/slog", p);
+	err_log("the external storage 3: %s", external_stor);
+	return external_stor;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -382,8 +443,10 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	ret = connect(sockfd, (struct sockaddr*)&address, sizeof(address));
-        if (ret < 0) {
-		perror("connect failed");
+	if (ret < 0) {
+		perror("connect failed,use another way");
+		printf("internal storage,%s,\n", INTERNAL_LOG_PATH);
+		printf("external storage,%s,\n", init_external_stor());
 		return -1;
 	}
 	ret = send_socket(sockfd, (void *)&cmd, sizeof(cmd));
