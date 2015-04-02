@@ -150,18 +150,6 @@ static int capture_all_for_notify(char *dest_file)
 	sprintf(src_file, "logcat -v threadtime -d -f %s", dest_file);
 	system(src_file);
 
-	/* kernel log*/
-	fp = fopen(dest_file, "a+");
-	if(fp == NULL) {
-		err_log("open file %s failed!", dest_file);
-		return 0;
-	}
-
-	fprintf(fp, "\n============ Kernel log  ==============\n");
-	fclose(fp);
-	sprintf(src_file, "dmesg >> %s", dest_file);
-	system(src_file);
-
         return 0;
 }
 
