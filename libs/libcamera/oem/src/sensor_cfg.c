@@ -80,6 +80,8 @@ extern SENSOR_INFO_T g_GC0310_MIPI_yuv_info;
 extern SENSOR_INFO_T g_sr030pc50_yuv_info;
 extern SENSOR_INFO_T g_at_ov2680_mipi_raw_info;
 extern SENSOR_INFO_T g_at_GC0310_MIPI_yuv_info;
+extern SENSOR_INFO_T g_at_ov5670_mipi_raw_info;
+
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -161,6 +163,7 @@ const SENSOR_INFO_T* at_main_sensor_infor_tab[]=
 	&g_at_ov2680_mipi_raw_info,
 	&g_autotest_ov8825_mipi_raw_info,
 	&g_autotest_ov5640_mipi_yuv_info,
+	&g_at_ov5670_mipi_raw_info,
 #endif
 #ifdef CONFIG_BACK_CAMERA_CCIR
 	&g_at_ov5640_ccir_yuv_info,
