@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <dirent.h>
@@ -18,14 +20,85 @@
 #include "private/android_filesystem_config.h"
 
 #include "slog_modem.h"
-
-
-extern char top_log_dir[MAX_NAME_LEN];
-extern char current_log_dir[MAX_NAME_LEN];
+#include "modem_cmn.h"
+#include "modem_cmn_imp.h"
+#include "cp_config.h"
 
 int internal_log_size = 5 * 1024;
 
+static struct RenameEntry* create_ren_entry(void)
+{
+	struct RenameEntry* e = (struct RenameEntry*)malloc(sizeof *e);
+	if (e) {
+		e->num = 0;
+		e->num_len = 0;
+		e->name[0] = '\0';
+		e->new_name[0] = '\0';
+		e->prev = e->next = 0;
+	}
 
+	return e;
+}
+
+static void init_ren_list(struct RenameList* plist)
+{
+	plist->head = 0;
+	plist->tail = 0;
+}
+
+static void free_ren_list(struct RenameList* plist)
+{
+	struct RenameEntry* e = plist->head;
+
+	while (e) {
+		struct RenameEntry* pnext = e->next;
+		free(e);
+		e = pnext;
+	}
+
+	plist->head = 0;
+	plist->tail = 0;
+}
+
+/*
+ *  insert_ren_entry - insert the RenameEntry in the decending order.
+ */
+static void insert_ren_entry(struct RenameList* plist,
+			     struct RenameEntry* e)
+{
+	struct RenameEntry* p = plist->head;
+
+	if (!p) {  // Empty list
+		e->next = 0;
+		e->prev = 0;
+		plist->head = e;
+		plist->tail = e;
+		return;
+	}
+
+	while (p) {
+		if (e->num > p->num) {
+			break;
+		}
+		p = p->next;
+	}
+
+	if (p) {
+		e->next = p;
+		e->prev = p->prev;
+		if (p->prev) {
+			p->prev->next = e;
+		} else {  // Insert before the head
+			plist->head = e;
+		}
+		p->prev = e;
+	} else {  // Add to tail
+		plist->tail->next = e;
+		e->prev = plist->tail;
+		e->next = 0;
+		plist->tail = e;
+	}
+}
 
 int send_socket(int sockfd, void* buffer, int size)
 {
@@ -40,7 +113,6 @@ int send_socket(int sockfd, void* buffer, int size)
                 }
         }
         return result;
-
 }
 
 int recv_socket(int sockfd, void* buffer, int size)
@@ -185,17 +257,24 @@ void write_modem_version(struct slog_info *info)
 	}
 	fwrite(modem_property, strlen(modem_property), 1, fp);
 	fclose(fp);
-
 }
 
-void gen_logpath(char *filename, struct slog_info *info)
+static int get_log_path(char* log_path, size_t len,
+			const struct slog_info* info)
+{
+	return snprintf(log_path, len, "%s/%s/%s",
+			top_log_dir, current_log_dir, info->log_path);
+}
+
+void gen_logpath(char* log_path, const struct slog_info* info)
 {
 	int ret;
 
-	sprintf(filename, "%s/%s/%s", top_log_dir, current_log_dir, info->log_path);
-	ret = mkdir(filename, S_IRWXU | S_IRWXG | S_IRWXO);
-	if (-1 == ret && (errno != EEXIST)){
-                err_log("mkdir %s failed.", filename);
+	sprintf(log_path, "%s/%s/%s",
+		top_log_dir, current_log_dir, info->log_path);
+	ret = mkdir(log_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (-1 == ret && EEXIST != errno){
+                err_log("mkdir %s failed.", log_path);
                 exit(0);
 	}
 }
@@ -336,23 +415,24 @@ retry:
  * open output file
  *
  */
-FILE *gen_outfd(struct slog_info *info)
+FILE* gen_outfd(struct slog_info* info)
 {
 	int cur;
-	FILE *fp;
-	char *buffer;
+	FILE* fp;
+	char* buffer;
 
 	buffer = info->path_name;
 	gen_logfile(buffer, info);
 	write_modem_version(info);
 	write_modem_timestamp(info, buffer);
 	fp = fopen(buffer, "a+b");
-	if(fp == NULL){
-		err_log("Unable to open file %s.",buffer);
+	if (!fp) {
+		err_log("Unable to open file %s.", buffer);
 		return NULL;
 	}
-	if(info->setvbuf == NULL)
-		info->setvbuf = malloc(SETV_BUFFER_SIZE);
+	if(!info->setvbuf) {
+		info->setvbuf = (char*)malloc(SETV_BUFFER_SIZE);
+	}
 
 	setvbuf(fp, info->setvbuf, _IOFBF, SETV_BUFFER_SIZE);
 	info->outbytecount = ftell(fp);
@@ -361,71 +441,332 @@ FILE *gen_outfd(struct slog_info *info)
 }
 
 /*
- * The file name to upgrade
+ *  parse_file_name - parse log file name.
+ *  @path_name: full path name of the log file.
+ *  @fname: base name of the log file
+ *  @cp_name: CP name pointer
+ *  @nlen: CP name length in byte
+ *  @num: pointer to the integer to hold the file number in the name
+ *  @suf_off: pointer to the integer to hold the suffix offset
+ *
+ *  Return Value:
+ *      Return -1 if the file is not a log file, otherwise return 0.
  */
-void file_name_rotate(struct slog_info *info, int num, char *buffer)
+static int parse_file_name(const char* path_name,
+			   const char* fname,
+			   const char* cp_name,
+			   size_t nlen,
+			   unsigned* num, size_t* suf_off)
 {
-	int i, err;
-	DIR *p_dir;
-	struct dirent *p_dirent;
-	char filename[MAX_NAME_LEN], buf[MAX_NAME_LEN];
+	const char* p = fname;
 
-	for (i = num; i >= 0 ; i--) {
-		char *file0, *file1;
-
-		if(( p_dir = opendir(buffer)) == NULL) {
-			err_log("can not open %s.", buffer);
-			return;
+	while (*p) {
+		if ('-' == *p) {
+			break;
 		}
-		sprintf(filename, "%d-%s", i, info->log_basename);
-		while((p_dirent = readdir(p_dir))) {
-			if( !strncmp(p_dirent->d_name, filename, strlen(filename)) ) {
-				err = asprintf(&file1, "%s/%s/%s/%s", top_log_dir, current_log_dir, info->log_path, p_dirent->d_name);
-				if(err == -1){
-					err_log("asprintf return err!");
-					exit(0);
-				}
-				if (i + 1 > num) {
-					remove(file1);
-					free(file1);
-				} else {
-					sprintf(filename, "%s", p_dirent->d_name);
-					err = asprintf(&file0, "%s/%s/%s/%d%s",
-						top_log_dir, current_log_dir, info->log_path, i + 1, filename + 1 + i/10);
-					if(err == -1) {
-						err_log("asprintf return err!");
-						exit(0);
-					}
-					err = rename (file1, file0);
-					if (err < 0 && errno != ENOENT) {
-						perror("while rotating log files");
-					}
-					free(file1);
-					free(file0);
-				}
-			}
-		}
-
-		closedir(p_dir);
+		++p;
 	}
+	if ('-' != *p) {
+		return -1;
+	}
+	// Get the file number.
+	unsigned fnum;
+	size_t num_len = p - fname;
+
+	if (str2unsigned(fname, num_len, &fnum)) {
+		return -1;
+	}
+
+	// Check the CP name
+	++p;
+	for (unsigned i = 0; i < nlen; ++i) {
+		if (p[i] != cp_name[i]) {
+			return -1;
+		}
+	}
+
+	p += nlen;
+	for (int i = 0; i < 3; ++i, p += 3) {
+		if ('-' != *p || !isdigit(p[1]) || !isdigit(p[2])) {
+			return -1;
+		}
+	}
+	if (strcmp(".log", p)) {
+		return -1;
+	}
+
+	// The base name is like a log, check whether it's a file.
+	struct stat log_stat;
+
+	if (stat(path_name, &log_stat) || !S_ISREG(log_stat.st_mode)) {
+		return -1;
+	}
+
+	*num = fnum;
+	*suf_off = num_len;
+	return 0;
+}
+
+static void get_new_log_name(char* new_name, size_t len,
+		 	     const char* dir_name,
+			     unsigned num,
+			     const char* suffix)
+{
+	snprintf(new_name, len, "%s/%u%s", dir_name, num, suffix);
+}
+
+static void ren_logs_and_free(struct RenameList* plist)
+{
+	struct RenameEntry* pe = plist->head;
+
+	while (pe) {
+		struct RenameEntry* next = pe->next;
+
+		if (rename(pe->name, pe->new_name)) {
+			err_log("slogcp: rename %s -> %s failed %d",
+				pe->name, pe->new_name, errno);
+		}
+
+		free(pe);
+		pe = next;
+	}
+
+	plist->head = plist->tail = 0;
 }
 
 /*
- *  File volume
+ *  file_name_rotate - rotate the log file name.
+ *  @dir_name: the directory name
+ *
+ *  When the file is written full, rename file to file.1
+ *  and rename file.1 to file.2, and so on.
+ *
+ *  Return Value:
+ *      Return 0 on success, -1 otherwise.
+ */
+static int file_name_rotate(const struct slog_info* info, char* dir_name)
+{
+	DIR* p_dir;
+	struct dirent* p_dirent;
+
+	p_dir = opendir(dir_name);
+	if(!p_dir) {
+		err_log("slogcp: rotate can not open dir %s.",
+			dir_name);
+		return -1;
+	}
+
+	struct RenameList ren_list;
+	size_t nlen = strlen(info->name);
+
+	init_ren_list(&ren_list);
+	while (p_dirent = readdir(p_dir)) {
+		char path_name[MAX_NAME_LEN];
+		unsigned num;
+		size_t num_len;
+
+		snprintf(path_name, MAX_NAME_LEN, "%s/%s",
+			 dir_name, p_dirent->d_name);
+		if (parse_file_name(path_name, p_dirent->d_name,
+				    info->name, nlen,
+				    &num, &num_len)) {
+			continue;
+		}
+
+		struct RenameEntry* pe = create_ren_entry();
+		if (!pe) {
+			free_ren_list(&ren_list);
+			break;
+		}
+		pe->num = num;
+		pe->num_len = num_len;
+		strcpy(pe->name, path_name);
+		get_new_log_name(pe->new_name, MAX_NAME_LEN,
+				 dir_name,
+				 num + 1,
+				 p_dirent->d_name + num_len);
+		insert_ren_entry(&ren_list, pe);
+	}
+
+	ren_logs_and_free(&ren_list);
+
+	return 0;
+}
+
+/*
+ *  rotatelogs - rotate log file names.
+ *  @num: the maximum number of log files under the log directory.
+ *  @info: the pointer to the CP entity whose log is to be rotated.
  *
  *  When the file is written full, rename file to file.1
  *  and rename file.1 to file.2, and so on.
  */
-void rotatelogs(int num, struct slog_info *info)
+void rotatelogs(int num, struct slog_info* info)
 {
-	char buffer[MAX_NAME_LEN];
+	char log_path[MAX_NAME_LEN];
 
-	err_log("slog rotatelogs");
+	err_log("log rotation starts");
 	fclose(info->fp_out);
-	gen_logpath(buffer, info);
-	file_name_rotate(info, num, buffer);
+	gen_logpath(log_path, info);
+	file_name_rotate(info, log_path);
 	info->fp_out = gen_outfd(info);
 	info->outbytecount = 0;
+}
+
+/*
+ *  del_oldest_log_file - delete the oldest log file in the current log
+ *                        directory.
+ *  @cp: the pointer to the related CP entity.
+ *
+ *  Return Value:
+ *      1: oldest file deleted.
+ *      0: no file can be deleted.
+ *      -1: error occurs.
+ */
+static int del_oldest_log_file(const struct slog_info* cp)
+{
+	char log_path[MAX_NAME_LEN];
+	char oldest[MAX_NAME_LEN];
+	DIR* pd;
+	struct dirent* pent;
+	int len;
+
+	len = get_log_path(log_path, MAX_NAME_LEN, cp);
+	pd = opendir(log_path);
+	if (!pd) {
+		return -1;
+	}
+
+	unsigned max_num = 0;
+	size_t nlen = strlen(cp->name);
+
+	oldest[0] = '\0';
+	while (pent = readdir(pd)) {
+		char path_name[MAX_NAME_LEN];
+		unsigned num;
+		size_t num_len;
+
+		snprintf(path_name, MAX_NAME_LEN, "%s/%s",
+			 log_path, pent->d_name);
+		if (!parse_file_name(path_name, pent->d_name,
+				     cp->name, nlen,
+				     &num, &num_len)) {
+			err_log("file number %u", num);
+			if (num > max_num) {
+				max_num = num;
+				strcpy(oldest, path_name);
+			}
+		}
+	}
+
+	int ret = 0;
+
+	if (oldest[0]) {
+		err_log("deleting %s", oldest);
+		ret = unlink(oldest);
+		if (!ret) {  // Log file deleted.
+			ret = 1;
+		}
+	}
+
+	return ret;
+}
+
+static int parse_dir_name(const char* name)
+{
+	int i;
+
+	for (i = 0; i < 4; ++i) {
+		if (!isdigit(name[i])) {
+			return -1;
+		}
+	}
+
+	for (int j = 0; j < 5; ++j, i += 3) {
+		if ('-' != name[i] || !isdigit(name[i + 1]) ||
+		    !isdigit(name[i + 2])) {
+			return -1;
+		}
+	}
+
+	return !name[i] ? 0 : -1;
+}
+
+static int is_dir(const char* path)
+{
+	struct stat pstat;
+	int n = 0;
+
+	if (!stat(path, &pstat) && S_ISDIR(pstat.st_mode)) {
+		n = 1;
+	}
+
+	return n;
+}
+
+static int del_oldest_log_dir(const char* par_dir,
+			      const char* cur_dir)
+{
+	DIR* pd;
+	struct dirent* pent;
+
+	pd = opendir(par_dir);
+	if (!pd) {
+		return -1;
+	}
+
+	char oldest_path[MAX_NAME_LEN];
+	char oldest_base[20];
+
+	oldest_path[0] = '\0';
+	// Set oldest_base to maximum
+	memset(oldest_base, 0xff, 19);
+	while (pent = readdir(pd)) {
+		char path[MAX_NAME_LEN];
+
+		snprintf(path, MAX_NAME_LEN, "%s/%s", par_dir, pent->d_name);
+		if (!strcmp(pent->d_name, cur_dir)) {
+			continue;
+		}
+		if (!parse_dir_name(pent->d_name) &&
+		    is_dir(path) &&
+		    memcmp(pent->d_name, oldest_base, 19) < 0) {
+			memcpy(oldest_base, pent->d_name, 20);
+			strcpy(oldest_path, path);
+		}
+	}
+
+	closedir(pd);
+
+	int ret = 0;
+
+	if (oldest_path[0]) {
+		char cmd[MAX_NAME_LEN + 16];
+
+		snprintf(cmd, MAX_NAME_LEN + 16, "rm -fr %s", oldest_path);
+		ret = system(cmd);
+		if (ret) {
+			ret = -1;
+		}
+	}
+
+	return ret;
+}
+
+int del_oldest_log(const struct slog_info* cp)
+{
+	int ret = del_oldest_log_file(cp);
+
+	if (!ret) {  // No file can be deleted
+		// Try to delete the oldest log directory
+		ret = del_oldest_log_dir(top_log_dir, current_log_dir);
+	}
+
+	if (1 == ret) {
+		ret = 0;
+	}
+
+	return ret;
 }
 
 /*
@@ -433,17 +774,17 @@ void rotatelogs(int num, struct slog_info *info)
  *
  *
  */
-void log_size_handler(struct slog_info *info)
+void log_size_handler(struct slog_info* info)
 {
-	if( !strncmp(top_log_dir, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH)) ) {
-		if(info->outbytecount >= internal_log_size * 1024) {
+	if(!strncmp(top_log_dir, INTERNAL_LOG_PATH, strlen(INTERNAL_LOG_PATH))) {
+		if(info->outbytecount >= g_log_size * 1024) {
 			rotatelogs(INTERNAL_ROLLLOGS, info);
 		}
 		return;
 	}
 
 	if (!strncmp(info->name, "cp", 2)) {
-		if(info->outbytecount >= DEFAULT_LOG_SIZE_CP * 1024 * 1024)
+		if(info->outbytecount >= g_log_size * 1024 * 1024)
 			rotatelogs(MAXROLLLOGS_FOR_CP, info);
 	} else {
 		if(info->outbytecount >= DEFAULT_LOG_SIZE_AP * 1024 * 1024)
@@ -451,4 +792,46 @@ void log_size_handler(struct slog_info *info)
 	}
 }
 
+#if 0
+//{Debug
+void test_overwrite_log(struct slog_info* info)
+{
+	char log_path[MAX_NAME_LEN];
+	DIR* pd;
+	struct dirent* pent;
 
+	if (SLOG_ENABLE != g_overwrite_enable) {
+		return;
+	}
+
+	get_log_path(log_path, MAX_NAME_LEN, info);
+	pd = opendir(log_path);
+	if (!pd) {
+		return;
+	}
+
+	int fnum = 0;
+	size_t nlen = strlen(info->name);
+	while (pent = readdir(pd)) {
+		char path_name[MAX_NAME_LEN];
+		unsigned num;
+		size_t num_len;
+
+		snprintf(path_name, MAX_NAME_LEN, "%s/%s",
+			 log_path, pent->d_name);
+		if (!parse_file_name(path_name, pent->d_name,
+				     info->name, nlen,
+				     &num, &num_len)) {
+			++fnum;
+		}
+	}
+
+	if (fnum >= 3) {
+		err_log("deleting oldest file ...");
+		if (del_oldest_log(info)) {
+			err_log("del_oldest_log failed");
+		}
+	}
+}
+//}Debug
+#endif
