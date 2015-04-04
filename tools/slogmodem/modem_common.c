@@ -172,13 +172,12 @@ int get_timezone()
 
 void write_modem_timestamp(struct slog_info *info, char *buffer)
 {
-	int fd, ret, retry_count = 0;
-	FILE *fp;
+	int fd;
+	FILE* fp;
 	int time_zone;
 	struct modem_timestamp *mts;
-        char cp_time[MAX_NAME_LEN];
+	char cp_time[MAX_NAME_LEN];
 
-        memset(cp_time, '0', MAX_NAME_LEN);
         if (!strncmp(info->name, "cp_wcdma", 8)) {
                 strcpy(cp_time, W_TIME);
         } else if (!strncmp(info->name, "cp_td-scdma", 8)) {
@@ -189,42 +188,58 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
                 strcpy(cp_time, L_TIME);
 	 } else if (!strncmp(info->name, "cp_fdd-lte", 8)) {
                 strcpy(cp_time, L_TIME);
-	} else
+	} else {
                 return;
+	}
 
-	mts = calloc(1, sizeof(struct modem_timestamp));
-retry_get_cp_time:
-	fd = open(cp_time, O_RDWR);
-	if( fd < 0 ){
-		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
-			retry_count ++;
-			sleep(1);
-			goto retry_get_cp_time;
+	mts = (struct modem_timestamp*)calloc(1, sizeof *mts);
+	if (!mts) {
+		return;
+	}
+
+	int retry_count = 0;
+	while (retry_count < 5) {
+		fd = open(cp_time, O_RDWR | O_NONBLOCK);
+		if (fd >= 0) {
+			break;
 		}
-		err_log("Unable to open time stamp device '%s'", cp_time);
-		free(mts);
-		return;
+
+		if (EINTR != errno && EAGAIN != errno) {
+			err_log("Unable to open time stamp device '%s'",
+				cp_time);
+			free(mts);
+			return;
+		}
+
+		sleep(1);
+		++retry_count;
 	}
-	ret = read(fd, (char*)mts + 4, 12);
-	if(ret < 12) {
-		close(fd);
-		free(mts);
-		return;
-	}
+
+	ssize_t ret;
+
+	ret = read(fd, (char*)mts + offsetof(struct modem_timestamp, tv), 12);
 	close(fd);
+	if (ret < 12) {
+		free(mts);
+		err_log("not enough data from %s", cp_time);
+		return;
+	}
 
 	mts->magic_number = 0x12345678;
 	time_zone = get_timezone();
 	mts->tv.tv_sec += time_zone * 3600;
-	err_log("%lx, %lx, %lx, %lx", mts->magic_number, mts->tv.tv_sec, mts->tv.tv_usec, mts->sys_cnt);
+	debug_log("%lx, %lx, %lx, %lx",
+		  mts->magic_number,
+		  mts->tv.tv_sec, mts->tv.tv_usec,
+		  mts->sys_cnt);
 
 	fp = fopen(buffer, "a+b");
-	if(fp == NULL) {
+	if (fp == NULL) {
 		err_log("open file %s failed!", buffer);
 		free(mts);
 		return;
 	}
-	fwrite(mts, sizeof(struct modem_timestamp), 1, fp);
+	fwrite(mts, sizeof *mts, 1, fp);
 	fclose(fp);
 
 	free(mts);
