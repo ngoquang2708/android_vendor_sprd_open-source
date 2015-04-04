@@ -190,6 +190,7 @@ struct modem_config_parse_state{
 	i2s_bt_t  *i2s_btcall_info;	
        i2s_ctl_t *i2s_ctl_info;
     char* cp_nbio_pipe;
+    int fm_type;
 };
 
 #endif

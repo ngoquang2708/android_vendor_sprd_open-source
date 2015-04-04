@@ -554,6 +554,7 @@ struct tiny_private_ctl private_ctl;
     int fm_volume;
     bool fm_open;
     bool fm_record;
+    int fm_type;
 
     int requested_channel_cnt;
     int  input_source;
@@ -5192,7 +5193,21 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             ALOGE("no i2s_for_btcall  num!");
         }
     }
-
+   else if (strcmp(tag_name, "fm_type") == 0) {
+        if (strcmp(attr[0], "type") == 0) {
+            if (strcmp(attr[1], "digital") == 0) {
+                state->fm_type = 0;
+            } else if (strcmp(attr[1], "linein") == 0) {
+                state->fm_type = 1;
+            } else if (strcmp(attr[1], "linein-vbc") == 0) {
+                state->fm_type = 2;
+            } else {
+                ALOGE("fm type is unkown");
+                state->fm_type = -1;
+            }
+            ALOGI("fm type is %s    fm_type=%d", attr[1], state->fm_type);
+        }
+   }
     else if (strcmp(tag_name, "btcal_I2S") == 0)
     {
 
@@ -5582,6 +5597,7 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
     memset(&state, 0, sizeof(state));
     state.modem_info = modem;
 state.i2s_btcall_info = i2s_btcall_info;
+    state.fm_type = -1;
     XML_SetUserData(parser, &state);
     XML_SetElementHandler(parser, adev_modem_start_tag, adev_modem_end_tag);
 
@@ -5612,6 +5628,7 @@ state.i2s_btcall_info = i2s_btcall_info;
     adev->cp = modem;
 	adev->i2s_btcall_info = i2s_btcall_info;
     adev->cp_nbio_pipe =   state.cp_nbio_pipe;
+    adev->fm_type = state.fm_type;
     ALOGE("adev->cp_nbio_pipe (%s)", adev->cp_nbio_pipe);
     XML_ParserFree(parser);
     fclose(file);
@@ -5854,7 +5871,13 @@ static int audiopara_get_compensate_phoneinfo(void* pmsg)
     sprintf(currentPosition,"%d",codec_info);
     ALOGE("%s :%s:%s",__func__,(currentPosition - AUDIO_AT_ITEM_NAME_LENGTH),currentPosition);
 
-    //8,get and fill anthoer item.
+    //8, get fm type info
+    currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
+    strcpy(currentPosition, AUDIO_AT_FM_TYPE_INFO);
+    currentPosition = currentPosition + AUDIO_AT_ITEM_NAME_LENGTH;
+    sprintf(currentPosition,"%d",s_adev->fm_type);
+
+    //9, get and fill anthoer item.
     currentPosition = currentPosition + AUDIO_AT_ITEM_VALUE_LENGTH;
     result = currentPosition - startPosition;
     ALOGE("%s :result length:%d",__func__,result);

@@ -62,6 +62,7 @@
 #define AUDIO_AT_VOIP_DSP_PROCESS_NAME "VOIP DSP Pro"
 #define AUDIO_AT_9620_MODEM "9620 modem"
 #define AUDIO_AT_CODEC_INFO "aud codec info"
+#define AUDIO_AT_FM_TYPE_INFO "FM type info"
 
 #define ENG_AUDIO_PARA  			"/etc/audio_para"
 #define ENG_AUDIO_PARA_DEBUG 			"/data/local/media/audio_para"
