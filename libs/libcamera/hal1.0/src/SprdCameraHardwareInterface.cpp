@@ -4507,6 +4507,7 @@ status_t SprdCameraHardware::setCameraParameters()
 			}
 
 		} else {
+			mFlashMode = CAMERA_FLASH_MODE_OFF;
 			SET_PARM(mCameraHandle, CAMERA_PARAM_FLASH, CAMERA_FLASH_MODE_OFF);
 		}
 	}
