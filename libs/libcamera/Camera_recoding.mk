@@ -92,6 +92,7 @@ LOCAL_SRC_FILES:= \
 	sensor/sensor_sr352_mipi.c \
 	sensor/sensor_sr030pc50_mipi.c \
 	sensor/sensor_autotest_ov2680_mipi_raw.c \
+	sensor/sensor_autotest_ov5670_mipi_raw.c \
 	sensor/sensor_autotest_gc0310_mipi.c \
 	vsp/sc8830/src/jpg_drv_sc8830.c \
 	jpeg/jpeg_fw_8830/src/jpegcodec_bufmgr.c \
