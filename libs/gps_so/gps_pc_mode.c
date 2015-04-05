@@ -66,17 +66,22 @@ static sem_t sem_a;
 static pthread_mutex_t mutex_a = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex_b = PTHREAD_MUTEX_INITIALIZER;
 static GpsSvStatus SvState;
+static GpsLocation GPSloc;
+static int fix_status;
 /*============================ begin============================*/
 
 //pthread_t create_thread(const char* name, void (*start)(void *), void* arg);
 
 static void location_callback(GpsLocation* location)
 {
+    fix_status = 1;
+	memcpy(&GPSloc,location,sizeof(GpsLocation));
     E("%s called\n",__FUNCTION__);
 }
 
 static void status_callback(GpsStatus* status)
 {
+
     E("%s called\n",__FUNCTION__);
 }
 
@@ -278,6 +283,11 @@ int gps_export_stop(void)
 		pGpsface->delete_aiding_data(set_mode);   //trigger cs/hs/ws
 		ret = 1;
 		break;
+	case 20: // Fac start
+		set_mode = FAC_START;
+		pGpsface->delete_aiding_data(set_mode);   //trigger cs/hs/ws
+		ret = 1;
+		break;
 	default:
 		break;
 	}
@@ -312,7 +322,17 @@ int get_init_mode(void)
 		int i = 0;
 
 		E("begin gps init\n");
-
+		if(access("/data/cg",0) == -1)
+		{
+			E("===========>>>>>>>>>>cg file is not exit");
+			system("mkdir /data/cg");
+			system("mkdir /data/cg/supl");
+			system("mkdir /data/cg/online");
+			chmod("/data/cg",0777);
+			chmod("/data/cg/supl",0777);
+			chmod("/data/cg/online",0777);
+		}
+		E("before dlopen");
 		handle = dlopen("/system/lib/hw/gps.default.so", RTLD_LAZY);
 		if (!handle) {
 		   E("%s\n", dlerror());
@@ -340,7 +360,7 @@ int get_stop_mode(void)
 =========================== func eut begin====================================
 *****************************************************************************/
 
-#define ENG_GPS_NUM     7
+#define ENG_GPS_NUM     8
 
 int eut_parse(int data,char *rsp)
 {
@@ -469,7 +489,27 @@ int prn_parse(int data,char *rsp)
 	}
 	return 0;
 }
+int fix_parse(int data,char *rsp)
+{
+	int i = 0,found = 0;
+	if((gps_search_state == 0) && (eut_gps_state == 0))
+	{
+		sprintf(rsp,"%s%d",EUT_GPS_ERROR,EUT_GPSERR_PRNSEARCH);
+		return 0;
+	}
 
+ 	if(fix_status == 0)
+	{
+		E("cannot fix location");
+		sprintf(rsp,"fix result:false");
+	}	
+	else
+	{
+		E("fix over");
+		sprintf(rsp,"fix result:success,%f,%f",GPSloc.latitude,GPSloc.longitude);
+	}
+	return 0;
+}
 typedef int (*eut_function)(int data,char *rsp);
 typedef struct
 {
@@ -485,6 +525,7 @@ eut_data eut_gps_at_table[ENG_GPS_NUM] = {
 	{"PRNSTATE?",prnstate_parse},
 	{"SNR?",snr_parse},
 	{"PRN",prn_parse},	
+	{"FIX?",fix_parse},	
 };
 #if 0
 int (*state[ENG_GPS_NUM])(int data,char *rsp) = {
