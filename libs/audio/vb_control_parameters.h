@@ -166,6 +166,7 @@ typedef struct{
     ctrl_node *i2s_fm;
     struct voip_res  voip_res;
     debuginfo debug_info;
+    ctrl_node *i2s_btsco_fm;
 }audio_modem_t;
 
 /*audio mode structure,we can expand  for more fields if necessary*/
@@ -189,8 +190,8 @@ struct modem_config_parse_state{
 	audio_mode_item_t *audio_mode_item_info;
 	i2s_bt_t  *i2s_btcall_info;	
        i2s_ctl_t *i2s_ctl_info;
-    char* cp_nbio_pipe;
-    int fm_type;
+       char* cp_nbio_pipe;
+       int fm_type;
 };
 
 #endif

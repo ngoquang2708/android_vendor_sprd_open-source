@@ -649,6 +649,61 @@ exit:
     return ret;
 }
 
+char* get_pointinfo_hal(char *pipe) {
+    LOG_V("cat cppoint start f");
+    int ret,result;
+    struct timeval timeout = {5,0};
+    char buffer[32] = {0};
+    char buffer_all[1024] = {0};
+    int enablebits = 0;
+    int temp = 0;
+    int point[CP_MAX_POINT]= {0};
+    int tzero = 0;
+    int duration = 0;
+    int indx = 0;
+    enablebits = get_enablepoint(pipe);
+    if(enablebits < -1){
+        return -1;
+    }
+
+    LOG_D("cat enablebits,ret:%d,enablebits:0x%x,enablenumber:%d",ret,enablebits,__builtin_popcount(enablebits));
+    if(__builtin_popcount(enablebits) == 0){
+        LOG_E(" No enable point");
+    }
+    //parse the enable point from int
+    temp = enablebits;
+    while(tzero < CP_MAX_POINT){
+        tzero = __builtin_ctz(temp);
+        if(tzero < CP_MAX_POINT){
+            point[tzero] = 1;
+            LOG_E("The enable point %d .",tzero);
+        }
+        temp &= ~(1 << tzero);
+    }
+
+    duration = get_duration(pipe);
+    if(duration < -1){
+        goto exit;
+    }
+    LOG_D("cat duration,ret:%d,duration:0x%x",ret,duration);
+    memset(buffer,0x00,sizeof(buffer));
+    sprintf(buffer,"enable point:  ");
+    strcat(buffer_all,buffer);
+    for(indx = 0;indx < CP_MAX_POINT;indx++){
+        if(enablebits & (1<<indx)){
+            memset(buffer,0x00,sizeof(buffer));
+            sprintf(buffer,"%d  ",indx);
+            strcat(buffer_all,buffer);
+        }
+    }
+    memset(buffer,0x00,sizeof(buffer));
+    sprintf(buffer,"\n\nduration: %ds\n",duration);
+    strcat(buffer_all,buffer);
+    return buffer_all;
+exit:
+    return ret;
+}
+
 void  savememory2file(void*buffer,int size,int point){
     char filepath[MAX_FILE_LENGTH] = {0};
     FILE* dump_fd = NULL;
