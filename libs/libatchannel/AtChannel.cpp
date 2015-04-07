@@ -79,19 +79,19 @@ static String16 getServiceName(int modemId, int simId)
 
 const char* sendAt(int modemId, int simId, const char* atCmd)
 {
-    sp<IServiceManager> sm = defaultServiceManager();
-    if (sm == NULL) {
-        ALOGE("Couldn't get default ServiceManager\n");
-        return "ERROR";
-    }
 
-    sp<IAtChannel> atChannel;
-    String16 serviceName = getServiceName(modemId, simId);
-    atChannel = interface_cast<IAtChannel>(sm->getService(serviceName));
-    if (atChannel == NULL) {
-        ALOGE("Couldn't get connection to %s\n", String8(serviceName).string());
-        return "ERROR";
-    }
+    sp < IServiceManager > sm = NULL;
+    sp<IAtChannel> atChannel = NULL;
+    String16 serviceName;
+    do {
+        sm = defaultServiceManager();
+        if (sm == NULL) {
+            ALOGE("Couldn't get default ServiceManager\n");
+            continue;
+        }
+        serviceName = getServiceName(modemId, simId);
+        atChannel = interface_cast < IAtChannel > (sm->getService(serviceName));
+    } while (atChannel == NULL);
 
     return atChannel->sendAt(atCmd);
 }
