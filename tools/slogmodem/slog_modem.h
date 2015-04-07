@@ -126,17 +126,19 @@ struct slog_info {
 
 	/* for handle anr */
 	struct timeval last, current;
-}; 
+};
 
-struct slog_cmd {
+struct slog_cmd
+{
 	int type;
 	char content[MAX_LINE_LEN * 2];
 };
 
-struct modem_timestamp {
-        long unsigned int magic_number;       /* magic number for verify the structure */
-        struct timeval tv;      /* clock time, seconds since 1970.01.01 */
-        long unsigned int sys_cnt;            /* modem's time */
+struct modem_timestamp
+{
+	long unsigned int magic_number;       /* magic number for verify the structure */
+	struct timeval tv;      /* clock time, seconds since 1970.01.01 */
+	long unsigned int sys_cnt;            /* modem's time */
 };
 
 /* var */
@@ -146,6 +148,10 @@ extern char current_log_dir[MAX_NAME_LEN];
 extern char external_storage[MAX_NAME_LEN];
 extern struct slog_info* cp_log_head;
 extern int internal_log_size;
+
+extern struct client_conn s_cli_mgr;
+
+extern char* g_external_path;
 
 // Public functions from modem.c
 struct slog_info* find_device(const char* name);

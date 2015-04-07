@@ -22,7 +22,21 @@ int open_device(struct slog_info *info, char *path);
 FILE* gen_outfd(struct slog_info* info);
 void cp_file(char *path, char *new_path);
 void log_size_handler(struct slog_info* info);
+
+/*
+ *  del_oldest_log - delete the oldest log file or log directory of the
+ *                   specified CP.
+ *  @cp: the CP whose oldest log is to be deleted.
+ *
+ *  Return 0 on success, -1 on error.
+ */
 int del_oldest_log(const struct slog_info* cp);
+
+/*
+ *  clear_log - delete all log directories, including those on internal
+ *              storage and external storage.
+ */
+void clear_log(void);
 
 #ifdef __cplusplus
 }

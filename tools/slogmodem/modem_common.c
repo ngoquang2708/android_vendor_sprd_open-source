@@ -807,6 +807,18 @@ void log_size_handler(struct slog_info* info)
 	}
 }
 
+void clear_log(void)
+{
+	system("rm -fr /data/modem_log/*");
+	if (g_external_path) {
+		char cmd[MAX_NAME_LEN + 16];
+
+		snprintf(cmd, sizeof cmd, "rm -fr %s/modem_log/*",
+			 g_external_path);
+		system(cmd);
+	}
+}
+
 #if 0
 //{Debug
 void test_overwrite_log(struct slog_info* info)

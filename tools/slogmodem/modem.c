@@ -46,7 +46,7 @@ struct client_conn s_cli_mgr;
 char top_log_dir[MAX_NAME_LEN];
 char whole_log_dir[MAX_NAME_LEN];
 char current_log_dir[MAX_NAME_LEN]; 
-static char* s_external_path;
+char* g_external_path;
 // If the EXTERNAL_STORAGE environment variable is set, s_sd_mounted
 // indicates the external SD card mount state; otherwise s_sd_mounted
 // will be 0.
@@ -63,6 +63,20 @@ struct slog_info* find_device(const char* name)
 		info = info->next;
 	}
 	return info;
+}
+
+static int get_cp_on_num(const struct slog_info* head)
+{
+	int n = 0;
+
+	while (head) {
+		if (SLOG_STATE_ON == head->state) {
+			++n;
+		}
+		head = head->next;
+	}
+
+	return n;
 }
 
 static void handle_dump_shark_sipc_info()
@@ -200,7 +214,7 @@ int creat_top_path(int path_flag)
 	when = time(NULL);
 	localtime_r(&when, &start_tm);
 	if (path_flag) {
-		sprintf(top_log_dir, "%s/modem_log", s_external_path);
+		sprintf(top_log_dir, "%s/modem_log", g_external_path);
 	} else {
 		sprintf(top_log_dir,"%s/modem_log",INTERNAL_PATH);
 	}
@@ -842,33 +856,31 @@ static int fd_set_new(int modem_fd,int wcn_fd,fd_set *read_set)
 	return max;
 }
 
-static void process_data(int index)
+static void process_client_data(struct client_conn* conns, int index)
 {
-	int fd = s_cli_mgr.client_socket[index];
+	int fd = conns->client_socket[index];
 	uint8_t buf[32];
 	ssize_t nr;
 
 	nr = read(fd, buf, 32);
-	if(nr >= 14) {
-		debug_log("read %d bytes", nr);
-		if(!memcmp(buf, "slogctl reload", 14)) {
-			/* reload config file */
-			debug_log("reload config");
-			cp_parse_config();
-			reopen_devices();
-		} else {
-			if (nr < 32) {
-				buf[nr] = '\0';
-				err_log("invalid cmd %s", buf);
-			} else {
-				err_log("invalid cmd");
-			}
-		}
+	debug_log("read %d bytes", (int)nr);
+	if(nr >= 14 && !memcmp(buf, "slogctl reload", 14)) {
+		/* reload config file */
+		debug_log("reload config");
+		cp_parse_config();
+		reopen_devices();
+	} else if (nr >=13 && !memcmp(buf, "slogctl clear", 13)) {
+		/* Clear log files */
+		debug_log("clear log");
+		clear_log();
+	} else if (nr > 0) {
+		buf[31] = '\0';
+		err_log("invalid cmd %s", buf);
 	} else {
-		err_log("read error %d, close fd %d", nr, fd);
+		err_log("read error %d, close fd %d", (int)nr, fd);
 		close(fd);
-		s_cli_mgr.client_socket[index] = -1;
-		s_cli_mgr.dirty = 1;
+		conns->client_socket[index] = -1;
+		conns->dirty = 1;
 	}
 }
 
@@ -938,11 +950,13 @@ void* modem_log_handler(void* arg)
 	struct timeval timeout;
 
 	// Create the modem_log/<time> directory first.
-	debug_log("create %s log dir",
-		  s_sd_mounted ? "external" : "internal");
-	ret = creat_top_path(s_sd_mounted);
-	if(ret) {
-		err_log("create top dir failed");
+	if (get_cp_on_num(cp_log_head)) {
+		debug_log("create %s log dir",
+			  s_sd_mounted ? "external" : "internal");
+		ret = creat_top_path(s_sd_mounted);
+		if(ret) {
+			err_log("create top dir failed");
+		}
 	}
 
 	// Open CP log devices and the log files
@@ -1029,7 +1043,7 @@ void* modem_log_handler(void* arg)
 		memcpy(&readset, &readset_tmp, sizeof(readset_tmp));
 
 		if (fd_modem < 0 || fd_wcn < 0 || s_cli_mgr.srv_socket < 0 ||
-		    (s_external_path && !s_sd_mounted)) {
+		    (g_external_path && !s_sd_mounted)) {
 			timeout.tv_sec = 3;
 			timeout.tv_usec = 0;
 			result = select(max + 1, &readset, NULL, NULL, &timeout);
@@ -1038,7 +1052,7 @@ void* modem_log_handler(void* arg)
 		}
 
 		// Check the mount state
-		if (s_external_path) {
+		if (g_external_path) {
 			check_media_change(cp_log_head);
 		}
 
@@ -1060,7 +1074,7 @@ void* modem_log_handler(void* arg)
 			if(socket >= 0) {
 				long flags = fcntl(socket, F_GETFL);
 				int err = -1;
-				
+
 				err_log("client %d connection established.",socket);
 				for(i = 0; i < CLINET_NR_MAX;i ++) {
 					if(s_cli_mgr.client_socket[i] == -1) {
@@ -1084,7 +1098,7 @@ void* modem_log_handler(void* arg)
 		for(i = 0; i < CLINET_NR_MAX; i++) {
 			if(s_cli_mgr.client_socket[i] >= 0) {
 				if(FD_ISSET(s_cli_mgr.client_socket[i], &readset)) {
-					process_data(i);
+					process_client_data(&s_cli_mgr, i);
 					max = fd_set_new(fd_modem, fd_wcn,
 							 &readset_tmp);
 				}
@@ -1253,8 +1267,8 @@ int main(int argc, char *argv[])
 	sigaction(SIGPIPE, &siga, 0);
 
 	cp_parse_config();
-	s_external_path = getenv("EXTERNAL_STORAGE");
-	if (s_external_path && monitor_sdcard_status()) {
+	g_external_path = getenv("EXTERNAL_STORAGE");
+	if (g_external_path && monitor_sdcard_status()) {
 		s_sd_mounted = 1;
 	}
 	init_client_mgr();
