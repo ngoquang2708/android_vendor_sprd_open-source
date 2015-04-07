@@ -40,7 +40,6 @@
 pthread_t modem_log_tid;
 pthread_t modem_monitor_tid;
 struct slog_info* cp_log_head;
-int test_num = 0;
 
 struct client_conn s_cli_mgr;
 
@@ -469,18 +468,21 @@ int connect_socket_server(char *server_name)
 {
 	int fd = 0;
 
-	fd = socket_local_client(server_name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+	fd = socket_local_client(server_name,
+				 ANDROID_SOCKET_NAMESPACE_ABSTRACT,
+				 SOCK_STREAM);
 	if(fd < 0) {
-		err_log("slog bind server %s failed, try again.", server_name);
 		sleep(1);
-		fd = socket_local_client(server_name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-		if(fd < 0) {
-			err_log("bind server %s failed.", server_name);
-			return -1;
-		}
+		fd = socket_local_client(server_name,
+					 ANDROID_SOCKET_NAMESPACE_ABSTRACT,
+					 SOCK_STREAM);
 	}
 
-	err_log("bind server %s success", server_name);
+	if(fd < 0) {
+		err_log("connect server %s failed.", server_name);
+	} else {
+		debug_log("connect server %s success", server_name);
+	}
 
 	return fd;
 }
@@ -1041,7 +1043,6 @@ void* modem_log_handler(void* arg)
 		}
 
 		if (!result) {
-			debug_log("select timeout");
 			continue;
 		}
 		if(result < 0) {
