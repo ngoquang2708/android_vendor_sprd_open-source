@@ -10,7 +10,8 @@ enum {
      USERCASE_BIT = 5,
      EXTRAVOLUME_BIT = 6,
      BTSAMPLE_BIT = 7,
-     MAX_BIT = 8,
+     SPPCMDUMP_BIT=8,
+     MAX_BIT = 9,
 };
 static pthread_mutex_t  ATlock = PTHREAD_MUTEX_INITIALIZER;         //eng cannot handle many at commands once
 static int at_cmd_routeDev(struct tiny_audio_device *adev,char* route,T_AT_CMD* at);
@@ -128,6 +129,15 @@ static int config_bt_dev_type(int bt_headset_type, cp_type_t cp_type, int cp_sim
     usleep(10000);
     return 0;
 }
+
+static int at_cmd_cp_pcm_dump(char *at_cmd)
+{
+    ALOGI("%s : at_cmd: %s",__func__,at_cmd);
+    push_voice_command(at_cmd,SPPCMDUMP_BIT);
+    usleep(10000);
+    return 0;
+}
+
 static int at_cmd_routeDev(struct tiny_audio_device *adev,char* route,T_AT_CMD* at)
 {
     char *prefix = "AT+SSAM=";

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #define LOG_TAG "audio_hw_primary"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 volatile int log_level = 4;
 #define LOG_V(...)  ALOGV_IF(log_level >= 5,__VA_ARGS__);
 #define LOG_D(...)  ALOGD_IF(log_level >= 4,__VA_ARGS__);
@@ -333,6 +333,14 @@ struct pcm_config pcm_config_btscocapture = {
     .format = PCM_FORMAT_S16_LE,
 };
 
+struct pcm_config pcm_config_scocapture_i2s = {
+    .channels = 2,
+    .rate = DEFAULT_FM_SRC_SAMPLING_RATE,
+    .period_size = 640,
+    .period_count = 8,
+    .format = PCM_FORMAT_S16_LE,
+};
+
 struct pcm_config pcm_config_fm_dl = {
     .channels = 2,
     .rate = DEFAULT_OUT_SAMPLING_RATE,
@@ -413,7 +421,7 @@ struct bt_sco_thread_manager {
 
 #define VOIP_PIPE_NAME_MAX    16
 #define MAX_AT_CMD_LENGTH   32
-#define MAX_AT_CMD_TYPE  8
+#define MAX_AT_CMD_TYPE  9
 /*
 typedef struct{
    char  s_at_cmd_route[MAX_CMD_LENGTH];
@@ -563,6 +571,8 @@ struct tiny_private_ctl private_ctl;
     pthread_mutex_t               device_lock;
     int  device_force_set;
     char* cp_nbio_pipe;
+    struct mixer *i2s_mixer;
+    int i2sfm_flag;
 };
 
 struct tiny_stream_out {
@@ -3043,10 +3053,11 @@ static int start_input_stream(struct tiny_stream_in *in)
         ALOGI("record process sco module created is %s.", in->active_rec_proc ? "successful" : "failed");
 #endif
     }
-    else if(in->is_bt_sco) {
+    else if(in->is_bt_sco || adev->i2sfm_flag) {
         //BLUE_TRACE("start sco input stream in");
 		BLUE_TRACE("voip:start bt sco input stream in");
-        in->config = pcm_config_btscocapture;
+        if(adev->i2sfm_flag) in->config = pcm_config_scocapture_i2s;
+            else in->config = pcm_config_btscocapture;
         if(in->config.channels  != in->requested_channels) {
             ALOGE("bt sco input : in->requested_channels is %d, in->config.channels is %d",in->requested_channels, in->config.channels);
             in->config.channels = in->requested_channels;
@@ -3836,12 +3847,210 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
     free(stream);
 }
 
+static void audiodebug_process(struct tiny_audio_device *adev,struct str_parms *parms)
+{
+    char value[128];
+    int ret;
+    int val=0;
+    //Adie/Digital/VBC Loopback
+    ret = str_parms_get_str(parms, "loop", value, sizeof(value));
+    if (ret >= 0) {
+        ALOGI("%s loop: value is %s",__func__,value);
+        pthread_mutex_lock(&adev->lock);
+        struct mixer_ctl *ctl;
+        if (strcmp(value,"clear") == 0){
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC1-DAC Digital Loop switch");
+            mixer_ctl_set_value(ctl, 0, 0);
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC-DAC Digital Loop switch");
+            mixer_ctl_set_value(ctl, 0, 0);
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC1-DAC Adie Loop switch");
+            mixer_ctl_set_value(ctl, 0, 0);
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC-DAC Adie Loop switch");
+            mixer_ctl_set_value(ctl, 0, 0);
+        } else if (strcmp(value,"digital0") == 0){
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC-DAC Digital Loop switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else if (strcmp(value,"digital1") == 0){
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC1-DAC Digital Loop switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else if (strcmp(value,"adie0") == 0){
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC-DAC Adie Loop switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else if (strcmp(value,"adie1") == 0){
+            ctl = mixer_get_ctl_by_name(adev->mixer,"ADC1-DAC Adie Loop switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+        } else if (strcmp(value,"vbc_enable") == 0){
+            if(adev->pcm_fm_dl == NULL)
+                adev->pcm_fm_dl= pcm_open(s_tinycard, PORT_FM, PCM_OUT, &pcm_config_fm_dl);
+            if (!pcm_is_ready(adev->pcm_fm_dl)) {
+                ALOGE("%s:AUDIO_DEVICE_OUT_FM cannot open pcm_fm_dl : %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+                pcm_close(adev->pcm_fm_dl);
+                adev->pcm_fm_dl= NULL;
+            } else {
+                if( 0 != pcm_start(adev->pcm_fm_dl)){
+                    ALOGE("%s:pcm_start pcm_fm_dl start unsucessfully: %s", __func__,pcm_get_error(adev->pcm_fm_dl));
+                }
+            }
+            ctl = mixer_get_ctl_by_name(adev->mixer,"Aud Loop in VBC Switch");
+            mixer_ctl_set_value(ctl, 0, 1);
+            if (adev->private_ctl.fm_da0_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 1);
+            if (adev->private_ctl.fm_da1_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 1);
+        } else if (strcmp(value,"vbc_disable") == 0){
+            if(adev->pcm_fm_dl != NULL){
+                pcm_close(adev->pcm_fm_dl);
+                adev->pcm_fm_dl= NULL;
+            }
+            ctl = mixer_get_ctl_by_name(adev->mixer,"Aud Loop in VBC Switch");
+            mixer_ctl_set_value(ctl, 0, 0);
+            if (adev->private_ctl.fm_da0_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 0);
+            if (adev->private_ctl.fm_da1_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 0);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    //modem voice dump
+    ret = str_parms_get_str(parms, "ATSPPCMDUMP", value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        char at_cmd[32] = "AT+SPPCMDUMP=";
+        strcat(at_cmd,value);
+        ALOGI("%s at_cmd=%s,value=%s",__func__,at_cmd,value);
+        at_cmd_cp_pcm_dump(at_cmd);
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    //AudioTest AudioSink Device Routing
+    ret = str_parms_get_str(parms, "test_stream_route", value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        val = atoi(value);
+        ALOGI("adev_set_parameters test_stream_route: get adev lock adev->devices is %x,%x",adev->out_devices,adev->out_devices&AUDIO_DEVICE_OUT_ALL);
+        if(((val & (AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE | AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_BLUETOOTH_A2DP |
+            AUDIO_DEVICE_OUT_BLUETOOTH_SCO | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET | AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT)) != 0) && ((adev->out_devices & AUDIO_DEVICE_OUT_ALL) != val)){
+            adev->out_devices &= ~AUDIO_DEVICE_OUT_ALL;
+            adev->out_devices |= val;
+            if(adev->active_output)  {
+                pthread_mutex_lock(&adev->active_output->lock);
+                adev->active_output->devices &= ~AUDIO_DEVICE_OUT_ALL;
+                adev->active_output->devices |= val;
+                pthread_mutex_unlock(&adev->active_output->lock);
+            }
+            ALOGW("adev_set_parameters test_stream_route want to set devices:0x%x mode:%d call_start:%d ",adev->out_devices,adev->mode,adev->call_start);
+            select_devices_signal(adev);
+            pthread_mutex_unlock(&adev->lock);
+        } else {
+            pthread_mutex_unlock(&adev->lock);
+        }
+    }
+
+    //AudioTest AudioSource Device Routing
+    ret = str_parms_get_str(parms, "test_in_stream_route", value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        val = atoi(value);
+        ALOGI("adev_set_parameters test_in_stream_route: get adev lock adev->in_devices is %x,%x",adev->in_devices,adev->in_devices&AUDIO_DEVICE_IN_ALL);
+        if(((val & AUDIO_DEVICE_IN_ALL) != 0) && ((adev->in_devices & AUDIO_DEVICE_IN_ALL) != val)){
+            adev->in_devices &= ~AUDIO_DEVICE_IN_ALL;
+            adev->in_devices |= val;
+            ALOGW("adev_set_parameters test_stream_route want to set devices:0x%x mode:%d call_start:%d ",adev->out_devices,adev->mode,adev->call_start);
+            select_devices_signal(adev);
+            pthread_mutex_unlock(&adev->lock);
+        } else {
+            pthread_mutex_unlock(&adev->lock);
+        }
+    }
+
+    //i2sfm switch
+    ret = str_parms_get_str(parms, "i2sfm", value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        val = atoi(value);
+        if(val==1) {
+            adev->i2sfm_flag=1;
+            adev->i2s_mixer = mixer_open(s_bt_sco);
+            if (adev->i2s_mixer) {
+                struct mixer_ctl *ctl;
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"fs");
+                mixer_ctl_set_value(ctl, 0, 48000);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"hw_port");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"slave_timeout");
+                mixer_ctl_set_value(ctl, 0, 3857);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"bus_type");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"byte_per_chan");
+                mixer_ctl_set_value(ctl, 0, 1);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"mode");
+                mixer_ctl_set_value(ctl, 0, 1);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"lsb");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"rtx_mode");
+                mixer_ctl_set_value(ctl, 0, 1);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"sync_mode");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"lrck_inv");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"clk_inv");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"i2s_bus_mode");
+                mixer_ctl_set_value(ctl, 0, 1);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"pcm_bus_mode");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"pcm_slot");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"pcm_cycle");
+                mixer_ctl_set_value(ctl, 0, 0);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"tx_watermark");
+                mixer_ctl_set_value(ctl, 0, 12);
+                ctl = mixer_get_ctl_by_name(adev->i2s_mixer,"rx_watermark");
+                mixer_ctl_set_value(ctl, 0, 20);
+            }
+            audio_modem_t *modem = adev->cp;
+            if(modem->i2s_btsco_fm->ctrl_file_fd  <= 0){
+                modem->i2s_btsco_fm->ctrl_file_fd = open(modem->i2s_btsco_fm->ctrl_path,O_RDWR | O_SYNC);
+            }
+            write(modem->i2s_btsco_fm->ctrl_file_fd,"1",1);
+        }else{
+            int i2s_ctrl;
+            char * i2s_ctrl_value="1";
+            adev->i2sfm_flag=0;
+            i2s_ctrl = fopen("/proc/pin_switch/iis0_sys_sel/vbc_iis0","wb");
+            if(i2s_ctrl  != NULL){
+                fputs(i2s_ctrl_value,i2s_ctrl);
+                fclose(i2s_ctrl);
+            }
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    //Audio HAL debug for Music/Vaudio/SCO/BT SCO/WAV/Cache /Log Level.
+    ret = str_parms_get_str(parms, "hal_debug", value, sizeof(value));
+    if (ret >= 0) {
+        int hal_audio_ctrl;
+        pthread_mutex_lock(&adev->lock);
+        hal_audio_ctrl = fopen("/dev/pipe/mmi.audio.ctrl","wb");
+        if(hal_audio_ctrl < 0){
+            ALOGE("%s, open pipe error!! ",__func__);
+        }
+        if(hal_audio_ctrl  != NULL){
+            ALOGE("%s,hal_debug:value=%s",__func__,value);
+            fputs(value,hal_audio_ctrl);
+            fclose(hal_audio_ctrl);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+}
+
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     struct str_parms *parms;
     char *str;
-    char value[32];
+    char value[128];
     int ret;
     int val=0;
     uint32_t gain = 0;
@@ -3888,6 +4097,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         else
             adev->low_power = true;
     }
+
+    audiodebug_process(adev,parms);
 
  #if VOIP_DSP_PROCESS
     ret = str_parms_get_str(parms, "sprd_voip_start", value, sizeof(value));
@@ -4047,6 +4258,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 static char * adev_get_parameters(const struct audio_hw_device *dev,
         const char *keys)
 {
+    struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
+    if (strcmp(keys, "point_info") == 0) {
+        char* point_info;
+        ALOGE("keys: %s",keys);
+        point_info=get_pointinfo_hal(adev->cp_nbio_pipe);
+        return strdup(point_info);
+    }
     return strdup("");
 }
 
@@ -4379,6 +4597,7 @@ static int adev_close(hw_device_t *device)
 
     adev_free_audmode();
     mixer_close(adev->mixer);
+    if (adev->i2s_mixer)  mixer_close(adev->i2s_mixer);
     stream_routing_manager_close(adev);
     voice_command_manager_close(adev);
     free(device);
@@ -5207,7 +5426,21 @@ static void adev_modem_start_tag(void *data, const XML_Char *tag_name,
             }
             ALOGI("fm type is %s    fm_type=%d", attr[1], state->fm_type);
         }
-   }
+    }
+    else if (strcmp(tag_name, "fm_btsco_i2s") == 0){
+	 modem->i2s_btsco_fm = malloc(sizeof(ctrl_node));
+	 if(modem->i2s_btsco_fm == NULL){
+             ALOGE("malloc i2s_fm err ");
+	 }else{
+            if (strcmp(attr[0], "ctl_file") == 0) {
+                memcpy(modem->i2s_btsco_fm->ctrl_path,attr[1],strlen(attr[1])+1);
+		   modem->i2s_btsco_fm->ctrl_file_fd=open(modem->i2s_btsco_fm->ctrl_path,O_RDWR | O_SYNC);
+		   if(modem->i2s_btsco_fm->ctrl_file_fd <= 0){
+                    ALOGE("open i2s_fm file err");
+		   }
+            }
+	 }
+    }
     else if (strcmp(tag_name, "btcal_I2S") == 0)
     {
 
@@ -5308,7 +5541,7 @@ ALOGE("------data = cpu_index(%d)i2s_index(%d)is_switch(%d)is_ext(%d)  len(%d) "
              ALOGE("malloc i2s_fm err ");
 	 }else{
             if (strcmp(attr[0], "ctl_file") == 0) {
-                memcpy(modem->i2s_fm->ctrl_path,attr[i+1],strlen(attr[i+1])+1);
+                memcpy(modem->i2s_fm->ctrl_path,attr[1],strlen(attr[1])+1);
 		   modem->i2s_fm->ctrl_file_fd=open(modem->i2s_fm->ctrl_path,O_RDWR | O_SYNC);
 		   if(modem->i2s_fm->ctrl_file_fd <= 0){
                     ALOGE("open i2s_fm file err");
@@ -5596,7 +5829,7 @@ static int adev_modem_parse(struct tiny_audio_device *adev)
 
     memset(&state, 0, sizeof(state));
     state.modem_info = modem;
-state.i2s_btcall_info = i2s_btcall_info;
+    state.i2s_btcall_info = i2s_btcall_info;
     state.fm_type = -1;
     XML_SetUserData(parser, &state);
     XML_SetElementHandler(parser, adev_modem_start_tag, adev_modem_end_tag);
@@ -5626,7 +5859,7 @@ state.i2s_btcall_info = i2s_btcall_info;
     }
 
     adev->cp = modem;
-	adev->i2s_btcall_info = i2s_btcall_info;
+    adev->i2s_btcall_info = i2s_btcall_info;
     adev->cp_nbio_pipe =   state.cp_nbio_pipe;
     adev->fm_type = state.fm_type;
     ALOGE("adev->cp_nbio_pipe (%s)", adev->cp_nbio_pipe);
@@ -6041,7 +6274,7 @@ ret = dump_parse_xml();
     adev->fm_open = false;
     adev->fm_record = false;
     adev->fm_volume = -1;
-
+    adev->i2sfm_flag = 0;
     adev->input_source = 0;
     mixer_ctl_set_value(adev->private_ctl.vbc_switch, 0, VBC_ARM_CHANNELID);  //switch to arm
     adev->vbc_2arm = mixer_ctl_get_value(adev->private_ctl.vbc_switch,0);
