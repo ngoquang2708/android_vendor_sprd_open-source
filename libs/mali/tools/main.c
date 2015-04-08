@@ -55,6 +55,15 @@ int main()
 
 	struct boost_full_list full_list[] =
 	{
+		//only for surfaceflinger animation
+		{
+			.level = 99,
+			.data_list =
+			{
+				"/system/bin/surfaceflinger"
+			}
+		},
+
 		//312M
 		{
 			.level = 10,

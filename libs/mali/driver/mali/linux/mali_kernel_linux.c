@@ -83,6 +83,10 @@ int gpu_level=0;
 module_param(gpu_level, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
 MODULE_PARM_DESC(gpu_level, "GPU gpu_level");
 
+int gpu_boost_sf_level = 0;
+module_param(gpu_boost_sf_level, int, S_IRUSR | S_IRGRP | S_IROTH); /* r-r-r-- */
+MODULE_PARM_DESC(gpu_boost_sf_level, "GPU gpu boost surfaceflinger level");
+
 extern int mali_max_job_runtime;
 module_param(mali_max_job_runtime, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(mali_max_job_runtime, "Maximum allowed job runtime in msecs.\nJobs will be killed after this no matter what");
