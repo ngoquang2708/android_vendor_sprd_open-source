@@ -76,7 +76,8 @@ extern void  nvstruct2stringfile(char* filename,void *para_ptr, int lenbytes);
 extern char* get_ser_diag_path(void);
 extern int	disconnect_vbus_charger(void);
 extern int	connect_vbus_charger(void);
-extern int  start_fm_test(char *,int);
+extern int  start_fm_test(char *,int,char *);
+
 
 
 extern  struct eng_bt_eutops bt_eutops;
@@ -649,8 +650,9 @@ int eng_diag_user_handle(int type, char *buf,int len)
             break;
 /* add FM pandora for marlin */
 	case CMD_USER_FM:
-	    rlen=start_fm_test(buf,len);
-	    eng_diag_write2pc(buf,len);
+            rlen=start_fm_test(buf,len,rsp);
+            eng_diag_write2pc(rsp,rlen);
+
 	    return 0;
 	    break;
 	case CMD_USER_AUTOTEST:
