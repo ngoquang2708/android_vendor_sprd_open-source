@@ -2827,11 +2827,13 @@ cmr_int prev_free_cap_buf(struct prev_handle *handle, cmr_u32 camera_id)
 	mem_ops->free_mem(CAMERA_SNAPSHOT,
 			  handle->oem_handle,
 			  prev_cxt->cap_phys_addr_array,
-			  prev_cxt->cap_phys_addr_array,
+			  prev_cxt->cap_virt_addr_array,
 			  sum);
 #endif
-	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
-	cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
+	if (PREV_RECOVERY_IDLE == prev_cxt->recovery_status) {
+		cmr_bzero(prev_cxt->cap_phys_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
+		cmr_bzero(prev_cxt->cap_virt_addr_array, CMR_CAPTURE_MEM_SUM * sizeof(cmr_uint));
+	}
 
 	CMR_LOGI("out");
 	return ret;

@@ -4514,6 +4514,7 @@ cmr_int camera_local_start_snapshot(cmr_handle oem_handle, enum takepicture_mode
 	}
 	camera_take_snapshot_step(CMR_STEP_TAKE_PIC);
 	prev_cxt = &cxt->prev_cxt;
+	sem_init(&cxt->share_path_sm, 0, 0);
 
 	if (CAMERA_ZSL_MODE != mode) {
 		ret = camera_set_preview_param(oem_handle, mode, is_snapshot);
