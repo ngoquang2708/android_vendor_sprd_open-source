@@ -491,10 +491,16 @@ typedef struct{
     bool dump_bt_sco;
     bool dump_vaudio;
     bool dump_music;
+    bool dump_in_read;
+    bool dump_in_read_noprocess;
+    bool dump_in_read_noresampler;
     out_dump_t* out_sco;
     out_dump_t* out_bt_sco;
     out_dump_t* out_vaudio;
     out_dump_t* out_music;
+    out_dump_t* in_read;
+    out_dump_t* in_read_noprocess;
+    out_dump_t* in_read_noresampler;
 }dump_info_t;
 
 typedef struct{
@@ -3452,11 +3458,13 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
         struct resampler_buffer* buffer)
 {
     struct tiny_stream_in *in;
+    struct tiny_audio_device *adev;
 
     if (buffer_provider == NULL || buffer == NULL)
         return -EINVAL;
 
     in = container_of(buffer_provider, struct tiny_stream_in, buf_provider);
+    adev = in->dev;
 
     if( (in->pcm == NULL) &&(in->mux_pcm ==NULL)) {
         buffer->raw = NULL;
@@ -3487,6 +3495,14 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
     dump_info.buf_len = in->config.period_size * audio_stream_frame_size(&in->stream.common);
     dump_info.dump_switch_info =  DUMP_RECORD_HWL_AFTER_VBC;
     dump_data(dump_info);
+#endif
+#ifdef AUDIO_DEBUG
+        if(adev->ext_contrl->dump_info->dump_in_read_noresampler){
+            do_dump(adev->ext_contrl->dump_info,
+                            (void*)in->buffer,
+                           in->config.period_size *
+                           audio_stream_frame_size((const struct audio_stream *)(&in->stream.common)));
+        }
 #endif
 
         if (in->read_status != 0) {
@@ -3686,7 +3702,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             ALOGE("  peter: normal read 1 in");
 
     }
-
+#ifdef AUDIO_DEBUG
+    if(adev->ext_contrl->dump_info->dump_in_read_noprocess){
+         do_dump(adev->ext_contrl->dump_info,
+                         (void*)buffer,bytes);
+    }
+#endif
     if (ret == 0 && in->active_rec_proc && in->proc_buf)
             aud_rec_do_process(buffer, bytes,in->proc_buf,in->proc_buf_size);
 
@@ -3698,6 +3719,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
             in->pop_mute = false;
         }
     }
+#ifdef AUDIO_DEBUG
+    if(adev->ext_contrl->dump_info->dump_in_read){
+         do_dump(adev->ext_contrl->dump_info,
+                         (void*)buffer,bytes);
+    }
+#endif
 
 #ifdef AUDIO_DUMP_EX
     dump_info.buf = buffer;
@@ -4588,6 +4615,15 @@ static int adev_close(hw_device_t *device)
     }
     if(adev->ext_contrl->dump_info->out_music){
         free(adev->ext_contrl->dump_info->out_music);
+    }
+    if(adev->ext_contrl->dump_info->in_read){
+        free(adev->ext_contrl->dump_info->in_read);
+    }
+    if(adev->ext_contrl->dump_info->in_read_noprocess){
+        free(adev->ext_contrl->dump_info->in_read_noprocess);
+    }
+    if(adev->ext_contrl->dump_info->in_read_noresampler){
+        free(adev->ext_contrl->dump_info->in_read_noresampler);
     }
     if(adev->ext_contrl->dump_info){
         free(adev->ext_contrl->dump_info);
@@ -6167,16 +6203,25 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->ext_contrl->dump_info->out_sco  = (out_dump_t*)malloc(sizeof(out_dump_t));
     adev->ext_contrl->dump_info->out_bt_sco  = (out_dump_t*)malloc(sizeof(out_dump_t));
     adev->ext_contrl->dump_info->out_vaudio  = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->in_read = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->in_read_noprocess = (out_dump_t*)malloc(sizeof(out_dump_t));
+    adev->ext_contrl->dump_info->in_read_noresampler = (out_dump_t*)malloc(sizeof(out_dump_t));
     adev->ext_contrl->dump_info->dump_to_cache = false;
     adev->ext_contrl->dump_info->dump_as_wav = false;
     adev->ext_contrl->dump_info->dump_music = false;
     adev->ext_contrl->dump_info->dump_bt_sco = false;
     adev->ext_contrl->dump_info->dump_sco = false;
     adev->ext_contrl->dump_info->dump_vaudio = false;
+    adev->ext_contrl->dump_info->dump_in_read = false;
+    adev->ext_contrl->dump_info->dump_in_read_noprocess = false;
+    adev->ext_contrl->dump_info->dump_in_read_noresampler = false;
     adev->ext_contrl->dump_info->out_bt_sco->buffer_length = DefaultBufferLength;
     adev->ext_contrl->dump_info->out_sco->buffer_length = DefaultBufferLength;
     adev->ext_contrl->dump_info->out_vaudio->buffer_length = DefaultBufferLength;
     adev->ext_contrl->dump_info->out_music->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->in_read->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->in_read_noprocess->buffer_length = DefaultBufferLength;
+    adev->ext_contrl->dump_info->in_read_noresampler->buffer_length = DefaultBufferLength;
 #endif
     pthread_mutex_lock(&adev->lock);
     ret = adev_modem_parse(adev);

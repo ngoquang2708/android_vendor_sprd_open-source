@@ -11,11 +11,17 @@
 #define FILE_PATH_SCO  "data/local/media/audio_dumpsco.pcm"
 #define FILE_PATH_BTSCO  "data/local/media/audio_dumpbtsco.pcm"
 #define FILE_PATH_VAUDIO  "data/local/media/audio_dumpvaudio.pcm"
+#define FILE_PATH_INREAD  "data/local/media/audio_dumpinread.pcm"
+#define FILE_PATH_INREAD_NO_PROCESS  "data/local/media/audio_dumpinread_noprocess.pcm"
+#define FILE_PATH_INREAD_NO_RESAMPLER  "data/local/media/audio_dumpinread_noresampler.pcm"
 
 #define FILE_PATH_MUSIC_WAV  "data/local/media/audio_dumpmusic.wav"
 #define FILE_PATH_SCO_WAV  "data/local/media/audio_dumpsco.wav"
 #define FILE_PATH_BTSCO_WAV  "data/local/media/audio_dumpbtsco.wav"
 #define FILE_PATH_VAUDIO_WAV  "data/local/media/audio_dumpvaudio.wav"
+#define FILE_PATH_INREAD_WAV  "data/local/media/audio_dumpinread.wav"
+#define FILE_PATH_INREAD_NO_PROCESS_WAV  "data/local/media/audio_dumpinread_noprocess.wav"
+#define FILE_PATH_INREAD_NO_RESAMPLER_WAV  "data/local/media/audio_dumpinread_noresampler.wav"
 
 #define FILE_PATH_HAL_INFO  "data/local/media/audio_hw_info.txt"
 #define FILE_PATH_HELP  "data/local/media/help.txt"
@@ -109,9 +115,17 @@ int init_dump_info(out_dump_t* out_dump,const char* filepath,size_t buffer_lengt
     out_dump->write_flag = 0;
     out_dump->more_one = false;
     out_dump->total_length = 0;
-    out_dump->sampleRate = 44100;
-    out_dump->channels = 2;
-
+    if(0 == strcmp(filepath,FILE_PATH_INREAD_WAV) || 0 == strcmp(filepath,FILE_PATH_INREAD) ||
+            0 == strcmp(filepath,FILE_PATH_INREAD_NO_PROCESS_WAV) || 0 == strcmp(filepath,FILE_PATH_INREAD_NO_PROCESS)){
+        out_dump->sampleRate = 8000;
+        out_dump->channels = 1;
+    }if(0 == strcmp(filepath,FILE_PATH_INREAD_NO_RESAMPLER_WAV) || 0 == strcmp(filepath,FILE_PATH_INREAD_NO_RESAMPLER)){
+        out_dump->sampleRate = 16000;
+        out_dump->channels = 1;
+    }else{
+        out_dump->sampleRate = 44100;
+        out_dump->channels = 2;
+    }
     return 0;
 }
 
@@ -153,7 +167,7 @@ int release_dump_info(out_dump_t* out_dump){
  *function: save cache buffer to file
  *
  * ******************************************/
-int save_cache_buffer(out_dump_t* out_dump, const char *filepath)
+int save_cache_buffer(out_dump_t* out_dump)
 {
     LOG_I("%s ",__func__);
     if (out_dump == NULL || out_dump->cache_buffer == NULL) {
@@ -162,7 +176,8 @@ int save_cache_buffer(out_dump_t* out_dump, const char *filepath)
     }
     size_t written = 0;
     if(out_dump->dump_fd == NULL){
-        out_dump->dump_fd = (FILE *)fopen(filepath,"wb");
+        LOG_E("dump fd is null ");
+        return -1;
     }
 
    if (out_dump->more_one) {
@@ -283,7 +298,7 @@ int add_wav_header(out_dump_t* out_dump){
     header[29] = (char) ((byteRate >> 8) & 0xff);
     header[30] = (char) ((byteRate >> 16) & 0xff);
     header[31] = (char) ((byteRate >> 24) & 0xff);
-    header[32] = (char) (2 * 16 / 8); // block align
+    header[32] = (char) (channels * 16 / 8); // block align
     header[33] = 0;
     header[34] = 16; // bits per sample
     header[35] = 0;
@@ -323,6 +338,12 @@ void do_dump(dump_info_t* dump_info, void* buffer, size_t size){
             dump_to_buffer(dump_info->out_sco,buffer,size);
         }else if(dump_info->dump_bt_sco){
             dump_to_buffer(dump_info->out_bt_sco,buffer,size);
+        }else if(dump_info->dump_in_read){
+            dump_to_buffer(dump_info->in_read,buffer,size);
+        }else if(dump_info->dump_in_read_noprocess){
+            dump_to_buffer(dump_info->in_read_noprocess,buffer,size);
+        }else if(dump_info->dump_in_read_noresampler){
+            dump_to_buffer(dump_info->in_read_noresampler,buffer,size);
         }
     }else{
         if(dump_info->dump_music){
@@ -333,6 +354,12 @@ void do_dump(dump_info_t* dump_info, void* buffer, size_t size){
             dump_to_file(dump_info->out_sco->dump_fd,buffer,size);
         }else if(dump_info->dump_bt_sco){
             dump_to_file(dump_info->out_bt_sco->dump_fd,buffer,size);
+        }else if(dump_info->dump_in_read){
+            dump_to_file(dump_info->in_read->dump_fd,buffer,size);
+        }else if(dump_info->dump_in_read_noprocess){
+            dump_to_file(dump_info->in_read_noprocess->dump_fd,buffer,size);
+        }else if(dump_info->dump_in_read_noresampler){
+            dump_to_file(dump_info->in_read_noresampler->dump_fd,buffer,size);
         }
     }
     return;
@@ -860,7 +887,7 @@ static void *control_audio_loop_process(void *arg){
             }else{
                 adev->ext_contrl->dump_info->dump_music = false;
                 if(adev->ext_contrl->dump_info->dump_to_cache){
-                    save_cache_buffer(adev->ext_contrl->dump_info->out_music,FILE_PATH_MUSIC);
+                    save_cache_buffer(adev->ext_contrl->dump_info->out_music);
                 }
                 if(adev->ext_contrl->dump_info->dump_as_wav){
                     add_wav_header(adev->ext_contrl->dump_info->out_music);
@@ -888,7 +915,7 @@ static void *control_audio_loop_process(void *arg){
             }else{
                 adev->ext_contrl->dump_info->dump_sco = false;
                 if(adev->ext_contrl->dump_info->dump_to_cache){
-                    save_cache_buffer(adev->ext_contrl->dump_info->out_sco,FILE_PATH_SCO);
+                    save_cache_buffer(adev->ext_contrl->dump_info->out_sco);
                 }
                 if(adev->ext_contrl->dump_info->dump_as_wav){
                     add_wav_header(adev->ext_contrl->dump_info->out_sco);
@@ -917,7 +944,7 @@ static void *control_audio_loop_process(void *arg){
             }else{
                 adev->ext_contrl->dump_info->dump_bt_sco = false;
                 if(adev->ext_contrl->dump_info->dump_to_cache){
-                    save_cache_buffer(adev->ext_contrl->dump_info->out_bt_sco,FILE_PATH_BTSCO);
+                    save_cache_buffer(adev->ext_contrl->dump_info->out_bt_sco);
                 }
                 if(adev->ext_contrl->dump_info->dump_as_wav){
                     add_wav_header(adev->ext_contrl->dump_info->out_bt_sco);
@@ -946,12 +973,99 @@ static void *control_audio_loop_process(void *arg){
             }else{
                 adev->ext_contrl->dump_info->dump_vaudio = false;
                 if(adev->ext_contrl->dump_info->dump_to_cache){
-                    save_cache_buffer(adev->ext_contrl->dump_info->out_vaudio,FILE_PATH_VAUDIO);
+                    save_cache_buffer(adev->ext_contrl->dump_info->out_vaudio);
                 }
                 if(adev->ext_contrl->dump_info->dump_as_wav){
                     add_wav_header(adev->ext_contrl->dump_info->out_vaudio);
                 }
                 release_dump_info(adev->ext_contrl->dump_info->out_vaudio);
+            }
+        }
+
+        ret = str_parms_get_str(parms,"dumpinread", value, sizeof(value));
+        if(ret >= 0){
+            val_int = atoi(value);
+            LOG_D("dumpinread is :%d",val_int);
+            if(val_int){
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    init_dump_info(adev->ext_contrl->dump_info->in_read,FILE_PATH_INREAD_WAV,
+                               adev->ext_contrl->dump_info->in_read->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }else{
+                    init_dump_info(adev->ext_contrl->dump_info->in_read,FILE_PATH_INREAD,
+                               adev->ext_contrl->dump_info->in_read->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }
+                adev->ext_contrl->dump_info->dump_in_read = true;
+            }else{
+                adev->ext_contrl->dump_info->dump_in_read = false;
+                if(adev->ext_contrl->dump_info->dump_to_cache){
+                    save_cache_buffer(adev->ext_contrl->dump_info->in_read);
+                }
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    add_wav_header(adev->ext_contrl->dump_info->in_read);
+                }
+                release_dump_info(adev->ext_contrl->dump_info->in_read);
+            }
+        }
+
+        ret = str_parms_get_str(parms,"dumpinnoprocess", value, sizeof(value));
+        if(ret >= 0){
+            val_int = atoi(value);
+            LOG_D("dumpinread is :%d",val_int);
+            if(val_int){
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    init_dump_info(adev->ext_contrl->dump_info->in_read_noprocess,FILE_PATH_INREAD_NO_PROCESS_WAV,
+                               adev->ext_contrl->dump_info->in_read_noprocess->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }else{
+                     init_dump_info(adev->ext_contrl->dump_info->in_read_noprocess,FILE_PATH_INREAD_NO_PROCESS,
+                               adev->ext_contrl->dump_info->in_read_noprocess->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }
+                adev->ext_contrl->dump_info->dump_in_read_noprocess = true;
+            }else{
+                adev->ext_contrl->dump_info->dump_in_read_noprocess = false;
+                if(adev->ext_contrl->dump_info->dump_to_cache){
+                    save_cache_buffer(adev->ext_contrl->dump_info->in_read_noprocess);
+                }
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    add_wav_header(adev->ext_contrl->dump_info->in_read_noprocess);
+                }
+                release_dump_info(adev->ext_contrl->dump_info->in_read_noprocess);
+            }
+        }
+
+        ret = str_parms_get_str(parms,"dumpinnoresampler", value, sizeof(value));
+        if(ret >= 0){
+            val_int = atoi(value);
+            LOG_D("dumpinread is :%d",val_int);
+            if(val_int){
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    init_dump_info(adev->ext_contrl->dump_info->in_read_noresampler,FILE_PATH_INREAD_NO_RESAMPLER_WAV,
+                               adev->ext_contrl->dump_info->in_read_noresampler->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }else{
+                     init_dump_info(adev->ext_contrl->dump_info->in_read_noresampler,FILE_PATH_INREAD_NO_RESAMPLER,
+                               adev->ext_contrl->dump_info->in_read_noresampler->buffer_length,
+                               adev->ext_contrl->dump_info->dump_to_cache,
+                               adev->ext_contrl->dump_info->dump_as_wav);
+                }
+                adev->ext_contrl->dump_info->dump_in_read_noresampler = true;
+            }else{
+                adev->ext_contrl->dump_info->dump_in_read_noresampler = false;
+                if(adev->ext_contrl->dump_info->dump_to_cache){
+                    save_cache_buffer(adev->ext_contrl->dump_info->in_read_noresampler);
+                }
+                if(adev->ext_contrl->dump_info->dump_as_wav){
+                    add_wav_header(adev->ext_contrl->dump_info->in_read_noresampler);
+                }
+                release_dump_info(adev->ext_contrl->dump_info->in_read_noresampler);
             }
         }
         ret = str_parms_get_str(parms,"dumpcache", value, sizeof(value));
