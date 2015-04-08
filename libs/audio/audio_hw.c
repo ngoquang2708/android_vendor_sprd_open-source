@@ -4258,6 +4258,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 static char * adev_get_parameters(const struct audio_hw_device *dev,
         const char *keys)
 {
+#ifdef AUDIO_DEBUG
     struct tiny_audio_device *adev = (struct tiny_audio_device *)dev;
     if (strcmp(keys, "point_info") == 0) {
         char* point_info;
@@ -4265,6 +4266,7 @@ static char * adev_get_parameters(const struct audio_hw_device *dev,
         point_info=get_pointinfo_hal(adev->cp_nbio_pipe);
         return strdup(point_info);
     }
+#endif
     return strdup("");
 }
 
