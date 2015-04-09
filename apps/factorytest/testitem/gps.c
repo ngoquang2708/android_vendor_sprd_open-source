@@ -34,6 +34,7 @@ static pthread_t create_thread_callback(const char* name, void (*start)(void *),
 //------------------------------------------------------------------------------
 static const  GpsInterface  * sGpsIntrfc = NULL;
 static int sSVNum = 0;
+static int sSvSnr[10] = {0};
 static int sPreTest = 0;
 static int sTimeout = 0;
 static unsigned int nCount=0;
@@ -151,6 +152,7 @@ static void gps_show_result(unsigned int result)
 {
 	char buffer[64];
 	int row = 3;
+	int i;
 
 	FUN_ENTER;
 	if(result == 1)
@@ -179,6 +181,18 @@ static void gps_show_result(unsigned int result)
 	}
 	ui_set_color(CL_WHITE);
 	row = ui_show_text(row, 0, buffer);
+	memset(buffer, 0, sizeof(buffer));
+	if(result == 1)
+	{
+	     sprintf(buffer, "GPS NUM: %d",sSVNum);
+	     row = ui_show_text(row, 0, buffer);
+	     for(i=0;i<sSVNum;i++)
+	     {
+		  memset(buffer, 0, sizeof(buffer));
+		  sprintf(buffer, "GPS SNR: %d",sSvSnr[i]);
+		  row = ui_show_text(row, 0, buffer);
+	     }
+	}
 	gr_flip();
 	FUN_EXIT;
 }
@@ -193,12 +207,12 @@ static void * processThread_show( void * param )
 		now_time = time(NULL);
 		SPRD_DBG("now_time = %ld, open_time=%ld \n", now_time,gOpenTime);
 		// Catch the Star
-		if(sSVNum >= 1)
+		if(sSVNum >= 2)
 		{
 			gps_show_result(1);
 			SPRD_DBG("mmitest GPS Test PASS Catch the Star\n");
 			ui_push_result(RL_PASS);
-			sleep(1);
+			sleep(3);
 			break;
 		}
 		else
@@ -264,9 +278,11 @@ static void sv_status_callback(GpsSvStatus* sv_status)
 	{
 		sSVNum = sv_status->num_svs;
 		sPreTest = sSVNum;
+		//sSvSnr = sv_status->sv_list[i].snr;
 
 		SPRD_DBG("GpsSvStatus: num_svs  = %d\n", sv_status->num_svs);
 		for(; i < sv_status->num_svs; ++i ) {
+			sSvSnr[i]=sv_status->sv_list[i].snr;
 			SPRD_DBG("GpsSvStatus lst[%d]: prn       = %d\n",   i, sv_status->sv_list[i].prn);
 			SPRD_DBG("GpsSvStatus lst[%d]: snr       = %02f\n", i, sv_status->sv_list[i].snr);
 			SPRD_DBG("GpsSvStatus lst[%d]: elevation = %02f\n", i, sv_status->sv_list[i].elevation);
