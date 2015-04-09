@@ -26,6 +26,7 @@
 
 int slog_enable = SLOG_ENABLE;
 int cplog_enable = SLOG_ENABLE;
+int screenshot_enable=1;
 int slog_start_step = 0;
 int slog_reload_flag = 0;
 int slog_init_complete = 0;
@@ -961,7 +962,7 @@ void *handle_request(void *arg)
 		break;
 #endif
 	case CTRL_CMD_TYPE_SCREEN:
-		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0)
+		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0||screenshot_enable==0)
 			break;
 		if(cmd.content[0]){
 			sprintf(filename, "screencap -p %s.png", cmd.content);

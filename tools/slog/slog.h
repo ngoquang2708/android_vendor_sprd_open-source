@@ -161,6 +161,7 @@ extern pthread_t stream_tid, snapshot_tid, notify_tid, sdcard_tid, bt_tid, tcp_t
 extern int slog_enable;
 extern int cplog_enable;
 extern int internal_log_size;
+extern int screenshot_enable;
 #ifdef LOW_POWER_MODE
 extern int hook_modem_flag;
 #define HOOK_MODEM_TARGET_DIR	"/data/log"

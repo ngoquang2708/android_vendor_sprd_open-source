@@ -104,6 +104,11 @@ int parse_3_entries(char *type)
 			config_log_path = external_storage;
 			current_log_path = external_storage;
 		}
+	} else if(!strncmp(name, "screenshot", 10)) {
+		if(!strncmp(pos3, "enable", 6))
+			screenshot_enable=1;
+		else
+			screenshot_enable=0;
 	} else if(!strncmp(name, "kmemleak", 8)) {
 		handle_kmemleak(pos3);
 	}
