@@ -1402,6 +1402,13 @@ void SPRDAVCDecoder::onPortFlushPrepare(OMX_U32 portIndex) {
     }
 }
 
+void SPRDAVCDecoder::onReset() {
+    mSignalledError = false;
+
+    //avoid process error after stop codec and restart codec when port settings changing.
+    mOutputPortSettingsChange = NONE;
+}
+
 void SPRDAVCDecoder::updatePortDefinitions() {
     OMX_PARAM_PORTDEFINITIONTYPE *def = &editPortInfo(0)->mDef;
     def->format.video.nFrameWidth = mWidth;
