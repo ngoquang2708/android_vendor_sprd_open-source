@@ -638,7 +638,10 @@ static int show_phone_test_result(void)
 	if(TOTAL_NUM-2<=text_rows-2)
 	{
 		ui_set_color(CL_SCREEN_BG);
-        gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+		gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+		ui_fill_locked();
+		ui_show_title(TEST_REPORT);
+		gr_flip();
 		for(i = 0; i < TOTAL_NUM-2; i++){
 			LOGD("mmitest <%d>-%s,%d\n", i, phone_result[i].name, phone_result[i].pass_faild);
 
@@ -686,7 +689,7 @@ static int show_phone_test_result(void)
 			if(change==1)
 			{
 			ui_set_color(CL_SCREEN_BG);
-            gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+			gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
 			row=2;
@@ -726,7 +729,7 @@ static int show_phone_test_result(void)
 			{
 			row=2;
 			ui_set_color(CL_SCREEN_BG);
-        	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+			gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
 			for(i = 0; i < TOTAL_NUM+2-text_rows-2; i++){
@@ -787,7 +790,7 @@ static int show_pcba_test_result(void)
 	ui_show_title(TEST_REPORT);
 	if(TOTAL_NUM-2<=text_rows-2)
 	{
-	for(i = 1; i < TOTAL_NUM-1; i++){
+	for(i = 1; i < TOTAL_NUM-2; i++){
 		LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[i].name, pcba_result[i].pass_faild);
 
 		switch(pcba_result[i].pass_faild) {
@@ -832,11 +835,11 @@ static int show_pcba_test_result(void)
 			if(change==1)
 			{
 			ui_set_color(CL_SCREEN_BG);
-            gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+			gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
 			row=2;
-			for(i = 1; i < text_rows-1; i++){
+			for(i = 1; i < text_rows-2; i++){
 				LOGD("mmitest <%d>-%s,%d\n", i, pcba_result[i].name, pcba_result[i].pass_faild);
 
 				switch(pcba_result[i].pass_faild) {
@@ -872,7 +875,7 @@ static int show_pcba_test_result(void)
 			{
 			row=2;
 			ui_set_color(CL_SCREEN_BG);
-        	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
+			gr_fill(0, 0, gr_fb_width(), gr_fb_height());
 			ui_fill_locked();
 			ui_show_title(TEST_REPORT);
 			for(i = 1; i < TOTAL_NUM+2-text_rows-2; i++){
