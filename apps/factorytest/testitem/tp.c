@@ -85,11 +85,11 @@ static int tp_handle_event(struct input_event *event)
 {
 	int keycode;
 	static int count=0;
-
 	count++;
-	//LOGD("xxxxxxxhongliangCount:%d\n", count);
-	if(event->type == EV_ABS) {
-		switch(event->code) {
+	if(event->type == EV_ABS)
+	{
+		switch(event->code)
+		{
 			case ABS_MT_POSITION_X:
 				x_pressed = 1;
 				cur_pos.x = event->value*width/tp_width;
@@ -99,61 +99,47 @@ static int tp_handle_event(struct input_event *event)
 				y_pressed = 1;
 				cur_pos.y = event->value*height/tp_height;
 				LOGD("mmitesthhlY:%d\n", event->value);
-				break;
-		}
 
-		if(firstdraw == 0) {
-			firstdraw = 1;
-			last_pos.x = cur_pos.x;
-			last_pos.y = cur_pos.y;
-		} else {
-				if(last_pos.x != cur_pos.x || last_pos.y != cur_pos.y) {
-				ui_set_color(CL_WHITE);
-				if(last_pos.x != 0 && last_pos.y != 0)
-				{
-					ui_draw_line_mid(last_pos.x, last_pos.y, cur_pos.x, cur_pos.y);
-					area_rectangle_check(cur_pos.x, cur_pos.y);
-					last_pos.x = cur_pos.x;
-					last_pos.y = cur_pos.y;
-					gr_flip();
-					LOGD("mmitesthhl %d-%d\n", cur_pos.x, cur_pos.y);
-				}
-				}
-		}
-	}
-	else if(event->type == EV_SYN) {
-		switch(event->code) {
-			case SYN_MT_REPORT:
-				saw_mt_report = 1;
-				if(firstdraw == 0) {
+				if(0) {
 					firstdraw = 1;
 					last_pos.x = cur_pos.x;
 					last_pos.y = cur_pos.y;
-				} else {
-					if(last_pos.x != cur_pos.x || last_pos.y != cur_pos.y) {
+				} else
+				{
+					if(last_pos.x != cur_pos.x || last_pos.y != cur_pos.y) 
+					{
 						ui_set_color(CL_WHITE);
-						if(last_pos.x == 0 && last_pos.y == 0) break;
-						ui_draw_line_mid(last_pos.x, last_pos.y, cur_pos.x, cur_pos.y);
-						area_rectangle_check(cur_pos.x, cur_pos.y);
-						last_pos.x = cur_pos.x;
-						last_pos.y = cur_pos.y;
-						gr_flip();
-						LOGD("mmitest %d-%d\n", cur_pos.x, cur_pos.y);
+						if(last_pos.x != 0 && last_pos.y != 0)
+						{
+							ui_draw_line_mid(last_pos.x, last_pos.y, cur_pos.x, cur_pos.y);
+							area_rectangle_check(cur_pos.x, cur_pos.y);
+							gr_flip();
+							LOGD("mmitesthhl %d-%d\n", cur_pos.x, cur_pos.y);
+						}
 					}
+					last_pos.x = cur_pos.x;
+					last_pos.y = cur_pos.y;
 				}
+
+				break;
+		}
+
+	}
+	else if(event->type == EV_SYN)
+	{
+		switch(event->code)
+		{
+			case SYN_MT_REPORT:
 				LOGD("mmitest SYN_MT_RP:%d\n", event->value);
 				break;
 			case SYN_REPORT:
 				LOGD("mmitest SYN_RP:%d\n", event->value);
-				if(!x_pressed && !y_pressed) {
-					firstdraw = 0;
-				}
-				x_pressed = y_pressed = 0;
 				break;
 		}
 	}
 	return 0;
 }
+
 
 static void* tp_thread(void *par)
 {
