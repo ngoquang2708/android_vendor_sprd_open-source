@@ -166,19 +166,20 @@ void btfmDisableCallback (int status)
 	ALOGI("Disable callback, status: %d", sFmStatus); 
 }
 
-void btfmTuneTestCallback (FM_SIGNAL_PARAM_T *chnl_info)
+void btfmTuneTestCallback (int status,FM_SIGNAL_PARAM_T *chnl_info)
 { 
-   if(chnl_info->nOperInd == BTA_FM_OK)
+   if(status == BTA_FM_OK)
    {
         memcpy(&mFmSignalParm,chnl_info,sizeof(FM_SIGNAL_PARAM_T));
     	sFmTuneStatus = FM_STATE_ENABLED;
+		mFmSignalParm.nFreqValue = mFmSignalParm.nFreqValue *10;
    }
    else
    {
 		mFmSignalParm.nOperInd = FM_FAILURE;
 		sFmTuneStatus = FM_STATE_ERR;
    }
-	ALOGI("Tune callback, status: %d, freq: %d rssi: %d", chnl_info->nOperInd); 
+	ALOGI("Tune callback, status: %d, freq: %d rssi: %d", status,mFmSignalParm.nFreqValue,mFmSignalParm.nRssi); 
 }
 
 void btfmMuteCallback (int status, BOOLEAN isMute)
@@ -201,18 +202,19 @@ void btfmSearchCallback (int status, int rssi, int snr, int freq)
 	ALOGI("Search callback, status: %d", status); 
 }
 
-void btfmSeekTestCallback(FM_SIGNAL_PARAM_T *chnl_info)
+void btfmSeekTestCallback(int status,FM_SIGNAL_PARAM_T *chnl_info)
 { 
-	if(chnl_info->nOperInd == BTA_FM_OK)
+	if(status == BTA_FM_OK)
 	{
 		 memcpy(&mFmSignalParm,chnl_info,sizeof(FM_SIGNAL_PARAM_T));
-		 sFmTuneStatus = FM_STATE_ENABLED;
+		 mFmSignalParm.nFreqValue = mFmSignalParm.nFreqValue *10;
+		 sFmSearchStatus = FM_STATE_ENABLED;
 	} 
 	else 
 	{
-		 sFmTuneStatus = FM_STATE_ERR;
+		 sFmSearchStatus = FM_STATE_ERR;
 	}
-	 ALOGI("seek callback, status: %d, freq: %d rssi: %d", chnl_info->nOperInd); 
+	 ALOGI("seek callback, status: %d, freq: %d rssi: %d",status,mFmSignalParm.nFreqValue,mFmSignalParm.nRssi); 
 
 }
 
@@ -453,7 +455,7 @@ int fm_set_seek(unsigned int startFreq,char mode)
 				ALOGE("Failed FM seek, status: %d", status);
 				return FM_FAILURE;
 		}
- 		while (counter++ < 30 && FM_STATE_ENABLED != sFmSearchStatus && FM_STATE_ERR != sFmSearchStatus) 
+ 		while (counter++ < 30 && (FM_STATE_ENABLED != sFmSearchStatus) && (FM_STATE_ERR != sFmSearchStatus)) 
  		{
  			if(sFmSearchStatus == FM_STATE_STOPED)
  			{
@@ -511,6 +513,11 @@ int fm_read_reg(unsigned int addr)
  	{
 		sFmReadRegStatus = FM_STATE_PANIC;
 		reg_value = 0;
+        if(addr%4)
+        {
+            ALOGE("fm_read_reg the addr is illegal %d" ,addr);
+            return FM_FAILURE;
+        }
  		if ((status = sFmInterface->read_reg(addr)) != BT_STATUS_SUCCESS) {
             ALOGE("Failed FM fm_read_reg, status: %d", status);
 			return FM_FAILURE;
@@ -537,6 +544,11 @@ int fm_write_reg(unsigned int addr,int value)
  	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
  	{
 		sFmWriteRegStatus = 0;
+        if(addr%4)
+        {
+            ALOGE("fm_write_reg the addr is illegal %d" ,addr);
+            return FM_FAILURE;
+        }
 
  		if ((status = sFmInterface->write_reg(addr,value)) != BT_STATUS_SUCCESS) {
             ALOGE("Failed FM fm_write_reg, status: %d", status);
@@ -614,10 +626,9 @@ int start_fm_test(unsigned char * buf,int len,char *rsp)
 		 case FM_CMD_READ_REG:
 		 	 receive_addr = pdata;
 			 ALOGE("FM_CMD_READ_REG =%d , mode = %d , %d ,%d \n",receive_addr->nStartAddr,receive_addr->nUintCount,sizeof(FM_RW_REG_T));
- 
 			 for(i = 0; i < receive_addr->nUintCount;i++)
 			 {
-			 	 ret &= fm_read_reg(receive_addr->nStartAddr+i);
+			 	 ret &= fm_read_reg(receive_addr->nStartAddr+i*4);
 				 memcpy((p + sizeof(FM_RW_REG_T) + i*sizeof(unsigned int)),&reg_value, sizeof(unsigned int));
 			 }
 			 receive_addr->nErrorCode = ret;
@@ -626,10 +637,10 @@ int start_fm_test(unsigned char * buf,int len,char *rsp)
 			 break;
 		 case FM_CMD_WRITE_REG:
 		 	 receive_addr = pdata;
-			 ALOGE("FM_CMD_WRITE_REG =%d , mode = %d , %d \n",receive_addr->nStartAddr,receive_addr->nUintCount);
+			 ALOGE("FM_CMD_WRITE_REG =%d , mode = %d  \n",receive_addr->nStartAddr,receive_addr->nUintCount);
 			 for(i = 0; i < receive_addr->nUintCount;i++)
 			 {
-			 	ret &= fm_write_reg(receive_addr->nStartAddr+i,*(pdata + sizeof(FM_RW_REG_T) +i));
+			 	ret &= fm_write_reg(receive_addr->nStartAddr+i,*(pdata + sizeof(FM_RW_REG_T) +i*4));
 			 }
 			 receive_addr->nErrorCode = ret;
 			 memcpy(p ,receive_addr, sizeof(FM_RW_REG_T));
