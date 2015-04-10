@@ -110,7 +110,7 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 
 #define START_FRQ	10410
 #define END_FRQ     8750
-#define THRESH_HOLD 100
+#define THRESH_HOLD 105
 #define DIRECTION   128
 #define SCANMODE    0
 #define MUTI_CHANNEL false

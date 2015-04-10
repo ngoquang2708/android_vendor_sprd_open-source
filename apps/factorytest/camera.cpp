@@ -283,16 +283,12 @@ static void data_mirror(uint8_t *des,uint8_t *src,int width,int height, int bits
 
 	for(j=0;j<height;j++)
 	{
-
-			for(i= 0;i< width;i++)
-			{
-
-					memcpy(&des[n],&src[linesize-(i+1)*m+j*linesize],m);
-					n+=m;
-
-			}
+		for(i= 0;i< width;i++)
+		{
+			memcpy(&des[n],&src[linesize-(i+1)*m+j*linesize],m);
+			n+=m;
+		}
 	}
-
 	LOGD("mmitest out of mirror");
 }
 
@@ -384,23 +380,23 @@ static camera_memory_t* __get_memory(int fd, size_t buf_size, uint_t num_bufs,
 {
 	const size_t pagesize = getpagesize();
 	uint32_t size= buf_size * num_bufs;
-    size = ((size + pagesize-1) & ~(pagesize-1));
-    mapfd(dup(fd), size, 0);
+	size = ((size + pagesize-1) & ~(pagesize-1));
+	mapfd(dup(fd), size, 0);
 
-    handle=(camera_memory_t *)malloc(sizeof(camera_memory_t));
-    handle->data = mBase;
-    handle->size = buf_size * num_bufs;
-    handle->handle = handle;
-    cb_buffer_size=buf_size;
-    cb_buffer_number=num_bufs;
-    handle->release = __put_memory;
-    return handle;
+	handle=(camera_memory_t *)malloc(sizeof(camera_memory_t));
+	handle->data = mBase;
+	handle->size = buf_size * num_bufs;
+	handle->handle = handle;
+	cb_buffer_size=buf_size;
+	cb_buffer_number=num_bufs;
+	handle->release = __put_memory;
+	return handle;
 }
 
 
-   static int __dequeue_buffer(struct preview_stream_ops* w,
+static int __dequeue_buffer(struct preview_stream_ops* w,
                                 buffer_handle_t** buffer, int *stride)
-    {
+{
 	  int i;
 	  //LOGD("dequeue buffer\r\n");
 
@@ -416,18 +412,17 @@ static camera_memory_t* __get_memory(int fd, size_t buf_size, uint_t num_bufs,
 	  {
 	  	int rc = gdevice->alloc(gdevice,mwidth, mheight, mformat,
                         musage, &buffers2[i].handle, &buffers2[i].stride);
-        LOGD("fb buffer %d allocation failed w=%d, h=%d, err=%s\r\n",mGrallocBufferIndex, mwidth, mheight, strerror(-rc));
-        if (rc)
-            return 0;
-        mGrallocBufferIndex++;
-	}
+		LOGD("fb buffer %d allocation failed w=%d, h=%d, err=%s\r\n",mGrallocBufferIndex, mwidth, mheight, strerror(-rc));
+		if (rc)
+		     return 0;
+		mGrallocBufferIndex++;
+	  }
 
-      *buffer = &buffers2[i].handle;
+	  *buffer = &buffers2[i].handle;
 	  *stride=  buffers2[i].stride;
-	   buffers2[i].inuse=1;
-
-        return 0;
-    }
+	  buffers2[i].inuse=1;
+	  return 0;
+}
 
 
 static int __lock_buffer(struct preview_stream_ops* w,
@@ -453,7 +448,7 @@ static int __lock_buffer(struct preview_stream_ops* w,
     static int __cancel_buffer(struct preview_stream_ops* w,
                       buffer_handle_t* buffer)
     {
-     int i;
+	int i;
 	for(i=0;i<buffer_count;i++)
 	{
 		if(buffers2[i].handle==*buffer)
@@ -582,14 +577,14 @@ static int eng_test_fb_open(void)
 	//set framebuffer address
 	memset(&fb_buf, 0, sizeof(fb_buf));
 	fb_buf[0].virt_addr = (uint32_t)bits;
-    fb_buf[0].phys_addr = fix.smem_start;
+	fb_buf[0].phys_addr = fix.smem_start;
 	fb_buf[0].length = var.yres * var.xres * (var.bits_per_pixel/8);
 
-    fb_buf[1].virt_addr = (uint32_t)(((unsigned) bits) + var.yres * var.xres * (var.bits_per_pixel/8));
+	fb_buf[1].virt_addr = (uint32_t)(((unsigned) bits) + var.yres * var.xres * (var.bits_per_pixel/8));
 	fb_buf[1].phys_addr = fix.smem_start+ var.yres * var.xres * (var.bits_per_pixel/8);
 	fb_buf[1].length = var.yres * var.xres * (var.bits_per_pixel/8);
 
-    fb_buf[2].virt_addr = (uint32_t)tmpbuf;
+	fb_buf[2].virt_addr = (uint32_t)tmpbuf;
 	fb_buf[2].length = var.yres * var.xres * (var.bits_per_pixel/8);
 
 	fb_buf[3].virt_addr = (uint32_t)tmpbuf1;
@@ -669,16 +664,8 @@ int fcamera_start(void)
     }
     fcamera_para=fcmDevice->ops->get_parameters(fcmDevice);
 
-    LOGD("mmitest parameter0=%s\n",fcamera_para);
-    LOGD("mmitest parameter0=%s\n",fcamera_para+512);
-    LOGD("mmitest parameter0=%s\n",fcamera_para+1024);
-
     fc_para=strstr(fcamera_para,"preview-size=");
     strncpy(fc_para,"preview-size=640x480",20);
-
-    LOGD("mmitest parameter1=%s\n",fcamera_para);
-    LOGD("mmitest parameter1=%s\n",fcamera_para+512);
-    LOGD("mmitest parameter1=%s\n",fcamera_para+1024);
 
     LOGD(" mmitest start  set_parameters\r\n");
     fcmDevice->ops->set_parameters(fcmDevice,fcamera_para);
@@ -789,32 +776,11 @@ void * bcamera_start(void)
    LOGD("mmitest open device 0 ok\r\n");
    bcamera_para=bcmDevice->ops->get_parameters(bcmDevice);
 
-   LOGD("mmitest parameter0=%s\n",bcamera_para);
-   LOGD("mmitest parameter0=%s\n",bcamera_para+512);
-   LOGD("mmitest parameter0=%s\n",bcamera_para+1024);
-   LOGD("mmitest parameter0=%s\n",bcamera_para+1536);
-
    bc_para=strstr(bcamera_para,"preview-size=");
-
-
-   LOGD("mmitest parameter bcamera_para=%p\n",bcamera_para);
-
-   LOGD("mmitest parameter bc_para=%p\n",bc_para);
-
-   LOGD("mmitest parameter bc_para=%s\n",bc_para);
-
    strncpy(bc_para,"preview-size=640x480",20);
 
-   LOGD("mmitest parameter bc_para=%s\n",bc_para);
-
-   LOGD("mmitest parameter1=%s\n",bcamera_para);
-
-   LOGD("mmitest parameter1=%s\n",bcamera_para+512);
-
-   LOGD("mmitest parameter1=%s\n",bcamera_para+1024);
-
-   LOGD("mmitest parameter1=%s\n",bcamera_para+1536);
-
+   bc_para=strstr(bcamera_para,"preview-frame-rate=");
+   strncpy(bc_para,"preview-frame-rate=25",21);
 
    LOGD(" mmitest start  set_parameters\r\n");
    bcmDevice->ops->set_parameters(bcmDevice,bcamera_para);
@@ -871,7 +837,6 @@ static int bcamera_close(void)
 			fb_fd=-1;
 		}
 	bcfmodule = NULL;
-
 	bcmodule = NULL;
 	LOGD("mmitest after close\r\n");
 	return 0;
@@ -922,8 +887,11 @@ int test_bcamera_start(void)
 	bcamera_close();
 
 	save_result(CASE_TEST_BCAMERA,ret);
+#ifdef MSG
 	save_result(CASE_TEST_FLASH,ret);
-
+#else
+	save_result(CASE_TEST_FLASH,RL_NS);
+#endif
 	return ret;
 }
 
