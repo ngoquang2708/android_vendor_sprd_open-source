@@ -330,10 +330,18 @@ static int fm_search(void)
 {
     int ret;
     int counter=0;
-    ret =sBtFmInterface->combo_search(START_FRQ,END_FRQ,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
+    int freq_end=END_FRQ;
+    int freq_start=END_FRQ+10;
 
-    while (counter++ < 10 && BT_STATUS_SUCCESS != sFmsearchStatus) sleep(1);
+    ret =sBtFmInterface->combo_search(freq_start,freq_end,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
 
+    while (counter++ < 10 && BT_STATUS_SUCCESS != sFmsearchStatus) 
+    {
+	 freq_end+=10;
+	 freq_start+=10;
+	 sBtFmInterface->combo_search(freq_start,freq_end,THRESH_HOLD,DIRECTION,SCANMODE,MUTI_CHANNEL,CONTYPE,CONVALUE);
+	 sleep(1);
+    }
     LOGD("mmitest fm search: status =%d fm_fre=%d fm_rssi=%d\n", sFmsearchStatus,fm_fre,fm_rssi);
     if(sFmsearchStatus!=BT_STATUS_SUCCESS)
         return -1;
@@ -398,8 +406,6 @@ int fm_start(void)
         sdcard_read_fm(&freq);
     else
         freq=990;
-
-
     LOGD("mmitest freq=%d",freq);
 
     ui_fill_locked();
@@ -448,14 +454,14 @@ int fm_start(void)
          //fm_close();
          goto FM_TEST_FAIL;
     }
-    sBtFmInterface->tune(freq*10);
+    /*sBtFmInterface->tune(freq*10);
     while (counter++ < 5 && BT_STATUS_SUCCESS != sFmtuneStatus) sleep(1);
         if(sFmtuneStatus!=BT_STATUS_SUCCESS)
             {
                 ret=fm_search();
                 LOGD("mmitest fm tune failed");
             }
-        else if(fm_fre!=0&&fm_rssi<100)
+	else if(fm_fre!=0&&fm_rssi<100)
             {
                 ret=0;
                 sdcard_write_fm(&fm_fre);
@@ -466,8 +472,8 @@ int fm_start(void)
                 ret=fm_search();
                 LOGD("mmitest fm tune signal weak");
                 LOGD("mmitest fm tune: fm_fre=%d fm_rssi=%d", fm_fre,fm_rssi);
-	    }
-    LOGD("mmitest fm tune signal weak %d\n",sFmsearchStatus);
+	    } */
+    fm_search();
     if(sFmsearchStatus==BT_STATUS_SUCCESS)
     {
         fm_show_searching(STATE_CLEAN);
