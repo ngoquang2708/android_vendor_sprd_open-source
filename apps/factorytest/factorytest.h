@@ -87,9 +87,6 @@ typedef unsigned char*BD_NAME_PTR;                /* Pointer to Device name */
 //#define SPRD_HEADSET_SWITCH_DEV     "/sys/class/switch/h2w/state"
 #define SPRD_HEADSETOUT             0
 #define SPRD_HEADSETIN              1
-//#define FM_CLOSE     				0
-//#define FM_PLAY     				1
-//#define FM_PLAY_ERR     			2
 #define HEADSET_CLOSE   			0
 #define HEADSET_OPEN    			1
 #define HEADSET_CHECK   			2
@@ -297,7 +294,7 @@ static char* modem_port[] = {
 
 
 /**************telephnoy*********/
-#define TEL_DEVICE_PATH "/dev/stty_lte1"
+#define TEL_DEVICE_PATH "/dev/stty_lte0"
 /**************end tel**********/
 
 
