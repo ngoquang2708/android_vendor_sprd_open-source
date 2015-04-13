@@ -22,6 +22,43 @@
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 
+static int set_engpc_service(WcndManager *pWcndManger, int start)
+{
+	//if(pWcndManger->is_eng_mode_only) return 0;
+
+	//if(!pWcndManger->is_wcn_modem_enabled) return 0;
+
+	char prop[PROPERTY_VALUE_MAX] = {'\0'};
+	WCND_LOGD("start engservice!");
+	property_get(WCND_ENGCTRL_PROP_KEY,prop, "0");
+
+	if(start && !strcmp(prop, "1"))
+	{
+		WCND_LOGD("Warning: persist.engpc.disable is true but APP want to start ");
+		//return 0;
+	}
+	else if(!start && !strcmp(prop, "0"))
+	{
+		WCND_LOGD("Warning: persist.engpc.disable is false but APP want to stop ");
+	}
+
+	if (start)
+	{
+		property_set("ctl.start", "engservicewcn");//not used just now
+		property_set("ctl.start", "engmodemclientwcn");//not used just now
+		property_set("ctl.start", "engpcclientwcn");
+	}
+	else
+	{
+		property_set("ctl.stop", "engservicewcn");//not used just now
+		property_set("ctl.stop", "engmodemclientwcn");//not used just now
+		property_set("ctl.stop", "engpcclientwcn");
+	}
+
+	return 0;
+}
+
+
 /**
 * Note:
 * For the connection that will only be used to send a commond, when handle the command from this
@@ -499,6 +536,18 @@ int wcnd_runcommand(int client_fd, int argc, char* argv[])
 		wcnd_process_atcmd(-1, WCND_ATCMD_CP2_GET_VERSION, pWcndManger);
 		pWcndManger->store_cp2_versin_done = 1;
 	}
+//#ifdef
+	else if(!strcmp(argv[0], "startengpc"))
+	{
+		wcnd_send_back_cmd_result(client_fd, NULL, 1);
+		set_engpc_service(pWcndManger, 1);
+	}
+	else if(!strcmp(argv[0], "stopengpc"))
+	{
+		wcnd_send_back_cmd_result(client_fd, NULL, 1);
+		set_engpc_service(pWcndManger, 0);
+	}
+//#endif
 	else
 		wcnd_send_back_cmd_result(client_fd, "Not support cmd", 0);
 
