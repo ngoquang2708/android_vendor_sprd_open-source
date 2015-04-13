@@ -6,6 +6,9 @@ if [ "$1" = "-u" ]; then
         #for var in seth_lte0 seth_lte1 seth_lte2 seth_lte3 seth_lte4 seth_lte5; do
         `echo ${temp} > /proc/sys/net/ipv6/conf/$ifname/disable_ipv6`
         #done
+	IF_ADDR=$(getprop sys.data.setip | busybox awk '{print $3}')
+	IF_SETH=$ifname
+
         `echo -1 > /proc/sys/net/ipv6/conf/$ifname/accept_dad`
 	ifname=`getprop sys.data.setip`
 	ip $ifname
@@ -17,6 +20,10 @@ if [ "$1" = "-u" ]; then
 	ip $ifname
         ifname=`getprop sys.data.noarp.ipv6`
         ip $ifname
+
+	`ip rule del table 150`
+	`ip rule add from $IF_ADDR table 150`
+	`ip route add default via $IF_ADDR table 150`
 
 ##For Auto Test
 	ethup=`getprop ril.gsps.eth.up`
@@ -72,4 +79,41 @@ elif [ "$1" = "-c" ]; then
         ip6tables -D INPUT -p udp --dport 53 -j DROP
         ip6tables -D OUTPUT -p udp --dport 53 -j DROP
 
+elif [ "$1" = "-f" ]; then
+    table1_idx=100
+    table2_idx=101
+    table3_idx=102
+
+    IPV4_PDN1_ADDR=`getprop net.seth_lte0.ip`
+    IPV4_PDN2_ADDR=`getprop net.seth_lte1.ip`
+    IPV4_PDN3_ADDR=`getprop net.seth_lte2.ip`
+
+    DEFAULT_IPV4_ADDR=$(ip route show | grep default | busybox head -1 | busybox sed -r 's/.+via ([^ ]+) .+/\1/')
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+
+    table1_route=`ip route list table $table1_idx`
+    table2_route=`ip route list table $table2_idx`
+    table3_route=`ip route list table $table3_idx`
+
+    `ip rule del table $table1_idx`
+    `ip rule del table $table2_idx`
+    `ip rule del table $table3_idx`
+    
+        if [ $DEFAULT_IPV4_ADDR == $IPV4_PDN1_ADDR ]; then
+            `ip rule add from $IPV4_PDN2_ADDR table $table2_idx`
+            `ip route add default via $IPV4_PDN2_ADDR table $table2_idx`
+            `ip rule add from "$IPV4_PDN3_ADDR" table $table3_idx`
+            `ip route add default via "$IPV4_PDN3_ADDR" table $table3_idx`
+        elif [ $DEFAULT_IPV4_ADDR == $IPV4_PDN2_ADDR ]; then
+            `ip rule add from $IPV4_PDN1_ADDR table $table1_idx`
+            `ip route add default via $IPV4_PDN1_ADDR table $table1_idx`
+            `ip rule add from $IPV4_PDN3_ADDR table $table3_idx`
+            `ip route add default via $IPV4_PDN3_ADDR table $table3_idx`
+        elif [ $DEFAULT_IPV4_ADDR == $IPV4_PDN3_ADDR ]; then
+            `ip rule add from $IPV4_PDN1_ADDR table $table1_idx`
+            `ip route add default via $IPV4_PDN1_ADDR table $table1_idx`
+            `ip rule add from $IPV4_PDN2_ADDR table $table2_idx`
+            `ip route add default via $IPV4_PDN2_ADDR table $table2_idx`    
+        fi
+      
 fi
