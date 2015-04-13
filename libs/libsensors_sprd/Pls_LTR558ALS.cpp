@@ -35,6 +35,7 @@
 #define LTR_IOCTL_SET_PFLAG                     _IOW(LTR_IOCTL_MAGIC, 3, int)
 #define LTR_IOCTL_SET_LFLAG                     _IOW(LTR_IOCTL_MAGIC, 4, int)
 #define LTR_IOCTL_GET_DATA                      _IOW(LTR_IOCTL_MAGIC, 5, unsigned char)
+#define EVIOCSSUSPENDBLOCK	                 _IOW('E', 0x91, int)
 
 /*****************************************************************************/
 static struct sensor_t sSensorList[] = {
@@ -64,6 +65,9 @@ PlsSensor::PlsSensor() :
 	mPendingEvents[Proximity].sensor = ID_P;
 	mPendingEvents[Proximity].type = SENSOR_TYPE_PROXIMITY;
 
+	if (data_fd >= 0) {
+		bool usingSuspendBlockIoctl = !ioctl(data_fd, EVIOCSSUSPENDBLOCK, 1);
+	}
 	for (int i = 0; i < numSensors; i++)
 		mDelays[i] = 200000000;	// 200 ms by default
 }

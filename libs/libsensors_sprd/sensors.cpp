@@ -27,7 +27,7 @@
 
 #include <utils/Atomic.h>
 #include <utils/Log.h>
-
+#include <hardware_legacy/power.h>
 #include "sensors.h"
 #include "AccSensor.h"
 #include "OriSensor.h"
@@ -61,6 +61,8 @@ static struct sensor_t sSensorList[AccSensor::numSensors
 
 static int numSensors = 0;
 static char GetChipInfo[256] = {0};
+static const char *WAKE_LOCK_ID = "SensorEvents";
+static bool wakeLockAcquired = false;
 
 static int open_sensors(const struct hw_module_t *module, const char *id,
 			struct hw_device_t **device);
@@ -311,6 +313,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t * data, int count)
 	int nbEvents = 0;
 	int n = 0;
 	int polltime = -1;
+	bool hasPSensor = false;
 
 	do {
 		// see if we have some leftover from the last poll()
@@ -339,6 +342,12 @@ int sensors_poll_context_t::pollEvents(sensors_event_t * data, int count)
 			// we still have some room, so try to see if we can get
 			// some events immediately or just wait if we don't have
 			// anything to return
+#ifndef PLS_NULL
+			if (wakeLockAcquired && !hasPSensor) {
+				wakeLockAcquired = false;
+				release_wake_lock(WAKE_LOCK_ID);
+			}
+#endif
 			do {
 				n = poll(mPollFds, numFds,
 					 nbEvents ? 0 : polltime);
@@ -347,6 +356,13 @@ int sensors_poll_context_t::pollEvents(sensors_event_t * data, int count)
 				ALOGE("poll() failed (%s)", strerror(errno));
 				return -errno;
 			}
+#ifndef PLS_NULL
+			if ((mPollFds[pls].revents & POLLIN) && (!hasPSensor)) {
+				acquire_wake_lock(PARTIAL_WAKE_LOCK, WAKE_LOCK_ID);
+				wakeLockAcquired = true;
+				hasPSensor = true;
+			}
+#endif
 			if (mPollFds[wake].revents & POLLIN) {
 				char msg;
 				int result = read(mPollFds[wake].fd, &msg, 1);
