@@ -138,7 +138,7 @@ int test_cali_info(void)
 		//row = ui_show_text(row, 0, tmp2);
 	}
 
-	pcur = s_cali_info1;
+	pcur = s_cali_info2;
 	len = strlen(pcur);
 	while(len > 0) {
 		pos1 = strchr(pcur, ':');
@@ -154,14 +154,14 @@ int test_cali_info(void)
 			len -= (pos2 - pcur);
 			pcur = pos2;
 		}
-        testlen=str_replace(tmp4[row_num1],tmp3[row_num1],"calibrated","cali");
+        testlen=str_replace(tmp4[row_num1],tmp3[row_num1],"BAND","WCDMA BAND");
         LOGD("mmitest test=%s\n",tmp4[row_num1]);
 		row_num1++;
 		//row = ui_show_text(row, 0, tmp2);
 	}
 
 
-	pcur = s_cali_info2;
+	pcur = s_cali_info1;
 	len = strlen(pcur);
 	while(len > 0) {
 		pos1 = strchr(pcur, ':');
@@ -177,7 +177,7 @@ int test_cali_info(void)
 			len -= (pos2 - pcur);
 			pcur = pos2;
 		}
-        testlen=str_replace(tmp6[row_num2],tmp5[row_num2],"calibrated","cali");
+        testlen=str_replace(tmp6[row_num2],tmp5[row_num2],"BAND","WCDMA BAND");
         LOGD("mmitest test=%s\n",tmp6[row_num2]);
 		row_num2++;
 		//row = ui_show_text(row, 0, tmp2);
