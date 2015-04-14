@@ -1297,6 +1297,7 @@ static cmr_int setting_get_exif_info(struct setting_component *cpt,
 	}
 
 	if (NULL != p_exif_info->primary.img_desc_ptr) {
+		CMR_LOGD("set maker.");
 		strcpy((char *)p_exif_info->primary.img_desc_ptr->ImageDescription, (char *)image_desc);
 		memset(property,'\0',sizeof(property));
 		property_get("ro.product.manufacturer", property, EXIF_DEF_MAKER);
