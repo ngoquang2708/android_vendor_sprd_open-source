@@ -113,17 +113,21 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
                 return;
 
 	mts = calloc(1, sizeof(struct modem_timestamp));
-retry_get_cp_time:
-	fd = open(cp_time, O_RDWR);
-	if( fd < 0 ){
-		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
-			retry_count ++;
-			sleep(1);
-			goto retry_get_cp_time;
-		}
-		err_log("Unable to open time stamp device '%s'", cp_time);
-		free(mts);
-		return;
+	retry_count=5;
+	while(retry_count){
+		fd = open(cp_time, O_RDWR);
+		if( fd < 0 ){
+			if(errno == EINTR || errno == EAGAIN) {
+				retry_count --;
+				sleep(1);
+			}else{
+				err_log("Unable to open time stamp device '%s'", cp_time);
+				free(mts);
+				return;
+				exit(0);
+			}
+		}else
+			break;
 	}
 	ret = read(fd, (char*)mts + 4, 12);
 	if(ret < 12) {
@@ -195,6 +199,7 @@ void gen_logpath(char *filename, struct slog_info *info)
 void gen_logfile(char *filename, struct slog_info *info)
 {
 	int ret;
+	int retry_count=5;
 	char buffer[MAX_NAME_LEN];
 	DIR *p_dir;
 	struct dirent *p_dirent;
@@ -208,10 +213,17 @@ void gen_logfile(char *filename, struct slog_info *info)
                 err_log("mkdir %s failed.", filename);
                 exit(0);
 	}
-
-	if(( p_dir = opendir(filename)) == NULL) {
-		err_log("can not open %s.", filename);
-		return;
+	while(retry_count){
+		if(( p_dir = opendir(filename)) == NULL) {
+			if(errno==EINTR||errno==EAGAIN){
+				sleep(1);
+				retry_count--;
+			}else{
+				err_log("can not open %s.", filename);
+				exit(0);
+			}
+		}else
+			break;
 	}
 	while((p_dirent = readdir(p_dir))) {
 		if( !strncmp(p_dirent->d_name, buffer, strlen(buffer)) ) {
@@ -307,21 +319,21 @@ int write_from_buffer(int fd, char *buf, int len)
  */
 int open_device(struct slog_info *info, char *path)
 {
-	int retry_count = 0;
+	int retry_count = 5;
 	int fd;
-
-retry:
-	fd = open(path, O_RDWR);
-	if(fd < 0){
-		if( (errno == EINTR || errno == EAGAIN ) && retry_count < 5) {
-			retry_count ++;
-			sleep(1);
-			goto retry;
-		}
-		err_log("Unable to open log device '%s'.", path);
-		return -1;
+	while(retry_count){
+		fd = open(path, O_RDWR);
+		if(fd < 0){
+			if(errno==EINTR||errno==EAGAIN){
+				sleep(1);
+				retry_count--;
+			}else{
+				err_log("Unable to open log device '%s'.", path);
+				exit(0);
+			}
+		}else
+			break;
 	}
-
 	return fd;
 }
 
@@ -332,16 +344,25 @@ retry:
 FILE *gen_outfd(struct slog_info *info)
 {
 	int cur;
+	int retry_count=5;
 	FILE *fp;
 	char buffer[MAX_NAME_LEN];
 
 	gen_logfile(buffer, info);
 	write_modem_version(info);
 	write_modem_timestamp(info, buffer);
-	fp = fopen(buffer, "a+b");
-	if(fp == NULL){
-		err_log("Unable to open file %s.",buffer);
-		return NULL;
+	while(retry_count){
+		fp = fopen(buffer, "a+b");
+		if(fp == NULL){
+			if(errno==EINTR||errno==EAGAIN){
+				sleep(1);
+				retry_count--;
+			}else{
+				err_log("Unable to open file %s.",buffer);
+				exit(0);
+			}
+		}else
+			break;
 	}
 	if(info->setvbuf == NULL)
 		info->setvbuf = malloc(SETV_BUFFER_SIZE);

@@ -285,19 +285,20 @@ void *stream_log_handler(void *arg)
 				}
 				buf_kmsg[ret] = '\0';
 				strinst(wbuf_kmsg, buf_kmsg);
-				retry = 0;
-retry1:
-				ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
-				if ( ret != 1 ) {
-					fclose(info->fp_out);
-					sleep(1);
-					add_flag_when_lost(info);
-					info->fp_out = gen_outfd(info);
-					if(retry++ < 5)
-						goto retry1;
-				} else {
-					info->outbytecount += strlen(wbuf_kmsg);
-					log_size_handler(info);
+				retry = 5;
+				while(retry){
+					ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
+					if ( ret != 1 ) {
+						fclose(info->fp_out);
+						sleep(1);
+						add_flag_when_lost(info);
+						info->fp_out = gen_outfd(info);
+						retry--;
+					} else {
+						info->outbytecount += strlen(wbuf_kmsg);
+						log_size_handler(info);
+						break;
+					}
 				}
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) || !strncmp(info->name, "events", 6) ) {
@@ -344,21 +345,21 @@ retry1:
 							info = info->next;
 							continue;
 					}
-					retry = 0;
-retry2:
-					ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
-					if ( ret != 1 ) {
-						fclose(info->fp_out);
-						sleep(1);
-						add_flag_when_lost(info);
-						info->fp_out = gen_outfd(info);
-						if(retry++ < 5)
-							goto retry2;
-					} else {
-						info->outbytecount += totalLen;
-						log_size_handler(info);
+					retry = 5;
+					while(retry){
+						ret = fwrite(outBuffer, totalLen, 1, info->fp_out);
+						if ( ret != 1 ) {
+							fclose(info->fp_out);
+							sleep(1);
+							add_flag_when_lost(info);
+							info->fp_out = gen_outfd(info);
+							retry--;
+						} else {
+							info->outbytecount += totalLen;
+							log_size_handler(info);
+							break;
+						}
 					}
-
 					if (outBuffer != defaultBuffer)
 						free(outBuffer);
 				}
