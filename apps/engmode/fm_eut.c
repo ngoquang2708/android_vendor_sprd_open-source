@@ -382,7 +382,7 @@ int CallbackStatus(int status,char *p)
 		}
 		return FM_FAILURE;
 }
-int fm_set_volume(unsigned char pdata)
+int fm_set_volume(unsigned char vol)
 {
     int status;
 	int counter = 0;
@@ -390,7 +390,9 @@ int fm_set_volume(unsigned char pdata)
  	if((NULL != sFmInterface) && ((sFmStatus == FM_STATE_ENABLED) ||(sFmStatus == FM_STATE_PLAYING)) )
  	{
  		sFmVolumeStatus = FM_STATE_PANIC;
- 		if ((status = sFmInterface->set_volume((int)pdata)) != BT_STATUS_SUCCESS) {
+		 ALOGE("fm_set_volume() vol = %d",(int)vol);
+		 setVolume((int)vol);
+ 		if ((status = sFmInterface->set_volume((int)vol)) != BT_STATUS_SUCCESS) {
             ALOGE("Failed FM setFMVolumeNative, status: %d", status);
 			return FM_FAILURE;
         }
@@ -413,6 +415,7 @@ int fm_set_mute()
  	{
 
 		sFmMuteStatus = FM_STATE_PANIC;
+		setVolume(0);
         if ((status = sFmInterface->mute(TRUE)) != BT_STATUS_SUCCESS) {
             ALOGE("Failed FM setFMmuteNative, status: %d", status);
 			return FM_FAILURE;
@@ -599,7 +602,7 @@ int start_fm_test(unsigned char * buf,int len,char *rsp)
 			 break;
 		 case FM_CMD_VOLUME:
 		 	ALOGE("FM_CMD_VOLUME =%d",*pdata);
-			 ret = fm_set_volume(pdata);
+			 ret = fm_set_volume(*pdata);
 			 *p = ret;
 			 head_ptr->len = headlen + 1;
 			 break;

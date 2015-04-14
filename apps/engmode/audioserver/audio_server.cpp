@@ -26,4 +26,12 @@ int setParameters(){
     String8 fm_volume("FM_Volume=11");
     return AudioSystem::setParameters(audio_io_handle_t(0),fm_volume);
 }
+int setVolume(int volume){
+    char *buf=NULL;
+    asprintf(&buf,"FM_Volume=%d",volume);
+    String8 fm_volume(buf);
+    free(buf);
+    return AudioSystem::setParameters(audio_io_handle_t(0),fm_volume);
+
+}
 
