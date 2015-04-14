@@ -39,6 +39,7 @@
 #define MODEM_W_ENABLE_PROPERTY     "persist.modem.w.enable"
 #define MODEM_TDDCSFB_ENABLE_PROPERTY     "persist.modem.tl.enable"
 #define MODEM_FDDCSFB_ENABLE_PROPERTY     "persist.modem.lf.enable"
+#define MODEM_CSFB_ENABLE_PROPERTY     "persist.modem.l.enable"
 
 #define AUDIO_NV_FM_GAINL_INDEX         18
 #define AUDIO_NV_FM_DGAIN_INDEX         19
