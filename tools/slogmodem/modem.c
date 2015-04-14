@@ -556,8 +556,13 @@ static void handle_dump_external_wcn(struct slog_info *info)
 	struct tm tm;
 	int ret;
 
-	if(info->fd_dump_cp < 0) {
+	if (info->fd_dump_cp < 0) {
 		err_log("dump dev is not open");
+	}
+
+	if (info->fp_out) {
+		fflush(info->fp_out);
+		debug_log("flush wcn log");
 	}
 
 	creat_top_path(monitor_sdcard_status());
