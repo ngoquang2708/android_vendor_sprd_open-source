@@ -356,6 +356,11 @@ static void handle_dump_external_wcn(struct slog_info *info)
 	if(info->fd_dump_cp < 0) {
 		err_log("open dump dev failed");
 	}
+
+	if(info->fp_out >= 0){
+		fflush(info->fp_out);
+		err_log("flush wcn log");
+	}
 	/* add timestamp */
 	t = time(NULL);
 	localtime_r(&t, &tm);
