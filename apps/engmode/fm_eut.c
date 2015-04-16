@@ -212,9 +212,9 @@ void btfmSeekTestCallback(int status,FM_SIGNAL_PARAM_T *chnl_info)
 	} 
 	else 
 	{
-		 sFmSearchStatus = FM_STATE_ERR;
-	}
-	 ALOGI("seek callback, status: %d, freq: %d rssi: %d",status,mFmSignalParm.nFreqValue,mFmSignalParm.nRssi); 
+	    sFmSearchStatus = FM_STATE_STOPED;
+    }
+    ALOGI("seek callback, status: %d, freq: %d rssi: %d",status,mFmSignalParm.nFreqValue,mFmSignalParm.nRssi); 
 
 }
 
