@@ -581,18 +581,18 @@ cmr_int cmr_preview_start(cmr_handle preview_handle, cmr_u32 camera_id)
 	CHECK_CAMERA_ID(camera_id);
 	CMR_LOGI("in");
 
-	message.msg_type  = PREV_EVT_START;
+	message.msg_type  = PREV_EVT_ASSIST_START;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-	message.data      = (void*)camera_id;
-	ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
+	ret = cmr_thread_msg_send(handle->thread_cxt.assist_thread_handle, &message);
 	if (ret) {
 		CMR_LOGE("send msg failed!");
 		return CMR_CAMERA_FAIL;
 	}
 
-	message.msg_type  = PREV_EVT_ASSIST_START;
+	message.msg_type  = PREV_EVT_START;
 	message.sync_flag = CMR_MSG_SYNC_PROCESSED;
-	ret = cmr_thread_msg_send(handle->thread_cxt.assist_thread_handle, &message);
+	message.data      = (void*)camera_id;
+	ret = cmr_thread_msg_send(handle->thread_cxt.thread_handle, &message);
 	if (ret) {
 		CMR_LOGE("send msg failed!");
 		return CMR_CAMERA_FAIL;
