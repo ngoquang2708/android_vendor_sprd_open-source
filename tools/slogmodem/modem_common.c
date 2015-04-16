@@ -406,7 +406,7 @@ int write_from_buffer(int fd, char *buf, int len)
  * open log devices
  *
  */
-int open_device(struct slog_info *info, char *path)
+int open_device(char* path)
 {
 	int retry_count = 0;
 	int fd;

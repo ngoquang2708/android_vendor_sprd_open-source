@@ -8,6 +8,20 @@
  *      Feature merge: log file size configuration, overwrite configuration.
  */
 
+/*
+ *  Usage: slogmodem [-t] [-s <type>]
+ *
+ *      -t      This argument is ignored. It's kept for compatibility with
+ *              early version of slogmodem.
+ *      -s <type>
+ *              Specify the storage to use. <type> may be one of the following:
+ *                  int: internal storage of the phone
+ *                  ext: external storage. The root path is indicated by the
+ *                       EXTERNAL_STORAGE environment variable.
+ *                  sec: external storage. The root path is indicated by the
+ *                       SECONDARY_STORAGE environment variable.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,11 +60,65 @@ struct client_conn s_cli_mgr;
 char top_log_dir[MAX_NAME_LEN];
 char whole_log_dir[MAX_NAME_LEN];
 char current_log_dir[MAX_NAME_LEN]; 
-char* g_external_path;
+
+// The environment variable for the storage path to check
+const char* g_env_storage = 0;
+int g_storage_type;
+char* g_external_path = 0;
 // If the EXTERNAL_STORAGE environment variable is set, s_sd_mounted
 // indicates the external SD card mount state; otherwise s_sd_mounted
 // will be 0.
 static int s_sd_mounted = 0;
+
+static int parse_storage_type(const char* stype)
+{
+	int ret = 0;
+
+	if (!strcmp(stype, "int")) {
+		g_env_storage = 0;
+		g_storage_type = 0;
+	} else if (!strcmp(stype, "ext")) {
+		g_env_storage = "EXTERNAL_STORAGE";
+		g_storage_type = 1;
+	} else if (!strcmp(stype, "sec")) {
+		g_env_storage = "SECONDARY_STORAGE";
+		g_storage_type = 2;
+	} else {
+		ret = -1;
+	}
+
+	return ret;
+}
+
+static int parse_cmd_line(int argc, char* argv[])
+{
+	int i;
+	int ret = 0;
+
+	for (i = 1; i < argc; ++i) {
+		if (!strcmp(argv[i], "-t")) {
+			continue;
+		}
+		if (strcmp(argv[i], "-s")) {
+			err_log("invalid command line argument %s", argv[i]);
+			ret = -1;
+			break;
+		}
+		++i;
+		if (i >= argc) {
+			err_log("no storage type defined on command line");
+			ret = -1;
+			break;
+		}
+		ret = parse_storage_type(argv[i]);
+		if (ret < 0) {
+			err_log("invalid storage type %s", argv[i]);
+			break;
+		}
+	}
+
+	return ret;
+}
 
 struct slog_info* find_device(const char* name)
 {
@@ -248,14 +316,14 @@ int creat_top_path(int path_flag)
 	return 0;	
 }
 
-int monitor_sdcard_status()
+int monitor_sdcard_status(int stype)
 {
 	char value[PROPERTY_VALUE_MAX];
 	int type;
 
 	property_get("persist.storage.type", value, "-1");
 	type = atoi(value);
-	if (type == 1) {
+	if (type == stype) {
 		property_get("init.svc.fuse_sdcard0", value, "");
 		if( !strncmp(value, "running", 7) )
 			return 1;
@@ -265,18 +333,17 @@ int monitor_sdcard_status()
 	return 0;
 }
 
-int minidump_data_file(char *path)
+int minidump_data_file()
 {
-	int path_flag=0;
-	path_flag=monitor_sdcard_status();
-	if(s_sd_mounted != path_flag){
+	int path_flag = 0;
+	path_flag = monitor_sdcard_status(g_storage_type);
+	if(s_sd_mounted != path_flag) {
 		creat_top_path(path_flag);
 	}
-	
+
 	minidump_log_file();		
 	return 0;
 }
-
 
 static void handle_init_modem_state(struct slog_info *info)
 {
@@ -315,29 +382,29 @@ static void handle_open_modem_device(struct slog_info *info)
 
 	if (!strncmp(info->name, "cp_wcdma", 8)) {
 		property_get(MODEM_W_DIAG_PROPERTY, modem_property, "not_find");
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		info->fd_dump_cp = info->fd_device;
 		if(info->fd_device < 0)
 			info->state = SLOG_STATE_OFF;
 	} else if (!strncmp(info->name, "cp_td-scdma", 8)) {
 		property_get(MODEM_TD_LOG_PROPERTY, modem_property, "not_find");
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		if(info->fd_device < 0) {
 			property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_device = open_device(info, modem_property);
+			info->fd_device = open_device(modem_property);
 			info->fd_dump_cp = info->fd_device;
 			if(info->fd_device < 0)
 				info->state = SLOG_STATE_OFF;
 		} else {
 			property_get(MODEM_TD_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_dump_cp = open_device(info, modem_property);
+			info->fd_dump_cp = open_device(modem_property);
 		}
 	} else if (!strncmp(info->name, "cp_wcn", 6)) {
 		property_get(MODEM_WCN_DIAG_PROPERTY, modem_property, "not_find");
 		#ifdef EXTERNAL_WCN
 		info->fd_device = open(modem_property, O_RDWR|O_NONBLOCK);
 		#else
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		#endif
 		info->fd_dump_cp = info->fd_device;
 		if(info->fd_device < 0){
@@ -345,36 +412,36 @@ static void handle_open_modem_device(struct slog_info *info)
 		}
 	} else if (!strncmp(info->name, "cp_td-lte", 8)) {
 		property_get(MODEM_L_LOG_PROPERTY, modem_property, "not_find");
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		if(info->fd_device < 0) {
 			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_device = open_device(info, modem_property);
+			info->fd_device = open_device(modem_property);
 			info->fd_dump_cp = info->fd_device;
 		} else {
 			property_get(MODEM_L_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_dump_cp = open_device(info, modem_property);
+			info->fd_dump_cp = open_device(modem_property);
 		}
 	} else if (!strncmp(info->name, "cp_tdd-lte", 8)) {
 		property_get(MODEM_TL_LOG_PROPERTY, modem_property, "not_find");
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		if(info->fd_device < 0) {
 			property_get(MODEM_TL_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_device = open_device(info, modem_property);
+			info->fd_device = open_device(modem_property);
 			info->fd_dump_cp = info->fd_device;
 		} else {
 			property_get(MODEM_TL_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_dump_cp = open_device(info, modem_property);
+			info->fd_dump_cp = open_device(modem_property);
 		}
 	} else if (!strncmp(info->name, "cp_fdd-lte", 8)) {
 		property_get(MODEM_FL_LOG_PROPERTY, modem_property, "not_find");
-		info->fd_device = open_device(info, modem_property);
+		info->fd_device = open_device(modem_property);
 		if(info->fd_device < 0) {
 			property_get(MODEM_FL_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_device = open_device(info, modem_property);
+			info->fd_device = open_device(modem_property);
 			info->fd_dump_cp = info->fd_device;
 		} else {
 			property_get(MODEM_FL_DIAG_PROPERTY, modem_property, "not_find");
-			info->fd_dump_cp = open_device(info, modem_property);
+			info->fd_dump_cp = open_device(modem_property);
 		}
 	}
 }
@@ -535,8 +602,8 @@ int handle_socket_modem(char *buffer)
 		}
 	}
 	if(minidump_flag==1){
-		minidump_data_file(MINIDUMP_LOG_SOURCE);
-		minidump_flag=0;
+		minidump_data_file();
+		minidump_flag = 0;
 		return 1;
 	}	
 	return 0;
@@ -565,7 +632,7 @@ static void handle_dump_external_wcn(struct slog_info *info)
 		debug_log("flush wcn log");
 	}
 
-	creat_top_path(monitor_sdcard_status());
+	creat_top_path(g_storage_type && monitor_sdcard_status(g_storage_type));
 	sprintf(new_path,"%s/%s/%s",top_log_dir,current_log_dir,info->name);
 	ret=mkdir(new_path, S_IRWXU | S_IRWXG | S_IRWXO);
 	if (-1 == ret && (errno != EEXIST)) {
@@ -903,7 +970,7 @@ static int check_media_change(struct slog_info* cp_head)
 	int dir_changed = 0;
 	int ret;
 
-	int sd_state = monitor_sdcard_status();
+	int sd_state = monitor_sdcard_status(g_storage_type);
 	if (sd_state != s_sd_mounted) {
 		debug_log("SD mount state changed to %d",
 			  sd_state);
@@ -936,7 +1003,7 @@ static int check_media_change(struct slog_info* cp_head)
 	return ret;
 }
 
-void* modem_log_handler(void* arg)
+void modem_log_handler()
 {
 	struct slog_info* info;
 	static char cp_buffer[BUFFER_SIZE];
@@ -1000,7 +1067,7 @@ void* modem_log_handler(void* arg)
 
 	if(-1 == max && SLOG_DISABLE == g_minidump_enable) {
 		err_log("modem disabled and no connection with modemd");
-		return NULL;
+		return;
 	}
 	
 	while (1) {
@@ -1241,14 +1308,12 @@ void* modem_log_handler(void* arg)
 			}
 		}
 	}
-	return NULL;
 }
 
 void init_modem_log_path()
 {
-	int flag;
-	flag=monitor_sdcard_status();
-	creat_top_path(flag);
+	creat_top_path(g_storage_type &&
+		       monitor_sdcard_status(g_storage_type));
 }
 
 static void init_client_mgr(void)
@@ -1262,22 +1327,34 @@ static void init_client_mgr(void)
 	s_cli_mgr.dirty = 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
+	int ret = parse_cmd_line(argc, argv);
+	if (ret < 0) {
+		err_log("Usage: slogmodem [-t] [-s <type>]");
+		return 1;
+	}
+
 	struct sigaction siga;
-	
+
 	// Ignore SIGPIPE signal
 	memset(&siga, 0, sizeof siga);
 	siga.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &siga, 0);
 
 	cp_parse_config();
-	g_external_path = getenv("EXTERNAL_STORAGE");
-	if (g_external_path && monitor_sdcard_status()) {
+
+	if (g_storage_type) {
+		g_external_path = getenv(g_env_storage);
+		if (!g_external_path) {
+			g_storage_type = 0;
+		}
+	}
+	if (g_storage_type && monitor_sdcard_status(g_storage_type)) {
 		s_sd_mounted = 1;
 	}
 	init_client_mgr();
-	modem_log_handler(0);
+	modem_log_handler();
 
 	return 0;
 }

@@ -13,7 +13,6 @@ endif
 
 LOCAL_MODULE := slogmodem
 LOCAL_MODULE_TAGS := optional
-LOCAL_LDLIBS += -lpthread
 LOCAL_C_INCLUDES += external/jpeg external/zlib
 LOCAL_CFLAGS += -std=c99
 LOCAL_SHARED_LIBRARIES := libc libcutils liblog libz libjpeg

@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 void gen_logfile(char *filename, struct slog_info *info);
-int open_device(struct slog_info *info, char *path);
+int open_device(char* path);
 FILE* gen_outfd(struct slog_info* info);
 void cp_file(char *path, char *new_path);
 void log_size_handler(struct slog_info* info);
