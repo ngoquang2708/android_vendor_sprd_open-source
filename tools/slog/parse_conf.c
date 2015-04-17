@@ -191,12 +191,6 @@ int parse_5_entries(char *type)
 		info->type = SLOG_TYPE_STREAM;
 		info->name = strdup(name);
 		if(!strncmp(info->name, "kernel", 6) ||
-			!strncmp(info->name, "cp_wcdma", 8) ||
-			!strncmp(info->name, "cp_td-scdma", 8) ||
-			!strncmp(info->name, "cp_wcn", 6) ||
-			!strncmp(info->name, "cp_td-lte", 8) ||
-			!strncmp(info->name, "cp_tdd-lte", 8) ||
-			!strncmp(info->name, "cp_fdd-lte", 8) ||
 			!strncmp(info->name, "bt", 2) ||
 			!strncmp(info->name, "tcp", 3) ||
 			!strncmp(info->name, "kmemleak", 8)) {
@@ -292,7 +286,7 @@ int gen_config_string(char *buffer)
 	int off = 0;
 	struct slog_info *info;
 
-	off += sprintf(buffer + off, "state: %d\nbackend threads(stream snapshot notify bt tcp modem): %d %d %d %d %d \n",
+	off += sprintf(buffer + off, "state: %d\nbackend threads(stream snapshot notify bt tcp): %d %d %d %d %d \n",
 			slog_enable, stream_log_handler_started, snapshot_log_handler_started,
 		notify_log_handler_started, bt_log_handler_started, tcp_log_handler_started);
 	off += sprintf(buffer + off, "current logpath,%s,\n", current_log_path);
@@ -387,10 +381,6 @@ int parse_config()
 			slog_enable = SLOG_ENABLE;
 		if(!strncmp("disable", buffer, 7))
 			slog_enable = SLOG_DISABLE;
-#ifdef LOW_POWER_MODE
-		if(!strncmp("low_power", buffer, 7))
-			slog_enable = SLOG_LOW_POWER;
-#endif
 		if(!strncmp("var", buffer, 3))
 			ret = parse_3_entries(buffer);
 		else if(!strncmp("snap", buffer, 4)) 

@@ -13,7 +13,6 @@
 #include <utils/Log.h>
 
 #define ANDROID_VERSION_442
-#define LOW_POWER_MODE
 
 /* "type" field */
 #define SLOG_TYPE_STREAM	0x1
@@ -26,9 +25,6 @@
 #define SLOG_STATE_OFF 1
 
 /*"slog state" field*/
-#ifdef LOW_POWER_MODE
-#define SLOG_LOW_POWER 2
-#endif
 
 #define SLOG_ENABLE 1
 #define SLOG_DISABLE 0
@@ -49,9 +45,6 @@ enum {
 	CTRL_CMD_TYPE_DUMP,
 	CTRL_CMD_TYPE_SCREEN,
 	CTRL_CMD_TYPE_SYNC,
-#ifdef LOW_POWER_MODE
-	CTRL_CMD_TYPE_HOOK_MODEM,
-#endif
 	CTRL_CMD_TYPE_JAVACRASH,
 	CTRL_CMD_TYPE_GMS,
 	CTRL_CMD_TYPE_RSP
@@ -73,16 +66,13 @@ enum {
 #define MAX_NAME_LEN			128
 #define MAX_LINE_LEN			2048
 #define DEFAULT_LOG_SIZE_AP		256 /* MB */
-#define DEFAULT_LOG_SIZE_CP		512 /* MB */
 #define MAXROLLLOGS_FOR_AP		9
-#define MAXROLLLOGS_FOR_CP		100
 #define INTERNAL_ROLLLOGS		1
 #define TIMEOUT_FOR_SD_MOUNT		10 /* seconds */
 #define BUFFER_SIZE			(32 * 1024) /* 32k */
 #define SETV_BUFFER_SIZE		(64 * 1024) /* 64k */
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
-#define MODEM_LOG_SOURCE		"/dev/vbpipe0"
 
 /* handler last log dir */
 #define LAST_LOG 			"last_log"
@@ -118,14 +108,14 @@ struct slog_info {
 	/* filename without timestamp */
 	char		*log_basename;
 
+	/* filepath to check file exist */
+	char		*file_path;
+
 	/* used for "snap" type*/
 	char		*content;
 
 	/* used for "stream" type, log source handle */
 	int		fd_device;
-
-	/* used for "stream" type, modem memory source handle */
-	int		fd_dump_cp;
 
 	/* log file handle */
 	FILE		*fp_out;
@@ -145,11 +135,6 @@ struct slog_cmd {
 	char content[MAX_LINE_LEN * 2];
 };
 
-struct modem_timestamp {
-        long unsigned int magic_number;       /* magic number for verify the structure */
-        struct timeval tv;      /* clock time, seconds since 1970.01.01 */
-        long unsigned int sys_cnt;            /* modem's time */
-};
 
 /* var */
 extern char *config_log_path, *current_log_path;
@@ -174,8 +159,6 @@ extern void *notify_log_handler(void *arg);
 extern void *bt_log_handler(void *arg);
 extern void *tcp_log_handler(void *arg);
 extern void *kmemleak_handler(void *arg);
-extern void *modem_log_handler(void *arg);
-extern void *handle_modem_state_monitor(void *arg);
 
 extern int stream_log_handler_started;
 extern int snapshot_log_handler_started;
@@ -183,7 +166,6 @@ extern int notify_log_handler_started;
 extern int bt_log_handler_started;
 extern int tcp_log_handler_started;
 extern int kmemleak_handler_started;
-extern int modem_log_handler_started;
 
 /* parse_conf.c */
 extern int gen_config_string(char *buffer);
