@@ -91,9 +91,6 @@ void update_5_entries(const char *keyword, const char *status, char *line)
 		if ( !strncmp("main", name, 4) || !strncmp("system", name, 6) || !strncmp("radio", name, 5)
 		|| !strncmp("events", name, 6) || !strncmp("kernel", name, 6) )
 			sprintf(line, "%s\t%s\t%s\t%s\t%s", "stream", name, status, pos4, pos5);
-	} else if  ( !strncmp("modem", keyword, 5) ) {
-		if  ( !strncmp("modem", name, 5) )
-			sprintf(line, "%s\t%s\t%s\t%s\t%s", "stream", name, status, pos4, pos5);
 	} else if  ( !strncmp("tcp", keyword, 3) ) {
 		if  ( !strncmp("tcp", name, 3) )
 			sprintf(line, "%s\t%s\t%s\t%s\t%s", "stream", name, status, pos4, pos5);
@@ -114,23 +111,11 @@ void update_conf(const char *keyword, const char *status)
 		perror("open conf failed!\n");
 		return;
 	}
-
-#ifdef LOW_POWER_MODE
-	if (!strncmp("enable", keyword, 6) || !strncmp("disable", keyword, 7) || !strncmp("low_power", keyword, 8)) {
-#else
-	if (!strncmp("enable", keyword, 6) || !strncmp("disable", keyword, 7)) {
-#endif
-		while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
-#ifdef LOW_POWER_MODE
-			if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7) || !strncmp("low_power", line, 8)) {
-#else
-			if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7)) {
-#endif
-				sprintf(line, "%s\n",  keyword);
-			}
-			len += sprintf(buffer + len, "%s", line);
-		}
-	} else if ( !strncmp("android", keyword, 6) || !strncmp("modem", keyword, 5) || !strncmp("bt", keyword, 2) || !strncmp("tcp", keyword, 3)) {
+    while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
+		sprintf(line, "%s\n",  keyword);
+	}
+    len += sprintf(buffer + len, "%s", line);
+	if ( !strncmp("android", keyword, 6) || !strncmp("bt", keyword, 2) || !strncmp("tcp", keyword, 3)) {
 		while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
 			if (!strncmp("stream", line, 6)) {
 				update_5_entries(keyword, status, line);
@@ -157,9 +142,7 @@ void usage(const char *name)
 	printf("Operation:\n"
                "\tenable             update config file and enable slog\n"
                "\tdisable            update config file and disable slog\n"
-               "\tlow_power          update config file and make slog in low_power state\n"
                "\tandroid [on/off]   update config file and enable/disable android log\n"
-               "\tmodem [on/off]     update config file and enable/disable modem log\n"
                "\ttcp [on/off]       update config file and enable/disable cap log\n"
                "\tbt  [on/off]       update config file and enable/disable bluetooth log\n"
                "\treload             reboot slog and parse config file.\n"
@@ -171,7 +154,6 @@ void usage(const char *name)
                "\tdump [file]        dump all log to a tar file.\n"
                "\tscreen [file]      screen shot, if no file given, will be put into misc dir\n"
                "\tsync               sync current android log to file.\n"
-               "\thook_modem         dump current modem log to /data/log\n"
                "\tquery              print the current slog configuration.\n");
 	return;
 }
@@ -377,14 +359,6 @@ int main(int argc, char *argv[])
 		cmd.type = CTRL_CMD_TYPE_SYNC;
 	} else if(!strncmp(argv[1], "javacrash", 9)) {
 		cmd.type = CTRL_CMD_TYPE_JAVACRASH;
-#ifdef LOW_POWER_MODE
-	} else if(!strncmp(argv[1], "hook_modem", 10)) {
-		cmd.type = CTRL_CMD_TYPE_HOOK_MODEM;
-	} else if(!strncmp(argv[1], "low_power", 8)) {
-		update_conf("low_power", NULL);
-                property_set("debug.slog.enabled", "1");
-		cmd.type = CTRL_CMD_TYPE_RELOAD;
-#endif
 	} else if(!strncmp(argv[1], "enable", 6)) {
 		update_conf("enable", NULL);
                 property_set("debug.slog.enabled", "1");
@@ -398,14 +372,6 @@ int main(int argc, char *argv[])
 	} else if(!strncmp(argv[1], "android", 7)) {
 		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
 			update_conf("android", argv[2]);
-			cmd.type = CTRL_CMD_TYPE_RELOAD;
-		} else {
-			usage(argv[0]);
-			return -1;
-		}
-	} else if(!strncmp(argv[1], "modem", 5)) {
-		if(argc == 3 && ( strncmp(argv[2], "on", 2) == 0 || strncmp(argv[2], "off", 3) == 0 )) {
-			update_conf("modem", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
 			usage(argv[0]);

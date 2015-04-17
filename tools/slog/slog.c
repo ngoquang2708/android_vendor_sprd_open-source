@@ -38,9 +38,6 @@ int tcp_log_handler_started = 0;
 int kmemleak_handler_started = 0;
 
 
-#ifdef LOW_POWER_MODE
-int hook_modem_flag = 0;
-#endif
 
 int internal_log_size = 5 * 1024; /*M*/
 
@@ -291,17 +288,6 @@ static void handler_last_dir()
 	return;
 }
 
-static void handler_modem_memory_log()
-{
-	char path[MAX_NAME_LEN];
-	struct stat st;
-
-	sprintf(path, "%s/modem_memory.log", external_path);
-	if(!stat(path, &st)) {
-		sprintf(path, "mv %s/modem_memory.log %s/%s/misc/", external_path, current_log_path, top_logdir);
-		system(path);
-	}
-}
 
 static void create_log_dir()
 {
@@ -365,18 +351,6 @@ static void use_ori_log_dir()
 	return;
 }
 
-#ifdef LOW_POWER_MODE
-static void handle_low_power()
-{
-	if(slog_enable != SLOG_LOW_POWER)
-		return;
-	/*
-	if(!modem_log_handler_started)
-		pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
-	*/
-}
-#endif
-
 static int start_sub_threads()
 {
 	int ret;
@@ -419,15 +393,6 @@ static int start_sub_threads()
 			exit(0);
 		}
 	}
-	/*
-	if(!modem_log_handler_started) {
-		ret = pthread_create(&modem_tid, NULL, modem_log_handler, NULL);
-		if(ret < 0) {
-			err_log("create modem thread failed.");
-			exit(0);
-		}
-	}
-	*/
 	if(!kmemleak_handler_started) {
 		ret = pthread_create(&kmemleak_tid, NULL, kmemleak_handler, NULL);
 		if(ret < 0) {
@@ -951,16 +916,6 @@ void *handle_request(void *arg)
 		handle_javacrash_file();
 		ret = 0;
 		break;
-#ifdef LOW_POWER_MODE
-	case CTRL_CMD_TYPE_HOOK_MODEM:
-		ret = mkdir(HOOK_MODEM_TARGET_DIR, S_IRWXU | S_IRWXG | S_IRWXO);
-		if (-1 == ret && (errno != EEXIST)){
-			err_log("mkdir /data/log failed.");
-		}
-		ret = 0;
-		hook_modem_flag = 1;
-		break;
-#endif
 	case CTRL_CMD_TYPE_SCREEN:
 		if(slog_enable != SLOG_ENABLE || slog_init_complete == 0||screenshot_enable==0)
 			break;
@@ -1170,9 +1125,6 @@ int main(int argc, char *argv[])
 
 	/* backend capture threads started here */
 	do_init();
-#ifdef LOW_POWER_MODE
-	handle_low_power();
-#endif
 	while(1) {
 		sleep(5);
 		log_buffer_flush();

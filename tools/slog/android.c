@@ -285,6 +285,12 @@ void *stream_log_handler(void *arg)
 				}
 				buf_kmsg[ret] = '\0';
 				strinst(wbuf_kmsg, buf_kmsg);
+				if (access(info->file_path, W_OK)) {
+					err_log("%s does not exist", info->file_path);
+					fclose(info->fp_out);
+					info->fp_out = NULL;
+					exit(0);
+				}
 				retry = 5;
 				while(retry){
 					ret = fwrite(wbuf_kmsg, strlen(wbuf_kmsg), 1, info->fp_out);
@@ -320,7 +326,6 @@ void *stream_log_handler(void *arg)
 					info = info->next;
 					continue;
                 		}
-
 				entry = (struct logger_entry *)buf;
 				if (entry->len != ret - sizeof(struct logger_entry)) {
 					err_log("slog read: unexpected length. Expected %d, got %d\n",
@@ -344,6 +349,12 @@ void *stream_log_handler(void *arg)
 					if (!outBuffer) {
 							info = info->next;
 							continue;
+					}
+					if (access(info->file_path, W_OK)) {
+						err_log("%s does not exist", info->file_path);
+						fclose(info->fp_out);
+						info->fp_out = NULL;
+						exit(0);
 					}
 					retry = 5;
 					while(retry){
