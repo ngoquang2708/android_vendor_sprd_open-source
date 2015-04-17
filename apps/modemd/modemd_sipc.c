@@ -358,6 +358,70 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcpy(dsp_partition,path);
         strcat(dsp_partition,"warm");
         load_sipc_image(dsp_partition, 0,  warm_bank, 0, sipc_warm_size);
+    } else if(modem == LTE_MODEM) {
+        char tgdsp_bank[128];
+        char ldsp_bank[128];
+        char warm_bank[128];
+        uint sipc_ldsp_size = 0;
+        uint sipc_warm_size = 0;
+        uint sipc_tgdsp_size = 0;
+
+        sipc_modem_size = L_MODEM_SIZE;
+        sipc_tgdsp_size = L_TGDSP_SIZE;
+        sipc_ldsp_size = L_LDSP_SIZE;
+        sipc_warm_size = L_WARM_SIZE;
+        strcat(persist_prop, "l.nvp");
+        property_get(LTE_PROC_PROP, proc_prop, "");
+        /* write 1 to stop*/
+        strcpy(modem_stop, proc_prop);
+        strcat(modem_stop, MODEM_STOP);
+        write_proc_file(modem_stop, 0, "1");
+        strcpy(modem_bank, proc_prop);
+        strcat(modem_bank, MODEM_BANK);
+
+        /*handle tgdsp image*/
+        strcpy(tgdsp_bank, proc_prop);
+        strcat(tgdsp_bank, TGDSP_BANK);
+
+        /*handle ldsp image*/
+        strcpy(ldsp_bank, proc_prop);
+        strcat(ldsp_bank, LDSP_BANK);
+
+        /*handle ldsp image*/
+        strcpy(warm_bank, proc_prop);
+        strcat(warm_bank, WARM_BANK);
+        strcpy(modem_start, proc_prop);
+        strcat(modem_start, MODEM_START);
+
+        property_get(persist_prop,path_char,"");
+        if(0 == strlen(path_char)){
+              MODEMD_LOGD("invalid ro.modem.x.nvp path_char %s\n",path_char);
+              return 0;
+         }
+        MODEMD_LOGD("modem path_char %s \n",path_char);
+        strcat(path,path_char);
+        strcpy(modem_partition,path);
+        strcpy(dsp_partition,path);
+        strcat(modem_partition,"modem");
+        strcat(dsp_partition,"gdsp");
+
+        /* load modem */
+        MODEMD_LOGD("load modem image from %s to %s, len=%d",
+                modem_partition, modem_bank, sipc_modem_size);
+        load_sipc_image(modem_partition, 0, modem_bank, 0, sipc_modem_size);
+
+        /* load dsp */
+        MODEMD_LOGD("load dsp image from %s to %s, len=%d",
+                dsp_partition, tgdsp_bank, sipc_tgdsp_size);
+        load_sipc_image(dsp_partition, 0, tgdsp_bank, 0, sipc_tgdsp_size);
+
+        strcpy(dsp_partition,path);
+        strcat(dsp_partition,"ldsp");
+        load_sipc_image(dsp_partition, 0, ldsp_bank, 0, sipc_ldsp_size);
+
+        strcpy(dsp_partition,path);
+        strcat(dsp_partition,"warm");
+        load_sipc_image(dsp_partition, 0, warm_bank, 0, sipc_warm_size);
     } else if(modem == TL_MODEM) {
         char tgdsp_bank[128];
         char ldsp_bank[128];
@@ -427,6 +491,8 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
         strcpy(alive_info, "TL Modem Alive");
     } else if(modem == LF_MODEM) {
         strcpy(alive_info, "LF Modem Alive");
+    } else if(modem == LTE_MODEM) {
+        strcpy(alive_info, "L Modem Alive");
     } else {
         MODEMD_LOGE("error unkown modem  alive_info");
     }
@@ -507,6 +573,11 @@ static int load_sipc_modem_img(int modem, int is_modem_assert)
             tl_modem_state = MODEM_READY;
             pthread_cond_signal(&tl_cond);
             pthread_mutex_unlock(&tl_state_mutex);
+    } else if(modem == LTE_MODEM) {
+        pthread_mutex_lock(&lte_state_mutex);
+        lte_modem_state = MODEM_READY;
+        pthread_cond_signal(&lte_cond);
+        pthread_mutex_unlock(&lte_state_mutex);
     }
 
     ret = 0;
@@ -870,6 +941,10 @@ void* detect_sipc_modem(void *param)
                     pthread_mutex_lock(&lf_state_mutex);
                     lf_modem_state = MODEM_RESET;
                     pthread_mutex_unlock(&lf_state_mutex);
+                } else if(modem == LTE_MODEM) {
+                    pthread_mutex_lock(&lte_state_mutex);
+                    lte_modem_state = MODEM_RESET;
+                    pthread_mutex_unlock(&lte_state_mutex);
                 }
 
                 /* info socket clients that modem is reset */
@@ -897,6 +972,10 @@ void* detect_sipc_modem(void *param)
                     pthread_mutex_lock(&lf_state_mutex);
                     lf_modem_state = MODEM_ASSERT;
                     pthread_mutex_unlock(&lf_state_mutex);
+                } else if(modem == LTE_MODEM) {
+                    pthread_mutex_lock(&lte_state_mutex);
+                    lte_modem_state = MODEM_ASSERT;
+                    pthread_mutex_unlock(&lte_state_mutex);
                 }
                 if(strstr(buf, "wdtirq")) {
                     if(modem == TD_MODEM) {
@@ -915,6 +994,10 @@ void* detect_sipc_modem(void *param)
                         MODEMD_LOGD("lf modem hangup");
                         strcpy(buf, "LF Modem Hang");
                         numRead = sizeof("LF Modem Hang");
+                    }  else if(modem == LTE_MODEM) {
+                        MODEMD_LOGD("lte modem hangup");
+                        strcpy(buf, "LTE Modem Hang");
+                        numRead = sizeof("LTE Modem Hang");
                     }
                 } else {
                     MODEMD_LOGD("modem assert happen com.android.modemassert.MODEM_STAT_CHANGE");

@@ -92,6 +92,11 @@
 #define TL_TGDSP_SIZE               (0x2e0000)
 #define TL_LDSP_SIZE                (0x1c0000)
 
+#define L_MODEM_SIZE               (0xbb0000)
+#define L_TGDSP_SIZE               (0x2e0000)
+#define L_LDSP_SIZE                (0x1c0000)
+#define L_WARM_SIZE                (0x280000)
+
 /* detect assert/hangup interface */
 #define TD_ASSERT_PROP               "ro.modem.t.assert"
 #define W_ASSERT_PROP                "ro.modem.w.assert"
@@ -125,8 +130,8 @@
 #define TD_WATCHDOG_DEV              "/proc/cpt/wdtirq"
 #define W_WATCHDOG_DEV               "/proc/cpw/wdtirq"
 #define TL_WATCHDOG_DEV              "/proc/cptl/wdtirq"
-#define LF_WATCHDOG_DEV              "/proc/cptl/wdtirq"
-#define L_WATCHDOG_DEV               "/proc/cpl/wdtirq"
+#define LF_WATCHDOG_DEV               "/proc/cptl/wdtirq"
+#define L_WATCHDOG_DEV                "/proc/cptl/wdtirq"
 
 #define TTY_DEV_PROP                 "persist.ttydev"
 #define PHONE_APP_PROP               "sys.phone.app"
