@@ -120,7 +120,23 @@ static bool mIOMMUEnabled = false;
 
 static int32 VSP_malloc_cb(void* mHandle, uint32 size_extra) {
 
+    int32 picId;
+    void* pBufferHeader;
+    while (MMDEC_OK == (*mH264Dec_GetLastDspFrm)((AVCHandle *)mHandle, &pBufferHeader, &picId)) {
+        //drainOneOutputBuffer(picId, pBufferHeader);
+    }
+
     MMCodecBuffer extra_mem[MAX_MEM_TYPE];
+
+    if (s_pbuf_extra_v != NULL) {
+        if (mIOMMUEnabled) {
+            s_pmem_extra->free_mm_iova(s_pbuf_extra_p, s_pbuf_extra_size);
+        }
+        s_pmem_extra.clear();
+        s_pbuf_extra_v = NULL;
+        s_pbuf_extra_p = 0;
+        s_pbuf_extra_size = 0;
+    }
 
     if (mIOMMUEnabled) {
         s_pmem_extra = new MemoryHeapIon("/dev/ion", size_extra, MemoryHeapBase::NO_CACHING, ION_HEAP_ID_MASK_SYSTEM);
@@ -250,6 +266,64 @@ int32 openDecoder(const char* libName) {
     return 0;
 }
 
+uint32 raw_get_unit (uint8 *pInStream)
+{
+    int32 len = 0;
+    uint8 *ptr;
+    uint8 data;
+    int32 declen = 0;
+    int32 zero_num = 0;
+    int32 cur_start_code_len = 0;
+    int32 next_start_code_len = 0;
+    uint32 nal_len;
+
+    ptr = pInStream;
+
+    while ((data = *ptr++) == 0x00)
+    {
+        cur_start_code_len++;
+    }
+    cur_start_code_len++;
+    declen += cur_start_code_len;
+
+    //read til next start code, and remove the third start code code emulation byte
+    len = 0;
+    while (declen < ONEFRAME_BITSTREAM_BFR_SIZE)
+    {
+        data = *ptr++;
+        declen++;
+        len++;
+
+        if (zero_num < 2)
+        {
+            zero_num++;
+            if(data != 0)
+            {
+                zero_num = 0;
+            }
+        } else
+        {
+            if ((zero_num >= 2) && (data == 0x1))
+            {
+                next_start_code_len = zero_num+1;
+                break;
+            }
+
+            if (data == 0)
+            {
+                zero_num++;
+            } else
+            {
+                zero_num = 0;
+            }
+        }
+    }
+
+    nal_len = len - next_start_code_len + cur_start_code_len;
+
+    return nal_len;
+}
+
 int main(int argc, char **argv) {
     char *filename_bs = NULL;
     FILE *fp_bs = NULL;
@@ -263,6 +337,7 @@ int main(int argc, char **argv) {
     uint32 startcode = 0;
     uint32 maskcode = 0;
     int32 i;
+    int32 strm_offset = 0;
 
     AVCHandle *mHandle = NULL;
 
@@ -443,78 +518,55 @@ int main(int argc, char **argv) {
     }
 
     /* step 2 - decode with vsp */
-    startcode = table_startcode2[format];
-    maskcode = table_maskcode2[format];
     while (!feof(fp_bs)) {
-        int read_size = fread(buffer_data+buffer_size, 1, ONEFRAME_BITSTREAM_BFR_SIZE-buffer_size, fp_bs);
-        int iCount = 0;
-        if (read_size <= 0) {
-            break;
+        fseek(fp_bs, strm_offset, SEEK_SET);
+        int read_size = fread(buffer_data, 1, ONEFRAME_BITSTREAM_BFR_SIZE, fp_bs);
+
+        uint32 frame_size = raw_get_unit(buffer_data);
+        strm_offset += frame_size;
+
+        // read a bitstream frame
+        memcpy(pbuf_stream, buffer_data, frame_size);
+
+        // decode bitstream to yuv420sp
+        uint8 *pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
+        uint32 pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
+        (*mH264Dec_SetCurRecPic)(mHandle, pyuv420sp, (uint8 *)pyuv420sp_phy, NULL, framenum_yuv);
+        framenum_bs++;
+        MMDecOutput dec_out;
+        dec_out.frameEffective = 0;
+        int64_t start = systemTime();
+        if (dec_decode_frame(mHandle, pbuf_stream, pbuf_stream_phy, frame_size, &dec_out) < 0) {
+            ERR("failed to decode one frame");
+            goto err;
         }
-        buffer_size += read_size;
+        int64_t end = systemTime();
+        uint32 duration = (uint32)((end-start) / 1000000L);
+        time_total_ms += duration;
 
-        uint8 *ptmp = buffer_data;
-        uint32 frame_size = 0;
-        while (buffer_size > 0) {
-            // search a frame
-            frame_size = find_frame(ptmp, buffer_size, startcode, maskcode);
-            if (frame_size == 0) {
-                if ((ptmp == buffer_data) || feof(fp_bs)) {
-                    frame_size = buffer_size;
-                } else {
-                    break;
-                }
-            }
-
-            // read a bitstream frame
-            memcpy(pbuf_stream, ptmp, frame_size);
-            ptmp += frame_size;
-            buffer_size -= frame_size;
-
-            // decode bitstream to yuv420sp
-            uint8 *pyuv420sp = pyuv[framenum_bs % DEC_YUV_BUFFER_NUM];
-            uint32 pyuv420sp_phy = pyuv_phy[framenum_bs % DEC_YUV_BUFFER_NUM];
-            (*mH264Dec_SetCurRecPic)(mHandle, pyuv420sp, (uint8 *)pyuv420sp_phy, NULL, framenum_yuv);
-            framenum_bs++;
-            MMDecOutput dec_out;
-            dec_out.frameEffective = 0;
-            int64_t start = systemTime();
-            if (dec_decode_frame(mHandle, pbuf_stream, pbuf_stream_phy, frame_size, &dec_out) < 0) {
-                ERR("failed to decode one frame");
-                goto err;
-            }
-            int64_t end = systemTime();
-            uint32 duration = (uint32)((end-start) / 1000000L);
-            time_total_ms += duration;
-
-            if (duration < 40) {
-                usleep((40 - duration)*1000);
-            }
-
-            INFO("frame %d[%dx%d]: time = %dms, size = %d, effective(%d)\n",
-                 framenum_bs, dec_out.frame_width, dec_out.frame_height, duration, frame_size, dec_out.frameEffective);
-
-            if ((dec_out.frameEffective) && (fp_yuv != NULL)) {
-                // yuv420sp to yuv420p
-                yuv420sp_to_yuv420p(dec_out.pOutFrameY, dec_out.pOutFrameU, py, pu, pv, dec_out.frame_width, dec_out.frame_height);
-
-                // write yuv420p
-                if (write_yuv_frame(py, pu, pv, dec_out.frame_width, dec_out.frame_height, fp_yuv)!= 0)	{
-                    break;
-                }
-
-                framenum_yuv ++;
-            }
-
-            if (frames != 0) {
-                if (framenum_yuv >= frames) {
-                    goto early_terminate;
-                }
-            }
+        if (duration < 40) {
+            usleep((40 - duration)*1000);
         }
 
-        if (buffer_size > 0) {
-            memmove(buffer_data, ptmp, buffer_size);
+        INFO("frame %d[%dx%d]: time = %dms, size = %d, effective(%d)\n",
+             framenum_bs, dec_out.frame_width, dec_out.frame_height, duration, frame_size, dec_out.frameEffective);
+
+        if ((dec_out.frameEffective) && (fp_yuv != NULL)) {
+            // yuv420sp to yuv420p
+            yuv420sp_to_yuv420p(dec_out.pOutFrameY, dec_out.pOutFrameU, py, pu, pv, dec_out.frame_width, dec_out.frame_height);
+
+            // write yuv420p
+            if (write_yuv_frame(py, pu, pv, dec_out.frame_width, dec_out.frame_height, fp_yuv)!= 0)	{
+                break;
+            }
+
+            framenum_yuv ++;
+        }
+
+        if (frames != 0) {
+            if (framenum_yuv >= frames) {
+                goto early_terminate;
+            }
         }
     }
 
