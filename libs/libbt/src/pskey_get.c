@@ -13,11 +13,13 @@
 #include "bt_vendor_sprd.h"
 #define BT_PSKEY_TRACE_BUF_SIZE 256
 #define MAX_BOARD_TYPE_LEN 32
+#define MAX_PSKEY_PATH_LEN 100
 
 #define _FILE_PARSE_DEBUG_
 #define  CMD_ITEM_TABLE(ITEM, MEM_OFFSET, TYPE)    { ITEM,   (unsigned int)( &(  ((BT_PSKEY_CONFIG_T *)(0))->MEM_OFFSET )),   TYPE }
 
-#define PSKEY_PATH  "/system/etc/connectivity_configure.ini"
+#define PSKEY_PATH_SYSTEM  "/system/etc/connectivity_configure.ini"
+#define PSKEY_PATH_PRODUCTINFO  "/productinfo/connectivity_configure.ini"
 
 typedef struct
 {
@@ -344,17 +346,24 @@ int bt_getPskeyFromFile(void *pData)
     unsigned char *pBuf = NULL;
     int len;
     int board_type=0;
+	char pPskeyPath[MAX_PSKEY_PATH_LEN] = {0};
 
     ALOGI("begin to bt_getPskeyFromFile");
-    fd = open(PSKEY_PATH, O_RDONLY, 0644);
+	if(access(PSKEY_PATH_PRODUCTINFO, R_OK) == 0)
+		strcpy(pPskeyPath, PSKEY_PATH_PRODUCTINFO);
+	else
+		strcpy(pPskeyPath, PSKEY_PATH_SYSTEM);
+	ALOGI("%s : pskey path is %s", __FUNCTION__, pPskeyPath);
+
+    fd = open(pPskeyPath, O_RDONLY, 0644);
     if(-1 != fd)
     {
-        len = bt_getFileSize(PSKEY_PATH);
+        len = bt_getFileSize(pPskeyPath);
         pBuf = (unsigned char *)malloc(len);
         ret = read(fd, pBuf, len);
         if(-1 == ret)
         {
-            ALOGE("%s read %s ret:%d\n", __FUNCTION__, PSKEY_PATH, ret);
+            ALOGE("%s read %s ret:%d\n", __FUNCTION__, pPskeyPath, ret);
             free(pBuf);
             close(fd);
             return -1;
@@ -363,7 +372,7 @@ int bt_getPskeyFromFile(void *pData)
     }
     else
     {
-        ALOGE("%s open %s ret:%d\n", __FUNCTION__, PSKEY_PATH, fd);
+        ALOGE("%s open %s ret:%d\n", __FUNCTION__, pPskeyPath, fd);
         return -1;
     }
 
