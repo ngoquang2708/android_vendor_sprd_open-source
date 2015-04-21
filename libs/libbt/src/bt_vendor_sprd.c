@@ -737,25 +737,6 @@ static void write_mac_file(char *file_name, uint8 *addr) {
     ALOGI("%s done", __func__);
 }
 
-static void check_mac_address(uint8 *addr) {
-    /* only for sprd bluetooth address */
-    uint8 res = 0;
-    if (addr[0] != 0x40) {
-        addr[0] = 0x40;
-	 res = 1;
-    }
-    if (addr[1] != 0x45) {
-        addr[1] = 0x45;
-	 res = 1;
-    }
-    if (addr[2] != 0xDA) {
-        addr[2] = 0xDA;
-	 res = 1;
-    }
-    if (res) {
-        ALOGI("%s AMEND ADDR: [%02X:%02X:%02X:%02X:%02X:%02X]", __func__, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-    }
-}
 
 static void mac_address_stream_compose(uint8 *addr) {
     uint8 tmp, i, j;
@@ -782,8 +763,6 @@ static void get_mac_address(uint8 *addr){
     /* read mac file */
     read_mac_address(DATMISC_MAC_ADDR_PATH, addr_t);
 
-    /* check mac addr */
-    check_mac_address(addr_t);
 
     /* compose mac stream */
     mac_address_stream_compose(addr_t);
