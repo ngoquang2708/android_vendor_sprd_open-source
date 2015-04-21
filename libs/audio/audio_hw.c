@@ -4259,6 +4259,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             pthread_mutex_unlock(&adev->lock);
         }else{
             pthread_mutex_lock(&adev->lock);
+            if (adev->private_ctl.fm_da0_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da0_mux, 0, 0);
+            if (adev->private_ctl.fm_da1_mux)
+                mixer_ctl_set_value(adev->private_ctl.fm_da1_mux, 0, 0);
             adev->fm_open = false;
             pthread_mutex_unlock(&adev->lock);
         }
