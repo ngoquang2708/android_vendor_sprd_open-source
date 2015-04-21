@@ -55,6 +55,7 @@ enum {
 #define debug_log(fmt, arg...)
 
 #define INTERNAL_LOG_PATH		"/data/slog"
+#define INTERNAL_MODEM_LOG_PATH         "/data/modem_log"
 #define DEFAULT_DEBUG_SLOG_CONFIG	"/system/etc/slog.conf"
 #define DEFAULT_USER_SLOG_CONFIG	"/system/etc/slog.conf.user"
 #define TMP_FILE_PATH			"/data/local/tmp/slog/"

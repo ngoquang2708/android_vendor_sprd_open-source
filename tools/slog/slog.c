@@ -583,7 +583,7 @@ int dump_all_log(const char *name)
 		return -1;
 	capture_all(snapshot_log_head);
 	capture_by_name(snapshot_log_head, "getprop", NULL);
-	sprintf(cmd, "tar czf %s/%s -C %s %s %s", external_path, name, external_path, "slog", INTERNAL_LOG_PATH);
+	sprintf(cmd, "tar czf %s/%s -C %s %s %s %s %s", external_path, name, external_path, "slog", "modem_log", INTERNAL_LOG_PATH, INTERNAL_MODEM_LOG_PATH);
 	return system(cmd);
 }
 
