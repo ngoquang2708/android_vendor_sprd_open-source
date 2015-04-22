@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <dirent.h>
+#include <poll.h>
 #include <cutils/sockets.h>
 #include <cutils/properties.h>
 #include "private/android_filesystem_config.h"
@@ -216,8 +217,20 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
 	}
 
 	ssize_t ret;
+	struct pollfd time_pol;
+	int pol_ret;
 
-	ret = read(fd, (char*)mts + offsetof(struct modem_timestamp, tv), 12);
+	// Wait for at most 1 second
+	time_pol.fd = fd;
+	time_pol.events = POLLIN;
+	time_pol.revents = 0;
+	pol_ret = poll(&time_pol, 1, 1000);
+	ret = 0;
+	if (pol_ret > 0 && (time_pol.revents & POLLIN)) {
+		ret = read(fd,
+			   (char*)mts + offsetof(struct modem_timestamp, tv),
+			   12);
+	}
 	close(fd);
 	if (ret < 12) {
 		free(mts);
@@ -234,7 +247,7 @@ void write_modem_timestamp(struct slog_info *info, char *buffer)
 		  mts->sys_cnt);
 
 	fp = fopen(buffer, "a+b");
-	if (fp == NULL) {
+	if (!fp) {
 		err_log("open file %s failed!", buffer);
 		free(mts);
 		return;
