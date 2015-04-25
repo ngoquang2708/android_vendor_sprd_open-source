@@ -1,0 +1,78 @@
+/*
+ *  multiplexer.h - The multiplexer declaration.
+ *
+ *  Copyright (C) 2015 Spreadtrum Communications Inc.
+ *
+ *  History:
+ *  2015-2-16 Zhang Ziyi
+ *  Initial version.
+ */
+#ifndef _MULTIPLEXER_H_
+#define _MULTIPLEXER_H_
+
+#include <poll.h>
+#include "cp_log_cmn.h"
+
+#include "fd_hdl.h"
+
+class Multiplexer
+{
+public:
+	Multiplexer();
+
+	/*
+	 * register_fd - Register a new handler, or modify an existing
+	 *               handler events.
+	 *
+	 * Return Value:
+	 *   Return 0 if successful, return -1 if the handler array is
+	 *   full.
+	 */
+	int register_fd(FdHandler* handler, int events);
+	void unregister_fd(FdHandler* handler, int events);
+
+	typedef void (*check_callback_t)(void* param);
+
+	// Periodic check callback
+	void add_check_event(check_callback_t cb, void* param);
+	void del_check_event(check_callback_t cb, void* param);
+	void set_check_timeout(int to)
+	{
+		m_check_timeout = to;
+	}
+
+	int run();
+
+private:
+	#define MAX_MULTIPLEXER_NUM 20
+
+	struct PollingEntry
+	{
+		FdHandler* handler;
+		int events;
+	};
+
+	struct CheckEntry
+	{
+		check_callback_t cb;
+		void* param;
+	};
+
+	LogVector<PollingEntry> m_polling_hdl;
+	bool m_dirty;
+	nfds_t m_current_num;
+	pollfd m_current_fds[MAX_MULTIPLEXER_NUM];
+	FdHandler* m_current_handlers[MAX_MULTIPLEXER_NUM];
+
+	// Shall we stop periodically to check something?
+	int m_check_timeout;
+	LogList<CheckEntry> m_check_list;
+
+	// Find handler
+	size_t find_handler(FdHandler* handler);
+	void prepare_polling_array();
+	void call_check_callback();
+};
+
+#endif  // !_MULTIPLEXER_H_
+
