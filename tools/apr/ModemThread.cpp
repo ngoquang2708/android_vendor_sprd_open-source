@@ -51,6 +51,7 @@ reconnect:
 			close(cfd);
 			goto reconnect;
 		}
+		buf[255] = '\0';
 
 		APR_LOGD("receive \"%s\"\n", buf);
 		if (strstr(buf, "Modem Blocked") != NULL) {

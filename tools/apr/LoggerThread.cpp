@@ -75,10 +75,24 @@ void LoggerThread::Setup()
 	APR_LOGD("LoggerThread::Setup()\n");
 	m_devices = new log_device_t(strdup("/dev/"LOGGER_LOG_MAIN), false, 'm');
 	m_devCount = 1;
-	int accessmode =
-		(m_mode & O_RDONLY) ? R_OK : 0
-		| (m_mode & O_WRONLY) ? W_OK : 0;
-	// only add this if it's available
+
+	/* The variable m_mode must include one of the following access
+	 modes: O_RDONLY:0, O_WRONLY:1 or O_RDWR:2. */
+	int accessmode = 0;
+	switch(m_mode) {
+	case O_RDONLY:
+		accessmode = R_OK;
+		break;
+	case O_WRONLY:
+		accessmode = W_OK;
+		break;
+	case O_RDWR:
+		accessmode = R_OK | W_OK;
+	default:
+		accessmode = 0;
+	}
+
+	/* only add this if it's available */
 	if (0 == access("/dev/"LOGGER_LOG_SYSTEM, accessmode)) {
 		m_devices->next = new log_device_t(strdup("/dev/"LOGGER_LOG_SYSTEM), false, 's');
 		m_devCount++;

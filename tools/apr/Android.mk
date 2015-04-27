@@ -2,7 +2,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := collect_apr
-LOCAL_MODULE_TAGS := debug
+LOCAL_MODULE_TAGS := optional
 
 LOCAL_STATIC_LIBRARIES := libxml2
 LOCAL_SHARED_LIBRARIES := libcutils libhardware
@@ -21,8 +21,6 @@ LOCAL_SRC_FILES += LoggerThread.cpp
 LOCAL_SRC_FILES += common.c
 
 LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -llog -lpthread -lxml
-LOCAL_LDLIBS += prebuilts/ndk/current/sources/cxx-stl/stlport/libs/armeabi/libstlport_static.a
-#LOCAL_LDLIBS += static
 
 LOCAL_CFLAGS := -D_STLP_USE_NO_IOSTREAMS
 LOCAL_CFLAGS += -D_STLP_USE_MALLOC

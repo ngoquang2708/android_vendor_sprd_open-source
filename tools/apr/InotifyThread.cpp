@@ -63,6 +63,7 @@ void InotifyThread::Execute(void* arg)
 
 	while (1)
 	{
+		memset(buffer, 0, sizeof(buffer));
 		len = read(m_ifd, buffer, MAX_BUF_SIZE);
 		if (len < 0) {
 			APR_LOGE("read()\n");
