@@ -108,6 +108,8 @@ private:
 	static bool get_sd_state();
 
 	static int copy_file(int src, int dest);
+
+	static int set_dos_attr_hidden(const char* dir);
 };
 
 #endif  // !FILE_MGR_H_

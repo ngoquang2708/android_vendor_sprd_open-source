@@ -38,6 +38,15 @@ private:
 	void proc_enable_md(const uint8_t* req, size_t len);
 	void proc_disable_md(const uint8_t* req, size_t len);
 	void proc_mini_dump(const uint8_t* req, size_t len);
+	void proc_get_log_file_size(const uint8_t* req, size_t len);
+	void proc_set_log_file_size(const uint8_t* req, size_t len);
+	void proc_enable_overwrite(const uint8_t* req, size_t len);
+	void proc_disable_overwrite(const uint8_t* req, size_t len);
+	void proc_get_data_part_size(const uint8_t* req, size_t len);
+	void proc_set_data_part_size(const uint8_t* req, size_t len);
+	void proc_get_sd_size(const uint8_t* req, size_t len);
+	void proc_set_sd_size(const uint8_t* req, size_t len);
+	void proc_get_log_overwrite(const uint8_t* req, size_t len);
 
 	static const uint8_t* search_end(const uint8_t* req, size_t len);
 };

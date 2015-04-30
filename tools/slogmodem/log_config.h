@@ -118,13 +118,34 @@ public:
 	{
 		return m_data_size;
 	}
+	void set_data_part_size(size_t sz)
+	{
+		if (sz != m_data_size) {
+			m_data_size = sz;
+			m_dirty = true;
+		}
+	}
 	size_t max_sd_size() const
 	{
 		return m_sd_size;
 	}
+	void set_sd_size(size_t sz)
+	{
+		if (m_sd_size != sz) {
+			m_sd_size = sz;
+			m_dirty = true;
+		}
+	}
 	bool overwrite_old_log() const
 	{
 		return m_overwrite_old_log;
+	}
+	void set_overwrite(bool en = true)
+	{
+		if (m_overwrite_old_log != en) {
+			m_overwrite_old_log = en;
+			m_dirty = true;
+		}
 	}
 
 	static const uint8_t* get_token(const uint8_t* buf, size_t& tlen);

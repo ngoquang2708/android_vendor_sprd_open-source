@@ -18,5 +18,8 @@ const uint8_t* get_token(const uint8_t* data, size_t len, size_t& tlen);
 const uint8_t* find_str(const uint8_t* data, size_t len,
 			const uint8_t* pat, size_t pat_len);
 
+int parse_number(const uint8_t* data, size_t len,
+		 unsigned& num);
+
 #endif  // !_PARSE_UTILS_H_
 

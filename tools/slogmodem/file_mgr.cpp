@@ -13,6 +13,8 @@
 #include <cstdio>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
+#include <linux/msdos_fs.h>
 #include <fcntl.h>
 #ifdef HOST_TEST_
 	#include "prop_test.h"
@@ -137,6 +139,7 @@ bool FileManager::check_media(LogStat& sd_stat)
 					err_log("create modem_log dir failed");
 					return false;
 				}
+				set_dos_attr_hidden(str_modem);
 				if (sd_stat.init(str_modem)) {
 					err_log("init SD log stat failed");
 					return false;
@@ -277,4 +280,30 @@ int FileManager::clear()
 	}
 
 	return 0;
+}
+
+int FileManager::set_dos_attr_hidden(const char* dir)
+{
+	int dir_fd = open(dir, O_RDONLY);
+
+	if (-1 == dir_fd) {
+		err_log("open %s failed", dir);
+		return -1;
+	}
+
+	uint32_t attr;
+	int ret;
+
+	ret = ioctl(dir_fd, FAT_IOCTL_GET_ATTRIBUTES, &attr);
+	if (0 == ret) {
+		attr |= ATTR_HIDDEN;
+		ret = ioctl(dir_fd, FAT_IOCTL_SET_ATTRIBUTES, &attr);
+	}
+	close(dir_fd);
+
+	if (ret) {
+		err_log("set %s hidden failed", dir);
+	}
+
+	return ret;
 }
