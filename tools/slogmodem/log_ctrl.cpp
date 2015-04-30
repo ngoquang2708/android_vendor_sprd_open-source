@@ -501,6 +501,95 @@ int LogController::reload_slog_conf()
 	return 0;
 }
 
+size_t LogController::get_log_file_size() const
+{
+	return m_config->max_log_file();
+}
+
+int LogController::set_log_file_size(size_t len)
+{
+	LogList<LogPipeHandler*>::iterator it;
+
+	for (it = m_log_pipes.begin(); it != m_log_pipes.end(); ++it) {
+		(*it)->set_log_limit(len << 20);
+	}
+
+	m_config->set_log_file_size(len);
+	if (m_config->dirty()) {
+		if (m_config->save()) {
+			err_log("save config file failed");
+		}
+	}
+
+	return 0;
+}
+
+int LogController::set_log_overwrite(bool en)
+{
+	m_data_part_stat.set_overwrite(en);
+	m_sd_stat.set_overwrite(en);
+
+	m_config->set_overwrite(en);
+	if (m_config->dirty()) {
+		if (m_config->save()) {
+			err_log("save config file failed");
+		}
+	}
+
+	return 0;
+}
+
+size_t LogController::get_data_part_size() const
+{
+	return m_config->max_data_part_size();
+}
+
+int LogController::set_data_part_size(size_t sz)
+{
+	uint64_t byte_sz = sz;
+
+	byte_sz <<= 20;
+
+	m_data_part_stat.set_max_size(byte_sz);
+
+	m_config->set_data_part_size(sz);
+	if (m_config->dirty()) {
+		if (m_config->save()) {
+			err_log("save config file failed");
+		}
+	}
+
+	return 0;
+}
+
+size_t LogController::get_sd_size() const
+{
+	return m_config->max_sd_size();
+}
+
+int LogController::set_sd_size(size_t sz)
+{
+	uint64_t byte_sz = sz;
+
+	byte_sz <<= 20;
+
+	m_sd_stat.set_max_size(byte_sz);
+
+	m_config->set_sd_size(sz);
+	if (m_config->dirty()) {
+		if (m_config->save()) {
+			err_log("save config file failed");
+		}
+	}
+
+	return 0;
+}
+
+bool LogController::get_log_overwrite() const
+{
+	return m_config->overwrite_old_log();
+}
+
 int LogController::check_dir_exist()
 {
 	int ret = m_file_mgr.check_dir_exist();

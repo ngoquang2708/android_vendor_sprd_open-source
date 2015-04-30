@@ -50,8 +50,6 @@ int ClientHandler::process_data()
 	const uint8_t* end = m_buffer.buffer + m_buffer.data_len;
 	size_t rlen = m_buffer.data_len;
 
-	info_log("%d bytes", static_cast<int>(rlen));
-
 	while (start < end) {
 		const uint8_t* p1 = search_end(start, rlen);
 		if (!p1) {  // Not complete request
@@ -75,8 +73,6 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 	size_t tok_len;
 	const uint8_t* endp = req + len;
 	const uint8_t* token = get_token(req, len, tok_len);
-
-	info_log("client data %u bytes", static_cast<unsigned>(len));
 
 	if (!token) {
 		// Empty line: ignore it.
@@ -115,6 +111,45 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 	case 11:
 		if (!memcmp(token, "DISABLE_LOG", 11)) {
 			proc_disable_log(req, len);
+			known_req = true;
+		}
+		break;
+	case 15:
+		if (!memcmp(token, "GET_SD_MAX_SIZE", 15)) {
+			proc_get_sd_size(req, len);
+			known_req = true;
+		} else if (!memcmp(token, "SET_SD_MAX_SIZE", 15)) {
+			proc_set_sd_size(req, len);
+			known_req = true;
+		}
+		break;
+	case 17:
+		if (!memcmp(token, "GET_LOG_OVERWRITE", 17)) {
+			proc_get_log_overwrite(req, len);
+			known_req = true;
+		} if (!memcmp(token, "GET_LOG_FILE_SIZE", 17)) {
+			proc_get_log_file_size(req, len);
+			known_req = true;
+		} else if (!memcmp(token, "SET_LOG_FILE_SIZE", 17)) {
+			proc_set_log_file_size(req, len);
+			known_req = true;
+		} else if (!memcmp(token, "GET_DATA_MAX_SIZE", 17)) {
+			proc_get_data_part_size(req, len);
+			known_req = true;
+		} else if (!memcmp(token, "SET_DATA_MAX_SIZE", 17)) {
+			proc_set_data_part_size(req, len);
+			known_req = true;
+		}
+		break;
+	case 20:
+		if (!memcmp(token, "ENABLE_LOG_OVERWRITE", 20)) {
+			proc_enable_overwrite(req, len);
+			known_req = true;
+		}
+		break;
+	case 21:
+		if (!memcmp(token, "DISABLE_LOG_OVERWRITE", 21)) {
+			proc_disable_overwrite(req, len);
 			known_req = true;
 		}
 		break;
@@ -285,4 +320,233 @@ void ClientHandler::process_conn_closed()
 void ClientHandler::process_conn_error(int err)
 {
 	ClientHandler::process_conn_closed();
+}
+
+void ClientHandler::proc_set_log_file_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SET_LOG_FILE_SIZE invalid parameter");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	unsigned val;
+
+	if (parse_number(tok, tlen, val)) {
+		err_log("SET_LOG_FILE_SIZE invalid size");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("SET_LOG_FILE_SIZE %u", val);
+
+	req = tok + tlen;
+	len = endp - req;
+	if (len && get_token(req, len, tlen)) {
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	controller()->set_log_file_size(val);
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_enable_overwrite(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("ENABLE_LOG_OVERWRITE invalid param");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("ENABLE_LOG_OVERWRITE");
+
+	controller()->set_log_overwrite();
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_disable_overwrite(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("DISABLE_LOG_OVERWRITE invalid param");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("DISABLE_LOG_OVERWRITE");
+
+	controller()->set_log_overwrite(false);
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_set_data_part_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SET_DATA_MAX_SIZE no param");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	unsigned val;
+
+	if (parse_number(tok, tlen, val)) {
+		err_log("SET_DATA_MAX_SIZE invalid param");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	if (len && get_token(req, len, tlen)) {
+		err_log("SET_DATA_MAX_SIZE invalid param");
+
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("SET_DATA_MAX_SIZE %u", val);
+
+	controller()->set_data_part_size(val);
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_set_sd_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SET_SD_MAX_SIZE no param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	unsigned val;
+
+	if (parse_number(tok, tlen, val)) {
+		err_log("SET_SD_MAX_SIZE invalid size");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	if (len && get_token(req, len, tlen)) {
+		err_log("SET_SD_MAX_SIZE invalid param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("SET_SD_MAX_SIZE %u", val);
+	controller()->set_sd_size(val);
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_get_log_file_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("GET_LOG_FILE_SIZE invalid param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	size_t sz = controller()->get_log_file_size();
+	char rsp[64];
+	int rsp_len = snprintf(rsp, 64, "OK %u\n", static_cast<unsigned>(sz));
+	write(m_fd, rsp, rsp_len);
+
+	info_log("GET_LOG_FILE_SIZE %u",
+		 static_cast<unsigned>(sz));
+}
+
+void ClientHandler::proc_get_data_part_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("GET_DATA_MAX_SIZE invalid param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	size_t sz = controller()->get_data_part_size();
+	char rsp[64];
+	int rsp_len = snprintf(rsp, 64, "OK %u\n", static_cast<unsigned>(sz));
+	write(m_fd, rsp, rsp_len);
+	info_log("GET_DATA_MAX_SIZE %u", static_cast<unsigned>(sz));
+}
+
+void ClientHandler::proc_get_sd_size(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("GET_SD_MAX_SIZE invalid param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	size_t sz = controller()->get_sd_size();
+	char rsp[64];
+	int rsp_len = snprintf(rsp, 64, "OK %u\n", static_cast<unsigned>(sz));
+	write(m_fd, rsp, rsp_len);
+	info_log("GET_SD_MAX_SIZE %u", static_cast<unsigned>(sz));
+}
+
+void ClientHandler::proc_get_log_overwrite(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("GET_LOG_OVERWRITE invalid param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	bool ow = controller()->get_log_overwrite();
+	char rsp[64];
+	int rsp_len = snprintf(rsp, 64, "OK %s\n",
+			       ow ? "ENABLE" : "DISABLE");
+	write(m_fd, rsp, rsp_len);
+	info_log("GET_LOG_OVERWRITE %s", ow ? "ENABLE" : "DISABLE");
 }

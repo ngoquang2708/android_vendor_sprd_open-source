@@ -76,6 +76,14 @@ public:
 	int disable_md();
 	int mini_dump();
 	int reload_slog_conf();
+	size_t get_log_file_size() const;
+	int set_log_file_size(size_t len);
+	bool get_log_overwrite() const;
+	int set_log_overwrite(bool en = true);
+	size_t get_data_part_size() const;
+	int set_data_part_size(size_t sz);
+	size_t get_sd_size() const;
+	int set_sd_size(size_t sz);
 
 	/*
 	 *    save_mini_dump - Save the mini dump.

@@ -40,9 +40,6 @@ void DataProcessHandler::process(int events)
 			process_conn_error(errno);
 		}
 	} else {
-		//{Debug
-		info_log("read %d bytes", static_cast<int>(n));
-
 		// Data read
 		m_buffer.data_len += n;
 		process_data();
