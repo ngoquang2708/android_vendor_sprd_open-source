@@ -402,8 +402,10 @@ int wifi_nvm_parse(const char *path, const int type,void *p_data)
     len = read(fd,pBuf,CONFIG_MAX_SIZE);
     if(len < 0) {
         RFDBG("read %s fail[%d]\n",path,len);
+        close(fd);
         return -2;
     }
+    close(fd);
 
     ret = wifi_nvm_buf_operate(pBuf, len, type, p_data);
     if(ret < 0) {
@@ -426,8 +428,10 @@ static int add_to_file(char *buf, int len)
     ret = write(fd,buf,len);
     if(ret < 0) {
         RFDBG("write %s fail[%d]\n",WIFI_CALI_FILE_WRITE_BACK,ret);
+        close(fd);
         return -1;
     }
+    close(fd);
     return 0;
 }
 
