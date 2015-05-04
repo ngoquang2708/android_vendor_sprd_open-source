@@ -71,7 +71,7 @@ enum {
 #define INTERNAL_ROLLLOGS		1
 #define TIMEOUT_FOR_SD_MOUNT		10 /* seconds */
 #define BUFFER_SIZE			(32 * 1024) /* 32k */
-#define SETV_BUFFER_SIZE		(64 * 1024) /* 64k */
+#define SETV_BUFFER_SIZE		(512 * 1024) /* 512k */
 
 #define KERNEL_LOG_SOURCE		"/proc/kmsg"
 
