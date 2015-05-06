@@ -51,7 +51,7 @@ typedef signed int			int32;
 //-------------------------------------------------
 //				Config: can be changed if nessarry
 //-------------------------------------------------
-#define RAMNV_DIRTYTABLE_MAXSIZE	32		// max sect number is (RAMNV_DIRTYTABLE_MAXSIZE << 5), 32 means 512k ramdisk
+#define RAMNV_DIRTYTABLE_MAXSIZE	48		// max sect number is (RAMNV_DIRTYTABLE_MAXSIZE << 5), 32 means 512k ramdisk
 
 unsigned short calc_Checksum(unsigned char *dat, unsigned long len);
 BOOLEAN ChkNVEcc(uint8 * buf, uint32 size, uint16 checksum);
