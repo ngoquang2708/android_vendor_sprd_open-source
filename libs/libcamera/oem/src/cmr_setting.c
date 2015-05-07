@@ -699,11 +699,27 @@ static cmr_int setting_set_flash_mode(struct setting_component *cpt,
 	struct setting_flash_param   *flash_param = get_flash_param(cpt, parm->camera_id);
 	cmr_uint                      flash_mode = 0;
 	cmr_uint                      status = 0;
+	struct common_isp_cmd_param    isp_param;
+	struct setting_init_in         *init_in = &cpt->init_in;
+	cmr_handle                     oem_handle = init_in->oem_handle;
 
+	isp_param.camera_id = parm->camera_id;
 	flash_mode = parm->cmd_type_value;
 	flash_param->flash_mode = flash_mode;
 	setting_flash_handle(cpt, parm, flash_param->flash_mode);
-
+	if ( CAMERA_FLASH_MODE_TORCH == flash_param->flash_mode) {
+		isp_param.cmd_value = 1;
+		ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EXIF,&isp_param);
+		if (ret) {
+			CMR_LOGE("COM_ISP_SET_FLASH_EXIF error.");
+		}
+	} else {
+		isp_param.cmd_value = 0;
+		ret = (*cpt->init_in.setting_isp_ioctl)(oem_handle, COM_ISP_SET_FLASH_EXIF,&isp_param);
+		if (ret) {
+			CMR_LOGE("COM_ISP_SET_FLASH_EXIF error.");
+		}
+	}
 	return ret;
 }
 
