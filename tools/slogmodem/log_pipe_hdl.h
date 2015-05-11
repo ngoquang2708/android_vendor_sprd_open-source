@@ -10,6 +10,7 @@
 #ifndef LOG_PIPE_HDL_H_
 #define LOG_PIPE_HDL_H_
 
+#include <time.h>
 #ifdef HOST_TEST_
 	#include "prop_test.h"
 #else
@@ -90,12 +91,28 @@ public:
 
 	void set_log_limit(size_t sz);
 
-	int open_dump_file();
-	virtual int save_dump();
+	int open_dump_file(const struct tm& lt);
+	virtual int save_dump(const struct tm& lt);
 
 	void open_on_alive();
 
 protected:
+	int dump_fd() const
+	{
+		return m_dump_fd;
+	}
+
+	/*  open_dump_device - Open the dump device.
+	 *
+	 *  Return Value:
+	 *      Return 0 if the devices are opened, -1 on error.
+	 *      If the dump device is opened, m_dump_fd will hold its
+	 *      file descriptor.
+	 */
+	int open_dump_device();
+
+	void close_dump_device();
+
 	/*
 	 *    log_buffer - Buffer shared by all LogPipeHandlers.
 	 *
@@ -105,11 +122,6 @@ protected:
 	static const size_t LOG_BUFFER_SIZE = (64 * 1024);
 	static uint8_t log_buffer[LOG_BUFFER_SIZE];
 
-	int dump_fd() const
-	{
-		return m_dump_fd;
-	}
-
 private:
 	enum CpWorkState
 	{
@@ -117,6 +129,7 @@ private:
 		CWS_WORKING
 	};
 
+	// Log turned on
 	bool m_enable;
 	LogString m_modem_name;
 	CpType m_type;

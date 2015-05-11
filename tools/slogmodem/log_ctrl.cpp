@@ -264,6 +264,11 @@ void LogController::process_cp_assert(CpType type)
 
 	LogPipeHandler* log_hdl = *it;
 
+	if (!log_hdl->enabled()) {
+		LogStat* log_stat = get_cur_stat();
+		log_hdl->change_log_file(m_file_mgr.get_cp_par_dir(),
+					 log_stat);
+	}
 	log_hdl->process_assert(m_save_md);
 }
 
@@ -294,9 +299,12 @@ int LogController::save_sipc_dump(const LogString& par_dir,
 				  const struct tm& lt)
 {
 	char fn[64];
+	int year = lt.tm_year + 1900;
+	int mon = lt.tm_mon + 1;
 
 	// /d/sipc/smsg
-	snprintf(fn, 64, "/%02d-%02d-%02d_smsg.log",
+	snprintf(fn, 64, "/smsg_%04d-%02d-%02d_%02d-%02d-%02d.log",
+		 year, mon, lt.tm_mday,
 		 lt.tm_hour, lt.tm_min, lt.tm_sec);
 	LogString file_path = par_dir + fn;
 	int err = 0;
@@ -307,7 +315,8 @@ int LogController::save_sipc_dump(const LogString& par_dir,
 	}
 
 	// /d/sipc/sbuf
-	snprintf(fn, 64, "/%02d-%02d-%02d_sbuf.log",
+	snprintf(fn, 64, "/sbuf_%04d-%02d-%02d_%02d-%02d-%02d.log",
+		 year, mon, lt.tm_mday,
 		 lt.tm_hour, lt.tm_min, lt.tm_sec);
 	file_path = par_dir + fn;
 	err = FileManager::copy_file(DEBUG_SBUF_PATH, ls2cstring(file_path));
@@ -316,7 +325,8 @@ int LogController::save_sipc_dump(const LogString& par_dir,
 	}
 
 	// /d/sipc/sblock
-	snprintf(fn, 64, "/%02d-%02d-%02d_sblock.log",
+	snprintf(fn, 64, "/sblock_%04d-%02d-%02d_%02d-%02d-%02d.log",
+		 year, mon, lt.tm_mday,
 		 lt.tm_hour, lt.tm_min, lt.tm_sec);
 	file_path = par_dir + fn;
 	err = FileManager::copy_file(DEBUG_SBLOCK_PATH, ls2cstring(file_path));

@@ -42,6 +42,9 @@ public:
 	 *  @timed_d: the timed directory under which the CP log directory
 	 *            is to be created.
 	 *  @log_stat: the pointer to the new LogStat object.
+	 *
+	 *  Return 0 on success, -1 otherwise.
+	 *  If the log directory is the same, do nothing and return 0.
 	 */
 	int change_dir(const LogString& timed_d, LogStat* log_stat);
 

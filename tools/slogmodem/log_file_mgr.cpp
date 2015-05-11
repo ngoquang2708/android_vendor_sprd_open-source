@@ -46,6 +46,11 @@ int LogFileManager::change_dir(const LogString& timed_d, LogStat* log_stat)
 {
 	info_log("new dir %s, LogStat %p",
 		 ls2cstring(timed_d), log_stat);
+	LogString log_dir = timed_d + "/" + m_cp_name;
+
+	if (log_dir == m_log_dir) {  // The dir has not changed
+		return 0;
+	}
 
 	close_log();
 
@@ -57,7 +62,7 @@ int LogFileManager::change_dir(const LogString& timed_d, LogStat* log_stat)
 	}
 	m_log_list.clear();
 
-	m_log_dir = timed_d + "/" + m_cp_name;
+	m_log_dir = log_dir;
 	int ret = mkdir(ls2cstring(m_log_dir),
 			S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	if (-1 == ret && EEXIST == errno) {

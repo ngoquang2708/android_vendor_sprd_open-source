@@ -33,15 +33,25 @@ bool ExtWcnLogHandler::will_be_reset() const
 	return 1 == n ? true : false;
 }
 
-int ExtWcnLogHandler::save_dump()
+int ExtWcnLogHandler::save_dump(const struct tm& lt)
 {
 	// Open the dump file from the CP
 	int err = -1;
 	int logf;
 	int fd_to_read;
 	long flags;
+	bool close_dump = false;
 
-	logf = open_dump_file();
+	// When log is not enabled, the dump device is not opened.
+	if (dump_fd() < 0) {
+		if (open_dump_device() < 0) {
+			err_log("open dump device failed");
+			return -1;
+		}
+		close_dump = true;
+	}
+
+	logf = open_dump_file(lt);
 
 	if (-1 == logf) {
 		goto set_dump_prop;
@@ -78,12 +88,17 @@ int ExtWcnLogHandler::save_dump()
 		}
 	}
 
-	flags |= O_NONBLOCK;
-	fcntl(fd_to_read, F_SETFL, flags);
+	if (!close_dump) {
+		flags |= O_NONBLOCK;
+		fcntl(fd_to_read, F_SETFL, flags);
+	}
 
 	close(logf);
 
 set_dump_prop:
 	property_set(MODEM_WCN_DUMP_LOG_COMPLETE, "1");
+	if (close_dump) {
+		close_dump_device();
+	}
 	return err;
 }

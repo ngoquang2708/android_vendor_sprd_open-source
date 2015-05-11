@@ -166,7 +166,12 @@ int LogPipeHandler::change_log_file(const LogString& par_dir,
 
 	save_version();
 
-	return m_log_mgr.create_log();
+	int ret = 0;
+	if (m_enable) {
+		ret = m_log_mgr.create_log();
+	}
+
+	return ret;
 }
 
 bool LogPipeHandler::save_version()
@@ -194,16 +199,10 @@ bool LogPipeHandler::save_version()
 	return ret;
 }
 
-int LogPipeHandler::open_dump_file()
+int LogPipeHandler::open_dump_file(const struct tm& lt)
 {
 	char log_name[64];
-	time_t t;
-	struct tm lt;
 
-	t = time(0);
-	if (static_cast<time_t>(-1) == t || !localtime_r(&t, &lt)) {
-		return -1;
-	}
 	snprintf(log_name, 64, "%04d-%02d-%02d_%02d-%02d-%02d.dmp",
 		 lt.tm_year + 1900,
 		 lt.tm_mon + 1,
@@ -212,39 +211,62 @@ int LogPipeHandler::open_dump_file()
 		 lt.tm_min,
 		 lt.tm_sec);
 	LogString fn = m_log_mgr.dir() + "/" + m_modem_name + "_memory_" + log_name;
-	return open(ls2cstring(fn), O_WRONLY | O_CREAT | O_TRUNC,
-		    S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	int ret = open(ls2cstring(fn), O_WRONLY | O_CREAT | O_TRUNC,
+		       S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (-1 == ret) {
+		err_log("open dump file %s failed",
+			ls2cstring(fn));
+	}
+	return ret;
 }
 
-int LogPipeHandler::save_dump()
+int LogPipeHandler::save_dump(const struct tm& lt)
 {
-	if (m_dump_fd < 0) {
-		return -1;
-	}
-
-	int out_fd = open_dump_file();
-	if (-1 == out_fd) {
-		return -1;
-	}
-
+	bool close_dump = false;
+	int err = -1;
 	uint8_t dump_cmd[2] = { 0x33, 0xa };
+	ssize_t nwr;
 
-	if (write(m_dump_fd, dump_cmd, 2) < 2) {
-		return -1;
+	// When log is not enabled, the dump device is not opened.
+	if (m_dump_fd < 0) {
+		if (open_dump_device() < 0) {
+			err_log("open dump device failed");
+			return -1;
+		}
+		close_dump = true;
 	}
 
-	int err = save_dump_ipc(out_fd);
-	if (err) {  // Comminication with the CP failed
+	int out_fd = open_dump_file(lt);
+	if (-1 == out_fd) {
+		err_log("open dump file failed");
+		goto cl_dump_dev;
+	}
+
+	nwr = write(m_dump_fd, dump_cmd, 2); 
+	if (nwr < 2) {
+		err_log("send dump command failed %d",
+			static_cast<int>(nwr));
+		goto cl_dump_dev;
+	}
+
+	err = save_dump_ipc(out_fd);
+	if (err) {  // Communication with the CP failed
+		err_log("save CP dump via SIPC failed, trying /proc file ...");
 		// Discard data read
 		if (-1 == ftruncate(out_fd, 0)) {
 			close(out_fd);
-			return -1;
+			goto cl_dump_dev;
 		}
 		lseek(out_fd, 0, SEEK_SET);
 
 		err = save_dump_proc(out_fd);
 	}
 
+cl_dump_dev:
+	if (close_dump) {
+		close(m_dump_fd);
+		m_dump_fd = -1;
+	}
 	return err;
 }
 
@@ -258,7 +280,7 @@ int LogPipeHandler::save_dump_ipc(int fd)
 	pol_dump.fd = m_dump_fd;
 	pol_dump.events = POLLIN;
 	pol_dump.revents = 0;
-	to = 3;
+	to = 3000;
 
 	while (true) {
 		int n = poll(&pol_dump, 1, to);
@@ -357,14 +379,9 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 	}
 
 	time_t t = time(0);
-
-	if (static_cast<time_t>(-1) == t) {
-		return;
-	}
-
 	struct tm lt;
 
-	if (!localtime_r(&t, &lt)) {
+	if (static_cast<time_t>(-1) == t || !localtime_r(&t, &lt)) {
 		return;
 	}
 
@@ -376,7 +393,7 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 
 	// Save MODEM dump
 	system("am broadcast -a slogui.intent.action.DUMP_START");
-	save_dump();
+	save_dump(lt);
 	system("am broadcast -a slogui.intent.action.DUMP_END");
 
 	close_on_assert();
@@ -391,4 +408,10 @@ bool LogPipeHandler::will_be_reset() const
 	property_get(MODEMRESET_PROPERTY, reset, "");
 	n = strtoul(reset, &endp, 0);
 	return 1 == n ? true : false;
+}
+
+void LogPipeHandler::close_dump_device()
+{
+	close(m_dump_fd);
+	m_dump_fd = -1;
 }

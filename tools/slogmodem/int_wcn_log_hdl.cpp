@@ -33,7 +33,7 @@ bool IntWcnLogHandler::will_be_reset() const
 	return 1 == n ? true : false;
 }
 
-int IntWcnLogHandler::save_dump()
+int IntWcnLogHandler::save_dump(const struct tm& lt)
 {
 	return 0;
 }

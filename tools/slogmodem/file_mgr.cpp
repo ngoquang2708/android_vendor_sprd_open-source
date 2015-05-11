@@ -210,6 +210,7 @@ int FileManager::copy_file(const char* src, const char* dest)
 
 	src_fd = open(src, O_RDONLY);
 	if (-1 == src_fd) {
+		err_log("open source file %s failed", src);
 		return -1;
 	}
 
@@ -217,6 +218,7 @@ int FileManager::copy_file(const char* src, const char* dest)
 		       S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (-1 == dest_fd) {
 		close(src_fd);
+		err_log("open dest file %s failed", dest);
 		return -1;
 	}
 

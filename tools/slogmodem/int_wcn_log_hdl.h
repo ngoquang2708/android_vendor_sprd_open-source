@@ -19,7 +19,7 @@ public:
 		         Multiplexer* multi,
 		         const LogConfig::ConfigEntry* conf);
 
-	int save_dump();
+	int save_dump(const struct tm& lt);
 
 private:
 	bool will_be_reset() const;

@@ -43,9 +43,11 @@ public:
 
 	/*
 	 *    check_media - Check whether the storage media is changed.
+	 *    @sd_stat: the SD card log statistics object
 	 *
 	 *    If the media is changed, the function creates the new time
-	 *    directory.
+	 *    directory. If the LogStat object is not initialized, init
+	 *    it with the new directory.
 	 *
 	 *    Return true if the storage changed, false otherwise.
 	 */
