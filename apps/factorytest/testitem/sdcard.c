@@ -159,7 +159,7 @@ int test_sdcard_start(void)
 	} else {
 		ui_set_color(CL_GREEN);
 		cur_row = ui_show_text(cur_row, 0, TEXT_SD_STATE_OK);
-		sprintf(temp, "%d MB", (fs.f_blocks>>1));
+		sprintf(temp, "%d MB", (fs.f_bsize*fs.f_blocks/1024/1024));
 		cur_row = ui_show_text(cur_row, 0, temp);
 		gr_flip();
 	}

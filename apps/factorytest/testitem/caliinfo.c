@@ -106,8 +106,8 @@ int test_cali_info(void)
 	memset(tmp2,0,sizeof(tmp2));
 	memset(tmp3,0,sizeof(tmp3));
 	memset(tmp4,0,sizeof(tmp4));
-	memset(tmp5,0,sizeof(tmp3));
-	memset(tmp6,0,sizeof(tmp4));
+	memset(tmp5,0,sizeof(tmp5));
+	memset(tmp6,0,sizeof(tmp6));
 
 	ui_fill_locked();
 	ui_show_title(MENU_CALI_INFO);

@@ -79,6 +79,7 @@ static int show_phone_test_result(void);
 static int phone_shutdown(void);
 static pthread_t bt_wifi_init_thread;
 static pthread_t gps_init_thread;
+static pthread_t test_tel_init_thread;
 extern void temp_set_visible(int is_show);
 
 
@@ -1013,29 +1014,38 @@ int test_gps_init(void)
 }
 
 int test_tel_init(void)
-{
-	int fd;
-	fd=open(TEL_DEVICE_PATH,O_RDWR);
+ {
+        int fd0,fd1;
+	fd0=open("/dev/stty_lte0",O_RDWR);
+	fd1=open("/dev/stty_lte3",O_RDWR);
+	sleep(2);
 
-	if(fd<0)
-	{
-		LOGD("mmitest tel test is faild");
-		return RL_FAIL;
+        if(fd0<0||fd1<0)
+        {
+                LOGD("mmitest tel test is faild");
+                return RL_FAIL;
 	}
-
-	tel_send_at(fd,"AT+SFUN=2",NULL,0, 0);
-
-    tel_send_at(fd,"AT+SFUN=4",NULL,0, 0);
-
-	return 0;
+	while(1)
+	{
+	     tel_send_at(fd0,"AT",NULL,0, 0);
+	     tel_send_at(fd1,"AT",NULL,0, 0);
+	     sleep(1);
+	}
+       return 0;
 }
+int test_tel_init1(void)
+{
+         pthread_create(&test_tel_init_thread, NULL, (void *)test_tel_init, NULL);
+        return 0;
+}
+
 
 static void test_item_init(void)
 {
 	test_modem_init();//SIM
 	test_bt_wifi_init();//BT WIFI
 	test_gps_init();//GPS
-	//test_tel_init();//telephone
+	test_tel_init1();//telephone
 }
 
 //unsigned char test_buff[]="hello world";

@@ -337,7 +337,7 @@ modem_init_func(void *arg)
 				if(modem_fd[i] > 0) {
 					break;
 				}
-				sleep(1000);
+				usleep(1000);
 			}
 		}
 	} else {

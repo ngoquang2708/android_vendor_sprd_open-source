@@ -294,7 +294,7 @@ static char* modem_port[] = {
 
 
 /**************telephnoy*********/
-#define TEL_DEVICE_PATH "/dev/stty_lte0"
+#define TEL_DEVICE_PATH "/dev/stty_lte31"
 /**************end tel**********/
 
 
