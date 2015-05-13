@@ -111,11 +111,14 @@ void update_conf(const char *keyword, const char *status)
 		perror("open conf failed!\n");
 		return;
 	}
-    while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
-		sprintf(line, "%s\n",  keyword);
-	}
-    len += sprintf(buffer + len, "%s", line);
-	if ( !strncmp("android", keyword, 6) || !strncmp("bt", keyword, 2) || !strncmp("tcp", keyword, 3)) {
+	if (!strncmp("enable", keyword, 6) || !strncmp("disable", keyword, 7)) {
+		while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
+			if(!strncmp("enable", line, 6) || !strncmp("disable", line, 7)) {
+				sprintf(line, "%s\n",  keyword);
+			}
+			len += sprintf(buffer + len, "%s", line);
+		}
+	}else if ( !strncmp("android", keyword, 6) || !strncmp("bt", keyword, 2) || !strncmp("tcp", keyword, 3)) {
 		while (fgets(line, MAX_NAME_LEN, fp) != NULL) {
 			if (!strncmp("stream", line, 6)) {
 				update_5_entries(keyword, status, line);
@@ -390,8 +393,12 @@ int main(int argc, char *argv[])
 			update_conf("bt", argv[2]);
 			cmd.type = CTRL_CMD_TYPE_RELOAD;
 		} else {
-			usage(argv[0]);
-			return -1;
+			if(argc == 3 && (strncmp(argv[2], "false", 5) == 0)) {
+				cmd.type = CTRL_CMD_TYPE_BT_FALSE;
+			}else{
+				usage(argv[0]);
+				return -1;
+			}
 		}
 	} else {
 		usage(argv[0]);

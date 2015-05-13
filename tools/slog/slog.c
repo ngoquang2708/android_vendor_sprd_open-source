@@ -906,6 +906,10 @@ void *handle_request(void *arg)
 		log_buffer_flush();
 		ret = 0;
 		break;
+	case CTRL_CMD_TYPE_BT_FALSE:
+		operate_bt_status("false", NULL);
+		ret=0;
+		break;
 	case CTRL_CMD_TYPE_CLEAR:
 		ret = clear_all_log();
 		break;
