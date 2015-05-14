@@ -41,11 +41,28 @@ void* playback_thread(void* t_mode){
 
 	sprintf(cmd,"tinymix -D %d 0 2;",card_num);
 	LOGD("[%s]:mode=%d, finish=%d\n", __func__, mode->mode, mode->finished);
+#ifdef MSG
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 107 0;",card_num);
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 79 0;",card_num);
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 80 0;",card_num);
+#else
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 103 0;",card_num);
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 75 0;",card_num);
+	sprintf(cmd+strlen(cmd),"tinymix -D %d 76 0;",card_num);
+#endif
+	system(cmd);
+	memset(cmd, 0, 1024);
 
 	if(mode->mode == SPEAKER){
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 69 1;",card_num);
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 70 1;",card_num);
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 97 1;",card_num);
+#ifdef MSG
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 79 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 80 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 107 1;",card_num);
+#else
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 75 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 76 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 103 1;",card_num);
+#endif
 		sprintf(cmd+strlen(cmd), "%s %s -D %d;","tinyplay", SPRD_AUDIO_FILE,card_num);
 
 		LOGD("mmitestsound:cmd= %s\n",cmd);
@@ -67,7 +84,13 @@ void* playback_thread(void* t_mode){
 		sprintf(cmd+strlen(cmd),"tinymix -D %d 97 1;",card_num);
 	}
 	else{
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 99 1;",card_num);
+#ifdef MSG
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 109 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 39  15;",card_num);
+#else
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 105 1;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 39 15;",card_num);
+#endif
 		sprintf(cmd+strlen(cmd), "%s %s -D %d","tinyplay", SPRD_AUDIO_FILE,card_num);
 		LOGD("mmitestsound:cmd= %s\n",cmd);
 	}
@@ -86,9 +109,15 @@ void* playback_thread(void* t_mode){
 	memset(cmd,0,1024);
 
 	if(mode->mode == SPEAKER){
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 69 0;",card_num);
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 70 0;",card_num);
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 97 0;",card_num);
+#ifdef MSG
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 107 0;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 79 0;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 80 0;",card_num);
+#else
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 103 0;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 75 0;",card_num);
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 76 0;",card_num);
+#endif
 	}
 	else if(mode->mode == FM_PLAY){
 		sprintf(cmd+strlen(cmd),"tinymix -D %d 97 0;",card_num);
@@ -96,7 +125,11 @@ void* playback_thread(void* t_mode){
 		pcm_close(fm_dl);fm_dl = NULL;
 	}
 	else{
-		sprintf(cmd+strlen(cmd),"tinymix -D %d 99 0;",card_num);
+#ifdef MSG
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 109 0;",card_num);
+#else
+		sprintf(cmd+strlen(cmd),"tinymix -D %d 105 0;",card_num);
+#endif
 	}
 	system(cmd);
 err:
