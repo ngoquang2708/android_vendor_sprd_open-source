@@ -167,7 +167,10 @@ void* headset_check_thread(void)
 	}
 
 err:
-	at_cmd_audio_loop(0,0,0,0,0,0);
+	if(headset_status==2)
+	     at_cmd_audio_loop(0,4,8,2,3,0);
+	else
+	     at_cmd_audio_loop(0,2,8,2,3,0);
 	if(fd > 0) close(fd);
 	if(input_fd > 0) close(input_fd);
 	ui_push_result(RL_PASS);
@@ -217,6 +220,10 @@ int test_headset_start(void)
 
 	pthread_join(t1, NULL); /* wait "handle key" thread exit. */
 	pthread_join(t2, NULL); /* wait "handle key" thread exit. */
+
+	at_cmd_audio_loop(1,3,8,2,3,0);
+	usleep(5*1000);
+	at_cmd_audio_loop(0,3,8,2,3,0);
 
 	save_result(CASE_TEST_HEADSET,ret);
 	return ret;

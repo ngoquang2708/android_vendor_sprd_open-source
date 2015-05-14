@@ -6,7 +6,7 @@ int test_tel_start(void)
 	int cur_row=2;
 	int ret,fd;
 	int pos;
-    char modem_call1[256];
+	char modem_call1[256];
 	char modem_call2[256];
 	static int onetime=0;
 
@@ -18,7 +18,7 @@ int test_tel_start(void)
 	gr_flip();
 
 	fd=open(TEL_DEVICE_PATH,O_RDWR);
-    LOGD("mmitest tel test %s",TEL_DEVICE_PATH);
+	LOGD("mmitest tel test %s",TEL_DEVICE_PATH);
 	if(fd<0)
 	{
 		LOGD("mmitest tel test is faild");
@@ -34,10 +34,11 @@ int test_tel_start(void)
 		}
 
 	tel_send_at(fd,"AT+SFUN=2",NULL,0, 0);
-    tel_send_at(fd,"AT+SFUN=4",NULL,0, 0);
-    pos=tel_send_at(fd, "ATD112;", NULL,NULL, 0);
+	tel_send_at(fd,"AT+SFUN=4",NULL,0, 0);
+	pos=tel_send_at(fd, "ATD112;", NULL,NULL, 0);
 	cur_row = ui_show_text(cur_row, 0, TEL_DIAL_OVER);
-
+	usleep(200*1000);
+	tel_send_at(fd,"AT+SSAM=1",NULL,0,0);
 	gr_flip();
 
 	ret = ui_handle_button(NULL, NULL);
