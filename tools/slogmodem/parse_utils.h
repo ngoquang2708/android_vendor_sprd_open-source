@@ -20,6 +20,8 @@ const uint8_t* find_str(const uint8_t* data, size_t len,
 
 int parse_number(const uint8_t* data, size_t len,
 		 unsigned& num);
+int parse_number(const uint8_t* data, size_t len,
+		 unsigned& num, size_t& parsed);
 
 #endif  // !_PARSE_UTILS_H_
 

@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #define LOG_TAG "SLOGCP"
 
@@ -127,6 +128,19 @@
 	}
 #endif
 
+inline bool str_starts_with(const LogString& s1, const char* s2,
+			    size_t len)
+{
+	return s1.length() >= len && !memcmp(ls2cstring(s1), s2, len);
+}
+
+inline bool str_ends_with(const LogString& s1, const char* s2,
+			  size_t len)
+{
+	return s1.length() >= len &&
+	       !memcmp(ls2cstring(s1) + s1.length() - len, s2, len);
+}
+
 template<typename C>
 void clear_ptr_container(C& c)
 {
@@ -186,6 +200,7 @@ struct modem_timestamp
 };
 
 int get_timezone();
+int copy_file(const char* src, const char* dest);
 
 #endif  // !_CP_LOG_CMN_H_
 

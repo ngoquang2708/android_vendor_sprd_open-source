@@ -161,11 +161,11 @@ int Multiplexer::run()
 
 		// Here process the events
 		if (err > 0) {
-			for(unsigned i = 0;
-			    i < m_current_num;
-			    ++i) {
+			for (unsigned i = 0;
+			     i < m_current_num;
+			     ++i) {
 				short revents = m_current_fds[i].revents;
-				if(revents) {
+				if (revents) {
 					m_current_handlers[i]->process(revents);
 				}
 			}

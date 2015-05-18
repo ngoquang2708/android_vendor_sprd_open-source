@@ -52,19 +52,9 @@ public:
 		return m_config;
 	}
 
-	bool get_file_size(size_t& sz) const
-	{
-		if (m_define_file_size) {
-			sz = m_log_file_size;
-		}
-		return m_define_file_size;
-	}
-
 private:
 	ConfigList m_config;
 	bool m_total_enable;
-	bool m_define_file_size;
-	size_t m_log_file_size;
 
 	int parse_line(const uint8_t* buf);
 	int parse_stream_line(const uint8_t* buf);

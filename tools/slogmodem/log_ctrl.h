@@ -23,8 +23,7 @@
 	#include "int_wcn_log_hdl.h"
 #endif
 #include "log_config.h"
-#include "file_mgr.h"
-#include "log_stat.h"
+#include "stor_mgr.h"
 
 class LogController
 {
@@ -34,36 +33,6 @@ public:
 
 	int init(LogConfig* config);
 	int run();
-
-	/*
-	 *    check_storage - Check whether the storage media is changed.
-	 *
-	 *    If the media is changed, the function creates the new time
-	 *    directory and creates all log files.
-	 *
-	 *    Return true if the storage changed, false otherwise.
-	 */
-	bool check_storage();
-
-	/*
-	 *    check_dir_exist - Check whether the timed directory exists.
-	 *
-	 *    If the timed directory is removed, LogController shall
-	 *    change log file for all CPs.
-	 *    If the timed directory is not removed, the LogPipeHandler
-	 *    shall change its log file.
-	 *
-	 *    Return Value:
-	 *        1: directory changed and all CP logs have been changed.
-	 *        0: directory exists.
-	 *        -1: error occurs.
-	 */
-	int check_dir_exist();
-
-	FileManager* file_manager()
-	{
-		return &m_file_mgr;
-	}
 
 	void process_cp_alive(CpType type);
 	void process_cp_blocked(CpType type);
@@ -84,30 +53,28 @@ public:
 	int set_data_part_size(size_t sz);
 	size_t get_sd_size() const;
 	int set_sd_size(size_t sz);
+	void clear_log();
 
 	/*
 	 *    save_mini_dump - Save the mini dump.
-	 *
-	 *    @par_dir: the directory in which the mini dump is to
-	 *              be saved
+	 *    @stor: the CP storage handle
 	 *    @t: the time to be used as the file name
 	 *
 	 *    Return Value:
 	 *      Return 0 on success, -1 otherwise.
 	 */
-	static int save_mini_dump(const LogString& par_dir,
+	static int save_mini_dump(CpStorage* stor,
 				  const struct tm& t);
 
 	/*
 	 *    save_sipc_dump - Save the SIPC dump.
-	 *    @par_dir: the directory in which the SIPC dump is to
-	 *              be saved
+	 *    @stor: the CP storage handle
 	 *    @t: the time to be used as the file name
 	 *
 	 *    Return Value:
 	 *      Return 0 on success, -1 otherwise.
 	 */
-	static int save_sipc_dump(const LogString& par_dir,
+	static int save_sipc_dump(CpStorage* stor,
 				  const struct tm& t);
 
 private:
@@ -125,13 +92,8 @@ private:
 	IntWcnStateHandler* m_wcn_state;
 #endif
 
-	FileManager m_file_mgr;
-	// Log statistics for /data partition
-	LogStat m_data_part_stat;
-	// Log statistics for SD card
-	LogStat m_sd_stat;
-
-	LogStat* get_cur_stat();
+	// Storage manager
+	StorageManager m_stor_mgr;
 
 	/*
 	 * create_handler - Create the LogPipeHandler object and try to
@@ -151,8 +113,6 @@ private:
 	 */
 	template<typename T>
 	void init_wcn_state_handler(T*& handler, const char* serv_name);
-
-	void clear_log_pipes();
 
 	static LogList<LogPipeHandler*>::iterator
 		find_log_handler(LogList<LogPipeHandler*>& handlers,

@@ -20,9 +20,7 @@
 #include "slog_config.h"
 
 SLogConfig::SLogConfig()
-	:m_total_enable {false},
-	 m_define_file_size {false},
-	 m_log_file_size {0}
+	:m_total_enable {false}
 {
 }
 
@@ -163,14 +161,6 @@ int SLogConfig::parse_line(const uint8_t* buf)
 			err = parse_stream_line(buf);
 		} else if (!memcmp(t, "enable", 6)) {
 			m_total_enable = true;
-		}
-		break;
-	case 7:
-		if (!memcmp(t, "logsize", 7)) {
-			err = LogConfig::parse_number(buf, m_log_file_size);
-			if (!err) {
-				m_define_file_size = true;
-			}
 		}
 		break;
 	default:
