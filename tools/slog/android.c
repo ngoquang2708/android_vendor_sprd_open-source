@@ -306,6 +306,8 @@ void *stream_log_handler(void *arg)
 						break;
 					}
 				}
+				if(retry==0)
+					exit(0);
 			} else if(!strncmp(info->name, "main", 4) || !strncmp(info->name, "system", 6)
 				|| !strncmp(info->name, "radio", 5) || !strncmp(info->name, "events", 6) ) {
 				ret = read(info->fd_device, buf, LOGGER_ENTRY_MAX_LEN);
@@ -371,6 +373,8 @@ void *stream_log_handler(void *arg)
 							break;
 						}
 					}
+					if(retry==0)
+						exit(0);
 					if (outBuffer != defaultBuffer)
 						free(outBuffer);
 				}
