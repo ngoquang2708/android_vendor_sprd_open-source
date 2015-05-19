@@ -7,28 +7,27 @@ LOCAL_MODULE := slogmodem
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := client_hdl.cpp \
-		client_mgr.cpp \
-		client_req.cpp \
-		cp_log_cmn.cpp \
-		cp_log.cpp \
-		cp_stat_hdl.cpp \
-		data_proc_hdl.cpp \
-		fd_hdl.cpp \
-		file_mgr.cpp \
-		log_config.cpp \
-		log_ctrl.cpp \
-		log_dir.cpp \
-		log_file_mgr.cpp \
-		log_pipe_dev.cpp \
-		log_pipe_hdl.cpp \
-		log_stat.cpp \
-		modem_stat_hdl.cpp \
-		multiplexer.cpp \
-		parse_utils.cpp \
-		slog_config.cpp \
-		total_dir_stat.cpp
-
-LOCAL_C_INCLUDES += external/zlib
+		   client_mgr.cpp \
+		   client_req.cpp \
+		   cp_dir.cpp \
+		   cp_log_cmn.cpp \
+		   cp_log.cpp \
+		   cp_set_dir.cpp \
+		   cp_stat_hdl.cpp \
+		   cp_stor.cpp \
+		   data_proc_hdl.cpp \
+		   fd_hdl.cpp \
+		   log_config.cpp \
+		   log_ctrl.cpp \
+		   log_file.cpp \
+		   log_pipe_dev.cpp \
+		   log_pipe_hdl.cpp \
+		   media_stor.cpp \
+		   modem_stat_hdl.cpp \
+		   multiplexer.cpp \
+		   parse_utils.cpp \
+		   slog_config.cpp \
+		   stor_mgr.cpp
 
 ifeq ($(strip $(SPRD_EXTERNAL_WCN)), true)
 	LOCAL_CFLAGS += -DEXTERNAL_WCN
@@ -40,10 +39,9 @@ else
 endif
 
 LOCAL_SHARED_LIBRARIES := libc \
-			libcutils \
-			liblog \
-			libutils \
-			libz
+			  libcutils \
+			  liblog \
+			  libutils
 LOCAL_CPPFLAGS += -std=c++11
 include $(BUILD_EXECUTABLE)
 

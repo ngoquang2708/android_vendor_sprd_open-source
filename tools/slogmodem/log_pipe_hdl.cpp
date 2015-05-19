@@ -18,19 +18,24 @@
 #include "log_pipe_hdl.h"
 #include "multiplexer.h"
 #include "log_ctrl.h"
+#include "stor_mgr.h"
+#include "cp_stor.h"
+#include "cp_dir.h"
 
 uint8_t LogPipeHandler::log_buffer[LogPipeHandler::LOG_BUFFER_SIZE];
 
 LogPipeHandler::LogPipeHandler(LogController* ctrl,
 			       Multiplexer* multi,
-			       const LogConfig::ConfigEntry* conf)
-	:FdHandler {-1, ctrl, multi},
-	 m_enable {false},
-	 m_modem_name (conf->modem_name),
-	 m_type {conf->type},
-	 m_cp_state {CWS_WORKING},
-	 m_dump_fd {-1},
-	 m_log_mgr {m_modem_name, this}
+			       const LogConfig::ConfigEntry* conf,
+			       StorageManager& stor_mgr)
+	:FdHandler(-1, ctrl, multi),
+	 m_enable(false),
+	 m_modem_name(conf->modem_name),
+	 m_type(conf->type),
+	 m_cp_state(CWS_WORKING),
+	 m_dump_fd(-1),
+	 m_stor_mgr(stor_mgr),
+	 m_storage(0)
 {
 	const char* fifo = "";
 
@@ -50,20 +55,19 @@ LogPipeHandler::LogPipeHandler(LogController* ctrl,
 		break;
 	}
 
-	m_log_mgr.set_timestamp_fifo(fifo);
+	m_ts_fifo = fifo;
 }
 
 LogPipeHandler::~LogPipeHandler()
 {
+	if (m_storage) {
+		m_stor_mgr.delete_storage(m_storage);
+	}
+
 	if (m_dump_fd >= 0 && m_dump_fd != m_fd) {
 		close(m_dump_fd);
 	}
 	m_dump_fd = -1;
-}
-
-void LogPipeHandler::set_log_limit(size_t sz)
-{
-	m_log_mgr.set_log_limit(sz);
 }
 
 int LogPipeHandler::start()
@@ -128,14 +132,26 @@ void LogPipeHandler::process(int events)
 		}
 	}
 
-	// There is a bug one CP2 log device: poll reports the device
+	// There is a bug in CP2 log device driver: poll reports the device
 	// is readable, but read returns 0.
 	if (!nr) {
-		err_log("log device bug: read returns 0");
+		err_log("log device driver bug: read returns 0");
 		return;
 	}
 
-	int err = m_log_mgr.write(log_buffer, nr);
+	if (!m_storage) {
+		m_storage = m_stor_mgr.create_storage(*this);
+		if (!m_storage) {
+			err_log("create %s CpStorage failed",
+				ls2cstring(m_modem_name));
+			return;
+		}
+		m_storage->set_new_log_callback(new_log_callback);
+		// The first write: save the version
+		save_version();
+	}
+
+	int err = m_storage->write(log_buffer, nr);
 	if (err < 0) {
 		err_log("CP %s save log error", ls2cstring(m_modem_name));
 	}
@@ -157,23 +173,6 @@ void LogPipeHandler::reopen_log_dev(void* param)
 	}
 }
 
-int LogPipeHandler::change_log_file(const LogString& par_dir,
-				    LogStat* log_stat)
-{
-	if (m_log_mgr.change_dir(par_dir, log_stat)) {
-		return -1;
-	}
-
-	save_version();
-
-	int ret = 0;
-	if (m_enable) {
-		ret = m_log_mgr.create_log();
-	}
-
-	return ret;
-}
-
 bool LogPipeHandler::save_version()
 {
 	char version[PROPERTY_VALUE_MAX];
@@ -184,40 +183,39 @@ bool LogPipeHandler::save_version()
 	}
 
 	bool ret = false;
-	LogString ver_file = m_log_mgr.dir() + "/" + m_modem_name + ".version";
-	FILE* pf = fopen(ls2cstring(ver_file), "w+");
-	if (pf) {
-		size_t n = fwrite(version, strlen(version), 1, pf);
-		fclose(pf);
-		if (n) {
+	LogString ver_file = m_modem_name + ".version";
+	LogFile* logf = m_storage->create_file(ver_file, LogFile::LT_VERSION);
+
+	if (logf) {
+		size_t len = strlen(version);
+		ssize_t n = logf->write(version, len);
+		logf->close();
+		if (static_cast<size_t>(n) == len) {
 			ret = true;
-		} else {
-			unlink(ls2cstring(ver_file));
 		}
 	}
 
 	return ret;
 }
 
-int LogPipeHandler::open_dump_file(const struct tm& lt)
+LogFile* LogPipeHandler::open_dump_file(const struct tm& lt)
 {
 	char log_name[64];
 
-	snprintf(log_name, 64, "%04d-%02d-%02d_%02d-%02d-%02d.dmp",
+	snprintf(log_name, 64, "_memory_%04d-%02d-%02d_%02d-%02d-%02d.dmp",
 		 lt.tm_year + 1900,
 		 lt.tm_mon + 1,
 		 lt.tm_mday,
 		 lt.tm_hour,
 		 lt.tm_min,
 		 lt.tm_sec);
-	LogString fn = m_log_mgr.dir() + "/" + m_modem_name + "_memory_" + log_name;
-	int ret = open(ls2cstring(fn), O_WRONLY | O_CREAT | O_TRUNC,
-		       S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (-1 == ret) {
-		err_log("open dump file %s failed",
-			ls2cstring(fn));
+	LogString dump_file_name = m_modem_name + log_name;
+	LogFile* f = m_storage->create_file(dump_file_name,
+					    LogFile::LT_DUMP);
+	if (!f) {
+		err_log("open dump file %s failed", log_name);
 	}
-	return ret;
+	return f;
 }
 
 int LogPipeHandler::save_dump(const struct tm& lt)
@@ -236,8 +234,8 @@ int LogPipeHandler::save_dump(const struct tm& lt)
 		close_dump = true;
 	}
 
-	int out_fd = open_dump_file(lt);
-	if (-1 == out_fd) {
+	LogFile* dumpf = open_dump_file(lt);
+	if (!dumpf) {
 		err_log("open dump file failed");
 		goto cl_dump_dev;
 	}
@@ -249,17 +247,16 @@ int LogPipeHandler::save_dump(const struct tm& lt)
 		goto cl_dump_dev;
 	}
 
-	err = save_dump_ipc(out_fd);
+	err = save_dump_ipc(dumpf);
 	if (err) {  // Communication with the CP failed
 		err_log("save CP dump via SIPC failed, trying /proc file ...");
 		// Discard data read
-		if (-1 == ftruncate(out_fd, 0)) {
-			close(out_fd);
+		if (dumpf->discard()) {
+			dumpf->dir()->remove(dumpf);
 			goto cl_dump_dev;
 		}
-		lseek(out_fd, 0, SEEK_SET);
 
-		err = save_dump_proc(out_fd);
+		err = save_dump_proc(dumpf);
 	}
 
 cl_dump_dev:
@@ -270,7 +267,7 @@ cl_dump_dev:
 	return err;
 }
 
-int LogPipeHandler::save_dump_ipc(int fd)
+int LogPipeHandler::save_dump_ipc(LogFile* dumpf)
 {
 	pollfd pol_dump;
 	int to;
@@ -313,16 +310,21 @@ int LogPipeHandler::save_dump_ipc(int fd)
 			break;
 		}
 		if (!read_len) {
+			err = 0;
 			break;
 		}
-		write(fd, log_buffer, read_len);
+		ssize_t nwr = dumpf->write(log_buffer, read_len);
+		if (nwr != read_len) {
+			err_log("not all data writen to dump file");
+			break;
+		}
 		++read_num;
 	}
 
 	return err;
 }
 
-int LogPipeHandler::save_dump_proc(int fd)
+int LogPipeHandler::save_dump_proc(LogFile* dumpf)
 {
 	const char* fname;
 
@@ -343,7 +345,7 @@ int LogPipeHandler::save_dump_proc(int fd)
 		break;
 	}
 
-	return FileManager::copy_file(fname, fd);
+	return dumpf->copy(fname);
 }
 
 void LogPipeHandler::open_on_alive()
@@ -374,21 +376,51 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 	}
 	m_cp_state = CWS_NOT_WORKING;
 
-	if (will_be_reset()) {
+	bool will_reset_cp = will_be_reset();
+	time_t t;
+	struct tm lt;
+
+	// If the CP will be reset, save mini dump if requested by the
+	// caller.
+	if (will_reset_cp) {
+		if (save_md) {
+			if (!m_storage) {
+				m_storage = m_stor_mgr.create_storage(*this);
+				if (!m_storage) {
+					return;
+				}
+				m_storage->set_new_log_callback(new_log_callback);
+			}
+
+			t = time(0);
+			if (static_cast<time_t>(-1) == t ||
+			    !localtime_r(&t, &lt)) {
+				return;
+			}
+
+			LogController::save_mini_dump(m_storage, lt);
+		}
 		return;
 	}
 
-	time_t t = time(0);
-	struct tm lt;
+	// CP will not be reset: save all dumps as requested.
+	if (!m_storage) {
+		m_storage = m_stor_mgr.create_storage(*this);
+		if (!m_storage) {
+			return;
+		}
+		m_storage->set_new_log_callback(new_log_callback);
+	}
 
+	t = time(0);
 	if (static_cast<time_t>(-1) == t || !localtime_r(&t, &lt)) {
 		return;
 	}
 
-	LogController::save_sipc_dump(m_log_mgr.dir(), lt);
+	LogController::save_sipc_dump(m_storage, lt);
 
 	if (save_md) {  // Mini dump shall be saved
-		LogController::save_mini_dump(m_log_mgr.dir(), lt);
+		LogController::save_mini_dump(m_storage, lt);
 	}
 
 	// Save MODEM dump
@@ -414,4 +446,45 @@ void LogPipeHandler::close_dump_device()
 {
 	close(m_dump_fd);
 	m_dump_fd = -1;
+}
+
+void LogPipeHandler::new_log_callback(LogPipeHandler* cp, LogFile* f)
+{
+	cp->save_timestamp(f);
+}
+
+bool LogPipeHandler::save_timestamp(LogFile* f)
+{
+	modem_timestamp ts;
+	int ts_file;
+
+	// Open the CP time stamp FIFO
+	ts_file = open(ls2cstring(m_ts_fifo), O_RDWR | O_NONBLOCK);
+	if (-1 == ts_file) {
+		return false;
+	}
+
+	struct pollfd pol_fifo;
+
+	pol_fifo.fd = ts_file;
+	pol_fifo.events = POLLIN;
+	pol_fifo.revents = 0;
+	int ret = poll(&pol_fifo, 1, 1000);
+	ssize_t n = 0;
+
+	if (ret > 0 && (pol_fifo.revents & POLLIN)) {
+		n = read(ts_file,
+			 (uint8_t*)&ts + offsetof(modem_timestamp, tv),
+			 12);
+	}
+	close(ts_file);
+	if (n < 12) {
+		return false;
+	}
+
+	ts.magic_number = 0x12345678;
+	int tz = get_timezone();
+	ts.tv.tv_sec += (3600 * tz);
+	n = f->write(&ts, sizeof ts);
+	return (static_cast<size_t>(n) == sizeof ts);
 }

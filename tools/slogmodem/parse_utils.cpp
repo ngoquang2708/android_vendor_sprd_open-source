@@ -9,6 +9,7 @@
  */
 #include <cstring>
 #include <climits>
+#include <cctype>
 #include "parse_utils.h"
 
 const uint8_t* get_token(const uint8_t* data, size_t len, size_t& tlen)
@@ -79,5 +80,33 @@ int parse_number(const uint8_t* data, size_t len, unsigned& num)
 		++data;
 	}
 
+	return 0;
+}
+
+int parse_number(const uint8_t* data, size_t len, unsigned& num,
+		 size_t& parsed)
+{
+	if (!len || !isdigit(data[0])) {
+		return -1;
+	}
+
+	const uint8_t* endp = data + len;
+	const uint8_t* p = data;
+
+	num = 0;
+	while (p < endp) {
+		int n = *p;
+		if (n < '0' || n > '9') {
+			break;
+		}
+		if (num >= UINT_MAX) {
+			return -1;
+		}
+		n -= '0';
+		num = num * 10 + n;
+		++p;
+	}
+
+	parsed = p - data;
 	return 0;
 }

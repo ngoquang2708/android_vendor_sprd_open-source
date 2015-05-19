@@ -9,6 +9,7 @@
  */
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #ifdef HOST_TEST_
 	#include "sock_test.h"
 #else

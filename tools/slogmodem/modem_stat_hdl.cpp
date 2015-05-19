@@ -99,6 +99,12 @@ CpType ModemStateHandler::get_cp_type(const ConnectionBuffer& cbuf)
 	}
 
 	p = find_str(cbuf.buffer, cbuf.data_len,
+		     reinterpret_cast<const uint8_t*>("5MODE"), 5);
+	if (p) {
+		return CT_5MODE;
+	}
+
+	p = find_str(cbuf.buffer, cbuf.data_len,
 		     reinterpret_cast<const uint8_t*>("WCN"), 3);
 	if (p) {
 		return CT_WCN;

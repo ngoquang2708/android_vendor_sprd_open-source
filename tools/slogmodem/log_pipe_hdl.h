@@ -19,14 +19,18 @@
 #include "cp_log_cmn.h"
 #include "fd_hdl.h"
 #include "log_config.h"
-#include "log_file_mgr.h"
+
+class LogFile;
+class StorageManager;
+class CpStorage;
 
 class LogPipeHandler : public FdHandler
 {
 public:
 	LogPipeHandler(LogController* ctrl,
 		       Multiplexer* multi,
-		       const LogConfig::ConfigEntry* conf);
+		       const LogConfig::ConfigEntry* conf,
+		       StorageManager& stor_mgr);
 	~LogPipeHandler();
 
 	CpType type() const
@@ -78,20 +82,7 @@ public:
 	 */
 	void process_assert(bool save_md = true);
 
-	/*
-	 *    change_log_file - Change the log file (because the storage
-	 *                      media changes).
-	 *    @par_dir: the parent directory for the CP directory.
-	 *    @log_stat: the pointer to the new LogStat object to use.
-	 *
-	 *    Return Value:
-	 *      Return 0 on success, -1 on error.
-	 */
-	int change_log_file(const LogString& par_dir, LogStat* log_stat);
-
-	void set_log_limit(size_t sz);
-
-	int open_dump_file(const struct tm& lt);
+	LogFile* open_dump_file(const struct tm& lt);
 	virtual int save_dump(const struct tm& lt);
 
 	void open_on_alive();
@@ -119,7 +110,7 @@ protected:
 	 *    process function of all LogPipeHandler objects are called
 	 *    from the same thread.
 	 */
-	static const size_t LOG_BUFFER_SIZE = (64 * 1024);
+	static const size_t LOG_BUFFER_SIZE = (32 * 1024);
 	static uint8_t log_buffer[LOG_BUFFER_SIZE];
 
 private:
@@ -135,8 +126,9 @@ private:
 	CpType m_type;
 	CpWorkState m_cp_state;
 	int m_dump_fd;
-	LogString m_log_file_name;
-	LogFileManager m_log_mgr;
+	LogString m_ts_fifo;
+	StorageManager& m_stor_mgr;
+	CpStorage* m_storage;
 
 	/*
 	 *    open_devices - Open the log device and the mini dump device.
@@ -158,13 +150,15 @@ private:
 	 */
 	bool save_version();
 
+	bool save_timestamp(LogFile* f);
+
 	/*
 	 *    will_be_reset - check whether the CP will be reset.
 	 */
 	virtual bool will_be_reset() const;
 
-	int save_dump_ipc(int fd);
-	int save_dump_proc(int fd);
+	int save_dump_ipc(LogFile* dumpf);
+	int save_dump_proc(LogFile* dumpf);
 
 	void close_on_assert();
 
@@ -175,6 +169,8 @@ private:
 	 *    This function is called by the multiplexer on check event.
 	 */
 	static void reopen_log_dev(void* param);
+
+	static void new_log_callback(LogPipeHandler* cp, LogFile* f);
 };
 
 #endif  // !LOG_PIPE_HDL_H_

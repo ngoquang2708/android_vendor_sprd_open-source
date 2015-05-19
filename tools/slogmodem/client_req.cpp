@@ -9,6 +9,7 @@
  */
 #include <cstddef>
 #include <cstring>
+#include <unistd.h>
 
 #include "client_req.h"
 #include "parse_utils.h"

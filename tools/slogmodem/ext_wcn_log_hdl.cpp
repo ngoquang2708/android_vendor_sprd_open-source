@@ -12,13 +12,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "ext_wcn_log_hdl.h"
 #include "parse_utils.h"
+#include "log_file.h"
 
 ExtWcnLogHandler::ExtWcnLogHandler(LogController* ctrl, Multiplexer* multi,
-				   const LogConfig::ConfigEntry* conf)
-	:LogPipeHandler { ctrl, multi, conf }
+				   const LogConfig::ConfigEntry* conf,
+				   StorageManager& stor_mgr)
+	:LogPipeHandler { ctrl, multi, conf, stor_mgr }
 {
 }
 
@@ -37,7 +40,7 @@ int ExtWcnLogHandler::save_dump(const struct tm& lt)
 {
 	// Open the dump file from the CP
 	int err = -1;
-	int logf;
+	LogFile* dumpf;
 	int fd_to_read;
 	long flags;
 	bool close_dump = false;
@@ -51,9 +54,9 @@ int ExtWcnLogHandler::save_dump(const struct tm& lt)
 		close_dump = true;
 	}
 
-	logf = open_dump_file(lt);
+	dumpf = open_dump_file(lt);
 
-	if (-1 == logf) {
+	if (!dumpf) {
 		goto set_dump_prop;
 	}
 
@@ -69,6 +72,7 @@ int ExtWcnLogHandler::save_dump(const struct tm& lt)
 				break;
 			}
 		} else if (!n) {
+			err = 0;
 			break;
 		} else {
 			if (n < 4096) {
@@ -81,7 +85,7 @@ int ExtWcnLogHandler::save_dump(const struct tm& lt)
 				}
 			}
 			size_t to_write = n;
-			n = write(logf, log_buffer, to_write);
+			n = dumpf->write(log_buffer, to_write);
 			if (static_cast<size_t>(n) != to_write) {
 				break;
 			}
@@ -93,7 +97,7 @@ int ExtWcnLogHandler::save_dump(const struct tm& lt)
 		fcntl(fd_to_read, F_SETFL, flags);
 	}
 
-	close(logf);
+	dumpf->close();
 
 set_dump_prop:
 	property_set(MODEM_WCN_DUMP_LOG_COMPLETE, "1");

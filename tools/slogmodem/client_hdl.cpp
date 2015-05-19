@@ -8,8 +8,9 @@
  *  2015-2-16 Zhang Ziyi
  *  Initial version.
  */
-#include <poll.h>
 #include <cstring>
+#include <poll.h>
+#include <unistd.h>
 
 #include "client_hdl.h"
 #include "client_mgr.h"
@@ -178,7 +179,7 @@ void ClientHandler::proc_slogctl(const uint8_t* req, size_t len)
 	if (5 == tlen && !memcmp(tok, "clear", 5)) {
 		info_log("remove CP log");
 		// Delete all logs
-		controller()->file_manager()->clear();
+		controller()->clear_log();
 		send_response(m_fd, REC_SUCCESS);
 	} else if (6 == tlen && !memcmp(tok, "reload", 6)) {
 		info_log("reload slog.conf");
@@ -361,7 +362,6 @@ void ClientHandler::proc_set_log_file_size(const uint8_t* req, size_t len)
 void ClientHandler::proc_enable_overwrite(const uint8_t* req, size_t len)
 {
 	const uint8_t* tok;
-	const uint8_t* endp = req + len;
 	size_t tlen;
 
 	tok = get_token(req, len, tlen);
@@ -381,7 +381,6 @@ void ClientHandler::proc_enable_overwrite(const uint8_t* req, size_t len)
 void ClientHandler::proc_disable_overwrite(const uint8_t* req, size_t len)
 {
 	const uint8_t* tok;
-	const uint8_t* endp = req + len;
 	size_t tlen;
 
 	tok = get_token(req, len, tlen);
@@ -473,7 +472,6 @@ void ClientHandler::proc_set_sd_size(const uint8_t* req, size_t len)
 void ClientHandler::proc_get_log_file_size(const uint8_t* req, size_t len)
 {
 	const uint8_t* tok;
-	const uint8_t* endp = req + len;
 	size_t tlen;
 
 	tok = get_token(req, len, tlen);
@@ -495,7 +493,6 @@ void ClientHandler::proc_get_log_file_size(const uint8_t* req, size_t len)
 void ClientHandler::proc_get_data_part_size(const uint8_t* req, size_t len)
 {
 	const uint8_t* tok;
-	const uint8_t* endp = req + len;
 	size_t tlen;
 
 	tok = get_token(req, len, tlen);

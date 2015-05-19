@@ -17,8 +17,9 @@
 #include "parse_utils.h"
 
 IntWcnLogHandler::IntWcnLogHandler(LogController* ctrl, Multiplexer* multi,
-				   const LogConfig::ConfigEntry* conf)
-	:LogPipeHandler { ctrl, multi, conf }
+				   const LogConfig::ConfigEntry* conf,
+				   StorageManager& stor_mgr)
+	:LogPipeHandler { ctrl, multi, conf, stor_mgr }
 {
 }
 

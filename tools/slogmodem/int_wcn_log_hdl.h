@@ -17,7 +17,8 @@ class IntWcnLogHandler : public LogPipeHandler
 public:
 	IntWcnLogHandler(LogController* ctrl,
 		         Multiplexer* multi,
-		         const LogConfig::ConfigEntry* conf);
+		         const LogConfig::ConfigEntry* conf,
+		         StorageManager& stor_mgr);
 
 	int save_dump(const struct tm& lt);
 
