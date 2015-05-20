@@ -95,6 +95,9 @@ elif [ "$1" = "-f" ]; then
     table2_route=`ip route list table $table2_idx`
     table3_route=`ip route list table $table3_idx`
 
+    `ip route del default table $table1_idx`
+    `ip route del default table $table2_idx`
+    `ip route del default table $table3_idx`
     `ip rule del table $table1_idx`
     `ip rule del table $table2_idx`
     `ip rule del table $table3_idx`
