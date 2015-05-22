@@ -193,7 +193,7 @@
 #define TEXT_RECV_PLAYING			"听筒中正在播放..."
 #define TEXT_SPE_PLAYING            "扬声器正在播放..."
 
-#define LCD_TEST_TIPS               "是否看到了黑白红绿蓝5种颜色？"
+#define LCD_TEST_TIPS               "是否看到了白黑红绿蓝5种颜色？"
 #define OTG_TEST_START              "OTG测试开始："
 #define OTG_NOT_SUPPORT             "不支持OTG功能"
 #define OTG_SUPPORT                 "支持OTG功能"
