@@ -354,9 +354,8 @@ void LogPipeHandler::open_on_alive()
 		if (!open_devices()) {
 			add_events(POLLIN);
 		}
-
-		m_cp_state = CWS_WORKING;
 	}
+	m_cp_state = CWS_WORKING;
 }
 
 void LogPipeHandler::close_on_assert()

@@ -77,6 +77,8 @@ int CpStateHandler::process_data()
 		break;
 	}
 
+	m_buffer.data_len = 0;
+
 	return 0;
 }
 

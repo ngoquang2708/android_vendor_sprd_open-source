@@ -24,6 +24,16 @@ private:
 			     CpType& type);
 
 	static CpType get_cp_type(const ConnectionBuffer& cbuf);
+	/*
+	 *    get_alive_cp_type - parse the MODEM type in alive notification.
+	 *
+	 *    Alive notifications are sent by modemd. There are 5 MODEM
+	 *    types: TD, W, TL, LF, L
+	 *
+	 *    Return Value:
+	 *      The MODEM type.
+	 */
+	static CpType get_alive_cp_type(const ConnectionBuffer& cbuf);
 };
 
 #endif  // !_MODEM_STAT_HDL_H_

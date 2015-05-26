@@ -1,5 +1,5 @@
 /*
- *  fd_hdl.cpp - The file descriptor handler base class declaration.
+ *  fd_hdl.h - The file descriptor handler base class declaration.
  *
  *  Copyright (C) 2015 Spreadtrum Communications Inc.
  *

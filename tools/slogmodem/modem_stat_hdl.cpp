@@ -56,7 +56,7 @@ CpStateHandler::CpEvent ModemStateHandler::parse_notify(const uint8_t* buf,
 		     11);
 	if (p) {
 		CpEvent evt = CE_ALIVE;
-		type = get_cp_type(m_buffer);
+		type = get_alive_cp_type(m_buffer);
 		if (CT_UNKNOWN == type) {
 			evt = CE_NONE;
 		}
@@ -111,4 +111,36 @@ CpType ModemStateHandler::get_cp_type(const ConnectionBuffer& cbuf)
 	}
 
 	return CT_UNKNOWN;
+}
+
+CpType ModemStateHandler::get_alive_cp_type(const ConnectionBuffer& cbuf)
+{
+	size_t tlen;
+	const uint8_t* p = get_token(cbuf.buffer, cbuf.data_len, tlen);
+	CpType cp_type = CT_UNKNOWN;
+
+	if (p) {
+		switch (tlen) {
+		case 1:
+			if ('W' == *p) {
+				cp_type = CT_WCDMA;
+			} else if ('L' == *p) {
+				cp_type = CT_5MODE;
+			}
+			break;
+		case 2:
+			if (!memcmp(p, "TD", 2)) {
+				cp_type = CT_TD;
+			} else if (!memcmp(p, "TL", 2)) {
+				cp_type = CT_3MODE;
+			} else if (!memcmp(p, "LF", 2)) {
+				cp_type = CT_4MODE;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	return cp_type;
 }

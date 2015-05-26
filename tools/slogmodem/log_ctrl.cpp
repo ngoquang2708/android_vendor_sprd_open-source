@@ -212,6 +212,9 @@ int LogController::save_mini_dump(CpStorage* stor,
 	if (f) {
 		ret = f->copy(MINI_DUMP_SRC_FILE);
 		f->close();
+	} else {
+		err_log("create mini dump file %s failed",
+			md_name);
 	}
 	return ret;
 }
