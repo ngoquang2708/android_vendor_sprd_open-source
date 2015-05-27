@@ -5,7 +5,8 @@ LOCAL_SRC_FILES:= \
     modemd.c      \
     modemd_vlx.c  \
     modemd_ext.c  \
-    modemd_sipc.c
+    modemd_sipc.c \
+    nv_read.c
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils             \
