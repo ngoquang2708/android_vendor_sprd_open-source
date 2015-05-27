@@ -182,8 +182,10 @@ static void gps_show_result(unsigned int result)
 	ui_set_color(CL_WHITE);
 	row = ui_show_text(row, 0, buffer);
 	memset(buffer, 0, sizeof(buffer));
-	if(result == 1)
+	if(1)//result==1
 	{
+	     ui_clear_rows(row, sSVNum);
+	     ui_set_color(CL_WHITE);
 	     sprintf(buffer, "GPS NUM: %d",sSVNum);
 	     row = ui_show_text(row, 0, buffer);
 	     for(i=0;i<sSVNum;i++)
@@ -199,21 +201,35 @@ static void gps_show_result(unsigned int result)
 
 static void * processThread_show( void * param )
 {
-	time_t now_time;
+	time_t now_time=time(NULL);
 	FUN_ENTER;
 	sTimeout = GPS_TEST_TIME_OUT;
+	int snr_count=0;
+	int snr_count1=0;
+	int i;
+	sSVNum=0;
 	while(thread_run == 1)
 	{
 		now_time = time(NULL);
 		SPRD_DBG("now_time = %ld, open_time=%ld \n", now_time,gOpenTime);
 		// Catch the Star
-		if(sSVNum >= 2)
+		if(sSVNum >= 4)
 		{
-			gps_show_result(1);
-			SPRD_DBG("mmitest GPS Test PASS Catch the Star\n");
-			ui_push_result(RL_PASS);
-			sleep(3);
-			break;
+		     for(i=0;i<sSVNum;i++)
+			{
+			     if(sSvSnr[i]>=40)
+				  snr_count++;
+			     if(sSvSnr[i]>=0)
+				  snr_count1++;
+			}
+			if(snr_count>0&&snr_count1>=4)
+			{
+			     gps_show_result(1);
+			     SPRD_DBG("mmitest GPS Test PASS Catch the Star\n");
+			     ui_push_result(RL_PASS);
+			     sleep(3);
+			     break;
+			}
 		}
 		else
 		{
