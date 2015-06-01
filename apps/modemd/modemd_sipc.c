@@ -698,7 +698,7 @@ reconnect:
             }
             w_modem_state = MODEM_ASSERT;
             pthread_mutex_unlock(&w_state_mutex);
-        } else if(strstr(buf, "LTE Modem Blocked") != NULL) {
+        } else if(strstr(buf, "L Modem Blocked") != NULL) {
             pthread_mutex_lock(&lte_state_mutex);
             if(lte_modem_state != MODEM_READY) {
                 pthread_mutex_unlock(&lte_state_mutex);
