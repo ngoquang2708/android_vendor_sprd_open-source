@@ -1012,9 +1012,11 @@ int ui_handle_button(//const char* centor,
             }
         switch(key) {
 			case KEY_VOLUMEDOWN:
+				usbin_state=0;
 				LOGD("mmitest keyV solved");
 				return 2;
 			case KEY_POWER:
+				usbin_state=0;
 				LOGD("mmitest keyP solved");
 				return 1;
 
