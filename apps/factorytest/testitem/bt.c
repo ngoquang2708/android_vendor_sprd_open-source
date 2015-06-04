@@ -679,7 +679,7 @@ int test_bt_start(void)
 		gr_flip();
 		ret=RL_NA;
 	}
-    //eng_bt_clear_list();
+    eng_bt_clear_list();
     sleep(1);
 
 	save_result(CASE_TEST_BT,ret);

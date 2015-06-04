@@ -526,6 +526,8 @@ static int auto_all_test(void)
 	int j = 0;
 	int result = 0;
 	char* rl_str;
+	test_gps_init();
+	test_bt_wifi_init();
 	menu_info* pmenu = menu_auto_test;
 	pcba_phone=0;
 	for(i = 0; i < K_MENU_AUTO_TEST_CNT; i++){
@@ -559,6 +561,8 @@ static int PCBA_auto_all_test(void)
 	int k = 0;
 	int result = 0;
 	char* rl_str;
+	test_gps_init();
+	test_bt_wifi_init();
 	menu_info* pmenu = menu_auto_test;
 	pcba_phone=1;
 	for(i = 1; i < K_MENU_AUTO_TEST_CNT; i++){

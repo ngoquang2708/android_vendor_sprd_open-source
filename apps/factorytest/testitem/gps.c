@@ -108,7 +108,7 @@ int gpsOpen( void )
 		SPRD_DBG("mmitest sGpsIntrfc->start()  %s \n", "success");
 
 	gps_is_enable = 1;
-	gOpenTime = time(NULL);
+//	gOpenTime = time(NULL);
 	SPRD_DBG("mmitest gOpenTime=%ld \n", gOpenTime);
 	sSVNum = 0;
 	FUN_EXIT;
@@ -404,6 +404,7 @@ int test_gps_start(void)
 	}
 
 	thread_run = 1;
+	gOpenTime = time(NULL);
 	pthread_create(&t1, NULL, (void*)processThread_show, NULL);
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
 	thread_run = 0;
