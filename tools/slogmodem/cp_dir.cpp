@@ -13,21 +13,25 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include "log_file.h"
 #include "cp_dir.h"
 #include "cp_set_dir.h"
+#include "log_file.h"
+#include "media_stor.h"
 
 CpDirectory::CpDirectory(CpSetDirectory* par_dir, const LogString& dir)
 	:m_cp_set_dir {par_dir},
 	 m_name(dir),
 	 m_size {0},
 	 m_start_log {0},
-	 m_cur_log {0}
+	 m_cur_log {0},
+	 m_log_watch {0}
 {
 }
 
 CpDirectory::~CpDirectory()
 {
+	// TODO: cancel file watch
+	//cancel_watch();
 	clear_ptr_container(m_log_files);
 }
 
@@ -133,6 +137,9 @@ LogFile* CpDirectory::create_log_file()
 		}
 		m_log_files.push_back(log_file);
 		m_cur_log = log_file;
+		// TODO: Watch the current log
+		//FileWatcher* fw = cp_set_dir()->get_media()->file_watcher();
+		//fw->add(this, log_delete_notify, s, m_log_watch);
 	}
 
 	return log_file;
@@ -142,6 +149,8 @@ int CpDirectory::close_log_file()
 {
 	m_cur_log->close();
 	m_cur_log = 0;
+	// TODO: Cancel file watch
+	//cancel_watch();
 	return 0;
 }
 
@@ -243,7 +252,8 @@ uint64_t CpDirectory::trim_working_dir(uint64_t sz)
 
 	while (it != m_log_files.end()) {
 		LogFile* f = *it;
-		if (f == m_start_log || f == m_cur_log) {
+		if (f == m_start_log || f == m_cur_log ||
+		    LogFile::LT_VERSION == f->type()) {
 			++it;
 			continue;
 		}
@@ -335,4 +345,53 @@ LogFile* CpDirectory::create_file(const LogString& fname,
 	}
 
 	return log_file;
+}
+
+void CpDirectory::cancel_watch()
+{
+	if (m_log_watch) {
+		FileWatcher* fw = cp_set_dir()->get_media()->file_watcher();
+		if (fw) {
+			fw->del(m_log_watch);
+		}
+		m_log_watch = 0;
+	}
+}
+
+void CpDirectory::log_delete_notify(void* client, uint32_t evt)
+{
+	CpDirectory* cp_dir = static_cast<CpDirectory*>(client);
+
+	if ((evt & IN_DELETE_SELF) && cp_dir->m_log_watch) {
+		// TODO: inform the StorageManager
+		//cp_dir->cp_set_dir()->get_media()->stor_mgr()->
+		cp_dir->close_log_file();
+	}
+}
+
+void CpDirectory::file_removed(LogFile* f)
+{
+	LogList<LogFile*>::iterator it;
+	bool found = false;
+
+	for (it = m_log_files.begin(); it != m_log_files.end(); ++it) {
+		LogFile* pf = *it;
+		if (f == pf) {
+			m_log_files.erase(it);
+			found = true;
+			break;
+		}
+	}
+
+	if (found) {
+		m_size -= f->size();
+		if (f == m_start_log) {
+			m_start_log = 0;
+		}
+		delete f;
+	} else {
+		err_log("log %s does not exist in dir %s",
+			ls2cstring(f->base_name()),
+			ls2cstring(m_name));
+	}
 }

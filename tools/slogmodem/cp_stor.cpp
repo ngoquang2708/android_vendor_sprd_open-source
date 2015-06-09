@@ -8,18 +8,20 @@
  *  Initial version.
  */
 
+#include "cp_dir.h"
+#include "cp_set_dir.h"
 #include "cp_stor.h"
+#include "log_file.h"
 #include "log_pipe_hdl.h"
 #include "stor_mgr.h"
-#include "cp_dir.h"
-#include "log_file.h"
 
 CpStorage::CpStorage(StorageManager& stor_mgr, LogPipeHandler& cp)
 	:m_stor_mgr(stor_mgr),
 	 m_cp(cp),
-	 m_new_log_cb(0),
-	 m_cur_file(0),
-	 m_shall_stop(false)
+	 m_new_log_cb {0},
+	 m_new_dir_cb {0},
+	 m_cur_file {0},
+	 m_shall_stop {false}
 {
 }
 
@@ -38,13 +40,38 @@ ssize_t CpStorage::write(const void* data, size_t len)
 			m_cur_file = 0;
 		}
 	}
-	if (!m_cur_file) {  // Media not changed
+	if (!m_cur_file) {  // Log file not created
 		m_cur_file = m_stor_mgr.request_file(m_cp);
 		if (!m_cur_file) {
 			return -1;
 		}
+		if (m_new_dir_cb) {
+			m_new_dir_cb(&m_cp);
+		}
 		if (m_new_log_cb) {
 			m_new_log_cb(&m_cp, m_cur_file);
+		}
+	} else {  // Log file opened
+		// Check whether the file exists
+		MediaStorage* m = m_cur_file->dir()->cp_set_dir()->get_media();
+		CpDirectory* cp_dir = m_cur_file->dir();
+
+		if (!m_cur_file->exists()) {
+			bool cp_dir_created = false;
+
+			m_cur_file->close();
+			cp_dir->file_removed(m_cur_file);
+			m_cur_file = m->recreate_log_file(m_cp.name(),
+							  cp_dir_created);
+			if (!m_cur_file) {
+				return -1;
+			}
+			if (cp_dir_created && m_new_dir_cb) {
+				m_new_dir_cb(&m_cp);
+			}
+			if (m_new_log_cb) {
+				m_new_log_cb(&m_cp, m_cur_file);
+			}
 		}
 	}
 

@@ -20,14 +20,15 @@
 #include "log_config.h"
 
 LogConfig::LogConfig(const char* tmp_config)
-	:m_dirty(false),
-	 m_stor_pos(SP_DATA),
+	:m_dirty {false},
+	 m_stor_pos {SP_DATA},
+	 m_ext_stor_type {1},
 	 m_config_file(tmp_config),
-	 m_enable_md(false),
-	 m_log_file_size(5),
-	 m_data_size(25),
-	 m_sd_size(250),
-	 m_overwrite_old_log(true)
+	 m_enable_md {false},
+	 m_log_file_size {5},
+	 m_data_size {25},
+	 m_sd_size {250},
+	 m_overwrite_old_log {true}
 {
 }
 
@@ -59,8 +60,14 @@ int LogConfig::set_stor_pos(int argc, char** argv)
 			char* dir;
 			if (!strcmp(argv[i], "ext")) {
 				dir = getenv("EXTERNAL_STORAGE");
+				if (dir) {
+					m_ext_stor_type = 1;
+				}
 			} else if (!strcmp(argv[i], "sec")) {
 				dir = getenv("SECONDARY_STORAGE");
+				if (dir) {
+					m_ext_stor_type = 2;
+				}
 			} else {
 				err_log("unknown SD type option: %s", argv[i]);
 				ret = -1;

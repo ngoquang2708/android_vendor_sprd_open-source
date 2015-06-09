@@ -25,10 +25,10 @@ public:
 
 	void process_client_disconn(ClientHandler*);
 
+	void notify_cp_dump(CpType cpt, ClientHandler::CpEvent evt);
+
 private:
 	LogList<ClientHandler*> m_clients;
-
-	void clear_clients();
 };
 
 #endif  // !CLIENT_MGR_H_

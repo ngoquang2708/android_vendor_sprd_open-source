@@ -12,8 +12,11 @@
 
 #include "media_stor.h"
 
+class LogController;
+class Multiplexer;
 class LogPipeHandler;
 class CpStorage;
+class FileWatcher;
 
 class StorageManager
 {
@@ -26,13 +29,28 @@ public:
 	};
 
 	StorageManager();
+	~StorageManager();
 
 	/*  init - initialize the storage manager.
 	 *  @sd_top_dir: top directory of SD card.
+	 *  @ctrl: LogController object
+	 *  @multiplexer: Multiplexer object
 	 *
 	 *  Return 0 on success, -1 on failure.
 	 */
-	int init(const LogString& sd_top_dir);
+	int init(const LogString& sd_top_dir,
+		 LogController* ctrl,
+		 Multiplexer* multiplexer);
+
+	/*  set_ext_stor_type - set external storage value in
+	 *                      persist.storage.type
+	 *  @type: external storage value in persist.storage.type
+	 *
+	 */
+	void set_ext_stor_type(int type)
+	{
+		m_ext_stor_type = type;
+	}
 
 	void set_overwrite(bool ow);
 	bool overwrite() const
@@ -75,7 +93,13 @@ public:
 	 */
 	void clear();
 
+	/*  proc_working_dir_removed - process the removal of working directory.
+	 */
+	void proc_working_dir_removed();
+
 private:
+	// External storage type value in persist.storage.type
+	int m_ext_stor_type;
 	// Current storage media
 	MediaType m_cur_type;
 	MediaStorage m_data_part;
@@ -84,6 +108,8 @@ private:
 	bool m_overwrite;
 	// CP storage handle
 	LogList<CpStorage*> m_cp_handles;
+	// File watcher
+	FileWatcher* m_file_watcher;
 
 	MediaStorage* get_media_stor(MediaType t)
 	{
@@ -105,7 +131,7 @@ private:
 
 	void stop_all_cps();
 
-	static bool get_sd_state();
+	static bool get_sd_state(int ext_stor);
 };
 
 #endif  // !_STOR_MGR_H_

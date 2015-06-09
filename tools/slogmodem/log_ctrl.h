@@ -34,6 +34,11 @@ public:
 	int init(LogConfig* config);
 	int run();
 
+	ClientManager* cli_mgr()
+	{
+		return m_cli_mgr;
+	}
+
 	void process_cp_alive(CpType type);
 	void process_cp_blocked(CpType type);
 	void process_cp_assert(CpType type);

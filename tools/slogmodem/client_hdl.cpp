@@ -7,6 +7,9 @@
  *  History:
  *  2015-2-16 Zhang Ziyi
  *  Initial version.
+ *
+ *  2015-6-5 Zhang Ziyi
+ *  CP dump notification added.
  */
 #include <cstring>
 #include <poll.h>
@@ -23,7 +26,8 @@ ClientHandler::ClientHandler(int sock,
 			     Multiplexer* multiplexer,
 			     ClientManager* mgr)
 	:DataProcessHandler(sock, ctrl, multiplexer, CLIENT_BUF_SIZE),
-	 m_mgr(mgr)
+	 m_mgr(mgr),
+	 m_cp_dump_notify {false}
 {
 }
 
@@ -98,6 +102,9 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 		} else if (!memcmp(token, "MINI_DUMP", 9)) {
 			proc_mini_dump(req, len);
 			known_req = true;
+		} else if (!memcmp(token, "SUBSCRIBE", 9)) {
+			proc_subscribe(req, len);
+			known_req = true;
 		}
 		break;
 	case 10:
@@ -112,6 +119,9 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 	case 11:
 		if (!memcmp(token, "DISABLE_LOG", 11)) {
 			proc_disable_log(req, len);
+			known_req = true;
+		} else if (!memcmp(token, "UNSUBSCRIBE", 11)) {
+			proc_unsubscribe(req, len);
 			known_req = true;
 		}
 		break;
@@ -318,7 +328,7 @@ void ClientHandler::process_conn_closed()
 	m_mgr->process_client_disconn(this);
 }
 
-void ClientHandler::process_conn_error(int err)
+void ClientHandler::process_conn_error(int /*err*/)
 {
 	ClientHandler::process_conn_closed();
 }
@@ -546,4 +556,141 @@ void ClientHandler::proc_get_log_overwrite(const uint8_t* req, size_t len)
 			       ow ? "ENABLE" : "DISABLE");
 	write(m_fd, rsp, rsp_len);
 	info_log("GET_LOG_OVERWRITE %s", ow ? "ENABLE" : "DISABLE");
+}
+
+void ClientHandler::proc_subscribe(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SUBSCRIBE no param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	CpType cpt = get_cp_type(tok, tlen);
+	if (CT_UNKNOWN == cpt) {
+		err_log("SUBSCRIBE invalid CP type");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SUBSCRIBE no <event>");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	if (4 != tlen || memcmp(tok, "DUMP", 4)) {
+		err_log("SUBSCRIBE invalid <event>");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	if (len && get_token(req, len, tlen)) {
+		err_log("SUBSCRIBE more params than expected");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	m_cp_dump_notify[cpt] = true;
+
+	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::notify_cp_dump(CpType cpt, CpEvent evt)
+{
+	if (cpt > CT_UNKNOWN && cpt < CT_NUMBER &&
+	    CE_DUMP_START <= evt && CE_DUMP_END >= evt &&
+	    m_cp_dump_notify[cpt]) {
+		send_dump_notify(m_fd, cpt, evt);
+	}
+}
+
+int ClientHandler::send_dump_notify(int fd, CpType cpt, CpEvent evt)
+{
+	uint8_t buf[128];
+	size_t len;
+
+	if (CE_DUMP_START == evt) {
+		memcpy(buf, "CP_DUMP_START ", 14);
+		len = 14;
+	} else {
+		memcpy(buf, "CP_DUMP_END ", 12);
+		len = 12;
+	}
+
+	size_t rlen = sizeof buf - len;
+	size_t tlen;
+	int ret = -1;
+	if (!put_cp_type(buf + len, rlen, cpt, tlen)) {
+		len += tlen;
+		rlen -= tlen;
+		if (rlen) {
+			buf[len] = '\n';
+			++len;
+			ssize_t wlen = write(fd, buf, len);
+			if (static_cast<size_t>(wlen) == len) {
+				ret = 0;
+			}
+		}
+	}
+
+	return ret;
+}
+
+void ClientHandler::proc_unsubscribe(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("UNSUBSCRIBE no param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	CpType cpt = get_cp_type(tok, tlen);
+	if (CT_UNKNOWN == cpt) {
+		err_log("UNSUBSCRIBE invalid CP type");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("UNSUBSCRIBE no <event>");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	if (4 != tlen || memcmp(tok, "DUMP", 4)) {
+		err_log("UNSUBSCRIBE invalid <event>");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	if (len && get_token(req, len, tlen)) {
+		err_log("UNSUBSCRIBE more params than expected");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	m_cp_dump_notify[cpt] = false;
+
+	send_response(m_fd, REC_SUCCESS);
 }

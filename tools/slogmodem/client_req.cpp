@@ -35,7 +35,7 @@ int send_response(int conn, ResponseErrorCode err)
 	return ret;
 }
 
-static CpType get_cp_type(const uint8_t* cp, size_t len)
+CpType get_cp_type(const uint8_t* cp, size_t len)
 {
 	CpType t = CT_UNKNOWN;
 
@@ -111,4 +111,58 @@ int parse_modem_set(const uint8_t* req, size_t len, ModemSet& ms)
 	ms.num = n;
 
 	return err;
+}
+
+int put_cp_type(uint8_t* buf, size_t len, CpType t, size_t& tlen)
+{
+	int ret = -1;
+
+	switch (t) {
+	case CT_WCDMA:
+		if (len >= 5) {
+			memcpy(buf, "WCDMA", 5);
+			tlen = 5;
+			ret = 0;
+		}
+		break;
+	case CT_TD:
+		if (len >= 2) {
+			memcpy(buf, "TD", 2);
+			tlen = 2;
+			ret = 0;
+		}
+		break;
+	case CT_3MODE:
+		if (len >= 7) {
+			memcpy(buf, "TDD-LTE", 7);
+			tlen = 7;
+			ret = 0;
+		}
+		break;
+	case CT_4MODE:
+		if (len >= 7) {
+			memcpy(buf, "FDD-LTE", 7);
+			tlen = 7;
+			ret = 0;
+		}
+		break;
+	case CT_5MODE:
+		if (len >= 5) {
+			memcpy(buf, "5MODE", 5);
+			tlen = 5;
+			ret = 0;
+		}
+		break;
+	case CT_WCN:
+		if (len >= 3) {
+			memcpy(buf, "WCN", 3);
+			tlen = 3;
+			ret = 0;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return ret;
 }

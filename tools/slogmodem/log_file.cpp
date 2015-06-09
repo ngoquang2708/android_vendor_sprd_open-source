@@ -557,3 +557,11 @@ int LogFile::extract_file_time(const char* s, size_t len,
 
 	return ret;
 }
+
+bool LogFile::exists() const
+{
+	const CpSetDirectory* cp_set = m_dir->cp_set_dir();
+	LogString file_path = cp_set->path() + "/" + m_dir->name()
+			      + "/" + m_base_name;
+	return 0 == access(ls2cstring(file_path), R_OK | W_OK);
+}

@@ -83,10 +83,11 @@ int LogController::init(LogConfig* config)
 	m_stor_mgr.set_overwrite(config->overwrite_old_log());
 
 	// Initialize the storage manager
-	int err = m_stor_mgr.init(config->sd_top_dir());
+	int err = m_stor_mgr.init(config->sd_top_dir(), this, &m_multiplexer);
 	if (err < 0) {
 		return -1;
 	}
+	m_stor_mgr.set_ext_stor_type(config->ext_stor_type());
 
 	// Create LogPipeHandlers according to settings in config
 	// And add them to m_log_pipes

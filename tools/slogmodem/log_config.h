@@ -64,6 +64,10 @@ public:
 	{
 		return m_stor_pos;
 	}
+	int ext_stor_type() const
+	{
+		return m_ext_stor_type;
+	}
 	const LogString& sd_top_dir() const
 	{
 		return m_sd_top_dir;
@@ -155,6 +159,7 @@ public:
 private:
 	bool m_dirty;
 	StoragePosition m_stor_pos;
+	int m_ext_stor_type;
 	LogString m_sd_top_dir;
 	LogString m_config_file;
 	ConfigList m_config;

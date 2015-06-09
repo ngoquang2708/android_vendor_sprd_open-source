@@ -81,6 +81,13 @@ public:
 			     const LogString& fname,
 			     LogFile::LogType t);
 
+	/*  recreate_log_file - recreate the log file after it's deleted.
+	 *  @cp_name: the CP name.
+	 *
+	 */
+	LogFile* recreate_log_file(const LogString& cp_name,
+				   bool& new_cp_dir);
+
 	void add_size(size_t len);
 	void dec_size(size_t len);
 

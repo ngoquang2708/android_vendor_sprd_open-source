@@ -53,6 +53,8 @@ struct ClientRequest
 
 int send_response(int conn, ResponseErrorCode err);
 int parse_modem_set(const uint8_t* req, size_t len, ModemSet& ms);
+CpType get_cp_type(const uint8_t* cp, size_t len);
+int put_cp_type(uint8_t* buf, size_t len, CpType t, size_t& tlen);
 
 #endif  // !_CLIENT_REQ_H_
 

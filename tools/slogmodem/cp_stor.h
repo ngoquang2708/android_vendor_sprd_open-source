@@ -21,6 +21,7 @@ class CpStorage
 {
 public:
 	typedef void (*new_log_callback_t)(LogPipeHandler*, LogFile* f);
+	typedef void (*new_dir_callback_t)(LogPipeHandler*);
 
 	CpStorage(StorageManager& stor_mgr, LogPipeHandler& cp);
 	~CpStorage();
@@ -39,6 +40,10 @@ public:
 	{
 		m_new_log_cb = cb;
 	}
+	void set_new_dir_callback(new_dir_callback_t cb)
+	{
+		m_new_dir_cb = cb;
+	}
 
 	// Non-log files
 	LogFile* create_file(const LogString& name, LogFile::LogType t);
@@ -47,6 +52,7 @@ private:
 	StorageManager& m_stor_mgr;
 	LogPipeHandler& m_cp;
 	new_log_callback_t m_new_log_cb;
+	new_dir_callback_t m_new_dir_cb;
 	// Current log file
 	LogFile* m_cur_file;
 	// Log capacity state

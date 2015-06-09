@@ -19,32 +19,54 @@
 #include "cp_set_dir.h"
 #include "cp_dir.h"
 #include "log_pipe_hdl.h"
+#include "file_watcher.h"
 
 StorageManager::StorageManager()
 	:m_cur_type {MT_NONE},
-	 m_data_part(LogString("/data")),
-	 m_overwrite {true}
+	 m_data_part(this, LogString("/data")),
+	 m_sd_card(this),
+	 m_overwrite {true},
+	 m_file_watcher {0}
 {
 }
 
-int StorageManager::init(const LogString& sd_top_dir)
+StorageManager::~StorageManager()
 {
-	if (m_data_part.init()) {
-		return -1;
+	//delete m_file_watcher;
+}
+
+int StorageManager::init(const LogString& sd_top_dir,
+			 LogController* ctrl,
+			 Multiplexer* multiplexer)
+{
+	// TODO: file watcher shall be implemented
+#if 0
+	m_file_watcher = new FileWatcher(ctrl, multiplexer);
+	if (m_file_watcher->init()) {
+		goto init_fail;
+	}
+#endif
+
+	if (m_data_part.init(m_file_watcher)) {
+		goto init_fail;
 	}
 
-	int ret = 0;
 	m_sd_card.set_top_dir(sd_top_dir);
-	if (get_sd_state()) {  // SD card is present
-		if (m_sd_card.init()) {
-			ret = -1;
+	if (get_sd_state(m_ext_stor_type)) {  // SD card is present
+		if (m_sd_card.init(m_file_watcher)) {
+			goto init_fail;
 		}
 	}
 
-	return ret;
+	return 0;
+
+init_fail:
+	//delete m_file_watcher;
+	//m_file_watcher = 0;
+	return -1;
 }
 
-bool StorageManager::get_sd_state()
+bool StorageManager::get_sd_state(int ext_stor)
 {
 	char val[PROPERTY_VALUE_MAX];
 
@@ -57,7 +79,7 @@ bool StorageManager::get_sd_state()
 	char* endp;
 
 	type = strtoul(val, &endp, 0);
-	if (1 != type) {
+	if (ext_stor != static_cast<int>(type)) {
 		return false;
 	}
 
@@ -120,11 +142,12 @@ LogFile* StorageManager::request_file(LogPipeHandler& cp)
 	MediaStorage* m = get_media_stor(m_cur_type);
 	CpDirectory* cp_dir = m->current_cp_set()->create_cp_dir(cp.name());
 
-	if (!cp_dir) {
-		return 0;
+	LogFile* f = 0;
+	if (cp_dir) {
+		f = cp_dir->create_log_file();
 	}
 
-	return cp_dir->create_log_file();
+	return f;
 }
 
 void StorageManager::stop_all_cps()
@@ -139,7 +162,7 @@ void StorageManager::stop_all_cps()
 
 bool StorageManager::check_media_change()
 {
-	bool has_sd = get_sd_state();
+	bool has_sd = get_sd_state(m_ext_stor_type);
 	bool changed = false;
 
 	if (has_sd) {  // SD is present
@@ -149,7 +172,7 @@ bool StorageManager::check_media_change()
 			}
 
 			if (!m_sd_card.inited()) {
-				if (m_sd_card.init()) {
+				if (m_sd_card.init(m_file_watcher)) {
 					err_log("init SD card failed");
 					return true;
 				}
@@ -188,4 +211,9 @@ void StorageManager::clear()
 	// Reset current media to MT_NONE so that the next request will
 	// recreate the CP set directory on the appropriate media.
 	m_cur_type = MT_NONE;
+}
+
+void StorageManager::proc_working_dir_removed()
+{
+	stop_all_cps();
 }

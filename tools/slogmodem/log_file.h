@@ -115,6 +115,7 @@ public:
 
 	int flush();
 
+	bool exists() const;
 	int remove(const LogString& par_dir);
 
 	/*  operator < - operator < for m_time.

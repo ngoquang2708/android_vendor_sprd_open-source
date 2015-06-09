@@ -29,7 +29,7 @@ ClientManager::ClientManager(LogController* ctrl, Multiplexer* multi)
 
 ClientManager::~ClientManager()
 {
-	clear_clients();
+	clear_ptr_container(m_clients);
 }
 
 int ClientManager::init(const char* serv_name)
@@ -58,19 +58,7 @@ int ClientManager::init(const char* serv_name)
 	return err;
 }
 
-void ClientManager::clear_clients()
-{
-	LogList<ClientHandler*>::iterator it;
-
-	for (it = m_clients.begin(); it != m_clients.end(); ++it) {
-		ClientHandler* p = *it;
-		delete p;
-	}
-
-	m_clients.clear();
-}
-
-void ClientManager::process(int events)
+void ClientManager::process(int /*events*/)
 {
 	// Server socket readable
 
@@ -94,8 +82,10 @@ void ClientManager::process(int events)
 		m_clients.push_back(client);
 		multiplexer()->register_fd(client, POLLIN);
 		info_log("new client accepted");
-		// Only support one client connection
-		multiplexer()->unregister_fd(this, POLLIN);
+		// Only support two client connection
+		if (m_clients.size() >= 2) {
+			multiplexer()->unregister_fd(this, POLLIN);
+		}
 	}
 }
 
@@ -106,5 +96,14 @@ void ClientManager::process_client_disconn(ClientHandler* client)
 	err_log("client disconnected");
 	if (m_clients.empty()) {
 		add_events(POLLIN);
+	}
+}
+
+void ClientManager::notify_cp_dump(CpType cpt, ClientHandler::CpEvent evt)
+{
+	LogList<ClientHandler*>::iterator it;
+
+	for (it = m_clients.begin(); it != m_clients.end(); ++it) {
+		(*it)->notify_cp_dump(cpt, evt);
 	}
 }

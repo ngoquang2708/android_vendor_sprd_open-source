@@ -110,7 +110,7 @@ void LogPipeHandler::close_devices()
 	m_dump_fd = -1;
 }
 
-void LogPipeHandler::process(int events)
+void LogPipeHandler::process(int /*events*/)
 {
 	// The log device file readable, read it
 
@@ -147,8 +147,7 @@ void LogPipeHandler::process(int events)
 			return;
 		}
 		m_storage->set_new_log_callback(new_log_callback);
-		// The first write: save the version
-		save_version();
+		m_storage->set_new_dir_callback(new_dir_callback);
 	}
 
 	int err = m_storage->write(log_buffer, nr);
@@ -283,6 +282,8 @@ int LogPipeHandler::save_dump_ipc(LogFile* dumpf)
 		int n = poll(&pol_dump, 1, to);
 		if (-1 == n) {
 			if (EINTR != errno) {
+				err_log("%s dump poll error",
+					ls2cstring(m_modem_name));
 				break;
 			}
 			continue;
@@ -290,11 +291,17 @@ int LogPipeHandler::save_dump_ipc(LogFile* dumpf)
 		if (!n) {  // Timeout
 			if (read_num >= 10) {
 				err = 0;
+			} else {
+				err_log("%s dump poll timeout",
+					ls2cstring(m_modem_name));
 			}
 			break;
 		}
 		if (pol_dump.revents & (POLLERR | POLLHUP)) {
 			// Error
+			err_log("%s dump poll error events %#x",
+				ls2cstring(m_modem_name),
+				static_cast<unsigned>(pol_dump.revents));
 			break;
 		}
 		if (!(pol_dump.revents & POLLIN)) {
@@ -307,6 +314,8 @@ int LogPipeHandler::save_dump_ipc(LogFile* dumpf)
 			if (EINTR == errno || EAGAIN == errno) {
 				continue;
 			}
+			err_log("%s dump read error",
+				ls2cstring(m_modem_name));
 			break;
 		}
 		if (!read_len) {
@@ -423,9 +432,12 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 	}
 
 	// Save MODEM dump
+	//ClientManager* cli_mgr = controller()->cli_mgr();
+	//cli_mgr->notify_cp_dump(m_type, ClientHandler::CE_DUMP_START);
 	system("am broadcast -a slogui.intent.action.DUMP_START");
 	save_dump(lt);
 	system("am broadcast -a slogui.intent.action.DUMP_END");
+	//cli_mgr->notify_cp_dump(m_type, ClientHandler::CE_DUMP_END);
 
 	close_on_assert();
 }
@@ -450,6 +462,11 @@ void LogPipeHandler::close_dump_device()
 void LogPipeHandler::new_log_callback(LogPipeHandler* cp, LogFile* f)
 {
 	cp->save_timestamp(f);
+}
+
+void LogPipeHandler::new_dir_callback(LogPipeHandler* cp)
+{
+	cp->save_version();
 }
 
 bool LogPipeHandler::save_timestamp(LogFile* f)

@@ -91,7 +91,7 @@ void CpStateHandler::process_conn_closed()
 	init();
 }
 
-void CpStateHandler::process_conn_error(int err)
+void CpStateHandler::process_conn_error(int /*err*/)
 {
 	CpStateHandler::process_conn_closed();
 }

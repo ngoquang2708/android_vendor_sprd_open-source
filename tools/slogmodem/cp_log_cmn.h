@@ -189,7 +189,8 @@ enum CpType
 	CT_3MODE,
 	CT_4MODE,
 	CT_5MODE,
-	CT_WCN
+	CT_WCN,
+	CT_NUMBER
 };
 
 struct modem_timestamp

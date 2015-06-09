@@ -17,6 +17,7 @@ LOCAL_SRC_FILES := client_hdl.cpp \
 		   cp_stor.cpp \
 		   data_proc_hdl.cpp \
 		   fd_hdl.cpp \
+		   file_watcher.cpp \
 		   log_config.cpp \
 		   log_ctrl.cpp \
 		   log_file.cpp \

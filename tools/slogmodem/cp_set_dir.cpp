@@ -207,3 +207,35 @@ CpDirectory* CpSetDirectory::get_cp_dir(const LogString& cp_name)
 
 	return cp_dir;
 }
+
+LogFile* CpSetDirectory::recreate_log_file(const LogString& cp_name,
+					   bool& new_cp_dir)
+{
+	CpDirectory* cp_dir = get_cp_dir(cp_name);
+	LogFile* log_file = 0;
+	bool created = false;
+
+	if (!cp_dir) {
+		cp_dir = create_cp_dir(cp_name);
+		created = true;
+	} else {
+		// CP dir exists?
+		LogString cp_path = m_path + "/" + cp_name;
+		if (access(ls2cstring(cp_path), R_OK | W_OK | X_OK)) {
+			// Remove the CpDirectory
+			ll_remove(m_cp_dirs, cp_dir);
+			m_size -= cp_dir->size();
+			delete cp_dir;
+			cp_dir = create_cp_dir(cp_name);
+			created = true;
+		}
+	}
+	if (cp_dir) {
+		log_file = cp_dir->create_log_file();
+		if (log_file) {
+			new_cp_dir = created;
+		}
+	}
+
+	return log_file;
+}

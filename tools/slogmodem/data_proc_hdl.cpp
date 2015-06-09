@@ -25,7 +25,7 @@ DataProcessHandler::~DataProcessHandler()
 	delete [] m_buffer.buffer;
 }
 
-void DataProcessHandler::process(int events)
+void DataProcessHandler::process(int /*events*/)
 {
 	// Client socket connection readable
 

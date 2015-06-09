@@ -171,6 +171,7 @@ private:
 	static void reopen_log_dev(void* param);
 
 	static void new_log_callback(LogPipeHandler* cp, LogFile* f);
+	static void new_dir_callback(LogPipeHandler* cp);
 };
 
 #endif  // !LOG_PIPE_HDL_H_
