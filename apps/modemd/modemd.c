@@ -830,6 +830,12 @@ static void control_engservice(int  open)
           {
               stop_engservice(LF_MODEM);
           }
+          memset(prop,'\0',256);
+          property_get(LTE_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              stop_engservice(LTE_MODEM);
+          }
       }
       else
       {
@@ -857,6 +863,12 @@ static void control_engservice(int  open)
           if(!strcmp(prop, "1"))
           {
               start_engservice(LF_MODEM);
+          }
+          memset(prop,'\0',256);
+          property_get(LTE_MODEM_ENABLE_PROP,prop, "");
+          if(!strcmp(prop, "1"))
+          {
+              start_engservice(LTE_MODEM);
           }
       }
 }
