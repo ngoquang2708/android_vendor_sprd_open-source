@@ -650,10 +650,10 @@ int main(int argc, char *argv[])
 		g_fifopath = W_FIFO_PATH;
 	} else if(flag == 2){
 		property_get("ro.modem.l.tty",path,"not_find");
-		if(0 == strcmp(path, "not_find")){
-			strcpy(path, LTE_NOTIFY_DEV);
-		} else{
+		if(0 == strcmp(path, "/dev/sdiomux")){
 			strcat(path, pathnumber);
+		} else{
+			strcpy(path, LTE_NOTIFY_DEV);
 		}
 		REF_LOGD("get L_NOTIFY_DEV property path is: %s \n", path);
 		if( -1 == access(L_FIFO_PATH, F_OK)){
