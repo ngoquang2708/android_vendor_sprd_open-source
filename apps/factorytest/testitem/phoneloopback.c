@@ -63,9 +63,11 @@ int test_assisloopback_start(void)
 	gr_flip();
 	at_cmd_audio_loop(0,0,0,0,0,0);
 	usleep(5*1000);
-	at_cmd_audio_loop(1,3,8,2,3,0);
+#ifndef MSG
+	at_cmd_audio_loop(1,0,8,2,3,0);
+#endif
 	ret = ui_handle_button(NULL, NULL);//, TEXT_GOBACK
-	at_cmd_audio_loop(0,3,8,2,3,0);
+	at_cmd_audio_loop(0,0,8,2,3,0);
 	save_result(CASE_TEST_ASSISLOOP,ret);
         over_time=time(NULL);
         LOGD("mmitest casetime mainloop is %d s\n",over_time-begin_time);
