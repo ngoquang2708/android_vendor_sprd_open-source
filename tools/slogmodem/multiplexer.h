@@ -12,8 +12,8 @@
 
 #include <poll.h>
 #include "cp_log_cmn.h"
-
 #include "fd_hdl.h"
+#include "timer_mgr.h"
 
 class Multiplexer
 {
@@ -33,12 +33,9 @@ public:
 
 	typedef void (*check_callback_t)(void* param);
 
-	// Periodic check callback
-	void add_check_event(check_callback_t cb, void* param);
-	void del_check_event(check_callback_t cb, void* param);
-	void set_check_timeout(int to)
+	TimerManager& timer_mgr()
 	{
-		m_check_timeout = to;
+		return m_timer_mgr;
 	}
 
 	int run();
@@ -52,21 +49,14 @@ private:
 		int events;
 	};
 
-	struct CheckEntry
-	{
-		check_callback_t cb;
-		void* param;
-	};
-
 	LogVector<PollingEntry> m_polling_hdl;
 	bool m_dirty;
 	nfds_t m_current_num;
 	pollfd m_current_fds[MAX_MULTIPLEXER_NUM];
 	FdHandler* m_current_handlers[MAX_MULTIPLEXER_NUM];
 
-	// Shall we stop periodically to check something?
-	int m_check_timeout;
-	LogList<CheckEntry> m_check_list;
+	// Timer manager
+	TimerManager m_timer_mgr;
 
 	// Find handler
 	size_t find_handler(FdHandler* handler);

@@ -10,12 +10,21 @@ LOCAL_SRC_FILES := client_hdl.cpp \
 		   client_mgr.cpp \
 		   client_req.cpp \
 		   cp_dir.cpp \
+		   cp_dump.cpp \
 		   cp_log_cmn.cpp \
 		   cp_log.cpp \
+		   cp_ringbuf.cpp \
 		   cp_set_dir.cpp \
+		   cp_sleep_log.cpp \
 		   cp_stat_hdl.cpp \
 		   cp_stor.cpp \
+		   data_consumer.cpp \
 		   data_proc_hdl.cpp \
+		   dev_file_hdl.cpp \
+		   dev_file_open.cpp \
+		   diag_dev_hdl.cpp \
+		   diag_stream_parser.cpp \
+		   ext_wcn_dump.cpp \
 		   fd_hdl.cpp \
 		   file_watcher.cpp \
 		   log_config.cpp \
@@ -24,19 +33,19 @@ LOCAL_SRC_FILES := client_hdl.cpp \
 		   log_pipe_dev.cpp \
 		   log_pipe_hdl.cpp \
 		   media_stor.cpp \
+		   modem_dump.cpp \
 		   modem_stat_hdl.cpp \
 		   multiplexer.cpp \
 		   parse_utils.cpp \
 		   slog_config.cpp \
-		   stor_mgr.cpp
+		   stor_mgr.cpp \
+		   timer_mgr.cpp
 
 ifeq ($(strip $(SPRD_EXTERNAL_WCN)), true)
 	LOCAL_CFLAGS += -DEXTERNAL_WCN
-	LOCAL_SRC_FILES += ext_wcn_log_hdl.cpp \
-			   ext_wcn_stat_hdl.cpp
+	LOCAL_SRC_FILES += ext_wcn_stat_hdl.cpp
 else
-	LOCAL_SRC_FILES += int_wcn_log_hdl.cpp \
-			   int_wcn_stat_hdl.cpp
+	LOCAL_SRC_FILES += int_wcn_stat_hdl.cpp
 endif
 
 LOCAL_SHARED_LIBRARIES := libc \

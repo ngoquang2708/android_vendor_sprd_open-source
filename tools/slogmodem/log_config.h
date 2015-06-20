@@ -181,4 +181,7 @@ private:
 	static ConfigList::iterator find(ConfigList& clist, CpType t);
 };
 
+int get_dev_paths(CpType t, bool& same, LogString& log_path,
+		  LogString& diag_path);
+
 #endif  // !LOG_CONFIG_H_

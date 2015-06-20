@@ -17,15 +17,11 @@
 	#include <cutils/properties.h>
 #endif
 
+#include "cp_stor.h"
 #include "def_config.h"
 #include "log_ctrl.h"
-#ifdef EXTERNAL_WCN
-	#include "ext_wcn_log_hdl.h"
-#else
-	#include "int_wcn_log_hdl.h"
-#endif
+#include "req_err.h"
 #include "slog_config.h"
-#include "cp_stor.h"
 
 LogController::LogController()
 	:m_config {0},
@@ -48,22 +44,35 @@ LogPipeHandler* LogController::create_handler(const LogConfig::ConfigEntry* e)
 {
 	LogPipeHandler* log_pipe;
 
-	if (CT_WCN == e->type) {
-#ifdef EXTERNAL_WCN
-		log_pipe = new ExtWcnLogHandler(this, &m_multiplexer, e,
-						m_stor_mgr);
-#else
-		log_pipe = new IntWcnLogHandler(this, &m_multiplexer, e,
-						m_stor_mgr);
-#endif
-	} else {
-		log_pipe = new LogPipeHandler(this, &m_multiplexer, e,
-					      m_stor_mgr);
-	}
+	log_pipe = new LogPipeHandler(this, &m_multiplexer, e,
+				      m_stor_mgr);
 	if (e->enable) {
-		int err = log_pipe->start();
-		if (err < 0) {
-			err_log("slogcp: start %s log failed",
+		bool same;
+		LogString log_path;
+		LogString diag_path;
+		int err = get_dev_paths(e->type, same, log_path, diag_path);
+
+		if (!err) {
+			if (same) {
+				info_log("CP %s dev %s",
+					 ls2cstring(e->modem_name),
+					 ls2cstring(log_path));
+				log_pipe->set_log_diag_dev_path(log_path);
+			} else {
+				info_log("CP %s dev %s %s",
+					 ls2cstring(e->modem_name),
+					 ls2cstring(log_path),
+					 ls2cstring(diag_path));
+				log_pipe->set_log_diag_dev_path(log_path,
+								diag_path);
+			}
+			err = log_pipe->start();
+			if (err < 0) {
+				err_log("slogcp: start %s log failed",
+					ls2cstring(e->modem_name));
+			}
+		} else {
+			err_log("Can not get log/diag path for %s",
 				ls2cstring(e->modem_name));
 		}
 	}
@@ -94,8 +103,6 @@ int LogController::init(LogConfig* config)
 	m_config = config;
 	m_save_md = config->md_enabled();
 
-	m_multiplexer.set_check_timeout(3000);
-
 	const LogConfig::ConfigList& conf_list = config->get_conf();
 	for(LogConfig::ConstConfigIter it = conf_list.begin();
 	    it != conf_list.end(); ++it) {
@@ -115,11 +122,7 @@ int LogController::init(LogConfig* config)
 
 	// Connection to modemd/wcnd
 	init_state_handler(m_modem_state, MODEM_SOCKET_NAME);
-#ifdef EXTERNAL_WCN
 	init_wcn_state_handler(m_wcn_state, WCN_SOCKET_NAME);
-#else
-	init_wcn_state_handler(m_wcn_state, WCN_SOCKET_NAME);
-#endif
 
 	return 0;
 }
@@ -297,8 +300,24 @@ int LogController::enable_log(const CpType* cps, size_t num)
 		if (it != m_log_pipes.end()) {
 			LogPipeHandler* p = *it;
 			if (!p->enabled()) {
-				p->start();
-				m_config->enable_log(p->type());
+				bool same;
+				LogString log_path;
+				LogString diag_path;
+				int err = get_dev_paths(p->type(), same,
+							log_path, diag_path);
+				if (!err) {
+					if (same) {
+						p->set_log_diag_dev_path(log_path);
+					} else {
+						p->set_log_diag_dev_path(log_path,
+										diag_path);
+					}
+					p->start();
+					m_config->enable_log(p->type());
+				} else {
+					err_log("Can not get log/diag path for %s",
+						ls2cstring(p->name()));
+				}
 				++mod_num;
 			}
 		}
@@ -405,7 +424,22 @@ int LogController::reload_slog_conf()
 					 p->enable ? "enable" : "disable",
 					 ls2cstring(pipe_hdl->name()));
 				if (p->enable) {
-					pipe_hdl->start();
+					bool same;
+					LogString log_path;
+					LogString diag_path;
+					int err = get_dev_paths(p->type, same,
+								log_path, diag_path);
+					if (!err) {
+						if (same) {
+							pipe_hdl->set_log_diag_dev_path(log_path);
+						} else {
+							pipe_hdl->set_log_diag_dev_path(log_path, diag_path);
+						}
+						pipe_hdl->start();
+					} else {
+						err_log("Can not get log/diag path for %s",
+							ls2cstring(pipe_hdl->name()));
+					}
 				} else {
 					pipe_hdl->stop();
 				}
@@ -505,7 +539,27 @@ bool LogController::get_log_overwrite() const
 	return m_config->overwrite_old_log();
 }
 
-void LogController::clear_log()
+int LogController::clear_log()
 {
+	LogList<LogPipeHandler*>::iterator it;
+
+	for (it = m_log_pipes.begin(); it != m_log_pipes.end(); ++it) {
+		if ((*it)->in_transaction()) {
+			return LCR_IN_TRANSACTION;
+		}
+	}
 	m_stor_mgr.clear();
+
+	return LCR_SUCCESS;
+}
+
+LogPipeHandler* LogController::get_cp(CpType type)
+{
+	LogList<LogPipeHandler*>::iterator it = find_log_handler(m_log_pipes,
+								 type);
+	LogPipeHandler* p = 0;
+	if (it != m_log_pipes.end()) {
+		p = (*it);
+	}
+	return p;
 }

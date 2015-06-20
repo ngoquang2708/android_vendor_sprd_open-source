@@ -14,10 +14,12 @@
 #ifndef CLIENT_HDL_H_
 #define CLIENT_HDL_H_
 
+#include "client_req.h"
 #include "cp_log_cmn.h"
 #include "data_proc_hdl.h"
 
 class ClientManager;
+class LogPipeHandler;
 
 class ClientHandler : public DataProcessHandler
 {
@@ -28,16 +30,42 @@ public:
 		CE_DUMP_END
 	};
 
+	enum ClientTransType
+	{
+		CTT_UNKNOWN,
+		CTT_SAVE_SLEEP_LOG,
+		CTT_SAVE_RINGBUF
+	};
+
+	enum ClientTransState
+	{
+		CTS_IDLE,
+		CTS_EXECUTING
+	};
+
 	ClientHandler(int sock, LogController* ctrl,
 		      Multiplexer* multiplexer,
 		      ClientManager* mgr);
+	~ClientHandler();
 
 	void notify_cp_dump(CpType cpt, CpEvent evt);
+
+	/*  notify_trans_result - transaction result notification.
+	 *  @result: transaction result. Possible values are LCR_XXX
+	 *           macros defined in req_err.h.
+	 */
+	void notify_trans_result(int result);
 
 private:
 	#define CLIENT_BUF_SIZE 256
 
 	ClientManager* m_mgr;
+	// Client transactin type
+	ClientTransType m_trans_type;
+	// Client transaction state
+	ClientTransState m_state;
+	// LogPipeHandler object for current transaction
+	LogPipeHandler* m_cp;
 	bool m_cp_dump_notify[CT_NUMBER];
 
 	int process_data();
@@ -62,9 +90,15 @@ private:
 	void proc_get_log_overwrite(const uint8_t* req, size_t len);
 	void proc_subscribe(const uint8_t* req, size_t len);
 	void proc_unsubscribe(const uint8_t* req, size_t len);
+	void proc_sleep_log(const uint8_t* req, size_t len);
+	void proc_ringbuf(const uint8_t* req, size_t len);
+
+	void proc_sleep_log_result(int result);
+	void proc_ringbuf_result(int result);
 
 	static const uint8_t* search_end(const uint8_t* req, size_t len);
 	static int send_dump_notify(int fd, CpType cpt, CpEvent evt);
+	static ResponseErrorCode trans_result_to_req_result(int result);
 };
 
 #endif  // !CLIENT_HDL_H_

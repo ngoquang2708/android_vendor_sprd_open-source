@@ -18,8 +18,10 @@
 #include "client_hdl.h"
 #include "client_mgr.h"
 #include "client_req.h"
-#include "parse_utils.h"
 #include "log_ctrl.h"
+#include "log_pipe_hdl.h"
+#include "parse_utils.h"
+#include "req_err.h"
 
 ClientHandler::ClientHandler(int sock,
 			     LogController* ctrl,
@@ -27,8 +29,18 @@ ClientHandler::ClientHandler(int sock,
 			     ClientManager* mgr)
 	:DataProcessHandler(sock, ctrl, multiplexer, CLIENT_BUF_SIZE),
 	 m_mgr(mgr),
+	 m_trans_type {CTT_UNKNOWN},
+	 m_state {CTS_IDLE},
+	 m_cp {0},
 	 m_cp_dump_notify {false}
 {
+}
+
+ClientHandler::~ClientHandler()
+{
+	if (CTS_IDLE != m_state) {
+		m_cp->cancel_trans_result_notify(this);
+	}
 }
 
 const uint8_t* ClientHandler::search_end(const uint8_t* req, size_t len)
@@ -86,6 +98,7 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 
 	// What request?
 	bool known_req = false;
+
 	req = token + tok_len;
 	len = endp - req;
 	switch (tok_len) {
@@ -122,6 +135,18 @@ void ClientHandler::process_req(const uint8_t* req, size_t len)
 			known_req = true;
 		} else if (!memcmp(token, "UNSUBSCRIBE", 11)) {
 			proc_unsubscribe(req, len);
+			known_req = true;
+		}
+		break;
+	case 12:
+		if (!memcmp(token, "SAVE_RINGBUF", 12)) {
+			proc_ringbuf(req, len);
+			known_req = true;
+		}
+		break;
+	case 14:
+		if (!memcmp(token, "SAVE_SLEEP_LOG", 14)) {
+			proc_sleep_log(req, len);
 			known_req = true;
 		}
 		break;
@@ -189,8 +214,20 @@ void ClientHandler::proc_slogctl(const uint8_t* req, size_t len)
 	if (5 == tlen && !memcmp(tok, "clear", 5)) {
 		info_log("remove CP log");
 		// Delete all logs
-		controller()->clear_log();
-		send_response(m_fd, REC_SUCCESS);
+		int ret = controller()->clear_log();
+		ResponseErrorCode err;
+		switch (ret) {
+		case LCR_SUCCESS:
+			err = REC_SUCCESS;
+			break;
+		case LCR_IN_TRANSACTION:
+			err = REC_IN_TRANSACTION;
+			break;
+		default:
+			err = REC_FAILURE;
+			break;
+		}
+		send_response(m_fd, err);
 	} else if (6 == tlen && !memcmp(tok, "reload", 6)) {
 		info_log("reload slog.conf");
 		// Reload slog.conf and update CP log and log file size
@@ -321,6 +358,13 @@ void ClientHandler::proc_mini_dump(const uint8_t* req, size_t len)
 
 void ClientHandler::process_conn_closed()
 {
+	// Clear current transaction result notification
+	if (CTS_IDLE != m_state) {
+		m_cp->cancel_trans_result_notify(this);
+		m_state = CTS_IDLE;
+		m_cp = 0;
+	}
+
 	// Parse the request and inform the LogController to execute it.
 	del_events(POLLIN);
 	m_fd = -1;
@@ -693,4 +737,181 @@ void ClientHandler::proc_unsubscribe(const uint8_t* req, size_t len)
 	m_cp_dump_notify[cpt] = false;
 
 	send_response(m_fd, REC_SUCCESS);
+}
+
+void ClientHandler::proc_sleep_log(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	info_log("SAVE_SLEEP_LOG");
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SAVE_SLEEP_LOG no param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	CpType cpt = get_cp_type(tok, tlen);
+	if (CT_UNKNOWN == cpt) {
+		err_log("SAVE_SLEEP_LOG invalid CP type");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	req = tok + tlen;
+	len = endp - req;
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("SAVE_SLEEP_LOG extra parameter");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	// Start the sleep log transaction
+	LogPipeHandler* cp = controller()->get_cp(cpt);
+	if (!cp) {
+		err_log("SAVE_SLEEP_LOG unknown CP");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	int err = cp->save_sleep_log(this);
+	if (LCR_IN_PROGRESS == err) {
+		// Pause data receiving
+		del_events(POLLIN);
+		m_trans_type = CTT_SAVE_SLEEP_LOG;
+		m_state = CTS_EXECUTING;
+		m_cp = cp;
+	} else {
+		err_log("Save sleep log error %d", err);
+		send_response(m_fd, trans_result_to_req_result(err));
+	}
+}
+
+void ClientHandler::proc_ringbuf(const uint8_t* req, size_t len)
+{
+	const uint8_t* tok;
+	const uint8_t* endp = req + len;
+	size_t tlen;
+
+	tok = get_token(req, len, tlen);
+	if (!tok) {
+		err_log("SAVE_RINGBUF no param");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	CpType cpt = get_cp_type(tok, tlen);
+	if (CT_UNKNOWN == cpt) {
+		err_log("SAVE_RINGBUF invalid CP type");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	info_log("SAVE_RINGBUF CP %d", cpt);
+
+	req = tok + tlen;
+	len = endp - req;
+	tok = get_token(req, len, tlen);
+	if (tok) {
+		err_log("SAVE_RINGBUF extra parameter");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	// Start the sleep log transaction
+	LogPipeHandler* cp = controller()->get_cp(cpt);
+	if (!cp) {
+		err_log("SAVE_RINGBUF unknown CP");
+		send_response(m_fd, REC_INVAL_PARAM);
+		return;
+	}
+
+	int err = cp->save_ringbuf(this);
+	if (LCR_IN_PROGRESS == err) {
+		// Pause data receiving
+		del_events(POLLIN);
+		m_trans_type = CTT_SAVE_RINGBUF;
+		m_state = CTS_EXECUTING;
+		m_cp = cp;
+	} else {
+		err_log("Save ringbuf error %d", err);
+		send_response(m_fd, trans_result_to_req_result(err));
+	}
+}
+
+void ClientHandler::notify_trans_result(int result)
+{
+	if (CTS_EXECUTING == m_state) {
+		switch (m_trans_type) {
+		case CTT_SAVE_SLEEP_LOG:
+			proc_sleep_log_result(result);
+			break;
+		case CTT_SAVE_RINGBUF:
+			proc_ringbuf_result(result);
+			break;
+		default:
+			err_log("Unknown transaction %d result %d",
+				m_trans_type, result);
+			break;
+		}
+	} else {
+		err_log("Non CTS_EXECUTING state notification %d", result);
+	}
+}
+
+void ClientHandler::proc_sleep_log_result(int result)
+{
+	info_log("SAVE_SLEEP_LOG result %d", result);
+
+	m_state = CTS_IDLE;
+	m_cp = 0;
+
+	add_events(POLLIN);
+	send_response(m_fd, trans_result_to_req_result(result));
+}
+
+void ClientHandler::proc_ringbuf_result(int result)
+{
+	info_log("SAVE_RINGBUF result %d", result);
+
+	m_state = CTS_IDLE;
+	m_cp = 0;
+
+	add_events(POLLIN);
+	send_response(m_fd, trans_result_to_req_result(result));
+}
+
+ResponseErrorCode ClientHandler::trans_result_to_req_result(int result)
+{
+	ResponseErrorCode res;
+
+	switch (result) {
+	case LCR_SUCCESS:
+		res = REC_SUCCESS;
+		break;
+	case LCR_IN_TRANSACTION:
+		res = REC_IN_TRANSACTION;
+		break;
+	case LCR_LOG_DISABLED:
+		res = REC_LOG_DISABLED;
+		break;
+	case LCR_SLEEP_LOG_NOT_SUPPORTED:
+		res = REC_SLEEP_LOG_NOT_SUPPORTED;
+		break;
+	case LCR_RINGBUF_NOT_SUPPORTED:
+		res = REC_RINGBUF_NOT_SUPPORTED;
+		break;
+	case LCR_CP_ASSERTED:
+		res = REC_CP_ASSERTED;
+		break;
+	default:
+		res = REC_FAILURE;
+		break;
+	}
+
+	return res;
 }

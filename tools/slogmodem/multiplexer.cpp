@@ -14,8 +14,7 @@
 
 Multiplexer::Multiplexer()
 	:m_dirty(true),
-	 m_current_num(0),
-	 m_check_timeout(-1)
+	 m_current_num(0)
 {
 }
 
@@ -83,36 +82,6 @@ void Multiplexer::unregister_fd(FdHandler* handler, int events)
 	}
 }
 
-void Multiplexer::add_check_event(check_callback_t cb, void* param)
-{
-	for (LogList<CheckEntry>::iterator it = m_check_list.begin();
-	     it != m_check_list.end();
-	     ++it) {
-		if (it->cb == cb && it->param == param) {
-			return;
-		}
-	}
-
-	CheckEntry e;
-
-	e.cb = cb;
-	e.param = param;
-	m_check_list.push_back(e);
-}
-
-void Multiplexer::del_check_event(check_callback_t cb, void* param)
-{
-	LogList<CheckEntry>::iterator it = m_check_list.begin();
-
-	while (it != m_check_list.end()) {
-		if (it->cb == cb && it->param == param) {
-			m_check_list.erase(it);
-			break;
-		}
-		++it;
-	}
-}
-
 void Multiplexer::prepare_polling_array()
 {
 	nfds_t i;
@@ -125,18 +94,6 @@ void Multiplexer::prepare_polling_array()
 	}
 
 	m_current_num = i;
-}
-
-void Multiplexer::call_check_callback()
-{
-	LogList<CheckEntry> check_list = m_check_list;
-
-	m_check_list.clear();
-
-	for (LogList<CheckEntry>::iterator it = check_list.begin();
-	     it != check_list.end(); ++it) {
-		it->cb(it->param);
-	}
 }
 
 int Multiplexer::run()
@@ -152,13 +109,16 @@ int Multiplexer::run()
 
 		int to;
 
-		if (m_check_list.empty()) {
+		if (m_timer_mgr.next_time(to) < 0) {
 			to = -1;
-		} else {
-			to = m_check_timeout;
 		}
+		#if 0
+		} else if (to > 0) {
+			info_log("next time: %d", to);
+		}
+		#endif
 		int err = poll(m_current_fds, m_current_num, to);
-
+		m_timer_mgr.run();
 		// Here process the events
 		if (err > 0) {
 			for (unsigned i = 0;
@@ -169,14 +129,6 @@ int Multiplexer::run()
 					m_current_handlers[i]->process(revents);
 				}
 			}
-		}
-
-		// Call callback first
-		call_check_callback();
-
-		if (!err) {
-			ALOGD("slogcp: poll timeout\n");
-			sleep(1);
 		}
 	}
 

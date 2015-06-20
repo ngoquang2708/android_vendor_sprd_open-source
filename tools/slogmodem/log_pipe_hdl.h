@@ -17,12 +17,15 @@
 	#include <cutils/properties.h>
 #endif
 #include "cp_log_cmn.h"
+#include "data_consumer.h"
 #include "fd_hdl.h"
 #include "log_config.h"
 
+class ClientHandler;
+class CpStorage;
+class DiagDeviceHandler;
 class LogFile;
 class StorageManager;
-class CpStorage;
 
 class LogPipeHandler : public FdHandler
 {
@@ -46,6 +49,26 @@ public:
 	bool enabled() const
 	{
 		return m_enable;
+	}
+
+	void set_log_diag_dev_path(const LogString& log,
+				   const LogString& diag)
+	{
+		m_log_dev_path = log;
+		m_diag_dev_path = diag;
+		m_log_diag_same = false;
+	}
+
+	void set_log_diag_dev_path(const LogString& path)
+	{
+		m_log_dev_path = path;
+		m_log_diag_same = true;
+		m_diag_dev_path.clear();
+	}
+
+	bool in_transaction() const
+	{
+		return m_cp_state > CWS_WORKING;
 	}
 
 	/*
@@ -82,28 +105,38 @@ public:
 	 */
 	void process_assert(bool save_md = true);
 
-	LogFile* open_dump_file(const struct tm& lt);
-	virtual int save_dump(const struct tm& lt);
-
 	void open_on_alive();
 
-protected:
-	int dump_fd() const
-	{
-		return m_dump_fd;
-	}
-
-	/*  open_dump_device - Open the dump device.
+	/*
+	 *  save_sleep_log - Start a sleep log saving transaction.
+	 *  @client: the ClientHandler object.
 	 *
-	 *  Return Value:
-	 *      Return 0 if the devices are opened, -1 on error.
-	 *      If the dump device is opened, m_dump_fd will hold its
-	 *      file descriptor.
+	 *  Return Values:
+	 *    LCR_IN_PROGRESS: the transaction is started successfully.
+	 *    LCR_IN_TRANSACTION: there is a transaction ongoing.
+	 *    LCR_LOG_DISABLED: the log is disabled for the CP and the
+	 *                      transaction can not be started.
 	 */
-	int open_dump_device();
+	int save_sleep_log(ClientHandler* client);
+	/*
+	 *  save_ringbuf - Start a ringbuf saving transaction.
+	 *  @client: the ClientHandler object.
+	 *
+	 *  Return Values:
+	 *    LCR_IN_PROGRESS: the transaction is started successfully.
+	 *    LCR_IN_TRANSACTION: there is a transaction ongoing.
+	 *    LCR_LOG_DISABLED: the log is disabled for the CP and the
+	 *                      transaction can not be started.
+	 */
+	int save_ringbuf(ClientHandler* client);
+	/*
+	 *  cancel_trans_result_notify - Cancel the result notification of
+	 *                               the current transaction.
+	 *  @client: the ClientHandler object.
+	 */
+	void cancel_trans_result_notify(ClientHandler* client);
 
-	void close_dump_device();
-
+protected:
 	/*
 	 *    log_buffer - Buffer shared by all LogPipeHandlers.
 	 *
@@ -117,33 +150,44 @@ private:
 	enum CpWorkState
 	{
 		CWS_NOT_WORKING,
-		CWS_WORKING
+		CWS_WORKING,
+		CWS_DUMP,
+		CWS_SAVE_SLEEP_LOG,
+		CWS_SAVE_RINGBUF
 	};
 
 	// Log turned on
 	bool m_enable;
 	LogString m_modem_name;
 	CpType m_type;
+	// Log device is the same as the diag device ?
+	bool m_log_diag_same;
+	// Log device file path
+	LogString m_log_dev_path;
+	// Diag device file path
+	LogString m_diag_dev_path;
+	// Reset property
+	const char* m_reset_prop;
 	CpWorkState m_cp_state;
-	int m_dump_fd;
+	// CP time stamp FIFO
 	LogString m_ts_fifo;
+	// Current dump/sleep log/RingBuf handler
+	DiagDeviceHandler* m_diag_handler;
+	DataConsumer* m_consumer;
+	// Current transaction client
+	ClientHandler* m_trans_client;
 	StorageManager& m_stor_mgr;
 	CpStorage* m_storage;
 
+	int open();
 	/*
-	 *    open_devices - Open the log device and the mini dump device.
+	 *    close_devices - Close the log device, stop sleep log/RingBuf.
 	 *
-	 *    Return Value:
-	 *      Return 0 if the devices are opened, -1 on error.
-	 */
-	int open_devices();
-
-	/*
-	 *    close_devices - Close the log device and the mini dump device.
-	 *
-	 *    This function assumes m_fd and m_dump_fd are opened.
+	 *    This function assumes m_fd is opened.
 	 */
 	void close_devices();
+
+	int create_storage();
 
 	/*
 	 *    save_version - Save version.
@@ -157,9 +201,13 @@ private:
 	 */
 	virtual bool will_be_reset() const;
 
-	int save_dump_ipc(LogFile* dumpf);
+	int start_dump(const struct tm& lt);
 	int save_dump_proc(LogFile* dumpf);
 
+	int start_sleep_log();
+	int start_ringbuf();
+
+	void stop_diag_activity();
 	void close_on_assert();
 
 	/*
@@ -172,6 +220,15 @@ private:
 
 	static void new_log_callback(LogPipeHandler* cp, LogFile* f);
 	static void new_dir_callback(LogPipeHandler* cp);
+	/*  diag_transaction_notify - Diagnosis port transaction result
+	 *                            notification function.
+	 *  @client: client parameter. It's the LogPipeHandler* pointer.
+	 *  @result: the transaction result.
+	 *
+	 *  This function is called by current DataConsumer object.
+	 */
+	static void diag_transaction_notify(void* client,
+					    DataConsumer::LogProcResult result);
 };
 
 #endif  // !LOG_PIPE_HDL_H_

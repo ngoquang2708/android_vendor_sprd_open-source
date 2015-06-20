@@ -7,15 +7,20 @@
  *  2015-2-16 Zhang Ziyi
  *  Initial version.
  */
+#include <cctype>
 #include <climits>
 #include <cstdint>
-#include <cstring>
-#include <cctype>
 #include <cstdlib>
+#include <cstring>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
+#ifdef HOST_TEST_
+	#include "prop_test.h"
+#else
+	#include <cutils/properties.h>
+#endif
 
 #include "log_config.h"
 
@@ -451,4 +456,92 @@ LogConfig::ConfigList::iterator LogConfig::find(ConfigList& clist, CpType t)
 	}
 
 	return it;
+}
+
+int get_dev_paths(CpType t, bool& same, LogString& log_path,
+		  LogString& diag_path)
+{
+	char prop_val[PROPERTY_VALUE_MAX];
+	int err = -1;
+
+	// Get path from property
+	switch (t) {
+	case CT_WCDMA:
+		property_get(MODEM_W_DIAG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			same = true;
+			log_path = prop_val;
+			err = 0;
+		}
+		break;
+	case CT_TD:
+		property_get(MODEM_TD_LOG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			log_path = prop_val;
+			property_get(MODEM_TD_DIAG_PROPERTY,
+				     prop_val, "");
+			if (prop_val[0]) {
+				same = false;
+				diag_path = prop_val;
+				err = 0;
+			} else {
+				log_path.clear();
+			}
+		}
+		break;
+	case CT_3MODE:
+		property_get(MODEM_TL_LOG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			log_path = prop_val;
+			property_get(MODEM_TL_DIAG_PROPERTY, prop_val, "");
+			if (prop_val[0]) {
+				same = false;
+				diag_path = prop_val;
+				err = 0;
+			} else {
+				log_path.clear();
+			}
+		}
+		break;
+	case CT_4MODE:
+		property_get(MODEM_FL_LOG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			log_path = prop_val;
+			property_get(MODEM_FL_DIAG_PROPERTY, prop_val, "");
+			if (prop_val[0]) {
+				same = false;
+				diag_path = prop_val;
+				err = 0;
+			} else {
+				log_path.clear();
+			}
+		}
+		break;
+	case CT_5MODE:
+		property_get(MODEM_L_LOG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			log_path = prop_val;
+			property_get(MODEM_L_DIAG_PROPERTY, prop_val, "");
+			if (prop_val[0]) {
+				same = false;
+				diag_path = prop_val;
+				err = 0;
+			} else {
+				log_path.clear();
+			}
+		}
+		break;
+	case CT_WCN:
+		property_get(MODEM_WCN_DIAG_PROPERTY, prop_val, "");
+		if (prop_val[0]) {
+			same = true;
+			log_path = prop_val;
+			err = 0;
+		}
+		break;
+	default:  // Unknown
+		break;
+	}
+
+	return err;
 }

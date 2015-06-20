@@ -35,7 +35,9 @@ int CpStateHandler::init()
 				   ANDROID_SOCKET_NAMESPACE_ABSTRACT,
 				   SOCK_STREAM);
 	if (-1 == m_fd) {
-		multiplexer()->add_check_event(connect_server, this);
+		multiplexer()->timer_mgr().add_timer(3000,
+						     connect_server,
+						     this);
 	} else {
 		add_events(POLLIN);
 	}

@@ -17,10 +17,8 @@
 #include "modem_stat_hdl.h"
 #ifdef EXTERNAL_WCN
 	#include "ext_wcn_stat_hdl.h"
-	#include "ext_wcn_log_hdl.h"
 #else
 	#include "int_wcn_stat_hdl.h"
-	#include "int_wcn_log_hdl.h"
 #endif
 #include "log_config.h"
 #include "stor_mgr.h"
@@ -38,6 +36,8 @@ public:
 	{
 		return m_cli_mgr;
 	}
+
+	LogPipeHandler* get_cp(CpType type);
 
 	void process_cp_alive(CpType type);
 	void process_cp_blocked(CpType type);
@@ -58,7 +58,7 @@ public:
 	int set_data_part_size(size_t sz);
 	size_t get_sd_size() const;
 	int set_sd_size(size_t sz);
-	void clear_log();
+	int clear_log();
 
 	/*
 	 *    save_mini_dump - Save the mini dump.

@@ -24,7 +24,9 @@ public:
 		LT_SIPC,
 		LT_DUMP,
 		LT_MINI_DUMP,
-		LT_VERSION
+		LT_VERSION,
+		LT_RINGBUF,
+		LT_SLEEPLOG
 	};
 
 	struct FileTime
