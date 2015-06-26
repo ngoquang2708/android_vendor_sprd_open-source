@@ -2883,7 +2883,7 @@ PUBLIC JPEG_RET_E Jpeg_WriteAPP1(uint8 *target_buf,
 **	Note:           return JPEG_SUCESS if successful
 *****************************************************************************/
 LOCAL JPEG_RET_E Jpeg_Write_APP3_ExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr,
-                                    EXIT_ISP_INFO_T *exif_isp_info,
+                                    EXIF_ISP_INFO_T *exif_isp_info,
                                     BOOLEAN is_next_ifd_exist,
                                     uint32 ifh_offset,
                                     uint32 begin_offset,
@@ -2925,7 +2925,7 @@ LOCAL JPEG_RET_E Jpeg_Write_APP3_ExifIFD(JPEG_WRITE_STREAM_CONTEXT_T *context_pt
 	if (PNULL != exif_isp_info) {
 		ifd_info.tag = IFD_APP3_ISP_INFO;
 		ifd_info.type = EXIF_BYTE;
-		ifd_info.count = sizeof(EXIT_ISP_INFO_T);
+		ifd_info.count = sizeof(EXIF_ISP_INFO_T);
 		ifd_info.value_offset.long_value = ifd_value_offset - ifh_offset;
 		ifd_info.value_bytes = ifd_info.count;
 		ifd_info.value_ptr = exif_isp_info;
@@ -3003,7 +3003,7 @@ LOCAL JPEG_RET_E Jpeg_WriteAPP3Header(JPEG_WRITE_STREAM_CONTEXT_T *context_ptr, 
 *****************************************************************************/
 PUBLIC JPEG_RET_E Jpeg_WriteAPP3(uint8 *target_buf,
                                  uint32 target_buf_size,
-                                     EXIT_ISP_INFO_T *exif_isp_info,
+                                     EXIF_ISP_INFO_T *exif_isp_info,
                                  uint32 *app3_size_ptr)
 {
 	JPEG_WRITE_STREAM_CONTEXT_T context;//        = {0};

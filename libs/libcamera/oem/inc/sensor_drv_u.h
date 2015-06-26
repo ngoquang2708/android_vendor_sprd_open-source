@@ -340,8 +340,26 @@ typedef enum {
 	SENSOR_IOCTL_GET_STATUS,
 	SENSOR_IOCTL_STREAM_ON,
 	SENSOR_IOCTL_STREAM_OFF,
+	SENSOR_IOCTL_ACCESS_VAL,
+	SENSOR_IOCTL_GET_VAL,
 	SENSOR_IOCTL_MAX
 } SENSOR_IOCTL_CMD_E;
+typedef enum {
+	SENSOR_VAL_TYPE_SHUTTER = 0,
+	SENSOR_VAL_TYPE_READ_VCM,
+	SENSOR_VAL_TYPE_WRITE_VCM,
+	SENSOR_VAL_TYPE_WRITE_OTP,
+	SENSOR_VAL_TYPE_READ_OTP,
+	SENSOR_VAL_TYPE_ERASE_OTP,
+	SENSOR_VAL_TYPE_PARSE_OTP,
+	SENSOR_VAL_TYPE_GET_RELOADINFO,
+	SENSOR_VAL_TYPE_GET_AFPOSITION,
+	SENSOR_VAL_TYPE_WRITE_OTP_GAIN,
+	SENSOR_VAL_TYPE_READ_OTP_GAIN,
+	SENSOR_VAL_TYPE_GET_GOLDEN_DATA,
+	SENSOR_VAL_TYPE_GET_GOLDEN_LSC_DATA,
+	SENSOR_VAL_TYPE_MAX
+} SENSOR_IOCTL_VAL_TYPE;
 
 typedef enum {
 	SENSOR_EXT_FOCUS_NONE = 0x00,
@@ -551,6 +569,17 @@ typedef struct _sensor_ext_fun_param_tag {
 	SENSOR_RECT_T zone[FOCUS_ZONE_CNT_MAX];
 	//cmr_u8 is_need_focus_move; //out pram, for caf
 } SENSOR_EXT_FUN_PARAM_T, *SENSOR_EXT_FUN_PARAM_T_PTR;
+
+struct sensor_gain_thrs_tag {
+	cmr_u8 cmd;
+	cmr_u8 param;
+	cmr_u32 gain_thrs;
+};
+
+typedef struct _sensor_val_tag {
+	uint8_t type;
+	void *pval;
+} SENSOR_VAL_T, *SENSOR_VAL_T_PTR;
 
 typedef struct sensor_reg_tab_info_tag {
 	SENSOR_REG_T_PTR sensor_reg_tab_ptr;

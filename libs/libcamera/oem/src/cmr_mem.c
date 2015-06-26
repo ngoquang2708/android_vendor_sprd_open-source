@@ -104,7 +104,7 @@ static const struct cap_size_to_mem back_cam_raw_mem_size_tab[IMG_SIZE_NUM] = {
 	{PIXEL_2P0_MEGA, (8  << 20)},
 	{PIXEL_3P0_MEGA, (12 << 20)},
 	{PIXEL_4P0_MEGA, (16 << 20)},
-	{PIXEL_5P0_MEGA, (20 << 20)},
+	{PIXEL_5P0_MEGA, (25 << 20)},
 	{PIXEL_6P0_MEGA, (23 << 20)},
 	{PIXEL_7P0_MEGA, (24 << 20)},
 	{PIXEL_8P0_MEGA, (27 << 20)},
@@ -680,8 +680,8 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 	mem_end = *io_mem_end;
 	channel_size = *io_channel_size;
 
-	channel_size = (uint32_t)(sn_size->width * sn_size->height);
-	raw_size = (uint32_t)(channel_size * RAWRGB_BIT_WIDTH / 8);
+	channel_size = CMR_ADDR_ALIGNED((uint32_t)(sn_align_size.width * sn_align_size.height));
+	raw_size = CMR_ADDR_ALIGNED((uint32_t)(channel_size * RAWRGB_BIT_WIDTH / 8));
 	y_to_raw = (uint32_t)(ISP_YUV_TO_RAW_GAP * sn_size->width);
 	uv_size = (channel_size >> 1);
 
@@ -715,6 +715,8 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 		yy_to_y = MAX(yy_to_y2, yy_to_y);
 		uv_size = uv_size + (yy_to_y >> 1);
 		useless_raw = (uint32_t)(yy_to_y * RAWRGB_BIT_WIDTH / 8);
+	} else if (sn_trim &&( (sn_trim->width != align16_image_size.width ) ||(sn_trim->height != align16_image_size.height))) {
+		yy_to_y = image_size->width*image_size->height;
 	}
 	cap_mem->target_yuv.addr_phy.addr_y = cap_2_frm->mem_frm.addr_phy.addr_y;
 	cap_mem->target_yuv.addr_vir.addr_y = cap_2_frm->mem_frm.addr_vir.addr_y;
@@ -728,23 +730,23 @@ int arrange_raw_buf(struct cmr_cap_2_frm *cap_2_frm,
 
 	offset = raw_size + y_to_raw + yy_to_y - useless_raw;/*the end of RawRGB*/
 	CMR_NO_MEM(offset, mem_res);
-	mem_end += offset;
-	mem_res -= offset;
+	mem_end += CMR_ADDR_ALIGNED(offset);
+	mem_res -= CMR_ADDR_ALIGNED(offset);
 
 	if (!need_rot) {
 		CMR_NO_MEM(cap_mem->target_jpeg.buf_size, mem_res);
 		cap_mem->target_jpeg.addr_phy.addr_y = cap_2_frm->mem_frm.addr_phy.addr_y + mem_end;
 		cap_mem->target_jpeg.addr_vir.addr_y = cap_2_frm->mem_frm.addr_vir.addr_y + mem_end;
-		mem_end += cap_mem->target_jpeg.buf_size;
-		mem_res -= cap_mem->target_jpeg.buf_size;
+		mem_end += CMR_ADDR_ALIGNED(cap_mem->target_jpeg.buf_size);
+		mem_res -= CMR_ADDR_ALIGNED(cap_mem->target_jpeg.buf_size);
 	}
 
 	/* start get UV buffer */
 	if (uv_size < mem_res) {
 		cap_mem->target_yuv.addr_phy.addr_u = cap_2_frm->mem_frm.addr_phy.addr_y + mem_end;
 		cap_mem->target_yuv.addr_vir.addr_u = cap_2_frm->mem_frm.addr_vir.addr_y + mem_end;
-		mem_end += uv_size;
-		mem_res -= uv_size;
+		mem_end += CMR_ADDR_ALIGNED(uv_size);
+		mem_res -= CMR_ADDR_ALIGNED(uv_size);
 	} else {
 		CMR_LOGI("No more memory reseved in buffer, need to alloc target YUV uv buffer!");
 		unsigned int addr_phy, addr_vir;

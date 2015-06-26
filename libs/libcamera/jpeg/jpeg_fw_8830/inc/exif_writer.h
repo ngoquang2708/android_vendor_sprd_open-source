@@ -45,7 +45,7 @@ typedef struct
 typedef struct
 {
     JINF_EXIF_INFO_T        *exif_info_ptr;
-    EXIT_ISP_INFO_T         *exif_isp_info;
+    EXIF_ISP_INFO_T         *exif_isp_info;
     uint8                   *temp_exif_isp_buf_ptr;
     uint32                  temp_exif_isp_buf_size;
     uint8                   *src_jpeg_buf_ptr;

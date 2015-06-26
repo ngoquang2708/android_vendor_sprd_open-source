@@ -22,7 +22,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/auto_test/inc \
 	$(LOCAL_PATH)/oem/inc \
 	$(LOCAL_PATH)/oem/isp_calibration/inc \
-	$(LOCAL_PATH)/isp/inc \
+	$(LOCAL_PATH)/isp1.0/inc \
 	$(LOCAL_PATH)/mtrace \
 	external/skia/include/images \
 	external/skia/include/core\
@@ -119,22 +119,11 @@ LOCAL_SRC_FILES:= \
 	jpeg/jpeg_fw_8830/src/exif_writer.c  \
 	jpeg/jpeg_fw_8830/src/jpeg_stream.c \
 	mtrace/mtrace.c \
-	isp/isp_app.c \
-	isp/isp_msg.c \
-	isp/isp_drv.c \
-	isp/isp_ctrl.c \
-	isp/isp_awb_ctrl.c \
-	isp/isp_app_msg.c \
-	isp/isp_video.c \
-	isp/isp_param_tune_com.c \
-	isp/isp_param_tune_v0000.c \
-	isp/isp_param_tune_v0001.c \
-	isp/isp_param_size.c \
-	isp/isp_param_file_update.c \
 	oem/isp_calibration/src/isp_calibration.c \
 	oem/isp_calibration/src/isp_cali_interface.c
 LOCAL_SRC_FILES+= \
 	hal1.0/src/SprdCameraHardwareInterface.cpp
+include $(LOCAL_PATH)/isp1.0/isp1_0.mk
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
@@ -342,7 +331,7 @@ endif
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(strip $(sc8830like)),1)
-LOCAL_SHARED_LIBRARIES := libandroidfw libexif libutils libbinder libcamera_client libskia libcutils libhardware libisp libuvdenoise libmorpho_easy_hdr libcamera_metadata
+LOCAL_SHARED_LIBRARIES := libandroidfw libexif libutils libbinder libcamera_client libskia libcutils libhardware libawb libae libaf liblsc libuvdenoise libmorpho_easy_hdr libcamera_metadata
 
 ifeq ($(strip $(TARGET_BOARD_CAMERA_FACE_DETECT)),true)
 LOCAL_SHARED_LIBRARIES += libface_finder
@@ -355,7 +344,10 @@ include $(BUILD_SHARED_LIBRARY)
 ifeq ($(strip $(sc8830like)),1)
 
 include $(CLEAR_VARS)
-LOCAL_PREBUILT_LIBS := oem/isp/libisp.so
+LOCAL_PREBUILT_LIBS := oem/isp1.0/libawb.so \
+        oem/isp1.0/libae.so \
+        oem/isp1.0/libaf.so \
+        oem/isp1.0/liblsc.so
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_MULTI_PREBUILT)
 

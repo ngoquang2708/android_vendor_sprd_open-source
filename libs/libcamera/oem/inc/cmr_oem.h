@@ -280,6 +280,8 @@ cmr_int camera_local_pre_flash (cmr_handle oem_handle);
 
 cmr_int camera_local_get_viewangle(cmr_handle oem_handle, struct sensor_view_angle *view_angle);
 
+void camera_calibrationconfigure_save (uint32_t start_addr, uint32_t data_size);
+void camera_set_reload_support(uint32_t is_support);
 #ifdef __cplusplus
 }
 #endif

@@ -186,6 +186,7 @@ struct setting_exif_cb_param {
 	struct setting_cmd_parameter *parm;
 };
 
+static cmr_int cmr_setting_clear_sem (cmr_handle  setting_handle);
 /** LOCAL FUNCTION DECLARATION
  */
 static cmr_int setting_set_flashdevice(struct setting_component *cpt,
@@ -1965,7 +1966,7 @@ static cmr_int setting_ctrl_flash(struct setting_component *cpt,
 							CMR_LOGE("get flash level error.");
 						}
 					}
-
+					cmr_setting_clear_sem(oem_handle);
 					setting_isp_alg_bypass(cpt, ISP_AWB_BYPASS);
 					setting_isp_alg_bypass(cpt, ISP_AE_BYPASS);
 					cmr_setting_isp_alg_wait(oem_handle);
@@ -2200,6 +2201,32 @@ setting_proc_out:
 	return ret;
 }
 
+static cmr_int cmr_setting_clear_sem (cmr_handle  setting_handle)
+{
+	cmr_int tmpVal = 0;
+ 	struct camera_context *cxt = (struct camera_context*)setting_handle;
+	if (!cxt) {
+		CMR_LOGE("camera_context is null.");
+		return -1;
+	}
+
+	pthread_mutex_lock(&cxt->cmr_set.isp_alg_mutex);
+	sem_getvalue(&cxt->cmr_set.isp_alg_sem, &tmpVal);
+	while (0 < tmpVal) {
+		sem_wait(&cxt->cmr_set.isp_alg_sem);
+		sem_getvalue(&cxt->cmr_set.isp_alg_sem, &tmpVal);
+	}
+/*
+	sem_getvalue(&cpt->quick_ae_sem, &tmpVal);
+	while (0 < tmpVal) {
+		sem_wait(&cpt->quick_ae_sem);
+		sem_getvalue(&cpt->quick_ae_sem, &tmpVal);
+	}
+*/
+	pthread_mutex_unlock(&cxt->cmr_set.isp_alg_mutex);
+	return 0;
+}
+
 static cmr_int cmr_setting_isp_alg_wait (cmr_handle  setting_handle)
 {
     cmr_int rtn = 0;
@@ -2280,7 +2307,7 @@ static cmr_int setting_set_pre_flash (struct setting_component *cpt,
 					CMR_LOGE("get flash level error.");
 				}
 			}
-
+			cmr_setting_clear_sem(oem_handle);
 			setting_isp_alg_bypass(cpt, ISP_AWB_BYPASS);
 			setting_isp_alg_bypass(cpt, ISP_AE_BYPASS);
 

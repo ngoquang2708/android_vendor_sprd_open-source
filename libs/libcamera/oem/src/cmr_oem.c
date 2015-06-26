@@ -62,6 +62,7 @@
                                                      } while(0)
 /**********************************************************************************************/
 
+static uint32_t                                      is_support_reload = 0;
 
 /************************************internal interface ***************************************/
 static void camera_send_channel_data(cmr_handle oem_handle, cmr_handle receiver_handle, cmr_uint evt, void *data);
@@ -778,18 +779,22 @@ cmr_int camera_isp_evt_cb(cmr_handle oem_handle, cmr_u32 evt, void* data, cmr_u3
 			ret = cmr_focus_isp_handle(cxt->focus_cxt.focus_handle, FOCUS_EVT_ISP_AF_NOTICE, cxt->camera_id, data);
 		}
 		break;
-	case ISP_FLASH_AE_CALLBACK:
+/*	case ISP_FLASH_AE_CALLBACK:
 		ret = cmr_setting_isp_alg_done(oem_handle, data);
 		break;
 	case ISP_AE_BAPASS_CALLBACK:
+		ret = cmr_setting_isp_alg_done(oem_handle, data);
+		break;*/
+		case ISP_AE_STAB_CALLBACK:
 		ret = cmr_setting_isp_alg_done(oem_handle, data);
 		break;
 
 	/*case ISP_AF_STAT_CALLBACK:
 		ret = camera_isp_af_stat(data);
 		break;*/
-
-	case ISP_FAST_AE_STAB_CALLBACK:
+	case ISP_QUICK_MODE_DOWN:
+		//cmr_setting_quick_ae_notice_done(cxt->setting_cxt.setting_handle, data);
+		CMR_LOGI("ISP_QUICK_MODE_DOWN");
 		break;
 
 	default:
@@ -1658,6 +1663,403 @@ exit:
 	return ret;
 }
 
+void camera_set_reload_support(uint32_t is_support)
+{
+	CMR_LOGI("%d.",is_support);
+	is_support_reload = is_support;
+}
+
+void camera_calibrationconfigure_save (uint32_t start_addr, uint32_t data_size)
+{
+	const char configfile[] = "/data/otpconfig.bin";
+
+	FILE *configfile_handle = fopen(configfile, "wb");
+	if (NULL == configfile_handle) {
+		CMR_LOGE("failed");
+		return;
+	}
+	fwrite(&start_addr, 1, 4, configfile_handle);
+	fwrite(&data_size, 1, 4, configfile_handle);
+	fclose(configfile_handle);
+	CMR_LOGI("done");
+}
+
+void camera_calibrationconfigure_load (uint32_t *start_addr, uint32_t *data_size)
+{
+	const char configfile[] = "/data/otpconfig.bin";
+
+	FILE *configfile_handle = fopen(configfile, "rb");
+	if (NULL == configfile_handle) {
+		CMR_LOGE("failed");
+		return;
+	}
+	fread(&start_addr, 1, 4, configfile_handle);
+	fread(&data_size, 1, 4, configfile_handle);
+	fclose(configfile_handle);
+	CMR_LOGI("done");
+}
+
+#if defined(CONFIG_CAMERA_ISP_VERSION_V3) || defined(CONFIG_CAMERA_ISP_VERSION_V4)
+#define CMR_ISP_OTP_MAX_SIZE (100 * 1024)
+static int camera_get_reloadinfo(cmr_handle  oem_handle, struct isp_cali_param *cali_param, struct isp_data_info* cali_result)
+{
+	int32_t                        rtn = 0;
+	struct camera_context          *cxt     = (struct camera_context*)oem_handle;
+	struct sensor_exp_info         *sensor_info_ptr;
+	cmr_int                        ret = 0;
+	uint32_t                       otp_start_addr = 0;
+	uint32_t                       otp_data_len = 0;
+	SENSOR_VAL_T                   val;
+	SENSOR_OTP_PARAM_T             param_ptr;
+	const char                     golden_file[] = "/data/golden.bin";
+	const char                     random_lsc_file[] = "/data/random_lsc.bin";
+	const char                     random_awb_file[] = "/data/random_awb.bin";
+	const char                     calibration_file[] = "/data/calibration_phone.bin";
+	struct stat                    info;
+	struct isp_data_t              lsc_otp;
+	struct isp_data_t              awb_otp;
+	struct isp_data_t              golden;
+	struct isp_data_t              target_buf;
+	struct isp_data_t              sensor_otp;
+	struct isp_data_t              checksum_otp;
+	struct isp_data_t              fw_version;
+	struct isp_cali_info_t           cali_info;
+	FILE                           *golden_handle = NULL;
+	FILE                           *lsc_otp_handle = NULL;
+	FILE                           *awb_otp_handle = NULL;
+	FILE                           *calibration_handle = NULL;
+	uint32_t                       device_flag = 0;
+	uint32_t                       is_reload = 1;
+	uint32_t                       is_need_checksum = 0;
+	void                           *checksum_ptr = NULL;
+
+	if (NULL == cali_param || NULL == cali_result) {
+		CMR_LOGE("param error cali_param, cali_result, %p %p", cali_param, cali_result);
+		return -CMR_CAMERA_INVALID_PARAM;
+	}
+
+#ifndef MINICAMERA
+	if (CAMERA_ID_0 == cxt->camera_id) {
+		camera_set_reload_support(1);
+	} else {
+		camera_set_reload_support(0);
+	}
+	device_flag = 1; //handset
+#endif
+
+	if (is_support_reload) {
+		CMR_LOGI("support reload");
+
+		cmr_bzero(&lsc_otp, sizeof(lsc_otp));
+		cmr_bzero(&awb_otp, sizeof(awb_otp));
+		cmr_bzero(&golden, sizeof(golden));
+		cmr_bzero(&target_buf, sizeof(target_buf));
+		cmr_bzero(&sensor_otp, sizeof(sensor_otp));
+		cmr_bzero(&checksum_otp, sizeof(checksum_otp));
+		cmr_bzero(&fw_version, sizeof(fw_version));
+		cmr_bzero(&cali_info, sizeof(cali_info));
+		cmr_bzero(&param_ptr, sizeof(param_ptr));
+#if 1
+#if 0
+		//read FW version
+		fw_version.size = CMR_ISP_OTP_MAX_SIZE;
+		fw_version.data_ptr = malloc(fw_version.size);
+		if (NULL == fw_version.data_ptr) {
+			CMR_LOGE("malloc fw_version buffer failed");
+			goto EXIT;
+		}
+
+		cmr_bzero(&param_ptr, sizeof(param_ptr));
+		param_ptr.start_addr   = 0;
+		param_ptr.len          = fw_version.size;
+		param_ptr.buff         = fw_version.data_ptr;
+		param_ptr.type         = SENSOR_OTP_PARAM_FW_VERSION;
+		val.type               = SENSOR_VAL_TYPE_READ_OTP;
+		val.pval               = &param_ptr;
+		ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_ACCESS_VAL, (cmr_uint)&val);
+		if (ret || 0 == param_ptr.len) {
+			CMR_LOGE("read otp data fw version failed");
+			goto EXIT;
+		}
+		CMR_LOGI(" fw version %s size %d", param_ptr.buff, param_ptr.len);
+#endif
+		//checksum
+		checksum_otp.size = CMR_ISP_OTP_MAX_SIZE;
+		checksum_otp.data_ptr = malloc(checksum_otp.size);
+		if (NULL == checksum_otp.data_ptr) {
+			CMR_LOGE("malloc checksum_otp buffer failed");
+			goto EXIT;
+		}
+
+		cmr_bzero(&param_ptr, sizeof(param_ptr));
+		param_ptr.start_addr   = 0;
+		param_ptr.len          = checksum_otp.size;
+		param_ptr.buff         = checksum_otp.data_ptr;
+		param_ptr.type         = SENSOR_OTP_PARAM_CHECKSUM;
+		val.type               = SENSOR_VAL_TYPE_READ_OTP;
+		val.pval               = &param_ptr;
+		ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_ACCESS_VAL, (cmr_uint)&val);
+		if (ret || 0 == param_ptr.len) {
+			CMR_LOGE("read otp data checksum failed %d,%d", ret, param_ptr.len);
+			goto EXIT;
+		}
+		if (param_ptr.len != checksum_otp.size) {
+			is_need_checksum = 1;
+			checksum_otp.size = param_ptr.len;
+		}
+		CMR_LOGI(" checksum %s size %d", param_ptr.buff, param_ptr.len);
+#endif
+
+#if (CONFIG_READOTP_METHOD == 0)
+		if (stat(calibration_file, &info) == 0 && device_flag) {
+			CMR_LOGI(" %s is already exist!", calibration_file);
+
+			calibration_handle = fopen(calibration_file, "rb");
+			if (NULL == calibration_handle) {
+				CMR_LOGE("open calibration file failed");
+				goto EXIT;
+			}
+#endif
+			//get the target buffer size
+			rtn = isp_calibration_get_info(&golden, &cali_info);
+			if (0 != rtn) {
+				CMR_LOGE("isp_calibration_get_info failed");
+				goto EXIT;
+			}
+			CMR_LOGI("get calibration info: %d", cali_info.size);
+			cali_result->size = cali_info.size;
+			cali_result->data_ptr = malloc(cali_result->size);
+			if (NULL == cali_result->data_ptr) {
+				CMR_LOGE("malloc target buffer failed");
+				goto EXIT;
+			}
+#if (CONFIG_READOTP_METHOD == 0)
+			fread(cali_result->data_ptr, 1, cali_result->size, calibration_handle);
+			fclose(calibration_handle);
+
+			if (is_need_checksum) {
+				checksum_ptr = (void *)((char *)cali_result->data_ptr + cali_result->size - checksum_otp.size);
+				if (0 == strcmp((void *)checksum_ptr, (const char *)checksum_otp.data_ptr)) {
+					CMR_LOGI("checksum ok");
+					is_reload = 0;
+				} else {
+					CMR_LOGI("checksum different need to reload");
+				}
+			} else {
+				is_reload = 0;
+			}
+		}
+#else
+		is_reload = 1;
+#endif
+		if (is_reload) {
+			CMR_LOGI(" %s will creat now!", calibration_file);
+#if 0
+			//read golden data
+			golden_handle = fopen(golden_file, "rb");
+			if (NULL == golden_handle) {
+				CMR_LOGE("open golden file failed");
+				goto EXIT;
+			}
+			fseek(golden_handle,0,SEEK_END);
+			golden.size = ftell(golden_handle);
+			fseek(golden_handle,0,SEEK_SET);
+			golden.data_ptr = malloc(golden.size);
+			if (NULL == golden.data_ptr){
+				CMR_LOGE("malloc golden memory failed");
+				goto EXIT;
+			}
+			CMR_LOGI("golden file size=%d, buf=%p", golden.size, golden.data_ptr);
+			if (golden.size != fread(golden.data_ptr, 1, golden.size, golden_handle)){
+				CMR_LOGE("read golden file failed");
+				goto EXIT;
+			}
+#else
+			cmr_bzero(&param_ptr, sizeof(param_ptr));
+			val.type               = SENSOR_VAL_TYPE_GET_GOLDEN_DATA;
+			val.pval               = &param_ptr;
+			ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_ACCESS_VAL, (cmr_uint)&val);
+			if (ret || 0 == param_ptr.golden.size) {
+				CMR_LOGE("get golden data failed");
+				goto EXIT;
+			}
+			golden.data_ptr = param_ptr.golden.data_ptr;
+			golden.size = param_ptr.golden.size;
+#endif
+#if 0
+			//read otp lsc data
+			lsc_otp_handle = fopen(random_lsc_file, "rb");
+			if (NULL == lsc_otp_handle) {
+				CMR_LOGE("open random lsc file failed");
+				goto EXIT;
+			}
+			fseek(lsc_otp_handle,0,SEEK_END);
+			lsc_otp.size = ftell(lsc_otp_handle);
+			fseek(lsc_otp_handle,0,SEEK_SET);
+			lsc_otp.data_ptr = malloc(lsc_otp.size);
+			if (NULL == lsc_otp.data_ptr) {
+				CMR_LOGE("malloc random lsc file failed");
+				goto EXIT;
+			}
+			CMR_LOGI("random lsc file size=%d, buf=%p", lsc_otp.size, lsc_otp.data_ptr);
+			if (lsc_otp.size != fread(lsc_otp.data_ptr, 1, lsc_otp.size, lsc_otp_handle)) {
+				CMR_LOGE("read random lsc file failed");
+				goto EXIT;
+			}
+
+			//read otp awb data
+			awb_otp_handle = fopen(random_awb_file, "rb");
+			if (NULL == awb_otp_handle) {
+				CMR_LOGE("open random awb file failed");
+				goto EXIT;
+			}
+			fseek(awb_otp_handle,0,SEEK_END);
+			awb_otp.size = ftell(awb_otp_handle);
+			fseek(awb_otp_handle,0,SEEK_SET);
+			awb_otp.data_ptr = malloc(awb_otp.size);
+			if (NULL == awb_otp.data_ptr) {
+				CMR_LOGE("malloc random awb file failed");
+				goto EXIT;
+			}
+			CMR_LOGI("random awb file size=%d, buf=%p", awb_otp.size, awb_otp.data_ptr);
+			if (awb_otp.size != fread(awb_otp.data_ptr, 1, awb_otp.size, awb_otp_handle)) {
+				CMR_LOGE("read random awb file failed");
+				goto EXIT;
+			}
+#else
+			//read otp lsc data
+			lsc_otp.size = CMR_ISP_OTP_MAX_SIZE;
+			lsc_otp.data_ptr = malloc(lsc_otp.size);
+			if (NULL == lsc_otp.data_ptr) {
+				CMR_LOGE("malloc random lsc file failed");
+				goto EXIT;
+			}
+
+			//read otp awb data
+			awb_otp.size = CMR_ISP_OTP_MAX_SIZE;
+			awb_otp.data_ptr = malloc(awb_otp.size);
+			if (NULL == awb_otp.data_ptr) {
+				CMR_LOGE("malloc random awb file failed");
+				goto EXIT;
+			}
+			CMR_LOGI("random awb file size=%d, buf=%p", awb_otp.size, awb_otp.data_ptr);
+
+			/*read lsc, awb from real otp */
+			//camera_calibrationconfigure_load(&otp_start_addr, &otp_data_len);
+			otp_start_addr   = 0;
+			otp_data_len     = CMR_ISP_OTP_MAX_SIZE;
+			sensor_otp.data_ptr = malloc(otp_data_len);
+			if (NULL == sensor_otp.data_ptr){
+				CMR_LOGE("malloc random lsc file failed");
+				goto EXIT;
+			}
+
+			cmr_bzero(&param_ptr, sizeof(param_ptr));
+			param_ptr.start_addr   = otp_start_addr;
+			param_ptr.len          = 0;
+			param_ptr.buff         = sensor_otp.data_ptr;
+			param_ptr.awb.size     = awb_otp.size;
+			param_ptr.awb.data_ptr = awb_otp.data_ptr;
+			param_ptr.lsc.size     = lsc_otp.size;
+			param_ptr.lsc.data_ptr = lsc_otp.data_ptr;
+			param_ptr.type         = SENSOR_OTP_PARAM_NORMAL;
+			val.type               = SENSOR_VAL_TYPE_READ_OTP;
+			val.pval               = &param_ptr;
+			CMR_PRINT_TIME;
+			ret = cmr_sensor_ioctl(cxt->sn_cxt.sensor_handle, cxt->camera_id, SENSOR_ACCESS_VAL, (cmr_uint)&val);
+			if (ret || 0 == param_ptr.len) {
+				CMR_LOGE("read otp data failed %d,%d", ret, param_ptr.len);
+				goto EXIT;
+			}
+			CMR_PRINT_TIME;
+#endif
+			//get the target buffer size
+			rtn = isp_calibration_get_info(&golden, &cali_info);
+			if (0 != rtn) {
+				CMR_LOGE("isp_calibration_get_info failed");
+				goto EXIT;
+			}
+			CMR_LOGI("get calibration info: %d", cali_info.size);
+			target_buf.size = cali_info.size;
+			target_buf.data_ptr = malloc(target_buf.size);
+			if (NULL == target_buf.data_ptr) {
+				CMR_LOGE("malloc target buffer failed");
+				goto EXIT;
+			}
+
+			//get the calibration data, the real size of data will be write to cali_result.size
+			cali_param->golden = golden;
+			cali_param->awb_otp = awb_otp;
+			cali_param->lsc_otp = lsc_otp;
+			cali_param->target_buf = target_buf;
+			rtn = isp_calibration(cali_param, (struct isp_data_t *)cali_result);
+			if (0 != rtn) {
+				CMR_LOGE("isp_calibration failed rtn %d", rtn);
+				goto EXIT;
+			}
+			CMR_LOGI("calibration data: addr=%p, size = %d", cali_result->data_ptr, cali_result->size);
+
+#if (CONFIG_READOTP_METHOD == 0)
+
+			//TODO: save the calibration data
+			calibration_handle = fopen(calibration_file, "wb");
+			if (NULL == calibration_handle) {
+				CMR_LOGE("open calibration file failed");
+				goto EXIT;
+			}
+			memcpy((void*)((char*)cali_result->data_ptr + target_buf.size - checksum_otp.size), (void*)checksum_otp.data_ptr, checksum_otp.size);
+			fwrite(cali_result->data_ptr, 1, target_buf.size, calibration_handle);
+#endif
+	EXIT:
+
+#if (CONFIG_READOTP_METHOD == 0)
+
+			if (NULL != golden_handle) {
+				fclose(golden_handle);
+				golden_handle = NULL;
+			}
+			if (NULL != lsc_otp_handle) {
+				fclose(lsc_otp_handle);
+				lsc_otp_handle = NULL;
+			}
+			if (NULL != awb_otp_handle) {
+				fclose(awb_otp_handle);
+				awb_otp_handle = NULL;
+			}
+			if (NULL != calibration_handle) {
+				fclose(calibration_handle);
+				calibration_handle = NULL;
+			}
+#endif
+			if (NULL != checksum_otp.data_ptr) {
+				free(checksum_otp.data_ptr);
+				checksum_otp.data_ptr = NULL;
+			}
+			if (NULL != fw_version.data_ptr) {
+				free(fw_version.data_ptr);
+				fw_version.data_ptr = NULL;
+			}
+			if (NULL != lsc_otp.data_ptr) {
+				free(lsc_otp.data_ptr);
+				golden.data_ptr = NULL;
+			}
+			if (NULL != awb_otp.data_ptr) {
+				free(awb_otp.data_ptr);
+				awb_otp.data_ptr = NULL;
+			}
+			if (NULL != sensor_otp.data_ptr) {
+				free(sensor_otp.data_ptr);
+				sensor_otp.data_ptr = NULL;
+			}
+			return rtn;
+		}
+	}else {
+		CMR_LOGI("not support reload");
+	}
+
+	return rtn;
+}
+#endif
 cmr_int camera_isp_init(cmr_handle  oem_handle)
 {
 	cmr_int                         ret = CMR_CAMERA_SUCCESS;
@@ -1703,17 +2105,18 @@ cmr_int camera_isp_init(cmr_handle  oem_handle)
 	}
 	isp_param.ctrl_callback = camera_isp_evt_cb;
 	isp_param.oem_handle = oem_handle;
+	isp_param.camera_id = cxt->camera_id;
 
 	CMR_LOGD("w %d h %d", isp_param.size.w,isp_param.size.h);
 	CMR_PRINT_TIME;
-	ret = isp_init(&isp_param);
+	ret = isp_init(&isp_param, &isp_cxt->isp_handle);
 	if (ret) {
 		CMR_LOGE("failed to init isp %ld", ret);
 		ret = -CMR_CAMERA_NO_SUPPORT;
 		goto exit;
 	}
 	CMR_PRINT_TIME;
-	ret = isp_capability(ISP_VIDEO_SIZE, &isp_limit);
+	ret = isp_capability(isp_cxt->isp_handle, ISP_VIDEO_SIZE, &isp_limit);
 	if (ret) {
 		CMR_LOGE("failed to get the limitation of isp %ld", ret);
 		ret = -CMR_CAMERA_NO_SUPPORT;
@@ -1724,7 +2127,7 @@ cmr_int camera_isp_init(cmr_handle  oem_handle)
 	goto exit;
 
 isp_deinit:
-	isp_deinit();
+	isp_deinit(isp_cxt->isp_handle);
 exit:
 	CMR_LOGD("done %ld", ret);
 	return ret;
@@ -1745,7 +2148,7 @@ cmr_int camera_isp_deinit(cmr_handle  oem_handle)
 		goto exit;
 	}
 
-	ret = isp_deinit();
+	ret = isp_deinit(isp_cxt->isp_handle);
 	if (ret) {
 		CMR_LOGE("failed to de-init isp %ld", ret);
 		goto exit;
@@ -3013,7 +3416,7 @@ cmr_int camera_raw_proc(cmr_handle oem_handle, cmr_handle caller_handle, struct 
 		in_param.dst_frame.img_addr_vir.chn0 = param_ptr->dst_frame.addr_vir.addr_y;
 		in_param.dst_frame.img_addr_vir.chn1 = param_ptr->dst_frame.addr_vir.addr_u;
 		in_param.dst_slice_height = param_ptr->dst_slice_height;
-		ret = isp_proc_start(&in_param, &out_param);
+		ret = isp_proc_start(cxt->isp_cxt.isp_handle, &in_param, &out_param);
 		if (ret) {
 			CMR_LOGE("failed to start proc %ld", ret);
 		}
@@ -3026,7 +3429,7 @@ cmr_int camera_raw_proc(cmr_handle oem_handle, cmr_handle caller_handle, struct 
 		in_param.src_addr_phy.chn1 = param_ptr->src_frame.addr_phy.addr_u;
 		in_param.dst_addr_phy.chn0 = param_ptr->dst_frame.addr_phy.addr_y;
 		in_param.dst_addr_phy.chn1 = param_ptr->dst_frame.addr_phy.addr_u;
-		ret = isp_proc_next(&in_param, &out_param);
+		ret = isp_proc_next(cxt->isp_cxt.isp_handle, &in_param, &out_param);
 		if (ret) {
 			CMR_LOGE("failed to start proc %ld", ret);
 		}
@@ -3068,19 +3471,19 @@ cmr_int camera_isp_start_video(cmr_handle oem_handle, struct video_start_param *
 	isp_ae_info.min_fps = ae_info->min_frate;
 	isp_ae_info.max_fps = ae_info->max_frate;
 	CMR_LOGI("line time %d sn_mode %ld", isp_ae_info.line_time, sn_mode);
-	isp_ioctl(ISP_CTRL_AE_INFO, (void*)&isp_ae_info);
+	isp_ioctl(isp_cxt->isp_handle, ISP_CTRL_AE_INFO, (void*)&isp_ae_info);
 
 	sensor_mode_info = &cxt->sn_cxt.sensor_info.mode_info[sn_mode];
 	wb_trim.x = 0;
 	wb_trim.y = 0;
 	wb_trim.w = sensor_mode_info->trim_width;
 	wb_trim.h = sensor_mode_info->trim_height;
-	ret = isp_ioctl(ISP_CTRL_WB_TRIM,(void*)&wb_trim);
+	ret = isp_ioctl(isp_cxt->isp_handle, ISP_CTRL_WB_TRIM,(void*)&wb_trim);
 	if (ret) {
 		CMR_LOGE("set wb trim information error.");
 	}
 	CMR_LOGI("isp w h, %d %d", isp_param.size.w, isp_param.size.h);
-	ret = isp_video_start(&isp_param);
+	ret = isp_video_start(isp_cxt->isp_handle, &isp_param);
 	if (!ret) {
 		isp_cxt->is_work = 1;
 	} else {
@@ -3104,7 +3507,7 @@ cmr_int camera_isp_stop_video(cmr_handle oem_handle)
 	}
 	if (cxt->isp_cxt.is_work) {
 	CMR_PRINT_TIME;
-		ret = isp_video_stop();
+		ret = isp_video_stop(cxt->isp_cxt.isp_handle);
 		if (ret) {
 			CMR_LOGE("failed to stop isp %ld", ret);
 		} else {
@@ -3757,7 +4160,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	case COM_ISP_GET_LOW_LUX_EB:
 		isp_cmd = ISP_LOW_LUX_EB;
 		isp_param_ptr = (void*)&param_ptr->cmd_value;
-		ret = isp_capability(isp_cmd, isp_param_ptr);
+		ret = isp_capability(cxt->isp_cxt.isp_handle, isp_cmd, isp_param_ptr);
 		if (ret) {
 			CMR_LOGE("Failed to read isp capability ret = %ld", ret);
 		}
@@ -3770,7 +4173,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 		CMR_LOGI("isp_cmd = %d, mode = %d", isp_cmd, param_ptr->alg_param.mode);
 		break;
 	case COM_ISP_SET_FACE_AREA:
-		isp_cmd = ISP_CTRL_AF_FACE_AREA;
+		isp_cmd = ISP_CTRL_FACE_AREA;
 		ptr_flag = 1;
 		isp_param_ptr = (void*)&param_ptr->fd_param;
 		CMR_LOGI("isp_cmd = %d, face_num = %d", isp_cmd, param_ptr->fd_param.face_num);
@@ -3792,7 +4195,7 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	}
 
 	if (ptr_flag) {
-		ret = isp_ioctl(isp_cmd, isp_param_ptr);
+		ret = isp_ioctl(cxt->isp_cxt.isp_handle, isp_cmd, isp_param_ptr);
 		if (ret) {
 			CMR_LOGE("failed isp ioctl %ld", ret);
 		}
@@ -3801,13 +4204,13 @@ cmr_int camera_isp_ioctl(cmr_handle oem_handle, cmr_uint cmd_type, struct common
 	}
 
 	if (set_isp_flag) {
-		ret = isp_ioctl(isp_cmd, (void*)&isp_param);
+		ret = isp_ioctl(cxt->isp_cxt.isp_handle, isp_cmd, (void*)&isp_param);
 		if (ret) {
 			CMR_LOGE("failed isp ioctl %ld", ret);
 		} else {
 			if (COM_ISP_SET_ISO == cmd_type) {
 				if (0 == param_ptr->cmd_value) {
-					isp_capability(ISP_CUR_ISO, (void *)&isp_param);
+					isp_capability(cxt->isp_cxt.isp_handle, ISP_CUR_ISO, (void *)&isp_param);
 					cxt->setting_cxt.is_auto_iso = 1;
 				} else {
 					cxt->setting_cxt.is_auto_iso = 0;

@@ -216,7 +216,7 @@ static cmr_int uvde_transfer_frame(cmr_handle class_handle, struct ipm_frame_in 
 
 	}
 
-	isp_capability(ISP_DENOISE_INFO, (void*)denoise_level);
+	isp_capability(NULL, ISP_DENOISE_INFO, (void*)denoise_level);
 	y_denoise_level = denoise_level[0];
 	uv_denoise_level = denoise_level[1];
 	if (uv_denoise_level < 9)
