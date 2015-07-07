@@ -7,8 +7,8 @@
  *  2015-2-16 Zhang Ziyi
  *  Initial version.
  */
-#include <signal.h>
 #include <cstring>
+#include <signal.h>
 
 #include "def_config.h"
 #include "log_ctrl.h"

@@ -189,6 +189,11 @@ private:
 
 	int create_storage();
 
+	/*  open_dump_mem_file - Open .mem file to store CP memory from
+	 *                       /proc/cpxxx/mem.
+	 */
+	LogFile* open_dump_mem_file(const struct tm& lt);
+
 	/*
 	 *    save_version - Save version.
 	 */
@@ -202,6 +207,7 @@ private:
 	virtual bool will_be_reset() const;
 
 	int start_dump(const struct tm& lt);
+	void process_dump_result(DataConsumer::LogProcResult res);
 	int save_dump_proc(LogFile* dumpf);
 
 	int start_sleep_log();

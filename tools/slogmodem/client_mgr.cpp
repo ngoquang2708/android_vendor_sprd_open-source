@@ -93,8 +93,9 @@ void ClientManager::process_client_disconn(ClientHandler* client)
 {
 	ll_remove(m_clients, client);
 	delete client;
-	err_log("client disconnected");
-	if (m_clients.empty()) {
+	info_log("client disconnected, remaining %u clients",
+		 static_cast<unsigned>(m_clients.size()));
+	if (m_clients.size() < 2) {
 		add_events(POLLIN);
 	}
 }

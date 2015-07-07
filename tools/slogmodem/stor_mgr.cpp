@@ -167,6 +167,8 @@ bool StorageManager::check_media_change()
 
 	if (has_sd) {  // SD is present
 		if (MT_SD_CARD != m_cur_type) {
+			info_log("Storage changing to external SD");
+
 			if (MT_INTERNAL == m_cur_type) {
 				stop_all_cps();
 			}

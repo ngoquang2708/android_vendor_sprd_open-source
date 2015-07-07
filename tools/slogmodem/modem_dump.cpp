@@ -49,6 +49,18 @@ int ModemDumpConsumer::start()
 }
 
 bool ModemDumpConsumer::process(DeviceFileHandler::DataBuffer& buffer)
+//{Debug: test /proc/cpxxx/mem
+#if 0
+{
+	TimerManager& tmgr = diag_dev()->multiplexer()->timer_mgr();
+
+	remove_dump_file();
+	tmgr.del_timer(m_timer);
+	m_timer = 0;
+	notify_client(LPR_FAILURE);
+	return true;
+}
+#else
 {
 	bool ret = false;
 	// Destroy the timer
@@ -61,7 +73,7 @@ bool ModemDumpConsumer::process(DeviceFileHandler::DataBuffer& buffer)
 	ssize_t n = f->write(buffer.buffer + buffer.data_start,
 			     buffer.data_len);
 	if (static_cast<size_t>(n) != buffer.data_len) {
-		close_dump_file();
+		remove_dump_file();
 		tmgr.del_timer(m_timer);
 		m_timer = 0;
 		notify_client(LPR_FAILURE);
@@ -75,6 +87,7 @@ bool ModemDumpConsumer::process(DeviceFileHandler::DataBuffer& buffer)
 	}
 	return ret;
 }
+#endif
 
 void ModemDumpConsumer::dump_read_timeout(void* param)
 {
@@ -82,12 +95,13 @@ void ModemDumpConsumer::dump_read_timeout(void* param)
 	LogProcResult result;
 
 	consumer->m_timer = 0;
-	consumer->close_dump_file();
 	if (consumer->m_read_num >= 10) {
+		consumer->close_dump_file();
 		info_log("timeout after %u reads, finished",
 			 consumer->m_read_num);
 		result = LPR_SUCCESS;
 	} else {
+		consumer->remove_dump_file();
 		err_log("timeout after %u reads", consumer->m_read_num);
 		result = LPR_FAILURE;
 	}

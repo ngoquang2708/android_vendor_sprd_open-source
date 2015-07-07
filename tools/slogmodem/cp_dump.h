@@ -22,6 +22,11 @@ public:
 		       const struct tm& lt);
 	~CpDumpConsumer();
 
+	const struct tm& time() const
+	{
+		return m_time;
+	}
+
 protected:
 	LogFile* open_dump_file();
 	LogFile* dump_file()
@@ -33,6 +38,7 @@ protected:
 		m_dump_file->close();
 		m_dump_file = 0;
 	}
+	void remove_dump_file();
 
 private:
 	struct tm m_time;

@@ -20,7 +20,6 @@ CpRingBufConsumer::CpRingBufConsumer(const LogString& cp_name,
 	 m_timer {0},
 	 m_file{0}
 {
-	
 }
 
 CpRingBufConsumer::~CpRingBufConsumer()

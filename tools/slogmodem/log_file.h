@@ -118,6 +118,11 @@ public:
 	int flush();
 
 	bool exists() const;
+	/*  remove - remove the file from the disk. Don't decrease any size.
+	 *  @par_dir: the parent directory.
+	 *
+	 *  Return 0 on success, -1 otherwise.
+	 */
 	int remove(const LogString& par_dir);
 
 	/*  operator < - operator < for m_time.

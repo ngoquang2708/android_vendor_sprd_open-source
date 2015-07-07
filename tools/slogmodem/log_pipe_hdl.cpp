@@ -213,7 +213,11 @@ int LogPipeHandler::save_dump_proc(LogFile* dumpf)
 
 	switch (m_type) {
 	case CT_WCDMA:
+#ifdef HOST_TEST_
+		fname = "/data/local/tmp/mem";
+#else
 		fname = "/proc/cpw/mem";
+#endif
 		break;
 	case CT_TD:
 		fname = "/proc/cpt/mem";
@@ -221,7 +225,11 @@ int LogPipeHandler::save_dump_proc(LogFile* dumpf)
 	case CT_3MODE:
 	case CT_4MODE:
 	case CT_5MODE:
+#ifdef HOST_TEST_
+		fname = "/data/local/tmp/mem";
+#else
 		fname = "/proc/cptl/mem";
+#endif
 		break;
 	default:  // CT_WCN
 		fname = "/proc/cpwcn/mem";
@@ -291,7 +299,8 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 		return;
 	}
 
-	// CP will not be reset: save all dumps as requested.
+	// CP will not be reset: if log is turned on, save all dumps
+	// as requested; otherwise only save mini dump as requested.
 	if (!m_storage) {
 		m_storage = m_stor_mgr.create_storage(*this);
 		if (!m_storage) {
@@ -433,6 +442,47 @@ int LogPipeHandler::start_dump(const struct tm& lt)
 	return err;
 }
 
+LogFile* LogPipeHandler::open_dump_mem_file(const struct tm& lt)
+{
+	char log_name[64];
+
+	snprintf(log_name, 64, "_memory_%04d-%02d-%02d_%02d-%02d-%02d.mem",
+		 lt.tm_year + 1900,
+		 lt.tm_mon + 1,
+		 lt.tm_mday,
+		 lt.tm_hour,
+		 lt.tm_min,
+		 lt.tm_sec);
+	LogString mem_file_name = m_modem_name + log_name;
+	LogFile* f = m_storage->create_file(mem_file_name,
+					    LogFile::LT_DUMP);
+	if (!f) {
+		err_log("create dump mem file %s failed",
+			ls2cstring(mem_file_name));
+	}
+
+	return f;
+}
+
+void LogPipeHandler::process_dump_result(DataConsumer::LogProcResult res)
+{
+	if (DataConsumer::LPR_SUCCESS != res) {
+		info_log("Read dump from spipe failed, save /proc/cpxxx/mem ...");
+
+		CpDumpConsumer* cons = static_cast<CpDumpConsumer*>(m_consumer);
+		LogFile* mem_file = open_dump_mem_file(cons->time());
+		if (mem_file) {
+			save_dump_proc(mem_file);
+			mem_file->close();
+		} else {
+			err_log("create dump mem file failed");
+		}
+	}
+
+	m_cp_state = CWS_NOT_WORKING;
+	system("am broadcast -a slogui.intent.action.DUMP_END");
+}
+
 void LogPipeHandler::diag_transaction_notify(void* client,
 					     DataConsumer::LogProcResult res)
 {
@@ -441,8 +491,7 @@ void LogPipeHandler::diag_transaction_notify(void* client,
 
 	switch (cp->m_cp_state) {
 	case CWS_DUMP:
-		cp->m_cp_state = CWS_NOT_WORKING;
-		system("am broadcast -a slogui.intent.action.DUMP_END");
+		cp->process_dump_result(res);
 		break;
 	case CWS_SAVE_SLEEP_LOG:
 		cp->m_cp_state = CWS_WORKING;
@@ -468,8 +517,15 @@ void LogPipeHandler::diag_transaction_notify(void* client,
 	if (valid) {
 		delete cp->m_consumer;
 		cp->m_consumer = 0;
+		if (cp->m_log_diag_same) {
+			cp->m_diag_handler->del_events(POLLIN);
+		}
 		delete cp->m_diag_handler;
 		cp->m_diag_handler = 0;
+		// Restore the normal log
+		if (CWS_WORKING == cp->m_cp_state) {
+			cp->add_events(POLLIN);
+		}
 	}
 }
 

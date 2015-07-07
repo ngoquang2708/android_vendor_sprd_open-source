@@ -8,6 +8,7 @@
  *  Initial version.
  */
 #include <poll.h>
+#include "cp_dir.h"
 #include "cp_dump.h"
 #include "cp_stor.h"
 #include "log_file.h"
@@ -46,4 +47,11 @@ LogFile* CpDumpConsumer::open_dump_file()
 			ls2cstring(dump_file_name));
 	}
 	return m_dump_file;
+}
+
+void CpDumpConsumer::remove_dump_file()
+{
+	m_dump_file->close();
+	m_dump_file->dir()->remove(m_dump_file);
+	m_dump_file = 0;
 }

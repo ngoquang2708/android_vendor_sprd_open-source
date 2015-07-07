@@ -127,6 +127,7 @@ CpSetDirectory* MediaStorage::create_cp_set()
 	if (cp_set->create()) {
 		delete cp_set;
 		cp_set = 0;
+		err_log("create CP set %s failed", ls2cstring(spath));
 	} else {
 		m_log_dirs.push_back(cp_set);
 		m_cur_set = cp_set;
@@ -178,7 +179,6 @@ int MediaStorage::check_quota(CpDirectory* cp_dir)
 		return -1;
 	}
 
-	//Debug
 	info_log("data large: %u/%uM",
 		 static_cast<unsigned>(m_size),
 		 static_cast<unsigned>(m_limit >> 20));

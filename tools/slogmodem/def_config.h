@@ -61,9 +61,15 @@
 
 #define MODEM_VERSION "gsm.version.baseband"
 
-#define DEBUG_SMSG_PATH "/d/sipc/smsg"
-#define DEBUG_SBUF_PATH "/d/sipc/sbuf"
-#define DEBUG_SBLOCK_PATH "/d/sipc/sblock"
+#ifdef HOST_TEST_
+	#define DEBUG_SMSG_PATH "/data/local/tmp/smsg"
+	#define DEBUG_SBUF_PATH "/data/local/tmp/sbuf"
+	#define DEBUG_SBLOCK_PATH "/data/local/tmp/sblock"
+#else
+	#define DEBUG_SMSG_PATH "/d/sipc/smsg"
+	#define DEBUG_SBUF_PATH "/d/sipc/sbuf"
+	#define DEBUG_SBLOCK_PATH "/d/sipc/sblock"
+#endif
 
 #define MINI_DUMP_SRC_FILE "/proc/cptl/mini_dump"
 

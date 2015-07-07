@@ -20,7 +20,6 @@ CpSleepLogConsumer::CpSleepLogConsumer(const LogString& cp_name,
 	 m_timer {0},
 	 m_file{0}
 {
-	
 }
 
 CpSleepLogConsumer::~CpSleepLogConsumer()
@@ -61,7 +60,6 @@ LogFile* CpSleepLogConsumer::open_file()
 	}
 	return f;
 }
-
 
 void CpSleepLogConsumer::close_file()
 {
@@ -159,4 +157,3 @@ bool CpSleepLogConsumer::process(DeviceFileHandler::DataBuffer& buffer)
 	}
 	return ret;
 }
-

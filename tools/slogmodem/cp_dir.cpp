@@ -234,6 +234,8 @@ int CpDirectory::remove(LogFile* rmf)
 		LogFile* f = *it;
 		if (rmf == f) {
 			m_log_files.erase(it);
+			LogString spath = m_cp_set_dir->path() + "/" + m_name;
+			f->remove(spath);
 			dec_size(f->size());
 			delete f;
 			ret = 0;

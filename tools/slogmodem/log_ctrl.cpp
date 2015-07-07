@@ -17,6 +17,7 @@
 	#include <cutils/properties.h>
 #endif
 
+#include "cp_dir.h"
 #include "cp_stor.h"
 #include "def_config.h"
 #include "log_ctrl.h"
@@ -216,6 +217,10 @@ int LogController::save_mini_dump(CpStorage* stor,
 	if (f) {
 		ret = f->copy(MINI_DUMP_SRC_FILE);
 		f->close();
+		if (ret) {
+			err_log("save mini dump error");
+			f->dir()->remove(f);
+		}
 	} else {
 		err_log("create mini dump file %s failed",
 			md_name);

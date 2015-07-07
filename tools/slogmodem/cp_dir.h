@@ -64,7 +64,7 @@ public:
 	 */
 	int remove();
 
-	/*  remove - remove file.
+	/*  remove - remove file if it's in the file list. Update the size.
 	 *
 	 *  Return 0 on success, -1 on failure.
 	 */

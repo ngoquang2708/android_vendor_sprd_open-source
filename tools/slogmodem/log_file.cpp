@@ -104,6 +104,7 @@ int LogFile::close()
 		m_fd = -1;
 
 		delete [] m_buffer;
+		m_buffer = 0;
 		m_buf_len = 0;
 		m_data_len = 0;
 	}
@@ -137,20 +138,33 @@ ssize_t LogFile::write(const void* data, size_t len)
 			v[1].iov_len = len;
 			vnum = 2;
 			n = writev(m_fd, v, vnum);
+			if (n >= static_cast<ssize_t>(m_data_len)) {
+				n -= m_data_len;
+				m_data_len = 0;
+				m_size += n;
+				m_dir->add_size(n);
+			} else if (n > 0) {
+				// m_buffer is not flushed
+				// Move data in m_buffer
+				m_data_len -= n;
+				memmove(m_buffer,
+					m_buffer + n,
+					m_data_len);
+				n = 0;
+			}
 		} else {
 			n = write_data(data, len);
+			if (n > 0) {
+				m_size += n;
+				m_dir->add_size(n);
+			}
 		}
 		if (n < 0) {
-			err_log("writev failed");
+			err_log("write file failed");
 			if (ENOSPC == errno) {
 				n = -2;
 			}
-		} else if (static_cast<size_t>(n) > m_data_len) {
-			n -= m_data_len;
-			m_size += n;
-			m_dir->add_size(n);
 		}
-		m_data_len = 0;
 	}
 	return n;
 }
@@ -342,7 +356,7 @@ ssize_t LogFile::write_data(const void* data, size_t len)
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(data);
 	const uint8_t* start = p;
 	const uint8_t* endp = p + len;
-	ssize_t n;
+	ssize_t n = 0;
 
 	while (p < endp) {
 		n = ::write(m_fd, p, len);
@@ -466,17 +480,17 @@ int LogFile::copy(const char* src)
 
 	// Open the source and the destination file
 	int src_fd;
-	uint8_t* buf = new uint8_t[FILE_IO_BUF_SIZE];
 
 	src_fd = open(src, O_RDONLY);
 	if (-1 == src_fd) {
-		delete [] buf;
+		err_log("open %s error", src);
 		return -1;
 	}
 
 	int ret = -1;
+	size_t total_save = 0;
 	while (true) {
-		ssize_t n = read(src_fd, buf, FILE_IO_BUF_SIZE);
+		ssize_t n = read(src_fd, m_buffer, FILE_IO_BUF_SIZE);
 		if (n < 0) {
 			break;
 		}
@@ -484,14 +498,20 @@ int LogFile::copy(const char* src)
 			ret = 0;
 			break;
 		}
-		ssize_t nwr = write(buf, n);
+		ssize_t nwr = ::write(m_fd, m_buffer, n);
 		if (nwr != n) {
+			if (nwr > 0) {
+				total_save += nwr;
+			}
 			break;
 		}
+		total_save += n;
 	}
 
+	m_size += total_save;
+	m_dir->add_size(total_save);
+
 	::close(src_fd);
-	delete [] buf;
 
 	return ret;
 }
