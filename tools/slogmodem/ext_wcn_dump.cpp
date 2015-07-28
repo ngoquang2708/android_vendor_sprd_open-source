@@ -20,6 +20,7 @@ ExtWcnDumpConsumer::ExtWcnDumpConsumer(const LogString& cp_name,
 int ExtWcnDumpConsumer::start()
 {
 	if (!open_dump_file()) {
+		err_log("open dump file failed!");
 		return -1;
 	}
 
@@ -43,12 +44,13 @@ bool ExtWcnDumpConsumer::process(DeviceFileHandler::DataBuffer& buffer)
 	}
 
 	LogFile* f = dump_file();
+	size_t len = buffer.data_len;
 	ssize_t n = f->write(buffer.buffer + buffer.data_start,
-			     buffer.data_len);
+			     len);
 	buffer.data_start = 0;
 	buffer.data_len = 0;
-	if (static_cast<size_t>(n) != buffer.data_len) {
-		close_dump_file();
+	if (static_cast<size_t>(n) != len) {
+		remove_dump_file();
 		notify_client(LPR_FAILURE);
 		ret = true;
 	}

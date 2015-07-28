@@ -20,9 +20,11 @@
 #include "cp_dir.h"
 #include "cp_stor.h"
 #include "def_config.h"
+#include "ext_wcn_log.h"
 #include "log_ctrl.h"
 #include "req_err.h"
 #include "slog_config.h"
+#include "wan_modem_log.h"
 
 LogController::LogController()
 	:m_config {0},
@@ -45,8 +47,14 @@ LogPipeHandler* LogController::create_handler(const LogConfig::ConfigEntry* e)
 {
 	LogPipeHandler* log_pipe;
 
-	log_pipe = new LogPipeHandler(this, &m_multiplexer, e,
-				      m_stor_mgr);
+	if (CT_WCN == e->type) {
+		log_pipe = new ExtWcnLogHandler(this, &m_multiplexer, e,
+						m_stor_mgr);
+	} else {
+		log_pipe = new WanModemLogHandler(this, &m_multiplexer, e,
+						  m_stor_mgr);
+	}
+
 	if (e->enable) {
 		bool same;
 		LogString log_path;

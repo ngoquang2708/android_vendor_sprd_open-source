@@ -51,6 +51,21 @@ public:
 		return m_enable;
 	}
 
+	bool log_diag_dev_same() const
+	{
+		return m_log_diag_same;
+	}
+
+	const LogString& log_dev_path() const
+	{
+		return m_log_dev_path;
+	}
+
+	const LogString& diag_dev_path() const
+	{
+		return m_diag_dev_path;
+	}
+
 	void set_log_diag_dev_path(const LogString& log,
 				   const LogString& diag)
 	{
@@ -137,6 +152,63 @@ public:
 	void cancel_trans_result_notify(ClientHandler* client);
 
 protected:
+	enum CpWorkState
+	{
+		CWS_NOT_WORKING,
+		CWS_WORKING,
+		CWS_DUMP,
+		CWS_SAVE_SLEEP_LOG,
+		CWS_SAVE_RINGBUF
+	};
+
+	CpWorkState cp_state() const
+	{
+		return m_cp_state;
+	}
+
+	CpStorage* storage()
+	{
+		return m_storage;
+	}
+
+	DiagDeviceHandler* create_diag_device(DataConsumer* consumer);
+
+	DataConsumer* consumer()
+	{
+		return m_consumer;
+	}
+
+	/*  start_dump - the virtual function to start CP MODEM memory dump.
+	 *
+	 *  Derived class shall override this function.
+	 *
+	 *  Return Value:
+	 *    Return 0 if the dump transaction is started successfully,
+	 *    return -1 if the dump transaction can not be started,
+	 *    return 1 if the dump transaction is finished.
+	 */
+	virtual int start_dump(const struct tm& lt) = 0;
+
+	/*  start_transaction - Save the DiagDeviceHandler and the consumer,
+	 *                      and change the m_cp_state.
+	 */
+	void start_transaction(DiagDeviceHandler* dev,
+			       DataConsumer* consumer,
+			       CpWorkState state);
+
+	/*  stop_transaction - stop current transaction.
+	 *
+	 *  Derived class shall override this function.
+	 */
+	void stop_transaction(CpWorkState state);
+
+	/*  open_dump_mem_file - Open .mem file to store CP memory from
+	 *                       /proc/cpxxx/mem.
+	 */
+	LogFile* open_dump_mem_file(const struct tm& lt);
+
+	int save_dump_proc(LogFile* dumpf);
+
 	/*
 	 *    log_buffer - Buffer shared by all LogPipeHandlers.
 	 *
@@ -147,15 +219,6 @@ protected:
 	static uint8_t log_buffer[LOG_BUFFER_SIZE];
 
 private:
-	enum CpWorkState
-	{
-		CWS_NOT_WORKING,
-		CWS_WORKING,
-		CWS_DUMP,
-		CWS_SAVE_SLEEP_LOG,
-		CWS_SAVE_RINGBUF
-	};
-
 	// Log turned on
 	bool m_enable;
 	LogString m_modem_name;
@@ -189,11 +252,6 @@ private:
 
 	int create_storage();
 
-	/*  open_dump_mem_file - Open .mem file to store CP memory from
-	 *                       /proc/cpxxx/mem.
-	 */
-	LogFile* open_dump_mem_file(const struct tm& lt);
-
 	/*
 	 *    save_version - Save version.
 	 */
@@ -204,16 +262,11 @@ private:
 	/*
 	 *    will_be_reset - check whether the CP will be reset.
 	 */
-	virtual bool will_be_reset() const;
-
-	int start_dump(const struct tm& lt);
-	void process_dump_result(DataConsumer::LogProcResult res);
-	int save_dump_proc(LogFile* dumpf);
+	bool will_be_reset() const;
 
 	int start_sleep_log();
 	int start_ringbuf();
 
-	void stop_diag_activity();
 	void close_on_assert();
 
 	/*
@@ -234,7 +287,7 @@ private:
 	 *  This function is called by current DataConsumer object.
 	 */
 	static void diag_transaction_notify(void* client,
-					    DataConsumer::LogProcResult result);
+					    DataConsumer::LogProcResult res);
 };
 
 #endif  // !LOG_PIPE_HDL_H_

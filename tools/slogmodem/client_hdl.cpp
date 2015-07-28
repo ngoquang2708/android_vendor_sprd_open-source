@@ -797,6 +797,8 @@ void ClientHandler::proc_ringbuf(const uint8_t* req, size_t len)
 	const uint8_t* endp = req + len;
 	size_t tlen;
 
+	info_log("SAVE_RINGBUF");
+
 	tok = get_token(req, len, tlen);
 	if (!tok) {
 		err_log("SAVE_RINGBUF no param");
@@ -810,8 +812,6 @@ void ClientHandler::proc_ringbuf(const uint8_t* req, size_t len)
 		send_response(m_fd, REC_INVAL_PARAM);
 		return;
 	}
-
-	info_log("SAVE_RINGBUF CP %d", cpt);
 
 	req = tok + tlen;
 	len = endp - req;

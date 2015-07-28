@@ -25,6 +25,7 @@ LOCAL_SRC_FILES := client_hdl.cpp \
 		   diag_dev_hdl.cpp \
 		   diag_stream_parser.cpp \
 		   ext_wcn_dump.cpp \
+		   ext_wcn_log.cpp \
 		   fd_hdl.cpp \
 		   file_watcher.cpp \
 		   log_config.cpp \
@@ -39,7 +40,8 @@ LOCAL_SRC_FILES := client_hdl.cpp \
 		   parse_utils.cpp \
 		   slog_config.cpp \
 		   stor_mgr.cpp \
-		   timer_mgr.cpp
+		   timer_mgr.cpp \
+		   wan_modem_log.cpp
 
 ifeq ($(strip $(SPRD_EXTERNAL_WCN)), true)
 	LOCAL_CFLAGS += -DEXTERNAL_WCN

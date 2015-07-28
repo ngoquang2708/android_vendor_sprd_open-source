@@ -46,6 +46,9 @@ DeviceFileHandler::~DeviceFileHandler()
 {
 	delete [] m_buffer.buffer;
 	if (!m_close_fd) {
+		if (m_fd >= 0) {
+			del_events(POLLIN | POLLOUT);
+		}
 		m_fd = -1;
 	}
 }

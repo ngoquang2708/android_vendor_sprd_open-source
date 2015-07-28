@@ -81,7 +81,7 @@ LogPipeHandler::~LogPipeHandler()
 		m_stor_mgr.delete_storage(m_storage);
 	}
 
-	stop_diag_activity();
+	stop_transaction(CWS_NOT_WORKING);
 }
 
 int LogPipeHandler::start()
@@ -268,7 +268,7 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 
 	// If it's saving sleep log/RingBuf, stop them
 	if (CWS_WORKING != m_cp_state) {
-		stop_diag_activity();
+		stop_transaction(CWS_WORKING);
 	}
 
 	bool will_reset_cp = will_be_reset();
@@ -323,6 +323,7 @@ void LogPipeHandler::process_assert(bool save_md /*= true*/)
 	// Save MODEM dump if log is turned on
 	if (m_enable) {
 		system("am broadcast -a slogui.intent.action.DUMP_START");
+
 		if (!start_dump(lt)) {
 			del_events(POLLIN);
 			m_cp_state = CWS_DUMP;
@@ -393,53 +394,26 @@ bool LogPipeHandler::save_timestamp(LogFile* f)
 	return (static_cast<size_t>(n) == sizeof ts);
 }
 
-int LogPipeHandler::start_dump(const struct tm& lt)
+DiagDeviceHandler* LogPipeHandler::create_diag_device(DataConsumer* consumer)
 {
-	assert(0 == m_diag_handler && 0 == m_consumer);
-
-	// Create the data consumer first
-	int err = 0;
-	CpDumpConsumer* dump;
-
-	if (CT_WCN == m_type) {
-		dump = new ExtWcnDumpConsumer(m_modem_name, *m_storage, lt);
-	} else {
-		dump = new ModemDumpConsumer(m_modem_name, *m_storage, lt);
-	}
-
-	dump->set_callback(this, diag_transaction_notify);
+	DiagDeviceHandler* diag;
 
 	if (m_log_diag_same) {
-		m_diag_handler = new DiagDeviceHandler(m_fd,
-						       dump, controller(),
-						       multiplexer());
+		diag = new DiagDeviceHandler(fd(),
+					     consumer, controller(),
+					     multiplexer());
 	} else {
-		m_diag_handler = new DiagDeviceHandler(m_diag_dev_path,
-						       dump, controller(),
-						       multiplexer());
-		int fd = m_diag_handler->open();
+		diag = new DiagDeviceHandler(diag_dev_path(),
+					     consumer, controller(),
+					     multiplexer());
+		int fd = diag->open();
 		if (fd < 0) {
-			err = -1;
+			delete diag;
+			diag = 0;
 		}
 	}
 
-	if (!err) {
-		m_diag_handler->add_events(POLLIN);
-		dump->bind(m_diag_handler);
-		if (!dump->start()) {
-			m_consumer = dump;
-		} else {
-			err = -1;
-		}
-	}
-
-	if (err) {
-		delete m_diag_handler;
-		m_diag_handler = 0;
-		delete dump;
-	}
-
-	return err;
+	return diag;
 }
 
 LogFile* LogPipeHandler::open_dump_mem_file(const struct tm& lt)
@@ -464,23 +438,24 @@ LogFile* LogPipeHandler::open_dump_mem_file(const struct tm& lt)
 	return f;
 }
 
-void LogPipeHandler::process_dump_result(DataConsumer::LogProcResult res)
+void LogPipeHandler::start_transaction(DiagDeviceHandler* dev,
+				       DataConsumer* consumer,
+				       CpWorkState state)
 {
-	if (DataConsumer::LPR_SUCCESS != res) {
-		info_log("Read dump from spipe failed, save /proc/cpxxx/mem ...");
+	m_diag_handler = dev;
+	m_consumer = consumer;
+	m_cp_state = state;
+}
 
-		CpDumpConsumer* cons = static_cast<CpDumpConsumer*>(m_consumer);
-		LogFile* mem_file = open_dump_mem_file(cons->time());
-		if (mem_file) {
-			save_dump_proc(mem_file);
-			mem_file->close();
-		} else {
-			err_log("create dump mem file failed");
-		}
+void LogPipeHandler::stop_transaction(CpWorkState state)
+{
+	delete m_consumer;
+	m_consumer = 0;
+	if (m_diag_handler) {
+		delete m_diag_handler;
+		m_diag_handler = 0;
 	}
-
-	m_cp_state = CWS_NOT_WORKING;
-	system("am broadcast -a slogui.intent.action.DUMP_END");
+	m_cp_state = state;
 }
 
 void LogPipeHandler::diag_transaction_notify(void* client,
@@ -490,9 +465,6 @@ void LogPipeHandler::diag_transaction_notify(void* client,
 	bool valid = true;
 
 	switch (cp->m_cp_state) {
-	case CWS_DUMP:
-		cp->process_dump_result(res);
-		break;
 	case CWS_SAVE_SLEEP_LOG:
 		cp->m_cp_state = CWS_WORKING;
 		if (cp->m_trans_client) {
@@ -517,9 +489,6 @@ void LogPipeHandler::diag_transaction_notify(void* client,
 	if (valid) {
 		delete cp->m_consumer;
 		cp->m_consumer = 0;
-		if (cp->m_log_diag_same) {
-			cp->m_diag_handler->del_events(POLLIN);
-		}
 		delete cp->m_diag_handler;
 		cp->m_diag_handler = 0;
 		// Restore the normal log
@@ -527,14 +496,6 @@ void LogPipeHandler::diag_transaction_notify(void* client,
 			cp->add_events(POLLIN);
 		}
 	}
-}
-
-void LogPipeHandler::stop_diag_activity()
-{
-	delete m_consumer;
-	m_consumer = 0;
-	delete m_diag_handler;
-	m_diag_handler = 0;
 }
 
 int LogPipeHandler::save_sleep_log(ClientHandler* client)
