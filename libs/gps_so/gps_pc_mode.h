@@ -13,6 +13,10 @@
 #define EUT_GPS_REQ "+SPGPSTEST:EUT="
 #define EUT_GPS_PRN_REQ "+SPGPSTEST:PRN="
 #define EUT_GPS_SNR_REQ "+SPGPSTEST:SNR="
+#define EUT_GPS_RSSI_REQ "+SPGPSTEST:RSSI="
+#define EUT_GPS_TSXTEMP_REQ "+SPGPSTEST:TSXTEMP="
+#define EUT_GPS_TCXO_REQ "+SPGPSTEST:TCXO="
+#define EUT_GPS_READ_REQ "+SPGPSTEST:READ="
 #define EUT_GPS_SEARCH_REQ  "+SPGPSTEST:SEARCH="
 #define EUT_GPS_SNR_NO_EXIST "NO_EXIST"
 #define EUT_GPS_NO_FOUND_STAELITE "NO_FOUND_SATELLITE"
@@ -41,4 +45,10 @@ extern int get_init_mode(void);
 extern int get_stop_mode(void);
 
 extern void gps_eut_parse(char *buf,char *rsp);
+
+#if 1//def GNSS_WR_REG
+extern int write_register(unsigned int addr,unsigned int value);
+extern unsigned int read_register(unsigned int addr);
+#endif
+
 #endif
